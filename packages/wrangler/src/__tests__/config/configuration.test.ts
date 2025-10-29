@@ -1049,6 +1049,19 @@ describe("normalizeAndValidateConfig()", () => {
 				observability: {
 					enabled: true,
 					head_sampling_rate: 1,
+					logs: {
+						enabled: true,
+						head_sampling_rate: 1,
+						invocation_logs: true,
+						destinations: ["test"],
+						persist: true,
+					},
+					traces: {
+						enabled: true,
+						head_sampling_rate: 1,
+						destinations: ["test"],
+						persist: true,
+					},
 				},
 			};
 
@@ -1136,6 +1149,19 @@ describe("normalizeAndValidateConfig()", () => {
 				observability: {
 					enabled: "INVALID",
 					head_sampling_rate: "INVALID",
+					logs: {
+						enabled: "INVALID",
+						head_sampling_rate: "INVALID",
+						destinations: "INVALID",
+						persist: "INVALID",
+						invocation_logs: "INVALID",
+					},
+					traces: {
+						enabled: "INVALID",
+						head_sampling_rate: "INVALID",
+						destinations: "INVALID",
+						persist: "INVALID",
+					},
 				},
 			} as unknown as RawEnvironment;
 
@@ -1208,9 +1234,18 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"observability.enabled\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"observability.logs.enabled\\" to be of type boolean but got undefined.
-				  - Expected \\"observability.traces.enabled\\" to be of type boolean but got undefined.
-				  - Expected \\"observability.head_sampling_rate\\" to be of type number but got \\"INVALID\\"."
+				  - Expected \\"observability.logs.enabled\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.traces.enabled\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.head_sampling_rate\\" to be of type number but got \\"INVALID\\".
+				  - Expected \\"observability.logs.enabled\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.logs.head_sampling_rate\\" to be of type number but got \\"INVALID\\".
+				  - Expected \\"observability.logs.invocation_logs\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"logs.destinations\\" to be an array of strings but got \\"INVALID\\"
+				  - Expected \\"observability.logs.persist\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.traces.enabled\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.traces.head_sampling_rate\\" to be of type number but got \\"INVALID\\".
+				  - Expected \\"traces.destinations\\" to be an array of strings but got \\"INVALID\\"
+				  - Expected \\"observability.traces.persist\\" to be of type boolean but got \\"INVALID\\"."
 			`);
 		});
 
@@ -6680,6 +6715,36 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"observability.enabled\\" or \\"observability.logs.enabled\\" or \\"observability.traces.enabled\\" is required.
 					  - Expected \\"observability.head_sampling_rate\\" to be of type number but got true."
 				`);
+			});
+
+			it("should not warn on full observability config", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							enabled: true,
+							head_sampling_rate: 1,
+							logs: {
+								enabled: true,
+								head_sampling_rate: 1,
+								invocation_logs: true,
+								destinations: ["test"],
+								persist: true,
+							},
+							traces: {
+								enabled: true,
+								head_sampling_rate: 1,
+								destinations: ["test"],
+								persist: true,
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
 			it("should error on invalid observability.logs", () => {

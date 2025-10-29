@@ -14096,7 +14096,7 @@ export default{
 			`);
 		});
 
-		it("should allow uploading workers with nested observability logs setting", async () => {
+		it("should allow uploading workers with nested observability traces setting", async () => {
 			writeWranglerConfig({
 				observability: {
 					enabled: true,
