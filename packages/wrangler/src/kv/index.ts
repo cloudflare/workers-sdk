@@ -2,7 +2,6 @@ import { strict as assert } from "node:assert";
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
-import chalk from "chalk";
 import {
 	CommandLineArgsError,
 	parseJSON,
@@ -10,6 +9,7 @@ import {
 	readFileSyncToBuffer,
 	UserError,
 } from "@cloudflare/workers-utils";
+import chalk from "chalk";
 import { readConfig } from "../config";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
