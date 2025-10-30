@@ -832,7 +832,7 @@ export async function buildMiniflareOptions(
 		if (!didWarnMiniflareCronSupport) {
 			didWarnMiniflareCronSupport = true;
 			logger.warn(
-				"Miniflare does not currently trigger scheduled Workers automatically.\n" +
+				"Scheduled Workers are not automatically triggered during local development.\n" +
 					"To test cron triggers locally, run `wrangler dev --local` and then trigger the scheduled event by running:\n" +
 					'  curl "http://localhost:8787/cdn-cgi/mf/scheduled"\n' +
 					"For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally"
