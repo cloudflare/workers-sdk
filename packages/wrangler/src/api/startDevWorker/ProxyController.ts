@@ -68,14 +68,10 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		}
 		assert(this.latestConfig !== undefined);
 
-		// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
-		// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
-		// inspector endpoint.
-		const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
-
 		const cert =
 			this.latestConfig.dev?.server?.secure ||
-			(this.latestConfig.dev.inspector !== false &&
+			(this.inspectorEnabled &&
+				this.latestConfig.dev?.inspector &&
 				this.latestConfig.dev?.inspector?.secure)
 				? getHttpsOptions(
 						this.latestConfig.dev.server?.httpsKeyPath,
@@ -144,7 +140,8 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			liveReload: false,
 		};
 
-		if (this.latestConfig.dev.inspector !== false && !inVscodeJsDebugTerminal) {
+		if (this.inspectorEnabled) {
+			assert(this.latestConfig.dev?.inspector);
 			proxyWorkerOptions.workers.push({
 				name: "InspectorProxyWorker",
 				compatibilityDate: "2023-12-18",
@@ -212,12 +209,12 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		if (willInstantiateMiniflareInstance) {
 			void Promise.all([
 				proxyWorker.ready,
-				this.latestConfig.dev.inspector === false || inVscodeJsDebugTerminal
+				!this.inspectorEnabled
 					? Promise.resolve(undefined)
 					: proxyWorker.unsafeGetDirectURL("InspectorProxyWorker"),
 			])
 				.then(([url, inspectorUrl]) => {
-					if (!inspectorUrl || inVscodeJsDebugTerminal) {
+					if (!this.inspectorEnabled) {
 						return [url, undefined];
 					}
 					// Don't connect the inspector proxy worker until we have a valid ready Miniflare instance.
@@ -404,6 +401,19 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		}
 	}
 
+	get inspectorEnabled() {
+		// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
+		// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
+		// inspector endpoint.
+		const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
+
+		return (
+			this.latestConfig?.dev.inspector !== false &&
+			!inVscodeJsDebugTerminal &&
+			!this.latestConfig?.experimental?.tailLogs
+		);
+	}
+
 	// ******************
 	//   Event Handlers
 	// ******************
@@ -423,7 +433,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		this.latestConfig = data.config;
 
 		void this.sendMessageToProxyWorker({ type: "pause" });
-		if (this.latestConfig.dev.inspector !== false) {
+		if (this.inspectorEnabled) {
 			void this.sendMessageToInspectorProxyWorker({ type: "reloadStart" });
 		}
 	}
@@ -438,7 +448,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			proxyData: data.proxyData,
 		});
 
-		if (this.latestConfig.dev.inspector !== false) {
+		if (this.inspectorEnabled) {
 			void this.sendMessageToInspectorProxyWorker({
 				type: "reloadComplete",
 				proxyData: data.proxyData,

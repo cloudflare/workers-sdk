@@ -12,7 +12,7 @@ export type { TailCLIFilters } from "./filters";
 export { translateCLICommandToFilterMessage } from "./filters";
 export { jsonPrintLogs, prettyPrintLogs } from "./printing";
 
-const TRACE_VERSION = "trace-v1";
+export const TRACE_VERSION = "trace-v1";
 
 /**
  * When creating a Tail, the response from the API contains
@@ -186,7 +186,7 @@ export async function createTail(
 	const tail = new WebSocket(websocketUrl, TRACE_VERSION, {
 		headers: {
 			"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
-			"User-Agent": `wrangler-js/${packageVersion}`,
+			"User-Agent": `wrangler/${packageVersion}`,
 		},
 		...p,
 	});
@@ -264,7 +264,7 @@ export type TailEventMessage = {
 	 */
 	logs: {
 		message: unknown[];
-		level: string; // TODO: make this a union of possible values
+		level: "debug" | "info" | "log" | "warn" | "error";
 		timestamp: number;
 	}[];
 

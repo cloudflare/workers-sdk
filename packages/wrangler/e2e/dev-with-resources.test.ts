@@ -14,7 +14,9 @@ const inspectorPort = await getPort();
 
 const RUNTIMES = [
 	{ flags: "", runtime: "local" },
-	...(CLOUDFLARE_ACCOUNT_ID ? [{ flags: "--remote", runtime: "remote" }] : []),
+	...(CLOUDFLARE_ACCOUNT_ID
+		? [{ flags: "--remote --x-tail-logs", runtime: "remote" }]
+		: []),
 ];
 
 // WebAssembly module containing single `func add(i32, i32): i32` export.
@@ -48,6 +50,9 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
+				# TODO: This is a workaround for an EWC bug where remote dev workers only log properly if they have bindings.
+				#       Remove the below line when MR:7727 is merged
+				version_metadata = { binding = "METADATA" }
 			`,
 			"src/index.ts": dedent`
 				export default {
@@ -80,8 +85,10 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 			expect(text).toContain("Error: monkey");
 			expect(text).toContain("src/index.ts:7:10");
 		}
-		await worker.readUntil(/Error: monkey/, 30_000);
-		await worker.readUntil(/src\/index\.ts:7:10/, 30_000);
+		await worker.readUntil(/monkey/, 30_000);
+		if (isLocal) {
+			await worker.readUntil(/src\/index\.ts:7:10/, 30_000);
+		}
 	});
 
 	it("works with basic service worker", async () => {
@@ -90,6 +97,9 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
+				# TODO: This is a workaround for an EWC bug where remote dev workers only log properly if they have bindings.
+				#       Remove the below line when MR:7727 is merged
+				version_metadata = { binding = "METADATA" }
 			`,
 			"src/index.ts": dedent`
 				addEventListener("fetch", (event) => {
@@ -119,8 +129,10 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 			expect(text).toContain("Error: monkey");
 			expect(text).toContain("src/index.ts:6:9");
 		}
-		await worker.readUntil(/Error: monkey/, 30_000);
-		await worker.readUntil(/src\/index\.ts:6:9/, 30_000);
+		await worker.readUntil(/monkey/, 30_000);
+		if (isLocal) {
+			await worker.readUntil(/src\/index\.ts:6:9/, 30_000);
+		}
 	});
 
 	it.todo("workers with no bundle");
@@ -167,30 +179,33 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 		});
 	});
 
-	it("starts inspector and allows debugging", async () => {
-		await helper.seed({
-			"wrangler.toml": dedent`
+	it.skipIf(runtime === "remote")(
+		"starts inspector and allows debugging",
+		async () => {
+			await helper.seed({
+				"wrangler.toml": dedent`
 				name = "${workerName}"
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
 			`,
-			"src/index.ts": dedent`
+				"src/index.ts": dedent`
 				export default {
 					fetch(request, env, ctx) { return new Response("body"); }
 				}
 			`,
-		});
-		const worker = helper.runLongLived(
-			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
-		);
-		await worker.waitForReady();
-		const inspectorUrl = new URL(`ws://127.0.0.1:${inspectorPort}`);
-		const ws = new WebSocket(inspectorUrl);
-		await events.once(ws, "open");
-		ws.close();
-		// TODO(soon): once we have inspector proxy worker, write basic tests here,
-		//  messages currently too non-deterministic to do this reliably
-	});
+			});
+			const worker = helper.runLongLived(
+				`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`
+			);
+			await worker.waitForReady();
+			const inspectorUrl = new URL(`ws://127.0.0.1:${inspectorPort}`);
+			const ws = new WebSocket(inspectorUrl);
+			await events.once(ws, "open");
+			ws.close();
+			// TODO(soon): once we have inspector proxy worker, write basic tests here,
+			//  messages currently too non-deterministic to do this reliably
+		}
+	);
 
 	it("starts https server", async () => {
 		await helper.seed({
