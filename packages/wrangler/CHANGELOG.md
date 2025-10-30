@@ -1,5 +1,22 @@
 # wrangler
 
+## 4.45.3
+
+### Patch Changes
+
+- [#11117](https://github.com/cloudflare/workers-sdk/pull/11117) [`6822aaf`](https://github.com/cloudflare/workers-sdk/commit/6822aaf405954a2939d1a064b3968297e337f97e) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: show local/remote status before D1 command confirmations
+
+  D1 commands (`execute`, `export`, `migrations apply`, `migrations list`, `delete`, `time-travel`) now display whether they're running against local or remote databases before showing confirmation prompts. This prevents confusion about which database will be affected by the operation.
+
+- [#11077](https://github.com/cloudflare/workers-sdk/pull/11077) [`bce8142`](https://github.com/cloudflare/workers-sdk/commit/bce81422f7685aef8fb62fd80192ea3516690702) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Ensure that process.env is case-insensitive on Windows
+
+  The object that holds the environment variables in `process.env` does not care about the case of its keys
+  in Windows. For example, `process.env.SystemRoot` and `process.env.SYSTEMROOT` will refer to the same value.
+
+  Previously, when merging fields from `.env` files we were replacing this native object with a vanilla
+  JavaScript object, that is case-insensitive, and so sometimes environment variables appeared to be missing
+  when in reality they just had different casing.
+
 ## 4.45.2
 
 ### Patch Changes

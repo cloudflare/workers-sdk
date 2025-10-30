@@ -1,5 +1,41 @@
 # create-cloudflare
 
+## 2.54.1
+
+### Patch Changes
+
+- [#11016](https://github.com/cloudflare/workers-sdk/pull/11016) [`9cef26a`](https://github.com/cloudflare/workers-sdk/commit/9cef26a1e736d33794006a67179b50fcdcd88afc) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-astro | 4.13.1 | 4.13.2 |
+
+- [#11101](https://github.com/cloudflare/workers-sdk/pull/11101) [`0856306`](https://github.com/cloudflare/workers-sdk/commit/08563062f99e2f69818934e422bbeccaf0be593c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.18.1 | 3.18.2 |
+
+- [#11102](https://github.com/cloudflare/workers-sdk/pull/11102) [`ac527a8`](https://github.com/cloudflare/workers-sdk/commit/ac527a85c7053a409040ab675890f84825fabaa3) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 20.3.6 | 20.3.7 |
+
+- [#11103](https://github.com/cloudflare/workers-sdk/pull/11103) [`3a39370`](https://github.com/cloudflare/workers-sdk/commit/3a39370dde4e52707ff685fbe60e2f5a056ca4bf) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To     |
+  | ---------------------- | ------ | ------ |
+  | @tanstack/create-start | 0.34.2 | 0.34.6 |
+
 ## 2.54.0
 
 ### Minor Changes
