@@ -17,7 +17,7 @@ import type WebSocket from "ws";
 /**
  * Pretty-Print a Tail message from a realish-preview attached tail worker
  * This is a simplified version of `prettyPrintLogs` that:
- *  - Only prints HTTP events, since realish previews don't receive any other types of events.
+ *  - Only prints logs from HTTP triggers, since realish previews don't receive any other types of trigger.
  *  - Doesn't print the request log line (e.g. GET https://example.com/ - Ok) since in the realish
  *    context this is printed by Wrangler's proxy controller.
  */
