@@ -2617,6 +2617,7 @@ describe("normalizeAndValidateConfig()", () => {
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
 						ASSETS_RPC: false,
+						REALISH_TAIL_LOGS: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -2773,6 +2774,7 @@ describe("normalizeAndValidateConfig()", () => {
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
 						ASSETS_RPC: false,
+						REALISH_TAIL_LOGS: false,
 					},
 					() =>
 						normalizeAndValidateConfig(
@@ -3111,6 +3113,7 @@ describe("normalizeAndValidateConfig()", () => {
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
 						ASSETS_RPC: false,
+						REALISH_TAIL_LOGS: false,
 					},
 					() =>
 						normalizeAndValidateConfig(

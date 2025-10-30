@@ -96,6 +96,7 @@ function createHandler(def: CommandDefinition) {
 						MULTIWORKER: false,
 						RESOURCES_PROVISION: args.experimentalProvision ?? false,
 						ASSETS_RPC: false,
+						REALISH_TAIL_LOGS: false,
 					};
 
 			await run(experimentalFlags, () =>
