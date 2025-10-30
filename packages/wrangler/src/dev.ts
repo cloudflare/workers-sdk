@@ -39,6 +39,7 @@ export const dev = createCommand({
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			DEPLOY_REMOTE_DIFF_CHECK: false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
+			REALISH_TAIL_LOGS: args.experimentalTailLogs,
 		}),
 	},
 	metadata: {
@@ -255,6 +256,13 @@ export const dev = createCommand({
 			describe:
 				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 			type: "boolean",
+		},
+		"experimental-tail-logs": {
+			type: "boolean",
+			alias: ["x-tail-logs"],
+			describe:
+				"Experimental: Use a tail URL for runtime logs rather than the inspector",
+			default: false,
 		},
 	},
 	async validateArgs(args) {

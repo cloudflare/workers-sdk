@@ -382,6 +382,9 @@ async function resolveConfig(
 		},
 		assets: assetsOptions,
 		tailConsumers: config.tail_consumers ?? [],
+		experimental: {
+			tailLogs: !!input.experimental?.tailLogs,
+		},
 	} satisfies StartDevWorkerOptions;
 
 	if (

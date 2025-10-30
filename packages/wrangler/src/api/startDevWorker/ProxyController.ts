@@ -471,28 +471,22 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			"Trying to handle inspector message when inspector is disabled"
 		);
 
-		switch (message.method) {
-			case "Runtime.consoleAPICalled": {
-				if (this._torndown) {
-					return;
-				}
-
-				logConsoleMessage(message.params);
-
-				break;
+		if (
+			!this.latestConfig?.experimental?.tailLogs &&
+			message.method === "Runtime.consoleAPICalled"
+		) {
+			if (this._torndown) {
+				return;
 			}
-			case "Runtime.exceptionThrown": {
-				if (this._torndown) {
-					return;
-				}
 
-				const stack = getSourceMappedStack(message.params.exceptionDetails);
-				logger.error(message.params.exceptionDetails.text, stack);
-				break;
+			logConsoleMessage(message.params);
+		} else if (message.method === "Runtime.exceptionThrown") {
+			if (this._torndown) {
+				return;
 			}
-			default: {
-				assertNever(message);
-			}
+
+			const stack = getSourceMappedStack(message.params.exceptionDetails);
+			logger.error(message.params.exceptionDetails.text, stack);
 		}
 	}
 	async onInspectorProxyWorkerRequest(

@@ -874,6 +874,7 @@ export const pagesDevCommand = createCommand({
 				RESOURCES_PROVISION: false,
 				DEPLOY_REMOTE_DIFF_CHECK: false,
 				AUTOCREATE_RESOURCES: false,
+				REALISH_TAIL_LOGS: false,
 			},
 			() =>
 				startDev({
@@ -947,6 +948,7 @@ export const pagesDevCommand = createCommand({
 					siteInclude: undefined,
 					siteExclude: undefined,
 					enableContainers: false,
+					experimentalTailLogs: false,
 				})
 		);
 
