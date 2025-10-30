@@ -53,15 +53,4 @@ export default class CustomAssetWorker extends AssetWorker<Env> {
 
 		return response.json() as Promise<string | null>;
 	}
-	override async unstable_canFetch(request: Request) {
-		// the 'sec-fetch-mode: navigate' header is stripped by something on its way into this worker
-		// so we restore it from 'x-mf-sec-fetch-mode'
-		const secFetchMode = request.headers.get("X-Mf-Sec-Fetch-Mode");
-
-		if (secFetchMode) {
-			request.headers.set("Sec-Fetch-Mode", secFetchMode);
-		}
-
-		return await super.unstable_canFetch(request);
-	}
 }
