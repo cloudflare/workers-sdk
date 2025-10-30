@@ -69,3 +69,5 @@ export {
 	constructWranglerConfig,
 	type FullWorkerConfig,
 } from "./construct-wrangler-config";
+
+export * from "./xdg-app-paths";

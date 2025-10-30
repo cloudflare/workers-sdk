@@ -47,6 +47,7 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@iarna/toml": "^3.0.0",
 		"jsonc-parser": "^3.2.0",
 		"@types/command-exists": "^1.2.0",

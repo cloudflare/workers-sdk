@@ -302,7 +302,7 @@ import { getAuthFromEnv } from "./user";
 import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
 import { whoami } from "./user/whoami";
 import { betaCmdColor, proxy } from "./utils/constants";
-import { debugLogFilepath } from "./utils/log-file";
+import { getDebugFilepath } from "./utils/log-file";
 import { logPossibleBugMessage } from "./utils/logPossibleBugMessage";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
@@ -468,7 +468,7 @@ export function createCLIParser(argv: string[]) {
 				version: 1,
 				wrangler_version: wranglerVersion,
 				command_line_args: argv,
-				log_file_path: debugLogFilepath,
+				log_file_path: getDebugFilepath(),
 			});
 
 			return true;

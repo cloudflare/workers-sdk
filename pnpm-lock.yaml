@@ -1609,6 +1609,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20251011.0
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@iarna/toml':
         specifier: ^3.0.0
         version: 3.0.0
@@ -1920,6 +1923,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20251011.0
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
@@ -3647,6 +3653,9 @@ importers:
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+      xdg-app-paths:
+        specifier: ^8.3.0
+        version: 8.3.0
 
   packages/workflows-shared:
     dependencies:
@@ -17977,7 +17986,7 @@ snapshots:
       fast-glob: 3.3.2
       is-glob: 4.0.3
       minimatch: 9.0.5
-      semver: 7.7.2
+      semver: 7.7.3
       ts-api-utils: 2.1.0(typescript@5.8.3)
       typescript: 5.8.3
     transitivePeerDependencies:

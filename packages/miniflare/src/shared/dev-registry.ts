@@ -10,11 +10,11 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { Worker } from "node:worker_threads";
+import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
 import { FSWatcher, watch } from "chokidar";
 import { SocketPorts } from "../runtime";
 import { getProxyFallbackServiceSocketName } from "./external-service";
 import { Log } from "./log";
-import { getGlobalWranglerConfigPath } from "./wrangler";
 
 export type WorkerRegistry = Record<string, WorkerDefinition>;
 
