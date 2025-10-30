@@ -378,13 +378,33 @@ describe("wrangler", () => {
 
 			it("should delete a namespace specified by id", async () => {
 				const requests = mockDeleteRequest("some-namespace-id");
+
+				mockConfirm({
+					text: "Ok to proceed?",
+					result: true,
+				});
 				await runWrangler(
 					`kv namespace delete --namespace-id some-namespace-id`
 				);
+
+				expect(requests.count).toEqual(1);
+			});
+			it("should not ask for confirmation in non-interactive contexts", async () => {
+				const requests = mockDeleteRequest("some-namespace-id");
+
+				setIsTTY(false);
+				await runWrangler(
+					`kv namespace delete --namespace-id some-namespace-id`
+				);
+
 				expect(requests.count).toEqual(1);
 			});
 
 			it("should delete a namespace specified by binding name", async () => {
+				mockConfirm({
+					text: "Ok to proceed?",
+					result: true,
+				});
 				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("bound-id");
 				await runWrangler(
@@ -394,6 +414,10 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a preview namespace specified by binding name", async () => {
+				mockConfirm({
+					text: "Ok to proceed?",
+					result: true,
+				});
 				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-bound-id");
 				await runWrangler(
@@ -421,6 +445,10 @@ describe("wrangler", () => {
 			it("should delete a namespace specified by binding name in a given environment", async () => {
 				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("env-bound-id");
+				mockConfirm({
+					text: "Ok to proceed?",
+					result: true,
+				});
 				await runWrangler(
 					"kv namespace delete --binding someBinding --env some-environment --preview false"
 				);
@@ -430,6 +458,10 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
+					About to delete remote KV namespace 'someBinding (env-bound-id)'.
+					This action is irreversible and will permanently delete all data in the KV namespace.
+
 					Deleting KV namespace env-bound-id.
 					Deleted KV namespace env-bound-id."
 				`);
@@ -440,6 +472,10 @@ describe("wrangler", () => {
 			it("should delete a preview namespace specified by binding name in a given environment", async () => {
 				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-env-bound-id");
+				mockConfirm({
+					text: "Ok to proceed?",
+					result: true,
+				});
 				await runWrangler(
 					`kv namespace delete --binding someBinding --env some-environment --preview`
 				);

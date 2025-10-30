@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
+import chalk from "chalk";
 import {
 	CommandLineArgsError,
 	parseJSON,
@@ -182,6 +183,12 @@ export const kvNamespaceDeleteCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with a preview namespace",
 		},
+		"skip-confirmation": {
+			type: "boolean",
+			description: "Skip confirmation",
+			alias: "y",
+			default: false,
+		},
 	},
 
 	validateArgs(args) {
@@ -201,6 +208,17 @@ export const kvNamespaceDeleteCommand = createCommand({
 		}
 
 		const accountId = await requireAuth(config);
+		logger.log(
+			`About to delete ${chalk.bold("remote")} KV namespace '${args.binding ? args.binding + ` (${id})` : args.namespaceId}'.\n` +
+				`This action is irreversible and will permanently delete all data in the KV namespace.\n`
+		);
+		if (!args.skipConfirmation) {
+			const response = await confirm(`Ok to proceed?`);
+			if (!response) {
+				logger.log(`Not deleting.`);
+				return;
+			}
+		}
 
 		logger.log(`Deleting KV namespace ${id}.`);
 		await deleteKVNamespace(config, accountId, id);
