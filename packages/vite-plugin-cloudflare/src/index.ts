@@ -261,12 +261,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 					// The HTTP server is not available in middleware mode
 					if (viteDevServer.httpServer) {
-						handleWebSocket(viteDevServer.httpServer, async () => {
-							assert(miniflare, `Miniflare not defined`);
-							const entryWorker = await miniflare.getWorker(entryWorkerName);
-
-							return entryWorker.fetch;
-						});
+						handleWebSocket(
+							viteDevServer.httpServer,
+							miniflare,
+							entryWorkerName
+						);
 					}
 
 					const staticRouting: StaticRouting | undefined =
@@ -443,11 +442,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					});
 				}
 
-				handleWebSocket(vitePreviewServer.httpServer, () => {
-					assert(miniflare, `Miniflare not defined`);
-
-					return miniflare.dispatchFetch;
-				});
+				handleWebSocket(vitePreviewServer.httpServer, miniflare);
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 				vitePreviewServer.middlewares.use(
