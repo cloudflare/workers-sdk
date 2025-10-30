@@ -4880,7 +4880,6 @@ describe("normalizeAndValidateConfig()", () => {
 				// 	  - Expected \\"placement.hint.scheme\\" field to be one of [\\"http\\",\\"tcp\\",\\"aws-region\\",\\"gcp-region\\",\\"cf-pop\\"] but got \\"invalid-scheme\\"."
 				// `);
 			});
-
 		});
 
 		describe("route & routes fields", () => {

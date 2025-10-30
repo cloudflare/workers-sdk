@@ -1090,11 +1090,17 @@ function normalizeAndValidatePlacement(
 			const fieldsPresent = [hasRegion, hasHost, hasHostname].filter(Boolean);
 			if (fieldsPresent.length > 1) {
 				const presentFields = [];
-				if (hasRegion) {presentFields.push("region");}
-				if (hasHost) {presentFields.push("host");}
-				if (hasHostname) {presentFields.push("hostname");}
+				if (hasRegion) {
+					presentFields.push("region");
+				}
+				if (hasHost) {
+					presentFields.push("host");
+				}
+				if (hasHostname) {
+					presentFields.push("hostname");
+				}
 				diagnostics.errors.push(
-					`"placement" fields ${presentFields.map(f => `"${f}"`).join(", ")} are mutually exclusive. Only one can be specified.`
+					`"placement" fields ${presentFields.map((f) => `"${f}"`).join(", ")} are mutually exclusive. Only one can be specified.`
 				);
 			}
 		}
