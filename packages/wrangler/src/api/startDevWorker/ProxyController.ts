@@ -64,7 +64,9 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 		const cert =
 			this.latestConfig.dev?.server?.secure ||
-			this.latestConfig.dev?.inspector?.secure
+			(this.inspectorEnabled &&
+				this.latestConfig.dev?.inspector &&
+				this.latestConfig.dev?.inspector?.secure)
 				? getHttpsOptions(
 						this.latestConfig.dev.server?.httpsKeyPath,
 						this.latestConfig.dev.server?.httpsCertPath
@@ -112,44 +114,6 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 					cache: false,
 					unsafeEphemeralDurableObjects: true,
 				},
-				{
-					name: "InspectorProxyWorker",
-					compatibilityDate: "2023-12-18",
-					compatibilityFlags: [
-						"nodejs_compat",
-						"increase_websocket_message_size",
-					],
-					modulesRoot: path.dirname(inspectorProxyWorkerPath),
-					modules: [{ type: "ESModule", path: inspectorProxyWorkerPath }],
-					durableObjects: {
-						DURABLE_OBJECT: {
-							className: "InspectorProxyWorker",
-							unsafePreventEviction: true,
-						},
-					},
-					serviceBindings: {
-						PROXY_CONTROLLER: async (req): Promise<Response> => {
-							const body =
-								(await req.json()) as InspectorProxyWorkerOutgoingRequestBody;
-
-							return this.onInspectorProxyWorkerRequest(body);
-						},
-					},
-					bindings: {
-						PROXY_CONTROLLER_AUTH_SECRET: this.secret,
-					},
-
-					unsafeDirectSockets: [
-						{
-							host: this.latestConfig.dev?.inspector?.hostname,
-							port: this.latestConfig.dev?.inspector?.port ?? 0,
-						},
-					],
-
-					// no need to use file-system, so don't
-					cache: false,
-					unsafeEphemeralDurableObjects: true,
-				},
 			],
 
 			verbose: logger.loggerLevel === "debug",
@@ -164,6 +128,48 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			structuredWorkerdLogs: true,
 			liveReload: false,
 		};
+
+		if (this.inspectorEnabled) {
+			assert(this.latestConfig.dev?.inspector);
+			proxyWorkerOptions.workers.push({
+				name: "InspectorProxyWorker",
+				compatibilityDate: "2023-12-18",
+				compatibilityFlags: [
+					"nodejs_compat",
+					"increase_websocket_message_size",
+				],
+				modulesRoot: path.dirname(inspectorProxyWorkerPath),
+				modules: [{ type: "ESModule", path: inspectorProxyWorkerPath }],
+				durableObjects: {
+					DURABLE_OBJECT: {
+						className: "InspectorProxyWorker",
+						unsafePreventEviction: true,
+					},
+				},
+				serviceBindings: {
+					PROXY_CONTROLLER: async (req): Promise<Response> => {
+						const body =
+							(await req.json()) as InspectorProxyWorkerOutgoingRequestBody;
+
+						return this.onInspectorProxyWorkerRequest(body);
+					},
+				},
+				bindings: {
+					PROXY_CONTROLLER_AUTH_SECRET: this.secret,
+				},
+
+				unsafeDirectSockets: [
+					{
+						host: this.latestConfig.dev?.inspector?.hostname,
+						port: this.latestConfig.dev?.inspector?.port ?? 0,
+					},
+				],
+
+				// no need to use file-system, so don't
+				cache: false,
+				unsafeEphemeralDurableObjects: true,
+			});
+		}
 
 		const proxyWorkerOptionsChanged = didMiniflareOptionsChange(
 			this.proxyWorkerOptions,
@@ -193,9 +199,14 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		if (willInstantiateMiniflareInstance) {
 			void Promise.all([
 				proxyWorker.ready,
-				proxyWorker.unsafeGetDirectURL("InspectorProxyWorker"),
+				!this.inspectorEnabled
+					? Promise.resolve(undefined)
+					: proxyWorker.unsafeGetDirectURL("InspectorProxyWorker"),
 			])
 				.then(([url, inspectorUrl]) => {
+					if (!this.inspectorEnabled) {
+						return [url, undefined];
+					}
 					// Don't connect the inspector proxy worker until we have a valid ready Miniflare instance.
 					// Otherwise, tearing down the ProxyController immediately after setting it up
 					// will result in proxyWorker.ready throwing, but reconnectInspectorProxyWorker hanging for ever,
@@ -367,6 +378,19 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		}
 	}
 
+	get inspectorEnabled() {
+		// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
+		// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
+		// inspector endpoint.
+		const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
+
+		return (
+			this.latestConfig?.dev.inspector !== false &&
+			!inVscodeJsDebugTerminal &&
+			!this.latestConfig?.experimental?.tailLogs
+		);
+	}
+
 	// ******************
 	//   Event Handlers
 	// ******************
@@ -386,7 +410,9 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		this.latestConfig = data.config;
 
 		void this.sendMessageToProxyWorker({ type: "pause" });
-		void this.sendMessageToInspectorProxyWorker({ type: "reloadStart" });
+		if (this.inspectorEnabled) {
+			void this.sendMessageToInspectorProxyWorker({ type: "reloadStart" });
+		}
 	}
 	onReloadComplete(data: ReloadCompleteEvent) {
 		this.latestConfig = data.config;
@@ -397,10 +423,12 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			proxyData: data.proxyData,
 		});
 
-		void this.sendMessageToInspectorProxyWorker({
-			type: "reloadComplete",
-			proxyData: data.proxyData,
-		});
+		if (this.inspectorEnabled) {
+			void this.sendMessageToInspectorProxyWorker({
+				type: "reloadComplete",
+				proxyData: data.proxyData,
+			});
+		}
 	}
 	onProxyWorkerMessage(message: ProxyWorkerOutgoingRequestBody) {
 		switch (message.type) {

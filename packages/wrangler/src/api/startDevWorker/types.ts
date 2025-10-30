@@ -177,6 +177,10 @@ export interface StartDevWorkerInput {
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
 	assets?: string;
+
+	experimental?: {
+		tailLogs: boolean;
+	};
 }
 
 export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {

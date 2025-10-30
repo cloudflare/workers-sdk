@@ -335,6 +335,13 @@ export const dev = createCommand({
 			default: false,
 			hidden: true,
 		},
+		"experimental-tail-logs": {
+			type: "boolean",
+			alias: ["x-tail-logs"],
+			describe:
+				"Experimental: Get runtime logs for the remote worker via Workers Tails rather than the Devtools inspector",
+			default: false,
+		},
 	},
 	async validateArgs(args) {
 		if (args.liveReload && args.remote) {
