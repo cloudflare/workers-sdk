@@ -283,9 +283,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						);
 						const userWorkerHandler = createRequestHandler(async (request) => {
 							assert(miniflare, `Miniflare not defined`);
-							const userWorker = await miniflare.getWorker(entryWorkerName);
+							request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 
-							return userWorker.fetch(request, { redirect: "manual" });
+							return miniflare.dispatchFetch(request, { redirect: "manual" });
 						});
 
 						preMiddleware = async (req, res, next) => {
@@ -378,17 +378,19 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							assert(miniflare, `Miniflare not defined`);
 
 							if (req[kRequestType] === "asset") {
-								const assetWorker =
-									await miniflare.getWorker(ASSET_WORKER_NAME);
+								request.headers.set(
+									CoreHeaders.ROUTE_OVERRIDE,
+									ASSET_WORKER_NAME
+								);
 
-								return assetWorker.fetch(request, { redirect: "manual" });
+								return miniflare.dispatchFetch(request, { redirect: "manual" });
 							} else {
-								const routerWorker =
-									await miniflare.getWorker(ROUTER_WORKER_NAME);
+								request.headers.set(
+									CoreHeaders.ROUTE_OVERRIDE,
+									ROUTER_WORKER_NAME
+								);
 
-								return routerWorker.fetch(request, {
-									redirect: "manual",
-								});
+								return miniflare.dispatchFetch(request, { redirect: "manual" });
 							}
 						})
 					);
