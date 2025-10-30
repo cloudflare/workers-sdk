@@ -758,10 +758,24 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		}
 
 		// The upload API only accepts an empty string or no specified placement for the "off" mode.
-		const placement: CfPlacement | undefined =
-			config.placement?.mode === "smart"
-				? { mode: "smart", hint: config.placement.hint }
-				: undefined;
+		let placement: CfPlacement | undefined;
+		if (config.placement?.mode === "smart") {
+			placement = { mode: "smart", hint: config.placement.hint };
+		} else if (
+			config.placement?.mode === "targeted" ||
+			config.placement?.region ||
+			config.placement?.host ||
+			config.placement?.hostname
+		) {
+			placement = {
+				mode: "targeted",
+				region: config.placement.region,
+				host: config.placement.host,
+				hostname: config.placement.hostname,
+			};
+		} else {
+			placement = undefined;
+		}
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
 		const main: CfModule = {

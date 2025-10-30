@@ -1226,7 +1226,7 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected \\"tsconfig\\" to be of type string but got true.
 				  - Expected \\"name\\" to be of type string, alphanumeric and lowercase with dashes only but got 111.
 				  - Expected \\"main\\" to be of type string but got 1333.
-				  - Expected \\"placement.mode\\" field to be one of [\\"off\\",\\"smart\\"] but got \\"INVALID\\".
+				  - Expected \\"placement.mode\\" field to be one of [\\"off\\",\\"smart\\",\\"targeted\\"] but got \\"INVALID\\".
 				  - The field \\"define.DEF1\\" should be a string but got 1777.
 				  - Expected \\"no_bundle\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"minify\\" to be of type boolean but got \\"INVALID\\".
@@ -4806,7 +4806,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - \\"placement.hint\\" cannot be set if \\"placement.mode\\" is not \\"smart\\""
+					  - \\"placement.hint\\" can only be set when \\"placement.mode\\" is \\"smart\\""
 				`);
 			});
 
@@ -4819,6 +4819,66 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it(`should error if placement hint object is set with placement mode "targeted"`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { mode: "targeted", hint: "wnam" } },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+			});
+
+			it(`should not error if hostname field is set with placement mode "targeted"`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { hostname: "example.com" } },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it(`should not error if host field is set with placement mode "targeted"`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { host: "example.com:5432" } },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it(`should not error if host field is set with placement mode "targeted"`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { region: "aws:us-east-1" } },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
+
+			it(`should error if placement has an invalid field`, () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{ placement: { shoeSize: 13 } },
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasErrors()).toBe(true);
+				// AJR -- rewrite this to match on error message
+				// expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				// 	"Processing wrangler configuration:
+				// 	  - Expected \\"placement.hint.scheme\\" field to be one of [\\"http\\",\\"tcp\\",\\"aws-region\\",\\"gcp-region\\",\\"cf-pop\\"] but got \\"invalid-scheme\\"."
+				// `);
 			});
 		});
 
