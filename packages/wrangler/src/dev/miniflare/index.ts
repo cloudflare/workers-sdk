@@ -817,8 +817,6 @@ export function buildSitesOptions({
 	}
 }
 
-let didWarnMiniflareCronSupport = false;
-
 export type Options = Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
 
 export async function buildMiniflareOptions(
@@ -829,15 +827,20 @@ export async function buildMiniflareOptions(
 	onDevRegistryUpdate?: (registry: WorkerRegistry) => void
 ): Promise<Options> {
 	if (config.crons?.length && !config.testScheduled) {
-		if (!didWarnMiniflareCronSupport) {
-			didWarnMiniflareCronSupport = true;
-			logger.warn(
-				"Scheduled Workers are not automatically triggered during local development.\n" +
-					"To test cron triggers locally, run `wrangler dev --local` and then trigger the scheduled event by running:\n" +
-					'  curl "http://localhost:8787/cdn-cgi/mf/scheduled"\n' +
-					"For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally"
-			);
-		}
+		const host =
+			config.initialIp === "0.0.0.0" || config.initialIp === "::"
+				? "localhost"
+				: config.initialIp.includes(":")
+					? `[${config.initialIp}]`
+					: config.initialIp;
+		const port = config.initialPort;
+
+		logger.once.warn(
+			`Scheduled Workers are not automatically triggered during local development.\n` +
+				`To manually trigger a scheduled event, run:\n` +
+				`  curl "http://${host}:${port}/cdn-cgi/handler/scheduled"\n` +
+				`For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally`
+		);
 	}
 
 	const upstream =
