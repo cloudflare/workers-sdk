@@ -99,13 +99,11 @@ function getUserRequest(
 	// https://developers.cloudflare.com/fundamentals/reference/http-request-headers/#accept-encoding
 	request.headers.set("Accept-Encoding", "br, gzip");
 
-	// `miniflare.dispatchFetch(request)` strips any `sec-fetch-mode` header. This allows clients to
-	// send it over a `x-mf-sec-fetch-mode` header instead (currently required by `vite preview`)
-	const secFetchMode = request.headers.get("X-Mf-Sec-Fetch-Mode");
+	const secFetchMode = request.headers.get(CoreHeaders.SEC_FETCH_MODE);
 	if (secFetchMode) {
 		request.headers.set("Sec-Fetch-Mode", secFetchMode);
 	}
-	request.headers.delete("X-Mf-Sec-Fetch-Mode");
+	request.headers.delete(CoreHeaders.SEC_FETCH_MODE);
 
 	if (rewriteHeadersFromOriginalUrl) {
 		request.headers.set("Host", url.host);
