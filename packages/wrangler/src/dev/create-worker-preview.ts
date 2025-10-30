@@ -214,19 +214,17 @@ export async function createPreviewSession(
 			token: string;
 			prewarm: string;
 		};
-		let inspector: URL | undefined;
+		let inspectorUrl: URL | undefined;
 		if (!tailLogs) {
-			inspector = new URL(inspector_websocket);
-			inspector.searchParams.append("cf_workers_preview_token", token);
+			inspectorUrl = switchHost(inspector_websocket, ctx.host, !!ctx.zone);
+			inspectorUrl.searchParams.append("cf_workers_preview_token", token);
 		}
 		return {
 			id: crypto.randomUUID(),
 			value: token,
-			host: ctx.host ?? inspector?.host ?? switchedExchangeUrl.host,
+			host: ctx.host ?? inspectorUrl?.host ?? switchedExchangeUrl.host,
 			prewarmUrl: switchHost(prewarm, ctx.host, !!ctx.zone),
-			...(!tailLogs && inspector
-				? { inspectorUrl: switchHost(inspector.href, ctx.host, !!ctx.zone) }
-				: {}),
+			inspectorUrl,
 		};
 	} catch (e) {
 		if (!(e instanceof ParseError)) {
