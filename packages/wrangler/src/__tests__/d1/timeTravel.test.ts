@@ -191,6 +191,10 @@ describe("time-travel", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
+					Resource location: local
+
+					Use --remote if you want to access the remote instance.
+
 					🚧 Restoring database db from bookmark undefined
 
 					⚠️ This will overwrite all data in database db.
@@ -230,6 +234,10 @@ describe("time-travel", () => {
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
+					Resource location: local
+
+					Use --remote if you want to access the remote instance.
+
 					🚧 Time Traveling...
 					⚠️ Timestamp '2011-09-05T14:48:00.000Z' corresponds with bookmark 'undefined'
 					⚡️ To restore to this specific bookmark, run:

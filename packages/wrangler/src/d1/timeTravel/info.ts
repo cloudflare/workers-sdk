@@ -13,6 +13,7 @@ export const d1TimeTravelInfoCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
+		printResourceLocation: (args) => !args.json,
 	},
 	args: {
 		database: {

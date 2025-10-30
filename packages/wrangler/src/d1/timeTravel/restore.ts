@@ -17,6 +17,7 @@ export const d1TimeTravelRestoreCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
+		printResourceLocation: (args) => !args.json,
 	},
 	args: {
 		database: {

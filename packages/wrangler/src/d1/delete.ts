@@ -32,7 +32,6 @@ export const d1DeleteCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	async handler({ name, skipConfirmation }, { config }) {
-		printResourceLocation("remote");
 		const accountId = await requireAuth(config);
 
 		const db: Database = await getDatabaseByNameOrBinding(
@@ -40,9 +39,9 @@ export const d1DeleteCommand = createCommand({
 			accountId,
 			name
 		);
-
+		printResourceLocation("remote");
 		logger.log(
-			`\nAbout to delete ${chalk.bold("remote")} database DB '${name}' (${db.uuid}).\n` +
+			`About to delete ${chalk.bold("remote")} database DB '${name}' (${db.uuid}).\n` +
 				`This action is irreversible and will permanently delete all data in the database.\n`
 		);
 		if (!skipConfirmation) {

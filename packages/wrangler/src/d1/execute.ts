@@ -50,7 +50,7 @@ export const d1ExecuteCommand = createCommand({
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
-		printResourceLocation: true,
+		printResourceLocation: (args) => !args.json,
 	},
 	args: {
 		database: {

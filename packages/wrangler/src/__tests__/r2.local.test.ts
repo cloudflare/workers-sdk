@@ -32,6 +32,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
@@ -40,6 +41,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
@@ -54,6 +56,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
@@ -62,6 +65,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
@@ -70,6 +74,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
@@ -92,6 +97,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
@@ -100,6 +106,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
@@ -114,6 +121,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
@@ -122,6 +130,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
@@ -130,6 +139,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Deleting object \\"wormhole-img.png\\" from bucket \\"bucket-object-test\\".
@@ -171,6 +181,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Creating object \\"file-one\\" in bucket \\"bucket-object-test\\".
@@ -179,6 +190,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Creating object \\"file-two\\" in bucket \\"bucket-object-test\\".
@@ -187,6 +199,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Downloading \\"file-one\\" from \\"bucket-object-test\\".
@@ -195,6 +208,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
+
 					Use --remote if you want to access the remote instance.
 
 					Downloading \\"file-two\\" from \\"bucket-object-test\\".
