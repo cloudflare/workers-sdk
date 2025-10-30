@@ -409,8 +409,8 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 
 		return (
 			this.latestConfig?.dev.inspector !== false &&
-			inVscodeJsDebugTerminal &&
-			!!this.latestConfig?.experimental?.tailLogs
+			!inVscodeJsDebugTerminal &&
+			!this.latestConfig?.experimental?.tailLogs
 		);
 	}
 
