@@ -23,6 +23,9 @@
 			"binding": "MY_KV",
 			"id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
 		},
+		{
+			"binding": "MY_PROVISIONED_KV",
+		},
 	],
 	"r2_buckets": [
 		{
