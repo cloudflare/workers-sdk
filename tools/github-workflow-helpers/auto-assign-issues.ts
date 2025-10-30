@@ -40,7 +40,7 @@ const TEAM_ASSIGNMENTS: { [label: string]: { [jobRole: string]: string } } = {
 	unenv: { em: "lrapoport-cf", pm: "mattietk" },
 	unstable_dev: { em: "lrapoport-cf", pm: "mattietk" },
 	vectorize: { em: "sejoker", pm: "jonesphillip" },
-	"vite-plugin": { em: "lrapoport-cf", pm: "mattietk", tl: "jamesopstad" },
+	"vite-plugin": { em: "lrapoport-cf", pm: "mattietk" },
 	vitest: { em: "lrapoport-cf", pm: "mattietk" },
 	"Workers + Assets": { em: "dcartertwo", pm: "irvinebroque" },
 	"workers ai": {},
