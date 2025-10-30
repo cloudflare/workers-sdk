@@ -9,6 +9,7 @@ import {
 	readFileSyncToBuffer,
 	UserError,
 } from "@cloudflare/workers-utils";
+import chalk from "chalk";
 import { readConfig } from "../config";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
@@ -182,6 +183,12 @@ export const kvNamespaceDeleteCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with a preview namespace",
 		},
+		"skip-confirmation": {
+			type: "boolean",
+			description: "Skip confirmation",
+			alias: "y",
+			default: false,
+		},
 	},
 
 	validateArgs(args) {
@@ -201,6 +208,17 @@ export const kvNamespaceDeleteCommand = createCommand({
 		}
 
 		const accountId = await requireAuth(config);
+		logger.log(
+			`About to delete ${chalk.bold("remote")} KV namespace '${args.binding ? args.binding + ` (${id})` : args.namespaceId}'.\n` +
+				`This action is irreversible and will permanently delete all data in the KV namespace.\n`
+		);
+		if (!args.skipConfirmation) {
+			const response = await confirm(`Ok to proceed?`);
+			if (!response) {
+				logger.log(`Not deleting.`);
+				return;
+			}
+		}
 
 		logger.log(`Deleting KV namespace ${id}.`);
 		await deleteKVNamespace(config, accountId, id);

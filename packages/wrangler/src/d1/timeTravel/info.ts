@@ -1,6 +1,7 @@
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
+import { printResourceLocation } from "../../utils/is-local";
 import { getDatabaseByNameOrBinding } from "../utils";
 import { getBookmarkIdFromTimestamp, throwIfDatabaseIsAlpha } from "./utils";
 
@@ -35,6 +36,9 @@ export const d1TimeTravelInfoCommand = createCommand({
 	async handler({ database, json, timestamp }, { config }) {
 		// bookmark
 		const accountId = await requireAuth(config);
+		if (!json) {
+			printResourceLocation("remote");
+		}
 		const db = await getDatabaseByNameOrBinding(config, accountId, database);
 		await throwIfDatabaseIsAlpha(config, accountId, db.uuid);
 		const result = await getBookmarkIdFromTimestamp(
