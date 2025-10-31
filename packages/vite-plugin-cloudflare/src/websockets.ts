@@ -1,20 +1,19 @@
 import { createHeaders } from "@remix-run/node-fetch-server";
-import { coupleWebSocket } from "miniflare";
+import { CoreHeaders, coupleWebSocket } from "miniflare";
 import { WebSocketServer } from "ws";
 import { UNKNOWN_HOST } from "./shared";
-import type { MaybePromise } from "./utils";
-import type { Fetcher } from "@cloudflare/workers-types/experimental";
-import type { ReplaceWorkersTypes } from "miniflare";
+import type { Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import type * as vite from "vite";
 
 /**
- * This function handles 'upgrade' requests to the Vite HTTP server and forwards WebSocket events between the client and Worker environments.
+ * Handles 'upgrade' requests to the Vite HTTP server and forwards WebSocket events between the client and Worker environments.
  */
 export function handleWebSocket(
 	httpServer: vite.HttpServer,
-	getFetcher: () => MaybePromise<ReplaceWorkersTypes<Fetcher>["fetch"]>
+	miniflare: Miniflare,
+	entryWorkerName?: string
 ) {
 	const nodeWebSocket = new WebSocketServer({ noServer: true });
 
@@ -29,8 +28,12 @@ export function handleWebSocket(
 			}
 
 			const headers = createHeaders(request);
-			const fetcher = await getFetcher();
-			const response = await fetcher(url, {
+
+			if (entryWorkerName) {
+				headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
+			}
+
+			const response = await miniflare.dispatchFetch(url, {
 				headers,
 				method: request.method,
 			});
