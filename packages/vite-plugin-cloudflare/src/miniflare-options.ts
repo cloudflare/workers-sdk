@@ -249,10 +249,9 @@ export async function getDevMiniflareOptions(config: {
 	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig;
 	viteDevServer: vite.ViteDevServer;
 	inspectorPort: number | false;
-	containerBuildId?: string;
 }): Promise<{
-	config: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
-	allContainerOptions: Map<
+	miniflareOptions: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
+	containerOptions: Map<
 		string,
 		NonNullable<ReturnType<typeof getContainerOptions>>[number]
 	>;
@@ -393,7 +392,7 @@ export async function getDevMiniflareOptions(config: {
 		},
 	];
 
-	let allContainerOptions = new Map<
+	let containerOptions = new Map<
 		string,
 		NonNullable<ReturnType<typeof getContainerOptions>>[number]
 	>();
@@ -444,7 +443,7 @@ export async function getDevMiniflareOptions(config: {
 									configPath: workerConfig.configPath,
 								});
 								for (const option of options ?? []) {
-									allContainerOptions.set(option.image_tag, option);
+									containerOptions.set(option.image_tag, option);
 								}
 							}
 
@@ -536,7 +535,7 @@ export async function getDevMiniflareOptions(config: {
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	return {
-		config: {
+		miniflareOptions: {
 			log: logger,
 			logRequests: false,
 			inspectorPort: inspectorPort === false ? undefined : inspectorPort,
@@ -680,7 +679,7 @@ export async function getDevMiniflareOptions(config: {
 				}
 			},
 		},
-		allContainerOptions,
+		containerOptions,
 	};
 }
 
@@ -714,8 +713,8 @@ export async function getPreviewMiniflareOptions(config: {
 	vitePreviewServer: vite.PreviewServer;
 	inspectorPort: number | false;
 }): Promise<{
-	config: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
-	allContainerOptions: Map<
+	miniflareOptions: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
+	containerOptions: Map<
 		string,
 		NonNullable<ReturnType<typeof getContainerOptions>>[number]
 	>;
@@ -723,7 +722,7 @@ export async function getPreviewMiniflareOptions(config: {
 	const { resolvedPluginConfig, vitePreviewServer, inspectorPort } = config;
 	const resolvedViteConfig = vitePreviewServer.config;
 
-	let allContainerOptions = new Map<
+	let containerOptions = new Map<
 		string,
 		NonNullable<ReturnType<typeof getContainerOptions>>[number]
 	>();
@@ -769,7 +768,7 @@ export async function getPreviewMiniflareOptions(config: {
 						configPath: workerConfig.configPath,
 					});
 					for (const option of options ?? []) {
-						allContainerOptions.set(option.image_tag, option);
+						containerOptions.set(option.image_tag, option);
 					}
 				}
 
@@ -817,7 +816,7 @@ export async function getPreviewMiniflareOptions(config: {
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	return {
-		config: {
+		miniflareOptions: {
 			log: logger,
 			inspectorPort: inspectorPort === false ? undefined : inspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
@@ -829,7 +828,7 @@ export async function getPreviewMiniflareOptions(config: {
 			),
 			workers,
 		},
-		allContainerOptions,
+		containerOptions,
 	};
 }
 

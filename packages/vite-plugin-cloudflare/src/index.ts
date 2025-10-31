@@ -5,13 +5,7 @@ import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/ass
 import { CoreHeaders } from "miniflare";
 import colors from "picocolors";
 import * as vite from "vite";
-import { hasAssetsConfigChanged } from "./asset-config";
-import { createBuildApp } from "./build";
-import {
-	cloudflareBuiltInModules,
-	createCloudflareEnvironmentOptions,
-	initRunners,
-} from "./cloudflare-environment";
+import { initRunners } from "./cloudflare-environment";
 import {
 	ASSET_WORKER_NAME,
 	kRequestType,
@@ -25,7 +19,6 @@ import {
 	getInputInspectorPortOption,
 	getResolvedInspectorPort,
 } from "./debugging";
-import { hasLocalDevVarsFileChanged } from "./dev-vars";
 import {
 	getDevMiniflareOptions,
 	getEntryWorkerConfig,
@@ -37,6 +30,7 @@ import {
 	resolvePluginConfig,
 } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
+import { configPlugin } from "./plugins/config";
 import {
 	nodeJsAlsPlugin,
 	nodeJsCompatPlugin,
@@ -50,10 +44,8 @@ import {
 } from "./plugins/virtual-modules";
 import { wasmHelperPlugin } from "./plugins/wasm";
 import { UNKNOWN_HOST } from "./shared";
-import { createRequestHandler, debuglog, getOutputDirectory } from "./utils";
-import { validateWorkerEnvironmentOptions } from "./vite-config";
+import { createRequestHandler, debuglog } from "./utils";
 import { handleWebSocket } from "./websockets";
-import { getWarningForWorkersConfigs } from "./workers-configs";
 import type { PluginConfig } from "./plugin-config";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 
@@ -77,118 +69,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			name: "vite-plugin-cloudflare",
 			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
 			sharedDuringBuild: true,
-			// Vite `config` Hook
-			// see https://vite.dev/guide/api-plugin.html#config
 			config(userConfig, env) {
 				ctx.setResolvedPluginConfig(
 					resolvePluginConfig(pluginConfig, userConfig, env)
 				);
-
-				if (ctx.resolvedPluginConfig.type === "preview") {
-					return { appType: "custom" };
-				}
-
-				if (!ctx.hasShownWorkerConfigWarnings) {
-					ctx.hasShownWorkerConfigWarnings = true;
-					const workerConfigWarnings = getWarningForWorkersConfigs(
-						ctx.resolvedPluginConfig.rawConfigs
-					);
-					if (workerConfigWarnings) {
-						console.warn(workerConfigWarnings);
-					}
-				}
-
-				const defaultDeniedFiles = [
-					".env",
-					".env.*",
-					"*.{crt,pem}",
-					"**/.git/**",
-				];
-
-				return {
-					appType: "custom",
-					server: {
-						fs: {
-							deny: [...defaultDeniedFiles, ".dev.vars", ".dev.vars.*"],
-						},
-					},
-					environments:
-						ctx.resolvedPluginConfig.type === "workers"
-							? {
-									...Object.fromEntries(
-										Object.entries(ctx.resolvedPluginConfig.workers).map(
-											([environmentName, workerConfig]) => {
-												return [
-													environmentName,
-													createCloudflareEnvironmentOptions({
-														workerConfig,
-														userConfig,
-														mode: env.mode,
-														environmentName,
-														isEntryWorker:
-															ctx.resolvedPluginConfig.type === "workers" &&
-															environmentName ===
-																ctx.resolvedPluginConfig
-																	.entryWorkerEnvironmentName,
-														hasNodeJsCompat:
-															ctx.getNodeJsCompat(environmentName) !==
-															undefined,
-													}),
-												];
-											}
-										)
-									),
-									client: {
-										build: {
-											outDir: getOutputDirectory(userConfig, "client"),
-										},
-										optimizeDeps: {
-											// Some frameworks allow users to mix client and server code in the same file and then extract the server code.
-											// As the dependency optimization may happen before the server code is extracted, we should exclude Cloudflare built-ins from client optimization.
-											exclude: [...cloudflareBuiltInModules],
-										},
-									},
-								}
-							: undefined,
-					builder: {
-						buildApp:
-							userConfig.builder?.buildApp ??
-							createBuildApp(ctx.resolvedPluginConfig),
-					},
-				};
 			},
-			// Vite `configResolved` Hook
-			// see https://vite.dev/guide/api-plugin.html#configresolved
-			configResolved(resolvedViteConfig) {
-				ctx.setResolvedViteConfig(resolvedViteConfig);
-
-				if (ctx.resolvedPluginConfig.type === "workers") {
-					validateWorkerEnvironmentOptions(
-						ctx.resolvedPluginConfig,
-						ctx.resolvedViteConfig
-					);
-				}
-			},
-			buildStart() {
-				// This resets the value when the dev server restarts
-				ctx.hasShownWorkerConfigWarnings = false;
-			},
-			// Vite `configureServer` Hook
-			// see https://vite.dev/guide/api-plugin.html#configureserver
 			async configureServer(viteDevServer) {
-				// Patch the `server.restart` method to track whether the server is restarting or not.
-				const restartServer = viteDevServer.restart.bind(viteDevServer);
-				viteDevServer.restart = async () => {
-					try {
-						ctx.isRestartingDevServer = true;
-						debuglog("From server.restart(): Restarting server...");
-						await restartServer();
-						debuglog("From server.restart(): Restarted server...");
-					} finally {
-						ctx.isRestartingDevServer = false;
-					}
-				};
-
 				assertIsNotPreview(ctx.resolvedPluginConfig);
 
 				// TODO: add inspector back in
@@ -198,41 +84,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// 	ctx.miniflare
 				// );
 
-				const configChangedHandler = async (changedFilePath: string) => {
-					assertIsNotPreview(ctx.resolvedPluginConfig);
-
-					if (
-						ctx.resolvedPluginConfig.configPaths.has(changedFilePath) ||
-						hasLocalDevVarsFileChanged(
-							ctx.resolvedPluginConfig,
-							changedFilePath
-						) ||
-						hasAssetsConfigChanged(
-							ctx.resolvedPluginConfig,
-							ctx.resolvedViteConfig,
-							changedFilePath
-						)
-					) {
-						debuglog("Config changed: " + changedFilePath);
-						viteDevServer.watcher.off("change", configChangedHandler);
-						debuglog("Restarting dev server and aborting previous setup");
-						await viteDevServer.restart();
-					}
-				};
-				viteDevServer.watcher.on("change", configChangedHandler);
-
-				let containerBuildId: string | undefined;
-				const entryWorkerConfig = getEntryWorkerConfig(
-					ctx.resolvedPluginConfig
-				);
-
-				const { config: miniflareOptions, allContainerOptions } =
+				const { miniflareOptions, containerOptions } =
 					await getDevMiniflareOptions({
 						resolvedPluginConfig: ctx.resolvedPluginConfig,
 						viteDevServer,
 						// inspectorPort: inputInspectorPort,
 						inspectorPort: false,
-						containerBuildId,
 					});
 
 				await ctx.setMiniflareOptions(miniflareOptions);
@@ -240,6 +97,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
 
 				if (ctx.resolvedPluginConfig.type === "workers") {
+					const entryWorkerConfig = getEntryWorkerConfig(
+						ctx.resolvedPluginConfig
+					);
 					assert(entryWorkerConfig, `No entry Worker config`);
 
 					debuglog("Initializing the Vite module runners");
@@ -298,7 +158,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						};
 					}
 
-					if (allContainerOptions.size > 0) {
+					if (containerOptions.size > 0) {
 						viteDevServer.config.logger.info(
 							colors.dim(
 								colors.yellow(
@@ -308,12 +168,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						);
 						await prepareContainerImagesForDev({
 							dockerPath: getDockerPath(),
-							containerOptions: [...allContainerOptions.values()],
+							containerOptions: [...containerOptions.values()],
 							onContainerImagePreparationStart: () => {},
 							onContainerImagePreparationEnd: () => {},
 						});
 
-						containerImageTagsSeen = new Set(allContainerOptions.keys());
+						containerImageTagsSeen = new Set(containerOptions.keys());
 						viteDevServer.config.logger.info(
 							colors.dim(
 								colors.yellow(
@@ -337,7 +197,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						 *
 						 */
 						process.on("exit", async () => {
-							if (allContainerOptions.size > 0) {
+							if (containerOptions.size > 0) {
 								cleanupContainers(getDockerPath(), containerImageTagsSeen);
 							}
 						});
@@ -400,7 +260,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					vitePreviewServer
 				);
 
-				const { config: miniflareOptions, allContainerOptions } =
+				const { miniflareOptions, containerOptions } =
 					await getPreviewMiniflareOptions({
 						resolvedPluginConfig: ctx.resolvedPluginConfig,
 						vitePreviewServer,
@@ -408,7 +268,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					});
 				await ctx.setMiniflareOptions(miniflareOptions);
 
-				if (allContainerOptions.size > 0) {
+				if (containerOptions.size > 0) {
 					const dockerPath = getDockerPath();
 
 					vitePreviewServer.config.logger.info(
@@ -420,11 +280,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					);
 					await prepareContainerImagesForDev({
 						dockerPath: getDockerPath(),
-						containerOptions: [...allContainerOptions.values()],
+						containerOptions: [...containerOptions.values()],
 						onContainerImagePreparationStart: () => {},
 						onContainerImagePreparationEnd: () => {},
 					});
-					containerImageTagsSeen = new Set(allContainerOptions.keys());
+					containerImageTagsSeen = new Set(containerOptions.keys());
 
 					vitePreviewServer.config.logger.info(
 						colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
@@ -588,6 +448,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				}
 			},
 		},
+		configPlugin(ctx),
 		virtualModulesPlugin(ctx),
 		virtualClientFallbackPlugin(ctx),
 		outputConfigPlugin(ctx),
