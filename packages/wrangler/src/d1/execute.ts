@@ -444,11 +444,9 @@ async function executeRemotely({
 			result: { num_queries, final_bookmark, meta },
 		} = finalResponse;
 		logger.log(
-			`🚣 Executed ${num_queries} queries in ${(meta.duration / 1000).toFixed(
+			`🚣 Executed ${num_queries} queries in ${meta.duration.toFixed(
 				2
-			)} seconds (${meta.rows_read} rows read, ${
-				meta.rows_written
-			} rows written)\n` +
+			)}ms (${meta.rows_read} rows read, ${meta.rows_written} rows written)\n` +
 				chalk.gray(`   Database is currently at bookmark ${final_bookmark}.`)
 		);
 
@@ -604,17 +602,15 @@ async function d1ApiPost<T>(
 }
 
 function logResult(r: QueryResult | QueryResult[]) {
-	logger.log(
-		`🚣 Executed ${
-			Array.isArray(r) && r.length !== 1 ? `${r.length} commands` : "1 command"
-		} in ${
-			Array.isArray(r)
-				? r
-						.map((d: QueryResult) => d.meta?.duration || 0)
-						.reduce((a: number, b: number) => a + b, 0)
-				: r.meta?.duration
-		}ms`
-	);
+	const commandsCount =
+		Array.isArray(r) && r.length !== 1 ? `${r.length} commands` : "1 command";
+	const durationMs = Array.isArray(r)
+		? r
+				.map((d: QueryResult) => d.meta?.duration || 0)
+				.reduce((a, b) => a + b, 0)
+		: r.meta?.duration ?? 0;
+
+	logger.log(`🚣 Executed ${commandsCount} in ${durationMs.toFixed(2)}ms`);
 }
 
 function shorten(query: string | undefined, length: number) {
