@@ -10,7 +10,7 @@ import {
 	sharedResourceCreationArgs,
 } from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
-import { LOCATION_CHOICES } from "./constants";
+import { JURISDICTION_CHOICES, LOCATION_CHOICES } from "./constants";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { DatabaseCreationResult } from "./types";
 
@@ -18,7 +18,8 @@ export async function createD1Database(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	name: string,
-	location?: string
+	location?: string,
+	jurisdiction?: string
 ) {
 	try {
 		return await fetchResult<DatabaseCreationResult>(
@@ -32,6 +33,7 @@ export async function createD1Database(
 				body: JSON.stringify({
 					name,
 					...(location && { primary_location_hint: location }),
+					...(jurisdiction && { jurisdiction }),
 				}),
 			}
 		);
@@ -73,13 +75,28 @@ export const d1CreateCommand = createCommand({
 
 					`,
 		},
+		jurisdiction: {
+			type: "string",
+			choices: [...JURISDICTION_CHOICES],
+			description: dedent`
+				The location to restrict the D1 database to run and store data within to comply with local regulations. Note that if jurisdictions are set, the location hint is ignored. Options:
+					eu: The European Union
+					fedramp: FedRAMP-compliant data centers
+			`,
+		},
 		...sharedResourceCreationArgs,
 	},
 	positionalArgs: ["name"],
-	async handler({ name, location, env, ...args }, { config }) {
+	async handler({ name, location, jurisdiction, env, ...args }, { config }) {
 		const accountId = await requireAuth(config);
 
-		const db = await createD1Database(config, accountId, name, location);
+		const db = await createD1Database(
+			config,
+			accountId,
+			name,
+			location,
+			jurisdiction
+		);
 
 		logger.log(
 			`✅ Successfully created DB '${db.name}'${
