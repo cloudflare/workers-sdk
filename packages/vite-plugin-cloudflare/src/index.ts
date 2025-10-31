@@ -60,6 +60,8 @@ import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 
 export type { PluginConfig } from "./plugin-config";
 
+const ctx = new PluginContext();
+
 const debuglog = util.debuglog("@cloudflare:vite-plugin");
 
 // this flag is used to show the workers configs warning only once
@@ -76,7 +78,7 @@ let miniflare: Miniflare | undefined;
  * @param pluginConfig An optional {@link PluginConfig} object.
  */
 export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
-	const ctx = new PluginContext();
+	ctx.resetLocalState();
 	let containerImageTagsSeen = new Set<string>();
 
 	return [

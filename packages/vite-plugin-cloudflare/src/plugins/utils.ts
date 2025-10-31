@@ -2,33 +2,39 @@ import type { ResolvedPluginConfig } from "../plugin-config";
 import type * as vite from "vite";
 
 export class PluginContext {
-	#resolvedPluginConfig?: ResolvedPluginConfig;
-	#resolvedViteConfig?: vite.ResolvedConfig;
+	#localState: {
+		resolvedPluginConfig?: ResolvedPluginConfig;
+		resolvedViteConfig?: vite.ResolvedConfig;
+	} = {};
+
+	resetLocalState(): void {
+		this.#localState = {};
+	}
 
 	setResolvedPluginConfig(resolvedPluginConfig: ResolvedPluginConfig): void {
-		this.#resolvedPluginConfig = resolvedPluginConfig;
+		this.#localState.resolvedPluginConfig = resolvedPluginConfig;
 	}
 
 	setResolvedViteConfig(resolvedViteConfig: vite.ResolvedConfig): void {
-		this.#resolvedViteConfig = resolvedViteConfig;
+		this.#localState.resolvedViteConfig = resolvedViteConfig;
 	}
 
 	get resolvedPluginConfig(): ResolvedPluginConfig {
 		// TODO: replace with `assert` once we have migrated to tsdown
-		if (!this.#resolvedPluginConfig) {
+		if (!this.#localState.resolvedPluginConfig) {
 			throw new Error("Expected resolvedPluginConfig to be defined");
 		}
 
-		return this.#resolvedPluginConfig;
+		return this.#localState.resolvedPluginConfig;
 	}
 
 	get resolvedViteConfig(): vite.ResolvedConfig {
 		// TODO: replace with `assert` once we have migrated to tsdown
-		if (!this.#resolvedViteConfig) {
+		if (!this.#localState.resolvedViteConfig) {
 			throw new Error("Expected resolvedViteConfig to be defined");
 		}
 
-		return this.#resolvedViteConfig;
+		return this.#localState.resolvedViteConfig;
 	}
 
 	getWorkerConfig(environmentName: string) {
