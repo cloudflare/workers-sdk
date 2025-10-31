@@ -1,7 +1,40 @@
 import { constructWranglerConfig } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
-import type { FullWorkerConfig, RawConfig } from "@cloudflare/workers-utils";
+import type {
+	RawConfig,
+	ServiceMetadataRes,
+	WorkerMetadata,
+} from "@cloudflare/workers-utils";
+
+type CustomDomainsRes = {
+	id: string;
+	zone_id: string;
+	zone_name: string;
+	hostname: string;
+	service: string;
+	environment: string;
+	cert_id: string;
+}[];
+
+type WorkerSubdomainRes = {
+	enabled: boolean;
+	previews_enabled: boolean;
+};
+type CronTriggersRes = {
+	schedules: {
+		cron: string;
+		created_on: Date;
+		modified_on: Date;
+	}[];
+};
+
+type RoutesRes = {
+	id: string;
+	pattern: string;
+	zone_name: string;
+	script: string;
+}[];
 
 /**
  * Downloads all information required to construct a Wrangler config file for a Worker from the API
@@ -10,7 +43,7 @@ export async function fetchWorkerConfig(
 	accountId: string,
 	workerName: string,
 	environment: string
-): Promise<FullWorkerConfig> {
+) {
 	const [
 		bindings,
 		routes,
@@ -19,27 +52,27 @@ export async function fetchWorkerConfig(
 		serviceEnvMetadata,
 		cronTriggers,
 	] = await Promise.all([
-		fetchResult<FullWorkerConfig["bindings"]>(
+		fetchResult<WorkerMetadata["bindings"]>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/bindings`
 		),
-		fetchResult<FullWorkerConfig["routes"]>(
+		fetchResult<RoutesRes>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/routes?show_zonename=true`
 		),
-		fetchResult<FullWorkerConfig["customDomains"]>(
+		fetchResult<CustomDomainsRes>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${environment}`
 		),
-		fetchResult<FullWorkerConfig["subdomainStatus"]>(
+		fetchResult<WorkerSubdomainRes>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/subdomain`
 		),
-		fetchResult<FullWorkerConfig["serviceEnvMetadata"]>(
+		fetchResult<ServiceMetadataRes["default_environment"]>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}`
 		),
-		fetchResult<FullWorkerConfig["cronTriggers"]>(
+		fetchResult<CronTriggersRes>(
 			COMPLIANCE_REGION_CONFIG_UNKNOWN,
 			`/accounts/${accountId}/workers/scripts/${workerName}/schedules`
 		),
@@ -84,12 +117,26 @@ export async function downloadWorkerConfig(
 		cronTriggers,
 	} = await fetchWorkerConfig(accountId, workerName, environment);
 
-	return constructWranglerConfig(workerName, entrypoint, {
+	return constructWranglerConfig({
+		name: workerName,
+		entrypoint,
+		compatibility_date: serviceEnvMetadata.script.compatibility_date,
+		compatibility_flags: serviceEnvMetadata.script.compatibility_flags,
+		tags: serviceEnvMetadata.script.tags,
+		migration_tag: serviceEnvMetadata.script.migration_tag,
+		tail_consumers: serviceEnvMetadata.script.tail_consumers,
+		observability: serviceEnvMetadata.script.observability,
+		limits: serviceEnvMetadata.script.limits,
 		bindings,
 		routes,
-		customDomains,
-		subdomainStatus,
-		serviceEnvMetadata,
-		cronTriggers,
+		domains: customDomains,
+		subdomain: subdomainStatus,
+		schedules: cronTriggers.schedules.map((s) => ({
+			cron: s.cron,
+		})),
+		placement: serviceEnvMetadata.script.placement_mode
+			? { mode: serviceEnvMetadata.script.placement_mode }
+			: undefined,
+		logpush: undefined,
 	});
 }
