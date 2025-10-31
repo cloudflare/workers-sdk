@@ -440,7 +440,7 @@ export default async function deploy(props: Props): Promise<{
 									// (the best we can) here
 									!targetingEnvironment &&
 									(await confirm(
-										"Would you like to update the local config file with the conflicting remote values?",
+										"Would you like to update the local config file with the remote values?",
 										{
 											defaultValue: true,
 											fallbackValue: true,
