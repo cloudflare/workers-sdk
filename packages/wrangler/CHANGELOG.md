@@ -1,5 +1,23 @@
 # wrangler
 
+## 3.114.16
+
+### Patch Changes
+
+- [#11134](https://github.com/cloudflare/workers-sdk/pull/11134) [`bd39455`](https://github.com/cloudflare/workers-sdk/commit/bd3945513419418fe5ef69d7f187a8ed70143328) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Reduce the amount of arguments being passed in metrics capture.
+
+  Now the argument values that are captured come from an allow list,
+  and can be marked as ALLOW (capture the real value) or REDACT (capture as "<REDACTED>").
+
+- [#11020](https://github.com/cloudflare/workers-sdk/pull/11020) [`9cb702e`](https://github.com/cloudflare/workers-sdk/commit/9cb702e95b38bede6ffde6efb47b81d290e01190) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix `observability.logs.persist` being flagged as an unexpected field during the wrangler config file validation
+
+- [#10889](https://github.com/cloudflare/workers-sdk/pull/10889) [`204616c`](https://github.com/cloudflare/workers-sdk/commit/204616c0fc4ab47a18c58af06a427634eb5897fa) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Clarify that `wrangler check startup` generates a local CPU profile
+
+- [#10962](https://github.com/cloudflare/workers-sdk/pull/10962) [`203e599`](https://github.com/cloudflare/workers-sdk/commit/203e599c2f6675e773e76ff296902de5afb50235) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Fixed duplicate warning messages appearing during wrangler dev when configuration changes or state transitions occur
+
+- Updated dependencies [[`4ae9ead`](https://github.com/cloudflare/workers-sdk/commit/4ae9eaded24a76c3ac1e1c1e00c9620e1b86fda2)]:
+  - miniflare@3.20250718.3
+
 ## 3.114.15
 
 ### Patch Changes
