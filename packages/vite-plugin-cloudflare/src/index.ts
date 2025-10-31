@@ -61,11 +61,6 @@ export type { PluginConfig } from "./plugin-config";
 
 const ctx = new PluginContext();
 
-// this flag is used to show the workers configs warning only once
-let workersConfigsWarningShown = false;
-/** Used to track whether hooks are being called because of a server restart or a server close event. */
-let restartingServer = false;
-
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
  *
@@ -93,13 +88,13 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					return { appType: "custom" };
 				}
 
-				if (!workersConfigsWarningShown) {
-					workersConfigsWarningShown = true;
-					const workersConfigsWarning = getWarningForWorkersConfigs(
+				if (!ctx.hasShownWorkerConfigWarnings) {
+					ctx.hasShownWorkerConfigWarnings = true;
+					const workerConfigWarnings = getWarningForWorkersConfigs(
 						ctx.resolvedPluginConfig.rawConfigs
 					);
-					if (workersConfigsWarning) {
-						console.warn(workersConfigsWarning);
+					if (workerConfigWarnings) {
+						console.warn(workerConfigWarnings);
 					}
 				}
 
@@ -176,7 +171,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 			},
 			buildStart() {
 				// This resets the value when the dev server restarts
-				workersConfigsWarningShown = false;
+				ctx.hasShownWorkerConfigWarnings = false;
 			},
 			// Vite `configureServer` Hook
 			// see https://vite.dev/guide/api-plugin.html#configureserver
@@ -185,12 +180,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				const restartServer = viteDevServer.restart.bind(viteDevServer);
 				viteDevServer.restart = async () => {
 					try {
-						restartingServer = true;
+						ctx.isRestartingDevServer = true;
 						debuglog("From server.restart(): Restarting server...");
 						await restartServer();
 						debuglog("From server.restart(): Restarted server...");
 					} finally {
-						restartingServer = false;
+						ctx.isRestartingDevServer = false;
 					}
 				};
 
@@ -460,8 +455,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					cleanupContainers(dockerPath, containerImageTagsSeen);
 				}
 
-				debuglog("buildEnd:", restartingServer ? "restarted" : "disposing");
-				if (!restartingServer) {
+				debuglog(
+					"buildEnd:",
+					ctx.isRestartingDevServer ? "restarted" : "disposing"
+				);
+				if (!ctx.isRestartingDevServer) {
 					try {
 						await ctx.disposeMiniflare();
 					} catch (error) {

@@ -11,6 +11,9 @@ export class PluginContext {
 		resolvedPluginConfig?: ResolvedPluginConfig;
 		resolvedViteConfig?: vite.ResolvedConfig;
 	} = {};
+	hasShownWorkerConfigWarnings = false;
+	/** Used to track whether hooks are being called because of a server restart or a server close event */
+	isRestartingDevServer = false;
 
 	async setMiniflareOptions(options: MiniflareOptions): Promise<void> {
 		if (!this.#miniflare) {
