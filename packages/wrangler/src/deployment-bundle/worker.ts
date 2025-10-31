@@ -381,7 +381,7 @@ export interface CfWorkerInit {
 
 export interface CfWorkerContext {
 	env: string | undefined;
-	legacyEnv: boolean | undefined;
+	useServiceEnvironments: boolean | undefined;
 	zone: string | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
