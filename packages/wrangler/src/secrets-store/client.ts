@@ -47,7 +47,7 @@ export async function deleteStore(
 export async function listStores(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
-	urlParams: URLSearchParams
+	urlParams?: URLSearchParams
 ): Promise<Store[]> {
 	return await fetchResult(
 		complianceConfig,

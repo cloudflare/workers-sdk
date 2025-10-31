@@ -1214,7 +1214,7 @@ export function createCLIParser(argv: string[]) {
 	});
 
 	// containers
-	wrangler.command("containers", false, (containersArgs) => {
+	wrangler.command("containers", "📦 Manage Containers ", (containersArgs) => {
 		return containers(containersArgs.command(subHelp), subHelp);
 	});
 

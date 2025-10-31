@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import path, { dirname } from "node:path";
 import {
+	getAndValidateRegistryType,
 	InstanceType,
 	isDockerfile,
 	resolveImageName,
@@ -172,6 +173,7 @@ export const getNormalizedContainerOptions = async (
 				image_vars: container.image_vars,
 			});
 		} else {
+			getAndValidateRegistryType(container.image);
 			normalizedContainers.push({
 				...shared,
 				...instanceTypeOrLimits,

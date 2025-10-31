@@ -103,7 +103,8 @@ export function handleFailure<
 	scope: typeof cloudchamberScope | typeof containersScope
 ): (args: CommonYargsOptions & CommandArgumentsObject) => Promise<void> {
 	return async (args) => {
-		if (!isNonInteractiveOrCI()) {
+		const isJson = "json" in args ? args.json === true : false;
+		if (!isNonInteractiveOrCI() && !isJson) {
 			await printWranglerBanner();
 			const commandStatus = command.includes("cloudchamber")
 				? "alpha"
