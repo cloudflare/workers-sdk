@@ -46,7 +46,6 @@ import type {
 	WorkerdStructuredLog,
 	WorkerOptions,
 } from "miniflare";
-import type { FetchFunctionOptions } from "vite/module-runner";
 import type {
 	Binding,
 	RemoteProxySession,
