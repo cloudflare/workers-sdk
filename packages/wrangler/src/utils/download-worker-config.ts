@@ -84,12 +84,22 @@ export async function downloadWorkerConfig(
 		cronTriggers,
 	} = await fetchWorkerConfig(accountId, workerName, environment);
 
-	return constructWranglerConfig(workerName, entrypoint, {
+	return constructWranglerConfig({
+		name: workerName,
+		entrypoint,
+		compatibility_date: serviceEnvMetadata.script.compatibility_date,
+		compatibility_flags: serviceEnvMetadata.script.compatibility_flags,
+		tags: serviceEnvMetadata.script.tags,
+		migration_tag: serviceEnvMetadata.script.migration_tag,
+		tail_consumers: serviceEnvMetadata.script.tail_consumers,
+		observability: serviceEnvMetadata.script.observability,
+		limits: serviceEnvMetadata.script.limits,
 		bindings,
 		routes,
-		customDomains,
-		subdomainStatus,
-		serviceEnvMetadata,
-		cronTriggers,
+		domains: customDomains,
+		subdomain: subdomainStatus,
+		schedules: cronTriggers.schedules.map((s) => ({
+			cron: s.cron,
+		})),
 	});
 }
