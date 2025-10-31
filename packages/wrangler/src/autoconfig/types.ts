@@ -1,13 +1,21 @@
 export type AutoConfigDetails = {
-	projectPath?: string; // the path to the project, defaults to cwd
-	packageJson?: string; // the content of the project's package.json file (if any)
-	configured: boolean; // wether the project is already configured (no autoconfig required)
+	/** The path to the project (defaults to cwd) */
+	projectPath?: string;
+	/** The content of the project's package.json file (if any) */
+	packageJson?: string;
+	/** Whether the project is already configured (no autoconfig required) */
+	configured: boolean;
+	/** Details about the detected framework (if any) */
 	framework?: {
-		// details about the detected framework (if any)
-		name: "astro"; // the detected framework
-		version: string; // the detected version of the framework
-		mode: "static" | "fullstack"; // wether the framework is build used for static generation or a fullstack deployment
+		/** The detected framework */
+		name: "astro";
+		/** The detected version of the framework */
+		version: string;
+		/** Whether the framework is used for static generation or fullstack deployment */
+		mode: "static" | "fullstack";
 	};
-	buildCommand?: string; // the build command used to build the project (if any)
-	outputDir?: string; // the output directory (if no framework is used outputDir points to the raw assets files)
+	/** The build command used to build the project (if any) */
+	buildCommand?: string;
+	/** The output directory (if no framework is used, points to the raw asset files) */
+	outputDir?: string;
 };
