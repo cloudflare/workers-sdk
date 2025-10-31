@@ -1,19 +1,13 @@
-import assert from "node:assert";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
-import { ApiError } from "@cloudflare/containers-shared";
 import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import {
-	APIError,
 	CommandLineArgsError,
 	experimental_readRawConfig,
-	JsonFriendlyFatalError,
-	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import Cloudflare from "cloudflare";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
@@ -30,14 +24,13 @@ import {
 	certUploadMtlsCommand,
 	certUploadNamespace,
 } from "./cert/cert";
-import { renderError } from "./cfetch";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
-import { readConfig } from "./config";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
+import { handleError } from "./core/handle-errors";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1Namespace } from "./d1";
 import { d1CreateCommand } from "./d1/create";
@@ -56,11 +49,6 @@ import { d1TimeTravelInfoCommand } from "./d1/timeTravel/info";
 import { d1TimeTravelRestoreCommand } from "./d1/timeTravel/restore";
 import { deleteCommand } from "./delete";
 import { deployCommand } from "./deploy";
-import { isAuthenticationError } from "./deploy/deploy";
-import {
-	isBuildFailure,
-	isBuildFailureFromCause,
-} from "./deployment-bundle/build-failures";
 import { dev } from "./dev";
 import {
 	dispatchNamespaceCreateCommand,
@@ -72,7 +60,6 @@ import {
 } from "./dispatch-namespace";
 import { docs } from "./docs";
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
-import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "./environment-variables/misc-variables";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
@@ -102,7 +89,7 @@ import {
 	kvNamespaceNamespace,
 	kvNamespaceRenameCommand,
 } from "./kv";
-import { logBuildFailure, logger, LOGGER_LEVELS } from "./logger";
+import { logger, LOGGER_LEVELS } from "./logger";
 import { getMetricsDispatcher } from "./metrics";
 import {
 	metricsAlias,
@@ -289,21 +276,13 @@ import {
 	secretsStoreStoreDeleteCommand,
 	secretsStoreStoreListCommand,
 } from "./secrets-store/commands";
-import {
-	addBreadcrumb,
-	captureGlobalException,
-	closeSentry,
-	setupSentry,
-} from "./sentry";
+import { addBreadcrumb, closeSentry, setupSentry } from "./sentry";
 import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
 import { typesCommand } from "./type-generation";
-import { getAuthFromEnv } from "./user";
 import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
-import { whoami } from "./user/whoami";
 import { betaCmdColor, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
-import { logPossibleBugMessage } from "./utils/logPossibleBugMessage";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
 import { vectorizeDeleteCommand } from "./vectorize/delete";
@@ -352,7 +331,6 @@ import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/inst
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
@@ -1663,146 +1641,8 @@ export async function main(argv: string[]): Promise<void> {
 		);
 	} catch (e) {
 		cliHandlerThrew = true;
-		let mayReport = true;
-		let errorType: string | undefined;
-		let loggableException = e;
-
-		logger.log(""); // Just adds a bit of space
-		if (e instanceof CommandLineArgsError) {
-			logger.error(e.message);
-			// We are not able to ask the `wrangler` CLI parser to show help for a subcommand programmatically.
-			// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
-			// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
-			const { wrangler: helpWrangler } = createCLIParser([...argv, "--help"]);
-			await helpWrangler.parse();
-		} else if (
-			isAuthenticationError(e) ||
-			// Is this a Containers/Cloudchamber-based auth error?
-			// This is different because it uses a custom OpenAPI-based generated client
-			(e instanceof UserError &&
-				e.cause instanceof ApiError &&
-				e.cause.status === 403)
-		) {
-			mayReport = false;
-			errorType = "AuthenticationError";
-			if (e.cause instanceof ApiError) {
-				logger.error(e.cause);
-			} else {
-				assert(isAuthenticationError(e));
-				logger.error(e);
-			}
-			const envAuth = getAuthFromEnv();
-			if (envAuth !== undefined && "apiToken" in envAuth) {
-				const message =
-					"📎 It looks like you are authenticating Wrangler via a custom API token set in an environment variable.\n" +
-					"Please ensure it has the correct permissions for this operation.\n";
-				logger.log(chalk.yellow(message));
-			}
-			const accountTag = (e as APIError)?.accountTag;
-			let complianceConfig: ComplianceConfig;
-			try {
-				complianceConfig = await readConfig(wrangler.arguments, {
-					hideWarnings: true,
-				});
-			} catch {
-				complianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN;
-			}
-			await whoami(complianceConfig, accountTag);
-		} else if (e instanceof ParseError) {
-			e.notes.push({
-				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
-			});
-			logger.error(e);
-		} else if (e instanceof JsonFriendlyFatalError) {
-			logger.log(e.message);
-		} else if (
-			e instanceof Error &&
-			e.message.includes("Raw mode is not supported on")
-		) {
-			// the current terminal doesn't support raw mode, which Ink needs to render
-			// Ink doesn't throw a typed error or subclass or anything, so we just check the message content.
-			// https://github.com/vadimdemedes/ink/blob/546fe16541fd05ad4e638d6842ca4cbe88b4092b/src/components/App.tsx#L138-L148
-			mayReport = false;
-
-			const currentPlatform = process.platform;
-
-			const thisTerminalIsUnsupported =
-				"This terminal doesn't support raw mode.";
-			const soWranglerWontWork =
-				"Wrangler uses raw mode to read user input and write output to the terminal, and won't function correctly without it.";
-			const tryRunningItIn =
-				"Try running your previous command in a terminal that supports raw mode";
-			const oneOfThese =
-				currentPlatform === "win32"
-					? ", such as Command Prompt or Powershell."
-					: currentPlatform === "darwin"
-						? ", such as Terminal.app or iTerm."
-						: "."; // linux user detected, hand holding disengaged.
-
-			logger.error(
-				`${thisTerminalIsUnsupported}\n${soWranglerWontWork}\n${tryRunningItIn}${oneOfThese}`
-			);
-		} else if (isBuildFailure(e)) {
-			mayReport = false;
-			errorType = "BuildFailure";
-
-			logBuildFailure(e.errors, e.warnings);
-		} else if (isBuildFailureFromCause(e)) {
-			mayReport = false;
-			errorType = "BuildFailure";
-			logBuildFailure(e.cause.errors, e.cause.warnings);
-		} else if (e instanceof Cloudflare.APIError) {
-			const error = new APIError({
-				text: `A request to the Cloudflare API failed.`,
-				notes: [...e.errors.map((err) => ({ text: renderError(err) }))],
-			});
-			error.notes.push({
-				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
-			});
-			logger.error(error);
-		} else {
-			if (
-				// Is this a StartDevEnv error event? If so, unwrap the cause, which is usually the user-recognisable error
-				e &&
-				typeof e === "object" &&
-				"type" in e &&
-				e.type === "error" &&
-				"cause" in e &&
-				e.cause instanceof Error
-			) {
-				loggableException = e.cause;
-			}
-
-			logger.error(
-				loggableException instanceof Error
-					? loggableException.message
-					: loggableException
-			);
-			if (loggableException instanceof Error) {
-				logger.debug(loggableException.stack);
-			}
-
-			if (
-				!(loggableException instanceof UserError) &&
-				!(loggableException instanceof ContainersUserError)
-			) {
-				await logPossibleBugMessage();
-			}
-		}
-
-		if (
-			// Only report the error if we didn't just handle it
-			mayReport &&
-			// ...and it's not a user error
-			!(loggableException instanceof UserError) &&
-			!(loggableException instanceof ContainersUserError) &&
-			// ...and it's not an un-reportable API error
-			!(loggableException instanceof APIError && !loggableException.reportable)
-		) {
-			await captureGlobalException(loggableException);
-		}
+		const errorType = await handleError(e, wrangler.arguments, argv);
 		const durationMs = Date.now() - startTime;
-
 		dispatcher?.sendCommandEvent(
 			"wrangler command errored",
 			{
@@ -1820,7 +1660,6 @@ export async function main(argv: string[]): Promise<void> {
 			},
 			argv
 		);
-
 		throw e;
 	} finally {
 		try {
@@ -1837,12 +1676,11 @@ export async function main(argv: string[]): Promise<void> {
 			}
 
 			await closeSentry();
-			const controller = new AbortController();
 
 			await Promise.race([
 				Promise.allSettled(dispatcher?.requests ?? []),
-				setTimeout(1000, undefined, controller), // Ensure we don't hang indefinitely
-			]).then(() => controller.abort()); // Ensure the Wrangler process doesn't hang waiting for setTimeout(1000) to complete
+				setTimeout(1000, undefined, { ref: false }),
+			]);
 		} catch (e) {
 			logger.error(e);
 			// Only re-throw if we haven't already re-thrown an exception from a

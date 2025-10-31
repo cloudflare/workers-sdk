@@ -40,13 +40,9 @@ export const versionsViewCommand = createCommand({
 	},
 	positionalArgs: ["version-id"],
 	async handler(args, { config }) {
-		metrics.sendMetricsEvent(
-			"view worker version",
-			{},
-			{
-				sendMetrics: config.send_metrics,
-			}
-		);
+		metrics.sendMetricsEvent("view worker version", {
+			sendMetrics: config.send_metrics,
+		});
 
 		const accountId = await requireAuth(config);
 		const workerName = args.name ?? config.name;
