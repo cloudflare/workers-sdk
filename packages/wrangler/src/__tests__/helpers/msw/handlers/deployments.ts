@@ -87,6 +87,7 @@ export const mswSuccessDeploymentScriptMetadata = [
 			return HttpResponse.json(
 				createFetchResult({
 					default_environment: {
+						script_tag: tag,
 						script: { last_deployed_from: "wrangler", tag },
 					},
 				})
@@ -104,6 +105,7 @@ export const mswSuccessDeploymentScriptAPI = [
 			return HttpResponse.json(
 				createFetchResult({
 					default_environment: {
+						script_tag: tag,
 						script: { last_deployed_from: "api", tag },
 					},
 				})

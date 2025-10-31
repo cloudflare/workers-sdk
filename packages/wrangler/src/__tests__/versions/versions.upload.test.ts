@@ -40,6 +40,7 @@ describe("versions upload", () => {
 						createFetchResult(
 							result ?? {
 								default_environment: {
+									script_tag: `tag:${params.scriptName}`,
 									script: {
 										last_deployed_from: "wrangler",
 									},
@@ -56,6 +57,7 @@ describe("versions upload", () => {
 	function mockGetScriptWithTags(tags: string[] | null) {
 		mockGetScript({
 			default_environment: {
+				script_tag: "tag:test-name",
 				script: {
 					last_deployed_from: "wrangler",
 					tags,

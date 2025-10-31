@@ -386,20 +386,21 @@ export default async function deploy(props: Props): Promise<{
 			const serviceMetaData = await fetchResult<{
 				default_environment: {
 					environment: string;
+					script_tag: string;
 					script: {
 						tag: string;
 						tags: string[] | null;
 						last_deployed_from: "dash" | "wrangler" | "api";
-					};
+					} | null;
 				};
 			}>(config, `/accounts/${accountId}/workers/services/${name}`);
 			const {
-				default_environment: { script },
+				default_environment: { script_tag, script },
 			} = serviceMetaData;
-			workerTag = script.tag;
-			tags = script.tags ?? tags;
+			workerTag = script_tag;
+			tags = script?.tags ?? tags;
 
-			if (script.last_deployed_from === "dash") {
+			if (script?.last_deployed_from === "dash") {
 				let configDiff: ReturnType<typeof getRemoteConfigDiff> | undefined;
 				if (getFlag("DEPLOY_REMOTE_DIFF_CHECK")) {
 					const remoteWorkerConfig = await downloadWorkerConfig(
@@ -437,7 +438,7 @@ export default async function deploy(props: Props): Promise<{
 						return { versionId, workerTag };
 					}
 				}
-			} else if (script.last_deployed_from === "api") {
+			} else if (script?.last_deployed_from === "api") {
 				logger.warn(
 					`You are about to publish a Workers Service that was last updated via the script API.\nEdits that have been made via the script API will be overridden by your local code and config.`
 				);

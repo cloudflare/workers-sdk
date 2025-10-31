@@ -427,24 +427,25 @@ export default async function versionsUpload(props: Props): Promise<{
 	if (accountId && name) {
 		try {
 			const {
-				default_environment: { script },
+				default_environment: { script_tag, script },
 			} = await fetchResult<{
 				default_environment: {
+					script_tag: string;
 					script: {
 						tag: string;
 						tags: string[] | null;
 						last_deployed_from: "dash" | "wrangler" | "api";
-					};
+					} | null;
 				};
 			}>(
 				config,
 				`/accounts/${accountId}/workers/services/${name}` // TODO(consider): should this be a /versions endpoint?
 			);
 
-			workerTag = script.tag;
-			tags = script.tags ?? tags;
+			workerTag = script_tag;
+			tags = script?.tags ?? tags;
 
-			if (script.last_deployed_from === "dash") {
+			if (script?.last_deployed_from === "dash") {
 				logger.warn(
 					`You are about to upload a Worker Version that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
 				);
@@ -454,7 +455,7 @@ export default async function versionsUpload(props: Props): Promise<{
 						workerTag,
 					};
 				}
-			} else if (script.last_deployed_from === "api") {
+			} else if (script?.last_deployed_from === "api") {
 				logger.warn(
 					`You are about to upload a Workers Version that was last updated via the API.\nEdits that have been made via the API will be overridden by your local code and config.`
 				);

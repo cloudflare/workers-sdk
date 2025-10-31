@@ -208,9 +208,12 @@ export const versionsDeployCommand = createCommand({
 		let workerTag: string | null = null;
 		try {
 			const serviceMetaData = await fetchResult<{
-				default_environment: { script: { tag: string } };
+				default_environment: {
+					script_tag: string;
+					script: { tag: string } | null;
+				};
 			}>(config, `/accounts/${accountId}/workers/services/${workerName}`);
-			workerTag = serviceMetaData.default_environment.script.tag;
+			workerTag = serviceMetaData.default_environment.script_tag;
 		} catch {
 			// If the fetch fails then we just output a null for the workerTag.
 		}
