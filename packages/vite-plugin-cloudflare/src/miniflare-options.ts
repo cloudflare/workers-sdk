@@ -34,6 +34,7 @@ import { getContainerOptions, getDockerPath } from "./containers";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
+import type { ContainerTagToOptionsMap } from "./containers";
 import type {
 	AssetsOnlyResolvedConfig,
 	PersistState,
@@ -251,10 +252,7 @@ export async function getDevMiniflareOptions(config: {
 	inspectorPort: number | false;
 }): Promise<{
 	miniflareOptions: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
-	containerOptions: Map<
-		string,
-		NonNullable<ReturnType<typeof getContainerOptions>>[number]
-	>;
+	containerTagToOptionsMap: ContainerTagToOptionsMap;
 }> {
 	const { resolvedPluginConfig, viteDevServer, inspectorPort } = config;
 	const resolvedViteConfig = viteDevServer.config;
@@ -392,10 +390,7 @@ export async function getDevMiniflareOptions(config: {
 		},
 	];
 
-	let containerOptions = new Map<
-		string,
-		NonNullable<ReturnType<typeof getContainerOptions>>[number]
-	>();
+	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
 
 	const workersFromConfig =
 		resolvedPluginConfig.type === "workers"
@@ -437,13 +432,13 @@ export async function getDevMiniflareOptions(config: {
 									resolveDockerHost(dockerPath);
 								containerBuildId = generateContainerBuildId();
 
-								const options = await getContainerOptions({
+								const options = getContainerOptions({
 									containersConfig: workerConfig.containers,
 									containerBuildId,
 									configPath: workerConfig.configPath,
 								});
 								for (const option of options ?? []) {
-									containerOptions.set(option.image_tag, option);
+									containerTagToOptionsMap.set(option.image_tag, option);
 								}
 							}
 
@@ -679,7 +674,7 @@ export async function getDevMiniflareOptions(config: {
 				}
 			},
 		},
-		containerOptions,
+		containerTagToOptionsMap,
 	};
 }
 
@@ -714,18 +709,11 @@ export async function getPreviewMiniflareOptions(config: {
 	inspectorPort: number | false;
 }): Promise<{
 	miniflareOptions: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
-	containerOptions: Map<
-		string,
-		NonNullable<ReturnType<typeof getContainerOptions>>[number]
-	>;
+	containerTagToOptionsMap: ContainerTagToOptionsMap;
 }> {
 	const { resolvedPluginConfig, vitePreviewServer, inspectorPort } = config;
 	const resolvedViteConfig = vitePreviewServer.config;
-
-	let containerOptions = new Map<
-		string,
-		NonNullable<ReturnType<typeof getContainerOptions>>[number]
-	>();
+	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
 
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
@@ -762,13 +750,13 @@ export async function getPreviewMiniflareOptions(config: {
 					workerConfig.dev.container_engine = resolveDockerHost(dockerPath);
 					containerBuildId = generateContainerBuildId();
 
-					const options = await getContainerOptions({
+					const options = getContainerOptions({
 						containersConfig: workerConfig.containers,
 						containerBuildId,
 						configPath: workerConfig.configPath,
 					});
 					for (const option of options ?? []) {
-						containerOptions.set(option.image_tag, option);
+						containerTagToOptionsMap.set(option.image_tag, option);
 					}
 				}
 
@@ -828,7 +816,7 @@ export async function getPreviewMiniflareOptions(config: {
 			),
 			workers,
 		},
-		containerOptions,
+		containerTagToOptionsMap,
 	};
 }
 

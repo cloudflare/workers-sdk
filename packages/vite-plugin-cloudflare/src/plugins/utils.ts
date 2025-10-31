@@ -10,6 +10,7 @@ export class PluginContext {
 	#localState: {
 		resolvedPluginConfig?: ResolvedPluginConfig;
 		resolvedViteConfig?: vite.ResolvedConfig;
+		// containerTagToOptionsMap?: ContainerTagToOptionsMap;
 	} = {};
 	hasShownWorkerConfigWarnings = false;
 	/** Used to track whether hooks are being called because of a server restart or a server close event */
@@ -45,10 +46,6 @@ export class PluginContext {
 		this.#localState.resolvedPluginConfig = resolvedPluginConfig;
 	}
 
-	setResolvedViteConfig(resolvedViteConfig: vite.ResolvedConfig): void {
-		this.#localState.resolvedViteConfig = resolvedViteConfig;
-	}
-
 	get resolvedPluginConfig(): ResolvedPluginConfig {
 		assert(
 			this.#localState.resolvedPluginConfig,
@@ -56,6 +53,10 @@ export class PluginContext {
 		);
 
 		return this.#localState.resolvedPluginConfig;
+	}
+
+	setResolvedViteConfig(resolvedViteConfig: vite.ResolvedConfig): void {
+		this.#localState.resolvedViteConfig = resolvedViteConfig;
 	}
 
 	get resolvedViteConfig(): vite.ResolvedConfig {
@@ -66,6 +67,21 @@ export class PluginContext {
 
 		return this.#localState.resolvedViteConfig;
 	}
+
+	// setContainerTagToOptionsMap(
+	// 	containerToOptionsMap: ContainerTagToOptionsMap
+	// ): void {
+	// 	this.#localState.containerTagToOptionsMap = containerToOptionsMap;
+	// }
+
+	// get containerTagToOptionsMap(): ContainerTagToOptionsMap {
+	// 	assert(
+	// 		this.#localState.containerTagToOptionsMap,
+	// 		"Expected `containerTagToOptionsMap` to be defined"
+	// 	);
+
+	// 	return this.#localState.containerTagToOptionsMap;
+	// }
 
 	getWorkerConfig(environmentName: string) {
 		return this.resolvedPluginConfig.type === "workers"

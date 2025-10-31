@@ -84,7 +84,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				// 	ctx.miniflare
 				// );
 
-				const { miniflareOptions, containerOptions } =
+				const { miniflareOptions, containerTagToOptionsMap } =
 					await getDevMiniflareOptions({
 						resolvedPluginConfig: ctx.resolvedPluginConfig,
 						viteDevServer,
@@ -158,7 +158,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						};
 					}
 
-					if (containerOptions.size > 0) {
+					if (containerTagToOptionsMap.size > 0) {
 						viteDevServer.config.logger.info(
 							colors.dim(
 								colors.yellow(
@@ -168,12 +168,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						);
 						await prepareContainerImagesForDev({
 							dockerPath: getDockerPath(),
-							containerOptions: [...containerOptions.values()],
+							containerOptions: [...containerTagToOptionsMap.values()],
 							onContainerImagePreparationStart: () => {},
 							onContainerImagePreparationEnd: () => {},
 						});
 
-						containerImageTagsSeen = new Set(containerOptions.keys());
+						containerImageTagsSeen = new Set(containerTagToOptionsMap.keys());
 						viteDevServer.config.logger.info(
 							colors.dim(
 								colors.yellow(
@@ -197,7 +197,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						 *
 						 */
 						process.on("exit", async () => {
-							if (containerOptions.size > 0) {
+							if (containerTagToOptionsMap.size > 0) {
 								cleanupContainers(getDockerPath(), containerImageTagsSeen);
 							}
 						});
@@ -260,7 +260,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					vitePreviewServer
 				);
 
-				const { miniflareOptions, containerOptions } =
+				const { miniflareOptions, containerTagToOptionsMap } =
 					await getPreviewMiniflareOptions({
 						resolvedPluginConfig: ctx.resolvedPluginConfig,
 						vitePreviewServer,
@@ -268,7 +268,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					});
 				await ctx.setMiniflareOptions(miniflareOptions);
 
-				if (containerOptions.size > 0) {
+				if (containerTagToOptionsMap.size > 0) {
 					const dockerPath = getDockerPath();
 
 					vitePreviewServer.config.logger.info(
@@ -280,11 +280,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					);
 					await prepareContainerImagesForDev({
 						dockerPath: getDockerPath(),
-						containerOptions: [...containerOptions.values()],
+						containerOptions: [...containerTagToOptionsMap.values()],
 						onContainerImagePreparationStart: () => {},
 						onContainerImagePreparationEnd: () => {},
 					});
-					containerImageTagsSeen = new Set(containerOptions.keys());
+					containerImageTagsSeen = new Set(containerTagToOptionsMap.keys());
 
 					vitePreviewServer.config.logger.info(
 						colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
