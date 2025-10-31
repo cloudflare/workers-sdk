@@ -18,7 +18,7 @@ const generate = async (ctx: C3Context) => {
 const configure = async () => {
 	// Although the template is pre-configured for Cloudflare Workers,
 	// we still need to install the latest minor of the OpenNext Cloudflare adapter package.
-	await installPackages(["@opennextjs/cloudflare@^1.3.0"], {
+	await installPackages(["@opennextjs/cloudflare@^1.11.0"], {
 		startText: "Adding the Cloudflare adapter",
 		doneText: `${brandColor(`installed`)} @opennextjs/cloudflare)}`,
 	});
