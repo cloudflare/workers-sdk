@@ -8,7 +8,7 @@ import { useMockStdin } from "../helpers/mock-stdin";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
-describe("containers registries put", () => {
+describe("containers registries configure", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 	const cliStd = mockCLIOutput();
@@ -48,8 +48,8 @@ describe("containers registries put", () => {
 	});
 
 	it("should reject unsupported registry domains", async () => {
-		await expect(runWrangler(`containers registries put docker.io`)).rejects
-			.toThrowErrorMatchingInlineSnapshot(`
+		await expect(runWrangler(`containers registries configure docker.io`))
+			.rejects.toThrowErrorMatchingInlineSnapshot(`
 			[Error: docker.io is not a supported image registry.
 			Currently we support the following non-Cloudflare registries: AWS ECR.
 			To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images]
@@ -57,7 +57,9 @@ describe("containers registries put", () => {
 	});
 
 	it("should no-op on cloudflare registry (default)", async () => {
-		await runWrangler(`containers registries put registry.cloudflare.com`);
+		await runWrangler(
+			`containers registries configure registry.cloudflare.com`
+		);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Configure a container registry
 			│
@@ -88,7 +90,7 @@ describe("containers registries put", () => {
 			});
 			mockPutRegistry();
 			await expect(
-				runWrangler(`containers registries put ${awsEcrDomain}`)
+				runWrangler(`containers registries configure ${awsEcrDomain}`)
 			).resolves.not.toThrow();
 		});
 
@@ -107,15 +109,16 @@ describe("containers registries put", () => {
 
 				mockStdIn.send(validJson);
 				mockPutRegistry();
-				await runWrangler(`containers registries put ${awsEcrDomain}`);
+				await runWrangler(`containers registries configure ${awsEcrDomain}`);
 			});
 
 			it("should error with invalid JSON from piped input", async () => {
 				const invalidJson = "not valid json";
 
 				mockStdIn.send(invalidJson);
-				await expect(runWrangler(`containers registries put ${awsEcrDomain}`))
-					.rejects.toThrowErrorMatchingInlineSnapshot(`
+				await expect(
+					runWrangler(`containers registries configure ${awsEcrDomain}`)
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
 				[Error: Invalid JSON input. Please provide AWS credentials in this format:
 				{"AWS_ACCESS_KEY_ID":"your-access-key","AWS_SECRET_ACCESS_KEY":"your-secret-key"}]
 			`);
@@ -129,7 +132,7 @@ describe("containers registries put", () => {
 
 				mockStdIn.send(incompleteJson);
 				await expect(
-					runWrangler(`containers registries put ${awsEcrDomain}`)
+					runWrangler(`containers registries configure ${awsEcrDomain}`)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Missing required credentials. JSON must include both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.]`
 				);
@@ -137,10 +140,11 @@ describe("containers registries put", () => {
 
 			it("should error with no piped input", async () => {
 				mockStdIn.send("");
-				await expect(runWrangler(`containers registries put ${awsEcrDomain}`))
-					.rejects.toThrowErrorMatchingInlineSnapshot(`
+				await expect(
+					runWrangler(`containers registries configure ${awsEcrDomain}`)
+				).rejects.toThrowErrorMatchingInlineSnapshot(`
 					[Error: No input provided. In non-interactive mode, please pipe AWS credentials as JSON:
-					\`wrangler containers registries put 123456789012.dkr.ecr.us-west-2.amazonaws.com < credentials.json\`
+					\`wrangler containers registries configure 123456789012.dkr.ecr.us-west-2.amazonaws.com < credentials.json\`
 					where credentials.json looks like
 					{"AWS_ACCESS_KEY_ID":"...","AWS_SECRET_ACCESS_KEY":"..."}]
 				`);

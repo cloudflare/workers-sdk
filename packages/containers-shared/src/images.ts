@@ -173,6 +173,7 @@ export function resolveImageName(accountId: string, image: string): string {
  * when using cloudflare mananged registries we expect CLOUDFLARE_CONTAINER_REGISTRY to be set
  */
 export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
+	// TODO: use parseImageName when that gets moved to this package
 	if (domain.includes("://")) {
 		throw new Error(
 			`${domain} is invalid:\nImage reference should not include the protocol part (e.g: registry.cloudflare.com rather than https://registry.cloudflare.com)`
@@ -193,6 +194,7 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 			type: ExternalRegistryKind.ECR,
 			pattern: /^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com$/,
 			name: "AWS ECR",
+			secretName: "AWS Secret Access Key",
 		},
 		{
 			type: "cloudflare",
@@ -223,6 +225,7 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 
 interface RegistryPattern {
 	type: ExternalRegistryKind | "cloudflare";
+	secretName?: string;
 	pattern: RegExp;
 	name: string;
 }

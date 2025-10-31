@@ -11,12 +11,14 @@ import {
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
 import { ExternalRegistryKind } from "@cloudflare/containers-shared/src/client/models/ExternalRegistryKind";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { handleFailure, promiseSpinner } from "../cloudchamber/common";
 import { confirm, prompt } from "../dialogs";
-import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { APIError, parseJSON } from "../parse";
+import { createSecret, createStore, listStores } from "../secrets-store/client";
+import { validateSecretName } from "../secrets-store/commands";
+import { getAccountId } from "../user";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { formatError } from "./deploy";
 import { containersScope } from ".";
@@ -24,17 +26,18 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { Config } from "@cloudflare/workers-utils";
 
 export const registryCommands = (yargs: CommonYargsArgv) => {
 	return yargs
 		.command(
-			"put <DOMAIN>",
-			"Add credentials for a non-Cloudflare container registry",
-			(args) => registryPutYargs(args),
+			"configure <DOMAIN>",
+			"Configure credentials for a non-Cloudflare container registry",
+			(args) => registryConfigureYargs(args),
 			(args) =>
 				handleFailure(
-					`wrangler containers registries put`,
-					registryPutCommand,
+					`wrangler containers registries configure`,
+					registryConfigureCommand,
 					containersScope
 				)(args)
 		)
@@ -61,16 +64,43 @@ export const registryCommands = (yargs: CommonYargsArgv) => {
 				)(args)
 		);
 };
-function registryPutYargs(args: CommonYargsArgv) {
-	return args.positional("DOMAIN", {
-		describe: "domain to configure for the registry",
-		type: "string",
-		demandOption: true,
-	});
+function registryConfigureYargs(args: CommonYargsArgv) {
+	return (
+		args
+			.positional("DOMAIN", {
+				describe: "Domain to configure for the registry",
+				type: "string",
+				demandOption: true,
+			})
+			// TODO: we will need to allow users to specify a pre-existing secret store integration
+			// but for now wrangler will create a new secret store secret
+			.option("identifier", {
+				type: "string",
+				description:
+					"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
+				demandOption: true,
+				alias: "id",
+			})
+			.option("secret-store-id", {
+				type: "string",
+				description:
+					"The ID of the secret store to use to store the registry credentials.",
+				demandOption: false,
+			})
+			// TODO: allow users to provide an existing secret name
+			// but then we can't get secrets by name, only id, so we would need to list all secrets and find the right one
+			.option("secret-name", {
+				type: "string",
+				description:
+					"The name Wrangler should store the registry credentials under.",
+				demandOption: false,
+			})
+	);
 }
 
-async function registryPutCommand(
-	configureArgs: StrictYargsOptionsToInterface<typeof registryPutYargs>
+async function registryConfigureCommand(
+	configureArgs: StrictYargsOptionsToInterface<typeof registryConfigureYargs>,
+	config: Config
 ) {
 	startSection("Configure a container registry");
 
@@ -78,7 +108,10 @@ async function registryPutCommand(
 
 	log(`Configuring ${registryType.name} registry: ${configureArgs.DOMAIN}\n`);
 
-	let credentials: Record<string, string> = {};
+	if (configureArgs.secretName) {
+		validateSecretName(configureArgs.secretName);
+	}
+	let secret: string;
 	switch (registryType.type) {
 		case "cloudflare":
 			log(
@@ -86,18 +119,85 @@ async function registryPutCommand(
 			);
 			endSection("No configuration required");
 			return;
+		// this can be extended to any registry type that requires credentials
 		case ExternalRegistryKind.ECR:
-			credentials = await configureAwsEcrRegistry(configureArgs.DOMAIN);
+			log(`Getting ${registryType.secretName}...\n`);
+			secret = await getSecret();
 			break;
 		default:
 			throw new UserError(`Unhandled registry type: ${registryType.type}`);
 	}
+
+	log("\n");
+	log("Setting up integration with Secrets Store...\n");
+	const accountId = await getAccountId(config);
+	let secretStoreId = configureArgs.secretStoreId;
+	if (!secretStoreId) {
+		const stores = await listStores(config, accountId);
+		if (stores.length === 0) {
+			const check = await confirm(
+				`No existing secret stores found. Create a secret store to store your registry credentials?`
+			);
+			if (!check) {
+				endSection("Cancelled.");
+				return;
+			}
+			const res = await promiseSpinner(
+				// should we allow users to specify the name of the store?
+				createStore(config, accountId, { name: "Default" })
+			);
+			log("New secret store `Default` created with id: " + res.id);
+			secretStoreId = res.id;
+		} else if (stores.length > 1) {
+			// note you can only have one secret store per account for now
+			throw new UserError(
+				`Multiple secret stores found. Please specify a secret store ID using --secret-store-id.`
+			);
+		} else {
+			secretStoreId = stores[0].id;
+			log(
+				`Using existing secret store ${stores[0].name} with id: ${stores[0].id}`
+			);
+		}
+	}
+	log("\n");
+	let secretName = configureArgs.secretName;
+	while (!secretName) {
+		try {
+			const res = await prompt(
+				`Please provide a name for the secret to store the registry credentials:`,
+				{ defaultValue: `${registryType.secretName?.replaceAll(" ", "_")}` }
+			);
+			validateSecretName(res);
+			secretName = res;
+		} catch (e) {
+			log((e as Error).message);
+			continue;
+		}
+	}
+
+	await promiseSpinner(
+		createSecret(config, accountId, secretStoreId, {
+			name: secretName,
+			value: secret,
+			scopes: ["containers"],
+			comment: `Created by Wrangler: credentials for image registry ${configureArgs.DOMAIN}`,
+		})
+	);
+	log(`Container-scoped secret ${secretName} created in Secrets Store.\n`);
+
 	try {
 		await promiseSpinner(
 			ImageRegistriesService.createImageRegistry({
 				domain: configureArgs.DOMAIN,
 				is_public: false,
-				auth: JSON.stringify(credentials),
+				auth: {
+					identifier: configureArgs.identifier,
+					secrets_integration: {
+						store_id: secretStoreId,
+						secret_name: secretName,
+					},
+				},
 				kind: registryType.type,
 			})
 		);
@@ -119,57 +219,25 @@ async function registryPutCommand(
 
 	endSection("Registry configuration completed");
 }
-async function configureAwsEcrRegistry(domain: string) {
-	let credentials: {
-		AWS_ACCESS_KEY_ID?: string;
-		AWS_SECRET_ACCESS_KEY?: string;
-	} = {};
+
+async function getSecret(): Promise<string> {
 	if (isNonInteractiveOrCI()) {
 		// Non-interactive mode: expect JSON input via stdin
-		log("Reading AWS credentials from stdin...\n");
-
 		const stdinInput = trimTrailingWhitespace(await readFromStdin());
 		if (!stdinInput) {
 			throw new UserError(
-				"No input provided. In non-interactive mode, please pipe AWS credentials as JSON:\n" +
-					`\`wrangler containers registries put ${domain} < credentials.json\`\n` +
-					"where credentials.json looks like\n" +
-					`{"AWS_ACCESS_KEY_ID":"...","AWS_SECRET_ACCESS_KEY":"..."}`
+				"No input provided. In non-interactive mode, please pipe in the secret."
 			);
 		}
-
-		try {
-			credentials = parseJSON(stdinInput) as {
-				AWS_ACCESS_KEY_ID?: string;
-				AWS_SECRET_ACCESS_KEY?: string;
-			};
-		} catch {
-			throw new UserError(
-				"Invalid JSON input. Please provide AWS credentials in this format:\n" +
-					'{"AWS_ACCESS_KEY_ID":"your-access-key","AWS_SECRET_ACCESS_KEY":"your-secret-key"}'
-			);
-		}
-	} else {
-		log(
-			"Please provide an AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY to configure this ECR registry.\n"
-		);
-		credentials["AWS_ACCESS_KEY_ID"] = await prompt("AWS_ACCESS_KEY_ID:", {
-			isSecret: false,
-		});
-		credentials["AWS_SECRET_ACCESS_KEY"] = await prompt(
-			"AWS_SECRET_ACCESS_KEY:",
-			{
-				isSecret: true,
-			}
-		);
+		return stdinInput;
 	}
-
-	if (!credentials.AWS_ACCESS_KEY_ID || !credentials.AWS_SECRET_ACCESS_KEY) {
-		throw new UserError(
-			"Missing required credentials. JSON must include both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY."
-		);
+	const secret = await prompt(`Enter secret:`, {
+		isSecret: true,
+	});
+	if (!secret) {
+		throw new UserError("Secret cannot be empty.");
 	}
-	return credentials;
+	return secret;
 }
 
 function registryListYargs(args: CommonYargsArgv) {
