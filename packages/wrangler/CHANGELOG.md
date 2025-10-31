@@ -1,5 +1,27 @@
 # wrangler
 
+## 4.45.4
+
+### Patch Changes
+
+- [#11133](https://github.com/cloudflare/workers-sdk/pull/11133) [`8ffbd17`](https://github.com/cloudflare/workers-sdk/commit/8ffbd17ee78887921244493f6ff7eb52abdcf3f1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Reduce the amount of arguments being passed in metrics capture.
+
+  Now the argument values that are captured come from an allow list,
+  and can be marked as ALLOW (capture the real value) or REDACT (capture as "<REDACTED>").
+
+- [#11033](https://github.com/cloudflare/workers-sdk/pull/11033) [`77ed7e2`](https://github.com/cloudflare/workers-sdk/commit/77ed7e2023ad61e35340c836c77bcf16bd9a214c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Offer to update the local Wrangler configuration file to match remote configuration when running `wrangler deploy`
+
+  When running `wrangler deploy`, with `--x-remote-diff-check`, Wrangler will display the difference between local and remote configuration.
+  If there would be a destructive change to the remote configuration, the user is given the option to cancel the deployment.
+  In the case where the user does cancel deployment, Wrangler will now also offer to update the local Wrangler configuration file to match the remote configuration.
+
+- [#11139](https://github.com/cloudflare/workers-sdk/pull/11139) [`bb00f9d`](https://github.com/cloudflare/workers-sdk/commit/bb00f9d88f4b3a2acc800f5a23f7ac97e695866a) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Updated cron trigger documentation links and improved error message to include instructions for testing cron triggers locally
+
+- [#11135](https://github.com/cloudflare/workers-sdk/pull/11135) [`ed666a1`](https://github.com/cloudflare/workers-sdk/commit/ed666a14156b5600acc11fdc3e1cfec0b0d9f6df) Thanks [@penalosa](https://github.com/penalosa)! - Implement tail-based logging for `wrangler dev` remote mode, behind the `--x-tail-tags` flag. This will become the default in the future.
+
+- Updated dependencies [[`14f60e8`](https://github.com/cloudflare/workers-sdk/commit/14f60e84b1f568eb54fd26d9547ea017dceb652a)]:
+  - miniflare@4.20251011.2
+
 ## 4.45.3
 
 ### Patch Changes

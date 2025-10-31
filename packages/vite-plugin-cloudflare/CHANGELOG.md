@@ -1,5 +1,17 @@
 # @cloudflare/vite-plugin
 
+## 1.13.19
+
+### Patch Changes
+
+- [#11123](https://github.com/cloudflare/workers-sdk/pull/11123) [`9c5601a`](https://github.com/cloudflare/workers-sdk/commit/9c5601a7f5dc11869bf29fe5b4cb5c4558a75951) Thanks [@sapphi-red](https://github.com/sapphi-red)! - Fix Vite 7.2 compatibility.
+
+- [#11137](https://github.com/cloudflare/workers-sdk/pull/11137) [`c2a63ab`](https://github.com/cloudflare/workers-sdk/commit/c2a63abd169f611210237055e2e8b1f9cdbada73) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Switch all instances of `miniflare.getWorker()` followed by `worker.fetch()` to use `miniflare.dispatchFetch()`. This means that the Vite plugin now emulates Cloudflare's response encoding in the same way as Wrangler.
+
+- Updated dependencies [[`8ffbd17`](https://github.com/cloudflare/workers-sdk/commit/8ffbd17ee78887921244493f6ff7eb52abdcf3f1), [`77ed7e2`](https://github.com/cloudflare/workers-sdk/commit/77ed7e2023ad61e35340c836c77bcf16bd9a214c), [`bb00f9d`](https://github.com/cloudflare/workers-sdk/commit/bb00f9d88f4b3a2acc800f5a23f7ac97e695866a), [`ed666a1`](https://github.com/cloudflare/workers-sdk/commit/ed666a14156b5600acc11fdc3e1cfec0b0d9f6df), [`14f60e8`](https://github.com/cloudflare/workers-sdk/commit/14f60e84b1f568eb54fd26d9547ea017dceb652a)]:
+  - wrangler@4.45.4
+  - miniflare@4.20251011.2
+
 ## 1.13.18
 
 ### Patch Changes
