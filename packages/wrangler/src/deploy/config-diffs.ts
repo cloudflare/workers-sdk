@@ -1,6 +1,11 @@
+import assert from "node:assert";
 import { getSubdomainValuesAPIMock } from "../triggers/deploy";
-import { diffJsonObjects, isNonDestructive } from "../utils/diff-json";
-import type { DiffJson, Json } from "../utils/diff-json";
+import {
+	diffJsonObjects,
+	isModifiedDiffValue,
+	isNonDestructive,
+} from "../utils/diff-json";
+import type { JsonLike } from "../utils/diff-json";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
 
 /**
@@ -8,7 +13,7 @@ import type { Config, RawConfig } from "@cloudflare/workers-utils";
  */
 type ConfigDiff = {
 	/** The actual (raw) computed diff of the two objects */
-	diff: Record<string, DiffJson> | null;
+	diff: Record<string, JsonLike> | null;
 	/**
 	 * Flag indicating whether the difference includes some destructive changes.
 	 *
@@ -36,8 +41,8 @@ export function getRemoteConfigDiff(
 	);
 
 	const diff = diffJsonObjects(
-		normalizedRemoteConfig as unknown as Record<string, Json>,
-		normalizedLocalConfig as unknown as Record<string, Json>
+		normalizedRemoteConfig as unknown as Record<string, JsonLike>,
+		normalizedLocalConfig as unknown as Record<string, JsonLike>
 	);
 
 	return {
@@ -279,4 +284,122 @@ function orderObjectFields<T extends Record<string, unknown>>(
 	}
 
 	return orderedSource;
+}
+
+/**
+ * Given a config diff generates a patch object that can be passed to `experimental_patchConfig` to revert the
+ * changes in the config object that are described by the config diff.
+ *
+ * @param configDiff The target config diff
+ * @returns The patch object to pass to `experimental_patchConfig` to revert the changes
+ */
+export function getConfigPatch(configDiff: ConfigDiff["diff"]): RawConfig {
+	const patchObj: RawConfig = {};
+
+	populateConfigPatch(configDiff, patchObj as Record<string, JsonLike>);
+
+	return patchObj;
+}
+
+/**
+ * Recursive call for `getConfigPatch`, it side-effectfully populates the patch object at the current level
+ *
+ * @param diff The current section of the config diff that is being analyzed
+ * @param patchObj The current section of the patch object that is being populated
+ */
+function populateConfigPatch(
+	diff: JsonLike,
+	patchObj: Record<string, JsonLike> | JsonLike[]
+): void {
+	if (!diff || typeof diff !== "object") {
+		return;
+	}
+
+	if (Array.isArray(diff)) {
+		// This is a recursive call since we're populating the
+		// patchObj we know that it is an array
+		assert(Array.isArray(patchObj));
+		return populateConfigPatchArray(diff, patchObj);
+	}
+
+	// We know that patchObj is not an array here
+	assert(!Array.isArray(patchObj));
+	return populateConfigPatchObject(diff, patchObj);
+}
+
+/**
+ * Recursive call for `getConfigPatch`, it side-effectfully populates the array present at the config patch level
+ *
+ * @param diff The current section of the config diff that is being analyzed
+ * @param patchArray The current section of the patch object that is being populated
+ */
+function populateConfigPatchArray(diff: JsonLike[], patchArray: JsonLike[]) {
+	// We create a temporary array since removed elements should be pushed back at the end
+	const elementsToAppend: JsonLike[] = [];
+
+	Object.values(diff).forEach((element) => {
+		if (!Array.isArray(element)) {
+			return;
+		}
+
+		if (element.length === 1 && element[0] === " ") {
+			// An array with a single element equal to a simple space indicates
+			// that the element hasn't been modified
+			patchArray.push({});
+			return;
+		}
+
+		if (element.length === 2) {
+			if (element[0] === "-") {
+				elementsToAppend.push(element[1]);
+				return;
+			}
+
+			if (element[0] === "~" && element[1]) {
+				const patchEl = {};
+				populateConfigPatch(element[1], patchEl);
+				patchArray.push(patchEl);
+				return;
+			}
+		}
+	});
+	elementsToAppend.forEach((el) => patchArray.push(el));
+}
+
+/**
+ * Recursive call for `getConfigPatch`, it side-effectfully populates the object present at the config patch level
+ *
+ * @param diff The current section of the config diff that is being analyzed
+ * @param patchObj The current section of the patch object that is being populated
+ */
+function populateConfigPatchObject(
+	diff: { [id: string]: JsonLike },
+	patchObj: Record<string, JsonLike>
+) {
+	Object.keys(diff)
+		.filter((key) => diff[key] && typeof diff[key] === "object")
+		.forEach((key) => {
+			if (isModifiedDiffValue(diff[key])) {
+				patchObj[key] = diff[key].__old;
+				return;
+			}
+
+			patchObj[key] = Array.isArray(diff[key]) ? [] : {};
+
+			Object.entries(diff[key] as Record<string, JsonLike>).forEach(
+				([entryKey, entryValue]) => {
+					if (entryKey.endsWith("__deleted")) {
+						(patchObj[key] as Record<string, unknown>)[
+							entryKey.replace("__deleted", "")
+						] = entryValue;
+						return;
+					}
+				}
+			);
+
+			if (diff[key] && typeof diff[key] === "object") {
+				populateConfigPatch(diff[key], patchObj[key]);
+				return;
+			}
+		});
 }
