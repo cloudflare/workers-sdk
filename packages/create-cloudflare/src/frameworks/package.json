@@ -5,9 +5,9 @@
 		"so that we can use dependabot to update these dependencies automatically."
 	],
 	"dependencies": {
-		"create-astro": "4.13.1",
+		"create-astro": "4.13.2",
 		"create-analog": "1.8.1",
-		"@angular/create": "20.3.6",
+		"@angular/create": "20.3.7",
 		"create-docusaurus": "3.9.1",
 		"create-hono": "0.19.2",
 		"create-next-app": "15.4.6",
@@ -15,9 +15,9 @@
 		"create-vite": "7.1.1",
 		"create-react-router": "7.9.4",
 		"create-solid": "0.6.11",
-		"create-vue": "3.18.1",
+		"create-vue": "3.18.2",
 		"create-waku": "0.12.5-0.26.1-0",
-		"@tanstack/create-start": "0.34.2",
+		"@tanstack/create-start": "0.34.6",
 		"gatsby": "5.15.0",
 		"sv": "0.9.8",
 		"nuxi": "3.29.3"

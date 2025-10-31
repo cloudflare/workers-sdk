@@ -24,6 +24,7 @@ describe("pipe test", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Resource location: local
+
 			Use --remote if you want to access the remote instance.
 
 			Creating object \\"wormhole.txt\\" in bucket \\"bucket-object-test\\".
@@ -32,6 +33,7 @@ describe("pipe test", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Resource location: local
+
 			Use --remote if you want to access the remote instance.
 
 			Downloading \\"wormhole.txt\\" from \\"bucket-object-test\\".

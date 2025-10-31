@@ -26,6 +26,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id."
@@ -40,6 +41,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
@@ -80,6 +82,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -115,6 +118,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -164,6 +168,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
@@ -175,6 +180,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
@@ -183,6 +189,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Deleting the key \\"val\\" on namespace some-namespace-id."
@@ -196,6 +203,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
@@ -204,6 +212,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Deleting the key \\"val\\" on namespace some-namespace-id.
@@ -240,6 +249,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!"
@@ -254,6 +264,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -269,6 +280,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -283,6 +295,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -323,6 +336,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -345,6 +359,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -360,6 +375,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!"
@@ -371,6 +387,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -386,6 +403,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -414,6 +432,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -443,6 +462,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -458,6 +478,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!"
@@ -469,6 +490,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -484,6 +506,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -512,6 +535,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -534,6 +558,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Success!
@@ -571,6 +596,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
@@ -578,6 +604,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Writing the value \\"persistValue\\" to key \\"val\\" on namespace some-namespace-id."
@@ -591,6 +618,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
@@ -598,6 +626,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Writing the value \\"persistValue\\" to key \\"val\\" on namespace some-namespace-id.
@@ -612,6 +641,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Writing the value \\"value\\" to key \\"val\\" on namespace some-namespace-id.
@@ -619,6 +649,7 @@ describe("wrangler", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Resource location: local
+
 				Use --remote if you want to access the remote instance.
 
 				Writing the value \\"persistValue\\" to key \\"val\\" on namespace some-namespace-id.
