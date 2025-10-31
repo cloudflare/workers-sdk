@@ -1,5 +1,11 @@
 # miniflare
 
+## 4.20251011.2
+
+### Patch Changes
+
+- [#11084](https://github.com/cloudflare/workers-sdk/pull/11084) [`14f60e8`](https://github.com/cloudflare/workers-sdk/commit/14f60e84b1f568eb54fd26d9547ea017dceb652a) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - remove explicit disposal on void-returning rpc method on workflow binding. This was adding extra dispose calls that were not needed, making the runtime noisy for the customers that saw internal errors unrelated to their code.
+
 ## 4.20251011.1
 
 ### Patch Changes
