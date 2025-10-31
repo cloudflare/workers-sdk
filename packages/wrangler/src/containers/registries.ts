@@ -72,14 +72,12 @@ function registryConfigureYargs(args: CommonYargsArgv) {
 				type: "string",
 				demandOption: true,
 			})
-			// TODO: we will need to allow users to specify a pre-existing secret store integration
-			// but for now wrangler will create a new secret store secret
-			.option("identifier", {
+			.option("public-credential", {
 				type: "string",
 				description:
 					"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
 				demandOption: true,
-				alias: "id",
+				alias: ["id", "aws-access-key-id"],
 			})
 			.option("secret-store-id", {
 				type: "string",
@@ -121,8 +119,8 @@ async function registryConfigureCommand(
 			return;
 		// this can be extended to any registry type that requires credentials
 		case ExternalRegistryKind.ECR:
-			log(`Getting ${registryType.secretName}...\n`);
-			secret = await getSecret();
+			log(`Getting ${registryType.secretType}...\n`);
+			secret = await getSecret(registryType.secretType);
 			break;
 		default:
 			throw new UserError(`Unhandled registry type: ${registryType.type}`);
@@ -135,28 +133,28 @@ async function registryConfigureCommand(
 	if (!secretStoreId) {
 		const stores = await listStores(config, accountId);
 		if (stores.length === 0) {
+			const defaultStoreName = "default_secret_store";
 			const check = await confirm(
-				`No existing secret stores found. Create a secret store to store your registry credentials?`
+				`No existing Secret Stores found. Create a Secret Store to store your registry credentials?`
 			);
 			if (!check) {
 				endSection("Cancelled.");
 				return;
 			}
 			const res = await promiseSpinner(
-				// should we allow users to specify the name of the store?
-				createStore(config, accountId, { name: "Default" })
+				createStore(config, accountId, { name: defaultStoreName })
 			);
-			log("New secret store `Default` created with id: " + res.id);
+			log(`New Secret Store ${defaultStoreName} created with id: ${res.id}`);
 			secretStoreId = res.id;
 		} else if (stores.length > 1) {
 			// note you can only have one secret store per account for now
 			throw new UserError(
-				`Multiple secret stores found. Please specify a secret store ID using --secret-store-id.`
+				`Multiple Secret Stores found. Please specify a Secret Store ID using --secret-store-id.`
 			);
 		} else {
 			secretStoreId = stores[0].id;
 			log(
-				`Using existing secret store ${stores[0].name} with id: ${stores[0].id}`
+				`Using existing Secret Store ${stores[0].name} with id: ${stores[0].id}`
 			);
 		}
 	}
@@ -164,10 +162,10 @@ async function registryConfigureCommand(
 	let secretName = configureArgs.secretName;
 	while (!secretName) {
 		try {
-			const res = await prompt(
-				`Please provide a name for the secret to store the registry credentials:`,
-				{ defaultValue: `${registryType.secretName?.replaceAll(" ", "_")}` }
-			);
+			const res = await prompt(`Secret name:`, {
+				defaultValue: `${registryType.secretType?.replaceAll(" ", "_")}`,
+			});
+
 			validateSecretName(res);
 			secretName = res;
 		} catch (e) {
@@ -192,7 +190,7 @@ async function registryConfigureCommand(
 				domain: configureArgs.DOMAIN,
 				is_public: false,
 				auth: {
-					identifier: configureArgs.identifier,
+					public_credential: configureArgs.publicCredential,
 					secrets_integration: {
 						store_id: secretStoreId,
 						secret_name: secretName,
@@ -220,18 +218,18 @@ async function registryConfigureCommand(
 	endSection("Registry configuration completed");
 }
 
-async function getSecret(): Promise<string> {
+async function getSecret(secretType?: string): Promise<string> {
 	if (isNonInteractiveOrCI()) {
 		// Non-interactive mode: expect JSON input via stdin
 		const stdinInput = trimTrailingWhitespace(await readFromStdin());
 		if (!stdinInput) {
 			throw new UserError(
-				"No input provided. In non-interactive mode, please pipe in the secret."
+				`No input provided. In non-interactive mode, please pipe in the ${secretType} secret via stdin.`
 			);
 		}
 		return stdinInput;
 	}
-	const secret = await prompt(`Enter secret:`, {
+	const secret = await prompt(`Enter ${secretType ?? "secret"}:`, {
 		isSecret: true,
 	});
 	if (!secret) {

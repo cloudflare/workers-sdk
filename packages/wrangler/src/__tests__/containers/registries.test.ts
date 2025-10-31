@@ -4,6 +4,11 @@ import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput, mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
+import {
+	mockCreateSecret,
+	mockCreateSecretStore,
+	mockListSecretStores,
+} from "../helpers/mock-secrets-store";
 import { useMockStdin } from "../helpers/mock-stdin";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -48,8 +53,11 @@ describe("containers registries configure", () => {
 	});
 
 	it("should reject unsupported registry domains", async () => {
-		await expect(runWrangler(`containers registries configure docker.io`))
-			.rejects.toThrowErrorMatchingInlineSnapshot(`
+		await expect(
+			runWrangler(
+				`containers registries configure docker.io --public-credential=test-id`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(`
 			[Error: docker.io is not a supported image registry.
 			Currently we support the following non-Cloudflare registries: AWS ECR.
 			To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images]
@@ -58,7 +66,7 @@ describe("containers registries configure", () => {
 
 	it("should no-op on cloudflare registry (default)", async () => {
 		await runWrangler(
-			`containers registries configure registry.cloudflare.com`
+			`containers registries configure registry.cloudflare.com --public-credential=test-id`
 		);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`
 			"╭ Configure a container registry
@@ -77,21 +85,149 @@ describe("containers registries configure", () => {
 		it("should configure AWS ECR registry with interactive prompts", async () => {
 			setIsTTY(true);
 			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
-
-			// Mock the prompts for AWS credentials with exact message matching
+			const storeId = "test-store-id-123";
 			mockPrompt({
-				text: "AWS_ACCESS_KEY_ID:",
-				result: "test-access-key-id",
-			});
-			mockPrompt({
-				text: "AWS_SECRET_ACCESS_KEY:",
+				text: "Enter AWS Secret Access Key:",
 				options: { isSecret: true },
 				result: "test-secret-access-key",
 			});
-			mockPutRegistry();
+			mockPrompt({
+				text: "Secret name:",
+				options: { isSecret: false, defaultValue: "AWS_Secret_Access_Key" },
+				result: "AWS_Secret_Access_Key",
+			});
+
+			mockListSecretStores([
+				{
+					id: storeId,
+					account_id: "some-account-id",
+					name: "Default",
+					created: "2024-01-01T00:00:00Z",
+					modified: "2024-01-01T00:00:00Z",
+				},
+			]);
+			mockCreateSecret(storeId);
+			mockPutRegistry({
+				domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com",
+				is_public: false,
+				auth: {
+					public_credential: "test-access-key-id",
+					secrets_integration: {
+						store_id: storeId,
+						secret_name: "AWS_Secret_Access_Key",
+					},
+				},
+				kind: "ECR",
+			});
+
+			await runWrangler(
+				`containers registries configure ${awsEcrDomain} --aws-access-key-id=test-access-key-id`
+			);
+
+			expect(cliStd.stdout).toContain("Using existing Secret Store Default");
+		});
+
+		it("will create a secret store if no existing stores are returned from the api", async () => {
+			setIsTTY(true);
+			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
+			const newStoreId = "new-store-id-456";
+
+			mockPrompt({
+				text: "Enter AWS Secret Access Key:",
+				options: { isSecret: true },
+				result: "test-secret-access-key",
+			});
+			mockConfirm({
+				text: "No existing Secret Stores found. Create a Secret Store to store your registry credentials?",
+				result: true,
+			});
+			mockPrompt({
+				text: "Secret name:",
+				options: { isSecret: false, defaultValue: "AWS_Secret_Access_Key" },
+				result: "AWS_Secret_Access_Key",
+			});
+
+			mockListSecretStores([]);
+			mockCreateSecretStore(newStoreId);
+			mockCreateSecret(newStoreId);
+			mockPutRegistry({
+				domain: awsEcrDomain,
+				is_public: false,
+				auth: {
+					public_credential: "test-access-key-id",
+					secrets_integration: {
+						store_id: newStoreId,
+						secret_name: "AWS_Secret_Access_Key",
+					},
+				},
+				kind: "ECR",
+			});
+
 			await expect(
-				runWrangler(`containers registries configure ${awsEcrDomain}`)
+				runWrangler(
+					`containers registries configure ${awsEcrDomain} --aws-access-key-id=test-access-key-id`
+				)
 			).resolves.not.toThrow();
+			expect(cliStd.stdout).toContain(
+				`New Secret Store default_secret_store created with id: ${newStoreId}`
+			);
+		});
+
+		it("will use an existing secret store if a store id is provided", async () => {
+			setIsTTY(true);
+			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
+			const providedStoreId = "provided-store-id-789";
+
+			mockPrompt({
+				text: "Enter AWS Secret Access Key:",
+				options: { isSecret: true },
+				result: "test-secret-access-key",
+			});
+			mockPrompt({
+				text: "Secret name:",
+				options: { isSecret: false, defaultValue: "AWS_Secret_Access_Key" },
+				result: "AWS_Secret_Access_Key",
+			});
+
+			mockCreateSecret(providedStoreId);
+			mockPutRegistry({
+				domain: awsEcrDomain,
+				is_public: false,
+				auth: {
+					public_credential: "test-access-key-id",
+					secrets_integration: {
+						store_id: providedStoreId,
+						secret_name: "AWS_Secret_Access_Key",
+					},
+				},
+				kind: "ECR",
+			});
+
+			await expect(
+				runWrangler(
+					`containers registries configure ${awsEcrDomain} --aws-access-key-id=test-access-key-id --secret-store-id=${providedStoreId}`
+				)
+			).resolves.not.toThrow();
+			// Should not call listStores or createStore
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Configure a container registry
+				│
+				│ Configuring AWS ECR registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
+				│
+				│ Getting AWS Secret Access Key...
+				│
+				│
+				│
+				│ Setting up integration with Secrets Store...
+				│
+				│
+				│
+				│ Container-scoped secret AWS_Secret_Access_Key created in Secrets Store.
+				│
+				╰ Registry configuration completed
+
+				"
+			`);
 		});
 
 		describe("non-interactive", () => {
@@ -101,53 +237,36 @@ describe("containers registries configure", () => {
 			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
 			const mockStdIn = useMockStdin({ isTTY: false });
 
-			it("should accept valid JSON credentials from piped input", async () => {
-				const validJson = JSON.stringify({
-					AWS_ACCESS_KEY_ID: "AKIAIOSFODNN7EXAMPLE",
-					AWS_SECRET_ACCESS_KEY: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+			it("should accept the secret from piped input", async () => {
+				const secret = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
+				const storeId = "test-store-id-999";
+
+				mockStdIn.send(secret);
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockCreateSecret(storeId);
+				mockPutRegistry({
+					domain: awsEcrDomain,
+					is_public: false,
+					auth: {
+						public_credential: "test-access-key-id",
+						secrets_integration: {
+							store_id: storeId,
+							secret_name: "AWS_Secret_Access_Key",
+						},
+					},
+					kind: "ECR",
 				});
-
-				mockStdIn.send(validJson);
-				mockPutRegistry();
-				await runWrangler(`containers registries configure ${awsEcrDomain}`);
-			});
-
-			it("should error with invalid JSON from piped input", async () => {
-				const invalidJson = "not valid json";
-
-				mockStdIn.send(invalidJson);
-				await expect(
-					runWrangler(`containers registries configure ${awsEcrDomain}`)
-				).rejects.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Invalid JSON input. Please provide AWS credentials in this format:
-				{"AWS_ACCESS_KEY_ID":"your-access-key","AWS_SECRET_ACCESS_KEY":"your-secret-key"}]
-			`);
-			});
-
-			it("should error with missing required credentials", async () => {
-				const incompleteJson = JSON.stringify({
-					AWS_ACCESS_KEY_ID: "AKIAIOSFODNN7EXAMPLE",
-					// Missing AWS_SECRET_ACCESS_KEY
-				});
-
-				mockStdIn.send(incompleteJson);
-				await expect(
-					runWrangler(`containers registries configure ${awsEcrDomain}`)
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Missing required credentials. JSON must include both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.]`
+				await runWrangler(
+					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --secret-name=AWS_Secret_Access_Key`
 				);
-			});
-
-			it("should error with no piped input", async () => {
-				mockStdIn.send("");
-				await expect(
-					runWrangler(`containers registries configure ${awsEcrDomain}`)
-				).rejects.toThrowErrorMatchingInlineSnapshot(`
-					[Error: No input provided. In non-interactive mode, please pipe AWS credentials as JSON:
-					\`wrangler containers registries configure 123456789012.dkr.ecr.us-west-2.amazonaws.com < credentials.json\`
-					where credentials.json looks like
-					{"AWS_ACCESS_KEY_ID":"...","AWS_SECRET_ACCESS_KEY":"..."}]
-				`);
 			});
 		});
 	});
@@ -298,11 +417,24 @@ describe("containers registries delete", () => {
 	});
 });
 
-const mockPutRegistry = () => {
+const mockPutRegistry = (expected?: object) => {
 	msw.use(
-		http.post("*/accounts/:accountId/containers/registries", async () => {
-			return HttpResponse.json({ success: true });
-		})
+		http.post(
+			"*/accounts/:accountId/containers/registries",
+			async ({ request }) => {
+				if (expected) {
+					const body = (await request.json()) as object;
+					expect(body).toEqual(expected);
+				}
+				return HttpResponse.json(
+					createFetchResult({
+						domain: expected
+							? (expected as { domain: string }).domain
+							: "test.example.com",
+					})
+				);
+			}
+		)
 	);
 };
 

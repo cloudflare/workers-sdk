@@ -194,7 +194,7 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 			type: ExternalRegistryKind.ECR,
 			pattern: /^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com$/,
 			name: "AWS ECR",
-			secretName: "AWS Secret Access Key",
+			secretType: "AWS Secret Access Key",
 		},
 		{
 			type: "cloudflare",
@@ -225,7 +225,7 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 
 interface RegistryPattern {
 	type: ExternalRegistryKind | "cloudflare";
-	secretName?: string;
+	secretType?: string;
 	pattern: RegExp;
 	name: string;
 }
