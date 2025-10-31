@@ -1,11 +1,38 @@
+import assert from "node:assert";
+import { Miniflare } from "miniflare";
+import { debuglog } from "../utils";
 import type { ResolvedPluginConfig } from "../plugin-config";
+import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
 
 export class PluginContext {
+	#miniflare?: Miniflare;
 	#localState: {
 		resolvedPluginConfig?: ResolvedPluginConfig;
 		resolvedViteConfig?: vite.ResolvedConfig;
 	} = {};
+
+	async setMiniflareOptions(options: MiniflareOptions): Promise<void> {
+		if (!this.#miniflare) {
+			debuglog("Creating new Miniflare instance");
+			this.#miniflare = new Miniflare(options);
+		} else {
+			debuglog("Updating the existing Miniflare instance");
+			await this.#miniflare.setOptions(options);
+		}
+		debuglog("Miniflare is ready");
+	}
+
+	async disposeMiniflare(): Promise<void> {
+		await this.#miniflare?.dispose();
+		this.#miniflare = undefined;
+	}
+
+	get miniflare(): Miniflare {
+		assert(this.#miniflare, "Expected `miniflare` to be defined");
+
+		return this.#miniflare;
+	}
 
 	resetLocalState(): void {
 		this.#localState = {};
@@ -20,19 +47,19 @@ export class PluginContext {
 	}
 
 	get resolvedPluginConfig(): ResolvedPluginConfig {
-		// TODO: replace with `assert` once we have migrated to tsdown
-		if (!this.#localState.resolvedPluginConfig) {
-			throw new Error("Expected resolvedPluginConfig to be defined");
-		}
+		assert(
+			this.#localState.resolvedPluginConfig,
+			"Expected `resolvedPluginConfig` to be defined"
+		);
 
 		return this.#localState.resolvedPluginConfig;
 	}
 
 	get resolvedViteConfig(): vite.ResolvedConfig {
-		// TODO: replace with `assert` once we have migrated to tsdown
-		if (!this.#localState.resolvedViteConfig) {
-			throw new Error("Expected resolvedViteConfig to be defined");
-		}
+		assert(
+			this.#localState.resolvedViteConfig,
+			"Expected `resolvedViteConfig` to be defined"
+		);
 
 		return this.#localState.resolvedViteConfig;
 	}

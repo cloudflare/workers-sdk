@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import * as util from "node:util";
 import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
 import {
 	CoreHeaders,
@@ -102,3 +103,5 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 		signal: request.signal,
 	});
 }
+
+export const debuglog = util.debuglog("@cloudflare:vite-plugin");

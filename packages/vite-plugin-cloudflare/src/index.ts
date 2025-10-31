@@ -1,9 +1,8 @@
 import assert from "node:assert";
-import * as util from "node:util";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
-import { CoreHeaders, Miniflare } from "miniflare";
+import { CoreHeaders } from "miniflare";
 import colors from "picocolors";
 import * as vite from "vite";
 import { hasAssetsConfigChanged } from "./asset-config";
@@ -51,7 +50,7 @@ import {
 } from "./plugins/virtual-modules";
 import { wasmHelperPlugin } from "./plugins/wasm";
 import { UNKNOWN_HOST } from "./shared";
-import { createRequestHandler, getOutputDirectory } from "./utils";
+import { createRequestHandler, debuglog, getOutputDirectory } from "./utils";
 import { validateWorkerEnvironmentOptions } from "./vite-config";
 import { handleWebSocket } from "./websockets";
 import { getWarningForWorkersConfigs } from "./workers-configs";
@@ -62,13 +61,10 @@ export type { PluginConfig } from "./plugin-config";
 
 const ctx = new PluginContext();
 
-const debuglog = util.debuglog("@cloudflare:vite-plugin");
-
 // this flag is used to show the workers configs warning only once
 let workersConfigsWarningShown = false;
 /** Used to track whether hooks are being called because of a server restart or a server close event. */
 let restartingServer = false;
-let miniflare: Miniflare | undefined;
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
@@ -200,11 +196,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				assertIsNotPreview(ctx.resolvedPluginConfig);
 
-				const inputInspectorPort = await getInputInspectorPortOption(
-					ctx.resolvedPluginConfig,
-					viteDevServer,
-					miniflare
-				);
+				// TODO: add inspector back in
+				// const inputInspectorPort = await getInputInspectorPortOption(
+				// 	ctx.resolvedPluginConfig,
+				// 	viteDevServer,
+				// 	ctx.miniflare
+				// );
 
 				const configChangedHandler = async (changedFilePath: string) => {
 					assertIsNotPreview(ctx.resolvedPluginConfig);
@@ -234,22 +231,16 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					ctx.resolvedPluginConfig
 				);
 
-				const { config: miniflareDevOptions, allContainerOptions } =
+				const { config: miniflareOptions, allContainerOptions } =
 					await getDevMiniflareOptions({
 						resolvedPluginConfig: ctx.resolvedPluginConfig,
 						viteDevServer,
-						inspectorPort: inputInspectorPort,
+						// inspectorPort: inputInspectorPort,
+						inspectorPort: false,
 						containerBuildId,
 					});
 
-				if (!miniflare) {
-					debuglog("Creating new Miniflare instance");
-					miniflare = new Miniflare(miniflareDevOptions);
-				} else {
-					debuglog("Updating the existing Miniflare instance");
-					await miniflare.setOptions(miniflareDevOptions);
-					debuglog("Miniflare is ready");
-				}
+				await ctx.setMiniflareOptions(miniflareOptions);
 
 				let preMiddleware: vite.Connect.NextHandleFunction | undefined;
 
@@ -257,7 +248,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					assert(entryWorkerConfig, `No entry Worker config`);
 
 					debuglog("Initializing the Vite module runners");
-					await initRunners(ctx.resolvedPluginConfig, viteDevServer, miniflare);
+					await initRunners(
+						ctx.resolvedPluginConfig,
+						viteDevServer,
+						ctx.miniflare
+					);
 
 					const entryWorkerName = entryWorkerConfig.name;
 
@@ -265,7 +260,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					if (viteDevServer.httpServer) {
 						handleWebSocket(
 							viteDevServer.httpServer,
-							miniflare,
+							ctx.miniflare,
 							entryWorkerName
 						);
 					}
@@ -283,10 +278,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 							staticRouting.user_worker
 						);
 						const userWorkerHandler = createRequestHandler(async (request) => {
-							assert(miniflare, `Miniflare not defined`);
 							request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 
-							return miniflare.dispatchFetch(request, { redirect: "manual" });
+							return ctx.miniflare.dispatchFetch(request, {
+								redirect: "manual",
+							});
 						});
 
 						preMiddleware = async (req, res, next) => {
@@ -376,22 +372,24 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					// post middleware
 					viteDevServer.middlewares.use(
 						createRequestHandler(async (request, req) => {
-							assert(miniflare, `Miniflare not defined`);
-
 							if (req[kRequestType] === "asset") {
 								request.headers.set(
 									CoreHeaders.ROUTE_OVERRIDE,
 									ASSET_WORKER_NAME
 								);
 
-								return miniflare.dispatchFetch(request, { redirect: "manual" });
+								return ctx.miniflare.dispatchFetch(request, {
+									redirect: "manual",
+								});
 							} else {
 								request.headers.set(
 									CoreHeaders.ROUTE_OVERRIDE,
 									ROUTER_WORKER_NAME
 								);
 
-								return miniflare.dispatchFetch(request, { redirect: "manual" });
+								return ctx.miniflare.dispatchFetch(request, {
+									redirect: "manual",
+								});
 							}
 						})
 					);
@@ -413,7 +411,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						vitePreviewServer,
 						inspectorPort: inputInspectorPort,
 					});
-				miniflare = new Miniflare(miniflareOptions);
+				await ctx.setMiniflareOptions(miniflareOptions);
 
 				if (allContainerOptions.size > 0) {
 					const dockerPath = getDockerPath();
@@ -444,14 +442,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 					});
 				}
 
-				handleWebSocket(vitePreviewServer.httpServer, miniflare);
+				handleWebSocket(vitePreviewServer.httpServer, ctx.miniflare);
 
 				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
 				vitePreviewServer.middlewares.use(
 					createRequestHandler((request) => {
-						assert(miniflare, `Miniflare not defined`);
-
-						return miniflare.dispatchFetch(request, { redirect: "manual" });
+						return ctx.miniflare.dispatchFetch(request, { redirect: "manual" });
 					})
 				);
 			},
@@ -466,11 +462,11 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 
 				debuglog("buildEnd:", restartingServer ? "restarted" : "disposing");
 				if (!restartingServer) {
-					debuglog("buildEnd: disposing Miniflare instance");
-					await miniflare?.dispose().catch((error) => {
-						debuglog("buildEnd: failed to dispose Miniflare instance:", error);
-					});
-					miniflare = undefined;
+					try {
+						await ctx.disposeMiniflare();
+					} catch (error) {
+						debuglog("Failed to dispose Miniflare instance:", error);
+					}
 				}
 			},
 		},
@@ -506,7 +502,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				viteDevServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {
 					const resolvedInspectorPort = await getResolvedInspectorPort(
 						ctx.resolvedPluginConfig,
-						miniflare
+						ctx.miniflare
 					);
 
 					if (resolvedInspectorPort) {
@@ -543,7 +539,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				vitePreviewServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {
 					const resolvedInspectorPort = await getResolvedInspectorPort(
 						ctx.resolvedPluginConfig,
-						miniflare
+						ctx.miniflare
 					);
 
 					if (resolvedInspectorPort) {
@@ -576,8 +572,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						"/cdn-cgi/handler/",
 						(req, res, next) => {
 							const requestHandler = createRequestHandler((request) => {
-								assert(miniflare, `Miniflare not defined`);
-
 								// set the target service that handles these requests
 								// to point to the User Worker (see `getTargetService` fn in
 								// `packages/miniflare/src/workers/core/entry.worker.ts`)
@@ -585,7 +579,9 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 									CoreHeaders.ROUTE_OVERRIDE,
 									entryWorkerName
 								);
-								return miniflare.dispatchFetch(request, { redirect: "manual" });
+								return ctx.miniflare.dispatchFetch(request, {
+									redirect: "manual",
+								});
 							});
 
 							requestHandler(req, res, next);
