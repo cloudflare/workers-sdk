@@ -95,9 +95,8 @@ class InstanceImpl implements WorkflowInstance {
 	}): Promise<void> {
 		const instance = (await this.binding.get(this.id)) as WorkflowInstance &
 			Disposable;
-		const res = (await instance.sendEvent(args)) as void & Disposable;
+		await instance.sendEvent(args);
 		instance[Symbol.dispose]();
-		res[Symbol.dispose]();
 	}
 }
 
