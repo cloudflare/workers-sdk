@@ -1,6 +1,6 @@
 import { writeFile } from "fs/promises";
 import path from "path";
-import guessWorkerFormat from "../deployment-bundle/guess-worker-format";
+import { guessWorkerFormat } from "../deployment-bundle/guess-worker-format";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 

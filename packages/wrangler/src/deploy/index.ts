@@ -8,6 +8,9 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
+import { getDetailsForAutoConfig } from "../autoconfig/get-details";
+import { runAutoConfig } from "../autoconfig/run";
+import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { confirm, prompt } from "../dialogs";
@@ -238,6 +241,13 @@ export const deployCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
+		"experimental-autoconfig": {
+			alias: ["x-autoconfig"],
+			describe:
+				"Experimental: Enables framework detection and automatic configuration when deploying",
+			type: "boolean",
+			default: false,
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
@@ -264,6 +274,20 @@ export const deployCommand = createCommand({
 					"For Pages, please run `wrangler pages deploy` instead.",
 				{ telemetryMessage: true }
 			);
+		}
+		if (args.experimentalAutoconfig) {
+			const details = await getDetailsForAutoConfig();
+
+			// Only run auto config if the project is not already configured
+			if (!details.configured) {
+				await runAutoConfig(details);
+
+				// If autoconfig worked, there should now be a new config file, and so we need to read config again
+				config = readConfig(args, {
+					hideWarnings: false,
+					useRedirectIfAvailable: true,
+				});
+			}
 		}
 		// We use the `userConfigPath` to compute the root of a project,
 		// rather than a redirected (potentially generated) `configPath`.
