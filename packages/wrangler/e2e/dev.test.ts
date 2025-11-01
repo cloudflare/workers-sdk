@@ -678,10 +678,21 @@ describe("hyperdrive dev tests", () => {
 		});
 		const socketMsgPromise = new Promise((resolve, _) => {
 			server.on("connection", (sock) => {
+				// workerd will write the sslrequest bytes and expect a response
+				let buffer = '';
+				// this will get called multiple times, so build up buffer array
 				sock.on("data", (data) => {
-					expect(new TextDecoder().decode(data)).toBe("test string");
+					buffer += new TextDecoder().decode(data);
 					server.close();
 					resolve({});
+				});
+
+				// writes back to workerd that server can not handle ssl request
+				sock.write('N');
+
+				// on socket close the full amount of data we expect should be sslrequest bytes + test string from worker script
+				sock.on("close", () => {
+					expect(buffer).toBe("\u0000\u0000\u0000\b\u0004\ufffd\u0016/" + "test string");
 				});
 			});
 		});
@@ -740,15 +751,159 @@ describe("hyperdrive dev tests", () => {
 		const { url } = await worker.waitForReady();
 		const socketMsgPromise = new Promise((resolve, _) => {
 			server.on("connection", (sock) => {
+				// workerd will write the sslrequest bytes and expect a response
+				let buffer = '';
+				// this will get called multiple times, so build up buffer array
 				sock.on("data", (data) => {
-					expect(new TextDecoder().decode(data)).toBe("test string");
+					buffer += new TextDecoder().decode(data);
 					server.close();
 					resolve({});
+				});
+
+				// writes back to workerd that server can not handle ssl request
+				sock.write('N');
+
+				// on socket close the full amount of data we expect should be sslrequest bytes + test string from worker script
+				sock.on("close", () => {
+					expect(buffer).toBe("\u0000\u0000\u0000\b\u0004\ufffd\u0016/" + "test string");
 				});
 			});
 		});
 		await fetch(`${url}/connect`);
 
+		await socketMsgPromise;
+	});
+
+	it("connects using sslmode - prefer", async () => {
+		const helper = new WranglerE2ETestHelper();
+		let port = 5432;
+		if (server.address() && typeof server.address() !== "string") {
+			port = (server.address() as nodeNet.AddressInfo).port;
+		}
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "hyperdrive_id"
+					localConnectionString = "postgresql://user:pass@127.0.0.1:${port}/some_db?sslmode=prefer"
+			`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+			"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+		});
+		const socketMsgPromise = new Promise((resolve, _) => {
+			server.on("connection", (sock) => {
+				// workerd will write the sslrequest bytes and expect a response
+				let buffer = '';
+				// this will get called multiple times, so build up buffer array
+				sock.on("data", (data) => {
+					buffer += new TextDecoder().decode(data);
+					server.close();
+					resolve({});
+				});
+
+				// writes back to workerd that server can not handle ssl request
+				sock.write('N');
+
+				// on socket close the full amount of data we expect should be sslrequest bytes + test string from worker script
+				sock.on("close", () => {
+					expect(buffer).toBe("\u0000\u0000\u0000\b\u0004\ufffd\u0016/" + "test string");
+				});
+			});
+		});
+
+		const worker = helper.runLongLived("wrangler dev");
+
+		const { url } = await worker.waitForReady();
+
+		await fetch(`${url}/connect`);
+
+		await socketMsgPromise;
+	});
+
+	it("fails to connect using sslmode - require", async () => {
+		const helper = new WranglerE2ETestHelper();
+		let port = 5432;
+		if (server.address() && typeof server.address() !== "string") {
+			port = (server.address() as nodeNet.AddressInfo).port;
+		}
+		await helper.seed({
+			"wrangler.toml": dedent`
+					name = "${workerName}"
+					main = "src/index.ts"
+					compatibility_date = "2023-10-25"
+
+					[[hyperdrive]]
+					binding = "HYPERDRIVE"
+					id = "hyperdrive_id"
+					localConnectionString = "postgresql://user:pass@127.0.0.1:${port}/some_db?sslmode=require"
+			`,
+			"src/index.ts": dedent`
+					export default {
+						async fetch(request, env) {
+							if (request.url.includes("connect")) {
+								const conn = env.HYPERDRIVE.connect();
+								await conn.writable.getWriter().write(new TextEncoder().encode("test string"));
+							}
+							return new Response(env.HYPERDRIVE?.connectionString ?? "no")
+						}
+					}`,
+			"package.json": dedent`
+					{
+						"name": "worker",
+						"version": "0.0.0",
+						"private": true
+					}
+					`,
+		});
+		const socketMsgPromise = new Promise((resolve, _) => {
+			server.on("connection", (sock) => {
+				// workerd will write the sslrequest bytes and expect a response
+				let buffer = '';
+				// this will get called multiple times, so build up buffer array
+				sock.on("data", (data) => {
+					buffer += new TextDecoder().decode(data);
+					server.close();
+					resolve({});
+				});
+
+				// writes back to workerd that server can not handle ssl request
+				sock.write('N');
+
+				// on socket close the full amount of data we expect should be sslrequest bytes but no "test string" as the request should fail
+				// on connect
+				sock.on("close", (e) => {
+					expect(buffer).toBe("\u0000\u0000\u0000\b\u0004\ufffd\u0016/");
+				});
+			});
+		});
+
+		const worker = helper.runLongLived("wrangler dev");
+
+		const { url } = await worker.waitForReady();
+
+		let res = await fetch(`${url}/connect`);
+		expect(res.status).toBe(500);
+		// verify error from workerd
+		expect(worker.currentOutput.includes("Server does not support SSL, but client requires it"));
 		await socketMsgPromise;
 	});
 
