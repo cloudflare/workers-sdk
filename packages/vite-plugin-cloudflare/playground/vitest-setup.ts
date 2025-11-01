@@ -99,9 +99,14 @@ beforeAll(async (s) => {
 		throw new Error("wsEndpoint not found");
 	}
 
+	const logLabel = "bootup: " + testName;
+
+	console.time(logLabel);
+	console.timeLog(logLabel, "Starting browser connect to", wsEndpoint);
 	browser = await chromium.connect(wsEndpoint);
 	// `@vitejs/plugin-basic-ssl` requires a manual confirmation step in the browser so we enable `ignoreHTTPSErrors` to bypass this
 	page = await browser.newPage({ ignoreHTTPSErrors: true });
+	console.timeLog(logLabel, `Browser connected`);
 
 	const globalConsole = console;
 	const warn = globalConsole.warn;
@@ -112,6 +117,7 @@ beforeAll(async (s) => {
 
 	try {
 		page.on("console", (msg) => {
+			console.timeLog(logLabel, `BROWSER LOG [${msg.type()}]: ${msg.text()}`);
 			// ignore favicon requests in headed browser
 			if (
 				process.env.VITE_DEBUG_SERVE &&
@@ -123,6 +129,7 @@ beforeAll(async (s) => {
 			browserLogs.push(msg.text());
 		});
 		page.on("pageerror", (error) => {
+			console.timeLog(logLabel, `BROWSER ERROR: ${error.message}`);
 			browserErrors.push(error);
 		});
 
@@ -147,6 +154,7 @@ beforeAll(async (s) => {
 				path.resolve(path.dirname(testPath), "serve.js"),
 			].find((i) => fs.existsSync(i));
 
+			console.timeLog(logLabel, "Starting test server...");
 			if (testCustomServe) {
 				// test has custom server configuration.
 				const mod = await import(testCustomServe);
@@ -163,6 +171,8 @@ beforeAll(async (s) => {
 			} else {
 				server = await startDefaultServe();
 			}
+			console.timeLog(logLabel, "Started test server...");
+			console.timeEnd(logLabel);
 		}
 	} catch (e) {
 		// Closing the page since an error in the setup, for example a runtime error
@@ -182,7 +192,7 @@ beforeAll(async (s) => {
 		await watcher?.close();
 		await browser?.close();
 	};
-}, 15_000);
+}, 20_000);
 
 export async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;

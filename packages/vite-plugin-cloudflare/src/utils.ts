@@ -1,6 +1,7 @@
 import * as path from "node:path";
 import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
 import {
+	CoreHeaders,
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
@@ -91,7 +92,7 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
 	const secFetchMode = request.headers.get("Sec-Fetch-Mode");
 	if (secFetchMode) {
-		request.headers.set("X-Mf-Sec-Fetch-Mode", secFetchMode);
+		request.headers.set(CoreHeaders.SEC_FETCH_MODE, secFetchMode);
 	}
 	return new MiniflareRequest(request.url, {
 		method: request.method,

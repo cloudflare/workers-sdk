@@ -47,6 +47,39 @@ describe("getRemoteConfigsDiff", () => {
 		expect(nonDestructive).toBe(true);
 	});
 
+	it("should handle a very simple diffing scenario where there is only an addition to an array (specifically in `kv_namespaces`)", () => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "silent-firefly-dbe3",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				kv_namespaces: [{ binding: "MY_KV", id: "<kv-id>" }],
+				preview_urls: true,
+			},
+			{
+				name: "silent-firefly-dbe3",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: true,
+				kv_namespaces: [],
+			} as unknown as Config
+		);
+
+		assert(diff);
+		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
+			" {
+			   kv_namespaces: [
+			-    {
+			-      binding: \\"MY_KV\\"
+			-      id: \\"<kv-id>\\"
+			-    }
+			   ]
+			 }
+			"
+		`);
+		expect(nonDestructive).toBe(false);
+	});
+
 	it("should handle a very simple diffing scenario (some diffs, random order)", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
