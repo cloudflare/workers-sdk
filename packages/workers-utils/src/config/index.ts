@@ -11,6 +11,7 @@ export type {
 	DevConfig,
 	RawConfig,
 	RawDevConfig,
+	TopLevelOnlyField,
 } from "./config";
 export type {
 	ConfigModuleRuleType,

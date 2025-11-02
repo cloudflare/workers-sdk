@@ -5,6 +5,7 @@ export type {
 	ConfigFields,
 	RawEnvironment,
 	ConfigBindingOptions,
+	TopLevelOnlyField,
 } from "./config";
 export * from "./config/environment";
 export {
