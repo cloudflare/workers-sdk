@@ -1,0 +1,33 @@
+import { writeFileSync } from "fs";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { getPackageManager } from "../../package-manager";
+import { runCommand } from "../c3-vendor/command";
+import type { Framework } from ".";
+import type { AutoConfigDetails } from "../types";
+import type { RawConfig } from "@cloudflare/workers-utils";
+
+export class Astro implements Framework {
+	name = "astro";
+	async configure(options: AutoConfigDetails): Promise<RawConfig> {
+		const { npx } = await getPackageManager();
+		await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
+			silent: true,
+			startText: "Installing adapter",
+			doneText: `${brandColor("installed")} ${dim(
+				`via \`${npx} astro add cloudflare\``
+			)}`,
+		});
+		await writeFileSync("public/.assetsignore", "_worker.js\n_routes.json");
+		return {
+			main: `${options.outputDir}/dist/_worker.js/index.js`,
+			compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
+			assets: {
+				binding: "ASSETS",
+				directory: options.outputDir,
+			},
+			observability: {
+				enabled: true,
+			},
+		};
+	}
+}

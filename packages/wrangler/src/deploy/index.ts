@@ -276,7 +276,17 @@ export const deployCommand = createCommand({
 			);
 		}
 		if (args.experimentalAutoconfig) {
-			const details = await getDetailsForAutoConfig();
+			let maybeOutputDir: string | undefined;
+			if (args.script) {
+				const stats = statSync(args.script);
+				if (stats.isDirectory()) {
+					maybeOutputDir = args.script;
+				}
+			}
+			const details = await getDetailsForAutoConfig({
+				wranglerConfig: config,
+				outputDir: maybeOutputDir,
+			});
 
 			// Only run auto config if the project is not already configured
 			if (!details.configured) {
