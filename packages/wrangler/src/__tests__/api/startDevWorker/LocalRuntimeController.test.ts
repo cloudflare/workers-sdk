@@ -11,6 +11,7 @@ import WebSocket from "ws";
 import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";
 import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { RuleTypeToModuleType } from "../../../deployment-bundle/module-collection";
+import { usingLocalSecretsStoreSecretAPI } from "../../../secrets-store/commands";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { useTeardown } from "../../helpers/teardown";
@@ -21,7 +22,7 @@ import type {
 	ReloadCompleteEvent,
 	StartDevWorkerOptions,
 } from "../../../api";
-import type { Rule } from "@cloudflare/workers-utils";
+import type { Config, Rule } from "@cloudflare/workers-utils";
 
 export type Module<ModuleType extends Rule["type"] = Rule["type"]> = File<
 	string | Uint8Array
@@ -127,12 +128,13 @@ function configDefaults(
 ): StartDevWorkerOptions {
 	return {
 		name: "test-worker",
+		compatibilityDate: "2025-10-10",
 		complianceRegion: undefined,
 		entrypoint: "NOT_REAL",
 		projectRoot: "NOT_REAL",
 		build: unusable<StartDevWorkerOptions["build"]>(),
 		legacy: {},
-		dev: { persist: "./persist" },
+		dev: { persist: "./persist", remote: false },
 		...config,
 	};
 }
@@ -791,6 +793,111 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("");
 		});
+		it("should support Secrets Store bindings", async () => {
+			const store_id = "37009502100840c0a9800b4990ed0449";
+			const secret_name = "well-known-secret";
+			const secretValue = "my-secret-value";
+			await usingLocalSecretsStoreSecretAPI(
+				"./persist",
+				{} as Config,
+				store_id,
+				secret_name,
+				(api) => api.create(secretValue)
+			);
+
+			const controller = new LocalRuntimeController();
+			teardown(() => controller.teardown());
+
+			const bundle = makeEsbuildBundle(`export default {
+			async fetch(request, env, ctx) {
+				return new Response(await env.SECRET.get());
+			}
+		}`);
+
+			const config = configDefaults({
+				bindings: {
+					SECRET: {
+						type: "secrets_store_secret",
+						store_id,
+						secret_name,
+					},
+				},
+			});
+			controller.onBundleStart({
+				type: "bundleStart",
+				config,
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle,
+			});
+
+			const event = await waitForReloadComplete(controller);
+			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
+			expect(await res.text()).toBe(secretValue);
+		});
+		it("should support Hello World bindings", async () => {
+			const controller = new LocalRuntimeController();
+			teardown(() => controller.teardown());
+
+			const bundle = makeEsbuildBundle(`export default {
+			async fetch(request, env, ctx) {
+				if (request.method === "POST") {
+					await env.BINDING.set(await request.text());
+				}
+				const result = await env.BINDING.get();
+				if (!result.value) {
+					return new Response('Not found', { status: 404 });
+				}
+				return Response.json(result);
+			}
+		}`);
+
+			const config = configDefaults({
+				bindings: {
+					BINDING: {
+						type: "unsafe_hello_world",
+					},
+				},
+			});
+			controller.onBundleStart({
+				type: "bundleStart",
+				config,
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle,
+			});
+
+			const event = await waitForReloadComplete(controller);
+			const url = urlFromParts(event.proxyData.userWorkerUrl);
+			const headers = { "MF-Disable-Pretty-Error": "true" };
+			const res1 = await fetch(url, { headers });
+			expect(await res1.text()).toBe("Not found");
+			expect(res1.status).toBe(404);
+
+			const res2 = await fetch(url, {
+				method: "POST",
+				body: "hello world",
+				headers,
+			});
+			expect(await res2.json()).toEqual({ value: "hello world" });
+			expect(res2.status).toBe(200);
+
+			const res3 = await fetch(url, { headers });
+			expect(await res3.json()).toEqual({ value: "hello world" });
+			expect(res3.status).toBe(200);
+
+			const res4 = await fetch(url, {
+				method: "POST",
+				body: "",
+				headers,
+			});
+			expect(await res4.text()).toBe("Not found");
+			expect(res4.status).toBe(404);
+		});
 		it("should support Workers Sites bindings", async () => {
 			const controller = new LocalRuntimeController();
 			teardown(() => controller.teardown());
@@ -1092,6 +1199,85 @@ describe("LocalRuntimeController", () => {
 			expect(res.status).toBe(200);
 			expect(await res.text()).toBe("👋");
 		});
+		it("should support Pipeline bindings", async () => {
+			const controller = new LocalRuntimeController();
+			teardown(() => controller.teardown());
+
+			const bundle = makeEsbuildBundle(`export default {
+				async fetch(request, env, ctx) {
+					let log = {
+						url: request.url,
+						method: request.method,
+						headers: Object.fromEntries(request.headers),
+					};
+					await env.PIPELINE.send([log]);
+					return new Response("Data sent to env.PIPELINE");
+				}
+		}`);
+
+			const config = configDefaults({
+				bindings: {
+					PIPELINE: {
+						type: "pipeline",
+						pipeline: "preserve-e2e-pipelines",
+					},
+				},
+			});
+			controller.onBundleStart({
+				type: "bundleStart",
+				config,
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle,
+			});
+
+			const event = await waitForReloadComplete(controller);
+			const url = urlFromParts(event.proxyData.userWorkerUrl);
+			const res = await fetch(url);
+			await expect(res.text()).resolves.toBe("Data sent to env.PIPELINE");
+		});
+		it("should support Images bindings", async () => {
+			const controller = new LocalRuntimeController();
+			teardown(() => controller.teardown());
+
+			const bundle = makeEsbuildBundle(`export default {
+				async fetch(request, env, ctx) {
+					return new Response("env.IMAGES is " + (env.IMAGES === undefined ? "not available" : "available"));
+				}
+		}`);
+
+			const config = configDefaults({
+				bindings: {
+					IMAGES: {
+						type: "images",
+					},
+				},
+			});
+			controller.onBundleStart({
+				type: "bundleStart",
+				config,
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle,
+			});
+
+			const event = await waitForReloadComplete(controller);
+			const url = urlFromParts(event.proxyData.userWorkerUrl);
+			const res = await fetch(url);
+			await expect(res.text()).resolves.toBe("env.IMAGES is available");
+		});
+		it.todo("should support Media bindings"); // Media bindings are only available remotely
+		it.todo("supports Workflow bindings");
+		it.todo("exposes send email bindings");
+		it.todo("exposes browser bindings");
+		it.todo("exposes Workers AI bindings");
+		it.todo("exposes Analytics Engine bindings");
+		it.todo("exposes dispatch namespace bindings");
+		it.todo("exposes mTLS bindings");
 	});
 });
 
