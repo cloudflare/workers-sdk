@@ -100,19 +100,6 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			ctx.hasShownWorkerConfigWarnings = false;
 		},
 		configureServer(viteDevServer) {
-			// Patch the `server.restart` method to track whether the server is restarting or not.
-			const restartServer = viteDevServer.restart.bind(viteDevServer);
-			viteDevServer.restart = async () => {
-				try {
-					ctx.isRestartingDevServer = true;
-					debuglog("From server.restart(): Restarting server...");
-					await restartServer();
-					debuglog("From server.restart(): Restarted server...");
-				} finally {
-					ctx.isRestartingDevServer = false;
-				}
-			};
-
 			const configChangedHandler = async (changedFilePath: string) => {
 				assertIsNotPreview(ctx.resolvedPluginConfig);
 
@@ -134,6 +121,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					await viteDevServer.restart();
 				}
 			};
+
 			viteDevServer.watcher.on("change", configChangedHandler);
 		},
 	};
