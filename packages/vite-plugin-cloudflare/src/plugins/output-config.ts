@@ -1,10 +1,10 @@
 import assert from "node:assert";
 import * as path from "node:path";
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
+import { assertIsNotPreview } from "../context";
 import { writeDeployConfig } from "../deploy-config";
 import { getLocalDevVarsForPreview } from "../dev-vars";
-import { assertIsNotPreview } from "../plugin-config";
-import { createPlugin } from "./utils";
+import { createPlugin } from "../utils";
 import type * as vite from "vite";
 import type { Unstable_RawConfig } from "wrangler";
 
@@ -14,7 +14,7 @@ import type { Unstable_RawConfig } from "wrangler";
 export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 	return {
 		generateBundle(_, bundle) {
-			assertIsNotPreview(ctx.resolvedPluginConfig);
+			assertIsNotPreview(ctx);
 
 			let outputConfig: Unstable_RawConfig | undefined;
 
@@ -111,7 +111,7 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 			});
 		},
 		writeBundle() {
-			assertIsNotPreview(ctx.resolvedPluginConfig);
+			assertIsNotPreview(ctx);
 
 			// These conditions ensure the deploy config is emitted once per application build as `writeBundle` is called for each environment.
 			// If Vite introduces an additional hook that runs after the application has built then we could use that instead.

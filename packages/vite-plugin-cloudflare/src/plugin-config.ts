@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import * as vite from "vite";
 import { getWorkerConfigs } from "./deploy-config";
-import { hasNodeJsCompat, NodeJsCompat } from "./plugins/nodejs-compat";
+import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import {
 	getValidatedWranglerConfigPath,
 	getWorkerConfig,
@@ -236,24 +236,4 @@ export function resolvePluginConfig(
 			auxiliaryWorkers: auxiliaryWorkersResolvedConfigs,
 		},
 	};
-}
-
-export function assertIsNotPreview(
-	resolvedPluginConfig: ResolvedPluginConfig
-): asserts resolvedPluginConfig is
-	| AssetsOnlyResolvedConfig
-	| WorkersResolvedConfig {
-	assert(
-		resolvedPluginConfig.type !== "preview",
-		`Expected "assets-only" or "workers" plugin config`
-	);
-}
-
-export function assertIsPreview(
-	resolvedPluginConfig: ResolvedPluginConfig
-): asserts resolvedPluginConfig is PreviewResolvedConfig {
-	assert(
-		resolvedPluginConfig.type === "preview",
-		`Expected "preview" plugin config`
-	);
 }

@@ -6,9 +6,24 @@ import {
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
-import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
+import type { PluginContext } from "./context";
 import type * as http from "node:http";
 import type * as vite from "vite";
+
+export const debuglog = util.debuglog("@cloudflare:vite-plugin");
+
+export function createPlugin(
+	name: string,
+	pluginFactory: (ctx: PluginContext) => Omit<vite.Plugin, "name">
+): (ctx: PluginContext) => vite.Plugin {
+	return (ctx) => {
+		return {
+			name: `vite-plugin-cloudflare:${name}`,
+			sharedDuringBuild: true,
+			...pluginFactory(ctx),
+		};
+	};
+}
 
 export function getOutputDirectory(
 	userConfig: vite.UserConfig,
@@ -103,18 +118,4 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 		duplex: "half",
 		signal: request.signal,
 	});
-}
-
-export const debuglog = util.debuglog("@cloudflare:vite-plugin");
-
-export function getEntryWorkerConfig(
-	resolvedPluginConfig: ResolvedPluginConfig
-): WorkerConfig | undefined {
-	if (resolvedPluginConfig.type !== "workers") {
-		return;
-	}
-
-	return resolvedPluginConfig.workers[
-		resolvedPluginConfig.entryWorkerEnvironmentName
-	];
 }

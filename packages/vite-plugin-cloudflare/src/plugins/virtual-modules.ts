@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { VIRTUAL_WORKER_ENTRY, virtualPrefix } from "../shared";
-import { createPlugin } from "./utils";
+import { createPlugin } from "../utils";
 
 export const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
 export const VIRTUAL_CLIENT_FALLBACK_ENTRY = `${virtualPrefix}client-fallback-entry`;

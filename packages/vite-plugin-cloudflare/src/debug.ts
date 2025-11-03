@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import getPort, { portNumbers } from "get-port";
 import colors from "picocolors";
-import type { PluginContext } from "./plugins/utils";
+import type { PluginContext } from "./context";
 import type * as vite from "vite";
 
 export const DEBUG_PATH = "/__debug";

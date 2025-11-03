@@ -11,18 +11,16 @@ import {
 	ROUTER_WORKER_NAME,
 } from "../constants";
 import { getDockerPath } from "../containers";
-import { getInputInspectorPort } from "../debugging";
+import { assertIsNotPreview } from "../context";
 import { getDevMiniflareOptions } from "../miniflare-options";
-import { assertIsNotPreview } from "../plugin-config";
 import { UNKNOWN_HOST } from "../shared";
-import { createRequestHandler, debuglog, getEntryWorkerConfig } from "../utils";
+import { createPlugin, createRequestHandler, debuglog } from "../utils";
 import { handleWebSocket } from "../websockets";
-import { createPlugin } from "./utils";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type * as vite from "vite";
 
 /**
- * Plugin to provide the core development functionality
+ * Plugin to provide core development functionality
  */
 export const devPlugin = createPlugin("dev", (ctx) => {
 	let containerImageTags = new Set<string>();
@@ -50,27 +48,17 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 			}
 		},
 		async configureServer(viteDevServer) {
-			assertIsNotPreview(ctx.resolvedPluginConfig);
+			assertIsNotPreview(ctx);
 
-			const inputInspectorPort = await getInputInspectorPort(
-				ctx,
-				viteDevServer
-			);
 			const { miniflareOptions, containerTagToOptionsMap } =
-				await getDevMiniflareOptions({
-					resolvedPluginConfig: ctx.resolvedPluginConfig,
-					viteDevServer,
-					inspectorPort: inputInspectorPort,
-				});
+				await getDevMiniflareOptions(ctx, viteDevServer);
 
 			await ctx.startOrUpdateMiniflare(miniflareOptions);
 
 			let preMiddleware: vite.Connect.NextHandleFunction | undefined;
 
 			if (ctx.resolvedPluginConfig.type === "workers") {
-				const entryWorkerConfig = getEntryWorkerConfig(
-					ctx.resolvedPluginConfig
-				);
+				const entryWorkerConfig = ctx.entryWorkerConfig;
 				assert(entryWorkerConfig, `No entry Worker config`);
 
 				debuglog("Initializing the Vite module runners");

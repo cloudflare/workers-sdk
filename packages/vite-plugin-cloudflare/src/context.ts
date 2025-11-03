@@ -1,8 +1,14 @@
 import assert from "node:assert";
 import { Miniflare } from "miniflare";
-import { debuglog } from "../utils";
-import type { ResolvedPluginConfig, WorkerConfig } from "../plugin-config";
+import { debuglog } from "./utils";
 import type { NodeJsCompat } from "./nodejs-compat";
+import type {
+	AssetsOnlyResolvedConfig,
+	PreviewResolvedConfig,
+	ResolvedPluginConfig,
+	WorkerConfig,
+	WorkersResolvedConfig,
+} from "./plugin-config";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
 
@@ -111,6 +117,16 @@ export class PluginContext {
 			: undefined;
 	}
 
+	get entryWorkerConfig(): WorkerConfig | undefined {
+		if (this.resolvedPluginConfig.type !== "workers") {
+			return;
+		}
+
+		return this.resolvedPluginConfig.workers[
+			this.resolvedPluginConfig.entryWorkerEnvironmentName
+		];
+	}
+
 	getNodeJsCompat(environmentName: string): NodeJsCompat | undefined {
 		return this.resolvedPluginConfig.type === "workers"
 			? this.resolvedPluginConfig.nodeJsCompatMap.get(environmentName)
@@ -118,15 +134,30 @@ export class PluginContext {
 	}
 }
 
-export function createPlugin(
-	name: string,
-	pluginFactory: (ctx: PluginContext) => Omit<vite.Plugin, "name">
-): (ctx: PluginContext) => vite.Plugin {
-	return (ctx) => {
-		return {
-			name: `vite-plugin-cloudflare:${name}`,
-			sharedDuringBuild: true,
-			...pluginFactory(ctx),
-		};
-	};
+interface NarrowedPluginContext<T extends ResolvedPluginConfig>
+	extends PluginContext {
+	readonly resolvedPluginConfig: T;
+}
+
+export type AssetsOnlyPluginContext =
+	NarrowedPluginContext<AssetsOnlyResolvedConfig>;
+export type WorkersPluginContext = NarrowedPluginContext<WorkersResolvedConfig>;
+export type PreviewPluginContext = NarrowedPluginContext<PreviewResolvedConfig>;
+
+export function assertIsNotPreview(
+	ctx: PluginContext
+): asserts ctx is AssetsOnlyPluginContext | WorkersPluginContext {
+	assert(
+		ctx.resolvedPluginConfig.type !== "preview",
+		`Expected "assets-only" or "workers" plugin config`
+	);
+}
+
+export function assertIsPreview(
+	ctx: PluginContext
+): asserts ctx is PreviewPluginContext {
+	assert(
+		ctx.resolvedPluginConfig.type === "preview",
+		`Expected "preview" plugin config`
+	);
 }

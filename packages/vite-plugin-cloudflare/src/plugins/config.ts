@@ -4,12 +4,11 @@ import {
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
 } from "../cloudflare-environment";
+import { assertIsNotPreview } from "../context";
 import { hasLocalDevVarsFileChanged } from "../dev-vars";
-import { assertIsNotPreview } from "../plugin-config";
-import { debuglog, getOutputDirectory } from "../utils";
+import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
-import { createPlugin } from "./utils";
 
 /**
  * Plugin to handle configuration and config file watching
@@ -104,7 +103,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		},
 		configureServer(viteDevServer) {
 			const configChangedHandler = async (changedFilePath: string) => {
-				assertIsNotPreview(ctx.resolvedPluginConfig);
+				assertIsNotPreview(ctx);
 
 				if (
 					ctx.resolvedPluginConfig.configPaths.has(changedFilePath) ||

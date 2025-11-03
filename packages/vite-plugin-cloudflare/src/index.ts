@@ -1,4 +1,5 @@
 import * as vite from "vite";
+import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
 import { configPlugin } from "./plugins/config";
@@ -11,16 +12,15 @@ import {
 } from "./plugins/nodejs-compat";
 import { outputConfigPlugin } from "./plugins/output-config";
 import { previewPlugin } from "./plugins/preview";
-import { triggerHandlersPlugin } from "./plugins/triggerHandlers";
-import { PluginContext } from "./plugins/utils";
+import { triggerHandlersPlugin } from "./plugins/trigger-handlers";
 import {
 	virtualClientFallbackPlugin,
 	virtualModulesPlugin,
 } from "./plugins/virtual-modules";
 import { wasmHelperPlugin } from "./plugins/wasm";
 import { debuglog } from "./utils";
+import type { SharedContext } from "./context";
 import type { PluginConfig } from "./plugin-config";
-import type { SharedContext } from "./plugins/utils";
 
 export type { PluginConfig } from "./plugin-config";
 

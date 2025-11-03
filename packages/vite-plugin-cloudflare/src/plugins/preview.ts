@@ -2,31 +2,22 @@ import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import colors from "picocolors";
 import { getDockerPath } from "../containers";
-import { getInputInspectorPort } from "../debugging";
+import { assertIsPreview } from "../context";
 import { getPreviewMiniflareOptions } from "../miniflare-options";
-import { assertIsPreview } from "../plugin-config";
-import { createRequestHandler } from "../utils";
+import { createPlugin, createRequestHandler } from "../utils";
 import { handleWebSocket } from "../websockets";
-import { createPlugin } from "./utils";
 
 /**
- * Plugin to provide the core preview functionality
+ * Plugin to provide core preview functionality
  */
 export const previewPlugin = createPlugin("preview", (ctx) => {
 	return {
 		async configurePreviewServer(vitePreviewServer) {
-			assertIsPreview(ctx.resolvedPluginConfig);
+			assertIsPreview(ctx);
 
-			const inputInspectorPort = await getInputInspectorPort(
-				ctx,
-				vitePreviewServer
-			);
 			const { miniflareOptions, containerTagToOptionsMap } =
-				await getPreviewMiniflareOptions({
-					resolvedPluginConfig: ctx.resolvedPluginConfig,
-					vitePreviewServer,
-					inspectorPort: inputInspectorPort,
-				});
+				await getPreviewMiniflareOptions(ctx, vitePreviewServer);
+
 			await ctx.startOrUpdateMiniflare(miniflareOptions);
 
 			if (containerTagToOptionsMap.size) {
