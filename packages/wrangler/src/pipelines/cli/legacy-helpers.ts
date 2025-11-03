@@ -1,7 +1,6 @@
+import { APIError, FatalError, UserError } from "@cloudflare/workers-utils";
 import { confirm } from "../../dialogs";
-import { FatalError, UserError } from "../../errors";
 import { logger } from "../../logger";
-import { APIError } from "../../parse";
 import {
 	authorizeR2Bucket,
 	BYTES_PER_MB,
@@ -15,8 +14,8 @@ import {
 	updatePipeline,
 } from "../legacy-client";
 import { validateName } from "../validate";
-import type { Config } from "../../config";
 import type { BindingSource, HttpSource, Source } from "../legacy-client";
+import type { Config } from "@cloudflare/workers-utils";
 
 export async function listLegacyPipelines(
 	config: Config,

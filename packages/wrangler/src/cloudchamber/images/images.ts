@@ -5,7 +5,6 @@ import {
 import { logger } from "../../logger";
 import { getAccountId } from "../../user";
 import { handleFailure, promiseSpinner } from "../common";
-import type { Config } from "../../config";
 import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgv,
@@ -14,6 +13,7 @@ import type {
 } from "../../yargs-types";
 import type { cloudchamberScope } from "../common";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
 
 interface CatalogWithTagsResponse {
 	repositories: Record<string, string[]>;

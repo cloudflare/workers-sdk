@@ -4,6 +4,7 @@ import { test } from "./helpers";
 
 test(
 	"formats config validation errors",
+	{ timeout: 45_000 },
 	async ({ expect, seed, vitestRun, tmpPath }) => {
 		const tmpPathName = path.basename(tmpPath);
 
@@ -85,12 +86,12 @@ test(
 		}
 	`.replaceAll("\t", "  ");
 		expect(result.stderr).toMatch(expected);
-	},
-	{ timeout: 45_000 }
+	}
 );
 
 test(
 	"requires modules entrypoint to use SELF",
+	{ timeout: 45_000 },
 	async ({ expect, seed, vitestRun, tmpPath }) => {
 		const tmpPathName = path.basename(tmpPath);
 
@@ -160,6 +161,5 @@ test(
 		If you're using service workers, please migrate to the modules format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers.
 	`;
 		expect(result.stderr).toMatch(expected);
-	},
-	{ timeout: 45_000 }
+	}
 );

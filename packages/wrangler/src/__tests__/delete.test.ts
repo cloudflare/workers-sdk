@@ -516,11 +516,11 @@ function mockDeleteWorkerRequest(
 	options: {
 		name?: string;
 		env?: string;
-		legacyEnv?: boolean;
+		useServiceEnvironments?: boolean;
 		force?: boolean;
 	} = {}
 ) {
-	const { env, legacyEnv, name } = options;
+	const { env, useServiceEnvironments, name } = options;
 	msw.use(
 		http.delete(
 			"*/accounts/:accountId/workers/services/:scriptName",
@@ -529,7 +529,7 @@ function mockDeleteWorkerRequest(
 
 				expect(params.accountId).toEqual("some-account-id");
 				expect(params.scriptName).toEqual(
-					legacyEnv && env
+					!useServiceEnvironments && env
 						? `${name ?? "test-name"}-${env}`
 						: `${name ?? "test-name"}`
 				);

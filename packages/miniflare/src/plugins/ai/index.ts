@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { z } from "zod";
 import {
 	getUserBindingServiceName,
@@ -10,7 +9,9 @@ import {
 
 const AISchema = z.object({
 	binding: z.string(),
-	remoteProxyConnectionString: z.custom<RemoteProxyConnectionString>(),
+	remoteProxyConnectionString: z
+		.custom<RemoteProxyConnectionString>()
+		.optional(),
 });
 
 export const AIOptionsSchema = z.object({
@@ -25,11 +26,6 @@ export const AI_PLUGIN: Plugin<typeof AIOptionsSchema> = {
 		if (!options.ai) {
 			return [];
 		}
-
-		assert(
-			options.ai.remoteProxyConnectionString,
-			"Workers AI only supports running remotely"
-		);
 
 		return [
 			{

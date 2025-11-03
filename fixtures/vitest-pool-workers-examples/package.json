@@ -4,11 +4,11 @@
 	"type": "module",
 	"scripts": {
 		"check:type": "node tsc-all.mjs",
-		"list": "vitest --config vitest.workers.config.ts list",
-		"test": "vitest --config vitest.workers.config.ts",
+		"list": "vitest list",
+		"test": "vitest",
 		"test:ci": "run-script-os",
-		"test:ci:default": "vitest run --config vitest.workers.config.ts",
-		"test:ci:win32": "vitest run --config vitest.workers.config.ts --exclude test/sqlite-in-do.test.ts"
+		"test:ci:default": "vitest run",
+		"test:ci:win32": "vitest run --exclude test/sqlite-in-do.test.ts"
 	},
 	"devDependencies": {
 		"@cloudflare/containers": "^0.0.25",

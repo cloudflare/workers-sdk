@@ -4,11 +4,11 @@ import { bold, brandColor, cyanBright, yellow } from "@cloudflare/cli/colors";
 import { ApiError, OpenAPI } from "@cloudflare/containers-shared";
 import { request } from "@cloudflare/containers-shared/src/client/core/request";
 import formatLabelledValues from "../utils/render-labelled-values";
-import type { Config } from "../config";
 import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { Config } from "@cloudflare/workers-utils";
 import type yargs from "yargs";
 
 export function yargsCurl(args: yargs.Argv<CommonYargsOptions>) {

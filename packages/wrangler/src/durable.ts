@@ -1,9 +1,8 @@
 import assert from "node:assert";
+import { configFileName } from "@cloudflare/workers-utils";
 import { fetchResult } from "./cfetch";
-import { configFileName } from "./config";
 import { logger } from "./logger";
-import type { Config } from "./config";
-import type { CfWorkerInit } from "./deployment-bundle/worker";
+import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 
 /**
  * For a given Worker + migrations config, figure out which migrations
@@ -14,7 +13,8 @@ export async function getMigrationsToUpload(
 	props: {
 		accountId: string | undefined;
 		config: Config;
-		legacyEnv: boolean | undefined;
+		/** Deprecated service environments. Previously known as !legacyEnv :-) */
+		useServiceEnvironments: boolean | undefined;
 		env: string | undefined;
 		dispatchNamespace: string | undefined;
 	}
@@ -39,7 +39,7 @@ export async function getMigrationsToUpload(
 				suppressNotFoundError(err);
 			}
 		} else {
-			if (!props.legacyEnv) {
+			if (props.useServiceEnvironments) {
 				try {
 					if (props.env) {
 						const scriptData = await fetchResult<{

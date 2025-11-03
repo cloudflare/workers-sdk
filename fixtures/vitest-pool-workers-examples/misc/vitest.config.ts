@@ -7,7 +7,7 @@ export default defineWorkersProject({
 		"CONFIG_NESTED.DEFINED.THING": "[1,2,3]",
 	},
 	test: {
-		exclude: ["test/assets.test.ts"],
+		exclude: ["test/assets.test.ts", "test/nodejs.test.ts"],
 		poolOptions: {
 			workers: {
 				singleWorker: true,

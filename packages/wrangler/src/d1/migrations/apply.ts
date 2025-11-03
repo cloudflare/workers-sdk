@@ -1,9 +1,8 @@
 import fs from "node:fs";
 import path from "path";
-import { configFileName } from "../../config";
+import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
-import { UserError } from "../../errors";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
@@ -14,13 +13,16 @@ import {
 	getUnappliedMigrations,
 	initMigrationsTable,
 } from "./helpers";
-import type { ParseError } from "../../parse";
+import type { ParseError } from "@cloudflare/workers-utils";
 
 export const d1MigrationsApplyCommand = createCommand({
 	metadata: {
 		description: "Apply D1 migrations",
 		status: "stable",
 		owner: "Product: D1",
+	},
+	behaviour: {
+		printResourceLocation: true,
 	},
 	args: {
 		database: {

@@ -1,15 +1,18 @@
 import { existsSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { configFileName, readPagesConfig } from "../config";
-import { findWranglerConfig } from "../config/config-helpers";
+import {
+	configFileName,
+	FatalError,
+	findWranglerConfig,
+} from "@cloudflare/workers-utils";
+import { readPagesConfig } from "../config";
 import { createCommand } from "../core/create-command";
-import { FatalError } from "../errors";
 import { logger } from "../logger";
 import {
 	EXIT_CODE_INVALID_PAGES_CONFIG,
 	EXIT_CODE_NO_CONFIG_FOUND,
 } from "./errors";
-import type { Config } from "../config";
+import type { Config } from "@cloudflare/workers-utils";
 
 export const pagesFunctionsBuildEnvCommand = createCommand({
 	metadata: {

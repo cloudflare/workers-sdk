@@ -33,7 +33,7 @@ catalog:
   vite: "^5.4.14"
   "ws": "8.18.0"
   esbuild: "0.25.4"
-  playwright-chromium: "^1.49.1"
+  playwright-chromium: "^1.56.1"
   "@cloudflare/workers-types": "^4.20251011.0"
   workerd: "1.20251011.0"
 

@@ -1,6 +1,6 @@
 {
 	"$schema": "../node_modules/wrangler/config-schema.json",
-	"compatibility_date": "2024-01-01",
+	// don't provide compatibility_date so that vitest will infer the latest one
 	"define": {
 		"WRANGLER_DEFINED_THING": "\"thing\"",
 		"WRANGLER_NESTED.DEFINED.THING": "[1,2,3]",

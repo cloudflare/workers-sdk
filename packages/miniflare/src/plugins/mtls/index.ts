@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import { z } from "zod";
 import {
 	getUserBindingServiceName,
@@ -10,7 +9,9 @@ import {
 
 const MtlsSchema = z.object({
 	certificate_id: z.string(),
-	remoteProxyConnectionString: z.custom<RemoteProxyConnectionString>(),
+	remoteProxyConnectionString: z
+		.custom<RemoteProxyConnectionString>()
+		.optional(),
 });
 
 export const MtlsOptionsSchema = z.object({
@@ -28,11 +29,6 @@ export const MTLS_PLUGIN: Plugin<typeof MtlsOptionsSchema> = {
 
 		return Object.entries(options.mtlsCertificates).map(
 			([name, { certificate_id, remoteProxyConnectionString }]) => {
-				assert(
-					remoteProxyConnectionString,
-					"MTLS only supports running remotely"
-				);
-
 				return {
 					name,
 
@@ -65,11 +61,6 @@ export const MTLS_PLUGIN: Plugin<typeof MtlsOptionsSchema> = {
 
 		return Object.entries(options.mtlsCertificates).map(
 			([name, { certificate_id, remoteProxyConnectionString }]) => {
-				assert(
-					remoteProxyConnectionString,
-					"MTLS only supports running remotely"
-				);
-
 				return {
 					name: getUserBindingServiceName(
 						MTLS_PLUGIN_NAME,

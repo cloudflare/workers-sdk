@@ -1,48 +1,11 @@
 import { brandColor, dim, white } from "@cloudflare/cli/colors";
+import { friendlyBindingNames, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import stripAnsi from "strip-ansi";
-import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
-import type { CfTailConsumer, CfWorkerInit } from "../deployment-bundle/worker";
+import type { CfTailConsumer, CfWorkerInit } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
-
-export const friendlyBindingNames: Record<
-	keyof CfWorkerInit["bindings"],
-	string
-> = {
-	data_blobs: "Data Blob",
-	durable_objects: "Durable Object",
-	kv_namespaces: "KV Namespace",
-	send_email: "Send Email",
-	queues: "Queue",
-	d1_databases: "D1 Database",
-	vectorize: "Vectorize Index",
-	hyperdrive: "Hyperdrive Config",
-	r2_buckets: "R2 Bucket",
-	logfwdr: "logfwdr",
-	services: "Worker",
-	analytics_engine_datasets: "Analytics Engine Dataset",
-	text_blobs: "Text Blob",
-	browser: "Browser",
-	ai: "AI",
-	images: "Images",
-	media: "Media",
-	version_metadata: "Worker Version Metadata",
-	unsafe: "Unsafe Metadata",
-	vars: "Environment Variable",
-	wasm_modules: "Wasm Module",
-	dispatch_namespaces: "Dispatch Namespace",
-	mtls_certificates: "mTLS Certificate",
-	workflows: "Workflow",
-	pipelines: "Pipeline",
-	secrets_store_secrets: "Secrets Store Secret",
-	ratelimits: "Rate Limit",
-	assets: "Assets",
-	unsafe_hello_world: "Hello World",
-	worker_loaders: "Worker Loader",
-	vpc_services: "VPC Service",
-} as const;
 
 /**
  * Print all the bindings a worker using a given config would have access to
@@ -53,11 +16,9 @@ export function printBindings(
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
-		imagesLocalMode?: boolean;
 		name?: string;
 		provisioning?: boolean;
 		warnIfNoBindings?: boolean;
-		vectorizeBindToProd?: boolean;
 	} = {}
 ) {
 	let hasConnectionStatus = false;
@@ -193,7 +154,7 @@ export function printBindings(
 					type: friendlyBindingNames.kv_namespaces,
 					value: id,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
+						isSimulatedLocally: !remote,
 					}),
 				};
 			})
@@ -228,9 +189,7 @@ export function printBindings(
 					type: friendlyBindingNames.send_email,
 					value,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
-							? !emailBinding.remote
-							: true,
+						isSimulatedLocally: !emailBinding.remote,
 					}),
 				};
 			})
@@ -245,7 +204,7 @@ export function printBindings(
 					type: friendlyBindingNames.queues,
 					value: queue_name,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
+						isSimulatedLocally: !remote,
 					}),
 				};
 			})
@@ -271,7 +230,7 @@ export function printBindings(
 						name: binding,
 						type: friendlyBindingNames.d1_databases,
 						mode: getMode({
-							isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
+							isSimulatedLocally: !remote,
 						}),
 						value,
 					};
@@ -288,13 +247,7 @@ export function printBindings(
 					type: friendlyBindingNames.vectorize,
 					value: index_name,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
-							? remote
-								? false
-								: undefined
-							: context.vectorizeBindToProd
-								? false
-								: /* Vectorize doesn't support local mode */ undefined,
+						isSimulatedLocally: remote ? false : undefined,
 					}),
 				};
 			})
@@ -316,12 +269,12 @@ export function printBindings(
 
 	if (vpc_services !== undefined && vpc_services.length > 0) {
 		output.push(
-			...vpc_services.map(({ binding, service_id }) => {
+			...vpc_services.map(({ binding, service_id, remote }) => {
 				return {
 					name: binding,
 					type: friendlyBindingNames.vpc_services,
 					value: service_id,
-					mode: getMode({ isSimulatedLocally: false }),
+					mode: getMode({ isSimulatedLocally: remote ? false : undefined }),
 				};
 			})
 		);
@@ -342,7 +295,7 @@ export function printBindings(
 					type: friendlyBindingNames.r2_buckets,
 					value: value,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
+						isSimulatedLocally: !remote,
 					}),
 				};
 			})
@@ -398,20 +351,27 @@ export function printBindings(
 					value += `#${entrypoint}`;
 				}
 
-				if (remote && getFlag("REMOTE_BINDINGS")) {
+				if (remote) {
 					mode = getMode({ isSimulatedLocally: false });
 				} else if (context.local && context.registry !== null) {
-					const registryDefinition = context.registry?.[service];
-					hasConnectionStatus = true;
+					const isSelfBinding = service === context.name;
 
-					if (
-						registryDefinition &&
-						(!entrypoint ||
-							registryDefinition.entrypointAddresses?.[entrypoint])
-					) {
+					if (isSelfBinding) {
+						hasConnectionStatus = true;
 						mode = getMode({ isSimulatedLocally: true, connected: true });
 					} else {
-						mode = getMode({ isSimulatedLocally: true, connected: false });
+						const registryDefinition = context.registry?.[service];
+						hasConnectionStatus = true;
+
+						if (
+							registryDefinition &&
+							(!entrypoint ||
+								registryDefinition.entrypointAddresses?.[entrypoint])
+						) {
+							mode = getMode({ isSimulatedLocally: true, connected: true });
+						} else {
+							mode = getMode({ isSimulatedLocally: true, connected: false });
+						}
 					}
 				}
 
@@ -458,7 +418,7 @@ export function printBindings(
 			type: friendlyBindingNames.browser,
 			value: undefined,
 			mode: getMode({
-				isSimulatedLocally: !(getFlag("REMOTE_BINDINGS") && browser.remote),
+				isSimulatedLocally: !browser.remote,
 			}),
 		});
 	}
@@ -469,11 +429,7 @@ export function printBindings(
 			type: friendlyBindingNames.images,
 			value: undefined,
 			mode: getMode({
-				isSimulatedLocally: getFlag("REMOTE_BINDINGS")
-					? images.remote === true || images.remote === undefined
-						? false
-						: undefined
-					: !!context.imagesLocalMode,
+				isSimulatedLocally: !images.remote,
 			}),
 		});
 	}
@@ -484,11 +440,10 @@ export function printBindings(
 			type: friendlyBindingNames.media,
 			value: undefined,
 			mode: getMode({
-				isSimulatedLocally: getFlag("REMOTE_BINDINGS")
-					? media.remote === true || media.remote === undefined
+				isSimulatedLocally:
+					media.remote === true || media.remote === undefined
 						? false
-						: undefined
-					: false,
+						: undefined,
 			}),
 		});
 	}
@@ -499,11 +454,8 @@ export function printBindings(
 			type: friendlyBindingNames.ai,
 			value: ai.staging ? `staging` : undefined,
 			mode: getMode({
-				isSimulatedLocally: getFlag("REMOTE_BINDINGS")
-					? ai.remote === true || ai.remote === undefined
-						? false
-						: undefined
-					: false,
+				isSimulatedLocally:
+					ai.remote === true || ai.remote === undefined ? false : undefined,
 			}),
 		});
 	}
@@ -515,7 +467,7 @@ export function printBindings(
 				type: friendlyBindingNames.pipelines,
 				value: pipeline,
 				mode: getMode({
-					isSimulatedLocally: getFlag("REMOTE_BINDINGS") ? !remote : true,
+					isSimulatedLocally: !remote,
 				}),
 			}))
 		);
@@ -609,11 +561,7 @@ export function printBindings(
 						? `${namespace} (outbound -> ${outbound.service})`
 						: namespace,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
-							? remote
-								? false
-								: undefined
-							: undefined,
+						isSimulatedLocally: remote ? false : undefined,
 					}),
 				};
 			})
@@ -628,11 +576,7 @@ export function printBindings(
 					type: friendlyBindingNames.mtls_certificates,
 					value: certificate_id,
 					mode: getMode({
-						isSimulatedLocally: getFlag("REMOTE_BINDINGS")
-							? remote === true || remote === undefined
-								? false
-								: undefined
-							: false,
+						isSimulatedLocally: remote ? false : undefined,
 					}),
 				};
 			})
@@ -661,7 +605,7 @@ export function printBindings(
 	} else {
 		let title: string;
 		if (context.provisioning) {
-			title = "The following bindings need to be provisioned:";
+			title = `${chalk.red("Experimental:")} The following bindings need to be provisioned:`;
 		} else if (context.name && getFlag("MULTIWORKER")) {
 			title = `${chalk.blue(context.name)} has access to the following bindings:`;
 		} else {

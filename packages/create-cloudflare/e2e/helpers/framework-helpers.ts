@@ -286,11 +286,11 @@ export async function verifyPreviewScript(
 		// so wait up to 5 mins for the dev-server to be ready.
 		await retry(
 			{ times: 300, sleepMs: 5000 },
-			async () => await fetch(`http://127.0.0.1:${port}${verifyPreview.route}`),
+			async () => await fetch(`http://localhost:${port}${verifyPreview.route}`),
 		);
 
 		// Make a request to the specified test route
-		const res = await fetch(`http://127.0.0.1:${port}${verifyPreview.route}`);
+		const res = await fetch(`http://localhost:${port}${verifyPreview.route}`);
 		expect(await res.text()).toContain(verifyPreview.expectedText);
 	} finally {
 		// Kill the process gracefully so ports can be cleaned up

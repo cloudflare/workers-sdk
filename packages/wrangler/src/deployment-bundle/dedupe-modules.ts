@@ -1,4 +1,4 @@
-import type { CfModule } from "./worker";
+import type { CfModule } from "@cloudflare/workers-utils";
 
 /**
  * Remove duplicate modules from the array.

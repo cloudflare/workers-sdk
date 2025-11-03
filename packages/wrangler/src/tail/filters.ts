@@ -5,7 +5,7 @@
  * only receive the ones we care about.
  */
 
-import { UserError } from "../errors";
+import { UserError } from "@cloudflare/workers-utils";
 
 /**
  * These are the filters we accept in the CLI. They

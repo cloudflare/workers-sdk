@@ -1,5 +1,78 @@
 # wrangler
 
+## 4.45.3
+
+### Patch Changes
+
+- [#11117](https://github.com/cloudflare/workers-sdk/pull/11117) [`6822aaf`](https://github.com/cloudflare/workers-sdk/commit/6822aaf405954a2939d1a064b3968297e337f97e) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: show local/remote status before D1 command confirmations
+
+  D1 commands (`execute`, `export`, `migrations apply`, `migrations list`, `delete`, `time-travel`) now display whether they're running against local or remote databases before showing confirmation prompts. This prevents confusion about which database will be affected by the operation.
+
+- [#11077](https://github.com/cloudflare/workers-sdk/pull/11077) [`bce8142`](https://github.com/cloudflare/workers-sdk/commit/bce81422f7685aef8fb62fd80192ea3516690702) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Ensure that process.env is case-insensitive on Windows
+
+  The object that holds the environment variables in `process.env` does not care about the case of its keys
+  in Windows. For example, `process.env.SystemRoot` and `process.env.SYSTEMROOT` will refer to the same value.
+
+  Previously, when merging fields from `.env` files we were replacing this native object with a vanilla
+  JavaScript object, that is case-insensitive, and so sometimes environment variables appeared to be missing
+  when in reality they just had different casing.
+
+## 4.45.2
+
+### Patch Changes
+
+- [#11097](https://github.com/cloudflare/workers-sdk/pull/11097) [`55657eb`](https://github.com/cloudflare/workers-sdk/commit/55657eb0dfa01ef9081a3510c4ba2b90243f2978) Thanks [@penalosa](https://github.com/penalosa)! - Extract internal APIs into a new `@cloudflare/workers-utils` package
+
+- [#11118](https://github.com/cloudflare/workers-sdk/pull/11118) [`d47f166`](https://github.com/cloudflare/workers-sdk/commit/d47f166499dd1a38c245ba06d1a2c150b2d6ef80) Thanks [@zebp](https://github.com/zebp)! - Fix validation of the `persist` field of observability `logs` and `traces` configuration
+
+## 4.45.1
+
+### Patch Changes
+
+- [#10959](https://github.com/cloudflare/workers-sdk/pull/10959) [`d0208fe`](https://github.com/cloudflare/workers-sdk/commit/d0208fef543c8a4850614d2cd3cba86a8bf4e3cb) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Fixed conflict between `--env` and `--expires` flags in `wrangler r2 object put`.
+
+  `--e` now aliases `--env` only, and NOT `--expires`.
+
+- [#10915](https://github.com/cloudflare/workers-sdk/pull/10915) [`dbe51c1`](https://github.com/cloudflare/workers-sdk/commit/dbe51c19bc3ad32c61efd5b0ca1fc2749de3bbe9) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Fixed self-bindings (service bindings to the same worker) showing as [not connected] in wrangler dev. Self-bindings now correctly show as [connected] since a worker is always available to itself.
+
+- [#10913](https://github.com/cloudflare/workers-sdk/pull/10913) [`d4f2daf`](https://github.com/cloudflare/workers-sdk/commit/d4f2daf71f64eb1a4529d78c27228877d48c22c4) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Fixed duplicate warning messages appearing during wrangler dev when configuration changes or state transitions occur
+
+## 4.45.0
+
+### Minor Changes
+
+- [#11030](https://github.com/cloudflare/workers-sdk/pull/11030) [`1a8088a`](https://github.com/cloudflare/workers-sdk/commit/1a8088ab32110f7d0503f5c379d4964200c0c140) Thanks [@penalosa](https://github.com/penalosa)! - Enable automatic resource provisioning by default in Wrangler. This is still an experimental feature, but we're turning on the flag by default to make it easier for people to test it and try it out. You can disable the feature using the `--no-x-provision` flag. It currently works for R2, D1, and KV bindings.
+
+  To use this feature, add a binding to your config file _without_ a resource ID:
+
+  ```jsonc
+  {
+  	"kv_namespaces": [{ "binding": "MY_KV" }],
+  	"d1_databases": [{ "binding": "MY_DB" }],
+  	"r2_buckets": [{ "binding": "MY_R2" }],
+  }
+  ```
+
+  `wrangler dev` will automatically create these resources for you locally, and when you next run `wrangler deploy` Wrangler will call the Cloudflare API to create the requested resources and link them to your Worker. They'll stay linked across deploys, and you don't need to add the resource IDs to the config file for future deploys to work. This is especially good for shared templates, which now no longer need to include account-specific resource ID when adding a binding.
+
+### Patch Changes
+
+- [#11037](https://github.com/cloudflare/workers-sdk/pull/11037) [`4bd4c29`](https://github.com/cloudflare/workers-sdk/commit/4bd4c296d599246d04f3c86034c739411b224659) Thanks [@danielrs](https://github.com/danielrs)! - Better Wrangler subdomain defaults warning.
+
+  Improves the warnings that we show users when either `worker_dev` or `preview_urls` are missing.
+
+- [#10927](https://github.com/cloudflare/workers-sdk/pull/10927) [`31e1330`](https://github.com/cloudflare/workers-sdk/commit/31e133090af046982b3ee15dc61262055c66ab5e) Thanks [@dom96](https://github.com/dom96)! - Implements `python_modules.excludes` wrangler config field
+
+  ```toml
+  [python_modules]
+  excludes = ["**/*.pyc", "**/__pycache__"]
+  ```
+
+- [#10741](https://github.com/cloudflare/workers-sdk/pull/10741) [`2f57345`](https://github.com/cloudflare/workers-sdk/commit/2f57345a7a57b6bba75c51e1a8f322894aa8a628) Thanks [@penalosa](https://github.com/penalosa)! - Remove obsolete `--x-remote-bindings` flag
+
+- Updated dependencies [[`ca6c010`](https://github.com/cloudflare/workers-sdk/commit/ca6c01017ccc39671e8724a6b9a5aa37a5e07e57)]:
+  - miniflare@4.20251011.1
+
 ## 4.44.0
 
 ### Minor Changes

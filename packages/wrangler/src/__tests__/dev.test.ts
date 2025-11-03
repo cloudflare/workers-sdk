@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import module from "node:module";
+import { FatalError } from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
@@ -8,8 +9,8 @@ import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../api/startDevWorker/utils";
 import { getWorkerAccountAndContext } from "../dev/remote";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
-import { FatalError } from "../errors";
 import { CI } from "../is-ci";
+import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -29,6 +30,7 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "../api";
+import type { RawConfig } from "@cloudflare/workers-utils";
 import type { Mock, MockInstance } from "vitest";
 
 vi.mock("../api/startDevWorker/ConfigController", (importOriginal) =>
@@ -36,13 +38,6 @@ vi.mock("../api/startDevWorker/ConfigController", (importOriginal) =>
 );
 vi.mock("node:child_process");
 vi.mock("../dev/hotkeys");
-
-vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
-	return {
-		...(await importOriginal()),
-		isDockerfile: () => true,
-	};
-});
 
 // Don't memoize in tests. If we did, it would memoize across test runs, which causes problems
 vi.mock("../utils/memoizeGetPort", () => {
@@ -84,7 +79,7 @@ async function expectedHostAndZone(
 				}
 			}),
 		env: undefined,
-		legacyEnv: undefined,
+		useServiceEnvironments: undefined,
 		sendMetrics: undefined,
 		configPath: config.config,
 	});
@@ -1391,7 +1386,7 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("container engine", () => {
-		const minimalContainerConfig = {
+		const minimalContainerConfig: RawConfig = {
 			durable_objects: {
 				bindings: [
 					{
@@ -1454,6 +1449,7 @@ describe.sequential("wrangler dev", () => {
 				},
 				...minimalContainerConfig,
 			});
+
 			fs.writeFileSync("index.js", `export default {};`);
 			vi.stubEnv("WRANGLER_DOCKER_HOST", "blah.sock");
 
@@ -2024,6 +2020,34 @@ describe.sequential("wrangler dev", () => {
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
+
+		it("should show self-bindings as connected", async () => {
+			writeWranglerConfig({
+				name: "my-worker",
+				services: [
+					{ binding: "SELF", service: "my-worker" },
+					{
+						binding: "NAMED",
+						service: "my-worker",
+						entrypoint: "MyEntrypoint",
+					},
+				],
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await runWranglerUntilConfig("dev index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Your Worker has access to the following bindings:
+				Binding                                 Resource      Mode
+				env.SELF (my-worker)                    Worker        local [connected]
+				env.NAMED (my-worker#MyEntrypoint)      Worker        local [connected]
+
+				"
+			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 
 	describe("print bindings", () => {
@@ -2110,6 +2134,14 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("containers", () => {
+		beforeEach(() => {
+			// Clear logger.once history between tests to ensure test isolation.
+			// Without this, warnings logged via logger.once.warn() in one test
+			// would be suppressed in subsequent tests since they track logged
+			// messages globally across the test process.
+			logger.clearHistory();
+		});
+
 		const containerConfig = {
 			main: "index.js",
 			compatibility_date: "2024-01-01",
@@ -2136,6 +2168,8 @@ describe.sequential("wrangler dev", () => {
 		};
 		it("should warn when run in remote mode with (enabled) containers", async () => {
 			writeWranglerConfig(containerConfig);
+			fs.writeFileSync("Dockerfile", `FROM ubuntu`);
+
 			fs.writeFileSync("index.js", `export default {};`);
 
 			await expect(
@@ -2155,6 +2189,8 @@ describe.sequential("wrangler dev", () => {
 		});
 
 		it("should not warn when run in remote mode with disabled containers", async () => {
+			fs.writeFileSync("Dockerfile", `FROM ubuntu`);
+
 			writeWranglerConfig({
 				...containerConfig,
 				dev: {

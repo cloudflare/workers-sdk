@@ -18,6 +18,7 @@ import {
 	Miniflare,
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
+	supportedCompatibilityDate,
 	testRegExps,
 	WebSocket,
 } from "miniflare";
@@ -119,9 +120,7 @@ const mfLog = new Log(LogLevel.WARN);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DIST_PATH = path.resolve(__dirname, "..");
-const POOL_WORKER_PATH = path.join(DIST_PATH, "worker", "index.mjs");
-
-const NODE_URL_PATH = path.join(DIST_PATH, "worker", "lib", "node", "url.mjs");
+const POOL_WORKER_PATH = path.join(DIST_PATH, "worker/index.mjs");
 
 const symbolizerWarning =
 	"warning: Not symbolizing stack traces because $LLVM_SYMBOLIZER is not set.";
@@ -425,6 +424,14 @@ function buildProjectWorkerOptions(
 	// `module.exports` directly, rather than `{ default: module.exports }`.
 	runnerWorker.compatibilityFlags ??= [];
 
+	if (runnerWorker.compatibilityDate === undefined) {
+		// No compatibility date was provided, so infer the latest supported date
+		runnerWorker.compatibilityDate ??= supportedCompatibilityDate;
+		log.info(
+			`No compatibility date was provided for project ${project.relativePath}, defaulting to latest supported date ${runnerWorker.compatibilityDate}.`
+		);
+	}
+
 	const flagAssertions = new CompatibilityFlagAssertions({
 		compatibilityDate: runnerWorker.compatibilityDate,
 		compatibilityFlags: runnerWorker.compatibilityFlags,
@@ -454,6 +461,7 @@ function buildProjectWorkerOptions(
 		runnerWorker.compatibilityFlags
 	);
 
+	// Force nodejs_compat_v2 flag, even if it is disabled by the user, since we require this native stuff for Vitest to work properly
 	if (mode !== "v2") {
 		if (hasNoNodejsCompatV2Flag) {
 			runnerWorker.compatibilityFlags.splice(
@@ -469,6 +477,12 @@ function buildProjectWorkerOptions(
 	if (!runnerWorker.compatibilityFlags.includes("unsafe_module")) {
 		runnerWorker.compatibilityFlags.push("unsafe_module");
 	}
+
+	// The following nodejs compat flags enable features required for Vitest to work properly
+	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_tty_module");
+	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_fs_module");
+	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_http_modules");
+	ensureFeature(runnerWorker.compatibilityFlags, "nodejs_perf_hooks_module");
 
 	// Make sure we define an unsafe eval binding and enable the fallback service
 	runnerWorker.unsafeEvalBinding = "__VITEST_POOL_WORKERS_UNSAFE_EVAL";
@@ -569,12 +583,19 @@ function buildProjectWorkerOptions(
 			path: path.join(modulesRoot, DEFINES_MODULE_PATH),
 			contents: defines,
 		},
-		// The workerd provided `node:url` module doesn't support everything Vitest needs.
-		// As a short-term fix, inject a `node:url` polyfill into the worker bundle
+		// The native workerd provided nodejs modules don't always support everything Vitest needs.
+		// As a short-term fix, inject polyfills into the worker bundle that override the native modules.
 		{
 			type: "ESModule",
-			path: path.join(modulesRoot, "node:url"),
-			contents: fs.readFileSync(NODE_URL_PATH),
+			path: path.join(modulesRoot, "node:console"),
+			contents: fs.readFileSync(
+				path.join(DIST_PATH, `worker/node/console.mjs`)
+			),
+		},
+		{
+			type: "ESModule",
+			path: path.join(modulesRoot, "node:vm"),
+			contents: fs.readFileSync(path.join(DIST_PATH, `worker/node/vm.mjs`)),
 		},
 	];
 
@@ -1225,4 +1246,26 @@ export default function (ctx: Vitest): ProcessPool {
 			await Promise.all(promises);
 		},
 	};
+}
+
+/**
+ * Ensures that the specified compatibility feature is enabled for Vitest to work.
+ * @param compatibilityFlags The list of current compatibility flags.
+ * @param feature The name of the feature to enable.
+ */
+function ensureFeature(compatibilityFlags: string[], feature: string) {
+	const flagToEnable = `enable_${feature}`;
+	const flagToDisable = `disable_${feature}`;
+	if (!compatibilityFlags.includes(flagToEnable)) {
+		log.debug(
+			`Adding \`${flagToEnable}\` compatibility flag during tests as this feature is needed to support the Vitest runner.`
+		);
+		compatibilityFlags.push(flagToEnable);
+	}
+	if (compatibilityFlags.includes(flagToDisable)) {
+		log.info(
+			`Removing \`${flagToDisable}\` compatibility flag during tests as that feature is needed to support the Vitest runner.`
+		);
+		compatibilityFlags.splice(compatibilityFlags.indexOf(flagToDisable), 1);
+	}
 }

@@ -19,7 +19,7 @@ import {
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "../helpers/write-wrangler-config";
-import type { WorkerMetadata } from "../../deployment-bundle/create-worker-upload-form";
+import type { WorkerMetadata } from "@cloudflare/workers-utils";
 
 describe("versions upload", () => {
 	runInTempDir();
@@ -705,7 +705,11 @@ describe("versions upload", () => {
 			mockGetScript();
 			mockUploadVersion(true);
 			mockPatchScriptSettings();
-			mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+			mockGetWorkerSubdomain({
+				enabled: true,
+				previews_enabled: false,
+				useServiceEnvironments: false,
+			});
 
 			// Setup
 			writeWranglerConfig({
@@ -741,7 +745,7 @@ describe("versions upload", () => {
 			mockGetWorkerSubdomain({
 				enabled: true,
 				previews_enabled: false,
-				legacyEnv: true,
+				useServiceEnvironments: false,
 				env: "test",
 			});
 

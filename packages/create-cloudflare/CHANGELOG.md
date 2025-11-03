@@ -1,5 +1,53 @@
 # create-cloudflare
 
+## 2.54.1
+
+### Patch Changes
+
+- [#11016](https://github.com/cloudflare/workers-sdk/pull/11016) [`9cef26a`](https://github.com/cloudflare/workers-sdk/commit/9cef26a1e736d33794006a67179b50fcdcd88afc) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From   | To     |
+  | ------------ | ------ | ------ |
+  | create-astro | 4.13.1 | 4.13.2 |
+
+- [#11101](https://github.com/cloudflare/workers-sdk/pull/11101) [`0856306`](https://github.com/cloudflare/workers-sdk/commit/08563062f99e2f69818934e422bbeccaf0be593c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.18.1 | 3.18.2 |
+
+- [#11102](https://github.com/cloudflare/workers-sdk/pull/11102) [`ac527a8`](https://github.com/cloudflare/workers-sdk/commit/ac527a85c7053a409040ab675890f84825fabaa3) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 20.3.6 | 20.3.7 |
+
+- [#11103](https://github.com/cloudflare/workers-sdk/pull/11103) [`3a39370`](https://github.com/cloudflare/workers-sdk/commit/3a39370dde4e52707ff685fbe60e2f5a056ca4bf) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To     |
+  | ---------------------- | ------ | ------ |
+  | @tanstack/create-start | 0.34.2 | 0.34.6 |
+
+## 2.54.0
+
+### Minor Changes
+
+- [#10842](https://github.com/cloudflare/workers-sdk/pull/10842) [`af18b48`](https://github.com/cloudflare/workers-sdk/commit/af18b483c37d13b33df5dfff5cefc32e5e5bee2d) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add TanStack Start framework template
+
+### Patch Changes
+
+- [#10991](https://github.com/cloudflare/workers-sdk/pull/10991) [`0372e86`](https://github.com/cloudflare/workers-sdk/commit/0372e863ec0e9f8da79fb655f61e5f69504c324d) Thanks [@dom96](https://github.com/dom96)! - Adds submodule to Python hello world template
+
+- [#11043](https://github.com/cloudflare/workers-sdk/pull/11043) [`5d9cf0d`](https://github.com/cloudflare/workers-sdk/commit/5d9cf0d097951adc15c294c02d4958ae731c47ac) Thanks [@dom96](https://github.com/dom96)! - Remove lockfiles from Python C3 templates
+
 ## 2.53.0
 
 ### Minor Changes

@@ -16,10 +16,10 @@ it("dispatches fetch event", async () => {
 	const ctx = createExecutionContext();
 	const response = await worker.fetch(request, env, ctx);
 	await waitOnExecutionContext(ctx);
-	expect(await response.text()).toBe("👋 http://example.com");
+	expect(await response.text()).toBe("👋 http://example.com/");
 });
 
 it("calls arbitrary function", () => {
 	const request = new Request("http://example.com");
-	expect(greet(request)).toBe("👋 http://example.com");
+	expect(greet(request)).toBe("👋 http://example.com/");
 });

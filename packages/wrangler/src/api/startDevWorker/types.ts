@@ -1,14 +1,9 @@
 import type { AssetsOptions } from "../../assets";
-import type { Config } from "../../config";
-import type {
-	ContainerApp,
-	ContainerEngine,
-	CustomDomainRoute,
-	DurableObjectMigration,
-	Rule,
-	ZoneIdRoute,
-	ZoneNameRoute,
-} from "../../config/environment";
+import type { CfAccount } from "../../dev/create-worker-preview";
+import type { EsbuildBundle } from "../../dev/use-esbuild";
+import type { ConfigController } from "./ConfigController";
+import type { DevEnv } from "./DevEnv";
+import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	CfAIBinding,
 	CfAnalyticsEngineDataset,
@@ -38,12 +33,15 @@ import type {
 	CfVpcService,
 	CfWorkerLoader,
 	CfWorkflow,
-} from "../../deployment-bundle/worker";
-import type { CfAccount } from "../../dev/create-worker-preview";
-import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { ConfigController } from "./ConfigController";
-import type { DevEnv } from "./DevEnv";
-import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
+	Config,
+	ContainerApp,
+	ContainerEngine,
+	CustomDomainRoute,
+	DurableObjectMigration,
+	Rule,
+	ZoneIdRoute,
+	ZoneNameRoute,
+} from "@cloudflare/workers-utils";
 import type {
 	DispatchFetch,
 	Json,
@@ -87,6 +85,12 @@ export interface StartDevWorkerInput {
 
 	/** Specify the compliance region mode of the Worker. */
 	complianceRegion?: Config["compliance_region"];
+
+	/** Configuration for Python modules. */
+	pythonModules?: {
+		/** A list of glob patterns to exclude files from the python_modules directory when bundling. */
+		exclude?: string[];
+	};
 
 	env?: string;
 
@@ -156,7 +160,11 @@ export interface StartDevWorkerInput {
 	dev?: {
 		/** Options applying to the worker's inspector server. False disables the inspector server. */
 		inspector?: { hostname?: string; port?: number; secure?: boolean } | false;
-		/** Whether the worker runs on the edge or locally. Can also be set to "minimal" for minimal mode. */
+		/** Whether the worker runs on the edge or locally. This has several options:
+		 *   - true | "minimal": Run your Worker's code & bindings in a remote preview session, optionally using minimal mode as an internal detail
+		 *   - false: Run your Worker's code & bindings in a local simulator
+		 *   - undefined (default): Run your Worker's code locally, and any configured remote bindings remotely
+		 */
 		remote?: boolean | "minimal";
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
 		auth?: AsyncHook<CfAccount, [Pick<Config, "account_id">]>; // provide config.account_id as a hook param
@@ -186,17 +194,8 @@ export interface StartDevWorkerInput {
 
 		testScheduled?: boolean;
 
-		/** Whether to use Vectorize as a remote binding -- the worker is run locally but accesses to Vectorize are made remotely */
-		bindVectorizeToProd?: boolean;
-
-		/** Whether to use Images local mode -- this is lower fidelity, but doesn't require network access */
-		imagesLocalMode?: boolean;
-
 		/** Treat this as the primary worker in a multiworker setup (i.e. the first Worker in Miniflare's options) */
 		multiworkerPrimary?: boolean;
-
-		/** Whether the experimental remote bindings feature should be enabled */
-		experimentalRemoteBindings?: boolean;
 
 		containerBuildId?: string;
 		/** Whether to build and connect to containers during local dev. Requires Docker daemon to be running. Defaults to true. */
@@ -213,10 +212,14 @@ export interface StartDevWorkerInput {
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
-		enableServiceEnvironments?: boolean;
+		useServiceEnvironments?: boolean;
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
 	assets?: string;
+
+	experimental?: {
+		tailLogs: boolean;
+	};
 }
 
 export type StartDevWorkerOptions = Omit<

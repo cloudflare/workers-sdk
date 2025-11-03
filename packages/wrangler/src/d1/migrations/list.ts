@@ -1,7 +1,6 @@
 import path from "path";
-import { configFileName } from "../../config";
+import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
-import { UserError } from "../../errors";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
@@ -17,6 +16,9 @@ export const d1MigrationsListCommand = createCommand({
 		description: "List your D1 migrations",
 		status: "stable",
 		owner: "Product: D1",
+	},
+	behaviour: {
+		printResourceLocation: true,
 	},
 	args: {
 		database: {

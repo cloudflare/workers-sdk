@@ -267,4 +267,51 @@ describe("ConfigController", () => {
 			},
 		});
 	});
+
+	it("should only log warnings once even with multiple config updates", async () => {
+		await seed({
+			"src/index.js": dedent/* javascript */ `
+				addEventListener('fetch', event => {
+					event.respondWith(new Response('hello world'))
+				})
+			`,
+			"wrangler.toml": dedent/* toml */ `
+				name = "my-worker"
+				main = "src/index.js"
+				compatibility_date = "2024-06-01"
+
+				[[analytics_engine_datasets]]
+				binding = "ANALYTICS"
+				dataset = "analytics_dataset"
+			`,
+		});
+
+		const event1 = waitForConfigUpdate(controller);
+		await controller.set({
+			config: "./wrangler.toml",
+		});
+		await event1;
+
+		const event2 = waitForConfigUpdate(controller);
+		await controller.patch({
+			dev: { liveReload: true },
+		});
+		await event2;
+
+		const event3 = waitForConfigUpdate(controller);
+		await controller.patch({
+			dev: { server: { port: 8787 } },
+		});
+		await event3;
+
+		const warningCount = std.warn
+			.split("\n")
+			.filter((line) =>
+				line.includes(
+					"Analytics Engine is not supported locally when using the service-worker format"
+				)
+			).length;
+
+		expect(warningCount).toBe(1);
+	});
 });

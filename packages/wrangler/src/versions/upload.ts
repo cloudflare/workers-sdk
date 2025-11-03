@@ -4,6 +4,13 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
+import {
+	configFileName,
+	formatCompatibilityDate,
+	formatConfigSnippet,
+	ParseError,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { Response } from "undici";
 import {
 	getAssetsOptions,
@@ -11,7 +18,6 @@ import {
 	validateAssetsArgsAndConfig,
 } from "../assets";
 import { fetchResult } from "../cfetch";
-import { configFileName, formatConfigSnippet } from "../config";
 import { createCommand } from "../core/create-command";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
@@ -38,7 +44,6 @@ import {
 	tagsAreEqual,
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "../environments";
-import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
@@ -46,7 +51,6 @@ import { getMetricsUsageHeaders } from "../metrics";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { writeOutput } from "../output";
-import { ParseError } from "../parse";
 import { getWranglerTmpDir } from "../paths";
 import { ensureQueuesExistByConfig } from "../queues/client";
 import { getWorkersDevSubdomain } from "../routes";
@@ -56,19 +60,21 @@ import {
 } from "../sourcemap";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
-import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
+import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import { patchNonVersionedScriptSettings } from "./api";
 import type { AssetsOptions } from "../assets";
-import type { Config } from "../config";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfPlacement, CfWorkerInit } from "../deployment-bundle/worker";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
+import type {
+	CfPlacement,
+	CfWorkerInit,
+	Config,
+} from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
 type Props = {
@@ -77,7 +83,7 @@ type Props = {
 	entry: Entry;
 	rules: Config["rules"];
 	name: string;
-	legacyEnv: boolean | undefined;
+	useServiceEnvironments: boolean | undefined;
 	env: string | undefined;
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
@@ -270,7 +276,6 @@ export const versionsUploadCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? true,
 			DEPLOY_REMOTE_DIFF_CHECK: false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
@@ -365,7 +370,7 @@ export const versionsUploadCommand = createCommand({
 				name,
 				rules: getRules(config),
 				entry,
-				legacyEnv: isLegacyEnv(config),
+				useServiceEnvironments: useServiceEnvironments(config),
 				env: args.env,
 				compatibilityDate: args.latest
 					? formatCompatibilityDate(new Date())
@@ -588,7 +593,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			bundleType,
 			...bundle
 		} = props.noBundle
-			? await noBundleWorker(props.entry, props.rules, props.outDir)
+			? await noBundleWorker(
+					props.entry,
+					props.rules,
+					props.outDir,
+					config.python_modules.exclude
+				)
 			: await bundleWorker(
 					props.entry,
 					typeof destination === "string" ? destination : destination.path,
@@ -656,7 +666,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			? await getMigrationsToUpload(scriptName, {
 					accountId,
 					config,
-					legacyEnv: props.legacyEnv,
+					useServiceEnvironments: props.useServiceEnvironments,
 					env: props.env,
 					dispatchNamespace: undefined,
 				})

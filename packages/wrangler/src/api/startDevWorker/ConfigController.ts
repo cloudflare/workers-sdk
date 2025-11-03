@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import { getWorkerRegistry } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
@@ -21,8 +22,6 @@ import {
 	getDisableConfigWatching,
 	getDockerPath,
 } from "../../environment-variables/misc-variables";
-import { UserError } from "../../errors";
-import { getFlag } from "../../experimental-flags";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
@@ -37,9 +36,9 @@ import {
 } from "../../utils/constants";
 import { getRules } from "../../utils/getRules";
 import { getScriptName } from "../../utils/getScriptName";
-import { isLegacyEnv } from "../../utils/isLegacyEnv";
 import { memoizeGetPort } from "../../utils/memoizeGetPort";
 import { printBindings } from "../../utils/print-bindings";
+import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
 import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -48,8 +47,6 @@ import {
 	extractBindingsOfType,
 	unwrapHook,
 } from "./utils";
-import type { Config } from "../../config";
-import type { CfUnsafe } from "../../deployment-bundle/worker";
 import type { ControllerEventMap } from "./BaseController";
 import type { ConfigUpdateEvent, DevRegistryUpdateEvent } from "./events";
 import type {
@@ -57,6 +54,7 @@ import type {
 	StartDevWorkerOptions,
 	Trigger,
 } from "./types";
+import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
 
 type ConfigControllerEventMap = ControllerEventMap & {
@@ -158,13 +156,7 @@ async function resolveDevConfig(
 		// absolute resolved path
 		persist: localPersistencePath,
 		registry: input.dev?.registry,
-		bindVectorizeToProd: input.dev?.bindVectorizeToProd ?? false,
 		multiworkerPrimary: input.dev?.multiworkerPrimary,
-		imagesLocalMode: input.dev?.imagesLocalMode ?? false,
-		experimentalRemoteBindings:
-			input.dev?.experimentalRemoteBindings ??
-			getFlag("REMOTE_BINDINGS") ??
-			true,
 		enableContainers:
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
@@ -210,8 +202,7 @@ async function resolveBindings(
 				"version_metadata",
 				input.bindings
 			)?.[0],
-		},
-		input.dev?.experimentalRemoteBindings ?? true
+		}
 	);
 
 	// Create a print function that captures the current bindings context
@@ -227,9 +218,7 @@ async function resolveBindings(
 			{
 				registry,
 				local: !input.dev?.remote,
-				imagesLocalMode: input.dev?.imagesLocalMode,
 				name: config.name,
-				vectorizeBindToProd: input.dev?.bindVectorizeToProd,
 			}
 		);
 	};
@@ -342,6 +331,9 @@ async function resolveConfig(
 		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
 		complianceRegion: input.complianceRegion ?? config.compliance_region,
+		pythonModules: {
+			exclude: input.pythonModules?.exclude ?? config.python_modules.exclude,
+		},
 		entrypoint: entry.file,
 		projectRoot: entry.projectRoot,
 		bindings,
@@ -380,8 +372,8 @@ async function resolveConfig(
 		dev: await resolveDevConfig(config, input),
 		legacy: {
 			site: legacySite,
-			enableServiceEnvironments:
-				input.legacy?.enableServiceEnvironments ?? !isLegacyEnv(config),
+			useServiceEnvironments:
+				input.legacy?.useServiceEnvironments ?? useServiceEnvironments(config),
 		},
 		unsafe: {
 			capnp: input.unsafe?.capnp ?? unsafe?.capnp,
@@ -389,6 +381,9 @@ async function resolveConfig(
 		},
 		assets: assetsOptions,
 		tailConsumers: config.tail_consumers ?? [],
+		experimental: {
+			tailLogs: !!input.experimental?.tailLogs,
+		},
 	} satisfies StartDevWorkerOptions;
 
 	if (
@@ -396,7 +391,7 @@ async function resolveConfig(
 		!resolved.dev.remote &&
 		resolved.build.format === "service-worker"
 	) {
-		logger.warn(
+		logger.once.warn(
 			"Analytics Engine is not supported locally when using the service-worker format. Please migrate to the module worker format: https://developers.cloudflare.com/workers/reference/migrate-to-module-workers/"
 		);
 	}
@@ -405,7 +400,7 @@ async function resolveConfig(
 
 	const services = extractBindingsOfType("service", resolved.bindings);
 	if (services && services.length > 0 && resolved.dev?.remote) {
-		logger.warn(
+		logger.once.warn(
 			`This worker is bound to live services: ${services
 				.map(
 					(service) =>
@@ -418,7 +413,7 @@ async function resolveConfig(
 	}
 
 	if (!resolved.dev?.origin?.secure && resolved.dev?.remote) {
-		logger.warn(
+		logger.once.warn(
 			"Setting upstream-protocol to http is not currently supported for remote mode.\n" +
 				"If this is required in your project, please add your use case to the following issue:\n" +
 				"https://github.com/cloudflare/workers-sdk/issues/583."
@@ -442,7 +437,9 @@ async function resolveConfig(
 		(queues?.length ||
 			resolved.triggers?.some((t) => t.type === "queue-consumer"))
 	) {
-		logger.warn("Queues are not yet supported in wrangler dev remote mode.");
+		logger.once.warn(
+			"Queues are not yet supported in wrangler dev remote mode."
+		);
 	}
 
 	if (resolved.dev.remote) {
@@ -453,7 +450,7 @@ async function resolveConfig(
 			resolved.containers &&
 			resolved.containers.length > 0
 		) {
-			logger.warn(
+			logger.once.warn(
 				"Containers are only supported in local mode, to suppress this warning set `dev.enable_containers` to `false` or pass `--enable-containers=false` to the `wrangler dev` command"
 			);
 		}
@@ -466,7 +463,9 @@ async function resolveConfig(
 			resolved.dev.remote &&
 			Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
 		) {
-			logger.warn("SQLite in Durable Objects is only supported in local mode.");
+			logger.once.warn(
+				"SQLite in Durable Objects is only supported in local mode."
+			);
 		}
 	}
 
@@ -558,7 +557,7 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 					config: input.config,
 					env: input.env,
 					"dispatch-namespace": undefined,
-					"legacy-env": !input.legacy?.enableServiceEnvironments,
+					"legacy-env": !input.legacy?.useServiceEnvironments,
 					remote: !!input.dev?.remote,
 					upstreamProtocol:
 						input.dev?.origin?.secure === undefined

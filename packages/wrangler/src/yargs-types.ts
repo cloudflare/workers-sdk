@@ -1,4 +1,4 @@
-import type { OnlyCamelCase } from "./config/config";
+import type { OnlyCamelCase } from "./core/types";
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
 
 /**
@@ -11,7 +11,6 @@ export interface CommonYargsOptions {
 	env: string | undefined;
 	"env-file": string[] | undefined;
 	"experimental-provision": boolean | undefined;
-	"experimental-remote-bindings": boolean | undefined;
 	"experimental-auto-create": boolean;
 }
 

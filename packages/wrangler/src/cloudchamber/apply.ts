@@ -23,9 +23,12 @@ import {
 	RolloutsService,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { formatConfigSnippet } from "../config";
+import {
+	FatalError,
+	formatConfigSnippet,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { configRolloutStepsToAPI } from "../containers/deploy";
-import { FatalError, UserError } from "../errors";
 import { getAccountId } from "../user";
 import { Diff } from "../utils/diff";
 import {
@@ -34,8 +37,6 @@ import {
 } from "../utils/sortObjectRecursive";
 import { promiseSpinner } from "./common";
 import { cleanForInstanceType } from "./instance-type/instance-type";
-import type { Config } from "../config";
-import type { ContainerApp, Observability } from "../config/environment";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -53,6 +54,11 @@ import type {
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
 import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
+import type {
+	Config,
+	ContainerApp,
+	Observability,
+} from "@cloudflare/workers-utils";
 import type { JsonMap } from "@iarna/toml";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {

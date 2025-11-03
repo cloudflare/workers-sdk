@@ -1,30 +1,29 @@
 import assert from "node:assert";
 import path from "node:path";
+import { APIError, UserError } from "@cloudflare/workers-utils";
 import { syncAssets } from "../assets";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { withSourceURLs } from "../deployment-bundle/source-url";
 import { getInferredHost } from "../dev";
-import { UserError } from "../errors";
 import { logger } from "../logger";
-import { APIError } from "../parse";
 import { syncWorkersSite } from "../sites";
 import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
 import type { AssetsOptions } from "../assets";
-import type { Route } from "../config/environment";
-import type {
-	CfModule,
-	CfScriptFormat,
-	CfWorkerContext,
-	CfWorkerInit,
-} from "../deployment-bundle/worker";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { LegacyAssetPaths } from "../sites";
 import type { ApiCredentials } from "../user";
 import type { CfAccount } from "./create-worker-preview";
 import type { EsbuildBundle } from "./use-esbuild";
+import type {
+	CfModule,
+	CfScriptFormat,
+	CfWorkerContext,
+	CfWorkerInit,
+	Route,
+} from "@cloudflare/workers-utils";
 
 export function handlePreviewSessionUploadError(
 	err: unknown,
@@ -89,7 +88,7 @@ export async function createRemoteWorkerInit(props: {
 	complianceConfig: ComplianceConfig;
 	accountId: string;
 	name: string;
-	legacyEnv: boolean | undefined;
+	useServiceEnvironments: boolean | undefined;
 	env: string | undefined;
 	isWorkersSite: boolean;
 	assets: AssetsOptions | undefined;
@@ -122,7 +121,8 @@ export async function createRemoteWorkerInit(props: {
 		// have added the env name on to the script name. However, we must
 		// include it in the kv namespace name regardless (since there's no
 		// concept of service environments for kv namespaces yet).
-		props.name + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
+		props.name +
+			(props.useServiceEnvironments && props.env ? `-${props.env}` : ""),
 		props.isWorkersSite ? props.legacyAssetPaths : undefined,
 		true,
 		false,
@@ -203,7 +203,7 @@ export async function getWorkerAccountAndContext(props: {
 	accountId: string;
 	apiToken?: ApiCredentials | undefined;
 	env: string | undefined;
-	legacyEnv: boolean | undefined;
+	useServiceEnvironments: boolean | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
 	sendMetrics: boolean | undefined;
@@ -223,7 +223,7 @@ export async function getWorkerAccountAndContext(props: {
 
 	const workerContext: CfWorkerContext = {
 		env: props.env,
-		legacyEnv: props.legacyEnv,
+		useServiceEnvironments: props.useServiceEnvironments,
 		zone: zoneId,
 		host: props.host ?? getInferredHost(props.routes, props.configPath),
 		routes: props.routes,

@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import BINDING from "worker:media/binding";
 import { z } from "zod";
 import {
@@ -13,7 +12,9 @@ export const MEDIA_PLUGIN_NAME = "media";
 
 const MediaSchema = z.object({
 	binding: z.string(),
-	remoteProxyConnectionString: z.custom<RemoteProxyConnectionString>(),
+	remoteProxyConnectionString: z
+		.custom<RemoteProxyConnectionString>()
+		.optional(),
 });
 
 export const MediaOptionsSchema = z.object({
@@ -26,11 +27,6 @@ export const MEDIA_PLUGIN: Plugin<typeof MediaOptionsSchema> = {
 		if (!options.media) {
 			return [];
 		}
-
-		assert(
-			options.media.remoteProxyConnectionString,
-			"Media only supports running remotely"
-		);
 
 		return [
 			{

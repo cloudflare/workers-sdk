@@ -12,10 +12,9 @@ import {
 	getWrangler1xLegacyModuleReferences,
 	noopModuleCollector,
 } from "../deployment-bundle/module-collection";
-import type { Config } from "../config";
 import type { SourceMapMetadata } from "../deployment-bundle/bundle";
 import type { Entry } from "../deployment-bundle/entry";
-import type { CfModule, CfModuleType } from "../deployment-bundle/worker";
+import type { CfModule, CfModuleType, Config } from "@cloudflare/workers-utils";
 import type { Metafile } from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
 
@@ -59,6 +58,7 @@ export function runBuild(
 		onStart,
 		defineNavigatorUserAgent,
 		checkFetch,
+		pythonModulesExcludes,
 	}: {
 		entry: Entry;
 		destination: string | undefined;
@@ -86,6 +86,7 @@ export function runBuild(
 		onStart: () => void;
 		defineNavigatorUserAgent: boolean;
 		checkFetch: boolean;
+		pythonModulesExcludes?: string[];
 	},
 	setBundle: (
 		cb: (previous: EsbuildBundle | undefined) => EsbuildBundle
@@ -110,7 +111,12 @@ export function runBuild(
 	async function getAdditionalModules() {
 		return noBundle
 			? dedupeModulesByName([
-					...((await doFindAdditionalModules(entry, rules)) ?? []),
+					...((await doFindAdditionalModules(
+						entry,
+						rules,
+						false,
+						pythonModulesExcludes ?? []
+					)) ?? []),
 					...additionalModules,
 				])
 			: additionalModules;

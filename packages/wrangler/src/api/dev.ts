@@ -4,11 +4,9 @@ import { startDev } from "../dev/start-dev";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
-import type { Environment } from "../config";
-import type { Rule } from "../config/environment";
-import type { CfModule } from "../deployment-bundle/worker";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
+import type { CfModule, Environment, Rule } from "@cloudflare/workers-utils";
 import type { Json } from "miniflare";
 import type { RequestInfo, RequestInit, Response } from "undici";
 
@@ -84,8 +82,6 @@ export interface Unstable_DevOptions {
 		watch?: boolean; // unstable_dev doesn't support watch-mode yet in testMode
 		devEnv?: boolean;
 		fileBasedRegistry?: boolean;
-		vectorizeBindToProd?: boolean;
-		imagesLocalMode?: boolean;
 		enableIpc?: boolean;
 		enableContainers?: boolean; // Whether to build and connect to containers in dev mode. Defaults to true.
 		dockerPath?: string; // Path to the docker binary, if not on $PATH
@@ -132,8 +128,6 @@ export async function unstable_dev(
 		showInteractiveDevSession,
 		testMode,
 		testScheduled,
-		vectorizeBindToProd,
-		imagesLocalMode,
 		// 2. options for alpha/beta products/libs
 		d1Databases,
 		enablePagesAssetsServiceBinding,
@@ -223,14 +217,12 @@ export async function unstable_dev(
 		port: options?.port ?? 0,
 		experimentalProvision: undefined,
 		experimentalAutoCreate: false,
-		experimentalRemoteBindings: true,
-		experimentalVectorizeBindToProd: vectorizeBindToProd ?? false,
-		experimentalImagesLocalMode: imagesLocalMode ?? false,
 		enableIpc: options?.experimental?.enableIpc,
 		nodeCompat: undefined,
 		enableContainers: options?.experimental?.enableContainers ?? false,
 		dockerPath,
 		containerEngine: options?.experimental?.containerEngine,
+		experimentalTailLogs: false,
 	};
 
 	//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
@@ -239,7 +231,6 @@ export async function unstable_dev(
 			// TODO: can we make this work?
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
-			REMOTE_BINDINGS: false,
 			DEPLOY_REMOTE_DIFF_CHECK: false,
 			AUTOCREATE_RESOURCES: false,
 		},

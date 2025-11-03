@@ -1,3 +1,4 @@
+import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import { fetchListResult, fetchResult } from "../cfetch";
@@ -10,7 +11,6 @@ import {
 	validateRoutes,
 } from "../deploy/deploy";
 import { getSubdomainMixedStateCheckDisabled } from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";
@@ -18,9 +18,8 @@ import { getWorkersDevSubdomain } from "../routes";
 import { retryOnAPIFailure } from "../utils/retry";
 import { getZoneForRoute } from "../zones";
 import type { AssetsOptions } from "../assets";
-import type { Config } from "../config";
-import type { Route } from "../config/environment";
 import type { RouteObject } from "../deploy/deploy";
+import type { Config, Route } from "@cloudflare/workers-utils";
 
 type Props = {
 	config: Config;
@@ -29,7 +28,7 @@ type Props = {
 	env: string | undefined;
 	triggers: string[] | undefined;
 	routes: Route[] | undefined;
-	legacyEnv: boolean | undefined;
+	useServiceEnvironments: boolean | undefined;
 	dryRun: boolean | undefined;
 	assetsOptions: AssetsOptions | undefined;
 	firstDeploy: boolean;
@@ -64,9 +63,13 @@ export default async function triggersDeploy(
 	const envName = props.env ?? "production";
 
 	const start = Date.now();
-	const notProd = Boolean(!props.legacyEnv && props.env);
-	const workerName = notProd ? `${scriptName} (${envName})` : scriptName;
-	const workerUrl = notProd
+	const useServiceEnvironments = Boolean(
+		props.useServiceEnvironments && props.env
+	);
+	const workerName = useServiceEnvironments
+		? `${scriptName} (${envName})`
+		: scriptName;
+	const workerUrl = useServiceEnvironments
 		? `/accounts/${accountId}/workers/services/${scriptName}/environments/${envName}`
 		: `/accounts/${accountId}/workers/scripts/${scriptName}`;
 
@@ -195,7 +198,7 @@ export default async function triggersDeploy(
 			publishRoutes(config, routesOnly, {
 				workerUrl,
 				scriptName,
-				notProd,
+				useServiceEnvironments,
 				accountId,
 			}).then(() => {
 				if (routesOnly.length > 10) {
@@ -441,7 +444,7 @@ async function subdomainDeploy(
 			config.configPath
 		);
 		workersDevURL =
-			props.legacyEnv || !props.env
+			!props.useServiceEnvironments || !props.env
 				? `${scriptName}.${userSubdomain}`
 				: `${envName}.${scriptName}.${userSubdomain}`;
 	}
@@ -481,11 +484,17 @@ async function subdomainDeploy(
 		config.workers_dev == undefined &&
 		after.enabled !== before.enabled
 	) {
-		const beforeStatus = before.enabled ? "enabled" : "disabled";
+		const status = (enabled: boolean, past: boolean) => {
+			if (past) {
+				return enabled ? "enabled" : "disabled";
+			} else {
+				return enabled ? "enable" : "disable";
+			}
+		};
 		logger.warn(
 			[
-				`Worker has workers.dev ${beforeStatus}, but 'workers_dev' is not in the config.`,
-				`Using default config 'workers_dev = ${after.enabled}', current status will be overwritten.`,
+				`Because 'workers_dev' is not in your Wrangler file, it will be ${status(after.enabled, true)} for this deployment by default.`,
+				`To override this setting, you can ${status(before.enabled, false)} workers.dev by explicitly setting 'workers_dev = ${before.enabled}' in your Wrangler file.`,
 			].join("\n")
 		);
 	}
@@ -495,11 +504,17 @@ async function subdomainDeploy(
 		config.preview_urls == undefined &&
 		after.previews_enabled !== before.previews_enabled
 	) {
-		const beforeStatus = before.previews_enabled ? "enabled" : "disabled";
+		const status = (enabled: boolean, past: boolean) => {
+			if (past) {
+				return enabled ? "enabled" : "disabled";
+			} else {
+				return enabled ? "enable" : "disable";
+			}
+		};
 		logger.warn(
 			[
-				`Worker has preview URLs ${beforeStatus}, but 'preview_urls' is not in the config.`,
-				`Using default config 'preview_urls = ${after.previews_enabled}', current status will be overwritten.`,
+				`Because your 'workers.dev' route is ${status(after.enabled, true)} and your 'preview_urls' setting is not in your Wrangler file, Preview URLs will be ${status(after.previews_enabled, true)} for this deployment by default.`,
+				`To override this setting, you can ${status(before.previews_enabled, false)} Preview URLs by explicitly setting 'preview_urls = ${before.previews_enabled}' in your Wrangler file.`,
 			].join("\n")
 		);
 	}

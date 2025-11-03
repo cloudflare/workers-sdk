@@ -41,16 +41,8 @@ describe("experimental_getWranglerCommands", () => {
 			    "alias": Array [
 			      "x-provision",
 			    ],
-			    "describe": "Experimental: Enable automatic resource provisioning",
-			    "hidden": true,
-			    "type": "boolean",
-			  },
-			  "experimental-remote-bindings": Object {
-			    "alias": Array [
-			      "x-remote-bindings",
-			    ],
 			    "default": true,
-			    "describe": "Experimental: Enable Remote Bindings",
+			    "describe": "Experimental: Enable automatic resource provisioning",
 			    "hidden": true,
 			    "type": "boolean",
 			  },

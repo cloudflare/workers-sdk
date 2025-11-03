@@ -1,36 +1,34 @@
 import assert from "node:assert";
-import { fetchResult } from "../cfetch";
 import {
+	APIError,
 	experimental_patchConfig,
+	experimental_readRawConfig,
+	INHERIT_SYMBOL,
 	PatchConfigError,
-} from "../config/patch-config";
+	UserError,
+} from "@cloudflare/workers-utils";
+import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
 import { getDatabaseInfoFromIdOrName } from "../d1/utils";
 import { prompt, select } from "../dialogs";
-import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { APIError } from "../parse";
 import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
-import type { Config, RawConfig } from "../config";
+import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { WorkerMetadataBinding } from "./create-worker-upload-form";
 import type {
 	CfD1Database,
 	CfKvNamespace,
 	CfR2Bucket,
 	CfWorkerInit,
-} from "./worker";
-
-/**
- * A symbol to inherit a binding from the deployed worker.
- */
-export const INHERIT_SYMBOL = Symbol.for("inherit_binding");
+	Config,
+	RawConfig,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
 
 export function getBindings(
 	config: Config | undefined,
@@ -423,11 +421,6 @@ async function collectPendingResources(
 
 	const pendingResources: PendingResource[] = [];
 
-	try {
-		settings = await getSettings(complianceConfig, accountId, scriptName);
-	} catch {
-		logger.debug("No settings found");
-	}
 	for (const resourceType of Object.keys(
 		HANDLERS
 	) as (keyof typeof HANDLERS)[]) {
@@ -479,7 +472,7 @@ export async function provisionBindings(
 			"Provisioning resources is not possible without a config file"
 		);
 
-		if (!isLegacyEnv(config)) {
+		if (useServiceEnvironments(config)) {
 			throw new UserError(
 				"Provisioning resources is not supported with a service environment"
 			);
@@ -519,10 +512,39 @@ export async function provisionBindings(
 			allChanges.set(resource.binding, resource.handler.binding);
 		}
 
+		const existingBindingNames = new Set<string>();
+
+		const isUsingRedirectedConfig =
+			config.userConfigPath && config.userConfigPath !== config.configPath;
+
+		// If we're using a redirected config, then the redirected config potentially has injected
+		// bindings that weren't originally in the user config. These can be provisioned, but we
+		// should not write the IDs back to the user config file (because the bindings weren't there in the first place)
+		if (isUsingRedirectedConfig) {
+			const { rawConfig: unredirectedConfig } =
+				await experimental_readRawConfig(
+					{ config: config.userConfigPath },
+					{ useRedirectIfAvailable: false }
+				);
+			for (const resourceType of Object.keys(
+				HANDLERS
+			) as (keyof typeof HANDLERS)[]) {
+				for (const binding of unredirectedConfig[resourceType] ?? []) {
+					existingBindingNames.add(binding.binding);
+				}
+			}
+		}
 		for (const resourceType of Object.keys(
 			HANDLERS
 		) as (keyof typeof HANDLERS)[]) {
 			for (const binding of bindings[resourceType] ?? []) {
+				// See above for why we skip writing back some bindings to the config file
+				if (
+					isUsingRedirectedConfig &&
+					!existingBindingNames.has(binding.binding)
+				) {
+					continue;
+				}
 				patch[resourceType] ??= [];
 
 				const bindingToWrite = allChanges.has(binding.binding)

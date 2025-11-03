@@ -1,7 +1,7 @@
 {
 	"name": "pipelines",
 	"main": "src/index.ts",
-	"compatibility_date": "2025-01-01",
+	// don't provide compatibility_date so that vitest will infer the latest one
 	"pipelines": [
 		{
 			"binding": "PIPELINE",

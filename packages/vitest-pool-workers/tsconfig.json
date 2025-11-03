@@ -11,7 +11,7 @@
 	},
 	"exclude": ["./scripts/**/rtti.ts"],
 	"include": [
-		"./scripts/**/*.ts",
+		"./scripts/**/*",
 		"./src/config/**/*.ts",
 		"./src/pool/**/*.ts",
 		"./src/shared/**/*.ts",

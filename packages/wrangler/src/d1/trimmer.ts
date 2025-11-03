@@ -1,7 +1,7 @@
 // Note that sqlite has many ways to trigger a transaction: https://www.sqlite.org/lang_transaction.html
 // this files (initial?) aim is to detect SQL files created by sqlite's .dump CLI command, and strip out the wrapping transaction in the sql file.
 
-import { UserError } from "../errors";
+import { UserError } from "@cloudflare/workers-utils";
 
 /**
  * A function to remove transaction statements from the start and end of SQL files, as the D1 API already does it for us.

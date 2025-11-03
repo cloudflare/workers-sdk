@@ -1,7 +1,10 @@
 import * as fs from "fs";
 import path from "node:path";
-import { experimental_readRawConfig, readConfig } from "../../config";
-import { normalizeAndValidateConfig } from "../../config/validation";
+import {
+	experimental_readRawConfig,
+	normalizeAndValidateConfig,
+} from "@cloudflare/workers-utils";
+import { readConfig } from "../../config";
 import { run } from "../../experimental-flags";
 import { normalizeString } from "../helpers/normalize";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -12,7 +15,7 @@ import type {
 	RawConfig,
 	RawDevConfig,
 	RawEnvironment,
-} from "../../config";
+} from "@cloudflare/workers-utils";
 
 describe("readConfig()", () => {
 	runInTempDir();
@@ -136,6 +139,7 @@ describe("normalizeAndValidateConfig()", () => {
 			data_blobs: undefined,
 			workers_dev: undefined,
 			preview_urls: undefined,
+			python_modules: { exclude: ["**/*.pyc"] },
 			no_bundle: undefined,
 			minify: undefined,
 			first_party_worker: undefined,
@@ -214,7 +218,11 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 
 			expect(config).toEqual(
-				expect.objectContaining({ ...expectedConfig, main: undefined })
+				expect.objectContaining({
+					...expectedConfig,
+					main: undefined,
+					legacy_env: true,
+				})
 			);
 			expect(diagnostics.hasWarnings()).toBe(false);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -1041,6 +1049,19 @@ describe("normalizeAndValidateConfig()", () => {
 				observability: {
 					enabled: true,
 					head_sampling_rate: 1,
+					logs: {
+						enabled: true,
+						head_sampling_rate: 1,
+						invocation_logs: true,
+						destinations: ["test"],
+						persist: true,
+					},
+					traces: {
+						enabled: true,
+						head_sampling_rate: 1,
+						destinations: ["test"],
+						persist: true,
+					},
 				},
 			};
 
@@ -1128,6 +1149,19 @@ describe("normalizeAndValidateConfig()", () => {
 				observability: {
 					enabled: "INVALID",
 					head_sampling_rate: "INVALID",
+					logs: {
+						enabled: "INVALID",
+						head_sampling_rate: "INVALID",
+						destinations: "INVALID",
+						persist: "INVALID",
+						invocation_logs: "INVALID",
+					},
+					traces: {
+						enabled: "INVALID",
+						head_sampling_rate: "INVALID",
+						destinations: "INVALID",
+						persist: "INVALID",
+					},
 				},
 			} as unknown as RawEnvironment;
 
@@ -1200,9 +1234,18 @@ describe("normalizeAndValidateConfig()", () => {
 				  - Expected \\"logpush\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"upload_source_maps\\" to be of type boolean but got \\"INVALID\\".
 				  - Expected \\"observability.enabled\\" to be of type boolean but got \\"INVALID\\".
-				  - Expected \\"observability.logs.enabled\\" to be of type boolean but got undefined.
-				  - Expected \\"observability.traces.enabled\\" to be of type boolean but got undefined.
-				  - Expected \\"observability.head_sampling_rate\\" to be of type number but got \\"INVALID\\"."
+				  - Expected \\"observability.logs.enabled\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.traces.enabled\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.head_sampling_rate\\" to be of type number but got \\"INVALID\\".
+				  - Expected \\"observability.logs.enabled\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.logs.head_sampling_rate\\" to be of type number but got \\"INVALID\\".
+				  - Expected \\"observability.logs.invocation_logs\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"logs.destinations\\" to be an array of strings but got \\"INVALID\\"
+				  - Expected \\"observability.logs.persist\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.traces.enabled\\" to be of type boolean but got \\"INVALID\\".
+				  - Expected \\"observability.traces.head_sampling_rate\\" to be of type number but got \\"INVALID\\".
+				  - Expected \\"traces.destinations\\" to be an array of strings but got \\"INVALID\\"
+				  - Expected \\"observability.traces.persist\\" to be of type boolean but got \\"INVALID\\"."
 			`);
 		});
 
@@ -2866,15 +2909,13 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - \\"kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			            - \\"kv_namespaces[0]\\" bindings should have a string \\"id\\" field but got {}.
-			            - \\"kv_namespaces[1]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\"}.
-			            - \\"kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			            - \\"kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			            - \\"kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}.
-			            - \\"kv_namespaces[4]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
-		        `);
+					"Processing wrangler configuration:
+					  - \\"kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
+					  - \\"kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+					  - \\"kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+					  - \\"kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}.
+					  - \\"kv_namespaces[4]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
+				`);
 			});
 
 			it("should allow the id field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
@@ -2882,7 +2923,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						REMOTE_BINDINGS: false,
 						DEPLOY_REMOTE_DIFF_CHECK: false,
 						AUTOCREATE_RESOURCES: false,
 					},
@@ -3024,15 +3064,10 @@ describe("normalizeAndValidateConfig()", () => {
 				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"d1_databases[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			  - \\"d1_databases[0]\\" bindings must have a \\"database_id\\" field but got {}.
-			  - \\"d1_databases[1]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"VALID\\"}.
-			  - \\"d1_databases[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			  - \\"d1_databases[2]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			  - \\"d1_databases[3]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"D1_BINDING_2\\",\\"id\\":\\"my-db\\",\\"preview_id\\":2222}.
-			  - \\"d1_databases[4]\\" bindings must have a \\"database_id\\" field but got {\\"binding\\":\\"VALID\\",\\"id\\":\\"\\"}."
-		`);
+					"Processing wrangler configuration:
+					  - \\"d1_databases[0]\\" bindings should have a string \\"binding\\" field but got {}.
+					  - \\"d1_databases[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}."
+				`);
 			});
 
 			it("should allow the database_id field to be omitted when the RESOURCES_PROVISION experimental flag is enabled", () => {
@@ -3040,7 +3075,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						REMOTE_BINDINGS: false,
 						DEPLOY_REMOTE_DIFF_CHECK: false,
 						AUTOCREATE_RESOURCES: false,
 					},
@@ -3364,8 +3398,6 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - \\"r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-					  - \\"r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
-					  - \\"r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
 					  - \\"r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 					  - \\"r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 					  - \\"r2_buckets[3]\\" bindings should, optionally, have a string \\"preview_bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_2\\",\\"bucket_name\\":\\"r2-bucket-2\\",\\"preview_bucket_name\\":2555}.
@@ -3380,7 +3412,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						REMOTE_BINDINGS: false,
 						DEPLOY_REMOTE_DIFF_CHECK: false,
 						AUTOCREATE_RESOURCES: false,
 					},
@@ -5025,9 +5056,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
-		        `);
+					"Processing wrangler configuration:
+					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
+				`);
 			});
 
 			it("should error if named environment contains a `name` field, even if there is no top-level name", () => {
@@ -5051,9 +5082,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
-		        `);
+					"Processing wrangler configuration:
+					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -5085,9 +5116,9 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
-		        `);
+					"Processing wrangler configuration:
+					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -5118,7 +5149,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config.account_id).toBeUndefined();
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -5152,7 +5183,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Experimental: Service environments are in beta, and their behaviour is guaranteed to change in the future. DO NOT USE IN PRODUCTION."
+					  - Service environments are deprecated, and will be removed in the future. DO NOT USE IN PRODUCTION."
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -5978,16 +6009,14 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"env.ENV1.kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
-			              - \\"env.ENV1.kv_namespaces[0]\\" bindings should have a string \\"id\\" field but got {}.
-			              - \\"env.ENV1.kv_namespaces[1]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":\\"VALID\\"}.
-			              - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			              - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
-			              - \\"env.ENV1.kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"env.ENV1.kv_namespaces[0]\\" bindings should have a string \\"binding\\" field but got {}.
+					    - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+					    - \\"env.ENV1.kv_namespaces[2]\\" bindings should have a string \\"id\\" field but got {\\"binding\\":2000,\\"id\\":2111}.
+					    - \\"env.ENV1.kv_namespaces[3]\\" bindings should, optionally, have a string \\"preview_id\\" field but got {\\"binding\\":\\"KV_BINDING_2\\",\\"id\\":\\"KV_ID_2\\",\\"preview_id\\":2222}."
+				`);
 			});
 		});
 
@@ -6089,8 +6118,6 @@ describe("normalizeAndValidateConfig()", () => {
 
 					  - \\"env.ENV1\\" environment configuration
 					    - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"binding\\" field but got {}.
-					    - \\"env.ENV1.r2_buckets[0]\\" bindings should have a string \\"bucket_name\\" field but got {}.
-					    - \\"env.ENV1.r2_buckets[1]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":\\"R2_BINDING_1\\"}.
 					    - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"binding\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 					    - \\"env.ENV1.r2_buckets[2]\\" bindings should have a string \\"bucket_name\\" field but got {\\"binding\\":2333,\\"bucket_name\\":2444}.
 					    - env.ENV1.r2_buckets[3].bucket_name=\\"R2_BUCKET_2\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.
@@ -6688,6 +6715,36 @@ describe("normalizeAndValidateConfig()", () => {
 					  - \\"observability.enabled\\" or \\"observability.logs.enabled\\" or \\"observability.traces.enabled\\" is required.
 					  - Expected \\"observability.head_sampling_rate\\" to be of type number but got true."
 				`);
+			});
+
+			it("should not warn on full observability config", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						observability: {
+							enabled: true,
+							head_sampling_rate: 1,
+							logs: {
+								enabled: true,
+								head_sampling_rate: 1,
+								invocation_logs: true,
+								destinations: ["test"],
+								persist: true,
+							},
+							traces: {
+								enabled: true,
+								head_sampling_rate: 1,
+								destinations: ["test"],
+								persist: true,
+							},
+						},
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
 			it("should error on invalid observability.logs", () => {

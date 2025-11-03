@@ -1,5 +1,8 @@
+import { MissingConfigError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Mutex } from "miniflare";
+import { WebSocket } from "ws";
+import { version as packageVersion } from "../../../package.json";
 import {
 	createPreviewSession,
 	createWorkerPreview,
@@ -10,8 +13,9 @@ import {
 	handlePreviewSessionCreationError,
 	handlePreviewSessionUploadError,
 } from "../../dev/remote";
-import { MissingConfigError } from "../../errors";
 import { logger } from "../../logger";
+import { TRACE_VERSION } from "../../tail/createTail";
+import { realishPrintLogs } from "../../tail/printing";
 import { getAccessToken } from "../../user/access";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -40,8 +44,12 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	#session?: CfPreviewSession;
 
+	#activeTail?: WebSocket;
+
 	async #previewSession(
-		props: Parameters<typeof getWorkerAccountAndContext>[0]
+		props: Parameters<typeof getWorkerAccountAndContext>[0] & {
+			tail_logs: boolean;
+		}
 	): Promise<CfPreviewSession | undefined> {
 		try {
 			const { workerAccount, workerContext } =
@@ -51,7 +59,8 @@ export class RemoteRuntimeController extends RuntimeController {
 				props.complianceConfig,
 				workerAccount,
 				workerContext,
-				this.#abortController.signal
+				this.#abortController.signal,
+				props.tail_logs
 			);
 		} catch (err: unknown) {
 			if (err instanceof Error && err.name == "AbortError") {
@@ -68,6 +77,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			Parameters<typeof getWorkerAccountAndContext>[0] & {
 				bundleId: number;
 				minimal_mode?: boolean;
+				tail_logs: boolean;
 			}
 	): Promise<CfPreviewToken | undefined> {
 		if (!this.#session) {
@@ -91,12 +101,13 @@ export class RemoteRuntimeController extends RuntimeController {
 			if (props.bundleId !== this.#currentBundleId) {
 				return;
 			}
+			this.#activeTail?.terminate();
 			const { workerAccount, workerContext } = await getWorkerAccountAndContext(
 				{
 					complianceConfig: props.complianceConfig,
 					accountId: props.accountId,
 					env: props.env,
-					legacyEnv: props.legacyEnv,
+					useServiceEnvironments: props.useServiceEnvironments,
 					host: props.host,
 					routes: props.routes,
 					sendMetrics: props.sendMetrics,
@@ -121,7 +132,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				modules: props.modules,
 				accountId: props.accountId,
 				name: scriptId,
-				legacyEnv: props.legacyEnv,
+				useServiceEnvironments: props.useServiceEnvironments,
 				env: props.env,
 				isWorkersSite: props.isWorkersSite,
 				assets: props.assets,
@@ -147,6 +158,21 @@ export class RemoteRuntimeController extends RuntimeController {
 				props.minimal_mode
 			);
 
+			if (props.tail_logs && workerPreviewToken.tailUrl) {
+				this.#activeTail = new WebSocket(
+					workerPreviewToken.tailUrl,
+					TRACE_VERSION,
+					{
+						headers: {
+							"Sec-WebSocket-Protocol": TRACE_VERSION, // needs to be `trace-v1` to be accepted
+							"User-Agent": `wrangler/${packageVersion}`,
+						},
+						signal: this.#abortController.signal,
+					}
+				);
+
+				this.#activeTail.on("message", realishPrintLogs);
+			}
 			return workerPreviewToken;
 		} catch (err: unknown) {
 			if (err instanceof Error && err.name == "AbortError") {
@@ -201,11 +227,12 @@ export class RemoteRuntimeController extends RuntimeController {
 				accountId: auth.accountId,
 				apiToken: auth.apiToken,
 				env: config.env, // deprecated service environments -- just pass it through for now
-				legacyEnv: !config.legacy?.enableServiceEnvironments, // wrangler environment -- just pass it through for now
+				useServiceEnvironments: config.legacy?.useServiceEnvironments, // wrangler environment -- just pass it through for now
 				host: config.dev.origin?.hostname,
 				routes,
 				sendMetrics: config.sendMetrics,
 				configPath: config.config,
+				tail_logs: !!config.experimental?.tailLogs,
 			});
 
 			const { bindings } = await convertBindingsToCfWorkerInitBindings(
@@ -224,7 +251,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				accountId: auth.accountId,
 				complianceConfig: { compliance_region: config.complianceRegion },
 				name: config.name,
-				legacyEnv: !config.legacy?.enableServiceEnvironments,
+				useServiceEnvironments: config.legacy?.useServiceEnvironments,
 				env: config.env,
 				isWorkersSite: config.legacy?.site !== undefined,
 				assets: config.assets,
@@ -247,6 +274,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				configPath: config.config,
 				bundleId: id,
 				minimal_mode: config.dev.remote === "minimal",
+				tail_logs: !!config.experimental?.tailLogs,
 			});
 
 			// If we received a new `bundleComplete` event before we were able to
@@ -268,12 +296,16 @@ export class RemoteRuntimeController extends RuntimeController {
 						hostname: token.host,
 						port: "443",
 					},
-					userWorkerInspectorUrl: {
-						protocol: token.inspectorUrl.protocol,
-						hostname: token.inspectorUrl.hostname,
-						port: token.inspectorUrl.port.toString(),
-						pathname: token.inspectorUrl.pathname,
-					},
+					...(!config.experimental?.tailLogs && token.inspectorUrl
+						? {
+								userWorkerInspectorUrl: {
+									protocol: token.inspectorUrl.protocol,
+									hostname: token.inspectorUrl.hostname,
+									port: token.inspectorUrl.port.toString(),
+									pathname: token.inspectorUrl.pathname,
+								},
+							}
+						: {}),
 					headers: {
 						"cf-workers-preview-token": token.value,
 						...(accessToken
@@ -339,6 +371,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		logger.debug("RemoteRuntimeController teardown beginning...");
 		this.#session = undefined;
 		this.#abortController.abort();
+		this.#activeTail?.terminate();
 		logger.debug("RemoteRuntimeController teardown complete");
 	}
 

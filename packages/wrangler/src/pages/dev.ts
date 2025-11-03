@@ -2,22 +2,26 @@ import { execSync, spawn } from "node:child_process";
 import events from "node:events";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import path, { dirname, join, normalize, resolve } from "node:path";
+import {
+	configFileName,
+	FatalError,
+	formatCompatibilityDate,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
-import { configFileName, readConfig } from "../config";
+import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
 import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { startDev } from "../dev/start-dev";
-import { FatalError, UserError } from "../errors";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getBasePath } from "../paths";
-import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { debounce } from "../utils/debounce";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
@@ -30,14 +34,14 @@ import {
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
-import type { Config } from "../config";
-import type {
-	DurableObjectBindings,
-	EnvironmentNonInheritable,
-} from "../config/environment";
-import type { CfModule } from "../deployment-bundle/worker";
 import type { AdditionalDevProps } from "../dev";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
+import type {
+	CfModule,
+	Config,
+	DurableObjectBindings,
+	EnvironmentNonInheritable,
+} from "@cloudflare/workers-utils";
 
 /*
  * DURABLE_OBJECTS_BINDING_REGEXP matches strings like:
@@ -239,18 +243,6 @@ export const pagesDevCommand = createCommand({
 			description:
 				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 			type: "boolean",
-		},
-		"experimental-vectorize-bind-to-prod": {
-			type: "boolean",
-			description:
-				"Bind to production Vectorize indexes in local development mode",
-			default: false,
-		},
-		"experimental-images-local-mode": {
-			type: "boolean",
-			description:
-				"Use a local lower-fidelity implementation of the Images binding",
-			default: false,
 		},
 	},
 	positionalArgs: ["directory", "command"],
@@ -884,7 +876,6 @@ export const pagesDevCommand = createCommand({
 			{
 				MULTIWORKER: Array.isArray(args.config),
 				RESOURCES_PROVISION: false,
-				REMOTE_BINDINGS: false,
 				DEPLOY_REMOTE_DIFF_CHECK: false,
 				AUTOCREATE_RESOURCES: false,
 			},
@@ -953,9 +944,6 @@ export const pagesDevCommand = createCommand({
 					persistTo: args.persistTo,
 					logLevel: args.logLevel ?? "log",
 					experimentalProvision: undefined,
-					experimentalRemoteBindings: true,
-					experimentalVectorizeBindToProd: false,
-					experimentalImagesLocalMode: false,
 					experimentalAutoCreate: false,
 					enableIpc: true,
 					config: Array.isArray(args.config) ? args.config : undefined,
@@ -963,6 +951,7 @@ export const pagesDevCommand = createCommand({
 					siteInclude: undefined,
 					siteExclude: undefined,
 					enableContainers: false,
+					experimentalTailLogs: false,
 				})
 		);
 

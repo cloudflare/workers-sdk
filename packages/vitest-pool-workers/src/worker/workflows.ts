@@ -45,18 +45,31 @@ class WorkflowInstanceIntrospectorHandle
 {
 	#workflow: WorkflowBinding;
 	#instanceId: string;
-	#instanceModifier: WorkflowInstanceModifier;
+	#instanceModifier: WorkflowInstanceModifier | undefined;
+	#instanceModifierPromise: Promise<WorkflowInstanceModifier> | undefined;
 
 	constructor(workflow: WorkflowBinding, instanceId: string) {
 		this.#workflow = workflow;
 		this.#instanceId = instanceId;
-
-		this.#instanceModifier = workflow.unsafeGetInstanceModifier(
-			instanceId
-		) as WorkflowInstanceModifier;
+		this.#instanceModifierPromise = workflow
+			.unsafeGetInstanceModifier(instanceId)
+			.then((res) => {
+				this.#instanceModifier = res as WorkflowInstanceModifier;
+				this.#instanceModifierPromise = undefined;
+				return this.#instanceModifier;
+			});
 	}
 
 	async modify(fn: ModifierCallback): Promise<WorkflowInstanceIntrospector> {
+		if (this.#instanceModifierPromise !== undefined) {
+			this.#instanceModifier = await this.#instanceModifierPromise;
+		}
+		if (this.#instanceModifier === undefined) {
+			throw new Error(
+				"could not apply modifications due to internal error. Retrying the test may resolve the issue."
+			);
+		}
+
 		await fn(this.#instanceModifier);
 
 		return this;

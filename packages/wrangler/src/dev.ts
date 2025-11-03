@@ -1,25 +1,21 @@
 import assert from "node:assert";
 import events from "node:events";
+import {
+	configFileName,
+	formatConfigSnippet,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { isWebContainer } from "@webcontainer/env";
 import { getAssetsOptions } from "./assets";
-import { configFileName, formatConfigSnippet } from "./config";
 import { createCommand } from "./core/create-command";
 import { validateRoutes } from "./deploy/deploy";
 import { getVarsForDev } from "./dev/dev-vars";
 import { startDev } from "./dev/start-dev";
-import { UserError } from "./errors";
-import { getFlag } from "./experimental-flags";
 import { logger } from "./logger";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
 import type { Trigger } from "./api";
-import type { Config, Environment } from "./config";
-import type {
-	EnvironmentNonInheritable,
-	Route,
-	Rule,
-} from "./config/environment";
-import type { INHERIT_SYMBOL } from "./deployment-bundle/bindings";
+import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
 	CfD1Database,
 	CfKvNamespace,
@@ -28,8 +24,13 @@ import type {
 	CfR2Bucket,
 	CfService,
 	CfWorkerInit,
-} from "./deployment-bundle/worker";
-import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
+	Config,
+	Environment,
+	EnvironmentNonInheritable,
+	INHERIT_SYMBOL,
+	Route,
+	Rule,
+} from "@cloudflare/workers-utils";
 import type { Json } from "miniflare";
 
 export const dev = createCommand({
@@ -38,9 +39,6 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			REMOTE_BINDINGS: args.local
-				? false
-				: args.experimentalRemoteBindings ?? true,
 			DEPLOY_REMOTE_DIFF_CHECK: false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
@@ -260,19 +258,12 @@ export const dev = createCommand({
 				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 			type: "boolean",
 		},
-		"experimental-vectorize-bind-to-prod": {
+		"experimental-tail-logs": {
 			type: "boolean",
+			alias: ["x-tail-logs"],
 			describe:
-				"Bind to production Vectorize indexes in local development mode",
+				"Experimental: Get runtime logs for the remote worker via Workers Tails rather than the Devtools inspector",
 			default: false,
-			hidden: true,
-		},
-		"experimental-images-local-mode": {
-			type: "boolean",
-			describe:
-				"Use a local lower-fidelity implementation of the Images binding",
-			default: false,
-			hidden: true,
 		},
 	},
 	async validateArgs(args) {
@@ -471,8 +462,7 @@ export function getBindings(
 	env: string | undefined,
 	envFiles: string[] | undefined,
 	local: boolean,
-	args: AdditionalDevProps,
-	remoteBindingsEnabled = getFlag("REMOTE_BINDINGS")
+	args: AdditionalDevProps
 ): CfWorkerInit["bindings"] {
 	/**
 	 * In Pages, KV, DO, D1, R2, AI and service bindings can be specified as
@@ -503,7 +493,7 @@ export function getBindings(
 			return {
 				binding,
 				id: preview_id ?? id,
-				remote: remoteBindingsEnabled && remote,
+				remote: remote,
 			} satisfies CfKvNamespace;
 		}
 	);
@@ -524,7 +514,7 @@ export function getBindings(
 		if (local) {
 			return {
 				...d1Db,
-				remote: remoteBindingsEnabled && d1Db.remote,
+				remote: d1Db.remote,
 				database_id,
 			} satisfies CfD1Database;
 		}
@@ -557,7 +547,7 @@ export function getBindings(
 					binding,
 					bucket_name: preview_bucket_name ?? bucket_name,
 					jurisdiction,
-					remote: remoteBindingsEnabled && remote,
+					remote: remote,
 				} satisfies CfR2Bucket;
 			}
 		) || [];
@@ -575,8 +565,7 @@ export function getBindings(
 		(service) =>
 			({
 				...service,
-				remote:
-					remoteBindingsEnabled && "remote" in service && !!service.remote,
+				remote: "remote" in service && !!service.remote,
 			}) satisfies CfService
 	);
 
@@ -629,7 +618,7 @@ export function getBindings(
 				binding: queue.binding,
 				queue_name: queue.queue,
 				delivery_delay: queue.delivery_delay,
-				remote: remoteBindingsEnabled && queue.remote,
+				remote: queue.remote,
 			} satisfies CfQueue;
 		}),
 	];

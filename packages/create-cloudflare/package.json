@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.53.0",
+	"version": "2.54.1",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -48,6 +48,7 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@iarna/toml": "^3.0.0",
+		"jsonc-parser": "^3.2.0",
 		"@types/command-exists": "^1.2.0",
 		"@types/cross-spawn": "^6.0.2",
 		"@types/deepmerge": "^2.2.0",

@@ -3776,6 +3776,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
 					Download complete."
 				`);
@@ -3801,6 +3802,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
 					Upload complete."
 				`);
@@ -3817,6 +3819,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucket-object-test\\".
 					Upload complete."
 				`);
@@ -3889,7 +3892,7 @@ describe("r2", () => {
 				);
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				const flags =
-					"--ct content-type-mock --cd content-disposition-mock --ce content-encoding-mock --cl content-lang-mock --cc cache-control-mock --e expire-time-mock";
+					"--ct content-type-mock --cd content-disposition-mock --ce content-encoding-mock --cl content-lang-mock --cc cache-control-mock --expires expire-time-mock";
 
 				await runWrangler(
 					`r2 object put --remote bucket-object-test/wormhole-img.png ${flags} --file wormhole-img.png`
@@ -3900,6 +3903,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
 					Upload complete."
 				`);
@@ -3915,6 +3919,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Deleting object \\"wormhole-img.png\\" from bucket \\"bucket-object-test\\".
 					Delete complete."
 				`);
@@ -3935,6 +3940,20 @@ describe("r2", () => {
 
 			"
 		`);
+			});
+
+			it("should allow --env and --expires to be used together without conflict", async () => {
+				writeWranglerConfig({
+					env: {
+						production: {},
+					},
+				});
+				fs.writeFileSync("wormhole-img.png", "passageway");
+				await runWrangler(
+					`r2 object put --remote bucket-object-test/wormhole-img.png --file ./wormhole-img.png --env production --expires 2024-12-31`
+				);
+
+				expect(std.out).toContain("Upload complete");
 			});
 		});
 	});

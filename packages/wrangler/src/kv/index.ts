@@ -3,18 +3,24 @@ import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
 import {
-	readConfig,
-	sharedResourceCreationArgs,
-	updateConfigFile,
-} from "../config";
+	CommandLineArgsError,
+	parseJSON,
+	readFileSync,
+	readFileSyncToBuffer,
+	UserError,
+} from "@cloudflare/workers-utils";
+import chalk from "chalk";
+import { readConfig } from "../config";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
-import { CommandLineArgsError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { parseJSON, readFileSync, readFileSyncToBuffer } from "../parse";
 import { requireAuth } from "../user";
+import {
+	createdResourceConfig,
+	sharedResourceCreationArgs,
+} from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import {
@@ -111,7 +117,7 @@ export const kvNamespaceCreateCommand = createCommand({
 		logger.log("✨ Success!");
 		const previewString = args.preview ? "preview_" : "";
 
-		await updateConfigFile(
+		await createdResourceConfig(
 			"kv_namespaces",
 			(name) => ({
 				binding: getValidBindingName(name ?? args.namespace, "KV"),
@@ -177,6 +183,12 @@ export const kvNamespaceDeleteCommand = createCommand({
 			type: "boolean",
 			describe: "Interact with a preview namespace",
 		},
+		"skip-confirmation": {
+			type: "boolean",
+			description: "Skip confirmation",
+			alias: "y",
+			default: false,
+		},
 	},
 
 	validateArgs(args) {
@@ -196,6 +208,17 @@ export const kvNamespaceDeleteCommand = createCommand({
 		}
 
 		const accountId = await requireAuth(config);
+		logger.log(
+			`About to delete ${chalk.bold("remote")} KV namespace '${args.binding ? args.binding + ` (${id})` : args.namespaceId}'.\n` +
+				`This action is irreversible and will permanently delete all data in the KV namespace.\n`
+		);
+		if (!args.skipConfirmation) {
+			const response = await confirm(`Ok to proceed?`);
+			if (!response) {
+				logger.log(`Not deleting.`);
+				return;
+			}
+		}
 
 		logger.log(`Deleting KV namespace ${id}.`);
 		await deleteKVNamespace(config, accountId, id);

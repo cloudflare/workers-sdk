@@ -1,14 +1,20 @@
 import assert from "node:assert";
 import { statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import {
+	configFileName,
+	formatCompatibilityDate,
+	UserError,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
-import { configFileName } from "../config";
+import { getDetailsForAutoConfig } from "../autoconfig/get-details";
+import { runAutoConfig } from "../autoconfig/run";
+import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { confirm, prompt } from "../dialogs";
 import { getCIOverrideName } from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
@@ -17,10 +23,9 @@ import { writeOutput } from "../output";
 import { getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
-import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
+import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import deploy from "./deploy";
 
 export const deployCommand = createCommand({
@@ -236,13 +241,19 @@ export const deployCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
+		"experimental-autoconfig": {
+			alias: ["x-autoconfig"],
+			describe:
+				"Experimental: Enables framework detection and automatic configuration when deploying",
+			type: "boolean",
+			default: false,
+		},
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? true,
 			DEPLOY_REMOTE_DIFF_CHECK: args.experimentalDeployRemoteDiffCheck ?? false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
@@ -263,6 +274,20 @@ export const deployCommand = createCommand({
 					"For Pages, please run `wrangler pages deploy` instead.",
 				{ telemetryMessage: true }
 			);
+		}
+		if (args.experimentalAutoconfig) {
+			const details = await getDetailsForAutoConfig();
+
+			// Only run auto config if the project is not already configured
+			if (!details.configured) {
+				await runAutoConfig(details);
+
+				// If autoconfig worked, there should now be a new config file, and so we need to read config again
+				config = readConfig(args, {
+					hideWarnings: false,
+					useRedirectIfAvailable: true,
+				});
+			}
 		}
 		// We use the `userConfigPath` to compute the root of a project,
 		// rather than a redirected (potentially generated) `configPath`.
@@ -366,7 +391,7 @@ export const deployCommand = createCommand({
 			domains: args.domains,
 			assetsOptions,
 			legacyAssetPaths: siteAssetPaths,
-			legacyEnv: isLegacyEnv(config),
+			useServiceEnvironments: useServiceEnvironments(config),
 			minify: args.minify,
 			isWorkersSite: Boolean(args.site || config.site),
 			outDir: args.outdir,

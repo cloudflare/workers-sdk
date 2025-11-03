@@ -10,16 +10,15 @@ import {
 	runDockerCmd,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
 import {
 	getCIOverrideNetworkModeHost,
 	getDockerPath,
 } from "../environment-variables/misc-variables";
-import { UserError } from "../errors";
 import { logger } from "../logger";
 import { getAccountId } from "../user";
 import { ensureContainerLimits } from "./limits";
 import { loadAccount } from "./locations";
-import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -29,6 +28,7 @@ import type {
 	ContainerNormalizedConfig,
 	ImageURIConfig,
 } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
 
 export function buildYargs(yargs: CommonYargsArgv) {
 	return yargs

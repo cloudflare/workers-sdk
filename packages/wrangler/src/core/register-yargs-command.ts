@@ -1,10 +1,13 @@
+import {
+	defaultWranglerConfig,
+	FatalError,
+	UserError,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
-import { defaultWranglerConfig } from "../config/config";
 import { hasDefinedEnvironments } from "../environments";
-import { FatalError, UserError } from "../errors";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
@@ -158,7 +161,6 @@ function createHandler(def: CommandDefinition, commandName: string) {
 				: {
 						MULTIWORKER: false,
 						RESOURCES_PROVISION: args.experimentalProvision ?? false,
-						REMOTE_BINDINGS: args.experimentalRemoteBindings ?? false,
 						DEPLOY_REMOTE_DIFF_CHECK: false,
 						AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 					};

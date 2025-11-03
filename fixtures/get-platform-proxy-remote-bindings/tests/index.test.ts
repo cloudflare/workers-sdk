@@ -14,8 +14,8 @@ const execOptions = {
 	encoding: "utf8",
 	env: { ...process.env, ...auth },
 } as const;
-const remoteWorkerName = `tmp-e2e-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
-const remoteStagingWorkerName = `tmp-e2e-staging-worker-test-remote-bindings-${randomUUID().split("-")[0]}`;
+const remoteWorkerName = `preserve-e2e-get-platform-proxy-remote`;
+const remoteStagingWorkerName = `preserve-e2e-get-platform-proxy-remote-staging`;
 const remoteKvName = `tmp-e2e-kv${Date.now()}-test-remote-bindings-${randomUUID().split("-")[0]}`;
 
 if (auth) {
@@ -23,41 +23,42 @@ if (auth) {
 		let remoteKvId: string;
 
 		beforeAll(async () => {
-			const deployOut = execSync(
-				`pnpm wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-06-19`,
-				execOptions
-			);
-			const deployedUrl = deployOut.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			)?.groups?.url;
-			assert(deployedUrl, "Failed to find deployed worker URL");
+			const deployedUrl =
+				"https://preserve-e2e-get-platform-proxy-remote.devprod-testing7928.workers.dev/";
 
-			const stagingDeployOut = execSync(
-				`pnpm wrangler deploy remote-worker.staging.js --name ${remoteStagingWorkerName} --compatibility-date 2025-06-19`,
-				execOptions
-			);
-			const stagingDeployedUrl = stagingDeployOut.match(
-				/(?<url>https:\/\/tmp-e2e-.+?\..+?\.workers\.dev)/
-			)?.groups?.url;
-			assert(stagingDeployedUrl, "Failed to find deployed staging worker URL");
-
-			// Wait for the deployed workers to be available
-			await Promise.all([
-				vi.waitFor(
+			try {
+				assert((await fetch(deployedUrl)).status !== 404);
+			} catch (e) {
+				execSync(
+					`pnpm wrangler deploy remote-worker.js --name ${remoteWorkerName} --compatibility-date 2025-06-19`,
+					execOptions
+				);
+				await vi.waitFor(
 					async () => {
 						const response = await fetch(deployedUrl);
 						expect(response.status).toBe(200);
 					},
 					{ timeout: 5000, interval: 500 }
-				),
-				vi.waitFor(
+				);
+			}
+
+			const stagingDeployedUrl =
+				"https://preserve-e2e-get-platform-proxy-remote-staging.devprod-testing7928.workers.dev/";
+			try {
+				assert((await fetch(stagingDeployedUrl)).status !== 404);
+			} catch {
+				execSync(
+					`pnpm wrangler deploy remote-worker.staging.js --name ${remoteStagingWorkerName} --compatibility-date 2025-06-19`,
+					execOptions
+				);
+				await vi.waitFor(
 					async () => {
 						const response = await fetch(stagingDeployedUrl);
 						expect(response.status).toBe(200);
 					},
 					{ timeout: 5000, interval: 500 }
-				),
-			]);
+				);
+			}
 
 			const kvAddOut = execSync(
 				`pnpm wrangler kv namespace create ${remoteKvName}`,
@@ -81,29 +82,19 @@ if (auth) {
 		afterAll(() => {
 			try {
 				execSync(
-					`pnpm wrangler delete --name ${remoteWorkerName}`,
-					execOptions
-				);
-			} catch {}
-			try {
-				execSync(
-					`pnpm wrangler delete --name ${remoteStagingWorkerName}`,
-					execOptions
-				);
-			} catch {}
-			try {
-				execSync(
 					`pnpm wrangler kv namespace delete --namespace-id=${remoteKvId}`,
 					execOptions
 				);
 			} catch {}
 
-			rmSync("./.tmp", {
-				recursive: true,
-				force: true,
-				maxRetries: 10,
-				retryDelay: 100,
-			});
+			try {
+				rmSync("./.tmp", {
+					recursive: true,
+					force: true,
+					maxRetries: 10,
+					retryDelay: 100,
+				});
+			} catch {}
 		}, 35_000);
 
 		describe("normal usage", () => {
@@ -199,32 +190,6 @@ if (auth) {
 
 				const kvValue = await env.MY_KV.get("test-key");
 				expect(kvValue).toEqual("remote-kv-value");
-
-				await dispose();
-			});
-
-			test("getPlatformProxy does not work with remote bindings if the experimental remoteBindings flag is not turned on", async () => {
-				const { env, dispose } = await getPlatformProxy<{
-					MY_WORKER: Fetcher;
-					MY_KV: KVNamespace;
-				}>({
-					configPath: "./.tmp/normal-usage/wrangler.json",
-					experimental: {
-						remoteBindings: false,
-					},
-				});
-
-				const response = await fetchFromWorker(
-					env.MY_WORKER,
-					"Service Unavailable"
-				);
-				const workerText = await response?.text();
-				expect(workerText).toEqual(
-					`Couldn't find a local dev session for the "default" entrypoint of service "${remoteWorkerName}" to proxy to`
-				);
-
-				const kvValue = await env.MY_KV.get("test-key");
-				expect(kvValue).toEqual(null);
 
 				await dispose();
 			});

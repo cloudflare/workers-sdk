@@ -106,7 +106,8 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 				? await noBundleWorker(
 						entry,
 						config.build.moduleRules,
-						this.#tmpDir.path
+						this.#tmpDir.path,
+						config.pythonModules?.exclude ?? []
 					)
 				: await bundleWorker(entry, this.#tmpDir.path, {
 						bundle: true,
@@ -279,6 +280,7 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 					config.compatibilityDate,
 					config.compatibilityFlags
 				),
+				pythonModulesExcludes: config.pythonModules?.exclude ?? [],
 			},
 			(cb) => {
 				const newBundle = cb(this.#currentBundle);

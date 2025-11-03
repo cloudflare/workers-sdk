@@ -46,7 +46,6 @@ import type {
 	WorkerdStructuredLog,
 	WorkerOptions,
 } from "miniflare";
-import type { FetchFunctionOptions } from "vite/module-runner";
 import type {
 	Binding,
 	RemoteProxySession,
@@ -414,15 +413,13 @@ export async function getDevMiniflareOptions(config: {
 								: undefined;
 
 							const remoteProxySessionData =
-								resolvedPluginConfig.experimental.remoteBindings ?? true
-									? await maybeStartOrUpdateRemoteProxySession(
-											{
-												name: workerConfig.name,
-												bindings: bindings ?? {},
-											},
-											preExistingRemoteProxySession ?? null
-										)
-									: undefined;
+								await maybeStartOrUpdateRemoteProxySession(
+									{
+										name: workerConfig.name,
+										bindings: bindings ?? {},
+									},
+									preExistingRemoteProxySession ?? null
+								);
 
 							if (workerConfig.configPath && remoteProxySessionData) {
 								remoteProxySessionsDataMap.set(
@@ -461,8 +458,7 @@ export async function getDevMiniflareOptions(config: {
 									remoteProxyConnectionString:
 										remoteProxySessionData?.session
 											?.remoteProxyConnectionString,
-									remoteBindingsEnabled:
-										resolvedPluginConfig.experimental.remoteBindings ?? true,
+
 									containerBuildId,
 								}
 							);
@@ -509,36 +505,11 @@ export async function getDevMiniflareOptions(config: {
 										__VITE_INVOKE_MODULE__: async (request) => {
 											const payload =
 												(await request.json()) as vite.CustomPayload;
-											const invokePayloadData = payload.data as {
-												id: string;
-												name: string;
-												data: [string, string, FetchFunctionOptions];
-											};
-
-											assert(
-												invokePayloadData.name === "fetchModule",
-												`Invalid invoke event: ${invokePayloadData.name}`
-											);
-
-											const [moduleId] = invokePayloadData.data;
-
-											// Additional modules (CompiledWasm, Data, Text)
-											if (additionalModuleRE.test(moduleId)) {
-												const result = {
-													externalize: moduleId,
-													type: "module",
-												} satisfies vite.FetchResult;
-
-												return MiniflareResponse.json({ result });
-											}
-
 											const devEnvironment = viteDevServer.environments[
 												environmentName
 											] as CloudflareDevEnvironment;
-
 											const result =
 												await devEnvironment.hot.handleInvoke(payload);
-
 											return MiniflareResponse.json(result);
 										},
 									},
@@ -768,15 +739,13 @@ export async function getPreviewMiniflareOptions(config: {
 					: undefined;
 
 				const remoteProxySessionData =
-					resolvedPluginConfig.experimental.remoteBindings ?? true
-						? await maybeStartOrUpdateRemoteProxySession(
-								{
-									name: workerConfig.name,
-									bindings: bindings ?? {},
-								},
-								preExistingRemoteProxySessionData ?? null
-							)
-						: undefined;
+					await maybeStartOrUpdateRemoteProxySession(
+						{
+							name: workerConfig.name,
+							bindings: bindings ?? {},
+						},
+						preExistingRemoteProxySessionData ?? null
+					);
 
 				if (workerConfig.configPath && remoteProxySessionData) {
 					remoteProxySessionsDataMap.set(
@@ -810,8 +779,7 @@ export async function getPreviewMiniflareOptions(config: {
 					{
 						remoteProxyConnectionString:
 							remoteProxySessionData?.session?.remoteProxyConnectionString,
-						remoteBindingsEnabled:
-							resolvedPluginConfig.experimental.remoteBindings ?? true,
+
 						containerBuildId,
 					}
 				);

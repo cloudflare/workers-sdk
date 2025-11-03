@@ -1,15 +1,14 @@
 import type { fetchResult } from "../cfetch";
-import type { Config } from "../config";
-import type { OnlyCamelCase } from "../config/config";
-import type { FatalError, UserError } from "../errors";
 import type { ExperimentalFlags } from "../experimental-flags";
 import type { Logger } from "../logger";
 import type { CommonYargsOptions, RemoveIndex } from "../yargs-types";
 import type { Teams } from "./teams";
+import type { Config, FatalError, UserError } from "@cloudflare/workers-utils";
 import type Cloudflare from "cloudflare";
 import type {
 	Alias,
 	ArgumentsCamelCase,
+	CamelCaseKey,
 	InferredOptionTypes,
 	Options,
 	PositionalOptions,
@@ -41,6 +40,11 @@ export type Metadata = {
 export type ArgDefinition = Omit<PositionalOptions, "type"> &
 	Pick<Options, "hidden" | "requiresArg" | "deprecated" | "type">;
 export type NamedArgDefinitions = { [key: string]: ArgDefinition };
+
+export type OnlyCamelCase<T = Record<string, never>> = {
+	[key in keyof T as CamelCaseKey<key>]: T[key];
+};
+
 export type HandlerArgs<Args extends NamedArgDefinitions> = DeepFlatten<
 	OnlyCamelCase<
 		RemoveIndex<
@@ -137,7 +141,7 @@ export type CommandDefinition<
 		 * If true, print a message about whether the command is operating on a local or remote resource
 		 */
 		printResourceLocation?:
-			| ((args?: HandlerArgs<NamedArgDefs>) => boolean)
+			| ((args: HandlerArgs<NamedArgDefs>) => boolean)
 			| boolean;
 
 		/**

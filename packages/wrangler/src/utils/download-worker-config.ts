@@ -1,44 +1,63 @@
+import { constructWranglerConfig } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
-import { formatCompatibilityDate } from "./compatibility-date";
-import { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
-import type { RawConfig } from "../config";
-import type {
-	CustomDomainRoute,
-	Route,
-	ZoneNameRoute,
-} from "../config/environment";
-import type { WorkerMetadata } from "../deployment-bundle/create-worker-upload-form";
-import type { ServiceMetadataRes } from "../init";
+import type { FullWorkerConfig, RawConfig } from "@cloudflare/workers-utils";
 
-type RoutesRes = {
-	id: string;
-	pattern: string;
-	zone_name: string;
-	script: string;
-}[];
-
-type CustomDomainsRes = {
-	id: string;
-	zone_id: string;
-	zone_name: string;
-	hostname: string;
-	service: string;
-	environment: string;
-	cert_id: string;
-}[];
-
-type WorkerSubdomainRes = {
-	enabled: boolean;
-	previews_enabled: boolean;
-};
-type CronTriggersRes = {
-	schedules: {
-		cron: string;
-		created_on: Date;
-		modified_on: Date;
-	}[];
-};
+/**
+ * Downloads all information required to construct a Wrangler config file for a Worker from the API
+ */
+export async function fetchWorkerConfig(
+	accountId: string,
+	workerName: string,
+	environment: string
+): Promise<FullWorkerConfig> {
+	const [
+		bindings,
+		routes,
+		customDomains,
+		subdomainStatus,
+		serviceEnvMetadata,
+		cronTriggers,
+	] = await Promise.all([
+		fetchResult<FullWorkerConfig["bindings"]>(
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/bindings`
+		),
+		fetchResult<FullWorkerConfig["routes"]>(
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/routes?show_zonename=true`
+		),
+		fetchResult<FullWorkerConfig["customDomains"]>(
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${environment}`
+		),
+		fetchResult<FullWorkerConfig["subdomainStatus"]>(
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/subdomain`
+		),
+		fetchResult<FullWorkerConfig["serviceEnvMetadata"]>(
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}`
+		),
+		fetchResult<FullWorkerConfig["cronTriggers"]>(
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			`/accounts/${accountId}/workers/scripts/${workerName}/schedules`
+		),
+	]).catch((e) => {
+		throw new Error(
+			`Error Occurred: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.`,
+			{ cause: e }
+		);
+	});
+	return {
+		bindings,
+		routes,
+		customDomains,
+		subdomainStatus,
+		serviceEnvMetadata,
+		cronTriggers,
+	};
+}
 
 /**
  * Downloads all the remote information we can gather for a worker and from them generates a raw configuration object that
@@ -56,103 +75,21 @@ export async function downloadWorkerConfig(
 	entrypoint: string,
 	accountId: string
 ): Promise<RawConfig> {
-	const [
+	const {
 		bindings,
 		routes,
 		customDomains,
 		subdomainStatus,
 		serviceEnvMetadata,
 		cronTriggers,
-	] = await Promise.all([
-		fetchResult<WorkerMetadata["bindings"]>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/bindings`
-		),
-		fetchResult<RoutesRes>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/routes?show_zonename=true`
-		),
-		fetchResult<CustomDomainsRes>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			`/accounts/${accountId}/workers/domains/records?page=0&per_page=5&service=${workerName}&environment=${environment}`
-		),
-		fetchResult<WorkerSubdomainRes>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}/subdomain`
-		),
-		fetchResult<ServiceMetadataRes["default_environment"]>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			`/accounts/${accountId}/workers/services/${workerName}/environments/${environment}`
-		),
-		fetchResult<CronTriggersRes>(
-			COMPLIANCE_REGION_CONFIG_UNKNOWN,
-			`/accounts/${accountId}/workers/scripts/${workerName}/schedules`
-		),
-	]).catch((e) => {
-		throw new Error(
-			`Error Occurred: Unable to fetch bindings, routes, or services metadata from the dashboard. Please try again later.`,
-			{ cause: e }
-		);
-	});
+	} = await fetchWorkerConfig(accountId, workerName, environment);
 
-	const mappedBindings = await mapWorkerMetadataBindings(
+	return constructWranglerConfig(workerName, entrypoint, {
 		bindings,
-		accountId,
-		COMPLIANCE_REGION_CONFIG_UNKNOWN
-	);
-
-	const durableObjectClassNames = bindings
-		.filter((binding) => binding.type === "durable_object_namespace")
-		.map(
-			(durableObject) => (durableObject as { class_name: string }).class_name
-		);
-
-	const allRoutes: Route[] = [
-		...routes.map<ZoneNameRoute>((r) => ({
-			pattern: r.pattern,
-			zone_name: r.zone_name,
-		})),
-		...customDomains.map<CustomDomainRoute>((c) => ({
-			pattern: c.hostname,
-			zone_name: c.zone_name,
-			custom_domain: true,
-		})),
-	];
-
-	return {
-		name: workerName,
-		main: entrypoint,
-		workers_dev: subdomainStatus.enabled,
-		preview_urls: subdomainStatus.previews_enabled,
-		compatibility_date:
-			serviceEnvMetadata.script.compatibility_date ??
-			formatCompatibilityDate(new Date()),
-		compatibility_flags: serviceEnvMetadata.script.compatibility_flags,
-		...(allRoutes.length ? { routes: allRoutes } : {}),
-		placement:
-			serviceEnvMetadata.script.placement_mode === "smart"
-				? { mode: "smart" }
-				: undefined,
-		limits: serviceEnvMetadata.script.limits,
-		...(durableObjectClassNames.length
-			? {
-					migrations: [
-						{
-							tag: serviceEnvMetadata.script.migration_tag,
-							new_classes: durableObjectClassNames,
-						},
-					],
-				}
-			: {}),
-		...(cronTriggers.schedules.length
-			? {
-					triggers: {
-						crons: cronTriggers.schedules.map((scheduled) => scheduled.cron),
-					},
-				}
-			: {}),
-		tail_consumers: serviceEnvMetadata.script.tail_consumers ?? undefined,
-		observability: serviceEnvMetadata.script.observability,
-		...mappedBindings,
-	};
+		routes,
+		customDomains,
+		subdomainStatus,
+		serviceEnvMetadata,
+		cronTriggers,
+	});
 }

@@ -25,8 +25,8 @@ import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
-import type { Config } from "../config";
 import type { UserAuthConfig } from "../user";
+import type { Config } from "@cloudflare/workers-utils";
 import type { MockInstance } from "vitest";
 
 describe("User", () => {

@@ -19,10 +19,10 @@ import {
 	collectPlainTextVars,
 } from "../utils/collectKeyValues";
 import type { AsyncHook, StartDevWorkerInput, Trigger } from "../api";
-import type { Config } from "../config";
 import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfAccount } from "./create-worker-preview";
+import type { Config } from "@cloudflare/workers-utils";
 import type { watch } from "chokidar";
 
 /**
@@ -247,7 +247,8 @@ async function setupDevEnv(
 			},
 			dev: {
 				auth,
-				remote: !args.forceLocal && args.remote,
+				remote:
+					args.remote || (args.forceLocal || args.local ? false : undefined),
 				server: {
 					hostname: args.ip,
 					port: args.port,
@@ -293,9 +294,12 @@ async function setupDevEnv(
 							}
 						: undefined;
 				},
-				enableServiceEnvironments: !(args.legacyEnv ?? true),
+				useServiceEnvironments: !(args.legacyEnv ?? true),
 			},
 			assets: args.assets,
+			experimental: {
+				tailLogs: !!args.experimentalTailLogs,
+			},
 		} satisfies StartDevWorkerInput,
 		true
 	);

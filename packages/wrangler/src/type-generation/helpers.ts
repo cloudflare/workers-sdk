@@ -2,8 +2,8 @@ import { readFileSync } from "fs";
 import { version } from "workerd";
 import { logger } from "../logger";
 import { generateEnvTypes } from ".";
-import type { Config } from "../config";
 import type { Entry } from "../deployment-bundle/entry";
+import type { Config } from "@cloudflare/workers-utils";
 
 // Checks the default location for a generated types file and compares if the
 // recorded Env hash, workerd version or compat date and flags have changed

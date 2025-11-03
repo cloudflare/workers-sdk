@@ -1,14 +1,14 @@
 import { inputPrompt } from "@cloudflare/cli/interactive";
-import { UserError } from "../../errors";
-import type {
-	CloudchamberConfig,
-	ContainerApp,
-} from "../../config/environment";
+import { UserError } from "@cloudflare/workers-utils";
 import type {
 	CreateApplicationRequest,
 	InstanceType,
 	UserDeploymentConfiguration,
 } from "@cloudflare/containers-shared";
+import type {
+	CloudchamberConfig,
+	ContainerApp,
+} from "@cloudflare/workers-utils";
 
 const instanceTypes = {
 	// lite is the default instance type when REQUIRE_INSTANCE_TYPE is set

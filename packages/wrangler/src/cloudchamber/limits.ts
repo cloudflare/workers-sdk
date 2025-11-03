@@ -1,5 +1,5 @@
 import { dockerImageInspect } from "@cloudflare/containers-shared";
-import { UserError } from "../errors";
+import { UserError } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import { getInstanceTypeUsage } from "./instance-type/instance-type";
 import type {

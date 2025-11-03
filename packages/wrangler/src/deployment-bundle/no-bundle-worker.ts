@@ -3,15 +3,21 @@ import {
 	findAdditionalModules,
 	writeAdditionalModules,
 } from "./find-additional-modules";
-import type { Rule } from "../config/environment";
 import type { Entry } from "./entry";
+import type { Rule } from "@cloudflare/workers-utils";
 
 export async function noBundleWorker(
 	entry: Entry,
 	rules: Rule[],
-	outDir: string | undefined
+	outDir: string | undefined,
+	pythonModulesExcludes: string[] = []
 ) {
-	const modules = await findAdditionalModules(entry, rules);
+	const modules = await findAdditionalModules(
+		entry,
+		rules,
+		false,
+		pythonModulesExcludes
+	);
 	if (outDir) {
 		await writeAdditionalModules(modules, outDir);
 	}

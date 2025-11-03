@@ -1,6 +1,6 @@
 {
 	"name": "workers-static-assets-only",
-	"compatibility_date": "2024-09-19",
+	// don't provide compatibility_date so that vitest will infer the latest one
 	"assets": {
 		"directory": "./public",
 		"html_handling": "none",

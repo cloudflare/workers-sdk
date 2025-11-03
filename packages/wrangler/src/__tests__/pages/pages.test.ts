@@ -81,9 +81,7 @@ describe("pages", () => {
 			      --https-cert-path                            Path to a custom certificate  [string]
 			      --persist-to                                 Specify directory to use for local persistence (defaults to .wrangler/state)  [string]
 			      --log-level                                  Specify logging level  [choices: \\"debug\\", \\"info\\", \\"log\\", \\"warn\\", \\"error\\", \\"none\\"]
-			      --show-interactive-dev-session               Show interactive dev session (defaults to true if the terminal supports interactivity)  [boolean]
-			      --experimental-vectorize-bind-to-prod        Bind to production Vectorize indexes in local development mode  [boolean] [default: false]
-			      --experimental-images-local-mode             Use a local lower-fidelity implementation of the Images binding  [boolean] [default: false]"
+			      --show-interactive-dev-session               Show interactive dev session (defaults to true if the terminal supports interactivity)  [boolean]"
 		`);
 	});
 

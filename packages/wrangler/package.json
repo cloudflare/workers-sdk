@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.44.0",
+	"version": "4.45.3",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -72,7 +72,7 @@
 		"esbuild": "catalog:default",
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
-		"unenv": "2.0.0-rc.21",
+		"unenv": "2.0.0-rc.24",
 		"workerd": "1.20251011.0"
 	},
 	"devDependencies": {
@@ -85,6 +85,7 @@
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@cspotcode/source-map-support": "0.8.1",
 		"@iarna/toml": "^3.0.0",
@@ -113,7 +114,7 @@
 		"chalk": "^5.2.0",
 		"chokidar": "^4.0.1",
 		"cli-table3": "^0.6.3",
-		"cloudflare": "^5.1.0",
+		"cloudflare": "^5.2.0",
 		"cmd-shim": "^4.1.0",
 		"command-exists": "^1.2.9",
 		"concurrently": "^8.2.2",
@@ -130,6 +131,7 @@
 		"itty-time": "^1.0.6",
 		"javascript-time-ago": "^2.5.4",
 		"json-diff": "^1.0.6",
+		"jsonc-parser": "^3.2.0",
 		"md5-file": "5.0.0",
 		"mime": "^3.0.0",
 		"minimatch": "^5.1.0",

@@ -1,7 +1,7 @@
 import { logRaw } from "@cloudflare/cli";
+import { UserError } from "@cloudflare/workers-utils";
 import { convertBindingsToCfWorkerInitBindings } from "../api/startDevWorker/utils";
 import { createCommand } from "../core/create-command";
-import { UserError } from "../errors";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { printBindings } from "../utils/print-bindings";
@@ -40,13 +40,9 @@ export const versionsViewCommand = createCommand({
 	},
 	positionalArgs: ["version-id"],
 	async handler(args, { config }) {
-		metrics.sendMetricsEvent(
-			"view worker version",
-			{},
-			{
-				sendMetrics: config.send_metrics,
-			}
-		);
+		metrics.sendMetricsEvent("view worker version", {
+			sendMetrics: config.send_metrics,
+		});
 
 		const accountId = await requireAuth(config);
 		const workerName = args.name ?? config.name;

@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path, { dirname } from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
 import { execa } from "execa";
 import { fetchResult } from "./cfetch";
 import { fetchWorkerDefinitionFromDash } from "./cfetch/internal";
@@ -8,7 +9,6 @@ import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getC3CommandFromEnv,
 } from "./environment-variables/misc-variables";
-import { UserError } from "./errors";
 import { logger } from "./logger";
 import { readMetricsConfig } from "./metrics/metrics-config";
 import { getPackageManager } from "./package-manager";
@@ -16,8 +16,8 @@ import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import { downloadWorkerConfig } from "./utils/download-worker-config";
 import * as shellquote from "./utils/shell-quote";
-import type { Observability, TailConsumer } from "./config/environment";
 import type { PackageManager } from "./package-manager";
+import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
 import type { ReadableStream } from "stream/web";
 
 export const init = createCommand({
@@ -139,44 +139,6 @@ export const init = createCommand({
 		}
 	},
 });
-
-export type ServiceMetadataRes = {
-	id: string;
-	default_environment: {
-		environment: string;
-		created_on: string;
-		modified_on: string;
-		script: {
-			id: string;
-			tag: string;
-			etag: string;
-			handlers: string[];
-			modified_on: string;
-			created_on: string;
-			migration_tag: string;
-			usage_model: "bundled" | "unbound";
-			limits: {
-				cpu_ms: number;
-			};
-			compatibility_date: string;
-			compatibility_flags: string[];
-			last_deployed_from?: "wrangler" | "dash" | "api";
-			placement_mode?: "smart";
-			tail_consumers?: TailConsumer[];
-			observability?: Observability;
-		};
-	};
-	created_on: string;
-	modified_on: string;
-	usage_model: "bundled" | "unbound";
-	environments: [
-		{
-			environment: string;
-			created_on: string;
-			modified_on: string;
-		},
-	];
-};
 
 function isNpm(packageManager: PackageManager) {
 	return packageManager.type === "npm";

@@ -378,13 +378,33 @@ describe("wrangler", () => {
 
 			it("should delete a namespace specified by id", async () => {
 				const requests = mockDeleteRequest("some-namespace-id");
+
+				mockConfirm({
+					text: "Ok to proceed?",
+					result: true,
+				});
 				await runWrangler(
 					`kv namespace delete --namespace-id some-namespace-id`
 				);
+
+				expect(requests.count).toEqual(1);
+			});
+			it("should not ask for confirmation in non-interactive contexts", async () => {
+				const requests = mockDeleteRequest("some-namespace-id");
+
+				setIsTTY(false);
+				await runWrangler(
+					`kv namespace delete --namespace-id some-namespace-id`
+				);
+
 				expect(requests.count).toEqual(1);
 			});
 
 			it("should delete a namespace specified by binding name", async () => {
+				mockConfirm({
+					text: "Ok to proceed?",
+					result: true,
+				});
 				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("bound-id");
 				await runWrangler(
@@ -394,6 +414,10 @@ describe("wrangler", () => {
 			});
 
 			it("should delete a preview namespace specified by binding name", async () => {
+				mockConfirm({
+					text: "Ok to proceed?",
+					result: true,
+				});
 				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-bound-id");
 				await runWrangler(
@@ -421,6 +445,10 @@ describe("wrangler", () => {
 			it("should delete a namespace specified by binding name in a given environment", async () => {
 				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("env-bound-id");
+				mockConfirm({
+					text: "Ok to proceed?",
+					result: true,
+				});
 				await runWrangler(
 					"kv namespace delete --binding someBinding --env some-environment --preview false"
 				);
@@ -430,6 +458,10 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
+					About to delete remote KV namespace 'someBinding (env-bound-id)'.
+					This action is irreversible and will permanently delete all data in the KV namespace.
+
 					Deleting KV namespace env-bound-id.
 					Deleted KV namespace env-bound-id."
 				`);
@@ -440,6 +472,10 @@ describe("wrangler", () => {
 			it("should delete a preview namespace specified by binding name in a given environment", async () => {
 				writeWranglerKVConfig();
 				const requests = mockDeleteRequest("preview-env-bound-id");
+				mockConfirm({
+					text: "Ok to proceed?",
+					result: true,
+				});
 				await runWrangler(
 					`kv namespace delete --binding someBinding --env some-environment --preview`
 				);
@@ -560,6 +596,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Renaming KV namespace some-namespace-id to \\"new-namespace-name\\".
 					✨ Successfully renamed namespace to \\"new-namespace-name\\""
 				`);
@@ -586,6 +623,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Renaming KV namespace some-namespace-id to \\"new-namespace-name\\".
 					✨ Successfully renamed namespace to \\"new-namespace-name\\""
 				`);
@@ -704,6 +742,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace some-namespace-id."
 				`
 				);
@@ -727,6 +766,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Writing the value \\"my-value\\" to key \\"/my-key\\" on namespace DS9."
 				`
 				);
@@ -749,6 +789,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace bound-id."
 				`
 				);
@@ -773,6 +814,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace preview-bound-id."
 				`
 				);
@@ -797,6 +839,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace some-namespace-id."
 				`
 				);
@@ -818,6 +861,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Writing the value \\"my-value\\" to key \\"my-key\\" on namespace env-bound-id."
 				`
 				);
@@ -841,6 +885,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Writing the contents of foo.txt to the key \\"my-key\\" on namespace some-namespace-id."
 				`
 				);
@@ -867,6 +912,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Writing the contents of test.png to the key \\"my-key\\" on namespace another-namespace-id."
 				`
 				);
@@ -892,6 +938,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Writing the value \\"dVal\\" to key \\"dKey\\" on namespace some-namespace-id with metadata \\"{\\"mKey\\":\\"mValue\\"}\\"."
 				`
 				);
@@ -921,6 +968,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Writing the contents of test.png to the key \\"another-my-key\\" on namespace some-namespace-id with metadata \\"{\\"mKey\\":\\"mValue\\"}\\"."
 				`
 				);
@@ -1220,6 +1268,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -1247,6 +1296,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					"
 				`);
 				expect(std.err).toMatchInlineSnapshot(`
@@ -1823,6 +1873,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Deleting the key \\"/NCC-74656\\" on namespace voyager."
 				`
 				);
@@ -1874,6 +1925,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Deleting the key \\"someKey\\" on namespace env-bound-id."
 				`
 				);
@@ -1939,6 +1991,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Success!"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1961,6 +2014,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Uploaded 0% (0 out of 12,000)
 					Uploaded 8% (1,000 out of 12,000)
 					Uploaded 16% (2,000 out of 12,000)
@@ -1996,6 +2050,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -2063,6 +2118,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`
@@ -2198,6 +2254,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Success!"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -2224,6 +2281,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Success!"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -2247,6 +2305,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Deleted 0% (0 out of 12,000)
 					Deleted 8% (1,000 out of 12,000)
 					Deleted 16% (2,000 out of 12,000)
@@ -2282,6 +2341,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Not deleting keys read from \\"keys.json\\"."
 				`
 				);
@@ -2302,6 +2362,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Success!"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -2321,6 +2382,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Success!"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -2348,6 +2410,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -2376,6 +2439,7 @@ describe("wrangler", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);

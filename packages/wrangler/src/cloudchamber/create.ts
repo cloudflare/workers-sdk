@@ -13,9 +13,9 @@ import {
 	AssignIPv6,
 	DeploymentsService,
 } from "@cloudflare/containers-shared";
+import { parseByteSize } from "@cloudflare/workers-utils";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { parseByteSize } from "./../parse";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
 import {
@@ -37,7 +37,6 @@ import {
 import { loadAccount } from "./locations";
 import { getNetworkInput } from "./network/network";
 import { sshPrompts as promptForSSHKeyAndGetAddedSSHKey } from "./ssh/ssh";
-import type { Config } from "../config";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -49,6 +48,7 @@ import type {
 	Label,
 	SSHPublicKeyID,
 } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
 
 const defaultContainerImage = "docker.io/cloudflare/hello-world:1.0";
 

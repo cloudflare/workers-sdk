@@ -1,6 +1,6 @@
 import path from "path";
+import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-import { defaultWranglerConfig } from "../config/config";
 import { getEntry } from "../deployment-bundle/entry";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";

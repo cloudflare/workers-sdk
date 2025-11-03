@@ -1,19 +1,23 @@
 import { execSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
+import {
+	configFileName,
+	FatalError,
+	findWranglerConfig,
+	ParseError,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
-import { configFileName, readPagesConfig } from "../config";
+import { readPagesConfig } from "../config";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
-import { findWranglerConfig } from "../config/config-helpers";
 import { createAlias, createCommand } from "../core/create-command";
 import { prompt, select } from "../dialogs";
 import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
-import { FatalError, UserError } from "../errors";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
-import { ParseError } from "../parse";
 import { requireAuth } from "../user";
 import { diagnoseStartupError } from "../utils/friendly-validator-errors";
 import {
@@ -24,7 +28,6 @@ import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
 import { getPagesProjectRoot, getPagesTmpDir } from "./utils";
-import type { Config } from "../config";
 import type { PagesConfigCache } from "./types";
 import type {
 	Deployment,
@@ -32,6 +35,7 @@ import type {
 	Project,
 	UnifiedDeploymentLogMessages,
 } from "@cloudflare/types";
+import type { Config } from "@cloudflare/workers-utils";
 
 export const pagesDeploymentCreateCommand = createAlias({
 	aliasOf: "wrangler pages deploy",

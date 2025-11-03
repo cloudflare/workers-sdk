@@ -42,6 +42,7 @@ import reactTemplate from "templates/react/c3";
 import scheduledTemplate from "templates/scheduled/c3";
 import solidTemplate from "templates/solid/c3";
 import svelteTemplate from "templates/svelte/c3";
+import tanStackStartTemplate from "templates/tanstack-start/c3";
 import vueTemplate from "templates/vue/c3";
 import wakuTemplate from "templates/waku/c3";
 import { isInsideGitRepo } from "./git";
@@ -204,6 +205,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			"react-router": reactRouterTemplate,
 			solid: solidTemplate,
 			svelte: svelteTemplate,
+			"tanstack-start": tanStackStartTemplate,
 			vue: vueTemplate,
 			waku: wakuTemplate,
 		};
@@ -827,7 +829,6 @@ export const downloadRemoteTemplate = async (
 
 function updatePythonPackageName(path: string, projectName: string) {
 	const pyprojectTomlPath = resolve(path, "pyproject.toml");
-	const uvLockPath = resolve(path, "uv.lock");
 	if (!existsSync(pyprojectTomlPath)) {
 		// Not a python template
 		return;
@@ -840,12 +841,6 @@ function updatePythonPackageName(path: string, projectName: string) {
 		`"${projectName}"`,
 	);
 	writeFile(pyprojectTomlPath, pyprojectTomlContents);
-	let uvLockContents = readFile(uvLockPath);
-	uvLockContents = uvLockContents.replace(
-		'"tbd"',
-		`"${projectName.toLowerCase()}"`,
-	);
-	writeFile(uvLockPath, uvLockContents);
 	s.stop(`${brandColor("updated")} ${dim("`pyproject.toml`")}`);
 }
 
