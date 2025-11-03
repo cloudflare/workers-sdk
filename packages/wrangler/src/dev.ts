@@ -214,10 +214,8 @@ export const dev = createCommand({
 		},
 		local: {
 			alias: "l",
-			describe: "Run on my machine",
+			describe: "Run fully locally (this also disables all remote bindings)",
 			type: "boolean",
-			deprecated: true,
-			hidden: true,
 		},
 		minify: {
 			describe: "Minify the script",
