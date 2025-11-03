@@ -9,6 +9,9 @@ import { createRequestHandler } from "../utils";
 import { handleWebSocket } from "../websockets";
 import { createPlugin } from "./utils";
 
+/**
+ * Plugin to provide the core preview functionality
+ */
 export const previewPlugin = createPlugin("preview", (ctx) => {
 	return {
 		async configurePreviewServer(vitePreviewServer) {
@@ -26,7 +29,7 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 				});
 			await ctx.setMiniflareOptions(miniflareOptions);
 
-			if (containerTagToOptionsMap.size > 0) {
+			if (containerTagToOptionsMap.size) {
 				const dockerPath = getDockerPath();
 
 				vitePreviewServer.config.logger.info(

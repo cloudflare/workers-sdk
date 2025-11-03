@@ -21,10 +21,34 @@ import { createPlugin } from "./utils";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type * as vite from "vite";
 
+/**
+ * Plugin to provide the core development functionality
+ */
 export const devPlugin = createPlugin("dev", (ctx) => {
 	let containerImageTagsSeen = new Set<string>();
 
 	return {
+		async buildEnd() {
+			if (
+				ctx.resolvedViteConfig.command === "serve" &&
+				containerImageTagsSeen.size
+			) {
+				const dockerPath = getDockerPath();
+				cleanupContainers(dockerPath, containerImageTagsSeen);
+			}
+
+			debuglog(
+				"buildEnd:",
+				ctx.isRestartingDevServer ? "restarted" : "disposing"
+			);
+			if (!ctx.isRestartingDevServer) {
+				try {
+					await ctx.disposeMiniflare();
+				} catch (error) {
+					debuglog("Failed to dispose Miniflare instance:", error);
+				}
+			}
+		},
 		async configureServer(viteDevServer) {
 			assertIsNotPreview(ctx.resolvedPluginConfig);
 
@@ -105,7 +129,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					};
 				}
 
-				if (containerTagToOptionsMap.size > 0) {
+				if (containerTagToOptionsMap.size) {
 					viteDevServer.config.logger.info(
 						colors.dim(
 							colors.yellow(
@@ -144,7 +168,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					 *
 					 */
 					process.on("exit", async () => {
-						if (containerTagToOptionsMap.size > 0) {
+						if (containerTagToOptionsMap.size) {
 							cleanupContainers(getDockerPath(), containerImageTagsSeen);
 						}
 					});
@@ -196,27 +220,6 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					})
 				);
 			};
-		},
-		async buildEnd() {
-			if (
-				ctx.resolvedViteConfig.command === "serve" &&
-				containerImageTagsSeen?.size
-			) {
-				const dockerPath = getDockerPath();
-				cleanupContainers(dockerPath, containerImageTagsSeen);
-			}
-
-			debuglog(
-				"buildEnd:",
-				ctx.isRestartingDevServer ? "restarted" : "disposing"
-			);
-			if (!ctx.isRestartingDevServer) {
-				try {
-					await ctx.disposeMiniflare();
-				} catch (error) {
-					debuglog("Failed to dispose Miniflare instance:", error);
-				}
-			}
 		},
 	};
 });

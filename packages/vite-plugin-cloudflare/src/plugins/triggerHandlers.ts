@@ -3,7 +3,7 @@ import { createRequestHandler, getEntryWorkerConfig } from "../utils";
 import { createPlugin } from "./utils";
 
 /**
- * Plugin to forward `/cdn-cgi/handler/*` routes to trigger handlers in development.
+ * Plugin to forward `/cdn-cgi/handler/*` routes to trigger handlers in development
  */
 export const triggerHandlersPlugin = createPlugin("trigger-handlers", (ctx) => {
 	return {

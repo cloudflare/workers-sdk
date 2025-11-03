@@ -9,8 +9,7 @@ import type * as vite from "vite";
 import type { Unstable_RawConfig } from "wrangler";
 
 /**
- * Plugin to generate additional output files as part of the build.
- * These include the output `wrangler.json` configuration.
+ * Plugin to generate additional output files as part of the build, including the output `wrangler.json` file.
  */
 export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 	return {

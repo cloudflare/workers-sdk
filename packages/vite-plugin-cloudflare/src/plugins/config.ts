@@ -11,6 +11,9 @@ import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
 import { createPlugin } from "./utils";
 
+/**
+ * Plugin to handle configuration and config file watching
+ */
 export const configPlugin = createPlugin("config", (ctx) => {
 	return {
 		config(userConfig, env) {

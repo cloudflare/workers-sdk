@@ -8,7 +8,7 @@ import { assertIsNotPreview, assertIsPreview } from "../plugin-config";
 import { createPlugin } from "./utils";
 
 /**
- * Plugin that provides a `__debug` path for debugging the Workers
+ * Plugin to provide a `/__debug` path for debugging Workers
  */
 export const debugPlugin = createPlugin("debug", (ctx) => {
 	return {
