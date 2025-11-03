@@ -1,7 +1,8 @@
 import assert from "node:assert";
 import { Miniflare } from "miniflare";
 import { debuglog } from "../utils";
-import type { ResolvedPluginConfig } from "../plugin-config";
+import type { ResolvedPluginConfig, WorkerConfig } from "../plugin-config";
+import type { NodeJsCompat } from "./nodejs-compat";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
 
@@ -83,13 +84,13 @@ export class PluginContext {
 	// 	return this.#localState.containerTagToOptionsMap;
 	// }
 
-	getWorkerConfig(environmentName: string) {
+	getWorkerConfig(environmentName: string): WorkerConfig | undefined {
 		return this.resolvedPluginConfig.type === "workers"
 			? this.resolvedPluginConfig.workers[environmentName]
 			: undefined;
 	}
 
-	getNodeJsCompat(environmentName: string) {
+	getNodeJsCompat(environmentName: string): NodeJsCompat | undefined {
 		return this.resolvedPluginConfig.type === "workers"
 			? this.resolvedPluginConfig.nodeJsCompatMap.get(environmentName)
 			: undefined;

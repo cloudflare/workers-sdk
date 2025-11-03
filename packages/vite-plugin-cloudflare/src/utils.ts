@@ -6,6 +6,7 @@ import {
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
+import type { ResolvedPluginConfig, WorkerConfig } from "./plugin-config";
 import type * as http from "node:http";
 import type * as vite from "vite";
 
@@ -105,3 +106,15 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 }
 
 export const debuglog = util.debuglog("@cloudflare:vite-plugin");
+
+export function getEntryWorkerConfig(
+	resolvedPluginConfig: ResolvedPluginConfig
+): WorkerConfig | undefined {
+	if (resolvedPluginConfig.type !== "workers") {
+		return;
+	}
+
+	return resolvedPluginConfig.workers[
+		resolvedPluginConfig.entryWorkerEnvironmentName
+	];
+}

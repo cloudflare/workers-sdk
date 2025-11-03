@@ -32,14 +32,13 @@ import {
 } from "./constants";
 import { getContainerOptions, getDockerPath } from "./containers";
 import { additionalModuleRE } from "./plugins/additional-modules";
-import { withTrailingSlash } from "./utils";
+import { getEntryWorkerConfig, withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
 import type {
 	AssetsOnlyResolvedConfig,
 	PersistState,
 	PreviewResolvedConfig,
-	WorkerConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type {
@@ -189,18 +188,6 @@ const ASSET_WORKER_PATH = "./workers/asset-worker.js";
 const VITE_PROXY_WORKER_PATH = "./workers/vite-proxy-worker.js";
 const RUNNER_PATH = "./workers/runner-worker.js";
 const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
-
-export function getEntryWorkerConfig(
-	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig
-): WorkerConfig | undefined {
-	if (resolvedPluginConfig.type === "assets-only") {
-		return;
-	}
-
-	return resolvedPluginConfig.workers[
-		resolvedPluginConfig.entryWorkerEnvironmentName
-	];
-}
 
 function logUnknownTails(
 	tails: WorkerOptions["tails"],

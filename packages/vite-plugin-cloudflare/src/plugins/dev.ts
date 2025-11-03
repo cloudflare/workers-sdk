@@ -11,13 +11,10 @@ import {
 	ROUTER_WORKER_NAME,
 } from "../constants";
 import { getDockerPath } from "../containers";
-import {
-	getDevMiniflareOptions,
-	getEntryWorkerConfig,
-} from "../miniflare-options";
+import { getDevMiniflareOptions } from "../miniflare-options";
 import { assertIsNotPreview } from "../plugin-config";
 import { UNKNOWN_HOST } from "../shared";
-import { createRequestHandler, debuglog } from "../utils";
+import { createRequestHandler, debuglog, getEntryWorkerConfig } from "../utils";
 import { handleWebSocket } from "../websockets";
 import { createPlugin } from "./utils";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";

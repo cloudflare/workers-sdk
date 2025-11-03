@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { CoreHeaders } from "miniflare";
 import * as vite from "vite";
 import {
 	addDebugToVitePrintUrls,
@@ -7,7 +6,6 @@ import {
 	getDebugPathHtml,
 	getResolvedInspectorPort,
 } from "./debugging";
-import { getEntryWorkerConfig } from "./miniflare-options";
 import {
 	assertIsNotPreview,
 	assertIsPreview,
@@ -23,13 +21,14 @@ import {
 } from "./plugins/nodejs-compat";
 import { outputConfigPlugin } from "./plugins/output-config";
 import { previewPlugin } from "./plugins/preview";
+import { triggerHandlersPlugin } from "./plugins/triggerHandlers";
 import { PluginContext } from "./plugins/utils";
 import {
 	virtualClientFallbackPlugin,
 	virtualModulesPlugin,
 } from "./plugins/virtual-modules";
 import { wasmHelperPlugin } from "./plugins/wasm";
-import { createRequestHandler, debuglog } from "./utils";
+import { debuglog } from "./utils";
 import type { PluginConfig } from "./plugin-config";
 
 export type { PluginConfig } from "./plugin-config";
@@ -152,47 +151,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				});
 			},
 		},
-		// Plugin to handle cron/email/etc triggers
-		{
-			name: "vite-plugin-cloudflare:trigger-handlers",
-			enforce: "pre",
-			async configureServer(viteDevServer) {
-				assertIsNotPreview(ctx.resolvedPluginConfig);
-
-				if (ctx.resolvedPluginConfig.type === "workers") {
-					const entryWorkerConfig = getEntryWorkerConfig(
-						ctx.resolvedPluginConfig
-					);
-					assert(entryWorkerConfig, `No entry Worker config`);
-
-					const entryWorkerName = entryWorkerConfig.name;
-
-					// cron && email triggers
-					viteDevServer.middlewares.use(
-						"/cdn-cgi/handler/",
-						(req, res, next) => {
-							const requestHandler = createRequestHandler((request) => {
-								// set the target service that handles these requests
-								// to point to the User Worker (see `getTargetService` fn in
-								// `packages/miniflare/src/workers/core/entry.worker.ts`)
-								request.headers.set(
-									CoreHeaders.ROUTE_OVERRIDE,
-									entryWorkerName
-								);
-								return ctx.miniflare.dispatchFetch(request, {
-									redirect: "manual",
-								});
-							});
-
-							requestHandler(req, res, next);
-						}
-					);
-				}
-			},
-		},
 		configPlugin(ctx),
 		devPlugin(ctx),
 		previewPlugin(ctx),
+		triggerHandlersPlugin(ctx),
 		virtualModulesPlugin(ctx),
 		virtualClientFallbackPlugin(ctx),
 		outputConfigPlugin(ctx),
