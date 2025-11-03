@@ -34,13 +34,18 @@ export async function runAutoConfig(
 	if (!deploy) {
 		throw new FatalError("Deployment aborted");
 	}
+	if (!autoConfigDetails.outputDir) {
+		throw new FatalError("Cannot deploy project without an output directory");
+	}
 
 	startSection("Configuring your application for Cloudflare", "Step 2 of 3");
 
 	await installWrangler();
 
 	const additionalConfigDetails =
-		(await autoConfigDetails.framework?.configure(autoConfigDetails)) ?? {};
+		(await autoConfigDetails.framework?.configure(
+			autoConfigDetails.outputDir
+		)) ?? {};
 	await writeFile(
 		resolve("wrangler.jsonc"),
 		JSON.stringify(

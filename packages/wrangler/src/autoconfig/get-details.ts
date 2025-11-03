@@ -9,9 +9,10 @@ import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
-import { getFramework } from "./frameworks/index";
+import { getFramework } from "./frameworks/get-framework";
 import type { AutoConfigDetails } from "./types";
 import type { Config } from "@cloudflare/workers-utils";
+import type { Settings } from "@netlify/build-info";
 
 class MultipleFrameworksError extends FatalError {
 	constructor(frameworks: string[]) {
@@ -55,10 +56,10 @@ export async function getDetailsForAutoConfig({
 		throw new MultipleFrameworksError(buildSettings.map((b) => b.name));
 	}
 
-	const detectedFramework = buildSettings?.[0];
+	const detectedFramework: Settings | undefined = buildSettings?.[0];
 
 	const framework: AutoConfigDetails["framework"] = getFramework(
-		detectedFramework.framework.id
+		detectedFramework?.framework.id
 	);
 	const packageJsonPath = resolve("package.json");
 	const packageJson = parsePackageJSON(
@@ -73,7 +74,7 @@ export async function getDetailsForAutoConfig({
 		: undefined;
 
 	return {
-		configured: false,
+		configured: framework?.configured ?? false,
 		framework,
 		packageJson,
 		buildCommand: detectedFramework?.buildCommand ?? packageJsonBuild,

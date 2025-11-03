@@ -2,13 +2,12 @@ import { writeFileSync } from "fs";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { getPackageManager } from "../../package-manager";
 import { runCommand } from "../c3-vendor/command";
-import type { Framework } from ".";
-import type { AutoConfigDetails } from "../types";
+import { Framework } from ".";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
-export class Astro implements Framework {
+export class Astro extends Framework {
 	name = "astro";
-	async configure(options: AutoConfigDetails): Promise<RawConfig> {
+	async configure(outputDir: string): Promise<RawConfig> {
 		const { npx } = await getPackageManager();
 		await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
 			silent: true,
@@ -19,11 +18,11 @@ export class Astro implements Framework {
 		});
 		await writeFileSync("public/.assetsignore", "_worker.js\n_routes.json");
 		return {
-			main: `${options.outputDir}/dist/_worker.js/index.js`,
+			main: `${outputDir}/dist/_worker.js/index.js`,
 			compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
 			assets: {
 				binding: "ASSETS",
-				directory: options.outputDir,
+				directory: outputDir,
 			},
 			observability: {
 				enabled: true,

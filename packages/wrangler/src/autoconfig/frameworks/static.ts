@@ -1,14 +1,17 @@
-import type { Framework } from ".";
-import type { AutoConfigDetails } from "../types";
+import { Framework } from ".";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
-export class Static implements Framework {
-	constructor(public name: string) {}
+export class Static extends Framework {
+	name: string;
+	constructor(name: string) {
+		super();
+		this.name = name ?? "static";
+	}
 
-	configure(options: AutoConfigDetails): Promise<RawConfig> | RawConfig {
+	configure(outputDir: string): Promise<RawConfig> | RawConfig {
 		return {
 			assets: {
-				directory: options.outputDir,
+				directory: outputDir,
 			},
 		};
 	}
