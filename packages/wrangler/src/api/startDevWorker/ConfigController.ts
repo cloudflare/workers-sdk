@@ -218,6 +218,7 @@ async function resolveBindings(
 			{
 				registry,
 				local: !input.dev?.remote,
+				localBindingsOnly: !!input.dev?.localBindingsOnly,
 				name: config.name,
 			}
 		);

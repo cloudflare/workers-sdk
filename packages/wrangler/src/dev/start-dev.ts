@@ -249,6 +249,7 @@ async function setupDevEnv(
 				auth,
 				remote:
 					args.remote || (args.forceLocal || args.local ? false : undefined),
+				localBindingsOnly: !!args.forceLocal,
 				server: {
 					hostname: args.ip,
 					port: args.port,
