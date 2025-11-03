@@ -187,7 +187,7 @@ describe("execute", () => {
 		mockAccountId({ accountId: "some-account-id" });
 		mockApiToken();
 
-		it("should format duration to 4 decimal places in milliseconds for remote execution", async () => {
+		it("should format duration to 2 decimal places in milliseconds for remote execution", async () => {
 			setIsTTY(false);
 			writeWranglerConfig({
 				d1_databases: [
@@ -230,7 +230,7 @@ describe("execute", () => {
 			expect(std.out).toMatch("🚣 Executed 1 command in 123.46ms");
 		});
 
-		it("should format batch execution duration with 4 decimal places", async () => {
+		it("should format batch execution duration with 2 decimal places", async () => {
 			setIsTTY(false);
 			writeWranglerConfig({
 				d1_databases: [
