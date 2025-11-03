@@ -1,18 +1,8 @@
-import assert from "node:assert";
 import * as vite from "vite";
-import {
-	addDebugToVitePrintUrls,
-	DEBUG_PATH,
-	getDebugPathHtml,
-	getResolvedInspectorPort,
-} from "./debugging";
-import {
-	assertIsNotPreview,
-	assertIsPreview,
-	resolvePluginConfig,
-} from "./plugin-config";
+import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
 import { configPlugin } from "./plugins/config";
+import { debugPlugin } from "./plugins/debug";
 import { devPlugin } from "./plugins/dev";
 import {
 	nodeJsAlsPlugin,
@@ -69,91 +59,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				};
 			},
 		},
-		// Plugin that provides a `__debug` path for debugging the Workers
-		{
-			name: "vite-plugin-cloudflare:debug",
-			enforce: "pre",
-			configureServer(viteDevServer) {
-				assertIsNotPreview(ctx.resolvedPluginConfig);
-				// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
-				// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
-				// inspector endpoint.
-				const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
-
-				if (inVscodeJsDebugTerminal) {
-					return;
-				}
-
-				if (
-					ctx.resolvedPluginConfig.type === "workers" &&
-					pluginConfig.inspectorPort !== false
-				) {
-					addDebugToVitePrintUrls(viteDevServer);
-				}
-
-				const workerNames =
-					ctx.resolvedPluginConfig.type === "workers"
-						? Object.values(ctx.resolvedPluginConfig.workers).map(
-								(worker) => worker.name
-							)
-						: [];
-
-				viteDevServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {
-					const resolvedInspectorPort = await getResolvedInspectorPort(
-						ctx.resolvedPluginConfig,
-						ctx.miniflare
-					);
-
-					if (resolvedInspectorPort) {
-						const html = getDebugPathHtml(workerNames, resolvedInspectorPort);
-						res.setHeader("Content-Type", "text/html");
-						res.end(html);
-					} else {
-						next();
-					}
-				});
-			},
-			async configurePreviewServer(vitePreviewServer) {
-				assertIsPreview(ctx.resolvedPluginConfig);
-				// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
-				// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
-				// inspector endpoint.
-				const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
-				if (inVscodeJsDebugTerminal) {
-					return;
-				}
-
-				if (
-					ctx.resolvedPluginConfig.workers.length >= 1 &&
-					ctx.resolvedPluginConfig.inspectorPort !== false
-				) {
-					addDebugToVitePrintUrls(vitePreviewServer);
-				}
-
-				const workerNames = ctx.resolvedPluginConfig.workers.map((worker) => {
-					assert(worker.name, "Expected the Worker to have a name");
-					return worker.name;
-				});
-
-				vitePreviewServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {
-					const resolvedInspectorPort = await getResolvedInspectorPort(
-						ctx.resolvedPluginConfig,
-						ctx.miniflare
-					);
-
-					if (resolvedInspectorPort) {
-						const html = getDebugPathHtml(workerNames, resolvedInspectorPort);
-						res.setHeader("Content-Type", "text/html");
-						res.end(html);
-					} else {
-						next();
-					}
-				});
-			},
-		},
 		configPlugin(ctx),
 		devPlugin(ctx),
 		previewPlugin(ctx),
+		debugPlugin(ctx),
 		triggerHandlersPlugin(ctx),
 		virtualModulesPlugin(ctx),
 		virtualClientFallbackPlugin(ctx),
