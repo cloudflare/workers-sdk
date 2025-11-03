@@ -7,16 +7,17 @@ import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
 
 export class PluginContext {
-	#miniflare?: Miniflare;
 	#localState: {
 		resolvedPluginConfig?: ResolvedPluginConfig;
 		resolvedViteConfig?: vite.ResolvedConfig;
 	} = {};
+	#miniflare?: Miniflare;
 	hasShownWorkerConfigWarnings = false;
 	/** Used to track whether hooks are being called because of a server restart or a server close event */
 	isRestartingDevServer = false;
 
-	async setMiniflareOptions(options: MiniflareOptions): Promise<void> {
+	/** Creates a new Miniflare instance or updates the existing instance */
+	async startOrUpdateMiniflare(options: MiniflareOptions): Promise<void> {
 		if (!this.#miniflare) {
 			debuglog("Creating new Miniflare instance");
 			this.#miniflare = new Miniflare(options);

@@ -25,16 +25,16 @@ import type * as vite from "vite";
  * Plugin to provide the core development functionality
  */
 export const devPlugin = createPlugin("dev", (ctx) => {
-	let containerImageTagsSeen = new Set<string>();
+	let containerImageTags = new Set<string>();
 
 	return {
 		async buildEnd() {
 			if (
 				ctx.resolvedViteConfig.command === "serve" &&
-				containerImageTagsSeen.size
+				containerImageTags.size
 			) {
 				const dockerPath = getDockerPath();
-				cleanupContainers(dockerPath, containerImageTagsSeen);
+				cleanupContainers(dockerPath, containerImageTags);
 			}
 
 			debuglog(
@@ -63,7 +63,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					inspectorPort: inputInspectorPort,
 				});
 
-			await ctx.setMiniflareOptions(miniflareOptions);
+			await ctx.startOrUpdateMiniflare(miniflareOptions);
 
 			let preMiddleware: vite.Connect.NextHandleFunction | undefined;
 
@@ -137,6 +137,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 							)
 						)
 					);
+
 					await prepareContainerImagesForDev({
 						dockerPath: getDockerPath(),
 						containerOptions: [...containerTagToOptionsMap.values()],
@@ -144,7 +145,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						onContainerImagePreparationEnd: () => {},
 					});
 
-					containerImageTagsSeen = new Set(containerTagToOptionsMap.keys());
+					containerImageTags = new Set(containerTagToOptionsMap.keys());
 					viteDevServer.config.logger.info(
 						colors.dim(
 							colors.yellow(
@@ -169,7 +170,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					 */
 					process.on("exit", async () => {
 						if (containerTagToOptionsMap.size) {
-							cleanupContainers(getDockerPath(), containerImageTagsSeen);
+							cleanupContainers(getDockerPath(), containerImageTags);
 						}
 					});
 				}

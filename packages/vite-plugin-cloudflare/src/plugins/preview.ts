@@ -27,7 +27,7 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					vitePreviewServer,
 					inspectorPort: inputInspectorPort,
 				});
-			await ctx.setMiniflareOptions(miniflareOptions);
+			await ctx.startOrUpdateMiniflare(miniflareOptions);
 
 			if (containerTagToOptionsMap.size) {
 				const dockerPath = getDockerPath();
@@ -37,21 +37,22 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 						colors.yellow("∷ Building container images for local preview...\n")
 					)
 				);
+
 				await prepareContainerImagesForDev({
 					dockerPath: getDockerPath(),
 					containerOptions: [...containerTagToOptionsMap.values()],
 					onContainerImagePreparationStart: () => {},
 					onContainerImagePreparationEnd: () => {},
 				});
-				const containerImageTagsSeen = new Set(containerTagToOptionsMap.keys());
 
+				const containerImageTags = new Set(containerTagToOptionsMap.keys());
 				vitePreviewServer.config.logger.info(
 					colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
 				);
 
 				process.on("exit", () => {
-					if (containerImageTagsSeen.size) {
-						cleanupContainers(dockerPath, containerImageTagsSeen);
+					if (containerImageTags.size) {
+						cleanupContainers(dockerPath, containerImageTags);
 					}
 				});
 			}
