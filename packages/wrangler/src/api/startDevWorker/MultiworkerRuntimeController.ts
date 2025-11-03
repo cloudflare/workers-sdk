@@ -112,7 +112,10 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 		try {
 			const configBundle = await convertToConfigBundle(data);
 
-			if (data.config.dev?.remote !== false) {
+			if (
+				!data.config.dev.localBindingsOnly &&
+				data.config.dev?.remote !== false
+			) {
 				// note: remote bindings use (transitively) LocalRuntimeController, so we need to import
 				// from the module lazily in order to avoid circular dependency issues
 				const { maybeStartOrUpdateRemoteProxySession } = await import(
