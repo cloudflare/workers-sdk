@@ -1,21 +1,13 @@
 import assert from "node:assert";
-import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
-import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { CoreHeaders } from "miniflare";
-import colors from "picocolors";
 import * as vite from "vite";
-import { getDockerPath } from "./containers";
 import {
 	addDebugToVitePrintUrls,
 	DEBUG_PATH,
 	getDebugPathHtml,
-	getInputInspectorPortOption,
 	getResolvedInspectorPort,
 } from "./debugging";
-import {
-	getEntryWorkerConfig,
-	getPreviewMiniflareOptions,
-} from "./miniflare-options";
+import { getEntryWorkerConfig } from "./miniflare-options";
 import {
 	assertIsNotPreview,
 	assertIsPreview,
@@ -30,6 +22,7 @@ import {
 	nodeJsCompatWarningsPlugin,
 } from "./plugins/nodejs-compat";
 import { outputConfigPlugin } from "./plugins/output-config";
+import { previewPlugin } from "./plugins/preview";
 import { PluginContext } from "./plugins/utils";
 import {
 	virtualClientFallbackPlugin,
@@ -37,7 +30,6 @@ import {
 } from "./plugins/virtual-modules";
 import { wasmHelperPlugin } from "./plugins/wasm";
 import { createRequestHandler, debuglog } from "./utils";
-import { handleWebSocket } from "./websockets";
 import type { PluginConfig } from "./plugin-config";
 
 export type { PluginConfig } from "./plugin-config";
@@ -53,12 +45,10 @@ const ctx = new PluginContext();
  */
 export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 	ctx.resetLocalState();
-	let containerImageTagsSeen = new Set<string>();
 
 	return [
 		{
 			name: "vite-plugin-cloudflare",
-			// This only applies to this plugin so is safe to use while other plugins migrate to the Environment API
 			sharedDuringBuild: true,
 			config(userConfig, env) {
 				ctx.setResolvedPluginConfig(
@@ -78,62 +68,6 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 						ctx.isRestartingDevServer = false;
 					}
 				};
-			},
-			// Vite `configurePreviewServer` Hook
-			// see https://vite.dev/guide/api-plugin.html#configurepreviewserver
-			async configurePreviewServer(vitePreviewServer) {
-				assertIsPreview(ctx.resolvedPluginConfig);
-
-				const inputInspectorPort = await getInputInspectorPortOption(
-					ctx.resolvedPluginConfig,
-					vitePreviewServer
-				);
-
-				const { miniflareOptions, containerTagToOptionsMap } =
-					await getPreviewMiniflareOptions({
-						resolvedPluginConfig: ctx.resolvedPluginConfig,
-						vitePreviewServer,
-						inspectorPort: inputInspectorPort,
-					});
-				await ctx.setMiniflareOptions(miniflareOptions);
-
-				if (containerTagToOptionsMap.size > 0) {
-					const dockerPath = getDockerPath();
-
-					vitePreviewServer.config.logger.info(
-						colors.dim(
-							colors.yellow(
-								"∷ Building container images for local preview...\n"
-							)
-						)
-					);
-					await prepareContainerImagesForDev({
-						dockerPath: getDockerPath(),
-						containerOptions: [...containerTagToOptionsMap.values()],
-						onContainerImagePreparationStart: () => {},
-						onContainerImagePreparationEnd: () => {},
-					});
-					containerImageTagsSeen = new Set(containerTagToOptionsMap.keys());
-
-					vitePreviewServer.config.logger.info(
-						colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
-					);
-
-					process.on("exit", () => {
-						if (containerImageTagsSeen.size) {
-							cleanupContainers(dockerPath, containerImageTagsSeen);
-						}
-					});
-				}
-
-				handleWebSocket(vitePreviewServer.httpServer, ctx.miniflare);
-
-				// In preview mode we put our middleware at the front of the chain so that all assets are handled in Miniflare
-				vitePreviewServer.middlewares.use(
-					createRequestHandler((request) => {
-						return ctx.miniflare.dispatchFetch(request, { redirect: "manual" });
-					})
-				);
 			},
 		},
 		// Plugin that provides a `__debug` path for debugging the Workers
@@ -258,6 +192,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		},
 		configPlugin(ctx),
 		devPlugin(ctx),
+		previewPlugin(ctx),
 		virtualModulesPlugin(ctx),
 		virtualClientFallbackPlugin(ctx),
 		outputConfigPlugin(ctx),
