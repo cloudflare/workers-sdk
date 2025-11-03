@@ -3,7 +3,6 @@ import {
 	addDebugToVitePrintUrls,
 	DEBUG_PATH,
 	getDebugPathHtml,
-	getResolvedInspectorPort,
 } from "../debugging";
 import { assertIsNotPreview, assertIsPreview } from "../plugin-config";
 import { createPlugin } from "./utils";
@@ -40,10 +39,7 @@ export const debugPlugin = createPlugin("debug", (ctx) => {
 					: [];
 
 			viteDevServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {
-				const resolvedInspectorPort = await getResolvedInspectorPort(
-					ctx.resolvedPluginConfig,
-					ctx.miniflare
-				);
+				const resolvedInspectorPort = await ctx.getResolvedInspectorPort();
 
 				if (resolvedInspectorPort) {
 					const html = getDebugPathHtml(workerNames, resolvedInspectorPort);
@@ -78,10 +74,7 @@ export const debugPlugin = createPlugin("debug", (ctx) => {
 			});
 
 			vitePreviewServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {
-				const resolvedInspectorPort = await getResolvedInspectorPort(
-					ctx.resolvedPluginConfig,
-					ctx.miniflare
-				);
+				const resolvedInspectorPort = await ctx.getResolvedInspectorPort();
 
 				if (resolvedInspectorPort) {
 					const html = getDebugPathHtml(workerNames, resolvedInspectorPort);

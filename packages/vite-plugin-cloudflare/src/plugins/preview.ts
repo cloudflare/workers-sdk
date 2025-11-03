@@ -2,7 +2,7 @@ import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import colors from "picocolors";
 import { getDockerPath } from "../containers";
-import { getInputInspectorPortOption } from "../debugging";
+import { getInputInspectorPort } from "../debugging";
 import { getPreviewMiniflareOptions } from "../miniflare-options";
 import { assertIsPreview } from "../plugin-config";
 import { createRequestHandler } from "../utils";
@@ -14,11 +14,10 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 		async configurePreviewServer(vitePreviewServer) {
 			assertIsPreview(ctx.resolvedPluginConfig);
 
-			const inputInspectorPort = await getInputInspectorPortOption(
-				ctx.resolvedPluginConfig,
+			const inputInspectorPort = await getInputInspectorPort(
+				ctx,
 				vitePreviewServer
 			);
-
 			const { miniflareOptions, containerTagToOptionsMap } =
 				await getPreviewMiniflareOptions({
 					resolvedPluginConfig: ctx.resolvedPluginConfig,

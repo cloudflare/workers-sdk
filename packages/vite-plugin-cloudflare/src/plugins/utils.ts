@@ -11,7 +11,6 @@ export class PluginContext {
 	#localState: {
 		resolvedPluginConfig?: ResolvedPluginConfig;
 		resolvedViteConfig?: vite.ResolvedConfig;
-		// containerTagToOptionsMap?: ContainerTagToOptionsMap;
 	} = {};
 	hasShownWorkerConfigWarnings = false;
 	/** Used to track whether hooks are being called because of a server restart or a server close event */
@@ -69,21 +68,6 @@ export class PluginContext {
 		return this.#localState.resolvedViteConfig;
 	}
 
-	// setContainerTagToOptionsMap(
-	// 	containerToOptionsMap: ContainerTagToOptionsMap
-	// ): void {
-	// 	this.#localState.containerTagToOptionsMap = containerToOptionsMap;
-	// }
-
-	// get containerTagToOptionsMap(): ContainerTagToOptionsMap {
-	// 	assert(
-	// 		this.#localState.containerTagToOptionsMap,
-	// 		"Expected `containerTagToOptionsMap` to be defined"
-	// 	);
-
-	// 	return this.#localState.containerTagToOptionsMap;
-	// }
-
 	getWorkerConfig(environmentName: string): WorkerConfig | undefined {
 		return this.resolvedPluginConfig.type === "workers"
 			? this.resolvedPluginConfig.workers[environmentName]
@@ -94,6 +78,19 @@ export class PluginContext {
 		return this.resolvedPluginConfig.type === "workers"
 			? this.resolvedPluginConfig.nodeJsCompatMap.get(environmentName)
 			: undefined;
+	}
+
+	/**
+	 * Gets the resolved inspector port provided by Miniflare
+	 */
+	async getResolvedInspectorPort(): Promise<number | null> {
+		if (this.resolvedPluginConfig.inspectorPort === false || !this.#miniflare) {
+			return null;
+		}
+
+		const miniflareInspectorUrl = await this.#miniflare.getInspectorURL();
+
+		return Number.parseInt(miniflareInspectorUrl.port);
 	}
 }
 

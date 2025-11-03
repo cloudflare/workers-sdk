@@ -11,6 +11,7 @@ import {
 	ROUTER_WORKER_NAME,
 } from "../constants";
 import { getDockerPath } from "../containers";
+import { getInputInspectorPort } from "../debugging";
 import { getDevMiniflareOptions } from "../miniflare-options";
 import { assertIsNotPreview } from "../plugin-config";
 import { UNKNOWN_HOST } from "../shared";
@@ -27,19 +28,15 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 		async configureServer(viteDevServer) {
 			assertIsNotPreview(ctx.resolvedPluginConfig);
 
-			// TODO: add inspector back in
-			// const inputInspectorPort = await getInputInspectorPortOption(
-			// 	ctx.resolvedPluginConfig,
-			// 	viteDevServer,
-			// 	ctx.miniflare
-			// );
-
+			const inputInspectorPort = await getInputInspectorPort(
+				ctx,
+				viteDevServer
+			);
 			const { miniflareOptions, containerTagToOptionsMap } =
 				await getDevMiniflareOptions({
 					resolvedPluginConfig: ctx.resolvedPluginConfig,
 					viteDevServer,
-					// inspectorPort: inputInspectorPort,
-					inspectorPort: false,
+					inspectorPort: inputInspectorPort,
 				});
 
 			await ctx.setMiniflareOptions(miniflareOptions);
