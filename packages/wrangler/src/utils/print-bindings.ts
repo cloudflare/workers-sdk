@@ -759,7 +759,7 @@ function createGetMode({
 			return dim("not supported");
 		}
 
-		return `${isSimulatedLocally ? chalk.blue("local") : chalk.yellow("remote")}${connected === undefined ? "" : connected ? chalk.green(" [connected]") : chalk.red(" [not connected]")}`;
+		return `${isSimulatedLocally || isLocalDev ? chalk.blue("local") : chalk.yellow("remote")}${connected === undefined ? "" : connected ? chalk.green(" [connected]") : chalk.red(" [not connected]")}`;
 	};
 }
 
