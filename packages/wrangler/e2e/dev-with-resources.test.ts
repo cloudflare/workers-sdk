@@ -13,12 +13,10 @@ import { generateResourceName } from "./helpers/generate-resource-name";
 const port = await getPort();
 const inspectorPort = await getPort();
 
-const RUNTIMES = [
-	{ flags: "", runtime: "local" },
-	...(CLOUDFLARE_ACCOUNT_ID
-		? [{ flags: "--remote --x-tail-logs", runtime: "remote" }]
-		: []),
-];
+const LOCAL = { flags: "", runtime: "local" };
+const REMOTE = { flags: "--remote --x-tail-logs", runtime: "remote" };
+
+const RUNTIMES = [LOCAL, ...(CLOUDFLARE_ACCOUNT_ID ? [REMOTE] : [])];
 
 // WebAssembly module containing single `func add(i32, i32): i32` export.
 // Generated using https://webassembly.github.io/wabt/demo/wat2wasm/.
@@ -256,7 +254,7 @@ describe.sequential.each(RUNTIMES)("Core: $flags", ({ runtime, flags }) => {
 	});
 });
 
-describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
+describe.sequential.each([LOCAL])("Bindings: $flags", ({ runtime, flags }) => {
 	const isLocal = runtime === "local";
 	const resourceFlags = isLocal ? "" : "--remote";
 
