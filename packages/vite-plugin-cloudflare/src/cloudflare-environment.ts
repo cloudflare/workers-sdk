@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import * as util from "node:util";
 import { CoreHeaders } from "miniflare";
 import * as vite from "vite";
 import { additionalModuleRE } from "./plugins/additional-modules";
@@ -10,7 +9,7 @@ import {
 	VIRTUAL_WORKER_ENTRY,
 	WORKER_ENTRY_PATH_HEADER,
 } from "./shared";
-import { getOutputDirectory } from "./utils";
+import { debuglog, getOutputDirectory } from "./utils";
 import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
 import type { MessageEvent, Miniflare, WebSocket } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
@@ -22,7 +21,6 @@ interface WebSocketContainer {
 }
 
 const webSocketUndefinedError = "The WebSocket is undefined";
-const debuglog = util.debuglog("@cloudflare:vite-plugin");
 
 function createHotChannel(
 	webSocketContainer: WebSocketContainer
