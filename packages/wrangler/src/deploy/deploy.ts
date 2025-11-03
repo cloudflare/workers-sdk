@@ -7,6 +7,7 @@ import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
 	APIError,
 	configFileName,
+	experimental_patchConfig,
 	formatCompatibilityDate,
 	formatConfigSnippet,
 	ParseError,
@@ -68,7 +69,7 @@ import {
 } from "../versions/api";
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
-import { getRemoteConfigDiff } from "./config-diffs";
+import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { AssetsOptions } from "../assets";
 import type { Entry } from "../deployment-bundle/entry";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
@@ -82,6 +83,7 @@ import type {
 	CfWorkerInit,
 	Config,
 	CustomDomainRoute,
+	RawConfig,
 	Route,
 	ZoneIdRoute,
 	ZoneNameRoute,
@@ -426,6 +428,35 @@ export default async function deploy(props: Props): Promise<{
 								"Deploying the Worker will override the remote configuration with your local one."
 						);
 						if (!(await deployConfirm("Would you like to continue?"))) {
+							if (
+								config.userConfigPath &&
+								/\.jsonc?$/.test(config.userConfigPath)
+							) {
+								const targetingEnvironment = !!props.env;
+
+								if (
+									// TODO: Currently if the user is targeting an environment we don't offer them to update
+									// their config file since that is fairly nuanced, we should also support environments
+									// (the best we can) here
+									!targetingEnvironment &&
+									(await confirm(
+										"Would you like to update the local config file with the remote values?",
+										{
+											defaultValue: true,
+											fallbackValue: true,
+										}
+									))
+								) {
+									const patchObj: RawConfig = getConfigPatch(configDiff.diff);
+
+									experimental_patchConfig(
+										config.userConfigPath,
+										patchObj,
+										false
+									);
+								}
+							}
+
 							return { versionId, workerTag };
 						}
 					}
