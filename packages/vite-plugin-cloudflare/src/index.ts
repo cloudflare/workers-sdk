@@ -20,10 +20,14 @@ import {
 import { wasmHelperPlugin } from "./plugins/wasm";
 import { debuglog } from "./utils";
 import type { PluginConfig } from "./plugin-config";
+import type { SharedContext } from "./plugins/utils";
 
 export type { PluginConfig } from "./plugin-config";
 
-const ctx = new PluginContext();
+const sharedContext: SharedContext = {
+	hasShownWorkerConfigWarnings: false,
+	isRestartingDevServer: false,
+};
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
@@ -33,7 +37,7 @@ const ctx = new PluginContext();
  * @param pluginConfig An optional {@link PluginConfig} object.
  */
 export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
-	ctx.resetLocalState();
+	const ctx = new PluginContext(sharedContext);
 
 	return [
 		{
@@ -49,12 +53,12 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				const restartServer = viteDevServer.restart.bind(viteDevServer);
 				viteDevServer.restart = async () => {
 					try {
-						ctx.isRestartingDevServer = true;
+						ctx.setIsRestartingDevServer(true);
 						debuglog("From server.restart(): Restarting server...");
 						await restartServer();
 						debuglog("From server.restart(): Restarted server...");
 					} finally {
-						ctx.isRestartingDevServer = false;
+						ctx.setIsRestartingDevServer(false);
 					}
 				};
 			},

@@ -6,67 +6,103 @@ import type { NodeJsCompat } from "./nodejs-compat";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
 
-export class PluginContext {
-	#localState: {
-		resolvedPluginConfig?: ResolvedPluginConfig;
-		resolvedViteConfig?: vite.ResolvedConfig;
-	} = {};
-	#miniflare?: Miniflare;
-	hasShownWorkerConfigWarnings = false;
+export interface SharedContext {
+	miniflare?: Miniflare;
+	hasShownWorkerConfigWarnings: boolean;
 	/** Used to track whether hooks are being called because of a server restart or a server close event */
-	isRestartingDevServer = false;
+	isRestartingDevServer: boolean;
+}
+
+export class PluginContext {
+	#sharedContext: SharedContext;
+	#resolvedPluginConfig?: ResolvedPluginConfig;
+	#resolvedViteConfig?: vite.ResolvedConfig;
+
+	constructor(sharedContext: SharedContext) {
+		this.#sharedContext = sharedContext;
+	}
 
 	/** Creates a new Miniflare instance or updates the existing instance */
 	async startOrUpdateMiniflare(options: MiniflareOptions): Promise<void> {
-		if (!this.#miniflare) {
+		if (!this.#sharedContext.miniflare) {
 			debuglog("Creating new Miniflare instance");
-			this.#miniflare = new Miniflare(options);
+			this.#sharedContext.miniflare = new Miniflare(options);
 		} else {
 			debuglog("Updating the existing Miniflare instance");
-			await this.#miniflare.setOptions(options);
+			await this.#sharedContext.miniflare.setOptions(options);
 		}
 		debuglog("Miniflare is ready");
 	}
 
 	async disposeMiniflare(): Promise<void> {
-		await this.#miniflare?.dispose();
-		this.#miniflare = undefined;
+		await this.#sharedContext.miniflare?.dispose();
+		this.#sharedContext.miniflare = undefined;
 	}
 
 	get miniflare(): Miniflare {
-		assert(this.#miniflare, "Expected `miniflare` to be defined");
+		assert(this.#sharedContext.miniflare, "Expected `miniflare` to be defined");
 
-		return this.#miniflare;
+		return this.#sharedContext.miniflare;
 	}
 
-	resetLocalState(): void {
-		this.#localState = {};
+	/**
+	 * Gets the resolved inspector port provided by Miniflare
+	 */
+	async getResolvedInspectorPort(): Promise<number | null> {
+		if (
+			this.resolvedPluginConfig.inspectorPort === false ||
+			!this.#sharedContext.miniflare
+		) {
+			return null;
+		}
+
+		const miniflareInspectorUrl =
+			await this.#sharedContext.miniflare.getInspectorURL();
+
+		return Number.parseInt(miniflareInspectorUrl.port);
+	}
+
+	setHasShownWorkerConfigWarnings(hasShownWorkerConfigWarnings: boolean): void {
+		this.#sharedContext.hasShownWorkerConfigWarnings =
+			hasShownWorkerConfigWarnings;
+	}
+
+	get hasShownWorkerConfigWarnings(): boolean {
+		return this.#sharedContext.hasShownWorkerConfigWarnings;
+	}
+
+	setIsRestartingDevServer(isRestartingDevServer: boolean): void {
+		this.#sharedContext.isRestartingDevServer = isRestartingDevServer;
+	}
+
+	get isRestartingDevServer(): boolean {
+		return this.#sharedContext.isRestartingDevServer;
 	}
 
 	setResolvedPluginConfig(resolvedPluginConfig: ResolvedPluginConfig): void {
-		this.#localState.resolvedPluginConfig = resolvedPluginConfig;
+		this.#resolvedPluginConfig = resolvedPluginConfig;
 	}
 
 	get resolvedPluginConfig(): ResolvedPluginConfig {
 		assert(
-			this.#localState.resolvedPluginConfig,
+			this.#resolvedPluginConfig,
 			"Expected `resolvedPluginConfig` to be defined"
 		);
 
-		return this.#localState.resolvedPluginConfig;
+		return this.#resolvedPluginConfig;
 	}
 
 	setResolvedViteConfig(resolvedViteConfig: vite.ResolvedConfig): void {
-		this.#localState.resolvedViteConfig = resolvedViteConfig;
+		this.#resolvedViteConfig = resolvedViteConfig;
 	}
 
 	get resolvedViteConfig(): vite.ResolvedConfig {
 		assert(
-			this.#localState.resolvedViteConfig,
+			this.#resolvedViteConfig,
 			"Expected `resolvedViteConfig` to be defined"
 		);
 
-		return this.#localState.resolvedViteConfig;
+		return this.#resolvedViteConfig;
 	}
 
 	getWorkerConfig(environmentName: string): WorkerConfig | undefined {
@@ -79,19 +115,6 @@ export class PluginContext {
 		return this.resolvedPluginConfig.type === "workers"
 			? this.resolvedPluginConfig.nodeJsCompatMap.get(environmentName)
 			: undefined;
-	}
-
-	/**
-	 * Gets the resolved inspector port provided by Miniflare
-	 */
-	async getResolvedInspectorPort(): Promise<number | null> {
-		if (this.resolvedPluginConfig.inspectorPort === false || !this.#miniflare) {
-			return null;
-		}
-
-		const miniflareInspectorUrl = await this.#miniflare.getInspectorURL();
-
-		return Number.parseInt(miniflareInspectorUrl.port);
 	}
 }
 

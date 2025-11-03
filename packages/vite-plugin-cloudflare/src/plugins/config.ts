@@ -22,7 +22,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			}
 
 			if (!ctx.hasShownWorkerConfigWarnings) {
-				ctx.hasShownWorkerConfigWarnings = true;
+				ctx.setHasShownWorkerConfigWarnings(true);
 				const workerConfigWarnings = getWarningForWorkersConfigs(
 					ctx.resolvedPluginConfig.rawConfigs
 				);
@@ -100,7 +100,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			}
 		},
 		buildStart() {
-			ctx.hasShownWorkerConfigWarnings = false;
+			ctx.setHasShownWorkerConfigWarnings(false);
 		},
 		configureServer(viteDevServer) {
 			const configChangedHandler = async (changedFilePath: string) => {
