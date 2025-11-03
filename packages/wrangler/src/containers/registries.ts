@@ -191,7 +191,7 @@ async function registryConfigureCommand(
 				is_public: false,
 				auth: {
 					public_credential: configureArgs.publicCredential,
-					secrets_integration: {
+					private_credential: {
 						store_id: secretStoreId,
 						secret_name: secretName,
 					},
