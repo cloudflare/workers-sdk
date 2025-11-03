@@ -454,7 +454,6 @@ export function getInferredHost(
  * If `undefined` it defaults to the standard .env files from `getDefaultEnvFiles()`.
  * @param local Whether the dev server should run locally.
  * @param args Additional arguments for the dev server.
- * @param remoteBindingsEnabled Whether remote bindings are enabled, defaults to the value of the `REMOTE_BINDINGS` flag.
  * @returns The bindings for the Cloudflare Worker.
  */
 export function getBindings(
