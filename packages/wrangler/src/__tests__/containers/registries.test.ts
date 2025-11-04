@@ -32,7 +32,7 @@ describe("containers registries configure", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers
 
-			📦 Manage Containers
+			📦 Manage Containers [open-beta]
 
 			COMMANDS
 			  wrangler containers build [PATH]  Build a container image
