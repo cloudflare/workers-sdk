@@ -140,22 +140,20 @@ it("doesn't connect to remote bindings when `remoteBindings` is set to `false`",
 		}),
 	});
 
-	await expect(
-		(async () => {
-			const worker = await startWorker({
-				config: `${helper.tmpPath}/wrangler.json`,
-				dev: {
-					inspector: false,
-					server: { port: 0 },
-					remoteBindings: false,
-				},
-			});
+	await expect(async () => {
+		const worker = await startWorker({
+			config: `${helper.tmpPath}/wrangler.json`,
+			dev: {
+				inspector: false,
+				server: { port: 0 },
+				remoteBindings: false,
+			},
+		});
 
-			await worker.ready;
+		await worker.ready;
 
-			await worker.fetch("http://example.com");
-		})()
-	).rejects.toThrowErrorMatchingInlineSnapshot(
+		await worker.fetch("http://example.com");
+	}).rejects.toThrowErrorMatchingInlineSnapshot(
 		`[Error: Binding AI needs to be run remotely]`
 	);
 });
