@@ -12,11 +12,9 @@ describe("getPlatformProxy - remote bindings with remoteBindings: false", () => 
 		});
 
 		await expect(
-			(async () => {
-				await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8", {
-					messages: [],
-				});
-			})()
+			env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8", {
+				messages: [],
+			})
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Binding AI needs to be run remotely]`
 		);
