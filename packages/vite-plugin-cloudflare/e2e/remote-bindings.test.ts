@@ -138,3 +138,24 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 			});
 		});
 }
+
+describe("remote bindings disabled", () => {
+	const projectPath = seed("remote-bindings-disabled", "pnpm");
+
+	describe.each(commands)('with "%s" command', (command) => {
+		test.skipIf(isBuildAndPreviewOnWindows(command))(
+			"cannot connect to remote bindings",
+			async ({ expect }) => {
+				const proc = await runLongLived("pnpm", command, projectPath);
+				const url = await waitForReady(proc);
+
+				const response = await fetch(url);
+
+				const responseText = await response.text();
+
+				expect(responseText).toContain("Error");
+				expect(responseText).toContain("Binding AI needs to be run remotely");
+			}
+		);
+	});
+});
