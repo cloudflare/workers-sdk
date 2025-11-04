@@ -16,7 +16,7 @@ export function printBindings(
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
-		localBindingsOnly?: boolean;
+		remoteBindingsDisabled?: boolean;
 		name?: string;
 		provisioning?: boolean;
 		warnIfNoBindings?: boolean;
@@ -141,7 +141,7 @@ export function printBindings(
 					value: value,
 					mode: getMode({
 						isSimulatedLocally:
-							script_name && !context.localBindingsOnly ? !remote : true,
+							script_name && !context.remoteBindingsDisabled ? !remote : true,
 					}),
 				};
 			})
@@ -156,7 +156,7 @@ export function printBindings(
 					type: friendlyBindingNames.kv_namespaces,
 					value: id,
 					mode: getMode({
-						isSimulatedLocally: context.localBindingsOnly || !remote,
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
 					}),
 				};
 			})
@@ -192,7 +192,7 @@ export function printBindings(
 					value,
 					mode: getMode({
 						isSimulatedLocally:
-							context.localBindingsOnly || !emailBinding.remote,
+							context.remoteBindingsDisabled || !emailBinding.remote,
 					}),
 				};
 			})
@@ -207,7 +207,7 @@ export function printBindings(
 					type: friendlyBindingNames.queues,
 					value: queue_name,
 					mode: getMode({
-						isSimulatedLocally: context.localBindingsOnly || !remote,
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
 					}),
 				};
 			})
@@ -233,7 +233,7 @@ export function printBindings(
 						name: binding,
 						type: friendlyBindingNames.d1_databases,
 						mode: getMode({
-							isSimulatedLocally: context.localBindingsOnly || !remote,
+							isSimulatedLocally: context.remoteBindingsDisabled || !remote,
 						}),
 						value,
 					};
@@ -251,7 +251,7 @@ export function printBindings(
 					value: index_name,
 					mode: getMode({
 						isSimulatedLocally:
-							remote && !context.localBindingsOnly ? false : undefined,
+							remote && !context.remoteBindingsDisabled ? false : undefined,
 					}),
 				};
 			})
@@ -280,7 +280,7 @@ export function printBindings(
 					value: service_id,
 					mode: getMode({
 						isSimulatedLocally:
-							remote && !context.localBindingsOnly ? false : undefined,
+							remote && !context.remoteBindingsDisabled ? false : undefined,
 					}),
 				};
 			})
@@ -302,7 +302,7 @@ export function printBindings(
 					type: friendlyBindingNames.r2_buckets,
 					value: value,
 					mode: getMode({
-						isSimulatedLocally: context.localBindingsOnly || !remote,
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
 					}),
 				};
 			})
@@ -425,7 +425,7 @@ export function printBindings(
 			type: friendlyBindingNames.browser,
 			value: undefined,
 			mode: getMode({
-				isSimulatedLocally: context.localBindingsOnly || !browser.remote,
+				isSimulatedLocally: context.remoteBindingsDisabled || !browser.remote,
 			}),
 		});
 	}
@@ -436,7 +436,7 @@ export function printBindings(
 			type: friendlyBindingNames.images,
 			value: undefined,
 			mode: getMode({
-				isSimulatedLocally: context.localBindingsOnly || !images.remote,
+				isSimulatedLocally: context.remoteBindingsDisabled || !images.remote,
 			}),
 		});
 	}
@@ -449,7 +449,7 @@ export function printBindings(
 			mode: getMode({
 				isSimulatedLocally:
 					(media.remote === true || media.remote === undefined) &&
-					!context.localBindingsOnly
+					!context.remoteBindingsDisabled
 						? false
 						: undefined,
 			}),
@@ -464,7 +464,7 @@ export function printBindings(
 			mode: getMode({
 				isSimulatedLocally:
 					(ai.remote === true || ai.remote === undefined) &&
-					!context.localBindingsOnly
+					!context.remoteBindingsDisabled
 						? false
 						: undefined,
 			}),
@@ -478,7 +478,7 @@ export function printBindings(
 				type: friendlyBindingNames.pipelines,
 				value: pipeline,
 				mode: getMode({
-					isSimulatedLocally: context.localBindingsOnly || !remote,
+					isSimulatedLocally: context.remoteBindingsDisabled || !remote,
 				}),
 			}))
 		);
@@ -573,7 +573,7 @@ export function printBindings(
 						: namespace,
 					mode: getMode({
 						isSimulatedLocally:
-							remote && !context.localBindingsOnly ? false : undefined,
+							remote && !context.remoteBindingsDisabled ? false : undefined,
 					}),
 				};
 			})
@@ -589,7 +589,7 @@ export function printBindings(
 					value: certificate_id,
 					mode: getMode({
 						isSimulatedLocally:
-							remote && !context.localBindingsOnly ? false : undefined,
+							remote && !context.remoteBindingsDisabled ? false : undefined,
 					}),
 				};
 			})

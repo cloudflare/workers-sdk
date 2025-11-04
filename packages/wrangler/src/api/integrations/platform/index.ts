@@ -86,10 +86,9 @@ export type GetPlatformProxyOptions = {
 	 */
 	persist?: boolean | { path: string };
 	/**
-	 * Wether only local bindings should be used. This effectively disables the remote aspect of remote bindings
-	 * (exactly as if their `remote` configuration was changed from `true` to `false`)
+	 * Wether remote bindings should be enabled or not (defaults to `true`)
 	 */
-	localBindingsOnly?: boolean;
+	remoteBindings?: boolean;
 };
 
 /**
@@ -143,7 +142,7 @@ export async function getPlatformProxy<
 	});
 
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
-	if (config.configPath && !options.localBindingsOnly) {
+	if (config.configPath && !options.remoteBindings) {
 		remoteProxySession = (
 			(await maybeStartOrUpdateRemoteProxySession({
 				path: config.configPath,

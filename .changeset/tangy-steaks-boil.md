@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Add `localBindingsOnly` option to `startWorker` to disable remote bindings
+Add a `remoteBindings` option to `startWorker` to disable remote bindings

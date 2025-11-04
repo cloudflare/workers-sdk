@@ -126,7 +126,7 @@ async function resolveDevConfig(
 	return {
 		auth,
 		remote: input.dev?.remote,
-		localBindingsOnly: input.dev?.localBindingsOnly,
+		remoteBindings: input.dev?.remoteBindings ?? true,
 		server: {
 			hostname: input.dev?.server?.hostname || config.dev.ip,
 			port:
@@ -219,7 +219,7 @@ async function resolveBindings(
 			{
 				registry,
 				local: !input.dev?.remote,
-				localBindingsOnly: !!input.dev?.localBindingsOnly,
+				remoteBindingsDisabled: input.dev?.remoteBindings === false,
 				name: config.name,
 			}
 		);

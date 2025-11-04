@@ -3,15 +3,15 @@ import { getPlatformProxy } from "wrangler";
 import type { Ai } from "@cloudflare/workers-types/experimental";
 
 describe(
-	"getPlatformProxy - remote bindings with localBindingsOnly",
+	"getPlatformProxy - remote bindings with remoteBindings: false",
 	{ timeout: 50_000 },
 	() => {
 		test("getPlatformProxy works with remote bindings", async () => {
 			const { env, dispose } = await getPlatformProxy<{
 				AI: Ai;
 			}>({
-				configPath: "./wrangler.local-bindings-only.jsonc",
-				localBindingsOnly: true,
+				configPath: "./wrangler.remote-bindings-false.jsonc",
+				remoteBindings: false,
 			});
 
 			await expect(
