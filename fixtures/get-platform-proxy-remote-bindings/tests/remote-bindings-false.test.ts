@@ -2,29 +2,25 @@ import { describe, expect, test } from "vitest";
 import { getPlatformProxy } from "wrangler";
 import type { Ai } from "@cloudflare/workers-types/experimental";
 
-describe(
-	"getPlatformProxy - remote bindings with remoteBindings: false",
-	{ timeout: 50_000 },
-	() => {
-		test("getPlatformProxy works with remote bindings", async () => {
-			const { env, dispose } = await getPlatformProxy<{
-				AI: Ai;
-			}>({
-				configPath: "./wrangler.remote-bindings-false.jsonc",
-				remoteBindings: false,
-			});
-
-			await expect(
-				(async () => {
-					await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8", {
-						messages: [],
-					});
-				})()
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Binding AI needs to be run remotely]`
-			);
-
-			await dispose();
+describe("getPlatformProxy - remote bindings with remoteBindings: false", () => {
+	test("getPlatformProxy works with remote bindings", async () => {
+		const { env, dispose } = await getPlatformProxy<{
+			AI: Ai;
+		}>({
+			configPath: "./wrangler.remote-bindings-false.jsonc",
+			remoteBindings: false,
 		});
-	}
-);
+
+		await expect(
+			(async () => {
+				await env.AI.run("@cf/meta/llama-3.1-8b-instruct-fp8", {
+					messages: [],
+				});
+			})()
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Binding AI needs to be run remotely]`
+		);
+
+		await dispose();
+	});
+});
