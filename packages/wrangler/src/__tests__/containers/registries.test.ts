@@ -112,7 +112,7 @@ describe("containers registries configure", () => {
 				is_public: false,
 				auth: {
 					public_credential: "test-access-key-id",
-					secrets_integration: {
+					private_credential: {
 						store_id: storeId,
 						secret_name: "AWS_Secret_Access_Key",
 					},
@@ -155,7 +155,7 @@ describe("containers registries configure", () => {
 				is_public: false,
 				auth: {
 					public_credential: "test-access-key-id",
-					secrets_integration: {
+					private_credential: {
 						store_id: newStoreId,
 						secret_name: "AWS_Secret_Access_Key",
 					},
@@ -195,7 +195,7 @@ describe("containers registries configure", () => {
 				is_public: false,
 				auth: {
 					public_credential: "test-access-key-id",
-					secrets_integration: {
+					private_credential: {
 						store_id: providedStoreId,
 						secret_name: "AWS_Secret_Access_Key",
 					},
@@ -257,7 +257,7 @@ describe("containers registries configure", () => {
 					is_public: false,
 					auth: {
 						public_credential: "test-access-key-id",
-						secrets_integration: {
+						private_credential: {
 							store_id: storeId,
 							secret_name: "AWS_Secret_Access_Key",
 						},

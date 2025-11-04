@@ -77,7 +77,7 @@ function registryConfigureYargs(args: CommonYargsArgv) {
 				description:
 					"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
 				demandOption: true,
-				alias: ["id", "aws-access-key-id"],
+				alias: ["aws-access-key-id"],
 			})
 			.option("secret-store-id", {
 				type: "string",

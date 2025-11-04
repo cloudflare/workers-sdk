@@ -754,7 +754,7 @@ export const secretsStoreSecretDuplicateCommand = createCommand({
 });
 
 export const validateSecretName = (name: string) => {
-	const validName = /^[A-Za-z0-9_-]+$/;
+	const validName = /^[A-z0-9-_]+$/;
 	if (!validName.test(name)) {
 		throw new UserError(
 			"Secret name may only contain alphanumeric characters, underscores, or dashes."
