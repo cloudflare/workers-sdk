@@ -142,7 +142,7 @@ export async function getPlatformProxy<
 	});
 
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
-	if (config.configPath && !options.remoteBindings) {
+	if (config.configPath && options.remoteBindings !== false) {
 		remoteProxySession = (
 			(await maybeStartOrUpdateRemoteProxySession({
 				path: config.configPath,
