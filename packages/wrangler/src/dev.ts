@@ -214,7 +214,7 @@ export const dev = createCommand({
 		},
 		local: {
 			alias: "l",
-			describe: "Run fully locally (this also disables all remote bindings)",
+			describe: "Run locally with remote bindings disabled",
 			type: "boolean",
 		},
 		minify: {
