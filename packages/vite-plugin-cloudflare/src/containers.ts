@@ -56,3 +56,8 @@ export function getContainerOptions(options: {
 		}
 	});
 }
+
+export type ContainerTagToOptionsMap = Map<
+	string,
+	NonNullable<ReturnType<typeof getContainerOptions>>[number]
+>;
