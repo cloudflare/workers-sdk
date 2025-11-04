@@ -1,7 +1,7 @@
 {
 	"extends": "@cloudflare/workers-tsconfig",
 	"compilerOptions": {
-		"module": "CommonJS",
+		"module": "preserve",
 		"types": ["node"]
 	},
 	"include": ["bundle.ts"],

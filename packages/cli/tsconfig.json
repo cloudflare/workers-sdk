@@ -4,7 +4,7 @@
 	"include": ["**/*.ts"],
 	"exclude": ["node_modules"],
 	"compilerOptions": {
-		"module": "CommonJS",
+		"module": "preserve",
 		"allowJs": false,
 		"outDir": "dist",
 		"types": ["node"],
