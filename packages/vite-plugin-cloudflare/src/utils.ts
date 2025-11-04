@@ -12,6 +12,10 @@ import type * as vite from "vite";
 
 export const debuglog = util.debuglog("@cloudflare:vite-plugin");
 
+/**
+ * Creates an internal plugin to be used inside the main `vite-plugin-cloudflare` plugin.
+ * The provided `name` will be prefixed with `vite-plugin-cloudflare:`.
+ */
 export function createPlugin(
 	name: string,
 	pluginFactory: (ctx: PluginContext) => Omit<vite.Plugin, "name">

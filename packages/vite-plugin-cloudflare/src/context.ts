@@ -12,6 +12,10 @@ import type {
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
 
+/**
+ * Used to store state that should persist across server restarts.
+ * This is then accessed via `PluginContext`.
+ */
 export interface SharedContext {
 	miniflare?: Miniflare;
 	hasShownWorkerConfigWarnings: boolean;
@@ -19,6 +23,10 @@ export interface SharedContext {
 	isRestartingDevServer: boolean;
 }
 
+/**
+ * Used to provide context to internal plugins.
+ * It should be reinstantiated each time the main plugin is created.
+ */
 export class PluginContext {
 	#sharedContext: SharedContext;
 	#resolvedPluginConfig?: ResolvedPluginConfig;
