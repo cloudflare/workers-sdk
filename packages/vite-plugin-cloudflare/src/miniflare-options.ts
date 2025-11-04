@@ -31,16 +31,17 @@ import {
 	VITE_PROXY_WORKER_NAME,
 } from "./constants";
 import { getContainerOptions, getDockerPath } from "./containers";
+import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
+import type { ContainerTagToOptionsMap } from "./containers";
 import type {
-	AssetsOnlyResolvedConfig,
-	PersistState,
-	PreviewResolvedConfig,
-	WorkerConfig,
-	WorkersResolvedConfig,
-} from "./plugin-config";
+	AssetsOnlyPluginContext,
+	PreviewPluginContext,
+	WorkersPluginContext,
+} from "./context";
+import type { PersistState } from "./plugin-config";
 import type {
 	MiniflareOptions,
 	WorkerdStructuredLog,
@@ -189,18 +190,6 @@ const VITE_PROXY_WORKER_PATH = "./workers/vite-proxy-worker.js";
 const RUNNER_PATH = "./workers/runner-worker.js";
 const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
 
-export function getEntryWorkerConfig(
-	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig
-): WorkerConfig | undefined {
-	if (resolvedPluginConfig.type === "assets-only") {
-		return;
-	}
-
-	return resolvedPluginConfig.workers[
-		resolvedPluginConfig.entryWorkerEnvironmentName
-	];
-}
-
 function logUnknownTails(
 	tails: WorkerOptions["tails"],
 	userWorkers: { name?: string }[],
@@ -245,21 +234,15 @@ const remoteProxySessionsDataMap = new Map<
 	} | null
 >();
 
-export async function getDevMiniflareOptions(config: {
-	resolvedPluginConfig: AssetsOnlyResolvedConfig | WorkersResolvedConfig;
-	viteDevServer: vite.ViteDevServer;
-	inspectorPort: number | false;
-	containerBuildId?: string;
-}): Promise<{
-	config: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
-	allContainerOptions: Map<
-		string,
-		NonNullable<ReturnType<typeof getContainerOptions>>[number]
-	>;
+export async function getDevMiniflareOptions(
+	ctx: AssetsOnlyPluginContext | WorkersPluginContext,
+	viteDevServer: vite.ViteDevServer
+): Promise<{
+	miniflareOptions: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
+	containerTagToOptionsMap: ContainerTagToOptionsMap;
 }> {
-	const { resolvedPluginConfig, viteDevServer, inspectorPort } = config;
-	const resolvedViteConfig = viteDevServer.config;
-	const entryWorkerConfig = getEntryWorkerConfig(resolvedPluginConfig);
+	const inputInspectorPort = await getInputInspectorPort(ctx, viteDevServer);
+	const { resolvedPluginConfig, resolvedViteConfig, entryWorkerConfig } = ctx;
 
 	const assetsConfig = getAssetsConfig(
 		resolvedPluginConfig,
@@ -393,10 +376,7 @@ export async function getDevMiniflareOptions(config: {
 		},
 	];
 
-	let allContainerOptions = new Map<
-		string,
-		NonNullable<ReturnType<typeof getContainerOptions>>[number]
-	>();
+	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
 
 	const workersFromConfig =
 		resolvedPluginConfig.type === "workers"
@@ -438,13 +418,13 @@ export async function getDevMiniflareOptions(config: {
 									resolveDockerHost(dockerPath);
 								containerBuildId = generateContainerBuildId();
 
-								const options = await getContainerOptions({
+								const options = getContainerOptions({
 									containersConfig: workerConfig.containers,
 									containerBuildId,
 									configPath: workerConfig.configPath,
 								});
 								for (const option of options ?? []) {
-									allContainerOptions.set(option.image_tag, option);
+									containerTagToOptionsMap.set(option.image_tag, option);
 								}
 							}
 
@@ -472,7 +452,7 @@ export async function getDevMiniflareOptions(config: {
 								worker: {
 									...workerOptions,
 									name: workerOptions.name ?? workerConfig.name,
-									unsafeInspectorProxy: inspectorPort !== false,
+									unsafeInspectorProxy: inputInspectorPort !== false,
 									unsafeDirectSockets:
 										environmentName ===
 										resolvedPluginConfig.entryWorkerEnvironmentName
@@ -536,10 +516,11 @@ export async function getDevMiniflareOptions(config: {
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	return {
-		config: {
+		miniflareOptions: {
 			log: logger,
 			logRequests: false,
-			inspectorPort: inspectorPort === false ? undefined : inspectorPort,
+			inspectorPort:
+				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			handleStructuredLogs: getStructuredLogsLogger(logger),
@@ -680,7 +661,7 @@ export async function getDevMiniflareOptions(config: {
 				}
 			},
 		},
-		allContainerOptions,
+		containerTagToOptionsMap,
 	};
 }
 
@@ -709,24 +690,19 @@ function getPreviewModules(
 	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;
 }
 
-export async function getPreviewMiniflareOptions(config: {
-	resolvedPluginConfig: PreviewResolvedConfig;
-	vitePreviewServer: vite.PreviewServer;
-	inspectorPort: number | false;
-}): Promise<{
-	config: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
-	allContainerOptions: Map<
-		string,
-		NonNullable<ReturnType<typeof getContainerOptions>>[number]
-	>;
+export async function getPreviewMiniflareOptions(
+	ctx: PreviewPluginContext,
+	vitePreviewServer: vite.PreviewServer
+): Promise<{
+	miniflareOptions: Extract<MiniflareOptions, { workers: WorkerOptions[] }>;
+	containerTagToOptionsMap: ContainerTagToOptionsMap;
 }> {
-	const { resolvedPluginConfig, vitePreviewServer, inspectorPort } = config;
-	const resolvedViteConfig = vitePreviewServer.config;
-
-	let allContainerOptions = new Map<
-		string,
-		NonNullable<ReturnType<typeof getContainerOptions>>[number]
-	>();
+	const inputInspectorPort = await getInputInspectorPort(
+		ctx,
+		vitePreviewServer
+	);
+	const { resolvedPluginConfig, resolvedViteConfig } = ctx;
+	const containerTagToOptionsMap: ContainerTagToOptionsMap = new Map();
 
 	const workers: Array<WorkerOptions> = (
 		await Promise.all(
@@ -763,13 +739,13 @@ export async function getPreviewMiniflareOptions(config: {
 					workerConfig.dev.container_engine = resolveDockerHost(dockerPath);
 					containerBuildId = generateContainerBuildId();
 
-					const options = await getContainerOptions({
+					const options = getContainerOptions({
 						containersConfig: workerConfig.containers,
 						containerBuildId,
 						configPath: workerConfig.configPath,
 					});
 					for (const option of options ?? []) {
-						allContainerOptions.set(option.image_tag, option);
+						containerTagToOptionsMap.set(option.image_tag, option);
 					}
 				}
 
@@ -799,7 +775,7 @@ export async function getPreviewMiniflareOptions(config: {
 					{
 						...workerOptions,
 						name: workerOptions.name ?? workerConfig.name,
-						unsafeInspectorProxy: inspectorPort !== false,
+						unsafeInspectorProxy: inputInspectorPort !== false,
 						unsafeDirectSockets:
 							// This exposes the default entrypoint of the entry worker on the dev registry
 							// Assuming that the first worker config to be the entry worker.
@@ -817,9 +793,10 @@ export async function getPreviewMiniflareOptions(config: {
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
 	return {
-		config: {
+		miniflareOptions: {
 			log: logger,
-			inspectorPort: inspectorPort === false ? undefined : inspectorPort,
+			inspectorPort:
+				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
 			handleStructuredLogs: getStructuredLogsLogger(logger),
@@ -829,7 +806,7 @@ export async function getPreviewMiniflareOptions(config: {
 			),
 			workers,
 		},
-		allContainerOptions,
+		containerTagToOptionsMap,
 	};
 }
 
