@@ -251,12 +251,9 @@ async function setupDevEnv(
 					args.remote || (args.forceLocal || args.local ? false : undefined),
 				remoteBindings:
 					// Note: this ternary is a hack, just to make sure that `wrangler pages dev`
-					//       supports the AI binding (the issue is that `wrangler pages dev` sets
-					//       `forceLocal` to true, so it should disable all remote bindings, but it
-					//       still needs to support the AI bindings regardless because removing such
-					//       support now would be a breaking change)
-					//       TODO: remove this hack in wrangler v5 (the following line should just be `!!args.forceLocal,`)
-					args.enablePagesAssetsServiceBinding ? true : !args.forceLocal,
+					//       supports the AI binding (removing such support now would be a breaking change)
+					//       TODO: remove this hack in wrangler v5 (the following line should just be `args.local !== true,`)
+					args.enablePagesAssetsServiceBinding ? true : args.local !== true,
 				server: {
 					hostname: args.ip,
 					port: args.port,
