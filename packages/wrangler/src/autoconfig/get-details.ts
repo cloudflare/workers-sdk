@@ -27,11 +27,9 @@ class MultipleFrameworksError extends FatalError {
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
-	outputDir,
 }: {
 	projectPath?: string; // the path to the project, defaults to cwd
 	wranglerConfig?: Config;
-	outputDir?: string;
 } = {}): Promise<AutoConfigDetails> {
 	logger.debug(`Running autoconfig detection in ${projectPath}...`);
 
@@ -78,6 +76,6 @@ export async function getDetailsForAutoConfig({
 		framework,
 		packageJson,
 		buildCommand: detectedFramework?.buildCommand ?? packageJsonBuild,
-		outputDir: outputDir ?? detectedFramework?.dist,
+		outputDir: detectedFramework?.dist,
 	};
 }
