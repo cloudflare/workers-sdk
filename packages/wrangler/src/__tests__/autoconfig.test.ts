@@ -1,16 +1,23 @@
-import { FatalError } from "@cloudflare/workers-utils";
+import { writeFile } from "node:fs/promises";
+import { FatalError, readFileSync } from "@cloudflare/workers-utils";
 import { vi } from "vitest";
+import * as c3 from "../autoconfig/c3-vendor/packages";
 import * as details from "../autoconfig/get-details";
 import * as run from "../autoconfig/run";
 import * as format from "../deployment-bundle/guess-worker-format";
 import { clearOutputFilePath } from "../output";
+import * as compatDate from "../utils/compatibility-date";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { clearDialogs } from "./helpers/mock-dialogs";
+import { mockConsoleMethods } from "./helpers/mock-console";
+import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
+import type { Framework } from "../autoconfig/frameworks";
+import type { Config } from "@cloudflare/workers-utils";
+import type { MockInstance } from "vitest";
 
 vi.mock("../deploy/deploy", async (importOriginal) => ({
 	...(await importOriginal()),
@@ -39,6 +46,7 @@ describe("autoconfig (deploy)", () => {
 	mockApiToken();
 	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
+	const std = mockConsoleMethods();
 
 	beforeEach(() => {
 		setIsTTY(true);
@@ -89,5 +97,171 @@ describe("autoconfig (deploy)", () => {
 
 		expect(getDetailsSpy).toHaveBeenCalled();
 		expect(runSpy).not.toHaveBeenCalled();
+	});
+
+	describe("getDetailsForAutoConfig()", () => {
+		it("should set configured: true if a configPath exists", async () => {
+			await expect(
+				details.getDetailsForAutoConfig({
+					wranglerConfig: { configPath: "/tmp" } as Config,
+				})
+			).resolves.toMatchObject({ configured: true });
+		});
+
+		// Check that Astro is detected. We don't want to duplicate the tests of @netlify/build-info
+		// by exhaustively checking every possible combination
+		it("should perform basic framework detection", async () => {
+			await writeFile(
+				"package.json",
+				JSON.stringify({
+					dependencies: {
+						astro: "5",
+					},
+				})
+			);
+
+			await expect(details.getDetailsForAutoConfig()).resolves
+				.toMatchInlineSnapshot(`
+				Object {
+				  "buildCommand": "astro build",
+				  "configured": false,
+				  "framework": Astro {
+				    "name": "astro",
+				  },
+				  "outputDir": "dist",
+				  "packageJson": Object {
+				    "dependencies": Object {
+				      "astro": "5",
+				    },
+				  },
+				}
+			`);
+		});
+
+		it("should bail when multiple frameworks are detected", async () => {
+			await writeFile(
+				"package.json",
+				JSON.stringify({
+					dependencies: {
+						astro: "5",
+						gatsby: "5",
+					},
+				})
+			);
+
+			await expect(
+				details.getDetailsForAutoConfig()
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found: Astro, Gatsby]`
+			);
+		});
+
+		it("should use npm build instead of framework build if present", async () => {
+			await writeFile(
+				"package.json",
+				JSON.stringify({
+					scripts: {
+						build: "echo build",
+					},
+					dependencies: {
+						astro: "5",
+					},
+				})
+			);
+
+			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
+				buildCommand: "npm run build",
+			});
+		});
+	});
+
+	describe("runAutoConfig()", () => {
+		let installSpy: MockInstance;
+		beforeEach(() => {
+			installSpy = vi
+				.spyOn(c3, "installWrangler")
+				.mockImplementation(async () => {});
+
+			vi.spyOn(compatDate, "getDevCompatibilityDate").mockImplementation(
+				() => "2000-01-01"
+			);
+		});
+		it("happy path", async () => {
+			vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "test-name");
+			await writeFile(
+				"package.json",
+				JSON.stringify({
+					name: "project-name",
+				})
+			);
+			mockConfirm({
+				text: "Do you want to deploy using these settings?",
+				result: true,
+			});
+			await writeFile(".gitignore", "");
+			const configureSpy = vi.fn(async (outputDir) => ({
+				assets: { directory: outputDir },
+			}));
+			await run.runAutoConfig({
+				buildCommand: "echo 'built' > build.txt",
+				configured: false,
+				framework: {
+					name: "fake",
+					configure: configureSpy,
+				} as unknown as Framework,
+				outputDir: "dist",
+				packageJson: {
+					dependencies: {
+						astro: "5",
+					},
+				},
+			});
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"Project settings detected:
+				Framework: fake
+				Build Command: echo 'built' > build.txt
+				Output Directory: dist
+				[build] Running: echo 'built' > build.txt"
+			`);
+
+			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
+				"{
+				  \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				  \\"name\\": \\"test-name\\",
+				  \\"compatibility_date\\": \\"2000-01-01\\",
+				  \\"observability\\": {
+				    \\"enabled\\": true
+				  },
+				  \\"assets\\": {
+				    \\"directory\\": \\"dist\\"
+				  }
+				}"
+			`);
+
+			expect(readFileSync(".gitignore")).toMatchInlineSnapshot(`
+				"
+
+				# wrangler files
+				.wrangler
+				.dev.vars*
+				!.dev.vars.example
+				.env*
+				!.env.example
+				"
+			`);
+
+			// Wrangler should have been installed
+			expect(installSpy).toHaveBeenCalled();
+
+			// The framework's configuration command should have been run
+			expect(configureSpy).toHaveBeenCalled();
+
+			// The framework's build command should have been run
+			expect(readFileSync("build.txt")).toMatchInlineSnapshot(`
+				"built
+				"
+			`);
+		});
 	});
 });

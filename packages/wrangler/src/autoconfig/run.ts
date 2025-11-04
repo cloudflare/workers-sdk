@@ -3,12 +3,12 @@ import { dirname, resolve } from "node:path";
 import { endSection, startSection } from "@cloudflare/cli";
 import { brandColor } from "@cloudflare/cli/colors";
 import { FatalError } from "@cloudflare/workers-utils";
+import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { getDevCompatibilityDate } from "../utils/compatibility-date";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
-import { runCommand } from "./c3-vendor/command";
 import { installWrangler } from "./c3-vendor/packages";
 import type { AutoConfigDetails } from "./types";
 import type { RawConfig } from "@cloudflare/workers-utils";
@@ -71,7 +71,11 @@ export async function runAutoConfig(
 	endSection(`Application configured`);
 
 	if (autoConfigDetails.buildCommand) {
-		await runCommand(autoConfigDetails.buildCommand?.split(" "));
+		await runCommand(
+			autoConfigDetails.buildCommand,
+			autoConfigDetails.projectPath ?? process.cwd(),
+			"[build]"
+		);
 	}
 
 	return;

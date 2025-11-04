@@ -18,7 +18,7 @@ export class Astro extends Framework {
 		});
 		await writeFileSync("public/.assetsignore", "_worker.js\n_routes.json");
 		return {
-			main: `${outputDir}/dist/_worker.js/index.js`,
+			main: `${outputDir}/_worker.js/index.js`,
 			compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
 			assets: {
 				binding: "ASSETS",

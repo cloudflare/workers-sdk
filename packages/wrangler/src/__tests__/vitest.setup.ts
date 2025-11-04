@@ -84,7 +84,14 @@ vi.mock("undici", async (importOriginal) => {
 	};
 });
 
-vi.mock("../package-manager");
+vi.mock("../package-manager", () => ({
+	getPackageManager() {
+		return {
+			type: "npm",
+			npx: "npx",
+		};
+	},
+}));
 
 vi.mock("../update-check");
 
