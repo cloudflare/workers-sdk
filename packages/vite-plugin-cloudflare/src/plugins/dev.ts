@@ -177,7 +177,9 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						"Failed to find viteCachedTransformMiddleware"
 					);
 
-					// Insert our middleware after the host check middleware to prevent DNS rebinding attacks
+					// Insert our middleware after the host check middleware to prevent DNS rebinding attacks.
+					// TODO: when we drop support for Vite 6 we can provide this middleware as normal.
+					// This is because Vite 7 places pre-middleware here by default.
 					middlewareStack.splice(cachedTransformMiddlewareIndex, 0, {
 						route: "",
 						handle: preMiddleware,
