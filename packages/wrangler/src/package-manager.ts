@@ -69,7 +69,7 @@ const NpmPackageManager: PackageManager = {
  */
 const PnpmPackageManager: PackageManager = {
 	type: "pnpm",
-	npx: "npx",
+	npx: "pnpm",
 };
 
 /**
