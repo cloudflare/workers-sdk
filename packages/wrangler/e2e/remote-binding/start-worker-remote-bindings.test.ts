@@ -124,3 +124,38 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 		await worker.dispose();
 	});
 });
+
+it("doesn't connect to remote bindings when `localBindingsOnly` is set", async () => {
+	const helper = new WranglerE2ETestHelper();
+	await helper.seed(resolve(__dirname, "./workers"));
+	await helper.seed({
+		"wrangler.json": JSON.stringify({
+			name: "remote-bindings-test",
+			main: "ai.js",
+			compatibility_date: "2025-05-07",
+			ai: {
+				binding: "AI",
+				remote: true,
+			},
+		}),
+	});
+
+	await expect(
+		(async () => {
+			const worker = await startWorker({
+				config: `${helper.tmpPath}/wrangler.json`,
+				dev: {
+					inspector: false,
+					server: { port: 0 },
+					localBindingsOnly: true,
+				},
+			});
+
+			await worker.ready;
+
+			await worker.fetch("http://example.com");
+		})()
+	).rejects.toThrowErrorMatchingInlineSnapshot(
+		`[Error: Binding AI needs to be run remotely]`
+	);
+});

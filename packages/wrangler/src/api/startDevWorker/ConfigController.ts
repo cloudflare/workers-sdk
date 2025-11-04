@@ -126,6 +126,7 @@ async function resolveDevConfig(
 	return {
 		auth,
 		remote: input.dev?.remote,
+		localBindingsOnly: input.dev?.localBindingsOnly,
 		server: {
 			hostname: input.dev?.server?.hostname || config.dev.ip,
 			port:
