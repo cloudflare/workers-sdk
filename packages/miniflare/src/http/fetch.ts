@@ -57,6 +57,15 @@ export async function fetch(
 		});
 
 		const responsePromise = new DeferredPromise<Response>();
+		let resolved = false;
+
+		const resolveOnce = (response: Response | Promise<Response>) => {
+			if (!resolved) {
+				resolved = true;
+				responsePromise.resolve(response);
+			}
+		};
+
 		ws.once("upgrade", (req) => {
 			const headers = convertUndiciHeadersToStandard(req.headers);
 			// Couple web socket with pair and resolve
@@ -67,7 +76,7 @@ export async function fetch(
 				webSocket: worker,
 				headers,
 			});
-			responsePromise.resolve(couplePromise.then(() => response));
+			resolveOnce(couplePromise.then(() => response));
 		});
 		ws.once("unexpected-response", (_, req) => {
 			const headers = convertUndiciHeadersToStandard(req.headers);
@@ -75,7 +84,26 @@ export async function fetch(
 				status: req.statusCode,
 				headers,
 			});
-			responsePromise.resolve(response);
+			resolveOnce(response);
+		});
+		// Fallback for Bun compatibility: Bun doesn't emit "upgrade" or "unexpected-response" events
+		// See: https://github.com/oven-sh/bun/issues/5951, https://github.com/oven-sh/bun/issues/24229
+		ws.once("open", () => {
+			const [worker, client] = Object.values(new WebSocketPair());
+			const couplePromise = coupleWebSocket(ws, client);
+			const response = new Response(null, {
+				status: 101,
+				webSocket: worker,
+				headers: new undici.Headers(),
+			});
+			resolveOnce(couplePromise.then(() => response));
+		});
+		ws.once("error", (error) => {
+			const response = new Response(null, {
+				status: 500,
+				statusText: error.message || "WebSocket connection failed",
+			});
+			resolveOnce(response);
 		});
 		return responsePromise;
 	}
