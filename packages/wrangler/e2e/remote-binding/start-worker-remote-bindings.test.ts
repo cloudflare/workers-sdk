@@ -125,7 +125,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("startWorker - remote bindings", () => {
 	});
 });
 
-it("doesn't connect to remote bindings when `remoteBindings` is set to `false`", async () => {
+it("doesn't connect to remote bindings when `remote` is set to `false`", async () => {
 	const helper = new WranglerE2ETestHelper();
 	await helper.seed(resolve(__dirname, "./workers"));
 	await helper.seed({
@@ -146,7 +146,7 @@ it("doesn't connect to remote bindings when `remoteBindings` is set to `false`",
 			dev: {
 				inspector: false,
 				server: { port: 0 },
-				remoteBindings: false,
+				remote: false,
 			},
 		});
 

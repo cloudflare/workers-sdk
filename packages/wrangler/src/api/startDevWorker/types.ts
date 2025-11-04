@@ -166,8 +166,6 @@ export interface StartDevWorkerInput {
 		 *   - undefined (default): Run your Worker's code locally, and any configured remote bindings remotely
 		 */
 		remote?: boolean | "minimal";
-		/** Whether remote bindings should be enabled */
-		remoteBindings?: boolean;
 		/** Cloudflare Account credentials. Can be provided upfront or as a function which will be called only when required. */
 		auth?: AsyncHook<CfAccount, [Pick<Config, "account_id">]>; // provide config.account_id as a hook param
 		/** Whether local storage (KV, Durable Objects, R2, D1, etc) is persisted. You can also specify the directory to persist data to. */
