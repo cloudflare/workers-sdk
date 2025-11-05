@@ -19,6 +19,15 @@ import type { Framework } from "../autoconfig/frameworks";
 import type { Config } from "@cloudflare/workers-utils";
 import type { MockInstance } from "vitest";
 
+vi.mock("../package-manager", () => ({
+	getPackageManager() {
+		return {
+			type: "npm",
+			npx: "npx",
+		};
+	},
+}));
+
 vi.mock("../deploy/deploy", async (importOriginal) => ({
 	...(await importOriginal()),
 	default: () => {
