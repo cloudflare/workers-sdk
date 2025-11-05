@@ -8,7 +8,10 @@ import { confirm } from "../dialogs";
 import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { getDevCompatibilityDate } from "../utils/compatibility-date";
-import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
+import {
+	addWranglerToAssetsIgnore,
+	addWranglerToGitIgnore,
+} from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
 import type { AutoConfigDetails } from "./types";
 import type { RawConfig } from "@cloudflare/workers-utils";
@@ -54,7 +57,7 @@ export async function runAutoConfig(
 				name:
 					getCIOverrideName() ??
 					autoConfigDetails.packageJson?.name ??
-					dirname(autoConfigDetails.projectPath ?? process.cwd()),
+					dirname(autoConfigDetails.projectPath),
 				compatibility_date: getDevCompatibilityDate(undefined),
 				observability: {
 					enabled: true,
@@ -66,14 +69,19 @@ export async function runAutoConfig(
 		)
 	);
 
-	await addWranglerToGitIgnore(autoConfigDetails.projectPath ?? process.cwd());
+	await addWranglerToGitIgnore(autoConfigDetails.projectPath);
+
+	// If we're uploading the project path as the output directory, make sure we don't accidentally upload any sensitive Wrangler files
+	if (autoConfigDetails.outputDir === autoConfigDetails.projectPath) {
+		await addWranglerToAssetsIgnore(autoConfigDetails.projectPath);
+	}
 
 	endSection(`Application configured`);
 
 	if (autoConfigDetails.buildCommand) {
 		await runCommand(
 			autoConfigDetails.buildCommand,
-			autoConfigDetails.projectPath ?? process.cwd(),
+			autoConfigDetails.projectPath,
 			"[build]"
 		);
 	}

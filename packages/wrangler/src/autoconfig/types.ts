@@ -3,7 +3,7 @@ import type { PackageJSON } from "@cloudflare/workers-utils";
 
 export type AutoConfigDetails = {
 	/** The path to the project (defaults to cwd) */
-	projectPath?: string;
+	projectPath: string;
 	/** The content of the project's package.json file (if any) */
 	packageJson?: PackageJSON;
 	/** Whether the project is already configured (no autoconfig required) */
