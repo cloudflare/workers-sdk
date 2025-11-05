@@ -653,6 +653,18 @@ describe("dev with remote bindings", { sequential: true }, () => {
 		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 			timeout: 2_000,
 		});
+		const bindingsPrintStart = std.out.indexOf(
+			"Your Worker has access to the following bindings:"
+		);
+		const bindingsPrintEnd = std.out.indexOf("⎔ Starting local server...") - 1;
+		expect(std.out.slice(bindingsPrintStart, bindingsPrintEnd))
+			.toMatchInlineSnapshot(`
+			"Your Worker has access to the following bindings:
+			Binding                                        Resource          Mode
+			env.KV_LOCAL_BINDING (mock-kv-namespace)       KV Namespace      local
+			env.KV_REMOTE_BINDING (mock-kv-namespace)      KV Namespace      local
+			"
+		`);
 		expect(proxyWorkerBindings).toEqual(undefined);
 		expect(workerOptions).toEqual([
 			expect.objectContaining({

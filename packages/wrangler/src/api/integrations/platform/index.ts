@@ -85,6 +85,10 @@ export type GetPlatformProxyOptions = {
 	 * If `false` is specified no data is persisted on the filesystem.
 	 */
 	persist?: boolean | { path: string };
+	/**
+	 * Whether remote bindings should be enabled or not (defaults to `true`)
+	 */
+	remoteBindings?: boolean;
 };
 
 /**
@@ -138,7 +142,7 @@ export async function getPlatformProxy<
 	});
 
 	let remoteProxySession: RemoteProxySession | undefined = undefined;
-	if (config.configPath) {
+	if (config.configPath && options.remoteBindings !== false) {
 		remoteProxySession = (
 			(await maybeStartOrUpdateRemoteProxySession({
 				path: config.configPath,

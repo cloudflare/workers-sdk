@@ -432,22 +432,19 @@ export default async function deploy(props: Props): Promise<{
 								config.userConfigPath &&
 								/\.jsonc?$/.test(config.userConfigPath)
 							) {
-								const targetingEnvironment = !!props.env;
-
 								if (
-									// TODO: Currently if the user is targeting an environment we don't offer them to update
-									// their config file since that is fairly nuanced, we should also support environments
-									// (the best we can) here
-									!targetingEnvironment &&
-									(await confirm(
+									await confirm(
 										"Would you like to update the local config file with the remote values?",
 										{
 											defaultValue: true,
 											fallbackValue: true,
 										}
-									))
+									)
 								) {
-									const patchObj: RawConfig = getConfigPatch(configDiff.diff);
+									const patchObj: RawConfig = getConfigPatch(
+										configDiff.diff,
+										props.env
+									);
 
 									experimental_patchConfig(
 										config.userConfigPath,
