@@ -1,4 +1,3 @@
-import { assertWranglerVersion } from "../assert-wrangler-version";
 import { hasAssetsConfigChanged } from "../asset-config";
 import { createBuildApp } from "../build";
 import {
@@ -17,8 +16,6 @@ import { getWarningForWorkersConfigs } from "../workers-configs";
 export const configPlugin = createPlugin("config", (ctx) => {
 	return {
 		async config(userConfig, env) {
-			await assertWranglerVersion();
-
 			if (ctx.resolvedPluginConfig.type === "preview") {
 				return { appType: "custom" };
 			}
