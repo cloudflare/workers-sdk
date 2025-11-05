@@ -276,7 +276,9 @@ export const deployCommand = createCommand({
 			);
 		}
 		if (args.experimentalAutoconfig) {
-			const details = await getDetailsForAutoConfig();
+			const details = await getDetailsForAutoConfig({
+				wranglerConfig: config,
+			});
 
 			// Only run auto config if the project is not already configured
 			if (!details.configured) {

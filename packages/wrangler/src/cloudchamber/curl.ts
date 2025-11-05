@@ -9,9 +9,9 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { Config } from "@cloudflare/workers-utils";
-import type yargs from "yargs";
+import type { Argv } from "yargs";
 
-export function yargsCurl(args: yargs.Argv<CommonYargsOptions>) {
+export function yargsCurl(args: Argv<CommonYargsOptions>) {
 	return args
 		.positional("path", { type: "string", default: "/" })
 		.option("header", {

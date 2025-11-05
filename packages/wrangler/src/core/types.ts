@@ -6,13 +6,42 @@ import type { Teams } from "./teams";
 import type { Config, FatalError, UserError } from "@cloudflare/workers-utils";
 import type Cloudflare from "cloudflare";
 import type {
-	Alias,
 	ArgumentsCamelCase,
-	CamelCaseKey,
+	InferredOptionType,
 	InferredOptionTypes,
 	Options,
 	PositionalOptions,
 } from "yargs";
+
+// Vendored from yargs
+/** Convert literal string types like 'foo-bar' to 'FooBar' */
+type PascalCase<S extends string> = string extends S
+	? string
+	: S extends `${infer T}-${infer U}`
+		? `${Capitalize<T>}${PascalCase<U>}`
+		: Capitalize<S>;
+
+// Vendored from yargs
+/** Convert literal string types like 'foo-bar' to 'fooBar' */
+type CamelCase<S extends string> = string extends S
+	? string
+	: S extends `${infer T}-${infer U}`
+		? `${T}${PascalCase<U>}`
+		: S;
+
+// Vendored from yargs
+type CamelCaseKey<K extends PropertyKey> = K extends string
+	? Exclude<CamelCase<K>, "">
+	: K;
+
+// Vendored from yargs
+type Alias<O extends Options | PositionalOptions> = O extends { alias: infer T }
+	? T extends Exclude<string, T>
+		? { [key in T]: InferredOptionType<O> }
+		: // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+			{}
+	: // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+		{};
 
 type StringKeyOf<T> = Extract<keyof T, string>;
 export type DeepFlatten<T> = T extends object
