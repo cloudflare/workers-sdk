@@ -1,17 +1,12 @@
 import assert from "node:assert";
 import { getSubdomainValuesAPIMock } from "../triggers/deploy";
-import { assertNever } from "../utils/assert-never";
 import {
 	diffJsonObjects,
 	isModifiedDiffValue,
 	isNonDestructive,
 } from "../utils/diff-json";
 import type { JsonLike } from "../utils/diff-json";
-import type {
-	Config,
-	RawConfig,
-	TopLevelOnlyField,
-} from "@cloudflare/workers-utils";
+import type { Config, RawConfig } from "@cloudflare/workers-utils";
 
 /**
  * Object representing the difference of two configuration objects.
@@ -295,8 +290,7 @@ function orderObjectFields<T extends Record<string, unknown>>(
  * Given a config diff generates a patch object that can be passed to `experimental_patchConfig` to revert the
  * changes in the config object that are described by the config diff.
  *
- * If the config is for a specific target environment, only the environment config object will be targeted for the
- * patch, besides top-level only keys which will target the top-level config object instead.
+ * If the config is for a specific target environment, only the environment config object will be targeted for the patch.
  *
  * @param configDiff The target config diff
  * @param targetEnvironment the target environment if any
@@ -385,36 +379,6 @@ function populateConfigPatchArray(diff: JsonLike[], patchArray: JsonLike[]) {
 }
 
 /**
- * Given a key discerns wether the key is only allowed at the top level of a config object
- *
- * @param key The target key
- * @returns true is the config is top-level only, false otherwise
- */
-function isTopLevelOnly(key: string): boolean {
-	const keyAsTopLevel = key as TopLevelOnlyField;
-
-	if (
-		keyAsTopLevel === "alias" ||
-		keyAsTopLevel === "legacy_env" ||
-		keyAsTopLevel === "send_metrics" ||
-		keyAsTopLevel === "dev" ||
-		keyAsTopLevel === "site" ||
-		keyAsTopLevel === "wasm_modules" ||
-		keyAsTopLevel === "text_blobs" ||
-		keyAsTopLevel === "data_blobs" ||
-		keyAsTopLevel === "keep_vars"
-	) {
-		return true;
-	}
-
-	// Note: this `assertNever` call ensures that all the topLevel fields
-	//       are included in the check above
-	assertNever(keyAsTopLevel);
-
-	return false;
-}
-
-/**
  * Recursive call for `getConfigPatch`, it side-effectfully populates the object present at the config patch level
  *
  * @param diff The current section of the config diff that is being analyzed
@@ -436,7 +400,7 @@ function populateConfigPatchObject(
 		.filter((key) => diff[key] && typeof diff[key] === "object")
 		.forEach((key) => {
 			if (isModifiedDiffValue(diff[key])) {
-				if (targetEnvironment && !isTopLevelOnly(key)) {
+				if (targetEnvironment) {
 					getEnvObj(targetEnvironment)[key] = diff[key].__old;
 				} else {
 					patchObj[key] = diff[key].__old;
@@ -444,7 +408,7 @@ function populateConfigPatchObject(
 				return;
 			}
 
-			if (targetEnvironment && !isTopLevelOnly(key)) {
+			if (targetEnvironment) {
 				getEnvObj(targetEnvironment)[key] ??= Array.isArray(diff[key])
 					? []
 					: {};
@@ -456,7 +420,7 @@ function populateConfigPatchObject(
 				([entryKey, entryValue]) => {
 					if (entryKey.endsWith("__deleted")) {
 						let patchObjectToUpdate = patchObj[key] as Record<string, unknown>;
-						if (targetEnvironment && !isTopLevelOnly(key)) {
+						if (targetEnvironment) {
 							const envObj = getEnvObj(targetEnvironment);
 							envObj[key] ??= {};
 							patchObjectToUpdate = envObj[key] as Record<string, unknown>;
@@ -470,7 +434,7 @@ function populateConfigPatchObject(
 			if (diff[key] && typeof diff[key] === "object") {
 				populateConfigPatch(
 					diff[key],
-					(targetEnvironment && !isTopLevelOnly(key)
+					(targetEnvironment
 						? getEnvObj(targetEnvironment)[key]
 						: patchObj[key]) as Record<string, JsonLike> | JsonLike[]
 					// Note: we are not passing the target environment since in the recursive calls

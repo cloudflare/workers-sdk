@@ -16,8 +16,7 @@ import type {
  * Notes:
  *
  * - Fields that are only specified in `ConfigFields` and not `Environment` can only appear
- *   in the top level config and should not appear in any environments (these are defined
- *   in the `TopLevelOnlyField` type).
+ *   in the top level config and should not appear in any environments.
  * - Fields that are specified in `PagesConfigFields` are only relevant for Pages projects
  * - All top level fields in config and environments are optional in the Wrangler configuration file.
  *
@@ -55,12 +54,6 @@ export interface ComputedFields {
 	/** The name of the environment being targeted. */
 	targetEnvironment: string | undefined;
 }
-
-/** Fields that can only appear at the top level */
-export type TopLevelOnlyField = Exclude<
-	keyof ConfigFields<RawDevConfig>,
-	keyof Environment
->;
 
 export interface ConfigFields<Dev extends RawDevConfig> {
 	/**

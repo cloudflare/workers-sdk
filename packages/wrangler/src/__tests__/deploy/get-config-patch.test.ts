@@ -251,98 +251,55 @@ describe("getConfigPatch", () => {
 		});
 	});
 
-	describe("with environment", () => {
-		test("non top level only configs get added/set on the target environment", () => {
-			/*
+	test("configs get added/set to a target environment", () => {
+		/*
 			Note: in the remote configuration we don't know if a value is actually there because
 			      inherited from the top level or not, so to be safe we just add it to the target
 				  environment, this applies to all configurations besides the ones that are only
 				  allowed at the top level
 			*/
-			expect(
-				getConfigPatch(
-					{
-						preview_urls: {
-							__old: false,
-							__new: true,
-						},
-						kv_namespaces: [
-							[
-								"-",
-								{
-									id: "<my-kv>",
-									binding: "MY_KV",
-								},
-							],
-							[
-								"-",
-								{
-									id: "<my-kv-a>",
-									binding: "MY_KV_A",
-								},
-							],
-						],
+		expect(
+			getConfigPatch(
+				{
+					preview_urls: {
+						__old: false,
+						__new: true,
 					},
-					"staging"
-				)
-			).toEqual({
-				env: {
-					staging: {
-						kv_namespaces: [
+					kv_namespaces: [
+						[
+							"-",
 							{
-								binding: "MY_KV",
 								id: "<my-kv>",
-							},
-							{
-								binding: "MY_KV_A",
-								id: "<my-kv-a>",
+								binding: "MY_KV",
 							},
 						],
-						preview_urls: false,
-					},
+						[
+							"-",
+							{
+								id: "<my-kv-a>",
+								binding: "MY_KV_A",
+							},
+						],
+					],
 				},
-			});
-		});
-
-		test("top level only config changes are applied to the top level (and not on the target environment)", () => {
-			expect(
-				getConfigPatch(
-					{
-						send_metrics: {
-							__old: false,
-							__new: true,
+				"staging"
+			)
+		).toEqual({
+			env: {
+				staging: {
+					kv_namespaces: [
+						{
+							binding: "MY_KV",
+							id: "<my-kv>",
 						},
-					},
-					"staging"
-				)
-			).toEqual({
-				send_metrics: false,
-			});
-		});
-
-		test("a mix of top level only and non top level only config changes are applied as expected", () => {
-			expect(
-				getConfigPatch(
-					{
-						preview_urls: {
-							__old: false,
-							__new: true,
+						{
+							binding: "MY_KV_A",
+							id: "<my-kv-a>",
 						},
-						send_metrics: {
-							__old: false,
-							__new: true,
-						},
-					},
-					"staging"
-				)
-			).toEqual({
-				send_metrics: false,
-				env: {
-					staging: {
-						preview_urls: false,
-					},
+					],
+					preview_urls: false,
 				},
-			});
+			},
 		});
 	});
 });
