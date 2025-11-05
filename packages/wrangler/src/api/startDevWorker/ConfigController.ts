@@ -218,6 +218,7 @@ async function resolveBindings(
 			{
 				registry,
 				local: !input.dev?.remote,
+				remoteBindingsDisabled: input.dev?.remote === false,
 				name: config.name,
 			}
 		);

@@ -41,6 +41,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
 	persistState?: PersistState;
 	inspectorPort?: number | false;
+	remoteBindings?: boolean;
 	experimental?: Experimental;
 }
 
@@ -58,6 +59,7 @@ interface BaseResolvedConfig {
 	persistState: PersistState;
 	inspectorPort: number | false | undefined;
 	experimental: Experimental;
+	remoteBindings: boolean;
 }
 
 export interface AssetsOnlyResolvedConfig extends BaseResolvedConfig {
@@ -123,6 +125,7 @@ export function resolvePluginConfig(
 	if (viteEnv.isPreview) {
 		return {
 			...shared,
+			remoteBindings: pluginConfig.remoteBindings ?? true,
 			type: "preview",
 			workers: getWorkerConfigs(root),
 		};
@@ -151,6 +154,7 @@ export function resolvePluginConfig(
 			cloudflareEnv,
 			config: entryWorkerResolvedConfig.config,
 			configPaths,
+			remoteBindings: pluginConfig.remoteBindings ?? true,
 			rawConfigs: {
 				entryWorker: entryWorkerResolvedConfig,
 			},
@@ -231,6 +235,7 @@ export function resolvePluginConfig(
 		entryWorkerEnvironmentName,
 		nodeJsCompatMap,
 		staticRouting,
+		remoteBindings: pluginConfig.remoteBindings ?? true,
 		rawConfigs: {
 			entryWorker: entryWorkerResolvedConfig,
 			auxiliaryWorkers: auxiliaryWorkersResolvedConfigs,

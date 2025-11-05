@@ -214,10 +214,8 @@ export const dev = createCommand({
 		},
 		local: {
 			alias: "l",
-			describe: "Run on my machine",
+			describe: "Run locally with remote bindings disabled",
 			type: "boolean",
-			deprecated: true,
-			hidden: true,
 		},
 		minify: {
 			describe: "Minify the script",
@@ -454,7 +452,6 @@ export function getInferredHost(
  * If `undefined` it defaults to the standard .env files from `getDefaultEnvFiles()`.
  * @param local Whether the dev server should run locally.
  * @param args Additional arguments for the dev server.
- * @param remoteBindingsEnabled Whether remote bindings are enabled, defaults to the value of the `REMOTE_BINDINGS` flag.
  * @returns The bindings for the Cloudflare Worker.
  */
 export function getBindings(
