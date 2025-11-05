@@ -16,6 +16,13 @@ export async function getPackageManager(): Promise<PackageManager> {
 		supportsBun(),
 	]);
 
+	logger.log({
+		hasYarn,
+		hasNpm,
+		hasPnpm,
+		hasBun,
+	});
+
 	const userAgent = sniffUserAgent();
 
 	// check the user agent
@@ -129,7 +136,7 @@ function supportsBun(): Promise<boolean> {
  * - [npm](https://github.com/npm/cli/blob/1415b4bdeeaabb6e0ba12b6b1b0cc56502bd64ab/lib/utils/config/definitions.js#L1945-L1979)
  * - [pnpm](https://github.com/pnpm/pnpm/blob/cd4f9341e966eb8b411462b48ff0c0612e0a51a7/packages/plugin-commands-script-runners/src/makeEnv.ts#L14)
  * - [yarn](https://yarnpkg.com/advanced/lifecycle-scripts#environment-variables)
- * - [bun](https://bun.sh/docs/cli/run#environment-variables)
+ * - [bun](https://github.com/oven-sh/bun/blob/550522e99b303d8172b7b16c5750d458cb056434/src/Global.zig#L205)
  */
 export function sniffUserAgent(): "npm" | "pnpm" | "yarn" | "bun" | undefined {
 	const userAgent = env.npm_config_user_agent;
@@ -145,11 +152,12 @@ export function sniffUserAgent(): "npm" | "pnpm" | "yarn" | "bun" | undefined {
 		return "pnpm";
 	}
 
-	if (userAgent.includes("npm")) {
-		return "npm";
-	}
-
 	if (userAgent.includes("bun")) {
 		return "bun";
+	}
+
+	// npm should come last as it is included in the user agent strings of other package managers
+	if (userAgent.includes("npm")) {
+		return "npm";
 	}
 }
