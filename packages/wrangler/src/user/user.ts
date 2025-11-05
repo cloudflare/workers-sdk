@@ -724,10 +724,10 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 		let tokenExchangeResErr = undefined;
 
 		try {
-			tokenExchangeResErr = await response.text();
-			tokenExchangeResErr = JSON.parse(tokenExchangeResErr);
-		} catch {
+			tokenExchangeResErr = await getJSONFromResponse(response);
+		} catch (e) {
 			// If it can't parse to JSON ignore the error
+			logger.error(e);
 		}
 
 		if (tokenExchangeResErr !== undefined) {
@@ -1352,15 +1352,34 @@ async function fetchAuthToken(body: URLSearchParams) {
 	const headers: Record<string, string> = {
 		"Content-Type": "application/x-www-form-urlencoded",
 	};
+	logger.debug("fetching auth token", body.toString());
 	if (await domainUsesAccess(getAuthDomainFromEnv())) {
+		logger.debug(
+			"Using Cloudflare Access to get an access token for the auth request"
+		);
 		// We are trying to access the staging API so we need an "access token".
 		headers["Cookie"] = `CF_Authorization=${await getCloudflareAccessToken()}`;
 	}
-	return await fetch(getTokenUrlFromEnv(), {
-		method: "POST",
-		body: body.toString(),
-		headers,
-	});
+	logger.debug("Fetching auth token from", getTokenUrlFromEnv());
+	try {
+		const response = await fetch(getTokenUrlFromEnv(), {
+			method: "POST",
+			body: body.toString(),
+			headers,
+		});
+		if (!response.ok) {
+			logger.error(
+				"Failed to fetch auth token:",
+				response.status,
+				response.statusText,
+				await response.text()
+			);
+		}
+		return response;
+	} catch (e) {
+		logger.error("Failed to fetch auth token:", e);
+		throw e;
+	}
 }
 
 async function getJSONFromResponse(response: Response) {

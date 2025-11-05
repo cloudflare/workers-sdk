@@ -1,5 +1,6 @@
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
+import { logger } from "../logger";
 import { getAccessToken } from "./access";
 
 /**
@@ -110,6 +111,7 @@ export const getCloudflareAccessToken = async () => {
 
 	// If the environment variable is defined, go ahead and use it.
 	if (env !== undefined) {
+		logger.debug("Using WRANGLER_CF_AUTHORIZATION_TOKEN from environment", env);
 		return env;
 	}
 
