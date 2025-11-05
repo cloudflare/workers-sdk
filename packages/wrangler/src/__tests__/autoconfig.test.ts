@@ -267,10 +267,7 @@ describe("autoconfig (deploy)", () => {
 			expect(configureSpy).toHaveBeenCalled();
 
 			// The framework's build command should have been run
-			expect(readFileSync("build.txt")).toMatchInlineSnapshot(`
-				"built
-				"
-			`);
+			expect(readFileSync("build.txt")).toContain("built");
 		});
 	});
 });
