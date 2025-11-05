@@ -413,7 +413,7 @@ export async function getDevMiniflareOptions(config: {
 								: undefined;
 
 							const remoteProxySessionData =
-								!resolvedPluginConfig.remoteBindingsEnabled
+								!resolvedPluginConfig.remoteBindings
 									? // if remote bindings are not enabled then the proxy session can simply be null
 										null
 									: await maybeStartOrUpdateRemoteProxySession(
@@ -741,17 +741,16 @@ export async function getPreviewMiniflareOptions(config: {
 					? remoteProxySessionsDataMap.get(workerConfig.configPath)
 					: undefined;
 
-				const remoteProxySessionData =
-					!resolvedPluginConfig.remoteBindingsEnabled
-						? // if remote bindings are not enabled then the proxy session can simply be null
-							null
-						: await maybeStartOrUpdateRemoteProxySession(
-								{
-									name: workerConfig.name,
-									bindings: bindings ?? {},
-								},
-								preExistingRemoteProxySessionData ?? null
-							);
+				const remoteProxySessionData = !resolvedPluginConfig.remoteBindings
+					? // if remote bindings are not enabled then the proxy session can simply be null
+						null
+					: await maybeStartOrUpdateRemoteProxySession(
+							{
+								name: workerConfig.name,
+								bindings: bindings ?? {},
+							},
+							preExistingRemoteProxySessionData ?? null
+						);
 
 				if (workerConfig.configPath && remoteProxySessionData) {
 					remoteProxySessionsDataMap.set(
