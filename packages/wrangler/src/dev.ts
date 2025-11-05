@@ -286,7 +286,7 @@ export const dev = createCommand({
 		}
 	},
 	async handler(args) {
-		const devInstance = await startDev({ ...args });
+		const devInstance = await startDev(args);
 		assert(devInstance.devEnv !== undefined);
 		await events.once(devInstance.devEnv, "teardown");
 		await Promise.all(devInstance.secondary.map((d) => d.teardown()));
