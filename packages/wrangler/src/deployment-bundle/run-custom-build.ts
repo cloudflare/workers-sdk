@@ -16,7 +16,7 @@ export async function runCommand(
 	try {
 		const res = execaCommand(command, {
 			shell: true,
-			...(cwd && { cwd: cwd }),
+			cwd,
 		});
 		res.stdout?.pipe(
 			new Writable({
