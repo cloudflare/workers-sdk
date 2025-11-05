@@ -278,6 +278,114 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
+	[
+		{
+			name: "tty enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_tty_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_tty_module: true,
+			},
+		},
+		{
+			name: "tty disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_tty_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_tty_module: false,
+			},
+		},
+	],
+	[
+		{
+			name: "repl enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_repl_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_repl_module: true,
+			},
+		},
+		{
+			name: "repl disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_repl_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_repl_module: false,
+			},
+		},
+	],
+	[
+		{
+			name: "readline enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_readline_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_readline_module: true,
+			},
+		},
+		{
+			name: "readline disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_readline_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_readline_module: false,
+			},
+		},
+	],
+	[
+		{
+			name: "inspector enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_inspector_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_inspector_module: true,
+			},
+		},
+		{
+			name: "inspector disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_inspector_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_inspector_module: false,
+			},
+		},
+	],
+	[
+		{
+			name: "v8 enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_v8_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_v8_module: true,
+			},
+		},
+		{
+			name: "v8 disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_v8_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_v8_module: false,
+			},
+		},
+	],
+	[
+		{
+			name: "dgram enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_dgram_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_dgram_module: true,
+			},
+		},
+		{
+			name: "dgram disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_dgram_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_dgram_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(localTestConfigs)(
