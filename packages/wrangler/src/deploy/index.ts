@@ -8,7 +8,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
-import { getDetailsForAutoConfig } from "../autoconfig/get-details";
+import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { runAutoConfig } from "../autoconfig/run";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";

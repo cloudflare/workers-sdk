@@ -3,26 +3,26 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";
 import { vi } from "vitest";
-import * as c3 from "../autoconfig/c3-vendor/packages";
-import * as details from "../autoconfig/get-details";
-import * as run from "../autoconfig/run";
-import * as format from "../deployment-bundle/guess-worker-format";
-import { clearOutputFilePath } from "../output";
-import * as compatDate from "../utils/compatibility-date";
-import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
-import { mockConsoleMethods } from "./helpers/mock-console";
-import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
-import { useMockIsTTY } from "./helpers/mock-istty";
-import { runInTempDir } from "./helpers/run-in-tmp";
-import { runWrangler } from "./helpers/run-wrangler";
-import { seed } from "./helpers/seed";
-import { writeWorkerSource } from "./helpers/write-worker-source";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
-import type { Framework } from "../autoconfig/frameworks";
+import * as c3 from "../../autoconfig/c3-vendor/packages";
+import * as details from "../../autoconfig/details";
+import * as run from "../../autoconfig/run";
+import * as format from "../../deployment-bundle/guess-worker-format";
+import { clearOutputFilePath } from "../../output";
+import * as compatDate from "../../utils/compatibility-date";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { mockConsoleMethods } from "../helpers/mock-console";
+import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
+import { useMockIsTTY } from "../helpers/mock-istty";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { runWrangler } from "../helpers/run-wrangler";
+import { seed } from "../helpers/seed";
+import { writeWorkerSource } from "../helpers/write-worker-source";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
+import type { Framework } from "../../autoconfig/frameworks";
 import type { Config } from "@cloudflare/workers-utils";
 import type { MockInstance } from "vitest";
 
-vi.mock("../package-manager", () => ({
+vi.mock("../../package-manager", () => ({
 	getPackageManager() {
 		return {
 			type: "npm",
@@ -265,10 +265,11 @@ describe("autoconfig (deploy)", () => {
 			});
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Project settings detected:
-				Framework: fake
-				Build Command: echo 'built' > build.txt
-				Output Directory: dist
+				"Auto-detected Project Settings:
+				 - Framework: fake
+				 - Build Command: echo 'built' > build.txt
+				 - Output Directory: dist
+
 				[build] Running: echo 'built' > build.txt"
 			`);
 
