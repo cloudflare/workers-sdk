@@ -126,18 +126,17 @@ async function registryConfigureCommand(
 			throw new UserError(`Unhandled registry type: ${registryType.type}`);
 	}
 
-	log("\n");
-	log("Setting up integration with Secrets Store...\n");
+	log("\nSetting up integration with Secrets Store...\n");
 	const accountId = await getAccountId(config);
 	let secretStoreId = configureArgs.secretStoreId;
 	if (!secretStoreId) {
 		const stores = await listStores(config, accountId);
 		if (stores.length === 0) {
 			const defaultStoreName = "default_secret_store";
-			const check = await confirm(
+			const yes = await confirm(
 				`No existing Secret Stores found. Create a Secret Store to store your registry credentials?`
 			);
-			if (!check) {
+			if (!yes) {
 				endSection("Cancelled.");
 				return;
 			}
