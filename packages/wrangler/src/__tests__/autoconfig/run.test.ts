@@ -22,7 +22,7 @@ import type { Framework } from "../../autoconfig/frameworks";
 import type { Config } from "@cloudflare/workers-utils";
 import type { MockInstance } from "vitest";
 
-vi.mock("../package-manager", () => ({
+vi.mock("../../package-manager", () => ({
 	getPackageManager() {
 		return {
 			type: "npm",
@@ -265,10 +265,11 @@ describe("autoconfig (deploy)", () => {
 			});
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Project settings detected:
-				Framework: fake
-				Build Command: echo 'built' > build.txt
-				Output Directory: dist
+				"Auto-detected Project Settings:
+				 - Framework: fake
+				 - Build Command: echo 'built' > build.txt
+				 - Output Directory: dist
+
 				[build] Running: echo 'built' > build.txt"
 			`);
 
