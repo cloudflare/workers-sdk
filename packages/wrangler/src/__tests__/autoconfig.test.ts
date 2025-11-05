@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+// TODO(dario): rename this file run.test.ts and move it under __tests__/autoconfig
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";
