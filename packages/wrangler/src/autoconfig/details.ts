@@ -1,6 +1,5 @@
 import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
-// TODO(dario): rename to details.ts
 import { brandColor } from "@cloudflare/cli/colors";
 import {
 	FatalError,

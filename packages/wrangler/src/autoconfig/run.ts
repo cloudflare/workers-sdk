@@ -10,7 +10,7 @@ import { getDevCompatibilityDate } from "../utils/compatibility-date";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
-import { displayAutoConfigDetails } from "./get-details";
+import { displayAutoConfigDetails } from "./details";
 import type { AutoConfigDetails } from "./types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
