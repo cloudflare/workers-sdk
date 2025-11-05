@@ -16,7 +16,7 @@ describe("invalid Wrangler version e2e tests", () => {
 		const proc = await runLongLived("pnpm", "dev", projectPath);
 		expect(await proc.exitCode).not.toBe(0);
 		expect(proc.stderr).toMatch(
-			/The installed version of Wrangler \(4\.20\.0\) is older than the version required by @cloudflare\/vite-plugin \(\d+\.\d+\.\d+\)/
+			/The installed version of Wrangler \(4\.20\.0\) does not satisfy the peer dependency required by @cloudflare\/vite-plugin \(\^\d+\.\d+\.\d+\)/
 		);
 	});
 });
