@@ -86,7 +86,7 @@ export type GetPlatformProxyOptions = {
 	 */
 	persist?: boolean | { path: string };
 	/**
-	 * Wether remote bindings should be enabled or not (defaults to `true`)
+	 * Whether remote bindings should be enabled or not (defaults to `true`)
 	 */
 	remoteBindings?: boolean;
 };
