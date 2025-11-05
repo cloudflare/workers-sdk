@@ -1214,9 +1214,13 @@ export function createCLIParser(argv: string[]) {
 	});
 
 	// containers
-	wrangler.command("containers", false, (containersArgs) => {
-		return containers(containersArgs.command(subHelp), subHelp);
-	});
+	wrangler.command(
+		"containers",
+		"📦 Manage Containers [open-beta]",
+		(containersArgs) => {
+			return containers(containersArgs.command(subHelp), subHelp);
+		}
+	);
 
 	// [PRIVATE BETA] pubsub
 	wrangler.command(

@@ -243,7 +243,7 @@ describe("getNormalizedContainerOptions", () => {
 				{
 					name: "test-container",
 					class_name: "TestContainer",
-					image: "registry.example.com/test:latest",
+					image: "registry.cloudflare.com/test:latest",
 					max_instances: 3,
 					configuration: {
 						disk: { size_mb: 5000 },
@@ -274,7 +274,7 @@ describe("getNormalizedContainerOptions", () => {
 			disk_bytes: 5_000_000_000, // 5000 MB in bytes
 			memory_mib: 1024,
 			vcpu: 2,
-			image_uri: "registry.example.com/test:latest",
+			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
 			constraints: { tier: 1 },
 		});
 	});
@@ -290,7 +290,7 @@ describe("getNormalizedContainerOptions", () => {
 				{
 					name: "test-container",
 					class_name: "TestContainer",
-					image: "registry.example.com/test:latest",
+					image: "registry.cloudflare.com/test:latest",
 					max_instances: 3,
 					instance_type: {
 						disk_mb: 5000,
@@ -321,7 +321,7 @@ describe("getNormalizedContainerOptions", () => {
 			disk_bytes: 5_000_000_000, // 5000 MB in bytes
 			memory_mib: 1024,
 			vcpu: 2,
-			image_uri: "registry.example.com/test:latest",
+			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
 			constraints: { tier: 1 },
 		});
 	});
@@ -336,7 +336,7 @@ describe("getNormalizedContainerOptions", () => {
 				{
 					name: "test-container",
 					class_name: "TestContainer",
-					image: "registry.example.com/test:latest",
+					image: "registry.cloudflare.com/test:latest",
 					max_instances: 3,
 					instance_type: {
 						vcpu: 2,
@@ -365,7 +365,7 @@ describe("getNormalizedContainerOptions", () => {
 			disk_bytes: 2_000_000_000, // 2000 MB in bytes
 			memory_mib: 256,
 			vcpu: 2,
-			image_uri: "registry.example.com/test:latest",
+			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
 			constraints: { tier: 1 },
 		});
 	});
@@ -379,7 +379,7 @@ describe("getNormalizedContainerOptions", () => {
 			containers: [
 				{
 					class_name: "TestContainer",
-					image: "registry.example.com/test:latest",
+					image: "registry.cloudflare.com/test:latest",
 					instance_type: "standard",
 					name: "test-container",
 					max_instances: 3,
@@ -405,7 +405,7 @@ describe("getNormalizedContainerOptions", () => {
 			rollout_step_percentage: [10, 100],
 			rollout_kind: "full_auto",
 			instance_type: "standard",
-			image_uri: "registry.example.com/test:latest",
+			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
 			constraints: { tier: 1 },
 		});
 	});
@@ -423,7 +423,7 @@ describe("getNormalizedContainerOptions", () => {
 				{
 					name: "custom-name",
 					class_name: "TestContainer",
-					image: "registry.example.com/test:latest",
+					image: "registry.cloudflare.com/test:latest",
 					max_instances: 10,
 					scheduling_policy: "regional",
 					rollout_step_percentage: 50,
@@ -461,7 +461,7 @@ describe("getNormalizedContainerOptions", () => {
 			rollout_kind: "full_manual",
 			rollout_active_grace_period: 600,
 			instance_type: "basic",
-			image_uri: "registry.example.com/test:latest",
+			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
 			constraints: {
 				tier: 2,
 				regions: ["US-EAST-1", "US-WEST-2"],
@@ -531,12 +531,12 @@ describe("getNormalizedContainerOptions", () => {
 			containers: [
 				{
 					class_name: "Container1",
-					image: "registry.example.com/test1:latest",
+					image: "registry.cloudflare.com/test1:latest",
 					name: "test-container",
 				},
 				{
 					class_name: "Container2",
-					image: "registry.example.com/test2:latest",
+					image: "registry.cloudflare.com/test2:latest",
 					name: "test-container-two",
 				},
 			],
@@ -649,5 +649,102 @@ describe("getNormalizedContainerOptions", () => {
 		const result = await getNormalizedContainerOptions(config, {});
 		expect(result).toHaveLength(1);
 		expect(result[0].rollout_step_percentage).toBe(100);
+	});
+
+	describe("image validation and resolution", async () => {
+		it("should reject unsupported image registries", async () => {
+			const config: Config = {
+				name: "test-worker",
+				configPath: "/test/wrangler.toml",
+				userConfigPath: "/test/wrangler.toml",
+				topLevelName: "test-worker",
+				containers: [
+					{
+						class_name: "TestContainer",
+						image: "docker.io/test:latest",
+						instance_type: "standard",
+						name: "test-container",
+						max_instances: 3,
+					},
+				],
+				durable_objects: {
+					bindings: [
+						{
+							name: "TEST_DO",
+							class_name: "TestContainer",
+						},
+					],
+				},
+			} as Partial<Config> as Config;
+			await expect(getNormalizedContainerOptions(config, {})).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: docker.io is not a supported image registry.
+				Currently we support the following non-Cloudflare registries: AWS ECR.
+				To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images]
+			`);
+		});
+		it("should not try and add an account id to non containers registry uris", async () => {
+			const config: Config = {
+				name: "test-worker",
+				configPath: "/test/wrangler.toml",
+				userConfigPath: "/test/wrangler.toml",
+				topLevelName: "test-worker",
+				containers: [
+					{
+						class_name: "TestContainer",
+						image: "123456789012.dkr.ecr.us-west-2.amazonaws.com/test:blah",
+						instance_type: "standard",
+						name: "test-container",
+						max_instances: 3,
+					},
+				],
+				durable_objects: {
+					bindings: [
+						{
+							name: "TEST_DO",
+							class_name: "TestContainer",
+						},
+					],
+				},
+			} as Partial<Config> as Config;
+			const result = await getNormalizedContainerOptions(config, {});
+			expect(result).toHaveLength(1);
+			expect(result[0]).toMatchObject({
+				image_uri: "123456789012.dkr.ecr.us-west-2.amazonaws.com/test:blah",
+			});
+			vi.unstubAllEnvs();
+		});
+		it("should not try and add an account id during a dry run", async () => {
+			const config: Config = {
+				name: "test-worker",
+				configPath: "/test/wrangler.toml",
+				userConfigPath: "/test/wrangler.toml",
+				topLevelName: "test-worker",
+				containers: [
+					{
+						class_name: "TestContainer",
+						image: "registry.cloudflare.com/test:latest",
+						instance_type: "standard",
+						name: "test-container",
+						max_instances: 3,
+					},
+				],
+				durable_objects: {
+					bindings: [
+						{
+							name: "TEST_DO",
+							class_name: "TestContainer",
+						},
+					],
+				},
+			} as Partial<Config> as Config;
+			const result = await getNormalizedContainerOptions(config, {
+				dryRun: true,
+			});
+			expect(result).toHaveLength(1);
+			expect(result[0]).toMatchObject({
+				image_uri: "registry.cloudflare.com/test:latest",
+			});
+		});
 	});
 });
