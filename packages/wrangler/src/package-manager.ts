@@ -48,7 +48,7 @@ export async function getPackageManager(): Promise<PackageManager> {
 		return { ...BunPackageManager };
 	} else {
 		throw new UserError(
-			"Unable to find a package manager. Supported managers are: npm, yarn, and pnpm.",
+			"Unable to find a package manager. Supported managers are: npm, yarn, pnpm, and bun.",
 			{
 				telemetryMessage: true,
 			}
