@@ -1,5 +1,7 @@
 import { readdir, stat } from "node:fs/promises";
 import { join, resolve } from "node:path";
+// TODO(dario): rename to details.ts
+import { brandColor } from "@cloudflare/cli/colors";
 import {
 	FatalError,
 	parsePackageJSON,
@@ -118,4 +120,31 @@ export async function getDetailsForAutoConfig({
 		buildCommand: detectedFramework?.buildCommand ?? packageJsonBuild,
 		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
 	};
+}
+
+export function displayAutoConfigDetails(
+	autoConfigDetails: AutoConfigDetails
+): void {
+	if (
+		!autoConfigDetails.framework &&
+		!autoConfigDetails.buildCommand &&
+		!autoConfigDetails.outputDir
+	) {
+		logger.log("No Project Settings Auto-detected");
+		return;
+	}
+
+	logger.log("Auto-detected Project Settings:");
+
+	if (autoConfigDetails.framework) {
+		logger.log(brandColor(" - Framework:"), autoConfigDetails.framework.name);
+	}
+	if (autoConfigDetails.buildCommand) {
+		logger.log(brandColor(" - Build Command:"), autoConfigDetails.buildCommand);
+	}
+	if (autoConfigDetails.outputDir) {
+		logger.log(brandColor(" - Output Directory:"), autoConfigDetails.outputDir);
+	}
+
+	logger.log("");
 }

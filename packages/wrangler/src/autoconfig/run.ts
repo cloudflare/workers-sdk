@@ -1,7 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { endSection, startSection } from "@cloudflare/cli";
-import { brandColor } from "@cloudflare/cli/colors";
 import { FatalError } from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
@@ -11,25 +10,14 @@ import { getDevCompatibilityDate } from "../utils/compatibility-date";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
+import { displayAutoConfigDetails } from "./get-details";
 import type { AutoConfigDetails } from "./types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 export async function runAutoConfig(
 	autoConfigDetails: AutoConfigDetails
 ): Promise<void> {
-	logger.debug(
-		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
-	);
-	logger.log("Project settings detected:");
-	if (autoConfigDetails.framework) {
-		logger.log(brandColor("Framework:"), autoConfigDetails.framework.name);
-	}
-	if (autoConfigDetails.buildCommand) {
-		logger.log(brandColor("Build Command:"), autoConfigDetails.buildCommand);
-	}
-	if (autoConfigDetails.outputDir) {
-		logger.log(brandColor("Output Directory:"), autoConfigDetails.outputDir);
-	}
+	displayAutoConfigDetails(autoConfigDetails);
 
 	const deploy = await confirm("Do you want to deploy using these settings?");
 	if (!deploy) {
@@ -39,7 +27,11 @@ export async function runAutoConfig(
 		throw new FatalError("Cannot deploy project without an output directory");
 	}
 
-	startSection("Configuring your application for Cloudflare", "Step 2 of 3");
+	logger.debug(
+		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
+	);
+
+	startSection("Configuring your application for Cloudflare");
 
 	await installWrangler();
 
