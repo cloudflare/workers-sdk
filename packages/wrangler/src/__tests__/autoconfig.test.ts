@@ -208,6 +208,17 @@ describe("autoconfig (deploy)", () => {
 				outputDir: join(process.cwd(), "public"),
 			});
 		});
+
+		it("outputDir should prioritize the project directory over its child directories", async () => {
+			await seed({
+				"index.html": `<h1>Hello World</h1>`,
+				"public/index.html": `<h1>Hello World</h1>`,
+			});
+
+			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
+				outputDir: process.cwd(),
+			});
+		});
 	});
 
 	describe("runAutoConfig()", () => {

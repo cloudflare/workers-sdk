@@ -8,10 +8,8 @@ import { confirm } from "../dialogs";
 import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { getDevCompatibilityDate } from "../utils/compatibility-date";
-import {
-	addWranglerToAssetsIgnore,
-	addWranglerToGitIgnore,
-} from "./c3-vendor/add-wrangler-gitignore";
+import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
+import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
 import type { AutoConfigDetails } from "./types";
 import type { RawConfig } from "@cloudflare/workers-utils";

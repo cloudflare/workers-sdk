@@ -41,7 +41,7 @@ async function hasIndexHtml(dir: string): Promise<boolean> {
  * This is best-effort, and so will not be accurate all the time. The heuristic we use is the first child directory
  * with an `index.html` file present.
  */
-async function findOutputDir(from: string): Promise<string | undefined> {
+async function findAssetsDir(from: string): Promise<string | undefined> {
 	if (await hasIndexHtml(from)) {
 		return from;
 	}
@@ -116,6 +116,6 @@ export async function getDetailsForAutoConfig({
 		framework,
 		packageJson,
 		buildCommand: detectedFramework?.buildCommand ?? packageJsonBuild,
-		outputDir: detectedFramework?.dist ?? (await findOutputDir(projectPath)),
+		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
 	};
 }
