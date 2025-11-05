@@ -10,10 +10,10 @@ import {
 	getAndValidateRegistryType,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
-import { ExternalRegistryKind } from "@cloudflare/containers-shared/src/client/models/ExternalRegistryKind";
 import { APIError, UserError } from "@cloudflare/workers-utils";
 import { handleFailure, promiseSpinner } from "../cloudchamber/common";
 import { confirm, prompt } from "../dialogs";
+import { getCloudflareComplianceRegion } from "../environment-variables/misc-variables";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { createSecret, createStore, listStores } from "../secrets-store/client";
@@ -26,6 +26,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { ImageRegistryAuth } from "@cloudflare/containers-shared/src/client/models/ImageRegistryAuth";
 import type { Config } from "@cloudflare/workers-utils";
 
 export const registryCommands = (yargs: CommonYargsArgv) => {
@@ -90,8 +91,14 @@ function registryConfigureYargs(args: CommonYargsArgv) {
 			.option("secret-name", {
 				type: "string",
 				description:
-					"The name Wrangler should store the registry credentials under.",
+					"The name for the secret the private registry credentials should be stored under.",
 				demandOption: false,
+			})
+			.option("useSecretStore", {
+				type: "boolean",
+				description:
+					"Whether to store the registry credentials in Secret Store. This cannot be set to true in FedRAMP High compliance regions.",
+				default: true,
 			})
 	);
 }
@@ -106,82 +113,111 @@ async function registryConfigureCommand(
 
 	log(`Configuring ${registryType.name} registry: ${configureArgs.DOMAIN}\n`);
 
+	if (registryType.type === "cloudflare") {
+		log(
+			"You do not need to configure credentials for Cloudflare managed registries.\n"
+		);
+		endSection("No configuration required");
+		return;
+	}
+
+	const isFedRAMPHigh =
+		getCloudflareComplianceRegion(config) === "fedramp_high";
+	if (isFedRAMPHigh) {
+		const error: string[] = [];
+		if (configureArgs.useSecretStore) {
+			error.push("You must set --useSecretStore=false.");
+		}
+		if (configureArgs.secretStoreId || configureArgs.secretName) {
+			error.push("Please omit --secret-name and/or --secret-store-id flags.");
+		}
+		if (error.length > 0) {
+			throw new UserError(
+				[
+					"Secret Store is not supported in FedRAMP compliance regions.",
+					...error,
+				].join("\n")
+			);
+		}
+	}
+
+	let secretStoreId = configureArgs.secretStoreId;
+	let secretName = configureArgs.secretName;
 	if (configureArgs.secretName) {
 		validateSecretName(configureArgs.secretName);
 	}
-	let secret: string;
-	switch (registryType.type) {
-		case "cloudflare":
-			log(
-				"You do not need to configure credentials for Cloudflare managed registries.\n"
-			);
-			endSection("No configuration required");
-			return;
-		// this can be extended to any registry type that requires credentials
-		case ExternalRegistryKind.ECR:
-			log(`Getting ${registryType.secretType}...\n`);
-			secret = await getSecret(registryType.secretType);
-			break;
-		default:
-			throw new UserError(`Unhandled registry type: ${registryType.type}`);
-	}
 
-	log("\nSetting up integration with Secrets Store...\n");
-	const accountId = await getAccountId(config);
-	let secretStoreId = configureArgs.secretStoreId;
-	if (!secretStoreId) {
-		const stores = await listStores(config, accountId);
-		if (stores.length === 0) {
-			const defaultStoreName = "default_secret_store";
-			const yes = await confirm(
-				`No existing Secret Stores found. Create a Secret Store to store your registry credentials?`
-			);
-			if (!yes) {
-				endSection("Cancelled.");
-				return;
+	log(`Getting ${registryType.secretType}...\n`);
+	const secret = await getSecret(registryType.secretType);
+
+	// Secret Store is not available in FedRAMP High
+	let private_credential: ImageRegistryAuth["private_credential"];
+	if (!isFedRAMPHigh) {
+		log("\nSetting up integration with Secrets Store...\n");
+		const accountId = await getAccountId(config);
+
+		if (!secretStoreId) {
+			const stores = await listStores(config, accountId);
+			if (stores.length === 0) {
+				const defaultStoreName = "default_secret_store";
+				const yes = await confirm(
+					`No existing Secret Stores found. Create a Secret Store to store your registry credentials?`
+				);
+				if (!yes) {
+					endSection("Cancelled.");
+					return;
+				}
+				const res = await promiseSpinner(
+					createStore(config, accountId, { name: defaultStoreName })
+				);
+				log(`New Secret Store ${defaultStoreName} created with id: ${res.id}`);
+				secretStoreId = res.id;
+			} else if (stores.length > 1) {
+				// note you can only have one secret store per account for now
+				throw new UserError(
+					`Multiple Secret Stores found. Please specify a Secret Store ID using --secret-store-id.`
+				);
+			} else {
+				secretStoreId = stores[0].id;
+				log(
+					`Using existing Secret Store ${stores[0].name} with id: ${stores[0].id}`
+				);
 			}
-			const res = await promiseSpinner(
-				createStore(config, accountId, { name: defaultStoreName })
-			);
-			log(`New Secret Store ${defaultStoreName} created with id: ${res.id}`);
-			secretStoreId = res.id;
-		} else if (stores.length > 1) {
-			// note you can only have one secret store per account for now
-			throw new UserError(
-				`Multiple Secret Stores found. Please specify a Secret Store ID using --secret-store-id.`
-			);
-		} else {
-			secretStoreId = stores[0].id;
-			log(
-				`Using existing Secret Store ${stores[0].name} with id: ${stores[0].id}`
-			);
 		}
-	}
-	log("\n");
-	let secretName = configureArgs.secretName;
-	while (!secretName) {
-		try {
-			const res = await prompt(`Secret name:`, {
-				defaultValue: `${registryType.secretType?.replaceAll(" ", "_")}`,
-			});
 
-			validateSecretName(res);
-			secretName = res;
-		} catch (e) {
-			log((e as Error).message);
-			continue;
+		log("\n");
+
+		while (!secretName) {
+			try {
+				const res = await prompt(`Secret name:`, {
+					defaultValue: `${registryType.secretType?.replaceAll(" ", "_")}`,
+				});
+
+				validateSecretName(res);
+				secretName = res;
+			} catch (e) {
+				log((e as Error).message);
+				continue;
+			}
 		}
-	}
 
-	await promiseSpinner(
-		createSecret(config, accountId, secretStoreId, {
-			name: secretName,
-			value: secret,
-			scopes: ["containers"],
-			comment: `Created by Wrangler: credentials for image registry ${configureArgs.DOMAIN}`,
-		})
-	);
-	log(`Container-scoped secret ${secretName} created in Secrets Store.\n`);
+		await promiseSpinner(
+			createSecret(config, accountId, secretStoreId, {
+				name: secretName,
+				value: secret,
+				scopes: ["containers"],
+				comment: `Created by Wrangler: credentials for image registry ${configureArgs.DOMAIN}`,
+			})
+		);
+		private_credential = {
+			store_id: secretStoreId,
+			secret_name: secretName,
+		};
+		log(`Container-scoped secret ${secretName} created in Secrets Store.\n`);
+	} else {
+		// If we are not using the secret store, we will be passing in the secret directly
+		private_credential = secret;
+	}
 
 	try {
 		await promiseSpinner(
@@ -190,10 +226,7 @@ async function registryConfigureCommand(
 				is_public: false,
 				auth: {
 					public_credential: configureArgs.publicCredential,
-					private_credential: {
-						store_id: secretStoreId,
-						secret_name: secretName,
-					},
+					private_credential,
 				},
 				kind: registryType.type,
 			})
