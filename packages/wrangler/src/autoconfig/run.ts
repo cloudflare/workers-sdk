@@ -21,7 +21,7 @@ export async function runAutoConfig(
 	);
 	logger.log("Project settings detected:");
 	if (autoConfigDetails.framework) {
-		logger.log(brandColor("Framework:"), autoConfigDetails.framework?.name);
+		logger.log(brandColor("Framework:"), autoConfigDetails.framework.name);
 	}
 	if (autoConfigDetails.buildCommand) {
 		logger.log(brandColor("Build Command:"), autoConfigDetails.buildCommand);
