@@ -74,4 +74,7 @@ export {
 	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
 } from "./api";
 
+export { getDetailsForAutoConfig as experimental_getDetailsForAutoConfig } from "./autoconfig/get-details";
+export { runAutoConfig as experimental_runAutoConfig } from "./autoconfig/run";
+
 export { experimental_getWranglerCommands } from "./experimental-commands-api";
