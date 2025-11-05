@@ -1,4 +1,6 @@
+import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";
 import { vi } from "vitest";
 import * as c3 from "../autoconfig/c3-vendor/packages";
@@ -13,6 +15,7 @@ import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import { seed } from "./helpers/seed";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { Framework } from "../autoconfig/frameworks";
@@ -87,7 +90,9 @@ describe("autoconfig (deploy)", () => {
 	it("should run autoconfig if project is not configured", async () => {
 		const getDetailsSpy = vi
 			.spyOn(details, "getDetailsForAutoConfig")
-			.mockImplementationOnce(() => Promise.resolve({ configured: false }));
+			.mockImplementationOnce(() =>
+				Promise.resolve({ configured: false, projectPath: process.cwd() })
+			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
 
 		await runDeploy("--x-autoconfig");
@@ -99,7 +104,9 @@ describe("autoconfig (deploy)", () => {
 	it("should not run autoconfig if project is already configured", async () => {
 		const getDetailsSpy = vi
 			.spyOn(details, "getDetailsForAutoConfig")
-			.mockImplementationOnce(() => Promise.resolve({ configured: true }));
+			.mockImplementationOnce(() =>
+				Promise.resolve({ configured: true, projectPath: process.cwd() })
+			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
 
 		await runDeploy("--x-autoconfig");
@@ -129,22 +136,16 @@ describe("autoconfig (deploy)", () => {
 				})
 			);
 
-			await expect(details.getDetailsForAutoConfig()).resolves
-				.toMatchInlineSnapshot(`
-				Object {
-				  "buildCommand": "astro build",
-				  "configured": false,
-				  "framework": Astro {
-				    "name": "astro",
-				  },
-				  "outputDir": "dist",
-				  "packageJson": Object {
-				    "dependencies": Object {
-				      "astro": "5",
-				    },
-				  },
-				}
-			`);
+			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
+				buildCommand: "astro build",
+				configured: false,
+				outputDir: "dist",
+				packageJson: {
+					dependencies: {
+						astro: "5",
+					},
+				},
+			});
 		});
 
 		it("should bail when multiple frameworks are detected", async () => {
@@ -182,6 +183,42 @@ describe("autoconfig (deploy)", () => {
 				buildCommand: "npm run build",
 			});
 		});
+
+		it("outputDir should be empty if nothing can be detected", async () => {
+			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
+				outputDir: undefined,
+			});
+		});
+
+		it("outputDir should be set to cwd if an index.html file exists", async () => {
+			await writeFile("index.html", `<h1>Hello World</h1>`);
+
+			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
+				outputDir: process.cwd(),
+			});
+		});
+
+		it("outputDir should find first child directory with an index.html file", async () => {
+			await seed({
+				"public/index.html": `<h1>Hello World</h1>`,
+				"random/index.html": `<h1>Hello World</h1>`,
+			});
+
+			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
+				outputDir: join(process.cwd(), "public"),
+			});
+		});
+
+		it("outputDir should prioritize the project directory over its child directories", async () => {
+			await seed({
+				"index.html": `<h1>Hello World</h1>`,
+				"public/index.html": `<h1>Hello World</h1>`,
+			});
+
+			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
+				outputDir: process.cwd(),
+			});
+		});
 	});
 
 	describe("runAutoConfig()", () => {
@@ -212,6 +249,7 @@ describe("autoconfig (deploy)", () => {
 				assets: { directory: outputDir },
 			}));
 			await run.runAutoConfig({
+				projectPath: process.cwd(),
 				buildCommand: "echo 'built' > build.txt",
 				configured: false,
 				framework: {
@@ -268,6 +306,34 @@ describe("autoconfig (deploy)", () => {
 
 			// The framework's build command should have been run
 			expect(readFileSync("build.txt")).toContain("built");
+
+			// outputDir !== projectPath, so there's no need for an assets ignore file
+			expect(existsSync(".assetsignore")).toBeFalsy();
+		});
+
+		it(".assetsignore should contain Wrangler files if outputDir === projectPath", async () => {
+			mockConfirm({
+				text: "Do you want to deploy using these settings?",
+				result: true,
+			});
+
+			await run.runAutoConfig({
+				projectPath: process.cwd(),
+				configured: false,
+				outputDir: process.cwd(),
+			});
+
+			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`
+				"
+
+				# wrangler files
+				.wrangler
+				.dev.vars*
+				!.dev.vars.example
+				.env*
+				!.env.example
+				"
+			`);
 		});
 	});
 });

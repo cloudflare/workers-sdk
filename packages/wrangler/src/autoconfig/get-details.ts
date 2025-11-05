@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { readdir, stat } from "node:fs/promises";
+import { join, resolve } from "node:path";
 import {
 	FatalError,
 	parsePackageJSON,
@@ -11,7 +12,7 @@ import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 import { getFramework } from "./frameworks/get-framework";
 import type { AutoConfigDetails } from "./types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { Config, PackageJSON } from "@cloudflare/workers-utils";
 import type { Settings } from "@netlify/build-info";
 
 class MultipleFrameworksError extends FatalError {
@@ -22,6 +23,37 @@ class MultipleFrameworksError extends FatalError {
 			{ telemetryMessage: true }
 		);
 	}
+}
+
+async function hasIndexHtml(dir: string): Promise<boolean> {
+	const children = await readdir(dir);
+	for (const child of children) {
+		const stats = await stat(join(dir, child));
+		if (stats.isFile() && child === "index.html") {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * If we haven't detected a framework being used, we need to "guess" what output dir the user is intending to use.
+ * This is best-effort, and so will not be accurate all the time. The heuristic we use is the first child directory
+ * with an `index.html` file present.
+ */
+async function findAssetsDir(from: string): Promise<string | undefined> {
+	if (await hasIndexHtml(from)) {
+		return from;
+	}
+	const children = await readdir(from);
+	for (const child of children) {
+		const path = join(from, child);
+		const stats = await stat(path);
+		if (stats.isDirectory() && (await hasIndexHtml(path))) {
+			return path;
+		}
+	}
+	return undefined;
 }
 
 export async function getDetailsForAutoConfig({
@@ -35,7 +67,7 @@ export async function getDetailsForAutoConfig({
 
 	// If a real Wrangler config has been found & used, don't run autoconfig
 	if (wranglerConfig?.configPath) {
-		return { configured: true };
+		return { configured: true, projectPath };
 	}
 	const fs = new NodeFS();
 
@@ -60,22 +92,30 @@ export async function getDetailsForAutoConfig({
 		detectedFramework?.framework.id
 	);
 	const packageJsonPath = resolve("package.json");
-	const packageJson = parsePackageJSON(
-		readFileSync(packageJsonPath),
-		packageJsonPath
-	);
+
+	let packageJson: PackageJSON | undefined;
+
+	try {
+		packageJson = parsePackageJSON(
+			readFileSync(packageJsonPath),
+			packageJsonPath
+		);
+	} catch {
+		logger.debug("No package.json found when running autoconfig");
+	}
 
 	const { type } = await getPackageManager();
 
-	const packageJsonBuild = packageJson.scripts?.["build"]
+	const packageJsonBuild = packageJson?.scripts?.["build"]
 		? `${type} run build`
 		: undefined;
 
 	return {
+		projectPath: projectPath,
 		configured: framework?.configured ?? false,
 		framework,
 		packageJson,
 		buildCommand: detectedFramework?.buildCommand ?? packageJsonBuild,
-		outputDir: detectedFramework?.dist,
+		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
 	};
 }
