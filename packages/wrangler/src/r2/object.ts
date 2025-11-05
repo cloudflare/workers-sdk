@@ -265,9 +265,9 @@ export const r2ObjectPutCommand = createCommand({
 				object = await createFileReadableStream(file);
 			} catch (err) {
 				if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-					throw new FatalError(`The file "${file}" does not exist.`);
+					throw new UserError(`The file "${file}" does not exist.`);
 				}
-				const error = new FatalError(
+				const error = new UserError(
 					`An error occurred while trying to read the file "${file}": ${
 						(err as Error).message
 					}`
