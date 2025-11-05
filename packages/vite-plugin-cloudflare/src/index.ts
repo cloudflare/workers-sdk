@@ -31,7 +31,7 @@ const sharedContext: SharedContext = {
 	isRestartingDevServer: false,
 };
 
-assertWranglerVersion();
+await assertWranglerVersion();
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
