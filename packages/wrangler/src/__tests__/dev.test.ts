@@ -1,6 +1,9 @@
 import * as fs from "node:fs";
 import module from "node:module";
-import { FatalError } from "@cloudflare/workers-utils";
+import {
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	FatalError,
+} from "@cloudflare/workers-utils";
 import getPort from "get-port";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
@@ -8,7 +11,6 @@ import { vi } from "vitest";
 import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../api/startDevWorker/utils";
 import { getWorkerAccountAndContext } from "../dev/remote";
-import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";

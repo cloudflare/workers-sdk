@@ -7,10 +7,12 @@ import { createWorkerUploadForm } from "../deployment-bundle/create-worker-uploa
 import { logger } from "../logger";
 import { getAccessToken } from "../user/access";
 import { isAbortError } from "../utils/isAbortError";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";
 import type { CfWorkerInitWithName } from "./remote";
-import type { CfWorkerContext } from "@cloudflare/workers-utils";
+import type {
+	CfWorkerContext,
+	ComplianceConfig,
+} from "@cloudflare/workers-utils";
 import type { HeadersInit } from "undici";
 
 /**

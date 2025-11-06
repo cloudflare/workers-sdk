@@ -6,11 +6,14 @@ import {
 	DeploymentMutationError,
 	OpenAPI,
 } from "@cloudflare/containers-shared";
-import { parseByteSize, UserError } from "@cloudflare/workers-utils";
+import {
+	getCloudflareApiBaseUrl,
+	parseByteSize,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { addAuthorizationHeader, addUserAgent } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { constructStatusMessage } from "../core/CommandRegistry";
-import { getCloudflareApiBaseUrl } from "../environment-variables/misc-variables";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getScopes, printScopes, requireApiToken, requireAuth } from "../user";

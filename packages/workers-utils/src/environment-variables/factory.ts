@@ -1,4 +1,4 @@
-import { UserError } from "@cloudflare/workers-utils";
+import { UserError } from "../errors";
 
 /**
  * Environment variables supported by Wrangler for configuration and authentication.
@@ -66,6 +66,8 @@ type VariableNames =
 	| "WRANGLER_REGISTRY_PATH"
 	/** Additional D1 location choices (internal use). */
 	| "WRANGLER_D1_EXTRA_LOCATION_CHOICES"
+	/** The Workers environment to target (equivalent to the `--env` CLI param) */
+	| "CLOUDFLARE_ENV"
 
 	// ## Advanced Configuration
 

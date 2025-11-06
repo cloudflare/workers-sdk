@@ -4,6 +4,7 @@ import { basename, join, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli/colors";
 import {
 	FatalError,
+	getCIOverrideName,
 	parsePackageJSON,
 	readFileSync,
 } from "@cloudflare/workers-utils";
@@ -11,7 +12,6 @@ import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
 import { confirm, prompt } from "../dialogs";
-import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 import { getFramework } from "./frameworks/get-framework";

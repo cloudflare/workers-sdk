@@ -4,6 +4,7 @@ import path from "node:path";
 import {
 	configFileName,
 	formatCompatibilityDate,
+	getCIOverrideName,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -14,7 +15,6 @@ import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { confirm, prompt } from "../dialogs";
-import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";

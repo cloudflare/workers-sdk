@@ -16,8 +16,7 @@ import { getDefaultPersistRoot } from "../dev/miniflare";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 import type { ReplaceWorkersTypes } from "miniflare";
 
 /** The largest number of kv items we can pass to the API in a single request. */

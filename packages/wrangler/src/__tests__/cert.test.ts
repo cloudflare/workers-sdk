@@ -1,4 +1,5 @@
 import { writeFileSync } from "fs";
+import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 import {
 	deleteMTlsCertificate,
@@ -10,7 +11,6 @@ import {
 	uploadMTlsCertificateFromFs,
 } from "../api";
 import { type MTlsCertificateResponse } from "../api/mtls-certificate";
-import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";

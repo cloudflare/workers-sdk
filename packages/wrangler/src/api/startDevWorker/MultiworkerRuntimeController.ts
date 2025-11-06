@@ -1,10 +1,10 @@
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
+import { getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
-import { getDockerPath } from "../../environment-variables/misc-variables";
 import { logger } from "../../logger";
 import { castErrorCause } from "./events";
 import {

@@ -15,9 +15,9 @@ import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
 import { printWranglerBanner } from "./wrangler-banner";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { CommonYargsOptions } from "./yargs-types";
 import type {
+	ComplianceConfig,
 	Config,
 	ServiceMetadataRes,
 	WorkerMetadataBinding,

@@ -59,7 +59,6 @@ import {
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
-import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,

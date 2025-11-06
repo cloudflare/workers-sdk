@@ -1,5 +1,5 @@
 import { fetchResult } from "../cfetch";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 // Stores API
 
