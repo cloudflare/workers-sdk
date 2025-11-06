@@ -1,5 +1,13 @@
 # @cloudflare/containers-shared
 
+## 0.3.0
+
+### Minor Changes
+
+- [#10605](https://github.com/cloudflare/workers-sdk/pull/10605) [`b55a3c7`](https://github.com/cloudflare/workers-sdk/commit/b55a3c70f7204c56e4f33649bc2ebcc2f7fa75f3) Thanks [@emily-shen](https://github.com/emily-shen)! - Add command to configure credentials for non-Cloudflare container registries
+
+  Note this is a closed/experimental command that will not work without the appropriate account-level capabilities.
+
 ## 0.2.13
 
 ### Patch Changes
