@@ -28,7 +28,7 @@ const extraParamsIndex = process.argv.indexOf("--");
 const extraParams =
 	extraParamsIndex === -1 ? [] : process.argv.slice(extraParamsIndex);
 const command =
-	`pnpm test:e2e --log-order=stream --output-logs=new-only --summarize --filter wrangler ` +
+	`pnpm test:e2e --log-order=stream --output-logs=new-only --summarize --filter wrangler --force` +
 	extraParams.join(" ");
 
 const failed: string[] = [];
