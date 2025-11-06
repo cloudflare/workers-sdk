@@ -1,5 +1,36 @@
 # wrangler
 
+## 4.46.0
+
+### Minor Changes
+
+- [#11183](https://github.com/cloudflare/workers-sdk/pull/11183) [`240ebeb`](https://github.com/cloudflare/workers-sdk/commit/240ebeb66e5cf152a68ff8ec63b0778f4d4dfdce) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - expose `experimental_getDetailsForAutoConfig` and `experimental_runAutoConfig` APIs that provide respectively the autoconfig detection and execution functionalities
+
+- [#11180](https://github.com/cloudflare/workers-sdk/pull/11180) [`53b0fce`](https://github.com/cloudflare/workers-sdk/commit/53b0fce84e0a897a99efcce4cc96e1cf21391118) Thanks [@penalosa](https://github.com/penalosa)! - Detect non-framework static sites
+
+- [#11162](https://github.com/cloudflare/workers-sdk/pull/11162) [`c3ed531`](https://github.com/cloudflare/workers-sdk/commit/c3ed5314c831b29a43d05fcec238c38c2f4cc8d0) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add a `remoteBindings` option to `getPlatformProxy` to allow the disabling of remote bindings
+
+- [#11164](https://github.com/cloudflare/workers-sdk/pull/11164) [`305d7bf`](https://github.com/cloudflare/workers-sdk/commit/305d7bfff9bb07e0c21ffae264e89f9f3efb5118) Thanks [@penalosa](https://github.com/penalosa)! - Implement experimental autoconfig flow for static sites
+
+- [#10605](https://github.com/cloudflare/workers-sdk/pull/10605) [`b55a3c7`](https://github.com/cloudflare/workers-sdk/commit/b55a3c70f7204c56e4f33649bc2ebcc2f7fa75f3) Thanks [@emily-shen](https://github.com/emily-shen)! - Add command to configure credentials for non-Cloudflare container registries
+
+  Note this is a closed/experimental command that will not work without the appropriate account-level capabilities.
+
+- [#11078](https://github.com/cloudflare/workers-sdk/pull/11078) [`5d7c4c2`](https://github.com/cloudflare/workers-sdk/commit/5d7c4c2e2e9a3cf1db84c26ae0c729894a2f90f9) Thanks [@simonha9](https://github.com/simonha9)! - Add jurisdiction support to d1 db creation via command-line argument
+
+### Patch Changes
+
+- [#11160](https://github.com/cloudflare/workers-sdk/pull/11160) [`05440a1`](https://github.com/cloudflare/workers-sdk/commit/05440a1a1a6bbe312c3af64adf2fccba5e61457b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Allows auto-update of the local Wrangler configuration file to match remote configuration when running `wrangler deploy --env <TARGET_ENV>`
+
+  When running `wrangler deploy`, with `--x-remote-diff-check` and after cancelling the deployment due to destructive changes present in the local config file, Wrangler offers to update the Wrangler configuration file to match the remote configuration. This wasn't however enabled when a target environment was specified (via the `--env|-e` flag). Now this will also apply when an environment is targeted.
+
+- [#11162](https://github.com/cloudflare/workers-sdk/pull/11162) [`c3ed531`](https://github.com/cloudflare/workers-sdk/commit/c3ed5314c831b29a43d05fcec238c38c2f4cc8d0) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update the description of the `--local` flag for the `wrangler dev` command to clarify that it disables remote bindings, also un-deprecate and un-hide it
+
+- [#11162](https://github.com/cloudflare/workers-sdk/pull/11162) [`c3ed531`](https://github.com/cloudflare/workers-sdk/commit/c3ed5314c831b29a43d05fcec238c38c2f4cc8d0) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix bindings with `remote: true` being logged as `remote` when run via `wrangler dev --local`
+
+- Updated dependencies [[`1ae020d`](https://github.com/cloudflare/workers-sdk/commit/1ae020d7066699512f89fcc42cf436b1deff0277)]:
+  - miniflare@4.20251105.0
+
 ## 4.45.4
 
 ### Patch Changes

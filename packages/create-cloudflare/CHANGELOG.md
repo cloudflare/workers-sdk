@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.54.3
+
+### Patch Changes
+
+- [#11155](https://github.com/cloudflare/workers-sdk/pull/11155) [`6d3b49f`](https://github.com/cloudflare/workers-sdk/commit/6d3b49f3d6092972b469dadbf6396a6bcb28bf6e) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.17.0 | 1.17.1 |
+
 ## 2.54.2
 
 ### Patch Changes
