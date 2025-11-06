@@ -138,7 +138,20 @@ export async function getDetailsForAutoConfig({
 
 const invalidWorkerNameCharsRegex = /[^a-z0-9 ]/g;
 const invalidWorkerNameStartEndRegex = /^(-+)|(-+)$/g;
+const workerNameLengthLimit = 62;
 
+/**
+ * Checks whether the provided worker name is valid, this means that:
+ *  - the name is not empty
+ *  - the name doesn't start nor ends with a dash
+ *  - the name doesn't contain special characters besides dashes
+ *  - the name is shorter than 63 characters
+ *
+ * See: https://developers.cloudflare.com/workers/configuration/routing/workers-dev/#limitations
+ *
+ * @param input The name to check
+ * @returns Object indicating whether the name is valid, and if not a cause indicating why it isn't
+ */
 function checkWorkerNameValidity(
 	input: string
 ): { valid: false; cause: string } | { valid: true } {
@@ -164,37 +177,51 @@ function checkWorkerNameValidity(
 		};
 	}
 
-	if (input.length > 58) {
+	if (input.length > workerNameLengthLimit) {
 		return {
 			valid: false,
-			cause: "Project names must be less than 58 characters.",
+			cause: "Project names must be less than 63 characters.",
 		};
 	}
 
 	return { valid: true };
 }
 
-function toValidWorkerName(name: string): string {
-	if (checkWorkerNameValidity(name).valid) {
-		return name;
+/**
+ * Given an input string it converts it to a valid worker name
+ *
+ * A worker name is valid if:
+ *  - the name is not empty
+ *  - the name doesn't start nor ends with a dash
+ *  - the name doesn't contain special characters besides dashes
+ *  - the name is shorter than 63 characters
+ *
+ * See: https://developers.cloudflare.com/workers/configuration/routing/workers-dev/#limitations
+ *
+ * @param input The input to convert
+ * @returns The input itself if it was already valid, the input converted to a valid worker name otherwise
+ */
+function toValidWorkerName(input: string): string {
+	if (checkWorkerNameValidity(input).valid) {
+		return input;
 	}
 
-	name = name
+	input = input
 		// Replace all underscores with dashes
 		.replaceAll("_", "-")
 		// Replace all the special characters (besides dashes) with dashes
 		.replace(invalidWorkerNameCharsRegex, "-")
 		// Remove invalid start/end dashes
 		.replace(invalidWorkerNameStartEndRegex, "")
-		// If the name is longer than 58 character let's truncate it to that
-		.slice(0, 58);
+		// If the name is longer than the limit let's truncate it to that
+		.slice(0, workerNameLengthLimit);
 
-	if (!name.length) {
+	if (!input.length) {
 		// If we've emptied the whole name let's replace it with a fallback value
 		return "my-worker";
 	}
 
-	return name;
+	return input;
 }
 
 export function displayAutoConfigDetails(
