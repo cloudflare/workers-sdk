@@ -72,3 +72,12 @@ export * from "./constants";
 export { formatCompatibilityDate } from "./format-compatibility-date";
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 export { constructWranglerConfig } from "./construct-wrangler-config";
+
+export {
+	getBooleanEnvironmentVariableFactory,
+	getEnvironmentVariableFactory,
+} from "./environment-variables/factory";
+
+export * from "./environment-variables/misc-variables";
+
+export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";

@@ -4,6 +4,7 @@ import { UserError as ContainersUserError } from "@cloudflare/containers-shared/
 import {
 	APIError,
 	CommandLineArgsError,
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	JsonFriendlyFatalError,
 	ParseError,
 	UserError,
@@ -18,14 +19,13 @@ import {
 	isBuildFailure,
 	isBuildFailureFromCause,
 } from "../deployment-bundle/build-failures";
-import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { logBuildFailure, logger } from "../logger";
 import { captureGlobalException } from "../sentry";
 import { getAuthFromEnv } from "../user";
 import { whoami } from "../user/whoami";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
 import type { ReadConfigCommandArgs } from "../config";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
  * Handles an error thrown during command execution.

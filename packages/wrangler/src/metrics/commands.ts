@@ -1,10 +1,10 @@
+import { getWranglerSendMetricsFromEnv } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import {
 	createAlias,
 	createCommand,
 	createNamespace,
 } from "../core/create-command";
-import { getWranglerSendMetricsFromEnv } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { readMetricsConfig, updateMetricsPermission } from "./metrics-config";
 

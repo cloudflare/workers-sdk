@@ -1,7 +1,7 @@
 import events from "node:events";
+import { getDockerPath } from "@cloudflare/workers-utils";
 import { fetch, Request } from "undici";
 import { startDev } from "../dev/start-dev";
-import { getDockerPath } from "../environment-variables/misc-variables";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import type { StartDevOptions } from "../dev";

@@ -23,12 +23,12 @@ import {
 } from "../r2/helpers/bucket";
 import { printBindings } from "../utils/print-bindings";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type {
 	CfD1Database,
 	CfKvNamespace,
 	CfR2Bucket,
 	CfWorkerInit,
+	ComplianceConfig,
 	Config,
 	RawConfig,
 	WorkerMetadataBinding,

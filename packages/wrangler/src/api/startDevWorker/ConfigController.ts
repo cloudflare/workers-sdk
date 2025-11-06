@@ -1,7 +1,11 @@
 import assert from "node:assert";
 import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
+import {
+	getDisableConfigWatching,
+	getDockerPath,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import { getWorkerRegistry } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
@@ -18,10 +22,6 @@ import {
 } from "../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
-import {
-	getDisableConfigWatching,
-	getDockerPath,
-} from "../../environment-variables/misc-variables";
 import { logger, runWithLogLevel } from "../../logger";
 import { checkTypesDiff } from "../../type-generation/helpers";
 import {
