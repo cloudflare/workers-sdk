@@ -248,7 +248,6 @@ describe("autoconfig (deploy)", () => {
 			);
 		});
 		it("happy path", async () => {
-			vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "test-name");
 			await writeFile(
 				"package.json",
 				JSON.stringify({
@@ -294,7 +293,7 @@ describe("autoconfig (deploy)", () => {
 			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
 				"{
 				  \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				  \\"name\\": \\"test-name\\",
+				  \\"name\\": \\"my-worker\\",
 				  \\"compatibility_date\\": \\"2000-01-01\\",
 				  \\"observability\\": {
 				    \\"enabled\\": true

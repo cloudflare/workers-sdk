@@ -185,4 +185,19 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			});
 		}
 	);
+
+	it("WRANGLER_CI_OVERRIDE_NAME, when set should override the worker name", async () => {
+		vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "overridden-worker-name");
+
+		await seed({
+			"./my-project/index.html": "<h1>Hello World</h1>",
+		});
+		await expect(
+			details.getDetailsForAutoConfig({
+				projectPath: `./my-project`,
+			})
+		).resolves.toMatchObject({
+			workerName: "overridden-worker-name",
+		});
+	});
 });
