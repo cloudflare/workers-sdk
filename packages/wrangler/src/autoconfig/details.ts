@@ -231,14 +231,8 @@ export async function confirmAutoConfigDetails(
 		return autoConfigDetails;
 	}
 
-	const { framework, ...detailsWithoutFramework } = autoConfigDetails;
-	const updatedAutoConfigDetails: AutoConfigDetails = structuredClone(
-		detailsWithoutFramework
-	);
-	if (framework) {
-		// The framework cannot be `structuredClone`d so we just copy it here
-		updatedAutoConfigDetails.framework = framework;
-	}
+	// Just spreading the object to shallow clone it to avoid some side effects
+	const { ...updatedAutoConfigDetails } = autoConfigDetails;
 
 	const workerName = await prompt("What do you want to name your Worker?", {
 		defaultValue: autoConfigDetails.workerName ?? "",
