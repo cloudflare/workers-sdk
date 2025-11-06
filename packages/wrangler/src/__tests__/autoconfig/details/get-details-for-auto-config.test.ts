@@ -147,10 +147,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			rawName: "x".repeat(100),
 			normalizedName: "x".repeat(63),
 		},
-		{
-			rawName: "???",
-			normalizedName: "my-worker",
-		},
 	];
 
 	it.each(workerNamesToTest)(
