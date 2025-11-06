@@ -1,7 +1,8 @@
 import crypto from "node:crypto";
 import { createServer, IncomingMessage, Server } from "node:http";
+import { setTimeout } from "timers/promises";
 import getPort from "get-port";
-import { DeferredPromise } from "miniflare:shared";
+import { DeferredPromise, LogLevel } from "miniflare:shared";
 import WebSocket, { WebSocketServer } from "ws";
 import { version as miniflareVersion } from "../../../../package.json";
 import { Log } from "../../../shared";
@@ -17,22 +18,20 @@ import { InspectorProxy } from "./inspector-proxy";
  *  - when a web socket connection is requested for a worker it passes such request to the appropriate proxy
  */
 export class InspectorProxyController {
-	#runtimeConnectionEstablished: DeferredPromise<void>;
+	#runtimeConnectionEstablished = new DeferredPromise<void>();
 
 	#proxies: InspectorProxy[] = [];
 
 	#server: Promise<Server>;
 
-	#inspectorPort: Promise<number>;
+	#inspectorPort = new DeferredPromise<number>();
 
 	constructor(
 		private inspectorPortOption: number,
 		private log: Log,
 		private workerNamesToProxy: Set<string>
 	) {
-		this.#inspectorPort = this.#getInspectorPortToUse();
 		this.#server = this.#initializeServer();
-		this.#runtimeConnectionEstablished = new DeferredPromise();
 	}
 
 	async #getInspectorPortToUse() {
@@ -60,27 +59,64 @@ export class InspectorProxyController {
 
 		this.#initializeWebSocketServer(server);
 
-		const listeningPromise = new Promise<void>((resolve) =>
-			server.once("listening", resolve)
-		);
-		server.listen(await this.#inspectorPort);
-
-		await listeningPromise;
+		await this.#startListening(server);
 
 		return server;
 	}
 
 	async #restartServer() {
+		this.#inspectorPort = new DeferredPromise();
 		const server = await this.#server;
+		await this.#closeServer(server);
+		await this.#startListening(server);
+	}
+
+	/**
+	 * Try up 5 times to start listening on a free port (or only once if the user specified a port).
+	 *
+	 * This is because there is a small chance that between us getting a free port and us starting to listen on it,
+	 * another process may have taken that port.
+	 *
+	 * @param server the server to start listening.
+	 */
+	async #startListening(server: Server): Promise<void> {
+		const listening = new DeferredPromise<void>();
+		let attempts = this.inspectorPortOption === 0 ? 5 : 1;
+		while (attempts > 0) {
+			try {
+				const port = await this.#getInspectorPortToUse();
+				this.log.debug("Trying to listen on port: " + port);
+				server.listen(port, () => listening.resolve());
+				this.#inspectorPort.resolve(port);
+				break;
+			} catch (e) {
+				attempts--;
+				if (attempts > 0 && isAddressInUseError(e)) {
+					this.log.debug(`Retrying to listen due to error: ${e}`);
+					await this.#closeServer(server);
+					await setTimeout(200);
+				}
+				this.log.logWithLevel(
+					LogLevel.ERROR,
+					`Failed to start inspector proxy server: ${e}`
+				);
+				throw e;
+			}
+			return listening;
+		}
+	}
+
+	async #closeServer(server: Server) {
 		server.closeAllConnections();
-		await new Promise<void>((resolve, reject) => {
-			server.close((err) => (err ? reject(err) : resolve()));
+		return await new Promise<void>((resolve) => {
+			// We'll resolve whether or not the close had an error.
+			server.close((err) => {
+				if (err) {
+					this.log.error(err);
+				}
+				resolve();
+			});
 		});
-		const listeningPromise = new Promise<void>((resolve) =>
-			server.once("listening", resolve)
-		);
-		server.listen(await this.#inspectorPort);
-		await listeningPromise;
 	}
 
 	#initializeWebSocketServer(server: Server) {
@@ -243,7 +279,6 @@ export class InspectorProxyController {
 		this.workerNamesToProxy = workerNamesToProxy;
 		if (this.inspectorPortOption !== inspectorPortOption) {
 			this.inspectorPortOption = inspectorPortOption;
-			this.#inspectorPort = this.#getInspectorPortToUse();
 
 			await this.#restartServer();
 		}
@@ -308,3 +343,7 @@ const ALLOWED_ORIGIN_HOSTNAMES = [
 	"[::1]",
 	"localhost",
 ];
+
+function isAddressInUseError(e: unknown): e is Error & { code: "EADDRINUSE" } {
+	return e instanceof Error && "code" in e && e.code === "EADDRINUSE";
+}
