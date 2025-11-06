@@ -81,7 +81,6 @@
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/pages-shared": "workspace:^",
-		"@cloudflare/types": "6.18.4",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",

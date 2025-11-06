@@ -14,11 +14,13 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import type { PagesConfigCache } from "./types";
-import type { Project } from "@cloudflare/types";
 import type { RawEnvironment } from "@cloudflare/workers-utils";
+import type Cloudflare from "cloudflare";
 
 // TODO: fix the Project definition
-type DeploymentConfig = Project["deployment_configs"]["production"];
+type DeploymentConfig = NonNullable<
+	NonNullable<Cloudflare.Pages.Project["deployment_configs"]>["preview"]
+>;
 interface PagesDeploymentConfig extends DeploymentConfig {
 	services: Record<
 		string,
@@ -56,9 +58,10 @@ interface PagesDeploymentConfig extends DeploymentConfig {
 		mode: "smart";
 	};
 	wrangler_config_hash?: string;
+	always_use_latest_compatibility_date?: boolean;
 }
 
-export interface PagesProject extends Project {
+export interface PagesProject extends Cloudflare.Pages.Project {
 	deployment_configs: {
 		production: PagesDeploymentConfig;
 		preview: PagesDeploymentConfig;
@@ -74,7 +77,7 @@ async function toEnvironment(
 		deploymentConfig.compatibility_date ?? formatCompatibilityDate(new Date());
 
 	// Find the latest supported compatibility date and use that
-	if (deploymentConfig.always_use_latest_compatibility_date) {
+	if (deploymentConfig?.always_use_latest_compatibility_date) {
 		configObj.compatibility_date = supportedCompatibilityDate;
 	}
 
@@ -103,8 +106,13 @@ async function toEnvironment(
 	for (const [name, namespace] of Object.entries(
 		deploymentConfig.kv_namespaces ?? {}
 	)) {
-		configObj.kv_namespaces ??= [];
-		configObj.kv_namespaces.push({ id: namespace.namespace_id, binding: name });
+		if (namespace) {
+			configObj.kv_namespaces ??= [];
+			configObj.kv_namespaces.push({
+				id: namespace.namespace_id,
+				binding: name,
+			});
+		}
 	}
 
 	for (const [name, ns] of Object.entries(
@@ -139,22 +147,26 @@ async function toEnvironment(
 	for (const [name, namespace] of Object.entries(
 		deploymentConfig.d1_databases ?? {}
 	)) {
-		configObj.d1_databases ??= [];
-		configObj.d1_databases.push({
-			database_id: namespace.id,
-			binding: name,
-			database_name: name,
-		});
+		if (namespace) {
+			configObj.d1_databases ??= [];
+			configObj.d1_databases.push({
+				database_id: namespace.id,
+				binding: name,
+				database_name: name,
+			});
+		}
 	}
 
 	for (const [name, bucket] of Object.entries(
 		deploymentConfig.r2_buckets ?? {}
 	)) {
-		configObj.r2_buckets ??= [];
-		configObj.r2_buckets.push({
-			bucket_name: bucket.name,
-			binding: name,
-		});
+		if (bucket) {
+			configObj.r2_buckets ??= [];
+			configObj.r2_buckets.push({
+				bucket_name: bucket.name,
+				binding: name,
+			});
+		}
 	}
 
 	for (const [name, { service, environment }] of Object.entries(
@@ -272,7 +284,7 @@ async function downloadProject(accountId: string, projectName: string) {
 
 	return {
 		name: project.name,
-		pages_build_output_dir: project.build_config.destination_dir,
+		pages_build_output_dir: project.build_config?.destination_dir,
 		...topLevel,
 		...{
 			env: preview

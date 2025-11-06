@@ -20,7 +20,7 @@ import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import { isUrl } from "./utils";
 import type { PagesConfigCache } from "./types";
-import type { Deployment } from "@cloudflare/types";
+import type Cloudflare from "cloudflare";
 
 const statusChoices = ["ok", "error", "canceled"] as const;
 type StatusChoice = (typeof statusChoices)[number];
@@ -169,7 +169,7 @@ export const pagesDeploymentTailCommand = createCommand({
 			throw new FatalError("Must specify a project name or deployment.", 1);
 		}
 
-		const deployments: Array<Deployment> = await fetchResult(
+		const deployments: Array<Cloudflare.Pages.Deployment> = await fetchResult(
 			COMPLIANCE_REGION_CONFIG_PUBLIC,
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
 			{},
@@ -179,15 +179,15 @@ export const pagesDeploymentTailCommand = createCommand({
 		const envDeployments = deployments.filter(
 			(d) =>
 				d.environment === environment &&
-				d.latest_stage.name === "deploy" &&
-				d.latest_stage.status === "success"
+				d.latest_stage?.name === "deploy" &&
+				d.latest_stage?.status === "success"
 		);
 
 		// Deployment is URL
 		if (isUrl(deployment)) {
 			const { hostname: deploymentHostname } = new URL(deployment);
 			const targetDeployment = envDeployments.find(
-				(d) => new URL(d.url).hostname === deploymentHostname
+				(d) => d.url && new URL(d.url).hostname === deploymentHostname
 			);
 
 			if (!targetDeployment) {
@@ -215,7 +215,11 @@ export const pagesDeploymentTailCommand = createCommand({
 			}
 
 			const latestDeployment = envDeployments
-				.map((d) => ({ id: d.id, created_on: new Date(d.created_on) }))
+				.filter((d) => d.id !== undefined && d.created_on !== undefined)
+				.map((d) => ({
+					id: d.id,
+					created_on: new Date(d.created_on as string),
+				}))
 				.sort((a, b) => +b.created_on - +a.created_on)[0];
 
 			deploymentId = latestDeployment.id;

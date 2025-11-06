@@ -10,7 +10,7 @@ import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import type { PagesConfigCache } from "./types";
-import type { Deployment } from "@cloudflare/types";
+import type Cloudflare from "cloudflare";
 
 export const pagesDeploymentListCommand = createCommand({
 	metadata: {
@@ -57,7 +57,7 @@ export const pagesDeploymentListCommand = createCommand({
 			throw new FatalError("Must specify a project name.", 1);
 		}
 
-		const deployments: Array<Deployment> = await fetchResult(
+		const deployments: Array<Cloudflare.Pages.Deployment> = await fetchResult(
 			COMPLIANCE_REGION_CONFIG_PUBLIC,
 			`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
 			{},
@@ -71,24 +71,30 @@ export const pagesDeploymentListCommand = createCommand({
 
 		const shortSha = (sha: string) => sha.slice(0, 7);
 
-		const getStatus = (deployment: Deployment) => {
+		const getStatus = (deployment: Cloudflare.Pages.Deployment) => {
 			// Return a pretty time since timestamp if successful otherwise the status
 			if (
-				deployment.latest_stage.status === "success" &&
-				deployment.latest_stage.ended_on
+				deployment.latest_stage?.status === "success" &&
+				deployment.latest_stage?.ended_on
 			) {
 				return timeagoFormat(deployment.latest_stage.ended_on);
 			}
-			return titleCase(deployment.latest_stage.status);
+			return titleCase(deployment.latest_stage?.status as string);
 		};
 
 		const data = deployments.map((deployment) => {
+			// The API types here are wrong, hence all the non-null assertions
 			return {
-				Id: deployment.id,
-				Environment: titleCase(deployment.environment),
-				Branch: deployment.deployment_trigger.metadata.branch,
-				Source: shortSha(deployment.deployment_trigger.metadata.commit_hash),
-				Deployment: deployment.url,
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				Id: deployment.id!,
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				Environment: titleCase(deployment.environment!),
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				Branch: deployment.deployment_trigger!.metadata!.branch!,
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				Source: shortSha(deployment.deployment_trigger!.metadata!.commit_hash!),
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				Deployment: deployment.url!,
 				Status: getStatus(deployment),
 				// TODO: Use a url shortener
 				Build: `https://dash.cloudflare.com/${accountId}/pages/view/${deployment.project_name}/${deployment.id}`,

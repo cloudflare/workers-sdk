@@ -31,8 +31,8 @@ import { getPagesTmpDir } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { Deployment, Project } from "@cloudflare/types";
 import type { Config } from "@cloudflare/workers-utils";
+import type Cloudflare from "cloudflare";
 
 interface PagesDeployOptions {
 	/**
@@ -148,7 +148,7 @@ export async function deploy({
 	} catch {}
 
 	// Grab the bindings from the API, we need these for shims and other such hacky inserts
-	const project = await fetchResult<Project>(
+	const project = await fetchResult<Cloudflare.Pages.Project>(
 		COMPLIANCE_REGION_CONFIG_PUBLIC,
 		`/accounts/${accountId}/pages/projects/${projectName}`
 	);
@@ -158,7 +158,7 @@ export async function deploy({
 	}
 
 	const env = isProduction ? "production" : "preview";
-	const deploymentConfig = project.deployment_configs[env];
+	const deploymentConfig = project.deployment_configs?.[env];
 	let config: Config | undefined;
 
 	try {
@@ -177,19 +177,19 @@ export async function deploy({
 	}
 
 	const nodejsCompatMode = validateNodeCompatMode(
-		config?.compatibility_date ?? deploymentConfig.compatibility_date,
-		config?.compatibility_flags ?? deploymentConfig.compatibility_flags ?? [],
+		config?.compatibility_date ?? deploymentConfig?.compatibility_date,
+		config?.compatibility_flags ?? deploymentConfig?.compatibility_flags ?? [],
 		{
 			noBundle: config?.no_bundle,
 		}
 	);
 	const defineNavigatorUserAgent = isNavigatorDefined(
-		config?.compatibility_date ?? deploymentConfig.compatibility_date,
-		config?.compatibility_flags ?? deploymentConfig.compatibility_flags
+		config?.compatibility_date ?? deploymentConfig?.compatibility_date,
+		config?.compatibility_flags ?? deploymentConfig?.compatibility_flags
 	);
 	const checkFetch = shouldCheckFetch(
-		config?.compatibility_date ?? deploymentConfig.compatibility_date,
-		config?.compatibility_flags ?? deploymentConfig.compatibility_flags
+		config?.compatibility_date ?? deploymentConfig?.compatibility_date,
+		config?.compatibility_flags ?? deploymentConfig?.compatibility_flags
 	);
 
 	/**
@@ -441,7 +441,9 @@ export async function deploy({
 	let lastErr: unknown;
 	while (attempts < MAX_DEPLOYMENT_ATTEMPTS) {
 		try {
-			const deploymentResponse = await fetchResult<Deployment>(
+			const deploymentResponse = await fetchResult<
+				Cloudflare.Pages.Deployment & { production_branch: string }
+			>(
 				COMPLIANCE_REGION_CONFIG_PUBLIC,
 				`/accounts/${accountId}/pages/projects/${projectName}/deployments`,
 				{

@@ -29,13 +29,8 @@ import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
 import { getPagesProjectRoot, getPagesTmpDir } from "./utils";
 import type { PagesConfigCache } from "./types";
-import type {
-	Deployment,
-	DeploymentStage,
-	Project,
-	UnifiedDeploymentLogMessages,
-} from "@cloudflare/types";
 import type { Config } from "@cloudflare/workers-utils";
+import type Cloudflare from "cloudflare";
 
 export const pagesDeploymentCreateCommand = createAlias({
 	aliasOf: "wrangler pages deploy",
@@ -194,7 +189,7 @@ export const pagesDeployCommand = createCommand({
 
 		if (projectName) {
 			try {
-				await fetchResult<Project>(
+				await fetchResult<Cloudflare.Pages.Project>(
 					COMPLIANCE_REGION_CONFIG_PUBLIC,
 					`/accounts/${accountId}/pages/projects/${projectName}`
 				);
@@ -304,7 +299,7 @@ export const pagesDeployCommand = createCommand({
 						throw new FatalError("Must specify a production branch.", 1);
 					}
 
-					await fetchResult<Project>(
+					await fetchResult<Cloudflare.Pages.Project>(
 						COMPLIANCE_REGION_CONFIG_PUBLIC,
 						`/accounts/${accountId}/pages/projects`,
 						{
@@ -400,7 +395,7 @@ export const pagesDeployCommand = createCommand({
 			project_name: projectName,
 		});
 
-		let latestDeploymentStage: DeploymentStage | undefined;
+		let latestDeploymentStage: Cloudflare.Pages.Projects.Stage | undefined;
 		let alias: string | undefined;
 		let attempts = 0;
 
@@ -426,7 +421,7 @@ export const pagesDeployCommand = createCommand({
 					`attempt #${attempts}: Attempting to fetch status for deployment with id "${deploymentResponse.id}" ...`
 				);
 
-				const deployment = await fetchResult<Deployment>(
+				const deployment = await fetchResult<Cloudflare.Pages.Deployment>(
 					COMPLIANCE_REGION_CONFIG_PUBLIC,
 					`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}`
 				);
@@ -456,35 +451,46 @@ export const pagesDeployCommand = createCommand({
 			latestDeploymentStage?.status === "failure"
 		) {
 			// get persistent logs so we can show users the failure message
-			const logs = await fetchResult<UnifiedDeploymentLogMessages>(
-				COMPLIANCE_REGION_CONFIG_PUBLIC,
-				`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}/history/logs?size=10000000`
-			);
-			// last log entry will be the most relevant for Direct Uploads
-			const failureMessage = logs.data[logs.total - 1].line
-				.replace("Error:", "")
-				.trim();
+			const logs =
+				await fetchResult<Cloudflare.Pages.Projects.Deployments.History.Logs.LogGetResponse>(
+					COMPLIANCE_REGION_CONFIG_PUBLIC,
+					`/accounts/${accountId}/pages/projects/${projectName}/deployments/${deploymentResponse.id}/history/logs?size=10000000`
+				);
+			const logData = logs.data;
+			const logTotal = logs.total;
+			if (logData === undefined || logTotal === undefined) {
+				logger.log(
+					`✨ Deployment complete! However, we couldn't ascertain the final status of your deployment.\n\n` +
+						`⚡️ Visit your deployment at ${deploymentResponse.url}\n` +
+						`⚡️ Check the deployment details on the Cloudflare dashboard: https://dash.cloudflare.com/${accountId}/pages/view/${projectName}/${deploymentResponse.id}`
+				);
+			} else {
+				// last log entry will be the most relevant for Direct Uploads
+				const failureMessage = (logData[logTotal - 1].line ?? "")
+					.replace("Error:", "")
+					.trim();
 
-			if (failureMessage.includes("Script startup exceeded CPU time limit")) {
-				const startupError = new ParseError({ text: failureMessage });
-				Object.assign(startupError, { code: 10021 }); // Startup error code
-				const workerBundle = formData.get("_worker.bundle") as File;
-				const filePath = path.join(getPagesTmpDir(), "_worker.bundle");
-				await writeFile(filePath, workerBundle.stream());
-				throw new UserError(
-					await diagnoseStartupError(
-						startupError,
-						filePath,
-						getPagesProjectRoot()
-					)
+				if (failureMessage.includes("Script startup exceeded CPU time limit")) {
+					const startupError = new ParseError({ text: failureMessage });
+					Object.assign(startupError, { code: 10021 }); // Startup error code
+					const workerBundle = formData.get("_worker.bundle") as File;
+					const filePath = path.join(getPagesTmpDir(), "_worker.bundle");
+					await writeFile(filePath, workerBundle.stream());
+					throw new UserError(
+						await diagnoseStartupError(
+							startupError,
+							filePath,
+							getPagesProjectRoot()
+						)
+					);
+				}
+
+				throw new FatalError(
+					`Deployment failed!
+	${failureMessage}`,
+					1
 				);
 			}
-
-			throw new FatalError(
-				`Deployment failed!
-	${failureMessage}`,
-				1
-			);
 		} else {
 			logger.log(
 				`✨ Deployment complete! However, we couldn't ascertain the final status of your deployment.\n\n` +
@@ -496,20 +502,26 @@ export const pagesDeployCommand = createCommand({
 		writeOutput({
 			type: "pages-deploy",
 			version: 1,
-			pages_project: deploymentResponse.project_name,
-			deployment_id: deploymentResponse.id,
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			pages_project: deploymentResponse.project_name!,
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			deployment_id: deploymentResponse.id!,
 			url: deploymentResponse.url,
 		});
 
 		writeOutput({
 			type: "pages-deploy-detailed",
 			version: 1,
-			pages_project: deploymentResponse.project_name,
-			deployment_id: deploymentResponse.id,
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			pages_project: deploymentResponse.project_name!,
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			deployment_id: deploymentResponse.id!,
 			url: deploymentResponse.url,
 			alias,
-			environment: deploymentResponse.environment,
-			production_branch: deploymentResponse.production_branch,
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			environment: deploymentResponse.environment!,
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+			production_branch: deploymentResponse.production_branch!,
 			deployment_trigger: {
 				metadata: {
 					commit_hash:
