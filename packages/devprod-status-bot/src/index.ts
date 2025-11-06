@@ -42,7 +42,6 @@ async function isWranglerTeamMember(
 			}
 		);
 
-		// 200 means user is a member, 404 means they are not
 		return response.status === 200;
 	} catch (error) {
 		// If there's an error checking membership, default to false
