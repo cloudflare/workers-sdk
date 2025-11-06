@@ -1,5 +1,6 @@
+import { statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli/colors";
 import {
 	FatalError,
@@ -9,6 +10,7 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
+import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 import { getFramework } from "./frameworks/get-framework";
@@ -68,7 +70,11 @@ export async function getDetailsForAutoConfig({
 
 	// If a real Wrangler config has been found & used, don't run autoconfig
 	if (wranglerConfig?.configPath) {
-		return { configured: true, projectPath };
+		return {
+			configured: true,
+			projectPath,
+			workerName: wranglerConfig.name ?? "worker",
+		};
 	}
 	const fs = new NodeFS();
 
@@ -92,7 +98,7 @@ export async function getDetailsForAutoConfig({
 	const framework: AutoConfigDetails["framework"] = getFramework(
 		detectedFramework?.framework.id
 	);
-	const packageJsonPath = resolve("package.json");
+	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
 
@@ -118,23 +124,73 @@ export async function getDetailsForAutoConfig({
 		packageJson,
 		buildCommand: detectedFramework?.buildCommand ?? packageJsonBuild,
 		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
+		workerName: toValidWorkerName(packageJson?.name ?? basename(projectPath)),
 	};
 }
 
-export function displayAutoConfigDetails(
-	autoConfigDetails: AutoConfigDetails
-): void {
-	if (
-		!autoConfigDetails.framework &&
-		!autoConfigDetails.buildCommand &&
-		!autoConfigDetails.outputDir
-	) {
-		logger.log("No Project Settings Auto-detected");
-		return;
+const invalidWorkerNameCharsRegex = /[^a-z0-9-]/g;
+const invalidWorkerNameStartEndRegex = /^-|-$/g;
+
+function checkWorkerNameValidity(
+	input: string
+): { valid: false; cause: string } | { valid: true } {
+	if (input.match(invalidWorkerNameStartEndRegex)) {
+		return {
+			valid: false,
+			cause: "Worker names cannot start or end with a dash.",
+		};
 	}
 
-	logger.log("Auto-detected Project Settings:");
+	if (input.match(invalidWorkerNameCharsRegex)) {
+		return {
+			valid: false,
+			cause:
+				"Project names must only contain lowercase characters, numbers, and dashes.",
+		};
+	}
 
+	if (input.length > 58) {
+		return {
+			valid: false,
+			cause: "Project names must be less than 58 characters.",
+		};
+	}
+
+	return { valid: true };
+}
+
+function toValidWorkerName(name: string): string {
+	if (checkWorkerNameValidity(name).valid) {
+		return name;
+	}
+
+	name = name
+		// Replace all underscores with dashes
+		.replaceAll("_", "-")
+		// Remove all the special characters besides dashes
+		.replace(invalidWorkerNameCharsRegex, "")
+		// Remove invalid start/end dashes
+		.replace(invalidWorkerNameStartEndRegex, "")
+		// If the name is longer than 58 character let's truncate it to that
+		.slice(0, 58);
+
+	if (!name.length) {
+		// If we've emptied the whole name let's replace it with a fallback value
+		return "my-worker";
+	}
+
+	return name;
+}
+
+export function displayAutoConfigDetails(
+	autoConfigDetails: AutoConfigDetails,
+	displayOptions?: { heading?: string }
+): void {
+	logger.log("");
+
+	logger.log(displayOptions?.heading ?? "Auto-detected Project Settings:");
+
+	logger.log(brandColor(" - Worker Name:"), autoConfigDetails.workerName);
 	if (autoConfigDetails.framework) {
 		logger.log(brandColor(" - Framework:"), autoConfigDetails.framework.name);
 	}
@@ -146,4 +202,74 @@ export function displayAutoConfigDetails(
 	}
 
 	logger.log("");
+}
+
+export async function confirmAutoConfigDetails(
+	autoConfigDetails: AutoConfigDetails
+): Promise<AutoConfigDetails> {
+	const modifySettings = await confirm(
+		"Do you want to modify these settings?",
+		{ defaultValue: false, fallbackValue: false }
+	);
+
+	if (!modifySettings) {
+		return autoConfigDetails;
+	}
+
+	const { framework, ...detailsWithoutFramework } = autoConfigDetails;
+	const updatedAutoConfigDetails: AutoConfigDetails = structuredClone(
+		detailsWithoutFramework
+	);
+	if (framework) {
+		// The framework cannot be `structuredClone`d so we just copy it here
+		updatedAutoConfigDetails.framework = framework;
+	}
+
+	const workerName = await prompt("What do you want to name your Worker?", {
+		defaultValue: autoConfigDetails.workerName ?? "",
+		validate: (value: string) => {
+			const validity = checkWorkerNameValidity(value);
+			if (validity.valid) {
+				return true;
+			}
+			return validity.cause;
+		},
+	});
+
+	updatedAutoConfigDetails.workerName = workerName;
+
+	const outputDir = await prompt(
+		"What directory contains your applications' output/asset files?",
+		{
+			defaultValue: autoConfigDetails.outputDir ?? "",
+			validate: async (value) => {
+				if (!value) {
+					return "Please provide a valid directory path";
+				}
+				const valueStats = statSync(resolve(value), { throwIfNoEntry: false });
+				if (!valueStats) {
+					// If the path doesn't point to anything that's fine since the directory will likely be
+					// generated by the build command anyways
+					return true;
+				}
+				if (valueStats?.isFile()) {
+					return "A file has been selected, a directory need to be selected instead";
+				}
+				return true;
+			},
+		}
+	);
+
+	updatedAutoConfigDetails.outputDir = outputDir;
+
+	const buildCommand = await prompt(
+		"What is your application's build command?",
+		{
+			defaultValue: autoConfigDetails.buildCommand ?? "",
+		}
+	);
+
+	updatedAutoConfigDetails.buildCommand = buildCommand;
+
+	return updatedAutoConfigDetails;
 }

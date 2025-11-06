@@ -2,6 +2,8 @@ import type { Framework } from "./frameworks/index";
 import type { PackageJSON } from "@cloudflare/workers-utils";
 
 export type AutoConfigDetails = {
+	/** The name of the worker */
+	workerName: string;
 	/** The path to the project (defaults to cwd) */
 	projectPath: string;
 	/** The content of the project's package.json file (if any) */

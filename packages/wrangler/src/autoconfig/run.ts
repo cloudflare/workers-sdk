@@ -10,7 +10,7 @@ import { getDevCompatibilityDate } from "../utils/compatibility-date";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
-import { displayAutoConfigDetails } from "./details";
+import { confirmAutoConfigDetails, displayAutoConfigDetails } from "./details";
 import type { AutoConfigDetails } from "./types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
@@ -19,7 +19,18 @@ export async function runAutoConfig(
 ): Promise<void> {
 	displayAutoConfigDetails(autoConfigDetails);
 
-	const deploy = await confirm("Do you want to deploy using these settings?");
+	const updatedAutoConfigDetails =
+		await confirmAutoConfigDetails(autoConfigDetails);
+
+	if (autoConfigDetails !== updatedAutoConfigDetails) {
+		displayAutoConfigDetails(updatedAutoConfigDetails, {
+			heading: "Updated Project Settings:",
+		});
+	}
+
+	const deploy = await confirm(
+		"Do you want to proceed with the deployment using these settings?"
+	);
 	if (!deploy) {
 		throw new FatalError("Deployment aborted");
 	}
