@@ -14,7 +14,7 @@
 		"@cloudflare/containers": "^0.0.25",
 		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
-		"@microlabs/otel-cf-workers": "1.0.0-rc.45",
+		"@microlabs/otel-cf-workers": "1.0.0-rc.52",
 		"@types/node": "catalog:default",
 		"discord-api-types": "0.37.98",
 		"ext-dep": "file:./module-resolution/vendor/ext-dep",
