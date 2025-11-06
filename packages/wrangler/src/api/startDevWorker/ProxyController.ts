@@ -269,12 +269,13 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			const inspectorProxyWorkerUrl = await this.proxyWorker.unsafeGetDirectURL(
 				"InspectorProxyWorker"
 			);
-			webSocket = new WebSocket(
-				`${inspectorProxyWorkerUrl.href}/cdn-cgi/InspectorProxyWorker/websocket`,
-				{
-					headers: { Authorization: this.secret },
-				}
-			);
+
+			inspectorProxyWorkerUrl.pathname =
+				"/cdn-cgi/InspectorProxyWorker/websocket";
+
+			webSocket = new WebSocket(inspectorProxyWorkerUrl, {
+				headers: { Authorization: this.secret },
+			});
 		} catch (cause) {
 			if (this._torndown) {
 				return;
