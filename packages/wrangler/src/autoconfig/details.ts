@@ -253,7 +253,7 @@ export async function confirmAutoConfigDetails(
 					return true;
 				}
 				if (valueStats?.isFile()) {
-					return "A file has been selected, a directory need to be selected instead";
+					return "Please select a directory";
 				}
 				return true;
 			},
