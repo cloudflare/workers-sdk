@@ -53,6 +53,7 @@ export async function confirm(
 interface PromptOptions {
 	defaultValue?: string;
 	isSecret?: boolean;
+	validate?: (value: string) => boolean | string | Promise<boolean | string>;
 }
 
 export async function prompt(
@@ -77,6 +78,7 @@ export async function prompt(
 		message: text,
 		initial: options?.defaultValue,
 		style: options?.isSecret ? "password" : "default",
+		validate: options.validate,
 		onState: (state) => {
 			if (state.aborted) {
 				process.nextTick(() => {

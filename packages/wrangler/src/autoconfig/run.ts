@@ -1,17 +1,16 @@
 import { writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { endSection, startSection } from "@cloudflare/cli";
 import { FatalError } from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
-import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import { getDevCompatibilityDate } from "../utils/compatibility-date";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
-import { displayAutoConfigDetails } from "./details";
+import { confirmAutoConfigDetails, displayAutoConfigDetails } from "./details";
 import type { AutoConfigDetails } from "./types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
@@ -39,7 +38,18 @@ export async function runAutoConfig(
 	);
 	displayAutoConfigDetails(autoConfigDetails);
 
-	const deploy = await confirm("Do you want to deploy using these settings?");
+	const updatedAutoConfigDetails =
+		await confirmAutoConfigDetails(autoConfigDetails);
+
+	if (autoConfigDetails !== updatedAutoConfigDetails) {
+		displayAutoConfigDetails(updatedAutoConfigDetails, {
+			heading: "Updated Project Settings:",
+		});
+	}
+
+	const deploy = await confirm(
+		"Do you want to proceed with the deployment using these settings?"
+	);
 	if (!deploy) {
 		throw new FatalError("Deployment aborted");
 	}
@@ -64,10 +74,7 @@ export async function runAutoConfig(
 		JSON.stringify(
 			{
 				$schema: "node_modules/wrangler/config-schema.json",
-				name:
-					getCIOverrideName() ??
-					autoConfigDetails.packageJson?.name ??
-					dirname(autoConfigDetails.projectPath),
+				name: autoConfigDetails.workerName,
 				compatibility_date: getDevCompatibilityDate(undefined),
 				observability: {
 					enabled: true,
