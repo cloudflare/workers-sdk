@@ -1,6 +1,6 @@
 ---
-"@cloudflare/containers-shared": patch
-"wrangler": patch
+"@cloudflare/containers-shared": minor
+"wrangler": minor
 ---
 
 Add command to configure credentials for non-Cloudflare container registries
