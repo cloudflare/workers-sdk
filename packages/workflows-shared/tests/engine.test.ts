@@ -188,14 +188,16 @@ describe("Engine", () => {
 			// supposed to error out
 		}
 
-		await engineStub.receiveEvent({
+		const newStub = env.ENGINE.get(env.ENGINE.idFromName("MOCK-INSTANCE-ID"));
+
+		await newStub.receiveEvent({
 			type: "event-type-1",
 			timestamp: new Date(),
 			payload: {},
 		});
 
 		await vi.waitUntil(async () => {
-			const logs = (await engineStub.readLogs()) as EngineLogs;
+			const logs = (await newStub.readLogs()) as EngineLogs;
 			return logs.logs.filter(
 				(val) => val.event == InstanceEvent.WORKFLOW_SUCCESS
 			);
