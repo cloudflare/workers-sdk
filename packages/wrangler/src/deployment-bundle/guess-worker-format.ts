@@ -20,12 +20,6 @@ export async function guessWorkerFormat(
 ): Promise<{ format: CfScriptFormat; exports: string[] }> {
 	const parsedEntryPath = path.parse(entryFile);
 	if (parsedEntryPath.ext == ".py") {
-		logger.warn(
-			`The entrypoint ${path.relative(
-				process.cwd(),
-				entryFile
-			)} defines a Python worker, support for Python workers is currently experimental.`
-		);
 		return { format: "modules", exports: [] };
 	}
 
