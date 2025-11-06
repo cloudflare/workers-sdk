@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
+	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	configFileName,
 	FatalError,
 	findWranglerConfig,
@@ -14,7 +15,6 @@ import { readPagesConfig } from "../config";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { createAlias, createCommand } from "../core/create-command";
 import { prompt, select } from "../dialogs";
-import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";

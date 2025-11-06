@@ -42,7 +42,8 @@
 		"tsdown": "^0.15.9",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "catalog:default",
+		"xdg-app-paths": "^8.3.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

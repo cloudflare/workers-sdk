@@ -23,7 +23,6 @@ import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type {
 	Database,
 	ImportInitResponse,
@@ -31,7 +30,7 @@ import type {
 	PollingFailure,
 } from "./types";
 import type { D1Result } from "@cloudflare/workers-types/experimental";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];

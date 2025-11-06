@@ -1,5 +1,4 @@
 import { fetchResult } from "../cfetch";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type {
 	ApiDeployment,
 	ApiVersion,
@@ -7,7 +6,11 @@ import type {
 	VersionCache,
 	VersionId,
 } from "./types";
-import type { Observability, TailConsumer } from "@cloudflare/workers-utils";
+import type {
+	ComplianceConfig,
+	Observability,
+	TailConsumer,
+} from "@cloudflare/workers-utils";
 
 export async function fetchVersion(
 	complianceConfig: ComplianceConfig,

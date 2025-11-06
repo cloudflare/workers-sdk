@@ -69,3 +69,12 @@ export {
 	constructWranglerConfig,
 	type FullWorkerConfig,
 } from "./construct-wrangler-config";
+
+export {
+	getBooleanEnvironmentVariableFactory,
+	getEnvironmentVariableFactory,
+} from "./environment-variables/factory";
+
+export * from "./environment-variables/misc-variables";
+
+export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";

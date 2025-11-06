@@ -1,14 +1,14 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path, { dirname } from "node:path";
-import { UserError } from "@cloudflare/workers-utils";
+import {
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	getC3CommandFromEnv,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { execa } from "execa";
 import { fetchResult } from "./cfetch";
 import { fetchWorkerDefinitionFromDash } from "./cfetch/internal";
 import { createCommand } from "./core/create-command";
-import {
-	COMPLIANCE_REGION_CONFIG_UNKNOWN,
-	getC3CommandFromEnv,
-} from "./environment-variables/misc-variables";
 import { logger } from "./logger";
 import { readMetricsConfig } from "./metrics/metrics-config";
 import { getPackageManager } from "./package-manager";

@@ -1,11 +1,14 @@
 import { setTimeout } from "node:timers/promises";
 import { HeadBucketCommand, S3Client } from "@aws-sdk/client-s3";
-import { APIError, FatalError } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	FatalError,
+	getCloudflareApiEnvironmentFromEnv,
+} from "@cloudflare/workers-utils";
 import { createNamespace } from "../core/create-command";
-import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { generateR2ServiceToken, getR2Bucket } from "./client";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 export const BYTES_PER_MB = 1000 * 1000;
 

@@ -1,4 +1,5 @@
 import { resolveDockerHost } from "@cloudflare/containers-shared";
+import { getDockerPath, getRegistryPath } from "@cloudflare/workers-utils";
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
@@ -12,10 +13,6 @@ import {
 	buildSitesOptions,
 	getImageNameFromDOClassName,
 } from "../../../dev/miniflare";
-import {
-	getDockerPath,
-	getRegistryPath,
-} from "../../../environment-variables/misc-variables";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";

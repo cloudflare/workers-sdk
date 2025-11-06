@@ -1,9 +1,9 @@
+import { getWranglerSendErrorReportsFromEnv } from "@cloudflare/workers-utils";
 import * as Sentry from "@sentry/node";
 import { rejectedSyncPromise } from "@sentry/utils";
 import { fetch } from "undici";
 import { version as wranglerVersion } from "../../package.json";
 import { confirm } from "../dialogs";
-import { getWranglerSendErrorReportsFromEnv } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import type { BaseTransportOptions, TransportRequest } from "@sentry/types";
 import type { RequestInit } from "undici";

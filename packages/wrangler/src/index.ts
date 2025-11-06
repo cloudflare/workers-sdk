@@ -5,6 +5,7 @@ import { UserError as ContainersUserError } from "@cloudflare/containers-shared/
 import {
 	CommandLineArgsError,
 	experimental_readRawConfig,
+	getEnvironmentVariableFactory,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -59,7 +60,6 @@ import {
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
-import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,

@@ -10,6 +10,7 @@ import {
 	experimental_patchConfig,
 	formatCompatibilityDate,
 	formatConfigSnippet,
+	getDockerPath,
 	ParseError,
 	parseNonHyphenedUuid,
 	UserError,
@@ -34,7 +35,6 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
-import { getDockerPath } from "../environment-variables/misc-variables";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
@@ -72,7 +72,6 @@ import { getZoneForRoute } from "../zones";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { AssetsOptions } from "../assets";
 import type { Entry } from "../deployment-bundle/entry";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
@@ -81,6 +80,7 @@ import type {
 	CfModule,
 	CfPlacement,
 	CfWorkerInit,
+	ComplianceConfig,
 	Config,
 	CustomDomainRoute,
 	RawConfig,
