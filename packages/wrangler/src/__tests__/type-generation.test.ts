@@ -1238,7 +1238,9 @@ describe("generate types", () => {
 		`;
 		fs.writeFileSync(".dev.vars.template", templateContent, "utf8");
 
-		await runWrangler("types --include-runtime=false --env-file=.dev.vars.template");
+		await runWrangler(
+			"types --include-runtime=false --env-file=.dev.vars.template"
+		);
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"

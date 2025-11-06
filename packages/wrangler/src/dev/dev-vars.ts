@@ -62,8 +62,8 @@ export function getVarsForDev(
 	// If .dev.vars wasn't loaded (either because envFiles was explicit or .dev.vars doesn't exist),
 	// try loading from .env files
 	if (getCloudflareLoadDevVarsFromDotEnv()) {
-		const resolvedEnvFilePaths = (envFiles ?? getDefaultEnvFiles(env)).map((p) =>
-			path.resolve(configDir, p)
+		const resolvedEnvFilePaths = (envFiles ?? getDefaultEnvFiles(env)).map(
+			(p) => path.resolve(configDir, p)
 		);
 		const dotEnvVars = loadDotEnv(resolvedEnvFilePaths, {
 			includeProcessEnv: getCloudflareIncludeProcessEnvFromEnv(),
