@@ -159,11 +159,9 @@ describe("autoconfig details", () => {
 			},
 		];
 
-		it("should use the directory name as the worker name for a plain static site, normalizing it if needed", async () => {
-			for (const {
-				rawName: dirname,
-				normalizedName: expectedWorkerName,
-			} of workerNamesToTest) {
+		it.each(workerNamesToTest)(
+			"should use the directory name as the worker name for a plain static site, normalizing it if needed (%s)",
+			async ({ rawName: dirname, normalizedName: expectedWorkerName }) => {
 				await seed({
 					[`./${dirname}/index.html`]: "<h1>Hello World</h1>",
 				});
@@ -175,13 +173,11 @@ describe("autoconfig details", () => {
 					workerName: expectedWorkerName,
 				});
 			}
-		});
+		);
 
-		it("should use the project name from the package.json file when available as the worker name, normalizing it if needed", async () => {
-			for (const {
-				rawName: projectName,
-				normalizedName: expectedWorkerName,
-			} of workerNamesToTest) {
+		it.each(workerNamesToTest)(
+			"should use the project name from the package.json file when available as the worker name, normalizing it if needed (%s)",
+			async ({ rawName: projectName, normalizedName: expectedWorkerName }) => {
 				const dirname = `project-${randomUUID()}`;
 				await seed({
 					[`./${dirname}/package.json`]: JSON.stringify({ name: projectName }),
@@ -194,7 +190,7 @@ describe("autoconfig details", () => {
 					workerName: expectedWorkerName,
 				});
 			}
-		});
+		);
 	});
 
 	describe("displayAutoConfigDetails()", () => {
