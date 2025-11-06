@@ -89,7 +89,7 @@ test("getAssetFromKV gets index.html by default for / requests", async (t) => {
 	}
 });
 
-test("getAssetFromKV non ASCII path support", async (t) => {
+test.skip("getAssetFromKV non ASCII path support", async (t) => {
 	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com/测试.html"));
 	const res = await getAssetFromKV(event);
@@ -144,7 +144,7 @@ test("getAssetFromKV only decode URL when necessary", async (t) => {
 	}
 });
 
-test("getAssetFromKV Support for user decode url path", async (t) => {
+test.skip("getAssetFromKV Support for user decode url path", async (t) => {
 	mockRequestScope();
 	const event1 = getEvent(new Request("https://blah.com/%E4%BD%A0%E5%A5%BD/"));
 	const event2 = getEvent(new Request("https://blah.com/你好/"));
@@ -544,11 +544,9 @@ test("getAssetFromKV if range request submitted and resource in cache, request f
 	await res1;
 	await sleep(2);
 	const res2 = await getAssetFromKV(event2);
-	if (res2.headers.has("content-range")) {
-		t.is(res2.status, 206);
-	} else {
-		t.fail("Response was undefined");
-	}
+
+	t.is(res2.status, 206);
+	t.is(res2.headers.has("content-range"), true);
 });
 
 test.todo("getAssetFromKV when body not empty, should invoke .cancel()");

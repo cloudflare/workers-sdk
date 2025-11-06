@@ -1,5 +1,3 @@
-import makeServiceWorkerEnv from "service-worker-mock";
-
 const HASH = "123HASHBROWN";
 
 export const getEvent = (
@@ -104,11 +102,15 @@ export const mockCaches = () => {
 					}
 					// ... which we are using in this repository to set status 206
 					if (response.headers.has("content-range")) {
-						// @ts-expect-error overridding status in this mock
-						response.status = 206;
+						response = new Response(response.body, {
+							headers: response.headers,
+							status: 206,
+						});
 					} else {
-						// @ts-expect-error overridding status in this mock
-						response.status = 200;
+						response = new Response(response.body, {
+							headers: response.headers,
+							status: 200,
+						});
 					}
 					const etag = response.headers.get("etag");
 					if (etag && !etag.includes("W/")) {
@@ -139,7 +141,6 @@ export const mockCaches = () => {
 
 // mocks functionality used inside worker request
 export function mockRequestScope() {
-	Object.assign(globalThis, makeServiceWorkerEnv());
 	Object.assign(globalThis, { __STATIC_CONTENT_MANIFEST: mockManifest() });
 	Object.assign(globalThis, { __STATIC_CONTENT: mockKV(store) });
 	Object.assign(globalThis, { caches: mockCaches() });

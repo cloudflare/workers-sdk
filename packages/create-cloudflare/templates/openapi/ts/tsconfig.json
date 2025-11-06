@@ -21,7 +21,6 @@
 		"lib": ["es2022"],
 		"types": [
 			"@types/node",
-			"@types/service-worker-mock",
 		]
 	},
 	"exclude": ["node_modules", "dist", "tests"],
