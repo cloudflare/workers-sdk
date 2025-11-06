@@ -16,7 +16,7 @@ import type {
  * Notes:
  *
  * - Fields that are only specified in `ConfigFields` and not `Environment` can only appear
- * in the top level config and should not appear in any environments.
+ *   in the top level config and should not appear in any environments.
  * - Fields that are specified in `PagesConfigFields` are only relevant for Pages projects
  * - All top level fields in config and environments are optional in the Wrangler configuration file.
  *

@@ -1,5 +1,32 @@
 # @cloudflare/vite-plugin
 
+## 1.14.0
+
+### Minor Changes
+
+- [#11162](https://github.com/cloudflare/workers-sdk/pull/11162) [`c3ed531`](https://github.com/cloudflare/workers-sdk/commit/c3ed5314c831b29a43d05fcec238c38c2f4cc8d0) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - add a `remoteBindings` option to allow the disabling of remote bindings
+
+### Patch Changes
+
+- Updated dependencies [[`240ebeb`](https://github.com/cloudflare/workers-sdk/commit/240ebeb66e5cf152a68ff8ec63b0778f4d4dfdce), [`05440a1`](https://github.com/cloudflare/workers-sdk/commit/05440a1a1a6bbe312c3af64adf2fccba5e61457b), [`1ae020d`](https://github.com/cloudflare/workers-sdk/commit/1ae020d7066699512f89fcc42cf436b1deff0277), [`53b0fce`](https://github.com/cloudflare/workers-sdk/commit/53b0fce84e0a897a99efcce4cc96e1cf21391118), [`c3ed531`](https://github.com/cloudflare/workers-sdk/commit/c3ed5314c831b29a43d05fcec238c38c2f4cc8d0), [`305d7bf`](https://github.com/cloudflare/workers-sdk/commit/305d7bfff9bb07e0c21ffae264e89f9f3efb5118), [`b55a3c7`](https://github.com/cloudflare/workers-sdk/commit/b55a3c70f7204c56e4f33649bc2ebcc2f7fa75f3), [`c3ed531`](https://github.com/cloudflare/workers-sdk/commit/c3ed5314c831b29a43d05fcec238c38c2f4cc8d0), [`5d7c4c2`](https://github.com/cloudflare/workers-sdk/commit/5d7c4c2e2e9a3cf1db84c26ae0c729894a2f90f9), [`c3ed531`](https://github.com/cloudflare/workers-sdk/commit/c3ed5314c831b29a43d05fcec238c38c2f4cc8d0)]:
+  - wrangler@4.46.0
+  - miniflare@4.20251105.0
+
+## 1.13.19
+
+### Patch Changes
+
+- [#11123](https://github.com/cloudflare/workers-sdk/pull/11123) [`9c5601a`](https://github.com/cloudflare/workers-sdk/commit/9c5601a7f5dc11869bf29fe5b4cb5c4558a75951) Thanks [@sapphi-red](https://github.com/sapphi-red)! - Fix Vite 7.2 compatibility.
+
+- [#11137](https://github.com/cloudflare/workers-sdk/pull/11137) [`c2a63ab`](https://github.com/cloudflare/workers-sdk/commit/c2a63abd169f611210237055e2e8b1f9cdbada73) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Switch all instances of `miniflare.getWorker()` followed by `worker.fetch()` to use `miniflare.dispatchFetch()`. This means that the Vite plugin now emulates Cloudflare's response encoding in the same way as Wrangler.
+
+- [#11080](https://github.com/cloudflare/workers-sdk/pull/11080) [`90a2566`](https://github.com/cloudflare/workers-sdk/commit/90a2566982637ceb362e3cdbd7c433b5b4de9b28) Thanks [@vicb](https://github.com/vicb)! - Bump `unenv` to 2.0.0-rc.24
+
+- Updated dependencies [[`8ffbd17`](https://github.com/cloudflare/workers-sdk/commit/8ffbd17ee78887921244493f6ff7eb52abdcf3f1), [`77ed7e2`](https://github.com/cloudflare/workers-sdk/commit/77ed7e2023ad61e35340c836c77bcf16bd9a214c), [`bb00f9d`](https://github.com/cloudflare/workers-sdk/commit/bb00f9d88f4b3a2acc800f5a23f7ac97e695866a), [`90a2566`](https://github.com/cloudflare/workers-sdk/commit/90a2566982637ceb362e3cdbd7c433b5b4de9b28), [`ed666a1`](https://github.com/cloudflare/workers-sdk/commit/ed666a14156b5600acc11fdc3e1cfec0b0d9f6df), [`14f60e8`](https://github.com/cloudflare/workers-sdk/commit/14f60e84b1f568eb54fd26d9547ea017dceb652a), [`22f25fd`](https://github.com/cloudflare/workers-sdk/commit/22f25fd2d5dc952c4f0f8510558107dff229faa4)]:
+  - wrangler@4.45.4
+  - @cloudflare/unenv-preset@2.7.9
+  - miniflare@4.20251011.2
+
 ## 1.13.18
 
 ### Patch Changes

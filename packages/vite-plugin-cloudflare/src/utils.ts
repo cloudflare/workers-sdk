@@ -1,12 +1,33 @@
 import * as path from "node:path";
+import * as util from "node:util";
 import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
 import {
 	CoreHeaders,
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
+import type { PluginContext } from "./context";
 import type * as http from "node:http";
 import type * as vite from "vite";
+
+export const debuglog = util.debuglog("@cloudflare:vite-plugin");
+
+/**
+ * Creates an internal plugin to be used inside the main `vite-plugin-cloudflare` plugin.
+ * The provided `name` will be prefixed with `vite-plugin-cloudflare:`.
+ */
+export function createPlugin(
+	name: string,
+	pluginFactory: (ctx: PluginContext) => Omit<vite.Plugin, "name">
+): (ctx: PluginContext) => vite.Plugin {
+	return (ctx) => {
+		return {
+			name: `vite-plugin-cloudflare:${name}`,
+			sharedDuringBuild: true,
+			...pluginFactory(ctx),
+		};
+	};
+}
 
 export function getOutputDirectory(
 	userConfig: vite.UserConfig,

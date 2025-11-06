@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/unenv-preset",
-	"version": "2.7.8",
+	"version": "2.7.9",
 	"description": "cloudflare preset for unenv",
 	"keywords": [
 		"cloudflare",
@@ -48,7 +48,7 @@
 		"unbuild": "^3.2.0"
 	},
 	"peerDependencies": {
-		"unenv": "2.0.0-rc.21",
+		"unenv": "2.0.0-rc.24",
 		"workerd": "^1.20250927.0"
 	},
 	"peerDependenciesMeta": {

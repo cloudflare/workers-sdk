@@ -1,10 +1,8 @@
 import { buildImage } from "./build";
+import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
 import { UserError } from "./error";
-import {
-	getCloudflareContainerRegistry,
-	isCloudflareRegistryLink,
-} from "./knobs";
-import { dockerLoginManagedRegistry } from "./login";
+import { getCloudflareContainerRegistry } from "./knobs";
+import { dockerLoginImageRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";
 import {
 	checkExposedPorts,
@@ -18,7 +16,8 @@ export async function pullImage(
 	dockerPath: string,
 	options: Exclude<ContainerDevOptions, DockerfileConfig>
 ): Promise<{ abort: () => void; ready: Promise<void> }> {
-	await dockerLoginManagedRegistry(dockerPath);
+	const domain = new URL(`http://${options.image_uri}`).hostname;
+	await dockerLoginImageRegistry(dockerPath, domain);
 	const pull = runDockerCmd(dockerPath, [
 		"pull",
 		options.image_uri,
@@ -95,12 +94,6 @@ export async function prepareContainerImagesForDev(args: {
 				containerOptions: options,
 			});
 		} else {
-			if (!isCloudflareRegistryLink(options.image_uri)) {
-				throw new UserError(
-					`Image "${options.image_uri}" is a registry link but does not point to the Cloudflare container registry.\n` +
-						`To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images`
-				);
-			}
 			const pull = await pullImage(dockerPath, options);
 			onContainerImagePreparationStart({
 				containerOptions: options,
@@ -172,4 +165,67 @@ export function resolveImageName(accountId: string, image: string): string {
 
 	// is managed registry and doesn't have the account id,add it to the path
 	return `${url.hostname}/${accountId}${url.pathname}`;
+}
+
+/**
+ * get type of container registry, and validate
+ * currently we support cloudflare managed registries and AWS ECR
+ * when using cloudflare mananged registries we expect CLOUDFLARE_CONTAINER_REGISTRY to be set
+ */
+export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
+	// TODO: use parseImageName when that gets moved to this package
+	if (domain.includes("://")) {
+		throw new Error(
+			`${domain} is invalid:\nImage reference should not include the protocol part (e.g: registry.cloudflare.com rather than https://registry.cloudflare.com)`
+		);
+	}
+	let url: URL;
+	try {
+		url = new URL(`http://${domain}`);
+	} catch (e) {
+		if (e instanceof Error) {
+			throw new Error(`${domain} is invalid:\n${e.message}`);
+		}
+		throw e;
+	}
+
+	const acceptedRegistries: RegistryPattern[] = [
+		{
+			type: ExternalRegistryKind.ECR,
+			pattern: /^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com$/,
+			name: "AWS ECR",
+			secretType: "AWS Secret Access Key",
+		},
+		{
+			type: "cloudflare",
+			// Make a regex based on the env var CLOUDFLARE_CONTAINER_REGISTRY
+			pattern: new RegExp(
+				`^${getCloudflareContainerRegistry().replace(/[\\.]/g, "\\$&")}$`
+			),
+			name: "Cloudflare Containers Managed Registry",
+		},
+	];
+
+	const match = acceptedRegistries.find((registry) =>
+		registry.pattern.test(url.hostname)
+	);
+
+	if (!match) {
+		const supportedRegistries = acceptedRegistries
+			.filter((r) => r.type !== "cloudflare")
+			.map((r) => r.name)
+			.join(", ");
+		throw new UserError(
+			`${url.hostname} is not a supported image registry.\nCurrently we support the following non-Cloudflare registries: ${supportedRegistries}.\nTo use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images`
+		);
+	}
+
+	return match;
+};
+
+interface RegistryPattern {
+	type: ExternalRegistryKind | "cloudflare";
+	secretType?: string;
+	pattern: RegExp;
+	name: string;
 }

@@ -1,8 +1,8 @@
-import { createPlugin } from "./utils";
+import assert from "node:assert";
+import { VIRTUAL_WORKER_ENTRY, virtualPrefix } from "../shared";
+import { createPlugin } from "../utils";
 
-const virtualPrefix = "virtual:cloudflare/";
-const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
-export const VIRTUAL_WORKER_ENTRY = `${virtualPrefix}worker-entry`;
+export const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
 export const VIRTUAL_CLIENT_FALLBACK_ENTRY = `${virtualPrefix}client-fallback-entry`;
 
 /**
@@ -20,11 +20,7 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 
 			if (source === VIRTUAL_USER_ENTRY) {
 				const workerConfig = ctx.getWorkerConfig(this.environment.name);
-
-				// TODO: replace with `assert` once we have migrated to tsdown
-				if (!workerConfig) {
-					return;
-				}
+				assert(workerConfig, "Expected `workerConfig` to be defined");
 
 				return this.resolve(workerConfig.main);
 			}

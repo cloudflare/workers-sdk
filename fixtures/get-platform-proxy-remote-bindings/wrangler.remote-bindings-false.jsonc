@@ -1,0 +1,8 @@
+{
+	"name": "get-platform-proxy-remote-bindings-with-local-bindings-only-test",
+	"compatibility_date": "2025-05-07",
+	"ai": {
+		"binding": "AI",
+		"remote": true,
+	},
+}

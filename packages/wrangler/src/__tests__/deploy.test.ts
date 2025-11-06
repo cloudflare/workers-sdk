@@ -14934,7 +14934,7 @@ export default{
 				script: {
 					created_on: "2025-08-07T09:34:47.846308Z",
 					modified_on: "2025-08-08T10:48:12.688997Z",
-					id: "silent-firefly-dbe3",
+					id: "my-worker-id",
 					observability: { enabled: true, head_sampling_rate: 1 },
 					compatibility_date: "2024-04-24",
 				},
@@ -15000,7 +15000,7 @@ export default{
 				script: {
 					created_on: "2025-08-07T09:34:47.846308Z",
 					modified_on: "2025-08-08T10:48:12.688997Z",
-					id: "silent-firefly-dbe3",
+					id: "my-worker-id",
 					observability: { enabled: true, head_sampling_rate: 1 },
 					compatibility_date: "2024-04-24",
 				},
@@ -15065,7 +15065,7 @@ export default{
 				script: {
 					created_on: "2025-08-07T09:34:47.846308Z",
 					modified_on: "2025-08-08T10:48:12.688997Z",
-					id: "silent-firefly-dbe3",
+					id: "my-worker-id",
 					observability: { enabled: true, head_sampling_rate: 1 },
 					compatibility_date: "2024-04-24",
 				},

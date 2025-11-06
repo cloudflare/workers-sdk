@@ -59,6 +59,7 @@ describe("wrangler", () => {
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open-beta]
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
+				  wrangler containers             📦 Manage Containers [open-beta]
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models
@@ -121,6 +122,7 @@ describe("wrangler", () => {
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open-beta]
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
+				  wrangler containers             📦 Manage Containers [open-beta]
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models

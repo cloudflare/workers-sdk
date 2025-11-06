@@ -7,6 +7,50 @@ import { execaCommand } from "execa";
 import { logger } from "../logger";
 import type { Config } from "@cloudflare/workers-utils";
 
+export async function runCommand(
+	command: string,
+	cwd: string | undefined,
+	prefix = "[custom build]"
+) {
+	logger.log(chalk.blue(prefix), "Running:", command);
+	try {
+		const res = execaCommand(command, {
+			shell: true,
+			cwd,
+		});
+		res.stdout?.pipe(
+			new Writable({
+				write(chunk: Buffer, _, callback) {
+					const lines = chunk.toString().split("\n");
+					for (const line of lines) {
+						logger.log(chalk.blue(prefix), line);
+					}
+					callback();
+				},
+			})
+		);
+		res.stderr?.pipe(
+			new Writable({
+				write(chunk: Buffer, _, callback) {
+					const lines = chunk.toString().split("\n");
+					for (const line of lines) {
+						logger.log(chalk.red(prefix), line);
+					}
+					callback();
+				},
+			})
+		);
+		await res;
+	} catch (e) {
+		logger.error(e);
+		throw new UserError(
+			`Running custom build \`${command}\` failed. There are likely more logs from your build command above.`,
+			{
+				cause: e,
+			}
+		);
+	}
+}
 /**
  * Run the custom build step, if one was provided.
  *
@@ -20,44 +64,7 @@ export async function runCustomBuild(
 	configPath: string | undefined
 ) {
 	if (build.command) {
-		logger.log(chalk.blue("[custom build]"), "Running:", build.command);
-		try {
-			const res = execaCommand(build.command, {
-				shell: true,
-				...(build.cwd && { cwd: build.cwd }),
-			});
-			res.stdout?.pipe(
-				new Writable({
-					write(chunk: Buffer, _, callback) {
-						const lines = chunk.toString().split("\n");
-						for (const line of lines) {
-							logger.log(chalk.blue("[custom build]"), line);
-						}
-						callback();
-					},
-				})
-			);
-			res.stderr?.pipe(
-				new Writable({
-					write(chunk: Buffer, _, callback) {
-						const lines = chunk.toString().split("\n");
-						for (const line of lines) {
-							logger.log(chalk.red("[custom build]"), line);
-						}
-						callback();
-					},
-				})
-			);
-			await res;
-		} catch (e) {
-			logger.error(e);
-			throw new UserError(
-				`Running custom build \`${build.command}\` failed. There are likely more logs from your build command above.`,
-				{
-					cause: e,
-				}
-			);
-		}
+		await runCommand(build.command, build.cwd);
 
 		assertEntryPointExists(
 			expectedEntryAbsolute,

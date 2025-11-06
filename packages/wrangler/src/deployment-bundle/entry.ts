@@ -7,7 +7,7 @@ import {
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { sniffUserAgent } from "../package-manager";
-import guessWorkerFormat from "./guess-worker-format";
+import { guessWorkerFormat } from "./guess-worker-format";
 import {
 	resolveEntryWithAssets,
 	resolveEntryWithEntryPoint,

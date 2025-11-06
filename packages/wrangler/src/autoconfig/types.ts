@@ -1,0 +1,17 @@
+import type { Framework } from "./frameworks/index";
+import type { PackageJSON } from "@cloudflare/workers-utils";
+
+export type AutoConfigDetails = {
+	/** The path to the project (defaults to cwd) */
+	projectPath: string;
+	/** The content of the project's package.json file (if any) */
+	packageJson?: PackageJSON;
+	/** Whether the project is already configured (no autoconfig required) */
+	configured: boolean;
+	/** Details about the detected framework (if any) */
+	framework?: Framework;
+	/** The build command used to build the project (if any) */
+	buildCommand?: string;
+	/** The output directory (if no framework is used, points to the raw asset files) */
+	outputDir?: string;
+};

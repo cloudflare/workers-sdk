@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"target": "ES2020",
 		"esModuleInterop": true,
-		"module": "CommonJS",
+		"module": "preserve",
 		"lib": ["ES2020"],
 		"types": ["node"],
 		"skipLibCheck": true,

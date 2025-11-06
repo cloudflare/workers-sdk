@@ -1,5 +1,4 @@
-import { cleanUrl } from "../utils";
-import { createPlugin } from "./utils";
+import { cleanUrl, createPlugin } from "../utils";
 
 /**
  * Plugin to support the `.wasm?init` extension

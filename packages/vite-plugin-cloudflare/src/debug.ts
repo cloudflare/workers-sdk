@@ -1,8 +1,7 @@
 import assert from "node:assert";
 import getPort, { portNumbers } from "get-port";
 import colors from "picocolors";
-import type { ResolvedPluginConfig } from "./plugin-config";
-import type { Miniflare } from "miniflare";
+import type { PluginContext } from "./context";
 import type * as vite from "vite";
 
 export const DEBUG_PATH = "/__debug";
@@ -11,19 +10,15 @@ const DEFAULT_INSPECTOR_PORT = 9229;
 /**
  * Gets the inspector port option that should be passed to Miniflare based on the user's plugin config
  */
-export async function getInputInspectorPortOption(
-	resolvedPluginConfig: ResolvedPluginConfig,
-	viteServer: vite.ViteDevServer | vite.PreviewServer,
-	miniflare?: Miniflare
+export async function getInputInspectorPort(
+	ctx: PluginContext,
+	viteServer: vite.ViteDevServer | vite.PreviewServer
 ) {
 	if (
-		resolvedPluginConfig.inspectorPort === undefined ||
-		resolvedPluginConfig.inspectorPort === 0
+		ctx.resolvedPluginConfig.inspectorPort === undefined ||
+		ctx.resolvedPluginConfig.inspectorPort === 0
 	) {
-		const resolvedInspectorPort = await getResolvedInspectorPort(
-			resolvedPluginConfig,
-			miniflare
-		);
+		const resolvedInspectorPort = await ctx.getResolvedInspectorPort();
 
 		if (resolvedInspectorPort !== null) {
 			// the user is not specifying an inspector port to use and we're already
@@ -33,11 +28,11 @@ export async function getInputInspectorPortOption(
 	}
 
 	const inputInspectorPort =
-		resolvedPluginConfig.inspectorPort ??
+		ctx.resolvedPluginConfig.inspectorPort ??
 		(await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT));
 
 	if (
-		resolvedPluginConfig.inspectorPort === undefined &&
+		ctx.resolvedPluginConfig.inspectorPort === undefined &&
 		inputInspectorPort !== DEFAULT_INSPECTOR_PORT
 	) {
 		viteServer.config.logger.warn(
@@ -48,22 +43,6 @@ export async function getInputInspectorPortOption(
 	}
 
 	return inputInspectorPort;
-}
-
-/**
- * Gets the resolved inspector port provided by Miniflare
- */
-export async function getResolvedInspectorPort(
-	resolvedPluginConfig: ResolvedPluginConfig,
-	miniflare: Miniflare | undefined
-) {
-	if (miniflare && resolvedPluginConfig.inspectorPort !== false) {
-		const miniflareInspectorUrl = await miniflare.getInspectorURL();
-
-		return Number.parseInt(miniflareInspectorUrl.port);
-	}
-
-	return null;
 }
 
 function getFirstAvailablePort(start: number) {

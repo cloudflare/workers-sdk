@@ -19,7 +19,7 @@ describe("getRemoteConfigsDiff", () => {
 	it("should handle a very simple diffing scenario (no diffs, random order)", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: true,
@@ -31,7 +31,7 @@ describe("getRemoteConfigsDiff", () => {
 				observability: { enabled: true, head_sampling_rate: 1 },
 			},
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				workers_dev: undefined,
 				placement: undefined,
 				compatibility_date: "2025-07-08",
@@ -50,14 +50,14 @@ describe("getRemoteConfigsDiff", () => {
 	it("should handle a very simple diffing scenario where there is only an addition to an array (specifically in `kv_namespaces`)", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				kv_namespaces: [{ binding: "MY_KV", id: "<kv-id>" }],
 				preview_urls: true,
 			},
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: true,
@@ -83,7 +83,7 @@ describe("getRemoteConfigsDiff", () => {
 	it("should handle a very simple diffing scenario (some diffs, random order)", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: true,
@@ -98,7 +98,7 @@ describe("getRemoteConfigsDiff", () => {
 				compatibility_date: "2025-07-09",
 				main: "/tmp/src/index.js",
 				compatibility_flags: [],
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				workers_dev: true,
 				limits: undefined,
 				placement: undefined,
@@ -121,7 +121,7 @@ describe("getRemoteConfigsDiff", () => {
 	it("should handle a diffing scenario with only additions", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: true,
@@ -134,7 +134,7 @@ describe("getRemoteConfigsDiff", () => {
 				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
 			},
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "src/index.js",
 				compatibility_date: "2025-07-08",
 				account_id: "account-id-123",
@@ -163,7 +163,7 @@ describe("getRemoteConfigsDiff", () => {
 	it("should handle a diffing scenario with only deletions", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: false,
@@ -176,7 +176,7 @@ describe("getRemoteConfigsDiff", () => {
 				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
 			},
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: false,
@@ -206,7 +206,7 @@ describe("getRemoteConfigsDiff", () => {
 	it("should handle a diffing scenario with modifications and removals", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: true,
@@ -219,7 +219,7 @@ describe("getRemoteConfigsDiff", () => {
 				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
 			},
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "src/index.js",
 				compatibility_date: "2025-07-09",
 				observability: {
