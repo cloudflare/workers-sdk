@@ -6,6 +6,7 @@ import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
+import { sendMetricsEvent } from "../metrics";
 import { getDevCompatibilityDate } from "../utils/compatibility-date";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
@@ -14,9 +15,28 @@ import { displayAutoConfigDetails } from "./details";
 import type { AutoConfigDetails } from "./types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
+type AutoconfigMetrics = Pick<
+	AutoConfigDetails,
+	"buildCommand" | "outputDir"
+> & {
+	framework: string | undefined;
+};
+
 export async function runAutoConfig(
 	autoConfigDetails: AutoConfigDetails
 ): Promise<void> {
+	const detected: AutoconfigMetrics = {
+		buildCommand: autoConfigDetails.buildCommand,
+		outputDir: autoConfigDetails.outputDir,
+		framework: autoConfigDetails.framework?.name,
+	};
+	sendMetricsEvent(
+		"autoconfig detected",
+		{
+			detected,
+		},
+		{}
+	);
 	displayAutoConfigDetails(autoConfigDetails);
 
 	const deploy = await confirm("Do you want to deploy using these settings?");
@@ -75,6 +95,21 @@ export async function runAutoConfig(
 			"[build]"
 		);
 	}
+
+	const used: AutoconfigMetrics = {
+		buildCommand: autoConfigDetails.buildCommand,
+		outputDir: autoConfigDetails.outputDir,
+		framework: autoConfigDetails.framework?.name,
+	};
+
+	sendMetricsEvent(
+		"autoconfig accepted",
+		{
+			detected,
+			used,
+		},
+		{}
+	);
 
 	return;
 }
