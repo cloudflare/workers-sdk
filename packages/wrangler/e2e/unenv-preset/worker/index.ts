@@ -576,16 +576,29 @@ export const WorkerdTests: Record<string, () => void> = {
 	async testTraceEvents() {
 		const traceEvents = await import("node:trace_events");
 
-		assert.strictEqual(typeof traceEvents.createTracing, "function");
-		assert.strictEqual(typeof traceEvents.getEnabledCategories, "function");
+		assertTypeOf(traceEvents, "createTracing", "function");
+		assertTypeOf(traceEvents, "getEnabledCategories", "function");
 
-		const categories = traceEvents.getEnabledCategories();
-		assert.ok(Array.isArray(categories));
-
-		const tracing = traceEvents.createTracing({ categories: ["node.async_hooks"] });
-		assert.strictEqual(typeof tracing.enable, "function");
-		assert.strictEqual(typeof tracing.disable, "function");
-		assert.strictEqual(typeof tracing.enabled, "boolean");
-		assert.strictEqual(typeof tracing.categories, "string");
+		if (getRuntimeFlagValue("enable_nodejs_trace_events_module")) {
+			const categories = traceEvents.getEnabledCategories();
+			assert.ok(Array.isArray(categories), "categories should be an array");
+		} else {
+			const tracing = traceEvents.createTracing({
+				categories: ["node.async_hooks"],
+			});
+			assertTypeOf(tracing, "enable", "function");
+			assertTypeOf(tracing, "disable", "function");
+			assertTypeOf(tracing, "enabled", "boolean");
+			assertTypeOf(tracing, "categories", "string");
+		}
 	},
 };
+
+function assertTypeOf(target: unknown, property: string, expectType: string) {
+	const actualType = typeof (target as any)[property];
+	assert.strictEqual(
+		actualType,
+		expectType,
+		`${property} should be of type ${expectType}, got ${actualType}`
+	);
+}
