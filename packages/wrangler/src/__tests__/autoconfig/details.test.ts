@@ -146,8 +146,8 @@ describe("autoconfig details", () => {
 		const workerNamesToTest = [
 			{ rawName: "my-project-1", normalizedName: "my-project-1" },
 			{
-				rawName: "-my-other-project%_",
-				normalizedName: "my-other-project",
+				rawName: "--my-other-project%1_",
+				normalizedName: "my-other-project-1",
 			},
 			{
 				rawName: "x".repeat(100),

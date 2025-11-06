@@ -128,8 +128,8 @@ export async function getDetailsForAutoConfig({
 	};
 }
 
-const invalidWorkerNameCharsRegex = /[^a-z0-9-]/g;
-const invalidWorkerNameStartEndRegex = /^-|-$/g;
+const invalidWorkerNameCharsRegex = /[^a-z0-9 ]/g;
+const invalidWorkerNameStartEndRegex = /^(-+)|(-+)$/g;
 
 function checkWorkerNameValidity(
 	input: string
@@ -167,8 +167,8 @@ function toValidWorkerName(name: string): string {
 	name = name
 		// Replace all underscores with dashes
 		.replaceAll("_", "-")
-		// Remove all the special characters besides dashes
-		.replace(invalidWorkerNameCharsRegex, "")
+		// Replace all the special characters (besides dashes) with dashes
+		.replace(invalidWorkerNameCharsRegex, "-")
 		// Remove invalid start/end dashes
 		.replace(invalidWorkerNameStartEndRegex, "")
 		// If the name is longer than 58 character let's truncate it to that
