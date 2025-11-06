@@ -1,10 +1,9 @@
 import { writeFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { resolve } from "node:path";
 import { endSection, startSection } from "@cloudflare/cli";
 import { FatalError } from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
-import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { getDevCompatibilityDate } from "../utils/compatibility-date";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
@@ -55,10 +54,7 @@ export async function runAutoConfig(
 		JSON.stringify(
 			{
 				$schema: "node_modules/wrangler/config-schema.json",
-				name:
-					getCIOverrideName() ??
-					autoConfigDetails.packageJson?.name ??
-					dirname(autoConfigDetails.projectPath),
+				name: autoConfigDetails.workerName,
 				compatibility_date: getDevCompatibilityDate(undefined),
 				observability: {
 					enabled: true,

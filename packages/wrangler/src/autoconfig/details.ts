@@ -11,6 +11,7 @@ import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
 import { confirm, prompt } from "../dialogs";
+import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 import { getFramework } from "./frameworks/get-framework";
@@ -59,6 +60,13 @@ async function findAssetsDir(from: string): Promise<string | undefined> {
 	return undefined;
 }
 
+function getWorkerName(projectOrWorkerName = "", projectPath: string): string {
+	const rawName =
+		getCIOverrideName() ?? (projectOrWorkerName || basename(projectPath));
+
+	return toValidWorkerName(rawName);
+}
+
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
@@ -73,7 +81,7 @@ export async function getDetailsForAutoConfig({
 		return {
 			configured: true,
 			projectPath,
-			workerName: wranglerConfig.name ?? "worker",
+			workerName: getWorkerName(wranglerConfig.name, projectPath),
 		};
 	}
 	const fs = new NodeFS();
@@ -124,7 +132,7 @@ export async function getDetailsForAutoConfig({
 		packageJson,
 		buildCommand: detectedFramework?.buildCommand ?? packageJsonBuild,
 		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
-		workerName: toValidWorkerName(packageJson?.name ?? basename(projectPath)),
+		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
 }
 
@@ -134,6 +142,13 @@ const invalidWorkerNameStartEndRegex = /^(-+)|(-+)$/g;
 function checkWorkerNameValidity(
 	input: string
 ): { valid: false; cause: string } | { valid: true } {
+	if (!input) {
+		return {
+			valid: false,
+			cause: "Worker names cannot be empty.",
+		};
+	}
+
 	if (input.match(invalidWorkerNameStartEndRegex)) {
 		return {
 			valid: false,
