@@ -231,7 +231,7 @@ export async function confirmAutoConfigDetails(
 		return autoConfigDetails;
 	}
 
-	// Just spreading the object to shallow clone it to avoid some side effects
+	// Just spreading the object to shallow clone it to avoid some potential side effects
 	const { ...updatedAutoConfigDetails } = autoConfigDetails;
 
 	const workerName = await prompt("What do you want to name your Worker?", {
