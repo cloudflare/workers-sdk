@@ -46,17 +46,22 @@ export function getVarsForDev(
 ): Config["vars"] {
 	const configDir = path.resolve(configPath ? path.dirname(configPath) : ".");
 
-	// First, try to load from .dev.vars
-	const devVarsPath = path.resolve(configDir, ".dev.vars");
-	const loaded = loadDotDevDotVars(devVarsPath, env);
-	if (loaded !== undefined) {
-		const devVarsRelativePath = path.relative(process.cwd(), loaded.path);
-		if (!silent) {
-			logger.log(`Using vars defined in ${devVarsRelativePath}`);
+	// If envFiles are not explicitly provided, try to load from .dev.vars first
+	if (envFiles === undefined) {
+		const devVarsPath = path.resolve(configDir, ".dev.vars");
+		const loaded = loadDotDevDotVars(devVarsPath, env);
+		if (loaded !== undefined) {
+			const devVarsRelativePath = path.relative(process.cwd(), loaded.path);
+			if (!silent) {
+				logger.log(`Using vars defined in ${devVarsRelativePath}`);
+			}
+			return { ...vars, ...loaded.parsed };
 		}
-		return { ...vars, ...loaded.parsed };
-	} else if (getCloudflareLoadDevVarsFromDotEnv()) {
-		// If no .dev.vars files load vars from .env files instead.
+	}
+
+	// If .dev.vars wasn't loaded (either because envFiles was explicit or .dev.vars doesn't exist),
+	// try loading from .env files
+	if (getCloudflareLoadDevVarsFromDotEnv()) {
 		const resolvedEnvFilePaths = (envFiles ?? getDefaultEnvFiles(env)).map(
 			(p) => path.resolve(configDir, p)
 		);
@@ -65,10 +70,10 @@ export function getVarsForDev(
 			silent,
 		});
 		return { ...vars, ...dotEnvVars };
-	} else {
-		// Just return the vars from the Wrangler configuration.
-		return vars;
 	}
+
+	// Just return the vars from the Wrangler configuration.
+	return vars;
 }
 
 export interface DotDevDotVars {
