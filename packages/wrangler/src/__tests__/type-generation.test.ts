@@ -1213,6 +1213,61 @@ describe("generate types", () => {
 		`);
 	});
 
+	it("should use explicit --env-file instead of .dev.vars when both exist", async () => {
+		fs.writeFileSync(
+			"./wrangler.jsonc",
+			JSON.stringify({
+				vars: {
+					myTomlVarA: "A from wrangler toml",
+				},
+			}),
+			"utf-8"
+		);
+
+		// Create .dev.vars with secrets that should NOT appear
+		const devVarsContent = dedent`
+			SECRET_FROM_DEV_VARS="should not appear"
+			ANOTHER_SECRET="also should not appear"
+		`;
+		fs.writeFileSync(".dev.vars", devVarsContent, "utf8");
+
+		// Create .dev.vars.template with secrets that SHOULD appear
+		const templateContent = dedent`
+			SECRET_FROM_TEMPLATE="should appear"
+			TEMPLATE_ONLY="only in template"
+		`;
+		fs.writeFileSync(".dev.vars.template", templateContent, "utf8");
+
+		await runWrangler(
+			"types --include-runtime=false --env-file=.dev.vars.template"
+		);
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface Env {
+					myTomlVarA: \\"A from wrangler toml\\";
+					SECRET_FROM_TEMPLATE: string;
+					TEMPLATE_ONLY: string;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+		// Verify that .dev.vars secrets are NOT included
+		expect(std.out).not.toContain("SECRET_FROM_DEV_VARS");
+		expect(std.out).not.toContain("ANOTHER_SECRET");
+	});
+
 	it("should include secret keys from .env, if there is no .dev.vars", async () => {
 		fs.writeFileSync(
 			"./wrangler.jsonc",
