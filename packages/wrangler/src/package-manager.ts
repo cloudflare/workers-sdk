@@ -91,7 +91,7 @@ const PnpmPackageManager: PackageManager = {
  */
 const YarnPackageManager: PackageManager = {
 	type: "yarn",
-	npx: "yarn",
+	npx: "yarn dlx",
 };
 
 /**
