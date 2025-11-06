@@ -79,7 +79,6 @@
 		"patchedDependencies": {
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
 			"pg@8.11.3": "patches/pg@8.11.3.patch",
-			"toucan-js@3.3.1": "patches/toucan-js@3.3.1.patch",
 			"toucan-js@4.0.0": "patches/toucan-js@4.0.0.patch",
 			"postal-mime": "patches/postal-mime.patch",
 			"@changesets/assemble-release-plan": "patches/@changesets__assemble-release-plan.patch",

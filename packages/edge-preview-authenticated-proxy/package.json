@@ -16,7 +16,7 @@
 		"@types/cookie": "^0.6.0",
 		"cookie": "^0.7.2",
 		"promjs": "^0.4.2",
-		"toucan-js": "^3.3.1",
+		"toucan-js": "^4.0.0",
 		"wrangler": "workspace:*"
 	},
 	"volta": {
