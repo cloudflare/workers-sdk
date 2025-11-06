@@ -19,6 +19,7 @@ import { seed } from "../helpers/seed";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type { Framework } from "../../autoconfig/frameworks";
+import type { AutoConfigDetails } from "../../autoconfig/types";
 import type { Config } from "@cloudflare/workers-utils";
 import type { MockInstance } from "vitest";
 
@@ -37,6 +38,12 @@ vi.mock("../deploy/deploy", async (importOriginal) => ({
 		// In unit tests of autoconfig we only care about the configuration aspect, so bail before any actual deployment happens
 		throw new FatalError("Bailing early in tests");
 	},
+}));
+
+vi.mock("../../autoconfig/details", async (importOriginal) => ({
+	...(await importOriginal()),
+	confirmAutoConfigDetails: async (autoConfigDetails: AutoConfigDetails) =>
+		autoConfigDetails,
 }));
 
 async function runDeploy(withArgs: string = "") {
@@ -91,7 +98,11 @@ describe("autoconfig (deploy)", () => {
 		const getDetailsSpy = vi
 			.spyOn(details, "getDetailsForAutoConfig")
 			.mockImplementationOnce(() =>
-				Promise.resolve({ configured: false, projectPath: process.cwd() })
+				Promise.resolve({
+					configured: false,
+					projectPath: process.cwd(),
+					workerName: "my-worker",
+				})
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
 
@@ -105,7 +116,11 @@ describe("autoconfig (deploy)", () => {
 		const getDetailsSpy = vi
 			.spyOn(details, "getDetailsForAutoConfig")
 			.mockImplementationOnce(() =>
-				Promise.resolve({ configured: true, projectPath: process.cwd() })
+				Promise.resolve({
+					configured: true,
+					projectPath: process.cwd(),
+					workerName: "my-worker",
+				})
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
 
@@ -233,7 +248,6 @@ describe("autoconfig (deploy)", () => {
 			);
 		});
 		it("happy path", async () => {
-			vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "test-name");
 			await writeFile(
 				"package.json",
 				JSON.stringify({
@@ -241,7 +255,7 @@ describe("autoconfig (deploy)", () => {
 				})
 			);
 			mockConfirm({
-				text: "Do you want to deploy using these settings?",
+				text: "Do you want to proceed with the deployment using these settings?",
 				result: true,
 			});
 			await writeFile(".gitignore", "");
@@ -252,6 +266,7 @@ describe("autoconfig (deploy)", () => {
 				projectPath: process.cwd(),
 				buildCommand: "echo 'built' > build.txt",
 				configured: false,
+				workerName: "my-worker",
 				framework: {
 					name: "fake",
 					configure: configureSpy,
@@ -265,7 +280,9 @@ describe("autoconfig (deploy)", () => {
 			});
 
 			expect(std.out).toMatchInlineSnapshot(`
-				"Auto-detected Project Settings:
+				"
+				Auto-detected Project Settings:
+				 - Worker Name: my-worker
 				 - Framework: fake
 				 - Build Command: echo 'built' > build.txt
 				 - Output Directory: dist
@@ -276,7 +293,7 @@ describe("autoconfig (deploy)", () => {
 			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
 				"{
 				  \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				  \\"name\\": \\"test-name\\",
+				  \\"name\\": \\"my-worker\\",
 				  \\"compatibility_date\\": \\"2000-01-01\\",
 				  \\"observability\\": {
 				    \\"enabled\\": true
@@ -314,12 +331,13 @@ describe("autoconfig (deploy)", () => {
 
 		it(".assetsignore should contain Wrangler files if outputDir === projectPath", async () => {
 			mockConfirm({
-				text: "Do you want to deploy using these settings?",
+				text: "Do you want to proceed with the deployment using these settings?",
 				result: true,
 			});
 
 			await run.runAutoConfig({
 				projectPath: process.cwd(),
+				workerName: "my-worker",
 				configured: false,
 				outputDir: process.cwd(),
 			});
