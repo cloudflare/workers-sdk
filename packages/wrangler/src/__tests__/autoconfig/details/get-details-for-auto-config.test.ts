@@ -145,7 +145,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		},
 		{
 			rawName: "x".repeat(100),
-			normalizedName: "x".repeat(62),
+			normalizedName: "x".repeat(63),
 		},
 		{
 			rawName: "???",

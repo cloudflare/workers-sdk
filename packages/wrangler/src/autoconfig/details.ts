@@ -138,14 +138,14 @@ export async function getDetailsForAutoConfig({
 
 const invalidWorkerNameCharsRegex = /[^a-z0-9 ]/g;
 const invalidWorkerNameStartEndRegex = /^(-+)|(-+)$/g;
-const workerNameLengthLimit = 62;
+const workerNameLengthLimit = 63;
 
 /**
  * Checks whether the provided worker name is valid, this means that:
  *  - the name is not empty
  *  - the name doesn't start nor ends with a dash
  *  - the name doesn't contain special characters besides dashes
- *  - the name is shorter than 63 characters
+ *  - the name is not longer than 63 characters
  *
  * See: https://developers.cloudflare.com/workers/configuration/routing/workers-dev/#limitations
  *
@@ -194,7 +194,7 @@ function checkWorkerNameValidity(
  *  - the name is not empty
  *  - the name doesn't start nor ends with a dash
  *  - the name doesn't contain special characters besides dashes
- *  - the name is shorter than 63 characters
+ *  - the name is not longer than 63 characters
  *
  * See: https://developers.cloudflare.com/workers/configuration/routing/workers-dev/#limitations
  *
