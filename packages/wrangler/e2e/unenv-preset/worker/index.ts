@@ -582,8 +582,10 @@ export const WorkerdTests: Record<string, () => void> = {
 		const categories = traceEvents.getEnabledCategories();
 		assert.strictEqual(
 			typeof categories,
-			"string",
-			"getEnabledCategories should return be a string"
+			// `getEnabledCategories` returns a string with unenv and `undefined` with the native module
+			getRuntimeFlagValue("enable_nodejs_trace_events_module")
+				? "undefined"
+				: "string"
 		);
 
 		const tracing = traceEvents.createTracing({
