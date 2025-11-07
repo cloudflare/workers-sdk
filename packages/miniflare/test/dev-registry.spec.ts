@@ -833,6 +833,7 @@ test("DevRegistry: tail to default entrypoint", async (t) => {
 		serviceBindings: {
 			remote: "remote-worker",
 		},
+		handleRuntimeStdio: () => {},
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -870,6 +871,7 @@ test("DevRegistry: tail to unknown worker", async (t) => {
 		},
 		compatibilityFlags: ["experimental"],
 		modules: true,
+		handleRuntimeStdio: () => {},
 		script: `
 			export default {
 				async fetch(request, env) {
