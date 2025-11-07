@@ -1,4 +1,4 @@
-/* eslint-disable no-var */
+ 
 // noinspection ES6ConvertVarToLetConst
 
 import type { WorkerGlobalState } from "vitest";

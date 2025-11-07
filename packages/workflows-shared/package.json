@@ -46,6 +46,7 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/mime": "^3.0.4",
 		"esbuild": "catalog:default",
+		"eslint": "catalog:default",
 		"rimraf": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"

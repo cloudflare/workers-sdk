@@ -103,7 +103,6 @@ export function createRegisterYargsCommand(
 
 function createHandler(def: CommandDefinition, commandName: string) {
 	return async function handler(args: HandlerArgs<NamedArgDefinitions>) {
-		// eslint-disable-next-line no-useless-catch
 		try {
 			const shouldPrintBanner = def.behaviour?.printBanner;
 

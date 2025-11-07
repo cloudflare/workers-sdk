@@ -43,6 +43,7 @@
 		"uuid": "^9.0.0"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@types/glob-to-regexp": "^0.4.1",
 		"@types/react": "^18.3.3",
 		"@types/react-dom": "^18.2.0",
@@ -50,7 +51,7 @@
 		"@typescript-eslint/eslint-plugin": "catalog:default",
 		"@typescript-eslint/parser": "catalog:default",
 		"@vitejs/plugin-react": "^4.3.3",
-		"eslint": "^8.57.1",
+		"eslint": "catalog:default",
 		"tsx": "^3.12.8",
 		"undici": "catalog:default",
 		"vite": "catalog:default",

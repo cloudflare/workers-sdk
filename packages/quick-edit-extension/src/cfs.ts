@@ -482,7 +482,6 @@ declare module "*.bin" {
 		let offset = haystackLen,
 			idx = -1;
 
-		// eslint-disable-next-line
 		while (true) {
 			idx = haystack.lastIndexOf(needle, offset - 1);
 			if (idx === -1 || idx + needleLen !== offset) {

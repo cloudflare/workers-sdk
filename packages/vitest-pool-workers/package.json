@@ -72,6 +72,7 @@
 		"@vitest/runner": "catalog:default",
 		"@vitest/snapshot": "catalog:default",
 		"capnp-es": "^0.0.11",
+		"eslint": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",

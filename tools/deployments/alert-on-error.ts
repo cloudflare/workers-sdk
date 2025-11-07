@@ -17,7 +17,6 @@ if (require.main === module) {
 	}
 
 	if (status.length > 0) {
-		// eslint-disable-next-line no-restricted-globals
 		void fetch(
 			"https://devprod-status-bot.devprod.workers.dev/release-failure",
 			{

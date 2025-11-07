@@ -955,7 +955,7 @@ interface PackageJson {
 	peerDependencies?: Record<string, string | undefined>;
 }
 function getPackageJson(dirPath: string): PackageJson | undefined {
-	// eslint-disable-next-line no-constant-condition
+	 
 	while (true) {
 		const pkgJsonPath = path.join(dirPath, "package.json");
 		try {

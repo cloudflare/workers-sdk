@@ -1,4 +1,3 @@
-/* eslint-disable turbo/no-undeclared-env-vars */
 import childProcess, { execSync } from "node:child_process";
 import fs, { writeFile } from "node:fs/promises";
 import os from "node:os";

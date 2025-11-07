@@ -6,7 +6,6 @@ export const getRenderer = ({ selectorPrefix = "c_" } = {}) => {
 	if (!renderer) {
 		renderer = createRenderer({
 			// @ts-expect-error Fix internal libs
-			// eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
 			dev: process.env.NODE_ENV === "development",
 			selectorPrefix,
 		});

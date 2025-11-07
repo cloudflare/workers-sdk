@@ -12,6 +12,7 @@
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"eslint": "catalog:default",
 		"mustache": "^4.2.0",
 		"promjs": "^0.4.2",
 		"toucan-js": "^3.3.1",
