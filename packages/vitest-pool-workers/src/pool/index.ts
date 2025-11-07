@@ -955,7 +955,6 @@ interface PackageJson {
 	peerDependencies?: Record<string, string | undefined>;
 }
 function getPackageJson(dirPath: string): PackageJson | undefined {
-	 
 	while (true) {
 		const pkgJsonPath = path.join(dirPath, "package.json");
 		try {

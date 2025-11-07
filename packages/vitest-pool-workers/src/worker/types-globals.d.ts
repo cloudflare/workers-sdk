@@ -1,4 +1,3 @@
- 
 // noinspection ES6ConvertVarToLetConst
 
 import type { WorkerGlobalState } from "vitest";
