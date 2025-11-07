@@ -5,8 +5,8 @@
 	"description": "ESLint config for workers-sdk",
 	"type": "module",
 	"exports": {
-		".": "./index.mjs",
-		"./react": "./react.mjs"
+		".": "./index.js",
+		"./react": "./react.js"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
