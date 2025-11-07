@@ -4,13 +4,17 @@ import {
 	WorkflowEntrypoint,
 } from "cloudflare:workers";
 import {
+	GET_EXPORT_TYPES_PATH,
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
 	WORKER_ENTRY_PATH_HEADER,
 } from "../../shared";
 import { stripInternalEnv } from "./env";
 import { maybeCaptureError } from "./errors";
-import { getWorkerEntryExport } from "./module-runner";
+import {
+	getWorkerEntryExport,
+	getWorkerEntryExportTypes,
+} from "./module-runner";
 import type { WrapperEnv } from "./env";
 
 export { __VITE_RUNNER_OBJECT__ } from "./module-runner";
@@ -256,6 +260,12 @@ export function createWorkerEntrypointWrapper(
 
 						// Forward the request to the Durable Object to initialize the module runner and return the WebSocket
 						return stub.fetch(request);
+					}
+
+					if (url.pathname === GET_EXPORT_TYPES_PATH) {
+						const workerEntryExportTypes = await getWorkerEntryExportTypes();
+
+						return Response.json(workerEntryExportTypes);
 					}
 				}
 

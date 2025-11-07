@@ -3,6 +3,7 @@ import { CoreHeaders } from "miniflare";
 import * as vite from "vite";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import {
+	GET_EXPORT_TYPES_PATH,
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
 	UNKNOWN_HOST,
@@ -270,6 +271,35 @@ export function initRunners(
 						environmentName
 					] as CloudflareDevEnvironment
 				).initRunner(miniflare, workerConfig, isEntryWorker);
+			}
+		)
+	);
+}
+
+export function getWorkerExportTypes(
+	resolvedPluginConfig: WorkersResolvedConfig,
+	viteDevServer: vite.ViteDevServer,
+	miniflare: Miniflare
+) {
+	return Promise.all(
+		Object.entries(resolvedPluginConfig.workers).map(
+			async ([environmentName, workerConfig]) => {
+				// Wait for dependencies to be optimized before making the request
+				await viteDevServer.environments[
+					environmentName
+				]?.depsOptimizer?.init();
+
+				const response = await miniflare.dispatchFetch(
+					new URL(GET_EXPORT_TYPES_PATH, UNKNOWN_HOST),
+					{
+						headers: {
+							[CoreHeaders.ROUTE_OVERRIDE]: workerConfig.name,
+						},
+					}
+				);
+				const json = await response.json();
+
+				return [workerConfig.name, json];
 			}
 		)
 	);

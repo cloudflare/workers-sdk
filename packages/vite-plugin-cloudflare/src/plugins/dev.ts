@@ -4,7 +4,7 @@ import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
 import { CoreHeaders } from "miniflare";
 import colors from "picocolors";
-import { initRunners } from "../cloudflare-environment";
+import { getWorkerExportTypes, initRunners } from "../cloudflare-environment";
 import {
 	ASSET_WORKER_NAME,
 	kRequestType,
@@ -73,6 +73,11 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					viteDevServer,
 					ctx.miniflare
 				);
+				const workerExportTypes = await getWorkerExportTypes(
+					ctx.resolvedPluginConfig,
+					ctx.miniflare
+				);
+				console.log("workerExportTypes", workerExportTypes);
 
 				const entryWorkerName = entryWorkerConfig.name;
 
