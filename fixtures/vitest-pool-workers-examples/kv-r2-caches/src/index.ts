@@ -38,7 +38,7 @@ export async function handleR2Request(
 	}
 }
 
-export default <ExportedHandler<Env>>{
+export default (<ExportedHandler<Env>>{
 	fetch(request, env, ctx) {
 		const url = new URL(request.url);
 		if (url.pathname.startsWith("/kv/")) {
@@ -49,4 +49,4 @@ export default <ExportedHandler<Env>>{
 			return new Response("Not Found", { status: 404 });
 		}
 	},
-};
+});

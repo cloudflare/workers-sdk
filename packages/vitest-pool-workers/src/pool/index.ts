@@ -1,53 +1,3 @@
-import assert from "node:assert";
-import crypto from "node:crypto";
-import events from "node:events";
-import fs from "node:fs";
-import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import util from "node:util";
-import { createBirpc } from "birpc";
-import * as devalue from "devalue";
-import {
-	compileModuleRules,
-	getNodeCompat,
-	kCurrentWorker,
-	kUnsafeEphemeralUniqueKey,
-	Log,
-	LogLevel,
-	maybeApply,
-	Miniflare,
-	structuredSerializableReducers,
-	structuredSerializableRevivers,
-	supportedCompatibilityDate,
-	testRegExps,
-	WebSocket,
-} from "miniflare";
-import semverSatisfies from "semver/functions/satisfies.js";
-import { createMethodsRPC } from "vitest/node";
-import { experimental_readRawConfig } from "wrangler";
-import { workerdBuiltinModules } from "../shared/builtin-modules";
-import { createChunkingSocket } from "../shared/chunking-socket";
-import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
-import { OPTIONS_PATH, parseProjectOptions } from "./config";
-import {
-	getProjectPath,
-	getRelativeProjectPath,
-	isFileNotFoundError,
-	WORKER_NAME_PREFIX,
-} from "./helpers";
-import {
-	ABORT_ALL_WORKER,
-	handleLoopbackRequest,
-	scheduleStorageReset,
-	waitForStorageReset,
-} from "./loopback";
-import { handleModuleFallbackRequest } from "./module-fallback";
-import type {
-	SourcelessWorkerOptions,
-	WorkersConfigPluginAPI,
-	WorkersPoolOptions,
-	WorkersPoolOptionsWithDefines,
-} from "./config";
 import type {
 	CloseEvent,
 	MiniflareOptions,
@@ -68,6 +18,59 @@ import type {
 	Vitest,
 	WorkspaceProject,
 } from "vitest/node";
+
+import { createBirpc } from "birpc";
+import * as devalue from "devalue";
+import {
+	compileModuleRules,
+	getNodeCompat,
+	kCurrentWorker,
+	kUnsafeEphemeralUniqueKey,
+	Log,
+	LogLevel,
+	maybeApply,
+	Miniflare,
+	structuredSerializableReducers,
+	structuredSerializableRevivers,
+	supportedCompatibilityDate,
+	testRegExps,
+	WebSocket,
+} from "miniflare";
+import assert from "node:assert";
+import crypto from "node:crypto";
+import events from "node:events";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import util from "node:util";
+import semverSatisfies from "semver/functions/satisfies.js";
+import { createMethodsRPC } from "vitest/node";
+import { experimental_readRawConfig } from "wrangler";
+
+import type {
+	SourcelessWorkerOptions,
+	WorkersConfigPluginAPI,
+	WorkersPoolOptions,
+	WorkersPoolOptionsWithDefines,
+} from "./config";
+
+import { workerdBuiltinModules } from "../shared/builtin-modules";
+import { createChunkingSocket } from "../shared/chunking-socket";
+import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
+import { OPTIONS_PATH, parseProjectOptions } from "./config";
+import {
+	getProjectPath,
+	getRelativeProjectPath,
+	isFileNotFoundError,
+	WORKER_NAME_PREFIX,
+} from "./helpers";
+import {
+	ABORT_ALL_WORKER,
+	handleLoopbackRequest,
+	scheduleStorageReset,
+	waitForStorageReset,
+} from "./loopback";
+import { handleModuleFallbackRequest } from "./module-fallback";
 
 interface SerializedOptions {
 	main?: string;
@@ -674,7 +677,7 @@ function buildProjectMiniflareOptions(
 	assert(runnerWorker.name.startsWith(WORKER_NAME_PREFIX));
 
 	const inspectorPort = ctx.config.inspector.enabled
-		? ctx.config.inspector.port ?? 9229
+		? (ctx.config.inspector.port ?? 9229)
 		: undefined;
 
 	if (inspectorPort !== undefined && !project.options.singleWorker) {

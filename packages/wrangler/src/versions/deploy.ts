@@ -1,4 +1,7 @@
 import assert from "assert";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import * as cli from "@cloudflare/cli";
 import { brandColor, gray, white } from "@cloudflare/cli/colors";
 import {
@@ -8,6 +11,16 @@ import {
 	spinnerWhile,
 } from "@cloudflare/cli/interactive";
 import { APIError, UserError } from "@cloudflare/workers-utils";
+
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type {
+	ApiDeployment,
+	ApiVersion,
+	Percentage,
+	VersionCache,
+	VersionId,
+} from "./types";
+
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -23,15 +36,6 @@ import {
 	fetchVersions,
 	patchNonVersionedScriptSettings,
 } from "./api";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type {
-	ApiDeployment,
-	ApiVersion,
-	Percentage,
-	VersionCache,
-	VersionId,
-} from "./types";
-import type { Config } from "@cloudflare/workers-utils";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish

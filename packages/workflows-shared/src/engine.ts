@@ -1,4 +1,10 @@
+import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
+
 import { DurableObject } from "cloudflare:workers";
+
+import type { Event } from "./context";
+import type { InstanceMetadata, RawInstanceLog } from "./instance";
+
 import { Context } from "./context";
 import {
 	INSTANCE_METADATA,
@@ -17,9 +23,6 @@ import {
 } from "./lib/gracePeriodSemaphore";
 import { TimePriorityQueue } from "./lib/timePriorityQueue";
 import { WorkflowInstanceModifier } from "./modifier";
-import type { Event } from "./context";
-import type { InstanceMetadata, RawInstanceLog } from "./instance";
-import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
 
 interface Env {
 	USER_WORKFLOW: WorkflowEntrypoint;

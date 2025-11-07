@@ -1,7 +1,9 @@
-import assert from "node:assert";
 import { DurableObject } from "cloudflare:workers";
-import { CoreBindings } from "../core/constants";
+import assert from "node:assert";
+
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
+
+import { CoreBindings } from "../core/constants";
 
 interface Env {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;

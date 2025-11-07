@@ -1,9 +1,8 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { INHERIT_SYMBOL, UserError } from "@cloudflare/workers-utils";
 import { FormData } from "undici";
-import { handleUnsafeCapnp } from "./capnp";
+
 import type {
 	AssetConfigMetadata,
 	CfModuleType,
@@ -11,6 +10,10 @@ import type {
 	WorkerMetadata,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
+
+import { INHERIT_SYMBOL, UserError } from "@cloudflare/workers-utils";
+
+import { handleUnsafeCapnp } from "./capnp";
 
 export const moduleTypeMimeType: {
 	[type in CfModuleType]: string | undefined;

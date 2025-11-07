@@ -17,8 +17,10 @@ import {
 	it,
 	vi,
 } from "vitest";
-import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
+
 import type pty from "@cdktf/node-pty-prebuilt-multiarch";
+
+import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
 
 // These tests are failing with `Error: read EPIPE` on Windows in CI. There's
 // still value running them on macOS and Linux.

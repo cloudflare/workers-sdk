@@ -1,4 +1,7 @@
 import { http, HttpResponse } from "msw";
+
+import type { VectorizeQueryOptions } from "../../vectorize/types";
+
 import { validateQueryFilter } from "../../vectorize/query";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -8,7 +11,6 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import type { VectorizeQueryOptions } from "../../vectorize/types";
 
 describe("vectorize help", () => {
 	const std = mockConsoleMethods();

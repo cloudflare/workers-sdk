@@ -1,14 +1,18 @@
 import fs from "node:fs";
 import path from "path";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import { configFileName, UserError } from "@cloudflare/workers-utils";
+
+import type { QueryResult } from "../execute";
+import type { Migration } from "../types";
+
 import { confirm } from "../../dialogs";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { executeSql } from "../execute";
-import type { QueryResult } from "../execute";
-import type { Migration } from "../types";
-import type { Config } from "@cloudflare/workers-utils";
 
 export async function getMigrationsPath({
 	projectPath,

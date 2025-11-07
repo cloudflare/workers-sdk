@@ -1,14 +1,6 @@
 import assert from "node:assert";
 import path, { dirname } from "node:path";
-import {
-	getAndValidateRegistryType,
-	InstanceType,
-	isDockerfile,
-	resolveImageName,
-	SchedulingPolicy,
-} from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
-import { getAccountId } from "../user";
+
 import type {
 	ApplicationAffinities,
 	ApplicationAffinityColocation,
@@ -18,6 +10,17 @@ import type {
 } from "@cloudflare/containers-shared";
 import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
 import type { Config, ContainerApp } from "@cloudflare/workers-utils";
+
+import {
+	getAndValidateRegistryType,
+	InstanceType,
+	isDockerfile,
+	resolveImageName,
+	SchedulingPolicy,
+} from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
+
+import { getAccountId } from "../user";
 
 /**
  * Perform type conversion of affinities so that they can be fed to the API.
@@ -98,7 +101,7 @@ export const getNormalizedContainerOptions = async (
 				tier:
 					container.constraints?.tier === -1
 						? undefined
-						: container.constraints?.tier ?? 1,
+						: (container.constraints?.tier ?? 1),
 				regions: container.constraints?.regions?.map((region) =>
 					region.toUpperCase()
 				),
@@ -110,7 +113,8 @@ export const getNormalizedContainerOptions = async (
 			rollout_step_percentage:
 				args?.containersRollout === "immediate"
 					? 100
-					: container.rollout_step_percentage ?? rolloutStepPercentageFallback,
+					: (container.rollout_step_percentage ??
+						rolloutStepPercentageFallback),
 			rollout_kind: container.rollout_kind ?? "full_auto",
 			rollout_active_grace_period: container.rollout_active_grace_period ?? 0,
 			observability: {

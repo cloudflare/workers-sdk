@@ -1,5 +1,6 @@
-import { Buffer } from "node:buffer";
 import { HttpError } from "miniflare:shared";
+import { Buffer } from "node:buffer";
+
 import { KVLimits, KVParams } from "./constants";
 
 export function decodeKey({ key }: { key: string }, query: URLSearchParams) {

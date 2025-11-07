@@ -1,7 +1,5 @@
 import { RpcTarget, WorkerEntrypoint } from "cloudflare:workers";
-import { InstanceEvent, instanceStatusName } from "./instance";
-import { WorkflowError } from "./lib/errors";
-import { isValidWorkflowInstanceId } from "./lib/validators";
+
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
@@ -9,6 +7,10 @@ import type {
 	Engine,
 	EngineLogs,
 } from "./engine";
+
+import { InstanceEvent, instanceStatusName } from "./instance";
+import { WorkflowError } from "./lib/errors";
+import { isValidWorkflowInstanceId } from "./lib/validators";
 
 type Env = {
 	ENGINE: DurableObjectNamespace<Engine>;

@@ -1,4 +1,5 @@
 import { base64Decode, base64Encode, SharedBindings } from "miniflare:shared";
+
 import {
 	decodeSitesKey,
 	deserialiseSiteRegExps,
@@ -134,7 +135,7 @@ async function handleListRequest(
 	}
 }
 
-export default <ExportedHandler<Env>>{
+export default (<ExportedHandler<Env>>{
 	async fetch(request, env) {
 		// Only permit reads
 		if (request.method !== "GET") {
@@ -168,4 +169,4 @@ export default <ExportedHandler<Env>>{
 			return blobsService.fetch(new URL(key, "http://placeholder"));
 		}
 	},
-};
+});

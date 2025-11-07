@@ -1,4 +1,7 @@
 import assert from "assert";
+import chalk from "chalk";
+import { Cloudflare } from "cloudflare";
+
 import { ApiError } from "@cloudflare/containers-shared";
 import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import {
@@ -8,8 +11,10 @@ import {
 	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
-import chalk from "chalk";
-import { Cloudflare } from "cloudflare";
+
+import type { ReadConfigCommandArgs } from "../config";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
+
 import { createCLIParser } from "..";
 import { renderError } from "../cfetch";
 import { readConfig } from "../config";
@@ -24,8 +29,6 @@ import { captureGlobalException } from "../sentry";
 import { getAuthFromEnv } from "../user";
 import { whoami } from "../user/whoami";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
-import type { ReadConfigCommandArgs } from "../config";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
 /**
  * Handles an error thrown during command execution.

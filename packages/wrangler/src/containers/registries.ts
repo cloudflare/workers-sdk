@@ -1,3 +1,5 @@
+import type { Config } from "@cloudflare/workers-utils";
+
 import {
 	cancel,
 	endSection,
@@ -12,6 +14,13 @@ import {
 } from "@cloudflare/containers-shared";
 import { ExternalRegistryKind } from "@cloudflare/containers-shared/src/client/models/ExternalRegistryKind";
 import { APIError, UserError } from "@cloudflare/workers-utils";
+
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
+
+import { containersScope } from ".";
 import { handleFailure, promiseSpinner } from "../cloudchamber/common";
 import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -21,12 +30,6 @@ import { validateSecretName } from "../secrets-store/commands";
 import { getAccountId } from "../user";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { formatError } from "./deploy";
-import { containersScope } from ".";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
-import type { Config } from "@cloudflare/workers-utils";
 
 export const registryCommands = (yargs: CommonYargsArgv) => {
 	return yargs

@@ -1,7 +1,18 @@
 #!/usr/bin/env node
+import type { C3Args, C3Context } from "types";
+
 import { mkdirSync } from "fs";
+import { cliDefinition, parseArgs } from "helpers/args";
+import { isUpdateAvailable } from "helpers/cli";
+import { runCommand } from "helpers/command";
+import {
+	detectPackageManager,
+	rectifyPmMismatch,
+} from "helpers/packageManagers";
+import { installWrangler, npmInstall } from "helpers/packages";
 import { dirname } from "path";
 import { chdir } from "process";
+
 import {
 	cancel,
 	checkMacOSVersion,
@@ -12,14 +23,7 @@ import {
 } from "@cloudflare/cli";
 import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive } from "@cloudflare/cli/interactive";
-import { cliDefinition, parseArgs } from "helpers/args";
-import { isUpdateAvailable } from "helpers/cli";
-import { runCommand } from "helpers/command";
-import {
-	detectPackageManager,
-	rectifyPmMismatch,
-} from "helpers/packageManagers";
-import { installWrangler, npmInstall } from "helpers/packages";
+
 import { version } from "../package.json";
 import { maybeOpenBrowser, offerToDeploy, runDeploy } from "./deploy";
 import { printSummary, printWelcomeMessage } from "./dialog";
@@ -37,7 +41,6 @@ import {
 import { validateProjectDirectory } from "./validators";
 import { addTypes } from "./workers";
 import { updateWranglerConfig } from "./wrangler/config";
-import type { C3Args, C3Context } from "types";
 
 const { npm } = detectPackageManager();
 

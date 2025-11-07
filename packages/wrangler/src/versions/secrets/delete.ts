@@ -1,4 +1,7 @@
 import { configFileName, UserError } from "@cloudflare/workers-utils";
+
+import type { VersionDetails, WorkerVersion } from "./index";
+
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
@@ -7,7 +10,6 @@ import { requireAuth } from "../../user";
 import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
 import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
 import { copyWorkerVersionWithNewSecrets } from "./index";
-import type { VersionDetails, WorkerVersion } from "./index";
 
 export const versionsSecretDeleteCommand = createCommand({
 	metadata: {

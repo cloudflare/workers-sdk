@@ -1,6 +1,8 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { ServiceType } from "./index";
+
 import type { ConnectivityServiceRequest, ServiceHost } from "./index";
+
+import { ServiceType } from "./index";
 
 export interface ServiceArgs {
 	name: string;

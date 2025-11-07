@@ -1,7 +1,12 @@
+import type { Interface } from "node:readline";
+
+import { http, HttpResponse } from "msw";
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
-import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
+
+import type { PagesProject } from "../../pages/download-config";
+
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -11,8 +16,6 @@ import { useMockStdin } from "../helpers/mock-stdin";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import type { PagesProject } from "../../pages/download-config";
-import type { Interface } from "node:readline";
 
 export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]

@@ -1,13 +1,16 @@
+import type { Mock } from "vitest";
+
 import { execSync } from "child_process";
 import { afterEach, describe, it, vitest } from "vitest";
+
+import type { UpdatedPackage } from "../deploy-non-npm-packages";
+
 import {
 	deployNonNpmPackages,
 	deployPackage,
 	findDeployablePackageNames,
 	getUpdatedPackages,
 } from "../deploy-non-npm-packages";
-import type { UpdatedPackage } from "../deploy-non-npm-packages";
-import type { Mock } from "vitest";
 
 vitest.mock("node:child_process", async () => {
 	return {

@@ -1,4 +1,5 @@
 import open from "open";
+
 import { logger } from "./logger";
 
 /**

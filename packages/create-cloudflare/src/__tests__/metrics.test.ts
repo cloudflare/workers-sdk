@@ -1,7 +1,9 @@
-import { CancelError } from "@cloudflare/cli/error";
 import { detectPackageManager } from "helpers/packageManagers";
 import { hasSparrowSourceKey, sendEvent } from "helpers/sparrow";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import { CancelError } from "@cloudflare/cli/error";
+
 import { collectCLIOutput, normalizeOutput } from "../../../cli/test-util";
 import { version as c3Version } from "../../package.json";
 import {
@@ -73,7 +75,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(1);
 
@@ -103,7 +105,7 @@ describe("createReporter", () => {
 					durationMinutes: 1234 / 1000 / 60,
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
@@ -140,7 +142,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			true,
+			true
 		);
 		expect(sendEvent).toBeCalledTimes(1);
 
@@ -170,7 +172,7 @@ describe("createReporter", () => {
 					durationMinutes: 1234 / 1000 / 60,
 				},
 			},
-			true,
+			true
 		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
@@ -285,7 +287,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(1);
 
@@ -314,7 +316,7 @@ describe("createReporter", () => {
 					durationMinutes: 1234 / 1000 / 60,
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
@@ -347,7 +349,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(1);
 
@@ -380,7 +382,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
@@ -416,7 +418,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(1);
 
@@ -446,7 +448,7 @@ describe("createReporter", () => {
 					durationMinutes: 1234 / 1000 / 60,
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});
@@ -481,7 +483,7 @@ describe("createReporter", () => {
 					},
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(1);
 
@@ -511,7 +513,7 @@ describe("createReporter", () => {
 					durationMinutes: 1234 / 1000 / 60,
 				},
 			},
-			false,
+			false
 		);
 		expect(sendEvent).toBeCalledTimes(2);
 	});

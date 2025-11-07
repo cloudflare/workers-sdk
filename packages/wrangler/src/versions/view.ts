@@ -1,5 +1,6 @@
 import { logRaw } from "@cloudflare/cli";
 import { UserError } from "@cloudflare/workers-utils";
+
 import { convertBindingsToCfWorkerInitBindings } from "../api/startDevWorker/utils";
 import { createCommand } from "../core/create-command";
 import * as metrics from "../metrics";

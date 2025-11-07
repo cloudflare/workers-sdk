@@ -1,3 +1,4 @@
+import { FSWatcher, watch } from "chokidar";
 import {
 	existsSync,
 	mkdirSync,
@@ -10,7 +11,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { Worker } from "node:worker_threads";
-import { FSWatcher, watch } from "chokidar";
+
 import { SocketPorts } from "../runtime";
 import { getProxyFallbackServiceSocketName } from "./external-service";
 import { Log } from "./log";

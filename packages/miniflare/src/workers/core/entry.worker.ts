@@ -9,6 +9,7 @@ import {
 	yellow,
 } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
+
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
 import { CoreBindings, CoreHeaders } from "./constants";
 import { handleEmail } from "./email";
@@ -350,7 +351,7 @@ function handleProxy(request: Request, env: Env) {
 	return stub.fetch(request);
 }
 
-export default <ExportedHandler<Env>>{
+export default (<ExportedHandler<Env>>{
 	async fetch(request, env, ctx) {
 		const startTime = Date.now();
 
@@ -451,6 +452,6 @@ export default <ExportedHandler<Env>>{
 			return new Response(e?.stack ?? String(e), { status: 500 });
 		}
 	},
-};
+});
 
 export { ProxyServer } from "./proxy.worker";

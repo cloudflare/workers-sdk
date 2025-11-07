@@ -1,10 +1,12 @@
-import { existsSync } from "fs";
+import type { ChildProcess } from "child_process";
+
 import { spawn } from "cross-spawn";
+import { existsSync } from "fs";
 import { readMetricsConfig } from "helpers/metrics-config";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
+
 import { quoteShellArgs, runCommand } from "../command";
-import type { ChildProcess } from "child_process";
 
 // We can change how the mock spawn works by setting these variables
 let spawnResultCode = 0;
@@ -76,7 +78,7 @@ describe("Command Helpers", () => {
 				["wrangler"],
 				expect.objectContaining({
 					env: expect.objectContaining({ WRANGLER_SEND_METRICS: "false" }),
-				}),
+				})
 			);
 		});
 
@@ -94,7 +96,7 @@ describe("Command Helpers", () => {
 				["wrangler"],
 				expect.objectContaining({
 					env: expect.not.objectContaining({ WRANGLER_SEND_METRICS: "false" }),
-				}),
+				})
 			);
 		});
 
@@ -112,7 +114,7 @@ describe("Command Helpers", () => {
 				["-l"],
 				expect.objectContaining({
 					env: expect.not.objectContaining({ WRANGLER_SEND_METRICS: "false" }),
-				}),
+				})
 			);
 		});
 	});
@@ -122,7 +124,7 @@ describe("Command Helpers", () => {
 			expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
 			expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`'24.02 foo-bar'`);
 			expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
-				`'foo/10 bar/20-baz/'`,
+				`'foo/10 bar/20-baz/'`
 			);
 		});
 
@@ -130,7 +132,7 @@ describe("Command Helpers", () => {
 			expect(quoteShellArgs([`pages:dev`])).toEqual("pages:dev");
 			expect(quoteShellArgs([`24.02 foo-bar`])).toEqual(`"24.02 foo-bar"`);
 			expect(quoteShellArgs([`foo/10 bar/20-baz/`])).toEqual(
-				`"foo/10 bar/20-baz/"`,
+				`"foo/10 bar/20-baz/"`
 			);
 		});
 	});

@@ -1,6 +1,7 @@
 import fs from "fs";
-import { setTimeout } from "node:timers/promises";
 import { http, HttpResponse } from "msw";
+import { setTimeout } from "node:timers/promises";
+
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";

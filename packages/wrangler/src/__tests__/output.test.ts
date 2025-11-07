@@ -1,11 +1,14 @@
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { FatalError } from "@cloudflare/workers-utils";
+
+import type { OutputEntry } from "../output";
+
 import { clearOutputFilePath, writeOutput } from "../output";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { OutputEntry } from "../output";
 
 describe("writeOutput()", () => {
 	runInTempDir({ homedir: "home" });

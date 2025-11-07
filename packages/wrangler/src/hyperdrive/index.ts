@@ -1,5 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { createNamespace } from "../core/create-command";
+
 import type {
 	CachingOptions,
 	Mtls,
@@ -10,6 +10,8 @@ import type {
 } from "./client";
 import type { hyperdriveCreateCommand } from "./create";
 import type { hyperdriveUpdateCommand } from "./update";
+
+import { createNamespace } from "../core/create-command";
 
 export const hyperdriveNamespace = createNamespace({
 	metadata: {

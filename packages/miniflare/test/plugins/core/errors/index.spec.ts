@@ -1,14 +1,16 @@
+import type { RawSourceMap } from "source-map";
+
 import assert from "assert";
-import fs from "fs/promises";
-import path from "path";
-import { fileURLToPath, pathToFileURL } from "url";
 import test from "ava";
 import Protocol from "devtools-protocol";
 import esbuild from "esbuild";
+import fs from "fs/promises";
 import { DeferredPromise, fetch, Log, LogLevel, Miniflare } from "miniflare";
+import path from "path";
+import { fileURLToPath, pathToFileURL } from "url";
 import NodeWebSocket from "ws";
+
 import { escapeRegexpComponent, useTmp } from "../../../test-shared";
-import type { RawSourceMap } from "source-map";
 
 const FIXTURES_PATH = path.resolve(
 	__dirname,

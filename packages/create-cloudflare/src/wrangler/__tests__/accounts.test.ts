@@ -2,6 +2,7 @@ import { mockPackageManager, mockSpinner } from "helpers/__tests__/mocks";
 import { runCommand } from "helpers/command";
 import { hasSparrowSourceKey } from "helpers/sparrow";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+
 import { createTestContext } from "../../__tests__/helpers";
 import { isLoggedIn, listAccounts, wranglerLogin } from "../accounts";
 
@@ -58,11 +59,11 @@ describe("wrangler account helpers", () => {
 			expect(loggedIn).toBe(true);
 			expect(mock).toHaveBeenCalledWith(
 				["npx", "wrangler", "whoami"],
-				expect.anything(),
+				expect.anything()
 			);
 			expect(mock).not.toHaveBeenCalledWith(
 				["npx", "wrangler", "login"],
-				expect.anything(),
+				expect.anything()
 			);
 			expect(spinner.start).toHaveBeenCalledOnce();
 			expect(spinner.stop).toHaveBeenCalledOnce();
@@ -79,11 +80,11 @@ describe("wrangler account helpers", () => {
 			expect(loggedIn).toBe(true);
 			expect(mock).toHaveBeenCalledWith(
 				["npx", "wrangler", "whoami"],
-				expect.anything(),
+				expect.anything()
 			);
 			expect(mock).toHaveBeenCalledWith(
 				["npx", "wrangler", "login"],
-				expect.anything(),
+				expect.anything()
 			);
 			expect(spinner.start).toHaveBeenCalledTimes(2);
 			expect(spinner.stop).toHaveBeenCalledTimes(2);
@@ -100,11 +101,11 @@ describe("wrangler account helpers", () => {
 			expect(loggedIn).toBe(false);
 			expect(mock).toHaveBeenCalledWith(
 				["npx", "wrangler", "whoami"],
-				expect.anything(),
+				expect.anything()
 			);
 			expect(mock).toHaveBeenCalledWith(
 				["npx", "wrangler", "login"],
-				expect.anything(),
+				expect.anything()
 			);
 			expect(spinner.start).toHaveBeenCalledTimes(2);
 			expect(spinner.stop).toHaveBeenCalledTimes(2);
@@ -120,7 +121,7 @@ describe("wrangler account helpers", () => {
 		expect(accounts).keys("testacct");
 		expect(mock).toHaveBeenLastCalledWith(
 			["npx", "wrangler", "whoami"],
-			expect.anything(),
+			expect.anything()
 		);
 	});
 
@@ -135,7 +136,7 @@ describe("wrangler account helpers", () => {
 			expect(result).toBe(true);
 			expect(mock).toHaveBeenLastCalledWith(
 				["npx", "wrangler", "whoami"],
-				expect.anything(),
+				expect.anything()
 			);
 		});
 
@@ -149,7 +150,7 @@ describe("wrangler account helpers", () => {
 			expect(result).toBe(false);
 			expect(mock).toHaveBeenLastCalledWith(
 				["npx", "wrangler", "whoami"],
-				expect.anything(),
+				expect.anything()
 			);
 		});
 
@@ -163,7 +164,7 @@ describe("wrangler account helpers", () => {
 			expect(result).toBe(false);
 			expect(mock).toHaveBeenLastCalledWith(
 				["npx", "wrangler", "whoami"],
-				expect.anything(),
+				expect.anything()
 			);
 		});
 	});

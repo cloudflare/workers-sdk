@@ -1,6 +1,5 @@
-import assert from "node:assert";
-import fs from "node:fs/promises";
-import path from "node:path";
+import type { Awaitable, Miniflare, Request, WorkerOptions } from "miniflare";
+
 import {
 	CACHE_PLUGIN_NAME,
 	D1_PLUGIN_NAME,
@@ -11,8 +10,11 @@ import {
 	Response,
 	WORKFLOWS_PLUGIN_NAME,
 } from "miniflare";
+import assert from "node:assert";
+import fs from "node:fs/promises";
+import path from "node:path";
+
 import { isFileNotFoundError, WORKER_NAME_PREFIX } from "./helpers";
-import type { Awaitable, Miniflare, Request, WorkerOptions } from "miniflare";
 
 // Based on https://github.com/vitest-dev/vitest/blob/v1.0.0-beta.5/packages/snapshot/src/env/node.ts
 async function handleSnapshotRequest(

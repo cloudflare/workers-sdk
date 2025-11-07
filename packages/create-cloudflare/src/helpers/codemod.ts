@@ -1,12 +1,14 @@
+import type { Program } from "esprima";
+import type { C3Context } from "types";
+
 import { existsSync, lstatSync, readdirSync } from "fs";
 import path, { extname, join } from "path";
 import * as recast from "recast";
 import * as esprimaParser from "recast/parsers/esprima";
 import * as typescriptParser from "recast/parsers/typescript";
+
 import { getTemplatePath } from "../templates";
 import { readFile, writeFile } from "./files";
-import type { Program } from "esprima";
-import type { C3Context } from "types";
 
 /*
   CODEMOD TIPS & TRICKS
@@ -69,7 +71,7 @@ export const parseFile = (filePath: string) => {
 // Transform a file with the provided transformer methods and write it back to disk
 export const transformFile = (
 	filePath: string,
-	methods: recast.types.Visitor,
+	methods: recast.types.Visitor
 ) => {
 	const ast = parseFile(filePath);
 
@@ -122,7 +124,7 @@ export const loadTemplateSnippets = (ctx: C3Context) => {
  */
 export const mergeObjectProperties = (
 	sourceObject: recast.types.namedTypes.ObjectExpression,
-	newProperties: recast.types.namedTypes.ObjectProperty[],
+	newProperties: recast.types.namedTypes.ObjectProperty[]
 ): void => {
 	newProperties.forEach((newProp) => {
 		const newPropName = getPropertyName(newProp);
@@ -130,7 +132,7 @@ export const mergeObjectProperties = (
 			return false;
 		}
 		const indexOfExisting = sourceObject.properties.findIndex(
-			(p) => p.type === "ObjectProperty" && getPropertyName(p) === newPropName,
+			(p) => p.type === "ObjectProperty" && getPropertyName(p) === newPropName
 		);
 
 		const existing = sourceObject.properties[indexOfExisting];
@@ -146,7 +148,7 @@ export const mergeObjectProperties = (
 		) {
 			mergeObjectProperties(
 				existing.value,
-				newProp.value.properties as recast.types.namedTypes.ObjectProperty[],
+				newProp.value.properties as recast.types.namedTypes.ObjectProperty[]
 			);
 			return;
 		}

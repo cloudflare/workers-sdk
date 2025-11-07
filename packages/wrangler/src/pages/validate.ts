@@ -1,9 +1,11 @@
-import { readdir, stat } from "node:fs/promises";
-import { join, relative, resolve, sep } from "node:path";
-import { FatalError } from "@cloudflare/workers-utils";
 import { getType } from "mime";
 import { Minimatch } from "minimatch";
+import { readdir, stat } from "node:fs/promises";
+import { join, relative, resolve, sep } from "node:path";
 import prettyBytes from "pretty-bytes";
+
+import { FatalError } from "@cloudflare/workers-utils";
+
 import { createCommand } from "../core/create-command";
 import { MAX_ASSET_COUNT, MAX_ASSET_SIZE } from "./constants";
 import { hashFile } from "./hash";

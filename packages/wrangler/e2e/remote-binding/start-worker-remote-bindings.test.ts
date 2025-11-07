@@ -2,6 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { beforeAll, describe, expect, it } from "vitest";
+
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	importWrangler,

@@ -1,11 +1,12 @@
-import { TransformStream } from "stream/web";
-import { Response } from "miniflare";
 import type {
 	HTMLRewriter as BaseHTMLRewriter,
 	DocumentHandlers,
 	ElementHandlers,
 } from "html-rewriter-wasm";
 import type { ReadableStream } from "stream/web";
+
+import { Response } from "miniflare";
+import { TransformStream } from "stream/web";
 
 // Vendored from Miniflare v2: https://github.com/cloudflare/miniflare/blob/master/packages/html-rewriter/src/rewriter.ts
 
@@ -49,9 +50,8 @@ export class HTMLRewriter {
 				const {
 					HTMLRewriter: BaseHTMLRewriter,
 					// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-				}: typeof import("html-rewriter-wasm") = await import(
-					"html-rewriter-wasm"
-				);
+				}: typeof import("html-rewriter-wasm") =
+					await import("html-rewriter-wasm");
 				rewriter = new BaseHTMLRewriter((output) => {
 					// enqueue will throw on empty chunks
 					if (output.length !== 0) {

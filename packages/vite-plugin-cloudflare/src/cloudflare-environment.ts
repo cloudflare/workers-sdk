@@ -1,6 +1,12 @@
-import assert from "node:assert";
+import type { MessageEvent, Miniflare, WebSocket } from "miniflare";
+import type { FetchFunctionOptions } from "vite/module-runner";
+
 import { CoreHeaders } from "miniflare";
+import assert from "node:assert";
 import * as vite from "vite";
+
+import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
+
 import { additionalModuleRE } from "./plugins/additional-modules";
 import {
 	INIT_PATH,
@@ -10,9 +16,6 @@ import {
 	WORKER_ENTRY_PATH_HEADER,
 } from "./shared";
 import { debuglog, getOutputDirectory } from "./utils";
-import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
-import type { MessageEvent, Miniflare, WebSocket } from "miniflare";
-import type { FetchFunctionOptions } from "vite/module-runner";
 
 export const MAIN_ENTRY_NAME = "index";
 

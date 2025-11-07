@@ -1,4 +1,7 @@
 import assert from "node:assert";
+
+import type { WorkerConfig } from "../plugin-config";
+
 import {
 	assertHasNodeJsCompat,
 	hasNodeJsAls,
@@ -8,7 +11,6 @@ import {
 	NodeJsCompatWarnings,
 } from "../nodejs-compat";
 import { createPlugin } from "../utils";
-import type { WorkerConfig } from "../plugin-config";
 
 /**
  * Plugin to support the `nodejs_als` compatibility flag

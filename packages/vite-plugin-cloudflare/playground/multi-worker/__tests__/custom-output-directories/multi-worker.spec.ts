@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, expect, test } from "vitest";
+
 import { getJsonResponse, isBuild, rootDir } from "../../../__test-utils__";
 
 describe.runIf(isBuild)("output directories", () => {

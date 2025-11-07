@@ -1,4 +1,5 @@
 import { newWebSocketRpcSession } from "capnweb";
+
 import { makeFetch } from "../shared/remote-bindings-utils";
 
 interface Env {

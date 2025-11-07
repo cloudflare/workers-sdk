@@ -1,5 +1,6 @@
-import { Prompt } from "@clack/core";
 import type { SelectPrompt } from "@clack/core";
+
+import { Prompt } from "@clack/core";
 
 export type Option = {
 	label: string;

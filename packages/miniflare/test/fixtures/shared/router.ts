@@ -1,5 +1,6 @@
-import assert from "node:assert";
 import { GET, POST, RouteHandler, Router } from "miniflare:shared";
+import assert from "node:assert";
+
 import { createTestHandler } from "../worker-test";
 
 class TestRouter extends Router {

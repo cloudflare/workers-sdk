@@ -1,10 +1,18 @@
+import type { ReplaceWorkersTypes } from "miniflare";
+
+import { Miniflare } from "miniflare";
 import assert from "node:assert";
 import { Blob } from "node:buffer";
 import { URLSearchParams } from "node:url";
+import { FormData } from "undici";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import { type KVNamespace } from "@cloudflare/workers-types/experimental";
 import { UserError } from "@cloudflare/workers-utils";
-import { Miniflare } from "miniflare";
-import { FormData } from "undici";
+
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
+
 import { fetchKVGetValue, fetchListResult, fetchResult } from "../cfetch";
 import { getSettings } from "../deployment-bundle/bindings";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
@@ -12,9 +20,6 @@ import { getDefaultPersistRoot } from "../dev/miniflare";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { Config } from "@cloudflare/workers-utils";
-import type { ReplaceWorkersTypes } from "miniflare";
 
 /** The largest number of kv items we can pass to the API in a single request. */
 const API_MAX = 10000;

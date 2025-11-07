@@ -1,5 +1,6 @@
-import { logger } from "../logger";
 import type { Rule } from "@cloudflare/workers-utils";
+
+import { logger } from "../logger";
 
 export function isJavaScriptModuleRule(rule: Rule) {
 	return rule.type === "ESModule" || rule.type === "CommonJS";

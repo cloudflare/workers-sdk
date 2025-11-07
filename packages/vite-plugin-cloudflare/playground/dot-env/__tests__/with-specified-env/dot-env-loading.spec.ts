@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { describe, expect, test } from "vitest";
+
 import { getJsonResponse, isBuild, testDir } from "../../../__test-utils__";
 
 test("reading variables from a staging .env file", async () => {

@@ -1,5 +1,6 @@
 // @ts-ignore entry point will get replaced
 import worker from "__ENTRY_POINT__";
+
 import { isRoutingRuleMatch } from "./pages-dev-util";
 
 // @ts-ignore entry point will get replaced
@@ -8,7 +9,7 @@ export * from "__ENTRY_POINT__";
 // @ts-ignore routes are injected
 const routes = __ROUTES__;
 
-export default <ExportedHandler<{ ASSETS: Fetcher }>>{
+export default (<ExportedHandler<{ ASSETS: Fetcher }>>{
 	fetch(request, env, context) {
 		const { pathname } = new URL(request.url);
 
@@ -30,4 +31,4 @@ export default <ExportedHandler<{ ASSETS: Fetcher }>>{
 
 		return env.ASSETS.fetch(request);
 	},
-};
+});

@@ -1,4 +1,5 @@
 import { expect, test, vi } from "vitest";
+
 import { getJsonResponse, WAIT_FOR_OPTIONS } from "../../../__test-utils__";
 
 test("should be able to call `getRandomValues()` bound to any object", async () => {

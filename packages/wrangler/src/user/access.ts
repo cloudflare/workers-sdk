@@ -1,6 +1,8 @@
 import { spawnSync } from "child_process";
-import { UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
+
+import { UserError } from "@cloudflare/workers-utils";
+
 import { logger } from "../logger";
 
 const cache: Record<string, string> = {};

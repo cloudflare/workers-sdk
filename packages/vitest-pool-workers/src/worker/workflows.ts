@@ -1,14 +1,16 @@
-import {
-	instanceStatusName,
-	InstanceStatus as InstanceStatusNumber,
-} from "@cloudflare/workflows-shared/src/instance";
-import { runInRunnerObject } from "./durable-objects";
-import { env, internalEnv } from "./env";
 import type { WorkflowBinding } from "@cloudflare/workflows-shared/src/binding";
 import type {
 	StepSelector,
 	WorkflowInstanceModifier,
 } from "@cloudflare/workflows-shared/src/modifier";
+
+import {
+	instanceStatusName,
+	InstanceStatus as InstanceStatusNumber,
+} from "@cloudflare/workflows-shared/src/instance";
+
+import { runInRunnerObject } from "./durable-objects";
+import { env, internalEnv } from "./env";
 
 type ModifierCallback = (m: WorkflowInstanceModifier) => Promise<void>;
 

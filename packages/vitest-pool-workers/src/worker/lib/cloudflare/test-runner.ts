@@ -1,5 +1,5 @@
-import assert from "node:assert";
-import { NodeSnapshotEnvironment } from "@vitest/snapshot/environment";
+import type { SerializedConfig, WorkerGlobalState, WorkerRPC } from "vitest";
+
 import { resetMockAgent } from "cloudflare:mock-agent";
 import {
 	fetchMock,
@@ -8,11 +8,14 @@ import {
 	registerHandlerAndGlobalWaitUntil,
 	waitForGlobalWaitUntil,
 } from "cloudflare:test-internal";
+import assert from "node:assert";
 import { vi } from "vitest";
 import { VitestTestRunner } from "vitest/runners";
 import workerdUnsafe from "workerd:unsafe";
+
 import type { Suite, Test } from "@vitest/runner";
-import type { SerializedConfig, WorkerGlobalState, WorkerRPC } from "vitest";
+
+import { NodeSnapshotEnvironment } from "@vitest/snapshot/environment";
 
 // When `DEBUG` is `true`, runner operations will be logged and slowed down
 // TODO(soon): remove this

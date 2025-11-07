@@ -1,12 +1,15 @@
-import { logRaw } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+import type { C3Context } from "types";
+
 import { runFrameworkGenerator } from "frameworks/index";
 import { readJSON, usesTypescript, writeJSON } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
+
+import { logRaw } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
+
 import type { TemplateConfig } from "../../../src/templates";
-import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
 

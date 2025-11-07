@@ -1,16 +1,31 @@
+import type { FormData } from "undici";
+import type { Mock } from "vitest";
+
+import { sync } from "command-exists";
+import * as esbuild from "esbuild";
+import { http, HttpResponse } from "msw";
 /* eslint-disable @typescript-eslint/no-empty-object-type */
 import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { findWranglerConfig, ParseError } from "@cloudflare/workers-utils";
-import * as TOML from "@iarna/toml";
-import { sync } from "command-exists";
-import * as esbuild from "esbuild";
-import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
 import { vi } from "vitest";
+
+import type {
+	Config,
+	ServiceMetadataRes,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
+
+import { findWranglerConfig, ParseError } from "@cloudflare/workers-utils";
+import * as TOML from "@iarna/toml";
+
+import type { AssetManifest } from "../assets";
+import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
+import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
+
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
 import { sniffUserAgent } from "../package-manager";
@@ -66,16 +81,6 @@ import {
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "./helpers/write-wrangler-config";
-import type { AssetManifest } from "../assets";
-import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
-import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
-import type {
-	Config,
-	ServiceMetadataRes,
-	WorkerMetadataBinding,
-} from "@cloudflare/workers-utils";
-import type { FormData } from "undici";
-import type { Mock } from "vitest";
 
 vi.mock("command-exists");
 vi.mock("../check/commands", async (importOriginal) => {
@@ -897,7 +902,7 @@ describe("deploy", () => {
 			writeWranglerConfig();
 			fs.writeFileSync(
 				"index.js",
-				dedent/* javascript */ `
+				dedent /* javascript */ `
 					export default {
 						fetch() {
 							return

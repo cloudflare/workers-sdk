@@ -1,4 +1,5 @@
 import globToRegexp from "glob-to-regexp";
+
 import { MatcherRegExps } from "../workers";
 
 export function globsToRegExps(globs: string[] = []): MatcherRegExps {

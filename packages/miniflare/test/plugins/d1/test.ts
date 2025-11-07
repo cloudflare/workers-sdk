@@ -1,8 +1,11 @@
-import path from "path";
-import { TestFn } from "ava";
-import { miniflareTest, MiniflareTestContext } from "../../test-shared";
-import type { D1Database } from "@cloudflare/workers-types/experimental";
 import type { Miniflare, MiniflareOptions } from "miniflare";
+
+import { TestFn } from "ava";
+import path from "path";
+
+import type { D1Database } from "@cloudflare/workers-types/experimental";
+
+import { miniflareTest, MiniflareTestContext } from "../../test-shared";
 
 const FIXTURES_PATH = path.resolve(
 	__dirname,

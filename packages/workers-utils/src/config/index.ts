@@ -1,9 +1,11 @@
 import TOML from "@iarna/toml";
-import { parseJSONC, parseTOML, readFileSync } from "../parse";
-import { resolveWranglerConfigPath } from "./config-helpers";
+
 import type { Config, RawConfig } from "./config";
 import type { ResolveConfigPathOptions } from "./config-helpers";
 import type { NormalizeAndValidateConfigArgs } from "./validation";
+
+import { parseJSONC, parseTOML, readFileSync } from "../parse";
+import { resolveWranglerConfigPath } from "./config-helpers";
 
 export type {
 	Config,

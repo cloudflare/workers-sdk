@@ -1,15 +1,17 @@
-import {
-	dockerImageInspect,
-	InstanceType,
-} from "@cloudflare/containers-shared";
-import {
-	ensureContainerLimits,
-	ensureImageFitsLimits,
-} from "../../cloudchamber/limits";
 import type {
 	CompleteAccountCustomer,
 	ContainerNormalizedConfig,
 } from "@cloudflare/containers-shared";
+
+import {
+	dockerImageInspect,
+	InstanceType,
+} from "@cloudflare/containers-shared";
+
+import {
+	ensureContainerLimits,
+	ensureImageFitsLimits,
+} from "../../cloudchamber/limits";
 
 const MB = 1000 * 1000;
 const commonLimits = {

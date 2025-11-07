@@ -5,6 +5,7 @@ import {
 	waitOnExecutionContext,
 } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
+
 import worker from "../src";
 
 // This will improve in the next major version of `@cloudflare/workers-types`,

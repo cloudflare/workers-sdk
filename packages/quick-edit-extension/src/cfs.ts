@@ -4,25 +4,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-import workersTypes from "raw:workers-types";
-import {
-	Disposable,
-	EventEmitter,
-	FileChangeType,
-	FilePermission,
-	FileSystemError,
-	FileType,
-	Position,
-	Range,
-	Uri,
-	workspace,
-} from "vscode";
-import type {
-	Channel,
-	FromQuickEditMessage,
-	ToQuickEditMessage,
-	WorkerLoadedMessage,
-} from "./ipc";
 import type {
 	CancellationToken,
 	Event,
@@ -40,6 +21,27 @@ import type {
 	TextSearchQuery,
 	TextSearchResult,
 } from "vscode";
+
+import workersTypes from "raw:workers-types";
+import {
+	Disposable,
+	EventEmitter,
+	FileChangeType,
+	FilePermission,
+	FileSystemError,
+	FileType,
+	Position,
+	Range,
+	Uri,
+	workspace,
+} from "vscode";
+
+import type {
+	Channel,
+	FromQuickEditMessage,
+	ToQuickEditMessage,
+	WorkerLoadedMessage,
+} from "./ipc";
 
 export class File implements FileStat {
 	type: FileType;

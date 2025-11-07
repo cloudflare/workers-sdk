@@ -1,5 +1,13 @@
 import { existsSync } from "fs";
 import { join } from "path";
+
+import type {
+	BuildArgs,
+	ContainerNormalizedConfig,
+	ImageURIConfig,
+} from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
+
 import {
 	constructBuildCommand,
 	dockerBuild,
@@ -12,6 +20,12 @@ import {
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
+
 import {
 	getCIOverrideNetworkModeHost,
 	getDockerPath,
@@ -20,16 +34,6 @@ import { logger } from "../logger";
 import { getAccountId } from "../user";
 import { ensureContainerLimits } from "./limits";
 import { loadAccount } from "./locations";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
-import type {
-	BuildArgs,
-	ContainerNormalizedConfig,
-	ImageURIConfig,
-} from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
 
 export function buildYargs(yargs: CommonYargsArgv) {
 	return yargs

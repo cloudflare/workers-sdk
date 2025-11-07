@@ -1,8 +1,10 @@
+import type { Plugin } from "vite";
+
 import { resolve } from "path";
-import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
-import type { Plugin } from "vite";
+
+import react from "@vitejs/plugin-react";
 
 // See https://github.com/facebook/create-react-app/issues/11769
 // Turn react/jsx-runtime imports into react/jsx-runtime.js

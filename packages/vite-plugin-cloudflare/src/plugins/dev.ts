@@ -1,9 +1,15 @@
+import type * as vite from "vite";
+
+import { CoreHeaders } from "miniflare";
 import assert from "node:assert";
+import colors from "picocolors";
+
+import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
+
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
 import { generateStaticRoutingRuleMatcher } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
-import { CoreHeaders } from "miniflare";
-import colors from "picocolors";
+
 import { initRunners } from "../cloudflare-environment";
 import {
 	ASSET_WORKER_NAME,
@@ -16,8 +22,6 @@ import { getDevMiniflareOptions } from "../miniflare-options";
 import { UNKNOWN_HOST } from "../shared";
 import { createPlugin, createRequestHandler, debuglog } from "../utils";
 import { handleWebSocket } from "../websockets";
-import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
-import type * as vite from "vite";
 
 /**
  * Plugin to provide core development functionality

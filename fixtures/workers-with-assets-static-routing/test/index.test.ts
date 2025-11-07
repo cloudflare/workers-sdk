@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { Browser, chromium } from "playwright-chromium";
 import { afterAll, beforeAll, describe, it } from "vitest";
+
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("[Workers + Assets] static routing", () => {

@@ -1,6 +1,7 @@
 import { SemVer } from "semver";
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
 import { version as currentVersion } from "../../../package.json";
 import { isUpdateAvailable } from "../cli";
 import { mockSpinner } from "./mocks";
@@ -68,7 +69,7 @@ describe("isUpdateAvailable", () => {
 				},
 				{
 					headers: { "content-type": "application/json" },
-				},
+				}
 			);
 	}
 });

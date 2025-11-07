@@ -1,11 +1,13 @@
-import { assign, parse, stringify } from "comment-json";
-import { readFile, writeFile } from "./files";
 import type {
 	CommentDescriptor,
 	CommentObject,
 	CommentSymbol,
 	CommentToken,
 } from "comment-json";
+
+import { assign, parse, stringify } from "comment-json";
+
+import { readFile, writeFile } from "./files";
 
 /**
  * Reads a JSON file and preserves comments.
@@ -25,7 +27,7 @@ export function readJSONWithComments(jsonFilePath: string): CommentObject {
  */
 export function writeJSONWithComments(
 	jsonFilePath: string,
-	jsonObject: CommentObject,
+	jsonObject: CommentObject
 ): void {
 	const jsonStr = stringify(jsonObject, null, "\t");
 	writeFile(jsonFilePath, jsonStr);
@@ -40,7 +42,7 @@ export function writeJSONWithComments(
 export function addJSONComment(
 	jsonObject: Partial<CommentObject>,
 	descriptor: CommentDescriptor,
-	comment: string | Partial<CommentToken> | (string | Partial<CommentToken>)[],
+	comment: string | Partial<CommentToken> | (string | Partial<CommentToken>)[]
 ): void {
 	if (!Array.isArray(comment)) {
 		comment = [comment];
@@ -75,7 +77,7 @@ export function addJSONComment(
 export function appendJSONProperty<T>(
 	jsonObject: T,
 	property: string,
-	value: unknown,
+	value: unknown
 ) {
 	return assign(jsonObject, { [property]: value });
 }
@@ -90,7 +92,7 @@ export function appendJSONProperty<T>(
 export function insertJSONProperty<T>(
 	jsonObject: T,
 	property: string,
-	value: unknown,
+	value: unknown
 ) {
 	return assign({ [property]: value }, jsonObject) as CommentObject;
 }

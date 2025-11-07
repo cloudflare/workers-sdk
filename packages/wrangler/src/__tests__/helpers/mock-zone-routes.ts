@@ -1,6 +1,8 @@
-import { http, HttpResponse } from "msw";
-import { msw } from "./msw";
 import type { RequestHandlerOptions } from "msw";
+
+import { http, HttpResponse } from "msw";
+
+import { msw } from "./msw";
 
 export function mockGetZoneWorkerRoutesMulti(
 	zones: {

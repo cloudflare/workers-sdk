@@ -1,9 +1,10 @@
+import type { AssetConfig } from "../../../utils/types";
+
 // Taken from https://stackoverflow.com/a/3561711
 // which is everything from the tc39 proposal, plus the following two characters: ^/
 // It's also everything included in the URLPattern escape (https://wicg.github.io/urlpattern/#escape-a-regexp-string), plus the following: -
 
 import { REDIRECTS_VERSION } from "../handler";
-import type { AssetConfig } from "../../../utils/types";
 
 // As the answer says, there's no downside to escaping these extra characters, so better safe than sorry
 const ESCAPE_REGEX_CHARACTERS = /[-/\\^$*+?.()|[\]{}]/g;

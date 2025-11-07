@@ -1,7 +1,8 @@
+import type { Dispatcher } from "undici";
+
+import { isMockActive, MockAgent, setDispatcher } from "cloudflare:mock-agent";
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
-import { isMockActive, MockAgent, setDispatcher } from "cloudflare:mock-agent";
-import type { Dispatcher } from "undici";
 
 const DECODER = new TextDecoder();
 

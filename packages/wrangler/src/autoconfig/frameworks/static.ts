@@ -1,5 +1,6 @@
-import { Framework } from ".";
 import type { RawConfig } from "@cloudflare/workers-utils";
+
+import { Framework } from ".";
 
 export class Static extends Framework {
 	name: string;

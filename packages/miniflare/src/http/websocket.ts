@@ -1,6 +1,7 @@
 import assert from "assert";
 import { once } from "events";
 import NodeWebSocket from "ws";
+
 import { TypedEventTarget } from "../shared";
 import { ValueOf, viewToBuffer } from "../workers";
 

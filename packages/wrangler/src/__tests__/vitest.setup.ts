@@ -1,9 +1,10 @@
+import chalk from "chalk";
+import { passthrough } from "msw";
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 import { resolve } from "path";
 import { PassThrough } from "stream";
-import chalk from "chalk";
-import { passthrough } from "msw";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";
+
 import { msw } from "./helpers/msw";
 
 //turn off chalk for tests due to inconsistencies between operating systems

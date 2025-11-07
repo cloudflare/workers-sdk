@@ -1,9 +1,7 @@
 import assert from "node:assert";
-import { readConfig } from "../../config";
-import { getCloudflareComplianceRegion } from "../../environment-variables/misc-variables";
-import { requireApiToken, requireAuth } from "../../user";
-import { convertConfigBindingsToStartWorkerBindings } from "../startDevWorker";
-import { startRemoteProxySession } from "./start-remote-proxy-session";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import type { CfAccount } from "../../dev/create-worker-preview";
 import type {
 	AsyncHook,
@@ -11,7 +9,12 @@ import type {
 	StartDevWorkerInput,
 } from "../startDevWorker/types";
 import type { RemoteProxySession } from "./start-remote-proxy-session";
-import type { Config } from "@cloudflare/workers-utils";
+
+import { readConfig } from "../../config";
+import { getCloudflareComplianceRegion } from "../../environment-variables/misc-variables";
+import { requireApiToken, requireAuth } from "../../user";
+import { convertConfigBindingsToStartWorkerBindings } from "../startDevWorker";
+import { startRemoteProxySession } from "./start-remote-proxy-session";
 
 export * from "./start-remote-proxy-session";
 

@@ -1,7 +1,9 @@
 import { RpcTarget } from "cloudflare:workers";
-import { computeHash } from "./lib/cache";
+
 import type { Event } from "./context";
 import type { Engine } from "./engine";
+
+import { computeHash } from "./lib/cache";
 
 export type StepSelector = {
 	name: string;

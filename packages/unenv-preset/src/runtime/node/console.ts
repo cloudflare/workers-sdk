@@ -1,3 +1,5 @@
+import type nodeConsole from "node:console";
+
 import {
 	_ignoreErrors,
 	_stderr,
@@ -7,7 +9,6 @@ import {
 	_times,
 	Console,
 } from "unenv/node/console";
-import type nodeConsole from "node:console";
 
 export {
 	Console,

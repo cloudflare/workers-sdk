@@ -34,7 +34,7 @@ export class SQLiteDurableObject implements DurableObject {
 	}
 }
 
-export default <ExportedHandler<Env>>{
+export default (<ExportedHandler<Env>>{
 	fetch(request, env) {
 		const { pathname } = new URL(request.url);
 		if (pathname === "/sql") {
@@ -46,4 +46,4 @@ export default <ExportedHandler<Env>>{
 		const stub = env.COUNTER.get(id);
 		return stub.fetch(request);
 	},
-};
+});

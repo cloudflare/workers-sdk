@@ -1,9 +1,7 @@
 import assert from "assert";
+import test from "ava";
 import { Blob } from "buffer";
 import http from "http";
-import { AddressInfo } from "net";
-import { URLSearchParams } from "url";
-import test from "ava";
 import {
 	CloseEvent,
 	DeferredPromise,
@@ -11,7 +9,10 @@ import {
 	FormData,
 	MessageEvent,
 } from "miniflare";
+import { AddressInfo } from "net";
+import { URLSearchParams } from "url";
 import { WebSocketServer } from "ws";
+
 import { flaky, useServer } from "../test-shared";
 
 const noop = () => {};

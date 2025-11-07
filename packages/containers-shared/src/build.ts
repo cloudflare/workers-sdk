@@ -1,12 +1,14 @@
 import { spawn } from "child_process";
 import { readFileSync } from "fs";
-import { UserError } from "./error";
+
 import type {
 	BuildArgs,
 	ContainerDevOptions,
 	ImageURIConfig,
 	Logger,
 } from "./types";
+
+import { UserError } from "./error";
 
 export async function constructBuildCommand(
 	options: BuildArgs,

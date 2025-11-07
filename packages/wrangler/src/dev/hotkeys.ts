@@ -1,11 +1,13 @@
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
+
+import type { DevEnv } from "../api";
+
 import { LocalRuntimeController } from "../api/startDevWorker/LocalRuntimeController";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { debounce } from "../utils/debounce";
 import { openInspector } from "./inspect";
-import type { DevEnv } from "../api";
 
 export default function registerDevHotKeys(
 	devEnvs: DevEnv[],

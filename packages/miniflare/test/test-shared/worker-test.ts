@@ -1,8 +1,9 @@
 import assert from "assert";
-import path from "path";
 import test from "ava";
 import esbuild from "esbuild";
 import { Miniflare } from "miniflare";
+import path from "path";
+
 import { useTmp } from "./storage";
 
 export const FIXTURES_PATH = path.resolve(

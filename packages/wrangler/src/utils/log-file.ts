@@ -1,13 +1,15 @@
+import { Mutex } from "miniflare";
 import { appendFile } from "node:fs/promises";
 import path from "node:path";
-import { Mutex } from "miniflare";
 import onExit from "signal-exit";
 import stripAnsi from "strip-ansi";
+
+import type { LoggerLevel } from "../logger";
+
 import { getEnvironmentVariableFactory } from "../environment-variables/factory";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { logger } from "../logger";
 import { ensureDirectoryExists } from "./filesystem";
-import type { LoggerLevel } from "../logger";
 
 const getDebugFileDir = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG_PATH",

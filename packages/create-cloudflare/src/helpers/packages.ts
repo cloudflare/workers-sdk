@@ -1,12 +1,15 @@
+import type { C3Context, PackageJson } from "types";
+
 import assert from "assert";
 import { existsSync } from "fs";
 import path from "path";
-import { brandColor, dim } from "@cloudflare/cli/colors";
 import { fetch } from "undici";
+
+import { brandColor, dim } from "@cloudflare/cli/colors";
+
 import { runCommand } from "./command";
 import { readJSON, writeJSON } from "./files";
 import { detectPackageManager } from "./packageManagers";
-import type { C3Context, PackageJson } from "types";
 
 type InstallConfig = {
 	startText?: string;
@@ -24,7 +27,7 @@ type InstallConfig = {
  */
 export const installPackages = async (
 	packages: string[],
-	config: InstallConfig = {},
+	config: InstallConfig = {}
 ) => {
 	if (packages.length === 0) {
 		return;
@@ -65,7 +68,7 @@ export const installPackages = async (
 		{
 			...config,
 			silent: true,
-		},
+		}
 	);
 
 	if (npm === "npm") {
@@ -112,7 +115,7 @@ export const npmInstall = async (ctx: C3Context) => {
 			silent: true,
 			startText: "Installing dependencies",
 			doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-		},
+		}
 	);
 };
 
@@ -139,10 +142,10 @@ export const installWrangler = async () => {
 	await installPackages([`wrangler@latest`], {
 		dev: true,
 		startText: `Installing wrangler ${dim(
-			"A command line tool for building Cloudflare Workers",
+			"A command line tool for building Cloudflare Workers"
 		)}`,
 		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npm} install wrangler --save-dev\``,
+			`via \`${npm} install wrangler --save-dev\``
 		)}`,
 	});
 };

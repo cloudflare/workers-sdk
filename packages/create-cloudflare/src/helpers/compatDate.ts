@@ -1,9 +1,12 @@
+import type { C3Context } from "types";
+
 import { readdirSync } from "fs";
 import { resolve } from "path";
+
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+
 import { getLatestPackageVersion } from "./packages";
-import type { C3Context } from "types";
 
 /**
  * Look up the latest release of workerd and use its date as the compatibility_date
@@ -51,8 +54,8 @@ export async function getWorkerdCompatibilityDate() {
 
 	s.stop(
 		`${brandColor("compatibility date")} ${dim(
-			` Could not find workerd date, falling back to ${fallbackDate}`,
-		)}`,
+			` Could not find workerd date, falling back to ${fallbackDate}`
+		)}`
 	);
 	return fallbackDate;
 }
@@ -83,7 +86,7 @@ export function getLatestTypesEntrypoint(ctx: C3Context) {
 		ctx.project.path,
 		"node_modules",
 		"@cloudflare",
-		"workers-types",
+		"workers-types"
 	);
 
 	try {

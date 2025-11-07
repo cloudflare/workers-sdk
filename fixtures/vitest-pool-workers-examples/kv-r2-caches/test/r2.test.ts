@@ -5,6 +5,7 @@ import {
 	waitOnExecutionContext,
 } from "cloudflare:test";
 import { expect, it } from "vitest";
+
 import { handleR2Request } from "../src"; // Note we can import any function
 
 it("stores in R2 bucket", async () => {

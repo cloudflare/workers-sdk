@@ -1,9 +1,11 @@
+import type { Result } from "update-check";
+
 import checkForUpdate from "update-check";
+
 import {
 	name as wranglerName,
 	version as wranglerVersion,
 } from "../package.json";
-import type { Result } from "update-check";
 
 async function doUpdateCheck(): Promise<string | undefined> {
 	let update: Result | null = null;

@@ -1,8 +1,8 @@
+import test from "ava";
+import { matchRoutes, parseRoutes, RouterError } from "miniflare";
 // noinspection HttpUrlsUsage
 
 import { URL } from "url";
-import test from "ava";
-import { matchRoutes, parseRoutes, RouterError } from "miniflare";
 
 // See https://developers.cloudflare.com/workers/platform/routes#matching-behavior and
 // https://developers.cloudflare.com/workers/platform/known-issues#route-specificity

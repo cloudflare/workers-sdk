@@ -1,25 +1,30 @@
+import type { ReplaceWorkersTypes } from "miniflare";
+import type { Readable } from "node:stream";
+import type { HeadersInit } from "undici";
+
+import { Miniflare } from "miniflare";
 import * as fs from "node:fs";
 import { ReadableStream } from "node:stream/web";
+import prettyBytes from "pretty-bytes";
+
+import type { R2Bucket } from "@cloudflare/workers-types/experimental";
+import type { Config } from "@cloudflare/workers-utils";
+
 import {
 	bucketFormatMessage,
 	isValidR2BucketName,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { Miniflare } from "miniflare";
-import prettyBytes from "pretty-bytes";
+
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { ApiCredentials } from "../user";
+
 import { fetchGraphqlResult, fetchResult } from "../cfetch";
 import { fetchR2Objects } from "../cfetch/internal";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../dev/miniflare";
 import { logger } from "../logger";
 import { getQueue, getQueueById } from "../queues/client";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { ApiCredentials } from "../user";
-import type { R2Bucket } from "@cloudflare/workers-types/experimental";
-import type { Config } from "@cloudflare/workers-utils";
-import type { ReplaceWorkersTypes } from "miniflare";
-import type { Readable } from "node:stream";
-import type { HeadersInit } from "undici";
 
 /**
  * Information about a bucket, returned from `listR2Buckets()`.

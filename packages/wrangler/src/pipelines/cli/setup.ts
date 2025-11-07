@@ -1,10 +1,25 @@
 import { readFileSync } from "node:fs";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import {
 	bucketFormatMessage,
 	isValidR2BucketName,
 	parseJSON,
 	UserError,
 } from "@cloudflare/workers-utils";
+
+import type {
+	CreatePipelineRequest,
+	CreateSinkRequest,
+	CreateStreamRequest,
+	ParquetFormat,
+	SchemaField,
+	Sink,
+	SinkFormat,
+	Stream,
+} from "../types";
+
 import { createCommand } from "../../core/create-command";
 import { confirm, prompt, select } from "../../dialogs";
 import { logger } from "../../logger";
@@ -24,17 +39,6 @@ import {
 	displayUsageExamples,
 	formatSchemaFieldsForTable,
 } from "./streams/utils";
-import type {
-	CreatePipelineRequest,
-	CreateSinkRequest,
-	CreateStreamRequest,
-	ParquetFormat,
-	SchemaField,
-	Sink,
-	SinkFormat,
-	Stream,
-} from "../types";
-import type { Config } from "@cloudflare/workers-utils";
 
 interface SetupConfig {
 	pipelineName: string;

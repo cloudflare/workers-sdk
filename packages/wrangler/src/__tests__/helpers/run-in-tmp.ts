@@ -3,6 +3,7 @@ import { rm } from "node:fs/promises";
 import os from "node:os";
 import * as path from "node:path";
 import { vi } from "vitest";
+
 import { reinitialiseAuthTokens } from "../../user";
 
 const originalCwd = process.cwd();

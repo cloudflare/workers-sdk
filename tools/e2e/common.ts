@@ -1,7 +1,8 @@
+import type { RequestInit, Response } from "undici";
+
 import assert from "node:assert";
 import { spawnSync } from "node:child_process";
 import { fetch } from "undici";
-import type { RequestInit, Response } from "undici";
 
 type ApiErrorBody = {
 	errors: string[];

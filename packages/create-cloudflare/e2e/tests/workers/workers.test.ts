@@ -1,7 +1,8 @@
 import { existsSync } from "fs";
-import { join } from "path";
 import { readJSON, readToml } from "helpers/files";
+import { join } from "path";
 import { beforeAll, describe, expect } from "vitest";
+
 import { deleteWorker } from "../../../scripts/common";
 import {
 	isWindows,
@@ -45,7 +46,7 @@ describe
 						const deployedUrl = await runC3ForWorkerTest(
 							testConfig,
 							project.path,
-							logStream,
+							logStream
 						);
 
 						// Relevant project files should have been created
@@ -72,7 +73,7 @@ describe
 							}
 						} else {
 							expect.fail(
-								`Expected at least one of "${jsoncPath}" or "${tomlPath}" to exist.`,
+								`Expected at least one of "${jsoncPath}" or "${tomlPath}" to exist.`
 							);
 						}
 
@@ -91,7 +92,7 @@ describe
 					} finally {
 						await deleteWorker(project.name);
 					}
-				},
+				}
 			);
 		});
 	});

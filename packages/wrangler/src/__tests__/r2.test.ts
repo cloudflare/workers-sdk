@@ -1,6 +1,14 @@
+import { http, HttpResponse } from "msw";
 import * as fs from "node:fs";
 import { writeFileSync } from "node:fs";
-import { http, HttpResponse } from "msw";
+
+import type {
+	BucketLockRule,
+	PutNotificationRequestBody,
+	R2EventableOperation,
+	R2EventType,
+} from "../r2/helpers";
+
 import { MAX_UPLOAD_SIZE } from "../r2/constants";
 import { actionsForEventCategories } from "../r2/helpers";
 import { endEventLoop } from "./helpers/end-event-loop";
@@ -12,12 +20,6 @@ import { createFetchResult, msw, mswR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
-import type {
-	BucketLockRule,
-	PutNotificationRequestBody,
-	R2EventableOperation,
-	R2EventType,
-} from "../r2/helpers";
 
 function mockBucketLockPutNew(bucketName: string, rules: BucketLockRule[]) {
 	mockBucketLockPutWithExistingRules(bucketName, [], rules);

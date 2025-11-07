@@ -102,7 +102,7 @@ async function handlePutRequest(
 // =============================================================================
 // Entrypoint
 
-export default <ExportedHandler<Env>>{
+export default (<ExportedHandler<Env>>{
 	fetch(request, env) {
 		const { origin, pathname } = new URL(request.url);
 		if (request.method === "GET") {
@@ -114,4 +114,4 @@ export default <ExportedHandler<Env>>{
 			return new Response("Method Not Allowed", { status: 405 });
 		}
 	},
-};
+});

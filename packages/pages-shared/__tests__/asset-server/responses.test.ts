@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { stripLeadingDoubleSlashes } from "../../asset-server/responses";
 
 describe("stripLeadingDoubleSlashes", () => {
@@ -51,12 +52,14 @@ describe("stripLeadingDoubleSlashes", () => {
 			`"/foo"`
 		);
 		// Unencoded space / tab
-		expect(stripLeadingDoubleSlashes("/%09/foo/%09/ /	/")).toMatchInlineSnapshot(
-			`"/foo/%09/ /	/"`
-		);
+		expect(
+			stripLeadingDoubleSlashes("/%09/foo/%09/ /	/")
+		).toMatchInlineSnapshot(`"/foo/%09/ /	/"`);
 		// Unencoded space
 		expect(stripLeadingDoubleSlashes("/ /foo")).toMatchInlineSnapshot(`"/foo"`);
 		// Unencoded tab
-		expect(stripLeadingDoubleSlashes("/	/foo")).toMatchInlineSnapshot(`"/foo"`);
+		expect(stripLeadingDoubleSlashes("/	/foo")).toMatchInlineSnapshot(
+			`"/foo"`
+		);
 	});
 });

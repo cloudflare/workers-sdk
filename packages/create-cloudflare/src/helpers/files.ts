@@ -1,9 +1,12 @@
+import type { C3Context, PackageJson } from "types";
+
+import { parse, stringify } from "comment-json";
 import fs, { existsSync, statSync } from "fs";
 import { join } from "path";
-import TOML from "@iarna/toml";
-import { parse, stringify } from "comment-json";
+
 import type { JsonMap } from "@iarna/toml";
-import type { C3Context, PackageJson } from "types";
+
+import TOML from "@iarna/toml";
 
 export const copyFile = (path: string, dest: string) => {
 	try {
@@ -70,7 +73,7 @@ export const readToml = (path: string) => {
 export const writeJSON = (
 	path: string,
 	object: unknown,
-	stringifySpace = "\t",
+	stringifySpace = "\t"
 ) => {
 	writeFile(path, stringify(object, null, stringifySpace));
 };

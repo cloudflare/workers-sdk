@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 
 describe("validateWorkerEnvironmentOptions", () => {

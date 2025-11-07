@@ -1,3 +1,5 @@
+import type { Writable } from "node:stream";
+
 import assert from "node:assert";
 import crypto from "node:crypto";
 import {
@@ -10,9 +12,9 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test as originalTest } from "vitest";
+
 import { customTempProjectPath, isWindows } from "./constants";
 import { createTestLogStream } from "./log-stream";
-import type { Writable } from "node:stream";
 
 const C3_E2E_PREFIX = "tmp-e2e-c3";
 const testProjectDir = (suite: string, test: string) => {

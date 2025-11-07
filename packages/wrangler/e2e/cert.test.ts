@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import {
 	generateCaCertName,

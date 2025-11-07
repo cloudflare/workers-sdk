@@ -1,11 +1,22 @@
-import { logRaw } from "@cloudflare/cli";
-import { red, white } from "@cloudflare/cli/colors";
 import {
 	addMilliseconds,
 	formatDistanceStrict,
 	formatDistanceToNowStrict,
 } from "date-fns";
 import { ms } from "itty-time";
+
+import { logRaw } from "@cloudflare/cli";
+import { red, white } from "@cloudflare/cli/colors";
+
+import type {
+	Instance,
+	InstanceSleepLog,
+	InstanceStatusAndLogs,
+	InstanceStepLog,
+	InstanceTerminateLog,
+	InstanceWaitForEventLog,
+} from "../../types";
+
 import { fetchResult } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
@@ -16,14 +27,6 @@ import {
 	emojifyInstanceTriggerName,
 	emojifyStepType,
 } from "../../utils";
-import type {
-	Instance,
-	InstanceSleepLog,
-	InstanceStatusAndLogs,
-	InstanceStepLog,
-	InstanceTerminateLog,
-	InstanceWaitForEventLog,
-} from "../../types";
 
 export const workflowsInstancesDescribeCommand = createCommand({
 	metadata: {

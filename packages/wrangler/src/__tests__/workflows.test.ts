@@ -1,4 +1,7 @@
 import { http, HttpResponse } from "msw";
+
+import type { Instance, Workflow } from "../workflows/types";
+
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -15,7 +18,6 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
-import type { Instance, Workflow } from "../workflows/types";
 
 describe("wrangler workflows", () => {
 	const std = mockConsoleMethods();

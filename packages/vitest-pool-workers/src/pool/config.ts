@@ -1,4 +1,9 @@
-import path from "node:path";
+import type { ModuleRule, WorkerOptions } from "miniflare";
+import type { ProvidedContext } from "vitest";
+import type { WorkspaceProject } from "vitest/node";
+import type { Binding, RemoteProxySession } from "wrangler";
+import type { ParseParams, ZodError } from "zod";
+
 import {
 	formatZodError,
 	getRootPath,
@@ -8,13 +13,10 @@ import {
 	parseWithRootPath,
 	PLUGINS,
 } from "miniflare";
+import path from "node:path";
 import { z } from "zod";
+
 import { getProjectPath, getRelativeProjectPath } from "./helpers";
-import type { ModuleRule, WorkerOptions } from "miniflare";
-import type { ProvidedContext } from "vitest";
-import type { WorkspaceProject } from "vitest/node";
-import type { Binding, RemoteProxySession } from "wrangler";
-import type { ParseParams, ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
 	setMain(newMain?: string): void;
@@ -255,7 +257,7 @@ async function parseCustomPoolOptions(
 			: undefined;
 
 		const remoteProxySessionData =
-			options.remoteBindings ?? true
+			(options.remoteBindings ?? true)
 				? await wrangler.maybeStartOrUpdateRemoteProxySession(
 						{
 							path: options.wrangler.configPath,

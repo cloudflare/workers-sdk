@@ -1,12 +1,15 @@
+import type { Metafile } from "esbuild";
+import type { FormData } from "undici";
+
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
-import { ParseError } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
+
+import { ParseError } from "@cloudflare/workers-utils";
+
 import { analyseBundle } from "../check/commands";
 import { logger } from "../logger";
 import { getWranglerTmpDir } from "../paths";
-import type { Metafile } from "esbuild";
-import type { FormData } from "undici";
 
 export async function helpIfErrorIsSizeOrScriptStartup(
 	err: unknown,

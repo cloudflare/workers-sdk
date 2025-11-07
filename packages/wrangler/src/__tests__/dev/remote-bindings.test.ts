@@ -1,6 +1,13 @@
+import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
+
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 import { fetch } from "undici";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
+
+import type { RawConfig } from "@cloudflare/workers-utils";
+
+import type { StartDevOptions } from "../../dev";
+
 import { Binding, StartRemoteProxySessionOptions } from "../../api";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -13,9 +20,6 @@ import {
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { seed } from "../helpers/seed";
-import type { StartDevOptions } from "../../dev";
-import type { RawConfig } from "@cloudflare/workers-utils";
-import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
 
 // Mock the startDev function to capture the devEnv so we can stop it later
 // The `stopWrangler` function will be assigned in the startDev mock implementation where it has access to the `devEnv.teardown()` method.

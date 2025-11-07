@@ -1,7 +1,15 @@
-import assert from "node:assert";
-import { APIError, parseJSON, UserError } from "@cloudflare/workers-utils";
+import type { URLSearchParams } from "node:url";
+import type { HeadersInit, RequestInfo, RequestInit } from "undici";
+
 import Cloudflare from "cloudflare";
+import assert from "node:assert";
 import { fetch, FormData, Headers, Request, Response } from "undici";
+
+import { APIError, parseJSON, UserError } from "@cloudflare/workers-utils";
+
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { ApiCredentials } from "../user";
+
 import { version as wranglerVersion } from "../../package.json";
 import {
 	getCloudflareApiBaseUrl,
@@ -9,10 +17,6 @@ import {
 } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { ApiCredentials } from "../user";
-import type { URLSearchParams } from "node:url";
-import type { HeadersInit, RequestInfo, RequestInit } from "undici";
 
 async function logRequest(request: Request, init?: RequestInit) {
 	logger.debug(`-- START CF API REQUEST: ${request.method} ${request.url}`);

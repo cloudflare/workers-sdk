@@ -1,13 +1,15 @@
-import { writeFile } from "node:fs/promises";
 import { http, HttpResponse } from "msw";
+import { writeFile } from "node:fs/promises";
 import { describe, expect, test } from "vitest";
+
+import type { ApiDeployment, ApiVersion } from "../../../versions/types";
+
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { createFetchResult, msw } from "../../helpers/msw";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
 import { writeWranglerConfig } from "../../helpers/write-wrangler-config";
-import type { ApiDeployment, ApiVersion } from "../../../versions/types";
 
 describe("versions secret list", () => {
 	runInTempDir();

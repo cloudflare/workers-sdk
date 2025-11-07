@@ -1,14 +1,18 @@
+import type { Json } from "miniflare";
+import type { RequestInfo, RequestInit, Response } from "undici";
+
 import events from "node:events";
 import { fetch, Request } from "undici";
+
+import type { CfModule, Environment, Rule } from "@cloudflare/workers-utils";
+
+import type { StartDevOptions } from "../dev";
+import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
+
 import { startDev } from "../dev/start-dev";
 import { getDockerPath } from "../environment-variables/misc-variables";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
-import type { StartDevOptions } from "../dev";
-import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
-import type { CfModule, Environment, Rule } from "@cloudflare/workers-utils";
-import type { Json } from "miniflare";
-import type { RequestInfo, RequestInit, Response } from "undici";
 
 export interface Unstable_DevOptions {
 	config?: string; // Path to .toml configuration file, relative to cwd

@@ -1,3 +1,7 @@
+import type { AssetConfig, JaegerTracing } from "../../../utils/types";
+import type { AssetIntentWithResolver } from "../handler";
+import type { Env } from "../worker";
+
 import { mockJaegerBinding } from "../../../utils/tracing";
 import {
 	flagIsEnabled,
@@ -6,9 +10,6 @@ import {
 import { CACHE_CONTROL_BROWSER } from "../constants";
 import { HEADERS_VERSION } from "../handler";
 import { generateRulesMatcher, replacer } from "./rules-engine";
-import type { AssetConfig, JaegerTracing } from "../../../utils/types";
-import type { AssetIntentWithResolver } from "../handler";
-import type { Env } from "../worker";
 
 /**
  * Returns a Headers object that contains additional headers (to those

@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import path from "path";
 import dedent from "ts-dedent";
 import { vi } from "vitest";
+
 import { unstable_dev } from "../api";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -825,7 +826,7 @@ describe("middleware", () => {
 
 		it("should build multiple middleware as expected", async () => {
 			await seedFs({
-				"src/index.js": dedent/* javascript */ `
+				"src/index.js": dedent /* javascript */ `
 				export default {
 					async fetch(request, env) {
 						return Response.json(env);
@@ -839,7 +840,7 @@ describe("middleware", () => {
 					}
 				}
 			`,
-				"wrangler.toml": dedent/*toml*/ `
+				"wrangler.toml": dedent /*toml*/ `
 				name = "worker-app"
 				main = "src/index.js"
 				compatibility_date = "2022-03-31"

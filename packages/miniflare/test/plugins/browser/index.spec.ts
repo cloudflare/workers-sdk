@@ -1,6 +1,7 @@
+import type { WebSocket } from "undici";
+
 import test from "ava";
 import { Miniflare, MiniflareOptions } from "miniflare";
-import type { WebSocket } from "undici";
 
 async function sendMessage(ws: WebSocket, message: any) {
 	// adapted from https://github.com/cloudflare/puppeteer/blob/b4984452165437e26dd1c8e516581cec2a02b4cd/packages/puppeteer-core/src/cloudflare/chunking.ts#L6-L30

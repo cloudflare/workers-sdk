@@ -1,8 +1,9 @@
+import MagicString from "magic-string";
 import assert from "node:assert";
 import * as fsp from "node:fs/promises";
 import * as path from "node:path";
-import MagicString from "magic-string";
 import * as vite from "vite";
+
 import { cleanUrl, createPlugin } from "../utils";
 
 /**

@@ -1,5 +1,13 @@
 import { readdir, readFile, stat } from "fs/promises";
 import { homedir, userInfo } from "os";
+
+import type {
+	ListSSHPublicKeys,
+	SSHPublicKeyID,
+	SSHPublicKeyItem,
+} from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
+
 import {
 	endSection,
 	log,
@@ -14,12 +22,7 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { SshPublicKeysService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
-import { isNonInteractiveOrCI } from "../../is-interactive";
-import { logger } from "../../logger";
-import { pollSSHKeysUntilCondition } from "../cli";
-import { checkEverythingIsSet, handleFailure } from "../common";
-import { wrap } from "../helpers/wrap";
-import { validatePublicSSHKeyCLI, validateSSHKey } from "./validate";
+
 import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgv,
@@ -27,12 +30,13 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
 import type { cloudchamberScope } from "../common";
-import type {
-	ListSSHPublicKeys,
-	SSHPublicKeyID,
-	SSHPublicKeyItem,
-} from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
+
+import { isNonInteractiveOrCI } from "../../is-interactive";
+import { logger } from "../../logger";
+import { pollSSHKeysUntilCondition } from "../cli";
+import { checkEverythingIsSet, handleFailure } from "../common";
+import { wrap } from "../helpers/wrap";
+import { validatePublicSSHKeyCLI, validateSSHKey } from "./validate";
 
 function createSSHPublicKeyOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs

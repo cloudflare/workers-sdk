@@ -1,7 +1,10 @@
-import AssetWorker from "@cloudflare/workers-shared/asset-worker";
-import { UNKNOWN_HOST } from "../../shared";
-import type { Env as _Env } from "@cloudflare/workers-shared/asset-worker";
 import type { ResolvedConfig } from "vite";
+
+import type { Env as _Env } from "@cloudflare/workers-shared/asset-worker";
+
+import AssetWorker from "@cloudflare/workers-shared/asset-worker";
+
+import { UNKNOWN_HOST } from "../../shared";
 
 interface Env extends _Env {
 	__VITE_HTML_EXISTS__: Fetcher;

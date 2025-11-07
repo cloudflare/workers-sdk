@@ -1,6 +1,9 @@
-import assert from "node:assert";
+import type { MiniflareOptions } from "miniflare";
+import type * as vite from "vite";
+
 import { Miniflare } from "miniflare";
-import { debuglog } from "./utils";
+import assert from "node:assert";
+
 import type { NodeJsCompat } from "./nodejs-compat";
 import type {
 	AssetsOnlyResolvedConfig,
@@ -9,8 +12,8 @@ import type {
 	WorkerConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
-import type { MiniflareOptions } from "miniflare";
-import type * as vite from "vite";
+
+import { debuglog } from "./utils";
 
 /**
  * Used to store state that should persist across server restarts.

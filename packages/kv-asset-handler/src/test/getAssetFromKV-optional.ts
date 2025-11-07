@@ -1,4 +1,5 @@
 import test from "ava";
+
 import { getEvent, mockGlobalScope, mockRequestScope } from "../mocks";
 
 mockGlobalScope();

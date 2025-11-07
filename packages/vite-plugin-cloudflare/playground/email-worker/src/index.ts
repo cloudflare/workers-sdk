@@ -2,6 +2,7 @@ import { EmailMessage } from "cloudflare:email";
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { createMimeMessage } from "mimetext";
 import * as PostalMime from "postal-mime";
+
 import type { SendEmail } from "@cloudflare/workers-types";
 
 interface Env {

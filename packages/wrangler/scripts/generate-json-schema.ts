@@ -1,7 +1,8 @@
+import type { Config, Schema } from "ts-json-schema-generator";
+
 import { writeFileSync } from "fs";
 import { join } from "path";
 import { createGenerator } from "ts-json-schema-generator";
-import type { Config, Schema } from "ts-json-schema-generator";
 
 const config: Config = {
 	path: join(__dirname, "../../workers-utils/src/config/config.ts"),

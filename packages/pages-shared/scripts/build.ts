@@ -1,7 +1,7 @@
 import { execFileSync } from "child_process";
+import * as esbuild from "esbuild";
 import { rmSync } from "fs";
 import path from "path";
-import * as esbuild from "esbuild";
 
 function resolve(...segments: string[]) {
 	return path.resolve(__dirname, "..", ...segments);

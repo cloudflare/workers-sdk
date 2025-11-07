@@ -1,7 +1,9 @@
+import dedent from "ts-dedent";
+
+import type { IssuesLabeledEvent } from "@octokit/webhooks-types";
+
 import * as core from "@actions/core";
 import { context, getOctokit } from "@actions/github";
-import dedent from "ts-dedent";
-import type { IssuesLabeledEvent } from "@octokit/webhooks-types";
 
 /**
  * The mapping of github issue labels to team members for assignment.

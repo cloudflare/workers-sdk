@@ -1,12 +1,14 @@
-import { stripAnsi } from "@cloudflare/cli";
-import { spawn } from "cross-spawn";
-import treeKill from "tree-kill";
 import type {
 	ChildProcess,
 	ChildProcessWithoutNullStreams,
 	SpawnOptionsWithoutStdio,
 } from "node:child_process";
 import type { Writable } from "node:stream";
+
+import { spawn } from "cross-spawn";
+import treeKill from "tree-kill";
+
+import { stripAnsi } from "@cloudflare/cli";
 
 /**
  * Spawn a child process and attach a handler that will log any output from
@@ -21,7 +23,7 @@ import type { Writable } from "node:stream";
 export const spawnWithLogging = (
 	args: string[],
 	opts: SpawnOptionsWithoutStdio,
-	logStream: Writable,
+	logStream: Writable
 ) => {
 	const [cmd, ...argv] = args;
 
@@ -61,7 +63,7 @@ export const spawnWithLogging = (
 
 export const waitForExit = async (
 	proc: ChildProcessWithoutNullStreams,
-	onData?: (chunk: string) => void,
+	onData?: (chunk: string) => void
 ) => {
 	const stdout: string[] = [];
 	const stderr: string[] = [];
@@ -125,6 +127,6 @@ export const testEnv = {
 
 export function kill(proc: ChildProcess) {
 	return new Promise<void>(
-		(resolve) => proc.pid && treeKill(proc.pid, "SIGINT", () => resolve()),
+		(resolve) => proc.pid && treeKill(proc.pid, "SIGINT", () => resolve())
 	);
 }

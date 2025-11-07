@@ -1,12 +1,14 @@
+import type * as vite from "vite";
+import type { Unstable_RawConfig } from "wrangler";
+
 import assert from "node:assert";
 import * as path from "node:path";
+
 import { MAIN_ENTRY_NAME } from "../cloudflare-environment";
 import { assertIsNotPreview } from "../context";
 import { writeDeployConfig } from "../deploy-config";
 import { getLocalDevVarsForPreview } from "../dev-vars";
 import { createPlugin } from "../utils";
-import type * as vite from "vite";
-import type { Unstable_RawConfig } from "wrangler";
 
 /**
  * Plugin to generate additional output files as part of the build, including the output `wrangler.json` file.

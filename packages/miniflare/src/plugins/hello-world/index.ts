@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import BINDING_SCRIPT from "worker:hello-world/binding";
 import OBJECT_SCRIPT from "worker:hello-world/object";
 import { z } from "zod";
+
 import { Service, Worker_Binding } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import {

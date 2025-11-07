@@ -1,6 +1,26 @@
 /**
  * Important! You are probably looking for containers/deploy.ts!
  * This is used for cloudchamber apply, but has been duplicated and modified in containers/deploy.ts to deploy containers during wrangler deploy.
+import type {
+	Application,
+	ApplicationAffinities,
+	ApplicationAffinityColocation,
+	ApplicationID,
+	ApplicationName,
+	CreateApplicationRequest,
+	ModifyApplicationRequestBody,
+	ModifyDeploymentV2RequestBody,
+	Observability as ObservabilityConfiguration,
+	UserDeploymentConfiguration,
+} from "@cloudflare/containers-shared";
+import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
+import type {
+	Config,
+	ContainerApp,
+	Observability,
+} from "@cloudflare/workers-utils";
+import type { JsonMap } from "@iarna/toml";
+
  */
 import {
 	endSection,
@@ -28,6 +48,12 @@ import {
 	formatConfigSnippet,
 	UserError,
 } from "@cloudflare/workers-utils";
+
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
+
 import { configRolloutStepsToAPI } from "../containers/deploy";
 import { getAccountId } from "../user";
 import { Diff } from "../utils/diff";
@@ -37,29 +63,6 @@ import {
 } from "../utils/sortObjectRecursive";
 import { promiseSpinner } from "./common";
 import { cleanForInstanceType } from "./instance-type/instance-type";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
-import type {
-	Application,
-	ApplicationAffinities,
-	ApplicationAffinityColocation,
-	ApplicationID,
-	ApplicationName,
-	CreateApplicationRequest,
-	ModifyApplicationRequestBody,
-	ModifyDeploymentV2RequestBody,
-	Observability as ObservabilityConfiguration,
-	UserDeploymentConfiguration,
-} from "@cloudflare/containers-shared";
-import type { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
-import type {
-	Config,
-	ContainerApp,
-	Observability,
-} from "@cloudflare/workers-utils";
-import type { JsonMap } from "@iarna/toml";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {
 	if (typeof target !== "object" || target === null) {
@@ -466,7 +469,7 @@ export async function apply(
 					name: application.name,
 					rollout_step_percentage:
 						application.durable_objects !== undefined
-							? appConfigNoDefaults.rollout_step_percentage ?? 25
+							? (appConfigNoDefaults.rollout_step_percentage ?? 25)
 							: appConfigNoDefaults.rollout_step_percentage,
 					rollout_kind:
 						appConfigNoDefaults.rollout_kind == "full_manual"

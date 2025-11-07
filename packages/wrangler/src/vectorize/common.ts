@@ -1,6 +1,8 @@
-import { access, constants, stat } from "node:fs/promises";
-import { logger } from "../logger";
 import type { Interface as RLInterface } from "node:readline";
+
+import { access, constants, stat } from "node:fs/promises";
+
+import { logger } from "../logger";
 
 export const deprecatedV1DefaultFlag = false;
 

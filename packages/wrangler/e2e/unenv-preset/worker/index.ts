@@ -15,7 +15,7 @@ export default {
 
 				return Response.json(
 					flagName
-						? getRuntimeFlagValue(flagName) ?? "undefined"
+						? (getRuntimeFlagValue(flagName) ?? "undefined")
 						: "The request is missing the `name` query parameter"
 				);
 			}

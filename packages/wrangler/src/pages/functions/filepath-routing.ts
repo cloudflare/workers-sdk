@@ -1,11 +1,14 @@
+import { build } from "esbuild";
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import { FatalError } from "@cloudflare/workers-utils";
-import { build } from "esbuild";
-import { toUrlPath } from "../../paths";
-import { FunctionsBuildError } from "../errors";
+
 import type { UrlPath } from "../../paths";
 import type { HTTPMethod, RouteConfig } from "./routes";
+
+import { toUrlPath } from "../../paths";
+import { FunctionsBuildError } from "../errors";
 
 export async function generateConfigFromFileTree({
 	baseDir,

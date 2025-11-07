@@ -1,6 +1,9 @@
+import type { Interface } from "node:readline";
+
 import { writeFile } from "node:fs/promises";
 import readline from "node:readline";
 import { describe, expect, test } from "vitest";
+
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs } from "../../helpers/mock-dialogs";
@@ -8,7 +11,6 @@ import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
 import { writeWranglerConfig } from "../../helpers/write-wrangler-config";
 import { mockPostVersion, mockSetupApiCalls } from "./utils";
-import type { Interface } from "node:readline";
 
 describe("versions secret bulk", () => {
 	const std = mockConsoleMethods();

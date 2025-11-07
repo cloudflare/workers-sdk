@@ -1,6 +1,7 @@
+import { parse, stringify } from "devalue";
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
-import { parse, stringify } from "devalue";
+
 import type {
 	Blob as WorkerBlob,
 	BlobOptions as WorkerBlobOptions,

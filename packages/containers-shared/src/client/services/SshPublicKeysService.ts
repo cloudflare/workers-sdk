@@ -1,13 +1,14 @@
-/* istanbul ignore file */
-/* tslint:disable */
-/* eslint-disable */
-import { OpenAPI } from "../core/OpenAPI";
-import { request as __request } from "../core/request";
 import type { CancelablePromise } from "../core/CancelablePromise";
 import type { CreateSSHPublicKeyRequestBody } from "../models/CreateSSHPublicKeyRequestBody";
 import type { EmptyResponse } from "../models/EmptyResponse";
 import type { ListSSHPublicKeys } from "../models/ListSSHPublicKeys";
 import type { SSHPublicKeyItem } from "../models/SSHPublicKeyItem";
+
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+import { OpenAPI } from "../core/OpenAPI";
+import { request as __request } from "../core/request";
 
 export class SshPublicKeysService {
 	/**

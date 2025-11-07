@@ -1,10 +1,12 @@
 import { APIError, readFileSync, UserError } from "@cloudflare/workers-utils";
+
+import type { SippyPutParams } from "./helpers";
+
 import { createCommand, createNamespace } from "../core/create-command";
 import { prompt } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { deleteR2Sippy, getR2Sippy, putR2Sippy } from "./helpers";
-import type { SippyPutParams } from "./helpers";
 
 const NO_SUCH_OBJECT_KEY = 10007;
 const SIPPY_PROVIDER_CHOICES = ["AWS", "GCS"];

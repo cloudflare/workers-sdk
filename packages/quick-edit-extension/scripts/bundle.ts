@@ -1,7 +1,7 @@
 import assert from "assert";
+import * as esbuild from "esbuild";
 import { readFile } from "fs/promises";
 import path from "path";
-import * as esbuild from "esbuild";
 
 type BuildFlags = {
 	watch?: boolean;

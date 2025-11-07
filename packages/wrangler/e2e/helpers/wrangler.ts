@@ -1,8 +1,10 @@
 import assert from "node:assert";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { LongLivedCommand, runCommand } from "./command";
+
 import type { CommandOptions } from "./command";
+
+import { LongLivedCommand, runCommand } from "./command";
 
 // Replace all backslashes with forward slashes to ensure that their use
 // in scripts doesn't break.

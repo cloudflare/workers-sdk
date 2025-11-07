@@ -1,4 +1,7 @@
 import { ParseError, readFileSync, UserError } from "@cloudflare/workers-utils";
+
+import type { BucketLockRule } from "./helpers";
+
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -11,7 +14,6 @@ import {
 	putBucketLockRules,
 	tableFromBucketLockRulesResponse,
 } from "./helpers";
-import type { BucketLockRule } from "./helpers";
 
 export const r2BucketLockNamespace = createNamespace({
 	metadata: {

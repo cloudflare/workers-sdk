@@ -1,4 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
+
 import { domainUsesAccess, getAccessToken } from "../user/access";
 import { msw, mswAccessHandlers } from "./helpers/msw";
 

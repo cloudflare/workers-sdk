@@ -1,7 +1,8 @@
-import crypto from "node:crypto";
-import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
 import { importPKCS8, SignJWT } from "jose";
 import { Request, Response } from "miniflare";
+import crypto from "node:crypto";
+
+import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
 
 // Generate RSA keypair for signing/verifying JWTs
 const authKeypair = crypto.generateKeyPairSync("rsa", {

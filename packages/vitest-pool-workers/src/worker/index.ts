@@ -1,8 +1,5 @@
-import assert from "node:assert";
-import { Buffer } from "node:buffer";
-import events from "node:events";
-import process from "node:process";
-import * as vm from "node:vm";
+import type { VitestExecutor as VitestExecutorType } from "vitest/execute";
+
 import defines from "__VITEST_POOL_WORKERS_DEFINES";
 import {
 	createWorkerEntrypointWrapper,
@@ -13,14 +10,20 @@ import {
 	setEnv,
 } from "cloudflare:test-internal";
 import * as devalue from "devalue";
+import assert from "node:assert";
+import { Buffer } from "node:buffer";
+import events from "node:events";
+import process from "node:process";
+import * as vm from "node:vm";
+
+import type { SocketLike } from "../shared/chunking-socket";
+
 // Using relative path here to ensure `esbuild` bundles it
 import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "../../../miniflare/src/workers/core/devalue";
 import { createChunkingSocket } from "../shared/chunking-socket";
-import type { SocketLike } from "../shared/chunking-socket";
-import type { VitestExecutor as VitestExecutorType } from "vitest/execute";
 
 function structuredSerializableStringify(value: unknown): string {
 	return devalue.stringify(value, structuredSerializableReducers);

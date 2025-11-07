@@ -3,6 +3,9 @@ import {
 	WorkerEntrypoint,
 	WorkflowEntrypoint,
 } from "cloudflare:workers";
+
+import type { WrapperEnv } from "./env";
+
 import {
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
@@ -11,7 +14,6 @@ import {
 import { stripInternalEnv } from "./env";
 import { maybeCaptureError } from "./errors";
 import { getWorkerEntryExport } from "./module-runner";
-import type { WrapperEnv } from "./env";
 
 export { __VITE_RUNNER_OBJECT__ } from "./module-runner";
 

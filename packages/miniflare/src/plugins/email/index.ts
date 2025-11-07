@@ -1,6 +1,7 @@
 import EMAIL_MESSAGE from "worker:email/email";
 import SEND_EMAIL_BINDING from "worker:email/send_email";
 import { z } from "zod";
+
 import { Service, Worker_Binding } from "../../runtime";
 import {
 	getUserBindingServiceName,

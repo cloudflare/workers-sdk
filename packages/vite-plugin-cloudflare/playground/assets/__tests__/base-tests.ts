@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+
 import { getResponse, getTextResponse } from "../../__test-utils__";
 
 test("fetches public directory asset", async () => {

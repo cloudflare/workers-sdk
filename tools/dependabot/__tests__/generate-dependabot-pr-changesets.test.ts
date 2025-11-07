@@ -1,7 +1,10 @@
+import type { Mock } from "vitest";
+
 import { spawnSync } from "child_process";
 import { writeFileSync } from "fs";
 import dedent from "ts-dedent";
 import { beforeEach, describe, it, vitest } from "vitest";
+
 import {
 	commitAndPush,
 	generateChangesetHeader,
@@ -10,7 +13,6 @@ import {
 	parseDiffForChanges,
 	writeChangeSet,
 } from "../generate-dependabot-pr-changesets";
-import type { Mock } from "vitest";
 
 beforeEach(() => {
 	vitest.mock("node:child_process", async () => {

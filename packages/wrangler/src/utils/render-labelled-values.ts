@@ -1,5 +1,6 @@
-import { gray, white } from "@cloudflare/cli/colors";
 import stripAnsi from "strip-ansi";
+
+import { gray, white } from "@cloudflare/cli/colors";
 
 type Options = {
 	/** Hook to format each label. This is a convenience option to avoid manually formatting each label. */

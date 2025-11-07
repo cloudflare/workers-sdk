@@ -1,5 +1,6 @@
-import { EventSourceType } from "../../../subscription-types";
 import type { EventSource } from "../../../subscription-types";
+
+import { EventSourceType } from "../../../subscription-types";
 
 export function getSourceType(source: EventSource): string {
 	return source.type;

@@ -1,7 +1,8 @@
-import * as fs from "fs/promises";
-import { scheduler } from "timers/promises";
 import test from "ava";
+import * as fs from "fs/promises";
 import { Miniflare, MiniflareOptions } from "miniflare";
+import { scheduler } from "timers/promises";
+
 import { useTmp } from "../../test-shared";
 
 const WORKFLOW_SCRIPT = () => `

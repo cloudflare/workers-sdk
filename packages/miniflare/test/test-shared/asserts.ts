@@ -1,7 +1,7 @@
-import assert from "node:assert";
-import { setTimeout as sleep } from "node:timers/promises";
 import { ExecutionContext } from "ava";
 import { Awaitable } from "miniflare";
+import assert from "node:assert";
+import { setTimeout as sleep } from "node:timers/promises";
 
 export function isWithin(
 	t: ExecutionContext,

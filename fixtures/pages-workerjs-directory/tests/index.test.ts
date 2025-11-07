@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path, { join, resolve } from "node:path";
 import { fetch } from "undici";
 import { describe, it } from "vitest";
+
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages _worker.js/ directory", () => {

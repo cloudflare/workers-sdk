@@ -1,5 +1,3 @@
-import assert from "node:assert";
-import { Buffer } from "node:buffer";
 import { bold, Colorize, green, grey, red, reset, yellow } from "kleur/colors";
 import {
 	HttpError,
@@ -13,6 +11,9 @@ import {
 	TimerHandle,
 	viewToBuffer,
 } from "miniflare:shared";
+import assert from "node:assert";
+import { Buffer } from "node:buffer";
+
 import { QueueBindings } from "./constants";
 import {
 	QueueConsumer,

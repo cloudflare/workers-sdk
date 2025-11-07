@@ -1,4 +1,11 @@
 import assert from "assert";
+
+import type {
+	HandlerContext,
+	InternalDefinition,
+	Metadata,
+} from "../../core/types";
+
 import { CommandRegistry } from "../../core/CommandRegistry";
 import {
 	createAlias,
@@ -6,11 +13,6 @@ import {
 	createNamespace,
 } from "../../core/create-command";
 import { isAliasDefinition } from "../../core/helpers";
-import type {
-	HandlerContext,
-	InternalDefinition,
-	Metadata,
-} from "../../core/types";
 
 describe("CommandRegistry", () => {
 	let registry: CommandRegistry;

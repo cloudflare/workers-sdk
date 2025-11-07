@@ -1,6 +1,6 @@
+import { hash as blake3hash } from "blake3-wasm";
 import { readFileSync } from "node:fs";
 import { extname } from "node:path";
-import { hash as blake3hash } from "blake3-wasm";
 
 export const hashFile = (filepath: string) => {
 	const contents = readFileSync(filepath);

@@ -1,6 +1,18 @@
 /**
  * Note! Much of this is copied and modified from cloudchamber/apply.ts
  * However this code is only used for containers interactions, not cloudchamber ones!
+import type {
+	Application,
+	ApplicationID,
+	ApplicationName,
+	ContainerNormalizedConfig,
+	CreateApplicationRequest,
+	ModifyApplicationRequestBody,
+	Observability as ObservabilityConfiguration,
+	RolloutStepRequest,
+} from "@cloudflare/containers-shared";
+import type { Config, ContainerApp } from "@cloudflare/workers-utils";
+
  */
 import {
 	endSection,
@@ -24,6 +36,9 @@ import {
 	formatConfigSnippet,
 	UserError,
 } from "@cloudflare/workers-utils";
+
+import type { ImageRef } from "../cloudchamber/build";
+
 import { promiseSpinner } from "../cloudchamber/common";
 import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
 import { getAccountId } from "../user";
@@ -32,18 +47,6 @@ import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../utils/sortObjectRecursive";
-import type { ImageRef } from "../cloudchamber/build";
-import type {
-	Application,
-	ApplicationID,
-	ApplicationName,
-	ContainerNormalizedConfig,
-	CreateApplicationRequest,
-	ModifyApplicationRequestBody,
-	Observability as ObservabilityConfiguration,
-	RolloutStepRequest,
-} from "@cloudflare/containers-shared";
-import type { Config, ContainerApp } from "@cloudflare/workers-utils";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {
 	if (typeof target !== "object" || target === null) {
@@ -230,7 +233,7 @@ export async function apply(
 	// however deployments that fail after push may result in no previous app but the image still existing
 	const imageRef =
 		"remoteDigest" in args.imageRef
-			? prevApp?.configuration.image ?? args.imageRef.remoteDigest
+			? (prevApp?.configuration.image ?? args.imageRef.remoteDigest)
 			: args.imageRef.newTag;
 	log(dim("Container application changes\n"));
 

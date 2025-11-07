@@ -1,11 +1,15 @@
-import path from "path";
+import type { RemoteProxyConnectionString } from "miniflare";
+
 import getPort from "get-port";
+import path from "path";
 import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
+
+import type { Config } from "@cloudflare/workers-utils";
+
+import type { StartDevWorkerInput, Worker } from "../startDevWorker";
+
 import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
-import type { StartDevWorkerInput, Worker } from "../startDevWorker";
-import type { Config } from "@cloudflare/workers-utils";
-import type { RemoteProxyConnectionString } from "miniflare";
 
 export type StartRemoteProxySessionOptions = {
 	workerName?: string;

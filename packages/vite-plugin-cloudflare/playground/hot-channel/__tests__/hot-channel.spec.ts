@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { isBuild, page, serverLogs, viteTestUrl } from "../../__test-utils__";
 
 describe.runIf(!isBuild)("hot-channel", () => {

@@ -1,7 +1,9 @@
-import { spinner } from "@cloudflare/cli/interactive";
-import { APIError, parseJSON, UserError } from "@cloudflare/workers-utils";
 import prettyBytes from "pretty-bytes";
 import { fetch } from "undici";
+
+import { spinner } from "@cloudflare/cli/interactive";
+import { APIError, parseJSON, UserError } from "@cloudflare/workers-utils";
+
 import { truncate } from "../cfetch/internal";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { getResponse, getTextResponse, isBuild } from "../../__test-utils__";
 
 describe.skipIf(isBuild)("denies access to sensitive files in dev", () => {

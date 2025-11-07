@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { validateDescription } from "../validate-pr-description";
 
 describe("validateDescription()", () => {

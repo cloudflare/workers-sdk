@@ -1,13 +1,16 @@
-import { logRaw } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import type { C3Context } from "types";
+
 import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
+
+import { logRaw } from "@cloudflare/cli";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
+
 import type { TemplateConfig } from "../../src/templates";
-import type { C3Context } from "types";
 
 const { npm, name: pm } = detectPackageManager();
 
@@ -52,7 +55,7 @@ const updateViteConfig = (ctx: C3Context) => {
 	transformFile(configFile, {
 		visitProgram(n) {
 			const lastImportIndex = n.node.body.findLastIndex(
-				(t) => t.type === "ImportDeclaration",
+				(t) => t.type === "ImportDeclaration"
 			);
 			const lastImport = n.get("body", lastImportIndex);
 			lastImport.insertAfter(...snippets.devBindingsModuleTs);
@@ -67,13 +70,13 @@ const updateViteConfig = (ctx: C3Context) => {
 					b.objectExpression([
 						b.objectProperty(
 							b.identifier("preset"),
-							b.stringLiteral("cloudflare-pages"),
+							b.stringLiteral("cloudflare-pages")
 						),
 						b.objectProperty(
 							b.identifier("modules"),
-							b.arrayExpression([b.identifier("devBindingsModule")]),
+							b.arrayExpression([b.identifier("devBindingsModule")])
 						),
-					]),
+					])
 				);
 
 				n.node.arguments = [b.objectExpression([pluginArguments])];

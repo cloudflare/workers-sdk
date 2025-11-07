@@ -1,4 +1,7 @@
+import type { Mock } from "vitest";
+
 import { http, HttpResponse } from "msw";
+
 import { printWranglerBanner } from "../wrangler-banner";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -9,7 +12,6 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { Mock } from "vitest";
 
 vi.mock("../wrangler-banner");
 

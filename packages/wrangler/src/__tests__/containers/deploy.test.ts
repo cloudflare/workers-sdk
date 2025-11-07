@@ -1,13 +1,24 @@
+import type { ChildProcess } from "node:child_process";
+
+import { http, HttpResponse } from "msw";
 import { execFileSync, spawn } from "node:child_process";
 import * as fs from "node:fs";
 import { PassThrough, Writable } from "node:stream";
+
+import type {
+	AccountRegistryToken,
+	Application,
+	CreateApplicationRequest,
+	ImageRegistryCredentialsConfiguration,
+} from "@cloudflare/containers-shared";
+
 import {
 	getCloudflareContainerRegistry,
 	InstanceType,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
-import { http, HttpResponse } from "msw";
+
 import { clearCachedAccount } from "../../cloudchamber/locations";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -24,13 +35,6 @@ import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/version
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
-import type {
-	AccountRegistryToken,
-	Application,
-	CreateApplicationRequest,
-	ImageRegistryCredentialsConfiguration,
-} from "@cloudflare/containers-shared";
-import type { ChildProcess } from "node:child_process";
 
 vi.mock("node:child_process");
 

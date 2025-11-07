@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+
 import { createFetchResult } from "../index";
 
 export const mswSuccessUserHandlers = [

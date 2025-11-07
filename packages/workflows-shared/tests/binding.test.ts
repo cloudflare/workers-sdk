@@ -1,13 +1,16 @@
+import type { ProvidedEnv } from "cloudflare:test";
+import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
+
 import {
 	createExecutionContext,
 	env,
 	runInDurableObject,
 } from "cloudflare:test";
 import { describe, expect, it, vi } from "vitest";
-import { WorkflowBinding } from "../src/binding";
+
 import type { Engine } from "../src/engine";
-import type { ProvidedEnv } from "cloudflare:test";
-import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
+
+import { WorkflowBinding } from "../src/binding";
 
 async function setWorkflowEntrypoint(
 	stub: DurableObjectStub<Engine>,

@@ -1,14 +1,17 @@
+import type { MockInstance } from "vitest";
+
 import assert from "node:assert";
 import path from "node:path";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import type { Worker } from "../src/api/startDevWorker";
+
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
-import type { Worker } from "../src/api/startDevWorker";
-import type { MockInstance } from "vitest";
 
 const { unstable_startWorker: startWorker } = await importWrangler();
 

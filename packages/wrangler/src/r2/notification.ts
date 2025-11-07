@@ -1,3 +1,5 @@
+import type { R2EventType } from "./helpers";
+
 import {
 	createAlias,
 	createCommand,
@@ -13,7 +15,6 @@ import {
 	putEventNotificationConfig,
 	tableFromNotificationGetResponse,
 } from "./helpers";
-import type { R2EventType } from "./helpers";
 
 export const r2BucketNotificationNamespace = createNamespace({
 	metadata: {

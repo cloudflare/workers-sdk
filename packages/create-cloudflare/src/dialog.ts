@@ -1,9 +1,11 @@
-import { relative } from "path";
-import { hyperlink, logRaw, shapes, stripAnsi } from "@cloudflare/cli";
-import { bgGreen, blue, gray } from "@cloudflare/cli/colors";
+import type { C3Args, C3Context } from "types";
+
 import { quoteShellArgs } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
-import type { C3Args, C3Context } from "types";
+import { relative } from "path";
+
+import { hyperlink, logRaw, shapes, stripAnsi } from "@cloudflare/cli";
+import { bgGreen, blue, gray } from "@cloudflare/cli/colors";
 
 /**
  * Wrap the lines with a border and inner padding
@@ -12,7 +14,7 @@ export function createDialog(lines: string[]) {
 	const screenWidth = process.stdout.columns;
 	const maxLineWidth = Math.max(
 		...lines.map((line) => stripAnsi(line).length),
-		60, // Min inner width
+		60 // Min inner width
 	);
 	const dividerWidth = Math.min(maxLineWidth, screenWidth);
 
@@ -27,7 +29,7 @@ export function createDialog(lines: string[]) {
 export function printWelcomeMessage(
 	version: string,
 	telemetryEnabled: boolean,
-	args: Partial<C3Args>,
+	args: Partial<C3Args>
 ) {
 	const lines = [
 		`👋 Welcome to create-cloudflare v${version}!`,
@@ -48,7 +50,7 @@ export function printWelcomeMessage(
 		lines.push(
 			`📊 Cloudflare collects telemetry about your usage of Create-Cloudflare.`,
 			"",
-			`Learn more at: ${blue.underline(hyperlink(telemetryDocsUrl))}`,
+			`Learn more at: ${blue.underline(hyperlink(telemetryDocsUrl))}`
 		);
 	}
 
@@ -91,7 +93,7 @@ export const printSummary = (ctx: C3Context) => {
 			`🔍 View Project`,
 			`${gray("Visit:")} ${blue.underline(hyperlink(ctx.deployment.url))}`,
 			`${gray("Dash:")} ${blue.underline(hyperlink(dashboardUrl))}`,
-			``,
+			``
 		);
 	}
 
@@ -108,7 +110,7 @@ export const printSummary = (ctx: C3Context) => {
 		`${blue.underline(hyperlink(reportIssueUrl))}`,
 		``,
 		`💬 Join our Community`,
-		`${blue.underline(hyperlink(discordUrl))}`,
+		`${blue.underline(hyperlink(discordUrl))}`
 	);
 
 	const dialog = createDialog(lines);

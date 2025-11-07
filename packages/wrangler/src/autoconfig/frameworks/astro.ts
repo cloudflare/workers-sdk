@@ -1,9 +1,12 @@
 import { writeFileSync } from "fs";
+
+import type { RawConfig } from "@cloudflare/workers-utils";
+
 import { brandColor, dim } from "@cloudflare/cli/colors";
+
+import { Framework } from ".";
 import { getPackageManager } from "../../package-manager";
 import { runCommand } from "../c3-vendor/command";
-import { Framework } from ".";
-import type { RawConfig } from "@cloudflare/workers-utils";
 
 export class Astro extends Framework {
 	name = "astro";

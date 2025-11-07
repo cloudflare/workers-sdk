@@ -1,6 +1,7 @@
-import path from "path";
-import { D1Database, R2Bucket } from "@cloudflare/workers-types";
+import type { Unstable_DevWorker } from "wrangler";
+
 import { toMatchImageSnapshot } from "jest-image-snapshot";
+import path from "path";
 import {
 	afterEach,
 	beforeEach,
@@ -10,7 +11,7 @@ import {
 	MockInstance,
 	vi,
 } from "vitest";
-import { getPlatformProxy } from "./shared";
+
 import type {
 	Fetcher,
 	Hyperdrive,
@@ -18,7 +19,10 @@ import type {
 	KVNamespace,
 	Workflow,
 } from "@cloudflare/workers-types";
-import type { Unstable_DevWorker } from "wrangler";
+
+import { D1Database, R2Bucket } from "@cloudflare/workers-types";
+
+import { getPlatformProxy } from "./shared";
 
 type Env = {
 	MY_VAR: string;

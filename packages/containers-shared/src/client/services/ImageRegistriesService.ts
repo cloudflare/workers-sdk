@@ -1,8 +1,3 @@
-/* istanbul ignore file */
-/* tslint:disable */
-/* eslint-disable */
-import { OpenAPI } from "../core/OpenAPI";
-import { request as __request } from "../core/request";
 import type { CancelablePromise } from "../core/CancelablePromise";
 import type { AccountRegistryToken } from "../models/AccountRegistryToken";
 import type { CreateImageRegistryRequestBody } from "../models/CreateImageRegistryRequestBody";
@@ -11,6 +6,12 @@ import type { EmptyResponse } from "../models/EmptyResponse";
 import type { ImageRegistryCredentialsConfiguration } from "../models/ImageRegistryCredentialsConfiguration";
 import type { ImageRegistryProtocol } from "../models/ImageRegistryProtocol";
 import type { ImageRegistryProtocols } from "../models/ImageRegistryProtocols";
+
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+import { OpenAPI } from "../core/OpenAPI";
+import { request as __request } from "../core/request";
 
 export class ImageRegistriesService {
 	/**

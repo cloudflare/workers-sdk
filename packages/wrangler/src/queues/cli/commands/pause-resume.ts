@@ -1,9 +1,11 @@
+import type { Config } from "@cloudflare/workers-utils";
+
+import type { PostQueueBody } from "../../client";
+
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { getQueue, updateQueue } from "../../client";
 import { handleFetchError } from "../../utils";
-import type { PostQueueBody } from "../../client";
-import type { Config } from "@cloudflare/workers-utils";
 
 export const queuesPauseCommand = createCommand({
 	metadata: {

@@ -1,18 +1,22 @@
+import chalk from "chalk";
+import globToRegExp from "glob-to-regexp";
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+
+import type { CfModule, Rule } from "@cloudflare/workers-utils";
+
 import { UserError } from "@cloudflare/workers-utils";
-import chalk from "chalk";
-import globToRegExp from "glob-to-regexp";
+
+import type { Entry } from "./entry";
+import type { ParsedRules } from "./rules";
+
 import { logger } from "../logger";
 import { getWranglerHiddenDirPath } from "../paths";
 import { getBundleType } from "./bundle-type";
 import { RuleTypeToModuleType } from "./module-collection";
 import { parseRules } from "./rules";
 import { tryAttachSourcemapToModule } from "./source-maps";
-import type { Entry } from "./entry";
-import type { ParsedRules } from "./rules";
-import type { CfModule, Rule } from "@cloudflare/workers-utils";
 
 async function* getFiles(
 	configPath: string | undefined,

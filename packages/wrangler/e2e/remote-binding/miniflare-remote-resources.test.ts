@@ -1,6 +1,12 @@
+import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
+import type { ExpectStatic } from "vitest";
+
 import path from "node:path";
 import dedent from "ts-dedent";
 import { beforeEach, describe, expect, it, onTestFinished } from "vitest";
+
+import type { RawConfig } from "@cloudflare/workers-utils";
+
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	importMiniflare,
@@ -8,9 +14,6 @@ import {
 	WranglerE2ETestHelper,
 } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
-import type { RawConfig } from "@cloudflare/workers-utils";
-import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
-import type { ExpectStatic } from "vitest";
 
 const { startRemoteProxySession } = await importWrangler();
 const { Miniflare } = await importMiniflare();
@@ -74,7 +77,7 @@ const testCases: TestCase<string>[] = [
 		setup: async (helper) => {
 			const targetWorkerName = generateResourceName();
 			await helper.seed({
-				"target-worker.js": dedent/* javascript */ `
+				"target-worker.js": dedent /* javascript */ `
 					import { WorkerEntrypoint } from "cloudflare:workers"
 					export default {
 						fetch(request) {
@@ -311,7 +314,7 @@ const testCases: TestCase<string>[] = [
 
 			const customerWorkerName = "remote-bindings-test-customer-worker";
 			await helper.seed({
-				"customer-worker.js": dedent/* javascript */ `
+				"customer-worker.js": dedent /* javascript */ `
 					import {WorkerEntrypoint} from "cloudflare:workers"
 					export default class W extends WorkerEntrypoint {
 						fetch(request) {
@@ -476,7 +479,7 @@ const mtlsTest: TestCase<{ certificateId: string; workerName: string }> = {
 		};
 
 		await helper.seed({
-			"worker.js": dedent/* javascript */ `
+			"worker.js": dedent /* javascript */ `
 					export default {
 						fetch(request) { return new Response("Hello"); }
 					}

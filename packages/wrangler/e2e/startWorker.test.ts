@@ -1,18 +1,20 @@
 import assert from "assert";
 import events from "events";
+import getPort from "get-port";
 import path from "path";
 import { setTimeout } from "timers/promises";
-import getPort from "get-port";
 import dedent from "ts-dedent";
 import undici from "undici";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import WebSocket from "ws";
+
+import type { DevToolsEvent, Worker } from "../src/api";
+
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
-import type { DevToolsEvent, Worker } from "../src/api";
 
 const OPTIONS = [
 	{ remote: false },

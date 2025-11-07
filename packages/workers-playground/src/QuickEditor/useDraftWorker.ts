@@ -1,11 +1,14 @@
-import { eg } from "@cloudflare/util-en-garde";
 import lzstring from "lz-string";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { v4 } from "uuid";
+
+import type { TypeFromCodec } from "@cloudflare/util-en-garde";
+
+import { eg } from "@cloudflare/util-en-garde";
+
 import { getPlaygroundWorker } from "./getPlaygroundWorker";
 import { matchFiles, parseRules, toMimeType } from "./module-collection";
-import type { TypeFromCodec } from "@cloudflare/util-en-garde";
 
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();

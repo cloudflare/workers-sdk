@@ -1,4 +1,8 @@
 import { http, HttpResponse } from "msw";
+
+import type { ServiceReferenceResponse, Tail } from "../delete";
+import type { KVNamespaceInfo } from "../kv/helpers";
+
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -7,8 +11,6 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
-import type { ServiceReferenceResponse, Tail } from "../delete";
-import type { KVNamespaceInfo } from "../kv/helpers";
 
 describe("delete", () => {
 	mockAccountId();

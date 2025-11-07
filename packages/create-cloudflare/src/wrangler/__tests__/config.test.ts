@@ -3,6 +3,7 @@ import { mockWorkersTypesDirectory } from "helpers/__tests__/mocks";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+
 import { createTestContext } from "../../__tests__/helpers";
 import { updateWranglerConfig } from "../config";
 
@@ -17,16 +18,16 @@ describe("update wrangler config", () => {
 
 	beforeEach(() => {
 		vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(
-			Promise.resolve(mockCompatDate),
+			Promise.resolve(mockCompatDate)
 		);
 		vi.mocked(existsSync).mockImplementation((f) =>
-			(f as string).endsWith(".toml"),
+			(f as string).endsWith(".toml")
 		);
 		mockWorkersTypesDirectory();
 
 		// Mock the read of tsconfig.json
 		vi.mocked(readFile).mockImplementation(
-			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`,
+			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`
 		);
 	});
 
@@ -89,7 +90,7 @@ describe("update wrangler config", () => {
 
 	test("placeholder replacement (json)", async () => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+			(f as string).endsWith(".json")
 		);
 		const json = JSON.stringify({
 			name: "<TBD>",
@@ -150,7 +151,7 @@ describe("update wrangler config", () => {
 
 	test("string literal replacement", async () => {
 		const toml = [`name = "my-cool-worker"`, `main = "src/index.ts"`].join(
-			"\n",
+			"\n"
 		);
 		vi.mocked(readFile).mockReturnValue(toml);
 

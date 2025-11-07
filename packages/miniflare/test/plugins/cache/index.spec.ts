@@ -12,13 +12,15 @@ import {
 	RequestInit,
 	Response,
 } from "miniflare";
+
+import type { CacheStorage } from "@cloudflare/workers-types/experimental";
+
 import {
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
 	MiniflareTestContext,
 	useTmp,
 } from "../../test-shared";
-import type { CacheStorage } from "@cloudflare/workers-types/experimental";
 
 interface Context extends MiniflareTestContext {
 	caches: ReplaceWorkersTypes<CacheStorage>;

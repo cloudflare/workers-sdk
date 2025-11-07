@@ -1,4 +1,8 @@
 import { UserError } from "@cloudflare/workers-utils";
+
+import type { ComplianceConfig } from "../../environment-variables/misc-variables";
+import type { RestoreBookmarkResponse } from "./types";
+
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
@@ -7,8 +11,6 @@ import { requireAuth } from "../../user";
 import { printResourceLocation } from "../../utils/is-local";
 import { getDatabaseByNameOrBinding } from "../utils";
 import { getBookmarkIdFromTimestamp, throwIfDatabaseIsAlpha } from "./utils";
-import type { ComplianceConfig } from "../../environment-variables/misc-variables";
-import type { RestoreBookmarkResponse } from "./types";
 
 export const d1TimeTravelRestoreCommand = createCommand({
 	metadata: {

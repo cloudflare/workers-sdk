@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
+
 import { getWorkerConfig } from "../workers-configs";
 
 describe("getWorkerConfig", () => {

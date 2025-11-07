@@ -1,6 +1,6 @@
-import { join } from "path";
 import { parseFile, parseTs } from "helpers/codemod";
 import { writeFile } from "helpers/files";
+import { join } from "path";
 import * as recast from "recast";
 
 /**
@@ -21,7 +21,7 @@ import * as recast from "recast";
  */
 export const testTransform = (
 	filePath: string,
-	methods: recast.types.Visitor,
+	methods: recast.types.Visitor
 ) => {
 	const ast = parseFile(join(__dirname, filePath));
 

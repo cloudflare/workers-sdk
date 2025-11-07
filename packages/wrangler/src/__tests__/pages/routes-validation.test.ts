@@ -1,4 +1,7 @@
 import { FatalError } from "@cloudflare/workers-utils";
+
+import type { RoutesJSONSpec } from "../../pages/functions/routes-transformation";
+
 import {
 	MAX_FUNCTIONS_ROUTES_RULE_LENGTH,
 	MAX_FUNCTIONS_ROUTES_RULES,
@@ -10,7 +13,6 @@ import {
 	RoutesValidationError,
 	validateRoutes,
 } from "../../pages/functions/routes-validation";
-import type { RoutesJSONSpec } from "../../pages/functions/routes-transformation";
 
 describe("routes-validation", () => {
 	describe("isRoutesJSONSpec", () => {

@@ -1,5 +1,11 @@
-import { FatalError } from "@cloudflare/workers-utils";
 import { format as timeagoFormat } from "timeago.js";
+
+import type { Deployment } from "@cloudflare/types";
+
+import { FatalError } from "@cloudflare/workers-utils";
+
+import type { PagesConfigCache } from "./types";
+
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
@@ -9,8 +15,6 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
-import type { PagesConfigCache } from "./types";
-import type { Deployment } from "@cloudflare/types";
 
 export const pagesDeploymentListCommand = createCommand({
 	metadata: {

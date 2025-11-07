@@ -1,6 +1,10 @@
 import fs from "node:fs";
 import path from "path";
+
+import type { ParseError } from "@cloudflare/workers-utils";
+
 import { configFileName, UserError } from "@cloudflare/workers-utils";
+
 import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
 import { isNonInteractiveOrCI } from "../../is-interactive";
@@ -13,7 +17,6 @@ import {
 	getUnappliedMigrations,
 	initMigrationsTable,
 } from "./helpers";
-import type { ParseError } from "@cloudflare/workers-utils";
 
 export const d1MigrationsApplyCommand = createCommand({
 	metadata: {

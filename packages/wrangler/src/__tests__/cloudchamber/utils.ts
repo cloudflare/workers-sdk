@@ -1,10 +1,13 @@
-import * as fs from "node:fs";
-import * as TOML from "@iarna/toml";
 import { http, HttpResponse } from "msw";
-import * as user from "../../user";
-import { msw } from "../helpers/msw";
+import * as fs from "node:fs";
+
 import type { CompleteAccountCustomer } from "@cloudflare/containers-shared";
 import type { CloudchamberConfig } from "@cloudflare/workers-utils";
+
+import * as TOML from "@iarna/toml";
+
+import * as user from "../../user";
+import { msw } from "../helpers/msw";
 
 export function setWranglerConfig(cloudchamber: CloudchamberConfig) {
 	fs.writeFileSync(

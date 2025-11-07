@@ -1,14 +1,15 @@
+import type {
+	Application,
+	DeploymentV2,
+	PlacementWithEvents,
+} from "@cloudflare/containers-shared";
+
 import {
 	ContainerNetworkMode,
 	DeploymentType,
 	NodeGroup,
 	PlacementStatusHealth,
 	SchedulingPolicy,
-} from "@cloudflare/containers-shared";
-import type {
-	Application,
-	DeploymentV2,
-	PlacementWithEvents,
 } from "@cloudflare/containers-shared";
 
 export const MOCK_DEPLOYMENTS: DeploymentV2[] = [

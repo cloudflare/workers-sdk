@@ -1,7 +1,9 @@
-import path from "node:path";
 import { findUpSync } from "find-up";
-import { getWranglerTmpDir } from "../paths";
+import path from "node:path";
+
 import type { BundleResult } from "../deployment-bundle/bundle";
+
+import { getWranglerTmpDir } from "../paths";
 
 export const RUNNING_BUILDERS: BundleResult[] = [];
 

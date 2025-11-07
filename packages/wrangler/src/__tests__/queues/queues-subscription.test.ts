@@ -1,3 +1,8 @@
+import type {
+	CreateEventSubscriptionRequest,
+	EventSubscription,
+} from "../../queues/subscription-types";
+
 import { EventSourceType } from "../../queues/subscription-types";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -13,10 +18,6 @@ import {
 	mockListSubscriptionsRequest,
 	mockUpdateSubscriptionRequest,
 } from "./mock-utils";
-import type {
-	CreateEventSubscriptionRequest,
-	EventSubscription,
-} from "../../queues/subscription-types";
 
 describe("queues subscription", () => {
 	mockAccountId();

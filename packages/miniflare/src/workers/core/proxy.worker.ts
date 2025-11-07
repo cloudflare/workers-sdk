@@ -1,7 +1,8 @@
-import assert from "node:assert";
-import { Buffer } from "node:buffer";
 import { parse } from "devalue";
 import { readPrefix, reduceError } from "miniflare:shared";
+import assert from "node:assert";
+import { Buffer } from "node:buffer";
+
 import {
 	CoreBindings,
 	CoreHeaders,

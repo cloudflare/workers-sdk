@@ -1,5 +1,3 @@
-import assert from "node:assert";
-import { Buffer } from "node:buffer";
 import CachePolicy from "http-cache-semantics";
 import {
 	DeferredPromise,
@@ -16,6 +14,9 @@ import {
 	RouteHandler,
 	Timers,
 } from "miniflare:shared";
+import assert from "node:assert";
+import { Buffer } from "node:buffer";
+
 import { isSitesRequest } from "../kv";
 import { CacheObjectCf } from "./constants";
 import {

@@ -1,5 +1,6 @@
 // Adapted from https://github.com/cloudflare/workers-sdk/blob/0a77990457652af36c60c52bf9c38c3a69945de4/packages/wrangler/src/module-collection.ts
 import globToRegExp from "glob-to-regexp";
+
 import type { TypedModule } from "./useDraftWorker";
 
 type ConfigModuleRuleType =

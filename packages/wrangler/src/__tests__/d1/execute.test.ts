@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { join } from "path";
+
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runInTempDir } from "../helpers/run-in-tmp";

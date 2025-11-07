@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { z } from "zod";
+
 import { Service, Worker_Binding } from "../../runtime";
 import { Plugin, ProxyNodeBinding } from "../shared";
 

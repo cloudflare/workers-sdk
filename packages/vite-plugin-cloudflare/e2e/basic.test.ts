@@ -1,5 +1,6 @@
 import { rm, writeFile } from "node:fs/promises";
 import { describe, test, vi } from "vitest";
+
 import {
 	fetchJson,
 	isBuildAndPreviewOnWindows,

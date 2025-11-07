@@ -1,12 +1,14 @@
 import assert from "node:assert";
 import WebSocket from "ws";
-import { Log } from "../../../shared";
-import { isDevToolsEvent } from "./devtools";
+
 import type {
 	DevToolsCommandRequests,
 	DevToolsEvent,
 	DevToolsEvents,
 } from "./devtools";
+
+import { Log } from "../../../shared";
+import { isDevToolsEvent } from "./devtools";
 
 /**
  * An `InspectorProxy` connects to a single runtime (/workerd) inspector server and proxies websocket communication

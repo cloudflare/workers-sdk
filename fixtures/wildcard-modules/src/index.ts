@@ -2,7 +2,7 @@ import common from "./common.cjs";
 import dep from "./dep";
 import text from "./text.txt";
 
-export default <ExportedHandler>{
+export default (<ExportedHandler>{
 	async fetch(request) {
 		const url = new URL(request.url);
 		if (url.pathname === "/dep") {
@@ -29,4 +29,4 @@ export default <ExportedHandler>{
 		}
 		return new Response("Not Found", { status: 404 });
 	},
-};
+});

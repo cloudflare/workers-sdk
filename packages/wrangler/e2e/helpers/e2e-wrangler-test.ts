@@ -4,6 +4,9 @@ import { cp } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
 import { expect, onTestFinished, vi } from "vitest";
+
+import type { WranglerCommandOptions } from "./wrangler";
+
 import {
 	generateLeafCertificate,
 	generateMtlsCertName,
@@ -17,7 +20,6 @@ import {
 	WRANGLER_IMPORT,
 	WranglerLongLivedCommand,
 } from "./wrangler";
-import type { WranglerCommandOptions } from "./wrangler";
 
 // eslint-disable-next-line @typescript-eslint/consistent-type-imports
 export function importWrangler(): Promise<typeof import("../../src/cli")> {

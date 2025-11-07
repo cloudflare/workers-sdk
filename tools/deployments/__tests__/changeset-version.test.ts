@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import { getNextMiniflareVersion } from "../../../.github/changeset-version";
 
 // prettier-ignore

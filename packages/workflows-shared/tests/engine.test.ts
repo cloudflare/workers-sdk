@@ -1,3 +1,6 @@
+import type { ProvidedEnv } from "cloudflare:test";
+import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
+
 import {
 	createExecutionContext,
 	env,
@@ -5,7 +8,7 @@ import {
 } from "cloudflare:test";
 import { NonRetryableError } from "cloudflare:workflows";
 import { describe, expect, it, vi } from "vitest";
-import { InstanceEvent, InstanceStatus } from "../src";
+
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
@@ -13,8 +16,8 @@ import type {
 	Engine,
 	EngineLogs,
 } from "../src/engine";
-import type { ProvidedEnv } from "cloudflare:test";
-import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
+
+import { InstanceEvent, InstanceStatus } from "../src";
 
 async function setWorkflowEntrypoint(
 	stub: DurableObjectStub<Engine>,

@@ -1,8 +1,9 @@
+import type React from "react";
+
 import { Icon } from "@cloudflare/component-icon";
 import { A, Span } from "@cloudflare/elements";
 import { isDarkMode } from "@cloudflare/style-const";
 import { createStyledComponent } from "@cloudflare/style-container";
-import type React from "react";
 
 const Link = createStyledComponent(
 	({ theme }) => ({

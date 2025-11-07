@@ -1,3 +1,6 @@
+import type { ParsedUrlQuery } from "node:querystring";
+import type { Response } from "undici";
+
 /* Based heavily on code from https://github.com/BitySA/oauth2-auth-code-pkce */
 
 /*
@@ -212,6 +215,9 @@ import http from "node:http";
 import path from "node:path";
 import url from "node:url";
 import { TextEncoder } from "node:util";
+import dedent from "ts-dedent";
+import { fetch } from "undici";
+
 import {
 	configFileName,
 	parseTOML,
@@ -219,8 +225,10 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import TOML from "@iarna/toml";
-import dedent from "ts-dedent";
-import { fetch } from "undici";
+
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { ChooseAccountItem } from "./choose-account";
+
 import {
 	getConfigCache,
 	purgeConfigCaches,
@@ -251,10 +259,6 @@ import {
 import { getAccountChoices } from "./choose-account";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { ChooseAccountItem } from "./choose-account";
-import type { ParsedUrlQuery } from "node:querystring";
-import type { Response } from "undici";
 
 export type ApiCredentials =
 	| {

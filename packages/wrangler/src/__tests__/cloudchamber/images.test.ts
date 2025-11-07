@@ -1,6 +1,8 @@
-import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+
+import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
+
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";

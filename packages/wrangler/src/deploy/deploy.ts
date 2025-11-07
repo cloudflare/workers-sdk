@@ -1,7 +1,24 @@
+import type { FormData } from "undici";
+
 import assert from "node:assert";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
+import PQueue from "p-queue";
+import { Response } from "undici";
+
+import type {
+	CfModule,
+	CfPlacement,
+	CfWorkerInit,
+	Config,
+	CustomDomainRoute,
+	RawConfig,
+	Route,
+	ZoneIdRoute,
+	ZoneNameRoute,
+} from "@cloudflare/workers-utils";
+
 import { cancel } from "@cloudflare/cli";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import {
@@ -14,8 +31,15 @@ import {
 	parseNonHyphenedUuid,
 	UserError,
 } from "@cloudflare/workers-utils";
-import PQueue from "p-queue";
-import { Response } from "undici";
+
+import type { AssetsOptions } from "../assets";
+import type { Entry } from "../deployment-bundle/entry";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { PostTypedConsumerBody } from "../queues/client";
+import type { LegacyAssetPaths } from "../sites";
+import type { RetrieveSourceMapFunction } from "../sourcemap";
+import type { ApiVersion, Percentage, VersionId } from "../versions/types";
+
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
 import { buildContainer, deployContainers } from "../cloudchamber/deploy";
@@ -70,25 +94,6 @@ import {
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
-import type { AssetsOptions } from "../assets";
-import type { Entry } from "../deployment-bundle/entry";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { PostTypedConsumerBody } from "../queues/client";
-import type { LegacyAssetPaths } from "../sites";
-import type { RetrieveSourceMapFunction } from "../sourcemap";
-import type { ApiVersion, Percentage, VersionId } from "../versions/types";
-import type {
-	CfModule,
-	CfPlacement,
-	CfWorkerInit,
-	Config,
-	CustomDomainRoute,
-	RawConfig,
-	Route,
-	ZoneIdRoute,
-	ZoneNameRoute,
-} from "@cloudflare/workers-utils";
-import type { FormData } from "undici";
 
 type Props = {
 	config: Config;

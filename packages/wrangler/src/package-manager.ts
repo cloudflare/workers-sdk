@@ -1,6 +1,8 @@
-import { env } from "node:process";
-import { UserError } from "@cloudflare/workers-utils";
 import { execaCommandSync } from "execa";
+import { env } from "node:process";
+
+import { UserError } from "@cloudflare/workers-utils";
+
 import { logger } from "./logger";
 
 export interface PackageManager {

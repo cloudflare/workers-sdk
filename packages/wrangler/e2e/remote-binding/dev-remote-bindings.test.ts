@@ -1,9 +1,10 @@
+import getPort from "get-port";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import getPort from "get-port";
 import dedent from "ts-dedent";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { fetchText } from "../helpers/fetch-text";

@@ -1,9 +1,11 @@
 import { expect, test } from "vitest";
-import { createMetadataObject } from "../..//metadata-generator/createMetadataObject";
+
 import type {
 	HeadersRule,
 	RedirectRule,
 } from "@cloudflare/workers-shared/utils/configuration/types";
+
+import { createMetadataObject } from "../..//metadata-generator/createMetadataObject";
 
 const homeRedirectRule: RedirectRule = {
 	from: "/home",

@@ -1,6 +1,8 @@
+import colors from "picocolors";
+
 import { prepareContainerImagesForDev } from "@cloudflare/containers-shared";
 import { cleanupContainers } from "@cloudflare/containers-shared/src/utils";
-import colors from "picocolors";
+
 import { getDockerPath } from "../containers";
 import { assertIsPreview } from "../context";
 import { getPreviewMiniflareOptions } from "../miniflare-options";

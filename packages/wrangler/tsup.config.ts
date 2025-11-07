@@ -1,8 +1,10 @@
-import path from "node:path";
-import * as esbuild from "esbuild";
-import { defineConfig } from "tsup";
-import { EXTERNAL_DEPENDENCIES } from "./scripts/deps";
 import type { Options } from "tsup";
+
+import * as esbuild from "esbuild";
+import path from "node:path";
+import { defineConfig } from "tsup";
+
+import { EXTERNAL_DEPENDENCIES } from "./scripts/deps";
 
 const TEMPLATES_DIR = path.join(__dirname, "templates");
 const workersContexts = new Map<string, esbuild.BuildContext>();

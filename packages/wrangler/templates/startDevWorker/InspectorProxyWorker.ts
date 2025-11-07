@@ -1,4 +1,12 @@
 import assert from "node:assert";
+
+import type {
+	InspectorProxyWorkerIncomingWebSocketMessage,
+	InspectorProxyWorkerOutgoingRequestBody,
+	InspectorProxyWorkerOutgoingWebsocketMessage,
+	ProxyData,
+} from "../../src/api/startDevWorker/events";
+
 import {
 	DevToolsCommandRequest,
 	DevToolsCommandRequests,
@@ -14,12 +22,6 @@ import {
 	urlFromParts,
 } from "../../src/api/startDevWorker/utils";
 import { assertNever } from "../../src/utils/assert-never";
-import type {
-	InspectorProxyWorkerIncomingWebSocketMessage,
-	InspectorProxyWorkerOutgoingRequestBody,
-	InspectorProxyWorkerOutgoingWebsocketMessage,
-	ProxyData,
-} from "../../src/api/startDevWorker/events";
 
 const ALLOWED_HOST_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];
 const ALLOWED_ORIGIN_HOSTNAMES = [

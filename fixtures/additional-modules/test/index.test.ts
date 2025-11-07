@@ -8,6 +8,7 @@ import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { unstable_startWorker } from "wrangler";
+
 import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
 
 async function getTmpDir() {

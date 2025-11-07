@@ -5,6 +5,7 @@ import {
 	waitOnExecutionContext,
 } from "cloudflare:test";
 import { it } from "vitest";
+
 import worker from "../src/index";
 
 it("dispatches scheduled event", async () => {

@@ -1,6 +1,6 @@
+import { data, text } from "./blobs-indirect.mjs";
 // Test `ImportDeclaration`
 import cjs from "./index.cjs";
-import { data, text } from "./blobs-indirect.mjs";
 
 export default {
 	async fetch() {

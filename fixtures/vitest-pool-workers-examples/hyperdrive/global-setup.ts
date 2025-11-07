@@ -1,8 +1,9 @@
+import type { GlobalSetupContext } from "vitest/node";
+
 import assert from "node:assert";
 import events from "node:events";
 import net from "node:net";
 import util from "node:util";
-import type { GlobalSetupContext } from "vitest/node";
 
 // Global setup runs inside Node.js, not `workerd`
 export default async function ({ provide }: GlobalSetupContext) {

@@ -1,11 +1,14 @@
 import assert from "assert";
-import fs from "fs/promises";
-import { type D1Database } from "@cloudflare/workers-types/experimental";
 import { ExecutionContext } from "ava";
+import fs from "fs/promises";
 import { Miniflare, MiniflareOptions } from "miniflare";
+
+import { type D1Database } from "@cloudflare/workers-types/experimental";
+
+import type { Context } from "./test";
+
 import { useTmp, utf8Encode } from "../../test-shared";
 import { binding, getDatabase, opts, test } from "./test";
-import type { Context } from "./test";
 
 export const SCHEMA = (
 	tableColours: string,

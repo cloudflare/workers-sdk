@@ -1,3 +1,7 @@
+import type React from "react";
+
+import { useContext, useEffect, useState } from "react";
+
 import { Button } from "@cloudflare/component-button";
 import { Icon } from "@cloudflare/component-icon";
 import { Listbox } from "@cloudflare/component-listbox";
@@ -6,15 +10,15 @@ import { Toast } from "@cloudflare/component-toast";
 import { Div, Form, Label, Output } from "@cloudflare/elements";
 import { isDarkMode, theme } from "@cloudflare/style-const";
 import { createStyledComponent } from "@cloudflare/style-container";
-import { useContext, useEffect, useState } from "react";
+
+import type { HeaderEntry } from "./RequestHeaders";
+
 import { FrameError } from "../FrameErrorBoundary";
 import { InputField } from "../InputField";
 import { ServiceContext } from "../QuickEditor";
 import { fetchWorker } from "./fetchWorker";
 import RequestHeaders from "./RequestHeaders";
 import ResponseView from "./ResponseView";
-import type { HeaderEntry } from "./RequestHeaders";
-import type React from "react";
 
 const HTTP_METHODS = [
 	"GET",

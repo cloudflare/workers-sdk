@@ -1,5 +1,6 @@
-import prompts from "prompts";
 import type { Mock } from "vitest";
+
+import prompts from "prompts";
 
 /**
  * The expected values for a confirmation request.

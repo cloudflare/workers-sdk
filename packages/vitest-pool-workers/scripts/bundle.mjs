@@ -1,8 +1,9 @@
+import esbuild from "esbuild";
 import fs from "node:fs";
 import module from "node:module";
 import path from "node:path";
 import url from "node:url";
-import esbuild from "esbuild";
+
 import { builtinModules } from "./rtti/query.mjs";
 
 const argv = process.argv.slice(2);

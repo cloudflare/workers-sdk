@@ -1,5 +1,6 @@
-import { MAX_ROUTES_RULE_LENGTH, MAX_ROUTES_RULES } from "./constants";
 import type { StaticRouting } from "../types";
+
+import { MAX_ROUTES_RULE_LENGTH, MAX_ROUTES_RULES } from "./constants";
 
 // copy of what EWC does. Wrangler uploads the rules in one array (so the API is consistent with Wrangler config),
 // but router Worker expects the rules to be split into two arrays, which we do here.

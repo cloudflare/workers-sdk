@@ -1,30 +1,44 @@
 import assert from "assert";
 import crypto from "crypto";
 import { Abortable } from "events";
+import exitHook from "exit-hook";
 import fs from "fs";
 import { mkdir, writeFile } from "fs/promises";
 import http from "http";
+import { $ as colors$, green } from "kleur/colors";
 import net from "net";
 import os from "os";
 import path from "path";
+import stoppable from "stoppable";
 import { Duplex, Transform, Writable } from "stream";
 import { ReadableStream } from "stream/web";
-import util from "util";
-import zlib from "zlib";
-import { checkMacOSVersion } from "@cloudflare/cli";
-import exitHook from "exit-hook";
-import { $ as colors$, green } from "kleur/colors";
-import stoppable from "stoppable";
 import {
 	Dispatcher,
 	getGlobalDispatcher,
 	Pool,
 	Response as UndiciResponse,
 } from "undici";
+import util from "util";
 import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
 import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
+import zlib from "zlib";
 import { z } from "zod";
+
+import type {
+	CacheStorage,
+	D1Database,
+	DurableObjectNamespace,
+	Fetcher,
+	KVNamespace,
+	KVNamespaceListKey,
+	Queue,
+	R2Bucket,
+} from "@cloudflare/workers-types/experimental";
+import type { Process } from "@puppeteer/browsers";
+
+import { checkMacOSVersion } from "@cloudflare/cli";
+
 import { fallbackCf, setupCf } from "./cf";
 import {
 	coupleWebSocket,
@@ -133,17 +147,6 @@ import {
 } from "./workers";
 import { ADMIN_API } from "./workers/secrets-store/constants";
 import { formatZodError } from "./zod-format";
-import type {
-	CacheStorage,
-	D1Database,
-	DurableObjectNamespace,
-	Fetcher,
-	KVNamespace,
-	KVNamespaceListKey,
-	Queue,
-	R2Bucket,
-} from "@cloudflare/workers-types/experimental";
-import type { Process } from "@puppeteer/browsers";
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {

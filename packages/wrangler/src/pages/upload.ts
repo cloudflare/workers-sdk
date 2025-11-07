@@ -1,8 +1,13 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import PQueue from "p-queue";
+
 import { spinner } from "@cloudflare/cli/interactive";
 import { APIError, FatalError } from "@cloudflare/workers-utils";
-import PQueue from "p-queue";
+
+import type { UploadPayloadFile } from "./types";
+import type { FileContainer } from "./validate";
+
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
@@ -18,8 +23,6 @@ import {
 } from "./constants";
 import { ApiErrorCodes } from "./errors";
 import { validate } from "./validate";
-import type { UploadPayloadFile } from "./types";
-import type { FileContainer } from "./validate";
 
 export const pagesProjectUploadCommand = createCommand({
 	metadata: {

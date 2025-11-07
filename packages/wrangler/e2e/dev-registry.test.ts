@@ -1,15 +1,17 @@
+import type { RequestInit } from "undici";
+
 import { execSync } from "child_process";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch, Request } from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
 import { seed as baseSeed, makeRoot, seed } from "./helpers/setup";
 import { WRANGLER_IMPORT } from "./helpers/wrangler";
-import type { RequestInit } from "undici";
 
 async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
 	const request = new Request(url, info);
@@ -57,7 +59,7 @@ describe("unstable_dev()", () => {
 					binding = "WORKER"
 					service = '${workerName}'
 			`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 					export default {
 						async fetch(req, env) {
 							return new Response("Hello from Parent!" + await env.WORKER.fetch(req).then(r => r.text()))
@@ -80,7 +82,7 @@ describe("unstable_dev()", () => {
 						main = "src/index.ts"
 						compatibility_date = "2023-01-01"
 				`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 					export default {
 						fetch(req, env) {
 							return new Response("Hello from Child!")
@@ -99,7 +101,7 @@ describe("unstable_dev()", () => {
 
 	async function runInNode() {
 		await seed(parent, {
-			"index.mjs": dedent/*javascript*/ `
+			"index.mjs": dedent /*javascript*/ `
 					import { unstable_dev } from "${WRANGLER_IMPORT}"
 					import { setTimeout } from "node:timers/promises";
 					import { readdirSync } from "node:fs"
@@ -174,7 +176,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
 			`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 				export default {
 					fetch(req, env) {
                         const url = new URL(req.url)
@@ -225,7 +227,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
                         { name = "REFERENCED_DO", class_name = "MyDurableObject", script_name = "${workerName}" }
                     ]
 			`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 				export default{
 					fetch(req, env) {
                         const url = new URL(req.url)
@@ -253,7 +255,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 					name = "${workerName3}"
 					main = "src/index.ts"
 			`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
                 addEventListener("fetch", (event) => {
                     event.respondWith(new Response("Hello from service worker"));
                 });
@@ -390,7 +392,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 							[[tail_consumers]]
 							service = "${workerName2}"
 					`,
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 						export default {
 							async fetch(req, env) {
 								console.log("log something")
@@ -407,7 +409,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 							main = "src/index.ts"
 							compatibility_date = "2025-04-28"
 					`,
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 						export default {
 							async tail(event) {
 								console.log("received tail event", event)
@@ -539,7 +541,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 						binding = "BEE"
 						service = '${workerName2}'
 				`,
-				"dist/_worker.js": dedent/* javascript */ `export default {
+				"dist/_worker.js": dedent /* javascript */ `export default {
 					fetch(req, env) {
                         const url = new URL(req.url)
                         if (url.pathname === "/service") {

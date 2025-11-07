@@ -1,7 +1,8 @@
+import type { Sink } from "../../types";
+
 import { logger } from "../../../logger";
 import formatLabelledValues from "../../../utils/render-labelled-values";
 import { SINK_DEFAULTS } from "../../defaults";
-import type { Sink } from "../../types";
 
 export function displaySinkConfiguration(
 	sink: Sink,

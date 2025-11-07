@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+
 import { getTextResponse } from "../../__test-utils__";
 
 test("it is possible to import assets from dependencies", async () => {

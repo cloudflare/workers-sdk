@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { fetch } from "undici";
 import { beforeAll, describe, expect, test, vi } from "vitest";
+
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import { WranglerE2ETestHelper } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";

@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+
 import { parseRedirects } from "../configuration/parseRedirects";
 
 // Snapshot values

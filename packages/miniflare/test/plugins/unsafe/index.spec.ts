@@ -1,4 +1,3 @@
-import path from "path";
 import test from "ava";
 import {
 	Miniflare,
@@ -6,6 +5,8 @@ import {
 	MiniflareOptions,
 	WorkerOptions,
 } from "miniflare";
+import path from "path";
+
 import { EXPORTED_FIXTURES, FIXTURES_PATH } from "../../test-shared";
 
 /**

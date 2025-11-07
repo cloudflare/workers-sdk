@@ -1,7 +1,9 @@
+import { http, HttpResponse } from "msw";
 import assert from "node:assert";
 import path from "node:path";
+
 import * as Sentry from "@sentry/node";
-import { http, HttpResponse } from "msw";
+
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm } from "./helpers/mock-dialogs";

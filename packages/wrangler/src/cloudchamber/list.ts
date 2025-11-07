@@ -1,3 +1,10 @@
+import type {
+	DeploymentPlacementState,
+	PlacementEvent,
+	PlacementWithEvents,
+} from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
+
 import { logRaw, shapes, space } from "@cloudflare/cli";
 import {
 	bgCyan,
@@ -14,22 +21,18 @@ import {
 	DeploymentsService,
 	PlacementsService,
 } from "@cloudflare/containers-shared";
-import { isNonInteractiveOrCI } from "../is-interactive";
-import { logger } from "../logger";
-import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
-import { capitalize, statusToColored } from "./cli/util";
-import { promiseSpinner } from "./common";
+
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
 import type { EventName } from "./enums";
-import type {
-	DeploymentPlacementState,
-	PlacementEvent,
-	PlacementWithEvents,
-} from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
+
+import { isNonInteractiveOrCI } from "../is-interactive";
+import { logger } from "../logger";
+import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
+import { capitalize, statusToColored } from "./cli/util";
+import { promiseSpinner } from "./common";
 
 export function listDeploymentsYargs(args: CommonYargsArgv) {
 	return args

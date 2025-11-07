@@ -1,5 +1,6 @@
 import test from "ava";
 import { Miniflare, MiniflareOptions, WorkerRegistry } from "miniflare";
+
 import { useTmp, waitUntil } from "./test-shared";
 
 test("DevRegistry: fetch to service worker", async (t) => {

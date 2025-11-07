@@ -1,4 +1,5 @@
 import { appendFileSync, existsSync, statSync, writeFileSync } from "node:fs";
+
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { readFileSync } from "@cloudflare/workers-utils";

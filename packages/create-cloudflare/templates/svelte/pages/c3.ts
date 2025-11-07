@@ -1,14 +1,17 @@
-import { existsSync } from "node:fs";
-import { logRaw, updateStatus } from "@cloudflare/cli";
-import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import type { C3Context, PackageJson } from "types";
+
 import { runFrameworkGenerator } from "frameworks/index";
 import { transformFile } from "helpers/codemod";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
+import { existsSync } from "node:fs";
 import * as recast from "recast";
+
+import { logRaw, updateStatus } from "@cloudflare/cli";
+import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+
 import type { TemplateConfig } from "../../../src/templates";
-import type { C3Context, PackageJson } from "types";
 
 const { npm } = detectPackageManager();
 
@@ -98,21 +101,21 @@ const updateTypeDefinitions = (ctx: C3Context) => {
 					b.tsInterfaceBody([
 						b.tsPropertySignature(
 							b.identifier("env"),
-							b.tsTypeAnnotation(b.tsTypeReference(b.identifier("Env"))),
+							b.tsTypeAnnotation(b.tsTypeReference(b.identifier("Env")))
 						),
 						b.tsPropertySignature(
 							b.identifier("cf"),
 							b.tsTypeAnnotation(
-								b.tsTypeReference(b.identifier("CfProperties")),
-							),
+								b.tsTypeReference(b.identifier("CfProperties"))
+							)
 						),
 						b.tsPropertySignature(
 							b.identifier("ctx"),
 							b.tsTypeAnnotation(
-								b.tsTypeReference(b.identifier("ExecutionContext")),
-							),
+								b.tsTypeReference(b.identifier("ExecutionContext"))
+							)
 						),
-					]),
+					])
 				);
 
 				moduleBlock.body.unshift(platformInterface);

@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import SCRIPT_SECRETS_STORE_SECRET from "worker:secrets-store/secret";
 import { z } from "zod";
+
 import { Service, Worker_Binding } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import { KV_NAMESPACE_OBJECT_CLASS_NAME } from "../kv";

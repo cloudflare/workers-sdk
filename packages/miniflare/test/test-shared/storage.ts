@@ -1,6 +1,8 @@
 import assert from "assert";
+import { ExecutionContext } from "ava";
 import crypto from "crypto";
 import fs from "fs/promises";
+import { sanitisePath } from "miniflare";
 import path from "path";
 import {
 	ReadableByteStreamController,
@@ -8,8 +10,6 @@ import {
 	ReadableStreamBYOBRequest,
 } from "stream/web";
 import { TextDecoder, TextEncoder } from "util";
-import { ExecutionContext } from "ava";
-import { sanitisePath } from "miniflare";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();

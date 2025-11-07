@@ -1,12 +1,14 @@
 import anyTest, { TestFn } from "ava";
 import { Awaitable, Miniflare, MiniflareOptions } from "miniflare";
-import { TestLog } from "./log";
+
 import type {
 	ExecutionContext,
 	ServiceWorkerGlobalScope,
 	Request as WorkerRequest,
 	Response as WorkerResponse,
 } from "@cloudflare/workers-types/experimental";
+
+import { TestLog } from "./log";
 
 export type TestMiniflareHandler<Env> = (
 	global: ServiceWorkerGlobalScope,

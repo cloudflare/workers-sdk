@@ -1,7 +1,8 @@
+import type { VectorizeMetadataIndexPropertyName } from "./types";
+
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { deleteMetadataIndex } from "./client";
-import type { VectorizeMetadataIndexPropertyName } from "./types";
 
 export const vectorizeDeleteMetadataIndexCommand = createCommand({
 	metadata: {

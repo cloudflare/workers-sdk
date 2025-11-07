@@ -4,6 +4,7 @@ import {
 	runInDurableObject,
 } from "cloudflare:test";
 import { expect, it } from "vitest";
+
 import { Counter } from "../src/";
 
 it("immediately executes alarm", async () => {

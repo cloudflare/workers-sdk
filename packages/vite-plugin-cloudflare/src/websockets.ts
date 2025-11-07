@@ -1,11 +1,14 @@
-import { createHeaders } from "@remix-run/node-fetch-server";
-import { CoreHeaders, coupleWebSocket } from "miniflare";
-import { WebSocketServer } from "ws";
-import { UNKNOWN_HOST } from "./shared";
 import type { Miniflare } from "miniflare";
 import type { IncomingMessage } from "node:http";
 import type { Duplex } from "node:stream";
 import type * as vite from "vite";
+
+import { CoreHeaders, coupleWebSocket } from "miniflare";
+import { WebSocketServer } from "ws";
+
+import { createHeaders } from "@remix-run/node-fetch-server";
+
+import { UNKNOWN_HOST } from "./shared";
 
 /**
  * Handles 'upgrade' requests to the Vite HTTP server and forwards WebSocket events between the client and Worker environments.

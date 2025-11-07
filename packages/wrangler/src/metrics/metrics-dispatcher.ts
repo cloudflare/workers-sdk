@@ -1,6 +1,12 @@
-import { configFormat } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetch } from "undici";
+
+import { configFormat } from "@cloudflare/workers-utils";
+
+import type { MetricsConfigOptions } from "./metrics-config";
+import type { AllowList } from "./sanitization";
+import type { CommonEventProperties, Events } from "./types";
+
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
@@ -23,9 +29,6 @@ import {
 	sanitizeArgKeys,
 	sanitizeArgValues,
 } from "./sanitization";
-import type { MetricsConfigOptions } from "./metrics-config";
-import type { AllowList } from "./sanitization";
-import type { CommonEventProperties, Events } from "./types";
 
 const SPARROW_URL = "https://sparrow.cloudflare.com";
 

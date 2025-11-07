@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vite from "vite";
 import { unstable_readConfig } from "wrangler";
+
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,

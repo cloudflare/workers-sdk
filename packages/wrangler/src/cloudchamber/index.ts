@@ -1,3 +1,7 @@
+import type { CommandModule } from "yargs";
+
+import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
+
 import { applyCommand, applyCommandOptionalYargs } from "./apply";
 import { buildCommand, buildYargs, pushCommand, pushYargs } from "./build";
 import { cloudchamberScope, handleFailure } from "./common";
@@ -9,8 +13,6 @@ import { registriesCommand } from "./images/registries";
 import { listCommand, listDeploymentsYargs } from "./list";
 import { modifyCommand, modifyCommandOptionalYargs } from "./modify";
 import { sshCommand } from "./ssh/ssh";
-import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
-import type { CommandModule } from "yargs";
 
 function internalCommands(args: CommonYargsArgv) {
 	try {

@@ -1,3 +1,7 @@
+import type { CommandModule } from "yargs";
+
+import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
+
 import {
 	buildCommand,
 	buildYargs,
@@ -15,8 +19,6 @@ import {
 	listYargs,
 } from "./containers";
 import { registryCommands } from "./registries";
-import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
-import type { CommandModule } from "yargs";
 
 export const containersScope = "containers:write" as const;
 

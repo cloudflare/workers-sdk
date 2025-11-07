@@ -1,7 +1,9 @@
 import { mkdirSync, writeFileSync } from "fs";
+
+import type { ContainerDevOptions } from "../src/types";
+
 import { checkExposedPorts, isDockerfile } from "./../src/utils";
 import { runInTempDir } from "./helpers/run-in-tmp-dir";
-import type { ContainerDevOptions } from "../src/types";
 
 describe("isDockerfile", () => {
 	const dockerfile =

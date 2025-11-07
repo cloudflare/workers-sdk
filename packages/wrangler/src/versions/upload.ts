@@ -1,8 +1,18 @@
+import type { FormData } from "undici";
+
 import assert from "node:assert";
 import { execSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { Response } from "undici";
+
+import type {
+	CfPlacement,
+	CfWorkerInit,
+	Config,
+} from "@cloudflare/workers-utils";
+
 import { blue, gray } from "@cloudflare/cli/colors";
 import {
 	configFileName,
@@ -11,7 +21,11 @@ import {
 	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { Response } from "undici";
+
+import type { AssetsOptions } from "../assets";
+import type { Entry } from "../deployment-bundle/entry";
+import type { RetrieveSourceMapFunction } from "../sourcemap";
+
 import {
 	getAssetsOptions,
 	syncAssets,
@@ -67,15 +81,6 @@ import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import { patchNonVersionedScriptSettings } from "./api";
-import type { AssetsOptions } from "../assets";
-import type { Entry } from "../deployment-bundle/entry";
-import type { RetrieveSourceMapFunction } from "../sourcemap";
-import type {
-	CfPlacement,
-	CfWorkerInit,
-	Config,
-} from "@cloudflare/workers-utils";
-import type { FormData } from "undici";
 
 type Props = {
 	config: Config;

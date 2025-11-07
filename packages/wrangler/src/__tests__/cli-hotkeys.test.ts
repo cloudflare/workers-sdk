@@ -1,10 +1,12 @@
+import type { Key } from "node:readline";
+
 import { setTimeout } from "node:timers/promises";
 import { vitest } from "vitest";
+
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
-import type { Key } from "node:readline";
 
 const writeToMockedStdin = (input: string | Key) =>
 	_internalKeyPressCallback(

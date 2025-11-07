@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, test, vi } from "vitest";
+
 import openInBrowser from "../open-in-browser";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";

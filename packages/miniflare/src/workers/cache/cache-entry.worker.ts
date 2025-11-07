@@ -1,4 +1,5 @@
 import { MiniflareDurableObjectCf, SharedBindings } from "miniflare:shared";
+
 import { CacheBindings, CacheHeaders, CacheObjectCf } from "./constants";
 
 interface Env {
@@ -6,7 +7,7 @@ interface Env {
 	[CacheBindings.MAYBE_JSON_CACHE_WARN_USAGE]?: boolean;
 }
 
-export default <ExportedHandler<Env>>{
+export default (<ExportedHandler<Env>>{
 	async fetch(request, env) {
 		const namespace = request.headers.get(CacheHeaders.NAMESPACE);
 		const name = namespace === null ? "default" : `named:${namespace}`;
@@ -23,4 +24,4 @@ export default <ExportedHandler<Env>>{
 		};
 		return await stub.fetch(request, { cf: cf as Record<string, unknown> });
 	},
-};
+});

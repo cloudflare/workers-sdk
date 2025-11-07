@@ -1,4 +1,5 @@
 import { HttpError } from "miniflare:shared";
+
 import { CacheHeaders } from "./constants";
 
 export class CacheError extends HttpError {

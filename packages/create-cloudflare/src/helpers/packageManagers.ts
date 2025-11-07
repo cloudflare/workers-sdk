@@ -1,14 +1,17 @@
+import type { C3Context } from "types";
+
 import { existsSync, rmSync } from "fs";
 import path from "path";
-import { brandColor, dim } from "@cloudflare/cli/colors";
 import semver from "semver";
 import whichPmRuns from "which-pm-runs";
+
+import { brandColor, dim } from "@cloudflare/cli/colors";
+
 import {
 	testPackageManager,
 	testPackageManagerVersion,
 } from "../../e2e/helpers/constants";
 import { runCommand } from "./command";
-import type { C3Context } from "types";
 
 /**
  * Detects the package manager which was used to invoke C3 and provides a map of its associated commands.

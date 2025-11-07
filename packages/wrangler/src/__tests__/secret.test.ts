@@ -1,9 +1,13 @@
+import type { Interface } from "node:readline";
+
+import { http, HttpResponse } from "msw";
 import * as fs from "node:fs";
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
-import * as TOML from "@iarna/toml";
-import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
+
+import * as TOML from "@iarna/toml";
+
 import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../secret";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -15,7 +19,6 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
-import type { Interface } from "node:readline";
 
 function createFetchResult(
 	result: unknown,

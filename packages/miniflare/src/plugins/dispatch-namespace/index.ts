@@ -1,5 +1,6 @@
 import LOCAL_DISPATCH_NAMESPACE from "worker:dispatch-namespace/dispatch-namespace";
 import { z } from "zod";
+
 import { Worker_Binding } from "../../runtime";
 import {
 	Plugin,

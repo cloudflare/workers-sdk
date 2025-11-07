@@ -1,14 +1,6 @@
 import * as fs from "fs";
 import path from "node:path";
-import {
-	experimental_readRawConfig,
-	normalizeAndValidateConfig,
-} from "@cloudflare/workers-utils";
-import { readConfig } from "../../config";
-import { run } from "../../experimental-flags";
-import { normalizeString } from "../helpers/normalize";
-import { runInTempDir } from "../helpers/run-in-tmp";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
+
 import type {
 	Config,
 	ConfigFields,
@@ -16,6 +8,17 @@ import type {
 	RawDevConfig,
 	RawEnvironment,
 } from "@cloudflare/workers-utils";
+
+import {
+	experimental_readRawConfig,
+	normalizeAndValidateConfig,
+} from "@cloudflare/workers-utils";
+
+import { readConfig } from "../../config";
+import { run } from "../../experimental-flags";
+import { normalizeString } from "../helpers/normalize";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("readConfig()", () => {
 	runInTempDir();

@@ -1,5 +1,6 @@
-import { WorkflowEntrypoint } from "cloudflare:workers";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
+
+import { WorkflowEntrypoint } from "cloudflare:workers";
 
 interface Env {
 	MY_WORKFLOW: Workflow;

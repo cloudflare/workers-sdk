@@ -1,4 +1,7 @@
 import { http, HttpResponse } from "msw";
+
+import type { WorkerMetadata } from "@cloudflare/workers-utils";
+
 import { dedent } from "../../utils/dedent";
 import { generatePreviewAlias } from "../../versions/upload";
 import { makeApiRequestAsserter } from "../helpers/assert-request";
@@ -19,7 +22,6 @@ import {
 	writeRedirectedWranglerConfig,
 	writeWranglerConfig,
 } from "../helpers/write-wrangler-config";
-import type { WorkerMetadata } from "@cloudflare/workers-utils";
 
 describe("versions upload", () => {
 	runInTempDir();

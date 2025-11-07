@@ -1,14 +1,17 @@
-import * as path from "node:path";
-import * as util from "node:util";
-import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
+import type * as http from "node:http";
+import type * as vite from "vite";
+
 import {
 	CoreHeaders,
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
+import * as path from "node:path";
+import * as util from "node:util";
+
+import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
+
 import type { PluginContext } from "./context";
-import type * as http from "node:http";
-import type * as vite from "vite";
 
 export const debuglog = util.debuglog("@cloudflare:vite-plugin");
 

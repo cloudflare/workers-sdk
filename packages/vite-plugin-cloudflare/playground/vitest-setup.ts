@@ -1,8 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
-import { chromium } from "playwright-chromium";
-import { beforeAll, inject } from "vitest";
-import { getViteModuleToTest } from "./vite-module-to-test";
 import type * as http from "node:http";
 import type { Browser, Page } from "playwright-chromium";
 import type {
@@ -18,6 +13,13 @@ import type {
 	ViteDevServer,
 } from "vite";
 import type { RunnerTestFile } from "vitest";
+
+import fs from "node:fs";
+import path from "node:path";
+import { chromium } from "playwright-chromium";
+import { beforeAll, inject } from "vitest";
+
+import { getViteModuleToTest } from "./vite-module-to-test";
 
 export const workspaceRoot = path.resolve(__dirname, "../");
 

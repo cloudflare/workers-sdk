@@ -1,7 +1,9 @@
+import type { Key } from "node:readline";
+
 import readline from "node:readline";
 import { PassThrough } from "stream";
+
 import isInteractive from "../is-interactive";
-import type { Key } from "node:readline";
 
 export function onKeyPress(callback: (key: Key) => void) {
 	// Listening for events on process.stdin (eg .on('keypress')) causes it to go into 'old mode'

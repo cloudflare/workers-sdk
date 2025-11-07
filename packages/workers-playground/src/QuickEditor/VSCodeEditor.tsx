@@ -1,15 +1,18 @@
-import { Loading } from "@cloudflare/component-loading";
-import { Div } from "@cloudflare/elements";
-import { isDarkMode } from "@cloudflare/style-const";
-import { Channel, DragContext, Frame } from "@cloudflare/workers-editor-shared";
 import { useContext, useEffect, useRef, useState } from "react";
-import type { TypedModule } from "./useDraftWorker";
+
 import type {
 	FromQuickEditMessage,
 	ToQuickEditMessage,
 	WorkerLoadedMessage,
 	WrappedChannel,
 } from "@cloudflare/workers-editor-shared";
+
+import { Loading } from "@cloudflare/component-loading";
+import { Div } from "@cloudflare/elements";
+import { isDarkMode } from "@cloudflare/style-const";
+import { Channel, DragContext, Frame } from "@cloudflare/workers-editor-shared";
+
+import type { TypedModule } from "./useDraftWorker";
 
 function stripSlashPrefix(path: string) {
 	return path[0] === "/" ? path.slice(1) : path;

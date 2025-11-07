@@ -1,5 +1,6 @@
 import test from "ava";
 import { Miniflare, MiniflareOptions } from "miniflare";
+
 import type { Hyperdrive } from "@cloudflare/workers-types/experimental";
 
 test("fields match expected", async (t) => {

@@ -1,4 +1,7 @@
+import type { CommentObject } from "comment-json";
+
 import { beforeEach, describe, expect, test, vi } from "vitest";
+
 import * as files from "../files";
 import {
 	addJSONComment,
@@ -7,7 +10,6 @@ import {
 	readJSONWithComments,
 	writeJSONWithComments,
 } from "../json";
-import type { CommentObject } from "comment-json";
 
 vi.mock("../files", () => ({
 	readFile: vi.fn(),
@@ -24,7 +26,7 @@ describe("json helpers", () => {
 	describe("readJSONWithComments", () => {
 		test("reads and parses JSON file with comments", () => {
 			mockReadFile.mockReturnValue(
-				'{\n/* a comment */\n "name": "test"\n}\n// post-comment',
+				'{\n/* a comment */\n "name": "test"\n}\n// post-comment'
 			);
 			const result = readJSONWithComments("/path/to/file.json");
 			expect(mockReadFile).toHaveBeenCalledWith("/path/to/file.json");
@@ -35,12 +37,12 @@ describe("json helpers", () => {
 	describe("writeJSONWithComments", () => {
 		test("stringifies and writes JSON object with comments", () => {
 			mockReadFile.mockReturnValue(
-				'{\n\t/* a comment */\n\t"name": "test"\n}\n// post-comment',
+				'{\n\t/* a comment */\n\t"name": "test"\n}\n// post-comment'
 			);
 			const result = readJSONWithComments("/path/to/file.json");
 			writeJSONWithComments("/path/to/file.json", result);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -60,7 +62,7 @@ describe("json helpers", () => {
 
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -80,7 +82,7 @@ describe("json helpers", () => {
 
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -99,7 +101,7 @@ describe("json helpers", () => {
 
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -114,14 +116,14 @@ describe("json helpers", () => {
 	describe("appendJSONProperty", () => {
 		test("appends property to JSON object, maintaining comments", () => {
 			mockReadFile.mockReturnValue(
-				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment',
+				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment'
 			);
 			let jsonObject = readJSONWithComments("/path/to/file.json");
 			jsonObject = appendJSONProperty(jsonObject, "newProp", "newValue");
 			expect(jsonObject).toEqual({ existing: "value", newProp: "newValue" });
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{
@@ -137,14 +139,14 @@ describe("json helpers", () => {
 	describe("insertJSONProperty", () => {
 		test("inserts property at the beginning of JSON object, maintaining comments", () => {
 			mockReadFile.mockReturnValue(
-				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment',
+				'{\n/* a comment */\n "existing": "value"\n}\n// post-comment'
 			);
 			let jsonObject = readJSONWithComments("/path/to/file.json");
 			jsonObject = insertJSONProperty(jsonObject, "newProp", "newValue");
 			expect(jsonObject).toEqual({ existing: "value", newProp: "newValue" });
 			writeJSONWithComments("/path/to/file.json", jsonObject);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
-				`"/path/to/file.json"`,
+				`"/path/to/file.json"`
 			);
 			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
 				"{

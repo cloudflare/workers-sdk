@@ -1,9 +1,12 @@
-import { dim } from "@cloudflare/cli/colors";
 import stripAnsi from "strip-ansi";
+
+import { dim } from "@cloudflare/cli/colors";
+
+import type { Hook } from "./api";
+
 import { unwrapHook } from "./api/startDevWorker/utils";
 import { logger } from "./logger";
 import { onKeyPress } from "./utils/onKeyPress";
-import type { Hook } from "./api";
 
 export default function (
 	options: Array<{

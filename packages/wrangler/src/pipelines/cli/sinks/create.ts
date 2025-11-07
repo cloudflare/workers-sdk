@@ -4,6 +4,9 @@ import {
 	isValidR2BucketName,
 	UserError,
 } from "@cloudflare/workers-utils";
+
+import type { CreateSinkRequest, SinkFormat } from "../../types";
+
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
@@ -12,7 +15,6 @@ import { applyDefaultsToSink, SINK_DEFAULTS } from "../../defaults";
 import { authorizeR2Bucket } from "../../index";
 import { validateEntityName } from "../../validate";
 import { displaySinkConfiguration } from "./utils";
-import type { CreateSinkRequest, SinkFormat } from "../../types";
 
 function parseSinkType(type: string): "r2" | "r2_data_catalog" {
 	if (type === "r2" || type === "r2-data-catalog") {

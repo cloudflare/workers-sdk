@@ -1,9 +1,11 @@
+import type { Mock } from "vitest";
+
 import { http, HttpResponse } from "msw";
 import { Request } from "undici";
+
 import openInBrowser from "../../open-in-browser";
 import { mockHttpServer } from "./mock-http-server";
 import { createFetchResult, msw } from "./msw";
-import type { Mock } from "vitest";
 
 export function mockGetMemberships(
 	accounts: { id: string; account: { id: string; name: string } }[]

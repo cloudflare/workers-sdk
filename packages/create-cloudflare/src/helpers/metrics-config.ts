@@ -6,6 +6,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+
 import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 
 export const USER_ID_CACHE_PATH = "user-id.json";
@@ -20,8 +21,8 @@ export function writeMetricsConfig(config: MetricsConfigFile) {
 		JSON.stringify(
 			config,
 			(_key, value) => (value instanceof Date ? value.toISOString() : value),
-			"\t",
-		),
+			"\t"
+		)
 	);
 }
 
@@ -32,7 +33,7 @@ export function readMetricsConfig(): MetricsConfigFile {
 	try {
 		const config = readFileSync(getMetricsConfigPath(), "utf8");
 		return JSON.parse(config, (key, value) =>
-			key === "date" ? new Date(value) : value,
+			key === "date" ? new Date(value) : value
 		);
 	} catch {
 		return {};

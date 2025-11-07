@@ -1,9 +1,12 @@
-import { isDockerRunning } from "@cloudflare/containers-shared";
-import { chromium } from "playwright-chromium";
-import { getDockerPath } from "../src/containers";
-import { getViteModuleToTest } from "./vite-module-to-test";
 import type { BrowserServer } from "playwright-chromium";
 import type { GlobalSetupContext } from "vitest/node";
+
+import { chromium } from "playwright-chromium";
+
+import { isDockerRunning } from "@cloudflare/containers-shared";
+
+import { getDockerPath } from "../src/containers";
+import { getViteModuleToTest } from "./vite-module-to-test";
 
 let browserServer: BrowserServer | undefined;
 

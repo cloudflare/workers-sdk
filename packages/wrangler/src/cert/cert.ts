@@ -1,3 +1,5 @@
+import type { MTlsCertificateResponse } from "../api/mtls-certificate";
+
 import {
 	deleteMTlsCertificate,
 	getMTlsCertificate,
@@ -10,7 +12,6 @@ import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import type { MTlsCertificateResponse } from "../api/mtls-certificate";
 
 // wrangler cert
 export const certNamespace = createNamespace({

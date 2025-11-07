@@ -1,5 +1,6 @@
-import { vi } from "vitest";
 import type { MockInstance } from "vitest";
+
+import { vi } from "vitest";
 
 /**
  * We use this module to mock process methods (write only for now),

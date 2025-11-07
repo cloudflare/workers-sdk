@@ -1,16 +1,19 @@
+import type Protocol from "devtools-protocol";
+import type { RawSourceMap } from "source-map";
+
 import { readFileSync } from "fs";
 import { fileURLToPath, URL } from "node:url";
-import path from "path";
 import open from "open";
+import path from "path";
+
+import type { EsbuildBundle } from "../dev/use-esbuild";
+
 import {
 	isAllowedSourceMapPath,
 	isAllowedSourcePath,
 } from "../api/startDevWorker/bundle-allowed-paths";
 import { logger } from "../logger";
 import { getSourceMappedString } from "../sourcemap";
-import type { EsbuildBundle } from "../dev/use-esbuild";
-import type Protocol from "devtools-protocol";
-import type { RawSourceMap } from "source-map";
 
 /**
  * This function converts a message serialized as a devtools event
@@ -70,7 +73,7 @@ export function logConsoleMessage(
 					args.push(
 						ro.subtype === "null"
 							? "null"
-							: ro.description ?? "<no-description>"
+							: (ro.description ?? "<no-description>")
 					);
 				} else {
 					args.push(ro.preview.description ?? "<no-description>");

@@ -1,6 +1,8 @@
-import { C3_DEFAULTS } from "helpers/cli";
-import type { TemplateConfig } from "../templates";
 import type { C3Args, C3Context } from "types";
+
+import { C3_DEFAULTS } from "helpers/cli";
+
+import type { TemplateConfig } from "../templates";
 
 export const createTestArgs = (args?: Partial<C3Args>) => {
 	return {
@@ -22,7 +24,7 @@ export const createTestContext = (name = "test", args?: C3Args): C3Context => {
 };
 
 export const createTestTemplate = (
-	config?: Partial<TemplateConfig>,
+	config?: Partial<TemplateConfig>
 ): TemplateConfig => {
 	return {
 		...config,

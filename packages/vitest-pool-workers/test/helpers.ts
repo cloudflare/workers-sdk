@@ -1,10 +1,10 @@
+import { stripAnsi } from "miniflare";
 /* eslint-disable no-empty-pattern */
 import childProcess from "node:child_process";
 import events from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";
 import util from "node:util";
-import { stripAnsi } from "miniflare";
 import { test as baseTest, inject, vi } from "vitest";
 
 const debuglog = util.debuglog("vitest-pool-workers:test");

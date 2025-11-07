@@ -1,5 +1,6 @@
 import { execFileSync } from "child_process";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { UserError } from "../src/error";
 import { resolveDockerHost } from "../src/utils";
 

@@ -1,7 +1,9 @@
 import { createExecutionContext } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import worker from "../src/worker";
+
 import type { Env } from "../src/worker";
+
+import worker from "../src/worker";
 
 describe("unit tests", async () => {
 	it("fails if specify running user worker ahead of assets, without user worker", async () => {

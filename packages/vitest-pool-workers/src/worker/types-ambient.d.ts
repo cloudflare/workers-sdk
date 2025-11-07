@@ -47,8 +47,9 @@ declare module "node:vm" {
 }
 
 declare module "cloudflare:mock-agent" {
-	import { MockAgent } from "undici";
 	import type { Dispatcher } from "undici";
+
+	import { MockAgent } from "undici";
 
 	export { MockAgent };
 	export function setDispatcher(

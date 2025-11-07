@@ -1,5 +1,6 @@
 import { Message } from "capnp-es";
 import { Miniflare } from "miniflare";
+
 import { StructureGroups } from "./rtti.js";
 
 // Extract RTTI from `workerd`

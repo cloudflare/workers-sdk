@@ -1,7 +1,9 @@
+import chalk from "chalk";
 import { strict as assert } from "node:assert";
 import { Blob } from "node:buffer";
 import { arrayBuffer } from "node:stream/consumers";
 import { StringDecoder } from "node:string_decoder";
+
 import {
 	CommandLineArgsError,
 	parseJSON,
@@ -9,7 +11,10 @@ import {
 	readFileSyncToBuffer,
 	UserError,
 } from "@cloudflare/workers-utils";
-import chalk from "chalk";
+
+import type { EventNames } from "../metrics";
+import type { KeyValue, NamespaceKeyInfo } from "./helpers";
+
 import { readConfig } from "../config";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
@@ -40,8 +45,6 @@ import {
 	updateKVNamespace,
 	usingLocalNamespace,
 } from "./helpers";
-import type { EventNames } from "../metrics";
-import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 
 export const kvNamespace = createNamespace({
 	metadata: {

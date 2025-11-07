@@ -1,5 +1,13 @@
 import assert from "node:assert";
 import { readFile } from "node:fs/promises";
+
+import type {
+	CfDispatchNamespace,
+	CfWorkerInit,
+	ConfigBindingOptions,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
+
 import type {
 	Binding,
 	File,
@@ -8,12 +16,6 @@ import type {
 	ServiceFetch,
 	StartDevWorkerOptions,
 } from "./types";
-import type {
-	CfDispatchNamespace,
-	CfWorkerInit,
-	ConfigBindingOptions,
-	WorkerMetadataBinding,
-} from "@cloudflare/workers-utils";
 
 export function assertNever(_value: never) {}
 

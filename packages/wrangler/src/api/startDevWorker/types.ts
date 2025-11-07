@@ -1,8 +1,13 @@
-import type { AssetsOptions } from "../../assets";
-import type { CfAccount } from "../../dev/create-worker-preview";
-import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { ConfigController } from "./ConfigController";
-import type { DevEnv } from "./DevEnv";
+import type {
+	DispatchFetch,
+	Json,
+	Miniflare,
+	NodeJSCompatMode,
+	Request,
+	Response,
+} from "miniflare";
+import type * as undici from "undici";
+
 import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
 	CfAIBinding,
@@ -42,15 +47,12 @@ import type {
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "@cloudflare/workers-utils";
-import type {
-	DispatchFetch,
-	Json,
-	Miniflare,
-	NodeJSCompatMode,
-	Request,
-	Response,
-} from "miniflare";
-import type * as undici from "undici";
+
+import type { AssetsOptions } from "../../assets";
+import type { CfAccount } from "../../dev/create-worker-preview";
+import type { EsbuildBundle } from "../../dev/use-esbuild";
+import type { ConfigController } from "./ConfigController";
+import type { DevEnv } from "./DevEnv";
 
 type MiniflareWorker = Awaited<ReturnType<Miniflare["getWorker"]>>;
 export interface Worker {

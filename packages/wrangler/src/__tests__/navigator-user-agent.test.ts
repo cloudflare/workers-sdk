@@ -3,12 +3,14 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
 import { vi } from "vitest";
+
+import type { BundleOptions } from "../deployment-bundle/bundle";
+
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { noopModuleCollector } from "../deployment-bundle/module-collection";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
-import type { BundleOptions } from "../deployment-bundle/bundle";
 
 /*
  * This file contains inline comments with the word "javascript"
@@ -104,7 +106,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 
 	it("preserves `navigator` when `defineNavigatorUserAgent` is `false`", async () => {
 		await seedFs({
-			"src/index.js": dedent/* javascript */ `
+			"src/index.js": dedent /* javascript */ `
 			function randomBytes(length) {
 				if (navigator.userAgent !== "Cloudflare-Workers") {
 					return new Uint8Array(require("node:crypto").randomBytes(length));
@@ -156,7 +158,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 
 	it("tree shakes `navigator` when `defineNavigatorUserAgent` is `true`", async () => {
 		await seedFs({
-			"src/index.js": dedent/* javascript */ `
+			"src/index.js": dedent /* javascript */ `
 			function randomBytes(length) {
 				if (navigator.userAgent !== "Cloudflare-Workers") {
 					return new Uint8Array(require("node:crypto").randomBytes(length));
@@ -200,7 +202,7 @@ describe("defineNavigatorUserAgent is respected", () => {
 
 	it("tree shakes `navigator` when `defineNavigatorUserAgent` is `true` and `process.env.NODE_ENV` is `undefined`", async () => {
 		await seedFs({
-			"src/index.js": dedent/* javascript */ `
+			"src/index.js": dedent /* javascript */ `
 			function randomBytes(length) {
 				if (navigator.userAgent !== "Cloudflare-Workers") {
 					return new Uint8Array(require("node:crypto").randomBytes(length));

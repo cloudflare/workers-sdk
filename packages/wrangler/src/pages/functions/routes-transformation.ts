@@ -1,4 +1,7 @@
 import { join as pathJoin } from "node:path";
+
+import type { RouteConfig } from "./routes";
+
 import { toUrlPath } from "../../paths";
 import {
 	MAX_FUNCTIONS_ROUTES_RULES,
@@ -6,7 +9,6 @@ import {
 	ROUTES_SPEC_VERSION,
 } from "../constants";
 import { consolidateRoutes } from "./routes-consolidation";
-import type { RouteConfig } from "./routes";
 
 /** Interface for _routes.json */
 export interface RoutesJSONSpec {

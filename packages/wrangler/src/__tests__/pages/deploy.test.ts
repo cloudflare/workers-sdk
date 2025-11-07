@@ -1,9 +1,16 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { chdir } from "node:process";
-import TOML from "@iarna/toml";
+import type { StrictRequest } from "msw";
+import type { FormDataEntryValue } from "undici";
+
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { chdir } from "node:process";
 import dedent from "ts-dedent";
+
+import TOML from "@iarna/toml";
+
+import type { Project, UploadPayloadFile } from "../../pages/types";
+
 import { version } from "../../../package.json";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";
 import { ApiErrorCodes } from "../../pages/errors";
@@ -21,9 +28,6 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { toString } from "../helpers/serialize-form-data-entry";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
-import type { Project, UploadPayloadFile } from "../../pages/types";
-import type { StrictRequest } from "msw";
-import type { FormDataEntryValue } from "undici";
 
 describe("pages deploy", () => {
 	const std = mockConsoleMethods();
@@ -5485,43 +5489,40 @@ and that at least one include rule is provided.
 			(await toString(contents)).includes("worker_default as default");
 
 		["wrangler.json", "wrangler.toml"].forEach((configPath) => {
-			it(
-				"should not bundle the _worker.js when `no_bundle = true` in Wrangler config: " +
-					configPath,
-				async () => {
-					mkdirSync("public/_worker.js", { recursive: true });
-					writeFileSync(
-						"public/_worker.js/index.js",
-						`
+			it("should not bundle the _worker.js when `no_bundle = true` in Wrangler config: " +
+				configPath, async () => {
+				mkdirSync("public/_worker.js", { recursive: true });
+				writeFileSync(
+					"public/_worker.js/index.js",
+					`
 					export default {
 						async fetch(request, env) {
 							return new Response('Ok');
 						}
 					};
 					`
-					);
+				);
 
-					const config = {
-						name: "foo",
-						no_bundle: true,
-						pages_build_output_dir: "public",
-					};
-					writeFileSync(
-						`${configPath}`,
-						configPath === "wrangler.json"
-							? JSON.stringify(config)
-							: TOML.stringify(config)
-					);
+				const config = {
+					name: "foo",
+					no_bundle: true,
+					pages_build_output_dir: "public",
+				};
+				writeFileSync(
+					`${configPath}`,
+					configPath === "wrangler.json"
+						? JSON.stringify(config)
+						: TOML.stringify(config)
+				);
 
-					simulateServer((generatedWorkerJS) =>
-						expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
-					);
+				simulateServer((generatedWorkerJS) =>
+					expect(workerIsBundled(generatedWorkerJS)).resolves.toBeFalsy()
+				);
 
-					await runWrangler("pages deploy");
+				await runWrangler("pages deploy");
 
-					expect(std.out).toContain("✨ Uploading Worker bundle");
-				}
-			);
+				expect(std.out).toContain("✨ Uploading Worker bundle");
+			});
 		});
 	});
 

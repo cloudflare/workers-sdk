@@ -1,5 +1,6 @@
-import path from "path";
 import { Colorize, dim, green, grey, red, reset, yellow } from "kleur/colors";
+import path from "path";
+
 import { LogLevel } from "../workers";
 
 const cwd = process.cwd();

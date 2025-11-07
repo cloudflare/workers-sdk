@@ -1,4 +1,7 @@
 import test from "ava";
+
+import type { KVError } from "../types";
+
 import {
 	getEvent,
 	mockGlobalScope,
@@ -7,7 +10,6 @@ import {
 	mockRequestScope,
 	sleep,
 } from "../mocks";
-import type { KVError } from "../types";
 
 mockGlobalScope();
 

@@ -1,4 +1,5 @@
 import { CommandLineArgsError } from "@cloudflare/workers-utils";
+
 import { createCommand } from "../core/create-command";
 import * as metrics from "../metrics";
 import { listScopes, login, logout, validateScopeKeys } from "./user";

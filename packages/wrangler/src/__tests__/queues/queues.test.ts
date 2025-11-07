@@ -1,4 +1,7 @@
 import { http, HttpResponse } from "msw";
+
+import type { PostTypedConsumerBody, QueueResponse } from "../../queues/client";
+
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockPrompt } from "../helpers/mock-dialogs";
@@ -8,7 +11,6 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import { mockGetQueueByNameRequest } from "./mock-utils";
-import type { PostTypedConsumerBody, QueueResponse } from "../../queues/client";
 
 describe("wrangler", () => {
 	mockAccountId();

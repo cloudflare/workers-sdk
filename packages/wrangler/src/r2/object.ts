@@ -2,12 +2,16 @@ import { Blob } from "node:buffer";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as stream from "node:stream";
+import prettyBytes from "pretty-bytes";
+
+import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
+
 import {
 	CommandLineArgsError,
 	FatalError,
 	UserError,
 } from "@cloudflare/workers-utils";
-import prettyBytes from "pretty-bytes";
+
 import { readConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
@@ -22,7 +26,6 @@ import {
 	putR2Object,
 	usingLocalBucket,
 } from "./helpers";
-import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
 export const r2ObjectNamespace = createNamespace({
 	metadata: {

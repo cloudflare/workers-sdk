@@ -1,8 +1,10 @@
+import type { RunnerTask, RunnerTestSuite } from "vitest";
+
 import assert from "node:assert";
 import { createWriteStream, mkdirSync, rmSync } from "node:fs";
 import path from "node:path";
+
 import { isExperimental, testPackageManager } from "./constants";
-import type { RunnerTask, RunnerTestSuite } from "vitest";
 
 export function createTestLogStream(task: RunnerTask) {
 	// The .ansi extension allows for editor extensions that format ansi terminal codes
@@ -50,6 +52,6 @@ function getLogPath(suite: RunnerTestSuite) {
 	return path.join(
 		"./.e2e-logs" + (isExperimental ? "-experimental" : ""),
 		testPackageManager,
-		suiteFilename,
+		suiteFilename
 	);
 }

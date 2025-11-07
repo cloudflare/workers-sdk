@@ -1,11 +1,14 @@
 import path from "path";
-import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
+
+import { defaultWranglerConfig } from "@cloudflare/workers-utils";
+
+import type { Entry } from "../deployment-bundle/entry";
+
 import { getEntry } from "../deployment-bundle/entry";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { seed } from "./helpers/seed";
-import type { Entry } from "../deployment-bundle/entry";
 
 function normalize(entry: Entry): Entry {
 	const tmpDir = process.cwd();
@@ -29,7 +32,7 @@ describe("getEntry()", () => {
 
 	it("--script index.ts", async () => {
 		await seed({
-			"index.ts": dedent/* javascript */ `
+			"index.ts": dedent /* javascript */ `
 							export default {
 								fetch() {
 
@@ -51,7 +54,7 @@ describe("getEntry()", () => {
 
 	it("--script src/index.ts", async () => {
 		await seed({
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 							export default {
 								fetch() {
 
@@ -73,7 +76,7 @@ describe("getEntry()", () => {
 
 	it("main = index.ts", async () => {
 		await seed({
-			"index.ts": dedent/* javascript */ `
+			"index.ts": dedent /* javascript */ `
 							export default {
 								fetch() {
 
@@ -95,7 +98,7 @@ describe("getEntry()", () => {
 
 	it("main = src/index.ts", async () => {
 		await seed({
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 							export default {
 								fetch() {
 
@@ -117,7 +120,7 @@ describe("getEntry()", () => {
 
 	it("main = src/index.ts w/ configPath", async () => {
 		await seed({
-			"other-worker/src/index.ts": dedent/* javascript */ `
+			"other-worker/src/index.ts": dedent /* javascript */ `
 							export default {
 								fetch() {
 

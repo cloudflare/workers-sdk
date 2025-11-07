@@ -1,4 +1,5 @@
 import { expect, test, vi } from "vitest";
+
 import { page } from "../../__test-utils__";
 
 test("sends and receives PartyServer messages", async () => {

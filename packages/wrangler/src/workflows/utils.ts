@@ -1,4 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
+
 import type { InstanceStatus, InstanceTriggerName } from "./types";
 
 export const emojifyInstanceStatus = (status: InstanceStatus) => {

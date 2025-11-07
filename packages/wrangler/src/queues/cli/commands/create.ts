@@ -1,8 +1,12 @@
+import dedent from "ts-dedent";
+
 import {
 	CommandLineArgsError,
 	formatConfigSnippet,
 } from "@cloudflare/workers-utils";
-import dedent from "ts-dedent";
+
+import type { PostQueueBody } from "../../client";
+
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { getValidBindingName } from "../../../utils/getValidBindingName";
@@ -14,7 +18,6 @@ import {
 	MIN_MESSAGE_RETENTION_PERIOD_SECS,
 } from "../../constants";
 import { handleFetchError } from "../../utils";
-import type { PostQueueBody } from "../../client";
 
 export const queuesCreateCommand = createCommand({
 	metadata: {

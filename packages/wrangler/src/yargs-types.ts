@@ -1,5 +1,6 @@
-import type { OnlyCamelCase } from "./core/types";
 import type { ArgumentsCamelCase, Argv, CommandModule } from "yargs";
+
+import type { OnlyCamelCase } from "./core/types";
 
 /**
  * Yargs options included in every wrangler command.

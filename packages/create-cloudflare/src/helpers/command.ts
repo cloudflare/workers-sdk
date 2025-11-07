@@ -1,7 +1,9 @@
+import { spawn } from "cross-spawn";
+
 import { stripAnsi } from "@cloudflare/cli";
 import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
-import { spawn } from "cross-spawn";
+
 import { readMetricsConfig } from "./metrics-config";
 
 /**
@@ -45,7 +47,7 @@ type PrintOptions<T> = {
  */
 export const runCommand = async (
 	command: Command,
-	opts: RunOptions = {},
+	opts: RunOptions = {}
 ): Promise<string> => {
 	return printAsyncStatus({
 		useSpinner: opts.useSpinner ?? opts.silent,
@@ -180,7 +182,7 @@ export function quoteShellArgs(args: string[]): string {
 		const specialCharsMatcher = /[&<>[\]|{}^=;!'+,`~\s]/;
 		return args
 			.map((arg) =>
-				arg.match(specialCharsMatcher) ? `"${arg.replaceAll(`"`, `""`)}"` : arg,
+				arg.match(specialCharsMatcher) ? `"${arg.replaceAll(`"`, `""`)}"` : arg
 			)
 			.join(" ");
 	} else {

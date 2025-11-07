@@ -1,5 +1,6 @@
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
+
 import { isExperimental, testPackageManager } from "./e2e/helpers/constants";
 
 export default defineConfig({

@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from "fs";
+
 import {
 	dockerBuild,
 	dockerImageInspect,
@@ -8,6 +9,7 @@ import {
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";

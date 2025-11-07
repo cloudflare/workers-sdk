@@ -1,6 +1,7 @@
+import esbuild from "esbuild";
 import fs from "node:fs/promises";
 import path from "node:path";
-import esbuild from "esbuild";
+
 import { getPackage, pkgRoot } from "./common.mjs";
 
 const argv = process.argv.slice(2);

@@ -1,11 +1,13 @@
 import { http, HttpResponse } from "msw";
-import { EventSourceType } from "../../queues/subscription-types";
-import { msw } from "../helpers/msw";
+
 import type { QueueResponse } from "../../queues/client";
 import type {
 	CreateEventSubscriptionRequest,
 	EventSubscription,
 } from "../../queues/subscription-types";
+
+import { EventSourceType } from "../../queues/subscription-types";
+import { msw } from "../helpers/msw";
 
 export function mockGetQueueByNameRequest(
 	queueName: string,

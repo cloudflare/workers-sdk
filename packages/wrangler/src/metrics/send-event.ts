@@ -1,7 +1,8 @@
-import { logger } from "../logger";
-import { getMetricsDispatcher } from "./metrics-dispatcher";
 import type { MetricsConfigOptions } from "./metrics-config";
 import type { Properties } from "./metrics-dispatcher";
+
+import { logger } from "../logger";
+import { getMetricsDispatcher } from "./metrics-dispatcher";
 
 /** These are event names used by this wrangler client. */
 export type EventNames =

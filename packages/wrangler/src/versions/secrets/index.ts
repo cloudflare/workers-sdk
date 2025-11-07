@@ -1,12 +1,5 @@
-import { FatalError, UserError } from "@cloudflare/workers-utils";
-import { fetchResult } from "../../cfetch";
-import { performApiFetch } from "../../cfetch/internal";
-import { createNamespace } from "../../core/create-command";
-import {
-	createWorkerUploadForm,
-	fromMimeType,
-} from "../../deployment-bundle/create-worker-upload-form";
-import { getMetricsUsageHeaders } from "../../metrics";
+import type { SpecIterableIterator } from "undici";
+
 import type {
 	CfModule,
 	CfTailConsumer,
@@ -18,7 +11,17 @@ import type {
 	Observability,
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
-import type { SpecIterableIterator } from "undici";
+
+import { FatalError, UserError } from "@cloudflare/workers-utils";
+
+import { fetchResult } from "../../cfetch";
+import { performApiFetch } from "../../cfetch/internal";
+import { createNamespace } from "../../core/create-command";
+import {
+	createWorkerUploadForm,
+	fromMimeType,
+} from "../../deployment-bundle/create-worker-upload-form";
+import { getMetricsUsageHeaders } from "../../metrics";
 
 export const versionsSecretNamespace = createNamespace({
 	metadata: {

@@ -1,9 +1,12 @@
-import { logRaw, updateStatus } from "@cloudflare/cli";
-import { dim } from "@cloudflare/cli/colors";
+import type { C3Context } from "types";
+
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { detectPackageManager } from "helpers/packageManagers";
+
+import { logRaw, updateStatus } from "@cloudflare/cli";
+import { dim } from "@cloudflare/cli/colors";
+
 import frameworksPackageJson from "./package.json";
-import type { C3Context } from "types";
 
 export const getFrameworkCli = (ctx: C3Context, withVersion = true) => {
 	if (!ctx.template) {
@@ -43,8 +46,8 @@ export const runFrameworkGenerator = async (ctx: C3Context, args: string[]) => {
 
 	updateStatus(
 		`Continue with ${ctx.template.displayName} ${dim(
-			`via \`${quoteShellArgs(cmd)}\``,
-		)}`,
+			`via \`${quoteShellArgs(cmd)}\``
+		)}`
 	);
 
 	// newline

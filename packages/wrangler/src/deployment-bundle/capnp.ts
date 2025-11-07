@@ -1,9 +1,11 @@
+import { sync as commandExistsSync } from "command-exists";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { UserError } from "@cloudflare/workers-utils";
-import { sync as commandExistsSync } from "command-exists";
+
 import type { CfCapnp } from "@cloudflare/workers-utils";
+
+import { UserError } from "@cloudflare/workers-utils";
 
 export function handleUnsafeCapnp(capnp: CfCapnp): Buffer {
 	if (capnp.compiled_schema) {

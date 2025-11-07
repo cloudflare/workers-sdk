@@ -1,6 +1,7 @@
-import { ms } from "itty-time";
 // @ts-expect-error workflows "shared" package will be pulled in later
 import type { ResolvedStepConfig, StepState } from "shared";
+
+import { ms } from "itty-time";
 
 export function calcRetryDuration(
 	config: ResolvedStepConfig,

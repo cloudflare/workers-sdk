@@ -1,9 +1,10 @@
+import type { Unstable_DevWorker } from "wrangler";
+
 import assert from "node:assert";
 import nodeNet from "node:net";
 import path from "path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unstable_dev } from "wrangler";
-import type { Unstable_DevWorker } from "wrangler";
 
 function getPort() {
 	return new Promise<number>((resolve, reject) => {

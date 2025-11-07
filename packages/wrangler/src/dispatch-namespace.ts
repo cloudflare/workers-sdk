@@ -1,9 +1,10 @@
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
+
 import { fetchResult } from "./cfetch";
 import { createCommand, createNamespace } from "./core/create-command";
 import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
 
 type Namespace = {
 	namespace_id: string;

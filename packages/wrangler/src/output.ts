@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { appendFileSync } from "node:fs";
 import { resolve } from "node:path";
+
 import {
 	getOutputFileDirectoryFromEnv,
 	getOutputFilePathFromEnv,

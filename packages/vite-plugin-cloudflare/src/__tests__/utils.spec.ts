@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import { describe, expect, test } from "vitest";
+
 import { getOutputDirectory } from "../utils";
 
 describe("getOutputDirectory", () => {

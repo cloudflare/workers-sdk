@@ -1,7 +1,8 @@
+import { spawn } from "cross-spawn";
+
 import { stripAnsi } from "@cloudflare/cli";
 import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive, spinner } from "@cloudflare/cli/interactive";
-import { spawn } from "cross-spawn";
 
 /**
  * Command is a string array, like ['git', 'commit', '-m', '"Initial commit"']

@@ -1,7 +1,9 @@
+import type { C3Context } from "types";
+
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+
 import { collectCLIOutput, normalizeOutput } from "../../../cli/test-util";
 import { printSummary, printWelcomeMessage } from "../dialog";
-import type { C3Context } from "types";
 
 describe("dialog helpers", () => {
 	const std = collectCLIOutput();

@@ -1,15 +1,18 @@
 import assert from "assert";
 import { readFileSync } from "fs";
 import fs from "fs/promises";
+import { bold } from "kleur/colors";
 import path from "path";
 import { Readable } from "stream";
 import tls from "tls";
-import { TextEncoder } from "util";
-import { bold } from "kleur/colors";
 import { MockAgent } from "undici";
+import { TextEncoder } from "util";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
 import { z } from "zod";
+
+import type { WorkerRegistry } from "../../shared/dev-registry";
+
 import { fetch } from "../../http";
 import {
 	Extension,
@@ -70,7 +73,6 @@ import {
 	kCurrentWorker,
 	ServiceDesignatorSchema,
 } from "./services";
-import type { WorkerRegistry } from "../../shared/dev-registry";
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
 // Rather than using a bundled CA store like Node, it uses

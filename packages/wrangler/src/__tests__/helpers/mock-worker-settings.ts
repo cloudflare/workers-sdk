@@ -1,6 +1,8 @@
 import { http, HttpResponse } from "msw";
-import { msw } from "./msw";
+
 import type { Settings } from "../../deployment-bundle/bindings";
+
+import { msw } from "./msw";
 
 export function mockGetSettings(
 	options: {

@@ -1,4 +1,7 @@
 import * as mime from "mime";
+
+import type { AssetManifestType } from "./types";
+
 import {
 	CacheControl,
 	InternalError,
@@ -6,7 +9,6 @@ import {
 	NotFoundError,
 	Options,
 } from "./types";
-import type { AssetManifestType } from "./types";
 
 declare global {
 	const __STATIC_CONTENT: KVNamespace | undefined,

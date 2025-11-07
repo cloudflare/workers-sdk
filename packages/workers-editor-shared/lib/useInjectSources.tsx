@@ -1,7 +1,9 @@
 import { useCallback } from "react";
-import { Channel } from "./ipc";
+
 import type { FromErrorPage, SourcesLoadedMessage, ToErrorPage } from "./ipc";
 import type { TypedModule } from "./types";
+
+import { Channel } from "./ipc";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();

@@ -1,10 +1,11 @@
+import type { WorkflowEvent } from "cloudflare:workers";
+
 import type { ResolvedStepConfig } from "./context";
 import type {
 	DatabaseInstance,
 	DatabaseVersion,
 	DatabaseWorkflow,
 } from "./engine";
-import type { WorkflowEvent } from "cloudflare:workers";
 
 export type Instance = {
 	id: string;

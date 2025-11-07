@@ -1,17 +1,22 @@
 import "cloudflare/shims/web";
+
+import type { Request, Response } from "miniflare";
+
 import process from "process";
-import { FatalError } from "@cloudflare/workers-utils";
 import { hideBin } from "yargs/helpers";
+
+import { FatalError } from "@cloudflare/workers-utils";
+
+import type { Unstable_DevOptions, Unstable_DevWorker } from "./api";
+import type { Logger } from "./logger";
+
+import { main } from ".";
 import {
 	unstable_dev,
 	DevEnv as unstable_DevEnv,
 	unstable_pages,
 	startWorker as unstable_startWorker,
 } from "./api";
-import { main } from ".";
-import type { Unstable_DevOptions, Unstable_DevWorker } from "./api";
-import type { Logger } from "./logger";
-import type { Request, Response } from "miniflare";
 
 /**
  * The main entrypoint for the CLI.

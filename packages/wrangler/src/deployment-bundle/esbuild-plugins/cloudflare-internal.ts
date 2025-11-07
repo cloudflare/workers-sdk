@@ -1,5 +1,6 @@
-import { dedent } from "../../utils/dedent";
 import type { Plugin } from "esbuild";
+
+import { dedent } from "../../utils/dedent";
 
 /**
  * An esbuild plugin that will mark any `cloudflare:...` imports as external.

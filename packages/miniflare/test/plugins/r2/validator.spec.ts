@@ -1,4 +1,5 @@
 import test from "ava";
+
 import { workerTestMacro } from "../../test-shared";
 
 test(

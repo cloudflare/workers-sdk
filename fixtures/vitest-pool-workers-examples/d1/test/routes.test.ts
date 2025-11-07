@@ -1,5 +1,6 @@
 import { env, SELF } from "cloudflare:test";
 import { expect, it } from "vitest";
+
 import { upsertPost } from "../src";
 
 it("should create and read post", async () => {

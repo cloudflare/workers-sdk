@@ -1,11 +1,12 @@
 import assert from "assert";
+import anyTest, { TestFn } from "ava";
 import { Blob } from "buffer";
 import { existsSync } from "fs";
 import fs from "fs/promises";
+import { InclusiveRange, Miniflare, Response } from "miniflare";
 import path from "path";
 import { ReadableStream } from "stream/web";
-import anyTest, { TestFn } from "ava";
-import { InclusiveRange, Miniflare, Response } from "miniflare";
+
 import { useTmp } from "../test-shared";
 
 class BlobStoreStub {

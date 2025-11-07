@@ -1,6 +1,10 @@
 import { execSync } from "node:child_process";
-import { FatalError } from "@cloudflare/workers-utils";
 import { format as timeagoFormat } from "timeago.js";
+
+import { FatalError } from "@cloudflare/workers-utils";
+
+import type { PagesConfigCache, Project } from "./types";
+
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
@@ -11,7 +15,6 @@ import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
-import type { PagesConfigCache, Project } from "./types";
 
 export const pagesProjectListCommand = createCommand({
 	metadata: {

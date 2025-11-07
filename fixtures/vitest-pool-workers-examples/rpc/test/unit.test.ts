@@ -6,6 +6,7 @@ import {
 } from "cloudflare:test";
 import { RpcStub } from "cloudflare:workers";
 import { describe, expect, it, onTestFinished } from "vitest";
+
 import { Counter, TestObject } from "../src";
 
 describe("named entrypoints", () => {

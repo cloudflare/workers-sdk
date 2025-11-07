@@ -1,7 +1,8 @@
-import { instrument } from "@microlabs/otel-cf-workers";
 import { Utils } from "discord-api-types/v10";
 import dep from "ext-dep";
 import { assert, describe, test } from "vitest";
+
+import { instrument } from "@microlabs/otel-cf-workers";
 
 describe("test", () => {
 	test("resolves commonjs directory dependencies correctly", async () => {

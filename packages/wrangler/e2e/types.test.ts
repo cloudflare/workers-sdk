@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+
 import { dedent } from "../src/utils/dedent";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 

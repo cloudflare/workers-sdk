@@ -1,6 +1,6 @@
-import html from "./index.html?raw";
 import importedImage from "./imported-image.svg";
 import importedText from "./imported-text.txt?url";
+import html from "./index.html?raw";
 import inlineImage from "./inline-image.svg?inline";
 
 interface Env {

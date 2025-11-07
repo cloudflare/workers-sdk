@@ -1,3 +1,8 @@
+import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
+import type { ViteDevServer } from "vite";
+
+import * as cjsModuleLexer from "cjs-module-lexer";
+import { ModuleRuleTypeSchema, Response } from "miniflare";
 import assert from "node:assert";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -5,12 +10,9 @@ import platformPath from "node:path";
 import posixPath from "node:path/posix";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import util from "node:util";
-import * as cjsModuleLexer from "cjs-module-lexer";
-import { ModuleRuleTypeSchema, Response } from "miniflare";
+
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { isFileNotFoundError } from "./helpers";
-import type { ModuleRuleType, Request, Worker_Module } from "miniflare";
-import type { ViteDevServer } from "vite";
 
 let debuglog: util.DebugLoggerFunction = util.debuglog(
 	"vitest-pool-workers:module-fallback",

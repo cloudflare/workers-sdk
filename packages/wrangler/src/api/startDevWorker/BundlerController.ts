@@ -1,7 +1,20 @@
 import assert from "assert";
+import { watch } from "chokidar";
 import { readFileSync, realpathSync, writeFileSync } from "fs";
 import path from "path";
-import { watch } from "chokidar";
+
+import type { BundleResult } from "../../deployment-bundle/bundle";
+import type { Entry } from "../../deployment-bundle/entry";
+import type { EsbuildBundle } from "../../dev/use-esbuild";
+import type { EphemeralDirectory } from "../../paths";
+import type { ControllerEventMap } from "./BaseController";
+import type {
+	BundleCompleteEvent,
+	BundleStartEvent,
+	ConfigUpdateEvent,
+} from "./events";
+import type { StartDevWorkerOptions } from "./types";
+
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { getBundleType } from "../../deployment-bundle/bundle-type";
 import {
@@ -19,17 +32,6 @@ import { debounce } from "../../utils/debounce";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { convertBindingsToCfWorkerInitBindings } from "./utils";
-import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { Entry } from "../../deployment-bundle/entry";
-import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { EphemeralDirectory } from "../../paths";
-import type { ControllerEventMap } from "./BaseController";
-import type {
-	BundleCompleteEvent,
-	BundleStartEvent,
-	ConfigUpdateEvent,
-} from "./events";
-import type { StartDevWorkerOptions } from "./types";
 
 type BundlerControllerEventMap = ControllerEventMap & {
 	bundleStart: [BundleStartEvent];

@@ -1,7 +1,8 @@
-import { assertNever } from "./assert-never";
-import { FatalError } from "./errors";
 import type { RawConfig } from "./config";
 import type { WorkerMetadataBinding } from "./types";
+
+import { assertNever } from "./assert-never";
+import { FatalError } from "./errors";
 
 /**
  * Maps a set of bindings defined as worker metadata bindings (straight from the Cloudflare API) to bindings defined in the local format.

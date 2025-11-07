@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+
+import type { AllowedArgs, AllowList } from "../../../src/metrics/sanitization";
+
 import {
 	ALLOW,
 	getAllowedArgs,
@@ -6,7 +9,6 @@ import {
 	sanitizeArgKeys,
 	sanitizeArgValues,
 } from "../../../src/metrics/sanitization";
-import type { AllowedArgs, AllowList } from "../../../src/metrics/sanitization";
 
 describe("sanitizeArgKeys", () => {
 	it("should sanitize arg keys based on argv", () => {

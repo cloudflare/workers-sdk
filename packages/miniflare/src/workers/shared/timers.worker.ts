@@ -1,4 +1,5 @@
 import assert from "node:assert";
+
 import { Awaitable } from "./types";
 
 const kFakeTimerHandle = Symbol("kFakeTimerHandle");

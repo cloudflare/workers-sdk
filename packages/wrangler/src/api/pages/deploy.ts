@@ -3,8 +3,15 @@ import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path, { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
-import { FatalError } from "@cloudflare/workers-utils";
 import { FormData } from "undici";
+
+import type { Deployment, Project } from "@cloudflare/types";
+import type { Config } from "@cloudflare/workers-utils";
+
+import { FatalError } from "@cloudflare/workers-utils";
+
+import type { BundleResult } from "../../deployment-bundle/bundle";
+
 import { fetchResult } from "../../cfetch";
 import { readPagesConfig } from "../../config";
 import { shouldCheckFetch } from "../../deployment-bundle/bundle";
@@ -30,9 +37,6 @@ import { upload } from "../../pages/upload";
 import { getPagesTmpDir } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
-import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { Deployment, Project } from "@cloudflare/types";
-import type { Config } from "@cloudflare/workers-utils";
 
 interface PagesDeployOptions {
 	/**

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { getPlatformProxy } from "./shared";
 
 describe("getPlatformProxy - cf", () => {

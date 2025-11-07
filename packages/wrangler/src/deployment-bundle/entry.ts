@@ -1,11 +1,20 @@
 import path from "node:path";
+import dedent from "ts-dedent";
+
+import type {
+	CfScriptFormat,
+	Config,
+	DurableObjectBindings,
+	RawConfig,
+} from "@cloudflare/workers-utils";
+
 import {
 	configFileName,
 	formatCompatibilityDate,
 	formatConfigSnippet,
 	UserError,
 } from "@cloudflare/workers-utils";
-import dedent from "ts-dedent";
+
 import { sniffUserAgent } from "../package-manager";
 import { guessWorkerFormat } from "./guess-worker-format";
 import {
@@ -15,12 +24,6 @@ import {
 	resolveEntryWithScript,
 } from "./resolve-entry";
 import { runCustomBuild } from "./run-custom-build";
-import type {
-	CfScriptFormat,
-	Config,
-	DurableObjectBindings,
-	RawConfig,
-} from "@cloudflare/workers-utils";
 
 /**
  * An entry point for the Worker.

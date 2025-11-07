@@ -1,6 +1,7 @@
-import { mkdir } from "node:fs/promises";
 import { http, HttpResponse } from "msw";
+import { mkdir } from "node:fs/promises";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { verifyWorkerMatchesCITag } from "../match-tag";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";

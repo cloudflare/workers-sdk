@@ -1,7 +1,10 @@
-import { describe, expect, test } from "vitest";
-import { getWarningForWorkersConfigs } from "../workers-configs";
-import type { WorkerConfig } from "../plugin-config";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";
+
+import { describe, expect, test } from "vitest";
+
+import type { WorkerConfig } from "../plugin-config";
+
+import { getWarningForWorkersConfigs } from "../workers-configs";
 
 describe("getWarningForWorkersConfigs", () => {
 	describe("no warning needed", () => {

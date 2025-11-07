@@ -1,4 +1,5 @@
 import manifestJSON from "__STATIC_CONTENT_MANIFEST";
+
 import {
 	getAssetFromKV,
 	mapRequestToAsset,

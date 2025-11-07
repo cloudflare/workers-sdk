@@ -1,4 +1,7 @@
 import { readFileSync, UserError } from "@cloudflare/workers-utils";
+
+import type { LifecycleRule } from "./helpers";
+
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm, multiselect, prompt } from "../dialogs";
 import isInteractive from "../is-interactive";
@@ -13,7 +16,6 @@ import {
 	putLifecycleRules,
 	tableFromLifecycleRulesResponse,
 } from "./helpers";
-import type { LifecycleRule } from "./helpers";
 
 export const r2BucketLifecycleNamespace = createNamespace({
 	metadata: {

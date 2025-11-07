@@ -1,9 +1,11 @@
-import path from "node:path";
 import * as esbuild from "esbuild";
+import path from "node:path";
+
+import type { CfScriptFormat } from "@cloudflare/workers-utils";
+
 import { logger } from "../logger";
 import { COMMON_ESBUILD_OPTIONS } from "./bundle";
 import { getEntryPointFromMetafile } from "./entry-point-from-metafile";
-import type { CfScriptFormat } from "@cloudflare/workers-utils";
 
 /**
  * A function to "guess" the type of worker.

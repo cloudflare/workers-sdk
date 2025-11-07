@@ -1,5 +1,6 @@
 import { Request } from "miniflare";
 import { Headers, Response } from "undici";
+
 import { getAIFetcher } from "../ai/fetcher";
 import * as internal from "../cfetch/internal";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";

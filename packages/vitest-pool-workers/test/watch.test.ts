@@ -1,4 +1,5 @@
 import dedent from "ts-dedent";
+
 import { minimalVitestConfig, test, waitFor } from "./helpers";
 
 test("automatically re-runs unit tests", async ({

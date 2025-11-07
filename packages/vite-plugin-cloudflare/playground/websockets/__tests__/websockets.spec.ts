@@ -1,4 +1,5 @@
 import { expect, test, vi } from "vitest";
+
 import { page, viteTestUrl } from "../../__test-utils__";
 
 async function openWebSocket() {

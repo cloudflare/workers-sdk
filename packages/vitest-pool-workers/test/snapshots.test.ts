@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
+
 import { minimalVitestConfig, test } from "./helpers";
 
 test(

@@ -1,10 +1,12 @@
 import { http, HttpResponse } from "msw";
-import { createFetchResult, msw } from "./msw";
+
 import type {
 	CreateSecret,
 	CreateStore,
 	Store,
 } from "../../secrets-store/client";
+
+import { createFetchResult, msw } from "./msw";
 
 /** Create a mock handler for Secrets Store API GET /stores with custom stores */
 export function mockListSecretStores(stores: Store[]) {

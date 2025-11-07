@@ -1,4 +1,5 @@
 import test from "ava";
+
 import { mapRequestToAsset } from "../index";
 import { mockGlobalScope, mockRequestScope } from "../mocks";
 

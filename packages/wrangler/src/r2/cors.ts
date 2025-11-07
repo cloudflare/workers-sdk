@@ -1,5 +1,9 @@
 import path from "node:path";
+
 import { parseJSON, readFileSync, UserError } from "@cloudflare/workers-utils";
+
+import type { CORSRule } from "./helpers";
+
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -11,7 +15,6 @@ import {
 	putCORSPolicy,
 	tableFromCORSPolicyResponse,
 } from "./helpers";
-import type { CORSRule } from "./helpers";
 
 export const r2BucketCORSNamespace = createNamespace({
 	metadata: {

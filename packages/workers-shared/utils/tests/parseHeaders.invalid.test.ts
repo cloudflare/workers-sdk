@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+
 import { parseHeaders } from "../configuration/parseHeaders";
 
 test("parseHeaders should reject malformed initial lines", () => {

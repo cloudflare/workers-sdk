@@ -5,6 +5,7 @@ import {
 	SELF,
 } from "cloudflare:test";
 import { expect, it } from "vitest";
+
 import { Counter } from "../src/";
 
 it("increments count and allows direct access to instance/storage", async () => {

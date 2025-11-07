@@ -1,5 +1,6 @@
-import assert from "node:assert";
 import type { RunningScriptOptions } from "node:vm";
+
+import assert from "node:assert";
 
 let unsafeEval: UnsafeEval | undefined;
 export function _setUnsafeEval(newUnsafeEval: UnsafeEval) {

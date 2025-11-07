@@ -1,4 +1,4 @@
-export default <ExportedHandler<Env>>{
+export default (<ExportedHandler<Env>>{
 	async fetch(request, env, ctx) {
 		const url = new URL(request.url);
 		// Forward login requests to the auth service
@@ -20,4 +20,4 @@ export default <ExportedHandler<Env>>{
 		url.pathname = `/${username}${url.pathname}`;
 		return env.DATABASE_SERVICE.fetch(url, request);
 	},
-};
+});

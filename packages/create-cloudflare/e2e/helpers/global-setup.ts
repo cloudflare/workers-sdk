@@ -1,5 +1,6 @@
-import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
 import exitHook from "exit-hook";
+
+import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
 
 /**
  * This Vitest global setup function starts a mock NPM registry and registers an exit hook to stop it when the tests are done.

@@ -1,5 +1,6 @@
-import { Div } from "@cloudflare/elements";
 import type React from "react";
+
+import { Div } from "@cloudflare/elements";
 
 export const StepNumber: React.FC<{
 	number: React.ReactNode;

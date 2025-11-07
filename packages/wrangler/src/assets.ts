@@ -1,7 +1,15 @@
+import chalk from "chalk";
 import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import PQueue from "p-queue";
+import prettyBytes from "pretty-bytes";
+import { FormData } from "undici";
+
+import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
+import type { Config } from "@cloudflare/workers-utils";
+
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import {
 	CF_ASSETS_IGNORE_FILENAME,
@@ -16,10 +24,12 @@ import {
 	normalizeFilePath,
 } from "@cloudflare/workers-shared/utils/helpers";
 import { APIError, FatalError, UserError } from "@cloudflare/workers-utils";
-import chalk from "chalk";
-import PQueue from "p-queue";
-import prettyBytes from "pretty-bytes";
-import { FormData } from "undici";
+
+import type { StartDevWorkerOptions } from "./api";
+import type { DeployArgs } from "./deploy";
+import type { StartDevOptions } from "./dev";
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
+
 import { fetchResult } from "./cfetch";
 import { formatTime } from "./deploy/deploy";
 import { logger, LOGGER_LEVELS } from "./logger";
@@ -27,12 +37,6 @@ import { hashFile } from "./pages/hash";
 import { isJwtExpired } from "./pages/upload";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
-import type { StartDevWorkerOptions } from "./api";
-import type { DeployArgs } from "./deploy";
-import type { StartDevOptions } from "./dev";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
-import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
-import type { Config } from "@cloudflare/workers-utils";
 
 export type AssetManifest = { [path: string]: { hash: string; size: number } };
 

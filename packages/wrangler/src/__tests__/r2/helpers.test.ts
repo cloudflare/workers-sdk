@@ -1,3 +1,6 @@
+import type { GetNotificationConfigResponse } from "../../r2/helpers";
+import type { ApiCredentials } from "../../user";
+
 import { logger } from "../../logger";
 import {
 	eventNotificationHeaders,
@@ -5,8 +8,6 @@ import {
 } from "../../r2/helpers";
 import formatLabelledValues from "../../utils/render-labelled-values";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import type { GetNotificationConfigResponse } from "../../r2/helpers";
-import type { ApiCredentials } from "../../user";
 
 describe("event notifications", () => {
 	const std = mockConsoleMethods();

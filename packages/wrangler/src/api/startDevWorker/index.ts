@@ -1,5 +1,6 @@
-import { DevEnv } from "./DevEnv";
 import type { StartDevWorkerInput, Worker } from "./types";
+
+import { DevEnv } from "./DevEnv";
 
 export { convertConfigBindingsToStartWorkerBindings } from "./utils";
 

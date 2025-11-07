@@ -1,3 +1,7 @@
+import { createLogUpdate } from "log-update";
+
+import type { Prompt } from "@clack/core";
+
 import {
 	ConfirmPrompt,
 	isCancel,
@@ -5,11 +9,11 @@ import {
 	SelectPrompt,
 	TextPrompt,
 } from "@clack/core";
-import { createLogUpdate } from "log-update";
+
+import type { OptionWithDetails } from "./select-list";
+
 import { blue, bold, brandColor, dim, gray, white } from "./colors";
 import { CancelError } from "./error";
-import SelectRefreshablePrompt from "./select-list";
-import { stdout } from "./streams";
 import {
 	cancel,
 	crash,
@@ -20,8 +24,8 @@ import {
 	status,
 	stripAnsi,
 } from "./index";
-import type { OptionWithDetails } from "./select-list";
-import type { Prompt } from "@clack/core";
+import SelectRefreshablePrompt from "./select-list";
+import { stdout } from "./streams";
 
 // logUpdate writes text to a TTY (it uses escape sequences to move the cursor
 // and clear lines). This function should not be used when running

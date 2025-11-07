@@ -1,5 +1,12 @@
+import type { MockInstance } from "vitest";
+
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
+
+import type { Config } from "@cloudflare/workers-utils";
+
+import type { UserAuthConfig } from "../user";
+
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
@@ -25,9 +32,6 @@ import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
-import type { UserAuthConfig } from "../user";
-import type { Config } from "@cloudflare/workers-utils";
-import type { MockInstance } from "vitest";
 
 describe("User", () => {
 	let isCISpy: MockInstance;

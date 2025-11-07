@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
+
 import { sanitisePath } from "./data";
 import { InclusiveRange } from "./range";
 

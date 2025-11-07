@@ -1,5 +1,6 @@
-import { version } from "../package.json";
 import type { Preset } from "unenv";
+
+import { version } from "../package.json";
 
 // Built-in APIs provided by workerd.
 //

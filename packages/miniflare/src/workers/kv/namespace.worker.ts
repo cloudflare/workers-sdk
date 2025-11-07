@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import {
 	DeferredPromise,
 	DELETE,
@@ -12,6 +11,8 @@ import {
 	PUT,
 	RouteHandler,
 } from "miniflare:shared";
+import assert from "node:assert";
+
 import { KVHeaders, KVLimits, KVParams, MAX_BULK_GET_KEYS } from "./constants";
 import {
 	decodeKey,

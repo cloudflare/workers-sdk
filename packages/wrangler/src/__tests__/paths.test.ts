@@ -1,4 +1,5 @@
 import * as path from "node:path";
+
 import { getBasePath, readableRelative } from "../paths";
 
 describe("paths", () => {

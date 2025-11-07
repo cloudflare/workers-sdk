@@ -1,4 +1,5 @@
 import { beforeEach, describe, it } from "vitest";
+
 import { loadDotEnv } from "../../config/dot-env";
 import { logger } from "../../logger";
 import { mockConsoleMethods } from "../helpers/mock-console";

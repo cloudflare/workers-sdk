@@ -1,14 +1,17 @@
-import { AsyncLocalStorage } from "node:async_hooks";
-import { format } from "node:util";
-import { ParseError } from "@cloudflare/workers-utils";
+import type { Message } from "esbuild";
+
 import chalk from "chalk";
 import CLITable from "cli-table3";
 import { formatMessagesSync } from "esbuild";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { format } from "node:util";
+
+import { ParseError } from "@cloudflare/workers-utils";
+
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import { getSanitizeLogs } from "./environment-variables/misc-variables";
 import { formatMessage } from "./utils/format-message";
 import { appendToDebugLogFile } from "./utils/log-file";
-import type { Message } from "esbuild";
 
 export const LOGGER_LEVELS = {
 	none: -1,

@@ -1,4 +1,5 @@
-import fs from "node:fs/promises";
+import type { Service, Worker_Binding } from "miniflare";
+
 import {
 	getMiniflareObjectBindings,
 	getPersistPath,
@@ -7,13 +8,13 @@ import {
 	SERVICE_LOOPBACK,
 	SharedBindings,
 } from "miniflare";
+import fs from "node:fs/promises";
 // The below imports (prefixed with `worker:`)
 // will be converted by our ESBuild plugin
 // into functions that load the transpiled Workers as JS
 import BINDING_WORKER from "worker:binding.worker";
 import OBJECT_WORKER from "worker:object.worker";
 import { z } from "zod";
-import type { Service, Worker_Binding } from "miniflare";
 
 export const UNSAFE_PLUGIN_NAME = "unsafe-plugin";
 

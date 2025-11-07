@@ -1,4 +1,5 @@
 import * as forge from "node-forge";
+
 import { generateResourceName } from "./generate-resource-name";
 
 // Generate X509 self signed root key pair and certificate

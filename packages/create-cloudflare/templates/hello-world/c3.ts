@@ -1,5 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+
 import type { TemplateConfig } from "../../src/templates";
 
 export default {
@@ -13,7 +14,7 @@ export default {
 		if (ctx.args.lang === "python") {
 			const contents = await readFile(
 				resolve(ctx.project.path, "pyproject.toml"),
-				"utf8",
+				"utf8"
 			);
 			const updated = contents.replaceAll(/<TBD>/g, ctx.project.name);
 			await writeFile(resolve(ctx.project.path, "pyproject.toml"), updated);

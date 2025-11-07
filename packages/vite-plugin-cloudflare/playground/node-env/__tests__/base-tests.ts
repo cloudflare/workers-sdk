@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
+
 import { isBuild, page } from "../../__test-utils__";
 
 test("replaces process.env.NODE_ENV with the correct value", async () => {

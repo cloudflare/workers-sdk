@@ -5,6 +5,7 @@ import {
 	waitOnExecutionContext,
 } from "cloudflare:test";
 import { describe, expect, it, vi } from "vitest";
+
 import worker from "../src/index";
 
 // For now, you'll need to do something like this to get a correctly-typed

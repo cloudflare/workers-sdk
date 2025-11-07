@@ -1,11 +1,13 @@
+import type { DispatchFetch, Response } from "miniflare";
+
 import { execSync } from "child_process";
 import { randomUUID } from "crypto";
 import assert from "node:assert";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import { getPlatformProxy } from "wrangler";
+
 import type { KVNamespace } from "@cloudflare/workers-types/experimental";
-import type { DispatchFetch, Response } from "miniflare";
 
 type Fetcher = { fetch: DispatchFetch };
 

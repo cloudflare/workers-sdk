@@ -1,9 +1,7 @@
 import assert from "assert";
-import http from "http";
-import { AddressInfo } from "net";
-import { setImmediate } from "timers/promises";
 import test from "ava";
 import { expectTypeOf } from "expect-type";
+import http from "http";
 import {
 	CloseEvent,
 	coupleWebSocket,
@@ -13,7 +11,10 @@ import {
 	WebSocket,
 	WebSocketPair,
 } from "miniflare";
+import { AddressInfo } from "net";
+import { setImmediate } from "timers/promises";
 import NodeWebSocket, { Event as WebSocketEvent, WebSocketServer } from "ws";
+
 import { useServer, utf8Decode, utf8Encode } from "../test-shared";
 
 const noop = () => {};

@@ -1,9 +1,12 @@
+import type React from "react";
+
+import { useEffect, useState } from "react";
+
 import { Button } from "@cloudflare/component-button";
 import { Div } from "@cloudflare/elements";
 import { createComponent } from "@cloudflare/style-container";
-import { useEffect, useState } from "react";
+
 import { InputField } from "../InputField";
-import type React from "react";
 
 const StyledForm = createComponent(
 	({ theme }) => ({

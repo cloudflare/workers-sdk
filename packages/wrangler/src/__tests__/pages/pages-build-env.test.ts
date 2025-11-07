@@ -1,5 +1,6 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+
 import { logger } from "../../logger";
 import {
 	EXIT_CODE_INVALID_PAGES_CONFIG,

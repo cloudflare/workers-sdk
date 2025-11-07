@@ -1,6 +1,8 @@
-import { setTimeout } from "node:timers/promises";
-import { APIError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
+import { setTimeout } from "node:timers/promises";
+
+import { APIError } from "@cloudflare/workers-utils";
+
 import { logger } from "../logger";
 
 const MAX_ATTEMPTS = 3;

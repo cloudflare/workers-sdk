@@ -1,12 +1,13 @@
-import { SharedBindings } from "./constants";
 import type { MiniflareDurableObjectCf } from "./object.worker";
+
+import { SharedBindings } from "./constants";
 
 interface Env {
 	[SharedBindings.TEXT_NAMESPACE]: string;
 	[SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT]: DurableObjectNamespace;
 }
 
-export default <ExportedHandler<Env>>{
+export default (<ExportedHandler<Env>>{
 	async fetch(request, env) {
 		const name = env[SharedBindings.TEXT_NAMESPACE];
 		const objectNamespace = env[SharedBindings.DURABLE_OBJECT_NAMESPACE_OBJECT];
@@ -15,4 +16,4 @@ export default <ExportedHandler<Env>>{
 		const cf: MiniflareDurableObjectCf = { miniflare: { name } };
 		return await stub.fetch(request, { cf: cf as Record<string, unknown> });
 	},
-};
+});

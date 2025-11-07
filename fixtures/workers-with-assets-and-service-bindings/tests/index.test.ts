@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { setTimeout } from "timers/promises";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, it, vi } from "vitest";
+
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("[Workers + Assets] Service bindings to Worker with assets", () => {

@@ -1,14 +1,15 @@
-/* istanbul ignore file */
-/* tslint:disable */
-/* eslint-disable */
-import { OpenAPI } from "../core/OpenAPI";
-import { request as __request } from "../core/request";
 import type { CancelablePromise } from "../core/CancelablePromise";
 import type { DeploymentID } from "../models/DeploymentID";
 import type { IPAllocationsWithFilter } from "../models/IPAllocationsWithFilter";
 import type { IPType } from "../models/IPType";
 import type { ListIPsIsAllocated } from "../models/ListIPsIsAllocated";
 import type { PlacementID } from "../models/PlacementID";
+
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+import { OpenAPI } from "../core/OpenAPI";
+import { request as __request } from "../core/request";
 
 export class IPsService {
 	/**

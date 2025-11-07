@@ -1,4 +1,5 @@
 import { expect, test, vi } from "vitest";
+
 import { getJsonResponse } from "../../../__test-utils__";
 
 test("debug is resolved correctly", async () => {

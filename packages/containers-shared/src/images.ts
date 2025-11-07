@@ -1,3 +1,5 @@
+import type { ContainerDevOptions, DockerfileConfig } from "./types";
+
 import { buildImage } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
 import { UserError } from "./error";
@@ -10,7 +12,6 @@ import {
 	runDockerCmd,
 	verifyDockerInstalled,
 } from "./utils";
-import type { ContainerDevOptions, DockerfileConfig } from "./types";
 
 export async function pullImage(
 	dockerPath: string,

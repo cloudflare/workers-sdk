@@ -1,7 +1,9 @@
 import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
-import { UserError } from "@cloudflare/workers-utils";
 import { FormData } from "undici";
+
+import { UserError } from "@cloudflare/workers-utils";
+
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { insertIntoIndex, insertIntoIndexV1 } from "./client";

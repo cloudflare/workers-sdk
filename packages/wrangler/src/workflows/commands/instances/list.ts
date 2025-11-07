@@ -1,9 +1,10 @@
+import type { Instance } from "../../types";
+
 import { fetchCursorPage } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
 import { emojifyInstanceStatus, validateStatus } from "../../utils";
-import type { Instance } from "../../types";
 
 export const workflowsInstancesListCommand = createCommand({
 	metadata: {

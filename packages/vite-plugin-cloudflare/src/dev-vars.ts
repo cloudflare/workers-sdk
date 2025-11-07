@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import { unstable_getVarsForDev } from "wrangler";
+
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,

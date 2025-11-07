@@ -2,12 +2,14 @@ import { once } from "events";
 import path from "path";
 import dedent from "ts-dedent";
 import { describe, test } from "vitest";
+
+import type { BundleCompleteEvent, StartDevWorkerOptions } from "../../../api";
+
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { seed } from "../../helpers/seed";
 import { unusable } from "../../helpers/unusable";
-import type { BundleCompleteEvent, StartDevWorkerOptions } from "../../../api";
 
 // Find the bundled result of a particular source file
 function findSourceFile(source: string, name: string): string {
@@ -60,7 +62,7 @@ describe("BundleController", () => {
 	describe("happy path bundle + watch", () => {
 		test("single ts source file", async () => {
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						//comment
@@ -109,7 +111,7 @@ describe("BundleController", () => {
 					"
 				`);
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 					export default {
 						fetch(request, env, ctx) {
 							//comment
@@ -137,7 +139,7 @@ describe("BundleController", () => {
 
 		test("multiple ts source files", async () => {
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 				import name from "./other"
 				export default {
 					fetch(request, env, ctx) {
@@ -146,7 +148,7 @@ describe("BundleController", () => {
 					}
 				} satisfies ExportedHandler
 			`,
-				"src/other.ts": dedent/* javascript */ `
+				"src/other.ts": dedent /* javascript */ `
 				export default "someone"
 			`,
 			});
@@ -191,7 +193,7 @@ describe("BundleController", () => {
 					"
 				`);
 			await seed({
-				"src/other.ts": dedent/* javascript */ `
+				"src/other.ts": dedent /* javascript */ `
 					export default "someone else"
 				`,
 			});
@@ -206,7 +208,7 @@ describe("BundleController", () => {
 
 		test("custom build", async () => {
 			await seed({
-				"random_dir/index.ts": dedent/* javascript */ `
+				"random_dir/index.ts": dedent /* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						//comment
@@ -262,7 +264,7 @@ describe("BundleController", () => {
 			await sleep(500);
 
 			await seed({
-				"random_dir/index.ts": dedent/* javascript */ `
+				"random_dir/index.ts": dedent /* javascript */ `
 					export default {
 						fetch(request, env, ctx) {
 							//comment
@@ -291,7 +293,7 @@ describe("BundleController", () => {
 
 	test("module aliasing", async () => {
 		await seed({
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 				import name from "foo"
 				export default {
 					fetch(request, env, ctx) {
@@ -300,10 +302,10 @@ describe("BundleController", () => {
 					}
 				} satisfies ExportedHandler
 			`,
-			"node_modules/foo": dedent/* javascript */ `
+			"node_modules/foo": dedent /* javascript */ `
 				export default "foo"
 			`,
-			"node_modules/bar": dedent/* javascript */ `
+			"node_modules/bar": dedent /* javascript */ `
 				export default "bar"
 			`,
 		});
@@ -329,7 +331,7 @@ describe("BundleController", () => {
 		await controller.onConfigUpdate({ type: "configUpdate", config });
 
 		let ev = await waitForBundleComplete(controller);
-		expect(ev.bundle.entrypointSource).toContain(dedent/* javascript */ `
+		expect(ev.bundle.entrypointSource).toContain(dedent /* javascript */ `
             // ../node_modules/foo
             var foo_default = "foo"
         `);
@@ -347,7 +349,7 @@ describe("BundleController", () => {
 			},
 		});
 		ev = await waitForBundleComplete(controller);
-		expect(ev.bundle.entrypointSource).toContain(dedent/* javascript */ `
+		expect(ev.bundle.entrypointSource).toContain(dedent /* javascript */ `
             // ../node_modules/bar
             var bar_default = "bar"
         `);
@@ -356,7 +358,7 @@ describe("BundleController", () => {
 	describe("switching", () => {
 		test("esbuild -> custom builds", async () => {
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 				export default {
 					fetch(request, env, ctx) {
 						//comment
@@ -407,7 +409,7 @@ describe("BundleController", () => {
 				`);
 
 			await seed({
-				"random_dir/index.ts": dedent/* javascript */ `
+				"random_dir/index.ts": dedent /* javascript */ `
 					export default {
 						fetch(request, env, ctx) {
 							//comment
@@ -463,7 +465,7 @@ describe("BundleController", () => {
 			// Make sure custom builds can reload after switching to them
 			evCustomPromise = waitForBundleComplete(controller);
 			await seed({
-				"random_dir/index.ts": dedent/* javascript */ `
+				"random_dir/index.ts": dedent /* javascript */ `
 						export default {
 							fetch(request, env, ctx) {
 								//comment
@@ -491,7 +493,7 @@ describe("BundleController", () => {
 
 		test("custom builds -> esbuild", async () => {
 			await seed({
-				"random_dir/index.ts": dedent/* javascript */ `
+				"random_dir/index.ts": dedent /* javascript */ `
 					export default {
 						fetch(request, env, ctx) {
 							//comment
@@ -543,7 +545,7 @@ describe("BundleController", () => {
 					"
 				`);
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 						export default {
 							fetch(request, env, ctx) {
 								//comment
@@ -593,7 +595,7 @@ describe("BundleController", () => {
 					"
 				`);
 			await seed({
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 						export default {
 							fetch(request, env, ctx) {
 								//comment

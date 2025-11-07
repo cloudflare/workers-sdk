@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { failsIf, isBuild, page, viteTestUrl } from "../../__test-utils__";
 
 describe("react-spa", () => {

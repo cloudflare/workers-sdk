@@ -1,10 +1,11 @@
-import { readFile } from "node:fs/promises";
 import test from "ava";
 import { LogLevel, Miniflare } from "miniflare";
+import { readFile } from "node:fs/promises";
 import dedent from "ts-dedent";
+
 import { TestLog, waitFor } from "../../test-shared";
 
-const SEND_EMAIL_WORKER = dedent/* javascript */ `
+const SEND_EMAIL_WORKER = dedent /* javascript */ `
 	import { EmailMessage } from "cloudflare:email";
 
 	export default {
@@ -23,7 +24,7 @@ const SEND_EMAIL_WORKER = dedent/* javascript */ `
 	};
 `;
 
-const REPLY_EMAIL_WORKER = (email = "message.raw") => dedent/* javascript */ `
+const REPLY_EMAIL_WORKER = (email = "message.raw") => dedent /* javascript */ `
 	import { EmailMessage } from "cloudflare:email";
 
 	export default {

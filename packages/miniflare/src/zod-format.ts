@@ -1,10 +1,11 @@
+import type { z } from "zod";
+
 // TODO(someday): publish this as a separate package
 // noinspection JSUnusedAssignment
 // ^ WebStorm incorrectly thinks some variables might not have been initialised
 //   before use without this. TypeScript is better at catching these errors. :)
 
 import assert from "assert";
-import util from "util";
 import {
 	$ as $colors,
 	blue,
@@ -15,7 +16,7 @@ import {
 	red,
 	yellow,
 } from "kleur/colors";
-import type { z } from "zod";
+import util from "util";
 
 // This file contains a `formatZodError(error, input)` function for formatting
 // a Zod `error` that came from parsing a specific `input`. This works by

@@ -1,7 +1,7 @@
 import { spawn } from "child_process";
+import { findUpSync } from "find-up";
 import fs from "fs";
 import path from "path";
-import { findUpSync } from "find-up";
 
 const currentFile = process.argv[2];
 const currentDirectory = path.dirname(currentFile);

@@ -1,8 +1,9 @@
-import { resolve } from "node:path";
-import { setTimeout } from "timers/promises";
 import { toMatchImageSnapshot } from "jest-image-snapshot";
+import { resolve } from "node:path";
 import { Browser, chromium } from "playwright-chromium";
+import { setTimeout } from "timers/promises";
 import { afterAll, beforeAll, describe, it } from "vitest";
+
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Workers + Assets + SPA", () => {

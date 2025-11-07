@@ -1,9 +1,10 @@
 import assert from "assert";
-import fs from "fs/promises";
-import path from "path";
 import anyTest, { Macro, TestFn } from "ava";
 import esbuild from "esbuild";
+import fs from "fs/promises";
 import { Miniflare } from "miniflare";
+import path from "path";
+
 import { useTmp } from "../../test-shared";
 
 const FIXTURES_PATH = path.resolve(

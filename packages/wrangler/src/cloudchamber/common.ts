@@ -1,3 +1,13 @@
+import type { Arg } from "@cloudflare/cli/interactive";
+import type {
+	CompleteAccountCustomer,
+	EnvironmentVariable,
+	InstanceType,
+	Label,
+	NetworkParameters,
+} from "@cloudflare/containers-shared";
+import type { CloudchamberConfig, Config } from "@cloudflare/workers-utils";
+
 import { space, updateStatus } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
@@ -7,6 +17,13 @@ import {
 	OpenAPI,
 } from "@cloudflare/containers-shared";
 import { parseByteSize, UserError } from "@cloudflare/workers-utils";
+
+import type { containersScope } from "../containers";
+import type {
+	CommonYargsOptions,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
+
 import { addAuthorizationHeader, addUserAgent } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { constructStatusMessage } from "../core/CommandRegistry";
@@ -17,20 +34,6 @@ import { getScopes, printScopes, requireApiToken, requireAuth } from "../user";
 import { printWranglerBanner } from "../wrangler-banner";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName } from "./locations";
-import type { containersScope } from "../containers";
-import type {
-	CommonYargsOptions,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
-import type { Arg } from "@cloudflare/cli/interactive";
-import type {
-	CompleteAccountCustomer,
-	EnvironmentVariable,
-	InstanceType,
-	Label,
-	NetworkParameters,
-} from "@cloudflare/containers-shared";
-import type { CloudchamberConfig, Config } from "@cloudflare/workers-utils";
 
 export const cloudchamberScope = "cloudchamber:write" as const;
 

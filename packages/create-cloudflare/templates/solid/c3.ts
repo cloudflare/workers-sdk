@@ -1,5 +1,5 @@
-import { logRaw, updateStatus } from "@cloudflare/cli";
-import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import type { C3Context } from "types";
+
 import { runFrameworkGenerator } from "frameworks/index";
 import { mergeObjectProperties, transformFile } from "helpers/codemod";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
@@ -7,8 +7,11 @@ import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { installPackages } from "helpers/packages";
 import * as recast from "recast";
+
+import { logRaw, updateStatus } from "@cloudflare/cli";
+import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+
 import type { TemplateConfig } from "../../src/templates";
-import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
@@ -52,15 +55,15 @@ const configure = async (ctx: C3Context) => {
 							// preset: "cloudflare_module"
 							b.objectProperty(
 								b.identifier("preset"),
-								b.stringLiteral("cloudflare_module"),
+								b.stringLiteral("cloudflare_module")
 							),
 							b.objectProperty(
 								b.identifier("compatibilityDate"),
-								b.stringLiteral(compatDate),
+								b.stringLiteral(compatDate)
 							),
-						]),
+						])
 					),
-				],
+				]
 			);
 
 			return false;

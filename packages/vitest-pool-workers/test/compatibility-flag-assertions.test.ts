@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { CompatibilityFlagAssertions } from "../src/pool/compatibility-flag-assertions";
 
 describe("FlagAssertions", () => {

@@ -1,10 +1,16 @@
+import type WebSocket from "ws";
+
 import { setTimeout } from "node:timers/promises";
+import onExit from "signal-exit";
+
 import {
 	configFileName,
 	createFatalError,
 	UserError,
 } from "@cloudflare/workers-utils";
-import onExit from "signal-exit";
+
+import type { TailCLIFilters } from "./createTail";
+
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -19,8 +25,6 @@ import {
 	prettyPrintLogs,
 	translateCLICommandToFilterMessage,
 } from "./createTail";
-import type { TailCLIFilters } from "./createTail";
-import type WebSocket from "ws";
 
 export const tailCommand = createCommand({
 	metadata: {

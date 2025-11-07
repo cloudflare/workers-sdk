@@ -1,13 +1,16 @@
+import type { ResolvedEnvironment } from "unenv";
+
+import { getNodeCompat } from "miniflare";
+import { resolvePathSync } from "mlly";
 import assert from "node:assert";
 import { builtinModules } from "node:module";
 import * as path from "node:path";
-import { getCloudflarePreset } from "@cloudflare/unenv-preset";
-import { getNodeCompat } from "miniflare";
-import { resolvePathSync } from "mlly";
 import { defineEnv } from "unenv";
 import * as vite from "vite";
+
+import { getCloudflarePreset } from "@cloudflare/unenv-preset";
+
 import type { WorkerConfig } from "./plugin-config";
-import type { ResolvedEnvironment } from "unenv";
 
 type InjectsByModule = Map<
 	string,

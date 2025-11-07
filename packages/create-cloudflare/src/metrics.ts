@@ -1,7 +1,3 @@
-import { AsyncLocalStorage } from "node:async_hooks";
-import { setTimeout } from "node:timers/promises";
-import { logRaw } from "@cloudflare/cli";
-import { CancelError } from "@cloudflare/cli/error";
 import {
 	getDeviceId,
 	readMetricsConfig,
@@ -9,8 +5,15 @@ import {
 } from "helpers/metrics-config";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as sparrow from "helpers/sparrow";
-import { version as c3Version } from "../package.json";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { setTimeout } from "node:timers/promises";
+
+import { logRaw } from "@cloudflare/cli";
+import { CancelError } from "@cloudflare/cli/error";
+
 import type { Event } from "./event";
+
+import { version as c3Version } from "../package.json";
 
 // A type to extract the prefix of event names sharing the same suffix
 type EventPrefix<Suffix extends string> =
@@ -79,7 +82,7 @@ export function createReporter() {
 
 	function sendEvent<EventName extends Event["name"]>(
 		name: EventName,
-		properties: EventProperties<EventName>,
+		properties: EventProperties<EventName>
 	): void {
 		if (!isEnabled) {
 			return;
@@ -100,7 +103,7 @@ export function createReporter() {
 					...properties,
 				},
 			},
-			enableLog,
+			enableLog
 		);
 
 		// TODO(consider): retry failed requests
@@ -214,7 +217,7 @@ export function createReporter() {
 							tracker?.setEventProperty(key, value);
 						},
 					},
-					options.promise,
+					options.promise
 				),
 			]);
 
@@ -239,14 +242,14 @@ export function createReporter() {
 	// To be used within `collectAsyncMetrics` to update the properties object sent to sparrow
 	function setEventProperty<Key extends KeysOfUnion<Event["properties"]>>(
 		key: Key,
-		value: unknown,
+		value: unknown
 	) {
 		const store = als.getStore();
 
 		// Throw only on test environment to avoid breaking the CLI
 		if (!store && process.env.VITEST) {
 			throw new Error(
-				"`setEventProperty` must be called within `collectAsyncMetrics`",
+				"`setEventProperty` must be called within `collectAsyncMetrics`"
 			);
 		}
 
@@ -297,7 +300,7 @@ export function updateC3Pemission(enabled: boolean) {
 }
 
 export const runTelemetryCommand = (
-	action: "status" | "enable" | "disable",
+	action: "status" | "enable" | "disable"
 ) => {
 	const logTelemetryStatus = (enabled: boolean) => {
 		logRaw(`Status: ${enabled ? "Enabled" : "Disabled"}`);
@@ -309,7 +312,7 @@ export const runTelemetryCommand = (
 			updateC3Pemission(true);
 			logTelemetryStatus(true);
 			logRaw(
-				"Create-Cloudflare is now collecting telemetry about your usage. Thank you for helping us improve the experience!",
+				"Create-Cloudflare is now collecting telemetry about your usage. Thank you for helping us improve the experience!"
 			);
 			break;
 		}

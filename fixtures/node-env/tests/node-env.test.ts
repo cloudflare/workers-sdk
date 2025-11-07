@@ -1,8 +1,9 @@
+import { Miniflare } from "miniflare";
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { Miniflare } from "miniflare";
 import { describe, it, vi } from "vitest";
+
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("`process.env.NODE_ENV` replacement in development", () => {

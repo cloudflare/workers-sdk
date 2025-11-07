@@ -15,7 +15,7 @@ export const frameworkToTestFilter = process.env.E2E_FRAMEWORK_TEMPLATE_TO_TEST;
 export const testPackageManager = isOneOf(
 	"E2E_TEST_PM",
 	["pnpm", "npm", "yarn", "bun"] as const,
-	"pnpm",
+	"pnpm"
 );
 export const testPackageManagerVersion = process.env.E2E_TEST_PM_VERSION ?? "";
 export const runDeployTests = process.env.E2E_RUN_DEPLOY_TESTS === "true";
@@ -38,12 +38,12 @@ export const keys = {
 function isOneOf<Options extends readonly string[]>(
 	key: string,
 	possibleValues: Options,
-	defaultValue: Options[number],
+	defaultValue: Options[number]
 ): Options[number] {
 	const value = process.env[key] ?? defaultValue;
 	assert(
 		possibleValues.includes(value),
-		`Invalid environment variable "${key}". Expected one of: ${possibleValues.join(", ")}`,
+		`Invalid environment variable "${key}". Expected one of: ${possibleValues.join(", ")}`
 	);
 	return value;
 }

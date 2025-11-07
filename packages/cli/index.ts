@@ -1,4 +1,5 @@
 import { exit } from "process";
+
 import {
 	bgBlue,
 	bgGreen,

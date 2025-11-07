@@ -1,14 +1,21 @@
+import type { ModuleDefinition } from "miniflare";
+import type { FormData, FormDataEntryValue } from "undici";
+
+import chalk from "chalk";
 import { randomUUID } from "crypto";
 import { readFile } from "fs/promises";
+import { Miniflare } from "miniflare";
 import events from "node:events";
 import { writeFile } from "node:fs/promises";
 import path from "path";
+import { WebSocket } from "ws";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import { log } from "@cloudflare/cli";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
 import { UserError } from "@cloudflare/workers-utils";
-import chalk from "chalk";
-import { Miniflare } from "miniflare";
-import { WebSocket } from "ws";
+
 import { createCLIParser } from "..";
 import { createCommand, createNamespace } from "../core/create-command";
 import { moduleTypeMimeType } from "../deployment-bundle/create-worker-upload-form";
@@ -18,9 +25,6 @@ import {
 } from "../deployment-bundle/module-collection";
 import { logger } from "../logger";
 import { getWranglerTmpDir } from "../paths";
-import type { Config } from "@cloudflare/workers-utils";
-import type { ModuleDefinition } from "miniflare";
-import type { FormData, FormDataEntryValue } from "undici";
 
 const mimeTypeModuleType = flipObject(moduleTypeMimeType);
 

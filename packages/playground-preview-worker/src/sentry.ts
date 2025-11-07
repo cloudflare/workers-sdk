@@ -1,5 +1,6 @@
 import { Toucan } from "toucan-js";
 import { ZodError } from "zod";
+
 import { HttpError, ZodSchemaError } from "./errors";
 
 export function handleException(e: unknown, sentry: Toucan): Response {

@@ -1,16 +1,18 @@
+import type {
+	CfWorkerInit,
+	Config,
+	RawConfig,
+} from "@cloudflare/workers-utils";
+
 import {
 	configFormat,
 	experimental_patchConfig,
 	formatConfigSnippet,
 	friendlyBindingNames,
 } from "@cloudflare/workers-utils";
+
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
-import type {
-	CfWorkerInit,
-	Config,
-	RawConfig,
-} from "@cloudflare/workers-utils";
 
 // All config keys that follow a "regular" binding shape (Binding[]) and so can be modified using `updateConfigFile`.
 type ValidKeys = Exclude<

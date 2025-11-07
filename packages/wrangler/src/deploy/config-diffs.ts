@@ -1,12 +1,15 @@
 import assert from "node:assert";
+
+import type { Config, RawConfig } from "@cloudflare/workers-utils";
+
+import type { JsonLike } from "../utils/diff-json";
+
 import { getSubdomainValuesAPIMock } from "../triggers/deploy";
 import {
 	diffJsonObjects,
 	isModifiedDiffValue,
 	isNonDestructive,
 } from "../utils/diff-json";
-import type { JsonLike } from "../utils/diff-json";
-import type { Config, RawConfig } from "@cloudflare/workers-utils";
 
 /**
  * Object representing the difference of two configuration objects.

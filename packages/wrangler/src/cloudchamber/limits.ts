@@ -1,11 +1,13 @@
-import { dockerImageInspect } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
-import { logger } from "../logger";
-import { getInstanceTypeUsage } from "./instance-type/instance-type";
 import type {
 	CompleteAccountCustomer,
 	ContainerNormalizedConfig,
 } from "@cloudflare/containers-shared";
+
+import { dockerImageInspect } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
+
+import { logger } from "../logger";
+import { getInstanceTypeUsage } from "./instance-type/instance-type";
 
 const MB = 1000 * 1000;
 const MiB = 1024 * 1024;

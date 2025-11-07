@@ -1,6 +1,7 @@
 import { execSync } from "node:child_process";
 import { rmSync } from "node:fs";
 import { resolve } from "node:path";
+
 import { loadConfig, startDefaultServe } from "../../vitest-setup";
 
 export async function preServe() {

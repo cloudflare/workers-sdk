@@ -1,12 +1,14 @@
 import { access, lstat } from "node:fs/promises";
 import { relative, resolve } from "node:path";
+
+import type { Entry } from "../../deployment-bundle/entry";
+import type { Options as WorkerOptions } from "./buildWorker";
+
 import { bundleWorker } from "../../deployment-bundle/bundle";
 import { createModuleCollector } from "../../deployment-bundle/module-collection";
 import { getBasePath } from "../../paths";
 import { getPagesProjectRoot } from "../utils";
 import { buildNotifierPlugin } from "./buildWorker";
-import type { Entry } from "../../deployment-bundle/entry";
-import type { Options as WorkerOptions } from "./buildWorker";
 
 type Options = Omit<
 	WorkerOptions,

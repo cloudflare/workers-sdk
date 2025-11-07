@@ -1,10 +1,14 @@
+import type { ParseError as JsoncParseError } from "jsonc-parser";
+
+import * as jsoncParser from "jsonc-parser";
 import { readFileSync as fsReadFileSync } from "node:fs";
 import { resolve } from "node:path";
+
 import TOML from "@iarna/toml";
-import * as jsoncParser from "jsonc-parser";
-import { UserError } from "./errors";
+
 import type { TelemetryMessage } from "./errors";
-import type { ParseError as JsoncParseError } from "jsonc-parser";
+
+import { UserError } from "./errors";
 
 export type Message = {
 	text: string;

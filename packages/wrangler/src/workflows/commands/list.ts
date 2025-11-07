@@ -1,8 +1,9 @@
+import type { Workflow } from "../types";
+
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
-import type { Workflow } from "../types";
 
 export const workflowsListCommand = createCommand({
 	metadata: {

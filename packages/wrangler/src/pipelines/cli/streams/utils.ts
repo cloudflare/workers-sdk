@@ -1,8 +1,10 @@
+import type { Config } from "@cloudflare/workers-utils";
+
+import type { SchemaField, Stream } from "../../types";
+
 import { logger } from "../../../logger";
 import { createdResourceConfig } from "../../../utils/add-created-resource-config";
 import formatLabelledValues from "../../../utils/render-labelled-values";
-import type { SchemaField, Stream } from "../../types";
-import type { Config } from "@cloudflare/workers-utils";
 
 export function formatSchemaFieldsForTable(
 	fields: SchemaField[],

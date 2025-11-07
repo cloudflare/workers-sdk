@@ -1,27 +1,16 @@
+import type { LogOptions, MiniflareOptions } from "miniflare";
+
+import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import events from "node:events";
 import path from "node:path";
-import { assertNever } from "@cloudflare/workers-utils";
-import { LogLevel, Miniflare, Mutex, Response } from "miniflare";
 import inspectorProxyWorkerPath from "worker:startDevWorker/InspectorProxyWorker";
 import proxyWorkerPath from "worker:startDevWorker/ProxyWorker";
 import WebSocket from "ws";
-import {
-	logConsoleMessage,
-	maybeHandleNetworkLoadResource,
-} from "../../dev/inspect";
-import {
-	castLogLevel,
-	handleStructuredLogs,
-	WranglerLog,
-} from "../../dev/miniflare";
-import { getHttpsOptions } from "../../https-options";
-import { logger } from "../../logger";
-import { getSourceMappedStack } from "../../sourcemap";
-import { Controller } from "./BaseController";
-import { castErrorCause } from "./events";
-import { createDeferred } from "./utils";
+
+import { assertNever } from "@cloudflare/workers-utils";
+
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { ControllerEventMap } from "./BaseController";
 import type {
@@ -42,7 +31,22 @@ import type {
 } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 import type { DeferredPromise } from "./utils";
-import type { LogOptions, MiniflareOptions } from "miniflare";
+
+import {
+	logConsoleMessage,
+	maybeHandleNetworkLoadResource,
+} from "../../dev/inspect";
+import {
+	castLogLevel,
+	handleStructuredLogs,
+	WranglerLog,
+} from "../../dev/miniflare";
+import { getHttpsOptions } from "../../https-options";
+import { logger } from "../../logger";
+import { getSourceMappedStack } from "../../sourcemap";
+import { Controller } from "./BaseController";
+import { castErrorCause } from "./events";
+import { createDeferred } from "./utils";
 
 type ProxyControllerEventMap = ControllerEventMap & {
 	ready: [ReadyEvent];

@@ -1,7 +1,8 @@
 // Test `ImportDeclaration` and `nodejs_compat`
 import assert from "node:assert";
-import cjs from "./index.cjs";
+
 import { data, text } from "./blobs-indirect.mjs";
+import cjs from "./index.cjs";
 
 export default {
 	async fetch() {

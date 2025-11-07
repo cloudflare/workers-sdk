@@ -4,6 +4,7 @@ import path, { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
 import { describe, it, vi } from "vitest";
+
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages _worker.js", () => {

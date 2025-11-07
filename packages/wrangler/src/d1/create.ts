@@ -1,5 +1,10 @@
-import { UserError } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
+
+import { UserError } from "@cloudflare/workers-utils";
+
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { DatabaseCreationResult } from "./types";
+
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { getD1ExtraLocationChoices } from "../environment-variables/misc-variables";
@@ -11,8 +16,6 @@ import {
 } from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
 import { JURISDICTION_CHOICES, LOCATION_CHOICES } from "./constants";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { DatabaseCreationResult } from "./types";
 
 export async function createD1Database(
 	complianceConfig: ComplianceConfig,

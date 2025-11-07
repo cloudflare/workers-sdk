@@ -1,5 +1,6 @@
-import type { Framework } from "./frameworks/index";
 import type { PackageJSON } from "@cloudflare/workers-utils";
+
+import type { Framework } from "./frameworks/index";
 
 export type AutoConfigDetails = {
 	/** The name of the worker */

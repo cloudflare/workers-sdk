@@ -1,6 +1,6 @@
 import { importSPKI, jwtVerify } from "jose";
 
-export default <ExportedHandler<Env>>{
+export default (<ExportedHandler<Env>>{
 	async fetch(request, env, ctx) {
 		if (request.method !== "POST") {
 			return new Response("Method Not Allowed", { status: 405 });
@@ -42,4 +42,4 @@ export default <ExportedHandler<Env>>{
 			return new Response("Not Found", { status: 404 });
 		}
 	},
-};
+});

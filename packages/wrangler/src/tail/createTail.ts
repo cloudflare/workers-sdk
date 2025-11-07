@@ -1,12 +1,15 @@
+import type { Request } from "undici";
+
 import { HttpsProxyAgent } from "https-proxy-agent";
 import WebSocket from "ws";
+
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { Outcome, TailFilterMessage } from "./filters";
+
 import { version as packageVersion } from "../../package.json";
 import { fetchResult } from "../cfetch";
 import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
 import { proxy } from "../utils/constants";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { Outcome, TailFilterMessage } from "./filters";
-import type { Request } from "undici";
 
 export type { TailCLIFilters } from "./filters";
 export { translateCLICommandToFilterMessage } from "./filters";

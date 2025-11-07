@@ -1,5 +1,24 @@
-import { resolveDockerHost } from "@cloudflare/containers-shared";
+import type {
+	MiniflareOptions,
+	ModuleRule,
+	RemoteProxyConnectionString,
+	WorkerOptions,
+} from "miniflare";
+
 import { kCurrentWorker, Miniflare } from "miniflare";
+
+import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
+import type {
+	Config,
+	RawConfig,
+	RawEnvironment,
+} from "@cloudflare/workers-utils";
+
+import { resolveDockerHost } from "@cloudflare/containers-shared";
+
+import type { AssetsOptions } from "../../../assets";
+import type { RemoteProxySession } from "../../remoteBindings";
+
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
@@ -22,20 +41,6 @@ import { dedent } from "../../../utils/dedent";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
-import type { AssetsOptions } from "../../../assets";
-import type { RemoteProxySession } from "../../remoteBindings";
-import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
-import type {
-	Config,
-	RawConfig,
-	RawEnvironment,
-} from "@cloudflare/workers-utils";
-import type {
-	MiniflareOptions,
-	ModuleRule,
-	RemoteProxyConnectionString,
-	WorkerOptions,
-} from "miniflare";
 
 export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
 export { readConfig as unstable_readConfig };
@@ -483,7 +488,7 @@ export function unstable_getMiniflareWorkerOptions(
 		compatibilityFlags: config.compatibility_flags,
 		modulesRules,
 		containerEngine: useContainers
-			? config.dev.container_engine ?? resolveDockerHost(getDockerPath())
+			? (config.dev.container_engine ?? resolveDockerHost(getDockerPath()))
 			: undefined,
 
 		...bindingOptions,

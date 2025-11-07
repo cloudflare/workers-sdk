@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { space } from "..";
 
 describe("cli", () => {

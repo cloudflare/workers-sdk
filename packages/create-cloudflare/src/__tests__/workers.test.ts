@@ -1,11 +1,13 @@
+import type { C3Context } from "types";
+
 import { existsSync } from "fs";
 import { mockSpinner } from "helpers/__tests__/mocks";
 import { getLatestTypesEntrypoint } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+
 import { updateTsConfig } from "../workers";
 import { createTestContext } from "./helpers";
-import type { C3Context } from "types";
 
 vi.mock("helpers/files");
 vi.mock("helpers/compatDate");
@@ -31,7 +33,7 @@ describe("updateTsConfig", () => {
 
 		// Mock the read of tsconfig.json
 		vi.mocked(readFile).mockImplementation(
-			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`,
+			() => `{ "compilerOptions": { "types": ["@cloudflare/workers-types"]} }`
 		);
 	});
 
@@ -43,7 +45,7 @@ describe("updateTsConfig", () => {
 		expect(writeFile).toHaveBeenCalled();
 
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
-			`"@cloudflare/workers-types/${mockCompatDate}"`,
+			`"@cloudflare/workers-types/${mockCompatDate}"`
 		);
 	});
 
@@ -66,12 +68,12 @@ describe("updateTsConfig", () => {
 		ctx.template.workersTypes = "installed";
 		vi.mocked(readFile).mockImplementation(
 			() =>
-				`{ "compilerOptions": { "types" : ["@cloudflare/workers-types/2021-03-20"]} }`,
+				`{ "compilerOptions": { "types" : ["@cloudflare/workers-types/2021-03-20"]} }`
 		);
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
-			`"@cloudflare/workers-types/2021-03-20"`,
+			`"@cloudflare/workers-types/2021-03-20"`
 		);
 	});
 
@@ -85,7 +87,7 @@ describe("updateTsConfig", () => {
 		});
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 		expect(vi.mocked(writeFile).mock.calls[0][1]).not.toContain(
-			`"@cloudflare/workers-types/2021-03-20"`,
+			`"@cloudflare/workers-types/2021-03-20"`
 		);
 	});
 
@@ -100,14 +102,14 @@ describe("updateTsConfig", () => {
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
-			`"@cloudflare/workers-types/2021-03-20"`,
+			`"@cloudflare/workers-types/2021-03-20"`
 		);
 	});
 
 	test("will add generated types file", async () => {
 		await updateTsConfig(ctx, { usesNodeCompat: false });
 		expect(vi.mocked(writeFile).mock.calls[0][1]).toContain(
-			`./worker-configuration.d.ts`,
+			`./worker-configuration.d.ts`
 		);
 	});
 });

@@ -1,6 +1,7 @@
+import { glob } from "glob";
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { glob } from "glob";
+
 import type { PackageJSON } from "./validate-fixtures";
 
 if (require.main === module) {

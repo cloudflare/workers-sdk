@@ -1,3 +1,5 @@
+import type { D1QueriesGraphQLResponse, Database } from "./types";
+
 import { fetchGraphqlResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
@@ -6,7 +8,6 @@ import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromIdOrName,
 } from "./utils";
-import type { D1QueriesGraphQLResponse, Database } from "./types";
 
 const cliOptionToGraphQLOption = {
 	time: "queryDurationMs",

@@ -1,4 +1,5 @@
 import { assert, describe, expect, test, vi } from "vitest";
+
 import { parseArgs } from "../args";
 
 vi.mock("@cloudflare/cli");
@@ -28,7 +29,7 @@ describe("Cli", () => {
 			expect(result.showHelpMessage).toBe(true);
 			expect(result.args).not.toBe(null);
 			expect(result.errorMessage).toBe(
-				"Too many positional arguments provided",
+				"Too many positional arguments provided"
 			);
 		});
 
@@ -116,13 +117,13 @@ describe("Cli", () => {
 		test.each(stringArgs)("%s requires an argument", async (arg) => {
 			const logSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 			await expect(
-				parseArgs(["my-react-project", `--${arg}`]),
+				parseArgs(["my-react-project", `--${arg}`])
 			).resolves.toEqual({
 				type: "unknown",
 				args: null,
 			});
 			expect(logSpy).toHaveBeenCalledWith(
-				expect.stringContaining(`Not enough arguments following: ${arg}`),
+				expect.stringContaining(`Not enough arguments following: ${arg}`)
 			);
 		});
 

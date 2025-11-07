@@ -1,6 +1,7 @@
+import type { Config } from "@cloudflare/workers-utils";
+
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
-import type { Config } from "@cloudflare/workers-utils";
 
 export type HyperdriveConfig = {
 	id: string;

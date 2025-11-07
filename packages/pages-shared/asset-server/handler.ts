@@ -2,6 +2,15 @@ import {
 	generateRulesMatcher,
 	replacer,
 } from "@cloudflare/workers-shared/asset-worker/src/utils/rules-engine";
+
+import type {
+	Metadata,
+	MetadataHeadersEntries,
+	MetadataHeadersRulesV2,
+	MetadataHeadersV1,
+	MetadataHeadersV2,
+} from "./metadata";
+
 import {
 	FoundResponse,
 	InternalServerErrorResponse,
@@ -15,13 +24,6 @@ import {
 	SeeOtherResponse,
 	TemporaryRedirectResponse,
 } from "./responses";
-import type {
-	Metadata,
-	MetadataHeadersEntries,
-	MetadataHeadersRulesV2,
-	MetadataHeadersV1,
-	MetadataHeadersV2,
-} from "./metadata";
 
 type BodyEncoding = "manual" | "automatic";
 

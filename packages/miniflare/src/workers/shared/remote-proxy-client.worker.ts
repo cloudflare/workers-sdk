@@ -1,5 +1,6 @@
 import { newWebSocketRpcSession } from "capnweb";
 import { WorkerEntrypoint } from "cloudflare:workers";
+
 import { makeFetch } from "./remote-bindings-utils";
 
 type Env = {

@@ -1,7 +1,20 @@
+import type {
+	DeploymentV2,
+	ModifyDeploymentV2RequestBody,
+	SSHPublicKeyID,
+} from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
+
 import { cancel, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
+
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
+
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
@@ -24,16 +37,6 @@ import {
 } from "./instance-type/instance-type";
 import { loadAccount } from "./locations";
 import { sshPrompts } from "./ssh/ssh";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
-import type {
-	DeploymentV2,
-	ModifyDeploymentV2RequestBody,
-	SSHPublicKeyID,
-} from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
 
 export function modifyCommandOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs

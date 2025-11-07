@@ -1,5 +1,6 @@
-import { createCLIParser } from "./index";
 import type { DefinitionTreeNode } from "./core/types";
+
+import { createCLIParser } from "./index";
 
 /**
  * EXPERIMENTAL: Get all registered Wrangler commands for documentation generation.

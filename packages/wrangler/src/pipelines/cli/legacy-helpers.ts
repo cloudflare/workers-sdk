@@ -1,4 +1,9 @@
+import type { Config } from "@cloudflare/workers-utils";
+
 import { APIError, FatalError, UserError } from "@cloudflare/workers-utils";
+
+import type { BindingSource, HttpSource, Source } from "../legacy-client";
+
 import { confirm } from "../../dialogs";
 import { logger } from "../../logger";
 import {
@@ -14,8 +19,6 @@ import {
 	updatePipeline,
 } from "../legacy-client";
 import { validateName } from "../validate";
-import type { BindingSource, HttpSource, Source } from "../legacy-client";
-import type { Config } from "@cloudflare/workers-utils";
 
 export async function listLegacyPipelines(
 	config: Config,

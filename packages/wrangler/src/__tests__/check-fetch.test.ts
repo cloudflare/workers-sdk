@@ -1,4 +1,5 @@
 import "vitest";
+
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
 
 describe("shouldCheckFetch()", () => {

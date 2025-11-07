@@ -1,3 +1,5 @@
+import React, { createContext, useEffect, useState } from "react";
+
 import { Div } from "@cloudflare/elements";
 import {
 	isDarkMode,
@@ -6,7 +8,7 @@ import {
 } from "@cloudflare/style-const";
 import { createComponent } from "@cloudflare/style-container";
 import { BACKGROUND_GRAY, SplitPane } from "@cloudflare/workers-editor-shared";
-import React, { createContext, useEffect, useState } from "react";
+
 import defaultHashes from "./defaultHashes";
 import EditorPane from "./EditorPane";
 import ToolsPane from "./ToolsPane";

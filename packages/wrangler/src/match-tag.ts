@@ -1,15 +1,18 @@
+import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
+
 import {
 	APIError,
 	configFileName,
 	FatalError,
 	formatConfigSnippet,
 } from "@cloudflare/workers-utils";
+
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
+
 import { fetchResult } from "./cfetch";
 import { getCIMatchTag } from "./environment-variables/misc-variables";
 import { logger } from "./logger";
 import { getCloudflareAccountIdFromEnv } from "./user/auth-variables";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
-import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
 
 export async function verifyWorkerMatchesCITag(
 	complianceConfig: ComplianceConfig,

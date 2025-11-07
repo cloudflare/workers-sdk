@@ -1,8 +1,19 @@
+import type { watch } from "chokidar";
+
 import assert from "node:assert";
 import path from "node:path";
+import dedent from "ts-dedent";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import { bold, green } from "@cloudflare/cli/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import dedent from "ts-dedent";
+
+import type { AsyncHook, StartDevWorkerInput, Trigger } from "../api";
+import type { StartDevOptions } from "../dev";
+import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
+import type { CfAccount } from "./create-worker-preview";
+
 import { DevEnv } from "../api";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
 import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
@@ -18,12 +29,6 @@ import {
 	collectKeyValues,
 	collectPlainTextVars,
 } from "../utils/collectKeyValues";
-import type { AsyncHook, StartDevWorkerInput, Trigger } from "../api";
-import type { StartDevOptions } from "../dev";
-import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
-import type { CfAccount } from "./create-worker-preview";
-import type { Config } from "@cloudflare/workers-utils";
-import type { watch } from "chokidar";
 
 /**
  * Starts one (primary) or more (secondary) DevEnv environments given the `args`.

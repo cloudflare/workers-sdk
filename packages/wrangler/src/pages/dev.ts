@@ -1,15 +1,27 @@
+import { watch } from "chokidar";
+import * as esbuild from "esbuild";
 import { execSync, spawn } from "node:child_process";
 import events from "node:events";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import path, { dirname, join, normalize, resolve } from "node:path";
+
+import type {
+	CfModule,
+	Config,
+	DurableObjectBindings,
+	EnvironmentNonInheritable,
+} from "@cloudflare/workers-utils";
+
 import {
 	configFileName,
 	FatalError,
 	formatCompatibilityDate,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { watch } from "chokidar";
-import * as esbuild from "esbuild";
+
+import type { AdditionalDevProps } from "../dev";
+import type { RoutesJSONSpec } from "./functions/routes-transformation";
+
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
@@ -34,14 +46,6 @@ import {
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
-import type { AdditionalDevProps } from "../dev";
-import type { RoutesJSONSpec } from "./functions/routes-transformation";
-import type {
-	CfModule,
-	Config,
-	DurableObjectBindings,
-	EnvironmentNonInheritable,
-} from "@cloudflare/workers-utils";
 
 /*
  * DURABLE_OBJECTS_BINDING_REGEXP matches strings like:

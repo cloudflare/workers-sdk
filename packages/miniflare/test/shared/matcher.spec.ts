@@ -1,7 +1,7 @@
-import path from "path";
-import { pathToFileURL } from "url";
 import test from "ava";
 import { globsToRegExps, testRegExps } from "miniflare";
+import path from "path";
+import { pathToFileURL } from "url";
 
 test("globsToRegExps/testRegExps: matches glob patterns", (t) => {
 	const globs = ["**/*.txt", "src/**/*.js", "!src/bad.js", "thing/*/*.jpg"];

@@ -1,8 +1,9 @@
 import { resolve } from "node:path";
+import { defineConfig } from "vite";
+
 import { cloudflare } from "@cloudflare/vite-plugin";
 // @ts-ignore
 import testDepPlugin from "@playground/module-resolution-excludes/plugin";
-import { defineConfig } from "vite";
 
 export default defineConfig({
 	resolve: {

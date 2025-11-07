@@ -1,3 +1,10 @@
+import type {
+	InvalidRedirectRule,
+	ParsedRedirects,
+	RedirectLine,
+	RedirectRule,
+} from "./types";
+
 import {
 	MAX_DYNAMIC_REDIRECT_RULES,
 	MAX_LINE_LENGTH,
@@ -7,12 +14,6 @@ import {
 	SPLAT_REGEX,
 } from "./constants";
 import { urlHasHost, validateUrl } from "./validateURL";
-import type {
-	InvalidRedirectRule,
-	ParsedRedirects,
-	RedirectLine,
-	RedirectRule,
-} from "./types";
 
 export function parseRedirects(
 	input: string,

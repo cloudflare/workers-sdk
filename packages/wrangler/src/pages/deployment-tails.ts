@@ -1,6 +1,12 @@
 import { setTimeout } from "node:timers/promises";
-import { FatalError } from "@cloudflare/workers-utils";
 import onExit from "signal-exit";
+
+import type { Deployment } from "@cloudflare/types";
+
+import { FatalError } from "@cloudflare/workers-utils";
+
+import type { PagesConfigCache } from "./types";
+
 import { fetchResult } from "../cfetch";
 import { readConfig } from "../config";
 import { getConfigCache } from "../config-cache";
@@ -19,8 +25,6 @@ import { requireAuth } from "../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import { isUrl } from "./utils";
-import type { PagesConfigCache } from "./types";
-import type { Deployment } from "@cloudflare/types";
 
 const statusChoices = ["ok", "error", "canceled"] as const;
 type StatusChoice = (typeof statusChoices)[number];

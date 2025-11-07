@@ -1,9 +1,12 @@
+import type { Writable } from "node:stream";
+
 import { tmpdir } from "node:os";
+
 import { stripAnsi } from "@cloudflare/cli";
+
 import { version } from "../../package.json";
 import { keys } from "./constants";
 import { spawnWithLogging, testEnv, waitForExit } from "./spawn";
-import type { Writable } from "node:stream";
 
 export type PromptHandler = {
 	matcher: RegExp;
@@ -64,7 +67,7 @@ export const runC3 = async (
 	argv: string[] = [],
 	promptHandlers: PromptHandler[] = [],
 	logStream: Writable,
-	extraEnv: Record<string, string | undefined> = {},
+	extraEnv: Record<string, string | undefined> = {}
 ) => {
 	// We don't use the "test" package manager here (i.e. E2E_TEST_PM and E2E_TEST_PM_VERSION) because yarn 1.x doesn't actually provide a `dlx` version.
 	// And in any case, this first step just installs a temp copy of create-cloudflare and executes it.
@@ -73,7 +76,7 @@ export const runC3 = async (
 	const proc = spawnWithLogging(
 		cmd,
 		{ env: { ...testEnv, ...extraEnv }, cwd: tmpdir() },
-		logStream,
+		logStream
 	);
 
 	const onData = (data: string) => {
@@ -96,7 +99,7 @@ export const runC3 = async (
 		}
 
 		const matchesPrompt = lines.some((line) =>
-			currentDialog.matcher.test(line),
+			currentDialog.matcher.test(line)
 		);
 
 		// if we don't match the current question and we haven't already matched it previously
@@ -118,7 +121,7 @@ export const runC3 = async (
 				!text.includes(assertErrorMessage)
 			) {
 				throw new Error(
-					`The error message does not match; Expected "${assertErrorMessage}" but found "${text}".`,
+					`The error message does not match; Expected "${assertErrorMessage}" but found "${text}".`
 				);
 			}
 
@@ -152,7 +155,7 @@ export const runC3 = async (
 				assertDefaultSelection !== currentSelection
 			) {
 				throw new Error(
-					`The default selection does not match; Expected "${assertDefaultSelection}" but found "${currentSelection}".`,
+					`The default selection does not match; Expected "${assertDefaultSelection}" but found "${currentSelection}".`
 				);
 			}
 
@@ -168,7 +171,7 @@ export const runC3 = async (
 				!description.includes(assertDescriptionText)
 			) {
 				throw new Error(
-					`The description does not match; Expected "${assertDescriptionText}" but found "${description}".`,
+					`The description does not match; Expected "${assertDescriptionText}" but found "${description}".`
 				);
 			}
 

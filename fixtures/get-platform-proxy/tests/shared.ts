@@ -1,5 +1,6 @@
-import { getPlatformProxy as originalGetPlatformProxy } from "wrangler";
 import type { GetPlatformProxyOptions } from "wrangler";
+
+import { getPlatformProxy as originalGetPlatformProxy } from "wrangler";
 
 // Here we wrap the actual original getPlatformProxy function and disable its persistance, this is to make sure
 // that we don't implement any persistance during these tests (which would add unnecessary extra complexity)

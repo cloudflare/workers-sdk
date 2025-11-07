@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import SCRIPT_R2_BUCKET_OBJECT from "worker:r2/bucket";
 import { z } from "zod";
+
 import {
 	Service,
 	Worker_Binding,

@@ -1,3 +1,5 @@
+import type { C3Context } from "types";
+
 import { existsSync } from "fs";
 import {
 	detectPackageManager,
@@ -5,8 +7,8 @@ import {
 } from "helpers/packageManagers";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
+
 import { mockPackageManager } from "./mocks";
-import type { C3Context } from "types";
 
 vi.mock("fs");
 vi.mock("which-pm-runs");
@@ -89,10 +91,10 @@ describe("Package Managers", () => {
 				["bun.lockb", true],
 			])("with %s", (file, isMismatch) => {
 				vi.mocked(existsSync).mockImplementationOnce(
-					(path) => !!(path as string).includes(file),
+					(path) => !!(path as string).includes(file)
 				);
 				expect(detectPmMismatch({ project: { path: "" } } as C3Context)).toBe(
-					isMismatch,
+					isMismatch
 				);
 			});
 		});
@@ -109,10 +111,10 @@ describe("Package Managers", () => {
 				["bun.lockb", true],
 			])("with %s", (file, isMismatch) => {
 				vi.mocked(existsSync).mockImplementationOnce(
-					(path) => !!(path as string).includes(file),
+					(path) => !!(path as string).includes(file)
 				);
 				expect(detectPmMismatch({ project: { path: "" } } as C3Context)).toBe(
-					isMismatch,
+					isMismatch
 				);
 			});
 		});
@@ -129,10 +131,10 @@ describe("Package Managers", () => {
 				["bun.lockb", false],
 			])("with %s", (file, isMismatch) => {
 				vi.mocked(existsSync).mockImplementationOnce(
-					(path) => !!(path as string).includes(file),
+					(path) => !!(path as string).includes(file)
 				);
 				expect(detectPmMismatch({ project: { path: "" } } as C3Context)).toBe(
-					isMismatch,
+					isMismatch
 				);
 			});
 		});

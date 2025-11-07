@@ -1,5 +1,3 @@
-import events from "node:events";
-import { setTimeout } from "node:timers/promises";
 import test from "ava";
 import getPort from "get-port";
 import {
@@ -8,6 +6,8 @@ import {
 	MiniflareCoreError,
 	MiniflareOptions,
 } from "miniflare";
+import events from "node:events";
+import { setTimeout } from "node:timers/promises";
 import WebSocket from "ws";
 
 const nullScript =

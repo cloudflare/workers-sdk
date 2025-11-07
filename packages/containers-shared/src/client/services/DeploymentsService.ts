@@ -1,8 +1,3 @@
-/* istanbul ignore file */
-/* tslint:disable */
-/* eslint-disable */
-import { OpenAPI } from "../core/OpenAPI";
-import { request as __request } from "../core/request";
 import type { CancelablePromise } from "../core/CancelablePromise";
 import type { ApplicationID } from "../models/ApplicationID";
 import type { CreateDeploymentV2RequestBody } from "../models/CreateDeploymentV2RequestBody";
@@ -18,6 +13,12 @@ import type { ModifyDeploymentV2RequestBody } from "../models/ModifyDeploymentV2
 import type { ModifyUserDeploymentConfiguration } from "../models/ModifyUserDeploymentConfiguration";
 import type { PlacementID } from "../models/PlacementID";
 import type { ReplaceDeploymentRequestBody } from "../models/ReplaceDeploymentRequestBody";
+
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+import { OpenAPI } from "../core/OpenAPI";
+import { request as __request } from "../core/request";
 
 export class DeploymentsService {
 	/**

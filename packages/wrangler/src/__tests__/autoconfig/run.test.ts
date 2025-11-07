@@ -1,8 +1,17 @@
+import type { MockInstance } from "vitest";
+
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { FatalError, readFileSync } from "@cloudflare/workers-utils";
 import { vi } from "vitest";
+
+import type { Config } from "@cloudflare/workers-utils";
+
+import { FatalError, readFileSync } from "@cloudflare/workers-utils";
+
+import type { Framework } from "../../autoconfig/frameworks";
+import type { AutoConfigDetails } from "../../autoconfig/types";
+
 import * as c3 from "../../autoconfig/c3-vendor/packages";
 import * as details from "../../autoconfig/details";
 import * as run from "../../autoconfig/run";
@@ -18,10 +27,6 @@ import { runWrangler } from "../helpers/run-wrangler";
 import { seed } from "../helpers/seed";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
-import type { Framework } from "../../autoconfig/frameworks";
-import type { AutoConfigDetails } from "../../autoconfig/types";
-import type { Config } from "@cloudflare/workers-utils";
-import type { MockInstance } from "vitest";
 
 vi.mock("../../package-manager", () => ({
 	getPackageManager() {

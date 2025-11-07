@@ -1,9 +1,11 @@
+import type { TestProject } from "vitest/node";
+
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import util from "node:util";
+
 import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
-import type { TestProject } from "vitest/node";
 
 const debuglog = util.debuglog("vite-plugin:test");
 

@@ -1,7 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { createCommand } from "../core/create-command";
-import { logger } from "../logger";
-import { queryIndexByVector, queryIndexByVectorId } from "./client";
+
 import type {
 	VectorizeMatches,
 	VectorizeMetadataFilterValue,
@@ -10,6 +8,10 @@ import type {
 	VectorizeVectorMetadataFilter,
 	VectorizeVectorMetadataFilterOp,
 } from "./types";
+
+import { createCommand } from "../core/create-command";
+import { logger } from "../logger";
+import { queryIndexByVector, queryIndexByVectorId } from "./client";
 
 export const vectorizeQueryCommand = createCommand({
 	metadata: {

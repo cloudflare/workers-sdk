@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+
 import { createdResourceConfig } from "../utils/add-created-resource-config";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";

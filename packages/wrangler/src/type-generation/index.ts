@@ -1,6 +1,12 @@
+import chalk from "chalk";
+import { findUpSync } from "find-up";
+import { getNodeCompat } from "miniflare";
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
+
+import type { Config, RawEnvironment } from "@cloudflare/workers-utils";
+
 import {
 	CommandLineArgsError,
 	configFileName,
@@ -8,9 +14,9 @@ import {
 	parseJSONC,
 	UserError,
 } from "@cloudflare/workers-utils";
-import chalk from "chalk";
-import { findUpSync } from "find-up";
-import { getNodeCompat } from "miniflare";
+
+import type { Entry } from "../deployment-bundle/entry";
+
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
@@ -20,8 +26,6 @@ import { logger } from "../logger";
 import { isProcessEnvPopulated } from "../process-env";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
-import type { Entry } from "../deployment-bundle/entry";
-import type { Config, RawEnvironment } from "@cloudflare/workers-utils";
 
 export const typesCommand = createCommand({
 	metadata: {

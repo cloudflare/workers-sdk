@@ -1,6 +1,7 @@
 /// <reference path="middleware-patch-console-prefix.d.ts"/>
 
 import { prefix } from "config:middleware/patch-console-prefix";
+
 import type { Middleware } from "./common";
 
 // @ts-expect-error globalThis.console _does_ exist

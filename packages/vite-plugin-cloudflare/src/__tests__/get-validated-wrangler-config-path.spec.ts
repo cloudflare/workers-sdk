@@ -1,6 +1,7 @@
 import { join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
+
 import { getValidatedWranglerConfigPath } from "../workers-configs";
 
 const fixturesPath = fileURLToPath(new URL("fixtures", import.meta.url));

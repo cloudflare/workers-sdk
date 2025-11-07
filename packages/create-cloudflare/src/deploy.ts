@@ -1,15 +1,19 @@
-import { mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { startSection, updateStatus } from "@cloudflare/cli";
-import { blue, brandColor, dim } from "@cloudflare/cli/colors";
-import TOML from "@iarna/toml";
+import type { C3Context } from "types";
+
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS, openInBrowser } from "helpers/cli";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { readFile } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { poll } from "helpers/poll";
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { startSection, updateStatus } from "@cloudflare/cli";
+import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import TOML from "@iarna/toml";
+
 import { isInsideGitRepo } from "./git";
 import { chooseAccount, wranglerLogin } from "./wrangler/accounts";
 import {
@@ -17,7 +21,6 @@ import {
 	readWranglerToml,
 	wranglerJsonExists,
 } from "./wrangler/config";
-import type { C3Context } from "types";
 
 export const offerToDeploy = async (ctx: C3Context) => {
 	const { npm } = detectPackageManager();
@@ -29,8 +32,8 @@ export const offerToDeploy = async (ctx: C3Context) => {
 		ctx.args.deploy = false;
 		updateStatus(
 			`Bindings must be configured in ${blue(
-				"`wrangler.toml`",
-			)} before your application can be deployed`,
+				"`wrangler.toml`"
+			)} before your application can be deployed`
 		);
 	}
 
@@ -113,7 +116,7 @@ export const runDeploy = async (ctx: C3Context) => {
 
 	const outputFile = join(
 		await mkdtemp(join(tmpdir(), "c3-wrangler-deploy-")),
-		"output.json",
+		"output.json"
 	);
 
 	await runCommand(deployCmd, {
@@ -125,7 +128,7 @@ export const runDeploy = async (ctx: C3Context) => {
 		},
 		startText: "Deploying your application",
 		doneText: `${brandColor("deployed")} ${dim(
-			`via \`${quoteShellArgs(baseDeployCmd)}\``,
+			`via \`${quoteShellArgs(baseDeployCmd)}\``
 		)}`,
 	});
 

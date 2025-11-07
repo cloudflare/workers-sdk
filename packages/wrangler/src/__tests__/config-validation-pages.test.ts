@@ -1,8 +1,9 @@
+import type { Config } from "@cloudflare/workers-utils";
+
 import {
 	defaultWranglerConfig,
 	validatePagesConfig,
 } from "@cloudflare/workers-utils";
-import type { Config } from "@cloudflare/workers-utils";
 
 describe("validatePagesConfig()", () => {
 	describe("`main` field validation", () => {

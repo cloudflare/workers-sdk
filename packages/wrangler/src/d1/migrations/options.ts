@@ -1,5 +1,6 @@
-import { Database } from "../options";
 import type { CommonYargsArgv } from "../../yargs-types";
+
+import { Database } from "../options";
 
 export function MigrationOptions(yargs: CommonYargsArgv) {
 	return Database(yargs)

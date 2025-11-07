@@ -1,4 +1,13 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+
+import type {
+	AssetConfig,
+	ColoMetadata,
+	JaegerTracing,
+	UnsafePerformanceTimer,
+} from "../../utils/types";
+import type { Environment, ReadyAnalytics } from "./types";
+
 import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
 import { mockJaegerBinding } from "../../utils/tracing";
@@ -9,13 +18,6 @@ import { ExperimentAnalytics } from "./experiment-analytics";
 import { canFetch, handleRequest } from "./handler";
 import { handleError, submitMetrics } from "./utils/final-operations";
 import { getAssetWithMetadataFromKV } from "./utils/kv";
-import type {
-	AssetConfig,
-	ColoMetadata,
-	JaegerTracing,
-	UnsafePerformanceTimer,
-} from "../../utils/types";
-import type { Environment, ReadyAnalytics } from "./types";
 
 export type Env = {
 	/*

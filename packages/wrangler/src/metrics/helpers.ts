@@ -1,4 +1,5 @@
 import os from "node:os";
+
 import { version as wranglerVersion } from "../../package.json";
 
 export function getWranglerVersion() {

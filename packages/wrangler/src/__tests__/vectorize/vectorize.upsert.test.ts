@@ -1,13 +1,15 @@
+import { http, HttpResponse } from "msw";
 import crypto from "node:crypto";
 import { writeFileSync } from "node:fs";
-import { http, HttpResponse } from "msw";
+
+import type { VectorizeVector } from "../../vectorize/types";
+
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { toString } from "../helpers/serialize-form-data-entry";
-import type { VectorizeVector } from "../../vectorize/types";
 
 describe("dataset upsert", () => {
 	const std = mockConsoleMethods();

@@ -1,7 +1,16 @@
+import type { Metafile } from "esbuild";
+import type { NodeJSCompatMode } from "miniflare";
+
+import { watch } from "chokidar";
 import assert from "node:assert";
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
-import { watch } from "chokidar";
+
+import type { CfModule, CfModuleType, Config } from "@cloudflare/workers-utils";
+
+import type { SourceMapMetadata } from "../deployment-bundle/bundle";
+import type { Entry } from "../deployment-bundle/entry";
+
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { getBundleType } from "../deployment-bundle/bundle-type";
 import { dedupeModulesByName } from "../deployment-bundle/dedupe-modules";
@@ -12,11 +21,6 @@ import {
 	getWrangler1xLegacyModuleReferences,
 	noopModuleCollector,
 } from "../deployment-bundle/module-collection";
-import type { SourceMapMetadata } from "../deployment-bundle/bundle";
-import type { Entry } from "../deployment-bundle/entry";
-import type { CfModule, CfModuleType, Config } from "@cloudflare/workers-utils";
-import type { Metafile } from "esbuild";
-import type { NodeJSCompatMode } from "miniflare";
 
 export type EsbuildBundle = {
 	id: number;

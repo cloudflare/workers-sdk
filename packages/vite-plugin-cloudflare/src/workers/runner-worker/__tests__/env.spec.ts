@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { stripInternalEnv } from "../env";
 
 const internalEnv = {

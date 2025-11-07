@@ -1,7 +1,7 @@
+import type { Writable } from "stream";
+
 import assert from "assert";
 import { existsSync } from "fs";
-import { setTimeout } from "node:timers/promises";
-import { join } from "path";
 import getPort from "get-port";
 import { runCommand } from "helpers/command";
 import {
@@ -15,8 +15,14 @@ import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
 import * as jsonc from "jsonc-parser";
+import { setTimeout } from "node:timers/promises";
+import { join } from "path";
 import { fetch } from "undici";
 import { expect } from "vitest";
+
+import type { TemplateConfig } from "../../src/templates";
+import type { RunnerConfig } from "./run-c3";
+
 import { version } from "../../package.json";
 import { getFrameworkMap } from "../../src/templates";
 import {
@@ -28,9 +34,6 @@ import {
 } from "./constants";
 import { runC3 } from "./run-c3";
 import { kill, spawnWithLogging } from "./spawn";
-import type { TemplateConfig } from "../../src/templates";
-import type { RunnerConfig } from "./run-c3";
-import type { Writable } from "stream";
 
 export type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
@@ -51,7 +54,7 @@ export async function runC3ForFrameworkTest(
 		argv = [],
 		promptHandlers = [],
 		extraEnv,
-	}: Pick<FrameworkTestConfig, "argv" | "promptHandlers" | "extraEnv">,
+	}: Pick<FrameworkTestConfig, "argv" | "promptHandlers" | "extraEnv">
 ) {
 	const args = [
 		projectPath,
@@ -89,7 +92,7 @@ export async function runC3ForFrameworkTest(
 export function updateWranglerConfig(
 	projectPath: string,
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	handleUpdate: <T extends Record<string, any>>(config: T) => T,
+	handleUpdate: <T extends Record<string, any>>(config: T) => T
 ) {
 	const wranglerTomlPath = join(projectPath, "wrangler.toml");
 	const wranglerJsoncPath = join(projectPath, "wrangler.jsonc");
@@ -99,7 +102,7 @@ export function updateWranglerConfig(
 
 		writeToml(
 			wranglerTomlPath,
-			handleUpdate(JSON.parse(JSON.stringify(wranglerToml))),
+			handleUpdate(JSON.parse(JSON.stringify(wranglerToml)))
 		);
 
 		return () => {
@@ -112,7 +115,7 @@ export function updateWranglerConfig(
 
 		writeJSON(
 			wranglerJsoncPath,
-			handleUpdate(JSON.parse(JSON.stringify(wranglerJsonc))),
+			handleUpdate(JSON.parse(JSON.stringify(wranglerJsonc)))
 		);
 
 		return () => {
@@ -144,7 +147,7 @@ export async function verifyDeployment(
 	frameworkId: string,
 	projectName: string,
 	deploymentUrl: string,
-	expectedText: string,
+	expectedText: string
 ) {
 	if (!runDeployTests) {
 		return;
@@ -160,7 +163,7 @@ export async function verifyDeployment(
 		const body = await res.text();
 		if (!body.includes(expectedText)) {
 			throw new Error(
-				`Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedText}"`,
+				`Deployed page (${deploymentUrl}) didn't contain expected string: "${expectedText}"`
 			);
 		}
 	});
@@ -170,7 +173,7 @@ export async function verifyDevScript(
 	{ verifyDev }: FrameworkTestConfig,
 	{ devScript }: TemplateConfig,
 	projectPath: string,
-	logStream: Writable,
+	logStream: Writable
 ) {
 	if (!verifyDev) {
 		return;
@@ -179,7 +182,7 @@ export async function verifyDevScript(
 	assert(
 		devScript,
 		"Expected a dev script as we are verifying the dev session in " +
-			projectPath,
+			projectPath
 	);
 
 	// Run the dev-server on random ports to avoid colliding with other tests
@@ -200,7 +203,7 @@ export async function verifyDevScript(
 				VITEST: undefined,
 			},
 		},
-		logStream,
+		logStream
 	);
 
 	let restoreConfig: (() => void) | undefined;
@@ -208,7 +211,7 @@ export async function verifyDevScript(
 	try {
 		await retry(
 			{ times: 300, sleepMs: 5000 },
-			async () => await fetch(`http://127.0.0.1:${port}${verifyDev.route}`),
+			async () => await fetch(`http://127.0.0.1:${port}${verifyDev.route}`)
 		);
 
 		// Make a request to the specified test route
@@ -247,7 +250,7 @@ export async function verifyPreviewScript(
 	{ verifyPreview }: FrameworkTestConfig,
 	{ previewScript }: TemplateConfig,
 	projectPath: string,
-	logStream: Writable,
+	logStream: Writable
 ) {
 	if (!verifyPreview) {
 		return;
@@ -256,7 +259,7 @@ export async function verifyPreviewScript(
 	assert(
 		previewScript,
 		"Expected a preview script is we are verifying the preview in " +
-			projectPath,
+			projectPath
 	);
 
 	// Run the dev-server on random ports to avoid colliding with other tests
@@ -278,7 +281,7 @@ export async function verifyPreviewScript(
 				VITEST: undefined,
 			},
 		},
-		logStream,
+		logStream
 	);
 
 	try {
@@ -286,7 +289,7 @@ export async function verifyPreviewScript(
 		// so wait up to 5 mins for the dev-server to be ready.
 		await retry(
 			{ times: 300, sleepMs: 5000 },
-			async () => await fetch(`http://localhost:${port}${verifyPreview.route}`),
+			async () => await fetch(`http://localhost:${port}${verifyPreview.route}`)
 		);
 
 		// Make a request to the specified test route
@@ -308,7 +311,7 @@ export async function verifyTypes(
 		typesPath = "./worker-configuration.d.ts",
 		envInterfaceName = "Env",
 	}: TemplateConfig,
-	projectPath: string,
+	projectPath: string
 ) {
 	if (workersTypes === "none") {
 		return;
@@ -321,14 +324,14 @@ export async function verifyTypes(
 			// old type gen - some framework templates pin older versions of wrangler
 			line === `interface ${envInterfaceName} {` ||
 			// new after importable env change
-			line === `interface ${envInterfaceName} extends Cloudflare.Env {}`,
+			line === `interface ${envInterfaceName} extends Cloudflare.Env {}`
 	);
 	expect(hasEnvInterface).toBe(true);
 
 	// if the runtime types were installed, they wont be in this file
 	if (workersTypes === "generated") {
 		expect(outputFileContent[2]).match(
-			/\/\/ Runtime types generated with workerd@1\.\d{8}\.\d \d{4}-\d{2}-\d{2} ([a-z_]+,?)*/,
+			/\/\/ Runtime types generated with workerd@1\.\d{8}\.\d \d{4}-\d{2}-\d{2} ([a-z_]+,?)*/
 		);
 	}
 
@@ -340,9 +343,7 @@ export async function verifyTypes(
 	}
 	if (workersTypes === "installed") {
 		expect(
-			tsconfigTypes.some((x: string) =>
-				x.includes("@cloudflare/workers-types"),
-			),
+			tsconfigTypes.some((x: string) => x.includes("@cloudflare/workers-types"))
 		).toBe(true);
 	}
 	if (nodeCompat) {
@@ -352,7 +353,7 @@ export async function verifyTypes(
 
 export function shouldRunTest(
 	frameworkId: string,
-	testConfig: FrameworkTestConfig,
+	testConfig: FrameworkTestConfig
 ) {
 	return (
 		// Skip if the test is quarantined
@@ -379,17 +380,17 @@ export function getFrameworkConfig(frameworkKey: string) {
 	if ("platformVariants" in frameworkMap[frameworkId]) {
 		assert(
 			platformVariant === "pages" || platformVariant === "workers",
-			`Missing or invalid platformVariant in "${frameworkKey}" test.\nPlease update the test maps to contain both "${frameworkId}:pages" and "${frameworkId}:workers" properties.`,
+			`Missing or invalid platformVariant in "${frameworkKey}" test.\nPlease update the test maps to contain both "${frameworkId}:pages" and "${frameworkId}:workers" properties.`
 		);
 		assert(
 			"platformVariants" in frameworkMap[frameworkId],
-			`Expected platformVariants for "${frameworkId}" framework config.`,
+			`Expected platformVariants for "${frameworkId}" framework config.`
 		);
 		return frameworkMap[frameworkId].platformVariants[platformVariant];
 	} else {
 		assert(
 			platformVariant === undefined,
-			`Unexpected platform variant in test for ${frameworkId}`,
+			`Unexpected platform variant in test for ${frameworkId}`
 		);
 		return frameworkMap[frameworkId];
 	}
@@ -401,7 +402,7 @@ export function getFrameworkConfig(frameworkKey: string) {
 export async function testGitCommitMessage(
 	projectName: string,
 	framework: string,
-	projectPath: string,
+	projectPath: string
 ) {
 	const commitMessage = await runCommand(["git", "log", "-1"], {
 		silent: true,
@@ -409,7 +410,7 @@ export async function testGitCommitMessage(
 	});
 
 	expect(commitMessage).toMatch(
-		/Initialize web application via create-cloudflare CLI/,
+		/Initialize web application via create-cloudflare CLI/
 	);
 	expect(commitMessage).toContain(`C3 = create-cloudflare@${version}`);
 	expect(commitMessage).toContain(`project name = ${projectName}`);
@@ -421,7 +422,7 @@ export async function testGitCommitMessage(
  */
 export async function testDeploymentCommitMessage(
 	projectName: string,
-	framework: string,
+	framework: string
 ) {
 	const projectLatestCommitMessage = await retry({ times: 5 }, async () => {
 		// Wait for 2 seconds between each attempt
@@ -434,7 +435,7 @@ export async function testDeploymentCommitMessage(
 				headers: {
 					Authorization: `Bearer ${CLOUDFLARE_API_TOKEN}`,
 				},
-			},
+			}
 		);
 
 		const result = (
@@ -461,10 +462,10 @@ export async function testDeploymentCommitMessage(
 	});
 
 	expect(projectLatestCommitMessage).toMatch(
-		/Initialize web application via create-cloudflare CLI/,
+		/Initialize web application via create-cloudflare CLI/
 	);
 	expect(projectLatestCommitMessage).toContain(
-		`C3 = create-cloudflare@${version}`,
+		`C3 = create-cloudflare@${version}`
 	);
 	expect(projectLatestCommitMessage).toContain(`project name = ${projectName}`);
 	expect(projectLatestCommitMessage).toContain(`framework = ${framework}`);

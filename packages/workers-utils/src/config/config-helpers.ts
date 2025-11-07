@@ -1,11 +1,13 @@
+import { findUpSync } from "find-up";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { findUpSync } from "find-up";
 import dedent from "ts-dedent";
+
+import type { RawConfig, RedirectedRawConfig } from "./config";
+
 import { PATH_TO_DEPLOY_CONFIG } from "../constants";
 import { UserError } from "../errors";
 import { parseJSONC, readFileSync } from "../parse";
-import type { RawConfig, RedirectedRawConfig } from "./config";
 
 export type ResolveConfigPathOptions = {
 	useRedirectIfAvailable?: boolean;

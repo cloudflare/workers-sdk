@@ -1,6 +1,15 @@
 import { execSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
+
+import type {
+	Deployment,
+	DeploymentStage,
+	Project,
+	UnifiedDeploymentLogMessages,
+} from "@cloudflare/types";
+import type { Config } from "@cloudflare/workers-utils";
+
 import {
 	configFileName,
 	FatalError,
@@ -8,6 +17,9 @@ import {
 	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
+
+import type { PagesConfigCache } from "./types";
+
 import { deploy } from "../api/pages/deploy";
 import { fetchResult } from "../cfetch";
 import { readPagesConfig } from "../config";
@@ -28,14 +40,6 @@ import { EXIT_CODE_INVALID_PAGES_CONFIG } from "./errors";
 import { listProjects } from "./projects";
 import { promptSelectProject } from "./prompt-select-project";
 import { getPagesProjectRoot, getPagesTmpDir } from "./utils";
-import type { PagesConfigCache } from "./types";
-import type {
-	Deployment,
-	DeploymentStage,
-	Project,
-	UnifiedDeploymentLogMessages,
-} from "@cloudflare/types";
-import type { Config } from "@cloudflare/workers-utils";
 
 export const pagesDeploymentCreateCommand = createAlias({
 	aliasOf: "wrangler pages deploy",

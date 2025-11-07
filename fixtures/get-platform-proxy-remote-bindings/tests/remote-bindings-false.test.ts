@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { getPlatformProxy } from "wrangler";
+
 import type { Ai } from "@cloudflare/workers-types/experimental";
 
 describe("getPlatformProxy - remote bindings with remoteBindings: false", () => {

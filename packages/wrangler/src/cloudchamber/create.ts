@@ -1,3 +1,12 @@
+import type { Arg } from "@cloudflare/cli/interactive";
+import type {
+	CreateDeploymentV2RequestBody,
+	EnvironmentVariable,
+	Label,
+	SSHPublicKeyID,
+} from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
+
 import {
 	cancel,
 	endSection,
@@ -14,6 +23,12 @@ import {
 	DeploymentsService,
 } from "@cloudflare/containers-shared";
 import { parseByteSize } from "@cloudflare/workers-utils";
+
+import type {
+	CommonYargsArgv,
+	StrictYargsOptionsToInterface,
+} from "../yargs-types";
+
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
@@ -37,18 +52,6 @@ import {
 import { loadAccount } from "./locations";
 import { getNetworkInput } from "./network/network";
 import { sshPrompts as promptForSSHKeyAndGetAddedSSHKey } from "./ssh/ssh";
-import type {
-	CommonYargsArgv,
-	StrictYargsOptionsToInterface,
-} from "../yargs-types";
-import type { Arg } from "@cloudflare/cli/interactive";
-import type {
-	CreateDeploymentV2RequestBody,
-	EnvironmentVariable,
-	Label,
-	SSHPublicKeyID,
-} from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
 
 const defaultContainerImage = "docker.io/cloudflare/hello-world:1.0";
 

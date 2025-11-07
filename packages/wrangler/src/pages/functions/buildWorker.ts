@@ -1,8 +1,18 @@
+import type { Plugin } from "esbuild";
+import type { NodeJSCompatMode } from "miniflare";
+
+import { build as esBuild } from "esbuild";
 import crypto from "node:crypto";
 import { access, cp, lstat, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
+
+import type { CfModule } from "@cloudflare/workers-utils";
+
 import { FatalError } from "@cloudflare/workers-utils";
-import { build as esBuild } from "esbuild";
+
+import type { BundleResult } from "../../deployment-bundle/bundle";
+import type { Entry } from "../../deployment-bundle/entry";
+
 import { bundleWorker } from "../../deployment-bundle/bundle";
 import { findAdditionalModules } from "../../deployment-bundle/find-additional-modules";
 import {
@@ -12,11 +22,6 @@ import {
 import { logBuildFailure, logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { getPagesProjectRoot, getPagesTmpDir } from "../utils";
-import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { Entry } from "../../deployment-bundle/entry";
-import type { CfModule } from "@cloudflare/workers-utils";
-import type { Plugin } from "esbuild";
-import type { NodeJSCompatMode } from "miniflare";
 
 export type Options = {
 	routesModule: string;

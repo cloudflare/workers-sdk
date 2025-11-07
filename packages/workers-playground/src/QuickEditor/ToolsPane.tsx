@@ -1,9 +1,11 @@
+import { useState } from "react";
+
 import { Icon } from "@cloudflare/component-icon";
 import { A, Div } from "@cloudflare/elements";
 import { isDarkMode, theme } from "@cloudflare/style-const";
 import { createComponent } from "@cloudflare/style-container";
 import { SplitPane } from "@cloudflare/workers-editor-shared";
-import { useState } from "react";
+
 import DevtoolsIframe from "./DevtoolsIframe";
 import { HTTPTab } from "./HTTPTab/HTTPTab";
 import MigrateToWrangler from "./MigrateToWrangler/MigrateToWrangler";

@@ -2,6 +2,7 @@ import { existsSync } from "fs";
 import { cp } from "fs/promises";
 import { join } from "path";
 import { beforeAll, describe, expect } from "vitest";
+
 import { deleteProject, deleteWorker } from "../../../scripts/common";
 import {
 	frameworkToTestFilter,
@@ -58,7 +59,7 @@ describe
 					if (!testConfig.verifyDeploy) {
 						expect(
 							true,
-							"A `deploy` configuration must be defined for all framework tests",
+							"A `deploy` configuration must be defined for all framework tests"
 						).toBe(false);
 						return;
 					}
@@ -77,7 +78,7 @@ describe
 								],
 								promptHandlers: testConfig.promptHandlers,
 								extraEnv: testConfig.extraEnv,
-							},
+							}
 						);
 
 						// Relevant project files should have been created
@@ -95,7 +96,7 @@ describe
 							await testGitCommitMessage(
 								project.name,
 								frameworkConfig.id,
-								project.path,
+								project.path
 							);
 						}
 
@@ -105,7 +106,7 @@ describe
 							frameworkConfig.id,
 							project.name,
 							`${deploymentUrl}${testConfig.verifyDeploy.route}`,
-							testConfig.verifyDeploy.expectedText,
+							testConfig.verifyDeploy.expectedText
 						);
 
 						// Copy over any platform specific test fixture files
@@ -113,7 +114,7 @@ describe
 							__dirname,
 							"fixtures",
 							frameworkConfig.id,
-							frameworkConfig.platform,
+							frameworkConfig.platform
 						);
 						if (existsSync(platformFixturePath)) {
 							await cp(platformFixturePath, project.path, {
@@ -125,7 +126,7 @@ describe
 							const fixturePath = join(
 								__dirname,
 								"fixtures",
-								frameworkConfig.id,
+								frameworkConfig.id
 							);
 							if (existsSync(fixturePath)) {
 								await cp(fixturePath, project.path, {
@@ -139,14 +140,14 @@ describe
 							testConfig,
 							frameworkConfig,
 							project.path,
-							logStream,
+							logStream
 						);
 
 						await verifyPreviewScript(
 							testConfig,
 							frameworkConfig,
 							project.path,
-							logStream,
+							logStream
 						);
 
 						await verifyTypes(testConfig, frameworkConfig, project.path);
@@ -154,7 +155,7 @@ describe
 						// eslint-disable-next-line no-console
 						console.error("ERROR", e);
 						expect.fail(
-							"Failed due to an exception while running C3. See logs for more details",
+							"Failed due to an exception while running C3. See logs for more details"
 						);
 					} finally {
 						// Cleanup the project in case we need to retry it
@@ -164,7 +165,7 @@ describe
 							await deleteProject(project.name);
 						}
 					}
-				},
+				}
 			);
 		});
 	});

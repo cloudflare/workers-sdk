@@ -1,6 +1,10 @@
+import type { RegistryType } from "promjs";
+import type { Toucan } from "toucan-js";
+
 import { Hono } from "hono";
 import { getCookie, setCookie } from "hono/cookie";
 import prom from "promjs";
+
 import {
 	HttpError,
 	PreviewRequestFailed,
@@ -10,8 +14,6 @@ import {
 	UploadFailed,
 } from "./errors";
 import { handleException, setupSentry } from "./sentry";
-import type { RegistryType } from "promjs";
-import type { Toucan } from "toucan-js";
 
 function maybeParseUrl(url: string | undefined) {
 	if (!url) {
@@ -335,7 +337,7 @@ app.onError((e, c) => {
 	return handleException(e, sentry);
 });
 
-export default <ExportedHandler>{
+export default (<ExportedHandler>{
 	async fetch(
 		request: Request,
 		env: Env,
@@ -343,6 +345,6 @@ export default <ExportedHandler>{
 	): Promise<Response> {
 		return app.fetch(request, env, ctx);
 	},
-};
+});
 
 export { UserSession } from "./user.do";

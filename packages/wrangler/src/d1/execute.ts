@@ -1,6 +1,14 @@
+import chalk from "chalk";
 import { createReadStream, promises as fs } from "fs";
+import md5File from "md5-file";
+import { Miniflare } from "miniflare";
 import assert from "node:assert";
 import path from "node:path";
+import { fetch } from "undici";
+
+import type { D1Result } from "@cloudflare/workers-types/experimental";
+import type { Config } from "@cloudflare/workers-utils";
+
 import { spinnerWhile } from "@cloudflare/cli/interactive";
 import {
 	APIError,
@@ -10,10 +18,15 @@ import {
 	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
-import chalk from "chalk";
-import md5File from "md5-file";
-import { Miniflare } from "miniflare";
-import { fetch } from "undici";
+
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type {
+	Database,
+	ImportInitResponse,
+	ImportPollingResponse,
+	PollingFailure,
+} from "./types";
+
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
@@ -23,15 +36,6 @@ import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type {
-	Database,
-	ImportInitResponse,
-	ImportPollingResponse,
-	PollingFailure,
-} from "./types";
-import type { D1Result } from "@cloudflare/workers-types/experimental";
-import type { Config } from "@cloudflare/workers-utils";
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];

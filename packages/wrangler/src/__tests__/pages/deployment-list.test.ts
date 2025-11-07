@@ -1,11 +1,13 @@
 import { http, HttpResponse } from "msw";
+
+import type { Deployment } from "./../../pages/types";
+
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { msw } from "./../helpers/msw";
 import { runInTempDir } from "./../helpers/run-in-tmp";
 import { runWrangler } from "./../helpers/run-wrangler";
-import type { Deployment } from "./../../pages/types";
 
 describe("pages deployment list", () => {
 	runInTempDir();

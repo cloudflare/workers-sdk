@@ -1,6 +1,8 @@
-import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import prompts from "prompts";
+
+import { UserError } from "@cloudflare/workers-utils";
+
 import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
 

@@ -1,7 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
-import { buildConfigure } from "../../templates/pre-existing/c3";
-import type { ConfigureParams } from "../../templates/pre-existing/c3";
 import type { C3Context } from "types";
+
+import { describe, expect, it, vi } from "vitest";
+
+import type { ConfigureParams } from "../../templates/pre-existing/c3";
+
+import { buildConfigure } from "../../templates/pre-existing/c3";
 
 describe("configure function", () => {
 	const ctx = {
@@ -33,7 +36,7 @@ describe("configure function", () => {
 
 		const configure = buildConfigure(params);
 		await expect(configure(ctx)).rejects.toThrow(
-			"Failed to login to Cloudflare",
+			"Failed to login to Cloudflare"
 		);
 		expect(params.chooseAccount).not.toHaveBeenCalled();
 		expect(params.copyFiles).not.toHaveBeenCalled();

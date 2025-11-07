@@ -1,9 +1,11 @@
-import { relative } from "path";
-import chalk from "chalk";
-import { logger } from "../../logger";
-import { dedent } from "../../utils/dedent";
 import type { Plugin } from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
+
+import chalk from "chalk";
+import { relative } from "path";
+
+import { logger } from "../../logger";
+import { dedent } from "../../utils/dedent";
 
 /**
  * An esbuild plugin that will:

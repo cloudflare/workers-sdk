@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+
 import { createFetchResult } from "../index";
 
 type StorageClass = "Standard" | "InfrequentAccess";

@@ -1,8 +1,10 @@
 import assert from "assert";
 import { writeFile } from "fs/promises";
 import path from "path";
+
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
+
 import { getPackageManager } from "../../package-manager";
 import { runCommand } from "./command";
 

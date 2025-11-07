@@ -1,5 +1,6 @@
 import os from "node:os";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { checkMacOSVersion } from "../check-macos-version";
 
 vi.mock("node:os");

@@ -1,14 +1,15 @@
+import test from "ava";
 import childProcess from "child_process";
 import { once } from "events";
 import fs from "fs/promises";
 import https from "https";
 import { AddressInfo } from "net";
 import path from "path";
+import stoppable from "stoppable";
 import { text } from "stream/consumers";
 import tls from "tls";
-import test from "ava";
-import stoppable from "stoppable";
 import which from "which";
+
 import { useTmp } from "../../test-shared";
 
 const opensslInstalled = which.sync("openssl", { nothrow: true });

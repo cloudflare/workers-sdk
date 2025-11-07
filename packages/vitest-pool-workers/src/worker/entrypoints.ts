@@ -1,9 +1,10 @@
-import assert from "node:assert";
 import {
 	DurableObject as DurableObjectClass,
 	WorkerEntrypoint,
 	WorkflowEntrypoint,
 } from "cloudflare:workers";
+import assert from "node:assert";
+
 import { maybeHandleRunRequest, runInRunnerObject } from "./durable-objects";
 import { getResolvedMainPath, stripInternalEnv } from "./env";
 import { patchAndRunWithHandlerContext } from "./wait-until";

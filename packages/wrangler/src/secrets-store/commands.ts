@@ -1,5 +1,11 @@
-import { FatalError, UserError } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
+
+import type { Config } from "@cloudflare/workers-utils";
+
+import { FatalError, UserError } from "@cloudflare/workers-utils";
+
+import type { Secret, Store } from "./client";
+
 import { createCommand } from "../core/create-command";
 import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
 import { getDefaultPersistRoot } from "../dev/miniflare";
@@ -18,8 +24,6 @@ import {
 	listStores,
 	updateSecret,
 } from "./client";
-import type { Secret, Store } from "./client";
-import type { Config } from "@cloudflare/workers-utils";
 
 export async function usingLocalSecretsStoreSecretAPI<T>(
 	persistTo: string | undefined,

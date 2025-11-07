@@ -1,6 +1,7 @@
-import { logBuildFailure, logBuildWarnings } from "../../logger";
 import type { Plugin } from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
+
+import { logBuildFailure, logBuildWarnings } from "../../logger";
 
 /**
  * Log esbuild warnings and errors

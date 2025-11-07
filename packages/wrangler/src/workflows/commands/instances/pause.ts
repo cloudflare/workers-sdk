@@ -1,8 +1,9 @@
+import type { Instance } from "../../types";
+
 import { fetchResult } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
-import type { Instance } from "../../types";
 
 export const workflowsInstancesPauseCommand = createCommand({
 	metadata: {

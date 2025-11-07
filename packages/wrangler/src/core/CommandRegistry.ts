@@ -1,10 +1,6 @@
-import assert from "node:assert";
 import chalk from "chalk";
-import {
-	isAliasDefinition,
-	isCommandDefinition,
-	isNamespaceDefinition,
-} from "./helpers";
+import assert from "node:assert";
+
 import type { CreateCommandResult } from "./create-command";
 import type {
 	AliasDefinition,
@@ -16,6 +12,12 @@ import type {
 	NamedArgDefinitions,
 	NamespaceDefinition,
 } from "./types";
+
+import {
+	isAliasDefinition,
+	isCommandDefinition,
+	isNamespaceDefinition,
+} from "./helpers";
 
 const BETA_CMD_COLOR = "#BD5B08";
 
@@ -333,7 +335,7 @@ export class CommandRegistry {
 		const { subtree } =
 			node.definition.type !== "alias"
 				? node
-				: this.#findNodeFor(resolvedDef.command) ?? node;
+				: (this.#findNodeFor(resolvedDef.command) ?? node);
 
 		const definition: InternalDefinition = {
 			// take all properties from the resolved alias

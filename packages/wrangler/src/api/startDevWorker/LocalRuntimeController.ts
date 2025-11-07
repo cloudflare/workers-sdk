@@ -1,24 +1,18 @@
+import chalk from "chalk";
+import { Miniflare, Mutex } from "miniflare";
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
+
+import type { ContainerDevOptions } from "@cloudflare/containers-shared";
+
 import {
 	cleanupContainers,
 	getDevContainerImageName,
 	prepareContainerImagesForDev,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
-import chalk from "chalk";
-import { Miniflare, Mutex } from "miniflare";
-import * as MF from "../../dev/miniflare";
-import { getDockerPath } from "../../environment-variables/misc-variables";
-import { logger } from "../../logger";
-import { RuntimeController } from "./BaseController";
-import { castErrorCause } from "./events";
-import {
-	convertBindingsToCfWorkerInitBindings,
-	convertCfWorkerInitBindingsToBindings,
-	unwrapHook,
-} from "./utils";
+
 import type { RemoteProxySession } from "../remoteBindings";
 import type {
 	BundleCompleteEvent,
@@ -29,7 +23,17 @@ import type {
 	ReloadStartEvent,
 } from "./events";
 import type { Binding, File, StartDevWorkerOptions } from "./types";
-import type { ContainerDevOptions } from "@cloudflare/containers-shared";
+
+import * as MF from "../../dev/miniflare";
+import { getDockerPath } from "../../environment-variables/misc-variables";
+import { logger } from "../../logger";
+import { RuntimeController } from "./BaseController";
+import { castErrorCause } from "./events";
+import {
+	convertBindingsToCfWorkerInitBindings,
+	convertCfWorkerInitBindingsToBindings,
+	unwrapHook,
+} from "./utils";
 
 async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {

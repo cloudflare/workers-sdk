@@ -1,4 +1,5 @@
 import lzstring from "lz-string";
+
 import type { TypedModule, Worker } from "./useDraftWorker";
 
 // Parse a serialised FormData representation of a (very!) simple worker

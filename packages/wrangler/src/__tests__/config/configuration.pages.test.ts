@@ -1,10 +1,13 @@
 import path from "node:path";
+
+import type { RawConfig, RawEnvironment } from "@cloudflare/workers-utils";
+
 import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
+
 import {
 	generateRawConfigForPages,
 	generateRawEnvConfigForPages,
 } from "../helpers/generate-wrangler-config";
-import type { RawConfig, RawEnvironment } from "@cloudflare/workers-utils";
 
 describe("normalizeAndValidateConfig()", () => {
 	describe("Pages configuration", () => {

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { getTextResponse } from "../../__test-utils__";
 
 describe("in-worker defined durable objects", async () => {

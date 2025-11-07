@@ -2,6 +2,7 @@
 import { rm } from "node:fs/promises";
 import { resolve } from "path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe.sequential("Local Browser", () => {

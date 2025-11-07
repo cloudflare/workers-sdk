@@ -1,9 +1,11 @@
+import type { ChildProcess } from "node:child_process";
+
 import { fork } from "node:child_process";
 import { resolve } from "node:path";
 import { fetch } from "undici";
 import { afterAll, beforeAll, describe, it } from "vitest";
+
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
-import type { ChildProcess } from "node:child_process";
 
 describe("pages-proxy-app", async () => {
 	let ip: string, port: number, stop: (() => Promise<unknown>) | undefined;

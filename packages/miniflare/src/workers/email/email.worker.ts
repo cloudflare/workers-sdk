@@ -1,5 +1,6 @@
-import { RAW_EMAIL } from "./constants";
 import type { EmailMessage as EmailMessageType } from "@cloudflare/workers-types/experimental";
+
+import { RAW_EMAIL } from "./constants";
 
 // This type is the _actual_ type of an EmailMessage when running locally, which is different to production
 // Refer to the below constructor for more details about why

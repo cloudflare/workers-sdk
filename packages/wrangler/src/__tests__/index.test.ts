@@ -1,4 +1,9 @@
+import type { Mock } from "vitest";
+
 import { vi } from "vitest";
+
+import type { PackageManager } from "../package-manager";
+
 import { getPackageManager } from "../package-manager";
 import { updateCheck } from "../update-check";
 import { logPossibleBugMessage } from "../utils/logPossibleBugMessage";
@@ -8,8 +13,6 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
-import type { PackageManager } from "../package-manager";
-import type { Mock } from "vitest";
 
 describe("wrangler", () => {
 	let mockPackageManager: PackageManager;

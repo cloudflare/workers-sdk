@@ -1,10 +1,10 @@
+import { stripAnsi } from "miniflare";
 import assert from "node:assert";
 import childProcess from "node:child_process";
 import events from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";
 import util from "node:util";
-import { stripAnsi } from "miniflare";
 import kill from "tree-kill";
 import {
 	afterAll,
@@ -14,6 +14,7 @@ import {
 	onTestFinished,
 	vi,
 } from "vitest";
+
 import vitePluginPackage from "../package.json";
 
 const debuglog = util.debuglog("vite-plugin:test");

@@ -1,11 +1,14 @@
+import chalk from "chalk";
+import { execaCommand } from "execa";
 import { existsSync, statSync } from "node:fs";
 import path from "node:path";
 import { Writable } from "node:stream";
-import { configFileName, UserError } from "@cloudflare/workers-utils";
-import chalk from "chalk";
-import { execaCommand } from "execa";
-import { logger } from "../logger";
+
 import type { Config } from "@cloudflare/workers-utils";
+
+import { configFileName, UserError } from "@cloudflare/workers-utils";
+
+import { logger } from "../logger";
 
 export async function runCommand(
 	command: string,

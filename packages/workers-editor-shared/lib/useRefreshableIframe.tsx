@@ -5,6 +5,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+
 import Frame from "./Frame";
 import { DragContext } from "./SplitPane";
 

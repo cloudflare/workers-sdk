@@ -1,8 +1,10 @@
-import assert from "node:assert";
-import getPort, { portNumbers } from "get-port";
-import colors from "picocolors";
-import type { PluginContext } from "./context";
 import type * as vite from "vite";
+
+import getPort, { portNumbers } from "get-port";
+import assert from "node:assert";
+import colors from "picocolors";
+
+import type { PluginContext } from "./context";
 
 export const DEBUG_PATH = "/__debug";
 const DEFAULT_INSPECTOR_PORT = 9229;

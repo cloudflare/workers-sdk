@@ -1,6 +1,7 @@
 import { afterEach, beforeEach } from "vitest";
-import { stderr, stdout } from "./streams";
+
 import { stripAnsi } from "./index";
+import { stderr, stdout } from "./streams";
 
 // Copied from packages/wrangler/src/__tests__/helpers/collect-cli-output.ts
 export function collectCLIOutput() {

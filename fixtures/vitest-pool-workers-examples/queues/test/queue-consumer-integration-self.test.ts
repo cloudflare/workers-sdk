@@ -1,5 +1,5 @@
-import { randomBytes } from "node:crypto";
 import { env, SELF } from "cloudflare:test";
+import { randomBytes } from "node:crypto";
 import { expect, it } from "vitest";
 
 it("consumes queue messages", async () => {

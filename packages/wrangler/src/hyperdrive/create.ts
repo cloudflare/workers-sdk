@@ -1,9 +1,3 @@
-import { createCommand } from "../core/create-command";
-import { logger } from "../logger";
-import { createdResourceConfig } from "../utils/add-created-resource-config";
-import { getValidBindingName } from "../utils/getValidBindingName";
-import { createConfig } from "./client";
-import { capitalizeScheme } from "./shared";
 import {
 	getCacheOptionsFromArgs,
 	getMtlsFromArgs,
@@ -11,6 +5,12 @@ import {
 	getOriginFromArgs,
 	upsertOptions,
 } from ".";
+import { createCommand } from "../core/create-command";
+import { logger } from "../logger";
+import { createdResourceConfig } from "../utils/add-created-resource-config";
+import { getValidBindingName } from "../utils/getValidBindingName";
+import { createConfig } from "./client";
+import { capitalizeScheme } from "./shared";
 
 export const hyperdriveCreateCommand = createCommand({
 	metadata: {

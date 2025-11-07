@@ -4,13 +4,15 @@
  * to be requested (to prevent arbitrary file access). This module exports
  * functions for checking whether a specific file may be requested as a source
  * file, or source map (i.e. is safe to serve from the file system).
+import type { RawSourceMap } from "source-map";
+
  */
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
 import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { RawSourceMap } from "source-map";
 
 export function isAllowedSourcePath(
 	bundle: EsbuildBundle,

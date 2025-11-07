@@ -1,12 +1,20 @@
-import * as fs from "node:fs";
-import path from "node:path";
-import * as TOML from "@iarna/toml";
+import type { Mock } from "vitest";
+
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
+import * as fs from "node:fs";
+import path from "node:path";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { FormData } from "undici";
 import { vi } from "vitest";
+
+import type { RawConfig, UserLimits } from "@cloudflare/workers-utils";
+
+import * as TOML from "@iarna/toml";
+
+import type { PackageManager } from "../package-manager";
+
 import { downloadWorker } from "../init";
 import { writeMetricsConfig } from "../metrics/metrics-config";
 import { getPackageManager } from "../package-manager";
@@ -17,9 +25,6 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { PackageManager } from "../package-manager";
-import type { RawConfig, UserLimits } from "@cloudflare/workers-utils";
-import type { Mock } from "vitest";
 
 describe("init", () => {
 	let mockPackageManager: PackageManager;
@@ -171,7 +176,7 @@ describe("init", () => {
 			usage_model = "bundled",
 			tags = [],
 			compatibility_date = "1987-09-27",
-			content = dedent/*javascript*/ `
+			content = dedent /*javascript*/ `
 							export default {
 								async fetch(request, env, ctx) {
 									return new Response("Hello World!");
@@ -1263,7 +1268,7 @@ describe("init", () => {
 				"index.js",
 				new File(
 					[
-						dedent/*javascript*/ `
+						dedent /*javascript*/ `
 								import handleRequest from './other.js';
 
 								export default {
@@ -1281,7 +1286,7 @@ describe("init", () => {
 				"other.js",
 				new File(
 					[
-						dedent/*javascript*/ `
+						dedent /*javascript*/ `
 								export default function (request, env, ctx) {
 									return new Response("Hello World!");
 								}

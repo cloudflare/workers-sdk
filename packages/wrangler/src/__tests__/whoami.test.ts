@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import { writeAuthConfigFile } from "../user";
 import { getUserInfo } from "../user/whoami";

@@ -1,6 +1,6 @@
+import { Miniflare } from "miniflare";
 import assert from "node:assert";
 import test, { after, before, describe } from "node:test";
-import { Miniflare } from "miniflare";
 
 describe("worker", () => {
 	/**

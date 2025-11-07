@@ -1,6 +1,6 @@
+import cmdShim from "cmd-shim";
 import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
-import cmdShim from "cmd-shim";
 
 const nodeShebang = "#!/usr/bin/env node";
 

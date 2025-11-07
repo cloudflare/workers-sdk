@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { describe, it } from "vitest";
+
 import { convertConfigBindingsToStartWorkerBindings } from "../../../api/startDevWorker/utils";
 
 describe("convertConfigBindingsToStartWorkerBindings", () => {

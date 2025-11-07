@@ -1,14 +1,15 @@
-/* istanbul ignore file */
-/* tslint:disable */
-/* eslint-disable */
-import { OpenAPI } from "../core/OpenAPI";
-import { request as __request } from "../core/request";
 import type { CancelablePromise } from "../core/CancelablePromise";
 import type { GenericMessageResponse } from "../models/GenericMessageResponse";
 import type { ListSecretsMetadata } from "../models/ListSecretsMetadata";
 import type { ModifySecretRequestBody } from "../models/ModifySecretRequestBody";
 import type { Secret } from "../models/Secret";
 import type { SecretMetadata } from "../models/SecretMetadata";
+
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+import { OpenAPI } from "../core/OpenAPI";
+import { request as __request } from "../core/request";
 
 export class SecretsService {
 	/**

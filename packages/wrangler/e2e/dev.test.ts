@@ -6,6 +6,7 @@ import { scheduler, setTimeout } from "node:timers/promises";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
@@ -846,7 +847,7 @@ describe("writes debug logs to hidden file", () => {
 					main = "src/index.ts"
 					compatibility_date = "2023-01-01"
 				`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 					export default {
 						fetch(req, env) {
 							return new Response('A' + req.url);
@@ -883,7 +884,7 @@ describe("writes debug logs to hidden file", () => {
 				main = "src/index.ts"
 				compatibility_date = "2023-01-01"
 			`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 				export default {
 					fetch(req, env) {
 						return new Response('A' + req.url);

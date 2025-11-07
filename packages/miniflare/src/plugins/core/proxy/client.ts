@@ -1,10 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
 import assert from "assert";
 import crypto from "crypto";
-import { ReadableStream, TransformStream } from "stream/web";
-import util from "util";
 import { stringify } from "devalue";
+import { ReadableStream, TransformStream } from "stream/web";
 import { Headers } from "undici";
+import util from "util";
+
+import type {
+	ImageDrawOptions,
+	ImageOutputOptions,
+	ImagesBinding,
+	ImageTransform,
+	ImageTransformationResult,
+	ImageTransformer,
+	ServiceWorkerGlobalScope,
+} from "@cloudflare/workers-types/experimental";
+
 import { DispatchFetch, Request, Response } from "../../../http";
 import { prefixStream, readPrefix } from "../../../shared";
 import {
@@ -25,15 +36,6 @@ import {
 } from "../../../workers";
 import { DECODER, SynchronousFetcher, SynchronousResponse } from "./fetch-sync";
 import { NODE_PLATFORM_IMPL } from "./types";
-import type {
-	ImageDrawOptions,
-	ImageOutputOptions,
-	ImagesBinding,
-	ImageTransform,
-	ImageTransformationResult,
-	ImageTransformer,
-	ServiceWorkerGlobalScope,
-} from "@cloudflare/workers-types/experimental";
 
 const kAddress = Symbol("kAddress");
 const kName = Symbol("kName");

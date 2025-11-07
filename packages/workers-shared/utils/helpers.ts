@@ -1,13 +1,15 @@
-import { readFileSync } from "node:fs";
-import { isAbsolute, resolve, sep } from "node:path";
+import type { PathOrFileDescriptor } from "node:fs";
+
 import ignore from "ignore";
 import mime from "mime";
+import { readFileSync } from "node:fs";
+import { isAbsolute, resolve, sep } from "node:path";
+
 import {
 	CF_ASSETS_IGNORE_FILENAME,
 	HEADERS_FILENAME,
 	REDIRECTS_FILENAME,
 } from "./constants";
-import type { PathOrFileDescriptor } from "node:fs";
 
 /** normalises sep for windows and prefix with `/` */
 export const normalizeFilePath = (relativeFilepath: string) => {

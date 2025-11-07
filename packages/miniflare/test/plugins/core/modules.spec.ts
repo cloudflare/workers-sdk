@@ -1,8 +1,9 @@
 import assert from "assert";
-import fs from "fs/promises";
-import path from "path";
 import test from "ava";
+import fs from "fs/promises";
 import { Miniflare, MiniflareCoreError, stripAnsi } from "miniflare";
+import path from "path";
+
 import { useCwd, useTmp, utf8Encode } from "../../test-shared";
 
 const ROOT = path.resolve(

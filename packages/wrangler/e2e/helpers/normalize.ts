@@ -1,5 +1,6 @@
 import stripAnsi from "strip-ansi";
 import { expect } from "vitest";
+
 import { CLOUDFLARE_ACCOUNT_ID } from "./account-id";
 
 export function normalizeOutput(

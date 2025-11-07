@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import {
 	isAllowedExistingFile,
 	validateProjectDirectory,
@@ -22,7 +23,7 @@ describe("validators", () => {
 			expect(validateProjectDirectory("-foobar-", args)).not.toBeUndefined();
 			expect(validateProjectDirectory("fo*o{ba)r", args)).not.toBeUndefined();
 			expect(
-				validateProjectDirectory("f".repeat(59), args),
+				validateProjectDirectory("f".repeat(59), args)
 			).not.toBeUndefined();
 		});
 

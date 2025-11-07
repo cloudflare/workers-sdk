@@ -1,4 +1,8 @@
 import * as vite from "vite";
+
+import type { SharedContext } from "./context";
+import type { PluginConfig } from "./plugin-config";
+
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
@@ -19,8 +23,6 @@ import {
 } from "./plugins/virtual-modules";
 import { wasmHelperPlugin } from "./plugins/wasm";
 import { debuglog } from "./utils";
-import type { SharedContext } from "./context";
-import type { PluginConfig } from "./plugin-config";
 
 export type { PluginConfig } from "./plugin-config";
 

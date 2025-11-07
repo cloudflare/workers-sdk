@@ -2,6 +2,9 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { z } from "zod";
+
+import type { RawSourceMap, UrlAndMap } from "@cspotcode/source-map-support";
+
 import { Request, Response } from "../../../http";
 import { Log, processStackTrace } from "../../../shared";
 import { maybeParseURL } from "../../shared";
@@ -11,7 +14,6 @@ import {
 	SourceOptions,
 } from "../modules";
 import { getSourceMapper } from "./sourcemap";
-import type { RawSourceMap, UrlAndMap } from "@cspotcode/source-map-support";
 
 // Subset of core worker options that define Worker source code.
 // These are the possible cases, and corresponding reported source files in

@@ -1,5 +1,7 @@
-import { fetchListResult, fetchResult } from "../cfetch";
-import { requireAuth } from "../user";
+import type { FormData } from "undici";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import type {
 	VectorFloatArray,
 	VectorizeAsyncMutation,
@@ -15,8 +17,9 @@ import type {
 	VectorizeVectorIds,
 	VectorizeVectorMutation,
 } from "./types";
-import type { Config } from "@cloudflare/workers-utils";
-import type { FormData } from "undici";
+
+import { fetchListResult, fetchResult } from "../cfetch";
+import { requireAuth } from "../user";
 
 const jsonContentType = "application/json; charset=utf-8;";
 

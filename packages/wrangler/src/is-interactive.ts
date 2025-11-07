@@ -1,4 +1,5 @@
 import { isInteractive as __isInteractive } from "@cloudflare/cli/interactive";
+
 import { CI, isPagesCI, isWorkersCI } from "./is-ci";
 
 /**

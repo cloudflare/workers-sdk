@@ -1,10 +1,5 @@
 import { relative } from "node:path";
-import {
-	HEADERS_VERSION,
-	PLACEHOLDER_REGEX,
-	REDIRECTS_VERSION,
-	SPLAT_REGEX,
-} from "./constants";
+
 import type {
 	AssetConfig,
 	MetadataHeaders,
@@ -12,6 +7,13 @@ import type {
 	MetadataStaticRedirects,
 } from "../types";
 import type { Logger, ParsedHeaders, ParsedRedirects } from "./types";
+
+import {
+	HEADERS_VERSION,
+	PLACEHOLDER_REGEX,
+	REDIRECTS_VERSION,
+	SPLAT_REGEX,
+} from "./constants";
 
 export function constructRedirects({
 	redirects,

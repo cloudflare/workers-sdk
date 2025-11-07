@@ -1,10 +1,11 @@
+import type { Unstable_DevWorker } from "wrangler";
+
 import { randomBytes } from "crypto";
 import fs from "fs/promises";
 import os from "os";
 import path from "path";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { unstable_dev } from "wrangler";
-import type { Unstable_DevWorker } from "wrangler";
 
 function removeUUID(str: string) {
 	return str.replace(

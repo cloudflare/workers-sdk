@@ -1,6 +1,8 @@
-import assert from "node:assert";
-import type { WorkersResolvedConfig } from "./plugin-config";
 import type * as vite from "vite";
+
+import assert from "node:assert";
+
+import type { WorkersResolvedConfig } from "./plugin-config";
 
 interface DisallowedEnvironmentOptions {
 	resolveExternal?: vite.ResolveOptions["external"];

@@ -1,4 +1,9 @@
+import type { MockInstance } from "vitest";
+
 import * as fs from "fs";
+
+import type { EnvironmentNonInheritable } from "@cloudflare/workers-utils";
+
 import {
 	constructTSModuleGlob,
 	constructTypeKey,
@@ -10,8 +15,6 @@ import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { EnvironmentNonInheritable } from "@cloudflare/workers-utils";
-import type { MockInstance } from "vitest";
 
 describe("isValidIdentifier", () => {
 	it("should return true for valid identifiers", () => {

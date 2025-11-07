@@ -1,6 +1,14 @@
+import type {
+	MiniflareOptions,
+	Miniflare as MiniflareType,
+	RemoteProxyConnectionString,
+	Response,
+} from "miniflare";
+
 import assert from "node:assert";
 import { resolve } from "node:path";
 import { beforeAll, describe, expect, test } from "vitest";
+
 import { CLOUDFLARE_ACCOUNT_ID } from "../helpers/account-id";
 import {
 	importMiniflare,
@@ -8,12 +16,6 @@ import {
 	WranglerE2ETestHelper,
 } from "../helpers/e2e-wrangler-test";
 import { generateResourceName } from "../helpers/generate-resource-name";
-import type {
-	MiniflareOptions,
-	Miniflare as MiniflareType,
-	RemoteProxyConnectionString,
-	Response,
-} from "miniflare";
 
 const { Miniflare } = await importMiniflare();
 const {

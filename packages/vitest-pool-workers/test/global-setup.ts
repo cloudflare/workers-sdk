@@ -1,10 +1,12 @@
+import type { GlobalSetupContext } from "vitest/node";
+
 import assert from "node:assert";
 import childProcess from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+
 import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
-import type { GlobalSetupContext } from "vitest/node";
 
 const repoRoot = path.resolve(__dirname, "../../..");
 const packagesRoot = path.resolve(repoRoot, "packages");

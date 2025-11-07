@@ -1,11 +1,14 @@
+import type { Attributes, Options } from "selfsigned";
+
+import { getAccessibleHosts } from "miniflare";
 import * as fs from "node:fs";
 import * as path from "node:path";
+
 import { UserError } from "@cloudflare/workers-utils";
-import { getAccessibleHosts } from "miniflare";
+
 import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 import { logger } from "./logger";
-import type { Attributes, Options } from "selfsigned";
 
 // Most of this file has been borrowed from the implementation in Miniflare.
 // See https://github.com/cloudflare/miniflare/blob/870b401ef5/packages/http-server/src/plugin.ts#L313-L397

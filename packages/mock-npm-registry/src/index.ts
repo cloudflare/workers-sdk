@@ -1,10 +1,10 @@
+import getPort from "get-port";
 /* eslint-disable turbo/no-undeclared-env-vars */
 import childProcess, { execSync } from "node:child_process";
 import fs, { writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import util from "node:util";
-import getPort from "get-port";
 import treeKill from "tree-kill";
 import { dedent } from "ts-dedent";
 import { ConfigBuilder } from "verdaccio";

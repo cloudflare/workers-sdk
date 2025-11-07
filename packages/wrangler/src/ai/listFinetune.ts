@@ -1,8 +1,9 @@
+import type { Finetune } from "./types";
+
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { listFinetuneEntries, truncateDescription } from "./utils";
-import type { Finetune } from "./types";
 
 export const aiFineTuneListCommand = createCommand({
 	metadata: {

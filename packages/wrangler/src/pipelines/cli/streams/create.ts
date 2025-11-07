@@ -1,5 +1,9 @@
 import { readFileSync } from "node:fs";
+
 import { parseJSON, UserError } from "@cloudflare/workers-utils";
+
+import type { CreateStreamRequest, SchemaField } from "../../types";
+
 import { createCommand } from "../../../core/create-command";
 import { confirm } from "../../../dialogs";
 import { logger } from "../../../logger";
@@ -7,7 +11,6 @@ import { requireAuth } from "../../../user";
 import { createStream } from "../../client";
 import { validateEntityName } from "../../validate";
 import { displayStreamConfiguration } from "./utils";
-import type { CreateStreamRequest, SchemaField } from "../../types";
 
 export const pipelinesStreamsCreateCommand = createCommand({
 	metadata: {

@@ -1,11 +1,15 @@
-import { brandColor, dim, white } from "@cloudflare/cli/colors";
-import { friendlyBindingNames, UserError } from "@cloudflare/workers-utils";
+import type { WorkerRegistry } from "miniflare";
+
 import chalk from "chalk";
 import stripAnsi from "strip-ansi";
+
+import type { CfTailConsumer, CfWorkerInit } from "@cloudflare/workers-utils";
+
+import { brandColor, dim, white } from "@cloudflare/cli/colors";
+import { friendlyBindingNames, UserError } from "@cloudflare/workers-utils";
+
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
-import type { CfTailConsumer, CfWorkerInit } from "@cloudflare/workers-utils";
-import type { WorkerRegistry } from "miniflare";
 
 /**
  * Print all the bindings a worker using a given config would have access to
@@ -227,7 +231,7 @@ export function printBindings(
 					const value =
 						typeof database_id == "symbol"
 							? database_id
-							: preview_database_id ?? database_name ?? database_id;
+							: (preview_database_id ?? database_name ?? database_id);
 
 					return {
 						name: binding,
@@ -633,7 +637,9 @@ export function printBindings(
 
 		const maxValueLength = Math.max(
 			...output.map((b) =>
-				typeof b.value === "symbol" ? "inherited".length : b.value?.length ?? 0
+				typeof b.value === "symbol"
+					? "inherited".length
+					: (b.value?.length ?? 0)
 			)
 		);
 		const maxNameLength = Math.max(...output.map((b) => b.name.length));
@@ -680,7 +686,7 @@ export function printBindings(
 			const bindingValue = dim(
 				typeof binding.value === "symbol"
 					? chalk.italic("inherited")
-					: binding.value ?? ""
+					: (binding.value ?? "")
 			);
 			const bindingString = padEndAnsi(
 				`${white(`env.${binding.name}`)}${binding.value && !shouldWrap ? ` (${bindingValue})` : ""}`,

@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { expect, test, vi } from "vitest";
+
 import { getResponse, isBuild, testDir } from "../../../__test-utils__";
 
 test("fetches public directory asset", async () => {

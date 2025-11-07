@@ -1,6 +1,14 @@
+import type { NodeJSCompatMode } from "miniflare";
+
 import { writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+
 import { FatalError } from "@cloudflare/workers-utils";
+
+import type { BundleResult } from "../deployment-bundle/bundle";
+import type { pagesFunctionsBuildCommand } from "./build";
+import type { Config } from "./functions/routes";
+
 import { toUrlPath } from "../paths";
 import { FunctionsNoRoutesError } from "./errors";
 import { buildPluginFromFunctions } from "./functions/buildPlugin";
@@ -9,10 +17,6 @@ import { generateConfigFromFileTree } from "./functions/filepath-routing";
 import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
 import { getPagesTmpDir, RUNNING_BUILDERS } from "./utils";
-import type { BundleResult } from "../deployment-bundle/bundle";
-import type { pagesFunctionsBuildCommand } from "./build";
-import type { Config } from "./functions/routes";
-import type { NodeJSCompatMode } from "miniflare";
 
 /**
  * Builds a Functions worker based on the functions directory, with filepath and handler based routing.

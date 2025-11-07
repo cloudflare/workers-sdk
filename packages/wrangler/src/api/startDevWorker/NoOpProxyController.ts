@@ -1,10 +1,11 @@
-import { ProxyController } from "./ProxyController";
 import type {
 	BundleStartEvent,
 	ConfigUpdateEvent,
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
+
+import { ProxyController } from "./ProxyController";
 
 export class NoOpProxyController extends ProxyController {
 	onConfigUpdate(_data: ConfigUpdateEvent) {}

@@ -1,9 +1,12 @@
+import type Protocol from "devtools-protocol";
+
+import { getFreshSourceMapSupport } from "miniflare";
 import assert from "node:assert";
 import url from "node:url";
-import { maybeGetFile } from "@cloudflare/workers-shared";
-import { getFreshSourceMapSupport } from "miniflare";
+
 import type { Options } from "@cspotcode/source-map-support";
-import type Protocol from "devtools-protocol";
+
+import { maybeGetFile } from "@cloudflare/workers-shared";
 
 export type RetrieveSourceMapFunction = NonNullable<
 	Options["retrieveSourceMap"]

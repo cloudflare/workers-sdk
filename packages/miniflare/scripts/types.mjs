@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
-import { Extractor, ExtractorConfig } from "@microsoft/api-extractor";
 import ts from "typescript";
+
+import { Extractor, ExtractorConfig } from "@microsoft/api-extractor";
+
 import { getPackage, pkgRoot } from "./common.mjs";
 
 const argv = process.argv.slice(2);

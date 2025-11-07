@@ -1,12 +1,16 @@
+import type { ErrorData } from "cloudflare/resources/shared";
+import type { RequestInit } from "undici";
+
 import { URLSearchParams } from "node:url";
+
 import { APIError } from "@cloudflare/workers-utils";
-import { maybeThrowFriendlyError } from "./errors";
-import { fetchInternal } from "./internal";
+
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";
 import type { FetchError } from "./errors";
-import type { ErrorData } from "cloudflare/resources/shared";
-import type { RequestInit } from "undici";
+
+import { maybeThrowFriendlyError } from "./errors";
+import { fetchInternal } from "./internal";
 
 // Check out https://api.cloudflare.com/ for API docs.
 
@@ -254,12 +258,12 @@ export function renderError(err: FetchError | ErrorData, level = 0): string {
 	const indent = "  ".repeat(level);
 	const chainedMessages =
 		"error_chain" in err
-			? err.error_chain
+			? (err.error_chain
 					?.map(
 						(chainedError) =>
 							`\n\n${indent}- ${renderError(chainedError, level + 1)}`
 					)
-					.join("\n") ?? ""
+					.join("\n") ?? "")
 			: "";
 	return (
 		(err.code ? `${err.message} [code: ${err.code}]` : err.message) +

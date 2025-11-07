@@ -1,14 +1,16 @@
 import { UserError } from "@cloudflare/workers-utils";
+
+import type {
+	CreateEventSubscriptionRequest,
+	EventSource,
+} from "../../../subscription-types";
+
 import { createCommand } from "../../../../core/create-command";
 import { logger } from "../../../../logger";
 import { createEventSubscription } from "../../../client";
 import {
 	EVENT_SOURCE_TYPES,
 	EventSourceType,
-} from "../../../subscription-types";
-import type {
-	CreateEventSubscriptionRequest,
-	EventSource,
 } from "../../../subscription-types";
 
 function parseSourceArgument(

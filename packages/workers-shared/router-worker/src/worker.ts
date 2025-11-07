@@ -1,3 +1,12 @@
+import type AssetWorker from "../../asset-worker";
+import type {
+	EyeballRouterConfig,
+	JaegerTracing,
+	RouterConfig,
+	UnsafePerformanceTimer,
+} from "../../utils/types";
+import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
+
 import { generateStaticRoutingRuleMatcher } from "../../asset-worker/src/utils/rules-engine";
 import { PerformanceTimer } from "../../utils/performance";
 import { setupSentry } from "../../utils/sentry";
@@ -8,14 +17,6 @@ import {
 	applyRouterConfigDefaults,
 } from "./configuration";
 import { renderLimitedResponse } from "./limited-response";
-import type AssetWorker from "../../asset-worker";
-import type {
-	EyeballRouterConfig,
-	JaegerTracing,
-	RouterConfig,
-	UnsafePerformanceTimer,
-} from "../../utils/types";
-import type { ColoMetadata, Environment, ReadyAnalytics } from "./types";
 
 export interface Env {
 	ASSET_WORKER: Service<AssetWorker>;

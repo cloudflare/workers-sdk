@@ -1,12 +1,13 @@
+import type { ApiRequestOptions } from "./ApiRequestOptions";
+import type { ApiResult } from "./ApiResult";
+import type { OnCancel } from "./CancelablePromise";
+
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
 import { ApiError } from "./ApiError";
 import { CancelablePromise } from "./CancelablePromise";
 import { type OpenAPIConfig } from "./OpenAPI";
-import type { ApiRequestOptions } from "./ApiRequestOptions";
-import type { ApiResult } from "./ApiResult";
-import type { OnCancel } from "./CancelablePromise";
 
 type FetchResponseInfo = {
 	code: number;

@@ -1,11 +1,19 @@
+import { http, HttpResponse } from "msw";
+import patchConsole from "patch-console";
+
+import type {
+	Application,
+	CreateApplicationRequest,
+	ModifyApplicationRequestBody,
+} from "@cloudflare/containers-shared";
+
 import {
 	ApplicationAffinityColocation,
 	getCloudflareContainerRegistry,
 	SchedulingPolicy,
 	SecretAccessType,
 } from "@cloudflare/containers-shared";
-import { http, HttpResponse } from "msw";
-import patchConsole from "patch-console";
+
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput, mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -14,11 +22,6 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import { mockAccount } from "./utils";
-import type {
-	Application,
-	CreateApplicationRequest,
-	ModifyApplicationRequestBody,
-} from "@cloudflare/containers-shared";
 
 function mockGetApplications(applications: Application[]) {
 	msw.use(

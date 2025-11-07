@@ -1,9 +1,21 @@
+import type { PositionalOptions } from "yargs";
+
+import chalk from "chalk";
+
 import {
 	defaultWranglerConfig,
 	FatalError,
 	UserError,
 } from "@cloudflare/workers-utils";
-import chalk from "chalk";
+
+import type { CommonYargsArgv, SubHelp } from "../yargs-types";
+import type {
+	CommandDefinition,
+	HandlerArgs,
+	InternalDefinition,
+	NamedArgDefinitions,
+} from "./types";
+
 import { fetchResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
@@ -15,14 +27,6 @@ import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
 import { demandSingleValue } from "./helpers";
-import type { CommonYargsArgv, SubHelp } from "../yargs-types";
-import type {
-	CommandDefinition,
-	HandlerArgs,
-	InternalDefinition,
-	NamedArgDefinitions,
-} from "./types";
-import type { PositionalOptions } from "yargs";
 
 /**
  * Creates a function for registering commands using Yargs.
@@ -167,7 +171,7 @@ function createHandler(def: CommandDefinition, commandName: string) {
 
 			await run(experimentalFlags, () => {
 				const config =
-					def.behaviour?.provideConfig ?? true
+					(def.behaviour?.provideConfig ?? true)
 						? readConfig(args, {
 								hideWarnings: !(def.behaviour?.printConfigWarnings ?? true),
 								useRedirectIfAvailable:

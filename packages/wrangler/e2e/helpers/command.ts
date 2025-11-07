@@ -1,3 +1,5 @@
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
+
 import assert from "node:assert";
 import { spawn, spawnSync } from "node:child_process";
 import events from "node:events";
@@ -8,8 +10,8 @@ import { ReadableStream } from "node:stream/web";
 import { setTimeout } from "node:timers/promises";
 import treeKill from "tree-kill";
 import dedent from "ts-dedent";
+
 import { readUntil } from "./read-until";
-import type { ChildProcessWithoutNullStreams } from "node:child_process";
 
 const DEFAULT_TIMEOUT = 50_000;
 

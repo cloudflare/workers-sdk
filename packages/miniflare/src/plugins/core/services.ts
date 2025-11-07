@@ -1,4 +1,9 @@
+import type * as http from "node:http";
+
 import { z } from "zod";
+
+import type { Awaitable } from "../../workers";
+
 import { Request, Response } from "../../http";
 import {
 	HOST_CAPNP_CONNECT,
@@ -10,8 +15,6 @@ import {
 	HttpOptions_Style,
 	TlsOptions_Version,
 } from "../../runtime";
-import type { Awaitable } from "../../workers";
-import type * as http from "node:http";
 
 // Zod validators for types in runtime/config/workerd.ts.
 // All options should be optional except where specifically stated.

@@ -1,10 +1,11 @@
-import { createCommand } from "../core/create-command";
-import { logger } from "../logger";
-import { createMetadataIndex } from "./client";
 import type {
 	VectorizeMetadataIndexProperty,
 	VectorizeVectorMetadataValueString,
 } from "./types";
+
+import { createCommand } from "../core/create-command";
+import { logger } from "../logger";
+import { createMetadataIndex } from "./client";
 
 export const vectorizeCreateMetadataIndexCommand = createCommand({
 	metadata: {

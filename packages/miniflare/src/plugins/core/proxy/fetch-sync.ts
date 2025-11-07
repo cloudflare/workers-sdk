@@ -1,6 +1,7 @@
 import assert from "assert";
 import { ReadableStream } from "stream/web";
 import { MessageChannel, receiveMessageOnPort, Worker } from "worker_threads";
+
 import { Headers } from "../../../http";
 import { CoreHeaders } from "../../../workers";
 import { JsonErrorSchema, reviveError } from "../errors";

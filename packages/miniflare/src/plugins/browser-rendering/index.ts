@@ -1,5 +1,9 @@
 import fs from "fs";
+import { dim } from "kleur/colors";
 import path from "path";
+import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
+import { z } from "zod";
+
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import {
@@ -10,9 +14,7 @@ import {
 	launch,
 	resolveBuildId,
 } from "@puppeteer/browsers";
-import { dim } from "kleur/colors";
-import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
-import { z } from "zod";
+
 import { kVoid } from "../../runtime";
 import { Log } from "../../shared";
 import { getGlobalWranglerCachePath } from "../../shared/wrangler";

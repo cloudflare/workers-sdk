@@ -1,9 +1,23 @@
-import assert from "node:assert";
-import path from "node:path";
-import { resolveDockerHost } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
+import type { WorkerRegistry } from "miniflare";
+
 import { watch } from "chokidar";
 import { getWorkerRegistry } from "miniflare";
+import assert from "node:assert";
+import path from "node:path";
+
+import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
+
+import { resolveDockerHost } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
+
+import type { ControllerEventMap } from "./BaseController";
+import type { ConfigUpdateEvent, DevRegistryUpdateEvent } from "./events";
+import type {
+	StartDevWorkerInput,
+	StartDevWorkerOptions,
+	Trigger,
+} from "./types";
+
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig } from "../../config";
@@ -47,15 +61,6 @@ import {
 	extractBindingsOfType,
 	unwrapHook,
 } from "./utils";
-import type { ControllerEventMap } from "./BaseController";
-import type { ConfigUpdateEvent, DevRegistryUpdateEvent } from "./events";
-import type {
-	StartDevWorkerInput,
-	StartDevWorkerOptions,
-	Trigger,
-} from "./types";
-import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
-import type { WorkerRegistry } from "miniflare";
 
 type ConfigControllerEventMap = ControllerEventMap & {
 	configUpdate: [ConfigUpdateEvent];
@@ -161,9 +166,9 @@ async function resolveDevConfig(
 			input.dev?.enableContainers ?? config.dev.enable_containers,
 		dockerPath: input.dev?.dockerPath ?? getDockerPath(),
 		containerEngine: useContainers
-			? input.dev?.containerEngine ??
+			? (input.dev?.containerEngine ??
 				config.dev.container_engine ??
-				resolveDockerHost(input.dev?.dockerPath ?? getDockerPath())
+				resolveDockerHost(input.dev?.dockerPath ?? getDockerPath()))
 			: undefined,
 		containerBuildId: input.dev?.containerBuildId,
 	} satisfies StartDevWorkerOptions["dev"];

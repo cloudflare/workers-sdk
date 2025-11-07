@@ -1,4 +1,7 @@
 import { UserError } from "@cloudflare/workers-utils";
+
+import type { VectorizeDistanceMetric } from "./types";
+
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import {
@@ -8,7 +11,6 @@ import {
 import { getValidBindingName } from "../utils/getValidBindingName";
 import { createIndex } from "./client";
 import { deprecatedV1DefaultFlag } from "./common";
-import type { VectorizeDistanceMetric } from "./types";
 
 export const vectorizeCreateCommand = createCommand({
 	metadata: {

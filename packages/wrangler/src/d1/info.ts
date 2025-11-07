@@ -1,4 +1,7 @@
 import prettyBytes from "pretty-bytes";
+
+import type { D1MetricsGraphQLResponse, Database } from "./types";
+
 import { fetchGraphqlResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
@@ -7,7 +10,6 @@ import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromIdOrName,
 } from "./utils";
-import type { D1MetricsGraphQLResponse, Database } from "./types";
 
 export const d1InfoCommand = createCommand({
 	metadata: {

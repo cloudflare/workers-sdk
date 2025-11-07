@@ -1,12 +1,14 @@
+import type { RequestInit } from "undici";
+
 import { randomUUID } from "node:crypto";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { seed as baseSeed, makeRoot } from "./helpers/setup";
-import type { RequestInit } from "undici";
 
 async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {
 	return vi.waitFor(
@@ -47,7 +49,7 @@ describe("multiworker", () => {
 					main = "src/index.ts"
 					compatibility_date = "2024-11-01"
 			`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 				import { DurableObject } from "cloudflare:workers";
 
 				export default {
@@ -113,7 +115,7 @@ describe("multiworker", () => {
                         { name = "REFERENCED_DO", class_name = "MyDurableObject", script_name = "${workerName}" }
                     ]
 			`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
 				import { WorkerEntrypoint, RpcTarget } from "cloudflare:workers";
 
 				class Counter extends RpcTarget {
@@ -169,7 +171,7 @@ describe("multiworker", () => {
 					name = "${workerName3}"
 					main = "src/index.ts"
 			`,
-			"src/index.ts": dedent/* javascript */ `
+			"src/index.ts": dedent /* javascript */ `
                 addEventListener("fetch", (event) => {
                     event.respondWith(new Response("Hello from service worker"));
                 });
@@ -408,7 +410,7 @@ describe("multiworker", () => {
 						[[tail_consumers]]
 						service = "${workerName2}"
 				`,
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 					export default {
 						async fetch(req, env) {
 							console.log("log something")
@@ -425,7 +427,7 @@ describe("multiworker", () => {
 						main = "src/index.ts"
 						compatibility_date = "2025-04-28"
 				`,
-				"src/index.ts": dedent/* javascript */ `
+				"src/index.ts": dedent /* javascript */ `
 					export default {
 						async tail(event) {
 							console.log("received tail event", event)
@@ -476,11 +478,11 @@ describe("multiworker", () => {
 					binding = "BEE"
 					service = '${workerName2}'
 				`,
-				"functions/cee.ts": dedent/* javascript */ `
+				"functions/cee.ts": dedent /* javascript */ `
 				export async function onRequest(context) {
 					return context.env.CEE.fetch("https://example.com");
 				}`,
-				"functions/bee.ts": dedent/* javascript */ `
+				"functions/bee.ts": dedent /* javascript */ `
 				export async function onRequest(context) {
 					return context.env.BEE.fetch("https://example.com");
 				}`,

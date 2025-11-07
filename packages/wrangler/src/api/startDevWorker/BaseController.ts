@@ -1,5 +1,5 @@
 import { EventEmitter } from "node:events";
-import { logger } from "../../logger";
+
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -9,6 +9,8 @@ import type {
 	ReloadCompleteEvent,
 	ReloadStartEvent,
 } from "./events";
+
+import { logger } from "../../logger";
 
 interface TypedEventEmitter<EventMap extends Record<string | symbol, unknown[]>>
 	extends EventEmitter {

@@ -1,4 +1,3 @@
-import { join, resolve } from "node:path";
 import {
 	BuildContext,
 	BuildOptions,
@@ -6,6 +5,7 @@ import {
 	Plugin,
 	build as runBuild,
 } from "esbuild";
+import { join, resolve } from "node:path";
 
 type EmbedWorkersOptions = {
 	/**

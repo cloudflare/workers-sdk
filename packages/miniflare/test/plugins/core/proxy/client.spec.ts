@@ -1,10 +1,7 @@
 import assert from "assert";
+import test, { ThrowsExpectation } from "ava";
 import { Blob } from "buffer";
 import http from "http";
-import { text } from "stream/consumers";
-import { ReadableStream, WritableStream } from "stream/web";
-import util from "util";
-import test, { ThrowsExpectation } from "ava";
 import {
 	DeferredPromise,
 	fetch,
@@ -14,6 +11,10 @@ import {
 	Response,
 	WebSocketPair,
 } from "miniflare";
+import { text } from "stream/consumers";
+import { ReadableStream, WritableStream } from "stream/web";
+import util from "util";
+
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 
 // This file tests API proxy edge cases. Cache, D1, Durable Object and R2 tests

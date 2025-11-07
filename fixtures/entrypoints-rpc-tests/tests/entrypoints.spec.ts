@@ -1,10 +1,11 @@
+import { Miniflare } from "miniflare";
 import fs, { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { Miniflare } from "miniflare";
 import dedent from "ts-dedent";
 import { Agent, fetch, setGlobalDispatcher } from "undici";
 import { test as baseTest, describe, expect, onTestFinished, vi } from "vitest";
+
 import {
 	runWranglerDev,
 	runWranglerPagesDev,

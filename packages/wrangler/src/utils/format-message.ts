@@ -1,6 +1,8 @@
 import { formatMessagesSync } from "esbuild";
-import { logger } from "../logger";
+
 import type { Message } from "@cloudflare/workers-utils";
+
+import { logger } from "../logger";
 
 /**
  * Formats a `Message` using esbuild's pretty-printing algorithm.

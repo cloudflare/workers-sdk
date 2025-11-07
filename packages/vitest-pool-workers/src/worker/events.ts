@@ -112,8 +112,8 @@ const kRetry = Symbol("kRetry");
 const kAck = Symbol("kAck");
 const kRetryAll = Symbol("kRetryAll");
 const kAckAll = Symbol("kAckAll");
-class QueueMessage<Body = unknown> /* Message */ {
-	// https://github.com/cloudflare/workerd/blob/v1.20231218.0/src/workerd/api/queue.h#L113
+class QueueMessage<Body = unknown> {
+	/* Message */ // https://github.com/cloudflare/workerd/blob/v1.20231218.0/src/workerd/api/queue.h#L113
 	readonly #controller: QueueController;
 	readonly id!: string;
 	readonly timestamp!: Date;
@@ -236,8 +236,8 @@ class QueueMessage<Body = unknown> /* Message */ {
 		this[kAck] = true;
 	}
 }
-class QueueController<Body = unknown> /* MessageBatch */ {
-	// https://github.com/cloudflare/workerd/blob/v1.20231218.0/src/workerd/api/queue.h#L198
+class QueueController<Body = unknown> {
+	/* MessageBatch */ // https://github.com/cloudflare/workerd/blob/v1.20231218.0/src/workerd/api/queue.h#L198
 	readonly queue!: string;
 	readonly messages!: QueueMessage<Body>[];
 	[kRetryAll] = false;

@@ -1,12 +1,14 @@
 import { configFileName, UserError } from "@cloudflare/workers-utils";
+
+import type { VersionDetails } from ".";
+import type { ApiVersion, VersionCache } from "../types";
+
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
 import { fetchDeploymentVersions, fetchLatestDeployment } from "../api";
-import type { VersionDetails } from ".";
-import type { ApiVersion, VersionCache } from "../types";
 
 export const versionsSecretsListCommand = createCommand({
 	metadata: {

@@ -1,5 +1,9 @@
+import chalk from "chalk";
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { ProxyAgent, setGlobalDispatcher } from "undici";
+import makeCLI from "yargs";
+
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
 import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import {
@@ -7,9 +11,10 @@ import {
 	experimental_readRawConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
-import chalk from "chalk";
-import { ProxyAgent, setGlobalDispatcher } from "undici";
-import makeCLI from "yargs";
+
+import type { LoggerLevel } from "./logger";
+import type { CommonYargsArgv, SubHelp } from "./yargs-types";
+
 import { version as wranglerVersion } from "../package.json";
 import { aiFineTuneNamespace, aiNamespace } from "./ai";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
@@ -331,8 +336,6 @@ import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/inst
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
-import type { LoggerLevel } from "./logger";
-import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
 if (proxy) {
 	setGlobalDispatcher(new ProxyAgent(proxy));
@@ -1578,53 +1581,59 @@ export async function main(argv: string[]): Promise<void> {
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
 	// Register Yargs middleware to record command as Sentry breadcrumb
 	let recordedCommand = false;
-	const wranglerWithMiddleware = wrangler.middleware((args) => {
-		// Update logger level, before we do any logging
-		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
-			logger.loggerLevel = args.logLevel as LoggerLevel;
-			// Also set the CLI package log level to match
-			setLogLevel(args.logLevel as LoggerLevel);
-		}
-		const envLogLevel = getEnvironmentVariableFactory({
-			variableName: "WRANGLER_LOG",
-		})()?.toLowerCase();
-		if (envLogLevel) {
-			setLogLevel(envLogLevel as LoggerLevel);
-		}
-		// Middleware called for each sub-command, but only want to record once
-		if (recordedCommand) {
-			return;
-		}
-		recordedCommand = true;
-		// `args._` doesn't include any positional arguments (e.g. script name,
-		// key to fetch) or flags
+	const wranglerWithMiddleware = wrangler.middleware(
+		(args) => {
+			// Update logger level, before we do any logging
+			if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
+				logger.loggerLevel = args.logLevel as LoggerLevel;
+				// Also set the CLI package log level to match
+				setLogLevel(args.logLevel as LoggerLevel);
+			}
+			const envLogLevel = getEnvironmentVariableFactory({
+				variableName: "WRANGLER_LOG",
+			})()?.toLowerCase();
+			if (envLogLevel) {
+				setLogLevel(envLogLevel as LoggerLevel);
+			}
+			// Middleware called for each sub-command, but only want to record once
+			if (recordedCommand) {
+				return;
+			}
+			recordedCommand = true;
+			// `args._` doesn't include any positional arguments (e.g. script name,
+			// key to fetch) or flags
 
-		try {
-			const { rawConfig, configPath } = experimental_readRawConfig(args);
-			dispatcher = getMetricsDispatcher({
-				sendMetrics: rawConfig.send_metrics,
-				hasAssets: !!rawConfig.assets?.directory,
-				configPath,
-			});
-		} catch (e) {
-			// If we can't parse the config, we can't send metrics
-			logger.debug("Failed to parse config. Disabling metrics dispatcher.", e);
-		}
+			try {
+				const { rawConfig, configPath } = experimental_readRawConfig(args);
+				dispatcher = getMetricsDispatcher({
+					sendMetrics: rawConfig.send_metrics,
+					hasAssets: !!rawConfig.assets?.directory,
+					configPath,
+				});
+			} catch (e) {
+				// If we can't parse the config, we can't send metrics
+				logger.debug(
+					"Failed to parse config. Disabling metrics dispatcher.",
+					e
+				);
+			}
 
-		command = `wrangler ${args._.join(" ")}`;
-		metricsArgs = args;
-		addBreadcrumb(command);
-		// NB despite 'applyBeforeValidation = true', this runs *after* yargs 'validates' options,
-		// e.g. if a required arg is missing, yargs will error out before we send any events :/
-		dispatcher?.sendCommandEvent(
-			"wrangler command started",
-			{
-				command,
-				args,
-			},
-			argv
-		);
-	}, /* applyBeforeValidation */ true);
+			command = `wrangler ${args._.join(" ")}`;
+			metricsArgs = args;
+			addBreadcrumb(command);
+			// NB despite 'applyBeforeValidation = true', this runs *after* yargs 'validates' options,
+			// e.g. if a required arg is missing, yargs will error out before we send any events :/
+			dispatcher?.sendCommandEvent(
+				"wrangler command started",
+				{
+					command,
+					args,
+				},
+				argv
+			);
+		},
+		/* applyBeforeValidation */ true
+	);
 
 	let cliHandlerThrew = false;
 	try {

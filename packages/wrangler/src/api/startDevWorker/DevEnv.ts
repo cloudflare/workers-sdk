@@ -1,16 +1,19 @@
+import { MiniflareCoreError } from "miniflare";
 import assert from "node:assert";
 import { EventEmitter } from "node:events";
+
 import { ParseError, UserError } from "@cloudflare/workers-utils";
-import { MiniflareCoreError } from "miniflare";
+
+import type { Controller, RuntimeController } from "./BaseController";
+import type { ErrorEvent } from "./events";
+import type { StartDevWorkerInput, Worker } from "./types";
+
 import { logger, runWithLogLevel } from "../../logger";
 import { BundlerController } from "./BundlerController";
 import { ConfigController } from "./ConfigController";
 import { LocalRuntimeController } from "./LocalRuntimeController";
 import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
-import type { Controller, RuntimeController } from "./BaseController";
-import type { ErrorEvent } from "./events";
-import type { StartDevWorkerInput, Worker } from "./types";
 
 export class DevEnv extends EventEmitter {
 	config: ConfigController;

@@ -1,5 +1,6 @@
-import { inputPrompt } from "./interactive";
 import type { Arg, PromptConfig } from "./interactive";
+
+import { inputPrompt } from "./interactive";
 
 export const processArgument = async <T>(
 	args: Record<string, Arg>,

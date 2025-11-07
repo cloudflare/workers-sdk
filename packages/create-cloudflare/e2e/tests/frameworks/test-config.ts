@@ -1,3 +1,5 @@
+import type { FrameworkTestConfig } from "../../helpers/framework-helpers";
+
 import { detectPackageManager } from "../../../src/helpers/packageManagers";
 import {
 	frameworkToTestFilter,
@@ -5,7 +7,6 @@ import {
 	keys,
 	LONG_TIMEOUT,
 } from "../../helpers/constants";
-import type { FrameworkTestConfig } from "../../helpers/framework-helpers";
 
 export type NamedFrameworkTestConfig = FrameworkTestConfig & {
 	name: string;

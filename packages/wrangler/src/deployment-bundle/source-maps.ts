@@ -1,8 +1,11 @@
+import type { RawSourceMap } from "source-map";
+
 import fs from "node:fs";
 import path from "node:path";
-import type { BundleResult, SourceMapMetadata } from "./bundle";
+
 import type { CfModule, CfWorkerSourceMap } from "@cloudflare/workers-utils";
-import type { RawSourceMap } from "source-map";
+
+import type { BundleResult, SourceMapMetadata } from "./bundle";
 
 /**
  * Loads source maps that appear in the given build output.

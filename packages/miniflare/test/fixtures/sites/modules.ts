@@ -1,9 +1,10 @@
 import manifestJSON from "__STATIC_CONTENT_MANIFEST";
+
 import { getAssetFromKV } from "@cloudflare/kv-asset-handler";
 
 const manifest = JSON.parse(manifestJSON);
 
-export default <
+export default (<
 	ExportedHandler<{
 		__STATIC_CONTENT: KVNamespace;
 		__STATIC_CONTENT_MANIFEST?: undefined;
@@ -32,4 +33,4 @@ export default <
 			}
 		);
 	},
-};
+});

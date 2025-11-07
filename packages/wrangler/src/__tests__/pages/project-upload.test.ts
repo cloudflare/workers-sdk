@@ -1,6 +1,11 @@
+import type { StrictRequest } from "msw";
+
+import { http, HttpResponse } from "msw";
 // /* eslint-disable no-shadow */
 import { mkdirSync, writeFileSync } from "node:fs";
-import { http, HttpResponse } from "msw";
+
+import type { UploadPayloadFile } from "../../pages/types";
+
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -10,8 +15,6 @@ import { msw } from "../helpers/msw";
 import { normalizeProgressSteps } from "../helpers/normalize-progress";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import type { UploadPayloadFile } from "../../pages/types";
-import type { StrictRequest } from "msw";
 
 describe("pages project upload", () => {
 	const std = mockConsoleMethods();

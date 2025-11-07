@@ -1,5 +1,6 @@
-import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
 import { Response } from "miniflare";
+
+import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
 
 export default defineWorkersProject({
 	define: {

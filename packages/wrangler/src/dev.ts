@@ -1,21 +1,8 @@
+import type { Json } from "miniflare";
+
 import assert from "node:assert";
 import events from "node:events";
-import {
-	configFileName,
-	formatConfigSnippet,
-	UserError,
-} from "@cloudflare/workers-utils";
-import { isWebContainer } from "@webcontainer/env";
-import { getAssetsOptions } from "./assets";
-import { createCommand } from "./core/create-command";
-import { validateRoutes } from "./deploy/deploy";
-import { getVarsForDev } from "./dev/dev-vars";
-import { startDev } from "./dev/start-dev";
-import { logger } from "./logger";
-import { mergeWithOverride } from "./utils/mergeWithOverride";
-import { getHostFromRoute } from "./zones";
-import type { Trigger } from "./api";
-import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
+
 import type {
 	CfD1Database,
 	CfKvNamespace,
@@ -31,7 +18,25 @@ import type {
 	Route,
 	Rule,
 } from "@cloudflare/workers-utils";
-import type { Json } from "miniflare";
+
+import {
+	configFileName,
+	formatConfigSnippet,
+	UserError,
+} from "@cloudflare/workers-utils";
+import { isWebContainer } from "@webcontainer/env";
+
+import type { Trigger } from "./api";
+import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
+
+import { getAssetsOptions } from "./assets";
+import { createCommand } from "./core/create-command";
+import { validateRoutes } from "./deploy/deploy";
+import { getVarsForDev } from "./dev/dev-vars";
+import { startDev } from "./dev/start-dev";
+import { logger } from "./logger";
+import { mergeWithOverride } from "./utils/mergeWithOverride";
+import { getHostFromRoute } from "./zones";
 
 export const dev = createCommand({
 	behaviour: {

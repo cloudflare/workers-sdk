@@ -4,6 +4,9 @@ import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import { z } from "zod";
+
+import type { DOContainerOptions } from "../do";
+
 import {
 	Extension,
 	Service,
@@ -23,7 +26,6 @@ import {
 	sanitisePath,
 } from "../../workers";
 import { UnsafeUniqueKey } from "./constants";
-import type { DOContainerOptions } from "../do";
 
 export const DEFAULT_PERSIST_ROOT = ".mf";
 

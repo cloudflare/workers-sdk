@@ -1,8 +1,10 @@
 import { CommandLineArgsError } from "@cloudflare/workers-utils";
+
+import type { PostTypedConsumerBody } from "../../../../client";
+
 import { createCommand } from "../../../../../core/create-command";
 import { logger } from "../../../../../logger";
 import { postConsumer } from "../../../../client";
-import type { PostTypedConsumerBody } from "../../../../client";
 
 export const queuesConsumerHttpAddCommand = createCommand({
 	metadata: {

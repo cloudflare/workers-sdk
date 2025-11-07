@@ -1,5 +1,19 @@
-import { ParseError } from "@cloudflare/workers-utils";
+import type { HttpResponseResolver } from "msw";
+
 import { http, HttpResponse } from "msw";
+
+import type {
+	AssetConfigMetadata,
+	CfWorkerInit,
+	RawConfig,
+	RawEnvironment,
+	WorkerMetadata,
+} from "@cloudflare/workers-utils";
+
+import { ParseError } from "@cloudflare/workers-utils";
+
+import type { NonVersionedScriptSettings } from "../../versions/api";
+
 import {
 	getSubdomainValues,
 	getSubdomainValuesAPIMock,
@@ -11,15 +25,6 @@ import {
 import { createFetchResult, msw } from "./msw";
 import { serialize, toString } from "./serialize-form-data-entry";
 import { readWranglerConfig } from "./write-wrangler-config";
-import type { NonVersionedScriptSettings } from "../../versions/api";
-import type {
-	AssetConfigMetadata,
-	CfWorkerInit,
-	RawConfig,
-	RawEnvironment,
-	WorkerMetadata,
-} from "@cloudflare/workers-utils";
-import type { HttpResponseResolver } from "msw";
 
 /** Create a mock handler for the request to upload a worker script. */
 export function mockUploadWorkerRequest(

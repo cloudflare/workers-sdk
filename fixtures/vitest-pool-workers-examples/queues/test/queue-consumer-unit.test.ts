@@ -1,11 +1,12 @@
-import { randomBytes } from "node:crypto";
 import {
 	createExecutionContext,
 	createMessageBatch,
 	env,
 	getQueueResult,
 } from "cloudflare:test";
+import { randomBytes } from "node:crypto";
 import { expect, it } from "vitest";
+
 import worker from "../src/index";
 
 it("consumes queue messages", async () => {

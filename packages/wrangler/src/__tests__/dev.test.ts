@@ -1,10 +1,23 @@
-import * as fs from "node:fs";
-import module from "node:module";
-import { FatalError } from "@cloudflare/workers-utils";
+import type { Mock, MockInstance } from "vitest";
+
 import getPort from "get-port";
 import { http, HttpResponse } from "msw";
+import * as fs from "node:fs";
+import module from "node:module";
 import dedent from "ts-dedent";
 import { vi } from "vitest";
+
+import type { RawConfig } from "@cloudflare/workers-utils";
+
+import { FatalError } from "@cloudflare/workers-utils";
+
+import type {
+	Binding,
+	StartDevWorkerInput,
+	StartDevWorkerOptions,
+	Trigger,
+} from "../api";
+
 import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../api/startDevWorker/utils";
 import { getWorkerAccountAndContext } from "../dev/remote";
@@ -24,14 +37,6 @@ import {
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
-import type {
-	Binding,
-	StartDevWorkerInput,
-	StartDevWorkerOptions,
-	Trigger,
-} from "../api";
-import type { RawConfig } from "@cloudflare/workers-utils";
-import type { Mock, MockInstance } from "vitest";
 
 vi.mock("../api/startDevWorker/ConfigController", (importOriginal) =>
 	importOriginal()

@@ -6,6 +6,7 @@ import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "miniflare";
+
 import { NODE_PLATFORM_IMPL } from "../../../src/plugins/core/proxy/types";
 
 test("serialize RegExp object consisting of only ascii chars", (t) => {

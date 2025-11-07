@@ -1,6 +1,7 @@
+import type { ReadableStream } from "node:stream/web";
+
 import { setTimeout } from "node:timers/promises";
 import stripAnsi from "strip-ansi";
-import type { ReadableStream } from "node:stream/web";
 
 const TIMEOUT = Symbol.for("TIMEOUT");
 

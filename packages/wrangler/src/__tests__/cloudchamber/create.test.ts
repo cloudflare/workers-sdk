@@ -1,7 +1,11 @@
-import * as fs from "node:fs";
-import * as TOML from "@iarna/toml";
 import { http, HttpResponse } from "msw";
+import * as fs from "node:fs";
 import patchConsole from "patch-console";
+
+import type { SSHPublicKeyItem } from "@cloudflare/containers-shared";
+
+import * as TOML from "@iarna/toml";
+
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { MOCK_DEPLOYMENTS_COMPLEX } from "../helpers/mock-cloudchamber";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -10,7 +14,6 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
-import type { SSHPublicKeyItem } from "@cloudflare/containers-shared";
 
 const MOCK_DEPLOYMENTS_COMPLEX_RESPONSE = `
 			"{

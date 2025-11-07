@@ -1,3 +1,5 @@
+import type { Message } from "@cloudflare/workers-utils";
+
 import {
 	indexLocation,
 	parseByteSize,
@@ -6,8 +8,8 @@ import {
 	parseTOML,
 	searchLocation,
 } from "@cloudflare/workers-utils";
+
 import { formatMessage } from "../utils/format-message";
-import type { Message } from "@cloudflare/workers-utils";
 
 describe("formatMessage", () => {
 	const format = (input: Message) => {

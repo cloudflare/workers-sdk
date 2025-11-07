@@ -1,4 +1,5 @@
 import path from "node:path";
+
 import type { Config } from "@cloudflare/workers-utils";
 
 /**

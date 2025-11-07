@@ -1,12 +1,14 @@
+import chalk from "chalk";
 import assert from "node:assert";
 import { statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+
 import {
 	configFileName,
 	formatCompatibilityDate,
 	UserError,
 } from "@cloudflare/workers-utils";
-import chalk from "chalk";
+
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { runAutoConfig } from "../autoconfig/run";

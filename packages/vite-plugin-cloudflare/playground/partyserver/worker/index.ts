@@ -1,5 +1,6 @@
-import { routePartykitRequest, Server } from "partyserver";
 import type { Connection } from "partyserver";
+
+import { routePartykitRequest, Server } from "partyserver";
 
 interface Env extends Record<string, unknown> {
 	Assets: Fetcher;

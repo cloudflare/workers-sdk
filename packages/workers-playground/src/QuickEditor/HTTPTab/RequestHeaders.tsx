@@ -1,8 +1,10 @@
+import type React from "react";
+
 import { Button } from "@cloudflare/component-button";
 import { Icon } from "@cloudflare/component-icon";
 import { Div } from "@cloudflare/elements";
+
 import { InputField } from "../InputField";
-import type React from "react";
 
 export type HeaderEntry = [string, string];
 

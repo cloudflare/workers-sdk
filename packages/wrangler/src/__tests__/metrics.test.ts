@@ -1,6 +1,9 @@
-import * as fs from "node:fs";
+import type { MockInstance } from "vitest";
+
 import { http, HttpResponse } from "msw";
+import * as fs from "node:fs";
 import { vi } from "vitest";
+
 import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
@@ -24,7 +27,6 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
-import type { MockInstance } from "vitest";
 
 vi.mock("../metrics/helpers");
 vi.mock("../metrics/send-event");

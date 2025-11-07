@@ -1,6 +1,10 @@
 import { statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
+
+import type { Config, PackageJSON } from "@cloudflare/workers-utils";
+import type { Settings } from "@netlify/build-info";
+
 import { brandColor } from "@cloudflare/cli/colors";
 import {
 	FatalError,
@@ -10,14 +14,14 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
+
+import type { AutoConfigDetails } from "./types";
+
 import { confirm, prompt } from "../dialogs";
 import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 import { getFramework } from "./frameworks/get-framework";
-import type { AutoConfigDetails } from "./types";
-import type { Config, PackageJSON } from "@cloudflare/workers-utils";
-import type { Settings } from "@netlify/build-info";
 
 class MultipleFrameworksError extends FatalError {
 	constructor(frameworks: string[]) {

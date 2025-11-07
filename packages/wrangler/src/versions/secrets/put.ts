@@ -1,4 +1,7 @@
 import { configFileName, UserError } from "@cloudflare/workers-utils";
+
+import type { WorkerVersion } from "./index";
+
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { prompt } from "../../dialogs";
@@ -7,7 +10,6 @@ import { requireAuth } from "../../user";
 import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import { copyWorkerVersionWithNewSecrets } from "./index";
-import type { WorkerVersion } from "./index";
 
 export const versionsSecretPutCommand = createCommand({
 	metadata: {

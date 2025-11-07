@@ -1,8 +1,10 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { fetchResult } from "../../cfetch";
-import { getDatabaseInfoFromIdOrName } from "../utils";
+
 import type { ComplianceConfig } from "../../environment-variables/misc-variables";
 import type { BookmarkResponse } from "./types";
+
+import { fetchResult } from "../../cfetch";
+import { getDatabaseInfoFromIdOrName } from "../utils";
 
 /**
  * a function to grab the nearest bookmark for a given timestamp. If no timestamp is provided, it will return the current bookmark

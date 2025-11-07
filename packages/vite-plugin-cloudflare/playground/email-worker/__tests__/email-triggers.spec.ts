@@ -1,5 +1,6 @@
 import dedent from "ts-dedent";
 import { expect, test } from "vitest";
+
 import { getTextResponse, serverLogs, viteTestUrl } from "../../__test-utils__";
 
 test("Supports sending email via the email binding", async () => {

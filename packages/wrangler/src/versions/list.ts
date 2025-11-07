@@ -1,11 +1,13 @@
 import { logRaw } from "@cloudflare/cli";
 import { UserError } from "@cloudflare/workers-utils";
+
+import type { ApiVersion, VersionCache } from "./types";
+
 import { createCommand } from "../core/create-command";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import { fetchDeployableVersions } from "./api";
-import type { ApiVersion, VersionCache } from "./types";
 
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
 

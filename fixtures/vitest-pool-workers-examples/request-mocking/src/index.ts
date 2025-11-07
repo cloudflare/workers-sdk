@@ -1,4 +1,4 @@
-export default <ExportedHandler>{
+export default (<ExportedHandler>{
 	async fetch(request, env, ctx) {
 		const url = new URL(request.url);
 		url.host = "cloudflare.com";
@@ -8,4 +8,4 @@ export default <ExportedHandler>{
 			return new Response(String(e), { status: 500 });
 		}
 	},
-};
+});

@@ -1,6 +1,6 @@
 import { CacheHeaders } from "./constants";
 
-export default <ExportedHandler>{
+export default (<ExportedHandler>{
 	async fetch(request) {
 		if (request.method === "GET") {
 			return new Response(null, {
@@ -17,4 +17,4 @@ export default <ExportedHandler>{
 			return new Response(null, { status: 405 });
 		}
 	},
-};
+});

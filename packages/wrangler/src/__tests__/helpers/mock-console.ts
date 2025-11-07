@@ -1,9 +1,12 @@
+import type { MockInstance } from "vitest";
+
 import * as util from "node:util";
-import * as streams from "@cloudflare/cli/streams";
 import { afterEach, beforeEach, vi } from "vitest";
+
+import * as streams from "@cloudflare/cli/streams";
+
 import { logger } from "../../logger";
 import { normalizeString } from "./normalize";
-import type { MockInstance } from "vitest";
 
 /**
  * We use this module to mock console methods, and optionally

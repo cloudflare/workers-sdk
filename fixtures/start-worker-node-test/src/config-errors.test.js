@@ -1,7 +1,7 @@
+import getPort from "get-port";
 import assert from "node:assert";
 import test, { describe } from "node:test";
 import { setTimeout } from "node:timers/promises";
-import getPort from "get-port";
 import { unstable_startWorker } from "wrangler";
 
 describe("startWorker - configuration errors", () => {

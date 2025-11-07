@@ -1,6 +1,7 @@
 // Emulated Secret Store Binding
 
 import { WorkerEntrypoint } from "cloudflare:workers";
+
 import { ADMIN_API } from "./constants";
 
 // ENV configuration

@@ -1,4 +1,7 @@
 import chalk from "chalk";
+
+import type { Database } from "./types";
+
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
@@ -6,7 +9,6 @@ import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { printResourceLocation } from "../utils/is-local";
 import { getDatabaseByNameOrBinding } from "./utils";
-import type { Database } from "./types";
 
 export const d1DeleteCommand = createCommand({
 	metadata: {

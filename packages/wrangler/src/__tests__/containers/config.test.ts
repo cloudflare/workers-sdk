@@ -1,12 +1,15 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { vi } from "vitest";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
-import { vi } from "vitest";
+
 import { getNormalizedContainerOptions } from "../../containers/config";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { runInTempDir } from "../helpers/run-in-tmp";
-import type { Config } from "@cloudflare/workers-utils";
 
 describe("getNormalizedContainerOptions", () => {
 	mockApiToken();

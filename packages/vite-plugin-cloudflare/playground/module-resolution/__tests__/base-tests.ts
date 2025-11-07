@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, test } from "vitest";
+
 import {
 	getJsonResponse,
 	getTextResponse,
@@ -104,8 +105,7 @@ describe("module resolution", async () => {
 			expect(result).toEqual({
 				"(slash-create/web) VERSION": "6.2.1",
 				"(slash-create/web) myCollection.random()": 54321,
-				"(slash-create/web) slashCreatorInstance is instance of SlashCreator":
-					true,
+				"(slash-create/web) slashCreatorInstance is instance of SlashCreator": true,
 			});
 		});
 	});

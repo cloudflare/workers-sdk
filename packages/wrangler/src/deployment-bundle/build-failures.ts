@@ -1,6 +1,7 @@
-import { builtinModules } from "node:module";
 import type * as esbuild from "esbuild";
 import type { NodeJSCompatMode } from "miniflare";
+
+import { builtinModules } from "node:module";
 
 /**
  * RegExp matching against esbuild's error text when it is unable to resolve

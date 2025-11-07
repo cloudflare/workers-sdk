@@ -1,9 +1,16 @@
+import chalk from "chalk";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import {
 	configFileName,
 	FatalError,
 	findWranglerConfig,
 } from "@cloudflare/workers-utils";
-import chalk from "chalk";
+
+import type { PagesProject } from "../download-config";
+import type { PagesConfigCache } from "../types";
+
 import { fetchResult } from "../../cfetch";
 import { readPagesConfig } from "../../config";
 import { getConfigCache } from "../../config-cache";
@@ -18,9 +25,6 @@ import { requireAuth } from "../../user";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../constants";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../errors";
-import type { PagesProject } from "../download-config";
-import type { PagesConfigCache } from "../types";
-import type { Config } from "@cloudflare/workers-utils";
 
 function isPagesEnv(env: string): env is "production" | "preview" {
 	return ["production", "preview"].includes(env);

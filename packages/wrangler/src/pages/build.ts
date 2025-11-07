@@ -1,3 +1,5 @@
+import type { NodeJSCompatMode } from "miniflare";
+
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, mkdirSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -7,11 +9,17 @@ import path, {
 	relative,
 	resolve as resolvePath,
 } from "node:path";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import {
 	FatalError,
 	findWranglerConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
+
+import type { BundleResult } from "../deployment-bundle/bundle";
+
 import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
 import { readPagesConfig } from "../config";
 import { createCommand } from "../core/create-command";
@@ -33,9 +41,6 @@ import {
 	buildRawWorker,
 	produceWorkerBundleForWorkerJSDirectory,
 } from "./functions/buildWorker";
-import type { BundleResult } from "../deployment-bundle/bundle";
-import type { Config } from "@cloudflare/workers-utils";
-import type { NodeJSCompatMode } from "miniflare";
 
 export const pagesFunctionsBuildCommand = createCommand({
 	metadata: {

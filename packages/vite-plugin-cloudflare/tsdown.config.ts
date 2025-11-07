@@ -1,5 +1,6 @@
-import { defineConfig } from "tsdown";
 import type { Options } from "tsdown";
+
+import { defineConfig } from "tsdown";
 
 export default defineConfig([
 	{

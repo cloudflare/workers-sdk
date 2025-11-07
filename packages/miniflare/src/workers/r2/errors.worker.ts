@@ -1,5 +1,6 @@
-import { Buffer } from "node:buffer";
 import { HttpError } from "miniflare:shared";
+import { Buffer } from "node:buffer";
+
 import { R2Headers } from "./constants";
 import { InternalR2Object } from "./r2Object.worker";
 

@@ -1,5 +1,11 @@
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
+
+import type {
+	ConnectivityService,
+	ConnectivityServiceRequest,
+} from "../vpc/index";
+
 import { ServiceType } from "../vpc/index";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -9,10 +15,6 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type {
-	ConnectivityService,
-	ConnectivityServiceRequest,
-} from "../vpc/index";
 
 describe("vpc help", () => {
 	const std = mockConsoleMethods();

@@ -3,6 +3,7 @@ import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { fetch, Response } from "undici";
 import { describe, expect, it, onTestFinished } from "vitest";
+
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages dev with proxy and a script file", () => {

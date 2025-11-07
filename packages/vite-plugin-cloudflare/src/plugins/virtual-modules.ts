@@ -1,4 +1,5 @@
 import assert from "node:assert";
+
 import { VIRTUAL_WORKER_ENTRY, virtualPrefix } from "../shared";
 import { createPlugin } from "../utils";
 

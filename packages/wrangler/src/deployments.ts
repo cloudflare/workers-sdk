@@ -1,12 +1,25 @@
+import type { ArgumentsCamelCase } from "yargs";
+
+import chalk from "chalk";
+import { FormData } from "undici";
 import { URLSearchParams } from "url";
+
+import type {
+	Config,
+	ServiceMetadataRes,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
+
 import {
 	configFileName,
 	mapWorkerMetadataBindings,
 	UserError,
 } from "@cloudflare/workers-utils";
 import TOML from "@iarna/toml";
-import chalk from "chalk";
-import { FormData } from "undici";
+
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
+import type { CommonYargsOptions } from "./yargs-types";
+
 import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
 import { confirm, prompt } from "./dialogs";
@@ -15,14 +28,6 @@ import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
 import { printWranglerBanner } from "./wrangler-banner";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
-import type { CommonYargsOptions } from "./yargs-types";
-import type {
-	Config,
-	ServiceMetadataRes,
-	WorkerMetadataBinding,
-} from "@cloudflare/workers-utils";
-import type { ArgumentsCamelCase } from "yargs";
 
 type DeploymentDetails = {
 	id: string;

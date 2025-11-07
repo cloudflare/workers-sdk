@@ -1,7 +1,8 @@
+import { registerCompletionHandler } from "ava";
 import Module from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { registerCompletionHandler } from "ava";
+
 import {
 	_enableControlEndpoints,
 	_initialiseInstanceRegistry,

@@ -1,8 +1,13 @@
+import type { MessagePort } from "node:worker_threads";
+
 import http from "node:http";
 import https from "node:https";
 import net from "node:net";
 import { Duplex } from "node:stream";
 import { parentPort } from "node:worker_threads";
+
+import type { WorkerDefinition } from "../shared/dev-registry";
+
 import { HOST_CAPNP_CONNECT } from "../plugins/shared/constants";
 import {
 	extractDoFetchProxyTarget,
@@ -10,8 +15,6 @@ import {
 	INBOUND_DO_PROXY_SERVICE_PATH,
 } from "../shared/external-service";
 import { Log } from "./log";
-import type { WorkerDefinition } from "../shared/dev-registry";
-import type { MessagePort } from "node:worker_threads";
 
 interface ProxyAddress {
 	protocol: "http" | "https";

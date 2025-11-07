@@ -1,14 +1,17 @@
+import type * as vite from "vite";
+import type { Unstable_Config } from "wrangler";
+
 import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import colors from "picocolors";
-import { VIRTUAL_CLIENT_FALLBACK_ENTRY } from "./plugins/virtual-modules";
+
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
-import type * as vite from "vite";
-import type { Unstable_Config } from "wrangler";
+
+import { VIRTUAL_CLIENT_FALLBACK_ENTRY } from "./plugins/virtual-modules";
 
 const CLIENT_FALLBACK_ENTRY_NAME = "__cloudflare_fallback_entry__";
 

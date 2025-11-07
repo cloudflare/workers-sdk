@@ -1,13 +1,23 @@
+import { DeferredPromise, Response } from "miniflare";
 import events from "node:events";
 import fs, { readFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
 import util from "node:util";
-import { DeferredPromise, Response } from "miniflare";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { assert, describe, expect, it } from "vitest";
 import WebSocket from "ws";
+
+import type { Rule } from "@cloudflare/workers-utils";
+
+import type {
+	Bundle,
+	File,
+	ReloadCompleteEvent,
+	StartDevWorkerOptions,
+} from "../../../api";
+
 import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";
 import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { RuleTypeToModuleType } from "../../../deployment-bundle/module-collection";
@@ -15,13 +25,6 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { useTeardown } from "../../helpers/teardown";
 import { unusable } from "../../helpers/unusable";
-import type {
-	Bundle,
-	File,
-	ReloadCompleteEvent,
-	StartDevWorkerOptions,
-} from "../../../api";
-import type { Rule } from "@cloudflare/workers-utils";
 
 export type Module<ModuleType extends Rule["type"] = Rule["type"]> = File<
 	string | Uint8Array
@@ -209,7 +212,7 @@ describe("LocalRuntimeController", () => {
 				],
 				id: 0,
 				path: "/virtual/esm/index.mjs",
-				entrypointSource: dedent/*javascript*/ `
+				entrypointSource: dedent /*javascript*/ `
 				import add from "./add.cjs";
 				import base64 from "./base64.cjs";
 				import wave1 from "./data/wave.txt";
@@ -308,7 +311,7 @@ describe("LocalRuntimeController", () => {
 			};
 			const bundle: Bundle = {
 				type: "commonjs",
-				entrypointSource: dedent/*javascript*/ `
+				entrypointSource: dedent /*javascript*/ `
 				addEventListener("fetch", (event) => {
 					const { pathname } = new URL(event.request.url);
 					if (pathname === "/") {
@@ -405,7 +408,7 @@ describe("LocalRuntimeController", () => {
 						VERSION: { type: "json", value: version },
 					},
 				} satisfies Partial<StartDevWorkerOptions>;
-				const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 					export default {
 						fetch(request, env, ctx) {
 							return Response.json({ binding: env.VERSION, bundle: ${version} });
@@ -458,7 +461,7 @@ describe("LocalRuntimeController", () => {
 				entrypoint: "NOT_REAL",
 				compatibilityDate: disabledDate,
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					fetch(request, env, ctx) { return new Response(typeof navigator); }
 				}
@@ -516,7 +519,7 @@ describe("LocalRuntimeController", () => {
 				name: "worker",
 				entrypoint: "NOT_REAL",
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 				export default {
 					fetch(request, env, ctx) {
 						debugger;
@@ -593,7 +596,7 @@ describe("LocalRuntimeController", () => {
 					},
 				},
 			};
-			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+			const bundle = makeEsbuildBundle(dedent /*javascript*/ `
 			export default {
 				fetch(request, env, ctx) {
 					const body = JSON.stringify(env, (key, value) => {

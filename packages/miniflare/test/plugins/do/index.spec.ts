@@ -1,8 +1,6 @@
 import assert from "assert";
-import fs from "fs/promises";
-import path from "path";
-import { setTimeout } from "timers/promises";
 import test from "ava";
+import fs from "fs/promises";
 import {
 	DeferredPromise,
 	kUnsafeEphemeralUniqueKey,
@@ -11,6 +9,9 @@ import {
 	MiniflareOptions,
 	RequestInit,
 } from "miniflare";
+import path from "path";
+import { setTimeout } from "timers/promises";
+
 import { useTmp } from "../../test-shared";
 
 const COUNTER_SCRIPT = (responsePrefix = "") => `export class Counter {

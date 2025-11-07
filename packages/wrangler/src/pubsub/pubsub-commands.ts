@@ -1,15 +1,18 @@
+import type { CommandModule } from "yargs";
+
 import {
 	CommandLineArgsError,
 	parseHumanDuration,
 } from "@cloudflare/workers-utils";
+
+import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
+
+import * as pubsub from ".";
 import { readConfig } from "../config";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
-import * as pubsub from ".";
-import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
-import type { CommandModule } from "yargs";
 
 export function pubSubCommands(
 	pubsubYargs: CommonYargsArgv,

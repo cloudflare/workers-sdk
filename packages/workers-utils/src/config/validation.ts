@@ -1,8 +1,24 @@
 import assert from "node:assert";
 import path from "node:path";
+import { dedent } from "ts-dedent";
+
 import { isDockerfile } from "@cloudflare/containers-shared";
 import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/validators";
-import { dedent } from "ts-dedent";
+
+import type { CfWorkerInit } from "../worker";
+import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
+import type {
+	Assets,
+	DispatchNamespaceOutbound,
+	Environment,
+	Observability,
+	RawEnvironment,
+	Rule,
+	TailConsumer,
+} from "./environment";
+import type { TypeofType, ValidatorFn } from "./validation-helpers";
+
+import { configFileName, formatConfigSnippet } from ".";
 import { UserError } from "../errors";
 import { isRedirectedRawConfig } from "./config-helpers";
 import { Diagnostics } from "./diagnostics";
@@ -33,19 +49,6 @@ import {
 	validateTypedArray,
 	validateUniqueNameProperty,
 } from "./validation-helpers";
-import { configFileName, formatConfigSnippet } from ".";
-import type { CfWorkerInit } from "../worker";
-import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
-import type {
-	Assets,
-	DispatchNamespaceOutbound,
-	Environment,
-	Observability,
-	RawEnvironment,
-	Rule,
-	TailConsumer,
-} from "./environment";
-import type { TypeofType, ValidatorFn } from "./validation-helpers";
 
 /**
  * R2 bucket names must:
@@ -582,7 +585,7 @@ function normalizeAndValidateDev(
 		inspector_port,
 		local_protocol = localProtocolArg ?? "http",
 		// In remote mode upstream_protocol must be https, otherwise it defaults to local_protocol.
-		upstream_protocol = upstreamProtocolArg ?? remoteArg
+		upstream_protocol = (upstreamProtocolArg ?? remoteArg)
 			? "https"
 			: local_protocol,
 		host,

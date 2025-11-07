@@ -1,5 +1,6 @@
-import type { C3Args } from "./types";
 import type { PromptConfig } from "@cloudflare/cli/interactive";
+
+import type { C3Args } from "./types";
 
 export type Event =
 	| {

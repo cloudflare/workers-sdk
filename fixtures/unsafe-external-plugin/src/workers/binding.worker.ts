@@ -1,4 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
+
 import type { UnsafeBindingObject } from "./object.worker";
 
 // ENV configuration

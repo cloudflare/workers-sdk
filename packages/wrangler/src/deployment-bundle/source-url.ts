@@ -1,4 +1,5 @@
 import { pathToFileURL } from "url";
+
 import type { CfModule } from "@cloudflare/workers-utils";
 
 function withSourceURL(source: string, sourcePath: string) {

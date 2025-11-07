@@ -3,6 +3,7 @@ import {
 	RequestInfo as BaseRequestInfo,
 	RequestInit as BaseRequestInit,
 } from "undici";
+
 import type {
 	IncomingRequestCfProperties,
 	RequestInitCfProperties,

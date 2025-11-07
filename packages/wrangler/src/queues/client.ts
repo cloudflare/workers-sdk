@@ -1,13 +1,17 @@
 import { URLSearchParams } from "node:url";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import { UserError } from "@cloudflare/workers-utils";
-import { fetchPagedListResult, fetchResult } from "../cfetch";
-import { logger } from "../logger";
-import { requireAuth } from "../user";
+
 import type {
 	CreateEventSubscriptionRequest,
 	EventSubscription,
 } from "./subscription-types";
-import type { Config } from "@cloudflare/workers-utils";
+
+import { fetchPagedListResult, fetchResult } from "../cfetch";
+import { logger } from "../logger";
+import { requireAuth } from "../user";
 
 export interface PostQueueBody {
 	queue_name: string;

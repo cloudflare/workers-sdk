@@ -1,5 +1,7 @@
+import type WebSocket from "ws";
+
 import chalk from "chalk";
-import { logger } from "../logger";
+
 import type {
 	AlarmEvent,
 	EmailEvent,
@@ -12,7 +14,8 @@ import type {
 	TailInfo,
 } from "./createTail";
 import type { Outcome } from "./filters";
-import type WebSocket from "ws";
+
+import { logger } from "../logger";
 
 /**
  * Pretty-Print a Tail message from a realish-preview attached tail worker

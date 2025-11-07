@@ -2,14 +2,15 @@ import assert from "assert";
 import childProcess, { spawn } from "child_process";
 import { randomBytes } from "crypto";
 import { Abortable, once } from "events";
+import { $ as $colors, red } from "kleur/colors";
 import path from "path";
 import rl from "readline";
 import { Readable, Transform } from "stream";
-import { $ as $colors, red } from "kleur/colors";
 import workerdPath, {
 	compatibilityDate as supportedCompatibilityDate,
 } from "workerd";
 import { z } from "zod";
+
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { MiniflareCoreError } from "../shared";
 import { Awaitable } from "../workers";

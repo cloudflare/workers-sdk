@@ -1,11 +1,14 @@
 import { readFileSync } from "node:fs";
+
 import { APIError, UserError } from "@cloudflare/workers-utils";
+
+import type { CreatePipelineRequest } from "../types";
+
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
 import { createPipeline, getPipeline, getStream, validateSql } from "../client";
 import { displayUsageExamples } from "./streams/utils";
-import type { CreatePipelineRequest } from "../types";
 
 export const pipelinesCreateCommand = createCommand({
 	metadata: {

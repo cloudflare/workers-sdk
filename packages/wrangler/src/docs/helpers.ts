@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { fetch } from "undici";
+
 import { logger } from "../logger";
 
 // The ALGOLIA_APP_ID and ALGOLIA_PUBLIC_KEY are provided at esbuild time as a `define` for production and beta releases.

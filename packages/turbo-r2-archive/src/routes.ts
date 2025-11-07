@@ -1,9 +1,11 @@
-import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
+
+import { zValidator } from "@hono/zod-validator";
+
 import { bustOldCache } from "./autoCacheBust";
 
 export const router = new Hono<{ Bindings: Env }>();

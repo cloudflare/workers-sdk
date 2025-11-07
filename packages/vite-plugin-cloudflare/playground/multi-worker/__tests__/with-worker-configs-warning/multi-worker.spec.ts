@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import { getJsonResponse, serverLogs } from "../../../__test-utils__";
 
 describe("multi-worker basic functionality", async () => {

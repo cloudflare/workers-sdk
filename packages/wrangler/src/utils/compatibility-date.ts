@@ -1,7 +1,10 @@
 import module from "node:module";
-import { configFileName } from "@cloudflare/workers-utils";
-import { logger } from "../logger";
+
 import type { Config } from "@cloudflare/workers-utils";
+
+import { configFileName } from "@cloudflare/workers-utils";
+
+import { logger } from "../logger";
 
 /**
  * Returns the compatibility date to use in development.

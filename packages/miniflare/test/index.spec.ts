@@ -1,27 +1,12 @@
 // noinspection TypeScriptValidateJSTypes
 
 import assert from "assert";
+import test, { ThrowsExpectation } from "ava";
 import childProcess from "child_process";
 import { once } from "events";
 import { existsSync } from "fs";
 import fs from "fs/promises";
 import http from "http";
-import { AddressInfo } from "net";
-import os from "os";
-import path from "path";
-import { Writable } from "stream";
-import { json, text } from "stream/consumers";
-import url from "url";
-import util from "util";
-import {
-	D1Database,
-	DurableObjectNamespace,
-	Fetcher,
-	KVNamespace,
-	Queue,
-	R2Bucket,
-} from "@cloudflare/workers-types/experimental";
-import test, { ThrowsExpectation } from "ava";
 import {
 	_forceColour,
 	_transformsForContentEncodingAndContentType,
@@ -41,11 +26,28 @@ import {
 	Worker_Module,
 	WorkerOptions,
 } from "miniflare";
+import { AddressInfo } from "net";
+import os from "os";
+import path from "path";
+import { Writable } from "stream";
+import { json, text } from "stream/consumers";
+import url from "url";
+import util from "util";
 import {
 	CloseEvent as StandardCloseEvent,
 	MessageEvent as StandardMessageEvent,
 	WebSocketServer,
 } from "ws";
+
+import {
+	D1Database,
+	DurableObjectNamespace,
+	Fetcher,
+	KVNamespace,
+	Queue,
+	R2Bucket,
+} from "@cloudflare/workers-types/experimental";
+
 import {
 	FIXTURES_PATH,
 	TestLog,

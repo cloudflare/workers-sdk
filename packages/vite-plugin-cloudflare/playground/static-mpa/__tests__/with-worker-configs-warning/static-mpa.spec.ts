@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+
 import { serverLogs } from "../../../__test-utils__";
 
 test("a worker configs warning is present in the terminal", async () => {

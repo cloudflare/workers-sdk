@@ -1,5 +1,10 @@
+import { parse as dotenvParse } from "dotenv";
 import path from "node:path";
 import readline from "node:readline";
+import { FormData } from "undici";
+
+import type { Config, WorkerMetadataBinding } from "@cloudflare/workers-utils";
+
 import {
 	APIError,
 	configFileName,
@@ -8,8 +13,7 @@ import {
 	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { parse as dotenvParse } from "dotenv";
-import { FormData } from "undici";
+
 import { fetchResult } from "../cfetch";
 import { createCommand, createNamespace } from "../core/create-command";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
@@ -20,7 +24,6 @@ import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import type { Config, WorkerMetadataBinding } from "@cloudflare/workers-utils";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
 

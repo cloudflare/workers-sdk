@@ -1,9 +1,10 @@
+import type { PluginOption } from "vite";
+
 import assert from "assert";
-import path from "path";
 import * as esbuild from "esbuild";
+import path from "path";
 import { dedent } from "ts-dedent";
 import { defineConfig } from "vitest/config";
-import type { PluginOption } from "vite";
 
 const TEMPLATES_DIR = path.join(__dirname, "templates");
 
@@ -49,7 +50,7 @@ function embedWorkersPlugin() {
 				this.addWatchFile(file);
 			}
 
-			return dedent/*javascript*/ `
+			return dedent /*javascript*/ `
 				export default ${absoluteScriptPath};
 			`;
 		},

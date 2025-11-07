@@ -1,10 +1,19 @@
+import type { XXHashAPI } from "xxhash-wasm";
+
+import chalk from "chalk";
 import assert from "node:assert";
 import { readdir, readFile, stat } from "node:fs/promises";
 import * as path from "node:path";
+import xxhash from "xxhash-wasm";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import { createPatternMatcher } from "@cloudflare/workers-shared";
 import { UserError } from "@cloudflare/workers-utils";
-import chalk from "chalk";
-import xxhash from "xxhash-wasm";
+
+import type { ComplianceConfig } from "./environment-variables/misc-variables";
+import type { KeyValue } from "./kv/helpers";
+
 import {
 	BATCH_KEY_MAX,
 	createKVNamespace,
@@ -17,10 +26,6 @@ import {
 	putKVKeyValue,
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
-import type { KeyValue } from "./kv/helpers";
-import type { Config } from "@cloudflare/workers-utils";
-import type { XXHashAPI } from "xxhash-wasm";
 
 /** Paths to always ignore. */
 const ALWAYS_IGNORE = new Set(["node_modules"]);

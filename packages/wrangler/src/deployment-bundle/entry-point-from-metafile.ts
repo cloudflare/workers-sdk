@@ -1,5 +1,6 @@
-import assert from "node:assert";
 import type { Metafile } from "esbuild";
+
+import assert from "node:assert";
 
 /**
  * Compute entry-point information such as path, exports and dependencies

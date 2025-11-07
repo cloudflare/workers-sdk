@@ -1,11 +1,14 @@
+import type { StdioOptions } from "child_process";
+
 import { execFileSync, spawn } from "child_process";
 import { randomUUID } from "crypto";
 import { existsSync, statSync } from "fs";
 import path from "path";
+
+import type { ContainerDevOptions } from "./types";
+
 import { UserError } from "./error";
 import { dockerImageInspect } from "./inspect";
-import type { ContainerDevOptions } from "./types";
-import type { StdioOptions } from "child_process";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = (
@@ -318,7 +321,7 @@ export function resolveDockerHost(dockerPath: string): string {
 export const getDockerHostFromEnv = (): string => {
 	const fromEnv = process.env.WRANGLER_DOCKER_HOST ?? process.env.DOCKER_HOST;
 
-	return fromEnv ?? process.platform === "win32"
+	return (fromEnv ?? process.platform === "win32")
 		? "//./pipe/docker_engine"
 		: "unix:///var/run/docker.sock";
 };

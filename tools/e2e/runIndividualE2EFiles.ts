@@ -1,9 +1,10 @@
+import type { ExecSyncOptionsWithBufferEncoding } from "child_process";
+
 import assert from "assert";
 import { execSync } from "child_process";
 import { statSync } from "fs";
-import path from "path";
 import { globIterateSync } from "glob";
-import type { ExecSyncOptionsWithBufferEncoding } from "child_process";
+import path from "path";
 
 // Turbo only supports caching on the individual task level, but for Wrangler's
 // e2e tests we want to support caching on a more granular basis - at the file level.

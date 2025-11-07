@@ -1,6 +1,8 @@
-import { ms } from "itty-time";
-import type { Engine } from "../engine";
 import type { WorkflowSleepDuration } from "cloudflare:workers";
+
+import { ms } from "itty-time";
+
+import type { Engine } from "../engine";
 
 export const ENGINE_TIMEOUT = ms("5 minutes" satisfies WorkflowSleepDuration);
 

@@ -1,9 +1,7 @@
 import assert from "assert";
+import { Macro, ThrowsExpectation } from "ava";
 import { Blob } from "buffer";
 import fs from "fs/promises";
-import path from "path";
-import consumers from "stream/consumers";
-import { Macro, ThrowsExpectation } from "ava";
 import {
 	KV_PLUGIN_NAME,
 	MAX_BULK_GET_KEYS,
@@ -11,6 +9,15 @@ import {
 	MiniflareOptions,
 	ReplaceWorkersTypes,
 } from "miniflare";
+import path from "path";
+import consumers from "stream/consumers";
+
+import type {
+	KVNamespace,
+	KVNamespaceListOptions,
+	KVNamespaceListResult,
+} from "@cloudflare/workers-types/experimental";
+
 import {
 	createJunkStream,
 	FIXTURES_PATH,
@@ -21,11 +28,6 @@ import {
 	Namespaced,
 	useTmp,
 } from "../../test-shared";
-import type {
-	KVNamespace,
-	KVNamespaceListOptions,
-	KVNamespaceListResult,
-} from "@cloudflare/workers-types/experimental";
 
 function secondsToMillis(seconds: number): number {
 	return seconds * 1000;

@@ -1,4 +1,11 @@
+import type * as vite from "vite";
+import type { Unstable_Config } from "wrangler";
+
 import * as path from "node:path";
+
+import type { Logger } from "@cloudflare/workers-shared/utils/configuration/types";
+import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
+
 import {
 	constructHeaders,
 	constructRedirects,
@@ -14,14 +21,11 @@ import {
 	HeadersSchema,
 	RedirectsSchema,
 } from "@cloudflare/workers-shared/utils/types";
+
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
-import type { Logger } from "@cloudflare/workers-shared/utils/configuration/types";
-import type { AssetConfig } from "@cloudflare/workers-shared/utils/types";
-import type * as vite from "vite";
-import type { Unstable_Config } from "wrangler";
 
 /**
  * Returns true if the `changedFile` matches one of the _headers or _redirects files,

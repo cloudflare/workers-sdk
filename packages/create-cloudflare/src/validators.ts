@@ -1,7 +1,9 @@
+import type { C3Args } from "types";
+
 import { existsSync, readdirSync } from "fs";
 import { basename, resolve } from "path";
+
 import type { Arg } from "@cloudflare/cli/interactive";
-import type { C3Args } from "types";
 
 /**
  * unreadable regex copied from wrangler, which was basically copied from degit. i put some named capture
@@ -35,7 +37,7 @@ export const validateTemplateUrl = (value: Arg) => {
  */
 export const validateProjectDirectory = (
 	relativePath: string,
-	args: Partial<C3Args>,
+	args: Partial<C3Args>
 ) => {
 	// Validate that the directory is non-existent or empty
 	const path = resolve(relativePath);

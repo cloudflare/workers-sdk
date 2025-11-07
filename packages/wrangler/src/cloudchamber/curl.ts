@@ -1,15 +1,20 @@
+import type { Argv } from "yargs";
+
 import { randomUUID } from "crypto";
+
+import type { Config } from "@cloudflare/workers-utils";
+
 import { logRaw } from "@cloudflare/cli";
 import { bold, brandColor, cyanBright, yellow } from "@cloudflare/cli/colors";
 import { ApiError, OpenAPI } from "@cloudflare/containers-shared";
 import { request } from "@cloudflare/containers-shared/src/client/core/request";
-import formatLabelledValues from "../utils/render-labelled-values";
+
 import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
-import type { Config } from "@cloudflare/workers-utils";
-import type { Argv } from "yargs";
+
+import formatLabelledValues from "../utils/render-labelled-values";
 
 export function yargsCurl(args: Argv<CommonYargsOptions>) {
 	return args

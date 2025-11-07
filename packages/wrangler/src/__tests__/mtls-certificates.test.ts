@@ -1,5 +1,8 @@
 import { writeFileSync } from "fs";
 import { http, HttpResponse } from "msw";
+
+import type { MTlsCertificateResponse } from "../api/mtls-certificate";
+
 import {
 	deleteMTlsCertificate,
 	getMTlsCertificate,
@@ -16,7 +19,6 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { MTlsCertificateResponse } from "../api/mtls-certificate";
 
 describe("wrangler", () => {
 	const accountId = "1a2b3c4d";

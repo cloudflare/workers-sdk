@@ -1,5 +1,6 @@
-import { writeFileSync } from "fs";
 import { Data, List, Message, Struct } from "capnp-es";
+import { writeFileSync } from "fs";
+
 import { Config as CapnpConfig } from "./generated";
 import { Config, kVoid } from "./workerd";
 

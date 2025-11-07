@@ -1,8 +1,9 @@
-import crypto from "node:crypto";
-import { createServer, IncomingMessage, Server } from "node:http";
 import getPort from "get-port";
 import { DeferredPromise } from "miniflare:shared";
+import crypto from "node:crypto";
+import { createServer, IncomingMessage, Server } from "node:http";
 import WebSocket, { WebSocketServer } from "ws";
+
 import { version as miniflareVersion } from "../../../../package.json";
 import { Log } from "../../../shared";
 import { InspectorProxy } from "./inspector-proxy";

@@ -1,11 +1,12 @@
+import type { CancelablePromise } from "../core/CancelablePromise";
+import type { CompleteAccountCustomer } from "../models/CompleteAccountCustomer";
+import type { ModifyMeRequestBody } from "../models/ModifyMeRequestBody";
+
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
-import type { CancelablePromise } from "../core/CancelablePromise";
-import type { CompleteAccountCustomer } from "../models/CompleteAccountCustomer";
-import type { ModifyMeRequestBody } from "../models/ModifyMeRequestBody";
 
 export class AccountService {
 	/**

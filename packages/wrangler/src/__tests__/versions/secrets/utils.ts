@@ -1,8 +1,11 @@
 import { http, HttpResponse } from "msw";
 import { FormData } from "undici";
-import { createFetchResult, msw } from "../../helpers/msw";
-import type { VersionDetails, WorkerVersion } from "../../../versions/secrets";
+
 import type { WorkerMetadata } from "@cloudflare/workers-utils";
+
+import type { VersionDetails, WorkerVersion } from "../../../versions/secrets";
+
+import { createFetchResult, msw } from "../../helpers/msw";
 
 function mockGetVersions() {
 	msw.use(

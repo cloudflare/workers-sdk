@@ -1,11 +1,14 @@
+import { SELF } from "cloudflare:test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { AssetMetadata } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
+
 import Worker from "@cloudflare/workers-shared/asset-worker";
 import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
-import { SELF } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { encodingTestCases } from "./test-cases/encoding-test-cases";
 import { htmlHandlingTestCases } from "./test-cases/html-handling-test-cases";
-import type { AssetMetadata } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 

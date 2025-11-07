@@ -593,7 +593,7 @@ declare module "cloudflare:test" {
 			body?: string | RegExp | ((body: string) => boolean);
 			/** Headers to intercept on. */
 			headers?: // eslint-disable-next-line unused-imports/no-unused-vars
-			| Record<string, string | RegExp | ((body: string) => boolean)>
+				| Record<string, string | RegExp | ((body: string) => boolean)>
 				| ((headers: Record<string, string>) => boolean);
 			/** Query params to intercept on */
 			query?: Record<string, unknown>;

@@ -1,19 +1,22 @@
 import { exit } from "process";
-import { cancel, endSection, log, newline } from "@cloudflare/cli";
-import { processArgument } from "@cloudflare/cli/args";
-import { brandColor, dim, yellow } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
-import { DeploymentsService } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
-import { wrap } from "../helpers/wrap";
-import { idToLocationName } from "../locations";
-import { statusToColored } from "./util";
+
 import type {
 	DeploymentPlacementState,
 	DeploymentV2,
 	Placement,
 	PlacementStatusHealth,
 } from "@cloudflare/containers-shared";
+
+import { cancel, endSection, log, newline } from "@cloudflare/cli";
+import { processArgument } from "@cloudflare/cli/args";
+import { brandColor, dim, yellow } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
+import { DeploymentsService } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
+
+import { wrap } from "../helpers/wrap";
+import { idToLocationName } from "../locations";
+import { statusToColored } from "./util";
 
 function ipv6(placement: Placement | undefined) {
 	if (!placement) {

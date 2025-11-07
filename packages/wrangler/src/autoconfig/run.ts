@@ -1,7 +1,13 @@
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+
+import type { RawConfig } from "@cloudflare/workers-utils";
+
 import { endSection, startSection } from "@cloudflare/cli";
 import { FatalError } from "@cloudflare/workers-utils";
+
+import type { AutoConfigDetails } from "./types";
+
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -11,8 +17,6 @@ import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
 import { confirmAutoConfigDetails, displayAutoConfigDetails } from "./details";
-import type { AutoConfigDetails } from "./types";
-import type { RawConfig } from "@cloudflare/workers-utils";
 
 type AutoconfigMetrics = Pick<
 	AutoConfigDetails,

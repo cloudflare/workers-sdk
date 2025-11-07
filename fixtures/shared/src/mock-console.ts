@@ -1,6 +1,7 @@
+import type { MockInstance } from "vitest";
+
 import * as util from "node:util";
 import { afterEach, beforeEach, vi } from "vitest";
-import type { MockInstance } from "vitest";
 
 /**
  * We use this module to mock console methods, and optionally

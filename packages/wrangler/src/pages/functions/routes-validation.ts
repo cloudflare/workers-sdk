@@ -1,11 +1,13 @@
 import { FatalError } from "@cloudflare/workers-utils";
+
+import type { RoutesJSONSpec } from "./routes-transformation";
+
 import {
 	MAX_FUNCTIONS_ROUTES_RULE_LENGTH,
 	MAX_FUNCTIONS_ROUTES_RULES,
 	ROUTES_SPEC_VERSION,
 } from "../constants";
 import { getRoutesValidationErrorMessage } from "../errors";
-import type { RoutesJSONSpec } from "./routes-transformation";
 
 export enum RoutesValidationError {
 	INVALID_JSON_SPEC,

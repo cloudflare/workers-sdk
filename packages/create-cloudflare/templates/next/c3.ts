@@ -1,10 +1,13 @@
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import type { C3Context } from "types";
+
 import { runFrameworkGenerator } from "frameworks/index";
 import { readFile, usesTypescript, writeFile } from "helpers/files";
 import { installPackages } from "helpers/packages";
+
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
+
 import type { TemplateConfig } from "../../src/templates";
-import type { C3Context } from "types";
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [ctx.project.name]);

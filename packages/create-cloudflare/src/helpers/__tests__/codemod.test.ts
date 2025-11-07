@@ -93,7 +93,7 @@ describe("mergeObjectProperties", () => {
 	}[];
 
 	tests.forEach(({ testName, ...testObjects }) =>
-		test(testName, () => testMergeObjectProperties(testObjects)),
+		test(testName, () => testMergeObjectProperties(testObjects))
 	);
 });
 
@@ -114,12 +114,12 @@ const testMergeObjectProperties = ({
 	mergeObjectProperties(sourceObj, newProperties);
 
 	expect(recast.prettyPrint(sourceObj, { parser }).code).toEqual(
-		recast.prettyPrint(expectedObj, { parser }).code,
+		recast.prettyPrint(expectedObj, { parser }).code
 	);
 };
 
 const createObjectExpression = (
-	sourceObj: Record<string, unknown>,
+	sourceObj: Record<string, unknown>
 ): recast.types.namedTypes.ObjectExpression => {
 	return (
 		(
@@ -127,7 +127,7 @@ const createObjectExpression = (
 				`const obj = {${Object.entries(sourceObj)
 					.map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
 					.join(",\n")}}`,
-				{ parser },
+				{ parser }
 			).program.body[0] as recast.types.namedTypes.VariableDeclaration
 		).declarations[0] as recast.types.namedTypes.VariableDeclarator
 	).init as recast.types.namedTypes.ObjectExpression;

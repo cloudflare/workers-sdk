@@ -1,6 +1,7 @@
+import { findUpSync } from "find-up";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import * as path from "path";
-import { findUpSync } from "find-up";
+
 import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
 

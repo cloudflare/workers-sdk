@@ -1,10 +1,11 @@
+import getPort from "get-port";
 import assert from "node:assert";
 import events from "node:events";
-import getPort from "get-port";
 import dedent from "ts-dedent";
 import { Agent, fetch } from "undici";
 import { beforeEach, describe, expect, it } from "vitest";
 import WebSocket from "ws";
+
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -653,7 +654,7 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				binding = "VECTORIZE"
 				index_name = "${name}"
 				`,
-			"src/index.ts": dedent/*javascript*/ `
+			"src/index.ts": dedent /*javascript*/ `
 				export interface Env {
 					VECTORIZE: Vectorize;
 				}

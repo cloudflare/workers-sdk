@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 import prettyBytes from "pretty-bytes";
+
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
+
 import { fetchResult } from "../cfetch";
 import formatLabelledValues from "../utils/render-labelled-values";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 
 // ensure this is in sync with:
 //   https://bitbucket.cfdata.org/projects/PIPE/repos/superpipe/browse/src/coordinator/types.ts#6

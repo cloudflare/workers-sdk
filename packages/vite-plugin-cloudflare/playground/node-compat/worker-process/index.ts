@@ -1,4 +1,5 @@
 import assert from "node:assert";
+
 import { stderr } from "./early-process-access";
 
 export default {

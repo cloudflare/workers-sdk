@@ -1,5 +1,6 @@
-import { fetchResult } from "../cfetch";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
+
+import { fetchResult } from "../cfetch";
 
 // Stores API
 

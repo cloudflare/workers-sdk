@@ -1,9 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+
+import type { CfScriptFormat } from "@cloudflare/workers-utils";
+
+import type { Entry } from "./entry";
+
 import { getBasePath } from "../paths";
 import { dedent } from "../utils/dedent";
-import type { Entry } from "./entry";
-import type { CfScriptFormat } from "@cloudflare/workers-utils";
 
 /**
  * A facade that acts as a "middleware loader".
@@ -61,7 +64,7 @@ export async function applyMiddlewareLoaderFacade(
 	if (entry.format === "modules") {
 		await fs.promises.writeFile(
 			dynamicFacadePath,
-			dedent/*javascript*/ `
+			dedent /*javascript*/ `
 				import worker, * as OTHER_EXPORTS from "${prepareFilePath(entry.file)}";
 				${imports}
 
@@ -110,7 +113,7 @@ export async function applyMiddlewareLoaderFacade(
 
 		await fs.promises.writeFile(
 			dynamicFacadePath,
-			dedent/*javascript*/ `
+			dedent /*javascript*/ `
 				import { __facade_registerInternal__ } from "${prepareFilePath(loaderSwPath)}";
 				${imports}
 				__facade_registerInternal__([${middlewareFns}])

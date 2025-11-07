@@ -1,5 +1,6 @@
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineProject, mergeConfig } from "vitest/config";
+
 import configShared from "../../vitest.shared";
 
 export default mergeConfig(
@@ -10,5 +11,5 @@ export default mergeConfig(
 			include: ["src/**/__tests__/**.test.ts"],
 			setupFiles: ["vitest.setup.ts"],
 		},
-	}),
+	})
 );

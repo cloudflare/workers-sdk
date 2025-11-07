@@ -3,8 +3,9 @@ import nodeCrypto, { getRandomValues, webcrypto } from "crypto";
 // this is not very common, but happens and we need to support it
 import assert from "node:assert/strict";
 import { Stream } from "node:stream";
-import { Context } from "vm";
 import { Client } from "pg";
+import { Context } from "vm";
+
 import { s } from "./dep.cjs";
 
 testBasicNodejsProperties();

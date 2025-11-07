@@ -1,9 +1,11 @@
 import assert from "assert";
 import http from "http";
-import { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import * as undici from "undici";
 import { UndiciHeaders } from "undici/types/dispatcher";
 import NodeWebSocket from "ws";
+
+import { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
+
 import { CoreHeaders, DeferredPromise } from "../workers";
 import { Request, RequestInfo, RequestInit } from "./request";
 import { Response } from "./response";

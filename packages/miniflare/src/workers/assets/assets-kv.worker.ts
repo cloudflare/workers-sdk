@@ -9,7 +9,7 @@ type AssetReverseMap = {
 	[pathHash: string]: { filePath: string; contentType: string };
 }; //map to actual filepath
 
-export default <ExportedHandler<Env>>{
+export default (<ExportedHandler<Env>>{
 	async fetch(request, env) {
 		// Only permit reads
 		if (request.method !== "GET") {
@@ -45,4 +45,4 @@ export default <ExportedHandler<Env>>{
 		}
 		return newResponse;
 	},
-};
+});

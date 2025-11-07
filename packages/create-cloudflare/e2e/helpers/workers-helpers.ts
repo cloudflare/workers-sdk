@@ -1,21 +1,24 @@
+import type { Writable } from "stream";
+
 import getPort from "get-port";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
 import { sleep } from "helpers/sleep";
 import { fetch } from "undici";
 import { expect } from "vitest";
+
+import type { WorkerTestConfig } from "../tests/workers/test-config";
+
 import { isExperimental, runDeployTests } from "./constants";
 import { runC3 } from "./run-c3";
 import { kill, spawnWithLogging, waitForExit } from "./spawn";
-import type { WorkerTestConfig } from "../tests/workers/test-config";
-import type { Writable } from "stream";
 
 const { name: pm } = detectPackageManager();
 
 export async function runC3ForWorkerTest(
 	{ argv, promptHandlers, template }: WorkerTestConfig,
 	projectPath: string,
-	logStream: Writable,
+	logStream: Writable
 ) {
 	const args = [
 		projectPath,
@@ -53,7 +56,7 @@ export async function verifyDeployment(
 	verifyDeploy: {
 		route: string;
 		expectedText: string;
-	},
+	}
 ) {
 	await retry({ times: 5 }, async () => {
 		await sleep(1000);
@@ -61,7 +64,7 @@ export async function verifyDeployment(
 		const body = await res.text();
 		if (!body.includes(verifyDeploy.expectedText)) {
 			throw new Error(
-				`(Deployed page (${deploymentUrl}) didn't contain expected string: "${verifyDeploy.expectedText}" instead got ${body}`,
+				`(Deployed page (${deploymentUrl}) didn't contain expected string: "${verifyDeploy.expectedText}" instead got ${body}`
 			);
 		}
 	});
@@ -70,7 +73,7 @@ export async function verifyDeployment(
 export async function verifyLocalDev(
 	{ verifyDeploy }: WorkerTestConfig,
 	projectPath: string,
-	logStream: Writable,
+	logStream: Writable
 ) {
 	if (verifyDeploy === null) {
 		return;
@@ -97,14 +100,14 @@ export async function verifyLocalDev(
 				VITEST: undefined,
 			},
 		},
-		logStream,
+		logStream
 	);
 
 	try {
 		// Wait for the dev-server to be ready
 		await retry(
 			{ times: 20, sleepMs: 5000 },
-			async () => await fetch(`http://127.0.0.1:${port}${verifyDeploy.route}`),
+			async () => await fetch(`http://127.0.0.1:${port}${verifyDeploy.route}`)
 		);
 
 		// Make a request to the specified test route
@@ -121,7 +124,7 @@ export async function verifyLocalDev(
 
 export async function verifyTestScript(
 	projectPath: string,
-	logStream: Writable,
+	logStream: Writable
 ) {
 	const proc = spawnWithLogging(
 		[pm, "run", "test"],
@@ -134,7 +137,7 @@ export async function verifyTestScript(
 				CI: "true",
 			},
 		},
-		logStream,
+		logStream
 	);
 
 	return await waitForExit(proc);

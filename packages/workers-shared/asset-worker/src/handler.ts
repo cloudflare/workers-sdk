@@ -1,3 +1,8 @@
+import type { AssetConfig } from "../../utils/types";
+import type { Analytics } from "./analytics";
+import type EntrypointType from "./worker";
+import type { Env } from "./worker";
+
 import {
 	FoundResponse,
 	InternalServerErrorResponse,
@@ -21,10 +26,6 @@ import {
 	generateRedirectsMatcher,
 	staticRedirectsMatcher,
 } from "./utils/rules-engine";
-import type { AssetConfig } from "../../utils/types";
-import type { Analytics } from "./analytics";
-import type EntrypointType from "./worker";
-import type { Env } from "./worker";
 
 export const REDIRECTS_VERSION = 1;
 export const HEADERS_VERSION = 2;
@@ -109,7 +110,7 @@ const getResponseOrAssetIntent = async (
 				location:
 					encodedDestination !== pathname
 						? encodedDestination
-						: intent.redirect ?? "<unknown>",
+						: (intent.redirect ?? "<unknown>"),
 				status: TemporaryRedirectResponse.status,
 			});
 

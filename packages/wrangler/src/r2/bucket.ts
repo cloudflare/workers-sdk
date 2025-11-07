@@ -1,9 +1,11 @@
+import dedent from "ts-dedent";
+
 import {
 	bucketFormatMessage,
 	isValidR2BucketName,
 	UserError,
 } from "@cloudflare/workers-utils";
-import dedent from "ts-dedent";
+
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";

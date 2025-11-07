@@ -1,8 +1,3 @@
-/* istanbul ignore file */
-/* tslint:disable */
-/* eslint-disable */
-import { OpenAPI } from "../core/OpenAPI";
-import { request as __request } from "../core/request";
 import type { CancelablePromise } from "../core/CancelablePromise";
 import type { ApplicationID } from "../models/ApplicationID";
 import type { ApplicationJob } from "../models/ApplicationJob";
@@ -11,6 +6,12 @@ import type { CreateApplicationJobRequest } from "../models/CreateApplicationJob
 import type { GenericMessageResponse } from "../models/GenericMessageResponse";
 import type { JobID } from "../models/JobID";
 import type { ModifyApplicationJobRequest } from "../models/ModifyApplicationJobRequest";
+
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+import { OpenAPI } from "../core/OpenAPI";
+import { request as __request } from "../core/request";
 
 export class JobsService {
 	/**

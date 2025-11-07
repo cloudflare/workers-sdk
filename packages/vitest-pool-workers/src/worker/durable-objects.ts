@@ -1,6 +1,8 @@
 import assert from "node:assert";
-import { getSerializedOptions, internalEnv } from "./env";
+
 import type { RunnerObject } from "./index";
+
+import { getSerializedOptions, internalEnv } from "./env";
 
 const CF_KEY_ACTION = "vitestPoolWorkersDurableObjectAction";
 

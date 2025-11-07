@@ -1,9 +1,13 @@
-import { writeFileSync } from "fs";
-import TOML from "@iarna/toml";
-import { applyEdits, format, modify } from "jsonc-parser";
-import { parseJSONC, parseTOML, readFileSync } from "../parse";
-import type { RawConfig } from "./config";
 import type { JSONPath } from "jsonc-parser";
+
+import { writeFileSync } from "fs";
+import { applyEdits, format, modify } from "jsonc-parser";
+
+import TOML from "@iarna/toml";
+
+import type { RawConfig } from "./config";
+
+import { parseJSONC, parseTOML, readFileSync } from "../parse";
 
 export const experimental_patchConfig = (
 	configPath: string,

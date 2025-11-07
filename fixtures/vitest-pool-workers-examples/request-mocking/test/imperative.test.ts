@@ -1,6 +1,6 @@
+import { SELF } from "cloudflare:test";
 import assert from "node:assert";
 import events from "node:events";
-import { SELF } from "cloudflare:test";
 import { afterEach, expect, it, vi } from "vitest";
 
 afterEach(() => {

@@ -1,14 +1,17 @@
-import { endSection } from "@cloudflare/cli";
-import { brandColor } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import type { C3Context } from "types";
+
 import { runFrameworkGenerator } from "frameworks/index";
 import { loadTemplateSnippets, transformFile } from "helpers/codemod";
 import { quoteShellArgs, runCommand } from "helpers/command";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
+
+import { endSection } from "@cloudflare/cli";
+import { brandColor } from "@cloudflare/cli/colors";
+import { spinner } from "@cloudflare/cli/interactive";
+
 import type { TemplateConfig } from "../../../src/templates";
-import type { C3Context } from "types";
 
 const { npm, npx, name } = detectPackageManager();
 
@@ -44,7 +47,7 @@ const addBindingsProxy = (ctx: C3Context) => {
 		// Insert the env declaration after the last import (but before the rest of the body)
 		visitProgram: function (n) {
 			const lastImportIndex = n.node.body.findLastIndex(
-				(t) => t.type === "ImportDeclaration",
+				(t) => t.type === "ImportDeclaration"
 			);
 			const lastImport = n.get("body", lastImportIndex);
 			lastImport.insertAfter(...snippets.getPlatformProxyTs);
@@ -110,8 +113,8 @@ const populateCloudflareEnv = () => {
 			].map(([varName, type]) =>
 				b.tsPropertySignature(
 					b.identifier(varName),
-					b.tsTypeAnnotation(b.tsTypeReference(b.identifier(type))),
-				),
+					b.tsTypeAnnotation(b.tsTypeReference(b.identifier(type)))
+				)
 			);
 
 			n.node.body.body = newBody;

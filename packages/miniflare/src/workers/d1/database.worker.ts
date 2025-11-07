@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import {
 	get,
 	HttpError,
@@ -11,6 +10,8 @@ import {
 	viewToBuffer,
 } from "miniflare:shared";
 import { z } from "miniflare:zod";
+import assert from "node:assert";
+
 import { dumpSql } from "./dumpSql";
 
 const D1ValueSchema = z.union([

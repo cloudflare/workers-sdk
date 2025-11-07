@@ -1,13 +1,13 @@
+import type { Unstable_Config } from "wrangler";
+
 import assert from "node:assert";
 import * as path from "node:path";
-import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import * as vite from "vite";
-import { getWorkerConfigs } from "./deploy-config";
-import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
-import {
-	getValidatedWranglerConfigPath,
-	getWorkerConfig,
-} from "./workers-configs";
+
+import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
+
+import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
+
 import type { Defined } from "./utils";
 import type {
 	AssetsOnlyWorkerResolvedConfig,
@@ -15,8 +15,13 @@ import type {
 	WorkerResolvedConfig,
 	WorkerWithServerLogicResolvedConfig,
 } from "./workers-configs";
-import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
-import type { Unstable_Config } from "wrangler";
+
+import { getWorkerConfigs } from "./deploy-config";
+import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
+import {
+	getValidatedWranglerConfigPath,
+	getWorkerConfig,
+} from "./workers-configs";
 
 export type PersistState = boolean | { path: string };
 

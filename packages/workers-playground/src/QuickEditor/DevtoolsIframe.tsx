@@ -1,8 +1,11 @@
-import { DragContext, Frame } from "@cloudflare/workers-editor-shared";
+import type React from "react";
+
 import { useContext } from "react";
+
+import { DragContext, Frame } from "@cloudflare/workers-editor-shared";
+
 import FrameErrorBoundary from "./FrameErrorBoundary";
 import { ServiceContext } from "./QuickEditor";
-import type React from "react";
 
 function getDevtoolsIframeUrl(inspectorUrl: string) {
 	const devToolsUrl = import.meta.env.VITE_DEVTOOLS_PREVIEW_URL

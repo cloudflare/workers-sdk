@@ -3,6 +3,7 @@ import {
 	waitOnExecutionContext,
 } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
+
 import * as apiMiddleware from "../functions/api/_middleware";
 import * as apiKVKeyFunction from "../functions/api/kv/[key]";
 import * as apiPingFunction from "../functions/api/ping";

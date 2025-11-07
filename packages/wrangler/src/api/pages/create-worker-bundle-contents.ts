@@ -1,13 +1,17 @@
+import type { Blob } from "node:buffer";
+import type { FormData } from "undici";
+
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { Response } from "undici";
+
+import type { CfPlacement, Config } from "@cloudflare/workers-utils";
+
+import type { BundleResult } from "../../deployment-bundle/bundle";
+
 import { getBindings } from "../../deployment-bundle/bindings";
 import { createWorkerUploadForm } from "../../deployment-bundle/create-worker-upload-form";
 import { loadSourceMaps } from "../../deployment-bundle/source-maps";
-import type { BundleResult } from "../../deployment-bundle/bundle";
-import type { CfPlacement, Config } from "@cloudflare/workers-utils";
-import type { Blob } from "node:buffer";
-import type { FormData } from "undici";
 
 /**
  * Takes a Worker bundle - `BundleResult` - and generates the _worker.bundle

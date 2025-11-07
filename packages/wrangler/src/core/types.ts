@@ -1,9 +1,3 @@
-import type { fetchResult } from "../cfetch";
-import type { ExperimentalFlags } from "../experimental-flags";
-import type { Logger } from "../logger";
-import type { CommonYargsOptions, RemoveIndex } from "../yargs-types";
-import type { Teams } from "./teams";
-import type { Config, FatalError, UserError } from "@cloudflare/workers-utils";
 import type Cloudflare from "cloudflare";
 import type {
 	ArgumentsCamelCase,
@@ -12,6 +6,14 @@ import type {
 	Options,
 	PositionalOptions,
 } from "yargs";
+
+import type { Config, FatalError, UserError } from "@cloudflare/workers-utils";
+
+import type { fetchResult } from "../cfetch";
+import type { ExperimentalFlags } from "../experimental-flags";
+import type { Logger } from "../logger";
+import type { CommonYargsOptions, RemoveIndex } from "../yargs-types";
+import type { Teams } from "./teams";
 
 // Vendored from yargs
 /** Convert literal string types like 'foo-bar' to 'FooBar' */

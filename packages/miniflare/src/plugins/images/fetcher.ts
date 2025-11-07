@@ -1,7 +1,9 @@
+import type { Sharp } from "sharp";
+
 import { File } from "buffer";
 import { Request } from "undici";
+
 import type { ImageInfoResponse } from "@cloudflare/workers-types/experimental";
-import type { Sharp } from "sharp";
 
 type Transform = {
 	imageIndex?: number;

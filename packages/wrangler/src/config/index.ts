@@ -1,5 +1,14 @@
 import assert from "node:assert";
 import path from "node:path";
+import dedent from "ts-dedent";
+
+import type {
+	Config,
+	NormalizeAndValidateConfigArgs,
+	RawConfig,
+	ResolveConfigPathOptions,
+} from "@cloudflare/workers-utils";
+
 import {
 	configFileName,
 	experimental_readRawConfig,
@@ -9,15 +18,9 @@ import {
 	UserError,
 	validatePagesConfig,
 } from "@cloudflare/workers-utils";
-import dedent from "ts-dedent";
+
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
-import type {
-	Config,
-	NormalizeAndValidateConfigArgs,
-	RawConfig,
-	ResolveConfigPathOptions,
-} from "@cloudflare/workers-utils";
 
 export type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 	config?: string;
@@ -148,9 +151,7 @@ export function readPagesConfig(
 		throw new UserError(diagnostics.renderErrors());
 	}
 
-	logger.debug(
-		`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`
-	);
+	logger.debug(`Configuration file belonging to ⚡️ Pages ⚡️ project detected.`);
 
 	const envNames = rawConfig.env ? Object.keys(rawConfig.env) : [];
 	const projectName = rawConfig?.name;

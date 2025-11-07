@@ -1,4 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
+
 import {
 	MAX_FUNCTIONS_ROUTES_RULE_LENGTH,
 	MAX_FUNCTIONS_ROUTES_RULES,

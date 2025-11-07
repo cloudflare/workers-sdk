@@ -1,3 +1,12 @@
+import type {
+	CustomerImageRegistry,
+	DeploymentV2,
+	ListSSHPublicKeys,
+	PlacementEvent,
+	PlacementStatusHealth,
+	PlacementWithEvents,
+} from "@cloudflare/containers-shared";
+
 import {
 	endSection,
 	log,
@@ -15,18 +24,12 @@ import {
 	SshPublicKeysService,
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+
+import type { EventName } from "../enums";
+
 import { wrap } from "../helpers/wrap";
 import { idToLocationName } from "../locations";
 import { capitalize } from "./util";
-import type { EventName } from "../enums";
-import type {
-	CustomerImageRegistry,
-	DeploymentV2,
-	ListSSHPublicKeys,
-	PlacementEvent,
-	PlacementStatusHealth,
-	PlacementWithEvents,
-} from "@cloudflare/containers-shared";
 
 export function pollRegistriesUntilCondition(
 	onRegistries: (registries: Array<CustomerImageRegistry>) => boolean

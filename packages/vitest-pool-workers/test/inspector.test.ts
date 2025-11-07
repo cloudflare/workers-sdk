@@ -1,4 +1,5 @@
 import dedent from "ts-dedent";
+
 import { test, waitFor } from "./helpers";
 
 test("opens an inspector with the `--inspect` argument", async ({

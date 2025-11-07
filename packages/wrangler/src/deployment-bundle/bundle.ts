@@ -1,8 +1,24 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { UserError } from "@cloudflare/workers-utils";
+import type { NodeJSCompatMode } from "miniflare";
+
 import chalk from "chalk";
 import * as esbuild from "esbuild";
+import * as fs from "node:fs";
+import * as path from "node:path";
+
+import type {
+	CfModule,
+	CfModuleType,
+	Config,
+	DurableObjectBindings,
+	WorkflowBinding,
+} from "@cloudflare/workers-utils";
+
+import { UserError } from "@cloudflare/workers-utils";
+
+import type { MiddlewareLoader } from "./apply-middleware";
+import type { Entry } from "./entry";
+import type { ModuleCollector } from "./module-collection";
+
 import {
 	getBuildConditionsFromEnv,
 	getBuildPlatformFromEnv,
@@ -21,17 +37,6 @@ import { configProviderPlugin } from "./esbuild-plugins/config-provider";
 import { getNodeJSCompatPlugins } from "./esbuild-plugins/nodejs-plugins";
 import { writeAdditionalModules } from "./find-additional-modules";
 import { noopModuleCollector } from "./module-collection";
-import type { MiddlewareLoader } from "./apply-middleware";
-import type { Entry } from "./entry";
-import type { ModuleCollector } from "./module-collection";
-import type {
-	CfModule,
-	CfModuleType,
-	Config,
-	DurableObjectBindings,
-	WorkflowBinding,
-} from "@cloudflare/workers-utils";
-import type { NodeJSCompatMode } from "miniflare";
 
 // Taken from https://stackoverflow.com/a/3561711
 // which is everything from the tc39 proposal, plus the following two characters: ^/

@@ -1,6 +1,7 @@
+import type { Request } from "undici";
+
 import http from "node:http";
 import { vi } from "vitest";
-import type { Request } from "undici";
 
 /**
  * Setup a mock HTTP server that can be triggered directly without interacting with any network.

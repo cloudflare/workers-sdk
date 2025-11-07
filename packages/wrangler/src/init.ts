@@ -1,7 +1,15 @@
+import type { ReadableStream } from "stream/web";
+
+import { execa } from "execa";
 import { mkdir, writeFile } from "node:fs/promises";
 import path, { dirname } from "node:path";
+
+import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
+
 import { UserError } from "@cloudflare/workers-utils";
-import { execa } from "execa";
+
+import type { PackageManager } from "./package-manager";
+
 import { fetchResult } from "./cfetch";
 import { fetchWorkerDefinitionFromDash } from "./cfetch/internal";
 import { createCommand } from "./core/create-command";
@@ -16,9 +24,6 @@ import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import { downloadWorkerConfig } from "./utils/download-worker-config";
 import * as shellquote from "./utils/shell-quote";
-import type { PackageManager } from "./package-manager";
-import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
-import type { ReadableStream } from "stream/web";
 
 export const init = createCommand({
 	metadata: {

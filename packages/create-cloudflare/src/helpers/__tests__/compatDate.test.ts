@@ -5,6 +5,7 @@ import {
 } from "helpers/compatDate";
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
+
 import { createTestContext } from "../../__tests__/helpers";
 import { mockSpinner, mockWorkersTypesDirectory } from "./mocks";
 
@@ -40,7 +41,7 @@ describe("Compatibility Date Helpers", () => {
 				200,
 				JSON.stringify({
 					"dist-tags": { latest },
-				}),
+				})
 			);
 	};
 
@@ -54,7 +55,7 @@ describe("Compatibility Date Helpers", () => {
 			expect(date).toBe(expectedDate);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(
-				expect.stringContaining(expectedDate),
+				expect.stringContaining(expectedDate)
 			);
 		});
 
@@ -67,7 +68,7 @@ describe("Compatibility Date Helpers", () => {
 			expect(date).toBe(fallbackDate);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(
-				expect.stringContaining(fallbackDate),
+				expect.stringContaining(fallbackDate)
 			);
 		});
 
@@ -83,7 +84,7 @@ describe("Compatibility Date Helpers", () => {
 			expect(date).toBe(fallbackDate);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(
-				expect.stringContaining(fallbackDate),
+				expect.stringContaining(fallbackDate)
 			);
 		});
 
@@ -98,7 +99,7 @@ describe("Compatibility Date Helpers", () => {
 			expect(date).toBe(expectedDate);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(
-				expect.stringContaining(expectedDate),
+				expect.stringContaining(expectedDate)
 			);
 		});
 	});

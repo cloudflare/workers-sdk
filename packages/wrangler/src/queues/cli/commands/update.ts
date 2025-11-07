@@ -1,4 +1,7 @@
 import { CommandLineArgsError } from "@cloudflare/workers-utils";
+
+import type { PostQueueBody, QueueSettings } from "../../client";
+
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { getQueue, updateQueue } from "../../client";
@@ -9,7 +12,6 @@ import {
 	MIN_MESSAGE_RETENTION_PERIOD_SECS,
 } from "../../constants";
 import { handleFetchError } from "../../utils";
-import type { PostQueueBody, QueueSettings } from "../../client";
 
 export const queuesUpdateCommand = createCommand({
 	metadata: {

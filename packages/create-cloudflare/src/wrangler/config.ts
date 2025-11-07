@@ -1,6 +1,7 @@
+import type { CommentObject } from "comment-json";
+import type { C3Context } from "types";
+
 import { existsSync, mkdirSync } from "fs";
-import { resolve } from "path";
-import TOML from "@iarna/toml";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile, writeJSON } from "helpers/files";
 import {
@@ -10,9 +11,11 @@ import {
 	readJSONWithComments,
 	writeJSONWithComments,
 } from "helpers/json";
+import { resolve } from "path";
+
 import type { JsonMap } from "@iarna/toml";
-import type { CommentObject } from "comment-json";
-import type { C3Context } from "types";
+
+import TOML from "@iarna/toml";
 
 /**
  * Update the `wrangler.(toml|json|jsonc)` file for this project by setting the name
@@ -26,14 +29,14 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		wranglerJson = insertJSONProperty(
 			wranglerJson,
 			"$schema",
-			"node_modules/wrangler/config-schema.json",
+			"node_modules/wrangler/config-schema.json"
 		);
 
 		wranglerJson = appendJSONProperty(wranglerJson, "name", ctx.project.name);
 		wranglerJson = appendJSONProperty(
 			wranglerJson,
 			"compatibility_date",
-			await getCompatibilityDate(wranglerJson),
+			await getCompatibilityDate(wranglerJson)
 		);
 		wranglerJson = appendJSONProperty(wranglerJson, "observability", {
 			enabled: true,
@@ -42,7 +45,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		addJSONComment(
 			wranglerJson,
 			"before-all",
-			"*\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n ",
+			"*\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n "
 		);
 
 		addJSONComment(wranglerJson, "after:observability", [
@@ -119,7 +122,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 # [[services]]
 # binding = "MY_SERVICE"
 # service = "my-service"
-`,
+`
 		);
 	}
 };
@@ -195,7 +198,7 @@ export const addVscodeConfig = (ctx: C3Context) => {
 };
 
 async function getCompatibilityDate<T extends Record<string, unknown>>(
-	config: T,
+	config: T
 ) {
 	const validCompatDateRe = /^\d{4}-\d{2}-\d{2}$/m;
 	if (

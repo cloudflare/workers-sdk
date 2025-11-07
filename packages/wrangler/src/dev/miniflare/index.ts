@@ -1,20 +1,19 @@
+import type {
+	DOContainerOptions,
+	MiniflareOptions,
+	RemoteProxyConnectionString,
+	SourceOptions,
+	WorkerdStructuredLog,
+	WorkerOptions,
+	WorkerRegistry,
+} from "miniflare";
+import type { UUID } from "node:crypto";
+
+import { Log, LogLevel } from "miniflare";
 import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { getDevContainerImageName } from "@cloudflare/containers-shared";
-import { Log, LogLevel } from "miniflare";
-import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
-import { withSourceURLs } from "../../deployment-bundle/source-url";
-import { logger } from "../../logger";
-import { getSourceMappedString } from "../../sourcemap";
-import { updateCheck } from "../../update-check";
-import { warnOrError } from "../../utils/print-bindings";
-import { getClassNamesWhichUseSQLite } from "../class-names-sqlite";
-import type { ServiceFetch } from "../../api";
-import type { AssetsOptions } from "../../assets";
-import type { LoggerLevel } from "../../logger";
-import type { LegacyAssetPaths } from "../../sites";
-import type { EsbuildBundle } from "../use-esbuild";
+
 import type {
 	CfD1Database,
 	CfDispatchNamespace,
@@ -30,16 +29,22 @@ import type {
 	Config,
 	ContainerEngine,
 } from "@cloudflare/workers-utils";
-import type {
-	DOContainerOptions,
-	MiniflareOptions,
-	RemoteProxyConnectionString,
-	SourceOptions,
-	WorkerdStructuredLog,
-	WorkerOptions,
-	WorkerRegistry,
-} from "miniflare";
-import type { UUID } from "node:crypto";
+
+import { getDevContainerImageName } from "@cloudflare/containers-shared";
+
+import type { ServiceFetch } from "../../api";
+import type { AssetsOptions } from "../../assets";
+import type { LoggerLevel } from "../../logger";
+import type { LegacyAssetPaths } from "../../sites";
+import type { EsbuildBundle } from "../use-esbuild";
+
+import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
+import { withSourceURLs } from "../../deployment-bundle/source-url";
+import { logger } from "../../logger";
+import { getSourceMappedString } from "../../sourcemap";
+import { updateCheck } from "../../update-check";
+import { warnOrError } from "../../utils/print-bindings";
+import { getClassNamesWhichUseSQLite } from "../class-names-sqlite";
 
 // This worker proxies all external Durable Objects to the Wrangler session
 // where they're defined, and receives all requests from other Wrangler sessions

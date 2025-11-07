@@ -1,4 +1,15 @@
 import assert from "node:assert";
+
+import type {
+	CfD1Database,
+	CfKvNamespace,
+	CfR2Bucket,
+	CfWorkerInit,
+	Config,
+	RawConfig,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
+
 import {
 	APIError,
 	experimental_patchConfig,
@@ -7,6 +18,9 @@ import {
 	PatchConfigError,
 	UserError,
 } from "@cloudflare/workers-utils";
+
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
+
 import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
@@ -19,16 +33,6 @@ import * as metrics from "../metrics";
 import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
 import { printBindings } from "../utils/print-bindings";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type {
-	CfD1Database,
-	CfKvNamespace,
-	CfR2Bucket,
-	CfWorkerInit,
-	Config,
-	RawConfig,
-	WorkerMetadataBinding,
-} from "@cloudflare/workers-utils";
 
 export function getBindings(
 	config: Config | undefined,

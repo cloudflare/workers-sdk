@@ -1,4 +1,4 @@
-export default <ExportedHandler<Env>>{
+export default (<ExportedHandler<Env>>{
 	async fetch(request, env, ctx) {
 		if (request.method !== "POST") return new Response("Method Not Allowed");
 		if (request.body === null) return new Response();
@@ -7,4 +7,4 @@ export default <ExportedHandler<Env>>{
 		await request.body.pipeTo(socket.writable);
 		return new Response(socket.readable);
 	},
-};
+});

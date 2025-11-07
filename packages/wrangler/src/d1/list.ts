@@ -1,9 +1,10 @@
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
+import type { Database } from "./types";
+
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { Database } from "./types";
 
 export const d1ListCommand = createCommand({
 	metadata: {

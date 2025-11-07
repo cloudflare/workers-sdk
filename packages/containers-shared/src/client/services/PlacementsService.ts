@@ -1,8 +1,3 @@
-/* istanbul ignore file */
-/* tslint:disable */
-/* eslint-disable */
-import { OpenAPI } from "../core/OpenAPI";
-import { request as __request } from "../core/request";
 import type { CancelablePromise } from "../core/CancelablePromise";
 import type { DeploymentID } from "../models/DeploymentID";
 import type { DeploymentV2 } from "../models/DeploymentV2";
@@ -10,6 +5,12 @@ import type { ListPlacements } from "../models/ListPlacements";
 import type { PlacementID } from "../models/PlacementID";
 import type { PlacementWithEvents } from "../models/PlacementWithEvents";
 import type { ReplaceDeploymentRequestBody } from "../models/ReplaceDeploymentRequestBody";
+
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+import { OpenAPI } from "../core/OpenAPI";
+import { request as __request } from "../core/request";
 
 export class PlacementsService {
 	/**

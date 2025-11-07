@@ -8,6 +8,7 @@
  * For the full copyright and license information, see https://github.com/poppinss/youch/blob/develop/LICENSE.md
  */
 import Mustache from "mustache";
+
 import viewTemplate from "./error.compiled.mustache";
 import StackTracey from "./Stacktracey";
 

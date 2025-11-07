@@ -1,17 +1,20 @@
+import type { Plugin } from "vite";
+import type { Awaitable, inject } from "vitest";
+import type { ConfigEnv, UserConfig, UserWorkspaceConfig } from "vitest/config";
+
 import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import { builtinModules } from "node:module";
 import path from "node:path";
 import { MessageChannel, receiveMessageOnPort } from "node:worker_threads";
-import { workerdBuiltinModules } from "../shared/builtin-modules";
+
 import type {
 	WorkersConfigPluginAPI,
 	WorkersPoolOptions,
 } from "../pool/config";
-import type { Plugin } from "vite";
-import type { Awaitable, inject } from "vitest";
-import type { ConfigEnv, UserConfig, UserWorkspaceConfig } from "vitest/config";
+
+import { workerdBuiltinModules } from "../shared/builtin-modules";
 
 const cloudflareTestPath = path.resolve(
 	__dirname,

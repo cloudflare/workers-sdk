@@ -1,6 +1,7 @@
+import type { Miniflare, WorkerRegistry } from "miniflare";
+
 import type { DevToolsEvent } from "./devtools";
 import type { Bundle, StartDevWorkerOptions } from "./types";
-import type { Miniflare, WorkerRegistry } from "miniflare";
 
 export type ErrorEvent =
 	| BaseErrorEvent<

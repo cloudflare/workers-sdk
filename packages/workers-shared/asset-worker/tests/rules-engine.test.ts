@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+
 import {
 	generateRulesMatcher,
 	generateStaticRoutingRuleMatcher,
@@ -78,7 +79,9 @@ describe("rules engine", () => {
 			matcher({ request: new Request("https://example.com/foo") })
 		).toEqual([]);
 		expect(
-			matcher({ request: new Request("https://example.com/blog/123/tricycle") })
+			matcher({
+				request: new Request("https://example.com/blog/123/tricycle"),
+			})
 		).toEqual(["3/tricycle/123", "4/123/tricycle"]);
 		expect(
 			matcher({ request: new Request("https://my.pages.dev/magic") })

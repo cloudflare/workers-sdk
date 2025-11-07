@@ -1,6 +1,9 @@
-import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
+import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+
+import type { Pipeline, SchemaField, Sink, Stream } from "../pipelines/types";
+
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -8,7 +11,6 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { Pipeline, SchemaField, Sink, Stream } from "../pipelines/types";
 
 describe("wrangler pipelines", () => {
 	const std = mockConsoleMethods();

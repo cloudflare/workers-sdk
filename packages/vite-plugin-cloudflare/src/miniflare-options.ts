@@ -1,12 +1,14 @@
-import assert from "node:assert";
-import * as fs from "node:fs";
-import * as fsp from "node:fs/promises";
-import * as path from "node:path";
-import { fileURLToPath } from "node:url";
-import {
-	generateContainerBuildId,
-	resolveDockerHost,
-} from "@cloudflare/containers-shared";
+import type {
+	MiniflareOptions,
+	WorkerdStructuredLog,
+	WorkerOptions,
+} from "miniflare";
+import type {
+	Binding,
+	RemoteProxySession,
+	SourcelessWorkerOptions,
+} from "wrangler";
+
 import {
 	getDefaultDevRegistryPath,
 	kCurrentWorker,
@@ -15,6 +17,11 @@ import {
 	LogLevel,
 	Response as MiniflareResponse,
 } from "miniflare";
+import assert from "node:assert";
+import * as fs from "node:fs";
+import * as fsp from "node:fs/promises";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import colors from "picocolors";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
@@ -23,6 +30,21 @@ import {
 	unstable_convertConfigBindingsToStartWorkerBindings,
 	unstable_getMiniflareWorkerOptions,
 } from "wrangler";
+
+import {
+	generateContainerBuildId,
+	resolveDockerHost,
+} from "@cloudflare/containers-shared";
+
+import type { CloudflareDevEnvironment } from "./cloudflare-environment";
+import type { ContainerTagToOptionsMap } from "./containers";
+import type {
+	AssetsOnlyPluginContext,
+	PreviewPluginContext,
+	WorkersPluginContext,
+} from "./context";
+import type { PersistState } from "./plugin-config";
+
 import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
@@ -34,24 +56,6 @@ import { getContainerOptions, getDockerPath } from "./containers";
 import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import { withTrailingSlash } from "./utils";
-import type { CloudflareDevEnvironment } from "./cloudflare-environment";
-import type { ContainerTagToOptionsMap } from "./containers";
-import type {
-	AssetsOnlyPluginContext,
-	PreviewPluginContext,
-	WorkersPluginContext,
-} from "./context";
-import type { PersistState } from "./plugin-config";
-import type {
-	MiniflareOptions,
-	WorkerdStructuredLog,
-	WorkerOptions,
-} from "miniflare";
-import type {
-	Binding,
-	RemoteProxySession,
-	SourcelessWorkerOptions,
-} from "wrangler";
 
 const INTERNAL_WORKERS_COMPATIBILITY_DATE = "2024-10-04";
 // Used to mark HTML assets as being in the public directory so that they can be resolved from their root relative paths

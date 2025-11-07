@@ -1,13 +1,16 @@
-import { DurableObject } from "cloudflare:workers";
-import { ModuleRunner, ssrModuleExportsKey } from "vite/module-runner";
-import { INIT_PATH, UNKNOWN_HOST, VIRTUAL_WORKER_ENTRY } from "../../shared";
-import { stripInternalEnv } from "./env";
-import type { WrapperEnv } from "./env";
 import type {
 	EvaluatedModuleNode,
 	ModuleEvaluator,
 	ModuleRunnerOptions,
 } from "vite/module-runner";
+
+import { DurableObject } from "cloudflare:workers";
+import { ModuleRunner, ssrModuleExportsKey } from "vite/module-runner";
+
+import type { WrapperEnv } from "./env";
+
+import { INIT_PATH, UNKNOWN_HOST, VIRTUAL_WORKER_ENTRY } from "../../shared";
+import { stripInternalEnv } from "./env";
 
 /**
  * Custom `ModuleRunner`.
@@ -186,9 +189,8 @@ async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 			},
 			async runExternalModule(filepath) {
 				if (filepath === "cloudflare:workers") {
-					const originalCloudflareWorkersModule = await import(
-						"cloudflare:workers"
-					);
+					const originalCloudflareWorkersModule =
+						await import("cloudflare:workers");
 
 					return Object.seal({
 						...originalCloudflareWorkersModule,

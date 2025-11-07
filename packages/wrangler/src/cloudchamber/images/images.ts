@@ -1,10 +1,11 @@
+import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
+import type { Config } from "@cloudflare/workers-utils";
+
 import {
 	getCloudflareContainerRegistry,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
-import { logger } from "../../logger";
-import { getAccountId } from "../../user";
-import { handleFailure, promiseSpinner } from "../common";
+
 import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgv,
@@ -12,8 +13,10 @@ import type {
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
 import type { cloudchamberScope } from "../common";
-import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
-import type { Config } from "@cloudflare/workers-utils";
+
+import { logger } from "../../logger";
+import { getAccountId } from "../../user";
+import { handleFailure, promiseSpinner } from "../common";
 
 interface CatalogWithTagsResponse {
 	repositories: Record<string, string[]>;

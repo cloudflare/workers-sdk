@@ -1,13 +1,16 @@
-import * as path from "node:path";
-import { maybeGetFile } from "@cloudflare/workers-shared";
 import dotenv from "dotenv";
+import * as path from "node:path";
+
+import type { Config } from "@cloudflare/workers-utils";
+
+import { maybeGetFile } from "@cloudflare/workers-shared";
+
 import { getDefaultEnvFiles, loadDotEnv } from "../config/dot-env";
 import {
 	getCloudflareIncludeProcessEnvFromEnv,
 	getCloudflareLoadDevVarsFromDotEnv,
 } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
-import type { Config } from "@cloudflare/workers-utils";
 
 /**
  * Get the Worker `vars` bindings for a `wrangler dev` instance of a Worker.

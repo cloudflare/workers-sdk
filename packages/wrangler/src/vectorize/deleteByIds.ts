@@ -1,8 +1,10 @@
 import { UserError } from "@cloudflare/workers-utils";
+
+import type { VectorizeVectorIds } from "./types";
+
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { deleteByIds } from "./client";
-import type { VectorizeVectorIds } from "./types";
 
 export const vectorizeDeleteVectorsCommand = createCommand({
 	metadata: {

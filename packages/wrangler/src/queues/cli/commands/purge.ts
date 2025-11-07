@@ -1,4 +1,5 @@
 import { FatalError } from "@cloudflare/workers-utils";
+
 import { createCommand } from "../../../core/create-command";
 import { prompt } from "../../../dialogs";
 import isInteractive from "../../../is-interactive";

@@ -1,7 +1,8 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import chalk from "chalk";
 import { findUpMultipleSync } from "find-up";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
 import { logger } from "../../logger";
 
 /**

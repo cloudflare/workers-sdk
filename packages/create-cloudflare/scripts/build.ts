@@ -1,5 +1,5 @@
-import { cp } from "fs/promises";
 import { build, BuildOptions, context } from "esbuild";
+import { cp } from "fs/promises";
 import * as glob from "glob";
 
 const run = async () => {
@@ -16,7 +16,7 @@ const run = async () => {
 		format: "cjs",
 		define: {
 			"process.env.SPARROW_SOURCE_KEY": JSON.stringify(
-				process.env.SPARROW_SOURCE_KEY ?? "",
+				process.env.SPARROW_SOURCE_KEY ?? ""
 			),
 		},
 	};

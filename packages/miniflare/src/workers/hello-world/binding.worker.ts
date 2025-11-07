@@ -1,6 +1,7 @@
 // Emulated Hello World Binding
 
 import { WorkerEntrypoint } from "cloudflare:workers";
+
 import type { HelloWorldObject } from "./object.worker";
 
 // ENV configuration

@@ -1,7 +1,7 @@
+import { Miniflare } from "miniflare";
 import assert from "node:assert";
 import { spawnSync } from "node:child_process";
 import test, { after, before, describe } from "node:test";
-import { Miniflare } from "miniflare";
 
 before(() => {
 	spawnSync("npx wrangler build -c wrangler-build.json", {

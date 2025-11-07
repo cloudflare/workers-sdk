@@ -1,3 +1,5 @@
+import type { MockInstance } from "vitest";
+
 import { fetchMock } from "cloudflare:test";
 import {
 	afterAll,
@@ -9,7 +11,6 @@ import {
 	it,
 	vi,
 } from "vitest";
-import type { MockInstance } from "vitest";
 
 beforeEach(() => fetchMock.activate());
 afterEach(() => {

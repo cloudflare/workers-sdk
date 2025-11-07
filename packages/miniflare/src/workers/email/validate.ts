@@ -1,5 +1,6 @@
 import { red } from "kleur/colors";
 import PostalMime, { Email } from "postal-mime";
+
 import { RAW_EMAIL } from "./constants";
 import { type MiniflareEmailMessage as EmailMessage } from "./email.worker";
 

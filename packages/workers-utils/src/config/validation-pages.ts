@@ -7,11 +7,12 @@
  * Pages.
  */
 
+import type { Config } from "./config";
+
 import { FatalError } from "../errors";
 import { defaultWranglerConfig } from "./config";
 import { Diagnostics } from "./diagnostics";
 import { isRequiredProperty } from "./validation-helpers";
-import type { Config } from "./config";
 
 const supportedPagesConfigFields = [
 	"pages_build_output_dir",
