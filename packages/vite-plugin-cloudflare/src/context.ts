@@ -121,7 +121,9 @@ export class PluginContext {
 
 	getWorkerConfig(environmentName: string): WorkerConfig | undefined {
 		return this.resolvedPluginConfig.type === "workers"
-			? this.resolvedPluginConfig.workers[environmentName]
+			? this.resolvedPluginConfig.environmentNameToWorkerMap.get(
+					environmentName
+				)?.config
 			: undefined;
 	}
 
@@ -130,14 +132,16 @@ export class PluginContext {
 			return;
 		}
 
-		return this.resolvedPluginConfig.workers[
+		return this.resolvedPluginConfig.environmentNameToWorkerMap.get(
 			this.resolvedPluginConfig.entryWorkerEnvironmentName
-		];
+		)?.config;
 	}
 
 	getNodeJsCompat(environmentName: string): NodeJsCompat | undefined {
 		return this.resolvedPluginConfig.type === "workers"
-			? this.resolvedPluginConfig.nodeJsCompatMap.get(environmentName)
+			? this.resolvedPluginConfig.environmentNameToWorkerMap.get(
+					environmentName
+				)?.nodeJsCompat
 			: undefined;
 	}
 }

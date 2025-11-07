@@ -381,15 +381,15 @@ export async function getDevMiniflareOptions(
 	const workersFromConfig =
 		resolvedPluginConfig.type === "workers"
 			? await Promise.all(
-					Object.entries(resolvedPluginConfig.workers).map(
-						async ([environmentName, workerConfig]) => {
+					[...resolvedPluginConfig.environmentNameToWorkerMap].map(
+						async ([environmentName, worker]) => {
 							const bindings =
 								unstable_convertConfigBindingsToStartWorkerBindings(
-									workerConfig
+									worker.config
 								);
 
-							const preExistingRemoteProxySession = workerConfig.configPath
-								? remoteProxySessionsDataMap.get(workerConfig.configPath)
+							const preExistingRemoteProxySession = worker.config.configPath
+								? remoteProxySessionsDataMap.get(worker.config.configPath)
 								: undefined;
 
 							const remoteProxySessionData =
@@ -398,33 +398,33 @@ export async function getDevMiniflareOptions(
 										null
 									: await maybeStartOrUpdateRemoteProxySession(
 											{
-												name: workerConfig.name,
+												name: worker.config.name,
 												bindings: bindings ?? {},
 											},
 											preExistingRemoteProxySession ?? null
 										);
 
-							if (workerConfig.configPath && remoteProxySessionData) {
+							if (worker.config.configPath && remoteProxySessionData) {
 								remoteProxySessionsDataMap.set(
-									workerConfig.configPath,
+									worker.config.configPath,
 									remoteProxySessionData
 								);
 							}
 
 							let containerBuildId: string | undefined;
 							if (
-								workerConfig.containers?.length &&
-								workerConfig.dev.enable_containers
+								worker.config.containers?.length &&
+								worker.config.dev.enable_containers
 							) {
 								const dockerPath = getDockerPath();
-								workerConfig.dev.container_engine =
+								worker.config.dev.container_engine =
 									resolveDockerHost(dockerPath);
 								containerBuildId = generateContainerBuildId();
 
 								const options = getContainerOptions({
-									containersConfig: workerConfig.containers,
+									containersConfig: worker.config.containers,
 									containerBuildId,
-									configPath: workerConfig.configPath,
+									configPath: worker.config.configPath,
 								});
 								for (const option of options ?? []) {
 									containerTagToOptionsMap.set(option.image_tag, option);
@@ -433,7 +433,7 @@ export async function getDevMiniflareOptions(
 
 							const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
 								{
-									...workerConfig,
+									...worker.config,
 									assets: undefined,
 								},
 								resolvedPluginConfig.cloudflareEnv,
@@ -454,7 +454,7 @@ export async function getDevMiniflareOptions(
 								externalWorkers,
 								worker: {
 									...workerOptions,
-									name: workerOptions.name ?? workerConfig.name,
+									name: workerOptions.name ?? worker.config.name,
 									unsafeInspectorProxy: inputInspectorPort !== false,
 									unsafeDirectSockets:
 										environmentName ===
@@ -475,9 +475,9 @@ export async function getDevMiniflareOptions(
 										...workerOptions.serviceBindings,
 										...(environmentName ===
 											resolvedPluginConfig.entryWorkerEnvironmentName &&
-										workerConfig.assets?.binding
+										worker.config.assets?.binding
 											? {
-													[workerConfig.assets.binding]: {
+													[worker.config.assets.binding]: {
 														node: (req, res) => {
 															req[kRequestType] = "asset";
 															viteDevServer.middlewares(req, res);

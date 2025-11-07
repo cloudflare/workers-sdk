@@ -260,9 +260,9 @@ export function initRunners(
 	miniflare: Miniflare
 ): Promise<void[]> | undefined {
 	return Promise.all(
-		Object.entries(resolvedPluginConfig.workers).map(
-			async ([environmentName, workerConfig]) => {
-				debuglog("Initializing worker:", workerConfig.name);
+		[...resolvedPluginConfig.environmentNameToWorkerMap].map(
+			([environmentName, worker]) => {
+				debuglog("Initializing worker:", worker.config.name);
 				const isEntryWorker =
 					environmentName === resolvedPluginConfig.entryWorkerEnvironmentName;
 
@@ -270,7 +270,7 @@ export function initRunners(
 					viteDevServer.environments[
 						environmentName
 					] as CloudflareDevEnvironment
-				).initRunner(miniflare, workerConfig, isEntryWorker);
+				).initRunner(miniflare, worker.config, isEntryWorker);
 			}
 		)
 	);
@@ -282,8 +282,8 @@ export function getWorkerExportTypes(
 	miniflare: Miniflare
 ) {
 	return Promise.all(
-		Object.entries(resolvedPluginConfig.workers).map(
-			async ([environmentName, workerConfig]) => {
+		[...resolvedPluginConfig.environmentNameToWorkerMap].map(
+			async ([environmentName, worker]) => {
 				// Wait for dependencies to be optimized before making the request
 				await viteDevServer.environments[
 					environmentName
@@ -293,13 +293,13 @@ export function getWorkerExportTypes(
 					new URL(GET_EXPORT_TYPES_PATH, UNKNOWN_HOST),
 					{
 						headers: {
-							[CoreHeaders.ROUTE_OVERRIDE]: workerConfig.name,
+							[CoreHeaders.ROUTE_OVERRIDE]: worker.config.name,
 						},
 					}
 				);
 				const json = await response.json();
 
-				return [workerConfig.name, json];
+				return [worker.config.name, json];
 			}
 		)
 	);
