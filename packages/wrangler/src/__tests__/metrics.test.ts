@@ -33,7 +33,9 @@ vi.mocked(getMetricsConfig).mockReset();
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 declare namespace globalThis {
+	// eslint-disable-next-line no-unused-vars
 	let ALGOLIA_APP_ID: string | undefined;
+	// eslint-disable-next-line no-unused-vars
 	let ALGOLIA_PUBLIC_KEY: string | undefined;
 }
 
