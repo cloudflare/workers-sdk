@@ -52,7 +52,7 @@
 	"scripts": {
 		"assert-git-version": "node -r esbuild-register scripts/assert-git-version.ts",
 		"build": "pnpm run clean && pnpm tsup && pnpm run generate-json-schema",
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "oxlint --type-aware",
 		"check:type": "tsc -p ./tsconfig.json && tsc -p ./templates/tsconfig.json",
 		"clean": "rimraf wrangler-dist miniflare-dist emitted-types",
 		"dev": "pnpm run clean && concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src --watch ../containers-shared/src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
@@ -143,6 +143,8 @@
 		"msw": "2.4.3",
 		"node-forge": "^1.3.1",
 		"open": "^8.4.0",
+		"oxlint": "^1.26.0",
+		"oxlint-tsgolint": "^0.5.1",
 		"p-queue": "^7.2.0",
 		"patch-console": "^1.0.0",
 		"pretty-bytes": "^6.0.0",

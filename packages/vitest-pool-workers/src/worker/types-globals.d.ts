@@ -9,6 +9,7 @@ declare global {
 	};
 	// Original, un-patched console that always logs directly to stdout/err,
 	// without call site annotations
+	// eslint-disable-next-line no-var
 	var __console: typeof console;
 }
 
