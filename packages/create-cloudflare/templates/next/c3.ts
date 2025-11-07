@@ -7,7 +7,8 @@ import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [ctx.project.name]);
+	// Disable Turbopack as it is not currently compatible with the Cloudflare adapter
+	await runFrameworkGenerator(ctx, [ctx.project.name, "--no-turbopack"]);
 };
 
 const configure = async (ctx: C3Context) => {
