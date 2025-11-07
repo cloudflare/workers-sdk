@@ -1,9 +1,19 @@
 import { describe, expect, test, vi } from "vitest";
-import * as autoConfigRun from "../autoconfig/run";
+import * as c3 from "../autoconfig/c3-vendor/packages";
+import * as run from "../autoconfig/run";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { seed } from "./helpers/seed";
+
+vi.mock("../package-manager", () => ({
+	getPackageManager() {
+		return {
+			type: "npm",
+			npx: "npx",
+		};
+	},
+}));
 
 describe("wrangler setup", () => {
 	const std = mockConsoleMethods();
@@ -14,7 +24,7 @@ describe("wrangler setup", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler setup
 
-			🆙 Setup a project to work on Cloudflare [experimental]
+			🪄 Setup a project to work on Cloudflare [experimental]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -26,25 +36,32 @@ describe("wrangler setup", () => {
 		`);
 	});
 
-	test("should run autoconfig when project is not configured", async () => {
-		const runSpy = vi
-			.spyOn(autoConfigRun, "runAutoConfig")
-			.mockImplementation(() => Promise.resolve());
-		await runWrangler("setup");
-
-		expect(runSpy).toHaveBeenCalled();
-		expect(std.out).toContain("wrangler deploy");
-	});
-
 	test("should skip autoconfig when project is already configured", async () => {
 		await seed({
-			"wrangler.jsonc": JSON.stringify({ name: "worker" }),
+			"wrangler.jsonc": JSON.stringify({ name: "my-worker" }),
 		});
+
+		const runSpy = vi.spyOn(run, "runAutoConfig");
 
 		await runWrangler("setup");
 
-		expect(std.out).toContain(
-			"🎉 Your project is already setup to deploy to Cloudflare"
-		);
+		// autoconfig should _not_ have been run
+		expect(runSpy).not.toHaveBeenCalled();
+	});
+
+	test("should run autoconfig when project is not configured", async () => {
+		await seed({
+			"public/index.html": `<h1>Hello World</h1>`,
+		});
+
+		// Let's not actually install Wrangler, to speed up tests
+		vi.spyOn(c3, "installWrangler").mockImplementation(async () => {});
+
+		const runSpy = vi.spyOn(run, "runAutoConfig");
+
+		await runWrangler("setup");
+
+		// autoconfig should have been run
+		expect(runSpy).toHaveBeenCalled();
 	});
 });

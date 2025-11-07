@@ -6,15 +6,12 @@ import { logger } from "./logger";
 
 export const setupCommand = createCommand({
 	metadata: {
-		description: "🆙 Setup a project to work on Cloudflare",
+		description: "🪄 Setup a project to work on Cloudflare",
 		owner: "Workers: Authoring and Testing",
 		status: "experimental",
 	},
-	behaviour: {
-		provideConfig: false,
-	},
 
-	async handler(args, { config }) {
+	async handler(_, { config }) {
 		const details = await getDetailsForAutoConfig({
 			wranglerConfig: config,
 		});
@@ -22,6 +19,7 @@ export const setupCommand = createCommand({
 		// Only run auto config if the project is not already configured
 		if (!details.configured) {
 			await runAutoConfig(details);
+			logger.log("🎉 Your project is now setup to deploy to Cloudflare");
 		} else {
 			logger.log("🎉 Your project is already setup to deploy to Cloudflare");
 		}
