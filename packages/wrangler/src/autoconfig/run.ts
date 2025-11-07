@@ -14,7 +14,7 @@ import { confirmAutoConfigDetails, displayAutoConfigDetails } from "./details";
 import type { AutoConfigDetails } from "./types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
-type AutoconfigMetrics = Pick<
+type AutoConfigMetrics = Pick<
 	AutoConfigDetails,
 	"buildCommand" | "outputDir"
 > & {
@@ -24,7 +24,7 @@ type AutoconfigMetrics = Pick<
 export async function runAutoConfig(
 	autoConfigDetails: AutoConfigDetails
 ): Promise<void> {
-	const detected: AutoconfigMetrics = {
+	const detected: AutoConfigMetrics = {
 		buildCommand: autoConfigDetails.buildCommand,
 		outputDir: autoConfigDetails.outputDir,
 		framework: autoConfigDetails.framework?.name,
@@ -103,7 +103,7 @@ export async function runAutoConfig(
 		);
 	}
 
-	const used: AutoconfigMetrics = {
+	const used: AutoConfigMetrics = {
 		buildCommand: autoConfigDetails.buildCommand,
 		outputDir: autoConfigDetails.outputDir,
 		framework: autoConfigDetails.framework?.name,
