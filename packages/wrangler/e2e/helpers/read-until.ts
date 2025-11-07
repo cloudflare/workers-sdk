@@ -14,7 +14,6 @@ export async function readUntil(
 	const readArray: string[] = [];
 	const read = () => stripAnsi(readArray.join("\n"));
 	try {
-		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			const result = await Promise.race([reader.read(), timeoutPromise]);
 			if (result === TIMEOUT) {

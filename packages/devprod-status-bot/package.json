@@ -8,9 +8,11 @@
 		"deploy": "wrangler deploy"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@octokit/types": "^13.8.0",
 		"@octokit/webhooks-types": "^7.6.1",
+		"eslint": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

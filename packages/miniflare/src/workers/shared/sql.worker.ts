@@ -123,7 +123,6 @@ export function all<R extends TypedResult>(
 }
 
 export function drain<R extends TypedResult>(cursor: TypedSqlStorageCursor<R>) {
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	for (const _ of cursor) {
 	}
 }

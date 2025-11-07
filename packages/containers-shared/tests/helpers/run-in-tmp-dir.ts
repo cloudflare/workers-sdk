@@ -24,6 +24,7 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 		);
 
 		process.chdir(tmpDir);
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		process.env.PWD = tmpDir;
 
 		// The path that is returned from `homedir()` should be absolute.
@@ -43,10 +44,11 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 	afterEach(() => {
 		if (fs.existsSync(tmpDir)) {
 			process.chdir(originalCwd);
+			// eslint-disable-next-line turbo/no-undeclared-env-vars
 			process.env.PWD = originalCwd;
 
 			// Don't block on deleting the tmp dir
-			void rm(tmpDir).catch((e) => {
+			void rm(tmpDir).catch(() => {
 				// Best effort - try once then just move on - they are only temp files after all.
 				// It seems that Windows doesn't let us delete this, with errors like:
 				//

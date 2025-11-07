@@ -592,8 +592,8 @@ declare module "cloudflare:test" {
 			/** Body to intercept on. */
 			body?: string | RegExp | ((body: string) => boolean);
 			/** Headers to intercept on. */
-			headers?: // eslint-disable-next-line unused-imports/no-unused-vars
-			| Record<string, string | RegExp | ((body: string) => boolean)>
+			headers?:
+				| Record<string, string | RegExp | ((body: string) => boolean)>
 				| ((headers: Record<string, string>) => boolean);
 			/** Query params to intercept on */
 			query?: Record<string, unknown>;
@@ -654,7 +654,7 @@ declare module "cloudflare:test" {
 	/** A mocked Agent class that implements the Agent API. It allows one to intercept HTTP requests made through undici and return mocked responses instead. */
 	abstract class MockAgent {
 		/** Creates and retrieves mock Dispatcher instances which can then be used to intercept HTTP requests. If the number of connections on the mock agent is set to 1, a MockClient instance is returned. Otherwise a MockPool instance is returned. */
-		// eslint-disable-next-line no-shadow
+
 		get(origin: string | RegExp | ((origin: string) => boolean)): Interceptable;
 
 		/** Disables mocking in MockAgent. */
@@ -664,7 +664,6 @@ declare module "cloudflare:test" {
 
 		/** Define host matchers so only matching requests that aren't intercepted by the mock dispatchers will be attempted. */
 		enableNetConnect(
-			// eslint-disable-next-line no-shadow
 			host?: string | RegExp | ((host: string) => boolean)
 		): void;
 		/** Causes all requests to throw when requests are not matched in a MockAgent intercept. */
