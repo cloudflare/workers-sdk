@@ -176,6 +176,7 @@ function getEntrypointState(
 }
 
 const WORKER_ENTRYPOINT_KEYS = [
+	"tailStream",
 	"fetch",
 	"tail",
 	"trace",
