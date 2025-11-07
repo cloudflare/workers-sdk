@@ -14,6 +14,7 @@ export default defineConfig(
 		"eslint.config.mjs",
 		"vitest.config.mts",
 		"**/dist/**/*",
+		".e2e-test-report/**",
 	]),
 	{
 		languageOptions: {
