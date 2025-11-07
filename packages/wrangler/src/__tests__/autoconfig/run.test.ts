@@ -1,6 +1,5 @@
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";
 import { vi } from "vitest";
 import * as c3 from "../../autoconfig/c3-vendor/packages";
@@ -15,12 +14,10 @@ import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { seed } from "../helpers/seed";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type { Framework } from "../../autoconfig/frameworks";
 import type { AutoConfigDetails } from "../../autoconfig/types";
-import type { Config } from "@cloudflare/workers-utils";
 import type { MockInstance } from "vitest";
 
 vi.mock("../../package-manager", () => ({
@@ -128,112 +125,6 @@ describe("autoconfig (deploy)", () => {
 
 		expect(getDetailsSpy).toHaveBeenCalled();
 		expect(runSpy).not.toHaveBeenCalled();
-	});
-
-	describe("getDetailsForAutoConfig()", () => {
-		it("should set configured: true if a configPath exists", async () => {
-			await expect(
-				details.getDetailsForAutoConfig({
-					wranglerConfig: { configPath: "/tmp" } as Config,
-				})
-			).resolves.toMatchObject({ configured: true });
-		});
-
-		// Check that Astro is detected. We don't want to duplicate the tests of @netlify/build-info
-		// by exhaustively checking every possible combination
-		it("should perform basic framework detection", async () => {
-			await writeFile(
-				"package.json",
-				JSON.stringify({
-					dependencies: {
-						astro: "5",
-					},
-				})
-			);
-
-			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-				buildCommand: "astro build",
-				configured: false,
-				outputDir: "dist",
-				packageJson: {
-					dependencies: {
-						astro: "5",
-					},
-				},
-			});
-		});
-
-		it("should bail when multiple frameworks are detected", async () => {
-			await writeFile(
-				"package.json",
-				JSON.stringify({
-					dependencies: {
-						astro: "5",
-						gatsby: "5",
-					},
-				})
-			);
-
-			await expect(
-				details.getDetailsForAutoConfig()
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found: Astro, Gatsby]`
-			);
-		});
-
-		it("should use npm build instead of framework build if present", async () => {
-			await writeFile(
-				"package.json",
-				JSON.stringify({
-					scripts: {
-						build: "echo build",
-					},
-					dependencies: {
-						astro: "5",
-					},
-				})
-			);
-
-			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-				buildCommand: "npm run build",
-			});
-		});
-
-		it("outputDir should be empty if nothing can be detected", async () => {
-			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-				outputDir: undefined,
-			});
-		});
-
-		it("outputDir should be set to cwd if an index.html file exists", async () => {
-			await writeFile("index.html", `<h1>Hello World</h1>`);
-
-			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-				outputDir: process.cwd(),
-			});
-		});
-
-		it("outputDir should find first child directory with an index.html file", async () => {
-			await seed({
-				"public/index.html": `<h1>Hello World</h1>`,
-				"random/index.html": `<h1>Hello World</h1>`,
-			});
-
-			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-				outputDir: join(process.cwd(), "public"),
-			});
-		});
-
-		it("outputDir should prioritize the project directory over its child directories", async () => {
-			await seed({
-				"index.html": `<h1>Hello World</h1>`,
-				"public/index.html": `<h1>Hello World</h1>`,
-			});
-
-			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-				outputDir: process.cwd(),
-			});
-		});
 	});
 
 	describe("runAutoConfig()", () => {
