@@ -41,6 +41,7 @@ import type {
 	PreviewPluginContext,
 	WorkersPluginContext,
 } from "./context";
+import type { ExportTypes } from "./export-types";
 import type { PersistState } from "./plugin-config";
 import type {
 	MiniflareOptions,
@@ -75,106 +76,106 @@ function getPersistenceRoot(
 	return persistPath;
 }
 
-function missingWorkerErrorMessage(workerName: string) {
-	return `${workerName} does not match a worker name.`;
-}
+// function missingWorkerErrorMessage(workerName: string) {
+// 	return `${workerName} does not match a worker name.`;
+// }
 
-function getWorkerToWorkerEntrypointNamesMap(
-	workers: Array<Pick<WorkerOptions, "serviceBindings"> & { name: string }>
-) {
-	const workerToWorkerEntrypointNamesMap = new Map(
-		workers.map((workerOptions) => [workerOptions.name, new Set<string>()])
-	);
+// function getWorkerToWorkerEntrypointNamesMap(
+// 	workers: Array<Pick<WorkerOptions, "serviceBindings"> & { name: string }>
+// ) {
+// 	const workerToWorkerEntrypointNamesMap = new Map(
+// 		workers.map((workerOptions) => [workerOptions.name, new Set<string>()])
+// 	);
 
-	for (const worker of workers) {
-		for (const value of Object.values(worker.serviceBindings ?? {})) {
-			if (
-				typeof value === "object" &&
-				"name" in value &&
-				value.entrypoint !== undefined &&
-				value.entrypoint !== "default"
-			) {
-				const targetWorkerName =
-					value.name === kCurrentWorker ? worker.name : value.name;
-				const entrypointNames =
-					workerToWorkerEntrypointNamesMap.get(targetWorkerName);
+// 	for (const worker of workers) {
+// 		for (const value of Object.values(worker.serviceBindings ?? {})) {
+// 			if (
+// 				typeof value === "object" &&
+// 				"name" in value &&
+// 				value.entrypoint !== undefined &&
+// 				value.entrypoint !== "default"
+// 			) {
+// 				const targetWorkerName =
+// 					value.name === kCurrentWorker ? worker.name : value.name;
+// 				const entrypointNames =
+// 					workerToWorkerEntrypointNamesMap.get(targetWorkerName);
 
-				if (entrypointNames) {
-					entrypointNames.add(value.entrypoint);
-				}
-			}
-		}
-	}
+// 				if (entrypointNames) {
+// 					entrypointNames.add(value.entrypoint);
+// 				}
+// 			}
+// 		}
+// 	}
 
-	return workerToWorkerEntrypointNamesMap;
-}
+// 	return workerToWorkerEntrypointNamesMap;
+// }
 
-function getWorkerToDurableObjectClassNamesMap(
-	workers: Array<Pick<WorkerOptions, "durableObjects"> & { name: string }>
-) {
-	const workerToDurableObjectClassNamesMap = new Map(
-		workers.map((workerOptions) => [workerOptions.name, new Set<string>()])
-	);
+// function getWorkerToDurableObjectClassNamesMap(
+// 	workers: Array<Pick<WorkerOptions, "durableObjects"> & { name: string }>
+// ) {
+// 	const workerToDurableObjectClassNamesMap = new Map(
+// 		workers.map((workerOptions) => [workerOptions.name, new Set<string>()])
+// 	);
 
-	for (const worker of workers) {
-		for (const value of Object.values(worker.durableObjects ?? {})) {
-			if (typeof value === "string") {
-				const classNames = workerToDurableObjectClassNamesMap.get(worker.name);
-				assert(classNames, missingWorkerErrorMessage(worker.name));
+// 	for (const worker of workers) {
+// 		for (const value of Object.values(worker.durableObjects ?? {})) {
+// 			if (typeof value === "string") {
+// 				const classNames = workerToDurableObjectClassNamesMap.get(worker.name);
+// 				assert(classNames, missingWorkerErrorMessage(worker.name));
 
-				classNames.add(value);
-			} else if (typeof value === "object") {
-				if (value.scriptName) {
-					const classNames = workerToDurableObjectClassNamesMap.get(
-						value.scriptName
-					);
-					assert(classNames, missingWorkerErrorMessage(value.scriptName));
+// 				classNames.add(value);
+// 			} else if (typeof value === "object") {
+// 				if (value.scriptName) {
+// 					const classNames = workerToDurableObjectClassNamesMap.get(
+// 						value.scriptName
+// 					);
+// 					assert(classNames, missingWorkerErrorMessage(value.scriptName));
 
-					classNames.add(value.className);
-				} else {
-					const classNames = workerToDurableObjectClassNamesMap.get(
-						worker.name
-					);
-					assert(classNames, missingWorkerErrorMessage(worker.name));
+// 					classNames.add(value.className);
+// 				} else {
+// 					const classNames = workerToDurableObjectClassNamesMap.get(
+// 						worker.name
+// 					);
+// 					assert(classNames, missingWorkerErrorMessage(worker.name));
 
-					classNames.add(value.className);
-				}
-			}
-		}
-	}
+// 					classNames.add(value.className);
+// 				}
+// 			}
+// 		}
+// 	}
 
-	return workerToDurableObjectClassNamesMap;
-}
+// 	return workerToDurableObjectClassNamesMap;
+// }
 
-function getWorkerToWorkflowEntrypointClassNamesMap(
-	workers: Array<Pick<WorkerOptions, "workflows"> & { name: string }>
-) {
-	const workerToWorkflowEntrypointClassNamesMap = new Map(
-		workers.map((workerOptions) => [workerOptions.name, new Set<string>()])
-	);
+// function getWorkerToWorkflowEntrypointClassNamesMap(
+// 	workers: Array<Pick<WorkerOptions, "workflows"> & { name: string }>
+// ) {
+// 	const workerToWorkflowEntrypointClassNamesMap = new Map(
+// 		workers.map((workerOptions) => [workerOptions.name, new Set<string>()])
+// 	);
 
-	for (const worker of workers) {
-		for (const value of Object.values(worker.workflows ?? {})) {
-			if (value.scriptName) {
-				const classNames = workerToWorkflowEntrypointClassNamesMap.get(
-					value.scriptName
-				);
-				assert(classNames, missingWorkerErrorMessage(value.scriptName));
+// 	for (const worker of workers) {
+// 		for (const value of Object.values(worker.workflows ?? {})) {
+// 			if (value.scriptName) {
+// 				const classNames = workerToWorkflowEntrypointClassNamesMap.get(
+// 					value.scriptName
+// 				);
+// 				assert(classNames, missingWorkerErrorMessage(value.scriptName));
 
-				classNames.add(value.className);
-			} else {
-				const classNames = workerToWorkflowEntrypointClassNamesMap.get(
-					worker.name
-				);
-				assert(classNames, missingWorkerErrorMessage(worker.name));
+// 				classNames.add(value.className);
+// 			} else {
+// 				const classNames = workerToWorkflowEntrypointClassNamesMap.get(
+// 					worker.name
+// 				);
+// 				assert(classNames, missingWorkerErrorMessage(worker.name));
 
-				classNames.add(value.className);
-			}
-		}
-	}
+// 				classNames.add(value.className);
+// 			}
+// 		}
+// 	}
 
-	return workerToWorkflowEntrypointClassNamesMap;
-}
+// 	return workerToWorkflowEntrypointClassNamesMap;
+// }
 
 // We want module names to be their absolute path without the leading slash
 // (i.e. the modules root should be the root directory). On Windows, we need
@@ -509,12 +510,12 @@ export async function getDevMiniflareOptions(
 		(options) => options.externalWorkers
 	);
 
-	const workerToWorkerEntrypointNamesMap =
-		getWorkerToWorkerEntrypointNamesMap(userWorkers);
-	const workerToDurableObjectClassNamesMap =
-		getWorkerToDurableObjectClassNamesMap(userWorkers);
-	const workerToWorkflowEntrypointClassNamesMap =
-		getWorkerToWorkflowEntrypointClassNamesMap(userWorkers);
+	// const workerToWorkerEntrypointNamesMap =
+	// 	getWorkerToWorkerEntrypointNamesMap(userWorkers);
+	// const workerToDurableObjectClassNamesMap =
+	// 	getWorkerToDurableObjectClassNamesMap(userWorkers);
+	// const workerToWorkflowEntrypointClassNamesMap =
+	// 	getWorkerToWorkflowEntrypointClassNamesMap(userWorkers);
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
@@ -536,50 +537,60 @@ export async function getDevMiniflareOptions(
 				...externalWorkers,
 				...userWorkers.map((workerOptions) => {
 					const wrappers = [
-						`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from '${RUNNER_PATH}';`,
-						`export { __VITE_RUNNER_OBJECT__ } from '${RUNNER_PATH}';`,
-						`export default createWorkerEntrypointWrapper('default');`,
+						`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from "${RUNNER_PATH}";`,
+						`export { __VITE_RUNNER_OBJECT__ } from "${RUNNER_PATH}";`,
+						`export default createWorkerEntrypointWrapper("default");`,
 					];
 
-					const workerEntrypointNames = workerToWorkerEntrypointNamesMap.get(
+					const exportTypes = ctx.workerNameToExportTypesMap.get(
 						workerOptions.name
 					);
-					assert(
-						workerEntrypointNames,
-						`WorkerEntrypoint names not found for worker ${workerOptions.name}`
-					);
 
-					for (const entrypointName of [...workerEntrypointNames].sort()) {
+					for (const [name, type] of Object.entries(exportTypes ?? {})) {
 						wrappers.push(
-							`export const ${entrypointName} = createWorkerEntrypointWrapper('${entrypointName}');`
+							`export const ${name} = create${type}Wrapper("${name}");`
 						);
 					}
 
-					const durableObjectClassNames =
-						workerToDurableObjectClassNamesMap.get(workerOptions.name);
-					assert(
-						durableObjectClassNames,
-						`DurableObject class names not found for worker ${workerOptions.name}`
-					);
+					// const workerEntrypointNames = workerToWorkerEntrypointNamesMap.get(
+					// 	workerOptions.name
+					// );
+					// assert(
+					// 	workerEntrypointNames,
+					// 	`WorkerEntrypoint names not found for worker ${workerOptions.name}`
+					// );
 
-					for (const className of [...durableObjectClassNames].sort()) {
-						wrappers.push(
-							`export const ${className} = createDurableObjectWrapper('${className}');`
-						);
-					}
+					// for (const entrypointName of [...workerEntrypointNames].sort()) {
+					// 	wrappers.push(
+					// 		`export const ${entrypointName} = createWorkerEntrypointWrapper('${entrypointName}');`
+					// 	);
+					// }
 
-					const workflowEntrypointClassNames =
-						workerToWorkflowEntrypointClassNamesMap.get(workerOptions.name);
-					assert(
-						workflowEntrypointClassNames,
-						`WorkflowEntrypoint class names not found for worker: ${workerOptions.name}`
-					);
+					// const durableObjectClassNames =
+					// 	workerToDurableObjectClassNamesMap.get(workerOptions.name);
+					// assert(
+					// 	durableObjectClassNames,
+					// 	`DurableObject class names not found for worker ${workerOptions.name}`
+					// );
 
-					for (const className of [...workflowEntrypointClassNames].sort()) {
-						wrappers.push(
-							`export const ${className} = createWorkflowEntrypointWrapper('${className}');`
-						);
-					}
+					// for (const className of [...durableObjectClassNames].sort()) {
+					// 	wrappers.push(
+					// 		`export const ${className} = createDurableObjectWrapper('${className}');`
+					// 	);
+					// }
+
+					// const workflowEntrypointClassNames =
+					// 	workerToWorkflowEntrypointClassNamesMap.get(workerOptions.name);
+					// assert(
+					// 	workflowEntrypointClassNames,
+					// 	`WorkflowEntrypoint class names not found for worker: ${workerOptions.name}`
+					// );
+
+					// for (const className of [...workflowEntrypointClassNames].sort()) {
+					// 	wrappers.push(
+					// 		`export const ${className} = createWorkflowEntrypointWrapper('${className}');`
+					// 	);
+					// }
 
 					logUnknownTails(
 						workerOptions.tails,

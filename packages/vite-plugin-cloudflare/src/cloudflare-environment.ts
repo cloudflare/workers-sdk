@@ -11,6 +11,7 @@ import {
 	WORKER_ENTRY_PATH_HEADER,
 } from "./shared";
 import { debuglog, getOutputDirectory } from "./utils";
+import type { ExportTypes } from "./export-types";
 import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
 import type { MessageEvent, Miniflare, WebSocket } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
@@ -94,7 +95,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		miniflare: Miniflare,
 		workerConfig: WorkerConfig,
 		isEntryWorker: boolean
-	) {
+	): Promise<void> {
 		const response = await miniflare.dispatchFetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
@@ -114,6 +115,26 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		assert(webSocket, "Failed to establish WebSocket");
 		webSocket.accept();
 		this.#webSocketContainer.webSocket = webSocket;
+	}
+
+	async fetchWorkerExportTypes(
+		miniflare: Miniflare,
+		workerConfig: WorkerConfig
+	): Promise<ExportTypes> {
+		// Wait for dependencies to be optimized before making the request
+		await this.depsOptimizer?.init();
+
+		const response = await miniflare.dispatchFetch(
+			new URL(GET_EXPORT_TYPES_PATH, UNKNOWN_HOST),
+			{
+				headers: {
+					[CoreHeaders.ROUTE_OVERRIDE]: workerConfig.name,
+				},
+			}
+		);
+		const json = await response.json();
+
+		return json as ExportTypes;
 	}
 
 	override async fetchModule(
@@ -271,35 +292,6 @@ export function initRunners(
 						environmentName
 					] as CloudflareDevEnvironment
 				).initRunner(miniflare, worker.config, isEntryWorker);
-			}
-		)
-	);
-}
-
-export function getWorkerExportTypes(
-	resolvedPluginConfig: WorkersResolvedConfig,
-	viteDevServer: vite.ViteDevServer,
-	miniflare: Miniflare
-) {
-	return Promise.all(
-		[...resolvedPluginConfig.environmentNameToWorkerMap].map(
-			async ([environmentName, worker]) => {
-				// Wait for dependencies to be optimized before making the request
-				await viteDevServer.environments[
-					environmentName
-				]?.depsOptimizer?.init();
-
-				const response = await miniflare.dispatchFetch(
-					new URL(GET_EXPORT_TYPES_PATH, UNKNOWN_HOST),
-					{
-						headers: {
-							[CoreHeaders.ROUTE_OVERRIDE]: worker.config.name,
-						},
-					}
-				);
-				const json = await response.json();
-
-				return [worker.config.name, json];
 			}
 		)
 	);

@@ -18,7 +18,7 @@ test("runs D1 query using Prisma", async () => {
 	const info = serverLogs.info.join("\n");
 	// TODO: duplicate this test elsewhere
 	// This test was originally intended to test that `nodejs_compat` polyfills are pre-bundled but this playground no longer uses `nodejs_compat`.
-	// It should alsoremain here to test that the `prisma` dependencies are pre-bundled.
+	// It should also remain here to test that the `prisma` dependencies are pre-bundled.
 	expect(info).not.toContain("optimized dependencies changed. reloading");
 	expect(info).not.toContain("[vite] program reload");
 });
