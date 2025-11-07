@@ -82,7 +82,9 @@ export type EventNames =
 	| "delete pipeline"
 	| "update pipeline"
 	| "show pipeline"
-	| "provision resources";
+	| "provision resources"
+	| "autoconfig detected"
+	| "autoconfig accepted";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.

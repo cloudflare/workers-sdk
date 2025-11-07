@@ -259,9 +259,22 @@ export const r2ObjectPutCommand = createCommand({
 		let object: ReadableStream;
 		let objectSize: number;
 		if (file) {
-			object = await createFileReadableStream(file);
-			const stats = fs.statSync(file);
-			objectSize = stats.size;
+			try {
+				const stats = fs.statSync(file);
+				objectSize = stats.size;
+				object = await createFileReadableStream(file);
+			} catch (err) {
+				if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+					throw new UserError(`The file "${file}" does not exist.`);
+				}
+				const error = new UserError(
+					`An error occurred while trying to read the file "${file}": ${
+						(err as Error).message
+					}`
+				);
+				error.cause = err;
+				throw error;
+			}
 		} else {
 			const buffer = await new Promise<Buffer>((resolve, reject) => {
 				const stdin = process.stdin;
