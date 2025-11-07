@@ -4,6 +4,7 @@ import { FatalError, readFileSync } from "@cloudflare/workers-utils";
 import { vi } from "vitest";
 import * as c3 from "../../autoconfig/c3-vendor/packages";
 import * as details from "../../autoconfig/details";
+import { Static } from "../../autoconfig/frameworks/static";
 import * as run from "../../autoconfig/run";
 import * as format from "../../deployment-bundle/guess-worker-format";
 import { clearOutputFilePath } from "../../output";
@@ -251,10 +252,6 @@ describe("autoconfig (deploy)", () => {
 				text: "What directory contains your applications' output/asset files?",
 				result: "dist",
 			});
-			mockPrompt({
-				text: "What is your application's build command?",
-				result: "",
-			});
 			mockConfirm({
 				text: "Do you want to proceed with the deployment using these settings?",
 				result: true,
@@ -266,6 +263,7 @@ describe("autoconfig (deploy)", () => {
 			await run.runAutoConfig({
 				projectPath: process.cwd(),
 				configured: false,
+				framework: new Static("static"),
 				workerName: "my-worker",
 				outputDir: "dist",
 			});
@@ -274,11 +272,13 @@ describe("autoconfig (deploy)", () => {
 				"
 				Auto-detected Project Settings:
 				 - Worker Name: my-worker
+				 - Framework: static
 				 - Output Directory: dist
 
 
 				Updated Project Settings:
 				 - Worker Name: edited-worker-name
+				 - Framework: static
 				 - Output Directory: dist
 
 
@@ -301,6 +301,9 @@ describe("autoconfig (deploy)", () => {
 				  \\"compatibility_date\\": \\"2000-01-01\\",
 				  \\"observability\\": {
 				    \\"enabled\\": true
+				  },
+				  \\"assets\\": {
+				    \\"directory\\": \\"dist\\"
 				  }
 				}"
 			`);

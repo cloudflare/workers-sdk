@@ -15,6 +15,7 @@ import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 import { getFramework } from "./frameworks/get-framework";
+import { Static } from "./frameworks/static";
 import type { AutoConfigDetails } from "./types";
 import type { Config, PackageJSON } from "@cloudflare/workers-utils";
 import type { Settings } from "@netlify/build-info";
@@ -298,14 +299,20 @@ export async function confirmAutoConfigDetails(
 
 	updatedAutoConfigDetails.outputDir = outputDir;
 
-	const buildCommand = await prompt(
-		"What is your application's build command?",
-		{
-			defaultValue: autoConfigDetails.buildCommand ?? "",
-		}
-	);
+	if (
+		!autoConfigDetails.buildCommand &&
+		!autoConfigDetails.packageJson &&
+		!(autoConfigDetails.framework instanceof Static)
+	) {
+		const buildCommand = await prompt(
+			"What is your application's build command?",
+			{
+				defaultValue: autoConfigDetails.buildCommand ?? "",
+			}
+		);
 
-	updatedAutoConfigDetails.buildCommand = buildCommand;
+		updatedAutoConfigDetails.buildCommand = buildCommand;
+	}
 
 	return updatedAutoConfigDetails;
 }
