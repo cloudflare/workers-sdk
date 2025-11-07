@@ -579,18 +579,20 @@ export const WorkerdTests: Record<string, () => void> = {
 		assertTypeOf(traceEvents, "createTracing", "function");
 		assertTypeOf(traceEvents, "getEnabledCategories", "function");
 
-		if (getRuntimeFlagValue("enable_nodejs_trace_events_module")) {
-			const categories = traceEvents.getEnabledCategories();
-			assert.ok(Array.isArray(categories), "categories should be an array");
-		} else {
-			const tracing = traceEvents.createTracing({
-				categories: ["node.async_hooks"],
-			});
-			assertTypeOf(tracing, "enable", "function");
-			assertTypeOf(tracing, "disable", "function");
-			assertTypeOf(tracing, "enabled", "boolean");
-			assertTypeOf(tracing, "categories", "string");
-		}
+		const categories = traceEvents.getEnabledCategories();
+		assert.strictEqual(
+			typeof categories,
+			"string",
+			"getEnabledCategories should return be a string"
+		);
+
+		const tracing = traceEvents.createTracing({
+			categories: ["node.async_hooks"],
+		});
+		assertTypeOf(tracing, "enable", "function");
+		assertTypeOf(tracing, "disable", "function");
+		assertTypeOf(tracing, "enabled", "boolean");
+		assertTypeOf(tracing, "categories", "string");
 	},
 };
 
