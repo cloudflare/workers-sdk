@@ -91,7 +91,7 @@ function isDirectory(filePath: string): boolean {
 
 function getParentPaths(filePath: string): string[] {
 	const parentPaths: string[] = [];
-	 
+
 	while (true) {
 		const parentPath = posixPath.dirname(filePath);
 		if (parentPath === filePath) {
