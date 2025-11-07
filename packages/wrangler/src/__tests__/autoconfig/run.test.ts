@@ -10,14 +10,13 @@ import { clearOutputFilePath } from "../../output";
 import * as compatDate from "../../utils/compatibility-date";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type { Framework } from "../../autoconfig/frameworks";
-import type { AutoConfigDetails } from "../../autoconfig/types";
 import type { MockInstance } from "vitest";
 
 vi.mock("../../package-manager", () => ({
@@ -35,12 +34,6 @@ vi.mock("../deploy/deploy", async (importOriginal) => ({
 		// In unit tests of autoconfig we only care about the configuration aspect, so bail before any actual deployment happens
 		throw new FatalError("Bailing early in tests");
 	},
-}));
-
-vi.mock("../../autoconfig/details", async (importOriginal) => ({
-	...(await importOriginal()),
-	confirmAutoConfigDetails: async (autoConfigDetails: AutoConfigDetails) =>
-		autoConfigDetails,
 }));
 
 async function runDeploy(withArgs: string = "") {
@@ -138,6 +131,7 @@ describe("autoconfig (deploy)", () => {
 				() => "2000-01-01"
 			);
 		});
+
 		it("happy path", async () => {
 			await writeFile(
 				"package.json",
@@ -145,6 +139,10 @@ describe("autoconfig (deploy)", () => {
 					name: "project-name",
 				})
 			);
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
 			mockConfirm({
 				text: "Do you want to proceed with the deployment using these settings?",
 				result: true,
@@ -240,7 +238,79 @@ describe("autoconfig (deploy)", () => {
 			expect(existsSync(".assetsignore")).toBeFalsy();
 		});
 
+		it("allows users to edit the auto-detected settings", async () => {
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: true,
+			});
+			mockPrompt({
+				text: "What do you want to name your Worker?",
+				result: "edited-worker-name",
+			});
+			mockPrompt({
+				text: "What directory contains your applications' output/asset files?",
+				result: "dist",
+			});
+			mockPrompt({
+				text: "What is your application's build command?",
+				result: "",
+			});
+			mockConfirm({
+				text: "Do you want to proceed with the deployment using these settings?",
+				result: true,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+			await run.runAutoConfig({
+				projectPath: process.cwd(),
+				configured: false,
+				workerName: "my-worker",
+				outputDir: "dist",
+			});
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				Auto-detected Project Settings:
+				 - Worker Name: my-worker
+				 - Output Directory: dist
+
+
+				Updated Project Settings:
+				 - Worker Name: edited-worker-name
+				 - Output Directory: dist
+
+
+				📄 Create wrangler.jsonc:
+				{
+				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				    \\"name\\": \\"edited-worker-name\\",
+				    \\"compatibility_date\\": \\"2000-01-01\\",
+				    \\"observability\\": {
+				      \\"enabled\\": true
+				    }
+				  }
+				"
+			`);
+
+			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
+				"{
+				  \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				  \\"name\\": \\"edited-worker-name\\",
+				  \\"compatibility_date\\": \\"2000-01-01\\",
+				  \\"observability\\": {
+				    \\"enabled\\": true
+				  }
+				}"
+			`);
+		});
+
 		it(".assetsignore should contain Wrangler files if outputDir === projectPath", async () => {
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
 			mockConfirm({
 				text: "Do you want to proceed with the deployment using these settings?",
 				result: true,

@@ -51,6 +51,8 @@ export async function runAutoConfig(
 		});
 	}
 
+	autoConfigDetails = updatedAutoConfigDetails;
+
 	const deploy = await confirm(
 		"Do you want to proceed with the deployment using these settings?"
 	);
