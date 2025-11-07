@@ -350,7 +350,6 @@ export function mapWorkerMetadataBindings(
 				}
 
 				return configObj;
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			}, {} as RawConfig)
 	);
 }

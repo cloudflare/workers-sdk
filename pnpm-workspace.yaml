@@ -36,6 +36,7 @@ catalog:
   playwright-chromium: "^1.56.1"
   "@cloudflare/workers-types": "^4.20251014.0"
   workerd: "1.20251105.0"
+  eslint: "^9.39.1"
 
 catalogs:
   vite-plugin:

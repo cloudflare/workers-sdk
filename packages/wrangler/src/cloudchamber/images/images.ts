@@ -2,6 +2,7 @@ import {
 	getCloudflareContainerRegistry,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
+import { fetch } from "undici";
 import { logger } from "../../logger";
 import { getAccountId } from "../../user";
 import { handleFailure, promiseSpinner } from "../common";

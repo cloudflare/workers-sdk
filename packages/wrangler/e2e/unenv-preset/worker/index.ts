@@ -40,7 +40,6 @@ export default {
 };
 
 function getRuntimeFlagValue(name: string): boolean | undefined {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const { compatibilityFlags } = (globalThis as any).Cloudflare;
 	return compatibilityFlags[name];
 }
