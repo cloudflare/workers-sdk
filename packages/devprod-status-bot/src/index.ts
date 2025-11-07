@@ -26,13 +26,44 @@ async function getBotMessage(ai: Ai, prompt: string) {
 	return message.response;
 }
 
+async function isWranglerTeamMember(
+	pat: string,
+	username: string
+): Promise<boolean> {
+	try {
+		const response = await fetch(
+			`https://api.github.com/orgs/cloudflare/teams/wrangler/memberships/${username}`,
+			{
+				headers: {
+					"User-Agent": "Cloudflare ANT Status bot",
+					Authorization: `Bearer ${pat}`,
+					Accept: "application/vnd.github+json",
+				},
+			}
+		);
+
+		return response.status === 200;
+	} catch (error) {
+		// If there's an error checking membership, default to false
+		console.error("Error checking team membership:", error);
+		return false;
+	}
+}
+
 async function checkForSecurityIssue(
 	ai: Ai,
+	pat: string,
 	message: Schema
 ): Promise<IssuesEvent | IssueCommentEvent | null> {
 	if (!isIssueEvent(message)) {
 		return null;
 	}
+
+	const isTeamMember = await isWranglerTeamMember(pat, message.sender.login);
+	if (isTeamMember) {
+		return null;
+	}
+
 	const prompt = `Analyze this GitHub issue to determine if it's likely reporting a security vulnerability or security concern.
 
 Issue Title: ${message.issue.title}
@@ -416,7 +447,11 @@ export default {
 		if (url.pathname === "/github") {
 			const body = await request.json<WebhookEvent>();
 
-			const maybeSecurityIssue = await checkForSecurityIssue(env.AI, body);
+			const maybeSecurityIssue = await checkForSecurityIssue(
+				env.AI,
+				env.GITHUB_PAT,
+				body
+			);
 			if (maybeSecurityIssue) {
 				await sendSecurityAlert(env.ALERTS_WEBHOOK, maybeSecurityIssue);
 			}
