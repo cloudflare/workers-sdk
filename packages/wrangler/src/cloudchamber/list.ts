@@ -16,8 +16,9 @@ import {
 } from "@cloudflare/containers-shared";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
+import { capitalize } from "../utils/strings";
 import { listDeploymentsAndChoose, loadDeployments } from "./cli/deployments";
-import { capitalize, statusToColored } from "./cli/util";
+import { statusToColored } from "./cli/util";
 import { promiseSpinner } from "./common";
 import type {
 	CommonYargsArgv,

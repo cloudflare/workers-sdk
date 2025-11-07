@@ -149,6 +149,10 @@ describe("autoconfig (deploy)", () => {
 				text: "Do you want to proceed with the deployment using these settings?",
 				result: true,
 			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
 			await writeFile(".gitignore", "");
 			const configureSpy = vi.fn(async (outputDir) => ({
 				assets: { directory: outputDir },
@@ -177,6 +181,22 @@ describe("autoconfig (deploy)", () => {
 				 - Framework: fake
 				 - Build Command: echo 'built' > build.txt
 				 - Output Directory: dist
+
+
+				📦 Install packages:
+				 - wrangler (devDependency)
+
+				📄 Create wrangler.jsonc:
+				{
+				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				    \\"name\\": \\"my-worker\\",
+				    \\"compatibility_date\\": \\"2000-01-01\\",
+				    \\"observability\\": {
+				      \\"enabled\\": true
+				    }
+				  }
+
+				🛠️  Run Configuration For Fake
 
 				[build] Running: echo 'built' > build.txt"
 			`);
@@ -223,6 +243,10 @@ describe("autoconfig (deploy)", () => {
 		it(".assetsignore should contain Wrangler files if outputDir === projectPath", async () => {
 			mockConfirm({
 				text: "Do you want to proceed with the deployment using these settings?",
+				result: true,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
 				result: true,
 			});
 

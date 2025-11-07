@@ -1,5 +1,7 @@
+import assert from "node:assert";
+import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { endSection, startSection } from "@cloudflare/cli";
 import { FatalError } from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
@@ -7,10 +9,12 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import { getDevCompatibilityDate } from "../utils/compatibility-date";
+import { capitalize } from "../utils/strings";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
 import { confirmAutoConfigDetails, displayAutoConfigDetails } from "./details";
+import { Static } from "./frameworks/static";
 import type { AutoConfigDetails } from "./types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
@@ -50,11 +54,32 @@ export async function runAutoConfig(
 	const deploy = await confirm(
 		"Do you want to proceed with the deployment using these settings?"
 	);
+
 	if (!deploy) {
 		throw new FatalError("Deployment aborted");
 	}
+
 	if (!autoConfigDetails.outputDir) {
 		throw new FatalError("Cannot deploy project without an output directory");
+	}
+
+	const baseWranglerConfig: RawConfig = {
+		$schema: "node_modules/wrangler/config-schema.json",
+		name: autoConfigDetails.workerName,
+		compatibility_date: getDevCompatibilityDate(undefined),
+		observability: {
+			enabled: true,
+		},
+	} satisfies RawConfig;
+
+	const { confirmed, packagesToInstall, scriptsToAdd } =
+		await buildAndConfirmOperationsSummary(
+			autoConfigDetails,
+			baseWranglerConfig
+		);
+
+	if (!confirmed) {
+		throw new FatalError("Deployment aborted");
 	}
 
 	logger.debug(
@@ -63,24 +88,45 @@ export async function runAutoConfig(
 
 	startSection("Configuring your application for Cloudflare");
 
-	await installWrangler();
+	if (
+		packagesToInstall.find(
+			(pkg) => pkg.package === "wrangler" && pkg.depType === "devDependency"
+		)
+	) {
+		await installWrangler();
+	}
+
+	if (scriptsToAdd.length) {
+		assert(autoConfigDetails.packageJson);
+		await writeFile(
+			resolve(autoConfigDetails.projectPath, "package.json"),
+			JSON.stringify(
+				{
+					...autoConfigDetails.packageJson,
+					scripts: {
+						...autoConfigDetails.packageJson.scripts,
+						...Object.fromEntries(
+							scriptsToAdd.map((script) => [script.name, script.value])
+						),
+					},
+				},
+				null,
+				2
+			)
+		);
+	}
 
 	const additionalConfigDetails =
 		(await autoConfigDetails.framework?.configure(
 			autoConfigDetails.outputDir
 		)) ?? {};
 	await writeFile(
-		resolve("wrangler.jsonc"),
+		resolve(autoConfigDetails.projectPath, "wrangler.jsonc"),
 		JSON.stringify(
 			{
-				$schema: "node_modules/wrangler/config-schema.json",
-				name: autoConfigDetails.workerName,
-				compatibility_date: getDevCompatibilityDate(undefined),
-				observability: {
-					enabled: true,
-				},
+				...baseWranglerConfig,
 				...additionalConfigDetails,
-			} satisfies RawConfig,
+			},
 			null,
 			2
 		)
@@ -119,4 +165,100 @@ export async function runAutoConfig(
 	);
 
 	return;
+}
+
+function usesTypescript(projectPath: string) {
+	return hasTsConfig(projectPath);
+}
+
+function hasTsConfig(path: string) {
+	return existsSync(join(`${path}`, `tsconfig.json`));
+}
+
+type PackageToInstall = {
+	package: string;
+	depType: "dependency" | "devDependency";
+};
+
+type ScriptToAdd = {
+	name: string;
+	value: string;
+};
+
+export async function buildAndConfirmOperationsSummary(
+	autoConfigDetails: AutoConfigDetails,
+	wranglerConfigToWrite: RawConfig
+): Promise<{
+	confirmed: boolean;
+	packagesToInstall: PackageToInstall[];
+	scriptsToAdd: ScriptToAdd[];
+}> {
+	const packagesToInstall: PackageToInstall[] = [];
+	const scriptsToAdd: ScriptToAdd[] = [];
+	if (autoConfigDetails.packageJson) {
+		const devDependencies = autoConfigDetails.packageJson.devDependencies ?? {};
+		const shouldInstallLatestWrangler =
+			!("wrangler" in devDependencies) ||
+			(typeof devDependencies["wrangler"] === "string" &&
+				!devDependencies["wrangler"].startsWith("^"));
+		if (shouldInstallLatestWrangler) {
+			packagesToInstall.push({ package: "wrangler", depType: "devDependency" });
+		}
+
+		const isFullstackFramework = false; // TODO: handle this logic appropriately
+
+		if (
+			isFullstackFramework &&
+			usesTypescript(autoConfigDetails.projectPath) &&
+			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
+		) {
+			scriptsToAdd.push({
+				name: "cf-typegen",
+				value: "wrangler types",
+			});
+		}
+	}
+
+	logger.log("");
+
+	if (packagesToInstall.length) {
+		logger.log("📦 Install packages:");
+		packagesToInstall.forEach((pkg) => {
+			logger.log(` - ${pkg.package} (${pkg.depType})`);
+		});
+		logger.log("");
+	}
+
+	if (scriptsToAdd.length) {
+		logger.log("📝 Update package.json scripts:");
+		scriptsToAdd.forEach((script) => {
+			logger.log(` - "${script.name}": "${script.value}"`);
+		});
+		logger.log("");
+	}
+
+	logger.log("📄 Create wrangler.jsonc:");
+	logger.log(
+		JSON.stringify(wranglerConfigToWrite, null, 2).replace(/\n/g, "\n  ")
+	);
+	logger.log("");
+
+	if (
+		autoConfigDetails.framework &&
+		!(autoConfigDetails.framework instanceof Static) &&
+		!autoConfigDetails.framework.configured
+	) {
+		logger.log(
+			`🛠️  Run Configuration For ${capitalize(autoConfigDetails.framework.name)}`
+		);
+		logger.log("");
+	}
+
+	const proceedWithSetup = await confirm("Proceed with setup?");
+
+	return {
+		confirmed: proceedWithSetup,
+		packagesToInstall,
+		scriptsToAdd,
+	};
 }
