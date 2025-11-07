@@ -2925,11 +2925,11 @@ importers:
   packages/vite-plugin-cloudflare/playground/node-env:
     dependencies:
       react:
-        specifier: ^19.1.0
-        version: 19.2.0
+        specifier: ~19.1.0
+        version: 19.1.1
       react-dom:
-        specifier: ^19.1.0
-        version: 19.1.0(react@19.2.0)
+        specifier: ~19.1.0
+        version: 19.1.0(react@19.1.1)
     devDependencies:
       '@cloudflare/vite-plugin':
         specifier: workspace:*
@@ -2941,10 +2941,10 @@ importers:
         specifier: catalog:default
         version: 4.20251014.0
       '@types/react':
-        specifier: ^19.1.0
+        specifier: ~19.1.0
         version: 19.1.0
       '@types/react-dom':
-        specifier: ^19.1.1
+        specifier: ~19.1.1
         version: 19.1.1(@types/react@19.1.0)
       typescript:
         specifier: catalog:default
@@ -11341,8 +11341,8 @@ packages:
     resolution: {integrity: sha512-V8AVnmPIICiWpGfm6GLzCR/W5FXLchHop40W4nXBmdlEceh16rCN8O8LNWm5bh5XUX91fh7KpA+W0TgMKmgTpQ==}
     engines: {node: '>=0.10.0'}
 
-  react@19.2.0:
-    resolution: {integrity: sha512-tmbWg6W31tQLeB5cdIBOicJDJRR2KzXsV7uSK9iNfLWQ5bIZfxuPEHp7M8wiHyHnn0DD1i7w3Zmin0FtkrwoCQ==}
+  react@19.1.1:
+    resolution: {integrity: sha512-w8nqGImo45dmMIfljjMwOGtbmC/mk4CMYhWIicdSflH91J9TyCyczcPFXJzrZ/ZXcgGRFeP6BU0BEJTw6tZdfQ==}
     engines: {node: '>=0.10.0'}
 
   read-pkg@9.0.1:
@@ -21052,9 +21052,9 @@ snapshots:
       react: 19.0.0
       scheduler: 0.25.0
 
-  react-dom@19.1.0(react@19.2.0):
+  react-dom@19.1.0(react@19.1.1):
     dependencies:
-      react: 19.2.0
+      react: 19.1.1
       scheduler: 0.26.0
 
   react-fela@11.7.0(fela@11.7.0)(react@18.3.1):
@@ -21121,7 +21121,7 @@ snapshots:
 
   react@19.0.0: {}
 
-  react@19.2.0: {}
+  react@19.1.1: {}
 
   read-pkg@9.0.1:
     dependencies:
