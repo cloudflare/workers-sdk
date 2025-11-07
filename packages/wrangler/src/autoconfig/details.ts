@@ -136,7 +136,7 @@ export async function getDetailsForAutoConfig({
 	};
 }
 
-const invalidWorkerNameCharsRegex = /[^a-z0-9 ]/g;
+const invalidWorkerNameCharsRegex = /[^a-z0-9- ]/g;
 const invalidWorkerNameStartEndRegex = /^(-+)|(-+)$/g;
 const workerNameLengthLimit = 63;
 
