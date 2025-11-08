@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { describe, expect, test } from "vitest";
+import { logger } from "../logger";
 import { collectCLIOutput } from "./helpers/collect-cli-output";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -14,7 +15,12 @@ describe("wrangler check startup", () => {
 	const std = collectCLIOutput();
 	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
-	setIsTTY(false);
+	beforeEach(() => {
+		setIsTTY(false);
+	});
+	afterEach(() => {
+		logger.resetLoggerLevel();
+	});
 
 	test("generates profile for basic worker", async () => {
 		writeWranglerConfig({ main: "index.js" });
