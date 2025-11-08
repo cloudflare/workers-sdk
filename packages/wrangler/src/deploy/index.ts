@@ -276,7 +276,16 @@ export const deployCommand = createCommand({
 				{ telemetryMessage: true }
 			);
 		}
-		if (args.experimentalAutoconfig) {
+
+		const shouldRunAutoConfig =
+			args.experimentalAutoconfig &&
+			// If there is a positional parameter or an assets directory specified via --assets then
+			// we don't want to run autoconfig since we assume that the user knows what they are doing
+			// and that they are specifying what needs to be deployed
+			!args.script &&
+			!args.assets;
+
+		if (shouldRunAutoConfig) {
 			const details = await getDetailsForAutoConfig({
 				wranglerConfig: config,
 			});
@@ -292,10 +301,6 @@ export const deployCommand = createCommand({
 				});
 			}
 		}
-		// We use the `userConfigPath` to compute the root of a project,
-		// rather than a redirected (potentially generated) `configPath`.
-		const projectRoot =
-			config.userConfigPath && path.dirname(config.userConfigPath);
 
 		if (!config.configPath) {
 			// Attempt to interactively handle `wrangler deploy <directory>`
@@ -313,7 +318,7 @@ export const deployCommand = createCommand({
 					// If stat fails, let the original flow handle the error
 				}
 			}
-			// atttempt to interactively handle `wrangler deploy --assets <directory>` missing compat date or name
+			// attempt to interactively handle `wrangler deploy --assets <directory>` missing compat date or name
 			else if (args.assets && (!args.compatibilityDate || !args.name)) {
 				args = await handleMaybeAssetsDeployment(args.assets, args);
 			}
@@ -372,6 +377,12 @@ export const deployCommand = createCommand({
 				config.configPath
 			);
 		}
+
+		// We use the `userConfigPath` to compute the root of a project,
+		// rather than a redirected (potentially generated) `configPath`.
+		const projectRoot =
+			config.userConfigPath && path.dirname(config.userConfigPath);
+
 		const { sourceMapSize, versionId, workerTag, targets } = await deploy({
 			config,
 			accountId,
