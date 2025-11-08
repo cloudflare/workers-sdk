@@ -1,4 +1,3 @@
-/* eslint-disable turbo/no-undeclared-env-vars */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { logger } from "../../logger";
 import {

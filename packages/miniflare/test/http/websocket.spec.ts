@@ -224,8 +224,7 @@ test("WebSocketPair: requires 'new' operator to construct", (t) => {
 		message: /^Failed to construct 'WebSocketPair'/,
 	});
 });
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function testWebSocketPairTypes() {
+function _testWebSocketPairTypes() {
 	const pair = new WebSocketPair();
 
 	let [webSocket1, webSocket2] = Object.values(pair);

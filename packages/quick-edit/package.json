@@ -21,11 +21,13 @@
 		"yarn": "^1.22.19"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/node": "catalog:default",
 		"concurrently": "^8.2.2",
 		"esbuild": "catalog:default",
+		"eslint": "catalog:default",
 		"tsx": "^3.12.8",
 		"wrangler": "workspace:*"
 	},

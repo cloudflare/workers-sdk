@@ -1,5 +1,3 @@
-/* eslint-disable no-shadow */
-
 import { createNamespace } from "../core/create-command";
 import { CLEANUP } from "./utils";
 
