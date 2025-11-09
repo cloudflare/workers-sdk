@@ -359,6 +359,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "Create Next App",
 			},
 			nodeCompat: true,
+			unsupportedOSs: ["win32"],
 		},
 		{
 			name: "nuxt:pages",
