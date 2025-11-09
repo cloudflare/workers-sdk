@@ -88,10 +88,18 @@ function normalizeObservability(
 ): Config["observability"] {
 	const normalized = structuredClone(obs);
 
+	const enabled = obs?.enabled === true ? true : false;
+
 	const fullObservabilityDefaults = {
-		enabled: false,
+		enabled,
 		head_sampling_rate: 1,
-		logs: { enabled: false, head_sampling_rate: 1, invocation_logs: true },
+		logs: {
+			enabled,
+			head_sampling_rate: 1,
+			invocation_logs: true,
+			persist: true,
+		},
+		traces: { enabled: false, persist: true, head_sampling_rate: 1 },
 	} as const;
 
 	if (!normalized) {
@@ -151,7 +159,7 @@ function normalizeRemoteConfigAsResolvedLocal(
 
 	Object.entries(localResolvedConfig).forEach(([key, value]) => {
 		// We want to skip observability since it has a remote default behavior
-		// different from that or wrangler
+		// different from that of wrangler
 		if (key !== "observability") {
 			(normalizedRemote as unknown as Record<string, unknown>)[key] = value;
 		}
@@ -162,35 +170,6 @@ function normalizeRemoteConfigAsResolvedLocal(
 			(normalizedRemote as unknown as Record<string, unknown>)[key] = value;
 		}
 	});
-
-	if (normalizedRemote.observability) {
-		if (
-			normalizedRemote.observability.head_sampling_rate === 1 &&
-			localResolvedConfig.observability?.head_sampling_rate === undefined
-		) {
-			// Note: remotely head_sampling_rate always defaults to 1 even if enabled is false
-			delete normalizedRemote.observability.head_sampling_rate;
-		}
-
-		if (normalizedRemote.observability.logs) {
-			if (
-				normalizedRemote.observability.logs.head_sampling_rate === 1 &&
-				localResolvedConfig.observability?.logs?.head_sampling_rate ===
-					undefined
-			) {
-				// Note: remotely logs.head_sampling_rate always defaults to 1 even if enabled is false
-				delete normalizedRemote.observability.logs.head_sampling_rate;
-			}
-
-			if (
-				normalizedRemote.observability.logs.invocation_logs === true &&
-				localResolvedConfig.observability?.logs?.invocation_logs === undefined
-			) {
-				// Note: remotely logs.invocation_logs always defaults to 1 even if enabled is false
-				delete normalizedRemote.observability.logs.invocation_logs;
-			}
-		}
-	}
 
 	normalizedRemote.observability = normalizeObservability(
 		normalizedRemote.observability

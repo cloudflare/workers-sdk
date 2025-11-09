@@ -242,6 +242,10 @@ describe("getRemoteConfigsDiff", () => {
 			   observability: {
 			-    enabled: true
 			+    enabled: false
+			     logs: {
+			-      enabled: true
+			+      enabled: false
+			     }
 			   }
 			 }
 			"
@@ -270,6 +274,25 @@ describe("getRemoteConfigsDiff", () => {
 				} as unknown as Config
 			);
 		}
+
+		it("shouldn't present any diff when the local config is just { enabled: true } and the remote observability is enabled with its default values", () => {
+			const { diff, nonDestructive } = getObservabilityDiff(
+				{
+					enabled: true,
+					head_sampling_rate: 1,
+					logs: {
+						enabled: true,
+						head_sampling_rate: 1,
+						persist: true,
+						invocation_logs: true,
+					},
+					traces: { enabled: false, persist: true, head_sampling_rate: 1 },
+				},
+				{ enabled: true }
+			);
+			expect(diff).toBe(null);
+			expect(nonDestructive).toBe(true);
+		});
 
 		it("should treat a remote undefined equal to a remote { enabled: false }", () => {
 			const { diff } = getObservabilityDiff(
@@ -301,6 +324,10 @@ describe("getRemoteConfigsDiff", () => {
 				   observability: {
 				-    enabled: false
 				+    enabled: true
+				     logs: {
+				-      enabled: false
+				+      enabled: true
+				     }
 				   }
 				 }
 				"
