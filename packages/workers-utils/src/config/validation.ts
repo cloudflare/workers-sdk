@@ -3,6 +3,7 @@ import path from "node:path";
 import { isDockerfile } from "@cloudflare/containers-shared";
 import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/validators";
 import { dedent } from "ts-dedent";
+import { getCloudflareEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isRedirectedRawConfig } from "./config-helpers";
 import { Diagnostics } from "./diagnostics";
@@ -257,22 +258,31 @@ export function normalizeAndValidateConfig(
 		);
 	}
 
-	//TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
-	const envName = args.env;
+	// Then environment can come from the CLI args (e.g. `--env`) or from the `CLOUDFLARE_ENV` environment variable.
+	const envName = args.env ?? getCloudflareEnv();
 	assert(envName === undefined || typeof envName === "string");
 
 	let activeEnv = topLevelEnv;
 
 	if (envName) {
 		if (isRedirectedConfig) {
-			// Note: we error if the user is specifying an environment, but not for pages
-			//       commands where the environment is always set (to either "preview" or "production")
-			if (!isPagesConfig(rawConfig)) {
+			// Check that if we are loading a redirected config, any specified environment must match the target environment
+			// from the original user config.
+			// Note: we don't error for pages commands where the environment is always set (to either "preview" or "production")
+			if (
+				!isPagesConfig(rawConfig) &&
+				rawConfig.targetEnvironment &&
+				rawConfig.targetEnvironment !== envName
+			) {
+				const via =
+					getCloudflareEnv() === undefined
+						? "via the `--env/-e` CLI argument"
+						: "via the CLOUDFLARE_ENV variable";
 				diagnostics.errors.push(dedent`
-					You have specified the environment "${envName}", but are using a redirected configuration, produced by a build tool such as Vite.
-					You need to set the environment in your build tool, rather than via Wrangler.
-					For example, if you are using Vite, refer to these docs: https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/
-				`);
+			You have specified the environment "${envName}" ${via}.
+			But this does not match the target environment "${rawConfig.targetEnvironment}" flattened into the redirected config from the original configuration file.
+			Perhaps you need to re-run the custom build of the project with "${envName}" as the environment?
+		`);
 			}
 		} else {
 			const envDiagnostics = new Diagnostics(

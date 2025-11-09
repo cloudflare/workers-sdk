@@ -15,6 +15,7 @@ import type {
 	RawConfig,
 	RawDevConfig,
 	RawEnvironment,
+	RedirectedRawConfig,
 } from "@cloudflare/workers-utils";
 
 describe("readConfig()", () => {
@@ -4875,6 +4876,108 @@ describe("normalizeAndValidateConfig()", () => {
 	});
 
 	describe("named environments", () => {
+		it("should use --env CLI arg to select the active environment", () => {
+			const rawConfig: RawConfig = {
+				name: "my-worker",
+				env: {
+					dev: {
+						kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+					},
+					prod: {
+						kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
+					},
+				},
+			};
+			const { config: configDev } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{ env: "dev" }
+			);
+			expect(configDev).toEqual(
+				expect.objectContaining({
+					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+				})
+			);
+
+			const { config: configProd } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{ env: "prod" }
+			);
+			expect(configProd).toEqual(
+				expect.objectContaining({
+					kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
+				})
+			);
+		});
+
+		it("should use CLOUDFLARE_ENV environment variable to select the active environment", () => {
+			const rawConfig: RawConfig = {
+				name: "my-worker",
+				env: {
+					dev: {
+						kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+					},
+					prod: {
+						kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
+					},
+				},
+			};
+			vi.stubEnv("CLOUDFLARE_ENV", "dev");
+			const { config: configDev } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{}
+			);
+			expect(configDev).toEqual(
+				expect.objectContaining({
+					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+				})
+			);
+
+			vi.stubEnv("CLOUDFLARE_ENV", "prod");
+			const { config: configProd } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{}
+			);
+			expect(configProd).toEqual(
+				expect.objectContaining({
+					kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
+				})
+			);
+		});
+
+		it("should use the `--env` CLI arg over the CLOUDFLARE_ENV environment variable to select the active environment", () => {
+			const rawConfig: RawConfig = {
+				name: "my-worker",
+				env: {
+					dev: {
+						kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+					},
+					prod: {
+						kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
+					},
+				},
+			};
+			vi.stubEnv("CLOUDFLARE_ENV", "dev");
+			const { config } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{ env: "prod" }
+			);
+			expect(config).toEqual(
+				expect.objectContaining({
+					kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
+				})
+			);
+		});
+
 		it("should warn if we specify an environment but there are no named environments", () => {
 			const rawConfig: RawConfig = {
 				name: "my-worker",
@@ -4908,6 +5011,49 @@ describe("normalizeAndValidateConfig()", () => {
 				    [env.dev]
 				    \`\`\`
 				"
+			`);
+		});
+
+		it("should error if we specify an environment via an argument for a redirected config that doesn't match the original target environment", () => {
+			const rawConfig: RedirectedRawConfig = {
+				name: "my-worker",
+				targetEnvironment: "prod",
+				kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+			};
+			const { diagnostics } = normalizeAndValidateConfig(
+				rawConfig,
+				"./redirected-config.jsonc",
+				"./original-config.jsonc",
+				{
+					env: "dev",
+				}
+			);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing redirected-config.jsonc configuration:
+				  - You have specified the environment \\"dev\\" via the \`--env/-e\` CLI argument.
+				    But this does not match the target environment \\"prod\\" flattened into the redirected config from the original configuration file.
+				    Perhaps you need to re-run the custom build of the project with \\"dev\\" as the environment?"
+			`);
+		});
+
+		it("should error if we specify an environment via an environment variable for a redirected config that doesn't match the original target environment", () => {
+			const rawConfig: RedirectedRawConfig = {
+				name: "my-worker",
+				targetEnvironment: "prod",
+				kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+			};
+			vi.stubEnv("CLOUDFLARE_ENV", "dev");
+			const { diagnostics } = normalizeAndValidateConfig(
+				rawConfig,
+				"./redirected-config.jsonc",
+				"./original-config.jsonc",
+				{}
+			);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing redirected-config.jsonc configuration:
+				  - You have specified the environment \\"dev\\" via the CLOUDFLARE_ENV variable.
+				    But this does not match the target environment \\"prod\\" flattened into the redirected config from the original configuration file.
+				    Perhaps you need to re-run the custom build of the project with \\"dev\\" as the environment?"
 			`);
 		});
 
