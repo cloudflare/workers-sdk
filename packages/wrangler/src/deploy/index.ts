@@ -275,9 +275,51 @@ export const deployCommand = createCommand({
 				{ telemetryMessage: true }
 			);
 		}
+
 		if (args.experimentalAutoconfig) {
+			let assetsDirectory: string | undefined;
+
+			if (!config.configPath) {
+				if (args.script) {
+					try {
+						const stats = statSync(args.script, { throwIfNoEntry: false });
+						if (!stats) {
+							logger.warn(
+								`You have provided an invalid positional parameter: ${args.script}, no such file or directory exists, the argument will be ignored`
+							);
+						} else if (stats.isDirectory()) {
+							// Set assets directory for `wrangler deploy <directory>`
+							assetsDirectory = args.script;
+							// Remove the `script` arg since this aspect will be handled by autoconfig
+							args.script = undefined;
+						}
+					} catch (error) {
+						// If this is our UserError, re-throw it
+						if (error instanceof UserError) {
+							throw error;
+						}
+						// If stat fails, let the original flow handle the error
+					}
+				}
+
+				if (args.assets) {
+					if (assetsDirectory) {
+						logger.warn(
+							"You seem to have provided an assets directory both as a positional parameter and as the --assets argument, the latter will be used"
+						);
+					}
+					// Set assets directory for `wrangler deploy --assets <directory>`
+					// Note: the positional argument takes precedence over the --assets argument
+					//       (e.g. with `wrangler deploy dir-a --assets dir-b`, the assets directory is dir-a)
+					assetsDirectory = args.assets;
+					// Remove the `assets` arg since this aspect will be handled by autoconfig
+					args.assets = undefined;
+				}
+			}
+
 			const details = await getDetailsForAutoConfig({
 				wranglerConfig: config,
+				assetsDirectory,
 			});
 
 			// Only run auto config if the project is not already configured
@@ -296,25 +338,31 @@ export const deployCommand = createCommand({
 		const projectRoot =
 			config.userConfigPath && path.dirname(config.userConfigPath);
 
-		if (!config.configPath) {
-			// Attempt to interactively handle `wrangler deploy <directory>`
-			if (args.script) {
-				try {
-					const stats = statSync(args.script);
-					if (stats.isDirectory()) {
-						args = await handleMaybeAssetsDeployment(args.script, args);
+		if (!args.experimentalAutoconfig) {
+			// TODO: the following logic predates autoconfig, autoconfig supports the
+			//       same cases handled below, making the following outdated/unnecessary
+			//       the below logic (alongside the handleMaybeAssetsDeployment function)
+			//       should be removed once autoconfig is released as stable
+			if (!config.configPath) {
+				// Attempt to interactively handle `wrangler deploy <directory>`
+				if (args.script) {
+					try {
+						const stats = statSync(args.script);
+						if (stats.isDirectory()) {
+							args = await handleMaybeAssetsDeployment(args.script, args);
+						}
+					} catch (error) {
+						// If this is our UserError, re-throw it
+						if (error instanceof UserError) {
+							throw error;
+						}
+						// If stat fails, let the original flow handle the error
 					}
-				} catch (error) {
-					// If this is our UserError, re-throw it
-					if (error instanceof UserError) {
-						throw error;
-					}
-					// If stat fails, let the original flow handle the error
 				}
-			}
-			// atttempt to interactively handle `wrangler deploy --assets <directory>` missing compat date or name
-			else if (args.assets && (!args.compatibilityDate || !args.name)) {
-				args = await handleMaybeAssetsDeployment(args.assets, args);
+				// attempt to interactively handle `wrangler deploy --assets <directory>` missing compat date or name
+				else if (args.assets && (!args.compatibilityDate || !args.name)) {
+					args = await handleMaybeAssetsDeployment(args.assets, args);
+				}
 			}
 		}
 

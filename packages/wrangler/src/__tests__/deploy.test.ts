@@ -13,7 +13,6 @@ import dedent from "ts-dedent";
 import { vi } from "vitest";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
-import { sniffUserAgent } from "../package-manager";
 import { getSubdomainValues } from "../triggers/deploy";
 import { writeAuthConfigFile } from "../user";
 import { diagnoseScriptSizeError } from "../utils/friendly-validator-errors";
@@ -86,6 +85,17 @@ vi.mock("../check/commands", async (importOriginal) => {
 		},
 	};
 });
+
+vi.mock("../package-manager", async (importOriginal) => ({
+	...(await importOriginal()),
+	sniffUserAgent: () => "npm",
+	getPackageManager() {
+		return {
+			type: "npm",
+			npx: "npx",
+		};
+	},
+}));
 
 describe("deploy", () => {
 	mockAccountId();
@@ -3095,7 +3105,6 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should error if there is no entry-point specified", async () => {
-			vi.mocked(sniffUserAgent).mockReturnValue("npm");
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -3308,6 +3317,7 @@ addEventListener('fetch', event => {});`
 				vi.useRealTimers();
 			});
 
+			// TODO: remove this test once autoconfig goes GA and its experimental opt-in flag is removed
 			it("should handle `wrangler deploy <directory>`", async () => {
 				mockConfirm({
 					text: "It looks like you are trying to deploy a directory of static assets only. Is this correct?",
@@ -3377,6 +3387,60 @@ addEventListener('fetch', event => {});`
 				`);
 			});
 
+			it("should handle `wrangler deploy <directory>` via autoconfig when called with `--x-autoconfig`", async () => {
+				// The API mocks expect the worker's name to be "test-name"
+				vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "test-name");
+
+				mockConfirm({
+					text: "Do you want to modify these settings?",
+					result: false,
+				});
+				mockConfirm({
+					text: "Proceed with setup?",
+					result: true,
+				});
+
+				const bodies: AssetManifest[] = [];
+				await mockAUSRequest(bodies);
+
+				await runWrangler("deploy ./assets --x-autoconfig");
+				// TODO: in the summary below the "assets" config should be included as well
+				expect(
+					std.out.replace(
+						/"compatibility_date": "\d{4}-\d{2}-\d{2}",/,
+						'"compatibility_date": "YYYY-MM-DD",'
+					)
+				).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+
+					Auto-detected Project Settings:
+					 - Worker Name: test-name
+					 - Framework: static
+					 - Output Directory: ./assets
+
+
+					📄 Create wrangler.jsonc:
+					  {
+					    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+					    \\"name\\": \\"test-name\\",
+					    \\"compatibility_date\\": \\"YYYY-MM-DD\\",
+					    \\"observability\\": {
+					      \\"enabled\\": true
+					    }
+					  }
+
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+			});
+
+			// TODO: remove this test once autoconfig goes GA and its experimental opt-in flag is removed
 			it("should handle `wrangler deploy --assets` without name or compat date", async () => {
 				// if the user has used --assets flag and args.script is not set, we just need to prompt for the name and add compat date
 				mockPrompt({
@@ -3432,6 +3496,59 @@ addEventListener('fetch', event => {});`
 					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
 
 					Proceeding with deployment...
+
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+			});
+
+			it("should handle `wrangler deploy --assets` via autoconfig when called with `--x-autoconfig`", async () => {
+				// The API mocks expect the worker's name to be "test-name"
+				vi.stubEnv("WRANGLER_CI_OVERRIDE_NAME", "test-name");
+
+				mockConfirm({
+					text: "Do you want to modify these settings?",
+					result: false,
+				});
+				mockConfirm({
+					text: "Proceed with setup?",
+					result: true,
+				});
+
+				const bodies: AssetManifest[] = [];
+				await mockAUSRequest(bodies);
+
+				await runWrangler("deploy --assets ./assets --x-autoconfig");
+				// TODO: in the summary below the "assets" config should be included as well
+				expect(
+					std.out.replace(
+						/"compatibility_date": "\d{4}-\d{2}-\d{2}",/,
+						'compatibility_date: "YYYY-MM-DD",'
+					)
+				).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+
+					Auto-detected Project Settings:
+					 - Worker Name: test-name
+					 - Framework: static
+					 - Output Directory: ./assets
+
+
+					📄 Create wrangler.jsonc:
+					  {
+					    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+					    \\"name\\": \\"test-name\\",
+					    compatibility_date: \\"YYYY-MM-DD\\",
+					    \\"observability\\": {
+					      \\"enabled\\": true
+					    }
+					  }
 
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms

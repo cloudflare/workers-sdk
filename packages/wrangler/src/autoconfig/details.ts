@@ -70,9 +70,11 @@ function getWorkerName(projectOrWorkerName = "", projectPath: string): string {
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
+	assetsDirectory,
 }: {
 	projectPath?: string; // the path to the project, defaults to cwd
 	wranglerConfig?: Config;
+	assetsDirectory?: string;
 } = {}): Promise<AutoConfigDetails> {
 	logger.debug(`Running autoconfig detection in ${projectPath}...`);
 
@@ -131,7 +133,9 @@ export async function getDetailsForAutoConfig({
 		framework,
 		packageJson,
 		buildCommand: detectedFramework?.buildCommand ?? packageJsonBuild,
-		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
+		outputDir:
+			detectedFramework?.dist ??
+			(assetsDirectory || (await findAssetsDir(projectPath))),
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
 }
