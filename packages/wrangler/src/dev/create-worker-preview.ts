@@ -60,7 +60,7 @@ export interface CfPreviewSession {
 	 *
 	 * @link https://chromedevtools.github.io/devtools-protocol/
 	 */
-	inspectorUrl: URL;
+	inspectorUrl?: URL;
 	/**
 	 * A url to prewarm the preview session.
 	 *
@@ -120,7 +120,7 @@ export interface CfPreviewToken {
 	 *
 	 * @link https://chromedevtools.github.io/devtools-protocol/
 	 */
-	inspectorUrl: URL;
+	inspectorUrl?: URL;
 	/**
 	 * A url to prewarm the preview session.
 	 *
@@ -132,6 +132,12 @@ export interface CfPreviewToken {
 	 * })
 	 */
 	prewarmUrl: URL;
+	/**
+	 * A URL that when fetched starts a tail. Essentially, `wrangler tail` for realish previews.
+	 *
+	 * https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/tail/methods/create/
+	 */
+	tailUrl?: string;
 }
 
 // URLs are often relative to the zone. Sometimes the base zone
@@ -155,7 +161,8 @@ export async function createPreviewSession(
 	complianceConfig: ComplianceConfig,
 	account: CfAccount,
 	ctx: CfWorkerContext,
-	abortSignal: AbortSignal
+	abortSignal: AbortSignal,
+	tailLogs: boolean
 ): Promise<CfPreviewSession> {
 	const { accountId, apiToken } = account;
 	const initUrl = ctx.zone
@@ -206,15 +213,17 @@ export async function createPreviewSession(
 			token: string;
 			prewarm: string;
 		};
-		const inspector = new URL(inspector_websocket);
-		inspector.searchParams.append("cf_workers_preview_token", token);
-
+		let inspectorUrl: URL | undefined;
+		if (!tailLogs) {
+			inspectorUrl = switchHost(inspector_websocket, ctx.host, !!ctx.zone);
+			inspectorUrl.searchParams.append("cf_workers_preview_token", token);
+		}
 		return {
 			id: crypto.randomUUID(),
 			value: token,
-			host: ctx.host ?? inspector.host,
-			inspectorUrl: switchHost(inspector.href, ctx.host, !!ctx.zone),
+			host: ctx.host ?? inspectorUrl?.host ?? switchedExchangeUrl.host,
 			prewarmUrl: switchHost(prewarm, ctx.host, !!ctx.zone),
+			inspectorUrl,
 		};
 	} catch (e) {
 		if (!(e instanceof ParseError)) {
@@ -273,7 +282,10 @@ async function createPreviewToken(
 	const formData = createWorkerUploadForm(worker);
 	formData.set("wrangler-session-config", JSON.stringify(mode));
 
-	const { preview_token } = await fetchResult<{ preview_token: string }>(
+	const { preview_token, tail_url } = await fetchResult<{
+		preview_token: string;
+		tail_url: string;
+	}>(
 		complianceConfig,
 		url,
 		{
@@ -305,6 +317,7 @@ async function createPreviewToken(
 
 		inspectorUrl,
 		prewarmUrl,
+		tailUrl: tail_url,
 	};
 }
 

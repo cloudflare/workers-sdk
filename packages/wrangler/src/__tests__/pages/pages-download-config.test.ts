@@ -1,4 +1,3 @@
-/* eslint-disable turbo/no-undeclared-env-vars */
 import { randomUUID } from "crypto";
 import { readFile } from "fs/promises";
 import { supportedCompatibilityDate } from "miniflare";

@@ -138,3 +138,28 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 			});
 		});
 }
+
+describe("remote bindings disabled", () => {
+	const projectPath = seed("remote-bindings-disabled", "pnpm");
+
+	describe.each(commands)('with "%s" command', (command) => {
+		// On Windows the path for the miniflare dependency gets pretty long and this fails in node < 22.7
+		// (see: https://github.com/shellscape/jsx-email/issues/225#issuecomment-2420567832), so
+		// we need to skip this on windows since in CI we're using node 20
+		// we should look into re-enable this once we can move to a node a newer version of node
+		test.skipIf(process.platform === "win32")(
+			"cannot connect to remote bindings",
+			async ({ expect }) => {
+				const proc = await runLongLived("pnpm", command, projectPath);
+				const url = await waitForReady(proc);
+
+				const response = await fetch(url);
+
+				const responseText = await response.text();
+
+				expect(responseText).toContain("Error");
+				expect(responseText).toContain("Binding AI needs to be run remotely");
+			}
+		);
+	});
+});

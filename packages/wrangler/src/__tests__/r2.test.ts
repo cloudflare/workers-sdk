@@ -3776,6 +3776,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
 					Download complete."
 				`);
@@ -3801,6 +3802,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
 					Upload complete."
 				`);
@@ -3817,6 +3819,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Creating object \\"wormhole-img.png\\" with InfrequentAccess storage class in bucket \\"bucket-object-test\\".
 					Upload complete."
 				`);
@@ -3900,6 +3903,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
 					Upload complete."
 				`);
@@ -3915,6 +3919,7 @@ describe("r2", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: remote
+
 					Deleting object \\"wormhole-img.png\\" from bucket \\"bucket-object-test\\".
 					Delete complete."
 				`);

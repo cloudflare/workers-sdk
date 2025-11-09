@@ -42,11 +42,13 @@
 	},
 	"devDependencies": {
 		"@ava/typescript": "^4.1.0",
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/mime": "^3.0.4",
 		"@types/node": "catalog:default",
 		"@types/service-worker-mock": "^2.0.1",
 		"ava": "^6.0.1",
+		"eslint": "catalog:default",
 		"service-worker-mock": "^2.0.5"
 	},
 	"engines": {

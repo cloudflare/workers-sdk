@@ -214,10 +214,8 @@ export const dev = createCommand({
 		},
 		local: {
 			alias: "l",
-			describe: "Run on my machine",
+			describe: "Run locally with remote bindings disabled",
 			type: "boolean",
-			deprecated: true,
-			hidden: true,
 		},
 		minify: {
 			describe: "Minify the script",
@@ -257,6 +255,13 @@ export const dev = createCommand({
 			describe:
 				"Show interactive dev session (defaults to true if the terminal supports interactivity)",
 			type: "boolean",
+		},
+		"experimental-tail-logs": {
+			type: "boolean",
+			alias: ["x-tail-logs"],
+			describe:
+				"Experimental: Get runtime logs for the remote worker via Workers Tails rather than the Devtools inspector",
+			default: false,
 		},
 	},
 	async validateArgs(args) {
@@ -447,7 +452,6 @@ export function getInferredHost(
  * If `undefined` it defaults to the standard .env files from `getDefaultEnvFiles()`.
  * @param local Whether the dev server should run locally.
  * @param args Additional arguments for the dev server.
- * @param remoteBindingsEnabled Whether remote bindings are enabled, defaults to the value of the `REMOTE_BINDINGS` flag.
  * @returns The bindings for the Cloudflare Worker.
  */
 export function getBindings(

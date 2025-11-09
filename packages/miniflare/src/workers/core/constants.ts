@@ -7,6 +7,8 @@ export const CoreHeaders = {
 	ERROR_STACK: "MF-Experimental-Error-Stack",
 	ROUTE_OVERRIDE: "MF-Route-Override",
 	CF_BLOB: "MF-CF-Blob",
+	/** Used by the Vite plugin to pass through the original `sec-fetch-mode` header */
+	SEC_FETCH_MODE: "MF-Sec-Fetch-Mode",
 
 	// API Proxy
 	OP_SECRET: "MF-Op-Secret",

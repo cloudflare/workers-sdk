@@ -1,5 +1,28 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.10.5
+
+### Patch Changes
+
+- Updated dependencies [[`240ebeb`](https://github.com/cloudflare/workers-sdk/commit/240ebeb66e5cf152a68ff8ec63b0778f4d4dfdce), [`05440a1`](https://github.com/cloudflare/workers-sdk/commit/05440a1a1a6bbe312c3af64adf2fccba5e61457b), [`1ae020d`](https://github.com/cloudflare/workers-sdk/commit/1ae020d7066699512f89fcc42cf436b1deff0277), [`53b0fce`](https://github.com/cloudflare/workers-sdk/commit/53b0fce84e0a897a99efcce4cc96e1cf21391118), [`c3ed531`](https://github.com/cloudflare/workers-sdk/commit/c3ed5314c831b29a43d05fcec238c38c2f4cc8d0), [`305d7bf`](https://github.com/cloudflare/workers-sdk/commit/305d7bfff9bb07e0c21ffae264e89f9f3efb5118), [`b55a3c7`](https://github.com/cloudflare/workers-sdk/commit/b55a3c70f7204c56e4f33649bc2ebcc2f7fa75f3), [`c3ed531`](https://github.com/cloudflare/workers-sdk/commit/c3ed5314c831b29a43d05fcec238c38c2f4cc8d0), [`5d7c4c2`](https://github.com/cloudflare/workers-sdk/commit/5d7c4c2e2e9a3cf1db84c26ae0c729894a2f90f9), [`c3ed531`](https://github.com/cloudflare/workers-sdk/commit/c3ed5314c831b29a43d05fcec238c38c2f4cc8d0)]:
+  - wrangler@4.46.0
+  - miniflare@4.20251105.0
+
+## 0.10.4
+
+### Patch Changes
+
+- Updated dependencies [[`8ffbd17`](https://github.com/cloudflare/workers-sdk/commit/8ffbd17ee78887921244493f6ff7eb52abdcf3f1), [`77ed7e2`](https://github.com/cloudflare/workers-sdk/commit/77ed7e2023ad61e35340c836c77bcf16bd9a214c), [`bb00f9d`](https://github.com/cloudflare/workers-sdk/commit/bb00f9d88f4b3a2acc800f5a23f7ac97e695866a), [`ed666a1`](https://github.com/cloudflare/workers-sdk/commit/ed666a14156b5600acc11fdc3e1cfec0b0d9f6df), [`14f60e8`](https://github.com/cloudflare/workers-sdk/commit/14f60e84b1f568eb54fd26d9547ea017dceb652a), [`22f25fd`](https://github.com/cloudflare/workers-sdk/commit/22f25fd2d5dc952c4f0f8510558107dff229faa4)]:
+  - wrangler@4.45.4
+  - miniflare@4.20251011.2
+
+## 0.10.3
+
+### Patch Changes
+
+- Updated dependencies [[`6822aaf`](https://github.com/cloudflare/workers-sdk/commit/6822aaf405954a2939d1a064b3968297e337f97e), [`bce8142`](https://github.com/cloudflare/workers-sdk/commit/bce81422f7685aef8fb62fd80192ea3516690702)]:
+  - wrangler@4.45.3
+
 ## 0.10.2
 
 ### Patch Changes

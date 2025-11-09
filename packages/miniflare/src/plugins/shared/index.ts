@@ -135,7 +135,6 @@ export async function loadExternalPlugins(
 		const pluginPath = require.resolve(packageName);
 		const moduleURL = pathToFileURL(pluginPath).href;
 
-		// eslint-disable-next-line es/no-dynamic-import
 		pluginModule = await import(moduleURL);
 	} catch (error) {
 		throw new MiniflareCoreError(

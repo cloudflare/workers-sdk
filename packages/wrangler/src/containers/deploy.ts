@@ -349,20 +349,22 @@ export async function apply(
 	endSection("Applied changes");
 }
 
-function formatError(err: ApiError): string {
+export function formatError(err: ApiError): string {
 	try {
 		const maybeError = JSON.parse(err.body.error);
-		if (
-			maybeError.error !== undefined &&
-			maybeError.details !== undefined &&
-			typeof maybeError.details === "object"
-		) {
-			let message = "";
-			message += `${maybeError.error}\n`;
-			for (const key in maybeError.details) {
-				message += `${brandColor(key)} ${maybeError.details[key]}\n`;
+
+		if (maybeError.error !== undefined) {
+			const message = [];
+			message.push(`${maybeError.error}`);
+			if (
+				maybeError.details !== undefined &&
+				typeof maybeError.details === "object"
+			) {
+				for (const key in maybeError.details) {
+					message.push(`${brandColor(key)} ${maybeError.details[key]}`);
+				}
 			}
-			return message;
+			return message.join("\n");
 		}
 	} catch {}
 	// if we can't make it pretty, just dump out the error body

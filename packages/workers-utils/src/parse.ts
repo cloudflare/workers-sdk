@@ -123,6 +123,7 @@ export function parseTOML<T>(input: string, file?: string): T | never {
  * A minimal type describing a package.json file.
  */
 export type PackageJSON = {
+	name?: string;
 	devDependencies?: Record<string, unknown>;
 	dependencies?: Record<string, unknown>;
 	scripts?: Record<string, unknown>;

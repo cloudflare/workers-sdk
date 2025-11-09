@@ -34,13 +34,9 @@ export const deploymentsStatusCommand = createCommand({
 		printBanner: (args) => !args.json,
 	},
 	handler: async function versionsDeploymentsStatusHandler(args, { config }) {
-		metrics.sendMetricsEvent(
-			"view latest versioned deployment",
-			{},
-			{
-				sendMetrics: config.send_metrics,
-			}
-		);
+		metrics.sendMetricsEvent("view latest versioned deployment", {
+			sendMetrics: config.send_metrics,
+		});
 
 		const accountId = await requireAuth(config);
 		const workerName = args.name ?? config.name;

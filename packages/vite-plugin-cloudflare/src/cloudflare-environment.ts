@@ -1,22 +1,18 @@
 import assert from "node:assert";
-import * as util from "node:util";
+import { CoreHeaders } from "miniflare";
 import * as vite from "vite";
-import { VIRTUAL_WORKER_ENTRY } from "./plugins/virtual-modules";
+import { additionalModuleRE } from "./plugins/additional-modules";
 import {
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
 	UNKNOWN_HOST,
+	VIRTUAL_WORKER_ENTRY,
 	WORKER_ENTRY_PATH_HEADER,
 } from "./shared";
-import { getOutputDirectory } from "./utils";
+import { debuglog, getOutputDirectory } from "./utils";
 import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
-import type { Fetcher } from "@cloudflare/workers-types/experimental";
-import type {
-	MessageEvent,
-	Miniflare,
-	ReplaceWorkersTypes,
-	WebSocket,
-} from "miniflare";
+import type { MessageEvent, Miniflare, WebSocket } from "miniflare";
+import type { FetchFunctionOptions } from "vite/module-runner";
 
 export const MAIN_ENTRY_NAME = "index";
 
@@ -25,7 +21,6 @@ interface WebSocketContainer {
 }
 
 const webSocketUndefinedError = "The WebSocket is undefined";
-const debuglog = util.debuglog("@cloudflare:vite-plugin");
 
 function createHotChannel(
 	webSocketContainer: WebSocketContainer
@@ -83,7 +78,6 @@ function createHotChannel(
 
 export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	#webSocketContainer: { webSocket?: WebSocket };
-	#worker?: ReplaceWorkersTypes<Fetcher>;
 
 	constructor(name: string, config: vite.ResolvedConfig) {
 		// It would be good if we could avoid passing this object around and mutating it
@@ -96,16 +90,15 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	}
 
 	async initRunner(
-		worker: ReplaceWorkersTypes<Fetcher>,
+		miniflare: Miniflare,
 		workerConfig: WorkerConfig,
 		isEntryWorker: boolean
 	) {
-		this.#worker = worker;
-
-		const response = await this.#worker.fetch(
+		const response = await miniflare.dispatchFetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
 				headers: {
+					[CoreHeaders.ROUTE_OVERRIDE]: workerConfig.name,
 					[WORKER_ENTRY_PATH_HEADER]: encodeURIComponent(workerConfig.main),
 					[IS_ENTRY_WORKER_HEADER]: String(isEntryWorker),
 					upgrade: "websocket",
@@ -120,6 +113,21 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		assert(webSocket, "Failed to establish WebSocket");
 		webSocket.accept();
 		this.#webSocketContainer.webSocket = webSocket;
+	}
+
+	override async fetchModule(
+		id: string,
+		importer?: string,
+		options?: FetchFunctionOptions
+	): Promise<vite.FetchResult> {
+		// Additional modules (CompiledWasm, Data, Text)
+		if (additionalModuleRE.test(id)) {
+			return {
+				externalize: id,
+				type: "module",
+			};
+		}
+		return super.fetchModule(id, importer, options);
 	}
 }
 
@@ -254,7 +262,6 @@ export function initRunners(
 		Object.entries(resolvedPluginConfig.workers).map(
 			async ([environmentName, workerConfig]) => {
 				debuglog("Initializing worker:", workerConfig.name);
-				const worker = await miniflare.getWorker(workerConfig.name);
 				const isEntryWorker =
 					environmentName === resolvedPluginConfig.entryWorkerEnvironmentName;
 
@@ -262,7 +269,7 @@ export function initRunners(
 					viteDevServer.environments[
 						environmentName
 					] as CloudflareDevEnvironment
-				).initRunner(worker, workerConfig, isEntryWorker);
+				).initRunner(miniflare, workerConfig, isEntryWorker);
 			}
 		)
 	);

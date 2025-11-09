@@ -4,6 +4,7 @@ import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
 import { logger } from "../../logger";
 import { requireAuth } from "../../user";
+import { printResourceLocation } from "../../utils/is-local";
 import { getDatabaseByNameOrBinding } from "../utils";
 import { getBookmarkIdFromTimestamp, throwIfDatabaseIsAlpha } from "./utils";
 import type { ComplianceConfig } from "../../environment-variables/misc-variables";
@@ -52,6 +53,9 @@ export const d1TimeTravelRestoreCommand = createCommand({
 	async handler({ database, json, timestamp, bookmark }, { config }) {
 		// bookmark
 		const accountId = await requireAuth(config);
+		if (!json) {
+			printResourceLocation("remote");
+		}
 		const db = await getDatabaseByNameOrBinding(config, accountId, database);
 		await throwIfDatabaseIsAlpha(config, accountId, db.uuid);
 		const searchParams = new URLSearchParams();

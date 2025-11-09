@@ -13,19 +13,13 @@ import type { CfScriptFormat } from "@cloudflare/workers-utils";
  * Else, it's a "service-worker" worker. This seems hacky, but works remarkably
  * well in practice.
  */
-export default async function guessWorkerFormat(
+export async function guessWorkerFormat(
 	entryFile: string,
 	entryWorkingDirectory: string,
 	tsconfig?: string | undefined
 ): Promise<{ format: CfScriptFormat; exports: string[] }> {
 	const parsedEntryPath = path.parse(entryFile);
 	if (parsedEntryPath.ext == ".py") {
-		logger.warn(
-			`The entrypoint ${path.relative(
-				process.cwd(),
-				entryFile
-			)} defines a Python worker, support for Python workers is currently experimental.`
-		);
 		return { format: "modules", exports: [] };
 	}
 

@@ -1,11 +1,33 @@
 import * as path from "node:path";
+import * as util from "node:util";
 import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
 import {
+	CoreHeaders,
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
+import type { PluginContext } from "./context";
 import type * as http from "node:http";
 import type * as vite from "vite";
+
+export const debuglog = util.debuglog("@cloudflare:vite-plugin");
+
+/**
+ * Creates an internal plugin to be used inside the main `vite-plugin-cloudflare` plugin.
+ * The provided `name` will be prefixed with `vite-plugin-cloudflare:`.
+ */
+export function createPlugin(
+	name: string,
+	pluginFactory: (ctx: PluginContext) => Omit<vite.Plugin, "name">
+): (ctx: PluginContext) => vite.Plugin {
+	return (ctx) => {
+		return {
+			name: `vite-plugin-cloudflare:${name}`,
+			sharedDuringBuild: true,
+			...pluginFactory(ctx),
+		};
+	};
+}
 
 export function getOutputDirectory(
 	userConfig: vite.UserConfig,
@@ -91,7 +113,7 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
 	const secFetchMode = request.headers.get("Sec-Fetch-Mode");
 	if (secFetchMode) {
-		request.headers.set("X-Mf-Sec-Fetch-Mode", secFetchMode);
+		request.headers.set(CoreHeaders.SEC_FETCH_MODE, secFetchMode);
 	}
 	return new MiniflareRequest(request.url, {
 		method: request.method,

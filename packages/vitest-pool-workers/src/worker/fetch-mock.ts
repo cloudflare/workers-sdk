@@ -34,7 +34,7 @@ const requests = new SingleAccessMap<string, BufferedRequest>();
 const responses = new SingleAccessMap<string, Response>();
 
 // This is in a Workers context
-// eslint-disable-next-line no-restricted-globals
+
 const originalFetch = fetch;
 setDispatcher((opts, handler) => {
 	const serialisedOptions = JSON.stringify(opts);

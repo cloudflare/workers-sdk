@@ -218,6 +218,7 @@ async function resolveBindings(
 			{
 				registry,
 				local: !input.dev?.remote,
+				remoteBindingsDisabled: input.dev?.remote === false,
 				name: config.name,
 			}
 		);
@@ -381,6 +382,9 @@ async function resolveConfig(
 		},
 		assets: assetsOptions,
 		tailConsumers: config.tail_consumers ?? [],
+		experimental: {
+			tailLogs: !!input.experimental?.tailLogs,
+		},
 	} satisfies StartDevWorkerOptions;
 
 	if (
