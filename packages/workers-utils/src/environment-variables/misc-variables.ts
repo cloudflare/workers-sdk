@@ -321,3 +321,10 @@ export const getWranglerHideBanner = getBooleanEnvironmentVariableFactory({
 	variableName: "WRANGLER_HIDE_BANNER",
 	defaultValue: false,
 });
+
+/**
+ * `CLOUDFLARE_ENV` specifies the currently selected Wrangler/Cloudflare environment.
+ */
+export const getCloudflareEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_ENV",
+});
