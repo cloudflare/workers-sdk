@@ -313,3 +313,7 @@ export const getDisableConfigWatching = getBooleanEnvironmentVariableFactory({
 	variableName: "WRANGLER_CI_DISABLE_CONFIG_WATCHING",
 	defaultValue: false,
 });
+
+export const getCloudflareEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_ENV",
+});

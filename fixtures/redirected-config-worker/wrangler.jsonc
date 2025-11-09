@@ -2,4 +2,16 @@
 	"name": "redirected-config-worker",
 	"compatibility_date": "2024-12-01",
 	"main": "src/index.js",
+	"env": {
+		"staging": {
+			"vars": {
+				"generated": "none",
+			},
+		},
+		"prod": {
+			"vars": {
+				"generated": "none",
+			},
+		},
+	},
 }
