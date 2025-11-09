@@ -68,12 +68,101 @@ function normalizeLocalResolvedConfigAsRemote(
 		localResolvedConfig.routes ?? []
 	);
 	const normalizedConfig: Config = {
-		...localResolvedConfig,
+		...structuredClone(localResolvedConfig),
 		workers_dev: subdomainValues.workers_dev,
 		preview_urls: subdomainValues.preview_urls,
 		observability: normalizeObservability(localResolvedConfig.observability),
 	};
+
+	removeRemoteConfigFieldFromBindings(normalizedConfig);
+
 	return normalizedConfig;
+}
+
+/**
+ * Given a configuration object removes all the `remote` config settings from all the bindings
+ * in the configuration (this is used as part of the config normalization since the `remote`
+ * key is not present in the remote configuration object)
+ *
+ * @param normalizedConfig The target configuration object (which gets updated side-effectfully)
+ */
+function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
+	for (const bindingField of [
+		"kv_namespaces",
+		"r2_buckets",
+		"d1_databases",
+	] as const) {
+		if (normalizedConfig[bindingField]?.length) {
+			normalizedConfig[bindingField] = normalizedConfig[bindingField].map(
+				({ remote: _, ...binding }) => binding
+			);
+		}
+	}
+
+	if (normalizedConfig.services?.length) {
+		normalizedConfig.services = normalizedConfig.services.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.vpc_services?.length) {
+		normalizedConfig.vpc_services = normalizedConfig.vpc_services.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.workflows?.length) {
+		normalizedConfig.workflows = normalizedConfig.workflows.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.dispatch_namespaces?.length) {
+		normalizedConfig.dispatch_namespaces =
+			normalizedConfig.dispatch_namespaces.map(
+				({ remote: _, ...binding }) => binding
+			);
+	}
+
+	if (normalizedConfig.mtls_certificates?.length) {
+		normalizedConfig.mtls_certificates = normalizedConfig.mtls_certificates.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.pipelines?.length) {
+		normalizedConfig.pipelines = normalizedConfig.pipelines.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.vectorize?.length) {
+		normalizedConfig.vectorize = normalizedConfig.vectorize.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.queues?.producers?.length) {
+		normalizedConfig.queues.producers = normalizedConfig.queues.producers.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.send_email) {
+		normalizedConfig.send_email = normalizedConfig.send_email.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	const singleBindingFields = ["browser", "ai", "images", "media"] as const;
+	for (const singleBindingField of singleBindingFields) {
+		if (
+			normalizedConfig[singleBindingField] &&
+			"remote" in normalizedConfig[singleBindingField]
+		) {
+			delete normalizedConfig[singleBindingField].remote;
+		}
+	}
 }
 
 /**

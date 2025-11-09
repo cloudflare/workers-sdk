@@ -14945,7 +14945,7 @@ export default{
 				result: true,
 			});
 
-			await runWrangler("deploy --x-remote-diff-check");
+			await runWrangler("deploy");
 
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
 				"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
@@ -15011,7 +15011,7 @@ export default{
 				result: true,
 			});
 
-			await runWrangler("deploy --x-remote-diff-check");
+			await runWrangler("deploy");
 
 			// Note: we display the toml config diff in json format since code-wise we'd have to convert the rawConfig to toml
 			//       to be able to show toml content/diffs, that combined with the fact that json(c) config files are the
@@ -15035,7 +15035,7 @@ export default{
 	});
 
 	describe("with strict mode enabled", () => {
-		it("should error if there are remote config difference (with --x-remote-diff-check) in non-interactive mode", async () => {
+		it("should error if there are remote config difference in non-interactive mode", async () => {
 			setIsTTY(false);
 
 			writeWorkerSource();
@@ -15071,7 +15071,7 @@ export default{
 				},
 			} as unknown as ServiceMetadataRes["default_environment"]);
 
-			await runWrangler("deploy --x-remote-diff-check --strict");
+			await runWrangler("deploy --strict");
 
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
 				"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:

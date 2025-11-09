@@ -233,6 +233,7 @@ export const deployCommand = createCommand({
 			describe: "Experimental: Enable The Deployment Remote Diff check",
 			type: "boolean",
 			hidden: true,
+			default: true,
 			alias: ["x-remote-diff-check"],
 		},
 		strict: {
