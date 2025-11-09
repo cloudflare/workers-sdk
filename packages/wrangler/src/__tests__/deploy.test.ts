@@ -15080,6 +15080,10 @@ export default{
 				     observability: {
 				  -    enabled: true
 				  +    enabled: false
+				       logs: {
+				  -      enabled: true
+				  +      enabled: false
+				       }
 				     }
 				   }
 
