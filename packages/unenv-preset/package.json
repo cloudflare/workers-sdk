@@ -49,7 +49,7 @@
 	},
 	"peerDependencies": {
 		"unenv": "2.0.0-rc.24",
-		"workerd": "^1.20250927.0"
+		"workerd": "^1.20251106.1"
 	},
 	"peerDependenciesMeta": {
 		"workerd": {
