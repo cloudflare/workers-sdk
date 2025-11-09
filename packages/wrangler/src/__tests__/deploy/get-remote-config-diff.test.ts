@@ -253,6 +253,35 @@ describe("getRemoteConfigsDiff", () => {
 		expect(nonDestructive).toBe(false);
 	});
 
+	it("should ignore local-only configs such as `dev` and `build`", () => {
+		const { diff } = getRemoteConfigDiff(
+			{
+				name: "my-worker-id",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+				compatibility_flags: undefined,
+			},
+			{
+				name: "my-worker-id",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+				compatibility_flags: undefined,
+				dev: {
+					local_protocol: "http",
+					port: 8999,
+				},
+				build: {
+					command: "npm run build",
+				},
+			} as unknown as Config
+		);
+		expect(diff).toBeNull();
+	});
+
 	it("should ignore the `remote` field of bindings during the diffing process (since remote bindings are a local-only concept)", () => {
 		const { diff } = getRemoteConfigDiff(
 			{

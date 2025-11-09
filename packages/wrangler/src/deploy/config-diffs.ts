@@ -246,6 +246,9 @@ function normalizeRemoteConfigAsResolvedLocal(
 ): Config {
 	let normalizedRemote = {} as Config;
 
+	// We start by adding all the local configs to the normalized remote config object
+	// in this way we can make sure that local-only configurations are not shown as
+	// differences between local and remote configs
 	Object.entries(localResolvedConfig).forEach(([key, value]) => {
 		// We want to skip observability since it has a remote default behavior
 		// different from that of wrangler
@@ -254,6 +257,7 @@ function normalizeRemoteConfigAsResolvedLocal(
 		}
 	});
 
+	// We then override the configs present in the remote config object
 	Object.entries(remoteConfig).forEach(([key, value]) => {
 		if (key !== "main" && value !== undefined) {
 			(normalizedRemote as unknown as Record<string, unknown>)[key] = value;
