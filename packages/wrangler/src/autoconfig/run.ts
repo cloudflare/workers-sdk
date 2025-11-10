@@ -181,10 +181,13 @@ export async function buildAndConfirmOperationsSummary(
 		// If there is a package.json file we will want to install wrangler
 		modifications.wranglerInstall = true;
 
-		const isFullstackFramework = false; // TODO: handle this logic appropriately
+		// TODO: Implement the logic to discern whether the project contains server code or not
+		//       (basically if it is fully static)
+		const containsServerSideCode = false;
 
 		if (
-			isFullstackFramework &&
+			// If there is no server side code, then there is no need to add the cf-typegen script
+			containsServerSideCode &&
 			usesTypescript(autoConfigDetails.projectPath) &&
 			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
 		) {
