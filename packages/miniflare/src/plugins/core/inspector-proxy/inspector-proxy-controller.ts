@@ -1,8 +1,6 @@
 import crypto from "node:crypto";
 import { createServer, IncomingMessage, Server } from "node:http";
-import { setTimeout } from "timers/promises";
-import getPort from "get-port";
-import { DeferredPromise, LogLevel } from "miniflare:shared";
+import { DeferredPromise } from "miniflare:shared";
 import WebSocket, { WebSocketServer } from "ws";
 import { version as miniflareVersion } from "../../../../package.json";
 import { Log } from "../../../shared";
@@ -31,16 +29,10 @@ export class InspectorProxyController {
 		private log: Log,
 		private workerNamesToProxy: Set<string>
 	) {
-		this.#server = this.#initializeServer();
+		this.#server = this.#createServer();
 	}
 
-	async #getInspectorPortToUse() {
-		return this.inspectorPortOption !== 0
-			? this.inspectorPortOption
-			: await getPort();
-	}
-
-	async #initializeServer() {
+	async #createServer() {
 		const server = createServer(async (req, res) => {
 			const maybeJson = await this.#handleDevToolsJsonRequest(
 				req.headers.host ?? "localhost",
@@ -72,44 +64,30 @@ export class InspectorProxyController {
 	}
 
 	/**
-	 * Try up 5 times to start listening on a free port (or only once if the user specified a port).
-	 *
-	 * This is because there is a small chance that between us getting a free port and us starting to listen on it,
-	 * another process may have taken that port.
+	 * Try to start listening on a the chosen port (or any port if none-chosen).
 	 *
 	 * @param server the server to start listening.
 	 */
 	async #startListening(server: Server): Promise<void> {
-		let attempts = this.inspectorPortOption === 0 ? 5 : 1;
-		while (attempts > 0) {
-			try {
-				const port = await this.#getInspectorPortToUse();
-				this.log.debug("Trying to listen on port: " + port);
-				// We await here to ensure that if it rejects we throw and try again
-				// without resolving the `listening` promise incorrectly.
-				return await new Promise<void>((resolve, reject) => {
-					server.once("error", (err) => reject(err));
-					server.listen(port, () => {
-						this.#inspectorPort.resolve(port);
-						resolve();
-					});
-				});
-			} catch (e) {
-				attempts--;
-				if (attempts > 0 && isAddressInUseError(e)) {
-					this.log.debug(`Retrying to listen due to error: ${e}`);
-					await this.#closeServer(server);
-					// Try again after a random amount of time to avoid further collisions
-					await setTimeout(200 + Math.random() * 100);
+		this.log.debug("Trying to listen on port: " + this.inspectorPortOption);
+		// We await here to ensure that if it rejects we throw and try again
+		// without resolving the `listening` promise incorrectly.
+		return await new Promise<void>((resolve, reject) => {
+			server.once("error", (err) => reject(err));
+			server.listen(this.inspectorPortOption, () => {
+				const address = server.address();
+				if (address && typeof address !== "string") {
+					this.#inspectorPort.resolve(address.port);
+					resolve();
 				} else {
-					this.log.logWithLevel(
-						LogLevel.ERROR,
-						`Failed to start inspector proxy server: ${e}`
+					reject(
+						new Error(
+							`Unable to acquire a port to listen on - address: "${address}"`
+						)
 					);
-					throw e;
 				}
-			}
-		}
+			});
+		});
 	}
 
 	async #closeServer(server: Server) {
@@ -349,7 +327,3 @@ const ALLOWED_ORIGIN_HOSTNAMES = [
 	"[::1]",
 	"localhost",
 ];
-
-function isAddressInUseError(e: unknown): e is Error & { code: "EADDRINUSE" } {
-	return e instanceof Error && "code" in e && e.code === "EADDRINUSE";
-}
