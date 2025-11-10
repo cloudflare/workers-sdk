@@ -182,7 +182,7 @@ describe("autoconfig (deploy)", () => {
 				 - wrangler (devDependency)
 
 				📄 Create wrangler.jsonc:
-				{
+				  {
 				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
 				    \\"name\\": \\"my-worker\\",
 				    \\"compatibility_date\\": \\"2000-01-01\\",
@@ -275,7 +275,7 @@ describe("autoconfig (deploy)", () => {
 
 
 				📄 Create wrangler.jsonc:
-				{
+				  {
 				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
 				    \\"name\\": \\"edited-worker-name\\",
 				    \\"compatibility_date\\": \\"2000-01-01\\",

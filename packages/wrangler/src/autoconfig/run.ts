@@ -229,7 +229,7 @@ export async function buildAndConfirmOperationsSummary(
 
 	logger.log("📄 Create wrangler.jsonc:");
 	logger.log(
-		JSON.stringify(wranglerConfigToWrite, null, 2).replace(/\n/g, "\n  ")
+		"  " + JSON.stringify(wranglerConfigToWrite, null, 2).replace(/\n/g, "\n  ")
 	);
 	logger.log("");
 

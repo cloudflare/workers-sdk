@@ -64,7 +64,7 @@ describe("autoconfig run - buildAndConfirmOperationsSummary()", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				📄 Create wrangler.jsonc:
-				{
+				  {
 				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
 				    \\"name\\": \\"worker-name\\",
 				    \\"compatibility_date\\": \\"2025-01-01\\",
@@ -202,7 +202,7 @@ describe("autoconfig run - buildAndConfirmOperationsSummary()", () => {
 				 - wrangler (devDependency)
 
 				📄 Create wrangler.jsonc:
-				{
+				  {
 				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
 				    \\"name\\": \\"worker-name\\",
 				    \\"compatibility_date\\": \\"2025-01-01\\",
