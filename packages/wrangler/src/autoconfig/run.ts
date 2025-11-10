@@ -178,13 +178,15 @@ export async function buildAndConfirmOperationsSummary(
 		typegenScriptAddition: false,
 	};
 	if (autoConfigDetails.packageJson) {
-		const devDependencies = autoConfigDetails.packageJson.devDependencies ?? {};
-		const shouldInstallLatestWrangler =
-			!("wrangler" in devDependencies) ||
-			(typeof devDependencies["wrangler"] === "string" &&
-				!devDependencies["wrangler"].startsWith("^"));
-		if (shouldInstallLatestWrangler) {
-			modifications.wranglerInstall = true;
+		for (const dependencyType of ["dependencies", "devDependencies"] as const) {
+			const dependencies = autoConfigDetails.packageJson[dependencyType] ?? {};
+			const shouldInstallLatestWrangler =
+				!("wrangler" in dependencies) ||
+				(typeof dependencies["wrangler"] === "string" &&
+					!/^[^]4\./.test(dependencies["wrangler"]));
+			if (shouldInstallLatestWrangler) {
+				modifications.wranglerInstall = true;
+			}
 		}
 
 		const isFullstackFramework = false; // TODO: handle this logic appropriately
