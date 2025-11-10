@@ -25,6 +25,7 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 		const absHomedir = path.resolve(tmpDir, homedir);
 		fs.mkdirSync(absHomedir, { recursive: true });
 		vi.stubEnv("HOME", absHomedir);
+		vi.stubEnv("XDG_CONFIG_HOME", path.resolve(absHomedir, ".config"));
 
 		// Now that we have changed the home directory location, we must reinitialize the user auth state
 		reinitialiseAuthTokens();
