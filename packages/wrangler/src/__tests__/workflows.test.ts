@@ -154,6 +154,7 @@ describe("wrangler workflows", () => {
 				  wrangler workflows instances list <name>            Instance related commands (list, describe, terminate, pause, resume)
 				  wrangler workflows instances describe <name> [id]   Describe a workflow instance - see its logs, retries and errors
 				  wrangler workflows instances terminate <name> <id>  Terminate a workflow instance
+				  wrangler workflows instances restart <name> <id>    Restart a workflow instance
 				  wrangler workflows instances pause <name> <id>      Pause a workflow instance
 				  wrangler workflows instances resume <name> <id>     Resume a workflow instance
 
@@ -570,6 +571,38 @@ describe("wrangler workflows", () => {
 			await runWrangler(`workflows instances terminate some-workflow bar`);
 			expect(std.info).toMatchInlineSnapshot(
 				`"🥷 The instance \\"bar\\" from some-workflow was terminated successfully"`
+			);
+		});
+	});
+
+	describe("instances restart", () => {
+		const mockInstances: Instance[] = [
+			{
+				id: "foo",
+				created_on: mockCreateDate.toISOString(),
+				modified_on: mockModifiedDate.toISOString(),
+				workflow_id: "b",
+				version_id: "c",
+				status: "running",
+			},
+			{
+				id: "bar",
+				created_on: mockCreateDate.toISOString(),
+				modified_on: mockModifiedDate.toISOString(),
+				workflow_id: "b",
+				version_id: "c",
+				status: "running",
+			},
+		];
+
+		it("should get and restart the bar instance given a name", async () => {
+			writeWranglerConfig();
+			await mockGetInstances(mockInstances);
+			await mockPatchRequest("bar");
+
+			await runWrangler(`workflows instances restart some-workflow bar`);
+			expect(std.info).toMatchInlineSnapshot(
+				`"🥷 The instance \\"bar\\" from some-workflow was restarted successfully"`
 			);
 		});
 	});
