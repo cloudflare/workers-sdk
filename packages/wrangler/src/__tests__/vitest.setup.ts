@@ -57,6 +57,19 @@ vi.mock("child_process", async (importOriginal) => {
 	};
 });
 
+vi.mock("os", async (importOriginal) => {
+	const os = await importOriginal<typeof import("os")>();
+	function homedir() {
+		// Let's just grab the HOME env var and then we can override that in tests
+		return (process.env as Record<string, string>).HOME;
+	}
+	return {
+		...os,
+		default: { ...os, homedir },
+		homedir,
+	};
+});
+
 vi.mock("log-update", () => {
 	const fn = function (..._: string[]) {};
 	fn["clear"] = () => {};

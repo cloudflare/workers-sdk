@@ -24,29 +24,20 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 		);
 
 		process.chdir(tmpDir);
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		process.env.PWD = tmpDir;
-
-		// The path that is returned from `homedir()` should be absolute.
-		const absHomedir = path.resolve(tmpDir, homedir);
+		vi.stubEnv("PWD", tmpDir);
 
 		// Override where the home directory is so that we can write our own user config,
 		// without destroying the real thing.
+		// The path that is returned from `homedir()` should be absolute.
+		const absHomedir = path.resolve(tmpDir, homedir);
 		fs.mkdirSync(absHomedir, { recursive: true });
-
-		// Note it is very important that we use the "default" value from "node:os" (e.g. `import os from "node:os";`)
-		// rather than an alias to the module (e.g. `import * as os from "node:os";`).
-		// This is because the module gets transpiled so that the "method" `homedir()` gets converted to a
-		// getter that is not configurable (and so cannot be spied upon).
-		vi.spyOn(os, "homedir")?.mockReturnValue(absHomedir);
+		vi.stubEnv("HOME", absHomedir);
+		vi.stubEnv("XDG_CONFIG_HOME", path.resolve(absHomedir, ".config"));
 	});
 
 	afterEach(() => {
+		process.chdir(originalCwd);
 		if (fs.existsSync(tmpDir)) {
-			process.chdir(originalCwd);
-			// eslint-disable-next-line turbo/no-undeclared-env-vars
-			process.env.PWD = originalCwd;
-
 			// Don't block on deleting the tmp dir
 			void rm(tmpDir).catch(() => {
 				// Best effort - try once then just move on - they are only temp files after all.
