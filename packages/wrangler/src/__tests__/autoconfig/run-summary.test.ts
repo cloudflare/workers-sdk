@@ -217,13 +217,10 @@ describe("autoconfig run - buildAndConfirmOperationsSummary()", () => {
 
 			expect(updatedAutoConfigDetails).toMatchObject({
 				confirmed: true,
-				packagesToInstall: [
-					{
-						package: "wrangler",
-						depType: "devDependency",
-					},
-				],
-				scriptsToAdd: [],
+				modifications: {
+					wranglerInstall: true,
+					typegenScriptAddition: false,
+				},
 			});
 		});
 	});

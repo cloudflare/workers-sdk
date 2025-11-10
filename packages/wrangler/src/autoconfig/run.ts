@@ -66,11 +66,10 @@ export async function runAutoConfig(
 		},
 	} satisfies RawConfig;
 
-	const { confirmed, packagesToInstall, scriptsToAdd } =
-		await buildAndConfirmOperationsSummary(
-			autoConfigDetails,
-			baseWranglerConfig
-		);
+	const { confirmed, modifications } = await buildAndConfirmOperationsSummary(
+		autoConfigDetails,
+		baseWranglerConfig
+	);
 
 	if (!confirmed) {
 		throw new FatalError("Deployment aborted");
@@ -82,15 +81,11 @@ export async function runAutoConfig(
 
 	startSection("Configuring your application for Cloudflare");
 
-	if (
-		packagesToInstall.find(
-			(pkg) => pkg.package === "wrangler" && pkg.depType === "devDependency"
-		)
-	) {
+	if (modifications.wranglerInstall) {
 		await installWrangler();
 	}
 
-	if (scriptsToAdd.length) {
+	if (modifications.typegenScriptAddition) {
 		assert(autoConfigDetails.packageJson);
 		await writeFile(
 			resolve(autoConfigDetails.projectPath, "package.json"),
@@ -99,9 +94,7 @@ export async function runAutoConfig(
 					...autoConfigDetails.packageJson,
 					scripts: {
 						...autoConfigDetails.packageJson.scripts,
-						...Object.fromEntries(
-							scriptsToAdd.map((script) => [script.name, script.value])
-						),
+						[typeGenScript.key]: typeGenScript.value,
 					},
 				},
 				null,
@@ -165,14 +158,9 @@ function usesTypescript(projectPath: string) {
 	return existsSync(join(projectPath, `tsconfig.json`));
 }
 
-type PackageToInstall = {
-	package: string;
-	depType: "dependency" | "devDependency";
-};
-
-type ScriptToAdd = {
-	name: string;
-	value: string;
+const typeGenScript = {
+	key: "cf-typegen",
+	value: "wrangler typegen",
 };
 
 export async function buildAndConfirmOperationsSummary(
@@ -180,11 +168,15 @@ export async function buildAndConfirmOperationsSummary(
 	wranglerConfigToWrite: RawConfig
 ): Promise<{
 	confirmed: boolean;
-	packagesToInstall: PackageToInstall[];
-	scriptsToAdd: ScriptToAdd[];
+	modifications: {
+		wranglerInstall: boolean;
+		typegenScriptAddition: boolean;
+	};
 }> {
-	const packagesToInstall: PackageToInstall[] = [];
-	const scriptsToAdd: ScriptToAdd[] = [];
+	const modifications = {
+		wranglerInstall: false,
+		typegenScriptAddition: false,
+	};
 	if (autoConfigDetails.packageJson) {
 		const devDependencies = autoConfigDetails.packageJson.devDependencies ?? {};
 		const shouldInstallLatestWrangler =
@@ -192,7 +184,7 @@ export async function buildAndConfirmOperationsSummary(
 			(typeof devDependencies["wrangler"] === "string" &&
 				!devDependencies["wrangler"].startsWith("^"));
 		if (shouldInstallLatestWrangler) {
-			packagesToInstall.push({ package: "wrangler", depType: "devDependency" });
+			modifications.wranglerInstall = true;
 		}
 
 		const isFullstackFramework = false; // TODO: handle this logic appropriately
@@ -202,28 +194,21 @@ export async function buildAndConfirmOperationsSummary(
 			usesTypescript(autoConfigDetails.projectPath) &&
 			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
 		) {
-			scriptsToAdd.push({
-				name: "cf-typegen",
-				value: "wrangler types",
-			});
+			modifications.typegenScriptAddition = true;
 		}
 	}
 
 	logger.log("");
 
-	if (packagesToInstall.length) {
+	if (modifications.wranglerInstall) {
 		logger.log("📦 Install packages:");
-		packagesToInstall.forEach((pkg) => {
-			logger.log(` - ${pkg.package} (${pkg.depType})`);
-		});
+		logger.log(` - wrangler (devDependency)`);
 		logger.log("");
 	}
 
-	if (scriptsToAdd.length) {
+	if (modifications.typegenScriptAddition) {
 		logger.log("📝 Update package.json scripts:");
-		scriptsToAdd.forEach((script) => {
-			logger.log(` - "${script.name}": "${script.value}"`);
-		});
+		logger.log(` - "${typeGenScript.key}": "${typeGenScript.value}"`);
 		logger.log("");
 	}
 
@@ -248,7 +233,6 @@ export async function buildAndConfirmOperationsSummary(
 
 	return {
 		confirmed: proceedWithSetup,
-		packagesToInstall,
-		scriptsToAdd,
+		modifications,
 	};
 }
