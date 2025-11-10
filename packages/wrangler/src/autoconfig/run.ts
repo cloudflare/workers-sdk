@@ -178,16 +178,8 @@ export async function buildAndConfirmOperationsSummary(
 		typegenScriptAddition: false,
 	};
 	if (autoConfigDetails.packageJson) {
-		for (const dependencyType of ["dependencies", "devDependencies"] as const) {
-			const dependencies = autoConfigDetails.packageJson[dependencyType] ?? {};
-			const shouldInstallLatestWrangler =
-				!("wrangler" in dependencies) ||
-				(typeof dependencies["wrangler"] === "string" &&
-					!/^[^]4\./.test(dependencies["wrangler"]));
-			if (shouldInstallLatestWrangler) {
-				modifications.wranglerInstall = true;
-			}
-		}
+		// If there is a package.json file we will want to install wrangler
+		modifications.wranglerInstall = true;
 
 		const isFullstackFramework = false; // TODO: handle this logic appropriately
 

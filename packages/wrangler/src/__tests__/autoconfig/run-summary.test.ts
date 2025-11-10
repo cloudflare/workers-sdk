@@ -104,7 +104,7 @@ describe("autoconfig run - buildAndConfirmOperationsSummary()", () => {
 			);
 		});
 
-		test("doesn't show that wrangler will be added as a devDependency when it is already installed as such", async () => {
+		test("when a package.json is present wrangler@latest will be unconditionally installed (even if already present)", async () => {
 			setIsTTY(true);
 
 			mockConfirm({
@@ -118,7 +118,7 @@ describe("autoconfig run - buildAndConfirmOperationsSummary()", () => {
 					packageJson: {
 						name: "my-project",
 						devDependencies: {
-							wrangler: "^4.45.0",
+							wrangler: "^4.0.0",
 						},
 					},
 					configured: false,
@@ -126,7 +126,7 @@ describe("autoconfig run - buildAndConfirmOperationsSummary()", () => {
 				testRawConfig
 			);
 
-			expect(std.out).not.toContain(
+			expect(std.out).toContain(
 				dedent`
 				📦 Install packages:
 				 - wrangler (devDependency)
