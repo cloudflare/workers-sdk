@@ -218,10 +218,10 @@ export async function buildAndConfirmOperationsSummary(
 		!autoConfigDetails.framework.configured
 	) {
 		logger.log(
-			`🛠️  Run Configuration For ${capitalize(autoConfigDetails.framework.name)}`
-		);
-		(autoConfigDetails.framework.configurationSteps ?? []).forEach((step) =>
-			logger.log(`  - ${step}`)
+			`🛠️  ${
+				autoConfigDetails.framework.configurationDescription ??
+				`Run Configuration For ${capitalize(autoConfigDetails.framework.name)}`
+			}`
 		);
 		logger.log("");
 	}

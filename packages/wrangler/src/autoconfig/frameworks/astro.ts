@@ -31,8 +31,6 @@ export class Astro extends Framework {
 		};
 	}
 
-	configurationSteps = [
-		"Run `astro add cloudflare`",
-		"Create `public/.assetsignore` file",
-	];
+	configurationDescription =
+		'Configuring project for Astro with "astro add cloudflare"';
 }

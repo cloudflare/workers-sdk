@@ -10,5 +10,5 @@ export abstract class Framework {
 
 	abstract configure(outputDir: string): Promise<RawConfig> | RawConfig;
 
-	configurationSteps?: string[];
+	configurationDescription?: string;
 }

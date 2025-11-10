@@ -152,15 +152,9 @@ describe("autoconfig run - buildAndConfirmOperationsSummary()", () => {
 				testRawConfig
 			);
 
-			const astroConfigurationLog = "🛠️  Run Configuration For Astro";
-			expect(std.out).toContain(astroConfigurationLog);
-			expect(std.out.slice(std.out.indexOf(astroConfigurationLog)))
-				.toMatchInlineSnapshot(`
-				"🛠️  Run Configuration For Astro
-				  - Run \`astro add cloudflare\`
-				  - Create \`public/.assetsignore\` file
-				"
-			`);
+			expect(std.out).toContain(
+				'🛠️  Configuring project for Astro with "astro add cloudflare"'
+			);
 		});
 
 		test("doesn't show the framework specific configuration step for the Static framework", async () => {
