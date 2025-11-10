@@ -916,6 +916,14 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 
 export function readAuthConfigFile(): UserAuthConfig {
 	const toml = parseTOML<UserAuthConfig>(readFileSync(getAuthConfigFilePath()));
+	if ("api_token" in toml) {
+		logger.warn(
+			"api_token found " +
+				toml.api_token +
+				" in auth config file at " +
+				getAuthConfigFilePath()
+		);
+	}
 	return toml;
 }
 
