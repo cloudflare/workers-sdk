@@ -220,7 +220,7 @@ export async function buildAndConfirmOperationsSummary(
 		logger.log(
 			`🛠️  ${
 				autoConfigDetails.framework.configurationDescription ??
-				`Run Configuration For ${capitalize(autoConfigDetails.framework.name)}`
+				`Configuring project for ${capitalize(autoConfigDetails.framework.name)}`
 			}`
 		);
 		logger.log("");

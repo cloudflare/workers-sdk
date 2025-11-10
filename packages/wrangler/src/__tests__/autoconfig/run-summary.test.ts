@@ -174,7 +174,7 @@ describe("autoconfig run - buildAndConfirmOperationsSummary()", () => {
 				testRawConfig
 			);
 
-			expect(std.out).not.toContain("🛠️  Run Configuration For");
+			expect(std.out).not.toContain("🛠️  Configuring project for");
 		});
 	});
 
