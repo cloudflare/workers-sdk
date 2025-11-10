@@ -80,29 +80,35 @@ export class InspectorProxyController {
 	 * @param server the server to start listening.
 	 */
 	async #startListening(server: Server): Promise<void> {
-		const listening = new DeferredPromise<void>();
 		let attempts = this.inspectorPortOption === 0 ? 5 : 1;
 		while (attempts > 0) {
 			try {
 				const port = await this.#getInspectorPortToUse();
 				this.log.debug("Trying to listen on port: " + port);
-				server.listen(port, () => listening.resolve());
-				this.#inspectorPort.resolve(port);
-				break;
+				// We await here to ensure that if it rejects we throw and try again
+				// without resolving the `listening` promise incorrectly.
+				return await new Promise<void>((resolve, reject) => {
+					server.once("error", (err) => reject(err));
+					server.listen(port, () => {
+						this.#inspectorPort.resolve(port);
+						resolve();
+					});
+				});
 			} catch (e) {
 				attempts--;
 				if (attempts > 0 && isAddressInUseError(e)) {
 					this.log.debug(`Retrying to listen due to error: ${e}`);
 					await this.#closeServer(server);
-					await setTimeout(200);
+					// Try again after a random amount of time to avoid further collisions
+					await setTimeout(200 + Math.random() * 100);
+				} else {
+					this.log.logWithLevel(
+						LogLevel.ERROR,
+						`Failed to start inspector proxy server: ${e}`
+					);
+					throw e;
 				}
-				this.log.logWithLevel(
-					LogLevel.ERROR,
-					`Failed to start inspector proxy server: ${e}`
-				);
-				throw e;
 			}
-			return listening;
 		}
 	}
 
