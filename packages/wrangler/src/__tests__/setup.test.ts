@@ -47,6 +47,10 @@ describe("wrangler setup", () => {
 
 		// autoconfig should _not_ have been run
 		expect(runSpy).not.toHaveBeenCalled();
+
+		expect(std.out).toContain(
+			"🎉 Your project is already setup to deploy to Cloudflare"
+		);
 	});
 
 	test("should run autoconfig when project is not configured", async () => {
@@ -63,5 +67,9 @@ describe("wrangler setup", () => {
 
 		// autoconfig should have been run
 		expect(runSpy).toHaveBeenCalled();
+
+		expect(std.out).toContain(
+			"🎉 Your project is now setup to deploy to Cloudflare"
+		);
 	});
 });
