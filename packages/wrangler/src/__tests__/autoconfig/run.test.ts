@@ -191,7 +191,7 @@ describe("autoconfig (deploy)", () => {
 				    }
 				  }
 
-				🛠️  Configuring project for
+				🛠️  Configuring project for Fake
 
 				[build] Running: echo 'built' > build.txt"
 			`);
