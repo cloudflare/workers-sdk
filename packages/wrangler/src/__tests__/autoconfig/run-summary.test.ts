@@ -1,4 +1,5 @@
 import { describe, expect } from "vitest";
+import { Astro } from "../../autoconfig/frameworks/astro";
 import { Static } from "../../autoconfig/frameworks/static";
 import { buildAndConfirmOperationsSummary } from "../../autoconfig/run";
 import { dedent } from "../../utils/dedent";
@@ -145,17 +146,21 @@ describe("autoconfig run - buildAndConfirmOperationsSummary()", () => {
 				{
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
-					framework: {
-						name: "astro",
-						configured: false,
-						configure: () => ({}),
-					},
+					framework: new Astro(),
 					configured: false,
 				},
 				testRawConfig
 			);
 
-			expect(std.out).toContain("🛠️  Run Configuration For Astro");
+			const astroConfigurationLog = "🛠️  Run Configuration For Astro";
+			expect(std.out).toContain(astroConfigurationLog);
+			expect(std.out.slice(std.out.indexOf(astroConfigurationLog)))
+				.toMatchInlineSnapshot(`
+				"🛠️  Run Configuration For Astro
+				  - Run \`astro add cloudflare\`
+				  - Create \`public/.assetsignore\` file
+				"
+			`);
 		});
 
 		test("doesn't show the framework specific configuration step for the Static framework", async () => {
