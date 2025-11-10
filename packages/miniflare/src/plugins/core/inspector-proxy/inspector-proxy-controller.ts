@@ -22,7 +22,17 @@ export class InspectorProxyController {
 
 	#server: Promise<Server>;
 
-	#inspectorPort = new DeferredPromise<number>();
+	async #getInspectorPort() {
+		const server = await this.#server;
+		const address = server.address();
+		if (address && typeof address !== "string") {
+			return address.port;
+		} else {
+			throw new Error(
+				`Unable to acquire a port to listen on - address: "${address}"`
+			);
+		}
+	}
 
 	constructor(
 		private inspectorPortOption: number,
@@ -57,7 +67,6 @@ export class InspectorProxyController {
 	}
 
 	async #restartServer() {
-		this.#inspectorPort = new DeferredPromise();
 		const server = await this.#server;
 		await this.#closeServer(server);
 		await this.#startListening(server);
@@ -70,23 +79,9 @@ export class InspectorProxyController {
 	 */
 	async #startListening(server: Server): Promise<void> {
 		this.log.debug("Trying to listen on port: " + this.inspectorPortOption);
-		// We await here to ensure that if it rejects we throw and try again
-		// without resolving the `listening` promise incorrectly.
-		return await new Promise<void>((resolve, reject) => {
-			server.once("error", (err) => reject(err));
-			server.listen(this.inspectorPortOption, () => {
-				const address = server.address();
-				if (address && typeof address !== "string") {
-					this.#inspectorPort.resolve(address.port);
-					resolve();
-				} else {
-					reject(
-						new Error(
-							`Unable to acquire a port to listen on - address: "${address}"`
-						)
-					);
-				}
-			});
+		return new Promise<void>((resolve, reject) => {
+			server.once("error", reject);
+			server.listen(this.inspectorPortOption, resolve);
 		});
 	}
 
@@ -252,7 +247,7 @@ export class InspectorProxyController {
 	}
 
 	async getInspectorURL(): Promise<URL> {
-		return getWebsocketURL(await this.#inspectorPort);
+		return getWebsocketURL(await this.#getInspectorPort());
 	}
 
 	async updateConnection(
