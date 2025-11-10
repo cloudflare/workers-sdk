@@ -53,14 +53,6 @@ export async function runAutoConfig(
 
 	autoConfigDetails = updatedAutoConfigDetails;
 
-	const deploy = await confirm(
-		"Do you want to proceed with the deployment using these settings?"
-	);
-
-	if (!deploy) {
-		throw new FatalError("Deployment aborted");
-	}
-
 	if (!autoConfigDetails.outputDir) {
 		throw new FatalError("Cannot deploy project without an output directory");
 	}

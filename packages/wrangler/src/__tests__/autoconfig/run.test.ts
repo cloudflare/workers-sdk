@@ -145,10 +145,6 @@ describe("autoconfig (deploy)", () => {
 				result: false,
 			});
 			mockConfirm({
-				text: "Do you want to proceed with the deployment using these settings?",
-				result: true,
-			});
-			mockConfirm({
 				text: "Proceed with setup?",
 				result: true,
 			});
@@ -253,10 +249,6 @@ describe("autoconfig (deploy)", () => {
 				result: "dist",
 			});
 			mockConfirm({
-				text: "Do you want to proceed with the deployment using these settings?",
-				result: true,
-			});
-			mockConfirm({
 				text: "Proceed with setup?",
 				result: true,
 			});
@@ -313,10 +305,6 @@ describe("autoconfig (deploy)", () => {
 			mockConfirm({
 				text: "Do you want to modify these settings?",
 				result: false,
-			});
-			mockConfirm({
-				text: "Do you want to proceed with the deployment using these settings?",
-				result: true,
 			});
 			mockConfirm({
 				text: "Proceed with setup?",
