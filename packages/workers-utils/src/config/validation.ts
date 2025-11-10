@@ -1524,7 +1524,7 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"unsafe",
-			validateUnsafeSettings(envName),
+			validateUnsafeSettings(envName, rawEnv),
 			{}
 		),
 		browser: notInheritable(
@@ -2035,7 +2035,7 @@ const validateBindingsProperty =
 	};
 
 const validateUnsafeSettings =
-	(envName: string): ValidatorFn =>
+	(envName: string, rawConfig: RawEnvironment | undefined): ValidatorFn =>
 	(diagnostics, field, value, config) => {
 		const fieldPath =
 			config === undefined ? `${field}` : `env.${envName}.${field}`;
@@ -2075,6 +2075,42 @@ const validateUnsafeSettings =
 				)}.`
 			);
 			return false;
+		}
+
+		// unsafe.containers
+		if (hasProperty(value, "containers") && value.containers !== undefined) {
+			if (!Array.isArray(value.containers)) {
+				diagnostics.errors.push(
+					`The field "${fieldPath}.containers" should be an array but got ${JSON.stringify(
+						value.containers
+					)}.`
+				);
+				return false;
+			}
+			if (rawConfig?.containers === undefined) {
+				diagnostics.errors.push(
+					`No 'safe' container configurations found in the top-level "containers" field. unsafe.containers should only contain configuration that is not available in the public option.`
+				);
+				return false;
+			}
+			const validClassNames = new Set(rawConfig?.containers.map((c) => c.name));
+			let valid = true;
+			for (const container of value.containers) {
+				if (!("name" in container)) {
+					diagnostics.errors.push(
+						`Each container in "${fieldPath}.containers" should have a "name" property that corresponds to the 'safe' container configuration.`
+					);
+					valid = false;
+				} else if (!validClassNames.has(container.name)) {
+					diagnostics.errors.push(
+						`The field "${fieldPath}.containers.name" has value "${container.name}" which does not correspond to any 'safe' container configuration found in the top-level "containers" field.`
+					);
+					valid = false;
+				}
+			}
+			if (!valid) {
+				return false;
+			}
 		}
 
 		// unsafe.capnp
@@ -2139,6 +2175,7 @@ const validateUnsafeSettings =
 			"bindings",
 			"metadata",
 			"capnp",
+			"containers",
 		]);
 
 		return true;

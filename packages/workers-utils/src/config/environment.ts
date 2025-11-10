@@ -79,6 +79,7 @@ type UnsafeBinding = {
 	[key: string]: unknown;
 };
 
+type UnsafeContainerApp = { name: string } & Record<string, unknown>;
 /**
  * Configuration for a container application
  */
@@ -1079,6 +1080,14 @@ export interface EnvironmentNonInheritable {
 			[key: string]: unknown;
 		};
 
+		/**
+		 * Arbitrary container configuration that will be MERGED with the 'safe' container configuration.
+		 * and then passed to the API. Refer to internal documentation to see what fields are supported.
+		 * The class_name field needs to match a container class_name in the 'safe' configuration,
+		 * so that we can match up which container to apply the unsafe configuration to.
+		 * All other fields do not need to be duplicated.
+		 */
+		containers?: UnsafeContainerApp[];
 		/**
 		 * Used for internal capnp uploads for the Workers runtime
 		 */

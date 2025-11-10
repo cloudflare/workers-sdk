@@ -4796,6 +4796,119 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		it("should error if unsafe.containers is specified without top-level containers", () => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					unsafe: {
+						containers: [
+							{ class_name: "TestContainer", custom_field: "value" },
+						],
+					},
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+		                  "Processing wrangler configuration:
+		                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+	              `);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+		                  "Processing wrangler configuration:
+		                    - No 'safe' container configurations found in the top-level \\"containers\\" field. unsafe.containers should only contain configuration that is not available in the public option."
+	              `);
+		});
+
+		it("should error if unsafe.containers entry is missing name", () => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					containers: [
+						{
+							name: "test-container",
+							class_name: "TestContainer",
+							image: "registry.cloudflare.com/test:image",
+						},
+					],
+					unsafe: {
+						containers: [{ custom_field: "value" }],
+					},
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+		                  "Processing wrangler configuration:
+		                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+	              `);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - Each container in \\"unsafe.containers\\" should have a \\"name\\" property that corresponds to the 'safe' container configuration."
+			`);
+		});
+
+		it("should error if unsafe.containers name doesn't match any safe container", () => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					containers: [
+						{
+							name: "test-container",
+							class_name: "TestContainer",
+							image: "registry.cloudflare.com/test:image",
+						},
+					],
+					unsafe: {
+						containers: [
+							{ name: "NonExistentContainer", custom_field: "value" },
+						],
+					},
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+		                  "Processing wrangler configuration:
+		                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+	              `);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - The field \\"unsafe.containers.name\\" has value \\"NonExistentContainer\\" which does not correspond to any 'safe' container configuration found in the top-level \\"containers\\" field."
+			`);
+		});
+
+		it("should not error if unsafe.containers is valid", () => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					containers: [
+						{
+							name: "test-container",
+							class_name: "TestContainer",
+							image: "registry.cloudflare.com/test:image",
+						},
+					],
+					unsafe: {
+						containers: [{ name: "test-container", custom_field: "value" }],
+					},
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+		                  "Processing wrangler configuration:
+		                    - \\"unsafe\\" fields are experimental and may change or break at any time."
+	              `);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				"
+			`);
+		});
+
 		describe("[placement]", () => {
 			it(`should error if placement hint is set with placement mode "off"`, () => {
 				const { diagnostics } = normalizeAndValidateConfig(
