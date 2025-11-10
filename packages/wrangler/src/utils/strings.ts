@@ -1,5 +1,5 @@
 /**
- * Converts the first latter of a string to uppercase
+ * Converts the first letter of a string to uppercase
  *
  * @param str The input string
  * @returns The capitalized string
