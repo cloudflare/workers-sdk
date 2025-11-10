@@ -221,7 +221,6 @@ export function createWorkerEntrypointWrapper(
 	}
 
 	for (const key of WORKER_ENTRYPOINT_KEYS) {
-		// @ts-expect-error tailStream is not in the Worker Entrypoint types yet
 		Wrapper.prototype[key] = async function (arg) {
 			return maybeCaptureError({ isEntryWorker, exportName, key }, async () => {
 				if (key === "fetch") {
@@ -287,7 +286,7 @@ export function createWorkerEntrypointWrapper(
 							`Expected "${exportName}" export of "${workerEntryPath}" to be a subclass of \`WorkerEntrypoint\`.`
 						);
 					}
-					// @ts-expect-error tailStream is not in the Worker Entrypoint types yet
+
 					const maybeFn = instance[key];
 
 					if (typeof maybeFn !== "function") {

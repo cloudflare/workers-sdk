@@ -8679,7 +8679,7 @@ addEventListener('fetch', event => {});`
 				Your Worker is sending Tail events to the following Workers:
 				- listener
 				- test-listener
-				- stream-listener (streaming)
+				- stream-listener  (streaming)
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
