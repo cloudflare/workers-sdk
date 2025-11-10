@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import { Miniflare } from "miniflare";
+import { getInitialWorkerNameToExportTypesMap } from "./export-types";
 import { debuglog } from "./utils";
 import type { ExportTypes } from "./export-types";
 import type { NodeJsCompat } from "./nodejs-compat";
@@ -86,13 +87,11 @@ export class PluginContext {
 
 	get workerNameToExportTypesMap(): Map<string, ExportTypes> {
 		if (!this.#sharedContext.workerNameToExportTypesMap) {
-			this.#sharedContext.workerNameToExportTypesMap = new Map(
-				this.resolvedPluginConfig.type === "workers"
-					? [
-							...this.resolvedPluginConfig.environmentNameToWorkerMap.values(),
-						].map((worker) => [worker.config.name, {}])
-					: []
-			);
+			if (this.resolvedPluginConfig.type !== "workers") {
+				return new Map();
+			}
+
+			return getInitialWorkerNameToExportTypesMap(this.resolvedPluginConfig);
 		}
 
 		return this.#sharedContext.workerNameToExportTypesMap;

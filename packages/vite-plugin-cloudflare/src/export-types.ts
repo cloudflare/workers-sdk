@@ -1,7 +1,8 @@
 import assert from "node:assert";
+import { unstable_getDurableObjectClassNameToUseSQLiteMap } from "wrangler";
 import { debuglog } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
-import type { WorkersResolvedConfig } from "./plugin-config";
+import type { Worker, WorkersResolvedConfig } from "./plugin-config";
 import type { Miniflare } from "miniflare";
 import type * as vite from "vite";
 
@@ -9,6 +10,144 @@ export type ExportTypes = Record<
 	string,
 	"DurableObject" | "WorkerEntrypoint" | "WorkflowEntrypoint"
 >;
+
+function getWorkerNameToWorkerEntrypointExportsMap(
+	workers: Worker[]
+): Map<string, Set<string>> {
+	const workerNameToWorkerEntrypointExportsMap = new Map(
+		workers.map((worker) => [worker.config.name, new Set<string>()])
+	);
+
+	for (const worker of workers) {
+		for (const value of worker.config.services ?? []) {
+			if (value.entrypoint !== undefined && value.entrypoint !== "default") {
+				const exportNames = workerNameToWorkerEntrypointExportsMap.get(
+					value.service
+				);
+
+				exportNames?.add(value.entrypoint);
+			}
+		}
+	}
+
+	return workerNameToWorkerEntrypointExportsMap;
+}
+
+function getWorkerNameToDurableObjectExportsMap(
+	workers: Worker[]
+): Map<string, Set<string>> {
+	const workerNameToDurableObjectExportsMap = new Map(
+		workers.map((worker) => [
+			worker.config.name,
+			new Set(
+				unstable_getDurableObjectClassNameToUseSQLiteMap(
+					worker.config.migrations
+				).keys()
+			),
+		])
+	);
+
+	for (const worker of workers) {
+		for (const value of worker.config.durable_objects.bindings) {
+			if (value.script_name) {
+				const exportNames = workerNameToDurableObjectExportsMap.get(
+					value.script_name
+				);
+
+				exportNames?.add(value.class_name);
+			} else {
+				const exportNames = workerNameToDurableObjectExportsMap.get(
+					worker.config.name
+				);
+
+				exportNames?.add(value.class_name);
+			}
+		}
+	}
+
+	return workerNameToDurableObjectExportsMap;
+}
+
+function getWorkerNameToWorkflowEntrypointExportsMap(
+	workers: Worker[]
+): Map<string, Set<string>> {
+	const workerNameToWorkflowEntrypointExportsMap = new Map(
+		workers.map((worker) => [worker.config.name, new Set<string>()])
+	);
+
+	for (const worker of workers) {
+		for (const value of worker.config.workflows) {
+			if (value.script_name) {
+				const exportNames = workerNameToWorkflowEntrypointExportsMap.get(
+					value.script_name
+				);
+
+				exportNames?.add(value.class_name);
+			} else {
+				const exportNames = workerNameToWorkflowEntrypointExportsMap.get(
+					worker.config.name
+				);
+
+				exportNames?.add(value.class_name);
+			}
+		}
+	}
+
+	return workerNameToWorkflowEntrypointExportsMap;
+}
+
+/**
+ * Derives initial export types for all Workers from the Worker config files and returns them in a Map
+ */
+export function getInitialWorkerNameToExportTypesMap(
+	resolvedPluginConfig: WorkersResolvedConfig
+): Map<string, ExportTypes> {
+	const workers = [...resolvedPluginConfig.environmentNameToWorkerMap.values()];
+	const workerNameToWorkerEntrypointExportsMap =
+		getWorkerNameToWorkerEntrypointExportsMap(workers);
+	const workerNameToDurableObjectExportsMap =
+		getWorkerNameToDurableObjectExportsMap(workers);
+	const workerNameToWorkflowEntrypointExportsMap =
+		getWorkerNameToWorkflowEntrypointExportsMap(workers);
+
+	return new Map(
+		workers.map((worker) => {
+			const workerEntrypointExports =
+				workerNameToWorkerEntrypointExportsMap.get(worker.config.name);
+			assert(
+				workerEntrypointExports,
+				`WorkerEntrypoint exports not found for Worker "${worker.config.name}"`
+			);
+			const durableObjectExports = workerNameToDurableObjectExportsMap.get(
+				worker.config.name
+			);
+			assert(
+				durableObjectExports,
+				`DurableObject exports not found for Worker "${worker.config.name}"`
+			);
+			const workflowEntrypointExports =
+				workerNameToWorkflowEntrypointExportsMap.get(worker.config.name);
+			assert(
+				workflowEntrypointExports,
+				`WorkflowEntrypoint exports not found for Worker "${worker.config.name}"`
+			);
+
+			const exportTypes: ExportTypes = Object.fromEntries([
+				...[...workerEntrypointExports].map(
+					(exportName) => [exportName, "WorkerEntrypoint"] as const
+				),
+				...[...durableObjectExports].map(
+					(exportName) => [exportName, "DurableObject"] as const
+				),
+				...[...workflowEntrypointExports].map(
+					(exportName) => [exportName, "WorkflowEntrypoint"] as const
+				),
+			]);
+
+			return [worker.config.name, exportTypes];
+		})
+	);
+}
 
 /**
  * Fetches the export types for all Workers and returns them in a Map

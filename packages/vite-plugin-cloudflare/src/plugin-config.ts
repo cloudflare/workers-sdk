@@ -55,7 +55,7 @@ export interface WorkerConfig extends AssetsOnlyConfig {
 	main: Defined<SanitizedWorkerConfig["main"]>;
 }
 
-interface Worker {
+export interface Worker {
 	config: WorkerConfig;
 	nodeJsCompat: NodeJsCompat | undefined;
 }
