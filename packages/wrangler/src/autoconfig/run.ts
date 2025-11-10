@@ -162,11 +162,7 @@ export async function runAutoConfig(
 }
 
 function usesTypescript(projectPath: string) {
-	return hasTsConfig(projectPath);
-}
-
-function hasTsConfig(path: string) {
-	return existsSync(join(`${path}`, `tsconfig.json`));
+	return existsSync(join(projectPath, `tsconfig.json`));
 }
 
 type PackageToInstall = {
