@@ -73,7 +73,7 @@ jobs:
       cancel-in-progress: true
 
     name: "Checks"
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -112,7 +112,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-24.04-arm
+          - os: ubuntu-latest
             os_name: Linux
             filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*"'
           - os: macos-latest
