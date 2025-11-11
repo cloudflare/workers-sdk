@@ -26,7 +26,6 @@ import {
 } from "@cloudflare/workers-utils";
 import { promiseSpinner } from "../cloudchamber/common";
 import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
-import { logger } from "../logger";
 import { getAccountId } from "../user";
 import { Diff } from "../utils/diff";
 import {
