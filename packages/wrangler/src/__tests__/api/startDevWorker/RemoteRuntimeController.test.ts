@@ -1,5 +1,4 @@
 import events from "node:events";
-import { CfWorkerInit } from "@cloudflare/workers-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
 import {
@@ -19,11 +18,11 @@ import { getAccessToken } from "../../../user/access";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { useTeardown } from "../../helpers/teardown";
 import type {
-	Binding,
 	Bundle,
 	PreviewTokenExpiredEvent,
 	StartDevWorkerOptions,
 } from "../../../api";
+import type { CfWorkerInit } from "@cloudflare/workers-utils";
 
 // Mock the API modules
 vi.mock("../../../dev/create-worker-preview", () => ({
@@ -101,10 +100,8 @@ describe("RemoteRuntimeController", () => {
 	mockConsoleMethods();
 	const teardown = useTeardown();
 
-	let controller: RemoteRuntimeController;
-
 	function setup() {
-		controller = new RemoteRuntimeController();
+		const controller = new RemoteRuntimeController();
 		teardown(() => controller.teardown());
 		return controller;
 	}
