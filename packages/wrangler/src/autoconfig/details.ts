@@ -298,14 +298,16 @@ export async function confirmAutoConfigDetails(
 
 	updatedAutoConfigDetails.outputDir = outputDir;
 
-	const buildCommand = await prompt(
-		"What is your application's build command?",
-		{
-			defaultValue: autoConfigDetails.buildCommand ?? "",
-		}
-	);
+	if (autoConfigDetails.buildCommand || autoConfigDetails.packageJson) {
+		const buildCommand = await prompt(
+			"What is your application's build command?",
+			{
+				defaultValue: autoConfigDetails.buildCommand ?? "",
+			}
+		);
 
-	updatedAutoConfigDetails.buildCommand = buildCommand;
+		updatedAutoConfigDetails.buildCommand = buildCommand;
+	}
 
 	return updatedAutoConfigDetails;
 }
