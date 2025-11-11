@@ -26,7 +26,7 @@ jobs:
       cancel-in-progress: true
 
     name: "Checks"
-    runs-on: ubuntu-24.04-arm
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
@@ -95,7 +95,7 @@ jobs:
             node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --summarize'
           # needs to run on the amd runners to allow containers test to work in CI
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
             description: Linux
             node_version: 20.19.1
             # ./tools _only_ runs here because they're only intended to run in CI
@@ -106,13 +106,13 @@ jobs:
             node_version: 20.19.1
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
           # needs to run on the amd runners to allow containers test to work in CI
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
             description: v22, Linux
             node_version: 22
             # Browser rendering is disabled here because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
             filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/browser-rendering"'
           # Skipped until we upgrade to undici v7, because of https://github.com/nodejs/undici/issues/4285
-          # - os: ubuntu-24.04
+          # - os: ubuntu-latest
           #   label: v24, Linux
           #   node_version: 24
           #   filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/interactive-dev-tests"'
