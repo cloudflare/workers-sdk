@@ -114,6 +114,7 @@ import {
 } from "./pages";
 import { pagesFunctionsBuildCommand } from "./pages/build";
 import { pagesFunctionsBuildEnvCommand } from "./pages/build-env";
+import { pagesDeploymentDeleteCommand } from "./pages/delete-deployment";
 import {
 	pagesDeployCommand,
 	pagesDeploymentCreateCommand,
@@ -1168,6 +1169,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler pages deployment create",
 			definition: pagesDeploymentCreateCommand,
+		},
+		{
+			command: "wrangler pages deployment delete",
+			definition: pagesDeploymentDeleteCommand,
 		},
 		{
 			command: "wrangler pages deployment tail",
