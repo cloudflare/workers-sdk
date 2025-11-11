@@ -277,7 +277,7 @@ export function normalizeAndValidateConfig(
 				const via =
 					args.env !== undefined
 						? "via the `--env/-e` CLI argument"
-						: "via the CLOUDFLARE_ENV variable";
+						: "via the CLOUDFLARE_ENV environment variable";
 				diagnostics.errors.push(dedent`
 			You have specified the environment "${envName}" ${via}.
 			But this does not match the target environment "${rawConfig.targetEnvironment}" flattened into the redirected config from the original configuration file.
