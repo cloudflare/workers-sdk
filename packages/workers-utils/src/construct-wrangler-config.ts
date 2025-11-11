@@ -32,7 +32,8 @@ interface APIWorkerConfig {
 	migration_tag?: string;
 
 	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/list/ */
-	domains: Cloudflare.Workers.Domain[] /* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/schedules/methods/get/ */;
+	domains: Cloudflare.Workers.Domain[];
+	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/schedules/methods/get/ */
 	schedules: Cloudflare.Workers.Scripts.Schedules.ScheduleGetResponse.Schedule[];
 
 	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/beta/subresources/workers/subresources/versions/methods/get/ using `{version_id}` of `latest` */
@@ -51,7 +52,11 @@ function convertWorkerToWranglerConfig(config: APIWorkerConfig): RawConfig {
 	const mappedBindings = mapWorkerMetadataBindings(config.bindings);
 
 	const durableObjectClassNames = config.bindings
-		.filter((binding) => binding.type === "durable_object_namespace")
+		.filter(
+			(binding) =>
+				binding.type === "durable_object_namespace" &&
+				binding.script_name === config.name
+		)
 		.map(
 			(durableObject) => (durableObject as { class_name: string }).class_name
 		);
@@ -138,7 +143,10 @@ export function constructWranglerConfig(
 			(t) => t === `${SERVICE_TAG_PREFIX}${workerName}`
 		);
 		const envTag = env.tags?.find((t) => t.startsWith(ENVIRONMENT_TAG_PREFIX));
-		if (serviceTag !== workerName || envTag === undefined) {
+		if (
+			serviceTag !== `${SERVICE_TAG_PREFIX}${workerName}` ||
+			envTag === undefined
+		) {
 			continue;
 		}
 		const [_, envName] = envTag.split("=");

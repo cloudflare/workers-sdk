@@ -13,6 +13,10 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "workers-devprod@cloudflare.com",
+	"exports": {
+		"browser": "./dist/browser.mjs",
+		"import": "./dist/index.mjs"
+	},
 	"main": "dist/index.mjs",
 	"types": "dist/index.d.mts",
 	"files": [
