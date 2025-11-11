@@ -59,13 +59,15 @@ class ProxyServer {
 			// Listen on a random port
 			await new Promise<void>((resolve, reject) => {
 				const server = http.createServer({
-					// Disable request timeout for long-lived WebSocket connections
-					// Node.js defaults to 300s (5 min) timeout, but empirically we've seen
-					// timeouts occurring around 90s for proxied WebSocket connections
-					requestTimeout: 0,
 					// There might be no HOST header when proxying a fetch request made over service binding
 					//  e.g. env.MY_WORKER.fetch("https://example.com")
 					requireHostHeader: false,
+					// Disable request and headers timeout for long-lived WebSocket connections
+					// Node.js's headersTimeout (default: min(60s, requestTimeout)) is checked periodically
+					// by connectionsCheckingInterval (default: 30s), causing timeouts around 60-90s.
+					// Setting both to 0 disables timeout enforcement for WebSocket proxying.
+					requestTimeout: 0,
+					headersTimeout: 0,
 				});
 
 				server.on("request", this.handleRequest.bind(this));
