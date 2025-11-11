@@ -284,8 +284,8 @@ export const deployCommand = createCommand({
 					try {
 						const stats = statSync(args.script, { throwIfNoEntry: false });
 						if (!stats) {
-							logger.warn(
-								`You have provided an invalid positional parameter: ${args.script}, no such file or directory exists, the argument will be ignored`
+							throw new UserError(
+								`You have provided an invalid positional parameter: "${args.script}", no such file or directory exists`
 							);
 						} else if (stats.isDirectory()) {
 							// Set assets directory for `wrangler deploy <directory>`
@@ -298,7 +298,7 @@ export const deployCommand = createCommand({
 						if (error instanceof UserError) {
 							throw error;
 						}
-						// If stat fails, let the original flow handle the error
+						// If statSync fails, let the original flow handle the error
 					}
 				}
 

@@ -3317,6 +3317,14 @@ addEventListener('fetch', event => {});`
 				vi.useRealTimers();
 			});
 
+			it("should error when running `wrangler deploy <path>` where <path> doesn't point to an existing file or directory (with `--x-autoconfig`)", async () => {
+				await expect(
+					runWrangler("deploy not_a_real_path --x-autoconfig")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: You have provided an invalid positional parameter: "not_a_real_path", no such file or directory exists]`
+				);
+			});
+
 			// TODO: remove this test once autoconfig goes GA and its experimental opt-in flag is removed
 			it("should handle `wrangler deploy <directory>`", async () => {
 				mockConfirm({
