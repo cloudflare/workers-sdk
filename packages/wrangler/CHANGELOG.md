@@ -1,5 +1,41 @@
 # wrangler
 
+## 4.47.0
+
+### Minor Changes
+
+- [#11201](https://github.com/cloudflare/workers-sdk/pull/11201) [`5286309`](https://github.com/cloudflare/workers-sdk/commit/52863090c3cb97d3cee10ede84420018305b6354) Thanks [@avenceslau](https://github.com/avenceslau)! - Add wrangler workflows instances restart command
+
+- [#11214](https://github.com/cloudflare/workers-sdk/pull/11214) [`5cf8a39`](https://github.com/cloudflare/workers-sdk/commit/5cf8a39ac2c2f806828b5e563a6e3b7d336c7794) Thanks [@penalosa](https://github.com/penalosa)! - Add the experimental `wrangler setup` command to run autoconfig outside of the deploy flow.
+
+- [#11187](https://github.com/cloudflare/workers-sdk/pull/11187) [`8abc789`](https://github.com/cloudflare/workers-sdk/commit/8abc7899bb1adb7a1315bf752b07cb8e6564ff56) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add possibility for users to edit their project settings during autoconfig
+
+  When running `wrangler deploy --experimental-autoconfig`, after the automatic project settings detection Wrangler will now present users the opportunity to customize the auto-detected project's settings
+
+### Patch Changes
+
+- [#11143](https://github.com/cloudflare/workers-sdk/pull/11143) [`2d16610`](https://github.com/cloudflare/workers-sdk/commit/2d16610e159e32b01b12d749c40505899ff324c6) Thanks [@FlorentCollin](https://github.com/FlorentCollin)! - Improve the formatting of the D1 execute command to always show the duration in milliseconds with two decimal places.
+
+- [#11178](https://github.com/cloudflare/workers-sdk/pull/11178) [`63defa2`](https://github.com/cloudflare/workers-sdk/commit/63defa28c825e77ab6c04d0d431ebaf1bd985069) Thanks [@ascorbic](https://github.com/ascorbic)! - Log a more helpful error when attempting to "r2 object put" a non-existent file
+
+- [#11199](https://github.com/cloudflare/workers-sdk/pull/11199) [`70d3d4a`](https://github.com/cloudflare/workers-sdk/commit/70d3d4a2f41df24785273f55bd4fb09904724e6b) Thanks [@penalosa](https://github.com/penalosa)! - Add telemetry to autoconfig
+
+- [#11186](https://github.com/cloudflare/workers-sdk/pull/11186) [`38396ed`](https://github.com/cloudflare/workers-sdk/commit/38396edc4754b8d86b07c7198d0478d73b86ef51) Thanks [@hoodmane](https://github.com/hoodmane)! - Removed warning when deploying a Python worker
+
+- [#11024](https://github.com/cloudflare/workers-sdk/pull/11024) [`cdcecfc`](https://github.com/cloudflare/workers-sdk/commit/cdcecfc3a9c8135c50d4f17ff73991f179036f6b) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Use the native `node:trace_events` module when available
+
+  It is enabled when the `enable_nodejs_trace_events_module` compatibility flag is set.
+
+- [#11195](https://github.com/cloudflare/workers-sdk/pull/11195) [`e85f965`](https://github.com/cloudflare/workers-sdk/commit/e85f965106eee43577fa05f18ea3cb55d538cbd4) Thanks [@ascorbic](https://github.com/ascorbic)! - Ignores `.dev.vars` if `--env-file` has been explicitly passed
+
+  Previously, `.dev.vars` would always be read first, and then any file passed with `--env-file` would override variables in `.dev.vars`. This meant there was no way to ignore `.dev.vars` if you wanted to use a different env file. Now, if `--env-file` is passed, `.dev.vars` will be ignored entirely.
+
+- [#11181](https://github.com/cloudflare/workers-sdk/pull/11181) [`88aa707`](https://github.com/cloudflare/workers-sdk/commit/88aa7071f888a9ccc84b8f2030b961c21769f0e3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add more logging around Wrangler authentication to help diagnose issues
+
+- Updated dependencies [[`dd7d584`](https://github.com/cloudflare/workers-sdk/commit/dd7d584cc9656896c3673b51f2589be967edee9b), [`4259256`](https://github.com/cloudflare/workers-sdk/commit/4259256e33445b5f2ae290a68795be9c1852d860), [`cdcecfc`](https://github.com/cloudflare/workers-sdk/commit/cdcecfc3a9c8135c50d4f17ff73991f179036f6b)]:
+  - miniflare@4.20251109.0
+  - @cloudflare/unenv-preset@2.7.10
+
 ## 4.46.0
 
 ### Minor Changes
