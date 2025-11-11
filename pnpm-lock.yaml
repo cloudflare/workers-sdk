@@ -6680,16 +6680,8 @@ packages:
     cpu: [arm64]
     os: [android]
 
-<<<<<<< HEAD
-  '@rolldown/binding-android-arm64@1.0.0-beta.47':
-    resolution: {integrity: sha512-vPP9/MZzESh9QtmvQYojXP/midjgkkc1E4AdnPPAzQXo668ncHJcVLKjJKzoBdsQmaIvNjrMdsCwES8vTQHRQw==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-android-arm64@1.0.0-beta.45':
-    resolution: {integrity: sha512-bfgKYhFiXJALeA/riil908+2vlyWGdwa7Ju5S+JgWZYdR4jtiPOGdM6WLfso1dojCh+4ZWeiTwPeV9IKQEX+4g==}
-=======
   '@rolldown/binding-android-arm64@1.0.0-beta.49':
     resolution: {integrity: sha512-xKQEOmqOet0vFHt/aqcoQGWvoDJhfSO8EBhuST0CDnxQRmnVzbI8keeeX62vi53ZyICKZxczyfx4A8dUY3dqKw==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [android]
@@ -6700,16 +6692,8 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
-<<<<<<< HEAD
-  '@rolldown/binding-darwin-arm64@1.0.0-beta.47':
-    resolution: {integrity: sha512-Lc3nrkxeaDVCVl8qR3qoxh6ltDZfkQ98j5vwIr5ALPkgjZtDK4BGCrrBoLpGVMg+csWcaqUbwbKwH5yvVa0oOw==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-darwin-arm64@1.0.0-beta.45':
-    resolution: {integrity: sha512-xjCv4CRVsSnnIxTuyH1RDJl5OEQ1c9JYOwfDAHddjJDxCw46ZX9q80+xq7Eok7KC4bRSZudMJllkvOKv0T9SeA==}
-=======
   '@rolldown/binding-darwin-arm64@1.0.0-beta.49':
     resolution: {integrity: sha512-kN0N/8m8HUYO13PqlIwxcXD7fu2E6GKu0J4iH7wUJw3T3QK+nvrc20rxtTZ0J6sA1sGCE8UYvvvnurDwMUp0dg==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [darwin]
@@ -6720,16 +6704,8 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-<<<<<<< HEAD
-  '@rolldown/binding-darwin-x64@1.0.0-beta.47':
-    resolution: {integrity: sha512-eBYxQDwP0O33plqNVqOtUHqRiSYVneAknviM5XMawke3mwMuVlAsohtOqEjbCEl/Loi/FWdVeks5WkqAkzkYWQ==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-darwin-x64@1.0.0-beta.45':
-    resolution: {integrity: sha512-ddcO9TD3D/CLUa/l8GO8LHzBOaZqWg5ClMy3jICoxwCuoz47h9dtqPsIeTiB6yR501LQTeDsjA4lIFd7u3Ljfw==}
-=======
   '@rolldown/binding-darwin-x64@1.0.0-beta.49':
     resolution: {integrity: sha512-29qmvsgY2A4ymfy8sQkFFOFc13m04SLUcYn1iil41gpkYrAspBLkvsOQMHPCs3rQCOImgweT4tFotqTAonwphQ==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [darwin]
@@ -6740,16 +6716,8 @@ packages:
     cpu: [x64]
     os: [freebsd]
 
-<<<<<<< HEAD
-  '@rolldown/binding-freebsd-x64@1.0.0-beta.47':
-    resolution: {integrity: sha512-Ns+kgp2+1Iq/44bY/Z30DETUSiHY7ZuqaOgD5bHVW++8vme9rdiWsN4yG4rRPXkdgzjvQ9TDHmZZKfY4/G11AA==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-freebsd-x64@1.0.0-beta.45':
-    resolution: {integrity: sha512-MBTWdrzW9w+UMYDUvnEuh0pQvLENkl2Sis15fHTfHVW7ClbGuez+RWopZudIDEGkpZXdeI4CkRXk+vdIIebrmg==}
-=======
   '@rolldown/binding-freebsd-x64@1.0.0-beta.49':
     resolution: {integrity: sha512-fY+esrHjgt6+RAnDPuUk39RvFNmYhJekGyC6wr0HWXGTBed07Feap9BrYINSh6x5xFlNpOPs6tImKnV0zVDuWQ==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [freebsd]
@@ -6760,16 +6728,8 @@ packages:
     cpu: [arm]
     os: [linux]
 
-<<<<<<< HEAD
-  '@rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.47':
-    resolution: {integrity: sha512-4PecgWCJhTA2EFOlptYJiNyVP2MrVP4cWdndpOu3WmXqWqZUmSubhb4YUAIxAxnXATlGjC1WjxNPhV7ZllNgdA==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.45':
-    resolution: {integrity: sha512-4YgoCFiki1HR6oSg+GxxfzfnVCesQxLF1LEnw9uXS/MpBmuog0EOO2rYfy69rWP4tFZL9IWp6KEfGZLrZ7aUog==}
-=======
   '@rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.49':
     resolution: {integrity: sha512-oQNAqB+XrRM2AZaSPyudQETsPhzCZqgPICQu80fJuNyBFYoz6nonNNZtm3BJ9uP+HZfUk9NfOn9vPoCNuk6gAw==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm]
     os: [linux]
@@ -6780,16 +6740,8 @@ packages:
     cpu: [arm64]
     os: [linux]
 
-<<<<<<< HEAD
-  '@rolldown/binding-linux-arm64-gnu@1.0.0-beta.47':
-    resolution: {integrity: sha512-CyIunZ6D9U9Xg94roQI1INt/bLkOpPsZjZZkiaAZ0r6uccQdICmC99M9RUPlMLw/qg4yEWLlQhG73W/mG437NA==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-linux-arm64-gnu@1.0.0-beta.45':
-    resolution: {integrity: sha512-LE1gjAwQRrbCOorJJ7LFr10s5vqYf5a00V5Ea9wXcT2+56n5YosJkcp8eQ12FxRBv2YX8dsdQJb+ZTtYJwb6XQ==}
-=======
   '@rolldown/binding-linux-arm64-gnu@1.0.0-beta.49':
     resolution: {integrity: sha512-bJinAiuWUJvlBxPa8ZmRnWkmmAoUlSWtZT4pRkWi/QX3HlgHfUUbhF+d7aZLciai+iFfbiPqOwCL2tqNXXrUsA==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
@@ -6800,16 +6752,8 @@ packages:
     cpu: [arm64]
     os: [linux]
 
-<<<<<<< HEAD
-  '@rolldown/binding-linux-arm64-musl@1.0.0-beta.47':
-    resolution: {integrity: sha512-doozc/Goe7qRCSnzfJbFINTHsMktqmZQmweull6hsZZ9sjNWQ6BWQnbvOlfZJe4xE5NxM1NhPnY5Giqnl3ZrYQ==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-linux-arm64-musl@1.0.0-beta.45':
-    resolution: {integrity: sha512-tdy8ThO/fPp40B81v0YK3QC+KODOmzJzSUOO37DinQxzlTJ026gqUSOM8tzlVixRbQJltgVDCTYF8HNPRErQTA==}
-=======
   '@rolldown/binding-linux-arm64-musl@1.0.0-beta.49':
     resolution: {integrity: sha512-gwueY8EJU7afq5tNwKSjYy5JqTR/0MNzZfv6s5dX+rMgeUpTNhwIToLO1F41TPYEa+6LRTXUWG23DO/ONPzUJA==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
@@ -6820,16 +6764,8 @@ packages:
     cpu: [x64]
     os: [linux]
 
-<<<<<<< HEAD
-  '@rolldown/binding-linux-x64-gnu@1.0.0-beta.47':
-    resolution: {integrity: sha512-fodvSMf6Aqwa0wEUSTPewmmZOD44rc5Tpr5p9NkwQ6W1SSpUKzD3SwpJIgANDOhwiYhDuiIaYPGB7Ujkx1q0UQ==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-linux-x64-gnu@1.0.0-beta.45':
-    resolution: {integrity: sha512-lS082ROBWdmOyVY/0YB3JmsiClaWoxvC+dA8/rbhyB9VLkvVEaihLEOr4CYmrMse151C4+S6hCw6oa1iewox7g==}
-=======
   '@rolldown/binding-linux-x64-gnu@1.0.0-beta.49':
     resolution: {integrity: sha512-VXYkjzzEZh5N5Ue1IEcBgL8RuJu5jWrIKmg8WY6hhCbnNJ1IOsObT4HFW+rE8ZaKNjoIXzImoiYi1UAkKiQRYA==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
@@ -6840,16 +6776,8 @@ packages:
     cpu: [x64]
     os: [linux]
 
-<<<<<<< HEAD
-  '@rolldown/binding-linux-x64-musl@1.0.0-beta.47':
-    resolution: {integrity: sha512-Rxm5hYc0mGjwLh5sjlGmMygxAaV2gnsx7CNm2lsb47oyt5UQyPDZf3GP/ct8BEcwuikdqzsrrlIp8+kCSvMFNQ==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-linux-x64-musl@1.0.0-beta.45':
-    resolution: {integrity: sha512-Hi73aYY0cBkr1/SvNQqH8Cd+rSV6S9RB5izCv0ySBcRnd/Wfn5plguUoGYwBnhHgFbh6cPw9m2dUVBR6BG1gxA==}
-=======
   '@rolldown/binding-linux-x64-musl@1.0.0-beta.49':
     resolution: {integrity: sha512-S5Yw6g/ftiW7MpNpnOM5vSIlDzGuohDY8y7VOI47+92HhO6WqsNfcMkDZXm3G5l6YIfUNStGBV86NWrzasp+sw==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
@@ -6860,16 +6788,8 @@ packages:
     cpu: [arm64]
     os: [openharmony]
 
-<<<<<<< HEAD
-  '@rolldown/binding-openharmony-arm64@1.0.0-beta.47':
-    resolution: {integrity: sha512-YakuVe+Gc87jjxazBL34hbr8RJpRuFBhun7NEqoChVDlH5FLhLXjAPHqZd990TVGVNkemourf817Z8u2fONS8w==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-openharmony-arm64@1.0.0-beta.45':
-    resolution: {integrity: sha512-fljEqbO7RHHogNDxYtTzr+GNjlfOx21RUyGmF+NrkebZ8emYYiIqzPxsaMZuRx0rgZmVmliOzEp86/CQFDKhJQ==}
-=======
   '@rolldown/binding-openharmony-arm64@1.0.0-beta.49':
     resolution: {integrity: sha512-bhRoMO2oP46W1UDd/PTrSdoIYfvLS2jiFAned0SOzOO0tcait9u+b9i8h4ZugbT2IK4qUXNezovbHJs7hKJOEQ==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [openharmony]
@@ -6879,16 +6799,8 @@ packages:
     engines: {node: '>=14.0.0'}
     cpu: [wasm32]
 
-<<<<<<< HEAD
-  '@rolldown/binding-wasm32-wasi@1.0.0-beta.47':
-    resolution: {integrity: sha512-ak2GvTFQz3UAOw8cuQq8pWE+TNygQB6O47rMhvevvTzETh7VkHRFtRUwJynX5hwzFvQMP6G0az5JrBGuwaMwYQ==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-wasm32-wasi@1.0.0-beta.45':
-    resolution: {integrity: sha512-ZJDB7lkuZE9XUnWQSYrBObZxczut+8FZ5pdanm8nNS1DAo8zsrPuvGwn+U3fwU98WaiFsNrA4XHngesCGr8tEQ==}
-=======
   '@rolldown/binding-wasm32-wasi@1.0.0-beta.49':
     resolution: {integrity: sha512-Owp6Y1RQ84UMOV8hrg5e1Fmu8Po1IUXWytAHUtPcc00+ty6Gr9g5GgLLw0oblu7QovBr4848ozvkMcEj3vDKgA==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: '>=14.0.0'}
     cpu: [wasm32]
 
@@ -6898,16 +6810,8 @@ packages:
     cpu: [arm64]
     os: [win32]
 
-<<<<<<< HEAD
-  '@rolldown/binding-win32-arm64-msvc@1.0.0-beta.47':
-    resolution: {integrity: sha512-o5BpmBnXU+Cj+9+ndMcdKjhZlPb79dVPBZnWwMnI4RlNSSq5yOvFZqvfPYbyacvnW03Na4n5XXQAPhu3RydZ0w==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-win32-arm64-msvc@1.0.0-beta.45':
-    resolution: {integrity: sha512-zyzAjItHPUmxg6Z8SyRhLdXlJn3/D9KL5b9mObUrBHhWS/GwRH4665xCiFqeuktAhhWutqfc+rOV2LjK4VYQGQ==}
-=======
   '@rolldown/binding-win32-arm64-msvc@1.0.0-beta.49':
     resolution: {integrity: sha512-dnheX8aXsN9P12uwPOW3TVvqSnQ1cfjKQlYgU2dTkrRpnco0kTGvqE1nEWybGukTyuPdzVvrGElgSGEJ7crcSQ==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [win32]
@@ -6918,16 +6822,8 @@ packages:
     cpu: [ia32]
     os: [win32]
 
-<<<<<<< HEAD
-  '@rolldown/binding-win32-ia32-msvc@1.0.0-beta.47':
-    resolution: {integrity: sha512-FVOmfyYehNE92IfC9Kgs913UerDog2M1m+FADJypKz0gmRg3UyTt4o1cZMCAl7MiR89JpM9jegNO1nXuP1w1vw==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-win32-ia32-msvc@1.0.0-beta.45':
-    resolution: {integrity: sha512-wODcGzlfxqS6D7BR0srkJk3drPwXYLu7jPHN27ce2c4PUnVVmJnp9mJzUQGT4LpmHmmVdMZ+P6hKvyTGBzc1CA==}
-=======
   '@rolldown/binding-win32-ia32-msvc@1.0.0-beta.49':
     resolution: {integrity: sha512-Blt1aODXiAuEdZBqHYXGJwVFlonXKkVEJy5hhxOgnAVi/0mzFNWDxc8qVlxl7dpQjQdboW/wXdgMHpTDfomicg==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [ia32]
     os: [win32]
@@ -6938,16 +6834,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-<<<<<<< HEAD
-  '@rolldown/binding-win32-x64-msvc@1.0.0-beta.47':
-    resolution: {integrity: sha512-by/70F13IUE101Bat0oeH8miwWX5mhMFPk1yjCdxoTNHTyTdLgb0THNaebRM6AP7Kz+O3O2qx87sruYuF5UxHg==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-win32-x64-msvc@1.0.0-beta.45':
-    resolution: {integrity: sha512-wiU40G1nQo9rtfvF9jLbl79lUgjfaD/LTyUEw2Wg/gdF5OhjzpKMVugZQngO+RNdwYaNj+Fs+kWBWfp4VXPMHA==}
-=======
   '@rolldown/binding-win32-x64-msvc@1.0.0-beta.49':
     resolution: {integrity: sha512-sSu4qUlL/62QJrR3P+Bd+EblD8tUpnovUz65qow3PA7YxH+f5NFDbCJMR1m5b8zBuVZwZIHfzbuawz+Vl34/xg==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [win32]
@@ -6955,16 +6843,8 @@ packages:
   '@rolldown/pluginutils@1.0.0-beta.44':
     resolution: {integrity: sha512-g6eW7Zwnr2c5RADIoqziHoVs6b3W5QTQ4+qbpfjbkMJ9x+8Og211VW/oot2dj9dVwaK/UyC6Yo+02gV+wWQVNg==}
 
-<<<<<<< HEAD
-  '@rolldown/pluginutils@1.0.0-beta.47':
-    resolution: {integrity: sha512-8QagwMH3kNCuzD8EWL8R2YPW5e4OrHNSAHRFDdmFqEwEaD/KcNKjVoumo+gP2vW5eKB2UPbM6vTYiGZX0ixLnw==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/pluginutils@1.0.0-beta.45':
-    resolution: {integrity: sha512-Le9ulGCrD8ggInzWw/k2J8QcbPz7eGIOWqfJ2L+1R0Opm7n6J37s2hiDWlh6LJN0Lk9L5sUzMvRHKW7UxBZsQA==}
-=======
   '@rolldown/pluginutils@1.0.0-beta.49':
     resolution: {integrity: sha512-HLlu3Qn3ePmNCbfehwKWXQMzX/2rzcL6Jmpo+Dl3xnq46TGMyJAgO+IsS8ka7IDLeD3wcoOhjJwxTdIdbrFhGw==}
->>>>>>> ad825ea0a (Address comments & add browser export)
 
   '@rollup/plugin-alias@5.1.1':
     resolution: {integrity: sha512-PR9zDb+rOzkRb2VD+EuKB7UC41vU5DIwZ5qqCpk0KJudcWAyi8rvYOhS7+L5aZCspw1stTViLgN5v6FF1p5cgQ==}
@@ -13057,16 +12937,8 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
-<<<<<<< HEAD
-  rolldown@1.0.0-beta.47:
-    resolution: {integrity: sha512-Mid74GckX1OeFAOYz9KuXeWYhq3xkXbMziYIC+ULVdUzPTG9y70OBSBQDQn9hQP8u/AfhuYw1R0BSg15nBI4Dg==}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  rolldown@1.0.0-beta.45:
-    resolution: {integrity: sha512-iMmuD72XXLf26Tqrv1cryNYLX6NNPLhZ3AmNkSf8+xda0H+yijjGJ+wVT9UdBUHOpKzq9RjKtQKRCWoEKQQBZQ==}
-=======
   rolldown@1.0.0-beta.49:
     resolution: {integrity: sha512-Bfmdn3ZqyCwi1LxG39KBrSlil9a/xnrOrAj+jqqN2YTR/WJIEOOfwNKgDALQvr0xlO9bG/i1C883KGd4nd7SrA==}
->>>>>>> ad825ea0a (Address comments & add browser export)
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
@@ -17445,121 +17317,61 @@ snapshots:
   '@rolldown/binding-android-arm64@1.0.0-beta.44':
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-android-arm64@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-android-arm64@1.0.0-beta.45':
-=======
   '@rolldown/binding-android-arm64@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     optional: true
 
   '@rolldown/binding-darwin-arm64@1.0.0-beta.44':
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-darwin-arm64@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-darwin-arm64@1.0.0-beta.45':
-=======
   '@rolldown/binding-darwin-arm64@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     optional: true
 
   '@rolldown/binding-darwin-x64@1.0.0-beta.44':
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-darwin-x64@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-darwin-x64@1.0.0-beta.45':
-=======
   '@rolldown/binding-darwin-x64@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     optional: true
 
   '@rolldown/binding-freebsd-x64@1.0.0-beta.44':
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-freebsd-x64@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-freebsd-x64@1.0.0-beta.45':
-=======
   '@rolldown/binding-freebsd-x64@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     optional: true
 
   '@rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.44':
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.45':
-=======
   '@rolldown/binding-linux-arm-gnueabihf@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     optional: true
 
   '@rolldown/binding-linux-arm64-gnu@1.0.0-beta.44':
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-linux-arm64-gnu@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-linux-arm64-gnu@1.0.0-beta.45':
-=======
   '@rolldown/binding-linux-arm64-gnu@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     optional: true
 
   '@rolldown/binding-linux-arm64-musl@1.0.0-beta.44':
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-linux-arm64-musl@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-linux-arm64-musl@1.0.0-beta.45':
-=======
   '@rolldown/binding-linux-arm64-musl@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     optional: true
 
   '@rolldown/binding-linux-x64-gnu@1.0.0-beta.44':
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-linux-x64-gnu@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-linux-x64-gnu@1.0.0-beta.45':
-=======
   '@rolldown/binding-linux-x64-gnu@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     optional: true
 
   '@rolldown/binding-linux-x64-musl@1.0.0-beta.44':
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-linux-x64-musl@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-linux-x64-musl@1.0.0-beta.45':
-=======
   '@rolldown/binding-linux-x64-musl@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     optional: true
 
   '@rolldown/binding-openharmony-arm64@1.0.0-beta.44':
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-openharmony-arm64@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-openharmony-arm64@1.0.0-beta.45':
-=======
   '@rolldown/binding-openharmony-arm64@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     optional: true
 
   '@rolldown/binding-wasm32-wasi@1.0.0-beta.44':
@@ -17567,13 +17379,7 @@ snapshots:
       '@napi-rs/wasm-runtime': 1.0.7
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-wasm32-wasi@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-wasm32-wasi@1.0.0-beta.45':
-=======
   '@rolldown/binding-wasm32-wasi@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     dependencies:
       '@napi-rs/wasm-runtime': 1.0.7
     optional: true
@@ -17581,48 +17387,24 @@ snapshots:
   '@rolldown/binding-win32-arm64-msvc@1.0.0-beta.44':
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-win32-arm64-msvc@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-win32-arm64-msvc@1.0.0-beta.45':
-=======
   '@rolldown/binding-win32-arm64-msvc@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     optional: true
 
   '@rolldown/binding-win32-ia32-msvc@1.0.0-beta.44':
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-win32-ia32-msvc@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-win32-ia32-msvc@1.0.0-beta.45':
-=======
   '@rolldown/binding-win32-ia32-msvc@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     optional: true
 
   '@rolldown/binding-win32-x64-msvc@1.0.0-beta.44':
     optional: true
 
-<<<<<<< HEAD
-  '@rolldown/binding-win32-x64-msvc@1.0.0-beta.47':
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/binding-win32-x64-msvc@1.0.0-beta.45':
-=======
   '@rolldown/binding-win32-x64-msvc@1.0.0-beta.49':
->>>>>>> ad825ea0a (Address comments & add browser export)
     optional: true
 
   '@rolldown/pluginutils@1.0.0-beta.44': {}
 
-<<<<<<< HEAD
-  '@rolldown/pluginutils@1.0.0-beta.47': {}
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  '@rolldown/pluginutils@1.0.0-beta.45': {}
-=======
   '@rolldown/pluginutils@1.0.0-beta.49': {}
->>>>>>> ad825ea0a (Address comments & add browser export)
 
   '@rollup/plugin-alias@5.1.1(rollup@4.30.1)':
     optionalDependencies:
@@ -24409,13 +24191,7 @@ snapshots:
       - oxc-resolver
       - supports-color
 
-<<<<<<< HEAD
-  rolldown-plugin-dts@0.16.7(rolldown@1.0.0-beta.47)(typescript@5.8.3):
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  rolldown-plugin-dts@0.16.7(rolldown@1.0.0-beta.45)(typescript@5.8.3):
-=======
   rolldown-plugin-dts@0.16.7(rolldown@1.0.0-beta.49)(typescript@5.8.3):
->>>>>>> ad825ea0a (Address comments & add browser export)
     dependencies:
       '@babel/generator': 7.28.3
       '@babel/parser': 7.28.4
@@ -24426,13 +24202,7 @@ snapshots:
       dts-resolver: 2.1.2
       get-tsconfig: 4.10.1
       magic-string: 0.30.19
-<<<<<<< HEAD
-      rolldown: 1.0.0-beta.47
-||||||| parent of ad825ea0a (Address comments & add browser export)
-      rolldown: 1.0.0-beta.45
-=======
       rolldown: 1.0.0-beta.49
->>>>>>> ad825ea0a (Address comments & add browser export)
     optionalDependencies:
       typescript: 5.8.3
     transitivePeerDependencies:
@@ -24475,56 +24245,11 @@ snapshots:
       '@rolldown/binding-win32-ia32-msvc': 1.0.0-beta.44
       '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.44
 
-<<<<<<< HEAD
-  rolldown@1.0.0-beta.47:
-||||||| parent of ad825ea0a (Address comments & add browser export)
-  rolldown@1.0.0-beta.45:
-=======
   rolldown@1.0.0-beta.49:
->>>>>>> ad825ea0a (Address comments & add browser export)
     dependencies:
-<<<<<<< HEAD
-      '@oxc-project/types': 0.96.0
-      '@rolldown/pluginutils': 1.0.0-beta.47
-||||||| parent of ad825ea0a (Address comments & add browser export)
-      '@oxc-project/types': 0.95.0
-      '@rolldown/pluginutils': 1.0.0-beta.45
-=======
       '@oxc-project/types': 0.96.0
       '@rolldown/pluginutils': 1.0.0-beta.49
->>>>>>> ad825ea0a (Address comments & add browser export)
     optionalDependencies:
-<<<<<<< HEAD
-      '@rolldown/binding-android-arm64': 1.0.0-beta.47
-      '@rolldown/binding-darwin-arm64': 1.0.0-beta.47
-      '@rolldown/binding-darwin-x64': 1.0.0-beta.47
-      '@rolldown/binding-freebsd-x64': 1.0.0-beta.47
-      '@rolldown/binding-linux-arm-gnueabihf': 1.0.0-beta.47
-      '@rolldown/binding-linux-arm64-gnu': 1.0.0-beta.47
-      '@rolldown/binding-linux-arm64-musl': 1.0.0-beta.47
-      '@rolldown/binding-linux-x64-gnu': 1.0.0-beta.47
-      '@rolldown/binding-linux-x64-musl': 1.0.0-beta.47
-      '@rolldown/binding-openharmony-arm64': 1.0.0-beta.47
-      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.47
-      '@rolldown/binding-win32-arm64-msvc': 1.0.0-beta.47
-      '@rolldown/binding-win32-ia32-msvc': 1.0.0-beta.47
-      '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.47
-||||||| parent of ad825ea0a (Address comments & add browser export)
-      '@rolldown/binding-android-arm64': 1.0.0-beta.45
-      '@rolldown/binding-darwin-arm64': 1.0.0-beta.45
-      '@rolldown/binding-darwin-x64': 1.0.0-beta.45
-      '@rolldown/binding-freebsd-x64': 1.0.0-beta.45
-      '@rolldown/binding-linux-arm-gnueabihf': 1.0.0-beta.45
-      '@rolldown/binding-linux-arm64-gnu': 1.0.0-beta.45
-      '@rolldown/binding-linux-arm64-musl': 1.0.0-beta.45
-      '@rolldown/binding-linux-x64-gnu': 1.0.0-beta.45
-      '@rolldown/binding-linux-x64-musl': 1.0.0-beta.45
-      '@rolldown/binding-openharmony-arm64': 1.0.0-beta.45
-      '@rolldown/binding-wasm32-wasi': 1.0.0-beta.45
-      '@rolldown/binding-win32-arm64-msvc': 1.0.0-beta.45
-      '@rolldown/binding-win32-ia32-msvc': 1.0.0-beta.45
-      '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.45
-=======
       '@rolldown/binding-android-arm64': 1.0.0-beta.49
       '@rolldown/binding-darwin-arm64': 1.0.0-beta.49
       '@rolldown/binding-darwin-x64': 1.0.0-beta.49
@@ -24539,7 +24264,6 @@ snapshots:
       '@rolldown/binding-win32-arm64-msvc': 1.0.0-beta.49
       '@rolldown/binding-win32-ia32-msvc': 1.0.0-beta.49
       '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.49
->>>>>>> ad825ea0a (Address comments & add browser export)
 
   rollup-plugin-dts@6.1.1(rollup@4.30.1)(typescript@5.8.3):
     dependencies:
@@ -25480,16 +25204,8 @@ snapshots:
       diff: 8.0.2
       empathic: 2.0.0
       hookable: 5.5.3
-<<<<<<< HEAD
-      rolldown: 1.0.0-beta.47
-      rolldown-plugin-dts: 0.16.7(rolldown@1.0.0-beta.47)(typescript@5.8.3)
-||||||| parent of ad825ea0a (Address comments & add browser export)
-      rolldown: 1.0.0-beta.45
-      rolldown-plugin-dts: 0.16.7(rolldown@1.0.0-beta.45)(typescript@5.8.3)
-=======
       rolldown: 1.0.0-beta.49
       rolldown-plugin-dts: 0.16.7(rolldown@1.0.0-beta.49)(typescript@5.8.3)
->>>>>>> ad825ea0a (Address comments & add browser export)
       semver: 7.7.2
       tinyexec: 1.0.1
       tinyglobby: 0.2.15
