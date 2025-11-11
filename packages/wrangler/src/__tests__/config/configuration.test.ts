@@ -5051,7 +5051,7 @@ describe("normalizeAndValidateConfig()", () => {
 			);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 				"Processing redirected-config.jsonc configuration:
-				  - You have specified the environment \\"dev\\" via the CLOUDFLARE_ENV variable.
+				  - You have specified the environment \\"dev\\" via the CLOUDFLARE_ENV environment variable.
 				    But this does not match the target environment \\"prod\\" flattened into the redirected config from the original configuration file.
 				    Perhaps you need to re-run the custom build of the project with \\"dev\\" as the environment?"
 			`);
