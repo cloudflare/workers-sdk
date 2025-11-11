@@ -134,8 +134,9 @@ export async function getDetailsForAutoConfig({
 		packageJson,
 		buildCommand: detectedFramework?.buildCommand ?? packageJsonBuild,
 		outputDir:
-			detectedFramework?.dist ??
-			(assetsDirectory || (await findAssetsDir(projectPath))),
+			assetsDirectory ||
+			detectedFramework?.dist ||
+			(await findAssetsDir(projectPath)),
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
 }
