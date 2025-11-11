@@ -708,14 +708,14 @@ export function printBindings(
 	}
 
 	const allTailConsumers = [
-		...(tailConsumers?.map((c) => ({
+		...(tailConsumers ?? []).map((c) => ({
 			service: c.service,
 			streaming: false,
-		})) ?? []),
-		...(streamingTailConsumers?.map((c) => ({
+		})),
+		...(streamingTailConsumers ?? []).map((c) => ({
 			service: c.service,
 			streaming: true,
-		})) ?? []),
+		})),
 	];
 	if (allTailConsumers.length > 0) {
 		logger.log(

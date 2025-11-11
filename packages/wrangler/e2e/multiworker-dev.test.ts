@@ -505,7 +505,7 @@ describe("multiworker", () => {
 			});
 		});
 
-		it("tail event sent to b", async () => {
+		it("logs tail event sent to b", async () => {
 			const worker = helper.runLongLived(
 				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
 				{ cwd: a }

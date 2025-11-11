@@ -6724,6 +6724,7 @@ describe("normalizeAndValidateConfig()", () => {
 								service: 123,
 								environment: "prod",
 							},
+							["some array"],
 						],
 					} as unknown as RawConfig,
 					undefined,
@@ -6734,13 +6735,14 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(false);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-			"Processing wrangler configuration:
-			  - \\"streaming_tail_consumers[0]\\" should be an object but got \\"some string\\".
-			  - \\"streaming_tail_consumers[1]\\" should be an object but got 456.
-			  - \\"streaming_tail_consumers[2].service\\" is a required field.
-			  - Expected \\"streaming_tail_consumers[3].service\\" to be of type string but got {}.
-			  - Expected \\"streaming_tail_consumers[4].service\\" to be of type string but got 123."
-		`);
+					"Processing wrangler configuration:
+					  - \\"streaming_tail_consumers[0]\\" should be an object but got \\"some string\\".
+					  - \\"streaming_tail_consumers[1]\\" should be an object but got 456.
+					  - \\"streaming_tail_consumers[2].service\\" is a required field.
+					  - Expected \\"streaming_tail_consumers[3].service\\" to be of type string but got {}.
+					  - Expected \\"streaming_tail_consumers[4].service\\" to be of type string but got 123.
+					  - \\"streaming_tail_consumers[5]\\" should be an object but got [\\"some array\\"]."
+				`);
 			});
 		});
 

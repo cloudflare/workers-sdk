@@ -1057,31 +1057,32 @@ const validateTailConsumers: ValidatorFn = (diagnostics, field, value) => {
 	return isValid;
 };
 
+/**
+ * Streaming tail consumers should match:
+ * {
+ *   service: string,
+ *   entrypoint?: string
+ * }
+ */
 function validateStreamingTailConsumer(
 	diagnostics: Diagnostics,
 	field: string,
 	value: StreamingTailConsumer
 ) {
-	if (typeof value !== "object" || value === null) {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
 		diagnostics.errors.push(
 			`"${field}" should be an object but got ${JSON.stringify(value)}.`
 		);
 		return false;
 	}
 
-	let isValid = true;
-
-	isValid =
-		isValid &&
-		validateRequiredProperty(
-			diagnostics,
-			field,
-			"service",
-			value.service,
-			"string"
-		);
-
-	return isValid;
+	return validateRequiredProperty(
+		diagnostics,
+		field,
+		"service",
+		value.service,
+		"string"
+	);
 }
 
 const validateStreamingTailConsumers: ValidatorFn = (

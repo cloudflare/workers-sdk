@@ -848,32 +848,28 @@ export const CORE_PLUGIN: Plugin<
 						sharedOptions.unsafeModuleFallbackService !== undefined
 							? `localhost:${loopbackPort}`
 							: undefined,
-					tails:
-						options.tails === undefined
-							? undefined
-							: options.tails.map<ServiceDesignator>((service) => {
-									return getCustomServiceDesignator(
-										/* referrer */ options.name,
-										workerIndex,
-										CustomServiceKind.UNKNOWN,
-										name,
-										service,
-										options.hasAssetsAndIsVitest
-									);
-								}),
-					streamingTails:
-						options.streamingTails === undefined
-							? undefined
-							: options.streamingTails.map<ServiceDesignator>((service) => {
-									return getCustomServiceDesignator(
-										/* referrer */ options.name,
-										workerIndex,
-										CustomServiceKind.UNKNOWN,
-										name,
-										service,
-										options.hasAssetsAndIsVitest
-									);
-								}),
+					tails: options.tails?.map<ServiceDesignator>((service) => {
+						return getCustomServiceDesignator(
+							/* referrer */ options.name,
+							workerIndex,
+							CustomServiceKind.UNKNOWN,
+							name,
+							service,
+							options.hasAssetsAndIsVitest
+						);
+					}),
+					streamingTails: options.streamingTails?.map<ServiceDesignator>(
+						(service) => {
+							return getCustomServiceDesignator(
+								/* referrer */ options.name,
+								workerIndex,
+								CustomServiceKind.UNKNOWN,
+								name,
+								service,
+								options.hasAssetsAndIsVitest
+							);
+						}
+					),
 					containerEngine: getContainerEngine(options.containerEngine),
 				},
 			});
@@ -892,28 +888,24 @@ export const CORE_PLUGIN: Plugin<
 			}
 		}
 
-		if (options.tails !== undefined) {
-			for (const service of options.tails) {
-				const maybeService = maybeGetCustomServiceService(
-					workerIndex,
-					CustomServiceKind.UNKNOWN,
-					name,
-					service
-				);
-				if (maybeService !== undefined) services.push(maybeService);
-			}
+		for (const service of options.tails ?? []) {
+			const maybeService = maybeGetCustomServiceService(
+				workerIndex,
+				CustomServiceKind.UNKNOWN,
+				name,
+				service
+			);
+			if (maybeService !== undefined) services.push(maybeService);
 		}
 
-		if (options.streamingTails !== undefined) {
-			for (const service of options.streamingTails) {
-				const maybeService = maybeGetCustomServiceService(
-					workerIndex,
-					CustomServiceKind.UNKNOWN,
-					name,
-					service
-				);
-				if (maybeService !== undefined) services.push(maybeService);
-			}
+		for (const service of options.streamingTails ?? []) {
+			const maybeService = maybeGetCustomServiceService(
+				workerIndex,
+				CustomServiceKind.UNKNOWN,
+				name,
+				service
+			);
+			if (maybeService !== undefined) services.push(maybeService);
 		}
 
 		if (options.outboundService !== undefined) {
