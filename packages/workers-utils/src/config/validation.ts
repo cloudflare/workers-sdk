@@ -278,11 +278,13 @@ export function normalizeAndValidateConfig(
 					args.env !== undefined
 						? "via the `--env/-e` CLI argument"
 						: "via the CLOUDFLARE_ENV environment variable";
-				diagnostics.errors.push(dedent`
-			You have specified the environment "${envName}" ${via}.
-			This does not match the target environment "${rawConfig.targetEnvironment}" that was used when building the application.
-			Perhaps you need to re-run the custom build of the project with "${envName}" as the selected environment?
-		`);
+				// We are throwing here rather than just adding to the diagnostics because this is a hard error
+				// and we'd like to collect Sentry data on when and how often this is happening.
+				throw new Error(dedent`
+					You have specified the environment "${envName}" ${via}.
+					This does not match the target environment "${rawConfig.targetEnvironment}" that was used when building the application.
+					Perhaps you need to re-run the custom build of the project with "${envName}" as the selected environment?
+				`);
 			}
 		} else {
 			const envDiagnostics = new Diagnostics(
