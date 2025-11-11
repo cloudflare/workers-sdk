@@ -275,7 +275,7 @@ export function normalizeAndValidateConfig(
 				rawConfig.targetEnvironment !== envName
 			) {
 				const via =
-					getCloudflareEnv() === undefined
+					args.env !== undefined
 						? "via the `--env/-e` CLI argument"
 						: "via the CLOUDFLARE_ENV variable";
 				diagnostics.errors.push(dedent`
