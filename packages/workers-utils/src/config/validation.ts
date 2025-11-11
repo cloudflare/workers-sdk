@@ -258,7 +258,7 @@ export function normalizeAndValidateConfig(
 		);
 	}
 
-	// Then environment can come from the CLI args (e.g. `--env`) or from the `CLOUDFLARE_ENV` environment variable.
+	// The environment can come from the CLI args (i.e. `--env`) or from the `CLOUDFLARE_ENV` environment variable.
 	const envName = args.env ?? getCloudflareEnv();
 	assert(envName === undefined || typeof envName === "string");
 
@@ -280,8 +280,8 @@ export function normalizeAndValidateConfig(
 						: "via the CLOUDFLARE_ENV environment variable";
 				diagnostics.errors.push(dedent`
 			You have specified the environment "${envName}" ${via}.
-			But this does not match the target environment "${rawConfig.targetEnvironment}" flattened into the redirected config from the original configuration file.
-			Perhaps you need to re-run the custom build of the project with "${envName}" as the environment?
+			This does not match the target environment "${rawConfig.targetEnvironment}" that was used when building the application.
+			Perhaps you need to re-run the custom build of the project with "${envName}" as the selected environment?
 		`);
 			}
 		} else {
