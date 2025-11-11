@@ -1,4 +1,6 @@
 import { createCommand } from "../core/create-command";
+import { confirm } from "../dialogs";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { createdResourceConfig } from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
@@ -43,14 +45,37 @@ export const hyperdriveCreateCommand = createCommand({
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
 		const origin = getOriginFromArgs(false, args);
+		const mtls = getMtlsFromArgs(args);
+    const origin_connection_limit = getOriginConnectionLimitFromArgs(args);
+
+		// Check if caching options were provided via CLI args
+		let caching = getCacheOptionsFromArgs(args);
+
+		// If no caching options provided, prompt the user (or use default in non-interactive environments)
+		if (!caching) {
+			if (isNonInteractiveOrCI()) {
+				// In non-interactive environments, use the default behavior (caching enabled)
+				// Leave caching as undefined to use default API behavior
+			} else {
+				const enableCaching = await confirm(
+					"Do you want to enable caching for this Hyperdrive? This can improve performance by caching SQL responses (default 60s).",
+					{ defaultValue: true, fallbackValue: true }
+				);
+
+				if (!enableCaching) {
+					caching = { disabled: true };
+				}
+				// If enableCaching is true, leave caching as undefined to use default API behavior
+			}
+		}
 
 		logger.log(`🚧 Creating '${args.name}'`);
 		const database = await createConfig(config, {
 			name: args.name,
 			origin,
-			caching: getCacheOptionsFromArgs(args),
-			mtls: getMtlsFromArgs(args),
-			origin_connection_limit: getOriginConnectionLimitFromArgs(args),
+			caching,
+			mtls,
+			origin_connection_limit
 		});
 		logger.log(
 			`✅ Created new Hyperdrive ${capitalizeScheme(database.origin.scheme)} config: ${database.id}`
