@@ -13,6 +13,7 @@ import {
 import { getDockerPath } from "../containers";
 import { assertIsNotPreview } from "../context";
 import {
+	compareExportTypes,
 	compareWorkerNameToExportTypesMaps,
 	getCurrentWorkerNameToExportTypesMap,
 } from "../export-types";
@@ -94,6 +95,46 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						ctx.resolvedPluginConfig,
 						viteDevServer,
 						ctx.miniflare
+					);
+				}
+
+				for (const environmentName of ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys()) {
+					const environment = viteDevServer.environments[environmentName];
+					assert(
+						environment,
+						`Expected environment "${environmentName}" to be defined`
+					);
+					environment.hot.on(
+						"vite-plugin-cloudflare:worker-export-types",
+						async (newExportTypes) => {
+							const workerConfig = ctx.getWorkerConfig(environmentName);
+							assert(
+								workerConfig,
+								`Expected workerConfig for environment "${environmentName}" to be defined`
+							);
+							const oldExportTypes = ctx.workerNameToExportTypesMap.get(
+								workerConfig.name
+							);
+							assert(
+								oldExportTypes,
+								`Expected export types for Worker "${workerConfig.name}" to be defined`
+							);
+							const hasChanged = compareExportTypes(
+								oldExportTypes,
+								newExportTypes
+							);
+
+							if (hasChanged) {
+								viteDevServer.config.logger.info(
+									colors.dim(
+										colors.yellow(
+											"Worker exports have changed. Restarting dev server."
+										)
+									)
+								);
+								await viteDevServer.restart();
+							}
+						}
 					);
 				}
 

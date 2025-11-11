@@ -35,11 +35,15 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 
 				return `
 ${nodeJsCompat ? nodeJsCompat.injectGlobalCode() : ""}
+import { getExportTypes } from "${VIRTUAL_EXPORT_TYPES}";
 import * as mod from "${VIRTUAL_USER_ENTRY}";
 export * from "${VIRTUAL_USER_ENTRY}";
 export default mod.default ?? {};
 if (import.meta.hot) {
-	import.meta.hot.accept();
+	import.meta.hot.accept((module) => {
+		const exportTypes = getExportTypes(module);
+		import.meta.hot.send("vite-plugin-cloudflare:worker-export-types", exportTypes);
+	});
 }
 				`;
 			}
