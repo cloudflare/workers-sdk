@@ -1,6 +1,9 @@
 import path from "node:path";
 import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
-import { getEnvironmentVariableFactory } from "./factory";
+import {
+	getBooleanEnvironmentVariableFactory,
+	getEnvironmentVariableFactory,
+} from "./factory";
 
 /**
  * `WRANGLER_C3_COMMAND` can override the command used by `wrangler init` when delegating to C3.
@@ -37,6 +40,14 @@ export const getC3CommandFromEnv = getEnvironmentVariableFactory({
 export const getWranglerSendMetricsFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_SEND_METRICS",
 });
+
+/**
+ * `WRANGLER_SEND_ERROR_REPORTS` can override whether we attempt to send error reports to Sentry.
+ */
+export const getWranglerSendErrorReportsFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "WRANGLER_SEND_ERROR_REPORTS",
+	});
 
 /**
  * Set `WRANGLER_API_ENVIRONMENT` environment variable to "staging" to tell Wrangler to hit the staging APIs rather than production.
