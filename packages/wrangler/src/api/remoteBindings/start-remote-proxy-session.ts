@@ -1,6 +1,7 @@
 import path from "path";
 import getPort from "get-port";
 import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
+import { getLogLevelFromEnv } from "../../logger";
 import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker";
@@ -43,7 +44,11 @@ export async function startRemoteProxySession(
 				port: await getPort(),
 			},
 			inspector: false,
-			logLevel: "error",
+			logLevel:
+				// If the user has specified WRANGLER_LOG to "debug", the are likely trying to debug some issue,
+				// so we should respect that here as well. In any other case, to avoid noisy logs, we just simply
+				// fall back to "error"
+				getLogLevelFromEnv() === "debug" ? "debug" : "error",
 		},
 		bindings: rawBindings,
 	}).catch((startWorkerError) => {
