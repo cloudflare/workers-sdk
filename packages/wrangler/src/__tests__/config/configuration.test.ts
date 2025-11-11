@@ -5014,70 +5014,72 @@ describe("normalizeAndValidateConfig()", () => {
 			`);
 		});
 
-		it("should error if we specify an environment via an argument for a redirected config that doesn't match the original target environment", () => {
-			const rawConfig: RedirectedRawConfig = {
-				name: "my-worker",
-				targetEnvironment: "prod",
-				kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
-			};
-			const { diagnostics } = normalizeAndValidateConfig(
-				rawConfig,
-				"./redirected-config.jsonc",
-				"./original-config.jsonc",
-				{
-					env: "dev",
-				}
-			);
-			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-				"Processing redirected-config.jsonc configuration:
-				  - You have specified the environment \\"dev\\" via the \`--env/-e\` CLI argument.
-				    This does not match the target environment \\"prod\\" that was used when building the application.
-				    Perhaps you need to re-run the custom build of the project with \\"dev\\" as the selected environment?"
-			`);
-		});
+		describe("with redirected config", () => {
+			it("should error if we specify an environment via an argument that doesn't match the original target environment", () => {
+				const rawConfig: RedirectedRawConfig = {
+					name: "my-worker",
+					targetEnvironment: "prod",
+					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+				};
+				expect(() =>
+					normalizeAndValidateConfig(
+						rawConfig,
+						"./redirected-config.jsonc",
+						"./original-config.jsonc",
+						{
+							env: "dev",
+						}
+					)
+				).toThrowErrorMatchingInlineSnapshot(`
+					[Error: You have specified the environment "dev" via the \`--env/-e\` CLI argument.
+					This does not match the target environment "prod" that was used when building the application.
+					Perhaps you need to re-run the custom build of the project with "dev" as the selected environment?]
+				`);
+			});
 
-		it("should error if we specify an environment via an environment variable for a redirected config that doesn't match the original target environment", () => {
-			const rawConfig: RedirectedRawConfig = {
-				name: "my-worker",
-				targetEnvironment: "prod",
-				kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
-			};
-			vi.stubEnv("CLOUDFLARE_ENV", "dev");
-			const { diagnostics } = normalizeAndValidateConfig(
-				rawConfig,
-				"./redirected-config.jsonc",
-				"./original-config.jsonc",
-				{}
-			);
-			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-				"Processing redirected-config.jsonc configuration:
-				  - You have specified the environment \\"dev\\" via the CLOUDFLARE_ENV environment variable.
-				    This does not match the target environment \\"prod\\" that was used when building the application.
-				    Perhaps you need to re-run the custom build of the project with \\"dev\\" as the selected environment?"
-			`);
-		});
+			it("should error if we specify an environment via an environment variable that doesn't match the original target environment", () => {
+				const rawConfig: RedirectedRawConfig = {
+					name: "my-worker",
+					targetEnvironment: "prod",
+					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+				};
+				vi.stubEnv("CLOUDFLARE_ENV", "dev");
+				expect(() =>
+					normalizeAndValidateConfig(
+						rawConfig,
+						"./redirected-config.jsonc",
+						"./original-config.jsonc",
+						{}
+					)
+				).toThrowErrorMatchingInlineSnapshot(`
+					[Error: You have specified the environment "dev" via the CLOUDFLARE_ENV environment variable.
+					This does not match the target environment "prod" that was used when building the application.
+					Perhaps you need to re-run the custom build of the project with "dev" as the selected environment?]
+				`);
+			});
 
-		it("should error if we specify an environment via both an argument and CLOUDFLARE_ENV for a redirected config that doesn't match the original target environment", () => {
-			const rawConfig: RedirectedRawConfig = {
-				name: "my-worker",
-				targetEnvironment: "prod",
-				kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
-			};
-			vi.stubEnv("CLOUDFLARE_ENV", "staging");
-			const { diagnostics } = normalizeAndValidateConfig(
-				rawConfig,
-				"./redirected-config.jsonc",
-				"./original-config.jsonc",
-				{
-					env: "dev",
-				}
-			);
-			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
-				"Processing redirected-config.jsonc configuration:
-				  - You have specified the environment \\"dev\\" via the \`--env/-e\` CLI argument.
-				    This does not match the target environment \\"prod\\" that was used when building the application.
-				    Perhaps you need to re-run the custom build of the project with \\"dev\\" as the selected environment?"
-			`);
+			it("should error if we specify an environment via both an argument and CLOUDFLARE_ENV that doesn't match the original target environment", () => {
+				const rawConfig: RedirectedRawConfig = {
+					name: "my-worker",
+					targetEnvironment: "prod",
+					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+				};
+				vi.stubEnv("CLOUDFLARE_ENV", "staging");
+				expect(() =>
+					normalizeAndValidateConfig(
+						rawConfig,
+						"./redirected-config.jsonc",
+						"./original-config.jsonc",
+						{
+							env: "dev",
+						}
+					)
+				).toThrowErrorMatchingInlineSnapshot(`
+					[Error: You have specified the environment "dev" via the \`--env/-e\` CLI argument.
+					This does not match the target environment "prod" that was used when building the application.
+					Perhaps you need to re-run the custom build of the project with "dev" as the selected environment?]
+				`);
+			});
 		});
 
 		it("should error if we specify an environment that does not match the named environments", () => {

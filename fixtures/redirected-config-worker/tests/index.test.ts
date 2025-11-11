@@ -61,10 +61,10 @@ describe("'wrangler dev', when reading redirected config,", () => {
 			'You have specified the environment "staging" via the `--env/-e` CLI argument.'
 		);
 		expect(error).toMatch(
-			'But this does not match the target environment "production" flattened into the redirected config from the original configuration file.'
+			'This does not match the target environment "production" that was used when building the application.'
 		);
 		expect(error).toMatch(
-			'Perhaps you need to re-run the custom build of the project with "staging" as the environment?'
+			'Perhaps you need to re-run the custom build of the project with "staging" as the selected environment?'
 		);
 	});
 
@@ -83,13 +83,13 @@ describe("'wrangler dev', when reading redirected config,", () => {
 		}
 
 		expect(error).toMatch(
-			'You have specified the environment "staging" via the CLOUDFLARE_ENV variable.'
+			'You have specified the environment "staging" via the CLOUDFLARE_ENV environment variable.'
 		);
 		expect(error).toMatch(
-			'But this does not match the target environment "production" flattened into the redirected config from the original configuration file.'
+			'This does not match the target environment "production" that was used when building the application.'
 		);
 		expect(error).toMatch(
-			'Perhaps you need to re-run the custom build of the project with "staging" as the environment?'
+			'Perhaps you need to re-run the custom build of the project with "staging" as the selected environment?'
 		);
 	});
 
