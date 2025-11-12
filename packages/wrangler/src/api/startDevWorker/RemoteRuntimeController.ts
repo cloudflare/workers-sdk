@@ -196,12 +196,12 @@ export class RemoteRuntimeController extends RuntimeController {
 		}
 	}
 
-	async #ensurePreviewSession(
+	#getPreviewSession(
 		config: StartDevWorkerOptions,
 		auth: CfAccount,
 		routes: Route[] | undefined
 	) {
-		this.#session ??= await this.#previewSession({
+		return this.#previewSession({
 			complianceConfig: { compliance_region: config.complianceRegion },
 			accountId: auth.accountId,
 			apiToken: auth.apiToken,
@@ -344,7 +344,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				logger.log(chalk.dim("⎔ Detected changes, restarted server."));
 			}
 
-			await this.#ensurePreviewSession(config, auth, routes);
+			this.#session ??= await this.#getPreviewSession(config, auth, routes);
 			await this.#updatePreviewToken(config, bundle, auth, routes, id);
 		} catch (error) {
 			if (error instanceof Error && error.name == "AbortError") {
@@ -376,6 +376,12 @@ export class RemoteRuntimeController extends RuntimeController {
 		});
 
 		try {
+			this.#session = await this.#getPreviewSession(
+				this.#latestConfig,
+				this.#latestAuth,
+				this.#latestRoutes
+			);
+
 			await this.#updatePreviewToken(
 				this.#latestConfig,
 				this.#latestBundle,
