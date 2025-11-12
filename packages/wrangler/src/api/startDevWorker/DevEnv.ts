@@ -9,12 +9,15 @@ import { LocalRuntimeController } from "./LocalRuntimeController";
 import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
 import type {
+	Controller,
 	ControllerBus,
 	ControllerEvent,
 	RuntimeController,
 } from "./BaseController";
 import type { ErrorEvent } from "./events";
 import type { StartDevWorkerInput, Worker } from "./types";
+
+type ControllerFactory<C extends Controller> = (devEnv: DevEnv) => C;
 
 export class DevEnv extends EventEmitter implements ControllerBus {
 	config: ConfigController;
@@ -40,27 +43,25 @@ export class DevEnv extends EventEmitter implements ControllerBus {
 	}
 
 	constructor({
-		config,
-		bundler,
-		runtimes,
-		proxy,
+		configFactory = (devEnv) => new ConfigController(devEnv),
+		bundlerFactory = (devEnv) => new BundlerController(devEnv),
+		runtimeFactories = [
+			(devEnv) => new LocalRuntimeController(devEnv),
+			(devEnv) => new RemoteRuntimeController(devEnv),
+		],
+		proxyFactory = (devEnv) => new ProxyController(devEnv),
 	}: {
-		config?: ConfigController;
-		bundler?: BundlerController;
-		runtimes?: RuntimeController[];
-		proxy?: ProxyController;
+		configFactory?: ControllerFactory<ConfigController>;
+		bundlerFactory?: ControllerFactory<BundlerController>;
+		runtimeFactories?: ControllerFactory<RuntimeController>[];
+		proxyFactory?: ControllerFactory<ProxyController>;
 	} = {}) {
 		super();
 
-		this.config = config ?? new ConfigController(this);
-		this.bundler = bundler ?? new BundlerController(this);
-		this.runtimes =
-			runtimes ??
-			([
-				new LocalRuntimeController(this),
-				new RemoteRuntimeController(this),
-			] as RuntimeController[]);
-		this.proxy = proxy ?? new ProxyController(this);
+		this.config = configFactory(this);
+		this.bundler = bundlerFactory(this);
+		this.runtimes = runtimeFactories.map((factory) => factory(this));
+		this.proxy = proxyFactory(this);
 
 		this.on("error", (event: ErrorEvent) => {
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
