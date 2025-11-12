@@ -259,12 +259,10 @@ export const typesCommand = createCommand({
 				config,
 				args.compatibilityDate ?? config.compatibility_date
 			);
-			const compatibilityFlags =
-				args.compatibilityFlags ?? config.compatibility_flags;
-			const { mode } = getNodeCompat(
-				compatibilityDate,
-				compatibilityFlags as string[] | undefined
-			);
+			const compatibilityFlags: string[] = (args.compatibilityFlags ??
+				config.compatibility_flags ??
+				[]) as string[];
+			const { mode } = getNodeCompat(compatibilityDate, compatibilityFlags);
 			if (args.includeRuntime) {
 				logRuntimeTypesMessage(tsconfigTypes, mode !== null);
 			}
