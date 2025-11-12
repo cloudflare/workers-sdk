@@ -595,7 +595,7 @@ export class ProxyController extends Controller {
 		this.ready.resolve(data);
 	}
 	emitPreviewTokenExpiredEvent(proxyData: ProxyData) {
-		this.devEnv.dispatch({
+		this.bus.dispatch({
 			type: "previewTokenExpired",
 			proxyData,
 		});

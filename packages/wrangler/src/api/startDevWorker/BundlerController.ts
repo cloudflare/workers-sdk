@@ -381,12 +381,12 @@ export class BundlerController extends Controller {
 	}
 
 	emitBundleStartEvent(config: StartDevWorkerOptions) {
-		this.devEnv.dispatch({ type: "bundleStart", config });
+		this.bus.dispatch({ type: "bundleStart", config });
 	}
 	emitBundleCompleteEvent(
 		config: StartDevWorkerOptions,
 		bundle: EsbuildBundle
 	) {
-		this.devEnv.dispatch({ type: "bundleComplete", config, bundle });
+		this.bus.dispatch({ type: "bundleComplete", config, bundle });
 	}
 }

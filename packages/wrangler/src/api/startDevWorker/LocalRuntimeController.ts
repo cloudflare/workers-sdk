@@ -439,13 +439,13 @@ export class LocalRuntimeController extends RuntimeController {
 	// *********************
 
 	emitReloadStartEvent(data: ReloadStartEvent) {
-		this.devEnv.dispatch(data);
+		this.bus.dispatch(data);
 	}
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
-		this.devEnv.dispatch(data);
+		this.bus.dispatch(data);
 	}
 	emitDevRegistryUpdateEvent(data: DevRegistryUpdateEvent): void {
-		this.devEnv.dispatch(data);
+		this.bus.dispatch(data);
 	}
 }
 

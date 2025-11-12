@@ -8,30 +8,15 @@ import { ConfigController } from "./ConfigController";
 import { LocalRuntimeController } from "./LocalRuntimeController";
 import { ProxyController } from "./ProxyController";
 import { RemoteRuntimeController } from "./RemoteRuntimeController";
-import type { RuntimeController } from "./BaseController";
 import type {
-	BundleCompleteEvent,
-	BundleStartEvent,
-	ConfigUpdateEvent,
-	DevRegistryUpdateEvent,
-	ErrorEvent,
-	PreviewTokenExpiredEvent,
-	ReloadCompleteEvent,
-	ReloadStartEvent,
-} from "./events";
+	ControllerBus,
+	ControllerEvent,
+	RuntimeController,
+} from "./BaseController";
+import type { ErrorEvent } from "./events";
 import type { StartDevWorkerInput, Worker } from "./types";
 
-type ControllerEvent =
-	| ErrorEvent
-	| ConfigUpdateEvent
-	| BundleStartEvent
-	| BundleCompleteEvent
-	| ReloadStartEvent
-	| ReloadCompleteEvent
-	| DevRegistryUpdateEvent
-	| PreviewTokenExpiredEvent;
-
-export class DevEnv extends EventEmitter {
+export class DevEnv extends EventEmitter implements ControllerBus {
 	config: ConfigController;
 	bundler: BundlerController;
 	runtimes: RuntimeController[];
@@ -76,21 +61,6 @@ export class DevEnv extends EventEmitter {
 				new RemoteRuntimeController(this),
 			] as RuntimeController[]);
 		this.proxy = proxy ?? new ProxyController(this);
-
-		if (config) {
-			config.setDevEnv(this);
-		}
-		if (bundler) {
-			bundler.setDevEnv(this);
-		}
-		if (runtimes) {
-			runtimes.forEach((runtime) => {
-				runtime.setDevEnv(this);
-			});
-		}
-		if (proxy) {
-			proxy.setDevEnv(this);
-		}
 
 		this.on("error", (event: ErrorEvent) => {
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);

@@ -634,6 +634,6 @@ export class ConfigController extends Controller {
 	// *********************
 
 	emitConfigUpdateEvent(config: StartDevWorkerOptions) {
-		this.devEnv.dispatch({ type: "configUpdate", config });
+		this.bus.dispatch({ type: "configUpdate", config });
 	}
 }

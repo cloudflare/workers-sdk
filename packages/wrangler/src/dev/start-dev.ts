@@ -78,9 +78,14 @@ export async function startDev(args: StartDevOptions) {
 		}
 
 		if (Array.isArray(args.config)) {
-			const runtime = new MultiworkerRuntimeController(args.config.length);
+			const primaryDevEnv = new DevEnv({ runtimes: [] });
 
-			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
+			const runtime = new MultiworkerRuntimeController(
+				primaryDevEnv,
+				args.config.length
+			);
+
+			primaryDevEnv.runtimes = [runtime];
 
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
 			devEnv = [
@@ -94,18 +99,12 @@ export async function startDev(args: StartDevOptions) {
 			devEnv.push(
 				...(await Promise.all(
 					(args.config as string[]).slice(1).map((c) => {
-						return setupDevEnv(
-							new DevEnv({
-								runtimes: [runtime],
-								proxy: new NoOpProxyController(),
-							}),
-							c,
-							authHook,
-							{
-								disableDevRegistry: args.disableDevRegistry,
-								multiworkerPrimary: false,
-							}
-						);
+						const auxDevEnv = new DevEnv({ runtimes: [runtime] });
+						auxDevEnv.proxy = new NoOpProxyController(auxDevEnv);
+						return setupDevEnv(auxDevEnv, c, authHook, {
+							disableDevRegistry: args.disableDevRegistry,
+							multiworkerPrimary: false,
+						});
 					})
 				))
 			);

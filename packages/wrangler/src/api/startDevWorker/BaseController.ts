@@ -1,8 +1,8 @@
 import { logger } from "../../logger";
-import type { DevEnv } from "./DevEnv";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
+	ConfigUpdateEvent,
 	DevRegistryUpdateEvent,
 	ErrorEvent,
 	PreviewTokenExpiredEvent,
@@ -10,23 +10,26 @@ import type {
 	ReloadStartEvent,
 } from "./events";
 
+export type ControllerEvent =
+	| ErrorEvent
+	| ConfigUpdateEvent
+	| BundleStartEvent
+	| BundleCompleteEvent
+	| ReloadStartEvent
+	| ReloadCompleteEvent
+	| DevRegistryUpdateEvent
+	| PreviewTokenExpiredEvent;
+
+export interface ControllerBus {
+	dispatch(event: ControllerEvent): void;
+}
+
 export abstract class Controller {
-	protected devEnv!: DevEnv;
+	protected bus: ControllerBus;
 	#tearingDown = false;
-	#devEnvSet = false;
 
-	constructor(devEnv?: DevEnv) {
-		if (devEnv) {
-			this.devEnv = devEnv;
-			this.#devEnvSet = true;
-		}
-	}
-
-	setDevEnv(devEnv: DevEnv): void {
-		if (!this.#devEnvSet) {
-			this.devEnv = devEnv;
-			this.#devEnvSet = true;
-		}
+	constructor(bus: ControllerBus) {
+		this.bus = bus;
 	}
 
 	async teardown(): Promise<void> {
@@ -40,7 +43,7 @@ export abstract class Controller {
 			logger.debug("=> Error contextual data:", event.data);
 			return;
 		}
-		this.devEnv.dispatch(event);
+		this.bus.dispatch(event);
 	}
 }
 
@@ -58,14 +61,14 @@ export abstract class RuntimeController extends Controller {
 	// *********************
 
 	protected emitReloadStartEvent(data: ReloadStartEvent): void {
-		this.devEnv.dispatch(data);
+		this.bus.dispatch(data);
 	}
 
 	protected emitReloadCompleteEvent(data: ReloadCompleteEvent): void {
-		this.devEnv.dispatch(data);
+		this.bus.dispatch(data);
 	}
 
 	protected emitDevRegistryUpdateEvent(data: DevRegistryUpdateEvent): void {
-		this.devEnv.dispatch(data);
+		this.bus.dispatch(data);
 	}
 }
