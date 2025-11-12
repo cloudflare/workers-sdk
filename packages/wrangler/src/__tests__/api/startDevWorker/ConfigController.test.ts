@@ -3,6 +3,7 @@ import path from "node:path";
 import dedent from "ts-dedent";
 import { describe, it } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
+import { DevEnv } from "../../../api/startDevWorker/DevEnv";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
 import { logger } from "../../../logger";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
@@ -13,10 +14,18 @@ import { seed } from "../../helpers/seed";
 import type { ConfigUpdateEvent } from "../../../api";
 
 async function waitForConfigUpdate(
-	controller: ConfigController
+	devEnv: DevEnv
 ): Promise<ConfigUpdateEvent> {
-	const [event] = await events.once(controller, "configUpdate");
-	return event;
+	return new Promise((resolve) => {
+		const originalDispatch = devEnv.dispatch.bind(devEnv);
+		devEnv.dispatch = (event) => {
+			if (event.type === "configUpdate") {
+				devEnv.dispatch = originalDispatch;
+				resolve(event);
+			}
+			originalDispatch(event);
+		};
+	});
 }
 
 describe("ConfigController", () => {
@@ -33,14 +42,16 @@ describe("ConfigController", () => {
 	// watch files in a directory that no longer exists.
 	// By doing it ourselves in `beforeEach()` and `afterEach()` we can ensure the controller
 	// is torn down before the temporary directory is removed.
+	let devEnv: DevEnv;
 	let controller: ConfigController;
 	beforeEach(() => {
-		controller = new ConfigController();
+		devEnv = new DevEnv();
+		controller = devEnv.config;
 		logger.loggerLevel = "debug";
 	});
 	afterEach(async () => {
 		logger.debug("tearing down");
-		await controller.teardown();
+		await devEnv.teardown();
 		logger.debug("teardown complete");
 		logger.resetLoggerLevel();
 	});
@@ -111,7 +122,7 @@ describe("ConfigController", () => {
 	});
 
 	it("should emit configUpdate events with defaults applied", async () => {
-		const event = waitForConfigUpdate(controller);
+		const event = waitForConfigUpdate(devEnv);
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
 				export default {
@@ -143,7 +154,7 @@ describe("ConfigController", () => {
 	});
 
 	it("should apply module root to parent if main is nested from base_dir", async () => {
-		const event = waitForConfigUpdate(controller);
+		const event = waitForConfigUpdate(devEnv);
 		await seed({
 			"some/base_dir/nested/index.js": dedent/* javascript */ `
 				export default {
@@ -177,7 +188,7 @@ describe("ConfigController", () => {
 	});
 
 	it("should shallow merge patched config", async () => {
-		const event1 = waitForConfigUpdate(controller);
+		const event1 = waitForConfigUpdate(devEnv);
 		await seed({
 			"src/index.ts": dedent/* javascript */ `
 				export default {
@@ -207,7 +218,7 @@ describe("ConfigController", () => {
 			},
 		});
 
-		const event2 = waitForConfigUpdate(controller);
+		const event2 = waitForConfigUpdate(devEnv);
 		await controller.patch({
 			dev: {
 				remote: true,
@@ -236,7 +247,7 @@ describe("ConfigController", () => {
 			},
 		});
 
-		const event3 = waitForConfigUpdate(controller);
+		const event3 = waitForConfigUpdate(devEnv);
 		await controller.patch({
 			dev: {
 				origin: { hostname: "myexample.com" },
@@ -286,19 +297,19 @@ describe("ConfigController", () => {
 			`,
 		});
 
-		const event1 = waitForConfigUpdate(controller);
+		const event1 = waitForConfigUpdate(devEnv);
 		await controller.set({
 			config: "./wrangler.toml",
 		});
 		await event1;
 
-		const event2 = waitForConfigUpdate(controller);
+		const event2 = waitForConfigUpdate(devEnv);
 		await controller.patch({
 			dev: { liveReload: true },
 		});
 		await event2;
 
-		const event3 = waitForConfigUpdate(controller);
+		const event3 = waitForConfigUpdate(devEnv);
 		await controller.patch({
 			dev: { server: { port: 8787 } },
 		});
