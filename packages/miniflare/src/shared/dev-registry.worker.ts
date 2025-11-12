@@ -425,7 +425,13 @@ function runProxyServer() {
 	const server = new ProxyServer(parentPort);
 
 	// Start the server
-	server.start();
+	server.start().catch((error) => {
+		log.error(
+			new Error("ProxyServer: Failed to start proxy server:", {
+				cause: error,
+			})
+		);
+	});
 }
 
 // Initialize the proxy server

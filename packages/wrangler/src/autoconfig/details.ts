@@ -1,5 +1,6 @@
+import { statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli/colors";
 import {
 	FatalError,
@@ -9,6 +10,8 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
+import { confirm, prompt } from "../dialogs";
+import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 import { getFramework } from "./frameworks/get-framework";
@@ -57,6 +60,13 @@ async function findAssetsDir(from: string): Promise<string | undefined> {
 	return undefined;
 }
 
+function getWorkerName(projectOrWorkerName = "", projectPath: string): string {
+	const rawName =
+		getCIOverrideName() ?? (projectOrWorkerName || basename(projectPath));
+
+	return toValidWorkerName(rawName);
+}
+
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
@@ -68,7 +78,11 @@ export async function getDetailsForAutoConfig({
 
 	// If a real Wrangler config has been found & used, don't run autoconfig
 	if (wranglerConfig?.configPath) {
-		return { configured: true, projectPath };
+		return {
+			configured: true,
+			projectPath,
+			workerName: getWorkerName(wranglerConfig.name, projectPath),
+		};
 	}
 	const fs = new NodeFS();
 
@@ -92,7 +106,7 @@ export async function getDetailsForAutoConfig({
 	const framework: AutoConfigDetails["framework"] = getFramework(
 		detectedFramework?.framework.id
 	);
-	const packageJsonPath = resolve("package.json");
+	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
 
@@ -118,23 +132,107 @@ export async function getDetailsForAutoConfig({
 		packageJson,
 		buildCommand: detectedFramework?.buildCommand ?? packageJsonBuild,
 		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
+		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
 }
 
-export function displayAutoConfigDetails(
-	autoConfigDetails: AutoConfigDetails
-): void {
-	if (
-		!autoConfigDetails.framework &&
-		!autoConfigDetails.buildCommand &&
-		!autoConfigDetails.outputDir
-	) {
-		logger.log("No Project Settings Auto-detected");
-		return;
+const invalidWorkerNameCharsRegex = /[^a-z0-9- ]/g;
+const invalidWorkerNameStartEndRegex = /^(-+)|(-+)$/g;
+const workerNameLengthLimit = 63;
+
+/**
+ * Checks whether the provided worker name is valid, this means that:
+ *  - the name is not empty
+ *  - the name doesn't start nor ends with a dash
+ *  - the name doesn't contain special characters besides dashes
+ *  - the name is not longer than 63 characters
+ *
+ * See: https://developers.cloudflare.com/workers/configuration/routing/workers-dev/#limitations
+ *
+ * @param input The name to check
+ * @returns Object indicating whether the name is valid, and if not a cause indicating why it isn't
+ */
+function checkWorkerNameValidity(
+	input: string
+): { valid: false; cause: string } | { valid: true } {
+	if (!input) {
+		return {
+			valid: false,
+			cause: "Worker names cannot be empty.",
+		};
 	}
 
-	logger.log("Auto-detected Project Settings:");
+	if (input.match(invalidWorkerNameStartEndRegex)) {
+		return {
+			valid: false,
+			cause: "Worker names cannot start or end with a dash.",
+		};
+	}
 
+	if (input.match(invalidWorkerNameCharsRegex)) {
+		return {
+			valid: false,
+			cause:
+				"Project names must only contain lowercase characters, numbers, and dashes.",
+		};
+	}
+
+	if (input.length > workerNameLengthLimit) {
+		return {
+			valid: false,
+			cause: "Project names must be less than 63 characters.",
+		};
+	}
+
+	return { valid: true };
+}
+
+/**
+ * Given an input string it converts it to a valid worker name
+ *
+ * A worker name is valid if:
+ *  - the name is not empty
+ *  - the name doesn't start nor ends with a dash
+ *  - the name doesn't contain special characters besides dashes
+ *  - the name is not longer than 63 characters
+ *
+ * See: https://developers.cloudflare.com/workers/configuration/routing/workers-dev/#limitations
+ *
+ * @param input The input to convert
+ * @returns The input itself if it was already valid, the input converted to a valid worker name otherwise
+ */
+function toValidWorkerName(input: string): string {
+	if (checkWorkerNameValidity(input).valid) {
+		return input;
+	}
+
+	input = input
+		// Replace all underscores with dashes
+		.replaceAll("_", "-")
+		// Replace all the special characters (besides dashes) with dashes
+		.replace(invalidWorkerNameCharsRegex, "-")
+		// Remove invalid start/end dashes
+		.replace(invalidWorkerNameStartEndRegex, "")
+		// If the name is longer than the limit let's truncate it to that
+		.slice(0, workerNameLengthLimit);
+
+	if (!input.length) {
+		// If we've emptied the whole name let's replace it with a fallback value
+		return "my-worker";
+	}
+
+	return input;
+}
+
+export function displayAutoConfigDetails(
+	autoConfigDetails: AutoConfigDetails,
+	displayOptions?: { heading?: string }
+): void {
+	logger.log("");
+
+	logger.log(displayOptions?.heading ?? "Auto-detected Project Settings:");
+
+	logger.log(brandColor(" - Worker Name:"), autoConfigDetails.workerName);
 	if (autoConfigDetails.framework) {
 		logger.log(brandColor(" - Framework:"), autoConfigDetails.framework.name);
 	}
@@ -146,4 +244,70 @@ export function displayAutoConfigDetails(
 	}
 
 	logger.log("");
+}
+
+export async function confirmAutoConfigDetails(
+	autoConfigDetails: AutoConfigDetails
+): Promise<AutoConfigDetails> {
+	const modifySettings = await confirm(
+		"Do you want to modify these settings?",
+		{ defaultValue: false, fallbackValue: false }
+	);
+
+	if (!modifySettings) {
+		return autoConfigDetails;
+	}
+
+	// Just spreading the object to shallow clone it to avoid some potential side effects
+	const { ...updatedAutoConfigDetails } = autoConfigDetails;
+
+	const workerName = await prompt("What do you want to name your Worker?", {
+		defaultValue: autoConfigDetails.workerName ?? "",
+		validate: (value: string) => {
+			const validity = checkWorkerNameValidity(value);
+			if (validity.valid) {
+				return true;
+			}
+			return validity.cause;
+		},
+	});
+
+	updatedAutoConfigDetails.workerName = workerName;
+
+	const outputDir = await prompt(
+		"What directory contains your applications' output/asset files?",
+		{
+			defaultValue: autoConfigDetails.outputDir ?? "",
+			validate: async (value) => {
+				if (!value) {
+					return "Please provide a valid directory path";
+				}
+				const valueStats = statSync(resolve(value), { throwIfNoEntry: false });
+				if (!valueStats) {
+					// If the path doesn't point to anything that's fine since the directory will likely be
+					// generated by the build command anyways
+					return true;
+				}
+				if (valueStats?.isFile()) {
+					return "Please select a directory";
+				}
+				return true;
+			},
+		}
+	);
+
+	updatedAutoConfigDetails.outputDir = outputDir;
+
+	if (autoConfigDetails.buildCommand || autoConfigDetails.packageJson) {
+		const buildCommand = await prompt(
+			"What is your application's build command?",
+			{
+				defaultValue: autoConfigDetails.buildCommand ?? "",
+			}
+		);
+
+		updatedAutoConfigDetails.buildCommand = buildCommand;
+	}
+
+	return updatedAutoConfigDetails;
 }

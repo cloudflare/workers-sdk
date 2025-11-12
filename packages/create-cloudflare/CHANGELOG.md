@@ -1,5 +1,19 @@
 # create-cloudflare
 
+## 2.54.4
+
+### Patch Changes
+
+- [#11014](https://github.com/cloudflare/workers-sdk/pull/11014) [`4937e85`](https://github.com/cloudflare/workers-sdk/commit/4937e85a0df6ffd86b1730623012dcb9ee31127c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | create-next-app | 15.4.6 | 15.5.6 |
+
+- [#11132](https://github.com/cloudflare/workers-sdk/pull/11132) [`0acaa5a`](https://github.com/cloudflare/workers-sdk/commit/0acaa5add98506b84bb71ddfd65a0992f4232563) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - use the Cloudflare maintained Next.js template
+
 ## 2.54.3
 
 ### Patch Changes

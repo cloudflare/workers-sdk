@@ -277,6 +277,7 @@ import {
 	secretsStoreStoreListCommand,
 } from "./secrets-store/commands";
 import { addBreadcrumb, closeSentry, setupSentry } from "./sentry";
+import { setupCommand } from "./setup";
 import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
 import { typesCommand } from "./type-generation";
@@ -325,6 +326,7 @@ import { workflowsDescribeCommand } from "./workflows/commands/describe";
 import { workflowsInstancesDescribeCommand } from "./workflows/commands/instances/describe";
 import { workflowsInstancesListCommand } from "./workflows/commands/instances/list";
 import { workflowsInstancesPauseCommand } from "./workflows/commands/instances/pause";
+import { workflowsInstancesRestartCommand } from "./workflows/commands/instances/restart";
 import { workflowsInstancesResumeCommand } from "./workflows/commands/instances/resume";
 import { workflowsInstancesTerminateCommand } from "./workflows/commands/instances/terminate";
 import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/instances/terminate-all";
@@ -557,6 +559,14 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("deploy");
+
+	registry.define([
+		{
+			command: "wrangler setup",
+			definition: setupCommand,
+		},
+	]);
+	registry.registerNamespace("setup");
 
 	registry.define([
 		{ command: "wrangler deployments", definition: deploymentsNamespace },
@@ -1359,6 +1369,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler workflows instances terminate",
 			definition: workflowsInstancesTerminateCommand,
+		},
+		{
+			command: "wrangler workflows instances restart",
+			definition: workflowsInstancesRestartCommand,
 		},
 		{
 			command: "wrangler workflows instances terminate-all",

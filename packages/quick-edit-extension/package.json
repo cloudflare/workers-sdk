@@ -42,10 +42,12 @@
 		"onFileSystem:cfs"
 	],
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"@cloudflare/workers-types": "catalog:default",
 		"esbuild": "catalog:default",
-		"esbuild-register": "^3.5.0"
+		"esbuild-register": "^3.5.0",
+		"eslint": "catalog:default"
 	},
 	"engines": {
 		"vscode": "^1.76.0"

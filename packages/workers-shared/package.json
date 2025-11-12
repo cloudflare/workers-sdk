@@ -49,6 +49,7 @@
 		"@sentry/cli": "^2.37.0",
 		"concurrently": "^8.2.2",
 		"esbuild": "catalog:default",
+		"eslint": "catalog:default",
 		"ignore": "^5.2.0",
 		"mime": "^4.0.7",
 		"rimraf": "catalog:default",

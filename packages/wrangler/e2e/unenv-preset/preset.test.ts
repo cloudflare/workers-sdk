@@ -278,6 +278,30 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "trace_events enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_trace_events_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_trace_events_module: true,
+			},
+		},
+		// TODO: update the date past the default enable date (when defined)
+		{
+			name: "trace_events disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [
+				"disable_nodejs_trace_events_module",
+				"experimental",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_trace_events_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(localTestConfigs)(

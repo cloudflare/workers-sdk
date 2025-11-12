@@ -29,7 +29,6 @@ function validateTransforms(inputTransforms: unknown): Transform[] | null {
 export async function imagesLocalFetcher(request: Request): Promise<Response> {
 	let sharp;
 	try {
-		// eslint-disable-next-line es/no-dynamic-import
 		const { default: importedSharp } = await import("sharp");
 		sharp = importedSharp;
 	} catch {
