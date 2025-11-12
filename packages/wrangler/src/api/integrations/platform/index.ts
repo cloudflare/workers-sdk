@@ -39,6 +39,7 @@ import type {
 
 export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
 export { readConfig as unstable_readConfig };
+export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
 export type {
 	Config as Unstable_Config,
 	RawConfig as Unstable_RawConfig,
