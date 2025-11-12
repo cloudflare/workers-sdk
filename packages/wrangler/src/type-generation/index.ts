@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
-import module from "node:module";
 import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import {
 	CommandLineArgsError,
@@ -19,6 +18,7 @@ import { getClassNamesWhichUseSQLite } from "../dev/class-names-sqlite";
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
 import { isProcessEnvPopulated } from "../process-env";
+import { getDevCompatibilityDate } from "../utils/compatibility-date";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Entry } from "../deployment-bundle/entry";
@@ -130,46 +130,26 @@ export const typesCommand = createCommand({
 		}
 	},
 	async handler(args) {
-		let config: Config | undefined;
+		let config: Config;
 		const secondaryConfigs: Config[] = [];
-		let hasConfigFile = false;
 
-		try {
-			if (Array.isArray(args.config)) {
-				config = readConfig({ ...args, config: args.config[0] });
-				for (const configPath of args.config.slice(1)) {
-					secondaryConfigs.push(readConfig({ config: configPath }));
-				}
-			} else {
-				config = readConfig(args);
+		if (Array.isArray(args.config)) {
+			config = readConfig({ ...args, config: args.config[0] });
+			for (const configPath of args.config.slice(1)) {
+				secondaryConfigs.push(readConfig({ config: configPath }));
 			}
-
-			if (
-				config.configPath &&
-				fs.existsSync(config.configPath) &&
-				!fs.statSync(config.configPath).isDirectory()
-			) {
-				hasConfigFile = true;
-			}
-		} catch (error) {
-			if (args.config) {
-				throw error;
-			}
-			config = undefined;
+		} else {
+			config = readConfig(args);
 		}
 
+		const hasConfigFile = Boolean(config.configPath);
 		const { envInterface, path: outputPath } = args;
 
 		if (!hasConfigFile && args.includeRuntime && !args.compatibilityDate) {
-			// Get the maximum compatibility date supported by the installed workerd
-			const miniflareEntry = require.resolve("miniflare");
-			const miniflareRequire = module.createRequire(miniflareEntry);
-			const miniflareWorkerd = miniflareRequire("workerd") as {
-				compatibilityDate: string;
-			};
-			args.compatibilityDate = miniflareWorkerd.compatibilityDate;
+			const date = getDevCompatibilityDate(config, args.compatibilityDate);
+			args.compatibilityDate = date;
 			logger.log(
-				`No config file detected. Using the installed Workers runtime's latest supported date: ${args.compatibilityDate}\n`
+				`No config file detected. Using the installed Workers runtime's latest supported date: ${date}\n`
 			);
 		}
 
@@ -241,31 +221,17 @@ export const typesCommand = createCommand({
 
 		if (args.includeRuntime) {
 			logger.log("Generating runtime types...\n");
-			let compatibilityDate =
-				args.compatibilityDate ?? config?.compatibility_date;
+			const compatibilityDate = getDevCompatibilityDate(
+				config,
+				args.compatibilityDate ?? config?.compatibility_date
+			);
 			const compatibilityFlags =
-				args.compatibilityFlags?.map(String) ??
-				config?.compatibility_flags ??
-				[];
-
-			if (!compatibilityDate) {
-				const miniflareEntry = require.resolve("miniflare");
-				const miniflareRequire = module.createRequire(miniflareEntry);
-				const miniflareWorkerd = miniflareRequire("workerd") as {
-					compatibilityDate: string;
-				};
-				compatibilityDate = miniflareWorkerd.compatibilityDate;
-				if (hasConfigFile) {
-					logger.warn(
-						`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${compatibilityDate}`
-					);
-				}
-			}
+				args.compatibilityFlags ?? config?.compatibility_flags ?? [];
 
 			const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
 				config: {
 					compatibility_date: compatibilityDate,
-					compatibility_flags: compatibilityFlags,
+					compatibility_flags: compatibilityFlags as string[],
 				},
 				outFile: outputPath || undefined,
 			});
@@ -289,12 +255,16 @@ export const typesCommand = createCommand({
 			const tsconfigPath =
 				config.tsconfig ?? join(dirname(config.configPath), "tsconfig.json");
 			const tsconfigTypes = readTsconfigTypes(tsconfigPath);
-			const compatibilityDate =
-				args.compatibilityDate ?? config.compatibility_date;
-			const compatibilityFlags = (
-				args.compatibilityFlags ?? config.compatibility_flags
-			)?.map(String);
-			const { mode } = getNodeCompat(compatibilityDate, compatibilityFlags);
+			const compatibilityDate = getDevCompatibilityDate(
+				config,
+				args.compatibilityDate ?? config.compatibility_date
+			);
+			const compatibilityFlags =
+				args.compatibilityFlags ?? config.compatibility_flags;
+			const { mode } = getNodeCompat(
+				compatibilityDate,
+				compatibilityFlags as string[] | undefined
+			);
 			if (args.includeRuntime) {
 				logRuntimeTypesMessage(tsconfigTypes, mode !== null);
 			}
