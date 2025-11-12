@@ -11,7 +11,7 @@ import type {
 } from "./events";
 
 export abstract class Controller {
-	protected devEnv!: DevEnv;
+	public devEnv!: DevEnv;
 	#tearingDown = false;
 
 	constructor(devEnv?: DevEnv) {
