@@ -41,3 +41,19 @@ updates:
     allow:
       - dependency-name: "workerd"
       - dependency-name: "@cloudflare/workers-types"
+  # Check for dependency updates in packages directory
+  - package-ecosystem: "npm"
+    directory: "/packages"
+    groups:
+      # Group all package dependencies into a single PR
+      packages-dependencies:
+        patterns:
+          - "*"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "06:00"
+    versioning-strategy: increase
+    labels:
+      - "dependencies"
+      - "skip-pr-description-validation"
