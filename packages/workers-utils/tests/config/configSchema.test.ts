@@ -4,7 +4,7 @@ import path from "node:path";
 describe("src/config/environment.ts", () => {
 	// `@default` values must not be escaped in order to generate a valid schema.
 	test("default values are not escaped", () => {
-		const srcFile = path.join(__dirname, "../../config/environment.ts");
+		const srcFile = path.join(__dirname, "../../src/config/environment.ts");
 		const srcLines = fs.readFileSync(srcFile, "utf-8").split("\n");
 		const hasEscapedDefaultRegex = /@default\s+`/;
 		srcLines.forEach((line, lineNumber) => {
