@@ -2351,6 +2351,12 @@ importers:
       mlly:
         specifier: ^1.7.4
         version: 1.7.4
+      tree-kill:
+        specifier: ^1.2.2
+        version: 1.2.2
+      ts-dedent:
+        specifier: ^2.2.0
+        version: 2.2.0
       tsdown:
         specifier: 0.16.3
         version: 0.16.3(ms@2.1.3)(typescript@5.8.3)
