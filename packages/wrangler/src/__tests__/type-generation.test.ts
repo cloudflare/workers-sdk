@@ -312,10 +312,59 @@ describe("generate types", () => {
 			})
 		);
 	});
-	it("should error when no config file is detected", async () => {
-		await expect(runWrangler("types")).rejects.toMatchInlineSnapshot(
-			`[Error: No config file detected. This command requires a Wrangler configuration file.]`
+	it("should generate runtime types without config file when compatibility-date is provided", async () => {
+		await runWrangler("types --compatibility-date=2024-01-01");
+		expect(std.out).toContain("No config file detected");
+		expect(std.out).toContain("Generating runtime types");
+		expect(std.out).toContain("Types written to worker-configuration.d.ts");
+		expect(spy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				config: expect.objectContaining({
+					compatibility_date: "2024-01-01",
+				}),
+				outFile: "worker-configuration.d.ts",
+			})
 		);
+	});
+
+	it("should use latest workerd compatibility date when no config file and no compatibility-date arg", async () => {
+		await runWrangler("types");
+		expect(std.out).toContain("No config file detected");
+		expect(std.out).toContain(
+			"Using the installed Workers runtime's latest supported date"
+		);
+		expect(std.out).toContain("Generating runtime types");
+		expect(spy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				config: expect.objectContaining({
+					compatibility_date: expect.any(String),
+				}),
+			})
+		);
+	});
+
+	it("should support compatibility-flags argument without config file", async () => {
+		await runWrangler(
+			"types --compatibility-date=2024-01-01 --compatibility-flags=nodejs_compat --compatibility-flags=streams_enable_constructors"
+		);
+		expect(std.out).toContain("No config file detected");
+		expect(spy).toHaveBeenCalledWith(
+			expect.objectContaining({
+				config: expect.objectContaining({
+					compatibility_date: "2024-01-01",
+					compatibility_flags: ["nodejs_compat", "streams_enable_constructors"],
+				}),
+				outFile: "worker-configuration.d.ts",
+			})
+		);
+	});
+
+	it("should set includeEnv to false when no config file is detected", async () => {
+		await runWrangler("types --compatibility-date=2024-01-01");
+		expect(std.out).toContain(
+			"Setting --include-env to false (only runtime types will be generated)"
+		);
+		expect(std.out).not.toContain("Generating project types");
 	});
 
 	it("should error when a specified custom config file is missing", async () => {
