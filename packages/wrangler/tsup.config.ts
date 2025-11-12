@@ -78,9 +78,7 @@ export default defineConfig((options) => [
 		entry: ["src/cli.ts"],
 		platform: "node",
 		format: "cjs",
-		dts: {
-			resolve: [/^@cloudflare\//],
-		},
+		dts: true,
 		outDir: "wrangler-dist",
 		tsconfig: "tsconfig.json",
 		metafile: true,
