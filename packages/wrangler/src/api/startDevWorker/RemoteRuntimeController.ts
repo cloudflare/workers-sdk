@@ -25,6 +25,7 @@ import type {
 	CfPreviewSession,
 	CfPreviewToken,
 } from "../../dev/create-worker-preview";
+import type { DevEnv } from "./DevEnv";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -45,6 +46,10 @@ export class RemoteRuntimeController extends RuntimeController {
 	#session?: CfPreviewSession;
 
 	#activeTail?: WebSocket;
+
+	constructor(devEnv: DevEnv) {
+		super(devEnv);
+	}
 
 	async #previewSession(
 		props: Parameters<typeof getWorkerAccountAndContext>[0] & {

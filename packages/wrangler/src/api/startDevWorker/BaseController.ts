@@ -1,5 +1,5 @@
-import { EventEmitter } from "node:events";
 import { logger } from "../../logger";
+import type { DevEnv } from "./DevEnv";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -10,86 +10,32 @@ import type {
 	ReloadStartEvent,
 } from "./events";
 
-interface TypedEventEmitter<EventMap extends Record<string | symbol, unknown[]>>
-	extends EventEmitter {
-	addListener<Name extends keyof EventMap>(
-		eventName: Name,
-		listener: (...args: EventMap[Name]) => void
-	): this;
-	on<Name extends keyof EventMap>(
-		eventName: Name,
-		listener: (...args: EventMap[Name]) => void
-	): this;
-	once<Name extends keyof EventMap>(
-		eventName: Name,
-		listener: (...args: EventMap[Name]) => void
-	): this;
-	removeListener<Name extends keyof EventMap>(
-		eventName: Name,
-		listener: (...args: EventMap[Name]) => void
-	): this;
-	off<Name extends keyof EventMap>(
-		eventName: Name,
-		listener: (...args: EventMap[Name]) => void
-	): this;
-	removeAllListeners(event?: keyof EventMap): this;
-	listeners<Name extends keyof EventMap>(
-		eventName: Name
-	): ((...args: EventMap[Name]) => void)[];
-	rawListeners<Name extends keyof EventMap>(
-		eventName: Name
-	): ((...args: EventMap[Name]) => void)[];
-	emit<Name extends keyof EventMap>(
-		eventName: Name,
-		...args: EventMap[Name]
-	): boolean;
-	listenerCount<Name extends keyof EventMap>(
-		eventName: Name,
-		listener?: (...args: EventMap[Name]) => void
-	): number;
-	prependListener<Name extends keyof EventMap>(
-		eventName: Name,
-		listener: (...args: EventMap[Name]) => void
-	): this;
-	prependOnceListener<Name extends keyof EventMap>(
-		eventName: Name,
-		listener: (...args: EventMap[Name]) => void
-	): this;
-}
-
-const TypedEventEmitterImpl = EventEmitter as unknown as {
-	new <
-		EventMap extends Record<string | symbol, unknown[]>,
-	>(): TypedEventEmitter<EventMap>;
-};
-
-export type ControllerEventMap = {
-	error: [ErrorEvent];
-};
-export abstract class Controller<
-	EventMap extends ControllerEventMap = ControllerEventMap,
-> extends TypedEventEmitterImpl<EventMap> {
+export abstract class Controller {
+	protected devEnv!: DevEnv;
 	#tearingDown = false;
+
+	constructor(devEnv?: DevEnv) {
+		if (devEnv) {
+			this.devEnv = devEnv;
+		}
+	}
+
 	async teardown(): Promise<void> {
 		this.#tearingDown = true;
 	}
-	emitErrorEvent(event: ErrorEvent) {
+
+	protected emitErrorEvent(event: ErrorEvent) {
 		if (this.#tearingDown) {
 			logger.debug("Suppressing error event during teardown");
 			logger.debug(`Error in ${event.source}: ${event.reason}\n`, event.cause);
 			logger.debug("=> Error contextual data:", event.data);
 			return;
 		}
-		this.emit("error", event);
+		this.devEnv.dispatch(event);
 	}
 }
 
-type RuntimeControllerEventMap = ControllerEventMap & {
-	reloadStart: [ReloadStartEvent];
-	reloadComplete: [ReloadCompleteEvent];
-	devRegistryUpdate: [DevRegistryUpdateEvent];
-};
-export abstract class RuntimeController extends Controller<RuntimeControllerEventMap> {
+export abstract class RuntimeController extends Controller {
 	// ******************
 	//   Event Handlers
 	// ******************
@@ -102,6 +48,15 @@ export abstract class RuntimeController extends Controller<RuntimeControllerEven
 	//   Event Dispatchers
 	// *********************
 
-	abstract emitReloadStartEvent(data: ReloadStartEvent): void;
-	abstract emitReloadCompleteEvent(data: ReloadCompleteEvent): void;
+	protected emitReloadStartEvent(data: ReloadStartEvent): void {
+		this.devEnv.dispatch(data);
+	}
+
+	protected emitReloadCompleteEvent(data: ReloadCompleteEvent): void {
+		this.devEnv.dispatch(data);
+	}
+
+	protected emitDevRegistryUpdateEvent(data: DevRegistryUpdateEvent): void {
+		this.devEnv.dispatch(data);
+	}
 }

@@ -14,6 +14,7 @@ import {
 } from "./LocalRuntimeController";
 import { convertCfWorkerInitBindingsToBindings } from "./utils";
 import type { RemoteProxySession } from "../remoteBindings";
+import type { DevEnv } from "./DevEnv";
 import type { BundleCompleteEvent } from "./events";
 import type { Binding } from "./index";
 
@@ -45,8 +46,11 @@ function ensureMatchingSql(options: MF.Options) {
 	return options;
 }
 export class MultiworkerRuntimeController extends LocalRuntimeController {
-	constructor(private numWorkers: number) {
-		super();
+	constructor(
+		devEnv: DevEnv,
+		private numWorkers: number
+	) {
+		super(devEnv);
 	}
 	// ******************
 	//   Event Handlers

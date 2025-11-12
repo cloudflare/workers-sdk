@@ -47,8 +47,8 @@ import {
 	extractBindingsOfType,
 	unwrapHook,
 } from "./utils";
-import type { ControllerEventMap } from "./BaseController";
-import type { ConfigUpdateEvent, DevRegistryUpdateEvent } from "./events";
+import type { DevEnv } from "./DevEnv";
+import type { DevRegistryUpdateEvent } from "./events";
 import type {
 	StartDevWorkerInput,
 	StartDevWorkerOptions,
@@ -56,10 +56,6 @@ import type {
 } from "./types";
 import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
-
-type ConfigControllerEventMap = ControllerEventMap & {
-	configUpdate: [ConfigUpdateEvent];
-};
 
 const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "127.0.0.1");
 const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, "localhost");
@@ -483,13 +479,17 @@ async function resolveConfig(
 	return { config: resolved, printCurrentBindings };
 }
 
-export class ConfigController extends Controller<ConfigControllerEventMap> {
+export class ConfigController extends Controller {
 	latestInput?: StartDevWorkerInput;
 	latestConfig?: StartDevWorkerOptions;
 	#printCurrentBindings?: (registry: WorkerRegistry | null) => void;
 
 	#configWatcher?: ReturnType<typeof watch>;
 	#abortController?: AbortController;
+
+	constructor(devEnv: DevEnv) {
+		super(devEnv);
+	}
 
 	async #ensureWatchingConfig(configPath: string | undefined) {
 		await this.#configWatcher?.close();
@@ -639,6 +639,6 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	// *********************
 
 	emitConfigUpdateEvent(config: StartDevWorkerOptions) {
-		this.emit("configUpdate", { type: "configUpdate", config });
+		this.devEnv.dispatch({ type: "configUpdate", config });
 	}
 }

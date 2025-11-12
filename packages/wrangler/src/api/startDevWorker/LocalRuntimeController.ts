@@ -20,6 +20,7 @@ import {
 	unwrapHook,
 } from "./utils";
 import type { RemoteProxySession } from "../remoteBindings";
+import type { DevEnv } from "./DevEnv";
 import type {
 	BundleCompleteEvent,
 	BundleStartEvent,
@@ -152,12 +153,16 @@ export async function convertToConfigBundle(
 }
 
 export class LocalRuntimeController extends RuntimeController {
+	#log = MF.buildLog();
+	#currentBundleId = 0;
+
+	constructor(devEnv: DevEnv) {
+		super(devEnv);
+	}
+
 	// ******************
 	//   Event Handlers
 	// ******************
-
-	#log = MF.buildLog();
-	#currentBundleId = 0;
 
 	// This is given as a shared secret to the Proxy and User workers
 	// so that the User Worker can trust aspects of HTTP requests from the Proxy Worker

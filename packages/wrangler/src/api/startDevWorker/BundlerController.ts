@@ -23,25 +23,21 @@ import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { EphemeralDirectory } from "../../paths";
-import type { ControllerEventMap } from "./BaseController";
-import type {
-	BundleCompleteEvent,
-	BundleStartEvent,
-	ConfigUpdateEvent,
-} from "./events";
+import type { DevEnv } from "./DevEnv";
+import type { ConfigUpdateEvent } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 
-type BundlerControllerEventMap = ControllerEventMap & {
-	bundleStart: [BundleStartEvent];
-	bundleComplete: [BundleCompleteEvent];
-};
-export class BundlerController extends Controller<BundlerControllerEventMap> {
+export class BundlerController extends Controller {
 	#currentBundle?: EsbuildBundle;
 
 	#customBuildWatcher?: ReturnType<typeof watch>;
 
 	// Handle aborting in-flight custom builds as new ones come in from the filesystem watcher
 	#customBuildAborter = new AbortController();
+
+	constructor(devEnv: DevEnv) {
+		super(devEnv);
+	}
 
 	async #runCustomBuild(config: StartDevWorkerOptions, filePath: string) {
 		// If a new custom build comes in, we need to cancel in-flight builds
@@ -390,12 +386,12 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	}
 
 	emitBundleStartEvent(config: StartDevWorkerOptions) {
-		this.emit("bundleStart", { type: "bundleStart", config });
+		this.devEnv.dispatch({ type: "bundleStart", config });
 	}
 	emitBundleCompleteEvent(
 		config: StartDevWorkerOptions,
 		bundle: EsbuildBundle
 	) {
-		this.emit("bundleComplete", { type: "bundleComplete", config, bundle });
+		this.devEnv.dispatch({ type: "bundleComplete", config, bundle });
 	}
 }

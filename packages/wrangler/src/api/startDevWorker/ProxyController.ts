@@ -23,7 +23,7 @@ import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { ControllerEventMap } from "./BaseController";
+import type { DevEnv } from "./DevEnv";
 import type {
 	BundleStartEvent,
 	ConfigUpdateEvent,
@@ -31,7 +31,6 @@ import type {
 	InspectorProxyWorkerIncomingWebSocketMessage,
 	InspectorProxyWorkerOutgoingRequestBody,
 	InspectorProxyWorkerOutgoingWebsocketMessage,
-	PreviewTokenExpiredEvent,
 	ProxyData,
 	ProxyWorkerIncomingRequestBody,
 	ProxyWorkerOutgoingRequestBody,
@@ -44,11 +43,7 @@ import type { StartDevWorkerOptions } from "./types";
 import type { DeferredPromise } from "./utils";
 import type { LogOptions, MiniflareOptions } from "miniflare";
 
-type ProxyControllerEventMap = ControllerEventMap & {
-	ready: [ReadyEvent];
-	previewTokenExpired: [PreviewTokenExpiredEvent];
-};
-export class ProxyController extends Controller<ProxyControllerEventMap> {
+export class ProxyController extends Controller {
 	public ready = createDeferred<ReadyEvent>();
 
 	public localServerReady = createDeferred<void>();
@@ -61,6 +56,10 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 	protected latestBundle?: EsbuildBundle;
 
 	secret = randomUUID();
+
+	constructor(devEnv: DevEnv) {
+		super(devEnv);
+	}
 
 	protected createProxyWorker() {
 		if (this._torndown) {
@@ -598,11 +597,10 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			inspectorUrl,
 		};
 
-		this.emit("ready", data);
 		this.ready.resolve(data);
 	}
 	emitPreviewTokenExpiredEvent(proxyData: ProxyData) {
-		this.emit("previewTokenExpired", {
+		this.devEnv.dispatch({
 			type: "previewTokenExpired",
 			proxyData,
 		});
