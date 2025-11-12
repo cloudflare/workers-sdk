@@ -154,6 +154,7 @@ function getStagingSubdomain(): string {
 export const getSanitizeLogs = getBooleanEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG_SANITIZE",
 	defaultValue: true,
+	strict: false,
 });
 
 /**

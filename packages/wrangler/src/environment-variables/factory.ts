@@ -1,4 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
+import { logger } from "../logger";
 
 /**
  * Environment variables supported by Wrangler for configuration and authentication.
@@ -126,17 +127,21 @@ type ElementType<A> = A extends readonly (infer T)[] ? T : never;
  *
  * This is not memoized to allow us to change the value at runtime, such as in testing.
  *
- * The environment variable must be either "true" or "false" (after lowercasing), otherwise it will throw an error.
+ * The environment variable must be either "true" or "false" (after lowercasing), otherwise it will throw an error, unless
+ * the strict setting is set to true, in such case the default value, if present will be returned instead (and if no default
+ * value is set an error will be thrown).
  */
 export function getBooleanEnvironmentVariableFactory(options: {
 	variableName: VariableNames;
 }): () => boolean | undefined;
 export function getBooleanEnvironmentVariableFactory(options: {
 	variableName: VariableNames;
+	strict?: boolean;
 	defaultValue: boolean | (() => boolean);
 }): () => boolean;
 export function getBooleanEnvironmentVariableFactory(options: {
 	variableName: VariableNames;
+	strict?: boolean;
 	defaultValue?: boolean | (() => boolean);
 }): () => boolean | undefined {
 	return () => {
@@ -155,6 +160,22 @@ export function getBooleanEnvironmentVariableFactory(options: {
 			case "false":
 				return false;
 			default:
+				if (options.strict === false && options.defaultValue) {
+					const defaultValue =
+						typeof options.defaultValue === "function"
+							? options.defaultValue()
+							: options.defaultValue;
+
+					if (defaultValue !== undefined) {
+						logger.once.warn(
+							`Unrecognised ${options.variableName} value "${JSON.stringify(
+								process.env[options.variableName]?.toLowerCase()
+							)}", expected "true" or "false", defaulting to "${defaultValue}"`
+						);
+						return defaultValue;
+					}
+				}
+
 				throw new UserError(
 					`Expected ${options.variableName} to be "true" or "false", but got ${JSON.stringify(
 						process.env[options.variableName]
