@@ -43,7 +43,8 @@ updates:
       - dependency-name: "@cloudflare/workers-types"
   # Check for dependency updates in packages directory
   - package-ecosystem: "npm"
-    directory: "/packages"
+    directory: "/"
+    open-pull-requests-limit: 1
     groups:
       # Group all package dependencies into a single PR
       packages-dependencies:
