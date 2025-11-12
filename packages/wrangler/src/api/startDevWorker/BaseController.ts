@@ -11,13 +11,17 @@ import type {
 } from "./events";
 
 export abstract class Controller {
-	public devEnv!: DevEnv;
+	protected devEnv!: DevEnv;
 	#tearingDown = false;
 
 	constructor(devEnv?: DevEnv) {
 		if (devEnv) {
 			this.devEnv = devEnv;
 		}
+	}
+
+	setDevEnv(devEnv: DevEnv): void {
+		this.devEnv = devEnv;
 	}
 
 	async teardown(): Promise<void> {

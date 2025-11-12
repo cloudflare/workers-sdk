@@ -57,7 +57,7 @@ export class ProxyController extends Controller {
 
 	secret = randomUUID();
 
-	constructor(devEnv: DevEnv) {
+	constructor(devEnv?: DevEnv) {
 		super(devEnv);
 	}
 

@@ -46,11 +46,8 @@ function ensureMatchingSql(options: MF.Options) {
 	return options;
 }
 export class MultiworkerRuntimeController extends LocalRuntimeController {
-	constructor(
-		devEnv: DevEnv,
-		private numWorkers: number
-	) {
-		super(devEnv);
+	constructor(private numWorkers: number) {
+		super();
 	}
 	// ******************
 	//   Event Handlers

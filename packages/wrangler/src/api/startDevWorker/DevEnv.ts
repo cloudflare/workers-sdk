@@ -78,18 +78,18 @@ export class DevEnv extends EventEmitter {
 		this.proxy = proxy ?? new ProxyController(this);
 
 		if (config) {
-			config.devEnv = this;
+			config.setDevEnv(this);
 		}
 		if (bundler) {
-			bundler.devEnv = this;
+			bundler.setDevEnv(this);
 		}
 		if (runtimes) {
 			runtimes.forEach((runtime) => {
-				runtime.devEnv = this;
+				runtime.setDevEnv(this);
 			});
 		}
 		if (proxy) {
-			proxy.devEnv = this;
+			proxy.setDevEnv(this);
 		}
 
 		this.on("error", (event: ErrorEvent) => {

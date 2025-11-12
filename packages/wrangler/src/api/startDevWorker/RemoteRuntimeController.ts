@@ -47,7 +47,7 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	#activeTail?: WebSocket;
 
-	constructor(devEnv: DevEnv) {
+	constructor(devEnv?: DevEnv) {
 		super(devEnv);
 	}
 
@@ -385,9 +385,9 @@ export class RemoteRuntimeController extends RuntimeController {
 	// *********************
 
 	emitReloadStartEvent(data: ReloadStartEvent) {
-		this.emit("reloadStart", data);
+		this.devEnv.dispatch(data);
 	}
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
-		this.emit("reloadComplete", data);
+		this.devEnv.dispatch(data);
 	}
 }
