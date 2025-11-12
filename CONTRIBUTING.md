@@ -449,8 +449,8 @@ We should be consistent with the word that describes how we get a worker to the 
 
 We use the following guidelines to determine the kind of change for a PR:
 
-- Bugfixes and experimental, beta, and pre-1.0-package features are considered to be 'patch' changes. Be sure to log warnings when experimental features are used.
-- New stable features and new deprecation warnings for future breaking changes are considered 'minor' changes. These changes shouldn't break existing code, but the deprecation warnings should suggest alternate solutions to not trigger the warning.
+- Bugfixes are considered to be 'patch' changes. Be sure to log warnings when experimental features are used.
+- New stable features as well as changes to experimental, beta, and pre-1.0-package features are considered 'minor' changes. New deprecation warnings for future breaking changes are also considered 'minor' changes—these changes shouldn't break existing code, but the deprecation warnings should suggest alternate solutions to not trigger the warning.
 - Breaking changes are considered to be 'major' changes. These are usually when deprecations take effect, or functional breaking behaviour is added with relevant logs (either as errors or warnings). Note: breaking changes for experimental, beta, or pre-1.0-package features are considered to be 'minor' changes.
 
 ### Styleguide

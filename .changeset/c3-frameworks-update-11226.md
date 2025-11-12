@@ -8,4 +8,4 @@ The following dependency versions have been updated:
 
 | Dependency      | From   | To     |
 | --------------- | ------ | ------ |
-| create-next-app | 15.4.6 | 15.5.6 |
+| @angular/create | 20.3.8 | 20.3.9 |

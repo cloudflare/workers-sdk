@@ -7,6 +7,7 @@ import type { RawConfig } from "@cloudflare/workers-utils";
 
 export class Astro extends Framework {
 	name = "astro";
+
 	async configure(outputDir: string): Promise<RawConfig> {
 		const { npx } = await getPackageManager();
 		await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
@@ -16,7 +17,7 @@ export class Astro extends Framework {
 				`via \`${npx} astro add cloudflare\``
 			)}`,
 		});
-		await writeFileSync("public/.assetsignore", "_worker.js\n_routes.json");
+		writeFileSync("public/.assetsignore", "_worker.js\n_routes.json");
 		return {
 			main: `${outputDir}/_worker.js/index.js`,
 			compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
@@ -29,4 +30,7 @@ export class Astro extends Framework {
 			},
 		};
 	}
+
+	configurationDescription =
+		'Configuring project for Astro with "astro add cloudflare"';
 }

@@ -5,9 +5,12 @@ import type { RawConfig } from "./config";
 import type {
 	CustomDomainRoute,
 	Route,
+	TailConsumer,
 	ZoneNameRoute,
 } from "./config/environment";
-import type { ServiceMetadataRes, WorkerMetadata } from "./types";
+import type { WorkerMetadata } from "./types";
+import type { AssetConfig } from "@cloudflare/workers-shared";
+import type { Cloudflare } from "cloudflare";
 
 type RoutesRes = {
 	id: string;
@@ -16,103 +19,91 @@ type RoutesRes = {
 	script: string;
 }[];
 
-type CustomDomainsRes = {
-	id: string;
-	zone_id: string;
-	zone_name: string;
-	hostname: string;
-	service: string;
-	environment: string;
-	cert_id: string;
-}[];
-
-type WorkerSubdomainRes = {
-	enabled: boolean;
-	previews_enabled: boolean;
-};
-type CronTriggersRes = {
-	schedules: {
-		cron: string;
-		created_on: Date;
-		modified_on: Date;
-	}[];
-};
-
-export interface FullWorkerConfig {
-	bindings: WorkerMetadata["bindings"];
+interface APIWorkerConfig {
+	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/list/ */
+	name: string; // property renamed from `id`...
+	entrypoint: string;
+	tags: string[];
+	compatibility_date: string;
+	compatibility_flags: string[];
+	logpush: boolean | undefined;
 	routes: RoutesRes;
-	customDomains: CustomDomainsRes;
-	subdomainStatus: WorkerSubdomainRes;
-	serviceEnvMetadata: ServiceMetadataRes["default_environment"];
-	cronTriggers: CronTriggersRes;
+	tail_consumers: TailConsumer[] | undefined;
+	migration_tag?: string;
+
+	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/list/ */
+	domains: Cloudflare.Workers.Domain[];
+	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/schedules/methods/get/ */
+	schedules: Cloudflare.Workers.Scripts.Schedules.ScheduleGetResponse.Schedule[];
+
+	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/beta/subresources/workers/subresources/versions/methods/get/ using `{version_id}` of `latest` */
+	assets?: AssetConfig;
+	bindings: WorkerMetadata["bindings"];
+	observability: Cloudflare.Workers.Beta.Worker.Observability | undefined;
+	limits: { cpu_ms: number } | undefined;
+	placement: Cloudflare.Workers.Beta.Workers.Version.Placement | undefined;
+	subdomain: {
+		enabled: boolean;
+		previews_enabled: boolean;
+	};
 }
 
-function convertWorkerToWranglerConfig(
-	workerName: string,
-	entrypoint: string,
-	{
-		bindings,
-		routes,
-		customDomains,
-		subdomainStatus,
-		serviceEnvMetadata,
-		cronTriggers,
-	}: FullWorkerConfig
-): RawConfig {
-	const mappedBindings = mapWorkerMetadataBindings(bindings);
+function convertWorkerToWranglerConfig(config: APIWorkerConfig): RawConfig {
+	const mappedBindings = mapWorkerMetadataBindings(config.bindings);
 
-	const durableObjectClassNames = bindings
-		.filter((binding) => binding.type === "durable_object_namespace")
+	const durableObjectClassNames = config.bindings
+		.filter(
+			(binding) =>
+				binding.type === "durable_object_namespace" &&
+				binding.script_name === config.name
+		)
 		.map(
 			(durableObject) => (durableObject as { class_name: string }).class_name
 		);
 
 	const allRoutes: Route[] = [
-		...routes.map<ZoneNameRoute>((r) => ({
+		...config.routes.map<ZoneNameRoute>((r) => ({
 			pattern: r.pattern,
 			zone_name: r.zone_name,
 		})),
-		...customDomains.map<CustomDomainRoute>((c) => ({
-			pattern: c.hostname,
+		...config.domains.map<CustomDomainRoute>((c) => ({
+			pattern: c.hostname as string,
 			zone_name: c.zone_name,
 			custom_domain: true,
 		})),
 	];
 
 	return {
-		name: workerName,
-		main: entrypoint,
-		workers_dev: subdomainStatus.enabled,
-		preview_urls: subdomainStatus.previews_enabled,
+		name: config.name,
+		main: config.entrypoint,
+		workers_dev: config.subdomain.enabled,
+		preview_urls: config.subdomain.previews_enabled,
 		compatibility_date:
-			serviceEnvMetadata.script.compatibility_date ??
-			formatCompatibilityDate(new Date()),
-		compatibility_flags: serviceEnvMetadata.script.compatibility_flags,
+			config.compatibility_date ?? formatCompatibilityDate(new Date()),
+		compatibility_flags: config.compatibility_flags,
 		...(allRoutes.length ? { routes: allRoutes } : {}),
 		placement:
-			serviceEnvMetadata.script.placement_mode === "smart"
-				? { mode: "smart" }
-				: undefined,
-		limits: serviceEnvMetadata.script.limits,
-		...(durableObjectClassNames.length
+			config.placement?.mode === "smart" ? { mode: "smart" } : undefined,
+		limits: config.limits,
+		...(durableObjectClassNames.length && config.migration_tag
 			? {
 					migrations: [
 						{
-							tag: serviceEnvMetadata.script.migration_tag,
+							tag: config.migration_tag,
 							new_classes: durableObjectClassNames,
 						},
 					],
 				}
 			: {}),
-		...(cronTriggers.schedules.length
+		...(config.schedules.length
 			? {
 					triggers: {
-						crons: cronTriggers.schedules.map((scheduled) => scheduled.cron),
+						crons: config.schedules.map((scheduled) => scheduled.cron),
 					},
 				}
 			: {}),
-		tail_consumers: serviceEnvMetadata.script.tail_consumers ?? undefined,
-		observability: serviceEnvMetadata.script.observability,
+		tail_consumers: config.tail_consumers,
+		observability: config.observability,
 		...mappedBindings,
 	};
 }
@@ -122,11 +113,9 @@ function convertWorkerToWranglerConfig(
  * construct a Wrangler config file for the application.
  */
 export function constructWranglerConfig(
-	workerName: string,
-	entrypoint: string,
-	workerOrWorkers: FullWorkerConfig | FullWorkerConfig[]
+	workerOrWorkers: APIWorkerConfig | APIWorkerConfig[]
 ): RawConfig {
-	let workers: FullWorkerConfig[];
+	let workers: APIWorkerConfig[];
 	if (Array.isArray(workerOrWorkers)) {
 		workers = workerOrWorkers;
 	} else {
@@ -134,18 +123,13 @@ export function constructWranglerConfig(
 	}
 
 	const topLevelEnv = workers.find(
-		(w) =>
-			!w.serviceEnvMetadata.script.tags?.some((t) =>
-				t.startsWith(ENVIRONMENT_TAG_PREFIX)
-			)
+		(w) => !w.tags?.some((t) => t.startsWith(ENVIRONMENT_TAG_PREFIX))
 	);
+	const workerName = topLevelEnv?.name ?? workers[0].name;
+	const entrypoint = topLevelEnv?.entrypoint ?? workers[0].entrypoint;
 	let combinedConfig: RawConfig;
 	if (topLevelEnv) {
-		combinedConfig = convertWorkerToWranglerConfig(
-			workerName,
-			entrypoint,
-			topLevelEnv
-		);
+		combinedConfig = convertWorkerToWranglerConfig(topLevelEnv);
 	} else {
 		// Make a synthetic top level environment
 		combinedConfig = {
@@ -155,22 +139,19 @@ export function constructWranglerConfig(
 	}
 
 	for (const env of workers) {
-		const serviceTag = env.serviceEnvMetadata.script.tags?.find(
+		const serviceTag = env.tags?.find(
 			(t) => t === `${SERVICE_TAG_PREFIX}${workerName}`
 		);
-		const envTag = env.serviceEnvMetadata.script.tags?.find((t) =>
-			t.startsWith(ENVIRONMENT_TAG_PREFIX)
-		);
-		if (serviceTag !== workerName || envTag === undefined) {
+		const envTag = env.tags?.find((t) => t.startsWith(ENVIRONMENT_TAG_PREFIX));
+		if (
+			serviceTag !== `${SERVICE_TAG_PREFIX}${workerName}` ||
+			envTag === undefined
+		) {
 			continue;
 		}
 		const [_, envName] = envTag.split("=");
 		combinedConfig.env ??= {};
-		combinedConfig.env[envName] = convertWorkerToWranglerConfig(
-			workerName,
-			entrypoint,
-			env
-		);
+		combinedConfig.env[envName] = convertWorkerToWranglerConfig(env);
 	}
 	return combinedConfig;
 }

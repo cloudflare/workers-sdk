@@ -14,6 +14,7 @@ interface TestCase {
 	npm: boolean;
 	pnpm: boolean;
 	yarn: boolean;
+	bun: boolean;
 	expectedPackageManager: string;
 }
 
@@ -23,6 +24,7 @@ const testCases: TestCase[] = [
 		npm: true,
 		yarn: false,
 		pnpm: false,
+		bun: false,
 
 		expectedPackageManager: "npm",
 	},
@@ -32,6 +34,7 @@ const testCases: TestCase[] = [
 		npm: false,
 		yarn: true,
 		pnpm: false,
+		bun: false,
 
 		expectedPackageManager: "yarn",
 	},
@@ -41,6 +44,7 @@ const testCases: TestCase[] = [
 		npm: false,
 		yarn: false,
 		pnpm: true,
+		bun: false,
 
 		expectedPackageManager: "pnpm",
 	},
@@ -50,6 +54,7 @@ const testCases: TestCase[] = [
 		npm: true,
 		yarn: true,
 		pnpm: false,
+		bun: false,
 
 		expectedPackageManager: "npm",
 	},
@@ -59,8 +64,29 @@ const testCases: TestCase[] = [
 		npm: true,
 		yarn: true,
 		pnpm: true,
+		bun: false,
 
 		expectedPackageManager: "npm",
+	},
+
+	// npm, yarn, pnpm and bun binaries
+	{
+		npm: true,
+		yarn: true,
+		pnpm: true,
+		bun: true,
+
+		expectedPackageManager: "npm",
+	},
+
+	// bun binary only
+	{
+		npm: false,
+		yarn: false,
+		pnpm: false,
+		bun: true,
+
+		expectedPackageManager: "bun",
 	},
 ];
 
@@ -73,21 +99,23 @@ describe("getPackageManager()", () => {
 		mockYarn(false);
 		mockNpm(false);
 		mockPnpm(false);
+		mockBun(false);
 
 		it("should throw an error", async () => {
 			await expect(() =>
 				getPackageManager()
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Unable to find a package manager. Supported managers are: npm, yarn, and pnpm.]`
+				`[Error: Unable to find a package manager. Supported managers are: npm, yarn, pnpm, and bun.]`
 			);
 		});
 	});
 
-	for (const { npm, yarn, pnpm, expectedPackageManager } of testCases) {
-		describe(getTestCaseDescription(npm, yarn, pnpm), () => {
+	for (const { npm, yarn, pnpm, bun, expectedPackageManager } of testCases) {
+		describe(getTestCaseDescription(npm, yarn, pnpm, bun), () => {
 			mockYarn(yarn);
 			mockNpm(npm);
 			mockPnpm(pnpm);
+			mockBun(bun);
 
 			it(`should return the ${expectedPackageManager} package manager`, async () => {
 				const actualPackageManager = await getPackageManager();
@@ -132,10 +160,22 @@ function mockPnpm(succeed: boolean): void {
 	afterEach(() => unMock());
 }
 
+/**
+ * Create a fake bun binary
+ */
+function mockBun(succeed: boolean): void {
+	let unMock: () => void;
+	beforeEach(async () => {
+		unMock = await mockBinary("bun", `process.exit(${succeed ? 0 : 1})`);
+	});
+	afterEach(() => unMock());
+}
+
 function getTestCaseDescription(
 	npm: boolean,
 	yarn: boolean,
-	pnpm: boolean
+	pnpm: boolean,
+	bun: boolean
 ): string {
 	const criteria: string[] = [];
 	if (npm) {
@@ -148,6 +188,10 @@ function getTestCaseDescription(
 
 	if (pnpm) {
 		criteria.push("pnpm");
+	}
+
+	if (bun) {
+		criteria.push("bun");
 	}
 
 	return "using " + criteria.join("; ");
