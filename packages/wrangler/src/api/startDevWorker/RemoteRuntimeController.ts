@@ -369,15 +369,18 @@ export class RemoteRuntimeController extends RuntimeController {
 			return;
 		}
 
-		// Routes can be undefined, so use the stored value or undefined
-		const routes = this.#latestRoutes;
+		this.emitReloadStartEvent({
+			type: "reloadStart",
+			config: this.#latestConfig,
+			bundle: this.#latestBundle,
+		});
 
 		try {
 			await this.#updatePreviewToken(
 				this.#latestConfig,
 				this.#latestBundle,
 				this.#latestAuth,
-				routes,
+				this.#latestRoutes,
 				this.#currentBundleId
 			);
 			logger.log(chalk.green("✔ Preview token refreshed successfully"));
