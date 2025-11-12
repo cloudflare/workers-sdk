@@ -41,7 +41,7 @@ updates:
     allow:
       - dependency-name: "workerd"
       - dependency-name: "@cloudflare/workers-types"
-  # Check for dependency updates in packages directory
+  # Check for weekly dependency updates (excluding workerd & workers-types)
   - package-ecosystem: "npm"
     directory: "/"
     open-pull-requests-limit: 1
@@ -58,3 +58,6 @@ updates:
     labels:
       - "dependencies"
       - "skip-pr-description-validation"
+    ignore:
+      - dependency-name: "workerd"
+      - dependency-name: "@cloudflare/workers-types"
