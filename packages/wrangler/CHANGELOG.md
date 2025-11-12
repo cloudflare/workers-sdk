@@ -1,5 +1,41 @@
 # wrangler
 
+## 3.115.0
+
+### Minor Changes
+
+- [#11246](https://github.com/cloudflare/workers-sdk/pull/11246) [`4febcda`](https://github.com/cloudflare/workers-sdk/commit/4febcdaf0f863abe3d53fbbea08eee075605a2b5) Thanks [@vicb](https://github.com/vicb)! - Change how Wrangler selects default ports for dev sessions.
+
+  If no port is specified, Wrangler now probes the default port and the 10 consecutive ports after it before falling back to a random port.
+  This will help getting a stable port number across dev sessions.
+  Both the http server and inspector ports are affected.
+
+### Patch Changes
+
+- [#10737](https://github.com/cloudflare/workers-sdk/pull/10737) [`c41a078`](https://github.com/cloudflare/workers-sdk/commit/c41a0788c69e590eb0e6bc1145be61983675aede) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Allow WRANGLER_SEND_ERROR_REPORTS env var to override whether to report Wrangler crashes to Sentry
+
+- [#11134](https://github.com/cloudflare/workers-sdk/pull/11134) [`bd39455`](https://github.com/cloudflare/workers-sdk/commit/bd3945513419418fe5ef69d7f187a8ed70143328) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Reduce the amount of arguments being passed in metrics capture.
+
+  Now the argument values that are captured come from an allow list,
+  and can be marked as ALLOW (capture the real value) or REDACT (capture as "<REDACTED>").
+
+- [#11020](https://github.com/cloudflare/workers-sdk/pull/11020) [`9cb702e`](https://github.com/cloudflare/workers-sdk/commit/9cb702e95b38bede6ffde6efb47b81d290e01190) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix `observability.logs.persist` being flagged as an unexpected field during the wrangler config file validation
+
+- [#11147](https://github.com/cloudflare/workers-sdk/pull/11147) [`cf4993b`](https://github.com/cloudflare/workers-sdk/commit/cf4993b2e2236d776b0cf4fa400a942c70b7f1f9) Thanks [@FlorentCollin](https://github.com/FlorentCollin)! - Improve the formatting of the D1 execute command to always show the duration in milliseconds with two decimal places.
+
+- [#11179](https://github.com/cloudflare/workers-sdk/pull/11179) [`7f779e9`](https://github.com/cloudflare/workers-sdk/commit/7f779e98151348f3d60dc19e341ed735ba2ce712) Thanks [@ascorbic](https://github.com/ascorbic)! - Log a more helpful error when attempting to "r2 object put" a non-existent file
+
+- [#11108](https://github.com/cloudflare/workers-sdk/pull/11108) [`892ec4f`](https://github.com/cloudflare/workers-sdk/commit/892ec4fbd31e299d2e7fdd8d4c7b07bea70b4c56) Thanks [@emily-shen](https://github.com/emily-shen)! - Fixed self-bindings (service bindings to the same worker) showing as [not connected] in wrangler dev. Self-bindings now correctly show as [connected] since a worker is always available to itself.
+
+- [#10889](https://github.com/cloudflare/workers-sdk/pull/10889) [`204616c`](https://github.com/cloudflare/workers-sdk/commit/204616c0fc4ab47a18c58af06a427634eb5897fa) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Clarify that `wrangler check startup` generates a local CPU profile
+
+- [#10962](https://github.com/cloudflare/workers-sdk/pull/10962) [`203e599`](https://github.com/cloudflare/workers-sdk/commit/203e599c2f6675e773e76ff296902de5afb50235) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Fixed duplicate warning messages appearing during wrangler dev when configuration changes or state transitions occur
+
+- [#11194](https://github.com/cloudflare/workers-sdk/pull/11194) [`71758e9`](https://github.com/cloudflare/workers-sdk/commit/71758e94d9d6d2852e174402a03b0f533c0d52e0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add more logging around Wrangler authentication to help diagnose issues
+
+- Updated dependencies [[`4ae9ead`](https://github.com/cloudflare/workers-sdk/commit/4ae9eaded24a76c3ac1e1c1e00c9620e1b86fda2)]:
+  - miniflare@3.20250718.3
+
 ## 3.114.15
 
 ### Patch Changes
