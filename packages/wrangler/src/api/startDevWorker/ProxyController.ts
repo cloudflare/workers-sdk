@@ -23,7 +23,6 @@ import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { DevEnv } from "./DevEnv";
 import type {
 	BundleStartEvent,
 	ConfigUpdateEvent,
@@ -56,10 +55,6 @@ export class ProxyController extends Controller {
 	protected latestBundle?: EsbuildBundle;
 
 	secret = randomUUID();
-
-	constructor(devEnv?: DevEnv) {
-		super(devEnv);
-	}
 
 	protected createProxyWorker() {
 		if (this._torndown) {

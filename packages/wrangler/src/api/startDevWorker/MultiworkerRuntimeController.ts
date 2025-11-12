@@ -14,7 +14,6 @@ import {
 } from "./LocalRuntimeController";
 import { convertCfWorkerInitBindingsToBindings } from "./utils";
 import type { RemoteProxySession } from "../remoteBindings";
-import type { DevEnv } from "./DevEnv";
 import type { BundleCompleteEvent } from "./events";
 import type { Binding } from "./index";
 

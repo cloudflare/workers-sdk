@@ -1,8 +1,6 @@
-import events from "node:events";
 import path from "node:path";
 import dedent from "ts-dedent";
 import { describe, it } from "vitest";
-import { ConfigController } from "../../../api/startDevWorker/ConfigController";
 import { DevEnv } from "../../../api/startDevWorker/DevEnv";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
 import { logger } from "../../../logger";
@@ -12,10 +10,9 @@ import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
 import { seed } from "../../helpers/seed";
 import type { ConfigUpdateEvent } from "../../../api";
+import type { ConfigController } from "../../../api/startDevWorker/ConfigController";
 
-async function waitForConfigUpdate(
-	devEnv: DevEnv
-): Promise<ConfigUpdateEvent> {
+async function waitForConfigUpdate(devEnv: DevEnv): Promise<ConfigUpdateEvent> {
 	return new Promise((resolve) => {
 		const originalDispatch = devEnv.dispatch.bind(devEnv);
 		devEnv.dispatch = (event) => {

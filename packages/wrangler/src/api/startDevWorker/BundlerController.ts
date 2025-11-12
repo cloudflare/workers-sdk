@@ -23,7 +23,6 @@ import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { EphemeralDirectory } from "../../paths";
-import type { DevEnv } from "./DevEnv";
 import type { ConfigUpdateEvent } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 
@@ -34,10 +33,6 @@ export class BundlerController extends Controller {
 
 	// Handle aborting in-flight custom builds as new ones come in from the filesystem watcher
 	#customBuildAborter = new AbortController();
-
-	constructor(devEnv: DevEnv) {
-		super(devEnv);
-	}
 
 	async #runCustomBuild(config: StartDevWorkerOptions, filePath: string) {
 		// If a new custom build comes in, we need to cancel in-flight builds
