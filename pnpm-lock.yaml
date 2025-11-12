@@ -3707,6 +3707,9 @@ importers:
       '@vitest/ui':
         specifier: catalog:default
         version: 3.2.3(vitest@3.2.3)
+      cloudflare:
+        specifier: ^5.2.0
+        version: 5.2.0(encoding@0.1.13)
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
