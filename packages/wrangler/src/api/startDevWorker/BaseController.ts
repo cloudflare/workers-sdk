@@ -13,15 +13,20 @@ import type {
 export abstract class Controller {
 	protected devEnv!: DevEnv;
 	#tearingDown = false;
+	#devEnvSet = false;
 
 	constructor(devEnv?: DevEnv) {
 		if (devEnv) {
 			this.devEnv = devEnv;
+			this.#devEnvSet = true;
 		}
 	}
 
 	setDevEnv(devEnv: DevEnv): void {
-		this.devEnv = devEnv;
+		if (!this.#devEnvSet) {
+			this.devEnv = devEnv;
+			this.#devEnvSet = true;
+		}
 	}
 
 	async teardown(): Promise<void> {
