@@ -187,7 +187,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 }
 
 describe("remote bindings disabled", () => {
-	const projectPath = seed("remote-bindings-disabled", "pnpm");
+	const projectPath = seed("remote-bindings-disabled", { pm: "pnpm" });
 
 	describe.each(commands)('with "%s" command', (command) => {
 		// On Windows the path for the miniflare dependency gets pretty long and this fails in node < 22.7
