@@ -3,6 +3,7 @@ import { getDetailsForAutoConfig } from "./autoconfig/details";
 import { runAutoConfig } from "./autoconfig/run";
 import { createCommand } from "./core/create-command";
 import { logger } from "./logger";
+import { getPackageManager } from "./package-manager";
 
 export const setupCommand = createCommand({
 	metadata: {
@@ -10,19 +11,38 @@ export const setupCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "experimental",
 	},
+	args: {
+		yes: {
+			describe: 'Answer "yes" to any prompts for configuring your project',
+			type: "boolean",
+			alias: "y",
+			default: false,
+		},
+		build: {
+			describe: "Run your project's build command once it has been configured",
+			type: "boolean",
+			default: false,
+		},
+	},
 
-	async handler(_, { config }) {
+	async handler(args, { config }) {
 		const details = await getDetailsForAutoConfig({
 			wranglerConfig: config,
 		});
 
 		// Only run auto config if the project is not already configured
 		if (!details.configured) {
-			await runAutoConfig(details);
+			await runAutoConfig(details, {
+				build: args.build,
+				skipConfirmation: args.yes,
+			});
 			logger.log("🎉 Your project is now setup to deploy to Cloudflare");
 		} else {
 			logger.log("🎉 Your project is already setup to deploy to Cloudflare");
 		}
-		logger.log(`You can now deploy with ${brandColor("wrangler deploy")}`);
+		const { type } = await getPackageManager();
+		logger.log(
+			`You can now deploy with ${brandColor(details.packageJson ? `${type} run deploy` : "wrangler deploy")}`
+		);
 	},
 });

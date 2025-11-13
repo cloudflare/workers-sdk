@@ -1,8 +1,6 @@
-import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { endSection, startSection } from "@cloudflare/cli";
 import { FatalError } from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
@@ -26,7 +24,8 @@ type AutoConfigMetrics = Pick<
 };
 
 export async function runAutoConfig(
-	autoConfigDetails: AutoConfigDetails
+	autoConfigDetails: AutoConfigDetails,
+	{ build = true, skipConfirmation = false } = {}
 ): Promise<void> {
 	const detected: AutoConfigMetrics = {
 		buildCommand: autoConfigDetails.buildCommand,
@@ -42,8 +41,9 @@ export async function runAutoConfig(
 	);
 	displayAutoConfigDetails(autoConfigDetails);
 
-	const updatedAutoConfigDetails =
-		await confirmAutoConfigDetails(autoConfigDetails);
+	const updatedAutoConfigDetails = skipConfirmation
+		? autoConfigDetails
+		: await confirmAutoConfigDetails(autoConfigDetails);
 
 	if (autoConfigDetails !== updatedAutoConfigDetails) {
 		displayAutoConfigDetails(updatedAutoConfigDetails, {
@@ -57,21 +57,27 @@ export async function runAutoConfig(
 		throw new FatalError("Cannot deploy project without an output directory");
 	}
 
-	const baseWranglerConfig: RawConfig = {
+	const additionalConfigDetails =
+		(await autoConfigDetails.framework?.configure(
+			autoConfigDetails.outputDir
+		)) ?? {};
+
+	const wranglerConfig: RawConfig = {
 		$schema: "node_modules/wrangler/config-schema.json",
 		name: autoConfigDetails.workerName,
 		compatibility_date: getDevCompatibilityDate(undefined),
 		observability: {
 			enabled: true,
 		},
+		...additionalConfigDetails,
 	} satisfies RawConfig;
 
-	const { confirmed, modifications } = await buildAndConfirmOperationsSummary(
+	const modifications = await buildOperationsSummary(
 		autoConfigDetails,
-		baseWranglerConfig
+		wranglerConfig
 	);
 
-	if (!confirmed) {
+	if (!(skipConfirmation || (await confirm("Proceed with setup?")))) {
 		throw new FatalError("Deployment aborted");
 	}
 
@@ -79,14 +85,11 @@ export async function runAutoConfig(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	startSection("Configuring your application for Cloudflare");
-
 	if (modifications.wranglerInstall) {
 		await installWrangler();
 	}
 
-	if (modifications.typegenScriptAddition) {
-		assert(autoConfigDetails.packageJson);
+	if (autoConfigDetails.packageJson) {
 		await writeFile(
 			resolve(autoConfigDetails.projectPath, "package.json"),
 			JSON.stringify(
@@ -94,7 +97,7 @@ export async function runAutoConfig(
 					...autoConfigDetails.packageJson,
 					scripts: {
 						...autoConfigDetails.packageJson.scripts,
-						[typeGenScript.key]: typeGenScript.value,
+						...modifications.scripts,
 					},
 				},
 				null,
@@ -103,20 +106,9 @@ export async function runAutoConfig(
 		);
 	}
 
-	const additionalConfigDetails =
-		(await autoConfigDetails.framework?.configure(
-			autoConfigDetails.outputDir
-		)) ?? {};
 	await writeFile(
 		resolve(autoConfigDetails.projectPath, "wrangler.jsonc"),
-		JSON.stringify(
-			{
-				...baseWranglerConfig,
-				...additionalConfigDetails,
-			},
-			null,
-			2
-		)
+		JSON.stringify(wranglerConfig, null, 2)
 	);
 
 	addWranglerToGitIgnore(autoConfigDetails.projectPath);
@@ -126,9 +118,7 @@ export async function runAutoConfig(
 		addWranglerToAssetsIgnore(autoConfigDetails.projectPath);
 	}
 
-	endSection(`Application configured`);
-
-	if (autoConfigDetails.buildCommand) {
+	if (autoConfigDetails.buildCommand && build) {
 		await runCommand(
 			autoConfigDetails.buildCommand,
 			autoConfigDetails.projectPath,
@@ -158,28 +148,37 @@ function usesTypescript(projectPath: string) {
 	return existsSync(join(projectPath, `tsconfig.json`));
 }
 
-const typeGenScript = {
-	key: "cf-typegen",
-	value: "wrangler typegen",
+type Modifications = {
+	wranglerInstall: boolean;
+	scripts: Record<string, string>;
 };
 
-export async function buildAndConfirmOperationsSummary(
+export async function buildOperationsSummary(
 	autoConfigDetails: AutoConfigDetails,
 	wranglerConfigToWrite: RawConfig
-): Promise<{
-	confirmed: boolean;
-	modifications: {
-		wranglerInstall: boolean;
-		typegenScriptAddition: boolean;
-	};
-}> {
-	const modifications = {
+): Promise<Modifications> {
+	logger.log("");
+
+	const modifications: Modifications = {
 		wranglerInstall: false,
-		typegenScriptAddition: false,
+		scripts: {},
 	};
 	if (autoConfigDetails.packageJson) {
 		// If there is a package.json file we will want to install wrangler
 		modifications.wranglerInstall = true;
+
+		logger.log("📦 Install packages:");
+		logger.log(` - wrangler (devDependency)`);
+		logger.log("");
+
+		modifications.scripts = {
+			deploy: autoConfigDetails.buildCommand
+				? `${autoConfigDetails.buildCommand} && wrangler deploy`
+				: `wrangler deploy`,
+			preview: autoConfigDetails.buildCommand
+				? `${autoConfigDetails.buildCommand} && wrangler dev`
+				: `wrangler dev`,
+		};
 
 		// TODO: Implement the logic to discern whether the project contains server code or not
 		//       (basically if it is fully static)
@@ -191,21 +190,13 @@ export async function buildAndConfirmOperationsSummary(
 			usesTypescript(autoConfigDetails.projectPath) &&
 			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
 		) {
-			modifications.typegenScriptAddition = true;
+			modifications.scripts["cf-typegen"] = "wrangler types";
 		}
-	}
 
-	logger.log("");
-
-	if (modifications.wranglerInstall) {
-		logger.log("📦 Install packages:");
-		logger.log(` - wrangler (devDependency)`);
-		logger.log("");
-	}
-
-	if (modifications.typegenScriptAddition) {
 		logger.log("📝 Update package.json scripts:");
-		logger.log(` - "${typeGenScript.key}": "${typeGenScript.value}"`);
+		for (const [name, script] of Object.entries(modifications.scripts)) {
+			logger.log(` - "${name}": "${script}"`);
+		}
 		logger.log("");
 	}
 
@@ -229,10 +220,5 @@ export async function buildAndConfirmOperationsSummary(
 		logger.log("");
 	}
 
-	const proceedWithSetup = await confirm("Proceed with setup?");
-
-	return {
-		confirmed: proceedWithSetup,
-		modifications,
-	};
+	return modifications;
 }
