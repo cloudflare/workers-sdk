@@ -25,7 +25,7 @@ export const setupCommand = createCommand({
 		},
 		"dry-run": {
 			describe:
-				"Runs the command but without actually applying any filesystem modification",
+				"Runs the command without applying any filesystem modifications",
 			type: "boolean",
 		},
 	},
