@@ -608,7 +608,12 @@ const RawErrorToErrorClassMap: { [_: string]: typeof ErrorOAuth2 } = {
  * Translate the raw error strings returned from the server into error classes.
  */
 function toErrorClass(rawError: string): ErrorOAuth2 {
-	return new (RawErrorToErrorClassMap[rawError] || ErrorUnknown)();
+	const ErrorClass =
+		Object.prototype.hasOwnProperty.call(RawErrorToErrorClassMap, rawError) &&
+		typeof RawErrorToErrorClassMap[rawError] === "function"
+			? RawErrorToErrorClassMap[rawError]
+			: ErrorUnknown;
+	return new ErrorClass();
 }
 
 /**
