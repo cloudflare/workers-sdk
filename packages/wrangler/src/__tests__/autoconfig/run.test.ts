@@ -1,26 +1,23 @@
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";
 import { vi } from "vitest";
 import * as c3 from "../../autoconfig/c3-vendor/packages";
 import * as details from "../../autoconfig/details";
+import { Static } from "../../autoconfig/frameworks/static";
 import * as run from "../../autoconfig/run";
 import * as format from "../../deployment-bundle/guess-worker-format";
 import { clearOutputFilePath } from "../../output";
 import * as compatDate from "../../utils/compatibility-date";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
+import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { seed } from "../helpers/seed";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type { Framework } from "../../autoconfig/frameworks";
-import type { AutoConfigDetails } from "../../autoconfig/types";
-import type { Config } from "@cloudflare/workers-utils";
 import type { MockInstance } from "vitest";
 
 vi.mock("../../package-manager", () => ({
@@ -38,12 +35,6 @@ vi.mock("../deploy/deploy", async (importOriginal) => ({
 		// In unit tests of autoconfig we only care about the configuration aspect, so bail before any actual deployment happens
 		throw new FatalError("Bailing early in tests");
 	},
-}));
-
-vi.mock("../../autoconfig/details", async (importOriginal) => ({
-	...(await importOriginal()),
-	confirmAutoConfigDetails: async (autoConfigDetails: AutoConfigDetails) =>
-		autoConfigDetails,
 }));
 
 async function runDeploy(withArgs: string = "") {
@@ -130,112 +121,6 @@ describe("autoconfig (deploy)", () => {
 		expect(runSpy).not.toHaveBeenCalled();
 	});
 
-	describe("getDetailsForAutoConfig()", () => {
-		it("should set configured: true if a configPath exists", async () => {
-			await expect(
-				details.getDetailsForAutoConfig({
-					wranglerConfig: { configPath: "/tmp" } as Config,
-				})
-			).resolves.toMatchObject({ configured: true });
-		});
-
-		// Check that Astro is detected. We don't want to duplicate the tests of @netlify/build-info
-		// by exhaustively checking every possible combination
-		it("should perform basic framework detection", async () => {
-			await writeFile(
-				"package.json",
-				JSON.stringify({
-					dependencies: {
-						astro: "5",
-					},
-				})
-			);
-
-			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-				buildCommand: "astro build",
-				configured: false,
-				outputDir: "dist",
-				packageJson: {
-					dependencies: {
-						astro: "5",
-					},
-				},
-			});
-		});
-
-		it("should bail when multiple frameworks are detected", async () => {
-			await writeFile(
-				"package.json",
-				JSON.stringify({
-					dependencies: {
-						astro: "5",
-						gatsby: "5",
-					},
-				})
-			);
-
-			await expect(
-				details.getDetailsForAutoConfig()
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Wrangler was unable to automatically configure your project to work with Cloudflare, since multiple frameworks were found: Astro, Gatsby]`
-			);
-		});
-
-		it("should use npm build instead of framework build if present", async () => {
-			await writeFile(
-				"package.json",
-				JSON.stringify({
-					scripts: {
-						build: "echo build",
-					},
-					dependencies: {
-						astro: "5",
-					},
-				})
-			);
-
-			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-				buildCommand: "npm run build",
-			});
-		});
-
-		it("outputDir should be empty if nothing can be detected", async () => {
-			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-				outputDir: undefined,
-			});
-		});
-
-		it("outputDir should be set to cwd if an index.html file exists", async () => {
-			await writeFile("index.html", `<h1>Hello World</h1>`);
-
-			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-				outputDir: process.cwd(),
-			});
-		});
-
-		it("outputDir should find first child directory with an index.html file", async () => {
-			await seed({
-				"public/index.html": `<h1>Hello World</h1>`,
-				"random/index.html": `<h1>Hello World</h1>`,
-			});
-
-			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-				outputDir: join(process.cwd(), "public"),
-			});
-		});
-
-		it("outputDir should prioritize the project directory over its child directories", async () => {
-			await seed({
-				"index.html": `<h1>Hello World</h1>`,
-				"public/index.html": `<h1>Hello World</h1>`,
-			});
-
-			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-				outputDir: process.cwd(),
-			});
-		});
-	});
-
 	describe("runAutoConfig()", () => {
 		let installSpy: MockInstance;
 		beforeEach(() => {
@@ -247,6 +132,7 @@ describe("autoconfig (deploy)", () => {
 				() => "2000-01-01"
 			);
 		});
+
 		it("happy path", async () => {
 			await writeFile(
 				"package.json",
@@ -255,7 +141,11 @@ describe("autoconfig (deploy)", () => {
 				})
 			);
 			mockConfirm({
-				text: "Do you want to proceed with the deployment using these settings?",
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
 				result: true,
 			});
 			await writeFile(".gitignore", "");
@@ -286,6 +176,22 @@ describe("autoconfig (deploy)", () => {
 				 - Framework: fake
 				 - Build Command: echo 'built' > build.txt
 				 - Output Directory: dist
+
+
+				📦 Install packages:
+				 - wrangler (devDependency)
+
+				📄 Create wrangler.jsonc:
+				  {
+				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				    \\"name\\": \\"my-worker\\",
+				    \\"compatibility_date\\": \\"2000-01-01\\",
+				    \\"observability\\": {
+				      \\"enabled\\": true
+				    }
+				  }
+
+				🛠️  Configuring project for Fake
 
 				[build] Running: echo 'built' > build.txt"
 			`);
@@ -329,9 +235,79 @@ describe("autoconfig (deploy)", () => {
 			expect(existsSync(".assetsignore")).toBeFalsy();
 		});
 
+		it("allows users to edit the auto-detected settings", async () => {
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: true,
+			});
+			mockPrompt({
+				text: "What do you want to name your Worker?",
+				result: "edited-worker-name",
+			});
+			mockPrompt({
+				text: "What directory contains your applications' output/asset files?",
+				result: "dist",
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+			await run.runAutoConfig({
+				projectPath: process.cwd(),
+				configured: false,
+				framework: new Static("static"),
+				workerName: "my-worker",
+				outputDir: "dist",
+			});
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				Auto-detected Project Settings:
+				 - Worker Name: my-worker
+				 - Framework: static
+				 - Output Directory: dist
+
+
+				Updated Project Settings:
+				 - Worker Name: edited-worker-name
+				 - Framework: static
+				 - Output Directory: dist
+
+
+				📄 Create wrangler.jsonc:
+				  {
+				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				    \\"name\\": \\"edited-worker-name\\",
+				    \\"compatibility_date\\": \\"2000-01-01\\",
+				    \\"observability\\": {
+				      \\"enabled\\": true
+				    }
+				  }
+				"
+			`);
+
+			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
+				"{
+				  \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				  \\"name\\": \\"edited-worker-name\\",
+				  \\"compatibility_date\\": \\"2000-01-01\\",
+				  \\"observability\\": {
+				    \\"enabled\\": true
+				  },
+				  \\"assets\\": {
+				    \\"directory\\": \\"dist\\"
+				  }
+				}"
+			`);
+		});
+
 		it(".assetsignore should contain Wrangler files if outputDir === projectPath", async () => {
 			mockConfirm({
-				text: "Do you want to proceed with the deployment using these settings?",
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
 				result: true,
 			});
 

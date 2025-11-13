@@ -307,6 +307,16 @@ export async function getR2Object(
 	return response === null ? null : response.body;
 }
 
+const headerKeys = [
+	"cache-control",
+	"content-disposition",
+	"content-encoding",
+	"content-language",
+	"content-length",
+	"content-type",
+	"expires",
+] as const;
+
 /**
  * Uploads an object
  */
@@ -316,19 +326,10 @@ export async function putR2Object(
 	bucketName: string,
 	objectName: string,
 	object: Readable | ReadableStream | Buffer,
-	options: Record<string, unknown>,
+	options: Record<(typeof headerKeys)[number], string | undefined>,
 	jurisdiction?: string,
 	storageClass?: string
 ): Promise<void> {
-	const headerKeys = [
-		"content-length",
-		"content-type",
-		"content-disposition",
-		"content-encoding",
-		"content-language",
-		"cache-control",
-		"expires",
-	];
 	const headers: HeadersInit = {};
 	for (const key of headerKeys) {
 		const value = options[key] || "";

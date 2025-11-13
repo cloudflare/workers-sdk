@@ -1,5 +1,49 @@
 # miniflare
 
+## 4.20251109.1
+
+### Patch Changes
+
+- [#11202](https://github.com/cloudflare/workers-sdk/pull/11202) [`305ffb3`](https://github.com/cloudflare/workers-sdk/commit/305ffb304d44e44a8045a08d43c655d1e1f17c88) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Make Miniflare inspector proxy more resilient to selecting a free port
+
+  We have seen some test flakes when there are a lot of Miniflare instances running in parallel.
+  This appears to be that there is a small chance that a port becomes unavailable between checking if it is free and using it.
+
+- [#11231](https://github.com/cloudflare/workers-sdk/pull/11231) [`46ccf0e`](https://github.com/cloudflare/workers-sdk/commit/46ccf0e9f79c909cd678af6dcb2e72ec2a12fc90) Thanks [@connyay](https://github.com/connyay)! - Fix WebSocket proxy timeout by disabling Node.js HTTP timeouts
+
+  The dev registry proxy server was experiencing connection timeouts around
+  60-90 seconds for long-lived WebSocket connections. This was caused by Node.js's
+  headersTimeout (defaults to min(60s, requestTimeout)) which is checked periodically
+  by connectionsCheckingInterval (defaults to 30s).
+
+  When proxying WebSocket connections, the HTTP server's headers timeout was
+  still active on the underlying socket, causing ERR_HTTP_REQUEST_TIMEOUT errors
+  to be thrown and both client and server sockets to be destroyed.
+
+  Setting both headersTimeout: 0 and requestTimeout: 0 in createServer options
+  disables timeout enforcement, allowing WebSocket connections to remain open
+  indefinitely as needed.
+
+## 4.20251109.0
+
+### Patch Changes
+
+- [#11200](https://github.com/cloudflare/workers-sdk/pull/11200) [`dd7d584`](https://github.com/cloudflare/workers-sdk/commit/dd7d584cc9656896c3673b51f2589be967edee9b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251105.0 | 1.20251106.1 |
+
+- [#11232](https://github.com/cloudflare/workers-sdk/pull/11232) [`4259256`](https://github.com/cloudflare/workers-sdk/commit/4259256e33445b5f2ae290a68795be9c1852d860) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251106.1 | 1.20251109.0 |
+
 ## 4.20251105.0
 
 ### Patch Changes

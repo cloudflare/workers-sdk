@@ -572,4 +572,37 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.throws(() => cluster.disconnect(), /not implemented/);
 		assert.throws(() => cluster.fork(), /not implemented/);
 	},
+
+	async testTraceEvents() {
+		const traceEvents = await import("node:trace_events");
+
+		assertTypeOf(traceEvents, "createTracing", "function");
+		assertTypeOf(traceEvents, "getEnabledCategories", "function");
+
+		const categories = traceEvents.getEnabledCategories();
+		assert.strictEqual(
+			typeof categories,
+			// `getEnabledCategories` returns a string with unenv and `undefined` with the native module
+			getRuntimeFlagValue("enable_nodejs_trace_events_module")
+				? "undefined"
+				: "string"
+		);
+
+		const tracing = traceEvents.createTracing({
+			categories: ["node.async_hooks"],
+		});
+		assertTypeOf(tracing, "enable", "function");
+		assertTypeOf(tracing, "disable", "function");
+		assertTypeOf(tracing, "enabled", "boolean");
+		assertTypeOf(tracing, "categories", "string");
+	},
 };
+
+function assertTypeOf(target: unknown, property: string, expectType: string) {
+	const actualType = typeof (target as any)[property];
+	assert.strictEqual(
+		actualType,
+		expectType,
+		`${property} should be of type ${expectType}, got ${actualType}`
+	);
+}

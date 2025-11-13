@@ -371,8 +371,13 @@ export const r2ObjectPutCommand = createCommand({
 				key,
 				object,
 				{
-					...options,
-					"content-length": `${objectSize}`,
+					"cache-control": options.cacheControl,
+					"content-disposition": options.contentDisposition,
+					"content-encoding": options.contentEncoding,
+					"content-language": options.contentLanguage,
+					"content-length": String(objectSize),
+					"content-type": options.contentType,
+					expires: options.expires,
 				},
 				jurisdiction,
 				storageClass

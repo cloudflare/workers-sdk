@@ -74,6 +74,7 @@ export function getCloudflarePreset({
 	const fsOverrides = getFsOverrides(compat);
 	const punycodeOverrides = getPunycodeOverrides(compat);
 	const clusterOverrides = getClusterOverrides(compat);
+	const traceEventsOverrides = getTraceEventsOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -84,6 +85,7 @@ export function getCloudflarePreset({
 		...fsOverrides.nativeModules,
 		...punycodeOverrides.nativeModules,
 		...clusterOverrides.nativeModules,
+		...traceEventsOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -95,6 +97,7 @@ export function getCloudflarePreset({
 		...fsOverrides.hybridModules,
 		...punycodeOverrides.hybridModules,
 		...clusterOverrides.hybridModules,
+		...traceEventsOverrides.hybridModules,
 	];
 
 	return {
@@ -380,6 +383,44 @@ function getClusterOverrides({
 	return enabled
 		? {
 				nativeModules: ["cluster"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:trace_events` (unenv or workerd)
+ *
+ * The native trace_events implementation:
+ * - is experimental
+ * - can be enabled with the "enable_nodejs_trace_events_module" flag
+ * - can be disabled with the "disable_nodejs_trace_events_module" flag
+ */
+function getTraceEventsOverrides({
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_trace_events_module"
+	);
+
+	// TODO: add `enabledByDate` when a date is defined in workerd
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_trace_events_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["trace_events"],
 				hybridModules: [],
 			}
 		: {

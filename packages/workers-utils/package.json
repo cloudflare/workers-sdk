@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.0.2",
+	"version": "0.1.0",
 	"description": "Utility package for common Worker operations",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
@@ -13,6 +13,10 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "workers-devprod@cloudflare.com",
+	"exports": {
+		"browser": "./dist/browser.mjs",
+		"import": "./dist/index.mjs"
+	},
 	"main": "dist/index.mjs",
 	"types": "dist/index.d.mts",
 	"files": [
@@ -34,6 +38,7 @@
 		"@iarna/toml": "^3.0.0",
 		"@types/node": "catalog:default",
 		"@vitest/ui": "catalog:default",
+		"cloudflare": "^5.2.0",
 		"concurrently": "^8.2.2",
 		"eslint": "catalog:default",
 		"find-up": "^6.3.0",

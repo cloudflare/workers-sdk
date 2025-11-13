@@ -351,7 +351,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			flags: ["--yes", "--import-alias", "@/*"],
 			verifyPreview: {
 				previewArgs: ["--", "--inspector-port=0"],
-				route: "/test",
+				route: "/",
 				expectedText: "Create Next App",
 			},
 			verifyDeploy: {
@@ -359,13 +359,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "Create Next App",
 			},
 			nodeCompat: true,
-			// see https://github.com/cloudflare/next-on-pages/blob/main/packages/next-on-pages/docs/supported.md#operating-systems
 			unsupportedOSs: ["win32"],
-			unsupportedPms: [
-				// bun and yarn are failing in CI
-				"bun",
-				"yarn",
-			],
 		},
 		{
 			name: "nuxt:pages",
