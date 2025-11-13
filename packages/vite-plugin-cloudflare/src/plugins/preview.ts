@@ -7,6 +7,12 @@ import { getPreviewMiniflareOptions } from "../miniflare-options";
 import { createPlugin, createRequestHandler } from "../utils";
 import { handleWebSocket } from "../websockets";
 
+let exitCallback = () => {};
+
+process.on("exit", () => {
+	exitCallback();
+});
+
 /**
  * Plugin to provide core preview functionality
  */
@@ -41,11 +47,11 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					colors.dim(colors.yellow("\n⚡️ Containers successfully built.\n"))
 				);
 
-				process.on("exit", () => {
+				exitCallback = () => {
 					if (containerImageTags.size) {
 						cleanupContainers(dockerPath, containerImageTags);
 					}
-				});
+				};
 			}
 
 			handleWebSocket(vitePreviewServer.httpServer, ctx.miniflare);
