@@ -16,13 +16,6 @@ export async function getPackageManager(): Promise<PackageManager> {
 		supportsBun(),
 	]);
 
-	logger.log({
-		hasYarn,
-		hasNpm,
-		hasPnpm,
-		hasBun,
-	});
-
 	const userAgent = sniffUserAgent();
 
 	// check the user agent
