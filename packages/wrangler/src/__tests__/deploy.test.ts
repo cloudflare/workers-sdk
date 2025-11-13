@@ -15234,7 +15234,7 @@ function writeAssets(
 	}
 }
 function mockDeploymentsListRequest() {
-	msw.use(...mswSuccessDeployments);
+	msw.use(...mswListNewDeploymentsLatestFull);
 }
 
 function mockLastDeploymentRequest() {
@@ -16169,7 +16169,7 @@ describe("deploy --secrets-file", () => {
 	mockAccountId();
 	mockApiToken();
 
-	const workerName = "test-worker";
+	const workerName = "test-name";
 
 	beforeEach(() => {
 		mockLastDeploymentRequest();
@@ -16217,14 +16217,14 @@ describe("deploy --secrets-file", () => {
 		await runWrangler(`deploy --secrets-file ${secretsFile}`);
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"Total Upload: xx KiB / gzip: xx KiB
-		Your worker has access to the following bindings:
-		- Secrets:
-		  - SECRET1: (hidden)
-		  - SECRET2: (hidden)
-		Uploaded test-worker (TIMINGS)
-		Deployed test-worker triggers (TIMINGS)
-		  https://test-worker.test-sub-domain.workers.dev
+		"
+		 ⛅️ wrangler x.x.x
+		──────────────────
+		Total Upload: xx KiB / gzip: xx KiB
+		Worker Startup Time: 100 ms
+		Uploaded test-name (TIMINGS)
+		Deployed test-name triggers (TIMINGS)
+		  https://test-name.test-sub-domain.workers.dev
 		Current Version ID: Galaxy-Class"
 	`);
 	});
@@ -16270,15 +16270,14 @@ SECRET3=value3`
 		await runWrangler(`deploy --secrets-file ${secretsFile}`);
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"Total Upload: xx KiB / gzip: xx KiB
-		Your worker has access to the following bindings:
-		- Secrets:
-		  - SECRET1: (hidden)
-		  - SECRET2: (hidden)
-		  - SECRET3: (hidden)
-		Uploaded test-worker (TIMINGS)
-		Deployed test-worker triggers (TIMINGS)
-		  https://test-worker.test-sub-domain.workers.dev
+		"
+		 ⛅️ wrangler x.x.x
+		──────────────────
+		Total Upload: xx KiB / gzip: xx KiB
+		Worker Startup Time: 100 ms
+		Uploaded test-name (TIMINGS)
+		Deployed test-name triggers (TIMINGS)
+		  https://test-name.test-sub-domain.workers.dev
 		Current Version ID: Galaxy-Class"
 	`);
 	});
@@ -16313,13 +16312,14 @@ SECRET3=value3`
 		await runWrangler(`deploy --secrets-file ${secretsFile}`);
 
 		expect(std.out).toMatchInlineSnapshot(`
-		"Total Upload: xx KiB / gzip: xx KiB
-		Your worker has access to the following bindings:
-		- Secrets:
-		  - MY_SECRET: (hidden)
-		Uploaded test-worker (TIMINGS)
-		Deployed test-worker triggers (TIMINGS)
-		  https://test-worker.test-sub-domain.workers.dev
+		"
+		 ⛅️ wrangler x.x.x
+		──────────────────
+		Total Upload: xx KiB / gzip: xx KiB
+		Worker Startup Time: 100 ms
+		Uploaded test-name (TIMINGS)
+		Deployed test-name triggers (TIMINGS)
+		  https://test-name.test-sub-domain.workers.dev
 		Current Version ID: Galaxy-Class"
 	`);
 	});
