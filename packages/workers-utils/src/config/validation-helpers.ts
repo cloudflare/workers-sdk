@@ -569,34 +569,50 @@ export const validateOptionalTypedArray = (
 };
 
 /**
- * Test to see if `obj` has the required property `prop` of type `type`.
+ * Returns whether `target` has the required property `property` of type `type`.
+ *
+ * @param target the object to test.
+ * @param property the property name to test.
+ * @param type the expected type of the property.
+ * @param choices optional list of allowed values for the property.
+ * @returns whether `target` has the required property `property` of type `type`, and optionally one of `choices`.
  */
 export const isRequiredProperty = <T extends object>(
-	obj: object,
-	prop: keyof T,
+	target: object,
+	property: keyof T,
 	type: TypeofType,
 	choices?: unknown[]
-): obj is T =>
-	hasProperty<T>(obj, prop) &&
-	typeof obj[prop] === type &&
-	(choices === undefined || choices.includes(obj[prop]));
+): target is T =>
+	hasProperty<T>(target, property) &&
+	typeof target[property] === type &&
+	(choices === undefined || choices.includes(target[property]));
 
 /**
- * Test to see if `obj` has the optional property `prop` of type `type`.
+ * Returns whether `target` has the optional property `property` of type `type`.
+ *
+ * @param target the object to test.
+ * @param property the property name to test.
+ * @param type the expected type of the property.
+ * @returns whether `target` has the optional property `property` of type `type`.
  */
 export const isOptionalProperty = <T extends object>(
-	obj: object,
-	prop: keyof T,
+	target: object,
+	property: keyof T,
 	type: TypeofType
-): obj is T => !hasProperty<T>(obj, prop) || typeof obj[prop] === type;
+): target is T =>
+	!hasProperty<T>(target, property) || typeof target[property] === type;
 
 /**
- * Test to see if `obj` has the property `prop`.
+ * Returns whether `target` has the property `property`.
+ *
+ * @param target the object to test.
+ * @param property the property name to test.
+ * @returns whether `target` has the property `property`.
  */
 export const hasProperty = <T extends object>(
-	obj: object,
+	target: object,
 	property: keyof T
-): obj is T => property in obj;
+): target is T => property in target;
 
 /**
  * Add warning messages about any properties in the given field that are not expected to be there.
