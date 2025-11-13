@@ -214,6 +214,7 @@ import url from "node:url";
 import { TextEncoder } from "node:util";
 import {
 	configFileName,
+	getGlobalWranglerConfigPath,
 	parseTOML,
 	readFileSync,
 	UserError,
@@ -231,7 +232,6 @@ import {
 	getCloudflareApiEnvironmentFromEnv,
 	getCloudflareComplianceRegion,
 } from "../environment-variables/misc-variables";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
