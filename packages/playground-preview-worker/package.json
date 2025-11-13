@@ -25,7 +25,7 @@
 		"eslint": "catalog:default",
 		"itty-router": "^4.0.13",
 		"promjs": "^0.4.2",
-		"toucan-js": "^3.3.1",
+		"toucan-js": "4.0.0",
 		"undici": "catalog:default",
 		"wrangler": "workspace:*"
 	},
