@@ -37,6 +37,7 @@ catalog:
   "@cloudflare/workers-types": "^4.20251109.0"
   workerd: "1.20251109.0"
   eslint: "^9.39.1"
+  tsdown: "0.16.4"
 
 catalogs:
   vite-plugin:

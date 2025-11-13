@@ -44,7 +44,7 @@
 		"find-up": "^6.3.0",
 		"jsonc-parser": "^3.2.0",
 		"ts-dedent": "^2.2.0",
-		"tsdown": "^0.15.9",
+		"tsdown": "catalog:default",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
