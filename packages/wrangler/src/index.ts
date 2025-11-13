@@ -235,6 +235,8 @@ import {
 	r2BucketNotificationNamespace,
 } from "./r2/notification";
 import {
+	r2BulkNamespace,
+	r2BulkPutCommand,
 	r2ObjectDeleteCommand,
 	r2ObjectGetCommand,
 	r2ObjectNamespace,
@@ -990,6 +992,14 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 sql query",
 			definition: r2SqlQueryCommand,
+		},
+		{
+			command: "wrangler r2 bulk",
+			definition: r2BulkNamespace,
+		},
+		{
+			command: "wrangler r2 bulk put",
+			definition: r2BulkPutCommand,
 		},
 	]);
 	registry.registerNamespace("r2");

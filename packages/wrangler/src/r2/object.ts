@@ -3,29 +3,40 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as stream from "node:stream";
 import {
+	bucketFormatMessage,
 	CommandLineArgsError,
 	FatalError,
+	isValidR2BucketName,
 	UserError,
 } from "@cloudflare/workers-utils";
-import prettyBytes from "pretty-bytes";
+import PQueue from "p-queue";
 import { readConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import { isLocal } from "../utils/is-local";
-import { MAX_UPLOAD_SIZE } from "./constants";
+import { logBulkProgress, validateBulkPutFile } from "./helpers/bulk";
 import {
-	bucketAndKeyFromObjectPath,
 	deleteR2Object,
 	getR2Object,
-	putR2Object,
+	putRemoteObject,
 	usingLocalBucket,
-} from "./helpers";
+	validateAndReturnBucketAndKey,
+	validateUploadSize,
+} from "./helpers/object";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
 
 export const r2ObjectNamespace = createNamespace({
 	metadata: {
 		description: `Manage R2 objects`,
+		status: "stable",
+		owner: "Product: R2",
+	},
+});
+
+export const r2BulkNamespace = createNamespace({
+	metadata: {
+		description: `Interact with multiple R2 objects at once`,
 		status: "stable",
 		owner: "Product: R2",
 	},
@@ -89,7 +100,7 @@ export const r2ObjectGetCommand = createCommand({
 	async handler(objectGetYargs, { config }) {
 		const localMode = isLocal(objectGetYargs);
 		const { objectPath, pipe, jurisdiction } = objectGetYargs;
-		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
+		const { bucket, key } = validateAndReturnBucketAndKey(objectPath);
 		let fullBucketName = bucket;
 		if (jurisdiction !== undefined) {
 			fullBucketName += ` (${jurisdiction})`;
@@ -144,6 +155,73 @@ export const r2ObjectGetCommand = createCommand({
 	},
 });
 
+/**
+ * Common arguments for R2 object put commands (single & bulk).
+ */
+const commonPutArguments = {
+	"content-type": {
+		describe: "A standard MIME type describing the format of the object data",
+		alias: "ct",
+		requiresArg: true,
+		type: "string",
+	},
+	"content-disposition": {
+		describe: "Specifies presentational information for the object",
+		alias: "cd",
+		requiresArg: true,
+		type: "string",
+	},
+	"content-encoding": {
+		describe:
+			"Specifies what content encodings have been applied to the object and thus what decoding mechanisms must be applied to obtain the media-type referenced by the Content-Type header field",
+		alias: "ce",
+		requiresArg: true,
+		type: "string",
+	},
+	"content-language": {
+		describe: "The language the content is in",
+		alias: "cl",
+		requiresArg: true,
+		type: "string",
+	},
+	"cache-control": {
+		describe: "Specifies caching behavior along the request/reply chain",
+		alias: "cc",
+		requiresArg: true,
+		type: "string",
+	},
+	expires: {
+		describe: "The date and time at which the object is no longer cacheable",
+		requiresArg: true,
+		type: "string",
+	},
+	local: {
+		type: "boolean",
+		describe: "Interact with local storage",
+	},
+	remote: {
+		type: "boolean",
+		describe: "Interact with remote storage",
+		conflicts: "local",
+	},
+	"persist-to": {
+		type: "string",
+		describe: "Directory for local persistence",
+	},
+	jurisdiction: {
+		describe: "The jurisdiction where the object will be created",
+		alias: "J",
+		requiresArg: true,
+		type: "string",
+	},
+	"storage-class": {
+		describe: "The storage class of the object to be created",
+		alias: "s",
+		requiresArg: false,
+		type: "string",
+	},
+} as const;
+
 export const r2ObjectPutCommand = createCommand({
 	metadata: {
 		description: "Create an object in an R2 bucket",
@@ -157,6 +235,7 @@ export const r2ObjectPutCommand = createCommand({
 			type: "string",
 			demandOption: true,
 		},
+		...commonPutArguments,
 		file: {
 			describe: "The path of the file to upload",
 			alias: "f",
@@ -171,97 +250,29 @@ export const r2ObjectPutCommand = createCommand({
 			conflicts: "file",
 			type: "boolean",
 		},
-		"content-type": {
-			describe: "A standard MIME type describing the format of the object data",
-			alias: "ct",
-			requiresArg: true,
-			type: "string",
-		},
-		"content-disposition": {
-			describe: "Specifies presentational information for the object",
-			alias: "cd",
-			requiresArg: true,
-			type: "string",
-		},
-		"content-encoding": {
-			describe:
-				"Specifies what content encodings have been applied to the object and thus what decoding mechanisms must be applied to obtain the media-type referenced by the Content-Type header field",
-			alias: "ce",
-			requiresArg: true,
-			type: "string",
-		},
-		"content-language": {
-			describe: "The language the content is in",
-			alias: "cl",
-			requiresArg: true,
-			type: "string",
-		},
-		"cache-control": {
-			describe: "Specifies caching behavior along the request/reply chain",
-			alias: "cc",
-			requiresArg: true,
-			type: "string",
-		},
-		expires: {
-			describe: "The date and time at which the object is no longer cacheable",
-			requiresArg: true,
-			type: "string",
-		},
-		local: {
-			type: "boolean",
-			describe: "Interact with local storage",
-		},
-		remote: {
-			type: "boolean",
-			describe: "Interact with remote storage",
-			conflicts: "local",
-		},
-		"persist-to": {
-			type: "string",
-			describe: "Directory for local persistence",
-		},
-		jurisdiction: {
-			describe: "The jurisdiction where the object will be created",
-			alias: "J",
-			requiresArg: true,
-			type: "string",
-		},
-		"storage-class": {
-			describe: "The storage class of the object to be created",
-			alias: "s",
-			requiresArg: false,
-			type: "string",
-		},
 	},
 	behaviour: {
 		printResourceLocation(args) {
 			return !args?.pipe;
 		},
 	},
-	async handler(objectPutYargs, { config }) {
-		const {
-			objectPath,
-			file,
-			pipe,
-			persistTo,
-			jurisdiction,
-			storageClass,
-			...options
-		} = objectPutYargs;
-		const localMode = isLocal(objectPutYargs);
-		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
+	async handler(yArgs, { config }) {
+		const { file, pipe } = yArgs;
 		if (!file && !pipe) {
 			throw new CommandLineArgsError(
 				"Either the --file or --pipe options are required."
 			);
 		}
-		let object: ReadableStream;
-		let objectSize: number;
+
+		const { bucket, key } = validateAndReturnBucketAndKey(yArgs.objectPath);
+
+		let objectStream: ReadableStream;
+		let sizeBytes: number;
 		if (file) {
 			try {
 				const stats = fs.statSync(file);
-				objectSize = stats.size;
-				object = stream.Readable.toWeb(fs.createReadStream(file));
+				sizeBytes = stats.size;
+				objectStream = stream.Readable.toWeb(fs.createReadStream(file));
 			} catch (err) {
 				if ((err as NodeJS.ErrnoException).code === "ENOENT") {
 					throw new UserError(`The file "${file}" does not exist.`);
@@ -287,55 +298,46 @@ export const r2ObjectPutCommand = createCommand({
 				);
 			});
 			const blob = new Blob([buffer]);
-			object = blob.stream();
-			objectSize = blob.size;
-		}
-
-		if (objectSize > MAX_UPLOAD_SIZE && !localMode) {
-			throw new FatalError(
-				`Error: Wrangler only supports uploading files up to ${prettyBytes(
-					MAX_UPLOAD_SIZE,
-					{ binary: true }
-				)} in size\n${key} is ${prettyBytes(objectSize, {
-					binary: true,
-				})} in size`,
-				1
-			);
+			objectStream = blob.stream();
+			sizeBytes = blob.size;
 		}
 
 		let fullBucketName = bucket;
-		if (jurisdiction !== undefined) {
-			fullBucketName += ` (${jurisdiction})`;
+		if (yArgs.jurisdiction !== undefined) {
+			fullBucketName += ` (${yArgs.jurisdiction})`;
 		}
 
 		let storageClassLog = ``;
-		if (storageClass !== undefined) {
-			storageClassLog = ` with ${storageClass} storage class`;
+		if (yArgs.storageClass !== undefined) {
+			storageClassLog = ` with ${yArgs.storageClass} storage class`;
 		}
+
 		logger.log(
 			`Creating object "${key}"${storageClassLog} in bucket "${fullBucketName}".`
 		);
 
-		if (localMode) {
+		const isLocalMode = isLocal(yArgs);
+
+		if (isLocalMode) {
 			await usingLocalBucket(
-				persistTo,
+				yArgs.persistTo,
 				config,
 				bucket,
-				async (_r2Bucket, mf) => {
+				async (_bucket, mf) => {
 					const putOptions: R2PutOptions = {
 						httpMetadata: {
-							contentType: options.contentType,
-							contentDisposition: options.contentDisposition,
-							contentEncoding: options.contentEncoding,
-							contentLanguage: options.contentLanguage,
-							cacheControl: options.cacheControl,
+							contentType: yArgs.contentType,
+							contentDisposition: yArgs.contentDisposition,
+							contentEncoding: yArgs.contentEncoding,
+							contentLanguage: yArgs.contentLanguage,
+							cacheControl: yArgs.cacheControl,
 							// @ts-expect-error `@cloudflare/workers-types` is wrong
 							//  here, `number`'s are allowed for `Date`s
 							// TODO(now): fix
 							cacheExpiry:
-								options.expires === undefined
+								yArgs.expires === undefined
 									? undefined
-									: parseInt(options.expires),
+									: parseInt(yArgs.expires),
 						},
 					};
 					// We can't use `r2Bucket.put()` here as `R2Bucket#put()`
@@ -345,34 +347,35 @@ export const r2ObjectPutCommand = createCommand({
 					// for writing to a local bucket.
 					await mf.dispatchFetch(`http://localhost/${key}`, {
 						method: "PUT",
-						body: object,
+						body: objectStream,
 						duplex: "half",
 						headers: {
-							"Content-Length": objectSize.toString(),
+							"Content-Length": String(sizeBytes),
 							"Wrangler-R2-Put-Options": JSON.stringify(putOptions),
 						},
 					});
 				}
 			);
 		} else {
-			const accountId = await requireAuth(config);
-			await putR2Object(
+			validateUploadSize(key, sizeBytes);
+
+			await putRemoteObject(
 				config,
-				accountId,
+				await requireAuth(config),
 				bucket,
 				key,
-				object,
+				objectStream,
 				{
-					"cache-control": options.cacheControl,
-					"content-disposition": options.contentDisposition,
-					"content-encoding": options.contentEncoding,
-					"content-language": options.contentLanguage,
-					"content-length": String(objectSize),
-					"content-type": options.contentType,
-					expires: options.expires,
+					"content-type": yArgs.contentType,
+					"content-disposition": yArgs.contentDisposition,
+					"content-encoding": yArgs.contentEncoding,
+					"content-language": yArgs.contentLanguage,
+					"cache-control": yArgs.cacheControl,
+					"content-length": String(sizeBytes),
+					expires: yArgs.expires,
 				},
-				jurisdiction,
-				storageClass
+				yArgs.jurisdiction,
+				yArgs.storageClass
 			);
 		}
 
@@ -421,7 +424,7 @@ export const r2ObjectDeleteCommand = createCommand({
 
 		const { objectPath, jurisdiction } = args;
 		const config = readConfig(args);
-		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
+		const { bucket, key } = validateAndReturnBucketAndKey(objectPath);
 		let fullBucketName = bucket;
 		if (jurisdiction !== undefined) {
 			fullBucketName += ` (${jurisdiction})`;
@@ -439,5 +442,171 @@ export const r2ObjectDeleteCommand = createCommand({
 		}
 
 		logger.log("Delete complete.");
+	},
+});
+
+// Bulk operations
+
+export const r2BulkPutCommand = createCommand({
+	metadata: {
+		description: "Create objects in an R2 bucket",
+		status: "stable",
+		owner: "Product: R2",
+	},
+	positionalArgs: ["bucket"],
+	args: {
+		bucket: {
+			describe: "The name of the new bucket",
+			type: "string",
+			demandOption: true,
+		},
+		...commonPutArguments,
+		// TODO: add a mutually exclusive option to specify a directory to upload
+		filename: {
+			describe: "The file containing the key/file pairs to write",
+			alias: "f",
+			requiresArg: true,
+			type: "string",
+		},
+		concurrency: {
+			describe: "The number of concurrent uploads to perform",
+			type: "number",
+			default: 20,
+		},
+	},
+	behaviour: {
+		printResourceLocation: true,
+	},
+	async handler(yArgs, { config }) {
+		if (!isValidR2BucketName(yArgs.bucket)) {
+			throw new UserError(
+				`The bucket name "${yArgs.bucket}" is invalid. ${bucketFormatMessage}`
+			);
+		}
+
+		if (!yArgs.filename) {
+			throw new UserError(
+				"The --filename argument is required for bulk put operations."
+			);
+		}
+
+		const entries = validateBulkPutFile(yArgs.filename);
+
+		const isLocalMode = isLocal(yArgs);
+
+		let fullBucketName = yArgs.bucket;
+		if (yArgs.jurisdiction !== undefined) {
+			fullBucketName += ` (${yArgs.jurisdiction})`;
+		}
+
+		let storageClassLog = ``;
+		if (yArgs.storageClass !== undefined) {
+			storageClassLog = ` with ${yArgs.storageClass} storage class`;
+		}
+
+		const concurrency = Math.max(1, yArgs.concurrency);
+
+		logger.log(
+			`Starting bulk upload of ${entries.length} objects to bucket ${fullBucketName}${storageClassLog} using a concurrency of ${concurrency}`
+		);
+
+		if (isLocalMode) {
+			await usingLocalBucket(
+				yArgs.persistTo,
+				config,
+				yArgs.bucket,
+				async (_bucket, mf) => {
+					const putOptions: R2PutOptions = {
+						httpMetadata: {
+							contentType: yArgs.contentType,
+							contentDisposition: yArgs.contentDisposition,
+							contentEncoding: yArgs.contentEncoding,
+							contentLanguage: yArgs.contentLanguage,
+							cacheControl: yArgs.cacheControl,
+							// @ts-expect-error `@cloudflare/workers-types` is wrong
+							//  here, `number`'s are allowed for `Date`s
+							// TODO(now): fix
+							cacheExpiry:
+								yArgs.expires === undefined
+									? undefined
+									: parseInt(yArgs.expires),
+						},
+					};
+
+					const queue = new PQueue({ concurrency });
+					const jsonPutOptions = JSON.stringify(putOptions);
+
+					await queue.addAll(
+						entries.map((entry, index) => async () => {
+							if ((index + 1) % 100 === 0 || index + 1 === entries.length) {
+								logBulkProgress("Uploaded", index + 1, entries.length);
+							}
+							// We can't use `r2Bucket.put()` here as `R2Bucket#put()`
+							// requires a known length stream, and Miniflare's magic proxy
+							// currently doesn't support sending these. Instead,
+							// `usingLocalBucket()` provides a single `PUT` endpoint
+							// for writing to a local bucket.
+							await mf.dispatchFetch(`http://localhost/${entry.key}`, {
+								method: "PUT",
+								body: stream.Readable.toWeb(fs.createReadStream(entry.file)),
+								duplex: "half",
+								headers: {
+									"Content-Length": String(entry.size),
+									"Wrangler-R2-Put-Options": jsonPutOptions,
+								},
+							});
+						})
+					);
+
+					try {
+						await Promise.race([queue.onError(), queue.onIdle()]);
+					} catch (error) {
+						queue.pause();
+						throw new FatalError(`R2 bulk upload failed\n${error}`);
+					}
+				}
+			);
+		} else {
+			const accountId = await requireAuth(config);
+
+			const queue = new PQueue({ concurrency });
+
+			await queue.addAll(
+				entries.map((entry, index) => async () => {
+					try {
+						if ((index + 1) % 10 === 0 || index + 1 === entries.length) {
+							logBulkProgress("Uploaded", index + 1, entries.length);
+						}
+						await putRemoteObject(
+							config,
+							accountId,
+							yArgs.bucket,
+							entry.key,
+							stream.Readable.toWeb(fs.createReadStream(entry.file)),
+							{
+								"cache-control": yArgs.cacheControl,
+								"content-disposition": yArgs.contentDisposition,
+								"content-encoding": yArgs.contentEncoding,
+								"content-language": yArgs.contentLanguage,
+								"content-type": yArgs.contentType,
+								"content-length": String(entry.size),
+								expires: yArgs.expires,
+							},
+							yArgs.jurisdiction,
+							yArgs.storageClass
+						);
+					} catch (e) {
+						throw new FatalError(`Error uploading "${entry.file}"\n${e}`);
+					}
+				})
+			);
+
+			try {
+				await Promise.race([queue.onError(), queue.onIdle()]);
+			} catch (error) {
+				queue.pause();
+				throw new FatalError(`R2 bulk upload failed\n${error}`);
+			}
+		}
 	},
 });

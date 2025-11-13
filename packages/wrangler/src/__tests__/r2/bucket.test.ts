@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getR2Bucket, getR2BucketMetrics } from "../../r2/helpers";
+import { getR2Bucket, getR2BucketMetrics } from "../../r2/helpers/bucket";
 import { requireAuth } from "../../user";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runWrangler } from "../helpers/run-wrangler";
 
-vi.mock("../../r2/helpers");
+vi.mock("../../r2/helpers/bucket");
 vi.mock("../../user");
 
 const logs = mockConsoleMethods();
