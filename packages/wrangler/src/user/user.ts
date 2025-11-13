@@ -483,7 +483,7 @@ class ErrorOAuth2 extends UserError {
 }
 
 // For really unknown errors.
-class ErrorUnknown extends UserError {
+class ErrorUnknown extends Error {
 	toString(): string {
 		return "ErrorUnknown";
 	}
@@ -585,7 +585,7 @@ class ErrorUnsupportedGrantType extends ErrorAccessTokenResponse {
 /**
  * Translate the raw error strings returned from the server into error classes.
  */
-function toErrorClass(rawError: string): ErrorOAuth2 {
+function toErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
 	switch (rawError) {
 		case "invalid_request":
 			return new ErrorInvalidRequest(rawError);
@@ -611,8 +611,9 @@ function toErrorClass(rawError: string): ErrorOAuth2 {
 			return new ErrorInvalidJson(rawError);
 		case "invalid_token":
 			return new ErrorInvalidToken(rawError);
+		default:
+			return new ErrorUnknown();
 	}
-	return new ErrorUnknown();
 }
 
 /**
