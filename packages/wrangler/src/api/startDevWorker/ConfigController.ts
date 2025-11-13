@@ -215,6 +215,7 @@ async function resolveBindings(
 				vars: maskedVars,
 			},
 			input.tailConsumers ?? config.tail_consumers,
+			input.streamingTailConsumers ?? config.streaming_tail_consumers,
 			{
 				registry,
 				local: !input.dev?.remote,
@@ -385,6 +386,7 @@ async function resolveConfig(
 		experimental: {
 			tailLogs: !!input.experimental?.tailLogs,
 		},
+		streamingTailConsumers: config.streaming_tail_consumers ?? [],
 	} satisfies StartDevWorkerOptions;
 
 	if (

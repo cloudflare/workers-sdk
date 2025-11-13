@@ -460,6 +460,68 @@ describe("multiworker", () => {
 		});
 	});
 
+	describe("Streaming tail consumers", () => {
+		beforeEach(async () => {
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2025-04-28"
+						compatibility_flags = ["streaming_tail_worker"]
+
+						[[tail_consumers]]
+						service = "${workerName2}"
+
+						[[streaming_tail_consumers]]
+						service = "${workerName2}"
+				`,
+				"src/index.ts": dedent/* javascript */ `
+					export default {
+						async fetch(req, env) {
+							console.log("log something")
+							return new Response("hello from a")
+						},
+					};
+					`,
+			});
+
+			b = await makeRoot();
+			await baseSeed(b, {
+				"wrangler.toml": dedent`
+						name = "${workerName2}"
+						main = "src/index.ts"
+						compatibility_date = "2025-04-28"
+				`,
+				"src/index.ts": dedent/* javascript */ `
+					export default {
+						async tail(event) {
+							console.log("received tail event", event)
+						},
+						async tailStream(event) {
+							console.log("received tail stream event", event)
+						},
+					};
+				`,
+			});
+		});
+
+		it("logs tail event sent to b", async () => {
+			const worker = helper.runLongLived(
+				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
+				{ cwd: a }
+			);
+			const { url } = await worker.waitForReady(5_000);
+
+			await expect(fetchText(`${url}`)).resolves.toBe("hello from a");
+
+			await vi.waitFor(
+				async () =>
+					expect(worker.currentOutput).includes("received tail stream event"),
+				{ interval: 1000, timeout: 10_000 }
+			);
+		});
+	});
+
 	describe("pages", () => {
 		beforeEach(async () => {
 			await baseSeed(a, {

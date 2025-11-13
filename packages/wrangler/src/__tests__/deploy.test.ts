@@ -8658,6 +8658,7 @@ addEventListener('fetch', event => {});`
 					{ service: "listener " },
 					{ service: "test-listener", environment: "production" },
 				],
+				streaming_tail_consumers: [{ service: "stream-listener " }],
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
@@ -8678,6 +8679,7 @@ addEventListener('fetch', event => {});`
 				Your Worker is sending Tail events to the following Workers:
 				- listener
 				- test-listener
+				- stream-listener  (streaming)
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
