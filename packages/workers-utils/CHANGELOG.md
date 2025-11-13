@@ -1,5 +1,11 @@
 # @cloudflare/workers-utils
 
+## 0.1.0
+
+### Minor Changes
+
+- [#11146](https://github.com/cloudflare/workers-sdk/pull/11146) [`d7a2037`](https://github.com/cloudflare/workers-sdk/commit/d7a203771569942a822d4943999db4d946101669) Thanks [@penalosa](https://github.com/penalosa)! - Change the input types of `constructWranglerConfig()` to better match the API
+
 ## 0.0.2
 
 ### Patch Changes
