@@ -23,8 +23,7 @@ export class FakeBus implements ControllerBus {
 			const w = this.waiters[i];
 			if (w.match(event)) {
 				this.waiters.splice(i, 1);
-				w.resolve(event);
-				break;
+				return w.resolve(event);
 			}
 		}
 	}
