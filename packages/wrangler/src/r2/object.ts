@@ -249,6 +249,7 @@ export const r2ObjectPutCommand = createCommand({
 			storageClass,
 			...options
 		} = objectPutYargs;
+
 		const localMode = isLocal(objectPutYargs);
 		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 		if (!file && !pipe) {
@@ -371,8 +372,13 @@ export const r2ObjectPutCommand = createCommand({
 				key,
 				object,
 				{
-					...options,
-					"content-length": `${objectSize}`,
+					"cache-control": options.cacheControl,
+					"content-disposition": options.contentDisposition,
+					"content-encoding": options.contentEncoding,
+					"content-language": options.contentLanguage,
+					"content-length": String(objectSize),
+					"content-type": options.contentType,
+					expires: options.expires,
 				},
 				jurisdiction,
 				storageClass
