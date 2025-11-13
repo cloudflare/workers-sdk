@@ -20,7 +20,10 @@ function embedWorkersPlugin(): UserConfig["plugins"] {
 
 				// Use this.resolve() API so Workers can be written as `m?[jt]s` files
 				// Create a fake importer path within the templates directory for resolution
-				const fakeImporter = path.join(TEMPLATES_DIR, "__virtual_importer__.js");
+				const fakeImporter = path.join(
+					TEMPLATES_DIR,
+					"__virtual_importer__.js"
+				);
 				const result = await this.resolve("./" + name, fakeImporter, {
 					skipSelf: true,
 					...options,
@@ -32,7 +35,9 @@ function embedWorkersPlugin(): UserConfig["plugins"] {
 				}
 
 				if (result.external) {
-					this.error(`Worker resolved as external: ${source} (id: ${result.id})`);
+					this.error(
+						`Worker resolved as external: ${source} (id: ${result.id})`
+					);
 					return null;
 				}
 
@@ -117,6 +122,7 @@ export default defineConfig((options) => [
 		metafile: true,
 		external: EXTERNAL_DEPENDENCIES,
 		sourcemap: process.env.SOURCEMAPS !== "false",
+		fixedExtension: false,
 		inject: [path.join(__dirname, "import_meta_url.js")],
 		// mainFields: ["module", "main"],
 		define: {
