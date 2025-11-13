@@ -54,6 +54,12 @@ export {
 export { validatePagesConfig } from "./config/validation-pages";
 
 export {
+	hasProperty,
+	isRequiredProperty,
+	isOptionalProperty,
+} from "./config/validation-helpers";
+
+export {
 	resolveWranglerConfigPath,
 	findWranglerConfig,
 } from "./config/config-helpers";
