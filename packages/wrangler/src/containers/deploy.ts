@@ -369,16 +369,15 @@ export async function apply(
 function mergeIfUnsafe<
 	T extends CreateApplicationRequest | ModifyApplicationRequestBody,
 >(fullConfig: Config, containerConfig: T, name: string) {
-	const unsafeContainerConfig = fullConfig.unsafe.containers?.find((unsafe) => {
-		return unsafe.name === name;
+	const unsafeContainerConfig = fullConfig.containers?.find((original) => {
+		return original.name === name && original.unsafe !== undefined;
 	});
 
 	if (unsafeContainerConfig) {
-		const unsafeWithoutName: Partial<Config> = {
-			...unsafeContainerConfig,
-		};
-		delete unsafeWithoutName.name;
-		return mergeDeep<T>(containerConfig, unsafeWithoutName as Partial<T>);
+		return mergeDeep<T>(
+			containerConfig,
+			unsafeContainerConfig.unsafe as Partial<T>
+		);
 	} else {
 		return containerConfig;
 	}

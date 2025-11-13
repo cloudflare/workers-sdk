@@ -1876,17 +1876,16 @@ describe("unsafe.containers configuration", () => {
 		mockGetVersion("Galaxy-Class");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
-			containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
-			unsafe: {
-				containers: [
-					{
-						name: "my-container",
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					unsafe: {
 						custom_field: "custom_value",
 						nested: { field: "nested_value" },
 						configuration: { network: "nested_value" },
 					},
-				],
-			},
+				},
+			],
 		});
 
 		mockGetApplications([]);
@@ -1917,17 +1916,12 @@ describe("unsafe.containers configuration", () => {
 					...DEFAULT_CONTAINER_FROM_REGISTRY,
 					max_instances: 20,
 					rollout_step_percentage: 10,
-				},
-			],
-			unsafe: {
-				containers: [
-					{
-						name: "my-container",
+					unsafe: {
 						unsafe_field: "unsafe_value",
 						configuration: { network: "unsafe_network_value" },
 					},
-				],
-			},
+				},
+			],
 		});
 
 		mockGetApplications([
