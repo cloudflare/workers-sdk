@@ -19,6 +19,12 @@ import { handleWebSocket } from "../websockets";
 import type { StaticRouting } from "@cloudflare/workers-shared/utils/types";
 import type * as vite from "vite";
 
+let exitCallback = () => {};
+
+process.on("exit", () => {
+	exitCallback();
+});
+
 /**
  * Plugin to provide core development functionality
  */
@@ -156,11 +162,11 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					 * not to be emitted).
 					 *
 					 */
-					process.on("exit", async () => {
-						if (containerTagToOptionsMap.size) {
+					exitCallback = () => {
+						if (containerImageTags.size) {
 							cleanupContainers(getDockerPath(), containerImageTags);
 						}
-					});
+					};
 				}
 			}
 
