@@ -464,7 +464,7 @@ describe("Create Cloudflare CLI", () => {
 				);
 				expect(normalizeOutput(output)).toMatchInlineSnapshot(`
 					"create-cloudflare <version>
-					  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
+					  The create-cloudflare CLI (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
 					USAGE
 					  <USAGE>
 					OPTIONS
@@ -486,6 +486,8 @@ describe("Create Cloudflare CLI", () => {
 					    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
 					    npm create cloudflare -- --framework next -- --ts
 					    pnpm create cloudflare --framework next -- --ts
+					    Allowed Values:
+					      gatsby
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:
@@ -536,7 +538,7 @@ describe("Create Cloudflare CLI", () => {
 				const { output } = await runC3(["--help"], [], logStream);
 				expect(normalizeOutput(output)).toMatchInlineSnapshot(`
 					"create-cloudflare <version>
-					  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
+					  The create-cloudflare CLI (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
 					USAGE
 					  <USAGE>
 					OPTIONS

@@ -1,4 +1,5 @@
 import { Framework } from ".";
+import type { ConfigurationOptions } from ".";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 export class Static extends Framework {
@@ -8,7 +9,9 @@ export class Static extends Framework {
 		this.name = name ?? "static";
 	}
 
-	configure(outputDir: string): Promise<RawConfig> | RawConfig {
+	configure({
+		outputDir,
+	}: ConfigurationOptions): Promise<RawConfig> | RawConfig {
 		return {
 			assets: {
 				directory: outputDir,

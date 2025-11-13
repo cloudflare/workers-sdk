@@ -144,7 +144,9 @@ const create = async (ctx: C3Context) => {
 		await template.generate(ctx);
 	}
 
-	await copyTemplateFiles(ctx);
+	if (!ctx.args.experimental) {
+		await copyTemplateFiles(ctx);
+	}
 	await updatePackageName(ctx);
 
 	chdir(ctx.project.path);
@@ -155,25 +157,37 @@ const create = async (ctx: C3Context) => {
 };
 
 const configure = async (ctx: C3Context) => {
-	startSection("Configuring your application for Cloudflare", "Step 2 of 3");
+	startSection(
+		"Configuring your application for Cloudflare via `wrangler setup`",
+		"Step 2 of 3",
+	);
 
+	// This is kept even in the autoconfig case because autoconfig will ultimately end up installing Wrangler anyway
+	// If we _didn't_ install Wrangler when using autoconfig we'd end up with a double install (one from `npx` and one from autoconfig)
 	await installWrangler();
 
-	// Note: This _must_ be called before the configure phase since
-	//       pre-existing workers assume its presence in their configure phase
-	await updateWranglerConfig(ctx);
+	if (ctx.args.experimental) {
+		const { npx } = detectPackageManager();
 
-	const { template } = ctx;
-	if (template.configure) {
-		await template.configure({ ...ctx });
+		await runCommand([npx, "wrangler", "setup", "--yes"]);
+	} else {
+		// Note: This _must_ be called before the configure phase since
+		//       pre-existing workers assume its presence in their configure phase
+		await updateWranglerConfig(ctx);
+
+		const { template } = ctx;
+		if (template.configure) {
+			await template.configure({ ...ctx });
+		}
+
+		addWranglerToGitIgnore(ctx);
+
+		await updatePackageScripts(ctx);
+
+		await addTypes(ctx);
 	}
 
-	addWranglerToGitIgnore(ctx);
-
-	await updatePackageScripts(ctx);
-
-	await addTypes(ctx);
-
+	// Autoconfig doesn't mess with version control, so C3 runs this after autoconfig
 	await offerGit(ctx);
 	await gitCommit(ctx);
 

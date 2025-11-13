@@ -610,7 +610,29 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
  */
 function getExperimentalFrameworkTestConfig() {
 	return [
-		// None right now
+		{
+			name: "gatsby:workers",
+			argv: ["--platform", "workers"],
+			unsupportedPms: ["bun", "pnpm", "yarn"],
+			promptHandlers: [
+				{
+					matcher: /Would you like to use a template\?/,
+					input: ["n"],
+				},
+			],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Gatsby!",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "Gatsby!",
+			},
+			nodeCompat: false,
+		},
 	];
 }
 

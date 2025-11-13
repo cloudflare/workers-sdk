@@ -7,6 +7,7 @@ import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
+import { getWranglerHideBanner } from "../environment-variables/misc-variables";
 import { hasDefinedEnvironments } from "../environments";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
@@ -107,7 +108,7 @@ function createHandler(def: CommandDefinition, commandName: string) {
 			const shouldPrintBanner = def.behaviour?.printBanner;
 
 			if (
-				/* No defautl behaviour override: show the banner */
+				/* No default behaviour override: show the banner */
 				shouldPrintBanner === undefined ||
 				/* Explicit opt in: show the banner */
 				(typeof shouldPrintBanner === "boolean" &&
@@ -119,14 +120,15 @@ function createHandler(def: CommandDefinition, commandName: string) {
 				await printWranglerBanner();
 			}
 
-			if (def.metadata.deprecated) {
-				logger.warn(def.metadata.deprecatedMessage);
-			}
-			if (def.metadata.statusMessage) {
-				logger.warn(def.metadata.statusMessage);
-			}
+			if (!getWranglerHideBanner()) {
+				if (def.metadata.deprecated) {
+					logger.warn(def.metadata.deprecatedMessage);
+				}
 
-			// TODO(telemetry): send command started event
+				if (def.metadata.statusMessage) {
+					logger.warn(def.metadata.statusMessage);
+				}
+			}
 
 			await def.validateArgs?.(args);
 

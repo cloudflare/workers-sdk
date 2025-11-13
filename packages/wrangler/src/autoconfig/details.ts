@@ -230,7 +230,7 @@ export function displayAutoConfigDetails(
 ): void {
 	logger.log("");
 
-	logger.log(displayOptions?.heading ?? "Auto-detected Project Settings:");
+	logger.log(displayOptions?.heading ?? "Detected Project Settings:");
 
 	logger.log(brandColor(" - Worker Name:"), autoConfigDetails.workerName);
 	if (autoConfigDetails.framework) {
