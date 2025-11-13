@@ -17,3 +17,20 @@ export type AutoConfigDetails = {
 	/** The output directory (if no framework is used, points to the raw asset files) */
 	outputDir?: string;
 };
+
+export type AutoConfigOptions = {
+	/** Whether to run autoconfig without actually applying any filesystem modification (default: false) */
+	dryRun?: boolean;
+	/**
+	 * Whether the build command should be run (default: true)
+	 *
+	 * Note: When `dryRun` is `true` the build command is never run.
+	 */
+	runBuild?: boolean;
+	/**
+	 * Whether the confirmation prompts should be skipped (default: false)
+	 *
+	 * Note: When `dryRun` is `true` the the confirmation prompts are always skipped.
+	 */
+	skipConfirmations?: boolean;
+};
