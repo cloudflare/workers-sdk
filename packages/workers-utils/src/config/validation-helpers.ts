@@ -569,13 +569,13 @@ export const validateOptionalTypedArray = (
 };
 
 /**
- * Returns whether `target` has the required property `prop` of type `type`.
+ * Returns whether `target` has the required property `property` of type `type`.
  *
  * @param target the object to test.
  * @param property the property name to test.
  * @param type the expected type of the property.
  * @param choices optional list of allowed values for the property.
- * @returns whether `target` has the required property `prop` of type `type`.
+ * @returns whether `target` has the required property `property` of type `type`, and optionally one of `choices`.
  */
 export const isRequiredProperty = <T extends object>(
 	target: object,
@@ -588,12 +588,12 @@ export const isRequiredProperty = <T extends object>(
 	(choices === undefined || choices.includes(target[property]));
 
 /**
- * Returns whether `target` has the optional property `prop` of type `type`.
+ * Returns whether `target` has the optional property `property` of type `type`.
  *
  * @param target the object to test.
  * @param property the property name to test.
  * @param type the expected type of the property.
- * @returns whether `target` has the optional property `prop` of type `type`.
+ * @returns whether `target` has the optional property `property` of type `type`.
  */
 export const isOptionalProperty = <T extends object>(
 	target: object,
@@ -603,11 +603,11 @@ export const isOptionalProperty = <T extends object>(
 	!hasProperty<T>(target, property) || typeof target[property] === type;
 
 /**
- * Returns whether `target` has the property `prop`.
+ * Returns whether `target` has the property `property`.
  *
  * @param target the object to test.
- * @param prop the property name to test.
- * @returns whether `target` has the property `prop`.
+ * @param property the property name to test.
+ * @returns whether `target` has the property `property`.
  */
 export const hasProperty = <T extends object>(
 	target: object,
