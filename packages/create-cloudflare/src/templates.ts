@@ -189,6 +189,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
 			gatsby: gatsbyTemplate,
+			svelte: svelteTemplate,
 		};
 	} else {
 		return {
