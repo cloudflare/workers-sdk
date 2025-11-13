@@ -35,6 +35,10 @@ export const EXTERNAL_DEPENDENCIES = [
 
 	// workerd contains a native binary, so must be external. Wrangler depends on a pinned version.
 	"workerd",
+
+	// @cloudflare/workers-utils needs to be a dependency as it has types that we re-export, and which
+	// tsup has trouble resolving. This means we don't gain anything by bundling it.
+	"@cloudflare/workers-utils",
 ];
 
 const pathToPackageJson = path.resolve(__dirname, "..", "package.json");
