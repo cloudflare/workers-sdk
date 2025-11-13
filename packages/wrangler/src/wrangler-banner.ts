@@ -17,6 +17,7 @@ export async function printWranglerBanner(performUpdateCheck = true) {
 	if (getWranglerHideBanner()) {
 		return;
 	}
+
 	let text =
 		typeof WRANGLER_PRERELEASE_LABEL === "undefined"
 			? ` ⛅️ wrangler ${wranglerVersion}`

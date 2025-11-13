@@ -149,7 +149,7 @@ describe("autoconfig (deploy)", () => {
 				result: true,
 			});
 			await writeFile(".gitignore", "");
-			const configureSpy = vi.fn(async (outputDir) => ({
+			const configureSpy = vi.fn(async ({ outputDir }) => ({
 				assets: { directory: outputDir },
 			}));
 			await run.runAutoConfig({

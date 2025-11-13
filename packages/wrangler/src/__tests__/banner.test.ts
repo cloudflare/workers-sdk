@@ -25,4 +25,15 @@ describe("wrangler banner", () => {
 
 		expect(std.out).toMatchInlineSnapshot(`""`);
 	});
+
+	it("should not hide the version banner when WRANGLER_HIDE_BANNER=false", async () => {
+		vi.stubEnv("WRANGLER_HIDE_BANNER", "false");
+		await runWrangler("--version");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────"
+		`);
+	});
 });
