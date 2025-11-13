@@ -9,7 +9,7 @@ import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { requireAuth } from "../user";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
-import type { R2BucketInfo } from "../r2/helpers";
+import type { R2BucketInfo } from "../r2/helpers/bucket";
 import type {
 	CreatePipelineRequest,
 	CreateSinkRequest,
