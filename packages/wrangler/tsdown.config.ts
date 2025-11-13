@@ -115,7 +115,14 @@ export default defineConfig((options) => [
 		platform: "node",
 		format: "cjs",
 		dts: {
-			resolve: ["@cloudflare/workers-utils"],
+			resolve: ["@cloudflare/workers-shared", "@cloudflare/containers-shared"],
+			compilerOptions: {
+				// workaround for https://github.com/rolldown/tsdown/issues/345
+				paths: {
+					"@cloudflare/workers-shared": ["../workers-shared"],
+					"@cloudflare/containers-shared": ["../containers-shared"],
+				},
+			},
 		},
 		outDir: "wrangler-dist",
 		tsconfig: "tsconfig.json",
