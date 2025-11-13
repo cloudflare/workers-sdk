@@ -285,7 +285,7 @@ export async function verifyPreviewScript(
 		// Some frameworks take quite a long time to build the application (e.g. Docusaurus)
 		// so wait some time for the dev-server to be ready.
 		await retry(
-			{ times: 30, sleepMs: 5000 },
+			{ times: 60, sleepMs: 5000 },
 			async () => await fetch(`http://localhost:${port}${verifyPreview.route}`),
 		);
 
