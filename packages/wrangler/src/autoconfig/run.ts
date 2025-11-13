@@ -1,6 +1,5 @@
-import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import { FatalError } from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
@@ -13,6 +12,7 @@ import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
 import { confirmAutoConfigDetails, displayAutoConfigDetails } from "./details";
 import { Static } from "./frameworks/static";
+import { usesTypescript } from "./uses-typescript";
 import type { AutoConfigDetails } from "./types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
@@ -57,11 +57,6 @@ export async function runAutoConfig(
 		throw new FatalError("Cannot deploy project without an output directory");
 	}
 
-	const additionalConfigDetails =
-		(await autoConfigDetails.framework?.configure(
-			autoConfigDetails.outputDir
-		)) ?? {};
-
 	const wranglerConfig: RawConfig = {
 		$schema: "node_modules/wrangler/config-schema.json",
 		name: autoConfigDetails.workerName,
@@ -69,13 +64,17 @@ export async function runAutoConfig(
 		observability: {
 			enabled: true,
 		},
-		...additionalConfigDetails,
 	} satisfies RawConfig;
 
-	const modifications = await buildOperationsSummary(
-		autoConfigDetails,
-		wranglerConfig
-	);
+	const modifications = await buildOperationsSummary(autoConfigDetails, {
+		...wranglerConfig,
+		...(await autoConfigDetails.framework?.configure({
+			outputDir: autoConfigDetails.outputDir,
+			projectPath: autoConfigDetails.projectPath,
+			workerName: autoConfigDetails.workerName,
+			dryRun: true,
+		})),
+	});
 
 	if (!(skipConfirmation || (await confirm("Proceed with setup?")))) {
 		throw new FatalError("Deployment aborted");
@@ -105,10 +104,17 @@ export async function runAutoConfig(
 			)
 		);
 	}
+	const additionalConfigDetails =
+		(await autoConfigDetails.framework?.configure({
+			outputDir: autoConfigDetails.outputDir,
+			projectPath: autoConfigDetails.projectPath,
+			workerName: autoConfigDetails.workerName,
+			dryRun: false,
+		})) ?? {};
 
 	await writeFile(
 		resolve(autoConfigDetails.projectPath, "wrangler.jsonc"),
-		JSON.stringify(wranglerConfig, null, 2)
+		JSON.stringify({ ...wranglerConfig, ...additionalConfigDetails }, null, 2)
 	);
 
 	addWranglerToGitIgnore(autoConfigDetails.projectPath);
@@ -144,10 +150,6 @@ export async function runAutoConfig(
 	return;
 }
 
-function usesTypescript(projectPath: string) {
-	return existsSync(join(projectPath, `tsconfig.json`));
-}
-
 type Modifications = {
 	wranglerInstall: boolean;
 	scripts: Record<string, string>;
@@ -172,17 +174,19 @@ export async function buildOperationsSummary(
 		logger.log("");
 
 		modifications.scripts = {
-			deploy: autoConfigDetails.buildCommand
-				? `${autoConfigDetails.buildCommand} && wrangler deploy`
-				: `wrangler deploy`,
-			preview: autoConfigDetails.buildCommand
-				? `${autoConfigDetails.buildCommand} && wrangler dev`
-				: `wrangler dev`,
+			deploy:
+				autoConfigDetails.framework?.deploy ??
+				(autoConfigDetails.buildCommand
+					? `${autoConfigDetails.buildCommand} && wrangler deploy`
+					: `wrangler deploy`),
+			preview:
+				autoConfigDetails.framework?.preview ??
+				(autoConfigDetails.buildCommand
+					? `${autoConfigDetails.buildCommand} && wrangler dev`
+					: `wrangler dev`),
 		};
 
-		// TODO: Implement the logic to discern whether the project contains server code or not
-		//       (basically if it is fully static)
-		const containsServerSideCode = false;
+		const containsServerSideCode = !!wranglerConfigToWrite.main;
 
 		if (
 			// If there is no server side code, then there is no need to add the cf-typegen script
@@ -190,7 +194,8 @@ export async function buildOperationsSummary(
 			usesTypescript(autoConfigDetails.projectPath) &&
 			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
 		) {
-			modifications.scripts["cf-typegen"] = "wrangler types";
+			modifications.scripts["cf-typegen"] =
+				autoConfigDetails.framework?.typegen ?? "wrangler types";
 		}
 
 		logger.log("📝 Update package.json scripts:");
