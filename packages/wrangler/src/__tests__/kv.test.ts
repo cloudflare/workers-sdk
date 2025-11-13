@@ -1001,13 +1001,13 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
+					      --path          Read value from the file at a given path  [string]
 					      --binding       The binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
 					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
 					      --metadata      Arbitrary JSON that is associated with a key  [string]
-					      --path          Read value from the file at a given path  [string]
 					      --local         Interact with local storage  [boolean]
 					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
@@ -1048,13 +1048,13 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
+					      --path          Read value from the file at a given path  [string]
 					      --binding       The binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
 					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
 					      --metadata      Arbitrary JSON that is associated with a key  [string]
-					      --path          Read value from the file at a given path  [string]
 					      --local         Interact with local storage  [boolean]
 					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
@@ -1097,13 +1097,13 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
+					      --path          Read value from the file at a given path  [string]
 					      --binding       The binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
 					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
 					      --metadata      Arbitrary JSON that is associated with a key  [string]
-					      --path          Read value from the file at a given path  [string]
 					      --local         Interact with local storage  [boolean]
 					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
@@ -1144,13 +1144,13 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
+					      --path          Read value from the file at a given path  [string]
 					      --binding       The binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
 					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
 					      --metadata      Arbitrary JSON that is associated with a key  [string]
-					      --path          Read value from the file at a given path  [string]
 					      --local         Interact with local storage  [boolean]
 					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
@@ -1188,13 +1188,13 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
+					      --path          Read value from the file at a given path  [string]
 					      --binding       The binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
 					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
 					      --metadata      Arbitrary JSON that is associated with a key  [string]
-					      --path          Read value from the file at a given path  [string]
 					      --local         Interact with local storage  [boolean]
 					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
@@ -1237,13 +1237,13 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
+					      --path          Read value from the file at a given path  [string]
 					      --binding       The binding name to the namespace to write to  [string]
 					      --namespace-id  The id of the namespace to write to  [string]
 					      --preview       Interact with a preview namespace  [boolean]
 					      --ttl           Time for which the entries should be visible  [number]
 					      --expiration    Time since the UNIX epoch after which the entry expires  [number]
 					      --metadata      Arbitrary JSON that is associated with a key  [string]
-					      --path          Read value from the file at a given path  [string]
 					      --local         Interact with local storage  [boolean]
 					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
@@ -1637,10 +1637,10 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
+					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
 					      --binding       The binding name to the namespace to get from  [string]
 					      --namespace-id  The id of the namespace to get from  [string]
 					      --preview       Interact with a preview namespace  [boolean] [default: false]
-					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
 					      --local         Interact with local storage  [boolean]
 					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
@@ -1676,10 +1676,10 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
+					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
 					      --binding       The binding name to the namespace to get from  [string]
 					      --namespace-id  The id of the namespace to get from  [string]
 					      --preview       Interact with a preview namespace  [boolean] [default: false]
-					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
 					      --local         Interact with local storage  [boolean]
 					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
@@ -1716,10 +1716,10 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
+					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
 					      --binding       The binding name to the namespace to get from  [string]
 					      --namespace-id  The id of the namespace to get from  [string]
 					      --preview       Interact with a preview namespace  [boolean] [default: false]
-					      --text          Decode the returned value as a utf8 string  [boolean] [default: false]
 					      --local         Interact with local storage  [boolean]
 					      --remote        Interact with remote storage  [boolean]
 					      --persist-to    Directory for local persistence  [string]"
