@@ -104,10 +104,10 @@ export const runDeploy = async (ctx: C3Context) => {
 		// Important: the following assumes that all framework deploy commands terminate with `wrangler pages deploy`
 		...(ctx.template.platform === "pages" && ctx.commitMessage && !insideGitRepo
 			? [
-					...(pm === "npm" ? ["--"] : []),
-					"--commit-message",
-					JSON.stringify(ctx.commitMessage),
-				]
+				...(pm === "npm" ? ["--"] : []),
+				"--commit-message",
+				JSON.stringify(ctx.commitMessage),
+			]
 			: []),
 	];
 
@@ -129,6 +129,8 @@ export const runDeploy = async (ctx: C3Context) => {
 		)}`,
 	});
 
+	const DEPLOYED_URL_REGEX = /https:\/\/.+\.(pages|workers)\.dev/;
+
 	try {
 		const contents = readFile(outputFile);
 
@@ -136,18 +138,26 @@ export const runDeploy = async (ctx: C3Context) => {
 			.split("\n")
 			.filter(Boolean)
 			.map((entry) => JSON.parse(entry));
-		const url: string | undefined =
+
+		// Single pass to find the URL
+		const url =
 			entries.find((entry) => entry.type === "deploy")?.targets?.[0] ??
 			entries.find((entry) => entry.type === "pages-deploy")?.url;
-		const deployedUrlRegex = /https:\/\/.+\.(pages|workers)\.dev/;
-		const deployedUrlMatch = url?.match(deployedUrlRegex);
-		if (deployedUrlMatch) {
-			ctx.deployment.url = deployedUrlMatch[0];
-		} else {
-			throw new Error("Failed to find deployment url.");
+
+		if (!url) {
+			throw new Error("No deployment entry found in output file.");
 		}
-	} catch {
-		throw new Error("Failed to find deployment url.");
+
+		const deployedUrlMatch = url.match(DEPLOYED_URL_REGEX);
+
+		if (!deployedUrlMatch) {
+			throw new Error(`Invalid deployment URL format: ${url}`);
+		}
+
+		ctx.deployment.url = deployedUrlMatch[0];
+	} catch (error) {
+		const message = error instanceof Error ? error.message : "Unknown error";
+		throw new Error(`Failed to find deployment url: ${message}`);
 	}
 
 	// if a pages url (<sha1>.<project>.pages.dev), remove the sha1
