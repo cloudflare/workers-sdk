@@ -61,7 +61,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			nodeCompat: true,
 			flags: [
 				"--skip-houston",
-				"--no-install",
 				"--no-git",
 				"--template",
 				"blog",

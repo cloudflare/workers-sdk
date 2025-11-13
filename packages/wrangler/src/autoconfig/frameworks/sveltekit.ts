@@ -10,15 +10,15 @@ export class SvelteKit extends Framework {
 	name = "svelte-kit";
 
 	async configure({ dryRun }: ConfigurationOptions): Promise<RawConfig> {
-		const { npx } = await getPackageManager();
+		const { dlx } = await getPackageManager();
 		if (!dryRun) {
 			await runCommand(
-				[npx, "sv", "add", "sveltekit-adapter=adapter:cloudflare"],
+				[...dlx, "sv", "add", "sveltekit-adapter=adapter:cloudflare"],
 				{
 					silent: true,
 					startText: "Installing adapter",
 					doneText: `${brandColor("installed")} ${dim(
-						`via \`${npx} sv add sveltekit-adapter=adapter:cloudflare\``
+						`via \`${dlx} sv add sveltekit-adapter=adapter:cloudflare\``
 					)}`,
 				}
 			);
