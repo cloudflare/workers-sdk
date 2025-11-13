@@ -1,0 +1,38 @@
+import { writeFileSync } from "fs";
+import { brandColor, dim } from "@cloudflare/cli/colors";
+import { getPackageManager } from "../../package-manager";
+import { runCommand } from "../c3-vendor/command";
+import { Framework } from ".";
+import type { ConfigurationOptions } from ".";
+import type { RawConfig } from "@cloudflare/workers-utils";
+
+export class SvelteKit extends Framework {
+	name = "svelte-kit";
+
+	async configure({ dryRun }: ConfigurationOptions): Promise<RawConfig> {
+		const { npx } = await getPackageManager();
+		if (!dryRun) {
+			await runCommand(
+				[npx, "sv", "add", "sveltekit-adapter=adapter:cloudflare"],
+				{
+					silent: true,
+					startText: "Installing adapter",
+					doneText: `${brandColor("installed")} ${dim(
+						`via \`${npx} sv add sveltekit-adapter=adapter:cloudflare\``
+					)}`,
+				}
+			);
+			writeFileSync("static/.assetsignore", "_worker.js\n_routes.json");
+		}
+		return {
+			main: ".svelte-kit/cloudflare/_worker.js",
+			compatibility_flags: ["nodejs_als"],
+			assets: {
+				binding: "ASSETS",
+				directory: ".svelte-kit/cloudflare",
+			},
+		};
+	}
+
+	configurationDescription = 'Configuring project for SvelteKit with "sv add"';
+}
