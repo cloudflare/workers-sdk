@@ -107,6 +107,7 @@ describe("wrangler setup", () => {
 				std.out
 					.replace(/- Worker Name: .*?\n/, "- Worker Name: <WORKER_NAME>\n")
 					.replace(/"name": ".*?",\n/, '"name": "<WORKER_NAME>",\n')
+					.replace(/"directory": ".*?"/, '"directory": "<DIR>"')
 			).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
@@ -127,7 +128,7 @@ describe("wrangler setup", () => {
 				      \\"enabled\\": true
 				    },
 				    \\"assets\\": {
-				      \\"directory\\": \\"<cwd>/public\\"
+				      \\"directory\\": \\"<DIR>\\"
 				    }
 				  }
 
