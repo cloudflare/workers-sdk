@@ -25,13 +25,10 @@ type AutoConfigMetrics = Pick<
 
 export async function runAutoConfig(
 	autoConfigDetails: AutoConfigDetails,
-	// { build = true, skipConfirmation = false } = {}
-	// autoConfigDetails: AutoConfigDetails,
 	autoConfigOptions: AutoConfigOptions = {}
 ): Promise<void> {
 	const dryRun = autoConfigOptions.dryRun === true;
-	const runBuild =
-		!dryRun && autoConfigOptions.runBuild === false ? false : true;
+	const runBuild = !dryRun && (autoConfigOptions.runBuild ?? true);
 	const skipConfirmations =
 		dryRun || autoConfigOptions.skipConfirmations === true;
 
