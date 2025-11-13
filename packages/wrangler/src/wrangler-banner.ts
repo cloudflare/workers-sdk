@@ -3,6 +3,7 @@ import semiver from "semiver";
 import stripAnsi from "strip-ansi";
 import supportsColor from "supports-color";
 import { version as wranglerVersion } from "../package.json";
+import { getWranglerHideBanner } from "./environment-variables/misc-variables";
 import { logger } from "./logger";
 import { updateCheck } from "./update-check";
 
@@ -13,6 +14,10 @@ const MIN_NODE_VERSION = "20.0.0";
 declare const WRANGLER_PRERELEASE_LABEL: string;
 
 export async function printWranglerBanner(performUpdateCheck = true) {
+	if (getWranglerHideBanner()) {
+		return;
+	}
+
 	let text =
 		typeof WRANGLER_PRERELEASE_LABEL === "undefined"
 			? ` ⛅️ wrangler ${wranglerVersion}`

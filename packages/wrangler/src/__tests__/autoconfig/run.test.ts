@@ -149,7 +149,7 @@ describe("autoconfig (deploy)", () => {
 				result: true,
 			});
 			await writeFile(".gitignore", "");
-			const configureSpy = vi.fn(async (outputDir) => ({
+			const configureSpy = vi.fn(async ({ outputDir }) => ({
 				assets: { directory: outputDir },
 			}));
 			await run.runAutoConfig({
@@ -171,7 +171,7 @@ describe("autoconfig (deploy)", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				Auto-detected Project Settings:
+				Detected Project Settings:
 				 - Worker Name: my-worker
 				 - Framework: fake
 				 - Build Command: echo 'built' > build.txt
@@ -181,6 +181,10 @@ describe("autoconfig (deploy)", () => {
 				📦 Install packages:
 				 - wrangler (devDependency)
 
+				📝 Update package.json scripts:
+				 - \\"deploy\\": \\"echo 'built' > build.txt && wrangler deploy\\"
+				 - \\"preview\\": \\"echo 'built' > build.txt && wrangler dev\\"
+
 				📄 Create wrangler.jsonc:
 				  {
 				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
@@ -188,6 +192,9 @@ describe("autoconfig (deploy)", () => {
 				    \\"compatibility_date\\": \\"2000-01-01\\",
 				    \\"observability\\": {
 				      \\"enabled\\": true
+				    },
+				    \\"assets\\": {
+				      \\"directory\\": \\"dist\\"
 				    }
 				  }
 
@@ -262,7 +269,7 @@ describe("autoconfig (deploy)", () => {
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
-				Auto-detected Project Settings:
+				Detected Project Settings:
 				 - Worker Name: my-worker
 				 - Framework: static
 				 - Output Directory: dist
@@ -281,6 +288,9 @@ describe("autoconfig (deploy)", () => {
 				    \\"compatibility_date\\": \\"2000-01-01\\",
 				    \\"observability\\": {
 				      \\"enabled\\": true
+				    },
+				    \\"assets\\": {
+				      \\"directory\\": \\"dist\\"
 				    }
 				  }
 				"

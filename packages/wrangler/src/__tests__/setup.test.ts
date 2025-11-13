@@ -32,7 +32,11 @@ describe("wrangler setup", () => {
 			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
+			  -v, --version   Show version number  [boolean]
+
+			OPTIONS
+			  -y, --yes    Answer \\"yes\\" to any prompts for configuring your project  [boolean] [default: false]
+			      --build  Run your project's build command once it has been configured  [boolean] [default: false]"
 		`);
 	});
 
