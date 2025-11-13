@@ -340,5 +340,24 @@ describe("autoconfig (deploy)", () => {
 				"
 			`);
 		});
+
+		it("errors if no output directory is specified in the autoconfig details", async () => {
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+
+			await expect(
+				run.runAutoConfig({
+					projectPath: process.cwd(),
+					configured: false,
+					framework: new Static("static"),
+					workerName: "my-worker",
+					outputDir: "",
+				})
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot configure project without an output directory]`
+			);
+		});
 	});
 });
