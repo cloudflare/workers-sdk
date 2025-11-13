@@ -84,6 +84,7 @@ export interface ConfigBundle {
 	inspect: boolean;
 	services: Config["services"] | undefined;
 	tails: Config["tail_consumers"] | undefined;
+	streamingTails: Config["streaming_tail_consumers"] | undefined;
 	serviceBindings: Record<string, ServiceFetch>;
 	testScheduled: boolean;
 	containerDOClassNames: Set<string> | undefined;
@@ -397,6 +398,7 @@ type WorkerOptionsBindings = Pick<
 	| "email"
 	| "analyticsEngineDatasets"
 	| "tails"
+	| "streamingTails"
 	| "browserRendering"
 	| "vectorize"
 	| "vpcServices"
@@ -418,6 +420,7 @@ type MiniflareBindingsConfig = Pick<
 	| "services"
 	| "serviceBindings"
 	| "tails"
+	| "streamingTails"
 	| "complianceRegion"
 	| "containerDOClassNames"
 	| "containerBuildId"
@@ -482,6 +485,11 @@ export function buildMiniflareBindingOptions(
 	const tails: NonNullable<WorkerOptions["tails"]> = [];
 	for (const tail of config.tails ?? []) {
 		tails.push({ name: tail.service });
+	}
+
+	const streamingTails: NonNullable<WorkerOptions["streamingTails"]> = [];
+	for (const streamingTail of config.streamingTails ?? []) {
+		streamingTails.push({ name: streamingTail.service });
 	}
 
 	const classNameToUseSQLite = getClassNamesWhichUseSQLite(config.migrations);
@@ -773,6 +781,7 @@ export function buildMiniflareBindingOptions(
 		serviceBindings,
 		wrappedBindings: wrappedBindings,
 		tails,
+		streamingTails,
 	};
 
 	return {

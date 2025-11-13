@@ -46,7 +46,7 @@ interface WorkflowEntrypointConstructor<T = Cloudflare.Env> {
 }
 
 /** Keys that should be ignored during RPC property access */
-const IGNORED_KEYS = ["self", "tailStream"] as const;
+const IGNORED_KEYS = ["self"] as const;
 
 /** Available methods for `WorkerEntrypoint` class */
 const WORKER_ENTRYPOINT_KEYS = [
@@ -56,6 +56,7 @@ const WORKER_ENTRYPOINT_KEYS = [
 	"test",
 	"trace",
 	"scheduled",
+	"tailStream",
 ] as const;
 
 /** Available methods for `DurableObject` class */
