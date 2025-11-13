@@ -483,7 +483,7 @@ class ErrorOAuth2 extends UserError {
 }
 
 // For really unknown errors.
-class ErrorUnknown extends Error {
+class ErrorUnknown extends UserError {
 	toString(): string {
 		return "ErrorUnknown";
 	}
@@ -582,26 +582,37 @@ class ErrorUnsupportedGrantType extends ErrorAccessTokenResponse {
 	}
 }
 
-const RawErrorToErrorClassMap: { [_: string]: typeof ErrorOAuth2 } = {
-	invalid_request: ErrorInvalidRequest,
-	invalid_grant: ErrorInvalidGrant,
-	unauthorized_client: ErrorUnauthorizedClient,
-	access_denied: ErrorAccessDenied,
-	unsupported_response_type: ErrorUnsupportedResponseType,
-	invalid_scope: ErrorInvalidScope,
-	server_error: ErrorServerError,
-	temporarily_unavailable: ErrorTemporarilyUnavailable,
-	invalid_client: ErrorInvalidClient,
-	unsupported_grant_type: ErrorUnsupportedGrantType,
-	invalid_json: ErrorInvalidJson,
-	invalid_token: ErrorInvalidToken,
-};
-
 /**
  * Translate the raw error strings returned from the server into error classes.
  */
 function toErrorClass(rawError: string): ErrorOAuth2 {
-	return new (RawErrorToErrorClassMap[rawError] || ErrorUnknown)();
+	switch (rawError) {
+		case "invalid_request":
+			return new ErrorInvalidRequest(rawError);
+		case "invalid_grant":
+			return new ErrorInvalidGrant(rawError);
+		case "unauthorized_client":
+			return new ErrorUnauthorizedClient(rawError);
+		case "access_denied":
+			return new ErrorAccessDenied(rawError);
+		case "unsupported_response_type":
+			return new ErrorUnsupportedResponseType(rawError);
+		case "invalid_scope":
+			return new ErrorInvalidScope(rawError);
+		case "server_error":
+			return new ErrorServerError(rawError);
+		case "temporarily_unavailable":
+			return new ErrorTemporarilyUnavailable(rawError);
+		case "invalid_client":
+			return new ErrorInvalidClient(rawError);
+		case "unsupported_grant_type":
+			return new ErrorUnsupportedGrantType(rawError);
+		case "invalid_json":
+			return new ErrorInvalidJson(rawError);
+		case "invalid_token":
+			return new ErrorInvalidToken(rawError);
+	}
+	return new ErrorUnknown();
 }
 
 /**
