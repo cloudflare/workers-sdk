@@ -249,7 +249,6 @@ export const r2ObjectPutCommand = createCommand({
 			storageClass,
 			...options
 		} = objectPutYargs;
-
 		const localMode = isLocal(objectPutYargs);
 		const { bucket, key } = bucketAndKeyFromObjectPath(objectPath);
 		if (!file && !pipe) {
