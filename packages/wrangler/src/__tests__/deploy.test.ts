@@ -51,7 +51,6 @@ import {
 import {
 	createFetchResult,
 	msw,
-	mswSuccessDeployments,
 	mswSuccessDeploymentScriptAPI,
 	mswSuccessDeploymentScriptMetadata,
 	mswSuccessOauthHandlers,
