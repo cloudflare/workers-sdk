@@ -16,7 +16,6 @@ import { isLocal } from "../utils/is-local";
 import { MAX_UPLOAD_SIZE } from "./constants";
 import {
 	bucketAndKeyFromObjectPath,
-	createFileReadableStream,
 	deleteR2Object,
 	getR2Object,
 	putR2Object,
@@ -262,7 +261,7 @@ export const r2ObjectPutCommand = createCommand({
 			try {
 				const stats = fs.statSync(file);
 				objectSize = stats.size;
-				object = await createFileReadableStream(file);
+				object = stream.Readable.toWeb(fs.createReadStream(file));
 			} catch (err) {
 				if ((err as NodeJS.ErrnoException).code === "ENOENT") {
 					throw new UserError(`The file "${file}" does not exist.`);
@@ -322,7 +321,7 @@ export const r2ObjectPutCommand = createCommand({
 				persistTo,
 				config,
 				bucket,
-				async (r2Bucket, mf) => {
+				async (_r2Bucket, mf) => {
 					const putOptions: R2PutOptions = {
 						httpMetadata: {
 							contentType: options.contentType,
@@ -338,13 +337,6 @@ export const r2ObjectPutCommand = createCommand({
 									? undefined
 									: parseInt(options.expires),
 						},
-						customMetadata: undefined,
-						sha1: undefined,
-						sha256: undefined,
-						onlyIf: undefined,
-						md5: undefined,
-						sha384: undefined,
-						sha512: undefined,
 					};
 					// We can't use `r2Bucket.put()` here as `R2Bucket#put()`
 					// requires a known length stream, and Miniflare's magic proxy
@@ -371,8 +363,13 @@ export const r2ObjectPutCommand = createCommand({
 				key,
 				object,
 				{
-					...options,
-					"content-length": `${objectSize}`,
+					"cache-control": options.cacheControl,
+					"content-disposition": options.contentDisposition,
+					"content-encoding": options.contentEncoding,
+					"content-language": options.contentLanguage,
+					"content-length": String(objectSize),
+					"content-type": options.contentType,
+					expires: options.expires,
 				},
 				jurisdiction,
 				storageClass

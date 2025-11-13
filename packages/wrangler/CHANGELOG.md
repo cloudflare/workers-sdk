@@ -1,5 +1,26 @@
 # wrangler
 
+## 4.48.0
+
+### Minor Changes
+
+- [#11212](https://github.com/cloudflare/workers-sdk/pull/11212) [`3908162`](https://github.com/cloudflare/workers-sdk/commit/3908162d8adf3d970e4c07bc0d722b85b5a7e11f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add autoconfig changes summary for `wrangler deploy --x-autoconfig` with the option for users to cancel the operation
+
+- [#11229](https://github.com/cloudflare/workers-sdk/pull/11229) [`14d79f2`](https://github.com/cloudflare/workers-sdk/commit/14d79f2fe87289a83637bc5402479c5129a1cbb5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Enables `experimental-deploy-remote-diff-check` flag by default (the flag is still present for now so that users can turn it off if needed) and improves the remote config diffing logic (to include less noise in the diff presented to the user)
+
+- [#11245](https://github.com/cloudflare/workers-sdk/pull/11245) [`dfc6513`](https://github.com/cloudflare/workers-sdk/commit/dfc6513f2be1236770f0dda7a8b9d79a5fee438f) Thanks [@vicb](https://github.com/vicb)! - Change how Wrangler selects default ports for dev sessions.
+
+  If no port is specified, Wrangler now probes the default port and the 10 consecutive ports after it before falling back to a random port.
+  This will help getting a stable port number across dev sessions.
+  Both the http server and inspector ports are affected.
+
+### Patch Changes
+
+- [#11177](https://github.com/cloudflare/workers-sdk/pull/11177) [`43fe9f3`](https://github.com/cloudflare/workers-sdk/commit/43fe9f31092d2b5e540fbc5f33ef8a494515b837) Thanks [@MattieTK](https://github.com/MattieTK)! - Added bun detection to package manager analytics
+
+- Updated dependencies [[`305ffb3`](https://github.com/cloudflare/workers-sdk/commit/305ffb304d44e44a8045a08d43c655d1e1f17c88), [`46ccf0e`](https://github.com/cloudflare/workers-sdk/commit/46ccf0e9f79c909cd678af6dcb2e72ec2a12fc90)]:
+  - miniflare@4.20251109.1
+
 ## 4.47.0
 
 ### Minor Changes

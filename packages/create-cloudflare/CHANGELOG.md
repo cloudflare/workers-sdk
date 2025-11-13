@@ -1,5 +1,33 @@
 # create-cloudflare
 
+## 2.54.5
+
+### Patch Changes
+
+- [#11223](https://github.com/cloudflare/workers-sdk/pull/11223) [`bff5f16`](https://github.com/cloudflare/workers-sdk/commit/bff5f1662e77be79ef5ba4b6b0b3bf10685f7d06) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From            | To              |
+  | ----------- | --------------- | --------------- |
+  | create-waku | 0.12.5-0.26.1-0 | 0.12.5-0.27.0-0 |
+
+- [#11224](https://github.com/cloudflare/workers-sdk/pull/11224) [`60a9890`](https://github.com/cloudflare/workers-sdk/commit/60a9890df196717a0562e166466c27cbe2f09f3f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.17.1 | 1.17.2 |
+
+- [#11226](https://github.com/cloudflare/workers-sdk/pull/11226) [`da07a10`](https://github.com/cloudflare/workers-sdk/commit/da07a10f3592211640067135cf82fa5c5c11fd0b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 20.3.8 | 20.3.9 |
+
 ## 2.54.4
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.14.1",
+	"version": "1.14.2",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -23,12 +23,12 @@
 	"type": "module",
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
 		}
 	},
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"main": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
 	"files": [
 		"dist"
 	],
@@ -62,7 +62,7 @@
 		"@types/ws": "^8.5.13",
 		"magic-string": "^0.30.12",
 		"mlly": "^1.7.4",
-		"tsdown": "^0.15.4",
+		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
 		"vitest": "catalog:default"
