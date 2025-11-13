@@ -37,7 +37,7 @@ describe("wrangler setup", () => {
 			OPTIONS
 			  -y, --yes      Answer \\"yes\\" to any prompts for configuring your project  [boolean] [default: false]
 			      --build    Run your project's build command once it has been configured  [boolean] [default: false]
-			      --dry-run  Runs the command but without actually applying any filesystem modification  [boolean]"
+			      --dry-run  Runs the command without applying any filesystem modifications  [boolean]"
 		`);
 	});
 
