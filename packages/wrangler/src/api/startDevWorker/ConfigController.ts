@@ -16,7 +16,7 @@ import {
 	getInferredHost,
 	maskVars,
 } from "../../dev";
-import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
+import { getDurableObjectClassNameToUseSQLiteMap } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import {
 	getDisableConfigWatching,
@@ -454,12 +454,12 @@ async function resolveConfig(
 		}
 
 		// TODO(do) support remote wrangler dev
-		const classNamesWhichUseSQLite = getClassNamesWhichUseSQLite(
+		const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
 			resolved.migrations
 		);
 		if (
 			resolved.dev.remote &&
-			Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
+			Array.from(classNameToUseSQLite.values()).some((v) => v)
 		) {
 			logger.once.warn(
 				"SQLite in Durable Objects is only supported in local mode."

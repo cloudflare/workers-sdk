@@ -9,7 +9,7 @@ import { logger } from "../../logger";
 import { getSourceMappedString } from "../../sourcemap";
 import { updateCheck } from "../../update-check";
 import { warnOrError } from "../../utils/print-bindings";
-import { getClassNamesWhichUseSQLite } from "../class-names-sqlite";
+import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { ServiceFetch } from "../../api";
 import type { AssetsOptions } from "../../assets";
 import type { LoggerLevel } from "../../logger";
@@ -492,7 +492,9 @@ export function buildMiniflareBindingOptions(
 		streamingTails.push({ name: streamingTail.service });
 	}
 
-	const classNameToUseSQLite = getClassNamesWhichUseSQLite(config.migrations);
+	const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
+		config.migrations
+	);
 
 	const durableObjects = bindings.durable_objects?.bindings ?? [];
 

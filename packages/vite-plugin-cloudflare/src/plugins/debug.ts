@@ -33,9 +33,9 @@ export const debugPlugin = createPlugin("debug", (ctx) => {
 
 			const workerNames =
 				ctx.resolvedPluginConfig.type === "workers"
-					? Object.values(ctx.resolvedPluginConfig.workers).map(
-							(worker) => worker.name
-						)
+					? [
+							...ctx.resolvedPluginConfig.environmentNameToWorkerMap.values(),
+						].map((worker) => worker.config.name)
 					: [];
 
 			viteDevServer.middlewares.use(DEBUG_PATH, async (_, res, next) => {
