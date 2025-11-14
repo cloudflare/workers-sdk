@@ -2563,7 +2563,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251111.0
+        version: 4.20251113.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
