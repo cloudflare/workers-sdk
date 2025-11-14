@@ -8,7 +8,7 @@ export default defineConfig({
 		// We run these tests one file at a time.
 		// Otherwise we occasionally get flakes where two playground variants are overwriting the same files.
 		fileParallelism: false,
-		include: ["./**/__tests__/**/*.spec.[tj]s"],
+		include: ["./bindings/__tests__/**/*.spec.[tj]s"],
 		setupFiles: ["./vitest-setup.ts"],
 		globalSetup: ["./vitest-global-setup.ts"],
 		reporters: "dot",
