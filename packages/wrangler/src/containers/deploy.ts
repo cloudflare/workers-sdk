@@ -45,6 +45,9 @@ import type {
 } from "@cloudflare/containers-shared";
 import type { Config, ContainerApp } from "@cloudflare/workers-utils";
 
+/**
+ * Source overwrites target
+ */
 function mergeDeep<T>(target: T, source: Partial<T>): T {
 	if (typeof target !== "object" || target === null) {
 		return source as T;
@@ -238,12 +241,16 @@ export async function apply(
 
 	// let's always convert normalised container config -> CreateApplicationRequest
 	// since CreateApplicationRequest is a superset of ModifyApplicationRequestBody
-	const appConfig = containerConfigToCreateRequest(
-		accountId,
-		containerConfig,
-		imageRef,
-		args.durable_object_namespace_id,
-		prevApp
+	const appConfig = mergeIfUnsafe(
+		config,
+		containerConfigToCreateRequest(
+			accountId,
+			containerConfig,
+			imageRef,
+			args.durable_object_namespace_id,
+			prevApp
+		),
+		containerConfig.name
 	);
 
 	if (prevApp !== undefined && prevApp !== null) {
@@ -272,7 +279,12 @@ export async function apply(
 			)
 		);
 
-		const modifyReq = createApplicationToModifyApplication(appConfig);
+		// this will have removed the unsafe fields, so we need to add them back in after
+		const modifyReq = mergeIfUnsafe(
+			config,
+			createApplicationToModifyApplication(appConfig),
+			appConfig.name
+		);
 		/** only used for diffing */
 		const nowContainer = mergeDeep(
 			normalisedPrevApp,
@@ -340,6 +352,7 @@ export async function apply(
 			.forEach((el) => log(`  ${el}`));
 		newline();
 		// add to the actions array to create the app later
+
 		await doAction({
 			action: "create",
 			application: appConfig,
@@ -347,6 +360,27 @@ export async function apply(
 	}
 	newline();
 	endSection("Applied changes");
+}
+
+/**
+ * If there is an unsafe container config that matches this container by class_name,
+ * merge the unsafe config into the Create/Modify request.
+ */
+function mergeIfUnsafe<
+	T extends CreateApplicationRequest | ModifyApplicationRequestBody,
+>(fullConfig: Config, containerConfig: T, name: string) {
+	const unsafeContainerConfig = fullConfig.containers?.find((original) => {
+		return original.name === name && original.unsafe !== undefined;
+	});
+
+	if (unsafeContainerConfig) {
+		return mergeDeep<T>(
+			containerConfig,
+			unsafeContainerConfig.unsafe as Partial<T>
+		);
+	} else {
+		return containerConfig;
+	}
 }
 
 export function formatError(err: ApiError): string {

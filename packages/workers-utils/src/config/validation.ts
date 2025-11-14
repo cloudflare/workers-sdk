@@ -2901,6 +2901,21 @@ function validateContainerApp(
 				);
 			}
 
+			// unsafe.containers
+			if ("unsafe" in containerAppOptional) {
+				if (
+					(containerAppOptional.unsafe &&
+						typeof containerAppOptional.unsafe !== "object") ||
+					Array.isArray(containerAppOptional.unsafe)
+				) {
+					diagnostics.errors.push(
+						`The field "containers.unsafe" should be an object but got ${JSON.stringify(
+							typeof containerAppOptional.unsafe
+						)}.`
+					);
+				}
+			}
+
 			validateAdditionalProperties(
 				diagnostics,
 				field,
@@ -2922,6 +2937,7 @@ function validateContainerApp(
 					"rollout_kind",
 					"durable_objects",
 					"rollout_active_grace_period",
+					"unsafe",
 				]
 			);
 			if ("configuration" in containerAppOptional) {
