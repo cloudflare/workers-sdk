@@ -1,7 +1,6 @@
 import { isDockerRunning } from "@cloudflare/containers-shared";
 import { chromium } from "playwright-chromium";
 import { getDockerPath } from "../src/containers";
-import { getViteModuleToTest } from "./vite-module-to-test";
 import type { BrowserServer } from "playwright-chromium";
 import type { GlobalSetupContext } from "vitest/node";
 
@@ -20,14 +19,6 @@ export async function setup({ provide }: GlobalSetupContext): Promise<void> {
 	});
 
 	provide("wsEndpoint", browserServer.wsEndpoint());
-
-	const viteModule = await getViteModuleToTest();
-	const viteInUseMessage = `Running playground tests against ${viteModule.packageName}@${viteModule.version}`;
-	const lineLength = viteInUseMessage.length + 8;
-	console.log(`┌${"─".repeat(lineLength)}┐`);
-	console.log(`│    ${viteInUseMessage}    │`);
-	console.log(`└${"─".repeat(lineLength)}┘`);
-	console.log("");
 }
 
 const dockerIsRunning = await isDockerRunning(getDockerPath());

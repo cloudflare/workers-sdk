@@ -21,7 +21,7 @@
 		"jose": "^5.2.2",
 		"miniflare": "workspace:*",
 		"run-script-os": "^1.1.6",
-		"toucan-js": "3.4.0",
+		"toucan-js": "4.0.0",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"vitest": "catalog:default",

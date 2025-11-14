@@ -8,7 +8,7 @@
 		"create-astro": "4.13.2",
 		"create-analog": "1.8.1",
 		"@angular/create": "20.3.9",
-		"create-docusaurus": "3.9.1",
+		"create-docusaurus": "3.9.2",
 		"create-hono": "0.19.3",
 		"create-next-app": "15.5.6",
 		"create-qwik": "1.17.2",
@@ -19,7 +19,7 @@
 		"create-waku": "0.12.5-0.27.0-0",
 		"@tanstack/create-start": "0.34.15",
 		"gatsby": "5.15.0",
-		"sv": "0.9.8",
-		"nuxi": "3.29.3"
+		"sv": "0.9.9",
+		"nuxi": "3.30.0"
 	}
 }

@@ -453,6 +453,7 @@ export interface CfWorkerInit {
 	logpush: boolean | undefined;
 	placement: CfPlacement | undefined;
 	tail_consumers: CfTailConsumer[] | undefined;
+	streaming_tail_consumers?: CfTailConsumer[] | undefined;
 	limits: CfUserLimits | undefined;
 	annotations?: Record<string, string | undefined>;
 	keep_assets?: boolean | undefined;

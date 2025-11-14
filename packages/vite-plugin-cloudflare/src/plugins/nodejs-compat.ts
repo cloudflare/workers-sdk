@@ -141,6 +141,12 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 	};
 });
 
+let exitCallback = () => {};
+
+process.on("exit", () => {
+	exitCallback();
+});
+
 /**
  * Plugin to warn if Node.js APIs are used without enabling the `nodejs_compat` compatibility flag
  */
@@ -151,6 +157,12 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 			WorkerConfig,
 			NodeJsCompatWarnings
 		>();
+
+		exitCallback = () => {
+			for (const nodeJsCompatWarnings of nodeJsCompatWarningsMap.values()) {
+				nodeJsCompatWarnings.renderWarnings();
+			}
+		};
 
 		return {
 			// We must ensure that the `resolveId` hook runs before the built-in ones.

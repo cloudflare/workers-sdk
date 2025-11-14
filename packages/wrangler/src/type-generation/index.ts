@@ -14,7 +14,7 @@ import { getNodeCompat } from "miniflare";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
-import { getClassNamesWhichUseSQLite } from "../dev/class-names-sqlite";
+import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
 import { isProcessEnvPopulated } from "../process-env";
@@ -711,7 +711,7 @@ export async function generateEnvTypes(
 			entrypoint
 				? generateImportSpecifier(fullOutputPath, entrypoint.file)
 				: undefined,
-			[...getClassNamesWhichUseSQLite(config.migrations).keys()]
+			[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()]
 		);
 		const hash = createHash("sha256")
 			.update(consoleOutput)

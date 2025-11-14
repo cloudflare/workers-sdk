@@ -34,14 +34,14 @@ export function createBuildApp(
 			return;
 		}
 
-		const workerEnvironments = Object.keys(resolvedPluginConfig.workers).map(
-			(environmentName) => {
-				const environment = builder.environments[environmentName];
-				assert(environment, `"${environmentName}" environment not found`);
+		const workerEnvironments = [
+			...resolvedPluginConfig.environmentNameToWorkerMap.keys(),
+		].map((environmentName) => {
+			const environment = builder.environments[environmentName];
+			assert(environment, `"${environmentName}" environment not found`);
 
-				return environment;
-			}
-		);
+			return environment;
+		});
 
 		await Promise.all(
 			workerEnvironments.map((environment) => builder.build(environment))

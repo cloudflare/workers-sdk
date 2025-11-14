@@ -1,6 +1,11 @@
 import { DurableObject } from "cloudflare:workers";
 import { ModuleRunner, ssrModuleExportsKey } from "vite/module-runner";
-import { INIT_PATH, UNKNOWN_HOST, VIRTUAL_WORKER_ENTRY } from "../../shared";
+import {
+	INIT_PATH,
+	UNKNOWN_HOST,
+	VIRTUAL_EXPORT_TYPES,
+	VIRTUAL_WORKER_ENTRY,
+} from "../../shared";
 import { stripInternalEnv } from "./env";
 import type { WrapperEnv } from "./env";
 import type {
@@ -234,4 +239,15 @@ export async function getWorkerEntryExport(
 	}
 
 	return exportValue;
+}
+
+export async function getWorkerEntryExportTypes() {
+	if (!moduleRunner) {
+		throw new Error(`Module runner not initialized`);
+	}
+
+	const { getExportTypes } = await moduleRunner.import(VIRTUAL_EXPORT_TYPES);
+	const module = await moduleRunner.import(VIRTUAL_WORKER_ENTRY);
+
+	return getExportTypes(module);
 }

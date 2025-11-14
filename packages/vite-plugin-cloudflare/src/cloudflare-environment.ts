@@ -3,6 +3,7 @@ import { CoreHeaders } from "miniflare";
 import * as vite from "vite";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import {
+	GET_EXPORT_TYPES_PATH,
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
 	UNKNOWN_HOST,
@@ -10,6 +11,7 @@ import {
 	WORKER_ENTRY_PATH_HEADER,
 } from "./shared";
 import { debuglog, getOutputDirectory } from "./utils";
+import type { ExportTypes } from "./export-types";
 import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
 import type { MessageEvent, Miniflare, WebSocket } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
@@ -93,7 +95,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		miniflare: Miniflare,
 		workerConfig: WorkerConfig,
 		isEntryWorker: boolean
-	) {
+	): Promise<void> {
 		const response = await miniflare.dispatchFetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
@@ -113,6 +115,26 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		assert(webSocket, "Failed to establish WebSocket");
 		webSocket.accept();
 		this.#webSocketContainer.webSocket = webSocket;
+	}
+
+	async fetchWorkerExportTypes(
+		miniflare: Miniflare,
+		workerConfig: WorkerConfig
+	): Promise<ExportTypes> {
+		// Wait for dependencies to be optimized before making the request
+		await this.depsOptimizer?.init();
+
+		const response = await miniflare.dispatchFetch(
+			new URL(GET_EXPORT_TYPES_PATH, UNKNOWN_HOST),
+			{
+				headers: {
+					[CoreHeaders.ROUTE_OVERRIDE]: workerConfig.name,
+				},
+			}
+		);
+		const json = await response.json();
+
+		return json as ExportTypes;
 	}
 
 	override async fetchModule(
@@ -259,9 +281,9 @@ export function initRunners(
 	miniflare: Miniflare
 ): Promise<void[]> | undefined {
 	return Promise.all(
-		Object.entries(resolvedPluginConfig.workers).map(
-			async ([environmentName, workerConfig]) => {
-				debuglog("Initializing worker:", workerConfig.name);
+		[...resolvedPluginConfig.environmentNameToWorkerMap].map(
+			([environmentName, worker]) => {
+				debuglog("Initializing worker:", worker.config.name);
 				const isEntryWorker =
 					environmentName === resolvedPluginConfig.entryWorkerEnvironmentName;
 
@@ -269,7 +291,7 @@ export function initRunners(
 					viteDevServer.environments[
 						environmentName
 					] as CloudflareDevEnvironment
-				).initRunner(miniflare, workerConfig, isEntryWorker);
+				).initRunner(miniflare, worker.config, isEntryWorker);
 			}
 		)
 	);
