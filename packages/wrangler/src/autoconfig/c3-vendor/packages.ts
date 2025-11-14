@@ -25,6 +25,31 @@ export const installPackages = async (
 	config: InstallConfig = {}
 ) => {
 	if (packages.length === 0) {
+		const { type } = await getPackageManager();
+
+		let cmd;
+		switch (type) {
+			case "yarn":
+				break;
+			case "npm":
+			case "pnpm":
+			default:
+				cmd = "install";
+				break;
+		}
+
+		await runCommand(
+			[
+				type,
+				...(cmd ? [cmd] : []),
+				...packages,
+				...(type === "pnpm" ? ["--no-frozen-lockfile"] : []),
+			],
+			{
+				...config,
+				silent: true,
+			}
+		);
 		return;
 	}
 
