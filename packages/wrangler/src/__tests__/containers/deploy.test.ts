@@ -144,15 +144,15 @@ describe("wrangler deploy with containers", () => {
 			│   max_instances = 10
 			│   rollout_active_grace_period = 0
 			│
-			│     [containers.configuration]
-			│     image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
-			│     instance_type = \\"lite\\"
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
+			│   instance_type = \\"lite\\"
 			│
-			│     [containers.constraints]
-			│     tier = 1
+			│   [containers.constraints]
+			│   tier = 1
 			│
-			│     [containers.durable_objects]
-			│     namespace_id = \\"1\\"
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
 			│
 			│
 			│  SUCCESS  Created application my-container (Application ID: undefined)
@@ -217,15 +217,15 @@ describe("wrangler deploy with containers", () => {
 			│   max_instances = 10
 			│   rollout_active_grace_period = 600
 			│
-			│     [containers.configuration]
-			│     image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
-			│     instance_type = \\"lite\\"
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│   instance_type = \\"lite\\"
 			│
-			│     [containers.constraints]
-			│     tier = 1
+			│   [containers.constraints]
+			│   tier = 1
 			│
-			│     [containers.durable_objects]
-			│     namespace_id = \\"1\\"
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
 			│
 			│
 			│  SUCCESS  Created application my-container (Application ID: undefined)
@@ -311,19 +311,19 @@ describe("wrangler deploy with containers", () => {
 			│   max_instances = 10
 			│   rollout_active_grace_period = 0
 			│
-			│     [containers.configuration]
-			│     image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
-			│     memory_mib = 1_000
-			│     vcpu = 1
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│   memory_mib = 1000
+			│   vcpu = 1
 			│
-			│       [containers.configuration.disk]
-			│       size_mb = 2_000
+			│   [containers.configuration.disk]
+			│   size_mb = 2000
 			│
-			│     [containers.constraints]
-			│     tier = 1
+			│   [containers.constraints]
+			│   tier = 1
 			│
-			│     [containers.durable_objects]
-			│     namespace_id = \\"1\\"
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
 			│
 			│
 			│  SUCCESS  Created application my-container (Application ID: undefined)
@@ -403,19 +403,19 @@ describe("wrangler deploy with containers", () => {
 			│   max_instances = 10
 			│   rollout_active_grace_period = 0
 			│
-			│     [containers.configuration]
-			│     image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
-			│     memory_mib = 1_000
-			│     vcpu = 1
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│   memory_mib = 1000
+			│   vcpu = 1
 			│
-			│       [containers.configuration.disk]
-			│       size_mb = 2_000
+			│   [containers.configuration.disk]
+			│   size_mb = 2000
 			│
-			│     [containers.constraints]
-			│     tier = 1
+			│   [containers.constraints]
+			│   tier = 1
 			│
-			│     [containers.durable_objects]
-			│     namespace_id = \\"1\\"
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
 			│
 			│
 			│  SUCCESS  Created application my-container (Application ID: undefined)
@@ -628,11 +628,11 @@ describe("wrangler deploy with containers", () => {
 			│ - rollout_active_grace_period = 500
 			│ + rollout_active_grace_period = 600
 			│   scheduling_policy = \\"default\\"
-			│     [containers.configuration]
-			│ -   image = \\"registry.cloudflare.com/some-account-id/my-container:old\\"
-			│ +   image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
-			│     instance_type = \\"lite\\"
-			│     [containers.constraints]
+			│   [containers.configuration]
+			│ - image = \\"registry.cloudflare.com/some-account-id/my-container:old\\"
+			│ + image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
+			│   instance_type = \\"lite\\"
+			│   [containers.constraints]
 			│
 			│
 			│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -769,11 +769,11 @@ describe("wrangler deploy with containers", () => {
 			│   name = \\"my-container\\"
 			│   rollout_active_grace_period = 0
 			│   scheduling_policy = \\"default\\"
-			│     [containers.configuration]
-			│ -   image = \\"registry.cloudflare.com/some-account-id/my-container:old\\"
-			│ +   image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
-			│     instance_type = \\"lite\\"
-			│     [containers.constraints]
+			│   [containers.configuration]
+			│ - image = \\"registry.cloudflare.com/some-account-id/my-container:old\\"
+			│ + image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
+			│   instance_type = \\"lite\\"
+			│   [containers.constraints]
 			│
 			│
 			│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -793,15 +793,15 @@ describe("wrangler deploy with containers", () => {
 			│   max_instances = 3
 			│   rollout_active_grace_period = 0
 			│
-			│     [containers.configuration]
-			│     image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
-			│     instance_type = \\"lite\\"
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│   instance_type = \\"lite\\"
 			│
-			│     [containers.constraints]
-			│     tier = 1
+			│   [containers.constraints]
+			│   tier = 1
 			│
-			│     [containers.durable_objects]
-			│     namespace_id = \\"2\\"
+			│   [containers.durable_objects]
+			│   namespace_id = \\"2\\"
 			│
 			│
 			│  SUCCESS  Created application my-container-app-2 (Application ID: undefined)
@@ -1108,12 +1108,12 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
-				│     instance_type = \\"lite\\"
+				│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+				│   instance_type = \\"lite\\"
 				│ + [containers.configuration.observability.logs]
 				│ + enabled = true
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1151,12 +1151,12 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
-				│     instance_type = \\"lite\\"
+				│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+				│   instance_type = \\"lite\\"
 				│ + [containers.configuration.observability.logs]
 				│ + enabled = true
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1207,12 +1207,12 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     instance_type = \\"lite\\"
+				│   instance_type = \\"lite\\"
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1263,12 +1263,12 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     instance_type = \\"lite\\"
+				│   instance_type = \\"lite\\"
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1315,12 +1315,12 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     instance_type = \\"lite\\"
+				│   instance_type = \\"lite\\"
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1372,12 +1372,12 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     instance_type = \\"lite\\"
+				│   instance_type = \\"lite\\"
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1518,15 +1518,15 @@ describe("wrangler deploy with containers", () => {
 			│   max_instances = 10
 			│   rollout_active_grace_period = 0
 			│
-			│     [containers.configuration]
-			│     image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
-			│     instance_type = \\"lite\\"
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
+			│   instance_type = \\"lite\\"
 			│
-			│     [containers.constraints]
-			│     tier = 2
+			│   [containers.constraints]
+			│   tier = 2
 			│
-			│     [containers.durable_objects]
-			│     namespace_id = \\"1\\"
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
 			│
 			│
 			│  SUCCESS  Created application my-container (Application ID: undefined)
@@ -1572,18 +1572,18 @@ describe("wrangler deploy with containers", () => {
 				│   max_instances = 10
 				│   rollout_active_grace_period = 0
 				│
-				│     [containers.configuration]
-				│     image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
-				│     instance_type = \\"lite\\"
+				│   [containers.configuration]
+				│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+				│   instance_type = \\"lite\\"
 				│
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
-				│     [containers.affinities]
-				│     hardware_generation = \\"highest-overall-performance\\"
+				│   [containers.affinities]
+				│   hardware_generation = \\"highest-overall-performance\\"
 				│
-				│     [containers.durable_objects]
-				│     namespace_id = \\"1\\"
+				│   [containers.durable_objects]
+				│   namespace_id = \\"1\\"
 				│
 				│
 				│  SUCCESS  Created application my-container (Application ID: undefined)
@@ -1659,10 +1659,10 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     [containers.constraints]
-				│     tier = 1
-				│ +   [containers.affinities]
-				│ +   hardware_generation = \\"highest-overall-performance\\"
+				│   [containers.constraints]
+				│   tier = 1
+				│ + [containers.affinities]
+				│ + hardware_generation = \\"highest-overall-performance\\"
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)

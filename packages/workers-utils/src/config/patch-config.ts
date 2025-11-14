@@ -1,6 +1,6 @@
 import { writeFileSync } from "fs";
-import TOML from "@iarna/toml";
 import { applyEdits, format, modify } from "jsonc-parser";
+import TOML from "smol-toml";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import type { RawConfig } from "./config";
 import type { JSONPath } from "jsonc-parser";
@@ -46,7 +46,7 @@ export const experimental_patchConfig = (
 	configString = applyEdits(configString, formatEdit);
 
 	if (configPath.endsWith(".toml")) {
-		configString = TOML.stringify(parseJSONC(configString) as TOML.JsonMap);
+		configString = TOML.stringify(parseJSONC(configString));
 	}
 	writeFileSync(configPath, configString);
 	return configString;
