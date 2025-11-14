@@ -108,6 +108,10 @@ describe("wrangler setup", () => {
 					.replace(/- Worker Name: .*?\n/, "- Worker Name: <WORKER_NAME>\n")
 					.replace(/"name": ".*?",\n/, '"name": "<WORKER_NAME>",\n')
 					.replace(/"directory": ".*?"/, '"directory": "<DIR>"')
+					.replace(
+						/"compatibility_date": "\d{4}-\d{2}-\d{2}"/,
+						'"compatibility_date": "yyyy-mm-dd"'
+					)
 			).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
@@ -123,7 +127,7 @@ describe("wrangler setup", () => {
 				  {
 				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
 				    \\"name\\": \\"<WORKER_NAME>\\",
-				    \\"compatibility_date\\": \\"2025-11-09\\",
+				    \\"compatibility_date\\": \\"yyyy-mm-dd\\",
 				    \\"observability\\": {
 				      \\"enabled\\": true
 				    },
