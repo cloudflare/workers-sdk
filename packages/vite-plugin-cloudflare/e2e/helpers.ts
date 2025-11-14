@@ -53,7 +53,7 @@ export function seed(
 			errorOnExist: true,
 		});
 		debuglog("Fixture copied to " + projectPath);
-		await updateVitePluginVersionAndAddWrangler(projectPath);
+		await updateVitePluginAndWranglerVersion(projectPath);
 		debuglog("Fixing up replacements in seeded files");
 		await fixupReplacements(projectPath, replacements);
 		debuglog("Updated vite-plugin version in package.json");
