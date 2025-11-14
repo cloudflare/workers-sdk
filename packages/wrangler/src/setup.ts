@@ -23,6 +23,11 @@ export const setupCommand = createCommand({
 			type: "boolean",
 			default: false,
 		},
+		"dry-run": {
+			describe:
+				"Runs the command without applying any filesystem modifications",
+			type: "boolean",
+		},
 	},
 
 	async handler(args, { config }) {
@@ -33,16 +38,21 @@ export const setupCommand = createCommand({
 		// Only run auto config if the project is not already configured
 		if (!details.configured) {
 			await runAutoConfig(details, {
-				build: args.build,
-				skipConfirmation: args.yes,
+				runBuild: args.build,
+				skipConfirmations: args.yes,
+				dryRun: args.dryRun,
 			});
-			logger.log("🎉 Your project is now setup to deploy to Cloudflare");
+			if (!args.dryRun) {
+				logger.log("🎉 Your project is now setup to deploy to Cloudflare");
+			}
 		} else {
 			logger.log("🎉 Your project is already setup to deploy to Cloudflare");
 		}
-		const { type } = await getPackageManager();
-		logger.log(
-			`You can now deploy with ${brandColor(details.packageJson ? `${type} run deploy` : "wrangler deploy")}`
-		);
+		if (!args.dryRun) {
+			const { type } = await getPackageManager();
+			logger.log(
+				`You can now deploy with ${brandColor(details.packageJson ? `${type} run deploy` : "wrangler deploy")}`
+			);
+		}
 	},
 });

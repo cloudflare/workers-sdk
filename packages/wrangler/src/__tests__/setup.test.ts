@@ -35,8 +35,9 @@ describe("wrangler setup", () => {
 			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
-			  -y, --yes    Answer \\"yes\\" to any prompts for configuring your project  [boolean] [default: false]
-			      --build  Run your project's build command once it has been configured  [boolean] [default: false]"
+			  -y, --yes      Answer \\"yes\\" to any prompts for configuring your project  [boolean] [default: false]
+			      --build    Run your project's build command once it has been configured  [boolean] [default: false]
+			      --dry-run  Runs the command without applying any filesystem modifications  [boolean]"
 		`);
 	});
 
@@ -75,5 +76,69 @@ describe("wrangler setup", () => {
 		expect(std.out).toContain(
 			"🎉 Your project is now setup to deploy to Cloudflare"
 		);
+	});
+
+	describe("--dry-run", () => {
+		test("should stop before running autoconfig when project is already configured", async () => {
+			await seed({
+				"wrangler.jsonc": JSON.stringify({ name: "my-worker" }),
+			});
+
+			const runSpy = vi.spyOn(run, "runAutoConfig");
+
+			await runWrangler("setup --dry-run");
+
+			// autoconfig should _not_ have been run
+			expect(runSpy).not.toHaveBeenCalled();
+
+			expect(std.out).toContain(
+				"🎉 Your project is already setup to deploy to Cloudflare"
+			);
+		});
+
+		test("should run autoconfig when project is not configured and stop at the summary step", async () => {
+			await seed({
+				"public/index.html": `<h1>Hello World</h1>`,
+			});
+
+			await runWrangler("setup --dry-run");
+
+			expect(
+				std.out
+					.replace(/- Worker Name: .*?\n/, "- Worker Name: <WORKER_NAME>\n")
+					.replace(/"name": ".*?",\n/, '"name": "<WORKER_NAME>",\n')
+					.replace(/"directory": ".*?"/, '"directory": "<DIR>"')
+					.replace(
+						/"compatibility_date": "\d{4}-\d{2}-\d{2}"/,
+						'"compatibility_date": "yyyy-mm-dd"'
+					)
+			).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+
+				Detected Project Settings:
+				 - Worker Name: <WORKER_NAME>
+				 - Framework: static
+				 - Output Directory: <cwd>/public
+
+
+				📄 Create wrangler.jsonc:
+				  {
+				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				    \\"name\\": \\"<WORKER_NAME>\\",
+				    \\"compatibility_date\\": \\"yyyy-mm-dd\\",
+				    \\"observability\\": {
+				      \\"enabled\\": true
+				    },
+				    \\"assets\\": {
+				      \\"directory\\": \\"<DIR>\\"
+				    }
+				  }
+
+				✋  Autoconfig process run in dry-run mode, existing now.
+				"
+			`);
+		});
 	});
 });
