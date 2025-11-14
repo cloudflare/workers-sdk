@@ -2,6 +2,7 @@ import { writeFileSync } from "fs";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { getPackageManager } from "../../package-manager";
 import { runCommand } from "../c3-vendor/command";
+import { installPackages } from "../c3-vendor/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions } from ".";
 import type { RawConfig } from "@cloudflare/workers-utils";
@@ -13,20 +14,27 @@ export class SvelteKit extends Framework {
 		const { dlx } = await getPackageManager();
 		if (!dryRun) {
 			await runCommand(
-				[...dlx, "sv", "add", "sveltekit-adapter=adapter:cloudflare"],
+				[
+					...dlx,
+					"sv",
+					"add",
+					"--no-install",
+					"sveltekit-adapter=adapter:cloudflare",
+				],
 				{
 					silent: true,
 					startText: "Installing adapter",
 					doneText: `${brandColor("installed")} ${dim(
 						`via \`${dlx} sv add sveltekit-adapter=adapter:cloudflare\``
 					)}`,
-					env: {
-						// We want pnpm installs to work in CI
-						CI: undefined,
-					},
 				}
 			);
 			writeFileSync("static/.assetsignore", "_worker.js\n_routes.json");
+
+			await installPackages([], {
+				startText: "Installing packages",
+				doneText: `${brandColor("installed")}`,
+			});
 		}
 		return {
 			main: ".svelte-kit/cloudflare/_worker.js",
