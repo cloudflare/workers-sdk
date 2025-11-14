@@ -61,10 +61,10 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 		async configureServer(viteDevServer) {
 			assertIsNotPreview(ctx);
 
-			let { miniflareOptions, containerTagToOptionsMap } =
-				await getDevMiniflareOptions(ctx, viteDevServer);
+			const initialOptions = await getDevMiniflareOptions(ctx, viteDevServer);
+			let containerTagToOptionsMap = initialOptions.containerTagToOptionsMap;
 
-			await ctx.startOrUpdateMiniflare(miniflareOptions);
+			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
 
 			let preMiddleware: vite.Connect.NextHandleFunction | undefined;
 
@@ -88,9 +88,12 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 
 				if (hasChanged) {
 					ctx.setWorkerNameToExportTypesMap(currentWorkerNameToExportTypesMap);
-					({ miniflareOptions, containerTagToOptionsMap } =
-						await getDevMiniflareOptions(ctx, viteDevServer));
-					await ctx.startOrUpdateMiniflare(miniflareOptions);
+					const updatedOptions = await getDevMiniflareOptions(
+						ctx,
+						viteDevServer
+					);
+					containerTagToOptionsMap = updatedOptions.containerTagToOptionsMap;
+					await ctx.startOrUpdateMiniflare(updatedOptions.miniflareOptions);
 					await initRunners(
 						ctx.resolvedPluginConfig,
 						viteDevServer,

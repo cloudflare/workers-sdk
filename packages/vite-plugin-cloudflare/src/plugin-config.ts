@@ -175,7 +175,7 @@ export function resolvePluginConfig(
 	}
 
 	const environmentNameToWorkerMap: Map<string, Worker> = new Map([
-		[entryWorkerEnvironmentName, setWorker(entryWorkerConfig)],
+		[entryWorkerEnvironmentName, resolveWorker(entryWorkerConfig)],
 	]);
 
 	const auxiliaryWorkersResolvedConfigs: WorkerResolvedConfig[] = [];
@@ -215,7 +215,7 @@ export function resolvePluginConfig(
 
 		environmentNameToWorkerMap.set(
 			workerEnvironmentName,
-			setWorker(workerConfig)
+			resolveWorker(workerConfig)
 		);
 	}
 
@@ -240,7 +240,7 @@ function workerNameToEnvironmentName(workerName: string) {
 	return workerName.replaceAll("-", "_");
 }
 
-function setWorker(workerConfig: WorkerConfig) {
+function resolveWorker(workerConfig: WorkerConfig) {
 	return {
 		config: workerConfig,
 		nodeJsCompat: hasNodeJsCompat(workerConfig)

@@ -132,17 +132,19 @@ export function getInitialWorkerNameToExportTypesMap(
 				`WorkflowEntrypoint exports not found for Worker "${worker.config.name}"`
 			);
 
-			const exportTypes: ExportTypes = Object.fromEntries([
-				...[...workerEntrypointExports].map(
-					(exportName) => [exportName, "WorkerEntrypoint"] as const
-				),
-				...[...durableObjectExports].map(
-					(exportName) => [exportName, "DurableObject"] as const
-				),
-				...[...workflowEntrypointExports].map(
-					(exportName) => [exportName, "WorkflowEntrypoint"] as const
-				),
-			]);
+			const exportTypes: ExportTypes = {};
+
+			for (const exportName of workerEntrypointExports) {
+				exportTypes[exportName] = "WorkerEntrypoint";
+			}
+
+			for (const exportName of durableObjectExports) {
+				exportTypes[exportName] = "DurableObject";
+			}
+
+			for (const exportName of workflowEntrypointExports) {
+				exportTypes[exportName] = "WorkflowEntrypoint";
+			}
 
 			return [worker.config.name, exportTypes];
 		})
