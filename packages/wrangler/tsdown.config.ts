@@ -115,7 +115,11 @@ export default defineConfig((options) => [
 		platform: "node",
 		format: "cjs",
 		dts: {
-			resolve: ["@cloudflare/workers-shared", "@cloudflare/containers-shared"],
+			resolve: [
+				"@cloudflare/workers-shared",
+				"@cloudflare/containers-shared",
+				"@cloudflare/workers-types/experimental",
+			],
 			compilerOptions: {
 				// workaround for https://github.com/rolldown/tsdown/issues/345
 				paths: {
@@ -130,11 +134,8 @@ export default defineConfig((options) => [
 		external: EXTERNAL_DEPENDENCIES,
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		fixedExtension: false,
-		inject: [path.join(__dirname, "import_meta_url.js")],
-		// mainFields: ["module", "main"],
 		define: {
 			__RELATIVE_PACKAGE_PATH__: '".."',
-			"import.meta.url": "import_meta_url",
 			"process.env.NODE_ENV": `'${process.env.NODE_ENV || "production"}'`,
 			"process.env.SPARROW_SOURCE_KEY": JSON.stringify(
 				process.env.SPARROW_SOURCE_KEY ?? ""
