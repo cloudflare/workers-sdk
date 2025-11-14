@@ -152,12 +152,12 @@ export async function convertToConfigBundle(
 }
 
 export class LocalRuntimeController extends RuntimeController {
+	#log = MF.buildLog();
+	#currentBundleId = 0;
+
 	// ******************
 	//   Event Handlers
 	// ******************
-
-	#log = MF.buildLog();
-	#currentBundleId = 0;
 
 	// This is given as a shared secret to the Proxy and User workers
 	// so that the User Worker can trust aspects of HTTP requests from the Proxy Worker
@@ -439,13 +439,13 @@ export class LocalRuntimeController extends RuntimeController {
 	// *********************
 
 	emitReloadStartEvent(data: ReloadStartEvent) {
-		this.emit("reloadStart", data);
+		this.bus.dispatch(data);
 	}
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
-		this.emit("reloadComplete", data);
+		this.bus.dispatch(data);
 	}
 	emitDevRegistryUpdateEvent(data: DevRegistryUpdateEvent): void {
-		this.emit("devRegistryUpdate", data);
+		this.bus.dispatch(data);
 	}
 }
 
