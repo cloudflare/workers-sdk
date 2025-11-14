@@ -41,3 +41,21 @@ updates:
     allow:
       - dependency-name: "workerd"
       - dependency-name: "@cloudflare/workers-types"
+  # Check for updates that are not workerd & workers-types
+  - package-ecosystem: "npm"
+    # If you restrict the update to a directory that is not the root
+    # then it will not update the package-lock.json.
+    directory: "/"
+    ignore:
+      # Don't update workerd and workers-types as they are covered above
+      - dependency-name: "workerd"
+      - dependency-name: "@cloudflare/workers-types"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+    versioning-strategy: increase-if-necessary
+    cooldown:
+      default-days: 5
+    labels:
+      - "dependencies"
+      - "skip-pr-description-validation"
