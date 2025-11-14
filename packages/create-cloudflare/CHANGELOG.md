@@ -1,5 +1,41 @@
 # create-cloudflare
 
+## 2.55.0
+
+### Minor Changes
+
+- [#11251](https://github.com/cloudflare/workers-sdk/pull/11251) [`7035804`](https://github.com/cloudflare/workers-sdk/commit/7035804a859b90fcaaebe8d774cd98fcf57def5b) Thanks [@penalosa](https://github.com/penalosa)! - When the `--experimental` flag is passed to `create-cloudflare`, use `wrangler setup` for configuring a project to work on Cloudflare rather than the existing `create-cloudflare` logic. Only Gatsby is supported right now, with more frameworks to be added in future. There should be no functional change to applications created via `create-cloudflare` when using the `--experimental` flag.
+
+- [#11170](https://github.com/cloudflare/workers-sdk/pull/11170) [`c6d33cf`](https://github.com/cloudflare/workers-sdk/commit/c6d33cfee2a83fdf311d9b89e3748addcd75f450) Thanks [@dom96](https://github.com/dom96)! - Fixes hello-world-with-assets python template
+
+### Patch Changes
+
+- [#11013](https://github.com/cloudflare/workers-sdk/pull/11013) [`1b4a08c`](https://github.com/cloudflare/workers-sdk/commit/1b4a08c2a72d5fb9c60bfb68c92505424acbd09f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From  | To    |
+  | ---------- | ----- | ----- |
+  | sv         | 0.9.8 | 0.9.9 |
+
+- [#11015](https://github.com/cloudflare/workers-sdk/pull/11015) [`220f608`](https://github.com/cloudflare/workers-sdk/commit/220f608fd3385e8c10a4b0668c7f89a9c9a9037a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency        | From  | To    |
+  | ----------------- | ----- | ----- |
+  | create-docusaurus | 3.9.1 | 3.9.2 |
+
+- [#11222](https://github.com/cloudflare/workers-sdk/pull/11222) [`32a88d2`](https://github.com/cloudflare/workers-sdk/commit/32a88d2a41aa9e76c55e1be5b2e243d4c21daebb) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.29.3 | 3.30.0 |
+
+- [#11266](https://github.com/cloudflare/workers-sdk/pull/11266) [`09cb720`](https://github.com/cloudflare/workers-sdk/commit/09cb720182dbdd5e403af2c9eae75461c4058682) Thanks [@penalosa](https://github.com/penalosa)! - Use the smol-toml library for parsing TOML instead of @iarna/toml
+
 ## 2.54.5
 
 ### Patch Changes
