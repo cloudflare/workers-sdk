@@ -13,7 +13,7 @@ const commands = ["dev", "buildAndPreview"] as const;
 
 describe("basic e2e tests", () => {
 	describe.each(packageManagers)('with "%s" package manager', async (pm) => {
-		const projectPath = seed("basic", pm);
+		const projectPath = seed("basic", { pm });
 
 		describe.each(commands)('with "%s" command', (command) => {
 			test.skipIf(isBuildAndPreviewOnWindows(command))(
