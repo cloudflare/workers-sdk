@@ -44,11 +44,31 @@ function createWorkerBundleFormData(
 		type: workerBundle.bundleType || "esm",
 	};
 
-	// The upload API only accepts an empty string or no specified placement for the "off" mode.
-	const placement: CfPlacement | undefined =
-		config?.placement?.mode === "smart"
-			? { mode: "smart", hint: config.placement.hint }
-			: undefined;
+	let placement: CfPlacement | undefined;
+	if (config?.placement) {
+		const plcmt = config.placement;
+		const hint = "hint" in plcmt ? plcmt.hint : undefined;
+
+		if (!hint && plcmt.mode === "off") {
+			placement = undefined;
+		} else if (hint || plcmt.mode === "smart") {
+			placement = { mode: "smart", hint: hint };
+		} else {
+			// mode is undefined or "targeted", which both map to the targeted variant
+			// TypeScript needs explicit checks to narrow the union type
+			if ("region" in plcmt && plcmt.region) {
+				placement = { mode: "targeted", region: plcmt.region };
+			} else if ("host" in plcmt && plcmt.host) {
+				placement = { mode: "targeted", host: plcmt.host };
+			} else if ("hostname" in plcmt && plcmt.hostname) {
+				placement = { mode: "targeted", hostname: plcmt.hostname };
+			} else {
+				placement = undefined;
+			}
+		}
+	} else {
+		placement = undefined;
+	}
 
 	return createWorkerUploadForm({
 		name: mainModule.name,
