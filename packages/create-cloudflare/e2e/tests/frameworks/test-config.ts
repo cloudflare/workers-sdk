@@ -602,6 +602,21 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			},
 			nodeCompat: true,
 		},
+		{
+			name: "redwood",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello, World!",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Hello, World!",
+			},
+			nodeCompat: true,
+		},
 	];
 }
 
