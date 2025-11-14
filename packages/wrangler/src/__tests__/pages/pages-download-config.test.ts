@@ -383,7 +383,6 @@ describe("pages download config", () => {
 			script_name = \\"do-s\\"
 			environment = \\"do-e\\"
 
-
 			[[d1_databases]]
 			database_id = \\"d1-id\\"
 			binding = \\"D1_PREVIEW\\"
@@ -420,7 +419,6 @@ describe("pages download config", () => {
 			binding = \\"QUEUE_PREVIEW2\\"
 			queue = \\"q-id\\"
 
-
 			[[analytics_engine_datasets]]
 			binding = \\"AE_PREVIEW\\"
 			dataset = \\"data\\"
@@ -455,7 +453,6 @@ describe("pages download config", () => {
 			script_name = \\"some-script-do-id\\"
 			environment = \\"some-environment-do-id\\"
 
-
 			[[env.production.d1_databases]]
 			database_id = \\"d1-id\\"
 			binding = \\"D1\\"
@@ -474,16 +471,12 @@ describe("pages download config", () => {
 			binding = \\"QUEUE\\"
 			queue = \\"q-id\\"
 
-
 			[[env.production.analytics_engine_datasets]]
 			binding = \\"AE\\"
 			dataset = \\"data\\"
 
 			[env.production.ai]
 			binding = \\"AI\\"
-
-
-
 			"
 		`);
 	});
@@ -528,7 +521,6 @@ describe("pages download config", () => {
 			script_name = \\"do-s\\"
 			environment = \\"do-e\\"
 
-
 			[[d1_databases]]
 			database_id = \\"d1-id\\"
 			binding = \\"D1_PREVIEW\\"
@@ -564,7 +556,6 @@ describe("pages download config", () => {
 			[[queues.producers]]
 			binding = \\"QUEUE_PREVIEW2\\"
 			queue = \\"q-id\\"
-
 
 			[[analytics_engine_datasets]]
 			binding = \\"AE_PREVIEW\\"
@@ -613,7 +604,6 @@ describe("pages download config", () => {
 			script_name = \\"do-s\\"
 			environment = \\"do-e\\"
 
-
 			[[env.preview.d1_databases]]
 			database_id = \\"d1-id\\"
 			binding = \\"D1_PREVIEW\\"
@@ -650,7 +640,6 @@ describe("pages download config", () => {
 			binding = \\"QUEUE_PREVIEW2\\"
 			queue = \\"q-id\\"
 
-
 			[[env.preview.analytics_engine_datasets]]
 			binding = \\"AE_PREVIEW\\"
 			dataset = \\"data\\"
@@ -661,7 +650,6 @@ describe("pages download config", () => {
 
 			[env.preview.ai]
 			binding = \\"AI_PREVIEW\\"
-
 
 			[env.production]
 			compatibility_date = \\"2024-02-14\\"
@@ -683,7 +671,6 @@ describe("pages download config", () => {
 			script_name = \\"some-script-do-id\\"
 			environment = \\"some-environment-do-id\\"
 
-
 			[[env.production.d1_databases]]
 			database_id = \\"d1-id\\"
 			binding = \\"D1\\"
@@ -702,16 +689,12 @@ describe("pages download config", () => {
 			binding = \\"QUEUE\\"
 			queue = \\"q-id\\"
 
-
 			[[env.production.analytics_engine_datasets]]
 			binding = \\"AE\\"
 			dataset = \\"data\\"
 
 			[env.production.ai]
 			binding = \\"AI\\"
-
-
-
 			"
 		`);
 	});
@@ -757,7 +740,6 @@ describe("pages download config", () => {
 			script_name = \\"do-s\\"
 			environment = \\"do-e\\"
 
-
 			[[d1_databases]]
 			database_id = \\"d1-id\\"
 			binding = \\"D1_PREVIEW\\"
@@ -794,7 +776,6 @@ describe("pages download config", () => {
 			binding = \\"QUEUE_PREVIEW2\\"
 			queue = \\"q-id\\"
 
-
 			[[analytics_engine_datasets]]
 			binding = \\"AE_PREVIEW\\"
 			dataset = \\"data\\"
@@ -820,7 +801,6 @@ describe("pages download config", () => {
 			script_name = \\"some-script-do-id\\"
 			environment = \\"some-environment-do-id\\"
 
-
 			[[env.production.d1_databases]]
 			database_id = \\"d1-id\\"
 			binding = \\"D1\\"
@@ -839,16 +819,12 @@ describe("pages download config", () => {
 			binding = \\"QUEUE\\"
 			queue = \\"q-id\\"
 
-
 			[[env.production.analytics_engine_datasets]]
 			binding = \\"AE\\"
 			dataset = \\"data\\"
 
 			[env.production.ai]
 			binding = \\"AI\\"
-
-
-
 			"
 		`);
 	});
@@ -934,7 +910,6 @@ describe("pages download config", () => {
 				script_name = \\"do-s\\"
 				environment = \\"do-e\\"
 
-
 				[[d1_databases]]
 				database_id = \\"d1-id\\"
 				binding = \\"D1_PREVIEW\\"
@@ -971,7 +946,6 @@ describe("pages download config", () => {
 				binding = \\"QUEUE_PREVIEW2\\"
 				queue = \\"q-id\\"
 
-
 				[[analytics_engine_datasets]]
 				binding = \\"AE_PREVIEW\\"
 				dataset = \\"data\\"
@@ -1006,7 +980,6 @@ describe("pages download config", () => {
 				script_name = \\"some-script-do-id\\"
 				environment = \\"some-environment-do-id\\"
 
-
 				[[env.production.d1_databases]]
 				database_id = \\"d1-id\\"
 				binding = \\"D1\\"
@@ -1025,16 +998,12 @@ describe("pages download config", () => {
 				binding = \\"QUEUE\\"
 				queue = \\"q-id\\"
 
-
 				[[env.production.analytics_engine_datasets]]
 				binding = \\"AE\\"
 				dataset = \\"data\\"
 
 				[env.production.ai]
 				binding = \\"AI\\"
-
-
-
 				"
 			`);
 		});
@@ -1111,7 +1080,6 @@ describe("pages download config", () => {
 				script_name = \\"do-s\\"
 				environment = \\"do-e\\"
 
-
 				[[d1_databases]]
 				database_id = \\"d1-id\\"
 				binding = \\"D1_PREVIEW\\"
@@ -1148,7 +1116,6 @@ describe("pages download config", () => {
 				binding = \\"QUEUE_PREVIEW2\\"
 				queue = \\"q-id\\"
 
-
 				[[analytics_engine_datasets]]
 				binding = \\"AE_PREVIEW\\"
 				dataset = \\"data\\"
@@ -1183,7 +1150,6 @@ describe("pages download config", () => {
 				script_name = \\"some-script-do-id\\"
 				environment = \\"some-environment-do-id\\"
 
-
 				[[env.production.d1_databases]]
 				database_id = \\"d1-id\\"
 				binding = \\"D1\\"
@@ -1202,16 +1168,12 @@ describe("pages download config", () => {
 				binding = \\"QUEUE\\"
 				queue = \\"q-id\\"
 
-
 				[[env.production.analytics_engine_datasets]]
 				binding = \\"AE\\"
 				dataset = \\"data\\"
 
 				[env.production.ai]
 				binding = \\"AI\\"
-
-
-
 				"
 			`);
 		});

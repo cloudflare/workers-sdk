@@ -169,7 +169,6 @@ describe("hyperdrive commands", () => {
 			[[hyperdrive]]
 			binding = \\"HYPERDRIVE\\"
 			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
-
 			"
 		`);
 	});

@@ -319,7 +319,6 @@ describe("wrangler deploy with containers", () => {
 			│   [containers.configuration.disk]
 			│   size_mb = 2000
 			│
-			│
 			│   [containers.constraints]
 			│   tier = 1
 			│
@@ -411,7 +410,6 @@ describe("wrangler deploy with containers", () => {
 			│
 			│   [containers.configuration.disk]
 			│   size_mb = 2000
-			│
 			│
 			│   [containers.constraints]
 			│   tier = 1
@@ -1213,6 +1211,8 @@ describe("wrangler deploy with containers", () => {
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1267,6 +1267,8 @@ describe("wrangler deploy with containers", () => {
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1317,6 +1319,8 @@ describe("wrangler deploy with containers", () => {
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1372,6 +1376,8 @@ describe("wrangler deploy with containers", () => {
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)

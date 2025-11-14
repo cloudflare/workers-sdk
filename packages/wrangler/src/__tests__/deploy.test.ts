@@ -3154,7 +3154,6 @@ addEventListener('fetch', event => {});`
 				[assets]
 				directory = "./dist"
 
-
 				\`\`\`
 				]
 			`
@@ -3189,7 +3188,6 @@ addEventListener('fetch', event => {});`
 				  \`\`\`
 				  [assets]
 				  directory = \\"./dist\\"
-
 
 				  \`\`\`
 
@@ -8327,7 +8325,6 @@ addEventListener('fetch', event => {});`
 				      [[migrations]]
 				      tag = \\"v1\\"
 				      new_classes = [ \\"SomeClass\\" ]
-
 
 				      \`\`\`
 

@@ -86,27 +86,21 @@ export class APIError extends ParseError {
  */
 export function parseTOML<T>(input: string, file?: string): T | never {
 	try {
-		// Normalize CRLF to LF to avoid hitting https://github.com/iarna/iarna-toml/issues/33.
-		const normalizedInput = input.replace(/\r\n/g, "\n");
-		return TOML.parse(normalizedInput) as T;
+		return TOML.parse(input) as T;
 	} catch (err) {
 		if (!(err instanceof TomlError)) {
 			throw err;
 		}
 
-		const { message, line, column } = err as TomlError;
-
-		const text = message.substring(0, message.indexOf("\n"));
-		const lineText = input.split("\n")[line - 1];
 		const location = {
-			lineText,
-			line: line,
-			column: column - 1,
+			lineText: input.split("\n")[err.line - 1],
+			line: err.line,
+			column: err.column - 1,
 			file,
 			fileText: input,
 		};
 		throw new ParseError({
-			text,
+			text: err.message.substring(0, err.message.indexOf("\n")),
 			location,
 			telemetryMessage: "TOML parse error",
 		});

@@ -77,14 +77,10 @@ Configure your Worker to send messages to this queue:
 queue = \\"testQueue\\"
 binding = \\"testQueue\\"
 
-
-
 Configure your Worker to consume messages from this queue:
 
 [[queues.consumers]]
 queue = \\"testQueue\\"
-
-
 "
 `;
 
@@ -101,13 +97,9 @@ Configure your Worker to send messages to this queue:
 queue = \\"testQueue\\"
 binding = \\"testQueue\\"
 
-
-
 Configure your Worker to consume messages from this queue:
 
 [[queues.consumers]]
 queue = \\"testQueue\\"
-
-
 "
 `;

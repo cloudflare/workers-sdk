@@ -492,7 +492,6 @@ describe("resource provisioning", () => {
 				[[d1_databases]]
 				binding = \\"D1\\"
 				database_id = \\"new-d1-id\\"
-
 				"
 			`);
 		});
@@ -654,7 +653,6 @@ describe("resource provisioning", () => {
 				[[d1_databases]]
 				binding = \\"D1\\"
 				database_id = \\"new-d1-id\\"
-
 				"
 			`);
 
@@ -809,7 +807,6 @@ describe("resource provisioning", () => {
 				[[d1_databases]]
 				binding = \\"D1\\"
 				database_id = \\"test-name-d1-id\\"
-
 				"
 			`);
 

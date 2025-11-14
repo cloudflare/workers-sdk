@@ -262,7 +262,6 @@ describe("createdResourceConfig()", () => {
 			[[kv_namespaces]]
 			binding = \\"KV\\"
 			id = \\"random-id\\"
-
 			"
 		`);
 		expect(await readFile("wrangler.toml", "utf8")).toMatchInlineSnapshot(

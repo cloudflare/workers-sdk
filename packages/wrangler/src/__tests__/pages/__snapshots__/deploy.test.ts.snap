@@ -32,7 +32,7 @@ exports[`pages deploy > with wrangler.json configuration > should support wrangl
 
 exports[`pages deploy > with wrangler.json configuration > should warn and ignore the config file, if it doesn't specify the \`pages_build_output_dir\` field 1`] = `[Error: Must specify a project name.]`;
 
-exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `"8199a81175b52fd88dacc29b0b47c4452cc0cb2e3175d6c592cc14414614324c"`;
+exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `"b5f53af7922efd0f0b73c7bf288f7e3f14df5c31e8b654e98027ddf85ea7e574"`;
 
 exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 2`] = `
 "

@@ -168,7 +168,6 @@ To access your new KV Namespace in your Worker, add the following snippet to you
 [[kv_namespaces]]
 binding = \\"MY_NS\\"
 id = \\"some-namespace-id\\"
-
 "
 `;
 
@@ -190,7 +189,6 @@ To access your new KV Namespace in your Worker, add the following snippet to you
 [[kv_namespaces]]
 binding = \\"UnitTestNamespace\\"
 id = \\"some-namespace-id\\"
-
 "
 `;
 
@@ -200,8 +198,6 @@ name = \\"worker\\"
 
 [env.customEnv]
 name = \\"worker\\"
-
-
 "
 `;
 
@@ -218,7 +214,6 @@ To access your new KV Namespace in your Worker, add the following snippet to you
 binding = \\"UnitTestNamespace\\"
 id = \\"some-namespace-id\\"
 remote = true
-
 "
 `;
 
@@ -240,7 +235,6 @@ To access your new KV Namespace in your Worker, add the following snippet to you
 [[kv_namespaces]]
 binding = \\"UnitTestNamespace\\"
 id = \\"some-namespace-id\\"
-
 "
 `;
 
@@ -262,6 +256,5 @@ To access your new KV Namespace in your Worker, add the following snippet to you
 [[kv_namespaces]]
 binding = \\"UnitTestNamespace\\"
 preview_id = \\"some-namespace-id\\"
-
 "
 `;

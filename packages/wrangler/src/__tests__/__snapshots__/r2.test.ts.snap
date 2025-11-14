@@ -86,7 +86,6 @@ To access your new R2 Bucket in your Worker, add the following snippet to your c
 [[r2_buckets]]
 bucket_name = \\"test-bucket\\"
 binding = \\"test_bucket\\"
-
 "
 `;
 
@@ -100,7 +99,6 @@ To access your new R2 Bucket in your Worker, add the following snippet to your c
 [[r2_buckets]]
 bucket_name = \\"test-bucket\\"
 binding = \\"test_bucket\\"
-
 "
 `;
 
@@ -114,7 +112,6 @@ To access your new R2 Bucket in your Worker, add the following snippet to your c
 [[r2_buckets]]
 bucket_name = \\"test-bucket\\"
 binding = \\"test_bucket\\"
-
 "
 `;
 
@@ -128,6 +125,5 @@ To access your new R2 Bucket in your Worker, add the following snippet to your c
 [[r2_buckets]]
 bucket_name = \\"test-bucket\\"
 binding = \\"test_bucket\\"
-
 "
 `;

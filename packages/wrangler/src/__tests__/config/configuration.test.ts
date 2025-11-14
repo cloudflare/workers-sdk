@@ -1092,7 +1092,6 @@ describe("normalizeAndValidateConfig()", () => {
 				    tag = \\"v1\\"
 				    new_classes = [ \\"CLASS1\\" ]
 
-
 				    \`\`\`
 
 				    Refer to https://developers.cloudflare.com/durable-objects/reference/durable-objects-migrations/ for more details."
