@@ -143,7 +143,7 @@
 		"msw": "2.4.3",
 		"node-forge": "^1.3.1",
 		"open": "^8.4.0",
-		"p-queue": "^7.2.0",
+		"p-queue": "^9.0.0",
 		"patch-console": "^1.0.0",
 		"pretty-bytes": "^6.0.0",
 		"prompts": "^2.4.2",
@@ -183,7 +183,7 @@
 		"fsevents": "~2.3.2"
 	},
 	"engines": {
-		"node": ">=18.0.0"
+		"node": ">=20.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"
