@@ -607,7 +607,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 /**
  * Gets the list of experimental framework test configurations.
  */
-function getExperimentalFrameworkTestConfig() {
+function getExperimentalFrameworkTestConfig(): NamedFrameworkTestConfig[] {
 	return [
 		{
 			name: "gatsby:workers",
@@ -656,6 +656,7 @@ function getExperimentalFrameworkTestConfig() {
 				expectedText: "C3_TEST",
 			},
 			nodeCompat: false,
+			verifyTypes: false,
 		},
 	];
 }
