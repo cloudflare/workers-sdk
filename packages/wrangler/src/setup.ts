@@ -35,21 +35,20 @@ export const setupCommand = createCommand({
 			wranglerConfig: config,
 		});
 
-		const dryRun = !!args.dryRun;
 		// Only run auto config if the project is not already configured
 		if (!details.configured) {
 			await runAutoConfig(details, {
 				runBuild: args.build,
 				skipConfirmations: args.yes,
-				dryRun,
+				dryRun: args.dryRun,
 			});
-			if (!dryRun) {
+			if (!args.dryRun) {
 				logger.log("🎉 Your project is now setup to deploy to Cloudflare");
 			}
 		} else {
 			logger.log("🎉 Your project is already setup to deploy to Cloudflare");
 		}
-		if (!dryRun) {
+		if (!args.dryRun) {
 			const { type } = await getPackageManager();
 			logger.log(
 				`You can now deploy with ${brandColor(details.packageJson ? `${type} run deploy` : "wrangler deploy")}`
