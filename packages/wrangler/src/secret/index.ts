@@ -146,7 +146,7 @@ export const secretNamespace = createNamespace({
 });
 export const secretPutCommand = createCommand({
 	metadata: {
-		description: "Create or update a secret variable for a Worker",
+		description: "Create or update a secret for a Worker",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
 	},
@@ -161,7 +161,8 @@ export const secretPutCommand = createCommand({
 			demandOption: true,
 		},
 		name: {
-			describe: "Name of the Worker",
+			describe:
+				"Name of the Worker. If this is not specified, it will default to the name specified in your Wrangler config file.",
 			type: "string",
 			requiresArg: true,
 		},
@@ -263,7 +264,7 @@ export const secretPutCommand = createCommand({
 
 export const secretDeleteCommand = createCommand({
 	metadata: {
-		description: "Delete a secret variable from a Worker",
+		description: "Delete a secret from a Worker",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
 	},
@@ -278,7 +279,8 @@ export const secretDeleteCommand = createCommand({
 			demandOption: true,
 		},
 		name: {
-			describe: "Name of the Worker",
+			describe:
+				"Name of the Worker. If this is not specified, it will default to the name specified in your Wrangler config file.",
 			type: "string",
 			requiresArg: true,
 		},
@@ -347,7 +349,9 @@ export const secretListCommand = createCommand({
 	},
 	args: {
 		name: {
-			describe: "Name of the Worker",
+			describe:
+				"Name of the Worker. If this is not specified, it will default to the name specified in your Wrangler config file.",
+
 			type: "string",
 			requiresArg: true,
 		},
@@ -400,7 +404,7 @@ export const secretListCommand = createCommand({
 
 export const secretBulkCommand = createCommand({
 	metadata: {
-		description: "Bulk upload secrets for a Worker",
+		description: "Upload multiple secrets for a Worker at once",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
 	},
@@ -410,11 +414,13 @@ export const secretBulkCommand = createCommand({
 	},
 	args: {
 		file: {
-			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .dev.vars file in the form KEY=VALUE`,
+			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .env file in the form KEY=VALUE. If omitted, Wrangler expects to receive input from stdin rather than a file.`,
 			type: "string",
 		},
 		name: {
-			describe: "Name of the Worker",
+			describe:
+				"Name of the Worker. If this is not specified, it will default to the name specified in your Wrangler config file.",
+
 			type: "string",
 			requiresArg: true,
 		},
