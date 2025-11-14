@@ -170,7 +170,7 @@ function wrap(proc: childProcess.ChildProcess): Process {
 	return wrappedProc;
 }
 
-async function updateVitePluginVersionAndAddWrangler(projectPath: string) {
+async function updateVitePluginAndWranglerVersion(projectPath: string) {
 	const pkg = JSON.parse(
 		await fs.readFile(path.resolve(projectPath, "package.json"), "utf8")
 	);
