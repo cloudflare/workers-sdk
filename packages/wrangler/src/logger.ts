@@ -30,7 +30,7 @@ const LOGGER_LEVEL_FORMAT_TYPE_MAP = {
 	debug: undefined,
 } as const;
 
-export const getLogLevelFromEnv = getEnvironmentVariableFactory({
+const getLogLevelFromEnv = getEnvironmentVariableFactory({
 	variableName: "WRANGLER_LOG",
 });
 
