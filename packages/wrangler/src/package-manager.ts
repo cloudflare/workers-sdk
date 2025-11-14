@@ -6,6 +6,7 @@ import { logger } from "./logger";
 export interface PackageManager {
 	type: "npm" | "yarn" | "pnpm" | "bun";
 	npx: string;
+	dlx: string[];
 }
 
 export async function getPackageManager(): Promise<PackageManager> {
@@ -69,6 +70,7 @@ export function getPackageManagerName(packageManager: PackageManager): string {
 const NpmPackageManager: PackageManager = {
 	type: "npm",
 	npx: "npx",
+	dlx: ["npx"],
 };
 
 /**
@@ -77,6 +79,7 @@ const NpmPackageManager: PackageManager = {
 const PnpmPackageManager: PackageManager = {
 	type: "pnpm",
 	npx: "pnpm",
+	dlx: ["pnpm", "dlx"],
 };
 
 /**
@@ -84,7 +87,8 @@ const PnpmPackageManager: PackageManager = {
  */
 const YarnPackageManager: PackageManager = {
 	type: "yarn",
-	npx: "yarn dlx",
+	npx: "yarn",
+	dlx: ["yarn", "dlx"],
 };
 
 /**
@@ -93,6 +97,7 @@ const YarnPackageManager: PackageManager = {
 const BunPackageManager: PackageManager = {
 	type: "bun",
 	npx: "bunx",
+	dlx: ["bunx"],
 };
 
 async function supports(name: string): Promise<boolean> {

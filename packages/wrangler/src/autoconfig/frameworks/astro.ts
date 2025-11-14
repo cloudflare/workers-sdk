@@ -31,9 +31,6 @@ export class Astro extends Framework {
 				binding: "ASSETS",
 				directory: outputDir,
 			},
-			observability: {
-				enabled: true,
-			},
 		};
 	}
 

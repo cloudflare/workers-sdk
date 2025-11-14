@@ -608,7 +608,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 /**
  * Gets the list of experimental framework test configurations.
  */
-function getExperimentalFrameworkTestConfig() {
+function getExperimentalFrameworkTestConfig(): NamedFrameworkTestConfig[] {
 	return [
 		{
 			name: "gatsby:workers",
@@ -632,6 +632,32 @@ function getExperimentalFrameworkTestConfig() {
 				expectedText: "Gatsby!",
 			},
 			nodeCompat: false,
+		},
+		{
+			name: "svelte:workers",
+			argv: ["--platform", "workers"],
+			flags: [
+				"--no-install",
+				"--no-add-ons",
+				"--template",
+				"minimal",
+				"--types",
+				"ts",
+			],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["npm", "yarn"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "SvelteKit app",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: false,
+			verifyTypes: false,
 		},
 	];
 }

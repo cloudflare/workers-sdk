@@ -58,6 +58,10 @@ export type RunnerConfig = {
 			expectedText: string;
 		};
 	};
+	/**
+	 * Specifies whether to verify generated types for the project
+	 */
+	verifyTypes?: boolean;
 };
 
 export const runC3 = async (
