@@ -3795,6 +3795,9 @@ importers:
       blake3-wasm:
         specifier: 2.1.5
         version: 2.1.5
+      cloudflare:
+        specifier: ^5.2.0
+        version: 5.2.0(encoding@0.1.13)
       esbuild:
         specifier: catalog:default
         version: 0.25.4
@@ -3935,9 +3938,6 @@ importers:
       cli-table3:
         specifier: ^0.6.3
         version: 0.6.3
-      cloudflare:
-        specifier: ^5.2.0
-        version: 5.2.0(encoding@0.1.13)
       cmd-shim:
         specifier: ^4.1.0
         version: 4.1.0
