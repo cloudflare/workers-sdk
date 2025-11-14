@@ -165,6 +165,7 @@ type WorkerMetadataPut = {
 	logpush?: boolean;
 	placement?: CfPlacement;
 	tail_consumers?: CfTailConsumer[];
+	streaming_tail_consumers?: CfTailConsumer[];
 	limits?: CfUserLimits;
 
 	assets?: {

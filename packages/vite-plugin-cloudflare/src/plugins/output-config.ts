@@ -19,8 +19,7 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 			let outputConfig: Unstable_RawConfig | undefined;
 
 			if (ctx.resolvedPluginConfig.type === "workers") {
-				const inputConfig =
-					ctx.resolvedPluginConfig.workers[this.environment.name];
+				const inputConfig = ctx.getWorkerConfig(this.environment.name);
 
 				if (!inputConfig) {
 					return;

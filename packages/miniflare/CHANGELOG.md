@@ -1,5 +1,29 @@
 # miniflare
 
+## 4.20251109.1
+
+### Patch Changes
+
+- [#11202](https://github.com/cloudflare/workers-sdk/pull/11202) [`305ffb3`](https://github.com/cloudflare/workers-sdk/commit/305ffb304d44e44a8045a08d43c655d1e1f17c88) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Make Miniflare inspector proxy more resilient to selecting a free port
+
+  We have seen some test flakes when there are a lot of Miniflare instances running in parallel.
+  This appears to be that there is a small chance that a port becomes unavailable between checking if it is free and using it.
+
+- [#11231](https://github.com/cloudflare/workers-sdk/pull/11231) [`46ccf0e`](https://github.com/cloudflare/workers-sdk/commit/46ccf0e9f79c909cd678af6dcb2e72ec2a12fc90) Thanks [@connyay](https://github.com/connyay)! - Fix WebSocket proxy timeout by disabling Node.js HTTP timeouts
+
+  The dev registry proxy server was experiencing connection timeouts around
+  60-90 seconds for long-lived WebSocket connections. This was caused by Node.js's
+  headersTimeout (defaults to min(60s, requestTimeout)) which is checked periodically
+  by connectionsCheckingInterval (defaults to 30s).
+
+  When proxying WebSocket connections, the HTTP server's headers timeout was
+  still active on the underlying socket, causing ERR_HTTP_REQUEST_TIMEOUT errors
+  to be thrown and both client and server sockets to be destroyed.
+
+  Setting both headersTimeout: 0 and requestTimeout: 0 in createServer options
+  disables timeout enforcement, allowing WebSocket connections to remain open
+  indefinitely as needed.
+
 ## 4.20251109.0
 
 ### Patch Changes

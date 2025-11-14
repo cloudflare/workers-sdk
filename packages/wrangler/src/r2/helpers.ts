@@ -1,5 +1,3 @@
-import * as fs from "node:fs";
-import { ReadableStream } from "node:stream/web";
 import {
 	bucketFormatMessage,
 	isValidR2BucketName,
@@ -19,6 +17,7 @@ import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { Config } from "@cloudflare/workers-utils";
 import type { ReplaceWorkersTypes } from "miniflare";
 import type { Readable } from "node:stream";
+import type { ReadableStream } from "node:stream/web";
 import type { HeadersInit } from "undici";
 
 /**
@@ -307,6 +306,16 @@ export async function getR2Object(
 	return response === null ? null : response.body;
 }
 
+const headerKeys = [
+	"cache-control",
+	"content-disposition",
+	"content-encoding",
+	"content-language",
+	"content-length",
+	"content-type",
+	"expires",
+] as const;
+
 /**
  * Uploads an object
  */
@@ -316,19 +325,10 @@ export async function putR2Object(
 	bucketName: string,
 	objectName: string,
 	object: Readable | ReadableStream | Buffer,
-	options: Record<string, unknown>,
+	options: Record<(typeof headerKeys)[number], string | undefined>,
 	jurisdiction?: string,
 	storageClass?: string
 ): Promise<void> {
-	const headerKeys = [
-		"content-length",
-		"content-type",
-		"content-disposition",
-		"content-encoding",
-		"content-language",
-		"cache-control",
-		"expires",
-	];
 	const headers: HeadersInit = {};
 	for (const key of headerKeys) {
 		const value = options[key] || "";
@@ -1592,27 +1592,4 @@ export async function deleteCORSPolicy(
 			headers,
 		}
 	);
-}
-
-const CHUNK_SIZE = 1024;
-export async function createFileReadableStream(filePath: string) {
-	// Based off https://streams.spec.whatwg.org/#example-rs-pull
-	const handle = await fs.promises.open(filePath, "r");
-	let position = 0;
-	return new ReadableStream({
-		async pull(controller) {
-			const buffer = new Uint8Array(CHUNK_SIZE);
-			const { bytesRead } = await handle.read(buffer, 0, CHUNK_SIZE, position);
-			if (bytesRead === 0) {
-				await handle.close();
-				controller.close();
-			} else {
-				position += bytesRead;
-				controller.enqueue(buffer.subarray(0, bytesRead));
-			}
-		},
-		cancel() {
-			return handle.close();
-		},
-	});
 }

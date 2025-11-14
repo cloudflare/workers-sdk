@@ -188,7 +188,7 @@ export type TemplateMap = Record<
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
-			// None right now
+			gatsby: gatsbyTemplate,
 		};
 	} else {
 		return {

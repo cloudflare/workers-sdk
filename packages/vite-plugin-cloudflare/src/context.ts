@@ -1,6 +1,8 @@
 import assert from "node:assert";
 import { Miniflare } from "miniflare";
+import { getInitialWorkerNameToExportTypesMap } from "./export-types";
 import { debuglog } from "./utils";
+import type { ExportTypes } from "./export-types";
 import type { NodeJsCompat } from "./nodejs-compat";
 import type {
 	AssetsOnlyResolvedConfig,
@@ -18,6 +20,7 @@ import type * as vite from "vite";
  */
 export interface SharedContext {
 	miniflare?: Miniflare;
+	workerNameToExportTypesMap?: Map<string, ExportTypes>;
 	hasShownWorkerConfigWarnings: boolean;
 	/** Used to track whether hooks are being called because of a server restart or a server close event */
 	isRestartingDevServer: boolean;
@@ -76,6 +79,24 @@ export class PluginContext {
 		return Number.parseInt(miniflareInspectorUrl.port);
 	}
 
+	setWorkerNameToExportTypesMap(
+		workerNameToExportTypesMap: Map<string, ExportTypes>
+	): void {
+		this.#sharedContext.workerNameToExportTypesMap = workerNameToExportTypesMap;
+	}
+
+	get workerNameToExportTypesMap(): Map<string, ExportTypes> {
+		if (!this.#sharedContext.workerNameToExportTypesMap) {
+			if (this.resolvedPluginConfig.type !== "workers") {
+				return new Map();
+			}
+
+			return getInitialWorkerNameToExportTypesMap(this.resolvedPluginConfig);
+		}
+
+		return this.#sharedContext.workerNameToExportTypesMap;
+	}
+
 	setHasShownWorkerConfigWarnings(hasShownWorkerConfigWarnings: boolean): void {
 		this.#sharedContext.hasShownWorkerConfigWarnings =
 			hasShownWorkerConfigWarnings;
@@ -121,7 +142,9 @@ export class PluginContext {
 
 	getWorkerConfig(environmentName: string): WorkerConfig | undefined {
 		return this.resolvedPluginConfig.type === "workers"
-			? this.resolvedPluginConfig.workers[environmentName]
+			? this.resolvedPluginConfig.environmentNameToWorkerMap.get(
+					environmentName
+				)?.config
 			: undefined;
 	}
 
@@ -130,14 +153,16 @@ export class PluginContext {
 			return;
 		}
 
-		return this.resolvedPluginConfig.workers[
+		return this.resolvedPluginConfig.environmentNameToWorkerMap.get(
 			this.resolvedPluginConfig.entryWorkerEnvironmentName
-		];
+		)?.config;
 	}
 
 	getNodeJsCompat(environmentName: string): NodeJsCompat | undefined {
 		return this.resolvedPluginConfig.type === "workers"
-			? this.resolvedPluginConfig.nodeJsCompatMap.get(environmentName)
+			? this.resolvedPluginConfig.environmentNameToWorkerMap.get(
+					environmentName
+				)?.nodeJsCompat
 			: undefined;
 	}
 }

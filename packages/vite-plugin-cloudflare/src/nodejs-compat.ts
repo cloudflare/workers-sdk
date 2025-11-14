@@ -276,7 +276,7 @@ export class NodeJsCompatWarnings {
 		}, 500);
 	}
 
-	private renderWarnings() {
+	renderWarnings() {
 		if (this.sources.size > 0) {
 			let message =
 				`Unexpected Node.js imports for environment "${this.environmentName}". ` +

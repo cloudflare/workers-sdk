@@ -1,26 +1,19 @@
-import { once } from "events";
 import path from "path";
 import dedent from "ts-dedent";
 import { describe, test } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
+import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { seed } from "../../helpers/seed";
 import { unusable } from "../../helpers/unusable";
-import type { BundleCompleteEvent, StartDevWorkerOptions } from "../../../api";
+import type { StartDevWorkerOptions } from "../../../api";
 
 // Find the bundled result of a particular source file
 function findSourceFile(source: string, name: string): string {
 	const startIndex = source.indexOf(`// ${name}`);
 	const endIndex = source.indexOf("\n//", startIndex);
 	return source.slice(startIndex, endIndex);
-}
-
-async function waitForBundleComplete(
-	controller: BundlerController
-): Promise<BundleCompleteEvent> {
-	const [event] = await once(controller, "bundleComplete");
-	return event;
 }
 
 function configDefaults(
@@ -51,9 +44,11 @@ describe("BundleController", () => {
 	// watch files in a directory that no longer exists.
 	// By doing it ourselves in `beforeEach()` and `afterEach()` we can ensure the controller
 	// is torn down before the temporary directory is removed.
+	let bus: FakeBus;
 	let controller: BundlerController;
 	beforeEach(() => {
-		controller = new BundlerController();
+		bus = new FakeBus();
+		controller = new BundlerController(bus);
 	});
 	afterEach(() => controller.teardown());
 
@@ -93,7 +88,7 @@ describe("BundleController", () => {
 				config: configDefaults(config),
 			});
 
-			let ev = await waitForBundleComplete(controller);
+			let ev = await bus.waitFor("bundleComplete");
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
 					"// index.ts
@@ -118,7 +113,7 @@ describe("BundleController", () => {
 					} satisfies ExportedHandler
 				`,
 			});
-			ev = await waitForBundleComplete(controller);
+			ev = await bus.waitFor("bundleComplete");
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
 					"// index.ts
@@ -174,7 +169,7 @@ describe("BundleController", () => {
 				config: configDefaults(config),
 			});
 
-			let ev = await waitForBundleComplete(controller);
+			let ev = await bus.waitFor("bundleComplete");
 			expect(findSourceFile(ev.bundle.entrypointSource, "other.ts"))
 				.toMatchInlineSnapshot(`
 				"// other.ts
@@ -195,7 +190,7 @@ describe("BundleController", () => {
 					export default "someone else"
 				`,
 			});
-			ev = await waitForBundleComplete(controller);
+			ev = await bus.waitFor("bundleComplete");
 			expect(findSourceFile(ev.bundle.entrypointSource, "other.ts"))
 				.toMatchInlineSnapshot(`
 				"// other.ts
@@ -242,7 +237,7 @@ describe("BundleController", () => {
 				config: configDefaults(config),
 			});
 
-			let ev = await waitForBundleComplete(controller);
+			let ev = await bus.waitFor("bundleComplete");
 			expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
 				.toMatchInlineSnapshot(`
 					"// out.ts
@@ -271,7 +266,7 @@ describe("BundleController", () => {
 					}
 				`,
 			});
-			ev = await waitForBundleComplete(controller);
+			ev = await bus.waitFor("bundleComplete");
 			expect(findSourceFile(ev.bundle.entrypointSource, "out.ts"))
 				.toMatchInlineSnapshot(`
 					"// out.ts
@@ -328,7 +323,7 @@ describe("BundleController", () => {
 
 		await controller.onConfigUpdate({ type: "configUpdate", config });
 
-		let ev = await waitForBundleComplete(controller);
+		let ev = await bus.waitFor("bundleComplete");
 		expect(ev.bundle.entrypointSource).toContain(dedent/* javascript */ `
             // ../node_modules/foo
             var foo_default = "foo"
@@ -346,7 +341,7 @@ describe("BundleController", () => {
 				},
 			},
 		});
-		ev = await waitForBundleComplete(controller);
+		ev = await bus.waitFor("bundleComplete");
 		expect(ev.bundle.entrypointSource).toContain(dedent/* javascript */ `
             // ../node_modules/bar
             var bar_default = "bar"
@@ -390,7 +385,7 @@ describe("BundleController", () => {
 				config: configDefaults(config),
 			});
 
-			const ev = await waitForBundleComplete(controller);
+			const ev = await bus.waitFor("bundleComplete");
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
 					"// index.ts
@@ -438,7 +433,7 @@ describe("BundleController", () => {
 				legacy: {},
 			};
 
-			let evCustomPromise = waitForBundleComplete(controller);
+			let evCustomPromise = bus.waitFor("bundleComplete");
 			await controller.onConfigUpdate({
 				type: "configUpdate",
 				config: configDefaults(configCustom),
@@ -461,7 +456,7 @@ describe("BundleController", () => {
 				`);
 
 			// Make sure custom builds can reload after switching to them
-			evCustomPromise = waitForBundleComplete(controller);
+			evCustomPromise = bus.waitFor("bundleComplete");
 			await seed({
 				"random_dir/index.ts": dedent/* javascript */ `
 						export default {
@@ -527,7 +522,7 @@ describe("BundleController", () => {
 				config: configDefaults(configCustom),
 			});
 
-			const evCustom = await waitForBundleComplete(controller);
+			const evCustom = await bus.waitFor("bundleComplete");
 			expect(findSourceFile(evCustom.bundle.entrypointSource, "out.ts"))
 				.toMatchInlineSnapshot(`
 					"// out.ts
@@ -577,7 +572,7 @@ describe("BundleController", () => {
 				config: configDefaults(config),
 			});
 
-			let ev = await waitForBundleComplete(controller);
+			let ev = await bus.waitFor("bundleComplete");
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
 					"// index.ts
@@ -602,7 +597,7 @@ describe("BundleController", () => {
 						} satisfies ExportedHandler
 					`,
 			});
-			ev = await waitForBundleComplete(controller);
+			ev = await bus.waitFor("bundleComplete");
 			expect(findSourceFile(ev.bundle.entrypointSource, "index.ts"))
 				.toMatchInlineSnapshot(`
 					"// index.ts

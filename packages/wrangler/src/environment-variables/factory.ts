@@ -51,6 +51,8 @@ type VariableNames =
 	| "WRANGLER_LOG_SANITIZE"
 	/** Directory for ND-JSON output files. */
 	| "WRANGLER_OUTPUT_FILE_DIRECTORY"
+	/** Hide the Wrangler version banner */
+	| "WRANGLER_HIDE_BANNER"
 
 	// ## Build & Deployment Configuration
 
