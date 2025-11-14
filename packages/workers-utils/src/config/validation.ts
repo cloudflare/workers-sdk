@@ -2840,7 +2840,8 @@ function validateContainerApp(
 			// unsafe.containers
 			if ("unsafe" in containerAppOptional) {
 				if (
-					typeof containerAppOptional.unsafe !== "object" ||
+					(containerAppOptional.unsafe &&
+						typeof containerAppOptional.unsafe !== "object") ||
 					Array.isArray(containerAppOptional.unsafe)
 				) {
 					diagnostics.errors.push(

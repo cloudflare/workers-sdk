@@ -1858,7 +1858,7 @@ describe("wrangler deploy with containers dry run", () => {
 	});
 });
 
-describe("unsafe.containers configuration", () => {
+describe("containers.unsafe configuration", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 	mockAccountId();
@@ -1872,7 +1872,7 @@ describe("unsafe.containers configuration", () => {
 		);
 	});
 
-	it("should merge unsafe.containers config into create request", async () => {
+	it("should merge containers.unsafe config into create request", async () => {
 		mockGetVersion("Galaxy-Class");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
@@ -1907,7 +1907,7 @@ describe("unsafe.containers configuration", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	it("should merge unsafe.containers config into modify request", async () => {
+	it("should merge containers.unsafe config into modify request", async () => {
 		mockGetVersion("Galaxy-Class");
 		writeWranglerConfig({
 			...DEFAULT_DURABLE_OBJECTS,
