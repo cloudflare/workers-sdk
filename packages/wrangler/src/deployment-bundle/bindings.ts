@@ -16,7 +16,11 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
+import {
+	createR2Bucket,
+	getR2Bucket,
+	listR2Buckets,
+} from "../r2/helpers/bucket";
 import { printBindings } from "../utils/print-bindings";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";

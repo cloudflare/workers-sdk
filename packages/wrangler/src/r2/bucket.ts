@@ -21,9 +21,9 @@ import {
 	getR2Bucket,
 	getR2BucketMetrics,
 	listR2Buckets,
-	tablefromR2BucketsListResponse,
+	tableFromR2BucketsListResponse,
 	updateR2BucketStorageClass,
-} from "./helpers";
+} from "./helpers/bucket";
 
 export const r2BucketNamespace = createNamespace({
 	metadata: {
@@ -197,7 +197,7 @@ export const r2BucketListCommand = createCommand({
 		logger.log(`Listing buckets...`);
 
 		const buckets = await listR2Buckets(config, accountId, args.jurisdiction);
-		const tableOutput = tablefromR2BucketsListResponse(buckets);
+		const tableOutput = tableFromR2BucketsListResponse(buckets);
 		logger.log(tableOutput.map((x) => formatLabelledValues(x)).join("\n\n"));
 	},
 });
