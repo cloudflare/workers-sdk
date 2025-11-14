@@ -23,12 +23,12 @@ interface APIWorkerConfig {
 	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/scripts/methods/list/ */
 	name: string; // property renamed from `id`...
 	entrypoint: string;
-	tags: string[];
+	tags: string[] | null;
 	compatibility_date: string;
 	compatibility_flags: string[];
 	logpush: boolean | undefined;
 	routes: RoutesRes;
-	tail_consumers: TailConsumer[] | undefined;
+	tail_consumers: TailConsumer[] | undefined | null;
 	migration_tag?: string;
 
 	/* sourced from https://developers.cloudflare.com/api/resources/workers/subresources/domains/methods/list/ */
@@ -102,7 +102,7 @@ function convertWorkerToWranglerConfig(config: APIWorkerConfig): RawConfig {
 					},
 				}
 			: {}),
-		tail_consumers: config.tail_consumers,
+		tail_consumers: config.tail_consumers ?? undefined,
 		observability: config.observability,
 		...mappedBindings,
 	};
