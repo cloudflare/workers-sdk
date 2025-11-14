@@ -1,7 +1,7 @@
 import path from "path";
 import getPort from "get-port";
 import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
-import { getLogLevelFromEnv, logger } from "../../logger";
+import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker";
