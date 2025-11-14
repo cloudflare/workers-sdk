@@ -491,7 +491,9 @@ describe("resource provisioning", () => {
 
 				[[d1_databases]]
 				binding = \\"D1\\"
-				database_id = \\"new-d1-id\\""
+				database_id = \\"new-d1-id\\"
+
+				"
 			`);
 		});
 
@@ -651,7 +653,9 @@ describe("resource provisioning", () => {
 
 				[[d1_databases]]
 				binding = \\"D1\\"
-				database_id = \\"new-d1-id\\""
+				database_id = \\"new-d1-id\\"
+
+				"
 			`);
 
 			rmSync(".wrangler/deploy/config.json");
@@ -804,7 +808,9 @@ describe("resource provisioning", () => {
 
 				[[d1_databases]]
 				binding = \\"D1\\"
-				database_id = \\"test-name-d1-id\\""
+				database_id = \\"test-name-d1-id\\"
+
+				"
 			`);
 
 			rmSync(".wrangler/deploy/config.json");

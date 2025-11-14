@@ -1140,8 +1140,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
-			│   [containers.constraints]
-			│   tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -1212,8 +1210,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
-			│   [containers.constraints]
-			│   tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -1283,8 +1279,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
-			│   [containers.constraints]
-			│   tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container-app
@@ -1357,8 +1351,6 @@ describe("cloudchamber apply", () => {
 			│   [containers.configuration.observability.logs]
 			│ - enabled = true
 			│ + enabled = false
-			│   [containers.constraints]
-			│   tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container-app

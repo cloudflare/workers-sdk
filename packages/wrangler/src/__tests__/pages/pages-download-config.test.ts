@@ -1048,7 +1048,10 @@ describe("pages download config", () => {
 			);
 
 			await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(
-				`"name = \\"some-project\\""`
+				`
+				"name = \\"some-project\\"
+				"
+			`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -1225,7 +1228,10 @@ describe("pages download config", () => {
 			);
 
 			await expect(await readNormalizedWranglerToml()).toMatchInlineSnapshot(
-				`"name = \\"some-project\\""`
+				`
+				"name = \\"some-project\\"
+				"
+			`
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"

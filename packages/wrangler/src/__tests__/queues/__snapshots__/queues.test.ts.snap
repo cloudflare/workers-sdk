@@ -76,10 +76,16 @@ Configure your Worker to send messages to this queue:
 [[queues.producers]]
 queue = \\"testQueue\\"
 binding = \\"testQueue\\"
+
+
+
 Configure your Worker to consume messages from this queue:
 
 [[queues.consumers]]
-queue = \\"testQueue\\""
+queue = \\"testQueue\\"
+
+
+"
 `;
 
 exports[`wrangler > queues > create > wrangler.toml > should send queue settings with delivery delay 1`] = `
@@ -94,8 +100,14 @@ Configure your Worker to send messages to this queue:
 [[queues.producers]]
 queue = \\"testQueue\\"
 binding = \\"testQueue\\"
+
+
+
 Configure your Worker to consume messages from this queue:
 
 [[queues.consumers]]
-queue = \\"testQueue\\""
+queue = \\"testQueue\\"
+
+
+"
 `;

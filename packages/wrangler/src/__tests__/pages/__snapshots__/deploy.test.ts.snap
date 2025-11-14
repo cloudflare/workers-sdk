@@ -32,7 +32,7 @@ exports[`pages deploy > with wrangler.json configuration > should support wrangl
 
 exports[`pages deploy > with wrangler.json configuration > should warn and ignore the config file, if it doesn't specify the \`pages_build_output_dir\` field 1`] = `[Error: Must specify a project name.]`;
 
-exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `"9cdc186bcdd9f2c3e379a0e31790496594a1e7a3b230327f4ea4d1933df6295f"`;
+exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 1`] = `"8199a81175b52fd88dacc29b0b47c4452cc0cb2e3175d6c592cc14414614324c"`;
 
 exports[`pages deploy > with wrangler.toml configuration > should always deploy to the Pages project specified by the top-level \`name\` configuration field, regardless of the corresponding env-level configuration 2`] = `
 "
@@ -48,7 +48,7 @@ exports[`pages deploy > with wrangler.toml configuration > should always deploy 
 
 exports[`pages deploy > with wrangler.toml configuration > should error if user attempts to specify a custom config file path 1`] = `[Error: Pages does not support custom paths for the Wrangler configuration file]`;
 
-exports[`pages deploy > with wrangler.toml configuration > should support wrangler.toml 1`] = `"5085adb9e258587b8f222ed38cb6ac728f888ee7fd9e6365f7ddf4b26cb76d39"`;
+exports[`pages deploy > with wrangler.toml configuration > should support wrangler.toml 1`] = `"62e8895a4896fc18db089b5590f7ecce38de8c1f38b515b1861da4bfd6ae7596"`;
 
 exports[`pages deploy > with wrangler.toml configuration > should support wrangler.toml 2`] = `
 "

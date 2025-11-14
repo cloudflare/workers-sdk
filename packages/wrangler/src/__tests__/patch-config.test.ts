@@ -501,8 +501,8 @@ describe("experimental_patchConfig()", () => {
 						isArrayInsertion
 					);
 					expect(result).not.toBeFalsy();
-					expect(result).toEqual(
-						`${configType === "json" ? expectedJson : expectedToml}`
+					expect(result.trim()).toEqual(
+						`${configType === "json" ? expectedJson.trim() : expectedToml.trim()}`
 					);
 				});
 			}
@@ -523,8 +523,8 @@ describe("experimental_patchConfig()", () => {
 						false
 					);
 					expect(result).not.toBeFalsy();
-					expect(result).toEqual(
-						`${configType === "json" ? expectedJson : expectedToml}`
+					expect(result.trim()).toEqual(
+						`${configType === "json" ? expectedJson.trim() : expectedToml.trim()}`
 					);
 				});
 			}

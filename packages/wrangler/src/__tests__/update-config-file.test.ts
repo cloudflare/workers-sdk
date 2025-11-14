@@ -261,12 +261,15 @@ describe("createdResourceConfig()", () => {
 			"To access your new KV Namespace in your Worker, add the following snippet to your configuration file:
 			[[kv_namespaces]]
 			binding = \\"KV\\"
-			id = \\"random-id\\""
+			id = \\"random-id\\"
+
+			"
 		`);
 		expect(await readFile("wrangler.toml", "utf8")).toMatchInlineSnapshot(
 			`
 			"compatibility_date = \\"2022-01-12\\"
-			name = \\"worker\\""
+			name = \\"worker\\"
+			"
 		`
 		);
 	});

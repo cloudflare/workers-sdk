@@ -232,7 +232,10 @@ describe("match-tag", () => {
 				await expect(
 					runWrangler("deploy ./index.js")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: The \`account_id\` in your wrangler.toml file must match the \`account_id\` for this account. Please update your wrangler.toml file with \`account_id = "some-other-account-id"\`]`
+					`
+					[Error: The \`account_id\` in your wrangler.toml file must match the \`account_id\` for this account. Please update your wrangler.toml file with \`account_id = "some-other-account-id"
+					\`]
+				`
 				);
 			});
 
@@ -251,7 +254,10 @@ describe("match-tag", () => {
 				await expect(
 					runWrangler("deploy -c path/config.toml ./index.js")
 				).rejects.toMatchInlineSnapshot(
-					`[Error: The \`account_id\` in your wrangler.toml file must match the \`account_id\` for this account. Please update your wrangler.toml file with \`account_id = "some-other-account-id"\`]`
+					`
+					[Error: The \`account_id\` in your wrangler.toml file must match the \`account_id\` for this account. Please update your wrangler.toml file with \`account_id = "some-other-account-id"
+					\`]
+				`
 				);
 			});
 		});
