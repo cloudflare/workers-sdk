@@ -646,7 +646,7 @@ function getExperimentalFrameworkTestConfig(): NamedFrameworkTestConfig[] {
 			],
 			testCommitMessage: true,
 			unsupportedOSs: ["win32"],
-			unsupportedPms: ["npm"],
+			unsupportedPms: ["npm", "yarn"],
 			verifyDeploy: {
 				route: "/",
 				expectedText: "SvelteKit app",
