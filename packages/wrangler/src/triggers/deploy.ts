@@ -1,4 +1,7 @@
-import { UserError } from "@cloudflare/workers-utils";
+import {
+	getSubdomainMixedStateCheckDisabled,
+	UserError,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import PQueue from "p-queue";
 import { fetchListResult, fetchResult } from "../cfetch";
@@ -10,7 +13,6 @@ import {
 	updateQueueConsumers,
 	validateRoutes,
 } from "../deploy/deploy";
-import { getSubdomainMixedStateCheckDisabled } from "../environment-variables/misc-variables";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { ensureQueuesExistByConfig } from "../queues/client";

@@ -17,9 +17,8 @@ import {
 	putKVKeyValue,
 } from "./kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { KeyValue } from "./kv/helpers";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 import type { XXHashAPI } from "xxhash-wasm";
 
 /** Paths to always ignore. */

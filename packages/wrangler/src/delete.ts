@@ -8,7 +8,7 @@ import { logger } from "./logger";
 import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 // Types returned by the /script/{name}/references API
 type ServiceReference = {

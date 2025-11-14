@@ -8,6 +8,9 @@ import {
 	configFileName,
 	formatCompatibilityDate,
 	formatConfigSnippet,
+	getCIGeneratePreviewAlias,
+	getCIOverrideName,
+	getWorkersCIBranchName,
 	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -34,11 +37,6 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
-import {
-	getCIGeneratePreviewAlias,
-	getCIOverrideName,
-	getWorkersCIBranchName,
-} from "../environment-variables/misc-variables";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,

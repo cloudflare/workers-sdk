@@ -12,9 +12,8 @@ import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Database, ExportPollingResponse, PollingFailure } from "./types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export const d1ExportCommand = createCommand({
 	metadata: {

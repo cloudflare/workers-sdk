@@ -222,7 +222,7 @@ describe("BundleController", () => {
 					bundle: true,
 					moduleRules: [],
 					custom: {
-						command: "cp random_dir/index.ts out.ts",
+						command: `node -e "fs.cpSync('random_dir/index.ts', 'out.ts')"`,
 						watch: "random_dir",
 					},
 					define: {},
@@ -422,7 +422,7 @@ describe("BundleController", () => {
 					bundle: true,
 					moduleRules: [],
 					custom: {
-						command: "cp random_dir/index.ts out.ts",
+						command: `node -e "fs.cpSync('random_dir/index.ts', 'out.ts')"`,
 						watch: "random_dir",
 					},
 					define: {},
@@ -507,7 +507,7 @@ describe("BundleController", () => {
 					bundle: true,
 					moduleRules: [],
 					custom: {
-						command: "cp random_dir/index.ts out.ts",
+						command: `node -e "fs.cpSync('random_dir/index.ts', 'out.ts')"`,
 						watch: "random_dir",
 					},
 					define: {},

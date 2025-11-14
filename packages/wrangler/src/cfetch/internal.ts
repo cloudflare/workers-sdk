@@ -1,16 +1,18 @@
 import assert from "node:assert";
-import { APIError, parseJSON, UserError } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	getCloudflareApiBaseUrl,
+	getTraceHeader,
+	parseJSON,
+	UserError,
+} from "@cloudflare/workers-utils";
 import Cloudflare from "cloudflare";
 import { fetch, FormData, Headers, Request, Response } from "undici";
 import { version as wranglerVersion } from "../../package.json";
-import {
-	getCloudflareApiBaseUrl,
-	getTraceHeader,
-} from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ApiCredentials } from "../user";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { URLSearchParams } from "node:url";
 import type { HeadersInit, RequestInfo, RequestInit } from "undici";
 

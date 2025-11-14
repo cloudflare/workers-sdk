@@ -11,11 +11,11 @@ import {
 	runDockerCmd,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
 import {
 	getCIOverrideNetworkModeHost,
 	getDockerPath,
-} from "../environment-variables/misc-variables";
+	UserError,
+} from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import { getAccountId } from "../user";
 import { ensureContainerLimits } from "./limits";

@@ -1,7 +1,9 @@
+import {
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	getGlobalWranglerConfigPath,
+} from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
-import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { CI } from "../is-ci";
 import {
 	getAuthConfigFilePath,
