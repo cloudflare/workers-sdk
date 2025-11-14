@@ -133,11 +133,11 @@ describe("parseTOML", () => {
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
-				text: "Unterminated string",
+				text: "Invalid TOML document: only letter, numbers, dashes and underscores are allowed in keys",
 				kind: "error",
 				location: {
 					line: 1,
-					column: 14,
+					column: 12,
 					fileText: "name = 'fail\"",
 					file: undefined,
 					lineText: "name = 'fail\"",
@@ -155,14 +155,14 @@ describe("parseTOML", () => {
 		} catch (err) {
 			expect({ ...(err as Error) }).toStrictEqual({
 				name: "ParseError",
-				text: "Key ended without value",
+				text: "Invalid TOML document: incomplete key-value: cannot find end of key",
 				kind: "error",
 				location: {
 					line: 2,
-					column: 5,
-					lineText: "[name",
+					column: 1,
 					file: "config.toml",
 					fileText: "\n[name",
+					lineText: "[name",
 				},
 				notes: [],
 				telemetryMessage: "TOML parse error",

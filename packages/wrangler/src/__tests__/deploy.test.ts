@@ -5,10 +5,10 @@ import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { findWranglerConfig, ParseError } from "@cloudflare/workers-utils";
-import * as TOML from "@iarna/toml";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
+import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { vi } from "vitest";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
@@ -3142,7 +3142,6 @@ addEventListener('fetch', event => {});`
 
 				\`\`\`
 				main = "src/index.ts"
-
 				\`\`\`
 
 
@@ -3153,7 +3152,6 @@ addEventListener('fetch', event => {});`
 				\`\`\`
 				[assets]
 				directory = "./dist"
-
 				\`\`\`
 				]
 			`
@@ -3176,7 +3174,6 @@ addEventListener('fetch', event => {});`
 
 				  \`\`\`
 				  main = \\"src/index.ts\\"
-
 				  \`\`\`
 
 
@@ -3188,7 +3185,6 @@ addEventListener('fetch', event => {});`
 				  \`\`\`
 				  [assets]
 				  directory = \\"./dist\\"
-
 				  \`\`\`
 
 
@@ -8325,7 +8321,6 @@ addEventListener('fetch', event => {});`
 				      [[migrations]]
 				      tag = \\"v1\\"
 				      new_classes = [ \\"SomeClass\\" ]
-
 				      \`\`\`
 
 				      Refer to

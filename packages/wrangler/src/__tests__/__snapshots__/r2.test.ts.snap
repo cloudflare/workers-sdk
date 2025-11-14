@@ -85,8 +85,7 @@ Creating bucket 'test-bucket'...
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
 bucket_name = \\"test-bucket\\"
-binding = \\"test_bucket\\"
-"
+binding = \\"test_bucket\\""
 `;
 
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket with the expected default storage class 1`] = `
@@ -98,8 +97,7 @@ Creating bucket 'test-bucket'...
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
 bucket_name = \\"test-bucket\\"
-binding = \\"test_bucket\\"
-"
+binding = \\"test_bucket\\""
 `;
 
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket with the expected jurisdiction 1`] = `
@@ -111,8 +109,7 @@ Creating bucket 'test-bucket (eu)'...
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
 bucket_name = \\"test-bucket\\"
-binding = \\"test_bucket\\"
-"
+binding = \\"test_bucket\\""
 `;
 
 exports[`r2 > bucket > create > wrangler.toml > should create a bucket with the expected location hint 1`] = `
@@ -124,6 +121,5 @@ Creating bucket 'test-bucket'...
 To access your new R2 Bucket in your Worker, add the following snippet to your configuration file:
 [[r2_buckets]]
 bucket_name = \\"test-bucket\\"
-binding = \\"test_bucket\\"
-"
+binding = \\"test_bucket\\""
 `;

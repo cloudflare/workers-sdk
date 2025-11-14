@@ -313,7 +313,6 @@ describe.sequential("wrangler dev", () => {
 
 				\`\`\`
 				main = "src/index.ts"
-
 				\`\`\`
 
 
@@ -324,7 +323,6 @@ describe.sequential("wrangler dev", () => {
 				\`\`\`
 				[assets]
 				directory = "./dist"
-
 				\`\`\`
 				]
 			`
@@ -347,7 +345,6 @@ describe.sequential("wrangler dev", () => {
 
 				  \`\`\`
 				  main = \\"src/index.ts\\"
-
 				  \`\`\`
 
 
@@ -359,7 +356,6 @@ describe.sequential("wrangler dev", () => {
 				  \`\`\`
 				  [assets]
 				  directory = \\"./dist\\"
-
 				  \`\`\`
 
 
@@ -688,7 +684,6 @@ describe.sequential("wrangler dev", () => {
 					\`\`\`
 					[dev]
 				host = "example.com"
-
 					\`\`\`
 				]
 			`);
@@ -1508,7 +1503,6 @@ describe.sequential("wrangler dev", () => {
 				      [[migrations]]
 				      tag = \\"v1\\"
 				      new_classes = [ \\"CLASS_1\\", \\"CLASS_3\\" ]
-
 				      \`\`\`
 
 				      Refer to

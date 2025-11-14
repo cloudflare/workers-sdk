@@ -168,8 +168,7 @@ describe("hyperdrive commands", () => {
 			To access your new Hyperdrive Config in your Worker, add the following snippet to your configuration file:
 			[[hyperdrive]]
 			binding = \\"HYPERDRIVE\\"
-			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\"
-			"
+			id = \\"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\\""
 		`);
 	});
 

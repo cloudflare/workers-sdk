@@ -1,4 +1,4 @@
-import TOML from "@iarna/toml";
+import TOML from "smol-toml";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import { resolveWranglerConfigPath } from "./config-helpers";
 import type { Config, RawConfig } from "./config";
@@ -47,7 +47,7 @@ export function formatConfigSnippet(
 ) {
 	const format = configFormat(configPath);
 	if (format === "toml") {
-		return TOML.stringify(snippet as TOML.JsonMap);
+		return TOML.stringify(snippet);
 	} else {
 		return formatted
 			? JSON.stringify(snippet, null, 2)

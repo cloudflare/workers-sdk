@@ -36,6 +36,9 @@ catalogs:
     rimraf:
       specifier: ^6.0.1
       version: 6.0.1
+    smol-toml:
+      specifier: ^1.5.0
+      version: 1.5.0
     typescript:
       specifier: ^5.8.3
       version: 5.8.3
@@ -1615,9 +1618,6 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20251113.0
-      '@iarna/toml':
-        specifier: ^3.0.0
-        version: 3.0.0
       '@types/command-exists':
         specifier: ^1.2.0
         version: 1.2.0
@@ -1717,6 +1717,9 @@ importers:
       semver:
         specifier: ^7.7.1
         version: 7.7.1
+      smol-toml:
+        specifier: catalog:default
+        version: 1.5.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3710,9 +3713,6 @@ importers:
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
-      '@iarna/toml':
-        specifier: ^3.0.0
-        version: 3.0.0
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
@@ -3734,6 +3734,9 @@ importers:
       jsonc-parser:
         specifier: ^3.2.0
         version: 3.2.0
+      smol-toml:
+        specifier: catalog:default
+        version: 1.5.0
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
@@ -3863,9 +3866,6 @@ importers:
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1
-      '@iarna/toml':
-        specifier: ^3.0.0
-        version: 3.0.0
       '@netlify/build-info':
         specifier: ^10.0.9
         version: 10.0.9
@@ -4058,6 +4058,9 @@ importers:
       signal-exit:
         specifier: ^3.0.7
         version: 3.0.7
+      smol-toml:
+        specifier: catalog:default
+        version: 1.5.0
       source-map:
         specifier: ^0.6.1
         version: 0.6.1
@@ -6033,9 +6036,6 @@ packages:
 
   '@iarna/toml@2.2.5':
     resolution: {integrity: sha512-trnsAYxU3xnS1gPHPyU961coFyLkh4gAD/0zQ5mymY4yOZ+CYvsPqUbOFSw0aDM4y0tV7tiFxL/1XfXPNC6IPg==}
-
-  '@iarna/toml@3.0.0':
-    resolution: {integrity: sha512-td6ZUkz2oS3VeleBcN+m//Q6HlCFCPrnI0FZhrt/h4XqLEdOyYp2u21nd8MdsR+WJy5r9PTDaHTDDfhf4H4l6Q==}
 
   '@img/sharp-darwin-arm64@0.33.5':
     resolution: {integrity: sha512-UT4p+iz/2H4twwAoLCqfA9UH5pI6DggwKEGuaPy7nCVQ8ZsiY5PIcrRvD1DzuY3qYL07NtIQcWnBSY/heikIFQ==}
@@ -13109,6 +13109,10 @@ packages:
     resolution: {integrity: sha512-94hK0Hh8rPqQl2xXc3HsaBoOXKV20MToPkcXvwbISWLEs+64sBq5kFgn2kJDHb1Pry9yrP0dxrCI9RRci7RXKg==}
     engines: {node: '>= 6.0.0', npm: '>= 3.0.0'}
 
+  smol-toml@1.5.0:
+    resolution: {integrity: sha512-Jjsa8LZ+DyLbZ7gVi9d18bS8oxq0PQrTlVDfvYXgh7gxLwbW9QWgvakHD+hBLUtr5NahfStd8LQLGSPchaEJ8Q==}
+    engines: {node: '>= 18'}
+
   socks-proxy-agent@8.0.5:
     resolution: {integrity: sha512-HehCEsotFqbPW9sJ8WVYB6UbmIMv7kUUORIF2Nncq4VQvBfNBLibW9YZR5dlYCSUhwcD628pRllm7n+E+YTzJw==}
     engines: {node: '>= 14'}
@@ -16458,8 +16462,6 @@ snapshots:
 
   '@iarna/toml@2.2.5': {}
 
-  '@iarna/toml@3.0.0': {}
-
   '@img/sharp-darwin-arm64@0.33.5':
     optionalDependencies:
       '@img/sharp-libvips-darwin-arm64': 1.0.4
@@ -18731,7 +18733,7 @@ snapshots:
     dependencies:
       '@vitest/spy': 3.0.9
       estree-walker: 3.0.3
-      magic-string: 0.30.17
+      magic-string: 0.30.21
     optionalDependencies:
       vite: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
 
@@ -18785,7 +18787,7 @@ snapshots:
   '@vitest/snapshot@3.0.9':
     dependencies:
       '@vitest/pretty-format': 3.0.9
-      magic-string: 0.30.17
+      magic-string: 0.30.21
       pathe: 2.0.3
 
   '@vitest/snapshot@3.2.3':
@@ -24417,6 +24419,8 @@ snapshots:
       is-fullwidth-code-point: 4.0.0
 
   smart-buffer@4.2.0: {}
+
+  smol-toml@1.5.0: {}
 
   socks-proxy-agent@8.0.5:
     dependencies:
