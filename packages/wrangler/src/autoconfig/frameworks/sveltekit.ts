@@ -20,6 +20,10 @@ export class SvelteKit extends Framework {
 					doneText: `${brandColor("installed")} ${dim(
 						`via \`${dlx} sv add sveltekit-adapter=adapter:cloudflare\``
 					)}`,
+					env: {
+						// We want pnpm installs to work in CI
+						CI: undefined,
+					},
 				}
 			);
 			writeFileSync("static/.assetsignore", "_worker.js\n_routes.json");
