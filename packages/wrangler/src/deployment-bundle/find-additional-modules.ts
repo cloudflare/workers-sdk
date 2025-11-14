@@ -174,7 +174,7 @@ export async function findAdditionalModules(
 				await matchFiles(
 					pythonModulesFiles,
 					pythonModulesDir,
-					parseRules(vendoredRules)
+					{ rules: vendoredRules, removedRules: [] }
 				)
 			)
 				.filter((m) => {
