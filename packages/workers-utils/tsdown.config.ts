@@ -19,6 +19,7 @@ export default defineConfig([
 		outDir: "dist",
 		tsconfig: "tsconfig.json",
 		// metafile: true,
+		external: ["jsonc-parser"],
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		// mainFields: ["module", "main"],
 		define: {

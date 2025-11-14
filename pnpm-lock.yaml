@@ -3992,9 +3992,6 @@ importers:
       json-diff:
         specifier: ^1.0.6
         version: 1.0.6
-      jsonc-parser:
-        specifier: ^3.2.0
-        version: 3.2.0
       md5-file:
         specifier: 5.0.0
         version: 5.0.0

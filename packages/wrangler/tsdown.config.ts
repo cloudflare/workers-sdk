@@ -132,6 +132,9 @@ export default defineConfig((options) => [
 		tsconfig: "tsconfig.json",
 		metafile: true,
 		external: EXTERNAL_DEPENDENCIES,
+		banner: {
+			js: 'require("cloudflare/shims/web");',
+		},
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		fixedExtension: false,
 		define: {

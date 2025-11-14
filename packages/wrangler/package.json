@@ -135,7 +135,6 @@
 		"itty-time": "^1.0.6",
 		"javascript-time-ago": "^2.5.4",
 		"json-diff": "^1.0.6",
-		"jsonc-parser": "^3.2.0",
 		"md5-file": "5.0.0",
 		"mime": "^3.0.0",
 		"minimatch": "^5.1.0",
