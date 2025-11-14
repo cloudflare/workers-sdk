@@ -26,17 +26,31 @@ describe.runIf(!isBuild)("file changes", () => {
 	test("does not restart the dev server if the exports have not changed", async () => {
 		mockFileChange(
 			path.join(__dirname, "../src/index.ts"),
-			(content) => content
+			() => `
+import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
+
+export class MyWorkerEntrypoint extends WorkerEntrypoint {}
+
+export class MyDurableObject extends DurableObject {}
+
+export default {
+	fetch() {
+		return new Response("Updated file with the same exports");
+	}
+}
+			`
 		);
 
-		// Wait long enough to ensure that the server would have restarted if it was restarting
-		await new Promise((resolve) => setTimeout(resolve, 2000));
-
-		const logs = serverLogs.info.join();
-		expect(logs).not.toContain(
-			"Worker exports have changed. Restarting dev server."
-		);
-		expect(logs).not.toContain("server restarted");
+		await vi.waitFor(async () => {
+			const logs = serverLogs.info.join();
+			expect(logs).not.toContain(
+				"Worker exports have changed. Restarting dev server."
+			);
+			expect(logs).not.toContain("server restarted");
+			expect(await getTextResponse()).toBe(
+				"Updated file with the same exports"
+			);
+		}, WAIT_FOR_OPTIONS);
 	});
 
 	test("restarts dev server with updated exports when exports have changed", async () => {
@@ -47,7 +61,7 @@ import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 
 export class TestWorkerEntrypoint extends WorkerEntrypoint {
 	greet() {
-		return "Hello from an updated file";
+		return "Updated file with different exports";
 	}
 }
 
@@ -69,7 +83,9 @@ export default {
 				"Worker exports have changed. Restarting dev server."
 			);
 			expect(logs).toContain("server restarted");
-			expect(await getTextResponse()).toBe("Hello from an updated file");
+			expect(await getTextResponse()).toBe(
+				"Updated file with different exports"
+			);
 		}, WAIT_FOR_OPTIONS);
 	});
 });
