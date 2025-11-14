@@ -49,7 +49,6 @@ export class RemoteRuntimeController extends RuntimeController {
 
 	#latestConfig?: StartDevWorkerOptions;
 	#latestBundle?: Bundle;
-	#latestAuth?: CfAccount;
 	#latestRoutes?: Route[];
 
 	async #previewSession(
@@ -337,7 +336,6 @@ export class RemoteRuntimeController extends RuntimeController {
 			// Store for token refresh
 			this.#latestConfig = config;
 			this.#latestBundle = bundle;
-			this.#latestAuth = auth;
 			this.#latestRoutes = routes;
 
 			if (this.#session) {
@@ -362,7 +360,7 @@ export class RemoteRuntimeController extends RuntimeController {
 	}
 
 	async #refreshPreviewToken() {
-		if (!this.#latestConfig || !this.#latestBundle || !this.#latestAuth) {
+		if (!this.#latestConfig || !this.#latestBundle) {
 			logger.warn(
 				"Cannot refresh preview token: missing config or bundle data"
 			);
@@ -375,17 +373,24 @@ export class RemoteRuntimeController extends RuntimeController {
 			bundle: this.#latestBundle,
 		});
 
+		if (!this.#latestConfig.dev?.auth) {
+			// This shouldn't happen as it's checked earlier, but we guard against it anyway
+			throw new MissingConfigError("config.dev.auth");
+		}
+
+		const auth = await unwrapHook(this.#latestConfig.dev.auth);
+
 		try {
 			this.#session = await this.#getPreviewSession(
 				this.#latestConfig,
-				this.#latestAuth,
+				auth,
 				this.#latestRoutes
 			);
 
 			await this.#updatePreviewToken(
 				this.#latestConfig,
 				this.#latestBundle,
-				this.#latestAuth,
+				auth,
 				this.#latestRoutes,
 				this.#currentBundleId
 			);
