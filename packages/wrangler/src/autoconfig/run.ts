@@ -84,7 +84,7 @@ export async function runAutoConfig(
 	});
 
 	if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
-		throw new FatalError("Autoconfig process aborted");
+		throw new FatalError("Setup cancelled");
 	}
 
 	if (dryRun) {
