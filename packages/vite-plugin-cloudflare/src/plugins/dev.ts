@@ -113,7 +113,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						if (req[kRequestType] === "asset") {
 							next();
 						} else if (excludeRulesMatcher({ request })) {
-							req[kRequestType] === "asset";
+							req[kRequestType] = "asset";
 							next();
 						} else if (includeRulesMatcher({ request })) {
 							userWorkerHandler(req, res, next);
