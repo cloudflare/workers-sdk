@@ -3,4 +3,4 @@
 "wrangler": minor
 ---
 
-Add unsafe.containers to allow internal users to use additional container features
+Add `containers.unsafe` to allow internal users to use additional container features
