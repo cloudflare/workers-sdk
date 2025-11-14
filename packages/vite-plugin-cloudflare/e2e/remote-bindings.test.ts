@@ -25,7 +25,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 				"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": `preserve-e2e-vite-remote-alt`,
 			};
 
-			const projectPath = seed("remote-bindings", "pnpm", replacements);
+			const projectPath = seed("remote-bindings", { pm: "pnpm", replacements });
 
 			beforeAll(async () => {
 				try {
@@ -140,7 +140,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 }
 
 describe("remote bindings disabled", () => {
-	const projectPath = seed("remote-bindings-disabled", "pnpm");
+	const projectPath = seed("remote-bindings-disabled", { pm: "pnpm" });
 
 	describe.each(commands)('with "%s" command', (command) => {
 		// On Windows the path for the miniflare dependency gets pretty long and this fails in node < 22.7
