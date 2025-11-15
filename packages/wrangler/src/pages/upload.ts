@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { setTimeout } from "node:timers/promises";
 import { spinner } from "@cloudflare/cli/interactive";
 import { APIError, FatalError } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
@@ -131,9 +132,7 @@ export const upload = async (
 		} catch (e) {
 			if (attempts < MAX_CHECK_MISSING_ATTEMPTS) {
 				// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
-				await new Promise((resolvePromise) =>
-					setTimeout(resolvePromise, Math.pow(2, attempts++) * 1000)
-				);
+				await setTimeout(Math.pow(2, attempts++) * 1_000);
 
 				if (
 					(e as { code: number }).code === ApiErrorCodes.UNAUTHORIZED ||
@@ -238,16 +237,12 @@ export const upload = async (
 				if (attempts < MAX_UPLOAD_ATTEMPTS) {
 					logger.debug("failed:", e, "retrying...");
 					// Exponential backoff, 1 second first time, then 2 second, then 4 second etc.
-					await new Promise((resolvePromise) =>
-						setTimeout(resolvePromise, Math.pow(2, attempts) * 1000)
-					);
+					await setTimeout(Math.pow(2, attempts) * 1_000);
 
 					if (e instanceof APIError && e.isGatewayError()) {
 						// Gateway problem, wait for some additional time and set concurrency to 1
 						queue.concurrency = 1;
-						await new Promise((resolvePromise) =>
-							setTimeout(resolvePromise, Math.pow(2, gatewayErrors) * 5000)
-						);
+						await setTimeout(Math.pow(2, gatewayErrors) * 5_000);
 
 						gatewayErrors++;
 
@@ -328,7 +323,7 @@ export const upload = async (
 				}
 			);
 		} catch (e) {
-			await new Promise((resolvePromise) => setTimeout(resolvePromise, 1000));
+			await setTimeout(1_000);
 
 			if (
 				(e as { code: number }).code === ApiErrorCodes.UNAUTHORIZED ||

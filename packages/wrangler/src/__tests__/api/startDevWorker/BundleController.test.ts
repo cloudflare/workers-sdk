@@ -1,3 +1,4 @@
+import { setTimeout } from "node:timers/promises";
 import path from "path";
 import dedent from "ts-dedent";
 import { describe, test } from "vitest";
@@ -254,7 +255,7 @@ describe("BundleController", () => {
 				`);
 
 			// Wait for a bit before we make a new change to the watched file
-			await sleep(500);
+			await setTimeout(500);
 
 			await seed({
 				"random_dir/index.ts": dedent/* javascript */ `
@@ -615,7 +616,3 @@ describe("BundleController", () => {
 		});
 	});
 });
-
-function sleep(ms: number) {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
