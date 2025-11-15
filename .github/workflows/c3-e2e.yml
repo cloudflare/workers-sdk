@@ -110,6 +110,9 @@ jobs:
           git config --global user.email wrangler@cloudflare.com
           git config --global user.name 'Wrangler Tester'
 
+      - name: Check current disk space
+        run: df -h
+
       - id: run-e2e
         if: steps.changes.outputs.everything_but_markdown == 'true'
         shell: bash
