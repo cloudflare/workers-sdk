@@ -21,23 +21,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        experimental: [true, false]
-        os:
-          [
-            { name: windows-latest, description: Windows },
-            { name: ubuntu-latest, description: Linux },
-          ]
-        pm:
-          [
-            { name: npm, version: "0.0.0" },
-            { name: yarn, version: "1.0.0" },
-            { name: pnpm, version: "9.12.0" },
-          ]
-        exclude:
+        # There are no real experimental tests to run right now so let's save resources by not creating jobs for them
+        # The yarn tests keep failing on Linux with out of space errors, with no clear reason why. Disabling for now.
+        include:
           - os: { name: windows-latest, description: Windows }
+            pm: { name: pnpm, version: "9.12.0" }
+            experimental: false
+          - os: { name: ubuntu-latest, description: Linux }
             pm: { name: npm, version: "0.0.0" }
-          - os: { name: windows-latest, description: Windows }
-            pm: { name: yarn, version: "1.0.0" }
+            experimental: false
+          # - os: { name: ubuntu-latest, description: Linux }
+          #   pm: { name: yarn, version: "1.0.0" }
+          #   experimental: false
+          - os: { name: ubuntu-latest, description: Linux }
+            pm: { name: pnpm, version: "9.12.0" }
+            experimental: false
     runs-on: ${{ matrix.os.name }}
     steps:
       - name: Checkout Repo
@@ -91,7 +89,7 @@ jobs:
 
       - name: Upload Logs
         uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() || steps.changes.outputs.everything_but_markdown == 'true' }}
+        if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
           name: ${{ format('e2e-logs-{0}-{1}-{2}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
           path: packages/create-cloudflare/.e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}
@@ -99,7 +97,7 @@ jobs:
 
       - name: Upload Turbo Summary
         uses: actions/upload-artifact@v4
-        if: ${{ !cancelled() || steps.changes.outputs.everything_but_markdown == 'true' }}
+        if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
           name: ${{ format('turbo-runs-{0}-{1}-{2}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
           path: .turbo/runs
