@@ -23,11 +23,7 @@ describe("r2", () => {
 					`[Error: The specified key does not exist.]`
 				);
 
-				fs.writeFileSync("wormhole-img.png", "passageway");
-				await runWrangler(
-					`r2 object put bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
-				);
-				expect(std.out).toMatchInlineSnapshot(`
+				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -36,8 +32,16 @@ describe("r2", () => {
 					Use --remote if you want to access the remote instance.
 
 					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+					"
+				`);
 
+				fs.writeFileSync("wormhole-img.png", "passageway");
+				await runWrangler(
+					`r2 object put bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
+				);
 
+				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
@@ -51,26 +55,8 @@ describe("r2", () => {
 				await runWrangler(
 					`r2 object get bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
-				expect(std.out).toMatchInlineSnapshot(`
+				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Resource location: local
-
-					Use --remote if you want to access the remote instance.
-
-					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
-
-
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Resource location: local
-
-					Use --remote if you want to access the remote instance.
-
-					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
-					Upload complete.
-
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
@@ -209,11 +195,7 @@ describe("r2", () => {
 					`r2 object put bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
-
-				await runWrangler(
-					`r2 object get bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
-				);
-				expect(std.out).toMatchInlineSnapshot(`
+				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -222,8 +204,14 @@ describe("r2", () => {
 					Use --remote if you want to access the remote instance.
 
 					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
-					Upload complete.
+					Upload complete."
+				`);
 
+				await runWrangler(
+					`r2 object get bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
+				);
+				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
@@ -237,26 +225,9 @@ describe("r2", () => {
 				await runWrangler(
 					`r2 object delete bucket-object-test/wormhole-img.png `
 				);
-				expect(std.out).toMatchInlineSnapshot(`
+
+				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
 					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Resource location: local
-
-					Use --remote if you want to access the remote instance.
-
-					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
-					Upload complete.
-
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Resource location: local
-
-					Use --remote if you want to access the remote instance.
-
-					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
-					Download complete.
-
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local
@@ -282,9 +253,33 @@ describe("r2", () => {
 					`r2 object put bucket-object-test/file-one --file ./wormhole-img.png `
 				);
 
+				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: local
+
+					Use --remote if you want to access the remote instance.
+
+					Creating object \\"file-one\\" in bucket \\"bucket-object-test\\".
+					Upload complete."
+				`);
+
 				await runWrangler(
 					`r2 object put bucket-object-test/file-two --file ./wormhole-img.png  --persist-to ./different-dir`
 				);
+
+				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: local
+
+					Use --remote if you want to access the remote instance.
+
+					Creating object \\"file-two\\" in bucket \\"bucket-object-test\\".
+					Upload complete."
+				`);
 
 				await expect(() =>
 					runWrangler(
@@ -294,10 +289,7 @@ describe("r2", () => {
 					`[Error: The specified key does not exist.]`
 				);
 
-				await runWrangler(
-					`r2 object get bucket-object-test/file-two --file ./wormhole-img.png  --persist-to ./different-dir`
-				);
-				expect(std.out).toMatchInlineSnapshot(`
+				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -305,27 +297,16 @@ describe("r2", () => {
 
 					Use --remote if you want to access the remote instance.
 
-					Creating object \\"file-one\\" in bucket \\"bucket-object-test\\".
-					Upload complete.
-
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Resource location: local
-
-					Use --remote if you want to access the remote instance.
-
-					Creating object \\"file-two\\" in bucket \\"bucket-object-test\\".
-					Upload complete.
-
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Resource location: local
-
-					Use --remote if you want to access the remote instance.
-
 					Downloading \\"file-one\\" from \\"bucket-object-test\\".
+					"
+				`);
 
+				await runWrangler(
+					`r2 object get bucket-object-test/file-two --file ./wormhole-img.png  --persist-to ./different-dir`
+				);
 
+				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Resource location: local

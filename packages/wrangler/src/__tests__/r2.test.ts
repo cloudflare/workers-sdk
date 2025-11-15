@@ -1,5 +1,4 @@
 import * as fs from "node:fs";
-import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
 import { MAX_UPLOAD_SIZE_BYTES } from "../r2/constants";
 import { actionsForEventCategories } from "../r2/helpers/notification";
@@ -3076,7 +3075,7 @@ describe("r2", () => {
 						],
 					};
 
-					writeFileSync(filePath, JSON.stringify(lifecycleRules));
+					fs.writeFileSync(filePath, JSON.stringify(lifecycleRules));
 
 					setIsTTY(true);
 					mockConfirm({
@@ -3181,7 +3180,7 @@ describe("r2", () => {
 						],
 					};
 
-					writeFileSync(filePath, JSON.stringify(corsRules));
+					fs.writeFileSync(filePath, JSON.stringify(corsRules));
 
 					setIsTTY(true);
 					mockConfirm({
@@ -3699,7 +3698,7 @@ describe("r2", () => {
 						],
 					};
 
-					writeFileSync(filePath, JSON.stringify(lockRules));
+					fs.writeFileSync(filePath, JSON.stringify(lockRules));
 					mockConfirm({
 						text: `Are you sure you want to overwrite all existing lock rules for bucket '${bucketName}'?`,
 						options: { defaultValue: true },
