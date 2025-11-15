@@ -1,4 +1,6 @@
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { resolve } from "node:path";
 import { stripAnsi } from "@cloudflare/cli";
 import { version } from "../../package.json";
 import { keys } from "./constants";
@@ -194,5 +196,11 @@ export const runC3 = async (
 		}
 	};
 
-	return waitForExit(proc, onData);
+	const result = await waitForExit(proc, onData);
+	// eslint-disable-next-line no-console
+	console.log("Cleaning up temporary files...");
+	await rm(resolve(tmpdir(), "*"), { recursive: true, force: true });
+	// eslint-disable-next-line no-console
+	console.log("Cleaned up temporary files.");
+	return result;
 };

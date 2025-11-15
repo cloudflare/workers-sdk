@@ -19,6 +19,7 @@ class TestRunner {
 			console.log(
 				`::group::${description} (${testPackageManager}${testPackageManagerVersion ? `@${testPackageManagerVersion}` : ""}${isExperimental ? " / experimental" : ""})`,
 			);
+			if (process.platform !== "win32") execSync("df -h", { stdio: "inherit" });
 			execSync(
 				`pnpm turbo test:e2e --log-order=stream --output-logs=new-only --summarize --filter=create-cloudflare -- ${testFilter}`,
 				{
