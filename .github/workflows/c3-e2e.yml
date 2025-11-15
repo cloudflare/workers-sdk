@@ -60,7 +60,7 @@ jobs:
         os:
           [
             { name: windows-latest, description: Windows },
-            { name: ubuntu-latest, description: Linux },
+            { name: ubuntu-22, description: Linux },
           ]
         pm:
           [
