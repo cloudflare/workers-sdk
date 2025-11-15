@@ -32,6 +32,16 @@ const std = {
 	get warn() {
 		return normalizeOutput(warnSpy);
 	},
+	/**
+	 * Return the content of the mocked stdout and clear the mock's history.
+	 *
+	 * Helpful for tests that need to assert on multiple sequential console outputs.
+	 */
+	getOutAndClear() {
+		const output = normalizeOutput(logSpy);
+		logSpy.mockClear();
+		return output;
+	},
 };
 
 function normalizeOutput(spy: MockInstance, join = "\n"): string {

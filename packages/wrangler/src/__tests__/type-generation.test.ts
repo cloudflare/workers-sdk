@@ -1264,8 +1264,9 @@ describe("generate types", () => {
 			"
 		`);
 		// Verify that .dev.vars secrets are NOT included
-		expect(std.out).not.toContain("SECRET_FROM_DEV_VARS");
-		expect(std.out).not.toContain("ANOTHER_SECRET");
+		const out = std.out;
+		expect(out).not.toContain("SECRET_FROM_DEV_VARS");
+		expect(out).not.toContain("ANOTHER_SECRET");
 	});
 
 	it("should include secret keys from .env, if there is no .dev.vars", async () => {
