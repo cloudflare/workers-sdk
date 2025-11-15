@@ -588,9 +588,23 @@ describe.each([{ cmd: "wrangler dev" }])(
 
 describe("hyperdrive dev tests", () => {
 	let server: nodeNet.Server;
+	const sslRequestPacket = Buffer.from([
+		0x00, 0x00, 0x00, 0x08, 0x04, 0xd2, 0x16, 0x2f,
+	]);
 
 	beforeEach(async () => {
-		server = nodeNet.createServer().listen();
+		server = nodeNet
+			.createServer((socket) => {
+				socket.on("data", (chunk) => {
+					if (sslRequestPacket.equals(chunk)) {
+						socket.write("N");
+					} else {
+						// echo back result
+						socket.write(chunk);
+					}
+				});
+			})
+			.listen();
 	});
 
 	it("matches expected configuration parameters", async () => {
@@ -677,9 +691,13 @@ describe("hyperdrive dev tests", () => {
 					`,
 		});
 		const socketMsgPromise = new Promise((resolve, _) => {
-			server.on("connection", (sock) => {
-				sock.on("data", (data) => {
-					expect(new TextDecoder().decode(data)).toBe("test string");
+			server.on("connection", (socket) => {
+				socket.on("data", (chunk) => {
+					if (chunk.equals(sslRequestPacket)) {
+						socket.write("N");
+						return;
+					}
+					expect(new TextDecoder().decode(chunk)).toBe("test string");
 					server.close();
 					resolve({});
 				});
@@ -739,9 +757,13 @@ describe("hyperdrive dev tests", () => {
 
 		const { url } = await worker.waitForReady();
 		const socketMsgPromise = new Promise((resolve, _) => {
-			server.on("connection", (sock) => {
-				sock.on("data", (data) => {
-					expect(new TextDecoder().decode(data)).toBe("test string");
+			server.on("connection", (socket) => {
+				socket.on("data", (chunk) => {
+					if (sslRequestPacket.equals(chunk)) {
+						socket.write("N");
+						return;
+					}
+					expect(new TextDecoder().decode(chunk)).toBe("test string");
 					server.close();
 					resolve({});
 				});

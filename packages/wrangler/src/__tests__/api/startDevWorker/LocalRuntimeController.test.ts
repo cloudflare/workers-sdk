@@ -1047,9 +1047,21 @@ describe("LocalRuntimeController", () => {
 			expect(res.status).toBe(204);
 			expect(await reportPromise).toEqual(["message"]);
 		});
-		it("should expose hyperdrive bindings", async () => {
-			// Start echo TCP server
-			const server = net.createServer((socket) => socket.pipe(socket));
+		it("should expose hyperdrive bindings - default", async () => {
+			// Start TCP echo server
+			const sslRequestPacket = Buffer.from([
+				0x00, 0x00, 0x00, 0x08, 0x04, 0xd2, 0x16, 0x2f,
+			]);
+			const server = net.createServer((socket) => {
+				socket.on("data", (chunk) => {
+					if (sslRequestPacket.equals(chunk)) {
+						socket.write("N");
+					} else {
+						// echo back result
+						socket.write(chunk);
+					}
+				});
+			});
 			const listeningPromise = events.once(server, "listening");
 			server.listen(0, "127.0.0.1");
 			teardown(() => util.promisify(server.close.bind(server))());
@@ -1072,14 +1084,19 @@ describe("LocalRuntimeController", () => {
 				},
 			};
 			const bundle = makeEsbuildBundle(`export default {
-			async fetch(request, env, ctx) {
-				const socket = env.DB.connect();
-				const writer = socket.writable.getWriter();
-				await writer.write(new TextEncoder().encode("👋"));
-				await writer.close();
-				return new Response(socket.readable);
-			}
-		}`);
+				async fetch(request, env, ctx) {
+					const socket = env.DB.connect();
+					const writer = socket.writable.getWriter();
+					await writer.write(new TextEncoder().encode("👋"));
+
+					// wait for response from proxy instead of reading immmediately from read stream
+					const reader = socket.readable.getReader();
+					const { value } = await reader.read();
+
+					writer.close();
+					return new Response(value);
+				}
+			}`);
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -1094,6 +1111,143 @@ describe("LocalRuntimeController", () => {
 			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(res.status).toBe(200);
 			expect(await res.text()).toBe("👋");
+		});
+		it("should expose hyperdrive bindings - sslmode 'prefer'", async () => {
+			// Start TCP echo server
+			const sslRequestPacket = Buffer.from([
+				0x00, 0x00, 0x00, 0x08, 0x04, 0xd2, 0x16, 0x2f,
+			]);
+			const server = net.createServer((socket) => {
+				socket.on("data", (chunk) => {
+					if (sslRequestPacket.equals(chunk)) {
+						socket.write("N");
+					} else {
+						// echo back result
+						socket.write(chunk);
+					}
+				});
+			});
+			const listeningPromise = events.once(server, "listening");
+			server.listen(0, "127.0.0.1");
+			teardown(() => util.promisify(server.close.bind(server))());
+			await listeningPromise;
+			const address = server.address();
+			assert(typeof address === "object" && address !== null);
+			const port = address.port;
+
+			// Start runtime with hyperdrive binding
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const localConnectionString = `postgres://username:password@127.0.0.1:${port}/db?sslmode=prefer`;
+			const config: Partial<StartDevWorkerOptions> = {
+				name: "worker",
+				entrypoint: "NOT_REAL",
+				bindings: {
+					DB: { type: "hyperdrive", id: "db", localConnectionString },
+				},
+			};
+			const bundle = makeEsbuildBundle(`export default {
+				async fetch(request, env, ctx) {
+					const socket = env.DB.connect();
+					const writer = socket.writable.getWriter();
+					await writer.write(new TextEncoder().encode("👋"));
+
+					// wait for response from proxy instead of reading immmediately from read stream
+					const reader = socket.readable.getReader();
+					const { value } = await reader.read();
+
+					await writer.close();
+					return new Response(value);
+				}
+			}`);
+			controller.onBundleStart({
+				type: "bundleStart",
+				config: configDefaults(config),
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config: configDefaults(config),
+				bundle,
+			});
+
+			const event = await bus.waitFor("reloadComplete");
+			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
+			expect(res.status).toBe(200);
+			expect(await res.text()).toBe("👋");
+		});
+		it("should expose hyperdrive bindings - sslmode 'require' fails", async () => {
+			// Start TCP echo server
+			const sslRequestPacket = Buffer.from([
+				0x00, 0x00, 0x00, 0x08, 0x04, 0xd2, 0x16, 0x2f,
+			]);
+			const server = net.createServer((socket) => {
+				socket.on("data", (chunk) => {
+					if (sslRequestPacket.equals(chunk)) {
+						socket.write("N");
+					} else {
+						// echo back result
+						socket.write(chunk);
+					}
+				});
+			});
+			const listeningPromise = events.once(server, "listening");
+			server.listen(0, "127.0.0.1");
+			teardown(() => util.promisify(server.close.bind(server))());
+			await listeningPromise;
+			const address = server.address();
+			assert(typeof address === "object" && address !== null);
+			const port = address.port;
+
+			// Start runtime with hyperdrive binding
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const localConnectionString = `postgres://username:password@127.0.0.1:${port}/db?sslmode=require`;
+			const config: Partial<StartDevWorkerOptions> = {
+				name: "worker",
+				entrypoint: "NOT_REAL",
+				bindings: {
+					DB: { type: "hyperdrive", id: "db", localConnectionString },
+				},
+			};
+			const bundle = makeEsbuildBundle(`export default {
+				async fetch(request, env, ctx) {
+					const socket = env.DB.connect();
+					const writer = socket.writable.getWriter();
+					await writer.write(new TextEncoder().encode("👋"));
+
+					const reader = socket.readable.getReader();
+					const { value } = await reader.read();
+
+					if (value) {
+						const text = new TextDecoder().decode(value);
+						throw new Error(text);
+					}
+
+					await writer.close();
+					return new Response(value);
+				}
+			}`);
+			controller.onBundleStart({
+				type: "bundleStart",
+				config: configDefaults(config),
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config: configDefaults(config),
+				bundle,
+			});
+
+			const event = await bus.waitFor("reloadComplete");
+			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
+			expect(res.status).toBe(500);
+			const errorText = await res.text();
+			expect(errorText).toContain(
+				"Error: Server does not support SSL, but client requires SSL"
+			);
 		});
 	});
 });

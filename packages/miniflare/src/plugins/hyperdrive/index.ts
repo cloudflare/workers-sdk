@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { z } from "zod";
-import { Service, Worker_Binding } from "../../runtime";
+import { Worker_Binding } from "../../runtime";
 import { Plugin, ProxyNodeBinding } from "../shared";
 
 export const HYPERDRIVE_PLUGIN_NAME = "hyperdrive";
@@ -115,15 +115,60 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 			})
 		);
 	},
-	async getServices({ options }) {
-		return Object.entries(options.hyperdrives ?? {}).map<Service>(
-			([name, url]) => ({
+	async getServices({ options, hyperdriveProxyController }) {
+		const services = [];
+		for (const [name, url] of Object.entries(options.hyperdrives ?? {})) {
+			const scheme = url.protocol.replace(":", "");
+
+			const proxyPort = await hyperdriveProxyController.createProxyServer(
+				name,
+				url.hostname,
+				getPort(url),
+				scheme,
+				parseSslMode(url, scheme)
+			);
+			services.push({
 				name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
 				external: {
-					address: `${url.hostname}:${getPort(url)}`,
+					address: `localhost:${proxyPort}`,
 					tcp: {},
 				},
-			})
-		);
+			});
+		}
+		return services;
 	},
 };
+
+function parseSslMode(url: URL, scheme: string): string {
+	if (scheme === "postgres" || scheme === "postgresql") {
+		return url.searchParams.get("sslmode") || "disable"; // disable is default
+	} else if (scheme === "mysql") {
+		// Parse different variations for mysql sslmode
+		const sslMode =
+			url.searchParams.get("ssl-mode") ||
+			url.searchParams.get("ssl") ||
+			url.searchParams.get("sslmode");
+
+		// Normalize to postgres values
+		if (
+			sslMode?.toLowerCase() === "required" ||
+			sslMode === "true" ||
+			sslMode === "1"
+		) {
+			return "require";
+		} else if (
+			sslMode === "DISABLED" ||
+			sslMode === "false" ||
+			sslMode === "0"
+		) {
+			return "disable";
+		} else if (sslMode?.toLocaleLowerCase() === "preferred") {
+			return "prefer";
+		}
+	}
+
+	// default to disable
+	return "disable";
+}
+
+export { HyperdriveProxyController } from "./hyperdrive-proxy";
