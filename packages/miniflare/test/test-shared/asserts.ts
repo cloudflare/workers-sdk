@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { setTimeout as sleep } from "node:timers/promises";
+import { setTimeout } from "node:timers/promises";
 import { ExecutionContext } from "ava";
 import { Awaitable } from "miniflare";
 
@@ -59,7 +59,7 @@ export async function waitFor<T>(
 				throw error;
 			}
 		}
-		await sleep(100);
+		await setTimeout(100);
 	}
 }
 
@@ -79,6 +79,6 @@ export async function waitUntil(
 		}
 
 		result.discard();
-		await sleep(100);
+		await setTimeout(100);
 	}
 }

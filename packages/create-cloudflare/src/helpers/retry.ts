@@ -1,4 +1,4 @@
-import { sleep } from "./sleep";
+import { setTimeout } from "node:timers/promises";
 
 type RetryConfig = {
 	times: number;
@@ -37,7 +37,7 @@ export const retry = async <T>(config: RetryConfig, fn: () => Promise<T>) => {
 			if (config.exitCondition?.(e)) {
 				break;
 			}
-			await sleep(config.sleepMs ?? 1000);
+			await setTimeout(config.sleepMs ?? 1_000);
 		}
 	}
 	throw error;
