@@ -1,6 +1,7 @@
 import { Analog } from "./analog";
 import { Angular } from "./angular";
 import { Astro } from "./astro";
+import { NextJs } from "./next";
 import { Nuxt } from "./nuxt";
 import { Qwik } from "./qwik";
 import { ReactRouter } from "./react-router";
@@ -36,6 +37,8 @@ export function getFramework(detectedFramework?: {
 			return new Vite(detectedFramework.name);
 		case "analog":
 			return new Analog(detectedFramework.name);
+		case "next":
+			return new NextJs(detectedFramework.name);
 		default:
 			return new Static(detectedFramework?.name);
 	}

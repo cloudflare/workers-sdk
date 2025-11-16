@@ -32,6 +32,7 @@ import workflowsTemplate from "templates/hello-world-workflows/c3";
 import helloWorldWorkerTemplate from "templates/hello-world/c3";
 import honoTemplate from "templates/hono/c3";
 import nextTemplate from "templates/next/c3";
+import nextExperimentalTemplate from "templates/next/experimental_c3";
 import nuxtTemplate from "templates/nuxt/c3";
 import openapiTemplate from "templates/openapi/c3";
 import preExistingTemplate from "templates/pre-existing/c3";
@@ -251,6 +252,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			svelte: svelteTemplate,
 			"tanstack-start": tanStackStartTemplate,
 			vue: vueTemplate,
+			next: nextExperimentalTemplate,
 		};
 	} else {
 		return {

@@ -19,6 +19,7 @@ export type ConfigurationResults = {
 	wranglerConfig: RawConfig;
 	// Scripts to override in the package.json. Most frameworks should not need to do this, as their default detected build command will be sufficient
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides;
+	buildCommand?: string;
 };
 
 export abstract class Framework {
