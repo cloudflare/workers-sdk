@@ -713,7 +713,7 @@ describe("metrics", () => {
 					},
 				});
 				await runWrangler(`${cmd} status`);
-				const out = std.getOutAndClear();
+				const out = std.getAndClearOut();
 				expect(out).toContain("Status: Enabled");
 				expect(out).not.toContain("Status: Disabled");
 				writeMetricsConfig({

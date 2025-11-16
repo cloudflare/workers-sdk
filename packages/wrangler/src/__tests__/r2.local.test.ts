@@ -23,7 +23,7 @@ describe("r2", () => {
 					`[Error: The specified key does not exist.]`
 				);
 
-				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -40,7 +40,7 @@ describe("r2", () => {
 					`r2 object put bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
 
-				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -55,7 +55,7 @@ describe("r2", () => {
 				await runWrangler(
 					`r2 object get bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
-				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -195,7 +195,7 @@ describe("r2", () => {
 					`r2 object put bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
-				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -210,7 +210,7 @@ describe("r2", () => {
 				await runWrangler(
 					`r2 object get bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
 				);
-				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -226,7 +226,7 @@ describe("r2", () => {
 					`r2 object delete bucket-object-test/wormhole-img.png `
 				);
 
-				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -253,7 +253,7 @@ describe("r2", () => {
 					`r2 object put bucket-object-test/file-one --file ./wormhole-img.png `
 				);
 
-				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -269,7 +269,7 @@ describe("r2", () => {
 					`r2 object put bucket-object-test/file-two --file ./wormhole-img.png  --persist-to ./different-dir`
 				);
 
-				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -289,7 +289,7 @@ describe("r2", () => {
 					`[Error: The specified key does not exist.]`
 				);
 
-				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
@@ -305,7 +305,7 @@ describe("r2", () => {
 					`r2 object get bucket-object-test/file-two --file ./wormhole-img.png  --persist-to ./different-dir`
 				);
 
-				expect(std.getOutAndClear()).toMatchInlineSnapshot(`
+				expect(std.getAndClearOut()).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
 					──────────────────
