@@ -1,4 +1,4 @@
-name: E2E
+name: C3 E2E
 on:
   merge_group:
   pull_request:
