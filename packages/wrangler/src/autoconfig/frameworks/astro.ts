@@ -3,14 +3,13 @@ import { brandColor, dim } from "@cloudflare/cli/colors";
 import { getPackageManager } from "../../package-manager";
 import { runCommand } from "../c3-vendor/command";
 import { Framework } from ".";
-import type { ConfigurationOptions } from ".";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { ConfigurationOptions, ConfigurationResults } from ".";
 
 export class Astro extends Framework {
 	async configure({
 		outputDir,
 		dryRun,
-	}: ConfigurationOptions): Promise<RawConfig> {
+	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const { npx } = await getPackageManager();
 		if (!dryRun) {
 			await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
@@ -23,11 +22,13 @@ export class Astro extends Framework {
 			writeFileSync("public/.assetsignore", "_worker.js\n_routes.json");
 		}
 		return {
-			main: `${outputDir}/_worker.js/index.js`,
-			compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
-			assets: {
-				binding: "ASSETS",
-				directory: outputDir,
+			wranglerConfig: {
+				main: `${outputDir}/_worker.js/index.js`,
+				compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
+				assets: {
+					binding: "ASSETS",
+					directory: outputDir,
+				},
 			},
 		};
 	}

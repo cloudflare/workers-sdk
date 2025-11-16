@@ -6,8 +6,7 @@ import * as recast from "recast";
 import { transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
 import { Framework } from ".";
-import type { ConfigurationOptions } from ".";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { ConfigurationOptions, ConfigurationResults } from ".";
 import type { types } from "recast";
 
 const b = recast.types.builders;
@@ -128,7 +127,7 @@ export class TanstackStart extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
-	}: ConfigurationOptions): Promise<RawConfig> {
+	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
 			await installPackages(["@cloudflare/vite-plugin"], {
 				dev: true,
@@ -140,8 +139,10 @@ export class TanstackStart extends Framework {
 		}
 
 		return {
-			compatibility_flags: ["nodejs_compat"],
-			main: "@tanstack/react-start/server-entry",
+			wranglerConfig: {
+				compatibility_flags: ["nodejs_compat"],
+				main: "@tanstack/react-start/server-entry",
+			},
 		};
 	}
 

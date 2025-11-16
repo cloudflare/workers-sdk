@@ -103,7 +103,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				buildCommand: "astro build",
 				framework: {
 					configured: false,
-					configure: () => ({}),
+					configure: () => ({ wranglerConfig: {} }),
 					name: "astro",
 				},
 				outputDir: "<OUTPUT_DIR>",

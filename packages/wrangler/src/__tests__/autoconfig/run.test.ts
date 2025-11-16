@@ -150,7 +150,9 @@ describe("autoconfig (deploy)", () => {
 			});
 			await writeFile(".gitignore", "");
 			const configureSpy = vi.fn(async ({ outputDir }) => ({
-				assets: { directory: outputDir },
+				wranglerConfig: {
+					assets: { directory: outputDir },
+				},
 			}));
 			await run.runAutoConfig({
 				projectPath: process.cwd(),

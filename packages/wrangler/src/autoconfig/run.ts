@@ -73,14 +73,17 @@ export async function runAutoConfig(
 		},
 	} satisfies RawConfig;
 
-	const modifications = await buildOperationsSummary(autoConfigDetails, {
-		...wranglerConfig,
-		...(await autoConfigDetails.framework?.configure({
+	const dryRunConfigurationResults =
+		await autoConfigDetails.framework?.configure({
 			outputDir: autoConfigDetails.outputDir,
 			projectPath: autoConfigDetails.projectPath,
 			workerName: autoConfigDetails.workerName,
 			dryRun: true,
-		})),
+		});
+
+	const modifications = await buildOperationsSummary(autoConfigDetails, {
+		...wranglerConfig,
+		...dryRunConfigurationResults?.wranglerConfig,
 	});
 
 	if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
@@ -99,10 +102,6 @@ export async function runAutoConfig(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (modifications.wranglerInstall) {
-		await installWrangler();
-	}
-
 	if (autoConfigDetails.packageJson) {
 		await writeFile(
 			resolve(autoConfigDetails.projectPath, "package.json"),
@@ -119,17 +118,24 @@ export async function runAutoConfig(
 			)
 		);
 	}
-	const additionalConfigDetails =
-		(await autoConfigDetails.framework?.configure({
-			outputDir: autoConfigDetails.outputDir,
-			projectPath: autoConfigDetails.projectPath,
-			workerName: autoConfigDetails.workerName,
-			dryRun: false,
-		})) ?? {};
+
+	if (modifications.wranglerInstall) {
+		await installWrangler();
+	}
+	const configurationResults = await autoConfigDetails.framework?.configure({
+		outputDir: autoConfigDetails.outputDir,
+		projectPath: autoConfigDetails.projectPath,
+		workerName: autoConfigDetails.workerName,
+		dryRun: false,
+	});
 
 	await writeFile(
 		resolve(autoConfigDetails.projectPath, "wrangler.jsonc"),
-		JSON.stringify({ ...wranglerConfig, ...additionalConfigDetails }, null, 2)
+		JSON.stringify(
+			{ ...wranglerConfig, ...configurationResults?.wranglerConfig },
+			null,
+			2
+		)
 	);
 
 	addWranglerToGitIgnore(autoConfigDetails.projectPath);

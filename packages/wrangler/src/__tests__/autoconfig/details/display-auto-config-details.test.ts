@@ -35,7 +35,11 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			configured: false,
 			projectPath: process.cwd(),
 			workerName: "my-astro-app",
-			framework: { name: "Astro", configured: false, configure: () => ({}) },
+			framework: {
+				name: "Astro",
+				configured: false,
+				configure: () => ({ wranglerConfig: {} }),
+			},
 			buildCommand: "astro build",
 			outputDir: "dist",
 		});
