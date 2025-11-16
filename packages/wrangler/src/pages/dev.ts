@@ -880,6 +880,7 @@ export const Handler = async (args: PagesDevArguments) => {
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: false,
 			ASSETS_RPC: false,
+			REALISH_TAIL_LOGS: false,
 		},
 		() =>
 			startDev({
@@ -960,6 +961,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				siteExclude: undefined,
 				inspect: undefined,
 				experimentalAssetsRpc: false,
+				experimentalTailLogs: false,
 			})
 	);
 

@@ -5,6 +5,7 @@ export type ExperimentalFlags = {
 	MULTIWORKER: boolean;
 	RESOURCES_PROVISION: boolean;
 	ASSETS_RPC: boolean;
+	REALISH_TAIL_LOGS: boolean;
 };
 
 const flags = new AsyncLocalStorage<ExperimentalFlags>();
