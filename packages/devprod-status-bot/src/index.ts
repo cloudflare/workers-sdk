@@ -1,3 +1,4 @@
+import dedent from "ts-dedent";
 import type {
 	IssueCommentEvent,
 	IssuesEvent,
@@ -76,51 +77,50 @@ async function checkForSecurityIssue(
 		return null;
 	}
 
-	const prompt = `
-## System Role:
-You are an expert Security Triage Analyst and a software developer with deep knowledge of Common Weakness Enumeration (CWE) and security best practices. Your task is to analyze a GitHub Issue and determine the likelihood that it is reporting a genuine security vulnerability or exploit (not just a functional bug).
+	const prompt = dedent`
+		## System Role:
+		You are an expert Security Triage Analyst and a software developer with deep knowledge of Common Weakness Enumeration (CWE) and security best practices. Your task is to analyze a GitHub Issue and determine the likelihood that it is reporting a genuine security vulnerability or exploit (not just a functional bug).
 
-## Task
-Analyze the provided GitHub Issue details (Title, Body, Comments, Labels) and classify it into one of two categories: "SECURITY VULNERABILITY" or "GENERAL BUG/FEATURE".
+		## Task
+		Analyze the provided GitHub Issue details (Title, Body, Comments, Labels) and classify it into one of two categories: "SECURITY VULNERABILITY" or "GENERAL BUG/FEATURE".
 
-## Analysis Guidelines
-Focus your analysis on identifying language, context, and details indicative of a security report. Key indicators include, but are not limited to:
-- Impact: Does the issue describe a potential compromise of Confidentiality, Integrity, or Availability (CIA)? (e.g., unauthorized access, data loss, denial of service).
-- Vulnerability Types: Mentions of common exploit classes (e.g., XSS, SQL Injection, Buffer Overflow, RCE, CSRF, insecure deserialization, broken access control, hardcoded secrets).
-- Proof of Concept (PoC): Contains exploit steps, malicious input, stack traces, specific functions used to bypass security controls, or references to attack vectors.
-- Terminology: Use of words like "exploit," "attack," "unauthorized," "bypass," "inject," "tainted," "secret," "leak," "data breach," or "DoS/DDoS."
-- User/Privilege Context: Descriptions of an action an unprivileged user can take to affect privileged resources or other users.
+		## Analysis Guidelines
+		Focus your analysis on identifying language, context, and details indicative of a security report. Key indicators include, but are not limited to:
+		- Impact: Does the issue describe a potential compromise of Confidentiality, Integrity, or Availability (CIA)? (e.g., unauthorized access, data loss, denial of service).
+		- Vulnerability Types: Mentions of common exploit classes (e.g., XSS, SQL Injection, Buffer Overflow, RCE, CSRF, insecure deserialization, broken access control, hardcoded secrets).
+		- Proof of Concept (PoC): Contains exploit steps, malicious input, stack traces, specific functions used to bypass security controls, or references to attack vectors.
+		- Terminology: Use of words like "exploit," "attack," "unauthorized," "bypass," "inject," "tainted," "secret," "leak," "data breach," or "DoS/DDoS."
+		- User/Privilege Context: Descriptions of an action an unprivileged user can take to affect privileged resources or other users.
 
-## GitHub Issue Details:
-Issue Title: ${message.issue.title}
-Issue Body: ${message.issue.body || ""}
-Changed Comment: ${"comment" in message ? message.comment.body : "N/A"}
+		## GitHub Issue Details:
+		Issue Title: ${message.issue.title}
+		Issue Body: ${message.issue.body || ""}
+		Changed Comment: ${"comment" in message ? message.comment.body : "N/A"}
 
-Look for keywords and patterns that suggest this is a security report, such as:
-- Vulnerability, exploit, security flaw, CVE
-- Authentication bypass, privilege escalation
-- XSS, SQL injection, CSRF, RCE
-- Unauthorized access, data exposure
-- Security disclosure, responsible disclosure
+		Look for keywords and patterns that suggest this is a security report, such as:
+		- Vulnerability, exploit, security flaw, CVE
+		- Authentication bypass, privilege escalation
+		- XSS, SQL injection, CSRF, RCE
+		- Unauthorized access, data exposure
+		- Security disclosure, responsible disclosure
 
-## Output Format
-Provide your response in the following structured Markdown format:
+		## Output Format
+		Provide your response in the following structured Markdown format:
 
-\`\`\`
-## Triage Summary
-Classification: [**SECURITY VULNERABILITY** or **GENERAL BUG/FEATURE**]
-Confidence Level: [Low, Medium, or High]
+		\`\`\`
+		## Triage Summary
+		Classification: [**SECURITY VULNERABILITY** or **GENERAL BUG/FEATURE**]
+		Confidence Level: [Low, Medium, or High]
 
-## Rationale
-[Explain in 2-3 concise sentences *why* you chose the classification. Highlight the specific keywords, behavior, or described impact that led to your decision.]
+		## Rationale
+		[Explain in 2-3 concise sentences *why* you chose the classification. Highlight the specific keywords, behavior, or described impact that led to your decision.]
 
-## Key Security Indicators Found
-* [List specific keywords, code snippets, or user actions from the issue that suggest a vulnerability.]
-* [Example: Describes using a special character in a username to execute a script (XSS).]
-* [Example: Mentions an unauthenticated API endpoint that returns sensitive user data.]
-\`\`\`
-
-`;
+		## Key Security Indicators Found
+		* [List specific keywords, code snippets, or user actions from the issue that suggest a vulnerability.]
+		* [Example: Describes using a special character in a username to execute a script (XSS).]
+		* [Example: Mentions an unauthenticated API endpoint that returns sensitive user data.]
+		\`\`\`
+	`;
 
 	const query = {
 		messages: [

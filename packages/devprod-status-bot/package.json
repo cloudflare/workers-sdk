@@ -13,6 +13,7 @@
 		"@octokit/types": "^13.8.0",
 		"@octokit/webhooks-types": "^7.6.1",
 		"eslint": "catalog:default",
+		"ts-dedent": "^2.2.0",
 		"wrangler": "workspace:*"
 	},
 	"volta": {
