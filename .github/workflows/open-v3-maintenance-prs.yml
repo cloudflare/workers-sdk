@@ -20,7 +20,7 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'skip-v3-pr') == false
       }}
     name: Open backport PR for patches
-    runs-on: macos-latest
+    runs-on: ubuntu-slim
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
