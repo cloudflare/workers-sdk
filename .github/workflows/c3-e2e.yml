@@ -21,7 +21,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # There are no real experimental tests to run right now so let's save resources by not creating jobs for them
         experimental: [false]
         filter: ["cli", "workers", "frameworks"]
         os: [{ name: ubuntu-latest, description: Linux }]
@@ -33,6 +32,9 @@ jobs:
         include:
           - os: { name: windows-latest, description: Windows }
             pm: { name: pnpm, version: "9.12.0" }
+          - os: { name: ubuntu-latest, description: Linux }
+            pm: { name: pnpm, version: "9.12.0" }
+            experimental: true
     runs-on: ${{ matrix.os.name }}
     steps:
       - name: Checkout Repo
