@@ -24,7 +24,8 @@ jobs:
         with:
           # See https://github.com/changesets/action/issues/187
           token: ${{ secrets.GH_ACCESS_TOKEN }}
-          fetch-depth: 0
+          # Pull in more history to cover the changeset commits
+          fetch-depth: 500
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
