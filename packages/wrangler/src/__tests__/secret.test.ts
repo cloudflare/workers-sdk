@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
-import * as TOML from "@iarna/toml";
 import { http, HttpResponse } from "msw";
+import * as TOML from "smol-toml";
 import { vi } from "vitest";
 import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../secret";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";

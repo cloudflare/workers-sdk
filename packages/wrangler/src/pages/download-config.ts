@@ -1,9 +1,9 @@
 import { existsSync } from "fs";
 import { writeFile } from "node:fs/promises";
 import { FatalError, formatCompatibilityDate } from "@cloudflare/workers-utils";
-import TOML from "@iarna/toml";
 import chalk from "chalk";
 import { supportedCompatibilityDate } from "miniflare";
+import TOML from "smol-toml";
 import { fetchResult } from "../cfetch";
 import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
@@ -193,7 +193,7 @@ async function toEnvironment(
 	return configObj;
 }
 async function writeWranglerToml(toml: RawEnvironment) {
-	let tomlString = TOML.stringify(toml as TOML.JsonMap);
+	let tomlString = TOML.stringify(toml);
 
 	// Remove indentation from the start of lines, as this isn't common across TOML examples, and causes user confusion
 	tomlString = tomlString

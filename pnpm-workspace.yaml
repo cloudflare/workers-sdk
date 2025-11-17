@@ -38,6 +38,7 @@ catalog:
   workerd: "1.20251113.0"
   eslint: "^9.39.1"
   tsdown: "0.16.4"
+  smol-toml: "^1.5.2"
 
 catalogs:
   vite-plugin:

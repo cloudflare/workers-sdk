@@ -1,6 +1,5 @@
 import { existsSync, mkdirSync } from "fs";
 import { resolve } from "path";
-import TOML from "@iarna/toml";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile, writeJSON } from "helpers/files";
 import {
@@ -10,7 +9,7 @@ import {
 	readJSONWithComments,
 	writeJSONWithComments,
 } from "helpers/json";
-import type { JsonMap } from "@iarna/toml";
+import TOML from "smol-toml";
 import type { CommentObject } from "comment-json";
 import type { C3Context } from "types";
 
@@ -82,7 +81,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 
 		const comment = `#:schema node_modules/wrangler/config-schema.json\n# For more details on how to configure Wrangler, refer to:\n# https://developers.cloudflare.com/workers/wrangler/configuration/\n`;
 
-		const stringified = comment + TOML.stringify(parsed as JsonMap);
+		const stringified = comment + TOML.stringify(parsed);
 
 		writeWranglerToml(
 			ctx,
