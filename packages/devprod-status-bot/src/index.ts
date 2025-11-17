@@ -66,20 +66,20 @@ async function checkForSecurityIssue(
 
 	const prompt = `Analyze this GitHub issue to determine if it's likely reporting a security vulnerability or security concern.
 
-Issue Title: ${message.issue.title}
+        Issue Title: ${message.issue.title}
 
-Issue Body: ${message.issue.body || ""}
+        Issue Body: ${message.issue.body || ""}
 
-Changed Comment: ${"comment" in message ? message.comment.body : "N/A"}
+        Changed Comment: ${"comment" in message ? message.comment.body : "N/A"}
 
-Look for keywords and patterns that suggest this is a security report, such as:
-- Vulnerability, exploit, security flaw, CVE
-- Authentication bypass, privilege escalation
-- XSS, SQL injection, CSRF, RCE
-- Unauthorized access, data exposure
-- Security disclosure, responsible disclosure
+        Look for keywords and patterns that suggest this is a security report, such as:
+        - Vulnerability, exploit, security flaw, CVE
+        - Authentication bypass, privilege escalation
+        - XSS, SQL injection, CSRF, RCE
+        - Unauthorized access, data exposure
+        - Security disclosure, responsible disclosure
 
-Respond with only "YES" if this appears to be a security-related issue, or "NO" if it appears to be a regular bug report or feature request.`;
+        Respond with only "YES" if this appears to be a security-related issue, or "NO" if it appears to be a regular bug report or feature request.`;
 
 	const chat = {
 		messages: [
