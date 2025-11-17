@@ -1,5 +1,6 @@
+import { execSync } from "node:child_process";
 import fs, { readFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { detectPackageManager } from "helpers/packageManagers";
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../../../package.json";
@@ -429,7 +430,31 @@ describe("Create Cloudflare CLI", () => {
 
 		test.skipIf(isWindows || pm === "yarn" || !CLOUDFLARE_API_TOKEN)(
 			"--existing-script",
+			{ timeout: 120_000 },
 			async ({ logStream, project }) => {
+				// Ensure the worker to download exists
+				try {
+					if (
+						(
+							await fetch(
+								"https://existing-script-test-do-not-delete.devprod-testing7928.workers.dev/",
+							)
+						).status === 404
+					) {
+						throw new Error("Remote worker not found");
+					}
+				} catch {
+					// eslint-disable-next-line no-console
+					console.log(
+						"Redeploying the existing-script-test-do-not-delete worker",
+					);
+					const workerPath = resolve(
+						__dirname,
+						"fixtures/existing-script-test-do-not-delete",
+					);
+					execSync("pnpx wrangler@latest deploy", { cwd: workerPath });
+				}
+
 				const { output } = await runC3(
 					[
 						project.path,

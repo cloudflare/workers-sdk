@@ -64,9 +64,21 @@ function getFrameworksGroups() {
 
 function main() {
 	const testRunner = new TestRunner();
-	testRunner.execTests(`Testing CLI`, "cli");
-	testRunner.execTests(`Testing Workers`, "workers");
-	testRunner.execTests(`Testing Framework`, "frameworks");
+	if (!process.env.E2E_TEST_FILTER || process.env.E2E_TEST_FILTER === "cli") {
+		testRunner.execTests(`Testing CLI`, "cli");
+	}
+	if (
+		!process.env.E2E_TEST_FILTER ||
+		process.env.E2E_TEST_FILTER === "workers"
+	) {
+		testRunner.execTests(`Testing Workers`, "workers");
+	}
+	if (
+		!process.env.E2E_TEST_FILTER ||
+		process.env.E2E_TEST_FILTER === "frameworks"
+	) {
+		testRunner.execTests(`Testing Framework`, "frameworks");
+	}
 	testRunner.assertNoFailures();
 }
 
