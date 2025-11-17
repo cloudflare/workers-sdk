@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   generate-changeset:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     if: |
       github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
