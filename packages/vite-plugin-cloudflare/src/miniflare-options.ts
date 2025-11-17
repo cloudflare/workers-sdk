@@ -298,7 +298,7 @@ export async function getDevMiniflareOptions(
 											{
 												name: worker.config.name,
 												bindings: bindings ?? {},
-												account_id: workerConfig.account_id,
+												account_id: worker.config.account_id,
 											},
 											preExistingRemoteProxySession ?? null
 										);
