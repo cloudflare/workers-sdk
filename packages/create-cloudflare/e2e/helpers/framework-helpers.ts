@@ -63,9 +63,8 @@ export async function runC3ForFrameworkTest(
 		`${runDeployTests}`,
 		"--no-open",
 		"--no-auto-update",
+		...argv,
 	];
-
-	args.push(...argv);
 
 	const { output } = await runC3(args, promptHandlers, logStream, extraEnv);
 	if (!runDeployTests) {
