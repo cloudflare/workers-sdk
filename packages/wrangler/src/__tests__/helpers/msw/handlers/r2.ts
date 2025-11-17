@@ -84,13 +84,13 @@ export const mswR2handlers = [
 		}
 	),
 	http.put(
-		"*/accounts/:accountId/r2/buckets/bulket/objects/:objectName",
+		"*/accounts/:accountId/r2/buckets/bulk-buket/objects/:objectName",
 		({ params }) => {
 			const { accountId, objectName } = params;
 			return HttpResponse.json(
 				createFetchResult({
 					accountId,
-					bucketName: "bulket",
+					bucketName: "bulk-buket",
 					objectName,
 				})
 			);
