@@ -527,6 +527,32 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			expect(await response.text()).toEqual("Hello from Module Worker!");
 			expect(response.status).toBe(200);
 		}, waitForTimeout);
+
+		// Test worker-entrypoint -> named entrypoint
+		// await vi.waitFor(async () => {
+		// 	const searchParams = new URLSearchParams({
+		// 		"test-service": "named-entrypoint",
+		// 		"test-method": "fetch",
+		// 	});
+		// 	const response = await fetch(
+		// 		`${workerEntrypointWithAssets}?${searchParams}`
+		// 	);
+
+		// 	expect(await response.text()).toEqual("Hello from Named Entrypoint!");
+		// 	expect(response.status).toBe(200);
+		// }, waitForTimeout);
+
+		// Test module-worker -> named entrypoint with assets
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint-with-assets",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${moduleWorker}?${searchParams}`);
+
+			expect(await response.text()).toEqual("Hello from Named Entrypoint!");
+			expect(response.status).toBe(200);
+		}, waitForTimeout);
 	});
 
 	it("supports RPC over service binding", async ({ devRegistryPath }) => {
@@ -575,6 +601,32 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong");
+		}, waitForTimeout);
+
+		// Test RPC to named entrypoint
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint",
+				"test-method": "rpc",
+			});
+			const response = await fetch(
+				`${workerEntrypointWithAssets}?${searchParams}`
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong from Named Entrypoint");
+		}, waitForTimeout);
+
+		// Test RPC to named entrypoint with static assets
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint-with-assets",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong from Named Entrypoint");
 		}, waitForTimeout);
 	});
 
@@ -693,7 +745,10 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		}, waitForTimeout);
 
 		const moduleWorker = await runWranglerDev(
-			"wrangler.module-worker.jsonc",
+			[
+				"wrangler.module-worker.jsonc",
+				// "wrangler.worker-entrypoint-with-assets.jsonc",
+			],
 			devRegistryPath
 		);
 
@@ -718,6 +773,28 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			expect(await response.text()).toBe("Hello from Module Worker!");
 			expect(response.status).toBe(200);
 		}, waitForTimeout);
+
+		// Test vite dev -> wrangler dev named entrypoint
+		// await vi.waitFor(async () => {
+		// 	const searchParams = new URLSearchParams({
+		// 		"test-service": "named-entrypoint",
+		// 		"test-method": "fetch",
+		// 	});
+		// 	const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+		// 	expect(await response.text()).toBe("Hello from Named Entrypoint!");
+		// 	expect(response.status).toBe(200);
+		// }, waitForTimeout);
+
+		// Test wrangler dev -> vite dev named entrypoint
+		// await vi.waitFor(async () => {
+		// 	const searchParams = new URLSearchParams({
+		// 		"test-service": "named-entrypoint-with-assets",
+		// 		"test-method": "fetch",
+		// 	});
+		// 	const response = await fetch(`${moduleWorker}?${searchParams}`);
+		// 	expect(await response.text()).toBe("Hello from Named Entrypoint!");
+		// 	expect(response.status).toBe(200);
+		// }, waitForTimeout);
 	});
 
 	it("supports service worker fetch over service binding", async ({
@@ -803,6 +880,30 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			expect(await response.text()).toEqual("Pong");
 			expect(response.status).toBe(200);
 		}, waitForTimeout);
+
+		// Test RPC to named entrypoint (vite dev -> wrangler dev)
+		// await vi.waitFor(async () => {
+		// 	const searchParams = new URLSearchParams({
+		// 		"test-service": "named-entrypoint",
+		// 		"test-method": "rpc",
+		// 	});
+		// 	const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+		// 	expect(response.status).toBe(200);
+		// 	expect(await response.text()).toEqual("Pong from Named Entrypoint");
+		// }, waitForTimeout);
+
+		// Test RPC to named entrypoint with static assets (wrangler dev -> vite dev)
+		// await vi.waitFor(async () => {
+		// 	const searchParams = new URLSearchParams({
+		// 		"test-service": "named-entrypoint-with-assets",
+		// 		"test-method": "rpc",
+		// 	});
+		// 	const response = await fetch(
+		// 		`${workerEntrypointWithAssets}?${searchParams}`
+		// 	);
+		// 	expect(response.status).toBe(200);
+		// 	expect(await response.text()).toEqual("Pong from Named Entrypoint");
+		// }, waitForTimeout);
 	});
 
 	it("supports tail handler", async ({ devRegistryPath }) => {

@@ -348,25 +348,52 @@ export async function getDevMiniflareOptions(
 
 							const workerOptions = miniflareWorkerOptions.workerOptions;
 
+							const wrappers = [
+								`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from "${RUNNER_PATH}";`,
+								`export { __VITE_RUNNER_OBJECT__ } from "${RUNNER_PATH}";`,
+								`export default createWorkerEntrypointWrapper("default");`,
+							];
+
+							const workerName = workerOptions.name ?? worker.config.name;
+							const exportTypes =
+								ctx.workerNameToExportTypesMap.get(workerName);
+							assert(exportTypes, `Expected exportTypes to be defined`);
+
+							const workerEntrypoints: string[] = [];
+
+							for (const [name, type] of Object.entries(exportTypes)) {
+								wrappers.push(
+									`export const ${name} = create${type}Wrapper("${name}");`
+								);
+
+								if (type === "WorkerEntrypoint") {
+									workerEntrypoints.push(name);
+								}
+							}
+
 							return {
 								externalWorkers,
 								worker: {
 									...workerOptions,
-									name: workerOptions.name ?? worker.config.name,
+									name: workerName,
 									unsafeInspectorProxy: inputInspectorPort !== false,
-									unsafeDirectSockets:
-										environmentName ===
-										resolvedPluginConfig.entryWorkerEnvironmentName
-											? [
-													{
-														// This exposes the default entrypoint of the asset proxy worker
-														// on the dev registry with the name of the entry worker
-														serviceName: VITE_PROXY_WORKER_NAME,
-														entrypoint: undefined,
-														proxy: true,
-													},
-												]
-											: [],
+									unsafeDirectSockets: [
+										{
+											// This exposes the default entrypoint of the asset proxy worker
+											// on the dev registry with the name of the entry worker
+											serviceName:
+												environmentName ===
+												resolvedPluginConfig.entryWorkerEnvironmentName
+													? VITE_PROXY_WORKER_NAME
+													: undefined,
+											entrypoint: undefined,
+											proxy: true,
+										},
+										...workerEntrypoints.map((entrypoint) => ({
+											entrypoint,
+											proxy: true,
+										})),
+									],
 									modulesRoot: miniflareModulesRoot,
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 									serviceBindings: {
@@ -394,7 +421,30 @@ export async function getDevMiniflareOptions(
 											return MiniflareResponse.json(result);
 										},
 									},
-								} satisfies Partial<WorkerOptions>,
+									durableObjects: {
+										...workerOptions.durableObjects,
+										__VITE_RUNNER_OBJECT__: {
+											className: "__VITE_RUNNER_OBJECT__",
+											unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
+											unsafePreventEviction: true,
+										},
+									},
+									modules: [
+										{
+											type: "ESModule",
+											path: path.join(miniflareModulesRoot, WRAPPER_PATH),
+											contents: wrappers.join("\n"),
+										},
+										{
+											type: "ESModule",
+											path: path.join(miniflareModulesRoot, RUNNER_PATH),
+											contents: fs.readFileSync(
+												fileURLToPath(new URL(RUNNER_PATH, import.meta.url))
+											),
+										},
+									],
+									unsafeUseModuleFallbackService: true,
+								} satisfies WorkerOptions,
 							};
 						}
 					)
@@ -409,6 +459,14 @@ export async function getDevMiniflareOptions(
 
 	const logger = new ViteMiniflareLogger(resolvedViteConfig);
 
+	for (const workerOptions of userWorkers) {
+		logUnknownTails(
+			workerOptions.tails,
+			userWorkers,
+			viteDevServer.config.logger.warn
+		);
+	}
+
 	return {
 		miniflareOptions: {
 			log: logger,
@@ -422,61 +480,7 @@ export async function getDevMiniflareOptions(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
-			workers: [
-				...assetWorkers,
-				...externalWorkers,
-				...userWorkers.map((workerOptions) => {
-					const wrappers = [
-						`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from "${RUNNER_PATH}";`,
-						`export { __VITE_RUNNER_OBJECT__ } from "${RUNNER_PATH}";`,
-						`export default createWorkerEntrypointWrapper("default");`,
-					];
-
-					const exportTypes = ctx.workerNameToExportTypesMap.get(
-						workerOptions.name
-					);
-					assert(exportTypes, `Expected exportTypes to be defined`);
-
-					for (const [name, type] of Object.entries(exportTypes)) {
-						wrappers.push(
-							`export const ${name} = create${type}Wrapper("${name}");`
-						);
-					}
-
-					logUnknownTails(
-						workerOptions.tails,
-						userWorkers,
-						viteDevServer.config.logger.warn
-					);
-
-					return {
-						...workerOptions,
-						durableObjects: {
-							...workerOptions.durableObjects,
-							__VITE_RUNNER_OBJECT__: {
-								className: "__VITE_RUNNER_OBJECT__",
-								unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
-								unsafePreventEviction: true,
-							},
-						},
-						modules: [
-							{
-								type: "ESModule",
-								path: path.join(miniflareModulesRoot, WRAPPER_PATH),
-								contents: wrappers.join("\n"),
-							},
-							{
-								type: "ESModule",
-								path: path.join(miniflareModulesRoot, RUNNER_PATH),
-								contents: fs.readFileSync(
-									fileURLToPath(new URL(RUNNER_PATH, import.meta.url))
-								),
-							},
-						],
-						unsafeUseModuleFallbackService: true,
-					} satisfies WorkerOptions;
-				}),
-			],
+			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
 			async unsafeModuleFallbackService(request) {
 				const url = new URL(request.url);
 				const rawSpecifier = url.searchParams.get("rawSpecifier");

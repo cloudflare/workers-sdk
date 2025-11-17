@@ -7,6 +7,7 @@ export default defineConfig({
 			configPath: "./wrangler.module-worker.jsonc",
 			inspectorPort: false,
 			persistState: false,
+			auxiliaryWorkers: [{ configPath: "./wrangler.worker-entrypoint.jsonc" }],
 		}),
 	],
 });
