@@ -15,6 +15,7 @@ import {
 	getWorkerAccountAndContext,
 } from "../../../dev/remote";
 import { getAccessToken } from "../../../user/access";
+import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { useTeardown } from "../../helpers/teardown";
 import type {
@@ -101,7 +102,8 @@ describe("RemoteRuntimeController", () => {
 	const teardown = useTeardown();
 
 	function setup() {
-		const controller = new RemoteRuntimeController();
+		const bus = new FakeBus();
+		const controller = new RemoteRuntimeController(bus);
 		teardown(() => controller.teardown());
 		return controller;
 	}
