@@ -54,11 +54,17 @@ async function checkForSecurityIssue(
 	ai: Ai,
 	pat: string,
 	message: Schema
-): Promise<
-	{ type: "issue" | "pr"; event: IssuesEvent | IssueCommentEvent } | null
-> {
+): Promise<{
+	type: "issue" | "pr";
+	event: IssuesEvent | IssueCommentEvent;
+} | null> {
 	const result = isIssueOrPREvent(message);
 	if (!result) {
+		return null;
+	}
+
+	const isPREvent = result.type === "pr";
+	if (isPREvent && result.event.issue.title === "Version Packages") {
 		return null;
 	}
 
