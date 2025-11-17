@@ -21,8 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # There are no real experimental tests to run right now so let's save resources by not creating jobs for them
-        experimental: [false]
+        experimental: [false, true]
         filter: ["cli", "workers", "frameworks"]
         os: [{ name: ubuntu-latest, description: Linux }]
         pm:
