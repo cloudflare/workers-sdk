@@ -444,6 +444,7 @@ export default {
 				crypto.randomUUID()
 			);
 		}
+
 		if (url.pathname === "/github") {
 			const body = await request.json<WebhookEvent>();
 
