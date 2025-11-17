@@ -56,6 +56,7 @@ async function checkForSecurityIssue(
 	pat: string,
 	message: Schema
 ): Promise<null | {
+	type: "issue" | "pr";
 	issueEvent: IssuesEvent | IssueCommentEvent;
 	reasoning: string;
 }> {
@@ -146,6 +147,7 @@ async function checkForSecurityIssue(
 		return null;
 	} else {
 		return {
+			type: result.type,
 			issueEvent: result.event,
 			reasoning: response,
 		};
