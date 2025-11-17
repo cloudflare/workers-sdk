@@ -1,5 +1,5 @@
 import { existsSync } from "fs";
-import { cp } from "fs/promises";
+import { cp, rm } from "fs/promises";
 import { join } from "path";
 import { beforeAll, describe, expect } from "vitest";
 import { deleteProject, deleteWorker } from "../../../scripts/common";
@@ -157,6 +157,16 @@ describe
 							"Failed due to an exception while running C3. See logs for more details",
 						);
 					} finally {
+						// Cleanup the project folder
+						try {
+							await rm(project.path, { recursive: true, force: true });
+						} catch {
+							// eslint-disable-next-line no-console
+							console.warn(
+								`Could not remove project folder at ${project.path}`,
+							);
+						}
+
 						// Cleanup the project in case we need to retry it
 						if (frameworkConfig.platform === "workers") {
 							await deleteWorker(project.name);
