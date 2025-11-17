@@ -59,21 +59,22 @@ async function checkForSecurityIssue(
 	issueEvent: IssuesEvent | IssueCommentEvent;
 	reasoning: string;
 }> {
-	if (!isIssueEvent(message)) {
+	const result = isIssueOrPREvent(message);
+	if (!result) {
 		return null;
 	}
 
-	if (await isWranglerTeamMember(pat, message.issue.user.login)) {
+	if (await isWranglerTeamMember(pat, result.event.issue.user.login)) {
 		return null;
 	}
 
 	// Ignore dependabot updates
-	if (message.issue.user.login === "dependabot[bot]") {
+	if (result.event.issue.user.login === "dependabot[bot]") {
 		return null;
 	}
 
 	// Ignore our own bot's PRs (e.g. Version Packages)
-	if (message.issue.user.login === "workers-devprod") {
+	if (result.event.issue.user.login === "workers-devprod") {
 		return null;
 	}
 
@@ -93,9 +94,9 @@ async function checkForSecurityIssue(
 		- User/Privilege Context: Descriptions of an action an unprivileged user can take to affect privileged resources or other users.
 
 		## GitHub Issue Details:
-		Issue Title: ${message.issue.title}
-		Issue Body: ${message.issue.body || ""}
-		Changed Comment: ${"comment" in message ? message.comment.body : "N/A"}
+		Issue Title: ${result.event.issue.title}
+		Issue Body: ${result.event.issue.body || ""}
+		Changed Comment: ${"comment" in result.event ? result.event.comment.body : "N/A"}
 
 		Look for keywords and patterns that suggest this is a security report, such as:
 		- Vulnerability, exploit, security flaw, CVE
@@ -145,7 +146,7 @@ async function checkForSecurityIssue(
 		return null;
 	} else {
 		return {
-			issueEvent: message,
+			issueEvent: result.event,
 			reasoning: response,
 		};
 	}
@@ -261,30 +262,38 @@ async function sendMessage(
 	console.log(await response.json());
 }
 
-function isIssueEvent(
+function isIssueOrPREvent(
 	message: WebhookEvent
-): message is IssuesEvent | IssueCommentEvent {
+): { type: "issue" | "pr"; event: IssuesEvent | IssueCommentEvent } | null {
 	if (
 		"issue" in message &&
 		(message.action === "opened" ||
 			message.action === "reopened" ||
 			message.action === "edited")
 	) {
-		return true;
+		const isPR = "pull_request" in message.issue;
+		return {
+			type: isPR ? "pr" : "issue",
+			event: message as IssuesEvent | IssueCommentEvent,
+		};
 	}
-	return false;
+	return null;
 }
 
 async function sendSecurityAlert(
 	webhookUrl: string,
 	{
+		type,
 		issueEvent,
 		reasoning,
 	}: {
+		type: "issue" | "pr";
 		issueEvent: IssuesEvent | IssueCommentEvent;
 		reasoning: string;
 	}
 ) {
+	const itemType = type === "pr" ? "PR" : "Issue";
+
 	return sendMessage(
 		webhookUrl,
 		{
@@ -293,8 +302,8 @@ async function sendSecurityAlert(
 					cardId: "unique-card-id",
 					card: {
 						header: {
-							title: "🚨 Potential Security Issue Detected",
-							subtitle: `Issue #${issueEvent.issue.number} in ${issueEvent.repository.full_name}`,
+							title: `🚨 Potential Security ${itemType} Detected`,
+							subtitle: `${itemType} #${issueEvent.issue.number} in ${issueEvent.repository.full_name}`,
 							imageUrl: issueEvent.issue.user.avatar_url,
 							imageType: "CIRCLE",
 							imageAltText: "Reporter Avatar",
@@ -312,7 +321,7 @@ async function sendSecurityAlert(
 										buttonList: {
 											buttons: [
 												{
-													text: "View Issue",
+													text: `View ${itemType}`,
 													onClick: {
 														openLink: {
 															url: issueEvent.issue.html_url,
