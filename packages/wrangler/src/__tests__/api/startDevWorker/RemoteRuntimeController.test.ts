@@ -1,4 +1,3 @@
-import events from "node:events";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
 import {
