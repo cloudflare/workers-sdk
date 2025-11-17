@@ -10,7 +10,7 @@ import {
 	listCustomDomainsOfBucket,
 	removeCustomDomainFromBucket,
 	tableFromCustomDomainListResponse,
-} from "./helpers";
+} from "./helpers/domain";
 
 export const r2BucketDomainNamespace = createNamespace({
 	metadata: {

@@ -14,7 +14,7 @@ describe("r2", () => {
 
 	describe("r2 object", () => {
 		describe("local", () => {
-			it("should put R2 object from local bucket", async () => {
+			it("should put R2 object to a local bucket", async () => {
 				await expect(() =>
 					runWrangler(
 						`r2 object get bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
@@ -70,6 +70,127 @@ describe("r2", () => {
 
 					Creating object \\"wormhole-img.png\\" in bucket \\"bucket-object-test\\".
 					Upload complete.
+
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: local
+
+					Use --remote if you want to access the remote instance.
+
+					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+					Download complete."
+				`);
+			});
+
+			it("should bulk put R2 objects to a local bucket", async () => {
+				await expect(() =>
+					runWrangler(
+						`r2 object get bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: The specified key does not exist.]`
+				);
+
+				await expect(() =>
+					runWrangler(
+						`r2 object get bucket-object-test/wormhole-img.png --file ./nebula-img.png`
+					)
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: The specified key does not exist.]`
+				);
+
+				fs.writeFileSync("wormhole-img.png", "passageway");
+				fs.writeFileSync("nebula-img.png", "nebula");
+				fs.writeFileSync(
+					"list.json",
+					JSON.stringify([
+						{
+							key: "wormhole-img.png",
+							file: "wormhole-img.png",
+						},
+						{
+							key: "nebula-img.png",
+							file: "nebula-img.png",
+						},
+					])
+				);
+				await runWrangler(
+					`r2 bulk put bucket-object-test --filename ./list.json`
+				);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: local
+
+					Use --remote if you want to access the remote instance.
+
+					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+
+
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: local
+
+					Use --remote if you want to access the remote instance.
+
+					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+
+
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: local
+
+					Use --remote if you want to access the remote instance.
+
+					Starting bulk upload of 2 objects to bucket bucket-object-test using a concurrency of 20
+					Uploaded 100% (2 out of 2)"
+				`);
+
+				await runWrangler(
+					`r2 object get bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
+				);
+				await runWrangler(
+					`r2 object get bucket-object-test/wormhole-img.png --file ./wormhole-img.png `
+				);
+
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: local
+
+					Use --remote if you want to access the remote instance.
+
+					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+
+
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: local
+
+					Use --remote if you want to access the remote instance.
+
+					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+
+
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: local
+
+					Use --remote if you want to access the remote instance.
+
+					Starting bulk upload of 2 objects to bucket bucket-object-test using a concurrency of 20
+					Uploaded 100% (2 out of 2)
+
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Resource location: local
+
+					Use --remote if you want to access the remote instance.
+
+					Downloading \\"wormhole-img.png\\" from \\"bucket-object-test\\".
+					Download complete.
 
 					 ⛅️ wrangler x.x.x
 					──────────────────
