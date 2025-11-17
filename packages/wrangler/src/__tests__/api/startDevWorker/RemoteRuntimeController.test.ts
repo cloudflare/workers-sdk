@@ -105,7 +105,7 @@ describe("RemoteRuntimeController", () => {
 		const bus = new FakeBus();
 		const controller = new RemoteRuntimeController(bus);
 		teardown(() => controller.teardown());
-		return controller;
+		return { controller, bus };
 	}
 
 	beforeEach(() => {
@@ -178,7 +178,7 @@ describe("RemoteRuntimeController", () => {
 
 	describe("preview token refresh", () => {
 		it("should handle missing state gracefully", async () => {
-			const controller = setup();
+			const { controller } = setup();
 
 			const expiredEvent: PreviewTokenExpiredEvent = {
 				type: "previewTokenExpired",
@@ -206,7 +206,7 @@ describe("RemoteRuntimeController", () => {
 		});
 
 		it("should call API with stored config/bundle when refreshing", async () => {
-			const controller = setup();
+			const { controller, bus } = setup();
 			const config = makeConfig({ name: "my-worker" });
 			const bundle = makeBundle();
 
@@ -215,7 +215,7 @@ describe("RemoteRuntimeController", () => {
 			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 
 			// Wait for initial reload to complete
-			await events.once(controller, "reloadComplete");
+			await bus.waitFor("reloadComplete");
 
 			// Clear mock call history to only track refresh calls
 			vi.mocked(createWorkerPreview).mockClear();
@@ -239,7 +239,7 @@ describe("RemoteRuntimeController", () => {
 			controller.onPreviewTokenExpired(expiredEvent);
 
 			// Wait for refresh to complete
-			await events.once(controller, "reloadComplete");
+			await bus.waitFor("reloadComplete");
 
 			// Verify createRemoteWorkerInit was called with the stored bundle
 			expect(createRemoteWorkerInit).toHaveBeenCalledTimes(1);
@@ -256,7 +256,7 @@ describe("RemoteRuntimeController", () => {
 		});
 
 		it("should emit reloadComplete event with fresh token when refreshing", async () => {
-			const controller = setup();
+			const { controller, bus } = setup();
 			const config = makeConfig();
 			const bundle = makeBundle();
 
@@ -265,7 +265,7 @@ describe("RemoteRuntimeController", () => {
 			controller.onBundleComplete({ type: "bundleComplete", config, bundle });
 
 			// Wait for initial reload
-			await events.once(controller, "reloadComplete");
+			await bus.waitFor("reloadComplete");
 
 			// Trigger token expired
 			const expiredEvent: PreviewTokenExpiredEvent = {
@@ -285,7 +285,7 @@ describe("RemoteRuntimeController", () => {
 			controller.onPreviewTokenExpired(expiredEvent);
 
 			// Wait for refresh reload
-			const [reloadEvent] = await events.once(controller, "reloadComplete");
+			const reloadEvent = await bus.waitFor("reloadComplete");
 
 			// Should have emitted a reloadComplete event with the new token
 			expect(reloadEvent).toMatchObject({
