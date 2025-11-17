@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace 1`] = `
+exports[`kv > namespace > create > wrangler.json > should create a namespace 1`] = `
 "
  ⛅️ wrangler x.x.x
 ──────────────────
@@ -19,7 +19,7 @@ To access your new KV Namespace in your Worker, add the following snippet to you
 }"
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace 2`] = `
+exports[`kv > namespace > create > wrangler.json > should create a namespace 2`] = `
 "{
 	\\"compatibility_date\\": \\"2022-01-12\\",
 	\\"name\\": \\"worker\\",
@@ -32,7 +32,7 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 }"
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace in an environment if configured to do so 1`] = `
+exports[`kv > namespace > create > wrangler.json > should create a namespace in an environment if configured to do so 1`] = `
 "
  ⛅️ wrangler x.x.x
 ──────────────────
@@ -51,7 +51,7 @@ To access your new KV Namespace in your Worker, add the following snippet to you
 }"
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace in an environment if configured to do so 2`] = `
+exports[`kv > namespace > create > wrangler.json > should create a namespace in an environment if configured to do so 2`] = `
 "{
 	\\"compatibility_date\\": \\"2022-01-12\\",
 	\\"name\\": \\"worker\\",
@@ -70,7 +70,7 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 }"
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace using configured worker name 1`] = `
+exports[`kv > namespace > create > wrangler.json > should create a namespace using configured worker name 1`] = `
 "
  ⛅️ wrangler x.x.x
 ──────────────────
@@ -90,7 +90,7 @@ To access your new KV Namespace in your Worker, add the following snippet to you
 }"
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace using configured worker name 2`] = `
+exports[`kv > namespace > create > wrangler.json > should create a namespace using configured worker name 2`] = `
 "{
 	\\"compatibility_date\\": \\"2022-01-12\\",
 	\\"name\\": \\"other-worker\\",
@@ -104,7 +104,7 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 }"
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace with custom binding name 1`] = `
+exports[`kv > namespace > create > wrangler.json > should create a namespace with custom binding name 1`] = `
 "
  ⛅️ wrangler x.x.x
 ──────────────────
@@ -123,7 +123,7 @@ To access your new KV Namespace in your Worker, add the following snippet to you
 }"
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.json > should create a namespace with custom binding name 2`] = `
+exports[`kv > namespace > create > wrangler.json > should create a namespace with custom binding name 2`] = `
 "{
 	\\"compatibility_date\\": \\"2022-01-12\\",
 	\\"name\\": \\"worker\\",
@@ -137,7 +137,7 @@ exports[`wrangler > kv namespace > create > wrangler.json > should create a name
 }"
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.json > should create a preview namespace if configured to do so 1`] = `
+exports[`kv > namespace > create > wrangler.json > should create a preview namespace if configured to do so 1`] = `
 "
  ⛅️ wrangler x.x.x
 ──────────────────
@@ -156,7 +156,7 @@ To access your new KV Namespace in your Worker, add the following snippet to you
 }"
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace 1`] = `
+exports[`kv > namespace > create > wrangler.toml > should create a namespace 1`] = `
 "
  ⛅️ wrangler x.x.x
 ──────────────────
@@ -171,13 +171,13 @@ id = \\"some-namespace-id\\"
 "
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace 2`] = `
+exports[`kv > namespace > create > wrangler.toml > should create a namespace 2`] = `
 "compatibility_date = \\"2022-01-12\\"
 name = \\"worker\\"
 "
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace in an environment if configured to do so 1`] = `
+exports[`kv > namespace > create > wrangler.toml > should create a namespace in an environment if configured to do so 1`] = `
 "
  ⛅️ wrangler x.x.x
 ──────────────────
@@ -192,7 +192,7 @@ id = \\"some-namespace-id\\"
 "
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace in an environment if configured to do so 2`] = `
+exports[`kv > namespace > create > wrangler.toml > should create a namespace in an environment if configured to do so 2`] = `
 "compatibility_date = \\"2022-01-12\\"
 name = \\"worker\\"
 
@@ -201,7 +201,7 @@ name = \\"worker\\"
 "
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace using configured worker name 1`] = `
+exports[`kv > namespace > create > wrangler.toml > should create a namespace using configured worker name 1`] = `
 "
  ⛅️ wrangler x.x.x
 ──────────────────
@@ -217,13 +217,13 @@ remote = true
 "
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace using configured worker name 2`] = `
+exports[`kv > namespace > create > wrangler.toml > should create a namespace using configured worker name 2`] = `
 "compatibility_date = \\"2022-01-12\\"
 name = \\"other-worker\\"
 "
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace with custom binding name 1`] = `
+exports[`kv > namespace > create > wrangler.toml > should create a namespace with custom binding name 1`] = `
 "
  ⛅️ wrangler x.x.x
 ──────────────────
@@ -238,13 +238,13 @@ id = \\"some-namespace-id\\"
 "
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.toml > should create a namespace with custom binding name 2`] = `
+exports[`kv > namespace > create > wrangler.toml > should create a namespace with custom binding name 2`] = `
 "compatibility_date = \\"2022-01-12\\"
 name = \\"worker\\"
 "
 `;
 
-exports[`wrangler > kv namespace > create > wrangler.toml > should create a preview namespace if configured to do so 1`] = `
+exports[`kv > namespace > create > wrangler.toml > should create a preview namespace if configured to do so 1`] = `
 "
  ⛅️ wrangler x.x.x
 ──────────────────
