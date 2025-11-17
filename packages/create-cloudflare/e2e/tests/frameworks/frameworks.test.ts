@@ -48,7 +48,7 @@ describe
 				envInterfaceName: "Env",
 				...getFrameworkConfig(testConfig.name),
 			};
-			test.runIf(shouldRunTest(frameworkConfig.id, testConfig))(
+			test.runIf(shouldRunTest(testConfig))(
 				`${frameworkConfig.id} (${frameworkConfig.platform ?? "pages"})`,
 				{
 					retry: testRetries,

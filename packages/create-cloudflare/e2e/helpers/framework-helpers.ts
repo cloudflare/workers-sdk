@@ -63,9 +63,8 @@ export async function runC3ForFrameworkTest(
 		`${runDeployTests}`,
 		"--no-open",
 		"--no-auto-update",
+		...argv,
 	];
-
-	args.push(...argv);
 
 	const { output } = await runC3(args, promptHandlers, logStream, extraEnv);
 	if (!runDeployTests) {
@@ -350,10 +349,7 @@ export async function verifyTypes(
 	}
 }
 
-export function shouldRunTest(
-	frameworkId: string,
-	testConfig: FrameworkTestConfig,
-) {
+export function shouldRunTest(testConfig: FrameworkTestConfig) {
 	return (
 		// Skip if the test is quarantined
 		testConfig.quarantine !== true &&
