@@ -1681,11 +1681,12 @@ describe.sequential("wrangler dev", () => {
 
 		it("should get local dev `vars` from `.env`", async () => {
 			await runWranglerUntilConfig("dev");
-			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+			const out = std.out;
+			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
 				"Using vars defined in .env
 				Using vars defined in .env.local"
 			`);
-			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+			expect(extractBindings(out)).toMatchInlineSnapshot(`
 				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
@@ -1702,10 +1703,11 @@ describe.sequential("wrangler dev", () => {
 					`
 			);
 			await runWranglerUntilConfig("dev");
-			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+			const out = std.out;
+			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
 				"Using vars defined in .dev.vars"
 			`);
-			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+			expect(extractBindings(out)).toMatchInlineSnapshot(`
 				"env.__DOT_DEV_DOT_VARS_LOCAL_DEV_VAR_1 (\\"(hidden)\\")      Environment Variable      local
 				env.__DOT_DEV_DOT_VARS_LOCAL_DEV_VAR_2 (\\"(hidden)\\")      Environment Variable      local"
 			`);
@@ -1715,19 +1717,21 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev", {
 				CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV: "false",
 			});
-			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`""`);
-			expect(extractBindings(std.out)).toMatchInlineSnapshot(`""`);
+			const out = std.out;
+			expect(extractUsingVars(out)).toMatchInlineSnapshot(`""`);
+			expect(extractBindings(out)).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should get local dev `vars` from appropriate `.env.<environment>` files when --env=<environment> is set", async () => {
 			await runWranglerUntilConfig("dev --env custom");
-			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+			const out = std.out;
+			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
 				"Using vars defined in .env
 				Using vars defined in .env.custom
 				Using vars defined in .env.custom.local
 				Using vars defined in .env.local"
 			`);
-			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+			expect(extractBindings(out)).toMatchInlineSnapshot(`
 				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
@@ -1737,11 +1741,12 @@ describe.sequential("wrangler dev", () => {
 
 		it("should get local dev vars from appropriate `.env` files when --env=<environment> is set but no .env.<environment> file exists", async () => {
 			await runWranglerUntilConfig("dev --env noEnv");
-			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+			const out = std.out;
+			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
 				"Using vars defined in .env
 				Using vars defined in .env.local"
 			`);
-			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+			expect(extractBindings(out)).toMatchInlineSnapshot(`
 				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
@@ -1753,7 +1758,8 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig("dev --env custom", {
 				CLOUDFLARE_INCLUDE_PROCESS_ENV: "true",
 			});
-			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+			const out = std.out;
+			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
 				"Using vars defined in .env
 				Using vars defined in .env.custom
 				Using vars defined in .env.custom.local
@@ -1762,7 +1768,7 @@ describe.sequential("wrangler dev", () => {
 			`);
 			// We could dump out all the bindings but that would be a lot of noise, and also may change between OSes and runs.
 			// Instead, we know that the `CLOUDFLARE_INCLUDE_PROCESS_ENV` variable should be present, so we just check for that.
-			expect(extractBindings(std.out)).contains(
+			expect(extractBindings(out)).contains(
 				'env.CLOUDFLARE_INCLUDE_PROCESS_ENV ("(hidden)")'
 			);
 		});
@@ -1786,10 +1792,11 @@ describe.sequential("wrangler dev", () => {
 			);
 
 			await runWranglerUntilConfig("dev --env-file=other/.env");
-			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(
+			const out = std.out;
+			expect(extractUsingVars(out)).toMatchInlineSnapshot(
 				`"Using vars defined in other/.env"`
 			);
-			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+			expect(extractBindings(out)).toMatchInlineSnapshot(`
 				"env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")      Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")      Environment Variable      local"
 			`);
@@ -1816,11 +1823,12 @@ describe.sequential("wrangler dev", () => {
 			await runWranglerUntilConfig(
 				"dev --env-file=other/.env --env-file=other/.env.local"
 			);
-			expect(extractUsingVars(std.out)).toMatchInlineSnapshot(`
+			const out = std.out;
+			expect(extractUsingVars(out)).toMatchInlineSnapshot(`
 				"Using vars defined in other/.env
 				Using vars defined in other/.env.local"
 			`);
-			expect(extractBindings(std.out)).toMatchInlineSnapshot(`
+			expect(extractBindings(out)).toMatchInlineSnapshot(`
 				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
 				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
