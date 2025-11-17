@@ -44,6 +44,7 @@ function normalizeTables(str: string): string {
 
 function normalizeDates(str: string): string {
 	return str
+		.replaceAll(/\d+ (years?|days?|months?) ago/g, "[mock-time-ago]")
 		.replaceAll(mockCreateDate.toLocaleString(), "[mock-create-date]")
 		.replaceAll(mockModifiedDate.toLocaleString(), "[mock-modified-date]")
 		.replaceAll(mockStartDate.toLocaleString(), "[mock-start-date]")

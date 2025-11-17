@@ -42,11 +42,11 @@
 		"@babel/types": "^7.21.4",
 		"@clack/prompts": "^0.6.3",
 		"@cloudflare/cli": "workspace:*",
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/mock-npm-registry": "workspace:*",
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
-		"@iarna/toml": "^3.0.0",
 		"@types/command-exists": "^1.2.0",
 		"@types/cross-spawn": "^6.0.2",
 		"@types/deepmerge": "^2.2.0",
@@ -68,6 +68,7 @@
 		"dns2": "^2.1.0",
 		"dotenv": "^16.0.0",
 		"esbuild": "catalog:default",
+		"eslint": "catalog:default",
 		"execa": "^7.1.1",
 		"exit-hook": "2.2.1",
 		"get-port": "^7.1.0",
@@ -79,6 +80,7 @@
 		"open": "^8.4.0",
 		"recast": "^0.22.0",
 		"semver": "^7.7.1",
+		"smol-toml": "catalog:default",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vite": "catalog:default",
@@ -88,9 +90,7 @@
 		"wrangler": "workspace:*",
 		"wrap-ansi": "^9.0.0",
 		"xdg-app-paths": "^8.3.0",
-		"yargs": "^17.7.2",
-		"@cloudflare/eslint-config-shared": "workspace:*",
-		"eslint": "catalog:default"
+		"yargs": "^17.7.2"
 	},
 	"engines": {
 		"node": ">=18.14.1"

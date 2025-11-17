@@ -218,7 +218,7 @@ import {
 	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
-import TOML from "@iarna/toml";
+import TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import {
@@ -921,7 +921,7 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 	mkdirSync(path.dirname(configPath), {
 		recursive: true,
 	});
-	writeFileSync(path.join(configPath), TOML.stringify(config as TOML.JsonMap), {
+	writeFileSync(path.join(configPath), TOML.stringify(config), {
 		encoding: "utf-8",
 	});
 
