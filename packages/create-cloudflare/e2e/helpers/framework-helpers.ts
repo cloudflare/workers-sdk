@@ -274,6 +274,8 @@ export async function verifyPreviewScript(
 			cwd: projectPath,
 			env: {
 				VITEST: undefined,
+				// Make sure we're not running frameworks with NODE_ENV: test, as that causes strange behaviour
+				NODE_ENV: "production",
 			},
 		},
 		logStream,
@@ -300,7 +302,7 @@ export async function verifyPreviewScript(
 }
 
 export async function verifyTypes(
-	{ nodeCompat }: FrameworkTestConfig,
+	{ nodeCompat, verifyTypes: verify }: FrameworkTestConfig,
 	{
 		workersTypes,
 		typesPath = "./worker-configuration.d.ts",
@@ -308,7 +310,7 @@ export async function verifyTypes(
 	}: TemplateConfig,
 	projectPath: string,
 ) {
-	if (workersTypes === "none") {
+	if (workersTypes === "none" || verify === false) {
 		return;
 	}
 
