@@ -3081,7 +3081,7 @@ describe("r2", () => {
 				});
 				fs.writeFileSync("wormhole-img.png", "passageway");
 				await runWrangler(
-					`r2 object put --remote bucket-object-test/wormhole-img.png --file ./wormhole-img.png --env production --expires 2024-12-31`
+					`r2 object put bucket-object-test/wormhole-img.png --file ./wormhole-img.png --env production --expires 2024-12-31`
 				);
 
 				expect(std.out).toContain("Upload complete");
