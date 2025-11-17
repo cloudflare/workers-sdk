@@ -350,10 +350,7 @@ export async function verifyTypes(
 	}
 }
 
-export function shouldRunTest(
-	frameworkId: string,
-	testConfig: FrameworkTestConfig,
-) {
+export function shouldRunTest(testConfig: FrameworkTestConfig) {
 	return (
 		// Skip if the test is quarantined
 		testConfig.quarantine !== true &&
