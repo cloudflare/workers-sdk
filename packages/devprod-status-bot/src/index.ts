@@ -54,22 +54,46 @@ async function checkForSecurityIssue(
 	ai: Ai,
 	pat: string,
 	message: Schema
-): Promise<IssuesEvent | IssueCommentEvent | null> {
+): Promise<null | {
+	issueEvent: IssuesEvent | IssueCommentEvent;
+	reasoning: string;
+}> {
 	if (!isIssueEvent(message)) {
 		return null;
 	}
 
-	const isTeamMember = await isWranglerTeamMember(pat, message.sender.login);
-	if (isTeamMember) {
+	if (await isWranglerTeamMember(pat, message.issue.user.login)) {
 		return null;
 	}
 
-	const prompt = `Analyze this GitHub issue to determine if it's likely reporting a security vulnerability or security concern.
+	// Ignore dependabot updates
+	if (message.issue.user.login === "dependabot[bot]") {
+		return null;
+	}
 
+	// Ignore our own bot's PRs (e.g. Version Packages)
+	if (message.issue.user.login === "workers-devprod") {
+		return null;
+	}
+
+	const prompt = `
+## System Role:
+You are an expert Security Triage Analyst and a software developer with deep knowledge of Common Weakness Enumeration (CWE) and security best practices. Your task is to analyze a GitHub Issue and determine the likelihood that it is reporting a genuine security vulnerability or exploit (not just a functional bug).
+
+## Task
+Analyze the provided GitHub Issue details (Title, Body, Comments, Labels) and classify it into one of two categories: "SECURITY VULNERABILITY" or "GENERAL BUG/FEATURE".
+
+## Analysis Guidelines
+Focus your analysis on identifying language, context, and details indicative of a security report. Key indicators include, but are not limited to:
+- Impact: Does the issue describe a potential compromise of Confidentiality, Integrity, or Availability (CIA)? (e.g., unauthorized access, data loss, denial of service).
+- Vulnerability Types: Mentions of common exploit classes (e.g., XSS, SQL Injection, Buffer Overflow, RCE, CSRF, insecure deserialization, broken access control, hardcoded secrets).
+- Proof of Concept (PoC): Contains exploit steps, malicious input, stack traces, specific functions used to bypass security controls, or references to attack vectors.
+- Terminology: Use of words like "exploit," "attack," "unauthorized," "bypass," "inject," "tainted," "secret," "leak," "data breach," or "DoS/DDoS."
+- User/Privilege Context: Descriptions of an action an unprivileged user can take to affect privileged resources or other users.
+
+## GitHub Issue Details:
 Issue Title: ${message.issue.title}
-
 Issue Body: ${message.issue.body || ""}
-
 Changed Comment: ${"comment" in message ? message.comment.body : "N/A"}
 
 Look for keywords and patterns that suggest this is a security report, such as:
@@ -79,9 +103,26 @@ Look for keywords and patterns that suggest this is a security report, such as:
 - Unauthorized access, data exposure
 - Security disclosure, responsible disclosure
 
-Respond with only "YES" if this appears to be a security-related issue, or "NO" if it appears to be a regular bug report or feature request.`;
+## Output Format
+Provide your response in the following structured Markdown format:
 
-	const chat = {
+\`\`\`
+## Triage Summary
+Classification: [**SECURITY VULNERABILITY** or **GENERAL BUG/FEATURE**]
+Confidence Level: [Low, Medium, or High]
+
+## Rationale
+[Explain in 2-3 concise sentences *why* you chose the classification. Highlight the specific keywords, behavior, or described impact that led to your decision.]
+
+## Key Security Indicators Found
+* [List specific keywords, code snippets, or user actions from the issue that suggest a vulnerability.]
+* [Example: Describes using a special character in a username to execute a script (XSS).]
+* [Example: Mentions an unauthenticated API endpoint that returns sensitive user data.]
+\`\`\`
+
+`;
+
+	const query = {
 		messages: [
 			{
 				role: "system",
@@ -95,8 +136,19 @@ Respond with only "YES" if this appears to be a security-related issue, or "NO" 
 		] as RoleScopedChatInput[],
 	};
 
-	const aiMessage = await ai.run("@cf/meta/llama-2-7b-chat-int8", chat);
-	return aiMessage.response?.trim().toUpperCase() === "YES" ? message : null;
+	const { response } = await ai.run(
+		"@cf/mistralai/mistral-small-3.1-24b-instruct",
+		query
+	);
+
+	if (!response?.includes("Classification: **SECURITY VULNERABILITY**")) {
+		return null;
+	} else {
+		return {
+			issueEvent: message,
+			reasoning: response,
+		};
+	}
 }
 
 type ProjectGQLResponse = {
@@ -225,7 +277,13 @@ function isIssueEvent(
 
 async function sendSecurityAlert(
 	webhookUrl: string,
-	issue: IssuesEvent | IssueCommentEvent
+	{
+		issueEvent,
+		reasoning,
+	}: {
+		issueEvent: IssuesEvent | IssueCommentEvent;
+		reasoning: string;
+	}
 ) {
 	return sendMessage(
 		webhookUrl,
@@ -236,8 +294,8 @@ async function sendSecurityAlert(
 					card: {
 						header: {
 							title: "🚨 Potential Security Issue Detected",
-							subtitle: `Issue #${issue.issue.number} in ${issue.repository.full_name}`,
-							imageUrl: issue.sender.avatar_url,
+							subtitle: `Issue #${issueEvent.issue.number} in ${issueEvent.repository.full_name}`,
+							imageUrl: issueEvent.issue.user.avatar_url,
 							imageType: "CIRCLE",
 							imageAltText: "Reporter Avatar",
 						},
@@ -247,7 +305,7 @@ async function sendSecurityAlert(
 								widgets: [
 									{
 										textParagraph: {
-											text: `<b>Title:</b> ${issue.issue.title}\n\n<b>Reporter:</b> ${issue.sender.login}`,
+											text: `<b>Title:</b> ${issueEvent.issue.title}\n\n<b>Reporter:</b> ${issueEvent.issue.user.login}`,
 										},
 									},
 									{
@@ -257,7 +315,7 @@ async function sendSecurityAlert(
 													text: "View Issue",
 													onClick: {
 														openLink: {
-															url: issue.issue.html_url,
+															url: issueEvent.issue.html_url,
 														},
 													},
 												},
@@ -272,7 +330,7 @@ async function sendSecurityAlert(
 								widgets: [
 									{
 										textParagraph: {
-											text: issue.issue.body || "No description provided",
+											text: reasoning,
 										},
 									},
 								],
@@ -282,7 +340,7 @@ async function sendSecurityAlert(
 				},
 			],
 		},
-		"-security-alert-" + issue.issue.number
+		"-security-alert-" + issueEvent.issue.number
 	);
 }
 
