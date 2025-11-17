@@ -3998,7 +3998,7 @@ describe("r2", () => {
 				);
 
 				await runWrangler(
-					`r2 bulk put bulk-buket --filename list.json --remote`
+					`r2 bulk put bulk-bucket --filename list.json --remote`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -4007,7 +4007,7 @@ describe("r2", () => {
 					──────────────────
 					Resource location: remote
 
-					Starting bulk upload of 2 objects to bucket bulk-buket using a concurrency of 20
+					Starting bulk upload of 2 objects to bucket bulk-bucket using a concurrency of 20
 					Uploaded 100% (2 out of 2)"
 				`);
 			});
@@ -4023,7 +4023,7 @@ describe("r2", () => {
 					])
 				);
 				await runWrangler(
-					`r2 bulk put bulk-buket --filename list.json --remote -s InfrequentAccess`
+					`r2 bulk put bulk-bucket --filename list.json --remote -s InfrequentAccess`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -4032,14 +4032,16 @@ describe("r2", () => {
 					──────────────────
 					Resource location: remote
 
-					Starting bulk upload of 2 objects to bucket bulk-buket with InfrequentAccess storage class using a concurrency of 20
+					Starting bulk upload of 2 objects to bucket bulk-bucket with InfrequentAccess storage class using a concurrency of 20
 					Uploaded 100% (2 out of 2)"
 				`);
 			});
 
 			it("should fail to bulk upload R2 objects if the list doesn't exist", async () => {
 				await expect(
-					runWrangler(`r2 bulk put bulk-buket --filename no-list.json --remote`)
+					runWrangler(
+						`r2 bulk put bulk-bucket --filename no-list.json --remote`
+					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: The file "no-list.json" does not exist.]`
 				);
@@ -4049,7 +4051,7 @@ describe("r2", () => {
 				fs.writeFileSync("bad-list.json", "[ invalid json }");
 				await expect(
 					runWrangler(
-						`r2 bulk put bulk-buket --filename bad-list.json --remote`
+						`r2 bulk put bulk-bucket --filename bad-list.json --remote`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: The file "bad-list.json" is not a valid JSON.]`
@@ -4063,7 +4065,7 @@ describe("r2", () => {
 				);
 				await expect(
 					runWrangler(
-						`r2 bulk put bulk-buket --filename bad-list.json --remote`
+						`r2 bulk put bulk-bucket --filename bad-list.json --remote`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: Each entry in the file "bad-list.json" must be an object with "key" and "file" string properties.]`
@@ -4077,7 +4079,7 @@ describe("r2", () => {
 				);
 				await expect(
 					runWrangler(
-						`r2 bulk put bulk-buket --filename bad-list.json --remote`
+						`r2 bulk put bulk-bucket --filename bad-list.json --remote`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: The file "not/a/file" does not exist.]`
@@ -4093,7 +4095,7 @@ describe("r2", () => {
 				);
 				await expect(
 					runWrangler(
-						`r2 bulk put bulk-buket --filename big-list.json --remote`
+						`r2 bulk put bulk-bucket --filename big-list.json --remote`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(
 					`[Error: The file "big-img.png" exceeds the maximum upload size of 300 MiB.]`
@@ -4121,7 +4123,7 @@ describe("r2", () => {
 			it("should pass all fetch option flags into requestInit & check request inputs", async () => {
 				msw.use(
 					http.put(
-						"*/accounts/:accountId/r2/buckets/bulk-buket/objects/:objectName",
+						"*/accounts/:accountId/r2/buckets/bulk-bucket/objects/:objectName",
 						({ request, params }) => {
 							const { accountId } = params;
 							expect(accountId).toEqual("some-account-id");
@@ -4166,7 +4168,7 @@ describe("r2", () => {
 					"--ct content-type-mock --cd content-disposition-mock --ce content-encoding-mock --cl content-lang-mock --cc cache-control-mock --expires expire-time-mock";
 
 				await runWrangler(
-					`r2 bulk put bulk-buket --remote --filename list.json ${flags}`
+					`r2 bulk put bulk-bucket --remote --filename list.json ${flags}`
 				);
 
 				expect(std.out).toMatchInlineSnapshot(`
@@ -4175,7 +4177,7 @@ describe("r2", () => {
 					──────────────────
 					Resource location: remote
 
-					Starting bulk upload of 2 objects to bucket bulk-buket using a concurrency of 20
+					Starting bulk upload of 2 objects to bucket bulk-bucket using a concurrency of 20
 					Uploaded 100% (2 out of 2)"
 				`);
 			});
@@ -4196,7 +4198,7 @@ describe("r2", () => {
 					},
 				});
 				await runWrangler(
-					`r2 bulk put bulk-buket --remote --filename list.json --env production --expires 2024-12-31`
+					`r2 bulk put bulk-bucket --remote --filename list.json --env production --expires 2024-12-31`
 				);
 
 				expect(std.out).toContain("Uploaded 100%");
