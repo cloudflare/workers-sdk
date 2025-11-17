@@ -54,23 +54,29 @@ async function checkForSecurityIssue(
 	ai: Ai,
 	pat: string,
 	message: Schema
-): Promise<IssuesEvent | IssueCommentEvent | null> {
-	if (!isIssueEvent(message)) {
+): Promise<
+	{ type: "issue" | "pr"; event: IssuesEvent | IssueCommentEvent } | null
+> {
+	const result = isIssueOrPREvent(message);
+	if (!result) {
 		return null;
 	}
 
-	const isTeamMember = await isWranglerTeamMember(pat, message.sender.login);
+	const isTeamMember = await isWranglerTeamMember(
+		pat,
+		result.event.sender.login
+	);
 	if (isTeamMember) {
 		return null;
 	}
 
 	const prompt = `Analyze this GitHub issue to determine if it's likely reporting a security vulnerability or security concern.
 
-        Issue Title: ${message.issue.title}
+        Issue Title: ${result.event.issue.title}
 
-        Issue Body: ${message.issue.body || ""}
+        Issue Body: ${result.event.issue.body || ""}
 
-        Changed Comment: ${"comment" in message ? message.comment.body : "N/A"}
+        Changed Comment: ${"comment" in result.event ? result.event.comment.body : "N/A"}
 
         Look for keywords and patterns that suggest this is a security report, such as:
         - Vulnerability, exploit, security flaw, CVE
@@ -96,7 +102,7 @@ async function checkForSecurityIssue(
 	};
 
 	const aiMessage = await ai.run("@cf/meta/llama-2-7b-chat-int8", chat);
-	return aiMessage.response?.trim().toUpperCase() === "YES" ? message : null;
+	return aiMessage.response?.trim().toUpperCase() === "YES" ? result : null;
 }
 
 type ProjectGQLResponse = {
@@ -209,24 +215,31 @@ async function sendMessage(
 	console.log(await response.json());
 }
 
-function isIssueEvent(
+function isIssueOrPREvent(
 	message: WebhookEvent
-): message is IssuesEvent | IssueCommentEvent {
+): { type: "issue" | "pr"; event: IssuesEvent | IssueCommentEvent } | null {
 	if (
 		"issue" in message &&
 		(message.action === "opened" ||
 			message.action === "reopened" ||
 			message.action === "edited")
 	) {
-		return true;
+		const isPR = "pull_request" in message.issue;
+		return {
+			type: isPR ? "pr" : "issue",
+			event: message as IssuesEvent | IssueCommentEvent,
+		};
 	}
-	return false;
+	return null;
 }
 
 async function sendSecurityAlert(
 	webhookUrl: string,
-	issue: IssuesEvent | IssueCommentEvent
+	data: { type: "issue" | "pr"; event: IssuesEvent | IssueCommentEvent }
 ) {
+	const { type, event } = data;
+	const itemType = type === "pr" ? "PR" : "Issue";
+
 	return sendMessage(
 		webhookUrl,
 		{
@@ -235,9 +248,9 @@ async function sendSecurityAlert(
 					cardId: "unique-card-id",
 					card: {
 						header: {
-							title: "🚨 Potential Security Issue Detected",
-							subtitle: `Issue #${issue.issue.number} in ${issue.repository.full_name}`,
-							imageUrl: issue.sender.avatar_url,
+							title: `🚨 Potential Security ${itemType} Detected`,
+							subtitle: `${itemType} #${event.issue.number} in ${event.repository.full_name}`,
+							imageUrl: event.sender.avatar_url,
 							imageType: "CIRCLE",
 							imageAltText: "Reporter Avatar",
 						},
@@ -247,17 +260,17 @@ async function sendSecurityAlert(
 								widgets: [
 									{
 										textParagraph: {
-											text: `<b>Title:</b> ${issue.issue.title}\n\n<b>Reporter:</b> ${issue.sender.login}`,
+											text: `<b>Title:</b> ${event.issue.title}\n\n<b>Reporter:</b> ${event.sender.login}`,
 										},
 									},
 									{
 										buttonList: {
 											buttons: [
 												{
-													text: "View Issue",
+													text: `View ${itemType}`,
 													onClick: {
 														openLink: {
-															url: issue.issue.html_url,
+															url: event.issue.html_url,
 														},
 													},
 												},
@@ -272,7 +285,7 @@ async function sendSecurityAlert(
 								widgets: [
 									{
 										textParagraph: {
-											text: issue.issue.body || "No description provided",
+											text: event.issue.body || "No description provided",
 										},
 									},
 								],
@@ -282,7 +295,7 @@ async function sendSecurityAlert(
 				},
 			],
 		},
-		"-security-alert-" + issue.issue.number
+		"-security-alert-" + event.issue.number
 	);
 }
 
