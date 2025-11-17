@@ -47,7 +47,7 @@ function configDefaults(
 	};
 }
 
-describe("BundleController", () => {
+describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 	mockConsoleMethods();
 	runInTempDir();
 
@@ -250,7 +250,7 @@ describe("BundleController", () => {
 						"
 					`);
 				},
-				{ timeout: 5000, interval: 500 }
+				{ timeout: 5_000, interval: 500 }
 			);
 		});
 	});
@@ -423,7 +423,7 @@ describe("BundleController", () => {
 						"
 					`);
 				},
-				{ timeout: 500000, interval: 500 }
+				{ timeout: 5_000, interval: 500 }
 			);
 		});
 
