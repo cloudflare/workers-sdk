@@ -33,6 +33,9 @@ jobs:
           - os: { name: windows-latest, description: Windows }
             pm: { name: pnpm, version: "9.12.0" }
     runs-on: ${{ matrix.os.name }}
+    # To save resources, if we're running the experimental tests let's run them only for pnpm and on ubuntu-latest
+    # (in the future we can consider enabling them for more cases, pnpm and ubuntu haven't been chosen for any specific reason)
+    if: ${{ !matrix.experimental || (matrix.pm.name === "pnpm" && matrix.os.name === "ubuntu-latest") }}
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
