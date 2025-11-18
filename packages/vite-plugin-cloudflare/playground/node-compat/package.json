@@ -43,11 +43,7 @@
 		"random:test": "vitest run -c ../vitest.config.e2e.ts worker-random",
 		"resolve-externals:build": "vite build --app -c vite.config.worker-resolve-externals.ts",
 		"resolve-externals:dev": "vite dev -c vite.config.worker-resolve-externals.ts",
-		"resolve-externals:preview": "vite preview -c vite.config.worker-resolve-externals.ts",
-		"warnings:build": "vite build --app -c vite.config.worker-warnings.ts",
-		"warnings:dev": "vite dev -c vite.config.worker-warnings.ts",
-		"warnings:preview": "vite preview -c vite.config.worker-warnings.ts",
-		"warnings:test": "vitest run -c ../vitest.config.e2e.ts worker-warnings"
+		"resolve-externals:preview": "vite preview -c vite.config.worker-resolve-externals.ts"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",

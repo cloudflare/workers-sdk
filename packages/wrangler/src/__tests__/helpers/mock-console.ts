@@ -16,23 +16,51 @@ let debugSpy: MockInstance,
 	errorSpy: MockInstance,
 	warnSpy: MockInstance;
 
-const std = {
-	get debug() {
-		return normalizeOutput(debugSpy);
-	},
-	get out() {
-		return normalizeOutput(logSpy);
-	},
-	get info() {
-		return normalizeOutput(infoSpy);
-	},
-	get err() {
-		return normalizeOutput(errorSpy);
-	},
-	get warn() {
-		return normalizeOutput(warnSpy);
-	},
-};
+/**
+ * An object containing the normalized output of each console method.
+ *
+ * We use `defineProperties` to add non enumerable methods to the object,
+ * so they don't show up in test assertions that iterate over the object's keys.
+ * i.e. `expect(std).toMatchInlineSnapshot('...')`;
+ */
+const std = Object.defineProperties(
+	{ debug: "", out: "", info: "", err: "", warn: "", getAndClearOut: () => "" },
+	{
+		debug: {
+			get: () => normalizeOutput(debugSpy),
+			enumerable: true,
+		},
+		out: {
+			get: () => normalizeOutput(logSpy),
+			enumerable: true,
+		},
+		info: {
+			get: () => normalizeOutput(infoSpy),
+			enumerable: true,
+		},
+		err: {
+			get: () => normalizeOutput(errorSpy),
+			enumerable: true,
+		},
+		warn: {
+			get: () => normalizeOutput(warnSpy),
+			enumerable: true,
+		},
+		/**
+		 * Return the content of the mocked stdout and clear the mock's history.
+		 *
+		 * Helpful for tests that need to assert on multiple sequential console outputs.
+		 */
+		getAndClearOut: {
+			value: () => {
+				const output = normalizeOutput(logSpy);
+				logSpy.mockClear();
+				return output;
+			},
+			enumerable: false,
+		},
+	}
+);
 
 function normalizeOutput(spy: MockInstance, join = "\n"): string {
 	return normalizeString(captureCalls(spy, join));

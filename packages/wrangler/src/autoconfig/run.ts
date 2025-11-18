@@ -13,7 +13,7 @@ import { installWrangler } from "./c3-vendor/packages";
 import { confirmAutoConfigDetails, displayAutoConfigDetails } from "./details";
 import { Static } from "./frameworks/static";
 import { usesTypescript } from "./uses-typescript";
-import type { AutoConfigDetails } from "./types";
+import type { AutoConfigDetails, AutoConfigOptions } from "./types";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 type AutoConfigMetrics = Pick<
@@ -25,8 +25,13 @@ type AutoConfigMetrics = Pick<
 
 export async function runAutoConfig(
 	autoConfigDetails: AutoConfigDetails,
-	{ build = true, skipConfirmation = false } = {}
+	autoConfigOptions: AutoConfigOptions = {}
 ): Promise<void> {
+	const dryRun = autoConfigOptions.dryRun === true;
+	const runBuild = !dryRun && (autoConfigOptions.runBuild ?? true);
+	const skipConfirmations =
+		dryRun || autoConfigOptions.skipConfirmations === true;
+
 	const detected: AutoConfigMetrics = {
 		buildCommand: autoConfigDetails.buildCommand,
 		outputDir: autoConfigDetails.outputDir,
@@ -36,12 +41,13 @@ export async function runAutoConfig(
 		"autoconfig detected",
 		{
 			detected,
+			options: autoConfigOptions,
 		},
 		{}
 	);
 	displayAutoConfigDetails(autoConfigDetails);
 
-	const updatedAutoConfigDetails = skipConfirmation
+	const updatedAutoConfigDetails = skipConfirmations
 		? autoConfigDetails
 		: await confirmAutoConfigDetails(autoConfigDetails);
 
@@ -76,8 +82,16 @@ export async function runAutoConfig(
 		})),
 	});
 
-	if (!(skipConfirmation || (await confirm("Proceed with setup?")))) {
+	if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
 		throw new FatalError("Deployment aborted");
+	}
+
+	if (dryRun) {
+		logger.log(
+			`✋  ${"Autoconfig process run in dry-run mode, existing now."}`
+		);
+		logger.log("");
+		return;
 	}
 
 	logger.debug(
@@ -124,7 +138,7 @@ export async function runAutoConfig(
 		addWranglerToAssetsIgnore(autoConfigDetails.projectPath);
 	}
 
-	if (autoConfigDetails.buildCommand && build) {
+	if (autoConfigDetails.buildCommand && runBuild) {
 		await runCommand(
 			autoConfigDetails.buildCommand,
 			autoConfigDetails.projectPath,

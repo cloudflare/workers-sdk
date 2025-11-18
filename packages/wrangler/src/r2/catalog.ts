@@ -13,8 +13,8 @@ import {
 	enableR2CatalogCompaction,
 	enableR2CatalogTableCompaction,
 	getR2Catalog,
-	upsertR2DataCatalogCredential,
-} from "./helpers";
+	upsertR2CatalogCredential,
+} from "./helpers/catalog";
 
 export const r2BucketCatalogNamespace = createNamespace({
 	metadata: {
@@ -242,7 +242,7 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 				);
 			}
 
-			await upsertR2DataCatalogCredential(
+			await upsertR2CatalogCredential(
 				config,
 				accountId,
 				args.bucket,

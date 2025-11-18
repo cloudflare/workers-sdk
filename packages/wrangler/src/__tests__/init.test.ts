@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
 import path from "node:path";
-import * as TOML from "@iarna/toml";
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
+import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { FormData } from "undici";

@@ -2,7 +2,11 @@ import assert from "node:assert";
 import { Blob } from "node:buffer";
 import { URLSearchParams } from "node:url";
 import { type KVNamespace } from "@cloudflare/workers-types/experimental";
-import { UserError } from "@cloudflare/workers-utils";
+import {
+	isOptionalProperty,
+	isRequiredProperty,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { FormData } from "undici";
 import { fetchKVGetValue, fetchListResult, fetchResult } from "../cfetch";
@@ -182,54 +186,19 @@ const KeyValueKeys = new Set([
 ]);
 
 /**
- * The object has the specified property.
- */
-function hasProperty<T extends object>(
-	obj: object,
-	property: keyof T
-): obj is T {
-	return property in obj;
-}
-
-/**
- * The object has a required property of the specified type.
- */
-function hasTypedProperty<T extends object>(
-	obj: object,
-	property: keyof T,
-	type: string
-): obj is T {
-	return hasProperty(obj, property) && typeof obj[property] === type;
-}
-
-/**
- * The object an optional property, of the specified type.
- */
-function hasOptionalTypedProperty<T extends object>(
-	obj: object,
-	property: keyof T,
-	type: string
-): obj is Omit<T, typeof property> | T {
-	return !hasProperty(obj, property) || typeof obj[property] === type;
-}
-
-/**
  * Is the given object a valid `KeyValue` type?
  */
 export function isKVKeyValue(keyValue: unknown): keyValue is KeyValue {
-	if (
-		keyValue === null ||
-		typeof keyValue !== "object" ||
-		!hasTypedProperty(keyValue, "key", "string") ||
-		!hasTypedProperty(keyValue, "value", "string") ||
-		!hasOptionalTypedProperty(keyValue, "expiration", "number") ||
-		!hasOptionalTypedProperty(keyValue, "expiration_ttl", "number") ||
-		!hasOptionalTypedProperty(keyValue, "base64", "boolean") ||
-		!hasOptionalTypedProperty(keyValue, "metadata", "object")
-	) {
-		return false;
-	}
-	return true;
+	return (
+		keyValue !== null &&
+		typeof keyValue === "object" &&
+		isRequiredProperty(keyValue, "key", "string") &&
+		isRequiredProperty(keyValue, "value", "string") &&
+		isOptionalProperty(keyValue, "expiration", "number") &&
+		isOptionalProperty(keyValue, "expiration_ttl", "number") &&
+		isOptionalProperty(keyValue, "base64", "boolean") &&
+		isOptionalProperty(keyValue, "metadata", "object")
+	);
 }
 
 /**

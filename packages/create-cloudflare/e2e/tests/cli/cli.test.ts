@@ -1,5 +1,6 @@
+import { execSync } from "node:child_process";
 import fs, { readFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { detectPackageManager } from "helpers/packageManagers";
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../../../package.json";
@@ -274,6 +275,49 @@ describe("Create Cloudflare CLI", () => {
 			},
 		);
 
+		test.skipIf(isWindows)(
+			"Filtering templates when --lang=python is specified",
+			async ({ logStream, project }) => {
+				const { output } = await runC3(
+					[
+						project.path,
+						"--lang=python",
+						"--type=hello-world",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream,
+				);
+
+				expect(project.path).toExist();
+				expect(output).toContain(`category Hello World example`);
+				expect(output).toContain(`type Worker only`);
+				expect(output).toContain(`lang Python`);
+			},
+		);
+
+		test.skipIf(isWindows)(
+			"Error when --lang=python is used with a category that has no Python templates",
+			async ({ logStream, project }) => {
+				const { errors } = await runC3(
+					[
+						project.path,
+						"--lang=python",
+						"--category=demo",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream,
+				);
+
+				expect(errors).toContain(
+					`No templates available for language "python" in the "demo" category`,
+				);
+			},
+		);
+
 		/*
 		 * Skipping in yarn due to node version resolution conflict
 		 * The Openapi C3 template depends on `chanfana`, which has a dependency
@@ -429,7 +473,31 @@ describe("Create Cloudflare CLI", () => {
 
 		test.skipIf(isWindows || pm === "yarn" || !CLOUDFLARE_API_TOKEN)(
 			"--existing-script",
+			{ timeout: 120_000 },
 			async ({ logStream, project }) => {
+				// Ensure the worker to download exists
+				try {
+					if (
+						(
+							await fetch(
+								"https://existing-script-test-do-not-delete.devprod-testing7928.workers.dev/",
+							)
+						).status === 404
+					) {
+						throw new Error("Remote worker not found");
+					}
+				} catch {
+					// eslint-disable-next-line no-console
+					console.log(
+						"Redeploying the existing-script-test-do-not-delete worker",
+					);
+					const workerPath = resolve(
+						__dirname,
+						"fixtures/existing-script-test-do-not-delete",
+					);
+					execSync("pnpx wrangler@latest deploy", { cwd: workerPath });
+				}
+
 				const { output } = await runC3(
 					[
 						project.path,
@@ -487,7 +555,7 @@ describe("Create Cloudflare CLI", () => {
 					    npm create cloudflare -- --framework next -- --ts
 					    pnpm create cloudflare --framework next -- --ts
 					    Allowed Values:
-					      gatsby
+					      gatsby, svelte, docusaurus
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:

@@ -10,7 +10,6 @@
 		"worker-postgres",
 		"worker-process",
 		"worker-random",
-		"worker-resolve-externals",
-		"worker-warnings"
+		"worker-resolve-externals"
 	]
 }
