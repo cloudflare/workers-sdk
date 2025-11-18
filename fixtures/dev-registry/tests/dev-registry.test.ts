@@ -474,6 +474,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			"vite.worker-entrypoint-with-assets.config.ts",
 			devRegistryPath
 		);
+		await runViteDev("vite.worker-entrypoint.config.ts", devRegistryPath);
 
 		// Test fallback before exported-handler is started
 		await vi.waitFor(async () => {
@@ -496,7 +497,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			devRegistryPath
 		);
 
-		// Test exported-handler -> worker-entrypoint
+		// Test exported-handler -> worker-entrypoint-with-assets
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "worker-entrypoint-with-assets",
@@ -516,7 +517,7 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			expect(await assetResponse.text()).toBe("This is an example asset file");
 		}, waitForTimeout);
 
-		// Test worker-entrypoint -> exported-handler
+		// Test worker-entrypoint-with-assets -> exported-handler
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "exported-handler",
@@ -529,20 +530,46 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			expect(await response.text()).toEqual("Hello from exported handler!");
 			expect(response.status).toBe(200);
 		}, waitForTimeout);
+
+		// Test exported-handler -> named-entrypoint
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
+
+			expect(await response.text()).toEqual("Hello from Named Entrypoint!");
+			expect(response.status).toBe(200);
+		}, waitForTimeout);
+
+		// Test exported-handler -> named-entrypoint-with-assets
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint-with-assets",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
+
+			expect(await response.text()).toEqual("Hello from Named Entrypoint!");
+			expect(response.status).toBe(200);
+		}, waitForTimeout);
 	});
 
 	it("supports RPC over service binding", async ({ devRegistryPath }) => {
-		const workerEntrypoint = await runViteDev(
-			"vite.worker-entrypoint.config.ts",
+		const exportedHandler = await runViteDev(
+			"vite.exported-handler.config.ts",
 			devRegistryPath
 		);
+		await runViteDev("vite.worker-entrypoint.config.ts", devRegistryPath);
 
+		// Test fallback before worker-entrypoint-with-assets is started
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "worker-entrypoint-with-assets",
 				"test-method": "rpc",
 			});
-			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
 
 			expect(response.status).toBe(500);
 			expect(await response.text()).toEqual(
@@ -550,33 +577,57 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			);
 		}, waitForTimeout);
 
-		const workerEntrypointWithAssets = await runViteDev(
+		await runViteDev(
 			"vite.worker-entrypoint-with-assets.config.ts",
 			devRegistryPath
 		);
 
+		// Test exported-handler -> worker-entrypoint RPC
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "worker-entrypoint",
 				"test-method": "rpc",
 			});
-			const response = await fetch(
-				`${workerEntrypointWithAssets}?${searchParams}`
-			);
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong");
 		}, waitForTimeout);
 
+		// Test exported-handler -> worker-entrypoint-with-assets RPC
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "worker-entrypoint-with-assets",
 				"test-method": "rpc",
 			});
-			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong");
+		}, waitForTimeout);
+
+		// Test exported-handler -> named-entrypoint RPC
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong from Named Entrypoint");
+		}, waitForTimeout);
+
+		// Test exported-handler -> named-entrypoint-with-assets RPC
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint-with-assets",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong from Named Entrypoint");
 		}, waitForTimeout);
 	});
 
