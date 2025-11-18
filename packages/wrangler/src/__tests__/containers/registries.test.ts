@@ -31,15 +31,14 @@ describe("containers registries configure", () => {
 	afterEach(() => {
 		clearDialogs();
 	});
-
 	it("should reject unsupported registry domains", async () => {
 		await expect(
 			runWrangler(
-				`containers registries configure docker.io --public-credential=test-id`
+				`containers registries configure unsupported.domain --public-credential=test-id`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(`
-			[Error: docker.io is not a supported image registry.
-			Currently we support the following non-Cloudflare registries: AWS ECR.
+			[Error: unsupported.domain is not a supported image registry.
+			Currently we support the following non-Cloudflare registries: AWS ECR, DockerHub.
 			To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images]
 		`);
 	});
@@ -78,6 +77,30 @@ describe("containers registries configure", () => {
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Arguments secret-name and disable-secrets-store are mutually exclusive]`
+		);
+	});
+
+	it("should enforce mutual exclusivity for public credential arguments", async () => {
+		await expect(
+			runWrangler(`containers registries configure docker.io`)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Must provide exactly one public credential to confgure registry: --public-credential (aliases: --aws-access-key-id, --dockerhub-username)]`
+		);
+
+		await expect(
+			runWrangler(
+				`containers registries configure docker.io --public-credential=test-id --aws-access-key-id=another-test-id`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Must provide exactly one public credential to confgure registry: --public-credential (aliases: --aws-access-key-id, --dockerhub-username)]`
+		);
+
+		await expect(
+			runWrangler(
+				`containers registries configure docker.io --public-credential=test-id --aws-access-key-id=another-test-id --dockerhub-username=yet-again`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Must provide exactly one public credential to confgure registry: --public-credential (aliases: --aws-access-key-id, --dockerhub-username)]`
 		);
 	});
 
@@ -403,6 +426,93 @@ describe("containers registries configure", () => {
 
 				// Should not contain "created" message since we reused existing secret
 				expect(cliStd.stdout).not.toContain("created in Secrets Store");
+			});
+		});
+	});
+
+	describe("DockerHub registry configuration", () => {
+		it("should configure DockerHub registry with interactive prompts", async () => {
+			setIsTTY(true);
+			const dockerHubDomain = "docker.io";
+			const storeId = "test-store-id-123";
+			mockPrompt({
+				text: "Enter DockerHub PAT Token:",
+				options: { isSecret: true },
+				result: "test-pat-token",
+			});
+			mockPrompt({
+				text: "Secret name:",
+				options: { isSecret: false, defaultValue: "DockerHub_PAT_Token" },
+				result: "DockerHub_PAT_Token",
+			});
+
+			mockListSecretStores([
+				{
+					id: storeId,
+					account_id: "some-account-id",
+					name: "Default",
+					created: "2024-01-01T00:00:00Z",
+					modified: "2024-01-01T00:00:00Z",
+				},
+			]);
+			mockCreateSecret(storeId);
+			mockPutRegistry({
+				domain: "docker.io",
+				is_public: false,
+				auth: {
+					public_credential: "cloudchambertest",
+					private_credential: {
+						store_id: storeId,
+						secret_name: "DockerHub_PAT_Token",
+					},
+				},
+				kind: "DockerHub",
+			});
+
+			await runWrangler(
+				`containers registries configure ${dockerHubDomain} --dockerhub-username=cloudchambertest`
+			);
+
+			expect(cliStd.stdout).toContain("Using existing Secret Store Default");
+		});
+
+		describe("non-interactive", () => {
+			beforeEach(() => {
+				setIsTTY(false);
+			});
+			const dockerHubDomain = "docker.io";
+			const mockStdIn = useMockStdin({ isTTY: false });
+
+			it("should accept the secret from piped input", async () => {
+				const secret = "example-pat-token";
+				const storeId = "test-store-id-999";
+
+				mockStdIn.send(secret);
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockCreateSecret(storeId);
+				mockPutRegistry({
+					domain: dockerHubDomain,
+					is_public: false,
+					auth: {
+						public_credential: "cloudchambertest",
+						private_credential: {
+							store_id: storeId,
+							secret_name: "DockerHub_PAT_Token",
+						},
+					},
+					kind: "DockerHub",
+				});
+				await runWrangler(
+					`containers registries configure ${dockerHubDomain} --public-credential=cloudchambertest --secret-name=DockerHub_PAT_Token`
+				);
 			});
 		});
 	});

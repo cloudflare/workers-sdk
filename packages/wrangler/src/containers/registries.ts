@@ -54,8 +54,19 @@ function _registryConfigureYargs(args: CommonYargsArgv) {
 			type: "string",
 			description:
 				"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
-			demandOption: true,
-			alias: ["aws-access-key-id"],
+			demandOption: false,
+		})
+		.option("aws-access-key-id", {
+			type: "string",
+			description: "hidden alias for --public-credential",
+			demandOption: false,
+			hidden: true,
+		})
+		.option("dockerhub-username", {
+			type: "string",
+			description: "hidden alias for --public-credential",
+			demandOption: false,
+			hidden: true,
 		})
 		.option("secret-store-id", {
 			type: "string",
@@ -103,6 +114,18 @@ async function registryConfigureCommand(
 	config: Config
 ) {
 	startSection("Configure a container registry");
+
+	const publicCredentials = [
+		configureArgs.publicCredential,
+		configureArgs.awsAccessKeyId,
+		configureArgs.dockerhubUsername,
+	].filter((credential) => credential !== undefined);
+	if (publicCredentials.length != 1) {
+		throw new UserError(
+			"Must provide exactly one public credential to confgure registry: --public-credential (aliases: --aws-access-key-id, --dockerhub-username)"
+		);
+	}
+	const publicCredential = publicCredentials[0];
 
 	const registryType = getAndValidateRegistryType(configureArgs.DOMAIN);
 
@@ -207,7 +230,7 @@ async function registryConfigureCommand(
 				domain: configureArgs.DOMAIN,
 				is_public: false,
 				auth: {
-					public_credential: configureArgs.publicCredential,
+					public_credential: publicCredential,
 					private_credential,
 				},
 				kind: registryType.type,
@@ -507,8 +530,19 @@ export const containersRegistriesConfigureCommand = createCommand({
 			type: "string",
 			description:
 				"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
-			demandOption: true,
-			alias: "aws-access-key-id",
+			demandOption: false,
+		},
+		"aws-access-key-id": {
+			type: "string",
+			description: "hidden alias for --public-credential",
+			demandOption: false,
+			hidden: true,
+		},
+		"dockerhub-username": {
+			type: "string",
+			description: "hidden alias for --public-credential",
+			demandOption: false,
+			hidden: true,
 		},
 		"secret-store-id": {
 			type: "string",
