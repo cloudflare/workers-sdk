@@ -39,7 +39,7 @@ export default class extends WorkerEntrypoint<Env> {
 		return new Response("Hello Email Workers playground!");
 	}
 
-	async email(message: ForwardableEmailMessage) {
+	override async email(message: ForwardableEmailMessage) {
 		const parser = new PostalMime.default();
 		const rawEmail = new Response(message.raw);
 		const email = await parser.parse(await rawEmail.arrayBuffer());
