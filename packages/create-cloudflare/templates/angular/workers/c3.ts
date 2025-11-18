@@ -94,7 +94,7 @@ const config: TemplateConfig = {
 	path: "templates/angular/workers",
 	devScript: "start",
 	deployScript: "deploy",
-	previewScript: "start",
+	previewScript: "preview",
 	generate,
 	configure,
 	transformPackageJson: async () => ({
