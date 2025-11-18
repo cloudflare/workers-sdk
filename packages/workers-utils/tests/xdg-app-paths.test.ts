@@ -6,7 +6,7 @@ import xdgAppPaths from "xdg-app-paths";
 import {
 	getGlobalWranglerCachePath,
 	getGlobalWranglerConfigPath,
-} from "../xdg-app-paths";
+} from "../src/xdg-app-paths";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 describe("getGlobalWranglerCachePath()", () => {
