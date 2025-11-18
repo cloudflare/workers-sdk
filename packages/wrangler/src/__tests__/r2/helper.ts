@@ -2,7 +2,7 @@ import { createWriteStream } from "node:fs";
 import { pipeline } from "node:stream/promises";
 
 /**
- * Creates a bug file without having to allocate it in memory first.
+ * Creates a big file without having to allocate it in memory first.
  *
  * @param name The name of the file to create
  * @param minSizeByte The minimum size of the file in bytes
