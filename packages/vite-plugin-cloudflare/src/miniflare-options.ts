@@ -14,7 +14,6 @@ import {
 	LogLevel,
 	Response as MiniflareResponse,
 } from "miniflare";
-import colors from "picocolors";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
 import {
@@ -358,9 +357,14 @@ export async function getDevMiniflareOptions(
 														// This exposes the default entrypoint of the asset proxy worker
 														// on the dev registry with the name of the entry worker
 														serviceName: VITE_PROXY_WORKER_NAME,
-														entrypoint: undefined,
 														proxy: true,
 													},
+													...Object.entries(exportTypes)
+														.filter(([_, type]) => type === "WorkerEntrypoint")
+														.map(([entrypoint]) => ({
+															entrypoint,
+															proxy: true,
+														})),
 												]
 											: [],
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
