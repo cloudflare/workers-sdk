@@ -4,11 +4,7 @@ import { parse as dotenvParse } from "dotenv";
 import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
 import { configFileName } from "../config";
-import {
-	createAlias,
-	createCommand,
-	createNamespace,
-} from "../core/create-command";
+import { createCommand, createNamespace } from "../core/create-command";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
 import { FatalError, UserError } from "../errors";
@@ -17,8 +13,8 @@ import * as metrics from "../metrics";
 import { APIError, parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
+import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import type { Config } from "../config";
 import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 
@@ -68,7 +64,8 @@ async function createDraftWorker({
 		logger.log(`🌀 Creating new Worker "${scriptName}"...`);
 	}
 	await fetchResult(
-		!isLegacyEnv(config) && args.env
+		config,
+		useServiceEnvironments(config) && args.env
 			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}`
 			: `/accounts/${accountId}/workers/scripts/${scriptName}`,
 		{
@@ -92,7 +89,9 @@ async function createDraftWorker({
 					d1_databases: [],
 					vectorize: [],
 					hyperdrive: [],
+					secrets_store_secrets: [],
 					services: [],
+					vpc_services: [],
 					analytics_engine_datasets: [],
 					wasm_modules: {},
 					browser: undefined,
@@ -105,12 +104,16 @@ async function createDraftWorker({
 					mtls_certificates: [],
 					pipelines: [],
 					logfwdr: { bindings: [] },
+					ratelimits: [],
 					assets: undefined,
 					unsafe: {
 						bindings: undefined,
 						metadata: undefined,
 						capnp: undefined,
 					},
+					unsafe_hello_world: [],
+					worker_loaders: [],
+					media: undefined,
 				},
 				modules: [],
 				migrations: undefined,
@@ -143,6 +146,9 @@ export const secretPutCommand = createCommand({
 		owner: "Workers: Deploy and Config",
 	},
 	positionalArgs: ["key"],
+	behaviour: {
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+	},
 	args: {
 		key: {
 			describe: "The variable name to be accessible in the Worker",
@@ -168,6 +174,8 @@ export const secretPutCommand = createCommand({
 			);
 		}
 
+		const isServiceEnv = Boolean(useServiceEnvironments(config) && args.env);
+
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			throw new UserError(
@@ -186,18 +194,17 @@ export const secretPutCommand = createCommand({
 
 		logger.log(
 			`🌀 Creating the secret for the Worker "${scriptName}" ${
-				args.env && !isLegacyEnv(config) ? `(${args.env})` : ""
+				isServiceEnv ? `(${args.env})` : ""
 			}`
 		);
 
 		async function submitSecret() {
-			const url =
-				!args.env || isLegacyEnv(config)
-					? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
-					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
+			const url = isServiceEnv
+				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`
+				: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
 
 			try {
-				return await fetchResult(url, {
+				return await fetchResult(config, url, {
 					method: "PUT",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
@@ -256,6 +263,9 @@ export const secretDeleteCommand = createCommand({
 		owner: "Workers: Deploy and Config",
 	},
 	positionalArgs: ["key"],
+	behaviour: {
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+	},
 	args: {
 		key: {
 			describe: "The variable name to be accessible in the Worker",
@@ -274,6 +284,7 @@ export const secretDeleteCommand = createCommand({
 		},
 	},
 	async handler(args, { config }) {
+		const isServiceEnv = useServiceEnvironments(config) && args.env;
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
@@ -294,23 +305,21 @@ export const secretDeleteCommand = createCommand({
 			await confirm(
 				`Are you sure you want to permanently delete the secret ${
 					args.key
-				} on the Worker ${scriptName}${
-					args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
-				}?`
+				} on the Worker ${scriptName}${isServiceEnv ? ` (${args.env})` : ""}?`
 			)
 		) {
 			logger.log(
 				`🌀 Deleting the secret ${args.key} on the Worker ${scriptName}${
-					args.env && !isLegacyEnv(config) ? ` (${args.env})` : ""
+					isServiceEnv ? ` (${args.env})` : ""
 				}`
 			);
 
-			const url =
-				!args.env || isLegacyEnv(config)
-					? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
-					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
+			const url = isServiceEnv
+				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`
+				: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
 
 			await fetchResult(
+				config,
 				`${url}/${encodeURIComponent(args.key)}`,
 				{ method: "DELETE" },
 				new URLSearchParams({
@@ -352,6 +361,7 @@ export const secretListCommand = createCommand({
 		printBanner: (args) => args.format === "pretty",
 	},
 	async handler(args, { config }) {
+		const isServiceEnv = useServiceEnvironments(config) && args.env;
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
@@ -368,12 +378,14 @@ export const secretListCommand = createCommand({
 
 		const accountId = await requireAuth(config);
 
-		const url =
-			!args.env || isLegacyEnv(config)
-				? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
-				: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
+		const url = isServiceEnv
+			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`
+			: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
 
-		const secrets = await fetchResult<{ name: string; type: string }[]>(url);
+		const secrets = await fetchResult<{ name: string; type: string }[]>(
+			config,
+			url
+		);
 
 		if (args.format === "pretty") {
 			for (const workerSecret of secrets) {
@@ -394,9 +406,12 @@ export const secretBulkCommand = createCommand({
 		status: "stable",
 		owner: "Workers: Deploy and Config",
 	},
-	positionalArgs: ["json"],
+	positionalArgs: ["file"],
+	behaviour: {
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+	},
 	args: {
-		json: {
+		file: {
 			describe: `The file of key-value pairs to upload, as JSON in form {"key": value, ...} or .dev.vars file in the form KEY=VALUE`,
 			type: "string",
 		},
@@ -419,6 +434,7 @@ export const secretBulkCommand = createCommand({
 			);
 		}
 
+		const isServiceEnv = useServiceEnvironments(config) && args.env;
 		const scriptName = getLegacyScriptName(args, config);
 		if (!scriptName) {
 			const error = new UserError(
@@ -432,38 +448,36 @@ export const secretBulkCommand = createCommand({
 
 		logger.log(
 			`🌀 Creating the secrets for the Worker "${scriptName}" ${
-				args.env && !isLegacyEnv(config) ? `(${args.env})` : ""
+				isServiceEnv ? `(${args.env})` : ""
 			}`
 		);
 
-		const content = await parseBulkInputToObject(args.json);
+		const content = await parseBulkInputToObject(args.file);
 
 		if (!content) {
 			return logger.error(`🚨 No content found in file, or piped input.`);
 		}
 
 		function getSettings() {
-			const url =
-				!args.env || isLegacyEnv(config)
-					? `/accounts/${accountId}/workers/scripts/${scriptName}/settings`
-					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/settings`;
+			const url = isServiceEnv
+				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/settings`
+				: `/accounts/${accountId}/workers/scripts/${scriptName}/settings`;
 
 			return fetchResult<{
 				bindings: Array<WorkerMetadataBinding | SecretBindingRedacted>;
-			}>(url);
+			}>(config, url);
 		}
 
 		function putBindingsSettings(
 			bindings: Array<SecretBindingUpload | InheritBindingUpload>
 		) {
-			const url =
-				!args.env || isLegacyEnv(config)
-					? `/accounts/${accountId}/workers/scripts/${scriptName}/settings`
-					: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/settings`;
+			const url = isServiceEnv
+				? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/settings`
+				: `/accounts/${accountId}/workers/scripts/${scriptName}/settings`;
 
 			const data = new FormData();
 			data.set("settings", JSON.stringify({ bindings }));
-			return fetchResult(url, {
+			return fetchResult(config, url, {
 				method: "PATCH",
 				body: data,
 			});
@@ -528,16 +542,6 @@ export const secretBulkCommand = createCommand({
 			logger.log(`🚨 Secrets failed to upload`);
 			throw err;
 		}
-	},
-});
-
-export const secretBulkAlias = createAlias({
-	aliasOf: "wrangler secret bulk",
-	metadata: {
-		deprecated: true,
-		deprecatedMessage:
-			"`wrangler secret:bulk` is deprecated and will be removed in a future major version.\nPlease use `wrangler secret bulk` instead, which accepts exactly the same arguments.",
-		hidden: true,
 	},
 });
 

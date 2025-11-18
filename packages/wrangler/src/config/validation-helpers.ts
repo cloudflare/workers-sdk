@@ -82,9 +82,9 @@ export function inheritable<K extends keyof Environment>(
 /**
  * Get an inheritable environment field, but only if we are in legacy environments
  */
-export function inheritableInLegacyEnvironments<K extends keyof Environment>(
+export function inheritableInWranglerEnvironments<K extends keyof Environment>(
 	diagnostics: Diagnostics,
-	isLegacyEnv: boolean | undefined,
+	useServiceEnvironments: boolean | undefined,
 	topLevelEnv: Environment | undefined,
 	rawEnv: RawEnvironment,
 	field: K,
@@ -92,8 +92,16 @@ export function inheritableInLegacyEnvironments<K extends keyof Environment>(
 	transformFn: TransformFn<Environment[K]> = (v) => v,
 	defaultValue: Environment[K]
 ): Environment[K] {
-	return topLevelEnv === undefined || isLegacyEnv === true
-		? inheritable(
+	const usingServiceEnvironments =
+		useServiceEnvironments && topLevelEnv !== undefined;
+	return usingServiceEnvironments
+		? notAllowedInNamedServiceEnvironment(
+				diagnostics,
+				topLevelEnv,
+				rawEnv,
+				field
+			)
+		: inheritable(
 				diagnostics,
 				topLevelEnv,
 				rawEnv,
@@ -101,12 +109,6 @@ export function inheritableInLegacyEnvironments<K extends keyof Environment>(
 				validate,
 				defaultValue,
 				transformFn
-			)
-		: notAllowedInNamedServiceEnvironment(
-				diagnostics,
-				topLevelEnv,
-				rawEnv,
-				field
 			);
 }
 

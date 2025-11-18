@@ -50,6 +50,7 @@ export type DevProps = {
 	nodejsCompatMode: NodeJSCompatMode | undefined;
 	build: Config["build"];
 	env: string | undefined;
+	/** Legacy env is wrangler environments, and not at all legacy. LegacyEnv = false is service environments, which is deprecated. */
 	legacyEnv: boolean;
 	host: string | undefined;
 	routes: Route[] | undefined;
