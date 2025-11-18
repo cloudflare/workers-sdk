@@ -3,18 +3,25 @@ import stripAnsi from "strip-ansi";
 import { describe, onTestFinished, test, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
+/**
+ * Run a Worker, make a request to it, and capture the output logs.
+ *
+ * You can call the returned function repeatedly to get the currently captured logs.
+ * The Worker will be stopped automatically when the test finishes.
+ *
+ * @param type The type of worker: "module" or "service".
+ * @param extraArgs Additional command-line arguments to pass to `wrangler dev`.
+ * @param customMessage A custom message to include in the `x-custom-message` header.
+ * @param env Environment variables to set for the worker process
+ * @returns A function that returns the captured output logs when called
+ */
 async function getWranglerDevOutput(
 	type: "module" | "service",
 	extraArgs: string[] = [],
 	customMessage?: string,
 	env = {}
 ) {
-	const {
-		ip,
-		port,
-		stop,
-		getOutput: getOutputRaw,
-	} = await runWranglerDev(
+	const { ip, port, stop, getOutput } = await runWranglerDev(
 		resolve(__dirname, ".."),
 		[
 			`-c=wrangler.${type}.jsonc`,
@@ -36,7 +43,7 @@ async function getWranglerDevOutput(
 	await response.text();
 
 	return () => {
-		const output = stripAnsi(getOutputRaw())
+		const output = stripAnsi(getOutput())
 			// Windows gets a different marker for ✘, so let's normalize it here
 			// so that these tests can be platform independent
 			.replaceAll("✘", "X")
