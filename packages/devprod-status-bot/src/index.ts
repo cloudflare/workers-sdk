@@ -143,14 +143,14 @@ async function checkForSecurityIssue(
 		query
 	);
 
-	if (!response?.includes("Classification: **SECURITY VULNERABILITY**")) {
-		return null;
-	} else {
+	if (!response?.includes("Classification: **GENERAL BUG/FEATURE**")) {
 		return {
 			type: result.type,
 			issueEvent: result.event,
 			reasoning: response,
 		};
+	} else {
+		return null;
 	}
 }
 
