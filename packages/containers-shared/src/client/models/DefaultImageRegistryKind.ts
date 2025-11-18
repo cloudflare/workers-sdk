@@ -3,5 +3,5 @@
 /* eslint-disable */
 
 export enum DefaultImageRegistryKind {
-    DEFAULT = 'default',
+	DEFAULT = "default",
 }
