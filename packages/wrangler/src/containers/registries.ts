@@ -76,8 +76,19 @@ function registryConfigureYargs(args: CommonYargsArgv) {
 				type: "string",
 				description:
 					"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
-				demandOption: true,
-				alias: ["aws-access-key-id"],
+				demandOption: false,
+			})
+			.option("aws-access-key-id", {
+				type: "string",
+				description: "hidden alias for --public-credential",
+				demandOption: false,
+				hidden: true,
+			})
+			.option("dockerhub-username", {
+				type: "string",
+				description: "hidden alias for --public-credential",
+				demandOption: false,
+				hidden: true,
 			})
 			.option("secret-store-id", {
 				type: "string",
@@ -102,6 +113,18 @@ async function registryConfigureCommand(
 ) {
 	startSection("Configure a container registry");
 
+	const publicCredentials = [
+		configureArgs.publicCredential,
+		configureArgs.awsAccessKeyId,
+		configureArgs.dockerhubUsername,
+	].filter((credential) => credential !== undefined);
+	if (publicCredentials.length != 1) {
+		throw new UserError(
+			"Must provide exactly one public credential to confgure registry: --public-credential (aliases: --aws-access-key-id, --dockerhub-username)"
+		);
+	}
+	const publicCredential = publicCredentials[0];
+
 	const registryType = getAndValidateRegistryType(configureArgs.DOMAIN);
 
 	log(`Configuring ${registryType.name} registry: ${configureArgs.DOMAIN}\n`);
@@ -119,6 +142,7 @@ async function registryConfigureCommand(
 			return;
 		// this can be extended to any registry type that requires credentials
 		case ExternalRegistryKind.ECR:
+		case ExternalRegistryKind.DOCKER_HUB:
 			log(`Getting ${registryType.secretType}...\n`);
 			secret = await getSecret(registryType.secretType);
 			break;
@@ -126,8 +150,7 @@ async function registryConfigureCommand(
 			throw new UserError(`Unhandled registry type: ${registryType.type}`);
 	}
 
-	log("\n");
-	log("Setting up integration with Secrets Store...\n");
+	log("\nSetting up integration with Secrets Store...\n");
 	const accountId = await getAccountId(config);
 	let secretStoreId = configureArgs.secretStoreId;
 	if (!secretStoreId) {
@@ -190,7 +213,7 @@ async function registryConfigureCommand(
 				domain: configureArgs.DOMAIN,
 				is_public: false,
 				auth: {
-					public_credential: configureArgs.publicCredential,
+					public_credential: publicCredential,
 					private_credential: {
 						store_id: secretStoreId,
 						secret_name: secretName,
