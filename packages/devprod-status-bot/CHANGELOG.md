@@ -1,5 +1,11 @@
 # devprod-status-bot
 
+## 1.2.2
+
+### Patch Changes
+
+- [#11315](https://github.com/cloudflare/workers-sdk/pull/11315) [`2309ec1`](https://github.com/cloudflare/workers-sdk/commit/2309ec1590490c803f254154bf731cdcd0eb3704) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Tighten up the security checks on issues to avoid false positives
+
 ## 1.2.1
 
 ### Patch Changes
