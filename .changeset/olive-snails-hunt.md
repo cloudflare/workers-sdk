@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": minor
+"create-cloudflare": patch
 ---
 
 Create-cloudflare now filters out options that don't exist for specified language
