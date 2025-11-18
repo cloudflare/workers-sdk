@@ -90,20 +90,6 @@ function createApplicationToModifyApplication(
 	};
 }
 
-function cleanupObservability(
-	observability: ObservabilityConfiguration | undefined
-) {
-	if (observability === undefined) {
-		return;
-	}
-
-	// `logging` field is deprecated, so if the server returns both `logging` and `logs`
-	// fields, drop the `logging` one.
-	if (observability.logging !== undefined && observability.logs !== undefined) {
-		delete observability.logging;
-	}
-}
-
 /**
  * Resolves current configuration based on previous deployment.
  */
@@ -217,9 +203,6 @@ export async function apply(
 	const existingApplications = await promiseSpinner(
 		ApplicationsService.listApplications(),
 		{ message: "Loading applications" }
-	);
-	existingApplications.forEach((app) =>
-		cleanupObservability(app.configuration.observability)
 	);
 	// TODO: this is not correct right now as there can be multiple applications
 	// with the same name.
