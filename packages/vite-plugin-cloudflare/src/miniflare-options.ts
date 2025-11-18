@@ -88,41 +88,6 @@ const VITE_PROXY_WORKER_PATH = "./workers/vite-proxy-worker.js";
 const RUNNER_PATH = "./workers/runner-worker.js";
 const WRAPPER_PATH = "__VITE_WORKER_ENTRY__";
 
-function logUnknownTails(
-	tails: WorkerOptions["tails"],
-	userWorkers: { name?: string }[],
-	log: (msg: string) => void
-) {
-	// Only connect the tail consumers that represent Workers that are defined in the Vite config. Warn that a tail might be omitted otherwise
-	// This _differs from service bindings_ because tail consumers are "optional" in a sense, and shouldn't affect the runtime behaviour of a Worker
-	for (const tailService of tails ?? []) {
-		let name: string;
-		if (typeof tailService === "string") {
-			name = tailService;
-		} else if (
-			typeof tailService === "object" &&
-			"name" in tailService &&
-			typeof tailService.name === "string"
-		) {
-			name = tailService.name;
-		} else {
-			// Don't interfere with network-based tail connections (e.g. via the dev registry), or kCurrentWorker
-			continue;
-		}
-		const found = userWorkers.some((w) => w.name === name);
-
-		if (!found) {
-			log(
-				colors.dim(
-					colors.yellow(
-						`Tail consumer "${name}" was not found in your config. Make sure you add it to the config or run it in another dev session if you'd like to simulate receiving tail events locally.`
-					)
-				)
-			);
-		}
-	}
-}
-
 /** Map that maps worker configPaths to their existing remote proxy session data (if any) */
 const remoteProxySessionsDataMap = new Map<
 	string,
@@ -344,15 +309,46 @@ export async function getDevMiniflareOptions(
 								}
 							);
 
-							const { externalWorkers } = miniflareWorkerOptions;
+							const { externalWorkers, workerOptions } = miniflareWorkerOptions;
 
-							const workerOptions = miniflareWorkerOptions.workerOptions;
+							const wrappers = [
+								`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from "${RUNNER_PATH}";`,
+								`export { __VITE_RUNNER_OBJECT__ } from "${RUNNER_PATH}";`,
+								`export default createWorkerEntrypointWrapper("default");`,
+							];
+
+							const exportTypes = ctx.workerNameToExportTypesMap.get(
+								worker.config.name
+							);
+							assert(exportTypes, `Expected exportTypes to be defined`);
+
+							for (const [name, type] of Object.entries(exportTypes)) {
+								wrappers.push(
+									`export const ${name} = create${type}Wrapper("${name}");`
+								);
+							}
 
 							return {
 								externalWorkers,
 								worker: {
 									...workerOptions,
-									name: workerOptions.name ?? worker.config.name,
+									name: worker.config.name,
+									modulesRoot: miniflareModulesRoot,
+									modules: [
+										{
+											type: "ESModule",
+											path: path.join(miniflareModulesRoot, WRAPPER_PATH),
+											contents: wrappers.join("\n"),
+										},
+										{
+											type: "ESModule",
+											path: path.join(miniflareModulesRoot, RUNNER_PATH),
+											contents: fs.readFileSync(
+												fileURLToPath(new URL(RUNNER_PATH, import.meta.url))
+											),
+										},
+									],
+									unsafeUseModuleFallbackService: true,
 									unsafeInspectorProxy: inputInspectorPort !== false,
 									unsafeDirectSockets:
 										environmentName ===
@@ -367,7 +363,6 @@ export async function getDevMiniflareOptions(
 													},
 												]
 											: [],
-									modulesRoot: miniflareModulesRoot,
 									unsafeEvalBinding: "__VITE_UNSAFE_EVAL__",
 									serviceBindings: {
 										...workerOptions.serviceBindings,
@@ -392,6 +387,14 @@ export async function getDevMiniflareOptions(
 											const result =
 												await devEnvironment.hot.handleInvoke(payload);
 											return MiniflareResponse.json(result);
+										},
+									},
+									durableObjects: {
+										...workerOptions.durableObjects,
+										__VITE_RUNNER_OBJECT__: {
+											className: "__VITE_RUNNER_OBJECT__",
+											unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
+											unsafePreventEviction: true,
 										},
 									},
 								} satisfies Partial<WorkerOptions>,
@@ -422,61 +425,7 @@ export async function getDevMiniflareOptions(
 				resolvedViteConfig.root,
 				resolvedPluginConfig.persistState
 			),
-			workers: [
-				...assetWorkers,
-				...externalWorkers,
-				...userWorkers.map((workerOptions) => {
-					const wrappers = [
-						`import { createWorkerEntrypointWrapper, createDurableObjectWrapper, createWorkflowEntrypointWrapper } from "${RUNNER_PATH}";`,
-						`export { __VITE_RUNNER_OBJECT__ } from "${RUNNER_PATH}";`,
-						`export default createWorkerEntrypointWrapper("default");`,
-					];
-
-					const exportTypes = ctx.workerNameToExportTypesMap.get(
-						workerOptions.name
-					);
-					assert(exportTypes, `Expected exportTypes to be defined`);
-
-					for (const [name, type] of Object.entries(exportTypes)) {
-						wrappers.push(
-							`export const ${name} = create${type}Wrapper("${name}");`
-						);
-					}
-
-					logUnknownTails(
-						workerOptions.tails,
-						userWorkers,
-						viteDevServer.config.logger.warn
-					);
-
-					return {
-						...workerOptions,
-						durableObjects: {
-							...workerOptions.durableObjects,
-							__VITE_RUNNER_OBJECT__: {
-								className: "__VITE_RUNNER_OBJECT__",
-								unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
-								unsafePreventEviction: true,
-							},
-						},
-						modules: [
-							{
-								type: "ESModule",
-								path: path.join(miniflareModulesRoot, WRAPPER_PATH),
-								contents: wrappers.join("\n"),
-							},
-							{
-								type: "ESModule",
-								path: path.join(miniflareModulesRoot, RUNNER_PATH),
-								contents: fs.readFileSync(
-									fileURLToPath(new URL(RUNNER_PATH, import.meta.url))
-								),
-							},
-						],
-						unsafeUseModuleFallbackService: true,
-					} satisfies WorkerOptions;
-				}),
-			],
+			workers: [...assetWorkers, ...externalWorkers, ...userWorkers],
 			async unsafeModuleFallbackService(request) {
 				const url = new URL(request.url);
 				const rawSpecifier = url.searchParams.get("rawSpecifier");
@@ -631,12 +580,6 @@ export async function getPreviewMiniflareOptions(
 
 				const { modulesRules, ...workerOptions } =
 					miniflareWorkerOptions.workerOptions;
-
-				logUnknownTails(
-					workerOptions.tails,
-					resolvedPluginConfig.workers,
-					vitePreviewServer.config.logger.warn
-				);
 
 				return [
 					{
