@@ -1,4 +1,4 @@
-import * as fs from "node:fs";
+import fs from "node:fs";
 import { http, HttpResponse } from "msw";
 import { MAX_UPLOAD_SIZE_BYTES } from "../../r2/constants";
 import { endEventLoop } from "../helpers/end-event-loop";
@@ -8,6 +8,7 @@ import { createFetchResult, msw, mswR2handlers } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
+import { createBigFile } from "./helper";
 
 describe("r2", () => {
 	const std = mockConsoleMethods();
@@ -142,21 +143,26 @@ describe("r2", () => {
 				);
 			});
 
-			it("should fail to bulk upload R2 objects if too large", async () => {
-				const TOO_BIG_FILE_SIZE = MAX_UPLOAD_SIZE_BYTES + 1024 * 1024;
-				fs.writeFileSync("big-img.png", Buffer.alloc(TOO_BIG_FILE_SIZE));
-				fs.writeFileSync(
-					"big-list.json",
-					JSON.stringify([{ key: "too-big", file: "big-img.png" }])
-				);
-				await expect(
-					runWrangler(
-						`r2 bulk put bulk-bucket --filename big-list.json --remote`
-					)
-				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: The file "big-img.png" exceeds the maximum upload size of 300 MiB.]`
-				);
-			});
+			it(
+				"should fail to bulk upload R2 objects if too large",
+				// Writing a large file could timeout on CI
+				{ timeout: 30_000 },
+				async () => {
+					const TOO_BIG_FILE_SIZE = MAX_UPLOAD_SIZE_BYTES + 1024 * 1024;
+					await createBigFile("big-img.png", TOO_BIG_FILE_SIZE);
+					fs.writeFileSync(
+						"big-list.json",
+						JSON.stringify([{ key: "too-big", file: "big-img.png" }])
+					);
+					await expect(
+						runWrangler(
+							`r2 bulk put bulk-bucket --filename big-list.json --remote`
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: The file "big-img.png" exceeds the maximum upload size of 300 MiB.]`
+					);
+				}
+			);
 
 			it("should fail to bulk upload R2 objects if the name is invalid", async () => {
 				fs.writeFileSync("wormhole-img.png", "passageway");

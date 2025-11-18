@@ -8,6 +8,7 @@ import { createFetchResult, msw, mswR2handlers } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
+import { createBigFile } from "./helper";
 
 describe("r2", () => {
 	const std = mockConsoleMethods();
@@ -104,10 +105,11 @@ describe("r2", () => {
 
 			it(
 				"should fail to upload R2 object to bucket if too large",
+				// Writing a large file could timeout on CI
 				{ timeout: 30_000 },
 				async () => {
 					const TOO_BIG_FILE_SIZE = MAX_UPLOAD_SIZE_BYTES + 1024 * 1024;
-					fs.writeFileSync("wormhole-img.png", Buffer.alloc(TOO_BIG_FILE_SIZE));
+					await createBigFile("wormhole-img.png", TOO_BIG_FILE_SIZE);
 					await expect(
 						runWrangler(
 							`r2 object put --remote bucket-object-test/wormhole-img.png --file ./wormhole-img.png`
