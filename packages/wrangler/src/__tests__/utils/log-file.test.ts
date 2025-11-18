@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { appendToDebugLogFile, debugLogFilepath } from "../../utils/log-file";
+import { appendToDebugLogFile, getDebugFilepath } from "../../utils/log-file";
 import { runInTempDir } from "../helpers/run-in-tmp";
 
 describe("appendToDebugLogFile", () => {
@@ -12,6 +12,7 @@ describe("appendToDebugLogFile", () => {
 	});
 
 	function getLogFileContent(): string {
+		const debugLogFilepath = getDebugFilepath();
 		if (existsSync(debugLogFilepath)) {
 			return readFileSync(debugLogFilepath, "utf8");
 		}

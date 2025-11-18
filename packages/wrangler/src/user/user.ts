@@ -214,6 +214,7 @@ import url from "node:url";
 import { TextEncoder } from "node:util";
 import {
 	configFileName,
+	getGlobalWranglerConfigPath,
 	parseTOML,
 	readFileSync,
 	UserError,
@@ -231,7 +232,6 @@ import {
 	getCloudflareApiEnvironmentFromEnv,
 	getCloudflareComplianceRegion,
 } from "../environment-variables/misc-variables";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -424,7 +424,8 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 			};
 		} else if (api_token) {
 			logger.warn(
-				"It looks like you have used Wrangler v1's `config` command to login with an API token.\n" +
+				"It looks like you have used Wrangler v1's `config` command to login with an API token\n" +
+					`from ${config === undefined ? getAuthConfigFilePath() : "in-memory config"}.\n` +
 					"This is no longer supported in the current version of Wrangler.\n" +
 					"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
 			);
