@@ -582,26 +582,38 @@ class ErrorUnsupportedGrantType extends ErrorAccessTokenResponse {
 	}
 }
 
-const RawErrorToErrorClassMap: { [_: string]: typeof ErrorOAuth2 } = {
-	invalid_request: ErrorInvalidRequest,
-	invalid_grant: ErrorInvalidGrant,
-	unauthorized_client: ErrorUnauthorizedClient,
-	access_denied: ErrorAccessDenied,
-	unsupported_response_type: ErrorUnsupportedResponseType,
-	invalid_scope: ErrorInvalidScope,
-	server_error: ErrorServerError,
-	temporarily_unavailable: ErrorTemporarilyUnavailable,
-	invalid_client: ErrorInvalidClient,
-	unsupported_grant_type: ErrorUnsupportedGrantType,
-	invalid_json: ErrorInvalidJson,
-	invalid_token: ErrorInvalidToken,
-};
-
 /**
  * Translate the raw error strings returned from the server into error classes.
  */
-function toErrorClass(rawError: string): ErrorOAuth2 {
-	return new (RawErrorToErrorClassMap[rawError] || ErrorUnknown)();
+function toErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
+	switch (rawError) {
+		case "invalid_request":
+			return new ErrorInvalidRequest(rawError);
+		case "invalid_grant":
+			return new ErrorInvalidGrant(rawError);
+		case "unauthorized_client":
+			return new ErrorUnauthorizedClient(rawError);
+		case "access_denied":
+			return new ErrorAccessDenied(rawError);
+		case "unsupported_response_type":
+			return new ErrorUnsupportedResponseType(rawError);
+		case "invalid_scope":
+			return new ErrorInvalidScope(rawError);
+		case "server_error":
+			return new ErrorServerError(rawError);
+		case "temporarily_unavailable":
+			return new ErrorTemporarilyUnavailable(rawError);
+		case "invalid_client":
+			return new ErrorInvalidClient(rawError);
+		case "unsupported_grant_type":
+			return new ErrorUnsupportedGrantType(rawError);
+		case "invalid_json":
+			return new ErrorInvalidJson(rawError);
+		case "invalid_token":
+			return new ErrorInvalidToken(rawError);
+		default:
+			return new ErrorUnknown();
+	}
 }
 
 /**
@@ -712,10 +724,10 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 		let tokenExchangeResErr = undefined;
 
 		try {
-			tokenExchangeResErr = await response.text();
-			tokenExchangeResErr = JSON.parse(tokenExchangeResErr);
+			tokenExchangeResErr = await getJSONFromResponse(response);
 		} catch (e) {
 			// If it can't parse to JSON ignore the error
+			logger.error(e);
 		}
 
 		if (tokenExchangeResErr !== undefined) {
@@ -1290,15 +1302,34 @@ async function fetchAuthToken(body: URLSearchParams) {
 	const headers: Record<string, string> = {
 		"Content-Type": "application/x-www-form-urlencoded",
 	};
+	logger.debug("fetching auth token", body.toString());
 	if (await domainUsesAccess(getAuthDomainFromEnv())) {
+		logger.debug(
+			"Using Cloudflare Access to get an access token for the auth request"
+		);
 		// We are trying to access the staging API so we need an "access token".
 		headers["Cookie"] = `CF_Authorization=${await getCloudflareAccessToken()}`;
 	}
-	return await fetch(getTokenUrlFromEnv(), {
-		method: "POST",
-		body: body.toString(),
-		headers,
-	});
+	logger.debug("Fetching auth token from", getTokenUrlFromEnv());
+	try {
+		const response = await fetch(getTokenUrlFromEnv(), {
+			method: "POST",
+			body: body.toString(),
+			headers,
+		});
+		if (!response.ok) {
+			logger.error(
+				"Failed to fetch auth token:",
+				response.status,
+				response.statusText,
+				await response.text()
+			);
+		}
+		return response;
+	} catch (e) {
+		logger.error("Failed to fetch auth token:", e);
+		throw e;
+	}
 }
 
 async function getJSONFromResponse(response: Response) {
