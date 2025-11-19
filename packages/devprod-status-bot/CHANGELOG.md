@@ -1,5 +1,11 @@
 # devprod-status-bot
 
+## 1.2.3
+
+### Patch Changes
+
+- [#11333](https://github.com/cloudflare/workers-sdk/pull/11333) [`474910a`](https://github.com/cloudflare/workers-sdk/commit/474910ac683bdb9b6c95fa4ab03623574d34ffc1) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix the security classification logic
+
 ## 1.2.2
 
 ### Patch Changes
