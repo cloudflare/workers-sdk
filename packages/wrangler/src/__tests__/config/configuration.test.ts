@@ -4,7 +4,7 @@ import {
 	experimental_readRawConfig,
 	normalizeAndValidateConfig,
 } from "@cloudflare/workers-utils";
-import { normalizeString } from "@cloudflare/workers-utils/test";
+import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { readConfig } from "../../config";
 import { run } from "../../experimental-flags";
 import { runInTempDir } from "../helpers/run-in-tmp";

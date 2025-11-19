@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { seed } from "@cloudflare/workers-utils/test";
+import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, expect, it } from "vitest";
 import * as details from "../../../autoconfig/details";
 import { clearOutputFilePath } from "../../../output";

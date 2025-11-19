@@ -1,4 +1,4 @@
-import { normalizeString } from "@cloudflare/workers-utils/test";
+import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";

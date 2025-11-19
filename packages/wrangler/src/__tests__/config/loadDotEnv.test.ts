@@ -1,4 +1,4 @@
-import { seed } from "@cloudflare/workers-utils/test";
+import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it } from "vitest";
 import { loadDotEnv } from "../../config/dot-env";
 import { logger } from "../../logger";

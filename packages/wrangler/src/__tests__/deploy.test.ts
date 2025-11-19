@@ -5,7 +5,7 @@ import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { findWranglerConfig, ParseError } from "@cloudflare/workers-utils";
-import { normalizeString } from "@cloudflare/workers-utils/test";
+import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";

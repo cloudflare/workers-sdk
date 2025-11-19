@@ -1,5 +1,5 @@
 import path from "node:path";
-import { seed } from "@cloudflare/workers-utils/test";
+import { seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { describe, it } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";

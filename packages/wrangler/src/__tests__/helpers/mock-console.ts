@@ -1,4 +1,4 @@
-import { mockConsoleMethods as mockConsoleMethodsCommon } from "@cloudflare/workers-utils/test";
+import { mockConsoleMethods as mockConsoleMethodsCommon } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach } from "vitest";
 import { logger } from "../../logger";
 

@@ -1,6 +1,6 @@
 import * as util from "node:util";
 import * as streams from "@cloudflare/cli/streams";
-import { normalizeString } from "@cloudflare/workers-utils/test";
+import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import type { MockInstance } from "vitest";
 
 let outSpy: MockInstance, errSpy: MockInstance;
