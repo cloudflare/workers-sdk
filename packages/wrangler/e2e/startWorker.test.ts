@@ -5,14 +5,14 @@ import { setTimeout } from "timers/promises";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import undici from "undici";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 import WebSocket from "ws";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import {
 	importWrangler,
 	WranglerE2ETestHelper,
 } from "./helpers/e2e-wrangler-test";
-import type { DevToolsEvent, Worker } from "../src/api";
+import type { DevToolsEvent } from "../src/api";
 
 const OPTIONS = [
 	{ remote: false },
@@ -49,12 +49,10 @@ function collectMessagesContaining<T>(
 
 describe("DevEnv", { sequential: true }, () => {
 	let helper: WranglerE2ETestHelper;
-	let worker: Worker | undefined;
 
 	beforeEach(() => {
 		helper = new WranglerE2ETestHelper();
 	});
-	afterEach(() => worker?.dispose());
 
 	describe.each(OPTIONS)("(remote: $remote)", ({ remote }) => {
 		it("ProxyWorker buffers requests while runtime reloads", async () => {
@@ -70,7 +68,7 @@ describe("DevEnv", { sequential: true }, () => {
 				"src/index.ts": script,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
 				dev: {
@@ -79,6 +77,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: false,
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			let res = await worker.fetch("http://dummy");
 			await expect(res.text()).resolves.toBe("body:1");
@@ -107,7 +106,7 @@ describe("DevEnv", { sequential: true }, () => {
 				"src/index.ts": script,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -117,6 +116,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: { port: 0 },
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			const inspectorUrl = await worker.inspectorUrl;
 			assert(inspectorUrl, "missing inspectorUrl");
@@ -180,7 +180,7 @@ describe("DevEnv", { sequential: true }, () => {
 			`,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -190,6 +190,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: { port: 0 },
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			const inspectorUrl = await worker.inspectorUrl;
 			assert(inspectorUrl);
@@ -238,7 +239,7 @@ describe("DevEnv", { sequential: true }, () => {
 				"src/index.ts": script,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -248,6 +249,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: { port: 0 },
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			const inspectorUrl = await worker.inspectorUrl;
 			assert(inspectorUrl, "missing inspectorUrl");
@@ -282,7 +284,7 @@ describe("DevEnv", { sequential: true }, () => {
 			`,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -292,6 +294,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: false,
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			let res = await worker.fetch("http://dummy");
 			await expect(res.text()).resolves.toBe("body:1");
@@ -334,7 +337,7 @@ describe("DevEnv", { sequential: true }, () => {
 			`,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -345,6 +348,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: false,
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			const scriptRegex =
 				/<script defer type="application\/javascript">([\s\S]*)<\/script>/gm;
@@ -411,11 +415,13 @@ describe("DevEnv", { sequential: true }, () => {
 				},
 			});
 
-			// test liveReload: false does nothing even when the response Content-Type is html
-			res = await worker.fetch("http://dummy");
-			resText = await res.text();
-			expect(resText).toBe("body:3");
-			expect(resText).not.toEqual(expect.stringMatching(scriptRegex));
+			await vi.waitFor(async () => {
+				// test liveReload: false does nothing even when the response Content-Type is html
+				res = await worker.fetch("http://dummy");
+				resText = await res.text();
+				expect(resText).toBe("body:3");
+				expect(resText).not.toEqual(expect.stringMatching(scriptRegex));
+			});
 		});
 	});
 
@@ -431,7 +437,7 @@ describe("DevEnv", { sequential: true }, () => {
 				`,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 				dev: {
@@ -439,6 +445,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: false,
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			await expect(worker.fetch("http://dummy")).rejects.toThrowError("Boom!");
 
@@ -513,7 +520,7 @@ describe("DevEnv", { sequential: true }, () => {
 				`,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 
@@ -525,6 +532,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: false,
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			let res = await worker.fetch("http://dummy/test/path/1");
 			await expect(res.text()).resolves.toBe(
@@ -571,7 +579,7 @@ describe("DevEnv", { sequential: true }, () => {
 				"src/index.ts": script,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
 				dev: {
@@ -579,6 +587,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: false,
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			let res = await worker.fetch("http://dummy/short");
 			await expect(res.text()).resolves.toBe("UserWorker:1");
@@ -640,7 +649,7 @@ describe("DevEnv", { sequential: true }, () => {
 				`,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
@@ -649,6 +658,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: false,
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			const res = await worker.fetch("http://dummy/test/path/1");
 			expect(await res.json()).toMatchInlineSnapshot(`
@@ -688,7 +698,7 @@ describe("DevEnv", { sequential: true }, () => {
 				`,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
@@ -697,6 +707,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: false,
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			const res = await worker.fetch("http://dummy/test/path/1");
 			expect(await res.json()).toMatchInlineSnapshot(`
@@ -744,7 +755,7 @@ describe("DevEnv", { sequential: true }, () => {
 				`,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
@@ -757,6 +768,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: false,
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			const res = await worker.fetch("http://dummy/test/path/1");
 			expect(await res.json()).toMatchInlineSnapshot(`
@@ -805,7 +817,7 @@ describe("DevEnv", { sequential: true }, () => {
 				`,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
@@ -815,6 +827,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: false,
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			const res = await worker.fetch("http://dummy/test/path/1");
 			expect(await res.json()).toMatchInlineSnapshot(`
@@ -855,7 +868,7 @@ describe("DevEnv", { sequential: true }, () => {
 			`,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
@@ -865,6 +878,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: false,
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			const res = await worker.fetch("http://dummy/test/path/1");
 			expect(await res.json()).toMatchInlineSnapshot(`
@@ -898,7 +912,7 @@ describe("DevEnv", { sequential: true }, () => {
 			`,
 			});
 
-			worker = await startWorker({
+			const worker = await startWorker({
 				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
 				name: "test-worker",
 				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
@@ -908,6 +922,7 @@ describe("DevEnv", { sequential: true }, () => {
 					inspector: false,
 				},
 			});
+			onTestFinished(worker?.dispose);
 
 			const res = await worker.fetch("http://dummy/test/path/1");
 			expect(await res.json()).toMatchInlineSnapshot(`
