@@ -10,6 +10,7 @@ import {
 	getAndValidateRegistryType,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
+import { ExternalRegistryKind } from "@cloudflare/containers-shared/src/client/models/ExternalRegistryKind";
 import {
 	APIError,
 	getCloudflareComplianceRegion,
@@ -52,21 +53,22 @@ function _registryConfigureYargs(args: CommonYargsArgv) {
 		})
 		.option("public-credential", {
 			type: "string",
-			description:
-				"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
 			demandOption: false,
+			hidden: true,
+			deprecated: true,
+			conflicts: ["dockerhub-username", "aws-access-key-id"],
 		})
 		.option("aws-access-key-id", {
 			type: "string",
-			description: "hidden alias for --public-credential",
+			description: "When configuring Amazon ECR, `AWS_ACCESS_KEY_ID`",
 			demandOption: false,
-			hidden: true,
+			conflicts: ["public-credential", "dockerhub-username"],
 		})
 		.option("dockerhub-username", {
 			type: "string",
-			description: "hidden alias for --public-credential",
+			description: "When configuring DockerHub, the DockerHub username",
 			demandOption: false,
-			hidden: true,
+			conflicts: ["public-credential", "aws-access-key-id"],
 		})
 		.option("secret-store-id", {
 			type: "string",
@@ -115,19 +117,21 @@ async function registryConfigureCommand(
 ) {
 	startSection("Configure a container registry");
 
-	const publicCredentials = [
-		configureArgs.publicCredential,
-		configureArgs.awsAccessKeyId,
-		configureArgs.dockerhubUsername,
-	].filter((credential) => credential !== undefined);
-	if (publicCredentials.length != 1) {
-		throw new UserError(
-			"Must provide exactly one public credential to confgure registry: --public-credential (aliases: --aws-access-key-id, --dockerhub-username)"
-		);
-	}
-	const publicCredential = publicCredentials[0];
-
 	const registryType = getAndValidateRegistryType(configureArgs.DOMAIN);
+
+	const publicCredential =
+		configureArgs.awsAccessKeyId ??
+		configureArgs.dockerhubUsername ??
+		configureArgs.publicCredential;
+	if (!publicCredential) {
+		const arg =
+			registryType.type === ExternalRegistryKind.DOCKER_HUB
+				? "dockerhub-username"
+				: registryType.type === ExternalRegistryKind.ECR
+					? "aws-access-key-id"
+					: "public-credential";
+		throw new UserError(`Missing required argument: ${arg}`);
+	}
 
 	log(`Configuring ${registryType.name} registry: ${configureArgs.DOMAIN}\n`);
 
@@ -528,21 +532,22 @@ export const containersRegistriesConfigureCommand = createCommand({
 		},
 		"public-credential": {
 			type: "string",
-			description:
-				"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
 			demandOption: false,
+			hidden: true,
+			deprecated: true,
+			conflicts: ["dockerhub-username", "aws-access-key-id"],
 		},
 		"aws-access-key-id": {
 			type: "string",
-			description: "hidden alias for --public-credential",
+			description: "When configuring Amazon ECR, `AWS_ACCESS_KEY_ID`",
 			demandOption: false,
-			hidden: true,
+			conflicts: ["public-credential", "dockerhub-username"],
 		},
 		"dockerhub-username": {
 			type: "string",
-			description: "hidden alias for --public-credential",
+			description: "When configuring DockerHub, the DockerHub username",
 			demandOption: false,
-			hidden: true,
+			conflicts: ["public-credential", "aws-access-key-id"],
 		},
 		"secret-store-id": {
 			type: "string",

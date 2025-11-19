@@ -19,6 +19,32 @@ import { useMockStdin } from "../helpers/mock-stdin";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
+describe("containers registries --help", () => {
+	const std = mockConsoleMethods();
+
+	it("should help", async () => {
+		await runWrangler("containers registries --help");
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler containers registries
+
+			Configure and manage non-Cloudflare registries
+
+			COMMANDS
+			  wrangler containers registries configure <DOMAIN>  Configure credentials for a non-Cloudflare container registry
+			  wrangler containers registries list                List all configured container registries
+			  wrangler containers registries delete <DOMAIN>     Delete a configured container registry
+
+			GLOBAL FLAGS
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
+		`);
+	});
+});
+
 describe("containers registries configure", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const cliStd = mockCLIOutput();
@@ -84,23 +110,23 @@ describe("containers registries configure", () => {
 		await expect(
 			runWrangler(`containers registries configure docker.io`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must provide exactly one public credential to confgure registry: --public-credential (aliases: --aws-access-key-id, --dockerhub-username)]`
+			`[Error: Missing required argument: dockerhub-username]`
 		);
 
 		await expect(
 			runWrangler(
-				`containers registries configure docker.io --public-credential=test-id --aws-access-key-id=another-test-id`
+				`containers registries configure 123456789012.dkr.ecr.region.amazonaws.com`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must provide exactly one public credential to confgure registry: --public-credential (aliases: --aws-access-key-id, --dockerhub-username)]`
+			`[Error: Missing required argument: aws-access-key-id]`
 		);
 
 		await expect(
 			runWrangler(
-				`containers registries configure docker.io --public-credential=test-id --aws-access-key-id=another-test-id --dockerhub-username=yet-again`
+				`containers registries configure docker.io --public-credential=test-id --dockerhub-username=another-test-id`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must provide exactly one public credential to confgure registry: --public-credential (aliases: --aws-access-key-id, --dockerhub-username)]`
+			`[Error: Arguments public-credential and dockerhub-username are mutually exclusive]`
 		);
 	});
 
