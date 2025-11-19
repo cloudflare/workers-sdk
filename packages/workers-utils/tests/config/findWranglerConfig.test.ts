@@ -1,9 +1,12 @@
 import path from "node:path";
-import { findWranglerConfig } from "@cloudflare/workers-utils";
-import { mockConsoleMethods } from "../helpers/mock-console";
-import { normalizeString } from "../helpers/normalize";
-import { runInTempDir } from "../helpers/run-in-tmp";
-import { seed } from "../helpers/seed";
+import { describe, expect, it } from "vitest";
+import { findWranglerConfig } from "../../src/config/config-helpers";
+import {
+	mockConsoleMethods,
+	normalizeString,
+	runInTempDir,
+	seed,
+} from "../../src/test-helpers";
 
 describe("config findWranglerConfig()", () => {
 	runInTempDir();
