@@ -37,8 +37,9 @@ export const r2ObjectNamespace = createNamespace({
 export const r2BulkNamespace = createNamespace({
 	metadata: {
 		description: `Interact with multiple R2 objects at once`,
-		status: "stable",
+		status: "experimental",
 		owner: "Product: R2",
+		hidden: true,
 	},
 });
 
@@ -450,8 +451,9 @@ export const r2ObjectDeleteCommand = createCommand({
 export const r2BulkPutCommand = createCommand({
 	metadata: {
 		description: "Create objects in an R2 bucket",
-		status: "stable",
+		status: "experimental",
 		owner: "Product: R2",
+		hidden: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
