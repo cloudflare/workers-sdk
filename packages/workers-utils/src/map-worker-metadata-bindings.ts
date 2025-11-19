@@ -1,5 +1,4 @@
 import { assertNever } from "./assert-never";
-import { FatalError } from "./errors";
 import type { RawConfig } from "./config";
 import type { WorkerMetadataBinding } from "./types";
 
@@ -282,9 +281,13 @@ export function mapWorkerMetadataBindings(
 						];
 						break;
 					case "assets":
-						throw new FatalError(
-							"`wrangler init --from-dash` is not yet supported for Workers with Assets"
-						);
+						configObj.assets = {
+							binding: binding.name,
+							// Note: we currently don't get all the assets information from the
+							//      API, so here we are only able to set the name of the binding
+							//      hopefully in the future we can properly fully support the binding
+						};
+						break;
 					case "inherit":
 						configObj.unsafe = {
 							bindings: [...(configObj.unsafe?.bindings ?? []), binding],
