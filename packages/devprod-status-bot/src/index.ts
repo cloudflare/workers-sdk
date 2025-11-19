@@ -79,10 +79,11 @@ async function checkForSecurityIssue(
 		return null;
 	}
 
-	const prompt = dedent`
+	const systemRole = dedent`
 		## System Role:
 		You are an expert Security Triage Analyst and a software developer with deep knowledge of Common Weakness Enumeration (CWE) and security best practices. Your task is to analyze a GitHub Issue and determine the likelihood that it is reporting a genuine security vulnerability or exploit (not just a functional bug).
-
+	`;
+	const prompt = dedent`
 		## Task
 		Analyze the provided GitHub Issue details (Title, Body, Comments, Labels) and classify it into one of two categories: "SECURITY VULNERABILITY" or "GENERAL BUG/FEATURE".
 
@@ -111,7 +112,7 @@ async function checkForSecurityIssue(
 
 		\`\`\`
 		## Triage Summary
-		Classification: [**SECURITY VULNERABILITY** or **GENERAL BUG/FEATURE**]
+		Classification: [SECURITY VULNERABILITY or GENERAL BUG/FEATURE]
 		Confidence Level: [Low, Medium, or High]
 
 		## Rationale
@@ -124,33 +125,24 @@ async function checkForSecurityIssue(
 		\`\`\`
 	`;
 
-	const query = {
-		messages: [
-			{
-				role: "system",
-				content:
-					"You are a security analyst assistant that helps identify potential security vulnerability reports in GitHub issues. Respond only with YES or NO.",
-			},
-			{
-				role: "user",
-				content: prompt,
-			},
-		] as RoleScopedChatInput[],
-	};
-
 	const { response } = await ai.run(
 		"@cf/mistralai/mistral-small-3.1-24b-instruct",
-		query
+		{
+			messages: [
+				{ role: "system", content: systemRole },
+				{ role: "user", content: prompt },
+			],
+		}
 	);
 
-	if (!response?.includes("Classification: **GENERAL BUG/FEATURE**")) {
+	if (!response?.includes("SECURITY VULNERABILITY")) {
+		return null;
+	} else {
 		return {
 			type: result.type,
 			issueEvent: result.event,
 			reasoning: response,
 		};
-	} else {
-		return null;
 	}
 }
 
