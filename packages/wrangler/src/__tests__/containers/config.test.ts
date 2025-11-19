@@ -708,7 +708,7 @@ describe("getNormalizedContainerOptions", () => {
 				containers: [
 					{
 						class_name: "TestContainer",
-						image: "docker.io/test:latest",
+						image: "unsupported.domain/test:latest",
 						instance_type: "standard",
 						name: "test-container",
 						max_instances: 3,
@@ -724,11 +724,12 @@ describe("getNormalizedContainerOptions", () => {
 				},
 				migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 			} as Partial<Config> as Config;
-			const result = await getNormalizedContainerOptions(config, {});
-			expect(result).toHaveLength(1);
-			expect(result[0]).toMatchObject({
-				image_uri: "docker.io/test:latest",
-			});
+			await expect(getNormalizedContainerOptions(config, {})).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: unsupported.domain is not a supported image registry.
+				Currently we support the following non-Cloudflare registries: AWS ECR, DockerHub.
+				To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images]
+			`);
 		});
 		it("should not try and add an account id to non containers registry uris", async () => {
 			const config: Config = {
