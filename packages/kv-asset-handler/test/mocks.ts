@@ -6,12 +6,11 @@ const HASH = "123HASHBROWN";
 export const getEvent = (
 	request: Request
 ): Pick<FetchEvent, "request" | "waitUntil"> => {
-	const waitUntil = async (maybePromise: unknown) => {
-		await maybePromise;
-	};
 	return {
 		request,
-		waitUntil,
+		async waitUntil(maybePromise: unknown) {
+			await maybePromise;
+		},
 	};
 };
 const store = {
