@@ -76,6 +76,14 @@ function normalizeLocalResolvedConfigAsRemote(
 
 	removeRemoteConfigFieldFromBindings(normalizedConfig);
 
+	// Currently remotely we only get the assets' binding name, so we need remove
+	// everything else, if present, from the local one
+	if (normalizedConfig.assets) {
+		normalizedConfig.assets = {
+			binding: normalizedConfig.assets.binding,
+		};
+	}
+
 	return normalizedConfig;
 }
 
@@ -250,9 +258,15 @@ function normalizeRemoteConfigAsResolvedLocal(
 	// in this way we can make sure that local-only configurations are not shown as
 	// differences between local and remote configs
 	Object.entries(localResolvedConfig).forEach(([key, value]) => {
-		// We want to skip observability since it has a remote default behavior
-		// different from that of wrangler
-		if (key !== "observability") {
+		if (
+			// We want to skip observability since it has a remote default behavior
+			// different from that of wrangler
+			key !== "observability" &&
+			// We want to skip assets since it is a special case, the issue being that
+			// remotely assets configs only include at most the binding name and we
+			// already address that in the local config normalization already
+			key !== "assets"
+		) {
 			(normalizedRemote as unknown as Record<string, unknown>)[key] = value;
 		}
 	});
