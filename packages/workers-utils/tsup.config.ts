@@ -4,7 +4,7 @@ export default defineConfig(() => [
 	{
 		treeshake: true,
 		keepNames: true,
-		entry: ["src/index.ts", "src/browser.ts"],
+		entry: ["src/index.ts", "src/browser.ts", "src/test-helpers/index.ts"],
 		platform: "node",
 		format: "esm",
 		dts: true,
@@ -12,9 +12,9 @@ export default defineConfig(() => [
 		tsconfig: "tsconfig.json",
 		metafile: true,
 		sourcemap: process.env.SOURCEMAPS !== "false",
-		// mainFields: ["module", "main"],
 		define: {
 			"process.env.NODE_ENV": `'${"production"}'`,
 		},
+		external: ["@cloudflare/*", "vitest", "msw", "undici"],
 	},
 ]);

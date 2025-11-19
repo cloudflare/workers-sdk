@@ -1,11 +1,11 @@
 import path from "path";
+import { seed } from "@cloudflare/workers-utils/test";
 import dedent from "ts-dedent";
 import { describe, test } from "vitest";
 import { BundlerController } from "../../../api/startDevWorker/BundlerController";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
-import { seed } from "../../helpers/seed";
 import type { StartDevWorkerOptions } from "../../../api";
 
 // Find the bundled result of a particular source file

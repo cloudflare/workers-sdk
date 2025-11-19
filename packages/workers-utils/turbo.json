@@ -5,7 +5,8 @@
 		"build": {
 			"inputs": ["$TURBO_DEFAULT$", "!**/__tests__/**"],
 			"outputs": ["dist/**"],
-			"env": ["SOURCEMAPS"]
+			"env": ["SOURCEMAPS"],
+			"passThroughEnv": ["PWD"]
 		},
 		"test:ci": {
 			"dependsOn": ["build"],
