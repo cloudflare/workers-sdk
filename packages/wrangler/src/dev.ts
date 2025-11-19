@@ -260,7 +260,8 @@ export const dev = createCommand({
 			alias: ["x-tail-logs"],
 			describe:
 				"Experimental: Get runtime logs for the remote worker via Workers Tails rather than the Devtools inspector",
-			default: false,
+			default: true,
+			hidden: true,
 		},
 	},
 	async validateArgs(args) {
