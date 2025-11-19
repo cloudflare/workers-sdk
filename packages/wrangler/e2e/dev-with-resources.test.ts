@@ -14,9 +14,7 @@ const inspectorPort = await getPort();
 
 const RUNTIMES = [
 	{ flags: "", runtime: "local" },
-	...(CLOUDFLARE_ACCOUNT_ID
-		? [{ flags: "--remote --x-tail-logs", runtime: "remote" }]
-		: []),
+	...(CLOUDFLARE_ACCOUNT_ID ? [{ flags: "--remote", runtime: "remote" }] : []),
 ];
 
 // WebAssembly module containing single `func add(i32, i32): i32` export.
