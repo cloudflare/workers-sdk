@@ -16,35 +16,12 @@ import { runWrangler } from "../helpers/run-wrangler";
 describe("containers registries --help", () => {
 	const std = mockConsoleMethods();
 
-	it("should not show in top level help (remove this when ready for public)", async () => {
-		await runWrangler("containers --help");
-		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers
-
-			📦 Manage Containers [open-beta]
-
-			COMMANDS
-			  wrangler containers build [PATH]  Build a container image
-			  wrangler containers push [TAG]    Push a tagged image to a Cloudflare managed registry
-			  wrangler containers images        Perform operations on images in your Cloudflare managed registry
-			  wrangler containers info [ID]     Get information about a specific container
-			  wrangler containers list          List containers
-			  wrangler containers delete [ID]   Delete a container
-
-			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
-		`);
-	});
-
 	it("should help", async () => {
 		await runWrangler("containers registries --help");
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers registries
+
+			Configure and manage non-Cloudflare registries
 
 			COMMANDS
 			  wrangler containers registries configure <DOMAIN>  Configure credentials for a non-Cloudflare container registry
@@ -58,31 +35,6 @@ describe("containers registries --help", () => {
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
 			  -v, --version   Show version number  [boolean]"
-		`);
-	});
-
-	it("should help and not show public credential aliases", async () => {
-		await runWrangler("containers registries configure --help");
-		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers registries configure <DOMAIN>
-
-			Configure credentials for a non-Cloudflare container registry
-
-			POSITIONALS
-			  DOMAIN  Domain to configure for the registry  [string] [required]
-
-			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]
-
-			OPTIONS
-			      --public-credential  The public part of the registry credentials, e.g. \`AWS_ACCESS_KEY_ID\` for ECR  [string]
-			      --secret-store-id    The ID of the secret store to use to store the registry credentials.  [string]
-			      --secret-name        The name Wrangler should store the registry credentials under.  [string]"
 		`);
 	});
 });
@@ -115,23 +67,21 @@ describe("containers registries configure", () => {
 		await expect(
 			runWrangler(`containers registries configure docker.io`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must provide exactly one public credential to confgure registry: --public-credential (aliases: --aws-access-key-id, --dockerhub-username)]`
+			`[Error: Missing required argument: dockerhub-username]`
+		);
+
+		await expect(
+			runWrangler(`containers registries configure 123456789012.dkr.ecr.region.amazonaws.com`)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Missing required argument: aws-access-key-id]`
 		);
 
 		await expect(
 			runWrangler(
-				`containers registries configure docker.io --public-credential=test-id --aws-access-key-id=another-test-id`
+				`containers registries configure docker.io --public-credential=test-id --dockerhub-username=another-test-id`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must provide exactly one public credential to confgure registry: --public-credential (aliases: --aws-access-key-id, --dockerhub-username)]`
-		);
-
-		await expect(
-			runWrangler(
-				`containers registries configure docker.io --public-credential=test-id --aws-access-key-id=another-test-id --dockerhub-username=yet-again`
-			)
-		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Must provide exactly one public credential to confgure registry: --public-credential (aliases: --aws-access-key-id, --dockerhub-username)]`
+			`[Error: Arguments public-credential and dockerhub-username are mutually exclusive]`
 		);
 	});
 

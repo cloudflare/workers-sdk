@@ -1,6 +1,6 @@
 ---
 "@cloudflare/containers-shared": patch
-"wrangler": patch
+"wrangler": minor
 ---
 
 Users are now able to configure DockerHub credentials and have containers reference images stored there.
