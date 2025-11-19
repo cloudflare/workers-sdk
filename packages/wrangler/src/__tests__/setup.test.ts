@@ -1,4 +1,4 @@
-import { seed } from "@cloudflare/workers-utils/test";
+import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, expect, test, vi } from "vitest";
 import * as c3 from "../autoconfig/c3-vendor/packages";
 import * as run from "../autoconfig/run";

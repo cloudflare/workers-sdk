@@ -4,7 +4,7 @@ import {
 	mockModifiedDate,
 	mockQueuedDate,
 	mockStartDate,
-} from "@cloudflare/workers-utils/test";
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
-import { seed } from "@cloudflare/workers-utils/test";
+import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { Binding, StartRemoteProxySessionOptions } from "../../api";

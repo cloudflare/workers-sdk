@@ -3701,9 +3701,6 @@ importers:
 
   packages/workers-utils:
     devDependencies:
-      '@cloudflare/cli':
-        specifier: workspace:*
-        version: link:../cli
       '@cloudflare/containers-shared':
         specifier: workspace:*
         version: link:../containers-shared

@@ -1,4 +1,4 @@
-import { runInTempDir as runInTempDirCommon } from "@cloudflare/workers-utils/test";
+import { runInTempDir as runInTempDirCommon } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach } from "vitest";
 import { reinitialiseAuthTokens } from "../../user";
 

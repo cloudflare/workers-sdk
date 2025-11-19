@@ -1,7 +1,7 @@
 import {
 	mockCreateDate,
 	mockModifiedDate,
-} from "@cloudflare/workers-utils/test";
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
