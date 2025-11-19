@@ -54,13 +54,14 @@ const IGNORED_KEYS = ["self"] as const;
 
 /** Available methods for `WorkerEntrypoint` class */
 const WORKER_ENTRYPOINT_KEYS = [
+	"email",
 	"fetch",
 	"queue",
 	"tail",
+	"tailStream",
 	"test",
 	"trace",
 	"scheduled",
-	"tailStream",
 ] as const;
 
 /** Available methods for `DurableObject` class */
