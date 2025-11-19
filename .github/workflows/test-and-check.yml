@@ -91,7 +91,7 @@ jobs:
             node_version: 20.19.1
           - os: windows-latest
             description: Windows
-            node_version: 20.19.1
+            node_version: 22
           - os: ubuntu-latest
             description: v22, Linux
             node_version: 22
