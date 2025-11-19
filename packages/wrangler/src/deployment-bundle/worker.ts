@@ -205,6 +205,7 @@ export interface CfService {
 	service: string;
 	environment?: string;
 	entrypoint?: string;
+	cross_account_grant?: string;
 }
 
 export interface CfAnalyticsEngineDataset {

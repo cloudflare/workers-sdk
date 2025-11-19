@@ -108,6 +108,7 @@ export type WorkerMetadataBinding =
 			service: string;
 			environment?: string;
 			entrypoint?: string;
+			cross_account_grant?: string;
 	  }
 	| { type: "analytics_engine"; name: string; dataset?: string }
 	| {
@@ -362,11 +363,12 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 	});
 
 	bindings.services?.forEach(
-		({ binding, service, environment, entrypoint }) => {
+		({ binding, service, environment, entrypoint, cross_account_grant }) => {
 			metadataBindings.push({
 				name: binding,
 				type: "service",
 				service,
+				cross_account_grant,
 				...(environment && { environment }),
 				...(entrypoint && { entrypoint }),
 			});
