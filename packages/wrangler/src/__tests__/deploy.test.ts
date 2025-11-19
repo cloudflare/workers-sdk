@@ -15310,6 +15310,10 @@ export default{
 	it("in non-intractive (and non-strict) mode, should present a diff when there are differences between the local config and the dash config, and proceed with the deployment", async () => {
 		setIsTTY(false);
 
+		fs.mkdirSync("./public");
+
+		await mockAUSRequest([]);
+
 		writeWorkerSource();
 		mockGetServiceByName("test-name", "production", "dash");
 		writeWranglerConfig(
@@ -15320,6 +15324,12 @@ export default{
 				preview_urls: true,
 				vars: {
 					MY_VAR: "this is a toml file",
+				},
+				assets: {
+					binding: "ASSETS",
+					// Note: remotely we only get the assets' binding name, so in the diff below you can see that
+					//       no diff for the directory configuration is shown
+					directory: "public",
 				},
 				observability: {
 					enabled: true,
@@ -15357,20 +15367,23 @@ export default{
 		//       to be able to show toml content/diffs, that combined with the fact that json(c) config files are the
 		//       recommended ones moving forward makes this small shortcoming of the config diffing acceptable
 		expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
-				"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
+			"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
 
-				   {
-				     vars: {
-				  -    MY_VAR: \\"abc\\"
-				  +    MY_VAR: \\"this is a toml file\\"
-				     }
-				   }
+			   {
+			  +  assets: {
+			  +    binding: \\"ASSETS\\"
+			  +  }
+			     vars: {
+			  -    MY_VAR: \\"abc\\"
+			  +    MY_VAR: \\"this is a toml file\\"
+			     }
+			   }
 
 
-				  Deploying the Worker will override the remote configuration with your local one.
+			  Deploying the Worker will override the remote configuration with your local one.
 
-				"
-			`);
+			"
+		`);
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"
@@ -15382,6 +15395,7 @@ export default{
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
 			Binding                                 Resource
+			env.ASSETS                              Assets
 			env.MY_VAR (\\"this is a toml file\\")      Environment Variable
 
 			Uploaded test-name (TIMINGS)
