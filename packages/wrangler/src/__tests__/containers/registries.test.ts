@@ -71,7 +71,9 @@ describe("containers registries configure", () => {
 		);
 
 		await expect(
-			runWrangler(`containers registries configure 123456789012.dkr.ecr.region.amazonaws.com`)
+			runWrangler(
+				`containers registries configure 123456789012.dkr.ecr.region.amazonaws.com`
+			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`[Error: Missing required argument: aws-access-key-id]`
 		);
