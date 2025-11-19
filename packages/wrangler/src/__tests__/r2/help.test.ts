@@ -15,24 +15,23 @@ describe("r2", () => {
 			await runWrangler("r2");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-			"wrangler r2
+				"wrangler r2
 
-			📦 Manage R2 buckets & objects
+				📦 Manage R2 buckets & objects
 
-			COMMANDS
-			  wrangler r2 object  Manage R2 objects
-			  wrangler r2 bucket  Manage R2 buckets
-			  wrangler r2 sql     Send queries and manage R2 SQL [open-beta]
-			  wrangler r2 bulk    Interact with multiple R2 objects at once
+				COMMANDS
+				  wrangler r2 object  Manage R2 objects
+				  wrangler r2 bucket  Manage R2 buckets
+				  wrangler r2 sql     Send queries and manage R2 SQL [open-beta]
 
-			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
+			`);
 		});
 
 		it("should show help when an invalid argument is passed", async () => {
@@ -46,25 +45,24 @@ describe("r2", () => {
 			"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler r2
+				"
+				wrangler r2
 
-			📦 Manage R2 buckets & objects
+				📦 Manage R2 buckets & objects
 
-			COMMANDS
-			  wrangler r2 object  Manage R2 objects
-			  wrangler r2 bucket  Manage R2 buckets
-			  wrangler r2 sql     Send queries and manage R2 SQL [open-beta]
-			  wrangler r2 bulk    Interact with multiple R2 objects at once
+				COMMANDS
+				  wrangler r2 object  Manage R2 objects
+				  wrangler r2 bucket  Manage R2 buckets
+				  wrangler r2 sql     Send queries and manage R2 SQL [open-beta]
 
-			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
+			`);
 		});
 	});
 });

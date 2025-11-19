@@ -23,11 +23,6 @@ describe("r2", () => {
 			expect(std.out).toMatchInlineSnapshot(`
 				"wrangler r2 bulk
 
-				Interact with multiple R2 objects at once
-
-				COMMANDS
-				  wrangler r2 bulk put <bucket>  Create objects in an R2 bucket
-
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]
 				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
