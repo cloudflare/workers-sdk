@@ -4,7 +4,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	plugins: [
 		cloudflare({
-			configPath: "./wrangler.module-worker.jsonc",
+			configPath: "./wrangler.exported-handler.jsonc",
 			inspectorPort: false,
 			persistState: false,
 		}),

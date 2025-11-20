@@ -9,8 +9,8 @@
 			"service": "service-worker",
 		},
 		{
-			"binding": "MODULE_WORKER",
-			"service": "module-worker",
+			"binding": "EXPORTED_HANDLER",
+			"service": "exported-handler",
 		},
 		{
 			"binding": "WORKER_ENTRYPOINT",
@@ -32,7 +32,7 @@
 	},
 	"tail_consumers": [
 		{
-			"service": "module-worker",
+			"service": "exported-handler",
 		},
 	],
 }

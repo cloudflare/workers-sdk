@@ -1,7 +1,7 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "module-worker",
-	"main": "./workers/module-worker.ts",
+	"name": "exported-handler",
+	"main": "./workers/exported-handler.ts",
 	"compatibility_date": "2025-05-01",
 	"services": [
 		{
@@ -9,8 +9,8 @@
 			"service": "service-worker",
 		},
 		{
-			"binding": "MODULE_WORKER",
-			"service": "module-worker",
+			"binding": "EXPORTED_HANDLER",
+			"service": "exported-handler",
 		},
 		{
 			"binding": "WORKER_ENTRYPOINT",
