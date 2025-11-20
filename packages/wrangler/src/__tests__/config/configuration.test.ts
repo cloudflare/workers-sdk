@@ -4805,7 +4805,6 @@ describe("normalizeAndValidateConfig()", () => {
 							class_name: "TestContainer",
 							image: "registry.cloudflare.com/test:image",
 							unsafe: {
-								name: "test-container",
 								custom_field: "value",
 							},
 						},
