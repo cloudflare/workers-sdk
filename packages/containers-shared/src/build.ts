@@ -5,12 +5,12 @@ import type {
 	BuildArgs,
 	ContainerDevOptions,
 	ImageURIConfig,
-	Logger,
+	WranglerLogger,
 } from "./types";
 
 export async function constructBuildCommand(
 	options: BuildArgs,
-	logger?: Logger
+	logger?: WranglerLogger
 ) {
 	const platform = options.platform ?? "linux/amd64";
 	const buildCmd = [
