@@ -22,7 +22,7 @@ jobs:
   check:
     timeout-minutes: 30
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-checks
+      group: ${{ github.workflow }}-${{ github.ref }}-checks
       cancel-in-progress: true
 
     name: "Checks"
@@ -55,13 +55,6 @@ jobs:
           CI_OS: ${{ runner.os }}
           NODE_OPTIONS: "--max_old_space_size=8192"
 
-      - name: Upload turbo logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
-          path: .turbo/runs
-
       # Check for old Node.js version warnings and errors
       - name: Use Node.js v16
         uses: actions/setup-node@v4
@@ -82,7 +75,7 @@ jobs:
   test:
     timeout-minutes: 45
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-${{ matrix.node_version }}-test
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node_version }}-test
       cancel-in-progress: true
 
     name: ${{ format('Tests ({0})', matrix.description) }}
@@ -173,5 +166,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
+          name: turbo-runs-${{ matrix.os }}-${{ matrix.node_version }}
           path: .turbo/runs
