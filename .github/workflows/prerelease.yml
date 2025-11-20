@@ -39,7 +39,7 @@ jobs:
       - run: echo ${{ github.head_ref }}
 
       - name: Build
-        run: pnpm run build
+        run: pnpm build --filter="./packages/*"
         env:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}
