@@ -155,6 +155,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 
 export const cloudflareBuiltInModules = [
 	"cloudflare:email",
+	"cloudflare:node",
 	"cloudflare:sockets",
 	"cloudflare:workers",
 	"cloudflare:workflows",
