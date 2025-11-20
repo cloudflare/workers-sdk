@@ -22,7 +22,7 @@ jobs:
   check:
     timeout-minutes: 30
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-checks
+      group: ${{ github.workflow }}-${{ github.ref }}-checks
       cancel-in-progress: true
 
     name: "Checks"
@@ -55,13 +55,6 @@ jobs:
           CI_OS: ${{ runner.os }}
           NODE_OPTIONS: "--max_old_space_size=8192"
 
-      - name: Upload turbo logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
-          path: .turbo/runs
-
       # Check for old Node.js version warnings and errors
       - name: Use Node.js v16
         uses: actions/setup-node@v4
@@ -82,7 +75,7 @@ jobs:
   test:
     timeout-minutes: 45
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.filter }}-${{ matrix.node_version }}-test
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node_version }}-test
       cancel-in-progress: true
 
     name: ${{ format('Tests ({0})', matrix.description) }}
@@ -93,29 +86,15 @@ jobs:
           - os: macos-latest
             description: macOS
             node_version: 20.19.1
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --summarize'
-          # needs to run on the amd runners to allow containers test to work in CI
           - os: ubuntu-latest
             description: Linux
             node_version: 20.19.1
-            # ./tools _only_ runs here because they're only intended to run in CI
-            # Browser rendering is disabled here because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
-            filter: '--filter="./tools" --filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./fixtures/browser-rendering"'
           - os: windows-latest
             description: Windows
             node_version: 20.19.1
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground"'
-          # needs to run on the amd runners to allow containers test to work in CI
           - os: ubuntu-latest
             description: v22, Linux
             node_version: 22
-            # Browser rendering is disabled here because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
-            filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/browser-rendering"'
-          # Skipped until we upgrade to undici v7, because of https://github.com/nodejs/undici/issues/4285
-          # - os: ubuntu-latest
-          #   label: v24, Linux
-          #   node_version: 24
-          #   filter: '--filter="./packages/*" --filter="./fixtures/*" --filter="./packages/vite-plugin-cloudflare/playground" --filter="!./packages/kv-asset-handler" --filter="!./fixtures/interactive-dev-tests"'
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -147,21 +126,52 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Run tests (Wrangler only)
-        # We are running Wrangler separately to be able to get early feedback on changes.
-        # There is no point in running the fixtures if Wrangler is broken.
+      - name: Run tests (tools only)
+        # tools _only_ needs to be tested on Linux because they're only intended to run in CI
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.os == 'ubuntu-latest'
+        run: pnpm run test:ci --log-order=stream --filter="@cloudflare/tools"
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/tools/index.html
+          CI_OS: ${{ matrix.description }}
+
+      - name: Run tests (packages)
+        # We are running the package tests first be able to get early feedback on changes.
+        # There is no point in running the fixtures if a package is broken.
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --log-order=stream --filter=wrangler
+        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*" --filter="!@cloudflare/kv-asset-handler"
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
           CI_OS: ${{ matrix.description }}
           NODE_DEBUG: "@cloudflare:vite-plugin"
 
-      - name: Run tests (not Wrangler)
+      - name: Run tests (kv-asset-handler only)
+        # kv-asset-handler tests don't work on Node.js 22
+        # TODO: put this back in the main packages test run when https://github.com/cloudflare/workers-sdk/pull/11348 is merged
+        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.node_version != '22'
+        run: pnpm run test:ci --log-order=stream --filter="@cloudflare/kv-asset-handler"
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/kv-asset-handler/index.html
+          CI_OS: ${{ matrix.description }}
+
+      - name: Run tests (vite-plugin playgrounds)
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --concurrency 1 ${{ matrix.filter }} --log-order=stream --filter=!wrangler
+        run: pnpm run test:ci --log-order=stream --filter="@vite-plugin-cloudflare/playground"
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/vite-plugin-playgrounds/index.html
+          CI_OS: ${{ matrix.description }}
+          NODE_DEBUG: "@cloudflare:vite-plugin"
+
+      - name: Run tests (fixtures)
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        # Browser rendering is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
+        run: pnpm run test:ci --concurrency 1 --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-rendering"' || '' }}
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
@@ -173,5 +183,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
+          name: turbo-runs-${{ matrix.os }}-${{ matrix.node_version }}
           path: .turbo/runs
