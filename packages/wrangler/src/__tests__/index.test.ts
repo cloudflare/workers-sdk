@@ -40,7 +40,7 @@ describe("wrangler", () => {
 
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
+				  wrangler deploy [path]          🆙 Deploy a Worker to Cloudflare
 				  wrangler setup                  🪄 Setup a project to work on Cloudflare [experimental]
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
@@ -104,7 +104,7 @@ describe("wrangler", () => {
 
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
+				  wrangler deploy [path]          🆙 Deploy a Worker to Cloudflare
 				  wrangler setup                  🪄 Setup a project to work on Cloudflare [experimental]
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
