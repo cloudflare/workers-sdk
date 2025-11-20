@@ -34,7 +34,7 @@ jobs:
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
 
-      - uses: Ana06/get-changed-files@v1.2
+      - uses: Ana06/get-changed-files@v2.3.0
         id: files
         with:
           format: "json"
