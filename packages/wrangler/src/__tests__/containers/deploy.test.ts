@@ -1858,6 +1858,127 @@ describe("wrangler deploy with containers dry run", () => {
 	});
 });
 
+describe("containers.unsafe configuration", () => {
+	runInTempDir();
+	const std = mockConsoleMethods();
+	mockAccountId();
+	mockApiToken();
+
+	beforeEach(() => {
+		setupCommonMocks();
+		fs.writeFileSync(
+			"index.js",
+			`export class ExampleDurableObject {}; export default{};`
+		);
+	});
+
+	it("should merge containers.unsafe config into create request", async () => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					unsafe: {
+						custom_field: "custom_value",
+						nested: { field: "nested_value" },
+						configuration: { network: "nested_value" },
+					},
+				},
+			],
+		});
+
+		mockGetApplications([]);
+
+		mockCreateApplication({
+			name: "my-container",
+			max_instances: 10,
+			custom_field: "custom_value",
+			nested: { field: "nested_value" },
+			configuration: {
+				// @ts-expect-error - testing with custom unsafe fields
+				network: "nested_value",
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+			},
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should merge containers.unsafe config into modify request", async () => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					max_instances: 20,
+					rollout_step_percentage: 10,
+					unsafe: {
+						unsafe_field: "unsafe_value",
+						configuration: { network: "unsafe_network_value" },
+					},
+				},
+			],
+		});
+
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container",
+				instances: 0,
+				max_instances: 10,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				configuration: {
+					image: "registry.cloudflare.com/some-account-id/my-container:old",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
+				},
+				constraints: {
+					tier: 1,
+				},
+				durable_objects: {
+					namespace_id: "1",
+				},
+			},
+		]);
+
+		mockModifyApplication({
+			max_instances: 20,
+			// @ts-expect-error - testing unsafe.containers with custom fields
+			unsafe_field: "unsafe_value",
+			configuration: {
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+			},
+		});
+
+		mockCreateApplicationRollout({
+			description: "Progressive update",
+			strategy: "rolling",
+			kind: "full_auto",
+			step_percentage: 10,
+			target_configuration: {
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+				network: "unsafe_network_value",
+			},
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+});
+
 // Docker mock factory
 function createDockerMockChain(
 	containerName: string,
