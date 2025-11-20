@@ -1,15 +1,13 @@
 import { EmailMessage } from "cloudflare:email";
-import { WorkerEntrypoint } from "cloudflare:workers";
 import { createMimeMessage } from "mimetext";
 import * as PostalMime from "postal-mime";
-import type { SendEmail } from "@cloudflare/workers-types";
 
 interface Env {
 	EMAIL: SendEmail;
 }
 
-export default class extends WorkerEntrypoint<Env> {
-	override async fetch(request: Request): Promise<Response> {
+export default {
+	async fetch(request, env) {
 		const url = new URL(request.url);
 
 		if (url.pathname === "/send") {
@@ -28,7 +26,7 @@ export default class extends WorkerEntrypoint<Env> {
 			);
 
 			try {
-				await this.env.EMAIL.send(message);
+				await env.EMAIL.send(message);
 			} catch (error) {
 				throw error;
 			}
@@ -37,14 +35,13 @@ export default class extends WorkerEntrypoint<Env> {
 		}
 
 		return new Response("Hello Email Workers playground!");
-	}
-
-	override async email(message: ForwardableEmailMessage) {
+	},
+	async email(message: ForwardableEmailMessage) {
 		const parser = new PostalMime.default();
 		const rawEmail = new Response(message.raw);
 		const email = await parser.parse(await rawEmail.arrayBuffer());
 		console.log(
 			`Received email from ${email.from.address} on ${email.date} with following message:\n\n ${email.html}`
 		);
-	}
-}
+	},
+} satisfies ExportedHandler<Env>;

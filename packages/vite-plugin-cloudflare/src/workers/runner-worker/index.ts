@@ -12,6 +12,12 @@ import {
 import { stripInternalEnv } from "./env";
 import { maybeCaptureError } from "./errors";
 import {
+	DURABLE_OBJECT_KEYS,
+	IGNORED_KEYS,
+	WORKER_ENTRYPOINT_KEYS,
+	WORKFLOW_ENTRYPOINT_KEYS,
+} from "./keys";
+import {
 	getWorkerEntryExport,
 	getWorkerEntryExportTypes,
 } from "./module-runner";
@@ -48,32 +54,6 @@ interface WorkflowEntrypointConstructor<T = Cloudflare.Env> {
 		...args: ConstructorParameters<typeof WorkflowEntrypoint<T>>
 	): WorkflowEntrypoint<T>;
 }
-
-/** Keys that should be ignored during RPC property access */
-const IGNORED_KEYS = ["self"] as const;
-
-/** Available methods for `WorkerEntrypoint` class */
-const WORKER_ENTRYPOINT_KEYS = [
-	"fetch",
-	"queue",
-	"tail",
-	"test",
-	"trace",
-	"scheduled",
-	"tailStream",
-] as const;
-
-/** Available methods for `DurableObject` class */
-const DURABLE_OBJECT_KEYS = [
-	"alarm",
-	"fetch",
-	"webSocketClose",
-	"webSocketError",
-	"webSocketMessage",
-] as const;
-
-/** Available methods for `WorkflowEntrypoint` classes */
-const WORKFLOW_ENTRYPOINT_KEYS = ["run"] as const;
 
 /** The path to the Worker entry file. We store it in the module scope so that it is easily accessible in error messages etc.. */
 let workerEntryPath = "";
