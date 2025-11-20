@@ -435,7 +435,7 @@ function getTraceEventsOverrides({
 /**
  * Returns the overrides for `node:domain` (unenv or workerd)
  *
- * The native trace_events implementation:
+ * The native domain implementation:
  * - is experimental
  * - can be enabled with the "enable_nodejs_domain_module" flag
  * - can be disabled with the "disable_nodejs_domain_module" flag
