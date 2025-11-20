@@ -32,9 +32,11 @@ export function resolveWranglerConfigPath(
 	{
 		config,
 		script,
+		path: inputPath,
 	}: {
 		config?: string;
 		script?: string;
+		path?: string;
 	},
 	options: { useRedirectIfAvailable?: boolean }
 ): ConfigPaths {
@@ -47,7 +49,10 @@ export function resolveWranglerConfigPath(
 		};
 	}
 
-	const leafPath = script !== undefined ? path.dirname(script) : process.cwd();
+	const entryPath = inputPath ?? script;
+
+	const leafPath =
+		entryPath !== undefined ? path.dirname(entryPath) : process.cwd();
 
 	return findWranglerConfig(leafPath, options);
 }

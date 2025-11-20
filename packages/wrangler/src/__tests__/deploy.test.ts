@@ -12330,6 +12330,43 @@ export default{
 		});
 	});
 
+	it("gives precedence to a provided positional path over a `--script` path", async () => {
+		writeWranglerConfig();
+		fs.writeFileSync("indexA.js", "export default {}");
+		fs.writeFileSync("indexB.js", "export default {}");
+		mockSubDomainRequest();
+		mockUploadWorkerRequest({
+			expectedMainModule: "indexA.js",
+		});
+		await runWrangler("deploy indexA.js --script indexB.js");
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Total Upload: xx KiB / gzip: xx KiB
+			Worker Startup Time: 100 ms
+			Uploaded test-name (TIMINGS)
+			Deployed test-name triggers (TIMINGS)
+			  https://test-name.test-sub-domain.workers.dev
+			Current Version ID: Galaxy-Class",
+			  "warn": "[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou have passed both a positional path argument and a --script flag.[0m
+
+
+			  This is not recommended, and the --script flag will be ignored.
+
+			  If you want to deploy a script and point to an assets directory run
+			    \`wrangler deploy <PATH_TO_ENTRY_POINT> --assets <PATH_TO_ASSETS_DIR>\`
+			  instead.
+
+			",
+			}
+		`);
+	});
+
 	describe("`nodejs_compat` compatibility flag", () => {
 		it('when absent, should warn on any "external" `node:*` imports', async () => {
 			writeWranglerConfig();

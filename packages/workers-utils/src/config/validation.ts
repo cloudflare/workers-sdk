@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { statSync } from "node:fs";
 import path from "node:path";
 import { isDockerfile } from "@cloudflare/containers-shared";
 import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/validators";
@@ -112,6 +113,7 @@ export type NormalizeAndValidateConfigArgs = {
 	localProtocol?: string;
 	upstreamProtocol?: string;
 	script?: string;
+	path?: string;
 	enableContainers?: boolean;
 };
 
@@ -424,7 +426,16 @@ function applyPythonConfig(
 	config: Config,
 	args: NormalizeAndValidateConfigArgs
 ) {
-	const mainModule = args.script ?? config.main;
+	let scriptPath: string | undefined = undefined;
+
+	if (args.path) {
+		const pathStats = statSync(args.path, { throwIfNoEntry: false });
+		if (pathStats?.isFile()) {
+			scriptPath = args.path;
+		}
+	}
+
+	const mainModule = scriptPath ?? config.main;
 	if (typeof mainModule === "string" && mainModule.endsWith(".py")) {
 		// Workers with a python entrypoint should have bundling turned off, since all of Wrangler's bundling is JS/TS specific
 		config.no_bundle = true;

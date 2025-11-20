@@ -8,6 +8,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
+import dedent from "ts-dedent";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { runAutoConfig } from "../autoconfig/run";
@@ -34,12 +35,17 @@ export const deployCommand = createCommand({
 		owner: "Workers: Deploy and Config",
 		status: "stable",
 	},
-	positionalArgs: ["script"],
+	positionalArgs: ["path"],
 	args: {
-		script: {
-			describe: "The path to an entry point for your Worker",
+		path: {
+			describe:
+				"The path to an entry point for your Worker or to a directory with assets (the latter only works in interactive mode)",
 			type: "string",
 			requiresArg: true,
+		},
+		script: {
+			describe: "The path to an entry point file for your Worker",
+			type: "string",
 		},
 		name: {
 			describe: "Name of the Worker",
@@ -277,11 +283,43 @@ export const deployCommand = createCommand({
 			);
 		}
 
+		const argsContainsBothPathAndScript = args.path && args.script;
+
+		if (argsContainsBothPathAndScript) {
+			// Note: The following logic is as is because changing it to something different would be a breaking change
+			//
+			// TODO: In the next Wrangler major change this logic to treat the path arg as an assets directory while
+			//       using the script arg as the entrypoint path (e.g. just as `wrangler deploy --assets <ASSETS_PATH> --script <SCRIPT_PATH>`)
+			logger.warn(
+				dedent`
+				You have passed both a positional path argument and a --script flag.
+
+				This is not recommended, and the --script flag will be ignored.
+
+				If you want to deploy a script and point to an assets directory run
+				  \`wrangler deploy <PATH_TO_ENTRY_POINT> --assets <PATH_TO_ASSETS_DIR>\`
+				instead.
+				`
+			);
+			args.script = undefined;
+		}
+
+		const pathStats = args.path
+			? statSync(args.path, { throwIfNoEntry: false })
+			: null;
+
+		if (!pathStats || !pathStats.isDirectory()) {
+			// The user passed to the path (positional) argument the path to a file
+			// so we set the script argument to that
+			args.script = args.path;
+		}
+
 		const shouldRunAutoConfig =
 			args.experimentalAutoconfig &&
-			// If there is a positional parameter or an assets directory specified via --assets then
-			// we don't want to run autoconfig since we assume that the user knows what they are doing
-			// and that they are specifying what needs to be deployed
+			// If there is a positional parameter, a --script arg or an assets directory specified via
+			// --assets then we don't want to run autoconfig since we assume that the user knows what
+			// they are doing and that they are specifying what needs to be deployed
+			!args.path &&
 			!args.script &&
 			!args.assets;
 
@@ -302,13 +340,12 @@ export const deployCommand = createCommand({
 			}
 		}
 
-		if (!config.configPath) {
+		if (!config.configPath && !args.script) {
 			// Attempt to interactively handle `wrangler deploy <directory>`
-			if (args.script) {
+			if (args.path) {
 				try {
-					const stats = statSync(args.script);
-					if (stats.isDirectory()) {
-						args = await handleMaybeAssetsDeployment(args.script, args);
+					if (pathStats?.isDirectory()) {
+						args = await handleMaybeAssetsDeployment(args.path, args);
 					}
 				} catch (error) {
 					// If this is our UserError, re-throw it
@@ -477,7 +514,7 @@ export async function handleMaybeAssetsDeployment(
 		logger.log("");
 		if (deployAssets) {
 			args.assets = assetDirectory;
-			args.script = undefined;
+			args.path = undefined;
 		} else {
 			// let the usual error handling path kick in
 			return args;
