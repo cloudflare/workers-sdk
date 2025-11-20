@@ -99,7 +99,6 @@ export default {
 	},
 } satisfies ExportedHandler<{
 	SERVICE_WORKER: Fetcher;
-	EXPORTED_HANDLER: Fetcher;
 	WORKER_ENTRYPOINT: Fetcher;
 	WORKER_ENTRYPOINT_WITH_ASSETS: Fetcher;
 	NAMED_ENTRYPOINT: Fetcher;

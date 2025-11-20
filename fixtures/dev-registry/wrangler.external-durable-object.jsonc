@@ -3,24 +3,6 @@
 	"name": "external-durable-object",
 	"main": "./workers/worker-entrypoint.ts",
 	"compatibility_date": "2025-05-01",
-	"services": [
-		{
-			"binding": "SERVICE_WORKER",
-			"service": "service-worker",
-		},
-		{
-			"binding": "EXPORTED_HANDLER",
-			"service": "exported-handler",
-		},
-		{
-			"binding": "WORKER_ENTRYPOINT",
-			"service": "worker-entrypoint",
-		},
-		{
-			"binding": "WORKER_ENTRYPOINT_WITH_ASSETS",
-			"service": "worker-entrypoint-with-assets",
-		},
-	],
 	"durable_objects": {
 		"bindings": [
 			{

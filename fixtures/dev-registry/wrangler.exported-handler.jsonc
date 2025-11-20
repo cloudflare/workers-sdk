@@ -9,10 +9,6 @@
 			"service": "service-worker",
 		},
 		{
-			"binding": "EXPORTED_HANDLER",
-			"service": "exported-handler",
-		},
-		{
 			"binding": "WORKER_ENTRYPOINT",
 			"service": "worker-entrypoint",
 		},

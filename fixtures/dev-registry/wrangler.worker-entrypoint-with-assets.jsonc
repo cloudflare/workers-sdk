@@ -16,12 +16,12 @@
 			"service": "exported-handler",
 		},
 		{
-			"binding": "WORKER_ENTRYPOINT",
-			"service": "worker-entrypoint",
+			"binding": "EXPORTED_HANDLER_WITH_ASSETS",
+			"service": "exported-handler-with-assets",
 		},
 		{
-			"binding": "WORKER_ENTRYPOINT_WITH_ASSETS",
-			"service": "worker-entrypoint-with-assets",
+			"binding": "WORKER_ENTRYPOINT",
+			"service": "worker-entrypoint",
 		},
 		{
 			"binding": "NAMED_ENTRYPOINT",
