@@ -8,8 +8,8 @@ export type ConfigurationOptions = {
 };
 export abstract class Framework {
 	name: string;
-	constructor(name: string) {
-		this.name = name ?? "static";
+	constructor(name?: string) {
+		this.name = name ?? "Static";
 	}
 
 	// Override commands used to configure the project. Most frameworks should not need to do this, as their default detected build command will be sufficient
