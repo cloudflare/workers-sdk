@@ -21,13 +21,11 @@
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
 	"type": "module",
-	"main": "dist/src/index.js",
-	"types": "dist/src/index.d.ts",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
 	"files": [
 		"src",
-		"dist",
-		"!src/test",
-		"!dist/test"
+		"dist"
 	],
 	"scripts": {
 		"build": "tsup",
