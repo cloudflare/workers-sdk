@@ -1,5 +1,21 @@
 # @cloudflare/workers-utils
 
+## 0.1.2
+
+### Patch Changes
+
+- [#11339](https://github.com/cloudflare/workers-sdk/pull/11339) [`dfba912`](https://github.com/cloudflare/workers-sdk/commit/dfba9126615993b7bbb6d8bf7d1e31b5eebab9f6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix `mapWorkerMetadataBindings` and `constructWranglerConfig` incorrectly throwing an error when encountering assets bindings
+
+  Currently `mapWorkerMetadataBindings` and `constructWranglerConfig` when provided data containing an assets binding throw the
+  following error:
+
+  ```
+   the error "`wrangler init --from-dash` is not yet supported for Workers with Assets"
+  ```
+
+  This is incorrect and `wrangler init` specific, the changes here make sure that such error is not thrown and that the assets
+  binding is instead handled
+
 ## 0.1.1
 
 ### Patch Changes
