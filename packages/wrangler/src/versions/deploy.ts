@@ -42,7 +42,7 @@ type OptionalPercentage = number | null; // null means automatically assign (eve
 export const versionsDeployCommand = createCommand({
 	metadata: {
 		description:
-			"Safely roll out new Versions of your Worker by splitting traffic between multiple Versions. To capture deployment output in ND-JSON format, set the WRANGLER_OUTPUT_FILE_PATH or WRANGLER_OUTPUT_FILE_DIRECTORY environment variable. See https://developers.cloudflare.com/workers/wrangler/system-environment-variables/ for details.",
+			"Safely roll out new Versions of your Worker by splitting traffic between multiple Versions. Capture deployment output (ND-JSON) via WRANGLER_OUTPUT_FILE_PATH or WRANGLER_OUTPUT_FILE_DIRECTORY. Docs: https://developers.cloudflare.com/workers/wrangler/system-environment-variables/",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
