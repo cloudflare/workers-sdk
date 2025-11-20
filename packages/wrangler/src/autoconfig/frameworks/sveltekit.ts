@@ -19,6 +19,7 @@ export class SvelteKit extends Framework {
 					"sv",
 					"add",
 					"--no-install",
+					"--no-git-check",
 					"sveltekit-adapter=adapter:cloudflare",
 				],
 				{
