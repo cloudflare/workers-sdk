@@ -255,7 +255,6 @@ export class CommandRegistry {
 		const stringifyChain = (...extra: InternalDefinition[]) =>
 			[...chain, ...extra].map(({ command }) => `"${command}"`).join(" => ");
 
-		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			if (chain.includes(def)) {
 				throw new CommandRegistrationError(

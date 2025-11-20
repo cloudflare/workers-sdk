@@ -1,0 +1,128 @@
+import { describe, expect } from "vitest";
+import { Astro } from "../../autoconfig/frameworks/astro";
+import { Static } from "../../autoconfig/frameworks/static";
+import { buildOperationsSummary } from "../../autoconfig/run";
+import { dedent } from "../../utils/dedent";
+import { mockConsoleMethods } from "../helpers/mock-console";
+import { useMockIsTTY } from "../helpers/mock-istty";
+import type { RawConfig } from "@cloudflare/workers-utils";
+
+const testRawConfig: RawConfig = {
+	$schema: "node_modules/wrangler/config-schema.json",
+	name: "worker-name",
+	compatibility_date: "2025-01-01",
+	observability: {
+		enabled: true,
+	},
+};
+
+describe("autoconfig run - buildOperationsSummary()", () => {
+	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
+	beforeEach(() => {
+		setIsTTY(true);
+	});
+
+	describe("interactive mode", () => {
+		test("presents a summary for a simple project where only a wrangler.jsonc file needs to be created", async () => {
+			await buildOperationsSummary(
+				{
+					workerName: "worker-name",
+					projectPath: "<PROJECT_PATH>",
+					configured: false,
+				},
+				testRawConfig
+			);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				📄 Create wrangler.jsonc:
+				  {
+				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				    \\"name\\": \\"worker-name\\",
+				    \\"compatibility_date\\": \\"2025-01-01\\",
+				    \\"observability\\": {
+				      \\"enabled\\": true
+				    }
+				  }
+				"
+			`);
+		});
+
+		test("shows that wrangler will be added as a devDependency when not already installed as such", async () => {
+			await buildOperationsSummary(
+				{
+					workerName: "worker-name",
+					projectPath: "<PROJECT_PATH>",
+					packageJson: {
+						name: "my-project",
+						devDependencies: {},
+					},
+					configured: false,
+				},
+				testRawConfig
+			);
+
+			expect(std.out).toContain(
+				dedent`
+				📦 Install packages:
+				 - wrangler (devDependency)
+				`
+			);
+		});
+
+		test("when a package.json is present wrangler@latest will be unconditionally installed (even if already present)", async () => {
+			await buildOperationsSummary(
+				{
+					workerName: "worker-name",
+					projectPath: "<PROJECT_PATH>",
+					packageJson: {
+						name: "my-project",
+						devDependencies: {
+							wrangler: "^4.0.0",
+						},
+					},
+					configured: false,
+				},
+				testRawConfig
+			);
+
+			expect(std.out).toContain(
+				dedent`
+				📦 Install packages:
+				 - wrangler (devDependency)
+				`
+			);
+		});
+
+		test("shows that when needed a framework specific configuration will be run", async () => {
+			await buildOperationsSummary(
+				{
+					workerName: "worker-name",
+					projectPath: "<PROJECT_PATH>",
+					framework: new Astro(),
+					configured: false,
+				},
+				testRawConfig
+			);
+
+			expect(std.out).toContain(
+				'🛠️  Configuring project for Astro with "astro add cloudflare"'
+			);
+		});
+
+		test("doesn't show the framework specific configuration step for the Static framework", async () => {
+			await buildOperationsSummary(
+				{
+					workerName: "worker-name",
+					projectPath: "<PROJECT_PATH>",
+					framework: new Static("static"),
+					configured: false,
+				},
+				testRawConfig
+			);
+
+			expect(std.out).not.toContain("🛠️  Configuring project for");
+		});
+	});
+});

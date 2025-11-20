@@ -351,7 +351,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			flags: ["--yes", "--import-alias", "@/*"],
 			verifyPreview: {
 				previewArgs: ["--", "--inspector-port=0"],
-				route: "/test",
+				route: "/",
 				expectedText: "Create Next App",
 			},
 			verifyDeploy: {
@@ -359,13 +359,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "Create Next App",
 			},
 			nodeCompat: true,
-			// see https://github.com/cloudflare/next-on-pages/blob/main/packages/next-on-pages/docs/supported.md#operating-systems
 			unsupportedOSs: ["win32"],
-			unsupportedPms: [
-				// bun and yarn are failing in CI
-				"bun",
-				"yarn",
-			],
 		},
 		{
 			name: "nuxt:pages",
@@ -614,9 +608,84 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 /**
  * Gets the list of experimental framework test configurations.
  */
-function getExperimentalFrameworkTestConfig() {
+function getExperimentalFrameworkTestConfig(
+	pm: string,
+): NamedFrameworkTestConfig[] {
 	return [
-		// None right now
+		{
+			name: "gatsby:workers",
+			argv: ["--platform", "workers"],
+			unsupportedPms: ["bun", "pnpm", "yarn"],
+			promptHandlers: [
+				{
+					matcher: /Would you like to use a template\?/,
+					input: ["n"],
+				},
+			],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Gatsby!",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "Gatsby!",
+			},
+			nodeCompat: false,
+		},
+		{
+			name: "svelte:workers",
+			argv: ["--platform", "workers"],
+			flags: [
+				"--no-install",
+				"--no-add-ons",
+				"--template",
+				"minimal",
+				"--types",
+				"ts",
+			],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["npm", "yarn"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "SvelteKit app",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: false,
+			verifyTypes: false,
+		},
+		{
+			name: "docusaurus:workers",
+			argv: ["--platform", "workers"],
+			unsupportedPms: ["bun"],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Dinosaurs are cool",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "Dinosaurs are cool",
+			},
+			nodeCompat: false,
+			flags: [`--package-manager`, pm],
+			promptHandlers: [
+				{
+					matcher: /Which language do you want to use\?/,
+					input: [keys.enter],
+				},
+			],
+		},
 	];
 }
 
@@ -630,7 +699,7 @@ function getExperimentalFrameworkTestConfig() {
 export function getFrameworksTests(): NamedFrameworkTestConfig[] {
 	const packageManager = detectPackageManager();
 	const frameworkTests = isExperimental
-		? getExperimentalFrameworkTestConfig()
+		? getExperimentalFrameworkTestConfig(packageManager.name)
 		: getFrameworkTestConfig(packageManager.name);
 	return frameworkTests.filter((testConfig) => {
 		if (!frameworkToTestFilter) {

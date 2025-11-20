@@ -125,7 +125,6 @@ describe("dialog helpers", () => {
 				Dash: https://dash.cloudflare.com/?to=/:account/workers/services/view/test-project
 
 				💻 Continue Developing
-				Start dev server: pnpm run start
 				Deploy again: pnpm run deploy
 
 				📖 Explore Documentation
@@ -160,7 +159,6 @@ describe("dialog helpers", () => {
 
 				💻 Continue Developing
 				Change directories: cd ../example
-				Start dev server: pnpm run start
 				Deploy: pnpm run deploy
 
 				📖 Explore Documentation

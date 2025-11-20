@@ -1,6 +1,6 @@
 import { writeFileSync } from "fs";
-import TOML from "@iarna/toml";
 import { applyEdits, format, modify } from "jsonc-parser";
+import TOML from "smol-toml";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";
 import type { RawConfig } from "./config";
 import type { JSONPath } from "jsonc-parser";
@@ -46,7 +46,7 @@ export const experimental_patchConfig = (
 	configString = applyEdits(configString, formatEdit);
 
 	if (configPath.endsWith(".toml")) {
-		configString = TOML.stringify(parseJSONC(configString) as TOML.JsonMap);
+		configString = TOML.stringify(parseJSONC(configString));
 	}
 	writeFileSync(configPath, configString);
 	return configString;
@@ -77,13 +77,13 @@ const getJSONPath = (
 				if (isArrayInsertion) {
 					// makes sure we insert new array items at the end
 					allPaths.push([...currentPath, -1, x]);
-				} else if (typeof x === "object") {
+				} else if (typeof x === "object" && x !== null) {
 					getJSONPath(x, allPaths, isArrayInsertion, [...currentPath, i]);
 				} else {
 					allPaths.push([...currentPath, i, x]);
 				}
 			});
-		} else if (typeof v === "object") {
+		} else if (typeof v === "object" && v !== null) {
 			getJSONPath(v, allPaths, isArrayInsertion, currentPath);
 		} else {
 			allPaths.push([...currentPath, v]);

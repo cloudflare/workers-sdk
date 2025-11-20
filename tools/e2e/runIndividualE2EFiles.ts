@@ -22,6 +22,8 @@ import type { ExecSyncOptionsWithBufferEncoding } from "child_process";
 // pnpm test:e2e:wrangler -- -u
 // ```
 
+const RETRIES = 4;
+
 const extraParamsIndex = process.argv.indexOf("--");
 const extraParams =
 	extraParamsIndex === -1 ? [] : process.argv.slice(extraParamsIndex);
@@ -34,30 +36,39 @@ const failed: string[] = [];
 const wranglerPath = path.join(__dirname, "../../packages/wrangler");
 assert(statSync(wranglerPath).isDirectory());
 
-for (const testFile of globIterateSync("e2e/**/*.test.ts", {
-	cwd: wranglerPath,
-	// Return `/` delimited paths, even on Windows.
-	posix: true,
-})) {
-	const options: ExecSyncOptionsWithBufferEncoding = {
-		stdio: "inherit",
-		env: { ...process.env, WRANGLER_E2E_TEST_FILE: testFile },
-	};
+let tests = Array.from(
+	globIterateSync("e2e/**/*.test.ts", {
+		cwd: wranglerPath,
+		// Return `/` delimited paths, even on Windows.
+		posix: true,
+	})
+);
 
-	console.log(`::group::Testing: ${testFile}`);
+for (let i = 0; i < RETRIES; i++) {
+	for (const testFile of tests) {
+		const options: ExecSyncOptionsWithBufferEncoding = {
+			stdio: "inherit",
+			env: { ...process.env, WRANGLER_E2E_TEST_FILE: testFile },
+		};
 
-	try {
-		execSync(command, options);
-	} catch {
-		console.error("Task failed - retrying");
+		console.log(`::group::Testing: ${testFile}`);
+
 		try {
 			execSync(command, options);
 		} catch {
-			console.error("Still failed, moving on");
 			failed.push(testFile);
 		}
+		console.log("::endgroup::");
 	}
-	console.log("::endgroup::");
+	if (failed.length === 0) {
+		break;
+	} else {
+		console.log(
+			`Retrying ${failed.length} failed tests...` +
+				failed.map((file) => `\n - ${file}`)
+		);
+		tests = failed.splice(0, failed.length);
+	}
 }
 
 if (failed.length > 0) {

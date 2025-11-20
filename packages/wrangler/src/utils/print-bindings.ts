@@ -13,9 +13,11 @@ import type { WorkerRegistry } from "miniflare";
 export function printBindings(
 	bindings: Partial<CfWorkerInit["bindings"]>,
 	tailConsumers: CfTailConsumer[] = [],
+	streamingTailConsumers: CfTailConsumer[] = [],
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
+		remoteBindingsDisabled?: boolean;
 		name?: string;
 		provisioning?: boolean;
 		warnIfNoBindings?: boolean;
@@ -139,7 +141,8 @@ export function printBindings(
 					type: friendlyBindingNames.workflows,
 					value: value,
 					mode: getMode({
-						isSimulatedLocally: script_name ? !remote : true,
+						isSimulatedLocally:
+							script_name && !context.remoteBindingsDisabled ? !remote : true,
 					}),
 				};
 			})
@@ -154,7 +157,7 @@ export function printBindings(
 					type: friendlyBindingNames.kv_namespaces,
 					value: id,
 					mode: getMode({
-						isSimulatedLocally: !remote,
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
 					}),
 				};
 			})
@@ -189,7 +192,8 @@ export function printBindings(
 					type: friendlyBindingNames.send_email,
 					value,
 					mode: getMode({
-						isSimulatedLocally: !emailBinding.remote,
+						isSimulatedLocally:
+							context.remoteBindingsDisabled || !emailBinding.remote,
 					}),
 				};
 			})
@@ -204,7 +208,7 @@ export function printBindings(
 					type: friendlyBindingNames.queues,
 					value: queue_name,
 					mode: getMode({
-						isSimulatedLocally: !remote,
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
 					}),
 				};
 			})
@@ -230,7 +234,7 @@ export function printBindings(
 						name: binding,
 						type: friendlyBindingNames.d1_databases,
 						mode: getMode({
-							isSimulatedLocally: !remote,
+							isSimulatedLocally: context.remoteBindingsDisabled || !remote,
 						}),
 						value,
 					};
@@ -247,7 +251,8 @@ export function printBindings(
 					type: friendlyBindingNames.vectorize,
 					value: index_name,
 					mode: getMode({
-						isSimulatedLocally: remote ? false : undefined,
+						isSimulatedLocally:
+							remote && !context.remoteBindingsDisabled ? false : undefined,
 					}),
 				};
 			})
@@ -274,7 +279,10 @@ export function printBindings(
 					name: binding,
 					type: friendlyBindingNames.vpc_services,
 					value: service_id,
-					mode: getMode({ isSimulatedLocally: remote ? false : undefined }),
+					mode: getMode({
+						isSimulatedLocally:
+							remote && !context.remoteBindingsDisabled ? false : undefined,
+					}),
 				};
 			})
 		);
@@ -295,7 +303,7 @@ export function printBindings(
 					type: friendlyBindingNames.r2_buckets,
 					value: value,
 					mode: getMode({
-						isSimulatedLocally: !remote,
+						isSimulatedLocally: context.remoteBindingsDisabled || !remote,
 					}),
 				};
 			})
@@ -418,7 +426,7 @@ export function printBindings(
 			type: friendlyBindingNames.browser,
 			value: undefined,
 			mode: getMode({
-				isSimulatedLocally: !browser.remote,
+				isSimulatedLocally: context.remoteBindingsDisabled || !browser.remote,
 			}),
 		});
 	}
@@ -429,7 +437,7 @@ export function printBindings(
 			type: friendlyBindingNames.images,
 			value: undefined,
 			mode: getMode({
-				isSimulatedLocally: !images.remote,
+				isSimulatedLocally: context.remoteBindingsDisabled || !images.remote,
 			}),
 		});
 	}
@@ -441,7 +449,8 @@ export function printBindings(
 			value: undefined,
 			mode: getMode({
 				isSimulatedLocally:
-					media.remote === true || media.remote === undefined
+					(media.remote === true || media.remote === undefined) &&
+					!context.remoteBindingsDisabled
 						? false
 						: undefined,
 			}),
@@ -455,7 +464,10 @@ export function printBindings(
 			value: ai.staging ? `staging` : undefined,
 			mode: getMode({
 				isSimulatedLocally:
-					ai.remote === true || ai.remote === undefined ? false : undefined,
+					(ai.remote === true || ai.remote === undefined) &&
+					!context.remoteBindingsDisabled
+						? false
+						: undefined,
 			}),
 		});
 	}
@@ -467,7 +479,7 @@ export function printBindings(
 				type: friendlyBindingNames.pipelines,
 				value: pipeline,
 				mode: getMode({
-					isSimulatedLocally: !remote,
+					isSimulatedLocally: context.remoteBindingsDisabled || !remote,
 				}),
 			}))
 		);
@@ -561,7 +573,8 @@ export function printBindings(
 						? `${namespace} (outbound -> ${outbound.service})`
 						: namespace,
 					mode: getMode({
-						isSimulatedLocally: remote ? false : undefined,
+						isSimulatedLocally:
+							remote && !context.remoteBindingsDisabled ? false : undefined,
 					}),
 				};
 			})
@@ -576,7 +589,8 @@ export function printBindings(
 					type: friendlyBindingNames.mtls_certificates,
 					value: certificate_id,
 					mode: getMode({
-						isSimulatedLocally: remote ? false : undefined,
+						isSimulatedLocally:
+							remote && !context.remoteBindingsDisabled ? false : undefined,
 					}),
 				};
 			})
@@ -692,21 +706,33 @@ export function printBindings(
 	} else {
 		title = "Your Worker is sending Tail events to the following Workers:";
 	}
-	if (tailConsumers !== undefined && tailConsumers.length > 0) {
+
+	const allTailConsumers = [
+		...(tailConsumers ?? []).map((c) => ({
+			service: c.service,
+			streaming: false,
+		})),
+		...(streamingTailConsumers ?? []).map((c) => ({
+			service: c.service,
+			streaming: true,
+		})),
+	];
+	if (allTailConsumers.length > 0) {
 		logger.log(
-			`${title}\n${tailConsumers
-				.map(({ service }) => {
+			`${title}\n${allTailConsumers
+				.map(({ service, streaming }) => {
+					const displayName = `${service}${streaming ? ` (streaming)` : ""}`;
 					if (context.local && context.registry !== null) {
 						const registryDefinition = context.registry?.[service];
 						hasConnectionStatus = true;
 
 						if (registryDefinition) {
-							return `- ${service} ${chalk.green("[connected]")}`;
+							return `- ${displayName} ${chalk.green("[connected]")}`;
 						} else {
-							return `- ${service} ${chalk.red("[not connected]")}`;
+							return `- ${displayName} ${chalk.red("[not connected]")}`;
 						}
 					} else {
-						return `- ${service}`;
+						return `- ${displayName}`;
 					}
 				})
 				.join("\n")}`

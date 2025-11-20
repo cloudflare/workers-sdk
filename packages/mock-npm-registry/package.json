@@ -14,8 +14,10 @@
 		"check:types": "tsc"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@types/node": "catalog:default",
 		"@verdaccio/types": "^10.8.0",
+		"eslint": "catalog:default",
 		"get-port": "^7.0.0",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",

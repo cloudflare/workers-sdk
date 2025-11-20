@@ -16,6 +16,7 @@
 		"@octokit/webhooks-types": "^7.6.1",
 		"@typescript-eslint/eslint-plugin": "catalog:default",
 		"@typescript-eslint/parser": "catalog:default",
+		"eslint": "catalog:default",
 		"find-up": "^6.3.0",
 		"glob": "^11.0.3",
 		"ts-dedent": "^2.2.0",

@@ -828,5 +828,95 @@ describe("DevEnv", { sequential: true }, () => {
 				}
 			`);
 		});
+
+		// Regression test for https://github.com/cloudflare/workers-sdk/issues/11038
+		// When envFiles is explicitly provided, .dev.vars should be completely ignored
+		it(".dev.vars is ignored when envFiles is explicitly provided (PR #11195)", async () => {
+			await helper.seed({
+				"src/index.ts": dedent`
+				export default {
+					fetch(request, env) {
+						return Response.json(env);
+					}
+				}
+			`,
+				"wrangler.jsonc": JSON.stringify({
+					vars: {
+						WRANGLER_ENV_VAR_0: "default-0",
+					},
+				}),
+				".dev.vars": dedent`
+				WRANGLER_ENV_VAR_1=dev-vars-1
+				WRANGLER_ENV_VAR_2=dev-vars-2
+			`,
+				"custom/.env": dedent`
+				WRANGLER_ENV_VAR_2=custom-2
+				WRANGLER_ENV_VAR_3=custom-3
+			`,
+			});
+
+			worker = await startWorker({
+				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
+				name: "test-worker",
+				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+				envFiles: ["custom/.env"],
+				dev: {
+					server: { port: 0 },
+					inspector: false,
+				},
+			});
+
+			const res = await worker.fetch("http://dummy/test/path/1");
+			expect(await res.json()).toMatchInlineSnapshot(`
+				{
+				  "WRANGLER_ENV_VAR_0": "default-0",
+				  "WRANGLER_ENV_VAR_2": "custom-2",
+				  "WRANGLER_ENV_VAR_3": "custom-3",
+				}
+			`);
+		});
+
+		// Regression test for https://github.com/cloudflare/workers-sdk/issues/11264
+		// When envFiles is an empty array, .dev.vars should still be loaded
+		it(".dev.vars is loaded when envFiles is empty array (PR #11278)", async () => {
+			await helper.seed({
+				"src/index.ts": dedent`
+				export default {
+					fetch(request, env) {
+						return Response.json(env);
+					}
+				}
+			`,
+				"wrangler.jsonc": JSON.stringify({
+					vars: {
+						WRANGLER_ENV_VAR_0: "default-0",
+					},
+				}),
+				".dev.vars": dedent`
+				WRANGLER_ENV_VAR_1=dev-vars-1
+				WRANGLER_ENV_VAR_2=dev-vars-2
+			`,
+			});
+
+			worker = await startWorker({
+				config: path.resolve(helper.tmpPath, "wrangler.jsonc"),
+				name: "test-worker",
+				entrypoint: path.resolve(helper.tmpPath, "src/index.ts"),
+				envFiles: [],
+				dev: {
+					server: { port: 0 },
+					inspector: false,
+				},
+			});
+
+			const res = await worker.fetch("http://dummy/test/path/1");
+			expect(await res.json()).toMatchInlineSnapshot(`
+				{
+				  "WRANGLER_ENV_VAR_0": "default-0",
+				  "WRANGLER_ENV_VAR_1": "dev-vars-1",
+				  "WRANGLER_ENV_VAR_2": "dev-vars-2",
+				}
+			`);
+		});
 	});
 });

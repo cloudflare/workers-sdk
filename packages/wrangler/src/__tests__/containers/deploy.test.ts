@@ -144,15 +144,15 @@ describe("wrangler deploy with containers", () => {
 			│   max_instances = 10
 			│   rollout_active_grace_period = 0
 			│
-			│     [containers.configuration]
-			│     image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
-			│     instance_type = \\"lite\\"
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
+			│   instance_type = \\"lite\\"
 			│
-			│     [containers.constraints]
-			│     tier = 1
+			│   [containers.constraints]
+			│   tier = 1
 			│
-			│     [containers.durable_objects]
-			│     namespace_id = \\"1\\"
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
 			│
 			│
 			│  SUCCESS  Created application my-container (Application ID: undefined)
@@ -217,15 +217,15 @@ describe("wrangler deploy with containers", () => {
 			│   max_instances = 10
 			│   rollout_active_grace_period = 600
 			│
-			│     [containers.configuration]
-			│     image = \\"docker.io/hello:world\\"
-			│     instance_type = \\"lite\\"
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│   instance_type = \\"lite\\"
 			│
-			│     [containers.constraints]
-			│     tier = 1
+			│   [containers.constraints]
+			│   tier = 1
 			│
-			│     [containers.durable_objects]
-			│     namespace_id = \\"1\\"
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
 			│
 			│
 			│  SUCCESS  Created application my-container (Application ID: undefined)
@@ -261,7 +261,7 @@ describe("wrangler deploy with containers", () => {
 			max_instances: 10,
 			scheduling_policy: SchedulingPolicy.DEFAULT,
 			configuration: {
-				image: "docker.io/hello:world",
+				image: "registry.cloudflare.com/some-account-id/hello:world",
 				disk: {
 					size_mb: 2000,
 				},
@@ -311,19 +311,19 @@ describe("wrangler deploy with containers", () => {
 			│   max_instances = 10
 			│   rollout_active_grace_period = 0
 			│
-			│     [containers.configuration]
-			│     image = \\"docker.io/hello:world\\"
-			│     memory_mib = 1_000
-			│     vcpu = 1
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│   memory_mib = 1000
+			│   vcpu = 1
 			│
-			│       [containers.configuration.disk]
-			│       size_mb = 2_000
+			│   [containers.configuration.disk]
+			│   size_mb = 2000
 			│
-			│     [containers.constraints]
-			│     tier = 1
+			│   [containers.constraints]
+			│   tier = 1
 			│
-			│     [containers.durable_objects]
-			│     namespace_id = \\"1\\"
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
 			│
 			│
 			│  SUCCESS  Created application my-container (Application ID: undefined)
@@ -359,7 +359,7 @@ describe("wrangler deploy with containers", () => {
 			max_instances: 10,
 			scheduling_policy: SchedulingPolicy.DEFAULT,
 			configuration: {
-				image: "docker.io/hello:world",
+				image: "registry.cloudflare.com/some-account-id/hello:world",
 				disk: {
 					size_mb: 2000,
 				},
@@ -403,19 +403,19 @@ describe("wrangler deploy with containers", () => {
 			│   max_instances = 10
 			│   rollout_active_grace_period = 0
 			│
-			│     [containers.configuration]
-			│     image = \\"docker.io/hello:world\\"
-			│     memory_mib = 1_000
-			│     vcpu = 1
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│   memory_mib = 1000
+			│   vcpu = 1
 			│
-			│       [containers.configuration.disk]
-			│       size_mb = 2_000
+			│   [containers.configuration.disk]
+			│   size_mb = 2000
 			│
-			│     [containers.constraints]
-			│     tier = 1
+			│   [containers.constraints]
+			│   tier = 1
 			│
-			│     [containers.durable_objects]
-			│     namespace_id = \\"1\\"
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
 			│
 			│
 			│  SUCCESS  Created application my-container (Application ID: undefined)
@@ -628,11 +628,11 @@ describe("wrangler deploy with containers", () => {
 			│ - rollout_active_grace_period = 500
 			│ + rollout_active_grace_period = 600
 			│   scheduling_policy = \\"default\\"
-			│     [containers.configuration]
-			│ -   image = \\"registry.cloudflare.com/some-account-id/my-container:old\\"
-			│ +   image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
-			│     instance_type = \\"lite\\"
-			│     [containers.constraints]
+			│   [containers.configuration]
+			│ - image = \\"registry.cloudflare.com/some-account-id/my-container:old\\"
+			│ + image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
+			│   instance_type = \\"lite\\"
+			│   [containers.constraints]
 			│
 			│
 			│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -696,7 +696,7 @@ describe("wrangler deploy with containers", () => {
 					name: "my-container-app-2",
 					max_instances: 3,
 					class_name: "DurableObjectClass2",
-					image: "docker.io/hello:world",
+					image: "registry.cloudflare.com/hello:world",
 				},
 			],
 		});
@@ -769,11 +769,11 @@ describe("wrangler deploy with containers", () => {
 			│   name = \\"my-container\\"
 			│   rollout_active_grace_period = 0
 			│   scheduling_policy = \\"default\\"
-			│     [containers.configuration]
-			│ -   image = \\"registry.cloudflare.com/some-account-id/my-container:old\\"
-			│ +   image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
-			│     instance_type = \\"lite\\"
-			│     [containers.constraints]
+			│   [containers.configuration]
+			│ - image = \\"registry.cloudflare.com/some-account-id/my-container:old\\"
+			│ + image = \\"registry.cloudflare.com/some-account-id/my-container:Galaxy\\"
+			│   instance_type = \\"lite\\"
+			│   [containers.constraints]
 			│
 			│
 			│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -793,15 +793,15 @@ describe("wrangler deploy with containers", () => {
 			│   max_instances = 3
 			│   rollout_active_grace_period = 0
 			│
-			│     [containers.configuration]
-			│     image = \\"docker.io/hello:world\\"
-			│     instance_type = \\"lite\\"
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│   instance_type = \\"lite\\"
 			│
-			│     [containers.constraints]
-			│     tier = 1
+			│   [containers.constraints]
+			│   tier = 1
 			│
-			│     [containers.durable_objects]
-			│     namespace_id = \\"2\\"
+			│   [containers.durable_objects]
+			│   namespace_id = \\"2\\"
 			│
 			│
 			│  SUCCESS  Created application my-container-app-2 (Application ID: undefined)
@@ -1065,7 +1065,7 @@ describe("wrangler deploy with containers", () => {
 			scheduling_policy: SchedulingPolicy.DEFAULT,
 			rollout_active_grace_period: 0,
 			configuration: {
-				image: "docker.io/hello:world",
+				image: "registry.cloudflare.com/hello:world",
 				disk: {
 					size: "2GB",
 					size_mb: 2000,
@@ -1093,7 +1093,7 @@ describe("wrangler deploy with containers", () => {
 
 			mockModifyApplication({
 				configuration: {
-					image: "docker.io/hello:world",
+					image: "registry.cloudflare.com/some-account-id/hello:world",
 					observability: { logs: { enabled: true } },
 				},
 			});
@@ -1108,12 +1108,12 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     image = \\"docker.io/hello:world\\"
-				│     instance_type = \\"lite\\"
+				│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+				│   instance_type = \\"lite\\"
 				│ + [containers.configuration.observability.logs]
 				│ + enabled = true
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1136,7 +1136,7 @@ describe("wrangler deploy with containers", () => {
 
 			mockModifyApplication({
 				configuration: {
-					image: "docker.io/hello:world",
+					image: "registry.cloudflare.com/some-account-id/hello:world",
 					observability: { logs: { enabled: true } },
 				},
 			});
@@ -1151,12 +1151,12 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     image = \\"docker.io/hello:world\\"
-				│     instance_type = \\"lite\\"
+				│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+				│   instance_type = \\"lite\\"
 				│ + [containers.configuration.observability.logs]
 				│ + enabled = true
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1191,7 +1191,7 @@ describe("wrangler deploy with containers", () => {
 
 			mockModifyApplication({
 				configuration: {
-					image: "docker.io/hello:world",
+					image: "registry.cloudflare.com/some-account-id/hello:world",
 					observability: { logs: { enabled: false } },
 				},
 			});
@@ -1207,12 +1207,12 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     instance_type = \\"lite\\"
+				│   instance_type = \\"lite\\"
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1247,7 +1247,7 @@ describe("wrangler deploy with containers", () => {
 
 			mockModifyApplication({
 				configuration: {
-					image: "docker.io/hello:world",
+					image: "registry.cloudflare.com/some-account-id/hello:world",
 					observability: { logs: { enabled: false } },
 				},
 			});
@@ -1263,12 +1263,12 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     instance_type = \\"lite\\"
+				│   instance_type = \\"lite\\"
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1301,7 +1301,7 @@ describe("wrangler deploy with containers", () => {
 
 			mockModifyApplication({
 				configuration: {
-					image: "docker.io/hello:world",
+					image: "registry.cloudflare.com/some-account-id/hello:world",
 					observability: { logs: { enabled: false } },
 				},
 			});
@@ -1315,12 +1315,12 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     instance_type = \\"lite\\"
+				│   instance_type = \\"lite\\"
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1356,7 +1356,7 @@ describe("wrangler deploy with containers", () => {
 
 			mockModifyApplication({
 				configuration: {
-					image: "docker.io/hello:world",
+					image: "registry.cloudflare.com/some-account-id/hello:world",
 					observability: { logs: { enabled: false } },
 				},
 			});
@@ -1372,12 +1372,12 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     instance_type = \\"lite\\"
+				│   instance_type = \\"lite\\"
 				│   [containers.configuration.observability.logs]
 				│ - enabled = true
 				│ + enabled = false
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1411,7 +1411,7 @@ describe("wrangler deploy with containers", () => {
 
 			mockModifyApplication({
 				configuration: {
-					image: "docker.io/hello:world",
+					image: "registry.cloudflare.com/some-account-id/hello:world",
 					observability: { logs: { enabled: true } },
 				},
 			});
@@ -1518,15 +1518,15 @@ describe("wrangler deploy with containers", () => {
 			│   max_instances = 10
 			│   rollout_active_grace_period = 0
 			│
-			│     [containers.configuration]
-			│     image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
-			│     instance_type = \\"lite\\"
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:1.0\\"
+			│   instance_type = \\"lite\\"
 			│
-			│     [containers.constraints]
-			│     tier = 2
+			│   [containers.constraints]
+			│   tier = 2
 			│
-			│     [containers.durable_objects]
-			│     namespace_id = \\"1\\"
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
 			│
 			│
 			│  SUCCESS  Created application my-container (Application ID: undefined)
@@ -1572,18 +1572,18 @@ describe("wrangler deploy with containers", () => {
 				│   max_instances = 10
 				│   rollout_active_grace_period = 0
 				│
-				│     [containers.configuration]
-				│     image = \\"docker.io/hello:world\\"
-				│     instance_type = \\"lite\\"
+				│   [containers.configuration]
+				│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+				│   instance_type = \\"lite\\"
 				│
-				│     [containers.constraints]
-				│     tier = 1
+				│   [containers.constraints]
+				│   tier = 1
 				│
-				│     [containers.affinities]
-				│     hardware_generation = \\"highest-overall-performance\\"
+				│   [containers.affinities]
+				│   hardware_generation = \\"highest-overall-performance\\"
 				│
-				│     [containers.durable_objects]
-				│     namespace_id = \\"1\\"
+				│   [containers.durable_objects]
+				│   namespace_id = \\"1\\"
 				│
 				│
 				│  SUCCESS  Created application my-container (Application ID: undefined)
@@ -1620,7 +1620,7 @@ describe("wrangler deploy with containers", () => {
 					scheduling_policy: SchedulingPolicy.DEFAULT,
 					rollout_active_grace_period: 0,
 					configuration: {
-						image: "docker.io/hello:world",
+						image: "registry.cloudflare.com/hello:world",
 						disk: {
 							size: "2GB",
 							size_mb: 2000,
@@ -1659,10 +1659,10 @@ describe("wrangler deploy with containers", () => {
 				│
 				├ EDIT my-container
 				│
-				│     [containers.constraints]
-				│     tier = 1
-				│ +   [containers.affinities]
-				│ +   hardware_generation = \\"highest-overall-performance\\"
+				│   [containers.constraints]
+				│   tier = 1
+				│ + [containers.affinities]
+				│ + hardware_generation = \\"highest-overall-performance\\"
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1858,6 +1858,127 @@ describe("wrangler deploy with containers dry run", () => {
 	});
 });
 
+describe("containers.unsafe configuration", () => {
+	runInTempDir();
+	const std = mockConsoleMethods();
+	mockAccountId();
+	mockApiToken();
+
+	beforeEach(() => {
+		setupCommonMocks();
+		fs.writeFileSync(
+			"index.js",
+			`export class ExampleDurableObject {}; export default{};`
+		);
+	});
+
+	it("should merge containers.unsafe config into create request", async () => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					unsafe: {
+						custom_field: "custom_value",
+						nested: { field: "nested_value" },
+						configuration: { network: "nested_value" },
+					},
+				},
+			],
+		});
+
+		mockGetApplications([]);
+
+		mockCreateApplication({
+			name: "my-container",
+			max_instances: 10,
+			custom_field: "custom_value",
+			nested: { field: "nested_value" },
+			configuration: {
+				// @ts-expect-error - testing with custom unsafe fields
+				network: "nested_value",
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+			},
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should merge containers.unsafe config into modify request", async () => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					max_instances: 20,
+					rollout_step_percentage: 10,
+					unsafe: {
+						unsafe_field: "unsafe_value",
+						configuration: { network: "unsafe_network_value" },
+					},
+				},
+			],
+		});
+
+		mockGetApplications([
+			{
+				id: "abc",
+				name: "my-container",
+				instances: 0,
+				max_instances: 10,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				configuration: {
+					image: "registry.cloudflare.com/some-account-id/my-container:old",
+					disk: {
+						size: "2GB",
+						size_mb: 2000,
+					},
+					vcpu: 0.0625,
+					memory: "256MB",
+					memory_mib: 256,
+				},
+				constraints: {
+					tier: 1,
+				},
+				durable_objects: {
+					namespace_id: "1",
+				},
+			},
+		]);
+
+		mockModifyApplication({
+			max_instances: 20,
+			// @ts-expect-error - testing unsafe.containers with custom fields
+			unsafe_field: "unsafe_value",
+			configuration: {
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+			},
+		});
+
+		mockCreateApplicationRollout({
+			description: "Progressive update",
+			strategy: "rolling",
+			kind: "full_auto",
+			step_percentage: 10,
+			target_configuration: {
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+				network: "unsafe_network_value",
+			},
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+});
+
 // Docker mock factory
 function createDockerMockChain(
 	containerName: string,
@@ -1958,7 +2079,7 @@ const DEFAULT_CONTAINER_FROM_REGISTRY = {
 	name: "my-container",
 	max_instances: 10,
 	class_name: "ExampleDurableObject",
-	image: "docker.io/hello:world",
+	image: "registry.cloudflare.com/hello:world",
 };
 const DEFAULT_CONTAINER_FROM_DOCKERFILE = {
 	name: "my-container",

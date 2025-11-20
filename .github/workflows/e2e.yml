@@ -18,14 +18,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-13
+          - os: macos-latest
             description: v20, macOS
             node: 20.19.1
-          - os: windows-2022
+          - os: windows-latest
             description: v20, Windows
             node: 20.19.1
             # we need to use an amd image to run the containers tests, since we build for linux/amd64
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
             description: v20, Linux
             node: 20.19.1
 
@@ -34,7 +34,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - uses: dorny/paths-filter@v3
         id: changes
@@ -96,14 +96,14 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: macos-13
+          - os: macos-latest
             description: v20, macOS
             node: 20.19.1
-          - os: windows-2022
+          - os: windows-latest
             description: v20, Windows
             node: 20.19.1
             # we need to use an amd image to run the containers tests, since we build for linux/amd64
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
             description: v20, Linux
             node: 20.19.1
     runs-on: ${{ matrix.os }}
@@ -111,7 +111,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - uses: dorny/paths-filter@v3
         id: changes

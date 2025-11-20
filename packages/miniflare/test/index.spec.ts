@@ -923,6 +923,7 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 
 test("Miniflare: tail consumer called", async (t) => {
 	const mf = new Miniflare({
+		handleRuntimeStdio: () => {},
 		workers: [
 			{
 				name: "a",
@@ -934,7 +935,7 @@ test("Miniflare: tail consumer called", async (t) => {
 				export default {
 					async fetch(request, env) {
 						if(request.url.includes("b")) { return env.B.fetch(request)}
-						console.log("log event")
+						console.log("Tail: log event")
 
 						return new Response("hello from a");
 					}
@@ -969,7 +970,7 @@ test("Miniflare: tail consumer called", async (t) => {
 				logs: { message: string[] }[];
 			}[]
 		)[0].logs[0].message,
-		["log event"]
+		["Tail: log event"]
 	);
 });
 

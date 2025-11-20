@@ -13,8 +13,8 @@ import type { Config } from "@cloudflare/workers-utils";
  * @returns the compatibility date to use in development
  */
 export function getDevCompatibilityDate(
-	config: Config,
-	compatibilityDate = config.compatibility_date
+	config: Config | undefined,
+	compatibilityDate = config?.compatibility_date
 ): string {
 	// Get the maximum compatibility date supported by the installed Miniflare
 	const miniflareEntry = require.resolve("miniflare");
@@ -24,7 +24,11 @@ export function getDevCompatibilityDate(
 	};
 	const workerdDate = miniflareWorkerd.compatibilityDate;
 
-	if (config.configPath !== undefined && compatibilityDate === undefined) {
+	if (
+		config &&
+		config.configPath !== undefined &&
+		compatibilityDate === undefined
+	) {
 		logger.warn(
 			`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${workerdDate}.\n` +
 				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${workerdDate}", or\n` +

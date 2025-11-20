@@ -252,6 +252,12 @@ export type ContainerApp = {
 	 * @default 0
 	 */
 	rollout_active_grace_period?: number;
+
+	/**
+	 * Directly passed to the API without wrangler-side validation or transformation.
+	 * @hidden
+	 */
+	unsafe?: Record<string, unknown>;
 };
 
 /**
@@ -1078,7 +1084,6 @@ export interface EnvironmentNonInheritable {
 		metadata?: {
 			[key: string]: unknown;
 		};
-
 		/**
 		 * Used for internal capnp uploads for the Workers runtime
 		 */
@@ -1125,6 +1130,17 @@ export interface EnvironmentNonInheritable {
 	 * @nonInheritable
 	 */
 	tail_consumers?: TailConsumer[];
+
+	/**
+	 * Specifies a list of Streaming Tail Workers that are bound to this Worker environment
+	 *
+	 * NOTE: This field is not automatically inherited from the top level environment,
+	 * and so must be specified in every named environment.
+	 *
+	 * @default []
+	 * @nonInheritable
+	 */
+	streaming_tail_consumers?: StreamingTailConsumer[];
 
 	/**
 	 * Specifies namespace bindings that are bound to this Worker environment.
@@ -1293,6 +1309,11 @@ export type TailConsumer = {
 	service: string;
 	/** (Optional) The environment of the service. */
 	environment?: string;
+};
+
+export type StreamingTailConsumer = {
+	/** The name of the service streaming tail events will be forwarded to. */
+	service: string;
 };
 
 export interface DispatchNamespaceOutbound {

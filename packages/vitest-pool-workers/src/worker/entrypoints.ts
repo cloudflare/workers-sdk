@@ -33,7 +33,7 @@ function importModule(
 	});
 }
 
-const IGNORED_KEYS = ["self", "tailStream"];
+const IGNORED_KEYS = ["self"];
 
 /**
  * Create a class extending `superClass` with a `Proxy` as a `prototype`.
@@ -176,12 +176,15 @@ function getEntrypointState(
 }
 
 const WORKER_ENTRYPOINT_KEYS = [
+	"tailStream",
 	"fetch",
 	"tail",
 	"trace",
 	"scheduled",
 	"queue",
 	"test",
+	"tailStream",
+	"email",
 ] as const;
 const DURABLE_OBJECT_KEYS = [
 	"fetch",

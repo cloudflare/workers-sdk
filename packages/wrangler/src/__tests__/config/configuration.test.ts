@@ -149,6 +149,7 @@ describe("normalizeAndValidateConfig()", () => {
 			placement: undefined,
 			worker_loaders: [],
 			tail_consumers: undefined,
+			streaming_tail_consumers: undefined,
 			pipelines: [],
 			workflows: [],
 			userConfigPath: undefined,
@@ -2497,7 +2498,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						containers: [
 							{
-								image: "docker.io/something:hello",
+								image: "registry.cloudflare.com/something:hello",
 							},
 						],
 					} as unknown as RawConfig,
@@ -2519,7 +2520,7 @@ describe("normalizeAndValidateConfig()", () => {
 						name: "test-worker-name",
 						containers: [
 							{
-								image: "docker.io/something:hello",
+								image: "registry.cloudflare.com/something:hello",
 								class_name: "test-class",
 							},
 						],
@@ -2535,7 +2536,7 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						class_name: "test-class",
 						name: "test-worker-name-test-class",
-						image: "docker.io/something:hello",
+						image: "registry.cloudflare.com/something:hello",
 						image_build_context: undefined,
 					},
 				]);
@@ -2689,7 +2690,7 @@ describe("normalizeAndValidateConfig()", () => {
 							containers: [
 								{
 									class_name: "test-class",
-									image: "docker.io/test:latest",
+									image: "registry.cloudflare.com/test:latest",
 									rollout_step_percentage: value.value,
 								},
 							],
@@ -2711,7 +2712,7 @@ describe("normalizeAndValidateConfig()", () => {
 						containers: [
 							{
 								class_name: "test-class",
-								image: "docker.io/test:latest",
+								image: "registry.cloudflare.com/test:latest",
 								rollout_step_percentage: 15,
 							},
 						],
@@ -2735,7 +2736,7 @@ describe("normalizeAndValidateConfig()", () => {
 						containers: [
 							{
 								class_name: "test-class",
-								image: "docker.io/test:latest",
+								image: "registry.cloudflare.com/test:latest",
 								rollout_step_percentage: [20, 30, 1, 101],
 							},
 						],
@@ -4795,6 +4796,35 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		it("should accept unsafe fields under containers", () => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					containers: [
+						{
+							name: "test-container",
+							class_name: "TestContainer",
+							image: "registry.cloudflare.com/test:image",
+							unsafe: {
+								custom_field: "value",
+							},
+						},
+					],
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				"
+			`);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				"
+			`);
+		});
+
 		describe("[placement]", () => {
 			it(`should error if placement hint is set with placement mode "off"`, () => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -6686,6 +6716,62 @@ describe("normalizeAndValidateConfig()", () => {
 			  - Expected \\"tail_consumers[3].service\\" to be of type string but got {}.
 			  - Expected \\"tail_consumers[4].service\\" to be of type string but got 123."
 		`);
+			});
+		});
+
+		describe("[streaming_tail_consumers]", () => {
+			it("should error if streaming_tail_consumers is not an array", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						streaming_tail_consumers: "this sure isn't an array",
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+			"Processing wrangler configuration:
+			  - Expected \\"streaming_tail_consumers\\" to be an array but got \\"this sure isn't an array\\"."
+		`);
+			});
+
+			it("should error on invalid streaming_tail_consumers", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						streaming_tail_consumers: [
+							"some string",
+							456,
+							{
+								binding: "other",
+								namespace: "shape",
+							},
+							{ service: {} },
+							{
+								service: 123,
+								environment: "prod",
+							},
+							["some array"],
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(true);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"streaming_tail_consumers[0]\\" should be an object but got \\"some string\\".
+					  - \\"streaming_tail_consumers[1]\\" should be an object but got 456.
+					  - \\"streaming_tail_consumers[2].service\\" is a required field.
+					  - Expected \\"streaming_tail_consumers[3].service\\" to be of type string but got {}.
+					  - Expected \\"streaming_tail_consumers[4].service\\" to be of type string but got 123.
+					  - \\"streaming_tail_consumers[5]\\" should be an object but got [\\"some array\\"]."
+				`);
 			});
 		});
 

@@ -68,12 +68,109 @@ function normalizeLocalResolvedConfigAsRemote(
 		localResolvedConfig.routes ?? []
 	);
 	const normalizedConfig: Config = {
-		...localResolvedConfig,
+		...structuredClone(localResolvedConfig),
 		workers_dev: subdomainValues.workers_dev,
 		preview_urls: subdomainValues.preview_urls,
 		observability: normalizeObservability(localResolvedConfig.observability),
 	};
+
+	removeRemoteConfigFieldFromBindings(normalizedConfig);
+
+	// Currently remotely we only get the assets' binding name, so we need remove
+	// everything else, if present, from the local one
+	if (normalizedConfig.assets) {
+		normalizedConfig.assets = {
+			binding: normalizedConfig.assets.binding,
+		};
+	}
+
 	return normalizedConfig;
+}
+
+/**
+ * Given a configuration object removes all the `remote` config settings from all the bindings
+ * in the configuration (this is used as part of the config normalization since the `remote`
+ * key is not present in the remote configuration object)
+ *
+ * @param normalizedConfig The target configuration object (which gets updated side-effectfully)
+ */
+function removeRemoteConfigFieldFromBindings(normalizedConfig: Config): void {
+	for (const bindingField of [
+		"kv_namespaces",
+		"r2_buckets",
+		"d1_databases",
+	] as const) {
+		if (normalizedConfig[bindingField]?.length) {
+			normalizedConfig[bindingField] = normalizedConfig[bindingField].map(
+				({ remote: _, ...binding }) => binding
+			);
+		}
+	}
+
+	if (normalizedConfig.services?.length) {
+		normalizedConfig.services = normalizedConfig.services.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.vpc_services?.length) {
+		normalizedConfig.vpc_services = normalizedConfig.vpc_services.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.workflows?.length) {
+		normalizedConfig.workflows = normalizedConfig.workflows.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.dispatch_namespaces?.length) {
+		normalizedConfig.dispatch_namespaces =
+			normalizedConfig.dispatch_namespaces.map(
+				({ remote: _, ...binding }) => binding
+			);
+	}
+
+	if (normalizedConfig.mtls_certificates?.length) {
+		normalizedConfig.mtls_certificates = normalizedConfig.mtls_certificates.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.pipelines?.length) {
+		normalizedConfig.pipelines = normalizedConfig.pipelines.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.vectorize?.length) {
+		normalizedConfig.vectorize = normalizedConfig.vectorize.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.queues?.producers?.length) {
+		normalizedConfig.queues.producers = normalizedConfig.queues.producers.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	if (normalizedConfig.send_email) {
+		normalizedConfig.send_email = normalizedConfig.send_email.map(
+			({ remote: _, ...binding }) => binding
+		);
+	}
+
+	const singleBindingFields = ["browser", "ai", "images", "media"] as const;
+	for (const singleBindingField of singleBindingFields) {
+		if (
+			normalizedConfig[singleBindingField] &&
+			"remote" in normalizedConfig[singleBindingField]
+		) {
+			delete normalizedConfig[singleBindingField].remote;
+		}
+	}
 }
 
 /**
@@ -88,10 +185,18 @@ function normalizeObservability(
 ): Config["observability"] {
 	const normalized = structuredClone(obs);
 
+	const enabled = obs?.enabled === true ? true : false;
+
 	const fullObservabilityDefaults = {
-		enabled: false,
+		enabled,
 		head_sampling_rate: 1,
-		logs: { enabled: false, head_sampling_rate: 1, invocation_logs: true },
+		logs: {
+			enabled,
+			head_sampling_rate: 1,
+			invocation_logs: true,
+			persist: true,
+		},
+		traces: { enabled: false, persist: true, head_sampling_rate: 1 },
 	} as const;
 
 	if (!normalized) {
@@ -149,48 +254,29 @@ function normalizeRemoteConfigAsResolvedLocal(
 ): Config {
 	let normalizedRemote = {} as Config;
 
+	// We start by adding all the local configs to the normalized remote config object
+	// in this way we can make sure that local-only configurations are not shown as
+	// differences between local and remote configs
 	Object.entries(localResolvedConfig).forEach(([key, value]) => {
-		// We want to skip observability since it has a remote default behavior
-		// different from that or wrangler
-		if (key !== "observability") {
+		if (
+			// We want to skip observability since it has a remote default behavior
+			// different from that of wrangler
+			key !== "observability" &&
+			// We want to skip assets since it is a special case, the issue being that
+			// remotely assets configs only include at most the binding name and we
+			// already address that in the local config normalization already
+			key !== "assets"
+		) {
 			(normalizedRemote as unknown as Record<string, unknown>)[key] = value;
 		}
 	});
 
+	// We then override the configs present in the remote config object
 	Object.entries(remoteConfig).forEach(([key, value]) => {
 		if (key !== "main" && value !== undefined) {
 			(normalizedRemote as unknown as Record<string, unknown>)[key] = value;
 		}
 	});
-
-	if (normalizedRemote.observability) {
-		if (
-			normalizedRemote.observability.head_sampling_rate === 1 &&
-			localResolvedConfig.observability?.head_sampling_rate === undefined
-		) {
-			// Note: remotely head_sampling_rate always defaults to 1 even if enabled is false
-			delete normalizedRemote.observability.head_sampling_rate;
-		}
-
-		if (normalizedRemote.observability.logs) {
-			if (
-				normalizedRemote.observability.logs.head_sampling_rate === 1 &&
-				localResolvedConfig.observability?.logs?.head_sampling_rate ===
-					undefined
-			) {
-				// Note: remotely logs.head_sampling_rate always defaults to 1 even if enabled is false
-				delete normalizedRemote.observability.logs.head_sampling_rate;
-			}
-
-			if (
-				normalizedRemote.observability.logs.invocation_logs === true &&
-				localResolvedConfig.observability?.logs?.invocation_logs === undefined
-			) {
-				// Note: remotely logs.invocation_logs always defaults to 1 even if enabled is false
-				delete normalizedRemote.observability.logs.invocation_logs;
-			}
-		}
-	}
 
 	normalizedRemote.observability = normalizeObservability(
 		normalizedRemote.observability
@@ -290,13 +376,23 @@ function orderObjectFields<T extends Record<string, unknown>>(
  * Given a config diff generates a patch object that can be passed to `experimental_patchConfig` to revert the
  * changes in the config object that are described by the config diff.
  *
+ * If the config is for a specific target environment, only the environment config object will be targeted for the patch.
+ *
  * @param configDiff The target config diff
+ * @param targetEnvironment the target environment if any
  * @returns The patch object to pass to `experimental_patchConfig` to revert the changes
  */
-export function getConfigPatch(configDiff: ConfigDiff["diff"]): RawConfig {
+export function getConfigPatch(
+	configDiff: ConfigDiff["diff"],
+	targetEnvironment?: string | undefined
+): RawConfig {
 	const patchObj: RawConfig = {};
 
-	populateConfigPatch(configDiff, patchObj as Record<string, JsonLike>);
+	populateConfigPatch(
+		configDiff,
+		patchObj as Record<string, JsonLike>,
+		targetEnvironment
+	);
 
 	return patchObj;
 }
@@ -306,10 +402,12 @@ export function getConfigPatch(configDiff: ConfigDiff["diff"]): RawConfig {
  *
  * @param diff The current section of the config diff that is being analyzed
  * @param patchObj The current section of the patch object that is being populated
+ * @param targetEnvironment the target environment if any
  */
 function populateConfigPatch(
 	diff: JsonLike,
-	patchObj: Record<string, JsonLike> | JsonLike[]
+	patchObj: Record<string, JsonLike> | JsonLike[],
+	targetEnvironment?: string
 ): void {
 	if (!diff || typeof diff !== "object") {
 		return;
@@ -324,7 +422,7 @@ function populateConfigPatch(
 
 	// We know that patchObj is not an array here
 	assert(!Array.isArray(patchObj));
-	return populateConfigPatchObject(diff, patchObj);
+	return populateConfigPatchObject(diff, patchObj, targetEnvironment);
 }
 
 /**
@@ -371,34 +469,64 @@ function populateConfigPatchArray(diff: JsonLike[], patchArray: JsonLike[]) {
  *
  * @param diff The current section of the config diff that is being analyzed
  * @param patchObj The current section of the patch object that is being populated
+ * @param targetEnvironment the target environment if any
  */
 function populateConfigPatchObject(
 	diff: { [id: string]: JsonLike },
-	patchObj: Record<string, JsonLike>
+	patchObj: Record<string, JsonLike>,
+	targetEnvironment?: string
 ) {
+	const getEnvObj = (targetEnv: string) => {
+		patchObj.env ??= {};
+		const patchObjEnv = patchObj.env as Record<string, Record<string, unknown>>;
+		patchObjEnv[targetEnv] ??= {};
+		return patchObjEnv[targetEnv];
+	};
 	Object.keys(diff)
 		.filter((key) => diff[key] && typeof diff[key] === "object")
 		.forEach((key) => {
 			if (isModifiedDiffValue(diff[key])) {
-				patchObj[key] = diff[key].__old;
+				if (targetEnvironment) {
+					getEnvObj(targetEnvironment)[key] = diff[key].__old;
+				} else {
+					patchObj[key] = diff[key].__old;
+				}
 				return;
 			}
 
-			patchObj[key] = Array.isArray(diff[key]) ? [] : {};
+			if (targetEnvironment) {
+				getEnvObj(targetEnvironment)[key] ??= Array.isArray(diff[key])
+					? []
+					: {};
+			} else {
+				patchObj[key] ??= Array.isArray(diff[key]) ? [] : {};
+			}
 
 			Object.entries(diff[key] as Record<string, JsonLike>).forEach(
 				([entryKey, entryValue]) => {
 					if (entryKey.endsWith("__deleted")) {
-						(patchObj[key] as Record<string, unknown>)[
-							entryKey.replace("__deleted", "")
-						] = entryValue;
+						let patchObjectToUpdate = patchObj[key] as Record<string, unknown>;
+						if (targetEnvironment) {
+							const envObj = getEnvObj(targetEnvironment);
+							envObj[key] ??= {};
+							patchObjectToUpdate = envObj[key] as Record<string, unknown>;
+						}
+						patchObjectToUpdate[entryKey.replace("__deleted", "")] = entryValue;
 						return;
 					}
 				}
 			);
 
 			if (diff[key] && typeof diff[key] === "object") {
-				populateConfigPatch(diff[key], patchObj[key]);
+				populateConfigPatch(
+					diff[key],
+					(targetEnvironment
+						? getEnvObj(targetEnvironment)[key]
+						: patchObj[key]) as Record<string, JsonLike> | JsonLike[]
+					// Note: we are not passing the target environment since in the recursive calls
+					//       we are already one level deep and dealing with the environment specific
+					//       patch object
+				);
 				return;
 			}
 		});

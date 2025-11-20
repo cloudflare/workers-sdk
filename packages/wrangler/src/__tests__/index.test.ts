@@ -41,6 +41,7 @@ describe("wrangler", () => {
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare. Capture deployment output (ND-JSON) via WRANGLER_OUTPUT_FILE_PATH or WRANGLER_OUTPUT_FILE_DIRECTORY. Docs: https://developers.cloudflare.com/workers/wrangler/system-environment-variables/
+				  wrangler setup                  🪄 Setup a project to work on Cloudflare [experimental]
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
@@ -59,6 +60,7 @@ describe("wrangler", () => {
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open-beta]
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
+				  wrangler containers             📦 Manage Containers [open-beta]
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models
@@ -103,6 +105,7 @@ describe("wrangler", () => {
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
 				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare. Capture deployment output (ND-JSON) via WRANGLER_OUTPUT_FILE_PATH or WRANGLER_OUTPUT_FILE_DIRECTORY. Docs: https://developers.cloudflare.com/workers/wrangler/system-environment-variables/
+				  wrangler setup                  🪄 Setup a project to work on Cloudflare [experimental]
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
@@ -121,6 +124,7 @@ describe("wrangler", () => {
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open-beta]
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
+				  wrangler containers             📦 Manage Containers [open-beta]
 				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler dispatch-namespace     🏗️  Manage dispatch namespaces
 				  wrangler ai                     🤖 Manage AI models

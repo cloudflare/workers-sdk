@@ -15,12 +15,12 @@ jobs:
     timeout-minutes: 30
     name: "Cleanup Test Projects"
     if: ${{ github.repository_owner == 'cloudflare' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies

@@ -50,15 +50,15 @@ class Default(WorkerEntrypoint):
     * @returns {Promise<Response>} The response to be sent back to the client
     """
     async def fetch(self, request):
-		# Create a stub to open a communication channel with the Durable Object
-		# instance named "foo".
-		#
-		# Requests from all Workers to the Durable Object instance named "foo"
-		# will go to a single remote Durable Object instance.
+        # Create a stub to open a communication channel with the Durable Object
+        # instance named "foo".
+        #
+        # Requests from all Workers to the Durable Object instance named "foo"
+        # will go to a single remote Durable Object instance.
         stub = self.env.MY_DURABLE_OBJECT.getByName("foo")
 
-		# Call the `say_hello()` RPC method on the stub to invoke the method on
-		# the remote Durable Object instance.
+        # Call the `say_hello()` RPC method on the stub to invoke the method on
+        # the remote Durable Object instance.
         greeting = await stub.say_hello("world")
 
         return Response(greeting)

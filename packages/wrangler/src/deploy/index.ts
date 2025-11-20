@@ -8,7 +8,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
-import { getDetailsForAutoConfig } from "../autoconfig/get-details";
+import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { runAutoConfig } from "../autoconfig/run";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
@@ -234,6 +234,7 @@ export const deployCommand = createCommand({
 			describe: "Experimental: Enable The Deployment Remote Diff check",
 			type: "boolean",
 			hidden: true,
+			default: true,
 			alias: ["x-remote-diff-check"],
 		},
 		strict: {
@@ -276,8 +277,19 @@ export const deployCommand = createCommand({
 				{ telemetryMessage: true }
 			);
 		}
-		if (args.experimentalAutoconfig) {
-			const details = await getDetailsForAutoConfig();
+
+		const shouldRunAutoConfig =
+			args.experimentalAutoconfig &&
+			// If there is a positional parameter or an assets directory specified via --assets then
+			// we don't want to run autoconfig since we assume that the user knows what they are doing
+			// and that they are specifying what needs to be deployed
+			!args.script &&
+			!args.assets;
+
+		if (shouldRunAutoConfig) {
+			const details = await getDetailsForAutoConfig({
+				wranglerConfig: config,
+			});
 
 			// Only run auto config if the project is not already configured
 			if (!details.configured) {
@@ -290,10 +302,6 @@ export const deployCommand = createCommand({
 				});
 			}
 		}
-		// We use the `userConfigPath` to compute the root of a project,
-		// rather than a redirected (potentially generated) `configPath`.
-		const projectRoot =
-			config.userConfigPath && path.dirname(config.userConfigPath);
 
 		if (!config.configPath) {
 			// Attempt to interactively handle `wrangler deploy <directory>`
@@ -311,7 +319,7 @@ export const deployCommand = createCommand({
 					// If stat fails, let the original flow handle the error
 				}
 			}
-			// atttempt to interactively handle `wrangler deploy --assets <directory>` missing compat date or name
+			// attempt to interactively handle `wrangler deploy --assets <directory>` missing compat date or name
 			else if (args.assets && (!args.compatibilityDate || !args.name)) {
 				args = await handleMaybeAssetsDeployment(args.assets, args);
 			}
@@ -370,6 +378,12 @@ export const deployCommand = createCommand({
 				config.configPath
 			);
 		}
+
+		// We use the `userConfigPath` to compute the root of a project,
+		// rather than a redirected (potentially generated) `configPath`.
+		const projectRoot =
+			config.userConfigPath && path.dirname(config.userConfigPath);
+
 		const { sourceMapSize, versionId, workerTag, targets } = await deploy({
 			config,
 			accountId,

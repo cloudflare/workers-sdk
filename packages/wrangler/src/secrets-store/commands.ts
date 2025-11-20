@@ -397,6 +397,9 @@ export const secretsStoreSecretCreateCommand = createCommand({
 			describe: "Directory for local persistence",
 		},
 	},
+	validateArgs(args) {
+		validateSecretName(args.name);
+	},
 	async handler(args, { config }) {
 		let secretValue = "";
 
@@ -693,6 +696,9 @@ export const secretsStoreSecretDuplicateCommand = createCommand({
 			describe: "Directory for local persistence",
 		},
 	},
+	validateArgs(args) {
+		validateSecretName(args.name);
+	},
 	async handler(args, { config }) {
 		logger.log(`🔐 Duplicating secret... (ID: ${args.secretId})`);
 
@@ -746,3 +752,12 @@ export const secretsStoreSecretDuplicateCommand = createCommand({
 		logger.table(prettierSecret);
 	},
 });
+
+export const validateSecretName = (name: string) => {
+	const validName = /^[A-z0-9-_]+$/;
+	if (!validName.test(name)) {
+		throw new UserError(
+			"Secret name may only contain alphanumeric characters, underscores, or dashes."
+		);
+	}
+};

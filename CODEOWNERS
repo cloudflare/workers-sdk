@@ -21,7 +21,7 @@
 /packages/containers-shared/ @cloudflare/cloudchamber @cloudflare/wrangler
 
 # C3 ownership
-/packages/create-cloudflare/ @cloudflare/c3 @cloudflare/wrangler
+/packages/create-cloudflare/ @cloudflare/wrangler
 
 # Workers KV ownership
 /packages/wrangler/src/kv @cloudflare/workers-kv @cloudflare/wrangler
@@ -60,4 +60,4 @@ pnpm-lock.yaml
 /packages/miniflare/package.json
 
 # To allow dependabot updates to C3 frameworks to be approved by C3 team
-/packages/create-cloudflare/**/package.json @cloudflare/wrangler @cloudflare/c3
+/packages/create-cloudflare/**/package.json @cloudflare/wrangler

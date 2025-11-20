@@ -11,7 +11,7 @@ permissions:
 jobs:
   add-to-project:
     name: Add issue to project
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - uses: actions/add-to-project@v0.3.0
         with:

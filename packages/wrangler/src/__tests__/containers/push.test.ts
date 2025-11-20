@@ -12,7 +12,7 @@ import { runWrangler } from "../helpers/run-wrangler";
 vi.mock("@cloudflare/containers-shared", async (importOriginal) => {
 	const actual = await importOriginal();
 	return Object.assign({}, actual, {
-		dockerLoginManagedRegistry: vi.fn(),
+		dockerLoginImageRegistry: vi.fn(),
 		runDockerCmd: vi.fn(),
 		dockerImageInspect: vi.fn(),
 	});

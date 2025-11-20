@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
 import path from "node:path";
-import * as TOML from "@iarna/toml";
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
+import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { FormData } from "undici";
@@ -201,6 +201,12 @@ describe("init", () => {
 					class_name: "Durability",
 					script_name: "another-durable-object-worker",
 					environment: "production",
+				},
+				{
+					type: "durable_object_namespace",
+					name: "DURABLE_TEST_SAME_WORKER",
+					class_name: "DurabilitySameWorker",
+					script_name: "isolinear-optical-chip",
 				},
 				{
 					type: "kv_namespace",
@@ -403,7 +409,7 @@ describe("init", () => {
 			name: "isolinear-optical-chip",
 			migrations: [
 				{
-					new_classes: ["Durability"],
+					new_classes: ["DurabilitySameWorker"],
 					tag: "some-migration-tag",
 				},
 			],
@@ -414,6 +420,11 @@ describe("init", () => {
 						name: "DURABLE_TEST",
 						script_name: "another-durable-object-worker",
 						environment: "production",
+					},
+					{
+						class_name: "DurabilitySameWorker",
+						name: "DURABLE_TEST_SAME_WORKER",
+						script_name: "isolinear-optical-chip",
 					},
 				],
 			},
@@ -919,7 +930,7 @@ describe("init", () => {
 					    {
 					      \\"tag\\": \\"some-migration-tag\\",
 					      \\"new_classes\\": [
-					        \\"Durability\\"
+					        \\"DurabilitySameWorker\\"
 					      ]
 					    }
 					  ],
@@ -947,6 +958,11 @@ describe("init", () => {
 					        \\"class_name\\": \\"Durability\\",
 					        \\"script_name\\": \\"another-durable-object-worker\\",
 					        \\"environment\\": \\"production\\"
+					      },
+					      {
+					        \\"name\\": \\"DURABLE_TEST_SAME_WORKER\\",
+					        \\"class_name\\": \\"DurabilitySameWorker\\",
+					        \\"script_name\\": \\"isolinear-optical-chip\\"
 					      }
 					    ]
 					  },

@@ -1,0 +1,344 @@
+import { existsSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
+import { FatalError, readFileSync } from "@cloudflare/workers-utils";
+import { vi } from "vitest";
+import * as c3 from "../../autoconfig/c3-vendor/packages";
+import * as details from "../../autoconfig/details";
+import { Static } from "../../autoconfig/frameworks/static";
+import * as run from "../../autoconfig/run";
+import * as format from "../../deployment-bundle/guess-worker-format";
+import { clearOutputFilePath } from "../../output";
+import * as compatDate from "../../utils/compatibility-date";
+import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
+import { mockConsoleMethods } from "../helpers/mock-console";
+import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
+import { useMockIsTTY } from "../helpers/mock-istty";
+import { runInTempDir } from "../helpers/run-in-tmp";
+import { runWrangler } from "../helpers/run-wrangler";
+import { writeWorkerSource } from "../helpers/write-worker-source";
+import { writeWranglerConfig } from "../helpers/write-wrangler-config";
+import type { Framework } from "../../autoconfig/frameworks";
+import type { MockInstance } from "vitest";
+
+vi.mock("../../package-manager", () => ({
+	getPackageManager() {
+		return {
+			type: "npm",
+			npx: "npx",
+		};
+	},
+}));
+
+vi.mock("../deploy/deploy", async (importOriginal) => ({
+	...(await importOriginal()),
+	default: () => {
+		// In unit tests of autoconfig we only care about the configuration aspect, so bail before any actual deployment happens
+		throw new FatalError("Bailing early in tests");
+	},
+}));
+
+async function runDeploy(withArgs: string = "") {
+	// Expect "Bailing early in tests" to be thrown
+	await expect(runWrangler(`deploy ${withArgs}`)).rejects.toThrowError();
+}
+
+// We don't care about module/service worker detection in the autoconfig tests,
+// and mocking it out speeds up the tests by removing an esbuild invocation
+vi.spyOn(format, "guessWorkerFormat").mockImplementation(() =>
+	Promise.resolve({
+		format: "modules",
+		exports: [],
+	})
+);
+
+describe("autoconfig (deploy)", () => {
+	mockAccountId();
+	mockApiToken();
+	runInTempDir();
+	const { setIsTTY } = useMockIsTTY();
+	const std = mockConsoleMethods();
+
+	beforeEach(() => {
+		setIsTTY(true);
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		clearDialogs();
+		clearOutputFilePath();
+	});
+
+	it("should not check for autoconfig without flag", async () => {
+		writeWorkerSource();
+		writeWranglerConfig({ main: "index.js" });
+		const getDetailsSpy = vi.spyOn(details, "getDetailsForAutoConfig");
+		await runDeploy();
+
+		expect(getDetailsSpy).not.toHaveBeenCalled();
+	});
+
+	it("should check for autoconfig with flag", async () => {
+		const getDetailsSpy = vi.spyOn(details, "getDetailsForAutoConfig");
+
+		await runDeploy("--x-autoconfig");
+
+		expect(getDetailsSpy).toHaveBeenCalled();
+	});
+
+	it("should run autoconfig if project is not configured", async () => {
+		const getDetailsSpy = vi
+			.spyOn(details, "getDetailsForAutoConfig")
+			.mockImplementationOnce(() =>
+				Promise.resolve({
+					configured: false,
+					projectPath: process.cwd(),
+					workerName: "my-worker",
+				})
+			);
+		const runSpy = vi.spyOn(run, "runAutoConfig");
+
+		await runDeploy("--x-autoconfig");
+
+		expect(getDetailsSpy).toHaveBeenCalled();
+		expect(runSpy).toHaveBeenCalled();
+	});
+
+	it("should not run autoconfig if project is already configured", async () => {
+		const getDetailsSpy = vi
+			.spyOn(details, "getDetailsForAutoConfig")
+			.mockImplementationOnce(() =>
+				Promise.resolve({
+					configured: true,
+					projectPath: process.cwd(),
+					workerName: "my-worker",
+				})
+			);
+		const runSpy = vi.spyOn(run, "runAutoConfig");
+
+		await runDeploy("--x-autoconfig");
+
+		expect(getDetailsSpy).toHaveBeenCalled();
+		expect(runSpy).not.toHaveBeenCalled();
+	});
+
+	describe("runAutoConfig()", () => {
+		let installSpy: MockInstance;
+		beforeEach(() => {
+			installSpy = vi
+				.spyOn(c3, "installWrangler")
+				.mockImplementation(async () => {});
+
+			vi.spyOn(compatDate, "getDevCompatibilityDate").mockImplementation(
+				() => "2000-01-01"
+			);
+		});
+
+		it("happy path", async () => {
+			await writeFile(
+				"package.json",
+				JSON.stringify({
+					name: "project-name",
+				})
+			);
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+			await writeFile(".gitignore", "");
+			const configureSpy = vi.fn(async ({ outputDir }) => ({
+				assets: { directory: outputDir },
+			}));
+			await run.runAutoConfig({
+				projectPath: process.cwd(),
+				buildCommand: "echo 'built' > build.txt",
+				configured: false,
+				workerName: "my-worker",
+				framework: {
+					name: "fake",
+					configure: configureSpy,
+				} as unknown as Framework,
+				outputDir: "dist",
+				packageJson: {
+					dependencies: {
+						astro: "5",
+					},
+				},
+			});
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				Detected Project Settings:
+				 - Worker Name: my-worker
+				 - Framework: fake
+				 - Build Command: echo 'built' > build.txt
+				 - Output Directory: dist
+
+
+				📦 Install packages:
+				 - wrangler (devDependency)
+
+				📝 Update package.json scripts:
+				 - \\"deploy\\": \\"echo 'built' > build.txt && wrangler deploy\\"
+				 - \\"preview\\": \\"echo 'built' > build.txt && wrangler dev\\"
+
+				📄 Create wrangler.jsonc:
+				  {
+				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				    \\"name\\": \\"my-worker\\",
+				    \\"compatibility_date\\": \\"2000-01-01\\",
+				    \\"observability\\": {
+				      \\"enabled\\": true
+				    },
+				    \\"assets\\": {
+				      \\"directory\\": \\"dist\\"
+				    }
+				  }
+
+				🛠️  Configuring project for Fake
+
+				[build] Running: echo 'built' > build.txt"
+			`);
+
+			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
+				"{
+				  \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				  \\"name\\": \\"my-worker\\",
+				  \\"compatibility_date\\": \\"2000-01-01\\",
+				  \\"observability\\": {
+				    \\"enabled\\": true
+				  },
+				  \\"assets\\": {
+				    \\"directory\\": \\"dist\\"
+				  }
+				}"
+			`);
+
+			expect(readFileSync(".gitignore")).toMatchInlineSnapshot(`
+				"
+
+				# wrangler files
+				.wrangler
+				.dev.vars*
+				!.dev.vars.example
+				.env*
+				!.env.example
+				"
+			`);
+
+			// Wrangler should have been installed
+			expect(installSpy).toHaveBeenCalled();
+
+			// The framework's configuration command should have been run
+			expect(configureSpy).toHaveBeenCalled();
+
+			// The framework's build command should have been run
+			expect(readFileSync("build.txt")).toContain("built");
+
+			// outputDir !== projectPath, so there's no need for an assets ignore file
+			expect(existsSync(".assetsignore")).toBeFalsy();
+		});
+
+		it("allows users to edit the auto-detected settings", async () => {
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: true,
+			});
+			mockPrompt({
+				text: "What do you want to name your Worker?",
+				result: "edited-worker-name",
+			});
+			mockPrompt({
+				text: "What directory contains your applications' output/asset files?",
+				result: "dist",
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+			await run.runAutoConfig({
+				projectPath: process.cwd(),
+				configured: false,
+				framework: new Static("static"),
+				workerName: "my-worker",
+				outputDir: "dist",
+			});
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				Detected Project Settings:
+				 - Worker Name: my-worker
+				 - Framework: static
+				 - Output Directory: dist
+
+
+				Updated Project Settings:
+				 - Worker Name: edited-worker-name
+				 - Framework: static
+				 - Output Directory: dist
+
+
+				📄 Create wrangler.jsonc:
+				  {
+				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				    \\"name\\": \\"edited-worker-name\\",
+				    \\"compatibility_date\\": \\"2000-01-01\\",
+				    \\"observability\\": {
+				      \\"enabled\\": true
+				    },
+				    \\"assets\\": {
+				      \\"directory\\": \\"dist\\"
+				    }
+				  }
+				"
+			`);
+
+			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
+				"{
+				  \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				  \\"name\\": \\"edited-worker-name\\",
+				  \\"compatibility_date\\": \\"2000-01-01\\",
+				  \\"observability\\": {
+				    \\"enabled\\": true
+				  },
+				  \\"assets\\": {
+				    \\"directory\\": \\"dist\\"
+				  }
+				}"
+			`);
+		});
+
+		it(".assetsignore should contain Wrangler files if outputDir === projectPath", async () => {
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+			mockConfirm({
+				text: "Proceed with setup?",
+				result: true,
+			});
+
+			await run.runAutoConfig({
+				projectPath: process.cwd(),
+				workerName: "my-worker",
+				configured: false,
+				outputDir: process.cwd(),
+			});
+
+			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`
+				"
+
+				# wrangler files
+				.wrangler
+				.dev.vars*
+				!.dev.vars.example
+				.env*
+				!.env.example
+				"
+			`);
+		});
+	});
+});

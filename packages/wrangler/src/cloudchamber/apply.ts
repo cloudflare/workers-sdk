@@ -59,7 +59,6 @@ import type {
 	ContainerApp,
 	Observability,
 } from "@cloudflare/workers-utils";
-import type { JsonMap } from "@iarna/toml";
 
 function mergeDeep<T>(target: T, source: Partial<T>): T {
 	if (typeof target !== "object" || target === null) {
@@ -338,7 +337,7 @@ export async function apply(
 			name: config.name ?? "my-containers-application",
 			instance_type: "lite",
 		};
-		const endConfig: JsonMap =
+		const endConfig: Record<string, unknown> =
 			args.env !== undefined
 				? {
 						env: { [args.env]: { containers: [configuration] } },

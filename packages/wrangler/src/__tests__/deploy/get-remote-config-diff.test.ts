@@ -19,7 +19,7 @@ describe("getRemoteConfigsDiff", () => {
 	it("should handle a very simple diffing scenario (no diffs, random order)", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: true,
@@ -31,7 +31,7 @@ describe("getRemoteConfigsDiff", () => {
 				observability: { enabled: true, head_sampling_rate: 1 },
 			},
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				workers_dev: undefined,
 				placement: undefined,
 				compatibility_date: "2025-07-08",
@@ -50,14 +50,14 @@ describe("getRemoteConfigsDiff", () => {
 	it("should handle a very simple diffing scenario where there is only an addition to an array (specifically in `kv_namespaces`)", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				kv_namespaces: [{ binding: "MY_KV", id: "<kv-id>" }],
 				preview_urls: true,
 			},
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: true,
@@ -83,7 +83,7 @@ describe("getRemoteConfigsDiff", () => {
 	it("should handle a very simple diffing scenario (some diffs, random order)", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: true,
@@ -98,7 +98,7 @@ describe("getRemoteConfigsDiff", () => {
 				compatibility_date: "2025-07-09",
 				main: "/tmp/src/index.js",
 				compatibility_flags: [],
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				workers_dev: true,
 				limits: undefined,
 				placement: undefined,
@@ -121,7 +121,7 @@ describe("getRemoteConfigsDiff", () => {
 	it("should handle a diffing scenario with only additions", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: true,
@@ -134,7 +134,7 @@ describe("getRemoteConfigsDiff", () => {
 				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
 			},
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "src/index.js",
 				compatibility_date: "2025-07-08",
 				account_id: "account-id-123",
@@ -163,7 +163,7 @@ describe("getRemoteConfigsDiff", () => {
 	it("should handle a diffing scenario with only deletions", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: false,
@@ -176,7 +176,7 @@ describe("getRemoteConfigsDiff", () => {
 				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
 			},
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: false,
@@ -206,7 +206,7 @@ describe("getRemoteConfigsDiff", () => {
 	it("should handle a diffing scenario with modifications and removals", () => {
 		const { diff, nonDestructive } = getRemoteConfigDiff(
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "/tmp/src/index.js",
 				workers_dev: true,
 				preview_urls: true,
@@ -219,7 +219,7 @@ describe("getRemoteConfigsDiff", () => {
 				kv_namespaces: [{ binding: "MY_KV", id: "my-kv-123" }],
 			},
 			{
-				name: "silent-firefly-dbe3",
+				name: "my-worker-id",
 				main: "src/index.js",
 				compatibility_date: "2025-07-09",
 				observability: {
@@ -242,6 +242,278 @@ describe("getRemoteConfigsDiff", () => {
 			   observability: {
 			-    enabled: true
 			+    enabled: false
+			     logs: {
+			-      enabled: true
+			+      enabled: false
+			     }
+			   }
+			 }
+			"
+		`);
+		expect(nonDestructive).toBe(false);
+	});
+
+	it("should ignore local-only configs such as `dev` and `build`", () => {
+		const { diff } = getRemoteConfigDiff(
+			{
+				name: "my-worker-id",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+				compatibility_flags: undefined,
+			},
+			{
+				name: "my-worker-id",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: true,
+				compatibility_date: "2025-07-08",
+				compatibility_flags: undefined,
+				dev: {
+					local_protocol: "http",
+					port: 8999,
+				},
+				build: {
+					command: "npm run build",
+				},
+			} as unknown as Config
+		);
+		expect(diff).toBeNull();
+	});
+
+	it("should ignore the `remote` field of bindings during the diffing process (since remote bindings are a local-only concept)", () => {
+		const { diff } = getRemoteConfigDiff(
+			{
+				name: "my-worker-id",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: false,
+				compatibility_date: "2025-07-08",
+				account_id: "account-id-123",
+				services: [
+					{
+						binding: "my-service",
+						service: "my-worker",
+					},
+				],
+				kv_namespaces: [
+					{
+						binding: "MY_KV",
+						id: "my-kv-123",
+					},
+				],
+				r2_buckets: [
+					{ binding: "MY_R2_A", bucket_name: "my-bucket-a" },
+					{ binding: "MY_R2_B", bucket_name: "my-bucket" },
+					{ binding: "MY_R2_C", bucket_name: "my-bucket-c" },
+				],
+				d1_databases: [{ binding: "MY_D1", database_id: "my-db" }],
+				ai: {
+					binding: "AI",
+				},
+				browser: {
+					binding: "BROWSER",
+				},
+				images: {
+					binding: "IMAGES",
+				},
+				send_email: [
+					{
+						name: "email",
+					},
+				],
+				queues: {
+					producers: [
+						{
+							binding: "MY_QUEUE",
+							queue: "my-queue",
+						},
+					],
+				},
+				mtls_certificates: [
+					{
+						certificate_id: "certificate-id",
+						binding: "MY_CERT",
+					},
+				],
+				pipelines: [
+					{
+						binding: "MY_PIPELINE",
+						pipeline: "my-pipeline",
+					},
+				],
+				vectorize: [
+					{
+						binding: "VERCTORIZE",
+						index_name: "my-vectorize",
+					},
+				],
+				dispatch_namespaces: [
+					{
+						binding: "DISPATCH",
+						namespace: "namespace",
+					},
+				],
+				media: {
+					binding: "MEDIA",
+				},
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+					},
+				],
+				vpc_services: [
+					{
+						binding: "MY_VPC",
+						service_id: "my-vpc",
+					},
+				],
+			},
+			{
+				name: "my-worker-id",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: false,
+				compatibility_date: "2025-07-08",
+				account_id: "account-id-123",
+				services: [
+					{
+						binding: "my-service",
+						service: "my-worker",
+						remote: true,
+					},
+				],
+				kv_namespaces: [
+					{
+						binding: "MY_KV",
+						id: "my-kv-123",
+						remote: true,
+					},
+				],
+				r2_buckets: [
+					{ binding: "MY_R2_A", bucket_name: "my-bucket-a", remote: true },
+					{ binding: "MY_R2_B", bucket_name: "my-bucket" },
+					{ binding: "MY_R2_C", bucket_name: "my-bucket-c", remote: false },
+				],
+				d1_databases: [
+					{ binding: "MY_D1", database_id: "my-db", remote: true },
+				],
+				ai: {
+					binding: "AI",
+					remote: true,
+				},
+				browser: {
+					binding: "BROWSER",
+					remote: false,
+				},
+				images: {
+					binding: "IMAGES",
+					remote: true,
+				},
+				send_email: [
+					{
+						name: "email",
+						remote: true,
+					},
+				],
+				queues: {
+					producers: [
+						{
+							binding: "MY_QUEUE",
+							queue: "my-queue",
+							remote: false,
+						},
+					],
+				},
+				mtls_certificates: [
+					{
+						certificate_id: "certificate-id",
+						binding: "MY_CERT",
+						remote: true,
+					},
+				],
+				pipelines: [
+					{
+						binding: "MY_PIPELINE",
+						pipeline: "my-pipeline",
+						remote: true,
+					},
+				],
+				vectorize: [
+					{
+						binding: "VERCTORIZE",
+						index_name: "my-vectorize",
+						remote: true,
+					},
+				],
+				dispatch_namespaces: [
+					{
+						binding: "DISPATCH",
+						namespace: "namespace",
+						remote: true,
+					},
+				],
+				media: {
+					binding: "MEDIA",
+					remote: true,
+				},
+				workflows: [
+					{
+						binding: "MY_WORKFLOW",
+						name: "my-workflow",
+						class_name: "MyWorkflow",
+						remote: false,
+					},
+				],
+				vpc_services: [
+					{
+						binding: "MY_VPC",
+						service_id: "my-vpc",
+						remote: true,
+					},
+				],
+			} as unknown as Config
+		);
+		expect(diff).toBeNull();
+	});
+
+	it("should ignore all fields from an assets binding besides the binding name (since remotely only that information is stored)", () => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker-id",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: false,
+				compatibility_date: "2025-07-08",
+				account_id: "account-id-123",
+				assets: {
+					binding: "ASSETS",
+				},
+			},
+			{
+				name: "my-worker-id",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: false,
+				compatibility_date: "2025-07-08",
+				account_id: "account-id-123",
+				assets: {
+					binding: "MY_ASSETS",
+					// Note: The directory and html_handling fields are ignored
+					directory: "public",
+					html_handling: "drop-trailing-slash",
+				},
+			} as unknown as Config
+		);
+		assert(diff);
+		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
+			" {
+			   assets: {
+			-    binding: \\"ASSETS\\"
+			+    binding: \\"MY_ASSETS\\"
 			   }
 			 }
 			"
@@ -270,6 +542,25 @@ describe("getRemoteConfigsDiff", () => {
 				} as unknown as Config
 			);
 		}
+
+		it("shouldn't present any diff when the local config is just { enabled: true } and the remote observability is enabled with its default values", () => {
+			const { diff, nonDestructive } = getObservabilityDiff(
+				{
+					enabled: true,
+					head_sampling_rate: 1,
+					logs: {
+						enabled: true,
+						head_sampling_rate: 1,
+						persist: true,
+						invocation_logs: true,
+					},
+					traces: { enabled: false, persist: true, head_sampling_rate: 1 },
+				},
+				{ enabled: true }
+			);
+			expect(diff).toBe(null);
+			expect(nonDestructive).toBe(true);
+		});
 
 		it("should treat a remote undefined equal to a remote { enabled: false }", () => {
 			const { diff } = getObservabilityDiff(
@@ -301,6 +592,10 @@ describe("getRemoteConfigsDiff", () => {
 				   observability: {
 				-    enabled: false
 				+    enabled: true
+				     logs: {
+				-      enabled: false
+				+      enabled: true
+				     }
 				   }
 				 }
 				"

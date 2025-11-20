@@ -12,7 +12,11 @@ Telemetry in Wrangler allows us to better identify bugs and gain visibility on u
 
 - What command is being run (e.g. `wrangler deploy`, `wrangler dev`)
 - Anonymized arguments and flags given to Wrangler (e.g. `wrangler deploy ./src/index.ts --dry-run=true --outdir=dist` would be sent as `wrangler deploy REDACTED --dry-run=true --outdir=REDACTED`)
-- Anonymized information about your Worker (e.g. whether or not Workers Assets is being used, whether or not TypeScript is being used)
+- Anonymized information about your Worker. For instance, this can include (this list is non-exhaustive):
+  - Whether or not Workers Assets is being used, along with the output directory
+  - Whether or not TypeScript is being used
+  - The framework being used
+  - The build command being used
 - Information about your connection to Cloudflare's API (e.g. how long it takes Wrangler to deploy your Worker)
 - The version of the Wrangler client that is sending the event
 - The package manager that the Wrangler client is using. (e.g. npm, yarn)

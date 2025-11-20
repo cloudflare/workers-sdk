@@ -833,6 +833,7 @@ test("DevRegistry: tail to default entrypoint", async (t) => {
 		serviceBindings: {
 			remote: "remote-worker",
 		},
+		handleRuntimeStdio: () => {},
 		compatibilityFlags: ["experimental"],
 		modules: true,
 		script: `
@@ -841,7 +842,7 @@ test("DevRegistry: tail to default entrypoint", async (t) => {
 					if (request.url.includes("remote-worker")) {
 						return env.remote.fetch(request)
 					}
-					console.log("log event")
+					console.log("DevReg: log event")
 					return new Response("Hello from local-worker!");
 				}
 			}
@@ -854,9 +855,9 @@ test("DevRegistry: tail to default entrypoint", async (t) => {
 	t.is(result, "Hello from local-worker!");
 
 	const res2 = await local.dispatchFetch("http://example.com/remote-worker");
-	const result2 = await res2.json();
+	const result2 = await res2.text();
 
-	t.deepEqual(result2, ["log event"]);
+	t.deepEqual(result2, `["DevReg: log event"]`);
 });
 
 test("DevRegistry: tail to unknown worker", async (t) => {
@@ -870,13 +871,14 @@ test("DevRegistry: tail to unknown worker", async (t) => {
 		},
 		compatibilityFlags: ["experimental"],
 		modules: true,
+		handleRuntimeStdio: () => {},
 		script: `
 			export default {
 				async fetch(request, env) {
 					if (request.url.includes("remote-worker")) {
 						return env.remote.fetch(request)
 					}
-					console.log("log event")
+					console.log("DevReg: log event 2")
 					return new Response("Hello from local-worker!");
 				}
 			}
@@ -1227,12 +1229,14 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 
 	// Wait for the callback to be triggered
 	await waitUntil(t, async (t) => {
-		t.true(
-			firstCallbackInvocations.length >= 1,
+		t.is(
+			firstCallbackInvocations.length,
+			1,
 			"Callback should be triggered when bound Worker starts"
 		);
-		t.true(
-			secondCallbackInvocations.length === 0,
+		t.is(
+			secondCallbackInvocations.length,
+			0,
 			"Second callback should not be triggered yet"
 		);
 	});
@@ -1241,8 +1245,9 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 	await waitUntil(t, async (t) => {
 		const latestInvocation = firstCallbackInvocations.at(-1);
 
-		t.true(
-			latestInvocation && "remote-worker" in latestInvocation.registry,
+		t.not(
+			latestInvocation?.registry["remote-worker"],
+			undefined,
 			"Registry should contain remote-worker"
 		);
 	});
@@ -1282,12 +1287,14 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 
 	// Wait for callback to be triggered by the update
 	await waitUntil(t, async (t) => {
-		t.true(
-			firstCallbackInvocations.length === 1,
+		t.is(
+			firstCallbackInvocations.length,
+			1,
 			"First callback should not be triggered again after update"
 		);
-		t.true(
-			secondCallbackInvocations.length === 1,
+		t.is(
+			secondCallbackInvocations.length,
+			1,
 			"Second callback should be triggered after update"
 		);
 	});
@@ -1296,8 +1303,9 @@ test("DevRegistry: handleDevRegistryUpdate callback", async (t) => {
 	await waitUntil(t, async (t) => {
 		const latestInvocation = secondCallbackInvocations.at(-1);
 
-		t.false(
-			!latestInvocation || "remote-worker" in latestInvocation.registry,
+		t.is(
+			latestInvocation?.registry["remote-worker"],
+			undefined,
 			"Registry should not contain remote-worker"
 		);
 	});

@@ -20,7 +20,7 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'skip-v3-pr') == false
       }}
     name: Open backport PR for patches
-    runs-on: macos-latest
+    runs-on: ubuntu-slim
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
@@ -34,7 +34,7 @@ jobs:
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
 
-      - uses: Ana06/get-changed-files@v1.2
+      - uses: Ana06/get-changed-files@v2.3.0
         id: files
         with:
           format: "json"

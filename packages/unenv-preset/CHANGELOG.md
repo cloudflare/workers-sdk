@@ -1,5 +1,19 @@
 # @cloudflare/unenv-preset
 
+## 2.7.10
+
+### Patch Changes
+
+- [#11024](https://github.com/cloudflare/workers-sdk/pull/11024) [`cdcecfc`](https://github.com/cloudflare/workers-sdk/commit/cdcecfc3a9c8135c50d4f17ff73991f179036f6b) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Use the native `node:trace_events` module when available
+
+  It is enabled when the `enable_nodejs_trace_events_module` compatibility flag is set.
+
+## 2.7.9
+
+### Patch Changes
+
+- [#11080](https://github.com/cloudflare/workers-sdk/pull/11080) [`90a2566`](https://github.com/cloudflare/workers-sdk/commit/90a2566982637ceb362e3cdbd7c433b5b4de9b28) Thanks [@vicb](https://github.com/vicb)! - Bump `unenv` to 2.0.0-rc.24
+
 ## 2.7.8
 
 ### Patch Changes
