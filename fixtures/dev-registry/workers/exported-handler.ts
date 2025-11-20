@@ -30,10 +30,6 @@ export default {
 					service = env.SERVICE_WORKER;
 					break;
 				}
-				case "module-worker": {
-					service = env.MODULE_WORKER;
-					break;
-				}
 				case "worker-entrypoint": {
 					service = env.WORKER_ENTRYPOINT;
 					break;
@@ -66,7 +62,7 @@ export default {
 				if (request.method === "POST") {
 					const logs = await request.json();
 					if (Array.isArray(logs)) {
-						console.log(`[Module Worker]`);
+						console.log(`[exported-handler]`);
 						console.log(...logs);
 					}
 					return new Response("ok");
@@ -74,7 +70,7 @@ export default {
 
 				try {
 					return Response.json({
-						worker: "Module Worker",
+						worker: "exported-handler",
 						tailEvents,
 					});
 				} finally {
@@ -83,7 +79,7 @@ export default {
 				}
 			}
 
-			return new Response("Hello from Module Worker!");
+			return new Response("Hello from exported handler!");
 		} catch (e) {
 			return new Response(e.message, { status: 500 });
 		}
@@ -103,7 +99,6 @@ export default {
 	},
 } satisfies ExportedHandler<{
 	SERVICE_WORKER: Fetcher;
-	MODULE_WORKER: Fetcher;
 	WORKER_ENTRYPOINT: Fetcher;
 	WORKER_ENTRYPOINT_WITH_ASSETS: Fetcher;
 	NAMED_ENTRYPOINT: Fetcher;

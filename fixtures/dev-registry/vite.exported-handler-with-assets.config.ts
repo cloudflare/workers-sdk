@@ -7,7 +7,7 @@ export default defineConfig({
 	publicDir: "./assets",
 	plugins: [
 		cloudflare({
-			configPath: "./wrangler.module-worker-with-assets.jsonc",
+			configPath: "./wrangler.exported-handler-with-assets.jsonc",
 			inspectorPort: false,
 			persistState: false,
 		}),

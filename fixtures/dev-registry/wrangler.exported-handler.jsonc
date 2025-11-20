@@ -1,19 +1,12 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "module-worker-with-assets",
-	"main": "./workers/module-worker.ts",
+	"name": "exported-handler",
+	"main": "./workers/exported-handler.ts",
 	"compatibility_date": "2025-05-01",
-	"assets": {
-		"directory": "./assets",
-	},
 	"services": [
 		{
 			"binding": "SERVICE_WORKER",
 			"service": "service-worker",
-		},
-		{
-			"binding": "MODULE_WORKER",
-			"service": "module-worker",
 		},
 		{
 			"binding": "WORKER_ENTRYPOINT",
@@ -36,7 +29,7 @@
 	],
 	"tail_consumers": [
 		{
-			"service": "worker-entrypoint",
+			"service": "worker-entrypoint-with-assets",
 		},
 	],
 }
