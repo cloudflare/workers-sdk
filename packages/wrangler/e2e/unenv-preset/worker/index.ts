@@ -596,6 +596,17 @@ export const WorkerdTests: Record<string, () => void> = {
 		assertTypeOf(tracing, "enabled", "boolean");
 		assertTypeOf(tracing, "categories", "string");
 	},
+
+	async testDomain() {
+		const { Domain } = await import("node:domain");
+
+		const domain = new Domain();
+
+		assertTypeOf(domain, "add", "function");
+		assertTypeOf(domain, "enter", "function");
+		assertTypeOf(domain, "exit", "function");
+		assertTypeOf(domain, "remove", "function");
+	},
 };
 
 function assertTypeOf(target: unknown, property: string, expectType: string) {

@@ -75,6 +75,7 @@ export function getCloudflarePreset({
 	const punycodeOverrides = getPunycodeOverrides(compat);
 	const clusterOverrides = getClusterOverrides(compat);
 	const traceEventsOverrides = getTraceEventsOverrides(compat);
+	const domainOverrides = getDomainOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -86,6 +87,7 @@ export function getCloudflarePreset({
 		...punycodeOverrides.nativeModules,
 		...clusterOverrides.nativeModules,
 		...traceEventsOverrides.nativeModules,
+		...domainOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -98,6 +100,7 @@ export function getCloudflarePreset({
 		...punycodeOverrides.hybridModules,
 		...clusterOverrides.hybridModules,
 		...traceEventsOverrides.hybridModules,
+		...domainOverrides.hybridModules,
 	];
 
 	return {
@@ -421,6 +424,44 @@ function getTraceEventsOverrides({
 	return enabled
 		? {
 				nativeModules: ["trace_events"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:domain` (unenv or workerd)
+ *
+ * The native trace_events implementation:
+ * - is experimental
+ * - can be enabled with the "enable_nodejs_domain_module" flag
+ * - can be disabled with the "disable_nodejs_domain_module" flag
+ */
+function getDomainOverrides({
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_domain_module"
+	);
+
+	// TODO: add `enabledByDate` when a date is defined in workerd
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_domain_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["domain"],
 				hybridModules: [],
 			}
 		: {
