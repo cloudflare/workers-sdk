@@ -112,7 +112,8 @@ type Props = {
 
 export const versionsUploadCommand = createCommand({
 	metadata: {
-		description: "Uploads your Worker code and config as a new Version",
+		description:
+			"Uploads your Worker code and config as a new Version. To capture deployment output in ND-JSON format, set the WRANGLER_OUTPUT_FILE_PATH or WRANGLER_OUTPUT_FILE_DIRECTORY environment variable. See https://developers.cloudflare.com/workers/wrangler/system-environment-variables/ for details.",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},

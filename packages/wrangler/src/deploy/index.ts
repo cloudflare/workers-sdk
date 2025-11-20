@@ -30,7 +30,8 @@ import deploy from "./deploy";
 
 export const deployCommand = createCommand({
 	metadata: {
-		description: "🆙 Deploy a Worker to Cloudflare",
+		description:
+			"🆙 Deploy a Worker to Cloudflare. To capture deployment output in ND-JSON format, set the WRANGLER_OUTPUT_FILE_PATH or WRANGLER_OUTPUT_FILE_DIRECTORY environment variable. See https://developers.cloudflare.com/workers/wrangler/system-environment-variables/ for details.",
 		owner: "Workers: Deploy and Config",
 		status: "stable",
 	},
