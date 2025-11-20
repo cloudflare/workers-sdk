@@ -1,5 +1,30 @@
 # wrangler
 
+## 4.50.0
+
+### Minor Changes
+
+- [#11219](https://github.com/cloudflare/workers-sdk/pull/11219) [`524a6e5`](https://github.com/cloudflare/workers-sdk/commit/524a6e52dd5e6740bc36ee1135ba350a2d5b9e44) Thanks [@Ltadrian](https://github.com/Ltadrian)! - Implement Hyperdrive binding TLS miniflare proxy. This will allow for wrangler dev hyperdrive bindings to connect to external
+  databases that require TLS.
+
+- [#11233](https://github.com/cloudflare/workers-sdk/pull/11233) [`c922a81`](https://github.com/cloudflare/workers-sdk/commit/c922a810808f640b82fcad08a96363323029de83) Thanks [@emily-shen](https://github.com/emily-shen)! - Add `containers.unsafe` to allow internal users to use additional container features
+
+### Patch Changes
+
+- [#11353](https://github.com/cloudflare/workers-sdk/pull/11353) [`0cf696d`](https://github.com/cloudflare/workers-sdk/commit/0cf696dfde285eac0eca3f86e6c407f2bcc43899) Thanks [@vicb](https://github.com/vicb)! - Use the native `node:domain` module when available
+
+  It is enabled when the `enable_nodejs_domain_module` compatibility flag is set.
+
+- [#11328](https://github.com/cloudflare/workers-sdk/pull/11328) [`bb44120`](https://github.com/cloudflare/workers-sdk/commit/bb4412042f86deb747259bbb353103e5d0322447) Thanks [@ascorbic](https://github.com/ascorbic)! - Fixes a bug that caused `wrangler deploy` to hang when deploying SvelteKit sites with experimental autoconfig
+
+- [#11025](https://github.com/cloudflare/workers-sdk/pull/11025) [`4a158e9`](https://github.com/cloudflare/workers-sdk/commit/4a158e9f4815778145969287d38720e61d956eee) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Use the native `node:wasi` module when available
+
+  It is enabled when the `enable_nodejs_wasi_module` compatibility flag is set.
+
+- Updated dependencies [[`0cf696d`](https://github.com/cloudflare/workers-sdk/commit/0cf696dfde285eac0eca3f86e6c407f2bcc43899), [`524a6e5`](https://github.com/cloudflare/workers-sdk/commit/524a6e52dd5e6740bc36ee1135ba350a2d5b9e44), [`4a158e9`](https://github.com/cloudflare/workers-sdk/commit/4a158e9f4815778145969287d38720e61d956eee)]:
+  - @cloudflare/unenv-preset@2.7.11
+  - miniflare@4.20251118.1
+
 ## 4.49.1
 
 ### Patch Changes

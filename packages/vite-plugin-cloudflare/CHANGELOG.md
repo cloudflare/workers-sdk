@@ -1,5 +1,18 @@
 # @cloudflare/vite-plugin
 
+## 1.15.2
+
+### Patch Changes
+
+- [#11342](https://github.com/cloudflare/workers-sdk/pull/11342) [`a55c0e4`](https://github.com/cloudflare/workers-sdk/commit/a55c0e41d55edf458e7ec240e3d1fcab3e3154c9) Thanks [@jamesopstad](https://github.com/jamesopstad)! - fix: `email` method not working in ExportedHandler exports in development
+
+- [#11322](https://github.com/cloudflare/workers-sdk/pull/11322) [`49eada3`](https://github.com/cloudflare/workers-sdk/commit/49eada38c5c08884fad4d292d8d4e91d190fb3d8) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add `cloudflare:node` to built-in modules
+
+- Updated dependencies [[`0cf696d`](https://github.com/cloudflare/workers-sdk/commit/0cf696dfde285eac0eca3f86e6c407f2bcc43899), [`524a6e5`](https://github.com/cloudflare/workers-sdk/commit/524a6e52dd5e6740bc36ee1135ba350a2d5b9e44), [`c922a81`](https://github.com/cloudflare/workers-sdk/commit/c922a810808f640b82fcad08a96363323029de83), [`bb44120`](https://github.com/cloudflare/workers-sdk/commit/bb4412042f86deb747259bbb353103e5d0322447), [`4a158e9`](https://github.com/cloudflare/workers-sdk/commit/4a158e9f4815778145969287d38720e61d956eee)]:
+  - @cloudflare/unenv-preset@2.7.11
+  - wrangler@4.50.0
+  - miniflare@4.20251118.1
+
 ## 1.15.1
 
 ### Patch Changes
