@@ -6,7 +6,7 @@ export default defineConfig([
 	sharedConfig,
 	{
 		files: ["**/*.ts"],
-		ignores: ["**/*.test.ts", "tsup.config.ts", "e2e/**"],
+		ignores: ["**/*.test.ts", "tsup.config.ts", "e2e/**", "tsdown.config.ts"],
 		rules: {
 			"no-console": "error",
 			"no-restricted-globals": [
