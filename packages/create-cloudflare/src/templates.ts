@@ -240,6 +240,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			svelte: svelteTemplate,
 			docusaurus: docusaurusTemplate,
 			astro: astroTemplate,
+			"tanstack-start": tanStackStartTemplate,
 		};
 	} else {
 		return {

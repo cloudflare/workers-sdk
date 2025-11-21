@@ -3887,6 +3887,9 @@ importers:
       '@types/cross-spawn':
         specifier: ^6.0.2
         version: 6.0.2
+      '@types/esprima':
+        specifier: ^4.0.3
+        version: 4.0.3
       '@types/glob-to-regexp':
         specifier: ^0.4.1
         version: 0.4.1
@@ -3980,6 +3983,9 @@ importers:
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.0)(supports-color@9.2.2)
+      esprima:
+        specifier: 4.0.1
+        version: 4.0.1
       execa:
         specifier: ^6.1.0
         version: 6.1.0
@@ -4043,6 +4049,9 @@ importers:
       prompts:
         specifier: ^2.4.2
         version: 2.4.2
+      recast:
+        specifier: 0.22.0
+        version: 0.22.0
       resolve:
         specifier: ^1.22.8
         version: 1.22.8
@@ -6704,7 +6713,13 @@ packages:
     engines: {node: ^20.19 || ^22.12 || >=24.0}
     peerDependencies:
       prisma: '*'
+<<<<<<< HEAD
       typescript: '>=5.4.0'
+||||||| parent of eea287405 (Support TanStack)
+      typescript: '>=5.1.0'
+=======
+      typescript: ^5.8.3
+>>>>>>> eea287405 (Support TanStack)
     peerDependenciesMeta:
       prisma:
         optional: true
@@ -17132,7 +17147,7 @@ snapshots:
       resolve: 1.22.8
       semver: 7.5.4
       source-map: 0.6.1
-      typescript: 5.8.2
+      typescript: 5.9.3
     transitivePeerDependencies:
       - '@types/node'
 
@@ -18590,7 +18605,7 @@ snapshots:
 
   '@types/esprima@4.0.3':
     dependencies:
-      '@types/estree': 1.0.5
+      '@types/estree': 1.0.8
 
   '@types/estree@1.0.5': {}
 
@@ -25937,8 +25952,8 @@ snapshots:
       inherits: 2.0.4
       is-arguments: 1.1.1
       is-generator-function: 1.0.10
-      is-typed-array: 1.1.13
-      which-typed-array: 1.1.16
+      is-typed-array: 1.1.15
+      which-typed-array: 1.1.19
 
   utils-merge@1.0.1: {}
 

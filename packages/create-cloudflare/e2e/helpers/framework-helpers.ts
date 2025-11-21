@@ -256,6 +256,11 @@ export async function verifyPreviewScript(
 		"Expected a preview script is we are verifying the preview in " +
 			projectPath,
 	);
+	if (verifyPreview.build) {
+		await runCommand([packageManager.name, "run", "build"], {
+			cwd: projectPath,
+		});
+	}
 
 	// Run the dev-server on random ports to avoid colliding with other tests
 	const port = await getPort();

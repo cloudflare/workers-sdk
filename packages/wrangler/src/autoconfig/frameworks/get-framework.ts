@@ -1,6 +1,7 @@
 import { Astro } from "./astro";
 import { Static } from "./static";
 import { SvelteKit } from "./sveltekit";
+import { TanstackStart } from "./tanstack";
 import type { Framework } from ".";
 
 export function getFramework(detectedFramework?: {
@@ -12,6 +13,8 @@ export function getFramework(detectedFramework?: {
 			return new Astro(detectedFramework.name);
 		case "svelte-kit":
 			return new SvelteKit(detectedFramework.name);
+		case "tanstack-start":
+			return new TanstackStart(detectedFramework.name);
 		default:
 			return new Static(detectedFramework?.name);
 	}
