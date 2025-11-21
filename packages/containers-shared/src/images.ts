@@ -197,6 +197,12 @@ export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 			secretType: "AWS Secret Access Key",
 		},
 		{
+			type: ExternalRegistryKind.DOCKER_HUB,
+			pattern: /^docker\.io$/,
+			name: "DockerHub",
+			secretType: "DockerHub PAT Token",
+		},
+		{
 			type: "cloudflare",
 			// Make a regex based on the env var CLOUDFLARE_CONTAINER_REGISTRY
 			pattern: new RegExp(
