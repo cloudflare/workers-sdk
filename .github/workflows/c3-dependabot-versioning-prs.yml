@@ -24,7 +24,7 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
-        wirh:
+        with:
           pnpm-filters: "./tools"
 
       - name: Configure Git
