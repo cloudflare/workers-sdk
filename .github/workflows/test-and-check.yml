@@ -75,7 +75,7 @@ jobs:
   test:
     timeout-minutes: 45
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node_version }}-test
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-test
       cancel-in-progress: true
 
     name: ${{ format('Tests ({0})', matrix.description) }}
@@ -85,16 +85,10 @@ jobs:
         include:
           - os: macos-latest
             description: macOS
-            node_version: 20.19.1
           - os: ubuntu-latest
             description: Linux
-            node_version: 20.19.1
           - os: windows-latest
             description: Windows
-            node_version: 22
-          - os: ubuntu-latest
-            description: v22, Linux
-            node_version: 22
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -103,7 +97,8 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: dorny/paths-filter@v3
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: |
@@ -118,7 +113,6 @@ jobs:
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-          node-version: ${{ matrix.node_version }}
 
       - name: Bump package versions
         if: steps.changes.outputs.everything_but_markdown == 'true'
@@ -172,5 +166,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.node_version }}
+          name: turbo-runs-${{ matrix.os }}
           path: .turbo/runs
