@@ -31,4 +31,3 @@ const config: TemplateConfig = {
 	previewScript: "preview",
 };
 export default config;
-
