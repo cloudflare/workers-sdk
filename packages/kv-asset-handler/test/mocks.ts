@@ -1,4 +1,3 @@
-import makeServiceWorkerEnv from "service-worker-mock";
 import { vi } from "vitest";
 
 const HASH = "123HASHBROWN";
@@ -65,58 +64,62 @@ interface CacheKey {
 }
 export const mockDefaultCache = () => {
 	const cacheStore = new Map<string, Response>();
-	return {
-		async match(key: Request) {
-			const cacheKey: CacheKey = {
-				url: key.url,
-				headers: {},
-			};
-			let response;
-			if (key.headers.has("if-none-match")) {
-				const makeStrongEtag = key.headers
-					.get("if-none-match")
-					.replace("W/", "");
-				Reflect.set(cacheKey.headers, "etag", makeStrongEtag);
-				response = cacheStore.get(JSON.stringify(cacheKey));
+	// @ts-expect-error we should pick cf types here
+	vi.spyOn(caches.default, "match").mockImplementation(async (key: Request) => {
+		const cacheKey: CacheKey = {
+			url: key.url,
+			headers: {},
+		};
+		let response;
+		if (key.headers.has("if-none-match")) {
+			const makeStrongEtag = key.headers.get("if-none-match").replace("W/", "");
+			Reflect.set(cacheKey.headers, "etag", makeStrongEtag);
+			response = cacheStore.get(JSON.stringify(cacheKey));
+		} else {
+			// if client doesn't send if-none-match, we need to iterate through these keys
+			// and just test the URL
+			const activeCacheKeys: Array<string> = Array.from(cacheStore.keys());
+			for (const cacheStoreKey of activeCacheKeys) {
+				if (JSON.parse(cacheStoreKey).url === key.url) {
+					response = cacheStore.get(cacheStoreKey);
+				}
+			}
+		}
+		if (!response) {
+			return undefined;
+		}
+
+		const headers = new Headers(response?.headers);
+		let status = response?.status;
+
+		// TODO: write test to accommodate for rare scenarios with where range requests accommodate etags
+		if (!key.headers.has("if-none-match")) {
+			// this appears overly verbose, but is necessary to document edge cache behavior
+			// The Range request header triggers the response header Content-Range ...
+			const range = key.headers.get("range");
+			if (range) {
+				headers.set(
+					"content-range",
+					`bytes ${range.split("=").pop()}/${headers.get("content-length")}`
+				);
+			}
+			// ... which we are using in this repository to set status 206
+			if (headers.has("content-range")) {
+				status = 206;
 			} else {
-				// if client doesn't send if-none-match, we need to iterate through these keys
-				// and just test the URL
-				const activeCacheKeys: Array<string> = Array.from(cacheStore.keys());
-				for (const cacheStoreKey of activeCacheKeys) {
-					if (JSON.parse(cacheStoreKey).url === key.url) {
-						response = cacheStore.get(cacheStoreKey);
-					}
-				}
+				status = 200;
 			}
-			// TODO: write test to accommodate for rare scenarios with where range requests accommodate etags
-			if (response && !key.headers.has("if-none-match")) {
-				// this appears overly verbose, but is necessary to document edge cache behavior
-				// The Range request header triggers the response header Content-Range ...
-				const range = key.headers.get("range");
-				if (range) {
-					response.headers.set(
-						"content-range",
-						`bytes ${range.split("=").pop()}/${response.headers.get(
-							"content-length"
-						)}`
-					);
-				}
-				// ... which we are using in this repository to set status 206
-				if (response.headers.has("content-range")) {
-					// @ts-expect-error overridding status in this mock
-					response.status = 206;
-				} else {
-					// @ts-expect-error overridding status in this mock
-					response.status = 200;
-				}
-				const etag = response.headers.get("etag");
-				if (etag && !etag.includes("W/")) {
-					response.headers.set("etag", `W/${etag}`);
-				}
+			const etag = headers.get("etag");
+			if (etag && !etag.includes("W/")) {
+				headers.set("etag", `W/${etag}`);
 			}
-			return response;
-		},
-		async put(key: Request, val: Response) {
+		}
+		return new Response(response.body, { ...response, headers, status });
+	});
+
+	// @ts-expect-error we should pick cf types here
+	vi.spyOn(caches.default, "put").mockImplementation(
+		async (key: Request, val: Response) => {
 			const headers = new Headers(val.headers);
 			const url = new URL(key.url);
 			const resWithBody = new Response(val.body, { headers, status: 200 });
@@ -131,18 +134,17 @@ export const mockDefaultCache = () => {
 			cacheKey.headers = {};
 			cacheStore.set(JSON.stringify(cacheKey), resWithBody);
 			return;
-		},
-	};
+		}
+	);
 };
 
 // mocks functionality used inside worker request
 export function mockRequestScope() {
-	const serviceWorkerEnv = makeServiceWorkerEnv();
-	for (const key of Object.keys(serviceWorkerEnv)) {
-		vi.stubGlobal(key, serviceWorkerEnv[key as keyof WorkerGlobalScope]);
-	}
-	// @ts-expect-error we should pick cf types here
-	caches.default = mockDefaultCache();
+	// const serviceWorkerEnv = makeServiceWorkerEnv();
+	// for (const key of Object.keys(serviceWorkerEnv)) {
+	// 	vi.stubGlobal(key, serviceWorkerEnv[key as keyof WorkerGlobalScope]);
+	// }
+	mockDefaultCache();
 }
 
 // mocks functionality used on global isolate scope. such as the KV namespace bind

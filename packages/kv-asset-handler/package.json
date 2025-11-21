@@ -34,7 +34,7 @@
 		"prepack": "npm run build",
 		"pretest": "npm run build",
 		"test": "vitest",
-		"test:ci": "vitest run --inspect=9229 --no-file-parallelism"
+		"test:ci": "vitest run"
 	},
 	"dependencies": {
 		"mime": "^3.0.0"
@@ -45,9 +45,7 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/mime": "^3.0.4",
 		"@types/node": "catalog:default",
-		"@types/service-worker-mock": "^2.0.1",
 		"eslint": "catalog:default",
-		"service-worker-mock": "^2.0.5",
 		"tsup": "8.3.0",
 		"vitest": "~2.1.0"
 	},
