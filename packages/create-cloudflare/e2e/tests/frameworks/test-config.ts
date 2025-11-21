@@ -609,11 +609,11 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			unsupportedOSs: ["win32"],
 			verifyDeploy: {
 				route: "/",
-				expectedText: "Hello, World!",
+				expectedText: "RedwoodSDK",
 			},
 			verifyPreview: {
 				route: "/",
-				expectedText: "Hello, World!",
+				expectedText: "RedwoodSDK",
 			},
 			nodeCompat: true,
 		},
