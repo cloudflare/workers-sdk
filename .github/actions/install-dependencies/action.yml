@@ -4,6 +4,9 @@ inputs:
   node-version:
     description: the version of Node.js to install
     default: 20.19.1
+  pnpm-filters:
+    description: space-separated list of pnpm filters to apply (e.g., "wrangler miniflare")
+    default: ""
   turbo-api:
     description: the api URL for connecting to the turbo remote cache
   turbo-team:
@@ -40,7 +43,17 @@ runs:
 
     - name: Install NPM Dependencies
       shell: bash
-      run: pnpm install --frozen-lockfile
+      # Still install the root dependencies even if filters are provided.
+      # Some packages may depend on root-level packages.
+      run: |
+        FILTERS=""
+        if [ -n "${{ inputs.pnpm-filters }}" ]; then
+          FILTERS="--filter ./"
+          for filter in ${{ inputs.pnpm-filters }}; do
+            FILTERS="$FILTERS --filter $filter"
+          done
+        fi
+        pnpm install --frozen-lockfile $FILTERS
 
     - name: Install uv for Python
       uses: astral-sh/setup-uv@v6

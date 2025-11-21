@@ -16,18 +16,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: ./.github/actions/install-dependencies
         with:
           node-version: 22 # need this version for `Set` methods
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.12.0
-
-      - name: Install Dependencies
-        run: pnpm i -F tools --frozen-lockfile
+          pnpm-filters: "./tools"
 
       - name: Auto-assign issue
         run: node -r esbuild-register tools/github-workflow-helpers/auto-assign-issues.ts
