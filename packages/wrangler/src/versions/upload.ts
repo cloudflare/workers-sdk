@@ -63,6 +63,7 @@ import { collectKeyValues } from "../utils/collectKeyValues";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
+import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
@@ -70,11 +71,7 @@ import { patchNonVersionedScriptSettings } from "./api";
 import type { AssetsOptions } from "../assets";
 import type { Entry } from "../deployment-bundle/entry";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
-import type {
-	CfPlacement,
-	CfWorkerInit,
-	Config,
-} from "@cloudflare/workers-utils";
+import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
 type Props = {
@@ -688,11 +685,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			vars: { ...config.vars, ...props.vars },
 		});
 
-		// The upload API only accepts an empty string or no specified placement for the "off" mode.
-		const placement: CfPlacement | undefined =
-			config.placement?.mode === "smart"
-				? { mode: "smart", hint: config.placement.hint }
-				: undefined;
+		const placement = parseConfigPlacement(config);
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
 		const main = {
