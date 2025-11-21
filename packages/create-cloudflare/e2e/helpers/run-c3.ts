@@ -41,6 +41,7 @@ export type RunnerConfig = {
 		previewArgs?: string[];
 		route: string;
 		expectedText: string;
+		build?: boolean;
 	};
 	/**
 	 * Specifies whether to run the test script for the project and verify the exit code.
