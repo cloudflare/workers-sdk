@@ -9,7 +9,11 @@ import type { DevEnv } from "../api";
 
 export default function registerDevHotKeys(
 	devEnvs: DevEnv[],
-	args: { forceLocal?: boolean; experimentalTailLogs: boolean },
+	args: {
+		forceLocal?: boolean;
+		experimentalTailLogs: boolean;
+		remote: boolean;
+	},
 	render = true
 ) {
 	const primaryDevEnv = devEnvs[0];
@@ -28,7 +32,8 @@ export default function registerDevHotKeys(
 				label: "open devtools",
 				// Don't display this hotkey if we're in a VSCode debug session
 				disabled:
-					!!process.env.VSCODE_INSPECTOR_OPTIONS || args.experimentalTailLogs,
+					!!process.env.VSCODE_INSPECTOR_OPTIONS ||
+					(args.remote && args.experimentalTailLogs),
 				handler: async () => {
 					const { inspectorUrl } = await primaryDevEnv.proxy.ready.promise;
 
