@@ -6,7 +6,7 @@ import type { DevEnv } from "../api";
 
 export default function registerDevHotKeys(
 	devEnv: DevEnv,
-	args: { forceLocal?: boolean }
+	args: { forceLocal?: boolean; experimentalTailLogs: boolean }
 ) {
 	const unregisterHotKeys = registerHotKeys([
 		{
@@ -20,6 +20,9 @@ export default function registerDevHotKeys(
 		{
 			keys: ["d"],
 			label: "open devtools",
+			// Don't display this hotkey if we're in a VSCode debug session
+			disabled:
+				!!process.env.VSCODE_INSPECTOR_OPTIONS || args.experimentalTailLogs,
 			handler: async () => {
 				const { inspectorUrl } = await devEnv.proxy.ready.promise;
 

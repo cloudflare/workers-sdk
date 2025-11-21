@@ -263,6 +263,7 @@ export const versionsUploadCommand = createCommand({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			ASSETS_RPC: false,
+			REALISH_TAIL_LOGS: false,
 		}),
 	},
 	handler: async function versionsUploadHandler(args, { config }) {
