@@ -925,6 +925,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.config
 				);
 			}
+
 			workerBundle = createWorkerUploadForm(worker);
 
 			await ensureQueuesExistByConfig(config);
