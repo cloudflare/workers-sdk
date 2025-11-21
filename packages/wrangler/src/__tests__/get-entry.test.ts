@@ -1,10 +1,10 @@
 import path from "path";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
+import { seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { getEntry } from "../deployment-bundle/entry";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
-import { seed } from "./helpers/seed";
 import type { Entry } from "../deployment-bundle/entry";
 
 function normalize(entry: Entry): Entry {

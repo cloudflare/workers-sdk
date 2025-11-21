@@ -1,11 +1,11 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { logger } from "../../logger";
 import {
 	EXIT_CODE_INVALID_PAGES_CONFIG,
 	EXIT_CODE_NO_CONFIG_FOUND,
 } from "../../pages/errors";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { normalizeString } from "../helpers/normalize";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";

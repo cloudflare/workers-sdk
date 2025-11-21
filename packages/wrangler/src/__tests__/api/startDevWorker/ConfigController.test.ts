@@ -1,4 +1,5 @@
 import path from "node:path";
+import { seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
 import { describe, it } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
@@ -9,7 +10,6 @@ import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import { seed } from "../../helpers/seed";
 
 describe("ConfigController", () => {
 	runInTempDir();

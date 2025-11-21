@@ -1,3 +1,7 @@
+import {
+	mockCreateDate,
+	mockModifiedDate,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
@@ -6,7 +10,6 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
-import { mockCreateDate, mockModifiedDate } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type {

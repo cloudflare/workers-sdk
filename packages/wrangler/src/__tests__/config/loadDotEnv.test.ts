@@ -1,9 +1,9 @@
+import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, it } from "vitest";
 import { loadDotEnv } from "../../config/dot-env";
 import { logger } from "../../logger";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
-import { seed } from "../helpers/seed";
 
 const isWindows = process.platform === "win32";
 

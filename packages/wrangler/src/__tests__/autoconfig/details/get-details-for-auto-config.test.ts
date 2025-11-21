@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, expect, it } from "vitest";
 import * as details from "../../../autoconfig/details";
 import { clearOutputFilePath } from "../../../output";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 import { runInTempDir } from "../../helpers/run-in-tmp";
-import { seed } from "../../helpers/seed";
 import type { Config } from "@cloudflare/workers-utils";
 
 vi.mock("../../../package-manager", () => ({
