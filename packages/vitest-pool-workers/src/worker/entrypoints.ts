@@ -184,6 +184,7 @@ const WORKER_ENTRYPOINT_KEYS = [
 	"queue",
 	"test",
 	"tailStream",
+	"email",
 ] as const;
 const DURABLE_OBJECT_KEYS = [
 	"fetch",

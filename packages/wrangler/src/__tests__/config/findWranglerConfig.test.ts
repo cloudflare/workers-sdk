@@ -40,7 +40,7 @@ describe("config findWranglerConfig()", () => {
 					userConfigPath: path.resolve(`foo/bar/wrangler.${ext}`),
 					redirected: false,
 				});
-				expect(std).toEqual(NO_LOGS);
+				expect(std).toMatchObject(NO_LOGS);
 			}
 		);
 
@@ -59,7 +59,7 @@ describe("config findWranglerConfig()", () => {
 					userConfigPath: path.resolve(`wrangler.${ext1}`),
 					redirected: false,
 				});
-				expect(std).toEqual(NO_LOGS);
+				expect(std).toMatchObject(NO_LOGS);
 			});
 
 			it("in different directories", async () => {
@@ -72,7 +72,7 @@ describe("config findWranglerConfig()", () => {
 					userConfigPath: path.resolve(`wrangler.${ext1}`),
 					redirected: false,
 				});
-				expect(std).toEqual(NO_LOGS);
+				expect(std).toMatchObject(NO_LOGS);
 			});
 		});
 
@@ -87,7 +87,7 @@ describe("config findWranglerConfig()", () => {
 				userConfigPath: path.resolve(`wrangler.toml`),
 				redirected: false,
 			});
-			expect(std).toEqual(NO_LOGS);
+			expect(std).toMatchObject(NO_LOGS);
 		});
 	});
 
@@ -112,15 +112,7 @@ describe("config findWranglerConfig()", () => {
 				deployConfigPath: path.resolve(`.wrangler/deploy/config.json`),
 				redirected: true,
 			});
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "",
-				  "warn": "",
-				}
-			`);
+			expect(std).toMatchObject(NO_LOGS);
 		});
 
 		it("should return redirected config path if matching user config and a deploy config is found", async () => {
@@ -146,15 +138,7 @@ describe("config findWranglerConfig()", () => {
 				deployConfigPath: path.resolve(`.wrangler/deploy/config.json`),
 				redirected: true,
 			});
-			expect(std).toMatchInlineSnapshot(`
-				Object {
-				  "debug": "",
-				  "err": "",
-				  "info": "",
-				  "out": "",
-				  "warn": "",
-				}
-			`);
+			expect(std).toMatchObject(NO_LOGS);
 		});
 
 		it("should error if deploy config is not valid JSON", async () => {
@@ -172,7 +156,7 @@ describe("config findWranglerConfig()", () => {
 			expect(normalizeString(`${error}`)).toMatchInlineSnapshot(
 				`"Error: Failed to parse the deploy configuration file at .wrangler/deploy/config.json"`
 			);
-			expect(std).toEqual(NO_LOGS);
+			expect(std).toMatchObject(NO_LOGS);
 		});
 
 		it("should error if deploy config does not contain a `configPath` property", async () => {
@@ -195,7 +179,7 @@ describe("config findWranglerConfig()", () => {
 				{}
 				\`\`\`"
 			`);
-			expect(std).toEqual(NO_LOGS);
+			expect(std).toMatchObject(NO_LOGS);
 		});
 
 		it("should error if redirected config file does not exist", async () => {
@@ -214,7 +198,7 @@ describe("config findWranglerConfig()", () => {
 				"Error: There is a deploy configuration at \\".wrangler/deploy/config.json\\".
 				But the redirected configuration path it points to, \\".wrangler/deploy/missing/wrangler.json\\", does not exist."
 			`);
-			expect(std).toEqual(NO_LOGS);
+			expect(std).toMatchObject(NO_LOGS);
 		});
 
 		it("should error if deploy config file and user config file do not have the same base path", async () => {
@@ -240,7 +224,7 @@ describe("config findWranglerConfig()", () => {
 				and a deploy configuration file at \\"foo/bar/.wrangler/deploy/config.json\\".
 				But these do not share the same base path so it is not clear which should be used."
 			`);
-			expect(std).toEqual(NO_LOGS);
+			expect(std).toMatchObject(NO_LOGS);
 
 			try {
 				error = undefined;
@@ -254,7 +238,7 @@ describe("config findWranglerConfig()", () => {
 				and a deploy configuration file at \\"bar/.wrangler/deploy/config.json\\".
 				But these do not share the same base path so it is not clear which should be used."
 			`);
-			expect(std).toEqual(NO_LOGS);
+			expect(std).toMatchObject(NO_LOGS);
 		});
 	});
 });

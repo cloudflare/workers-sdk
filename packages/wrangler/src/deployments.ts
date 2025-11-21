@@ -4,8 +4,8 @@ import {
 	mapWorkerMetadataBindings,
 	UserError,
 } from "@cloudflare/workers-utils";
-import TOML from "@iarna/toml";
 import chalk from "chalk";
+import TOML from "smol-toml";
 import { FormData } from "undici";
 import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
@@ -336,7 +336,7 @@ Handlers:            ${
 --------------------------bindings--------------------------
 ${
 	bindings.length > 0
-		? TOML.stringify(mapWorkerMetadataBindings(bindings) as TOML.JsonMap)
+		? TOML.stringify(mapWorkerMetadataBindings(bindings))
 		: `None`
 }
 `;

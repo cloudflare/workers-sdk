@@ -1,10 +1,13 @@
 import { execSync } from "child_process";
+import child_process from "node:child_process";
 import * as nodeNet from "node:net";
+import { promisify } from "node:util";
 import dedent from "ts-dedent";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
+import { POSTGRES_SSL_REQUEST_PACKET } from "./helpers/postgres-echo-handler";
 import { makeRoot, seed } from "./helpers/setup";
 import { WRANGLER_IMPORT } from "./helpers/wrangler";
 
@@ -365,44 +368,38 @@ describe("getPlatformProxy()", () => {
 		let root: string;
 		let port = 5432;
 		let server: nodeNet.Server;
-
+		let receivedData: string | null = null;
 		beforeEach(async () => {
-			server = nodeNet.createServer().listen();
+			// Create server with connection handler already attached
+			// Handle sslrequest packet for postgres tls handshake
+			server = nodeNet.createServer((socket) => {
+				socket.on("data", (chunk) => {
+					if (chunk.equals(POSTGRES_SSL_REQUEST_PACKET)) {
+						socket.write("N");
+					} else {
+						// Store what we received
+						receivedData = new TextDecoder().decode(chunk);
+						socket.write(chunk);
+						socket.end();
+					}
+				});
+			});
 
-			if (server.address() && typeof server.address() !== "string") {
-				port = (server.address() as nodeNet.AddressInfo).port;
+			await new Promise<void>((resolve) => {
+				server.listen(0, "127.0.0.1", () => {
+					resolve();
+				});
+			});
+
+			const address = server.address();
+			if (address && typeof address !== "string") {
+				port = address.port;
 			}
+		});
 
-			root = makeRoot();
-
-			await seed(root, {
-				"wrangler.toml": dedent`
-						name = "hyperdrive-app"
-						compatibility_date = "2024-08-20"
-						compatibility_flags = ["nodejs_compat"]
-
-						[[hyperdrive]]
-						binding = "HYPERDRIVE"
-						id = "hyperdrive_id"
-						localConnectionString = "postgresql://user:%21pass@127.0.0.1:${port}/some_db"
-				`,
-				"index.mjs": dedent/*javascript*/ `
-						import { getPlatformProxy } from "${WRANGLER_IMPORT}";
-
-						const { env, dispose } = await getPlatformProxy();
-
-						const conn = env.HYPERDRIVE.connect();
-						await conn.writable.getWriter().write(new TextEncoder().encode("test string sent using getPlatformProxy"));
-
-						await dispose();
-						`,
-				"package.json": dedent`
-						{
-							"name": "hyperdrive-app",
-							"version": "0.0.0",
-							"private": true
-						}
-						`,
+		afterEach(async () => {
+			await new Promise<void>((resolve, reject) => {
+				server.close((err) => (err ? reject(err) : resolve()));
 			});
 		});
 
@@ -410,24 +407,167 @@ describe("getPlatformProxy()", () => {
 			// in CI this test fails for windows because of ECONNRESET issues
 			process.platform === "win32"
 		)(
-			"can connect to a TCP socket via the hyperdrive connect method",
+			"default hyperdrive can connect to a TCP socket via the hyperdrive connect",
 			async () => {
-				const socketDataMsgPromise = new Promise<string>((resolve, _) => {
-					server.on("connection", (sock) => {
-						sock.on("data", (data) => {
-							resolve(new TextDecoder().decode(data));
-							server.close();
-						});
-					});
+				// set worker per test
+				root = makeRoot();
+				await seed(root, {
+					"wrangler.toml": dedent`
+							name = "hyperdrive-app"
+							compatibility_date = "2025-09-06"
+							compatibility_flags = ["nodejs_compat"]
+
+							[[hyperdrive]]
+							binding = "HYPERDRIVE"
+							id = "hyperdrive_id"
+							localConnectionString = "postgresql://user:%21pass@127.0.0.1:${port}/some_db"
+					`,
+					"index.mjs": dedent/*javascript*/ `
+							import { getPlatformProxy } from "${WRANGLER_IMPORT}";
+
+							const { env, dispose } = await getPlatformProxy();
+
+							const conn = env.HYPERDRIVE.connect();
+							const writer = conn.writable.getWriter();
+							await writer.write(new TextEncoder().encode("test string sent using getPlatformProxy"));
+
+							// Read response to keep connection alive
+							const reader = conn.readable.getReader();
+							await reader.read();
+
+							await dispose();
+							`,
+					"package.json": dedent`
+							{
+								"name": "hyperdrive-app",
+								"version": "0.0.0",
+								"private": true
+							}
+							`,
 				});
 
-				execSync("node index.mjs", {
+				// use async promise-based version of exec to avoid blocking the event loop.
+				// docs: https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
+				const exec = promisify(child_process.exec);
+				await exec("node index.mjs", {
 					cwd: root,
-					encoding: "utf-8",
+					timeout: 5000, // 5 second timeout to prevent infinite hang
 				});
-				expect(await socketDataMsgPromise).toMatchInlineSnapshot(
+				// Check that we received the expected data
+				expect(receivedData).toMatchInlineSnapshot(
 					`"test string sent using getPlatformProxy"`
 				);
+			}
+		);
+
+		it.skipIf(
+			// in CI this test fails for windows because of ECONNRESET issues
+			process.platform === "win32"
+		)(
+			"sslmode - 'prefer' can connect to a TCP socket via the hyperdrive connect method over hyprdrive-proxy",
+			async () => {
+				// set worker per test
+				root = makeRoot();
+				await seed(root, {
+					"wrangler.toml": dedent`
+							name = "hyperdrive-app"
+							compatibility_date = "2025-09-06"
+							compatibility_flags = ["nodejs_compat"]
+
+							[[hyperdrive]]
+							binding = "HYPERDRIVE"
+							id = "hyperdrive_id"
+							localConnectionString = "postgresql://user:%21pass@127.0.0.1:${port}/some_db?sslmode=prefer"
+					`,
+					"index.mjs": dedent/*javascript*/ `
+							import { getPlatformProxy } from "${WRANGLER_IMPORT}";
+
+							const { env, dispose } = await getPlatformProxy();
+
+							const conn = env.HYPERDRIVE.connect();
+							const writer = conn.writable.getWriter();
+							await writer.write(new TextEncoder().encode("test string sent using getPlatformProxy"));
+
+							// Read response to keep connection alive
+							const reader = conn.readable.getReader();
+							await reader.read();
+
+							await dispose();
+							`,
+					"package.json": dedent`
+							{
+								"name": "hyperdrive-app",
+								"version": "0.0.0",
+								"private": true
+							}
+							`,
+				});
+
+				// use async promise-based version of exec to avoid blocking the event loop.
+				// docs: https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
+				const exec = promisify(child_process.exec);
+				await exec("node index.mjs", {
+					cwd: root,
+					timeout: 5000, // 5 second timeout to prevent infinite hang
+				});
+				// Check that we received the expected data
+				expect(receivedData).toMatchInlineSnapshot(
+					`"test string sent using getPlatformProxy"`
+				);
+			}
+		);
+
+		it.skipIf(
+			// in CI this test fails for windows because of ECONNRESET issues
+			process.platform === "win32"
+		)(
+			"sslmode - 'require' fails hyperdrive connection method over hyperdrive-proxy",
+			async () => {
+				// set worker per test
+				root = makeRoot();
+				await seed(root, {
+					"wrangler.toml": dedent`
+						name = "hyperdrive-app"
+						compatibility_date = "2025-09-06"
+						compatibility_flags = ["nodejs_compat"]
+
+						[[hyperdrive]]
+						binding = "HYPERDRIVE"
+						id = "hyperdrive_id"
+						localConnectionString = "postgresql://user:%21pass@127.0.0.1:${port}/some_db?sslmode=require"
+					`,
+					"index.mjs": dedent/*javascript*/ `
+						import { getPlatformProxy } from "${WRANGLER_IMPORT}";
+
+						const { env, dispose } = await getPlatformProxy();
+
+						const conn = env.HYPERDRIVE.connect();
+						const writer = conn.writable.getWriter();
+						await writer.write(new TextEncoder().encode("test string sent using getPlatformProxy"));
+
+						// Read response to keep connection alive
+						const reader = conn.readable.getReader();
+						await reader.read();
+
+						await dispose();
+					`,
+					"package.json": dedent`
+					{
+						"name": "hyperdrive-app",
+						"version": "0.0.0",
+						"private": true
+					}`,
+				});
+
+				// use async promise-based version of exec to avoid blocking the event loop.
+				// docs: https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback
+				const exec = promisify(child_process.exec);
+				expect(
+					await exec("node index.mjs", {
+						cwd: root,
+						timeout: 5000, // 5 second timeout to prevent infinite hang
+					})
+				).toThrowError(Error);
 			}
 		);
 	});

@@ -12,6 +12,11 @@ import {
 } from "../constants";
 import { getDockerPath } from "../containers";
 import { assertIsNotPreview } from "../context";
+import {
+	compareExportTypes,
+	compareWorkerNameToExportTypesMaps,
+	getCurrentWorkerNameToExportTypesMap,
+} from "../export-types";
 import { getDevMiniflareOptions } from "../miniflare-options";
 import { UNKNOWN_HOST } from "../shared";
 import { createPlugin, createRequestHandler, debuglog } from "../utils";
@@ -56,24 +61,88 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 		async configureServer(viteDevServer) {
 			assertIsNotPreview(ctx);
 
-			const { miniflareOptions, containerTagToOptionsMap } =
-				await getDevMiniflareOptions(ctx, viteDevServer);
+			const initialOptions = await getDevMiniflareOptions(ctx, viteDevServer);
+			let containerTagToOptionsMap = initialOptions.containerTagToOptionsMap;
 
-			await ctx.startOrUpdateMiniflare(miniflareOptions);
+			await ctx.startOrUpdateMiniflare(initialOptions.miniflareOptions);
 
 			let preMiddleware: vite.Connect.NextHandleFunction | undefined;
 
 			if (ctx.resolvedPluginConfig.type === "workers") {
-				const entryWorkerConfig = ctx.entryWorkerConfig;
-				assert(entryWorkerConfig, `No entry Worker config`);
-
 				debuglog("Initializing the Vite module runners");
 				await initRunners(
 					ctx.resolvedPluginConfig,
 					viteDevServer,
 					ctx.miniflare
 				);
+				const currentWorkerNameToExportTypesMap =
+					await getCurrentWorkerNameToExportTypesMap(
+						ctx.resolvedPluginConfig,
+						viteDevServer,
+						ctx.miniflare
+					);
+				const hasChanged = compareWorkerNameToExportTypesMaps(
+					ctx.workerNameToExportTypesMap,
+					currentWorkerNameToExportTypesMap
+				);
 
+				if (hasChanged) {
+					ctx.setWorkerNameToExportTypesMap(currentWorkerNameToExportTypesMap);
+					const updatedOptions = await getDevMiniflareOptions(
+						ctx,
+						viteDevServer
+					);
+					containerTagToOptionsMap = updatedOptions.containerTagToOptionsMap;
+					await ctx.startOrUpdateMiniflare(updatedOptions.miniflareOptions);
+					await initRunners(
+						ctx.resolvedPluginConfig,
+						viteDevServer,
+						ctx.miniflare
+					);
+				}
+
+				for (const environmentName of ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys()) {
+					const environment = viteDevServer.environments[environmentName];
+					assert(
+						environment,
+						`Expected environment "${environmentName}" to be defined`
+					);
+					environment.hot.on(
+						"vite-plugin-cloudflare:worker-export-types",
+						async (newExportTypes) => {
+							const workerConfig = ctx.getWorkerConfig(environmentName);
+							assert(
+								workerConfig,
+								`Expected workerConfig for environment "${environmentName}" to be defined`
+							);
+							const oldExportTypes = ctx.workerNameToExportTypesMap.get(
+								workerConfig.name
+							);
+							assert(
+								oldExportTypes,
+								`Expected export types for Worker "${workerConfig.name}" to be defined`
+							);
+							const hasChanged = compareExportTypes(
+								oldExportTypes,
+								newExportTypes
+							);
+
+							if (hasChanged) {
+								viteDevServer.config.logger.info(
+									colors.dim(
+										colors.yellow(
+											"Worker exports have changed. Restarting dev server."
+										)
+									)
+								);
+								await viteDevServer.restart();
+							}
+						}
+					);
+				}
+
+				const entryWorkerConfig = ctx.entryWorkerConfig;
+				assert(entryWorkerConfig, `No entry Worker config`);
 				const entryWorkerName = entryWorkerConfig.name;
 
 				// The HTTP server is not available in middleware mode
@@ -113,7 +182,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						if (req[kRequestType] === "asset") {
 							next();
 						} else if (excludeRulesMatcher({ request })) {
-							req[kRequestType] === "asset";
+							req[kRequestType] = "asset";
 							next();
 						} else if (includeRulesMatcher({ request })) {
 							userWorkerHandler(req, res, next);

@@ -13,13 +13,12 @@ export function validateWorkerEnvironmentOptions(
 	resolvedPluginConfig: WorkersResolvedConfig,
 	resolvedViteConfig: vite.ResolvedConfig
 ) {
-	const workerEnvironmentNames = Object.keys(resolvedPluginConfig.workers);
 	const disallowedEnvironmentOptionsMap = new Map<
 		string,
 		DisallowedEnvironmentOptions
 	>();
 
-	for (const environmentName of workerEnvironmentNames) {
+	for (const environmentName of resolvedPluginConfig.environmentNameToWorkerMap.keys()) {
 		const environmentOptions = resolvedViteConfig.environments[environmentName];
 		assert(
 			environmentOptions,

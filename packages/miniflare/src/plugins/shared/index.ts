@@ -24,6 +24,7 @@ import {
 } from "../../workers";
 import { UnsafeUniqueKey } from "./constants";
 import type { DOContainerOptions } from "../do";
+import type { HyperdriveProxyController } from "../hyperdrive/hyperdrive-proxy";
 
 export const DEFAULT_PERSIST_ROOT = ".mf";
 
@@ -84,6 +85,7 @@ export interface PluginServicesOptions<
 	unsafeEphemeralDurableObjects: boolean;
 	queueProducers: QueueProducers;
 	queueConsumers: QueueConsumers;
+	hyperdriveProxyController: HyperdriveProxyController;
 }
 
 export interface ServicesExtensions {

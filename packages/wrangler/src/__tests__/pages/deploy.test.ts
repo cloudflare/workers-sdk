@@ -1,8 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
-import TOML from "@iarna/toml";
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
+import TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { version } from "../../../package.json";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";

@@ -55,6 +55,11 @@ export interface WorkerConfig extends AssetsOnlyConfig {
 	main: Defined<SanitizedWorkerConfig["main"]>;
 }
 
+export interface Worker {
+	config: WorkerConfig;
+	nodeJsCompat: NodeJsCompat | undefined;
+}
+
 interface BaseResolvedConfig {
 	persistState: PersistState;
 	inspectorPort: number | false | undefined;
@@ -76,9 +81,8 @@ export interface WorkersResolvedConfig extends BaseResolvedConfig {
 	type: "workers";
 	configPaths: Set<string>;
 	cloudflareEnv: string | undefined;
-	workers: Record<string, WorkerConfig>;
+	environmentNameToWorkerMap: Map<string, Worker>;
 	entryWorkerEnvironmentName: string;
-	nodeJsCompatMap: Map<string, NodeJsCompat>;
 	staticRouting: StaticRouting | undefined;
 	rawConfigs: {
 		entryWorker: WorkerWithServerLogicResolvedConfig;
@@ -95,11 +99,6 @@ export type ResolvedPluginConfig =
 	| AssetsOnlyResolvedConfig
 	| WorkersResolvedConfig
 	| PreviewResolvedConfig;
-
-// Worker names can only contain alphanumeric characters and '-' whereas environment names can only contain alphanumeric characters and '$', '_'
-function workerNameToEnvironmentName(workerName: string) {
-	return workerName.replaceAll("-", "_");
-}
 
 export function resolvePluginConfig(
 	pluginConfig: PluginConfig,
@@ -175,9 +174,9 @@ export function resolvePluginConfig(
 		);
 	}
 
-	const workers = {
-		[entryWorkerEnvironmentName]: entryWorkerConfig,
-	};
+	const environmentNameToWorkerMap: Map<string, Worker> = new Map([
+		[entryWorkerEnvironmentName, resolveWorker(entryWorkerConfig)],
+	]);
 
 	const auxiliaryWorkersResolvedConfigs: WorkerResolvedConfig[] = [];
 
@@ -208,37 +207,44 @@ export function resolvePluginConfig(
 			auxiliaryWorker.viteEnvironment?.name ??
 			workerNameToEnvironmentName(workerConfig.topLevelName);
 
-		if (workers[workerEnvironmentName]) {
+		if (environmentNameToWorkerMap.has(workerEnvironmentName)) {
 			throw new Error(
 				`Duplicate Vite environment name found: ${workerEnvironmentName}`
 			);
 		}
 
-		workers[workerEnvironmentName] = workerConfig;
+		environmentNameToWorkerMap.set(
+			workerEnvironmentName,
+			resolveWorker(workerConfig)
+		);
 	}
-
-	const nodeJsCompatMap = new Map(
-		Object.entries(workers)
-			.filter(([_, workerConfig]) => hasNodeJsCompat(workerConfig))
-			.map(([environmentName, workerConfig]) => [
-				environmentName,
-				new NodeJsCompat(workerConfig),
-			])
-	);
 
 	return {
 		...shared,
 		type: "workers",
 		cloudflareEnv,
 		configPaths,
-		workers,
+		environmentNameToWorkerMap,
 		entryWorkerEnvironmentName,
-		nodeJsCompatMap,
 		staticRouting,
 		remoteBindings: pluginConfig.remoteBindings ?? true,
 		rawConfigs: {
 			entryWorker: entryWorkerResolvedConfig,
 			auxiliaryWorkers: auxiliaryWorkersResolvedConfigs,
 		},
+	};
+}
+
+// Worker names can only contain alphanumeric characters and '-' whereas environment names can only contain alphanumeric characters and '$', '_'
+function workerNameToEnvironmentName(workerName: string) {
+	return workerName.replaceAll("-", "_");
+}
+
+function resolveWorker(workerConfig: WorkerConfig) {
+	return {
+		config: workerConfig,
+		nodeJsCompat: hasNodeJsCompat(workerConfig)
+			? new NodeJsCompat(workerConfig)
+			: undefined,
 	};
 }

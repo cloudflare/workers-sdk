@@ -13,7 +13,6 @@ import {
 } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import { retry } from "helpers/retry";
-import { sleep } from "helpers/sleep";
 import * as jsonc from "jsonc-parser";
 import { fetch } from "undici";
 import { expect } from "vitest";
@@ -63,9 +62,8 @@ export async function runC3ForFrameworkTest(
 		`${runDeployTests}`,
 		"--no-open",
 		"--no-auto-update",
+		...argv,
 	];
-
-	args.push(...argv);
 
 	const { output } = await runC3(args, promptHandlers, logStream, extraEnv);
 	if (!runDeployTests) {
@@ -155,7 +153,7 @@ export async function verifyDeployment(
 	}
 
 	await retry({ times: 5 }, async () => {
-		await sleep(1000);
+		await setTimeout(1_000);
 		const res = await fetch(deploymentUrl);
 		const body = await res.text();
 		if (!body.includes(expectedText)) {
@@ -207,7 +205,7 @@ export async function verifyDevScript(
 
 	try {
 		await retry(
-			{ times: 300, sleepMs: 5000 },
+			{ times: 300, sleepMs: 5_000 },
 			async () => await fetch(`http://127.0.0.1:${port}${verifyDev.route}`),
 		);
 
@@ -239,7 +237,7 @@ export async function verifyDevScript(
 		restoreConfig?.();
 		// Wait for a second to allow process to exit cleanly. Otherwise, the port might
 		// end up camped and cause future runs to fail
-		await sleep(1000);
+		await setTimeout(1_000);
 	}
 }
 
@@ -276,6 +274,8 @@ export async function verifyPreviewScript(
 			cwd: projectPath,
 			env: {
 				VITEST: undefined,
+				// Make sure we're not running frameworks with NODE_ENV: test, as that causes strange behaviour
+				NODE_ENV: "production",
 			},
 		},
 		logStream,
@@ -285,7 +285,7 @@ export async function verifyPreviewScript(
 		// Some frameworks take quite a long time to build the application (e.g. Docusaurus)
 		// so wait some time for the dev-server to be ready.
 		await retry(
-			{ times: 60, sleepMs: 5000 },
+			{ times: 60, sleepMs: 5_000 },
 			async () => await fetch(`http://localhost:${port}${verifyPreview.route}`),
 		);
 
@@ -297,12 +297,12 @@ export async function verifyPreviewScript(
 		await kill(proc);
 		// Wait for a second to allow process to exit cleanly. Otherwise, the port might
 		// end up camped and cause future runs to fail
-		await sleep(1000);
+		await setTimeout(1_000);
 	}
 }
 
 export async function verifyTypes(
-	{ nodeCompat }: FrameworkTestConfig,
+	{ nodeCompat, verifyTypes: verify }: FrameworkTestConfig,
 	{
 		workersTypes,
 		typesPath = "./worker-configuration.d.ts",
@@ -310,7 +310,7 @@ export async function verifyTypes(
 	}: TemplateConfig,
 	projectPath: string,
 ) {
-	if (workersTypes === "none") {
+	if (workersTypes === "none" || verify === false) {
 		return;
 	}
 
@@ -350,10 +350,7 @@ export async function verifyTypes(
 	}
 }
 
-export function shouldRunTest(
-	frameworkId: string,
-	testConfig: FrameworkTestConfig,
-) {
+export function shouldRunTest(testConfig: FrameworkTestConfig) {
 	return (
 		// Skip if the test is quarantined
 		testConfig.quarantine !== true &&
@@ -425,7 +422,7 @@ export async function testDeploymentCommitMessage(
 ) {
 	const projectLatestCommitMessage = await retry({ times: 5 }, async () => {
 		// Wait for 2 seconds between each attempt
-		await setTimeout(2000);
+		await setTimeout(2_000);
 		// Note: we cannot simply run git and check the result since the commit can be part of the
 		//       deployment even without git, so instead we fetch the deployment info from the pages api
 		const response = await fetch(

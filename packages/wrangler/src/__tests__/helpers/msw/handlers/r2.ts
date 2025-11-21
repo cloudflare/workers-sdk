@@ -69,15 +69,36 @@ export const mswR2handlers = [
 	),
 	http.put(
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",
-		() =>
-			HttpResponse.json(
+		({ params }) => {
+			const { accountId, bucketName, objectName } = params;
+			return HttpResponse.json(
 				createFetchResult({
-					accountId: "some-account-id",
-					bucketName: "bucketName-object-test",
-					objectName: "wormhole-img.png",
+					accountId,
+					bucketName,
+					objectName,
 				})
-			),
-		{ once: true }
+			);
+		},
+		{
+			once: true,
+		}
+	),
+	http.put(
+		"*/accounts/:accountId/r2/buckets/bulk-bucket/objects/:objectName",
+		({ params }) => {
+			const { accountId, objectName } = params;
+			return HttpResponse.json(
+				createFetchResult({
+					accountId,
+					bucketName: "bulk-bucket",
+					objectName,
+				})
+			);
+		},
+		{
+			// false to support bulk uploads in tests
+			once: false,
+		}
 	),
 	http.delete(
 		"*/accounts/:accountId/r2/buckets/:bucketName/objects/:objectName",

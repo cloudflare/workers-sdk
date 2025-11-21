@@ -1,3 +1,4 @@
+import { setTimeout } from "node:timers/promises";
 import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
 import { vi } from "vitest";
@@ -1178,7 +1179,7 @@ function mockWebsocketAPIs(
 		 */
 		async closeHelper() {
 			api.ws.close();
-			await new Promise((resolve) => setTimeout(resolve, 0));
+			await setTimeout(0);
 		},
 	};
 	api.requests.creation = mockCreateTailRequest(

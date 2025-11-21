@@ -252,6 +252,12 @@ export type ContainerApp = {
 	 * @default 0
 	 */
 	rollout_active_grace_period?: number;
+
+	/**
+	 * Directly passed to the API without wrangler-side validation or transformation.
+	 * @hidden
+	 */
+	unsafe?: Record<string, unknown>;
 };
 
 /**
@@ -1078,7 +1084,6 @@ export interface EnvironmentNonInheritable {
 		metadata?: {
 			[key: string]: unknown;
 		};
-
 		/**
 		 * Used for internal capnp uploads for the Workers runtime
 		 */

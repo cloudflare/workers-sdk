@@ -9,7 +9,7 @@ const { npm } = detectPackageManager();
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [
 		ctx.project.name,
-		"--host",
+		"--deployment",
 		"cloudflare",
 		"--framework",
 		"react",

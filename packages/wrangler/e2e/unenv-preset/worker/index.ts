@@ -81,10 +81,12 @@ export const WorkerdTests: Record<string, () => void> = {
 			assert.strictEqual(crypto.createCipher, undefined);
 			assert.strictEqual(crypto.createDecipher, undefined);
 		} else {
-			assert.strictEqual(typeof crypto.Cipher, "function");
-			assert.strictEqual(typeof crypto.Decipher, "function");
-			assert.strictEqual(typeof crypto.createCipher, "function");
-			assert.strictEqual(typeof crypto.createDecipher, "function");
+			assertTypeOfProperties(crypto, {
+				Cipher: "function",
+				Decipher: "function",
+				createCipher: "function",
+				createDecipher: "function",
+			});
 		}
 	},
 
@@ -112,8 +114,10 @@ export const WorkerdTests: Record<string, () => void> = {
 		}
 		assert.ok(new buffer.File([], "file"));
 		assert.ok(new buffer.Blob([]));
-		assert.strictEqual(typeof buffer.INSPECT_MAX_BYTES, "number");
-		assert.strictEqual(typeof buffer.resolveObjectURL, "function");
+		assertTypeOfProperties(buffer, {
+			INSPECT_MAX_BYTES: "number",
+			resolveObjectURL: "function",
+		});
 	},
 
 	async testNodeCompatModules() {
@@ -262,20 +266,24 @@ export const WorkerdTests: Record<string, () => void> = {
 	async testTls() {
 		const tls = await import("node:tls");
 		assert.strictEqual(typeof tls, "object");
-		// @ts-expect-error Node types are wrong
-		assert.strictEqual(typeof tls.convertALPNProtocols, "function");
-		assert.strictEqual(typeof tls.createSecureContext, "function");
-		assert.strictEqual(typeof tls.createServer, "function");
-		assert.strictEqual(typeof tls.checkServerIdentity, "function");
-		assert.strictEqual(typeof tls.getCiphers, "function");
+		assertTypeOfProperties(tls, {
+			convertALPNProtocols: "function",
+			createSecureContext: "function",
+			createServer: "function",
+			checkServerIdentity: "function",
+			getCiphers: "function",
+		});
 
 		// Test constants
-		assert.strictEqual(typeof tls.CLIENT_RENEG_LIMIT, "number");
-		assert.strictEqual(typeof tls.CLIENT_RENEG_WINDOW, "number");
-		assert.strictEqual(typeof tls.DEFAULT_ECDH_CURVE, "string");
-		assert.strictEqual(typeof tls.DEFAULT_CIPHERS, "string");
-		assert.strictEqual(typeof tls.DEFAULT_MIN_VERSION, "string");
-		assert.strictEqual(typeof tls.DEFAULT_MAX_VERSION, "string");
+		assertTypeOfProperties(tls, {
+			CLIENT_RENEG_LIMIT: "number",
+			CLIENT_RENEG_WINDOW: "number",
+			DEFAULT_ECDH_CURVE: "string",
+			DEFAULT_CIPHERS: "string",
+			DEFAULT_MIN_VERSION: "string",
+			DEFAULT_MAX_VERSION: "string",
+		});
+
 		assert.ok(Array.isArray(tls.rootCertificates));
 	},
 
@@ -301,18 +309,22 @@ export const WorkerdTests: Record<string, () => void> = {
 		}
 
 		assert.ok(http.METHODS.includes("GET"));
-		assert.strictEqual(typeof http.get, "function");
-		assert.strictEqual(typeof http.request, "function");
+		assertTypeOfProperties(http, {
+			get: "function",
+			request: "function",
+		});
 		assert.deepEqual(http.STATUS_CODES[404], "Not Found");
 	},
 
 	async testHttps() {
 		const https = await import("node:https");
 
-		assert.strictEqual(typeof https.Agent, "function");
-		assert.strictEqual(typeof https.get, "function");
-		assert.strictEqual(typeof https.globalAgent, "object");
-		assert.strictEqual(typeof https.request, "function");
+		assertTypeOfProperties(https, {
+			Agent: "function",
+			get: "function",
+			globalAgent: "object",
+			request: "function",
+		});
 	},
 
 	async testHttpServer() {
@@ -366,9 +378,11 @@ export const WorkerdTests: Record<string, () => void> = {
 	async testOs() {
 		const os = await import("node:os");
 
-		assert.strictEqual(typeof os.arch(), "string");
-		assert.strictEqual(typeof os.freemem(), "number");
-		assert.strictEqual(typeof os.availableParallelism(), "number");
+		assertTypeOfProperties(os, {
+			arch: "function",
+			freemem: "function",
+			availableParallelism: "function",
+		});
 	},
 
 	async testAsyncHooks() {
@@ -385,8 +399,11 @@ export const WorkerdTests: Record<string, () => void> = {
 
 		assert.strictEqual(typeof asyncHooks.createHook, "function");
 		const hook = asyncHooks.createHook({});
-		assert.strictEqual(typeof hook.enable, "function");
-		assert.strictEqual(typeof hook.disable, "function");
+
+		assertTypeOfProperties(hook, {
+			enable: "function",
+			disable: "function",
+		});
 
 		assert.strictEqual(typeof asyncHooks.executionAsyncId(), "number");
 		assert.strictEqual(typeof asyncHooks.executionAsyncResource(), "object");
@@ -479,14 +496,12 @@ export const WorkerdTests: Record<string, () => void> = {
 		// @ts-expect-error TS2339 Invalid node/types.
 		assert.ok(Array.isArray(module.globalPaths));
 		assert.ok(Array.isArray(module.builtinModules));
-		// @ts-expect-error TS2339 Invalid node/types.
-		assert.strictEqual(typeof module.constants, "object");
-		// @ts-expect-error TS2339 Invalid node/types.
-		assert.strictEqual(typeof module._cache, "object");
-		// @ts-expect-error TS2339 Invalid node/types.
-		assert.strictEqual(typeof module._extensions, "object");
-		// @ts-expect-error TS2339 Invalid node/types.
-		assert.strictEqual(typeof module._pathCache, "object");
+		assertTypeOfProperties(module, {
+			constants: "object",
+			_cache: "object",
+			_extensions: "object",
+			_pathCache: "object",
+		});
 	},
 
 	async testConstants() {
@@ -500,8 +515,11 @@ export const WorkerdTests: Record<string, () => void> = {
 	async testHttp2() {
 		const http2 = await import("node:http2");
 
-		assert.strictEqual(typeof http2.createSecureServer, "function");
-		assert.strictEqual(typeof http2.connect, "function");
+		assertTypeOfProperties(http2, {
+			createSecureServer: "function",
+			connect: "function",
+		});
+
 		assert.strictEqual(http2.constants.HTTP2_HEADER_STATUS, ":status");
 	},
 
@@ -528,29 +546,34 @@ export const WorkerdTests: Record<string, () => void> = {
 		}
 
 		// Event APIs are only available on global process
-		assert.equal(typeof gProcess.addListener, "function");
-		assert.equal(typeof gProcess.eventNames, "function");
-		assert.equal(typeof gProcess.getMaxListeners, "function");
-		assert.equal(typeof gProcess.listenerCount, "function");
-		assert.equal(typeof gProcess.listeners, "function");
-		assert.equal(typeof gProcess.off, "function");
-		assert.equal(typeof gProcess.on, "function");
-		assert.equal(typeof gProcess.once, "function");
-		assert.equal(typeof gProcess.prependListener, "function");
-		assert.equal(typeof gProcess.prependOnceListener, "function");
-		assert.equal(typeof gProcess.rawListeners, "function");
-		assert.equal(typeof gProcess.removeAllListeners, "function");
-		assert.equal(typeof gProcess.removeListener, "function");
-		assert.equal(typeof gProcess.setMaxListeners, "function");
+		assertTypeOfProperties(gProcess, {
+			addListener: "function",
+			eventNames: "function",
+			getMaxListeners: "function",
+			listenerCount: "function",
+			listeners: "function",
+			off: "function",
+			on: "function",
+			once: "function",
+			prependListener: "function",
+			prependOnceListener: "function",
+			rawListeners: "function",
+			removeAllListeners: "function",
+			removeListener: "function",
+			setMaxListeners: "function",
+		});
 	},
 
 	async testPunycode() {
 		const punycode = await import("node:punycode");
 
-		assert.strictEqual(typeof punycode.decode, "function");
-		assert.strictEqual(typeof punycode.encode, "function");
-		assert.strictEqual(typeof punycode.toASCII, "function");
-		assert.strictEqual(typeof punycode.toUnicode, "function");
+		assertTypeOfProperties(punycode, {
+			decode: "function",
+			encode: "function",
+			toASCII: "function",
+			toUnicode: "function",
+		});
+
 		assert.strictEqual(
 			punycode.toASCII("Bücher@日本語.com"),
 			"Bücher@xn--wgv71a119e.com"
@@ -591,13 +614,42 @@ export const WorkerdTests: Record<string, () => void> = {
 		const tracing = traceEvents.createTracing({
 			categories: ["node.async_hooks"],
 		});
-		assertTypeOf(tracing, "enable", "function");
-		assertTypeOf(tracing, "disable", "function");
-		assertTypeOf(tracing, "enabled", "boolean");
-		assertTypeOf(tracing, "categories", "string");
+
+		assertTypeOfProperties(tracing, {
+			enable: "function",
+			disable: "function",
+			enabled: "boolean",
+			categories: "string",
+		});
+	},
+
+	async testDomain() {
+		const { Domain } = await import("node:domain");
+
+		const domain = new Domain();
+
+		assertTypeOf(domain, "add", "function");
+		assertTypeOf(domain, "enter", "function");
+		assertTypeOf(domain, "exit", "function");
+		assertTypeOf(domain, "remove", "function");
+	},
+
+	async testWasi() {
+		const wasi = await import("node:wasi");
+
+		assert.strictEqual(typeof wasi.WASI, "function");
+
+		assert.throws(() => new wasi.WASI(), /not implemented/);
+		assert.throws(
+			() => new wasi.WASI({ version: "preview1" }),
+			/not implemented/
+		);
 	},
 };
 
+/**
+ * Asserts that `target[property]` is of type `expectType`.
+ */
 function assertTypeOf(target: unknown, property: string, expectType: string) {
 	const actualType = typeof (target as any)[property];
 	assert.strictEqual(
@@ -605,4 +657,18 @@ function assertTypeOf(target: unknown, property: string, expectType: string) {
 		expectType,
 		`${property} should be of type ${expectType}, got ${actualType}`
 	);
+}
+
+/**
+ * Asserts that multiple `properties` of `target` are of the expected types.
+ * @param target the object to test
+ * @param properties a record of property names to expected types
+ */
+function assertTypeOfProperties(
+	target: unknown,
+	properties: Record<string, string>
+) {
+	for (const [property, expectType] of Object.entries(properties)) {
+		assertTypeOf(target, property, expectType);
+	}
 }

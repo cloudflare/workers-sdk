@@ -16,7 +16,7 @@ import {
 	getInferredHost,
 	maskVars,
 } from "../../dev";
-import { getClassNamesWhichUseSQLite } from "../../dev/class-names-sqlite";
+import { getDurableObjectClassNameToUseSQLiteMap } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import {
 	getDisableConfigWatching,
@@ -47,8 +47,7 @@ import {
 	extractBindingsOfType,
 	unwrapHook,
 } from "./utils";
-import type { ControllerEventMap } from "./BaseController";
-import type { ConfigUpdateEvent, DevRegistryUpdateEvent } from "./events";
+import type { DevRegistryUpdateEvent } from "./events";
 import type {
 	StartDevWorkerInput,
 	StartDevWorkerOptions,
@@ -56,10 +55,6 @@ import type {
 } from "./types";
 import type { CfUnsafe, Config } from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
-
-type ConfigControllerEventMap = ControllerEventMap & {
-	configUpdate: [ConfigUpdateEvent];
-};
 
 const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "127.0.0.1");
 const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, "localhost");
@@ -459,12 +454,12 @@ async function resolveConfig(
 		}
 
 		// TODO(do) support remote wrangler dev
-		const classNamesWhichUseSQLite = getClassNamesWhichUseSQLite(
+		const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
 			resolved.migrations
 		);
 		if (
 			resolved.dev.remote &&
-			Array.from(classNamesWhichUseSQLite.values()).some((v) => v)
+			Array.from(classNameToUseSQLite.values()).some((v) => v)
 		) {
 			logger.once.warn(
 				"SQLite in Durable Objects is only supported in local mode."
@@ -483,7 +478,7 @@ async function resolveConfig(
 	return { config: resolved, printCurrentBindings };
 }
 
-export class ConfigController extends Controller<ConfigControllerEventMap> {
+export class ConfigController extends Controller {
 	latestInput?: StartDevWorkerInput;
 	latestConfig?: StartDevWorkerOptions;
 	#printCurrentBindings?: (registry: WorkerRegistry | null) => void;
@@ -639,6 +634,6 @@ export class ConfigController extends Controller<ConfigControllerEventMap> {
 	// *********************
 
 	emitConfigUpdateEvent(config: StartDevWorkerOptions) {
-		this.emit("configUpdate", { type: "configUpdate", config });
+		this.bus.dispatch({ type: "configUpdate", config });
 	}
 }

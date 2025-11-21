@@ -4796,6 +4796,35 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		it("should accept unsafe fields under containers", () => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					containers: [
+						{
+							name: "test-container",
+							class_name: "TestContainer",
+							image: "registry.cloudflare.com/test:image",
+							unsafe: {
+								custom_field: "value",
+							},
+						},
+					],
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				"
+			`);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				"
+			`);
+		});
+
 		describe("[placement]", () => {
 			it(`should error if placement hint is set with placement mode "off"`, () => {
 				const { diagnostics } = normalizeAndValidateConfig(

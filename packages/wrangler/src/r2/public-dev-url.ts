@@ -2,7 +2,7 @@ import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import { getR2DevDomain, updateR2DevDomain } from "./helpers";
+import { getR2DevDomain, updateR2DevDomain } from "./helpers/domain";
 
 export const r2BucketDevUrlNamespace = createNamespace({
 	metadata: {
