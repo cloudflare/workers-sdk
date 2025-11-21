@@ -21,8 +21,12 @@ jobs:
           fetch-depth: 2
           ref: ${{ github.head_ref }}
           token: ${{ secrets.GH_ACCESS_TOKEN }}
+
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
+        with:
+          pnpm-filters: "./tools"
+
       - name: Configure Git
         run: |
           git config --global user.email wrangler@cloudflare.com
