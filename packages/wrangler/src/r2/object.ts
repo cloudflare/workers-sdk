@@ -573,14 +573,14 @@ export const r2BulkPutCommand = createCommand({
 			// 1200 requests per 5 minutes
 			// We add some headroom (100 requests) for other API usage
 			// ref: https://developers.cloudflare.com/fundamentals/api/reference/limits/
-			const API_RATE_LIMIT_WINDOWS_SEC = 5 * 60; // 5 minutes
+			const API_RATE_LIMIT_WINDOWS_MS = 5 * 60 * 1_000; // 5 minutes
 			const API_RATE_LIMIT_REQUESTS = 1_200 - 100;
 
 			const accountId = await requireAuth(config);
 
 			const queue = new PQueue({
 				concurrency,
-				interval: API_RATE_LIMIT_WINDOWS_SEC * 1000,
+				interval: API_RATE_LIMIT_WINDOWS_MS,
 				intervalCap: API_RATE_LIMIT_REQUESTS,
 			});
 
