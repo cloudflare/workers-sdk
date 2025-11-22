@@ -1879,7 +1879,7 @@ importers:
         version: link:../eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: ^0.7.0
-        version: 0.7.8(@cloudflare/workers-types@4.20251118.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)
+        version: 0.7.8(@cloudflare/workers-types@4.20251121.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20251121.0
@@ -8572,9 +8572,6 @@ packages:
   birpc@0.2.14:
     resolution: {integrity: sha512-37FHE8rqsYM5JEKCnXFyHpBCzvgHEExwVVTq+nUmloInU7l8ezD1TpOhKpS8oe1DTYFqEK27rFZVKG43oTqXRA==}
 
-  birpc@2.6.1:
-    resolution: {integrity: sha512-LPnFhlDpdSH6FJhJyn4M0kFO7vtQ5iPw24FnG0y21q09xC7e8+1LeR31S1MAIrDAHp4m7aas4bEkTDTvMAtebQ==}
-
   birpc@2.8.0:
     resolution: {integrity: sha512-Bz2a4qD/5GRhiHSwj30c/8kC8QGj12nNDwz3D4ErQ4Xhy35dsSDvF+RA/tWpjyU0pdGtSDiEk6B5fBGE1qNVhw==}
 
@@ -15221,7 +15218,7 @@ snapshots:
       outdent: 0.5.0
       prettier: 2.8.8
       resolve-from: 5.0.0
-      semver: 7.7.1
+      semver: 7.7.3
 
   '@changesets/assemble-release-plan@6.0.9':
     dependencies:
@@ -15230,7 +15227,7 @@ snapshots:
       '@changesets/should-skip-package': 0.1.2
       '@changesets/types': 6.1.0
       '@manypkg/get-packages': 1.1.3
-      semver: 7.7.1
+      semver: 7.7.3
 
   '@changesets/changelog-git@0.2.1':
     dependencies:
@@ -15669,7 +15666,7 @@ snapshots:
       devalue: 4.3.3
       esbuild: 0.17.19
       miniflare: 3.20250310.0
-      semver: 7.7.1
+      semver: 7.7.3
       vitest: 2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.30.2)
       wrangler: 3.114.1(@cloudflare/workers-types@4.20251121.0)
       zod: 3.22.3
@@ -19416,8 +19413,6 @@ snapshots:
 
   birpc@0.2.14: {}
 
-  birpc@2.6.1: {}
-
   birpc@2.8.0: {}
 
   bl@4.1.0:
@@ -19793,7 +19788,7 @@ snapshots:
       js-string-escape: 1.0.1
       lodash: 4.17.21
       md5-hex: 3.0.1
-      semver: 7.7.2
+      semver: 7.7.3
       well-known-symbols: 2.0.0
 
   concurrently@8.2.2:
@@ -22228,7 +22223,7 @@ snapshots:
       lodash.isstring: 4.0.1
       lodash.once: 4.1.1
       ms: 2.1.3
-      semver: 7.7.2
+      semver: 7.7.3
 
   jsprim@2.0.2:
     dependencies:
@@ -22677,7 +22672,7 @@ snapshots:
       pkg-types: 1.3.1
       postcss: 8.5.6
       postcss-nested: 7.0.2(postcss@8.5.6)
-      semver: 7.7.2
+      semver: 7.7.3
       tinyglobby: 0.2.15
     optionalDependencies:
       typescript: 5.8.3
@@ -23970,7 +23965,7 @@ snapshots:
       '@babel/parser': 7.28.4
       '@babel/types': 7.28.4
       ast-kit: 2.1.3
-      birpc: 2.6.1
+      birpc: 2.8.0
       debug: 4.4.3
       dts-resolver: 2.1.2
       get-tsconfig: 4.13.0
@@ -25743,7 +25738,7 @@ snapshots:
     dependencies:
       '@volar/typescript': 2.4.0-alpha.18
       '@vue/language-core': 2.0.29(typescript@5.8.3)
-      semver: 7.7.2
+      semver: 7.7.3
       typescript: 5.8.3
 
   warning@4.0.3:
