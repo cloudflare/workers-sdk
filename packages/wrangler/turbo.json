@@ -58,7 +58,8 @@
 		},
 		"test:ci": {
 			"dependsOn": ["build"],
-			"env": ["VITEST", "NODE_DEBUG", "MINIFLARE_WORKERD_PATH"]
+			"env": ["VITEST", "NODE_DEBUG", "MINIFLARE_WORKERD_PATH"],
+			"cache": false
 		},
 		"test:e2e": {
 			"inputs": ["e2e/**"],
