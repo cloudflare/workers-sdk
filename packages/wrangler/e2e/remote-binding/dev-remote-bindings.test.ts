@@ -206,8 +206,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 
 				const worker = helper.runLongLived("wrangler dev");
 
-				await worker.waitForReady();
-
 				await vi.waitFor(
 					() =>
 						expect(worker.currentOutput).toContain(
@@ -234,8 +232,6 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				});
 
 				const worker = helper.runLongLived("wrangler dev");
-
-				await worker.waitForReady();
 
 				await vi.waitFor(
 					() =>
