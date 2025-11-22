@@ -54,9 +54,3 @@ runs:
           done
         fi
         pnpm install --frozen-lockfile $FILTERS
-
-    - name: Install uv for Python
-      uses: astral-sh/setup-uv@v6
-      with:
-        version: "0.9.3"
-        enable-cache: false

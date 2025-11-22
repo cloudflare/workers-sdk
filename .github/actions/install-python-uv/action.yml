@@ -1,0 +1,9 @@
+name: "Install Python uv"
+runs:
+  using: "composite"
+  steps:
+    - name: Install uv for Python
+      uses: astral-sh/setup-uv@v6
+      with:
+        version: "0.9.3"
+        enable-cache: false
