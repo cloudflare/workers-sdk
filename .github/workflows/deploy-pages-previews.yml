@@ -43,6 +43,8 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
+        with:
+          node-version: 22
 
       - name: Build tools and libraries
         run: pnpm run build

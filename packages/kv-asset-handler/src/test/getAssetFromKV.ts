@@ -1,5 +1,4 @@
-import { beforeEach, expect, test } from "vitest";
-import { getAssetFromKV, mapRequestToAsset } from "../src/index";
+import test from "ava";
 import {
 	getEvent,
 	mockGlobalScope,
@@ -7,116 +6,129 @@ import {
 	mockManifest,
 	mockRequestScope,
 	sleep,
-} from "./mocks";
+} from "../mocks";
+import type { KVError } from "../types";
 
-beforeEach(async () => {
-	mockGlobalScope();
+mockGlobalScope();
+
+// @ts-expect-error we use a require for a mock
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { getAssetFromKV, mapRequestToAsset } = require("../index");
+test("getAssetFromKV return correct val from KV and default caching", async (t) => {
 	mockRequestScope();
-});
-
-test("getAssetFromKV return correct val from KV and default caching", async () => {
 	const event = getEvent(new Request("https://blah.com/key1.txt"));
 	const res = await getAssetFromKV(event);
 
 	if (res) {
-		expect(res.headers.get("cache-control")).toBe(null);
-		expect(res.headers.get("cf-cache-status")).toBe("MISS");
-		expect(await res.text()).toBe("val1");
-		expect(res.headers.get("content-type")).toContain("text");
+		t.is(res.headers.get("cache-control"), null);
+		t.is(res.headers.get("cf-cache-status"), "MISS");
+		t.is(await res.text(), "val1");
+		t.true(res.headers.get("content-type").includes("text"));
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV evaluated the file matching the extensionless path first /client/ -> client", async () => {
+test("getAssetFromKV evaluated the file matching the extensionless path first /client/ -> client", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request(`https://foo.com/client/`));
 	const res = await getAssetFromKV(event);
-	expect(await res.text()).toBe("important file");
-	expect(res.headers.get("content-type")).toContain("text");
+	t.is(await res.text(), "important file");
+	t.true(res.headers.get("content-type").includes("text"));
 });
-test("getAssetFromKV evaluated the file matching the extensionless path first /client -> client", async () => {
+test("getAssetFromKV evaluated the file matching the extensionless path first /client -> client", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request(`https://foo.com/client`));
 	const res = await getAssetFromKV(event);
-	expect(await res.text()).toBe("important file");
-	expect(res.headers.get("content-type")).toContain("text");
+	t.is(await res.text(), "important file");
+	t.true(res.headers.get("content-type").includes("text"));
 });
 
-test("getAssetFromKV if not in asset manifest still returns nohash.txt", async () => {
+test("getAssetFromKV if not in asset manifest still returns nohash.txt", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com/nohash.txt"));
 	const res = await getAssetFromKV(event);
 
 	if (res) {
-		expect(await res.text()).toBe("no hash but still got some result");
-		expect(res.headers.get("content-type")).toContain("text");
+		t.is(await res.text(), "no hash but still got some result");
+		t.true(res.headers.get("content-type").includes("text"));
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV if no asset manifest /client -> client fails", async () => {
+test("getAssetFromKV if no asset manifest /client -> client fails", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request(`https://foo.com/client`));
-	await expect(() =>
+	const error: KVError = await t.throwsAsync(
 		getAssetFromKV(event, { ASSET_MANIFEST: {} })
-	).rejects.toThrowError(expect.objectContaining({ status: 404 }));
+	);
+	t.is(error.status, 404);
 });
 
-test("getAssetFromKV if sub/ -> sub/index.html served", async () => {
+test("getAssetFromKV if sub/ -> sub/index.html served", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request(`https://foo.com/sub`));
 	const res = await getAssetFromKV(event);
 	if (res) {
-		expect(await res.text()).toBe("picturedis");
+		t.is(await res.text(), "picturedis");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV gets index.html by default for / requests", async () => {
+test("getAssetFromKV gets index.html by default for / requests", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com/"));
 	const res = await getAssetFromKV(event);
 
 	if (res) {
-		expect(await res.text()).toBe("index.html");
-		expect(res.headers.get("content-type")).toContain("html");
+		t.is(await res.text(), "index.html");
+		t.true(res.headers.get("content-type").includes("html"));
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV non ASCII path support", async () => {
+test("getAssetFromKV non ASCII path support", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com/测试.html"));
 	const res = await getAssetFromKV(event);
 
 	if (res) {
-		expect(await res.text()).toBe("My filename is non-ascii");
+		t.is(await res.text(), "My filename is non-ascii");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV supports browser percent encoded URLs", async () => {
+test("getAssetFromKV supports browser percent encoded URLs", async (t) => {
+	mockRequestScope();
 	const event = getEvent(
 		new Request("https://example.com/%not-really-percent-encoded.html")
 	);
 	const res = await getAssetFromKV(event);
 
 	if (res) {
-		expect(await res.text()).toBe("browser percent encoded");
+		t.is(await res.text(), "browser percent encoded");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV supports user percent encoded URLs", async () => {
+test("getAssetFromKV supports user percent encoded URLs", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com/%2F.html"));
 	const res = await getAssetFromKV(event);
 
 	if (res) {
-		expect(await res.text()).toBe("user percent encoded");
+		t.is(await res.text(), "user percent encoded");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV only decode URL when necessary", async () => {
+test("getAssetFromKV only decode URL when necessary", async (t) => {
+	mockRequestScope();
 	const event1 = getEvent(
 		new Request("https://blah.com/%E4%BD%A0%E5%A5%BD.html")
 	);
@@ -125,28 +137,30 @@ test("getAssetFromKV only decode URL when necessary", async () => {
 	const res2 = await getAssetFromKV(event2);
 
 	if (res1 && res2) {
-		expect(await res1.text()).toBe("Im important");
-		expect(await res2.text()).toBe("Im important");
+		t.is(await res1.text(), "Im important");
+		t.is(await res2.text(), "Im important");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV Support for user decode url path", async () => {
+test("getAssetFromKV Support for user decode url path", async (t) => {
+	mockRequestScope();
 	const event1 = getEvent(new Request("https://blah.com/%E4%BD%A0%E5%A5%BD/"));
 	const event2 = getEvent(new Request("https://blah.com/你好/"));
 	const res1 = await getAssetFromKV(event1);
 	const res2 = await getAssetFromKV(event2);
 
 	if (res1 && res2) {
-		expect(await res1.text()).toBe("My path is non-ascii");
-		expect(await res2.text()).toBe("My path is non-ascii");
+		t.is(await res1.text(), "My path is non-ascii");
+		t.is(await res2.text(), "My path is non-ascii");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV custom key modifier", async () => {
+test("getAssetFromKV custom key modifier", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com/docs/sub/blah.png"));
 
 	const customRequestMapper = (request: Request) => {
@@ -162,14 +176,15 @@ test("getAssetFromKV custom key modifier", async () => {
 	});
 
 	if (res) {
-		expect(await res.text()).toBe("picturedis");
+		t.is(await res.text(), "picturedis");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV request override with existing manifest file", async () => {
+test("getAssetFromKV request override with existing manifest file", async (t) => {
 	// see https://github.com/cloudflare/kv-asset-handler/pull/159 for more info
+	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com/image.png")); // real file in manifest
 
 	const customRequestMapper = (request: Request) => {
@@ -185,25 +200,27 @@ test("getAssetFromKV request override with existing manifest file", async () => 
 	});
 
 	if (res) {
-		expect(await res.text()).toBe("imagewebp");
+		t.is(await res.text(), "imagewebp");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV when setting browser caching", async () => {
+test("getAssetFromKV when setting browser caching", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com/"));
 
 	const res = await getAssetFromKV(event, { cacheControl: { browserTTL: 22 } });
 
 	if (res) {
-		expect(res.headers.get("cache-control")).toBe("max-age=22");
+		t.is(res.headers.get("cache-control"), "max-age=22");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV when setting custom cache setting", async () => {
+test("getAssetFromKV when setting custom cache setting", async (t) => {
+	mockRequestScope();
 	const event1 = getEvent(new Request("https://blah.com/"));
 	const event2 = getEvent(new Request("https://blah.com/key1.png?blah=34"));
 	const cacheOnlyPngs = (req: Request) => {
@@ -223,15 +240,16 @@ test("getAssetFromKV when setting custom cache setting", async () => {
 	const res2 = await getAssetFromKV(event2, { cacheControl: cacheOnlyPngs });
 
 	if (res1 && res2) {
-		expect(res1.headers.get("cache-control")).toBe(null);
-		expect(res2.headers.get("content-type")).toContain("png");
-		expect(res2.headers.get("cache-control")).toBe("max-age=720");
-		expect(res2.headers.get("cf-cache-status")).toBe("MISS");
+		t.is(res1.headers.get("cache-control"), null);
+		t.true(res2.headers.get("content-type").includes("png"));
+		t.is(res2.headers.get("cache-control"), "max-age=720");
+		t.is(res2.headers.get("cf-cache-status"), "MISS");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV caches on two sequential requests", async () => {
+test("getAssetFromKV caches on two sequential requests", async (t) => {
+	mockRequestScope();
 	const resourceKey = "cache.html";
 	const resourceVersion = JSON.parse(mockManifest())[resourceKey];
 	const event1 = getEvent(new Request(`https://blah.com/${resourceKey}`));
@@ -250,14 +268,15 @@ test("getAssetFromKV caches on two sequential requests", async () => {
 	const res2 = await getAssetFromKV(event2);
 
 	if (res1 && res2) {
-		expect(res1.headers.get("cf-cache-status")).toBe("MISS");
-		expect(res1.headers.get("cache-control")).toBe("max-age=720");
-		expect(res2.headers.get("cf-cache-status")).toBe("REVALIDATED");
+		t.is(res1.headers.get("cf-cache-status"), "MISS");
+		t.is(res1.headers.get("cache-control"), "max-age=720");
+		t.is(res2.headers.get("cf-cache-status"), "REVALIDATED");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV does not store max-age on two sequential requests", async () => {
+test("getAssetFromKV does not store max-age on two sequential requests", async (t) => {
+	mockRequestScope();
 	const resourceKey = "cache.html";
 	const resourceVersion = JSON.parse(mockManifest())[resourceKey];
 	const event1 = getEvent(new Request(`https://blah.com/${resourceKey}`));
@@ -274,16 +293,17 @@ test("getAssetFromKV does not store max-age on two sequential requests", async (
 	const res2 = await getAssetFromKV(event2);
 
 	if (res1 && res2) {
-		expect(res1.headers.get("cf-cache-status")).toBe("MISS");
-		expect(res1.headers.get("cache-control")).toBe(null);
-		expect(res2.headers.get("cf-cache-status")).toBe("REVALIDATED");
-		expect(res2.headers.get("cache-control")).toBe(null);
+		t.is(res1.headers.get("cf-cache-status"), "MISS");
+		t.is(res1.headers.get("cache-control"), null);
+		t.is(res2.headers.get("cf-cache-status"), "REVALIDATED");
+		t.is(res2.headers.get("cache-control"), null);
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV does not cache on Cloudflare when bypass cache set", async () => {
+test("getAssetFromKV does not cache on Cloudflare when bypass cache set", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com/"));
 
 	const res = await getAssetFromKV(event, {
@@ -291,40 +311,43 @@ test("getAssetFromKV does not cache on Cloudflare when bypass cache set", async 
 	});
 
 	if (res) {
-		expect(res.headers.get("cache-control")).toBe(null);
-		expect(res.headers.get("cf-cache-status")).toBe(null);
+		t.is(res.headers.get("cache-control"), null);
+		t.is(res.headers.get("cf-cache-status"), null);
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV with no trailing slash on root", async () => {
+test("getAssetFromKV with no trailing slash on root", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com"));
 	const res = await getAssetFromKV(event);
 	if (res) {
-		expect(await res.text()).toBe("index.html");
+		t.is(await res.text(), "index.html");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV with no trailing slash on a subdirectory", async () => {
+test("getAssetFromKV with no trailing slash on a subdirectory", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com/sub/blah.png"));
 	const res = await getAssetFromKV(event);
 	if (res) {
-		expect(await res.text()).toBe("picturedis");
+		t.is(await res.text(), "picturedis");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV no result throws an error", async () => {
+test("getAssetFromKV no result throws an error", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com/random"));
-	await expect(getAssetFromKV(event)).rejects.toThrow(
-		expect.objectContaining({ status: 404 })
-	);
+	const error: KVError = await t.throwsAsync(getAssetFromKV(event));
+	t.is(error.status, 404);
 });
-test("getAssetFromKV TTls set to null should not cache on browser or edge", async () => {
+test("getAssetFromKV TTls set to null should not cache on browser or edge", async (t) => {
+	mockRequestScope();
 	const event = getEvent(new Request("https://blah.com/"));
 
 	const res1 = await getAssetFromKV(event, {
@@ -336,15 +359,16 @@ test("getAssetFromKV TTls set to null should not cache on browser or edge", asyn
 	});
 
 	if (res1 && res2) {
-		expect(res1.headers.get("cf-cache-status")).toBe(null);
-		expect(res1.headers.get("cache-control")).toBe(null);
-		expect(res2.headers.get("cf-cache-status")).toBe(null);
-		expect(res2.headers.get("cache-control")).toBe(null);
+		t.is(res1.headers.get("cf-cache-status"), null);
+		t.is(res1.headers.get("cache-control"), null);
+		t.is(res2.headers.get("cf-cache-status"), null);
+		t.is(res2.headers.get("cache-control"), null);
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV passing in a custom NAMESPACE serves correct asset", async () => {
+test("getAssetFromKV passing in a custom NAMESPACE serves correct asset", async (t) => {
+	mockRequestScope();
 	const CUSTOM_NAMESPACE = mockKV({
 		"key1.123HASHBROWN.txt": "val1",
 	});
@@ -352,33 +376,38 @@ test("getAssetFromKV passing in a custom NAMESPACE serves correct asset", async 
 	const event = getEvent(new Request("https://blah.com/"));
 	const res = await getAssetFromKV(event);
 	if (res) {
-		expect(await res.text()).toBe("index.html");
-		expect(res.headers.get("content-type")).toContain("html");
+		t.is(await res.text(), "index.html");
+		t.true(res.headers.get("content-type").includes("html"));
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV when custom namespace without the asset should fail", async () => {
+test("getAssetFromKV when custom namespace without the asset should fail", async (t) => {
+	mockRequestScope();
 	const CUSTOM_NAMESPACE = mockKV({
 		"key5.123HASHBROWN.txt": "customvalu",
 	});
 
 	const event = getEvent(new Request("https://blah.com"));
-	await expect(
+	const error: KVError = await t.throwsAsync(
 		getAssetFromKV(event, { ASSET_NAMESPACE: CUSTOM_NAMESPACE })
-	).rejects.toThrow(expect.objectContaining({ status: 404 }));
+	);
+	t.is(error.status, 404);
 });
-test("getAssetFromKV when namespace not bound fails", async () => {
-	const MY_CUSTOM_NAMESPACE: KVNamespace = undefined;
+test("getAssetFromKV when namespace not bound fails", async (t) => {
+	mockRequestScope();
+	const MY_CUSTOM_NAMESPACE: unknown = undefined;
 	Object.assign(globalThis, { MY_CUSTOM_NAMESPACE });
 
 	const event = getEvent(new Request("https://blah.com/"));
-	await expect(
+	const error: KVError = await t.throwsAsync(
 		getAssetFromKV(event, { ASSET_NAMESPACE: MY_CUSTOM_NAMESPACE })
-	).rejects.toThrow(expect.objectContaining({ status: 500 }));
+	);
+	t.is(error.status, 500);
 });
 
-test("getAssetFromKV when if-none-match === active resource version, should revalidate", async () => {
+test("getAssetFromKV when if-none-match === active resource version, should revalidate", async (t) => {
+	mockRequestScope();
 	const resourceKey = "key1.png";
 	const resourceVersion = JSON.parse(mockManifest())[resourceKey];
 	const event1 = getEvent(new Request(`https://blah.com/${resourceKey}`));
@@ -395,14 +424,15 @@ test("getAssetFromKV when if-none-match === active resource version, should reva
 	const res2 = await getAssetFromKV(event2);
 
 	if (res1 && res2) {
-		expect(res1.headers.get("cf-cache-status")).toBe("MISS");
-		expect(res2.headers.get("cf-cache-status")).toBe("REVALIDATED");
+		t.is(res1.headers.get("cf-cache-status"), "MISS");
+		t.is(res2.headers.get("cf-cache-status"), "REVALIDATED");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV when if-none-match equals etag of stale resource then should bypass cache", async () => {
+test("getAssetFromKV when if-none-match equals etag of stale resource then should bypass cache", async (t) => {
+	mockRequestScope();
 	const resourceKey = "key1.png";
 	const resourceVersion = JSON.parse(mockManifest())[resourceKey];
 	const req1 = new Request(`https://blah.com/${resourceKey}`, {
@@ -421,20 +451,17 @@ test("getAssetFromKV when if-none-match equals etag of stale resource then shoul
 	const res2 = await getAssetFromKV(event);
 	const res3 = await getAssetFromKV(event2);
 	if (res1 && res2 && res3) {
-		expect(res1.headers.get("cf-cache-status")).toBe("MISS");
-		expect(res2.headers.get("etag")).toBe(
-			`W/${req1.headers.get("if-none-match")}`
-		);
-		expect(res2.headers.get("cf-cache-status")).toBe("REVALIDATED");
-		expect(res3.headers.get("etag")).not.toBe(
-			req2.headers.get("if-none-match")
-		);
-		expect(res3.headers.get("cf-cache-status")).toBe("MISS");
+		t.is(res1.headers.get("cf-cache-status"), "MISS");
+		t.is(res2.headers.get("etag"), `W/${req1.headers.get("if-none-match")}`);
+		t.is(res2.headers.get("cf-cache-status"), "REVALIDATED");
+		t.not(res3.headers.get("etag"), req2.headers.get("if-none-match"));
+		t.is(res3.headers.get("cf-cache-status"), "MISS");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV when resource in cache, etag should be weakened before returned to eyeball", async () => {
+test("getAssetFromKV when resource in cache, etag should be weakened before returned to eyeball", async (t) => {
+	mockRequestScope();
 	const resourceKey = "key1.png";
 	const resourceVersion = JSON.parse(mockManifest())[resourceKey];
 	const req1 = new Request(`https://blah.com/${resourceKey}`, {
@@ -446,15 +473,14 @@ test("getAssetFromKV when resource in cache, etag should be weakened before retu
 	const res1 = await getAssetFromKV(event, { cacheControl: { edgeTTL: 720 } });
 	const res2 = await getAssetFromKV(event);
 	if (res1 && res2) {
-		expect(res1.headers.get("cf-cache-status")).toBe("MISS");
-		expect(res2.headers.get("etag")).toBe(
-			`W/${req1.headers.get("if-none-match")}`
-		);
+		t.is(res1.headers.get("cf-cache-status"), "MISS");
+		t.is(res2.headers.get("etag"), `W/${req1.headers.get("if-none-match")}`);
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV should support weak etag override of resource", async () => {
+test("getAssetFromKV should support weak etag override of resource", async (t) => {
+	mockRequestScope();
 	const resourceKey = "key1.png";
 	const resourceVersion = JSON.parse(mockManifest())[resourceKey];
 	const req1 = new Request(`https://blah-weak.com/${resourceKey}`, {
@@ -479,38 +505,34 @@ test("getAssetFromKV should support weak etag override of resource", async () =>
 	const res2 = await getAssetFromKV(event2, { defaultETag: "weak" });
 	const res3 = await getAssetFromKV(event3, { defaultETag: "weak" });
 	if (res1 && res2 && res3) {
-		expect(res1.headers.get("cf-cache-status")).toBe("MISS");
-		expect(res1.headers.get("etag")).toBe(req1.headers.get("if-none-match"));
-		expect(res2.headers.get("cf-cache-status")).toBe("REVALIDATED");
-		expect(res2.headers.get("etag")).toBe(
-			`W/${req2.headers.get("if-none-match")}`
-		);
-		expect(res3.headers.get("cf-cache-status")).toBe("MISS");
-		expect(res3.headers.get("etag")).not.toBe(
-			req2.headers.get("if-none-match")
-		);
+		t.is(res1.headers.get("cf-cache-status"), "MISS");
+		t.is(res1.headers.get("etag"), req1.headers.get("if-none-match"));
+		t.is(res2.headers.get("cf-cache-status"), "REVALIDATED");
+		t.is(res2.headers.get("etag"), `W/${req2.headers.get("if-none-match")}`);
+		t.is(res3.headers.get("cf-cache-status"), "MISS");
+		t.not(res3.headers.get("etag"), req2.headers.get("if-none-match"));
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV if-none-match not sent but resource in cache, should return cache hit 200 OK", async () => {
+test("getAssetFromKV if-none-match not sent but resource in cache, should return cache hit 200 OK", async (t) => {
 	const resourceKey = "cache.html";
 	const event = getEvent(new Request(`https://blah.com/${resourceKey}`));
 	const res1 = await getAssetFromKV(event, { cacheControl: { edgeTTL: 720 } });
 	await sleep(1);
 	const res2 = await getAssetFromKV(event);
 	if (res1 && res2) {
-		expect(res1.headers.get("cf-cache-status")).toBe("MISS");
-		expect(res1.headers.get("cache-control")).toBe(null);
-		expect(res2.status).toBe(200);
-		expect(res2.headers.get("cf-cache-status")).toBe("HIT");
+		t.is(res1.headers.get("cf-cache-status"), "MISS");
+		t.is(res1.headers.get("cache-control"), null);
+		t.is(res2.status, 200);
+		t.is(res2.headers.get("cf-cache-status"), "HIT");
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 
-test("getAssetFromKV if range request submitted and resource in cache, request fulfilled", async () => {
+test("getAssetFromKV if range request submitted and resource in cache, request fulfilled", async (t) => {
 	const resourceKey = "cache.html";
 	const event1 = getEvent(new Request(`https://blah.com/${resourceKey}`));
 	const event2 = getEvent(
@@ -523,9 +545,9 @@ test("getAssetFromKV if range request submitted and resource in cache, request f
 	await sleep(2);
 	const res2 = await getAssetFromKV(event2);
 	if (res2.headers.has("content-range")) {
-		expect(res2.status).toBe(206);
+		t.is(res2.status, 206);
 	} else {
-		expect.fail("Response was undefined");
+		t.fail("Response was undefined");
 	}
 });
 

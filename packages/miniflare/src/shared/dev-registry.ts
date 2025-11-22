@@ -320,18 +320,15 @@ export function getWorkerRegistry(
 	for (const workerName of readdirSync(registryPath)) {
 		try {
 			const definitionPath = path.join(registryPath, workerName);
-			const stats = statSync(definitionPath, { throwIfNoEntry: false });
+			const file = readFileSync(definitionPath, "utf8");
+			const stats = statSync(definitionPath);
 
 			// Cleanup old workers that have not sent a heartbeat in over 5 minutes
-			if (stats === undefined || stats.mtime.getTime() < Date.now() - 300_000) {
+			if (stats.mtime.getTime() < Date.now() - 300_000) {
 				unregisterStaleWorker?.(workerName);
 				continue;
 			}
 
-			const file = readFileSync(definitionPath, {
-				encoding: "utf8",
-				flag: "r",
-			});
 			registry[workerName] = JSON.parse(file);
 		} catch {
 			// This can safely be ignored. It generally indicates the worker was too old and was removed by a parallel process

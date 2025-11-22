@@ -1,12 +1,20 @@
 {
 	"compilerOptions": {
+		"outDir": "./dist",
 		"noImplicitAny": true,
 		"target": "ES2022",
 		"allowJs": false,
 		"types": ["@cloudflare/workers-types"],
-		"module": "es2022",
-		"moduleResolution": "bundler",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
 		"skipLibCheck": true
 	},
-	"exclude": ["dist", "node_modules"]
+	"include": [
+		"./src/*.ts",
+		"./src/**/*.ts",
+		"./test/**/*.ts",
+		"./test/*.ts",
+		"./src/types.d.ts"
+	],
+	"exclude": ["node_modules/", "dist/"]
 }
