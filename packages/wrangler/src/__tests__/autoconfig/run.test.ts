@@ -158,7 +158,7 @@ describe("autoconfig (deploy)", () => {
 				configured: false,
 				workerName: "my-worker",
 				framework: {
-					name: "fake",
+					name: "Fake",
 					configure: configureSpy,
 				} as unknown as Framework,
 				outputDir: "dist",
@@ -173,7 +173,7 @@ describe("autoconfig (deploy)", () => {
 				"
 				Detected Project Settings:
 				 - Worker Name: my-worker
-				 - Framework: fake
+				 - Framework: Fake
 				 - Build Command: echo 'built' > build.txt
 				 - Output Directory: dist
 

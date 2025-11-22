@@ -6,7 +6,6 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import { getDevCompatibilityDate } from "../utils/compatibility-date";
-import { capitalize } from "../utils/strings";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
@@ -233,7 +232,7 @@ export async function buildOperationsSummary(
 		logger.log(
 			`🛠️  ${
 				autoConfigDetails.framework.configurationDescription ??
-				`Configuring project for ${capitalize(autoConfigDetails.framework.name)}`
+				`Configuring project for ${autoConfigDetails.framework.name}`
 			}`
 		);
 		logger.log("");

@@ -7,8 +7,6 @@ import type { ConfigurationOptions } from ".";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 export class Astro extends Framework {
-	name = "astro";
-
 	async configure({
 		outputDir,
 		dryRun,

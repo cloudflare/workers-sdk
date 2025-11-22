@@ -8,8 +8,6 @@ import type { ConfigurationOptions } from ".";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 export class SvelteKit extends Framework {
-	name = "svelte-kit";
-
 	async configure({ dryRun }: ConfigurationOptions): Promise<RawConfig> {
 		const { dlx } = await getPackageManager();
 		if (!dryRun) {
