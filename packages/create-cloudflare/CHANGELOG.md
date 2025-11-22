@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.55.2
+
+### Patch Changes
+
+- [#11221](https://github.com/cloudflare/workers-sdk/pull/11221) [`6701036`](https://github.com/cloudflare/workers-sdk/commit/67010366c5c2aeb20eb7d11262a8e8fd07b783c5) Thanks [@peterp](https://github.com/peterp)! - Add RedwoodSDK as a framework option
+
 ## 2.55.1
 
 ### Patch Changes

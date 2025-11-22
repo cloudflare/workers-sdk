@@ -1,5 +1,14 @@
 # wrangler
 
+## 4.50.1
+
+### Patch Changes
+
+- [#11367](https://github.com/cloudflare/workers-sdk/pull/11367) [`e496280`](https://github.com/cloudflare/workers-sdk/commit/e4962809487e618d4bd99c56b0628b078fab7402) Thanks [@vicb](https://github.com/vicb)! - Rate limit r2 bulk put
+
+- Updated dependencies [[`69f4dc3`](https://github.com/cloudflare/workers-sdk/commit/69f4dc30496406b0c40f946ee8ace28d94667097)]:
+  - miniflare@4.20251121.0
+
 ## 4.50.0
 
 ### Minor Changes
