@@ -20,36 +20,34 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
+	"type": "module",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"files": [
 		"src",
-		"dist",
-		"!src/test",
-		"!dist/test"
+		"dist"
 	],
 	"scripts": {
-		"build": "tsc -d",
+		"build": "tsup",
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc",
 		"prepack": "npm run build",
 		"pretest": "npm run build",
-		"test": "ava dist/test/*.js --verbose",
-		"test:ci": "npm run build && ava dist/test/*.js --verbose"
+		"test": "vitest",
+		"test:ci": "vitest run"
 	},
 	"dependencies": {
 		"mime": "^3.0.0"
 	},
 	"devDependencies": {
-		"@ava/typescript": "^4.1.0",
 		"@cloudflare/eslint-config-shared": "workspace:*",
+		"@cloudflare/vitest-pool-workers": "^0.7.0",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/mime": "^3.0.4",
 		"@types/node": "catalog:default",
-		"@types/service-worker-mock": "^2.0.1",
-		"ava": "^6.0.1",
 		"eslint": "catalog:default",
-		"service-worker-mock": "^2.0.5"
+		"tsup": "8.3.0",
+		"vitest": "~2.1.0"
 	},
 	"engines": {
 		"node": ">=18.0.0"

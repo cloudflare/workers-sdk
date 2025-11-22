@@ -75,7 +75,7 @@ jobs:
   test:
     timeout-minutes: 45
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node_version }}-test
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-test
       cancel-in-progress: true
 
     name: ${{ format('Tests ({0})', matrix.description) }}
@@ -85,16 +85,10 @@ jobs:
         include:
           - os: macos-latest
             description: macOS
-            node_version: 20.19.1
           - os: ubuntu-latest
             description: Linux
-            node_version: 20.19.1
           - os: windows-latest
             description: Windows
-            node_version: 20.19.1
-          - os: ubuntu-latest
-            description: v22, Linux
-            node_version: 22
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -103,7 +97,8 @@ jobs:
         with:
           fetch-depth: 1
 
-      - uses: dorny/paths-filter@v3
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
         id: changes
         with:
           filters: |
@@ -118,7 +113,6 @@ jobs:
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-          node-version: ${{ matrix.node_version }}
 
       - name: Bump package versions
         if: steps.changes.outputs.everything_but_markdown == 'true'
@@ -139,24 +133,13 @@ jobs:
         # We are running the package tests first be able to get early feedback on changes.
         # There is no point in running the fixtures if a package is broken.
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*" --filter="!@cloudflare/kv-asset-handler"
+        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*"
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
           CI_OS: ${{ matrix.description }}
           NODE_DEBUG: "@cloudflare:vite-plugin"
-
-      - name: Run tests (kv-asset-handler only)
-        # kv-asset-handler tests don't work on Node.js 22
-        # TODO: put this back in the main packages test run when https://github.com/cloudflare/workers-sdk/pull/11348 is merged
-        if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.node_version != '22'
-        run: pnpm run test:ci --log-order=stream --filter="@cloudflare/kv-asset-handler"
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/kv-asset-handler/index.html
-          CI_OS: ${{ matrix.description }}
 
       - name: Run tests (vite-plugin playgrounds)
         if: steps.changes.outputs.everything_but_markdown == 'true'
@@ -183,5 +166,56 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.node_version }}
+          name: turbo-runs-${{ matrix.os }}
           path: .turbo/runs
+
+  # This job runs the main packages' tests on other supported Node.js versions to ensure compatibility.
+  test-other-node-versions:
+    timeout-minutes: 45
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.node_version }}-test-other-node-versions
+      cancel-in-progress: true
+    name: ${{ format('Tests ({0})', matrix.description) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { node_version: 20, description: "Node 20" }
+          - { node_version: 24, description: "Node 24" }
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Filter changed paths
+        uses: dorny/paths-filter@v3
+        id: changes
+        with:
+          filters: |
+            everything_but_markdown:
+              - '!**/*.md'
+
+      - name: Install Dependencies
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        uses: ./.github/actions/install-dependencies
+        with:
+          node-version: ${{ matrix.node_version }}
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Run tests (packages)
+        # We are running the package tests first be able to get early feedback on changes.
+        # There is no point in running the fixtures if a package is broken.
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*"
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
+          CI_OS: ${{ matrix.description }}
+          NODE_DEBUG: "@cloudflare:vite-plugin"
