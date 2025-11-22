@@ -59,6 +59,10 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
+      - name: Install Python uv
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        uses: ./.github/actions/install-python-uv
+
       - name: Bump package versions
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: node .github/changeset-version.js
