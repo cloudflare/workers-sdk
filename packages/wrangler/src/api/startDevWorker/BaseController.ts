@@ -43,6 +43,7 @@ export abstract class Controller {
 			logger.debug("=> Error contextual data:", event.data);
 			return;
 		}
+
 		this.bus.dispatch(event);
 	}
 }
