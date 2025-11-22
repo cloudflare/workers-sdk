@@ -3,8 +3,7 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"outputs": ["dist/**"],
-			"env": ["SOURCEMAPS"]
+			"outputs": ["dist/**"]
 		}
 	}
 }

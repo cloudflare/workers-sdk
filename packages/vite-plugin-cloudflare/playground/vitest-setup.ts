@@ -196,7 +196,7 @@ beforeAll(async (s) => {
 		await watcher?.close();
 		await browser?.close();
 	};
-}, 40_000);
+}, 20_000);
 
 export async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;
