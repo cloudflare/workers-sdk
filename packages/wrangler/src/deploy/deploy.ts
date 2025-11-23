@@ -24,6 +24,7 @@ import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import { UserError } from "../errors";
 import { getFlag } from "../experimental-flags";
+import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -51,6 +52,7 @@ import {
 } from "../versions/api";
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
+import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import type { AssetsOptions } from "../assets";
 import type { Config } from "../config";
 import type {
@@ -383,6 +385,20 @@ export default async function deploy(props: Props): Promise<{
 				throw e;
 			} else {
 				workerExists = false;
+			}
+		}
+	}
+
+	if (isInteractive()) {
+		const remoteSecretsCheck = await checkRemoteSecretsOverride(
+			config,
+			props.env
+		);
+
+		if (remoteSecretsCheck?.override) {
+			logger.warn(remoteSecretsCheck.deployErrorMessage);
+			if (!(await confirm("Would you like to continue?"))) {
+				return { versionId, workerTag };
 			}
 		}
 	}

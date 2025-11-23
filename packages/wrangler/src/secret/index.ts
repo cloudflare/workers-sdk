@@ -16,6 +16,7 @@ import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { APIError, parseJSON, readFileSync } from "../parse";
 import { requireAuth } from "../user";
+import { fetchSecrets } from "../utils/fetch-secrets";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
@@ -366,14 +367,10 @@ export const secretListCommand = createCommand({
 			);
 		}
 
-		const accountId = await requireAuth(config);
-
-		const url =
-			!args.env || isLegacyEnv(config)
-				? `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`
-				: `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`;
-
-		const secrets = await fetchResult<{ name: string; type: string }[]>(url);
+		const secrets = await fetchSecrets(
+			{ ...config, name: scriptName },
+			args.env
+		);
 
 		if (args.format === "pretty") {
 			for (const workerSecret of secrets) {
