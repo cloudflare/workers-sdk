@@ -701,6 +701,32 @@ function getExperimentalFrameworkTestConfig(
 				},
 			],
 		},
+		{
+			name: "astro:workers",
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello, Astronaut!",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: true,
+			flags: [
+				"--skip-houston",
+				"--no-install",
+				"--no-git",
+				"--template",
+				"blog",
+				"--typescript",
+				"strict",
+			],
+			verifyTypes: false,
+		},
 	];
 }
 
