@@ -48,12 +48,12 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					ctx.resolvedPluginConfig.type === "workers"
 						? {
 								...Object.fromEntries(
-									Object.entries(ctx.resolvedPluginConfig.workers).map(
-										([environmentName, workerConfig]) => {
+									[...ctx.resolvedPluginConfig.environmentNameToWorkerMap].map(
+										([environmentName, worker]) => {
 											return [
 												environmentName,
 												createCloudflareEnvironmentOptions({
-													workerConfig,
+													workerConfig: worker.config,
 													userConfig,
 													mode: env.mode,
 													environmentName,

@@ -3,7 +3,9 @@ import { validateWorkerEnvironmentOptions } from "../vite-config";
 
 describe("validateWorkerEnvironmentOptions", () => {
 	test("doesn't throw if there are no config violations", () => {
-		const resolvedPluginConfig = { workers: { worker: {} } } as any;
+		const resolvedPluginConfig = {
+			environmentNameToWorkerMap: new Map([["worker", { config: {} }]]),
+		} as any;
 		const resolvedViteConfig = {
 			environments: { worker: { resolve: { external: [] } } },
 		} as any;
@@ -14,7 +16,9 @@ describe("validateWorkerEnvironmentOptions", () => {
 	});
 
 	test("throws with an appropriate error message if a Worker environment contains disallowed options", () => {
-		const resolvedPluginConfig = { workers: { worker: {} } } as any;
+		const resolvedPluginConfig = {
+			environmentNameToWorkerMap: new Map([["worker", { config: {} }]]),
+		} as any;
 		const resolvedViteConfig = {
 			environments: { worker: { resolve: { external: true } } },
 		} as any;
@@ -33,11 +37,11 @@ describe("validateWorkerEnvironmentOptions", () => {
 
 	test("throws with an appropriate error message if multiple worker environments contain config violations", () => {
 		const resolvedPluginConfig = {
-			workers: {
-				workerA: {},
-				workerB: {},
-				workerC: {},
-			},
+			environmentNameToWorkerMap: new Map([
+				["workerA", { config: {} }],
+				["workerB", { config: {} }],
+				["workerC", { config: {} }],
+			]),
 		} as any;
 		const resolvedViteConfig = {
 			environments: {

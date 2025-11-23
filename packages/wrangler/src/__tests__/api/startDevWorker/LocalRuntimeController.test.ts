@@ -8,19 +8,16 @@ import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { assert, describe, expect, it } from "vitest";
 import WebSocket from "ws";
+import { createPostgresEchoHandler } from "../../../../e2e/helpers/postgres-echo-handler";
 import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";
 import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { RuleTypeToModuleType } from "../../../deployment-bundle/module-collection";
+import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { useTeardown } from "../../helpers/teardown";
 import { unusable } from "../../helpers/unusable";
-import type {
-	Bundle,
-	File,
-	ReloadCompleteEvent,
-	StartDevWorkerOptions,
-} from "../../../api";
+import type { Bundle, File, StartDevWorkerOptions } from "../../../api";
 import type { Rule } from "@cloudflare/workers-utils";
 
 export type Module<ModuleType extends Rule["type"] = Rule["type"]> = File<
@@ -51,13 +48,6 @@ const WASM_ADD_MODULE = Buffer.from(
 	"AGFzbQEAAAABBwFgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABagsACgRuYW1lAgMBAAA=",
 	"base64"
 );
-
-async function waitForReloadComplete(
-	controller: LocalRuntimeController
-): Promise<ReloadCompleteEvent> {
-	const [event] = await events.once(controller, "reloadComplete");
-	return event;
-}
 
 type TestBundle =
 	| string
@@ -145,7 +135,8 @@ describe("LocalRuntimeController", () => {
 
 	describe("Core", () => {
 		it("should start Miniflare with module worker", async () => {
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			const config = {
@@ -255,7 +246,7 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			const event = await waitForReloadComplete(controller);
+			const event = await bus.waitFor("reloadComplete");
 			const url = urlFromParts(event.proxyData.userWorkerUrl);
 
 			// Check all module types
@@ -299,7 +290,8 @@ describe("LocalRuntimeController", () => {
 			}
 		});
 		it("should start Miniflare with service worker", async () => {
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			const config = {
@@ -370,7 +362,7 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			const event = await waitForReloadComplete(controller);
+			const event = await bus.waitFor("reloadComplete");
 			const url = urlFromParts(event.proxyData.userWorkerUrl);
 
 			// Check additional modules added to global scope
@@ -394,7 +386,8 @@ describe("LocalRuntimeController", () => {
 			}
 		});
 		it("should update the running Miniflare instance", async () => {
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			function update(version: number) {
@@ -425,18 +418,18 @@ describe("LocalRuntimeController", () => {
 
 			// Start worker
 			update(1);
-			let event = await waitForReloadComplete(controller);
+			let event = await bus.waitFor("reloadComplete");
 			let res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.json()).toEqual({ binding: 1, bundle: 1 });
 
 			// Update worker and check config/bundle updated
 			update(2);
-			event = await waitForReloadComplete(controller);
+			event = await bus.waitFor("reloadComplete");
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.json()).toEqual({ binding: 2, bundle: 2 });
 
 			// Update worker multiple times and check only latest config/bundle used
-			const eventPromise = waitForReloadComplete(controller);
+			const eventPromise = bus.waitFor("reloadComplete");
 			update(3);
 			update(4);
 			update(5);
@@ -445,7 +438,8 @@ describe("LocalRuntimeController", () => {
 			expect(await res.json()).toEqual({ binding: 5, bundle: 5 });
 		});
 		it("should start Miniflare with configured compatibility settings", async () => {
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			// `global_navigator` was enabled by default on `2022-03-21`:
@@ -473,7 +467,7 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			let event = await waitForReloadComplete(controller);
+			let event = await bus.waitFor("reloadComplete");
 			let res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("undefined");
 
@@ -488,7 +482,7 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			event = await waitForReloadComplete(controller);
+			event = await bus.waitFor("reloadComplete");
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("object");
 
@@ -504,12 +498,13 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			event = await waitForReloadComplete(controller);
+			event = await bus.waitFor("reloadComplete");
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("object");
 		});
 		it("should start inspector on random port and allow debugging", async () => {
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -533,7 +528,7 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			const event = await waitForReloadComplete(controller);
+			const event = await bus.waitFor("reloadComplete");
 			const url = urlFromParts(event.proxyData.userWorkerUrl);
 			assert(event.proxyData.userWorkerInspectorUrl);
 			const inspectorUrl = urlFromParts(event.proxyData.userWorkerInspectorUrl);
@@ -578,7 +573,8 @@ describe("LocalRuntimeController", () => {
 
 	describe("Bindings", () => {
 		it("should expose basic bindings", async () => {
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -616,7 +612,7 @@ describe("LocalRuntimeController", () => {
 				bundle,
 			});
 
-			const event = await waitForReloadComplete(controller);
+			const event = await bus.waitFor("reloadComplete");
 			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.json()).toEqual({
 				TEXT: "text",
@@ -625,7 +621,8 @@ describe("LocalRuntimeController", () => {
 			});
 		});
 		it("should expose WebAssembly module bindings in service workers", async () => {
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -655,12 +652,13 @@ describe("LocalRuntimeController", () => {
 				bundle,
 			});
 
-			const event = await waitForReloadComplete(controller);
+			const event = await bus.waitFor("reloadComplete");
 			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("3");
 		});
 		it("should persist cached data", async () => {
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -693,7 +691,7 @@ describe("LocalRuntimeController", () => {
 				bundle,
 			});
 
-			let event = await waitForReloadComplete(controller);
+			let event = await bus.waitFor("reloadComplete");
 			let res = await fetch(urlFromParts(event.proxyData.userWorkerUrl), {
 				method: "POST",
 			});
@@ -709,7 +707,7 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			event = await waitForReloadComplete(controller);
+			event = await bus.waitFor("reloadComplete");
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("cached");
 
@@ -725,12 +723,13 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			event = await waitForReloadComplete(controller);
+			event = await bus.waitFor("reloadComplete");
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("miss");
 		});
 		it("should expose KV namespace bindings", async () => {
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -755,7 +754,7 @@ describe("LocalRuntimeController", () => {
 				bundle,
 			});
 
-			let event = await waitForReloadComplete(controller);
+			let event = await bus.waitFor("reloadComplete");
 			let res = await fetch(urlFromParts(event.proxyData.userWorkerUrl), {
 				method: "POST",
 			});
@@ -771,7 +770,7 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			event = await waitForReloadComplete(controller);
+			event = await bus.waitFor("reloadComplete");
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("value");
 
@@ -787,12 +786,13 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			event = await waitForReloadComplete(controller);
+			event = await bus.waitFor("reloadComplete");
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("");
 		});
 		it("should support Workers Sites bindings", async () => {
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			fs.writeFileSync("company.txt", "👨‍👩‍👧‍👦");
@@ -828,7 +828,7 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			let event = await waitForReloadComplete(controller);
+			let event = await bus.waitFor("reloadComplete");
 			let url = urlFromParts(event.proxyData.userWorkerUrl);
 			let res = await fetch(new URL("/company.txt", url));
 			expect(res.status).toBe(200);
@@ -853,7 +853,7 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			event = await waitForReloadComplete(controller);
+			event = await bus.waitFor("reloadComplete");
 			url = urlFromParts(event.proxyData.userWorkerUrl);
 			res = await fetch(new URL("/company.txt", url));
 			expect(res.status).toBe(200);
@@ -863,7 +863,8 @@ describe("LocalRuntimeController", () => {
 			expect(res.status).toBe(404);
 		});
 		it("should expose R2 bucket bindings", async () => {
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -889,7 +890,7 @@ describe("LocalRuntimeController", () => {
 				bundle,
 			});
 
-			let event = await waitForReloadComplete(controller);
+			let event = await bus.waitFor("reloadComplete");
 			let res = await fetch(urlFromParts(event.proxyData.userWorkerUrl), {
 				method: "POST",
 			});
@@ -905,7 +906,7 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			event = await waitForReloadComplete(controller);
+			event = await bus.waitFor("reloadComplete");
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("value");
 
@@ -921,12 +922,13 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			event = await waitForReloadComplete(controller);
+			event = await bus.waitFor("reloadComplete");
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("");
 		});
 		it("should expose D1 database bindings", async () => {
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			const config: Partial<StartDevWorkerOptions> = {
@@ -957,7 +959,7 @@ describe("LocalRuntimeController", () => {
 				bundle,
 			});
 
-			let event = await waitForReloadComplete(controller);
+			let event = await bus.waitFor("reloadComplete");
 			let res = await fetch(urlFromParts(event.proxyData.userWorkerUrl), {
 				method: "POST",
 			});
@@ -973,7 +975,7 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			event = await waitForReloadComplete(controller);
+			event = await bus.waitFor("reloadComplete");
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.json()).toEqual([{ key: "key", value: "value" }]);
 
@@ -989,12 +991,13 @@ describe("LocalRuntimeController", () => {
 				config: configDefaults(config),
 				bundle,
 			});
-			event = await waitForReloadComplete(controller);
+			event = await bus.waitFor("reloadComplete");
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.json()).toEqual([]);
 		});
 		it("should expose queue producer bindings and consume queue messages", async () => {
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			const reportPromise = new DeferredPromise<unknown>();
@@ -1038,16 +1041,18 @@ describe("LocalRuntimeController", () => {
 				bundle,
 			});
 
-			const event = await waitForReloadComplete(controller);
+			const event = await bus.waitFor("reloadComplete");
 			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl), {
 				method: "POST",
 			});
 			expect(res.status).toBe(204);
 			expect(await reportPromise).toEqual(["message"]);
 		});
-		it("should expose hyperdrive bindings", async () => {
-			// Start echo TCP server
-			const server = net.createServer((socket) => socket.pipe(socket));
+		it("should expose hyperdrive bindings - default", async () => {
+			// Start TCP echo server
+			const server = net.createServer((socket) => {
+				socket.on("data", createPostgresEchoHandler(socket));
+			});
 			const listeningPromise = events.once(server, "listening");
 			server.listen(0, "127.0.0.1");
 			teardown(() => util.promisify(server.close.bind(server))());
@@ -1057,7 +1062,8 @@ describe("LocalRuntimeController", () => {
 			const port = address.port;
 
 			// Start runtime with hyperdrive binding
-			const controller = new LocalRuntimeController();
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
 			teardown(() => controller.teardown());
 
 			const localConnectionString = `postgres://username:password@127.0.0.1:${port}/db`;
@@ -1069,14 +1075,19 @@ describe("LocalRuntimeController", () => {
 				},
 			};
 			const bundle = makeEsbuildBundle(`export default {
-			async fetch(request, env, ctx) {
-				const socket = env.DB.connect();
-				const writer = socket.writable.getWriter();
-				await writer.write(new TextEncoder().encode("👋"));
-				await writer.close();
-				return new Response(socket.readable);
-			}
-		}`);
+				async fetch(request, env, ctx) {
+					const socket = env.DB.connect();
+					const writer = socket.writable.getWriter();
+					await writer.write(new TextEncoder().encode("👋"));
+
+					// wait for response from proxy instead of reading immmediately from read stream
+					const reader = socket.readable.getReader();
+					const { value } = await reader.read();
+
+					writer.close();
+					return new Response(value);
+				}
+			}`);
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -1087,10 +1098,127 @@ describe("LocalRuntimeController", () => {
 				bundle,
 			});
 
-			const event = await waitForReloadComplete(controller);
+			const event = await bus.waitFor("reloadComplete");
 			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(res.status).toBe(200);
 			expect(await res.text()).toBe("👋");
+		});
+		it("should expose hyperdrive bindings - sslmode 'prefer'", async () => {
+			// Start TCP echo server
+			const server = net.createServer((socket) => {
+				socket.on("data", createPostgresEchoHandler(socket));
+			});
+			const listeningPromise = events.once(server, "listening");
+			server.listen(0, "127.0.0.1");
+			teardown(() => util.promisify(server.close.bind(server))());
+			await listeningPromise;
+			const address = server.address();
+			assert(typeof address === "object" && address !== null);
+			const port = address.port;
+
+			// Start runtime with hyperdrive binding
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const localConnectionString = `postgres://username:password@127.0.0.1:${port}/db?sslmode=prefer`;
+			const config: Partial<StartDevWorkerOptions> = {
+				name: "worker",
+				entrypoint: "NOT_REAL",
+				bindings: {
+					DB: { type: "hyperdrive", id: "db", localConnectionString },
+				},
+			};
+			const bundle = makeEsbuildBundle(`export default {
+				async fetch(request, env, ctx) {
+					const socket = env.DB.connect();
+					const writer = socket.writable.getWriter();
+					await writer.write(new TextEncoder().encode("👋"));
+
+					// wait for response from proxy instead of reading immmediately from read stream
+					const reader = socket.readable.getReader();
+					const { value } = await reader.read();
+
+					await writer.close();
+					return new Response(value);
+				}
+			}`);
+			controller.onBundleStart({
+				type: "bundleStart",
+				config: configDefaults(config),
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config: configDefaults(config),
+				bundle,
+			});
+
+			const event = await bus.waitFor("reloadComplete");
+			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
+			expect(res.status).toBe(200);
+			expect(await res.text()).toBe("👋");
+		});
+		it("should expose hyperdrive bindings - sslmode 'require' fails", async () => {
+			// Start TCP echo server
+			const server = net.createServer((socket) => {
+				socket.on("data", createPostgresEchoHandler(socket));
+			});
+			const listeningPromise = events.once(server, "listening");
+			server.listen(0, "127.0.0.1");
+			teardown(() => util.promisify(server.close.bind(server))());
+			await listeningPromise;
+			const address = server.address();
+			assert(typeof address === "object" && address !== null);
+			const port = address.port;
+
+			// Start runtime with hyperdrive binding
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const localConnectionString = `postgres://username:password@127.0.0.1:${port}/db?sslmode=require`;
+			const config: Partial<StartDevWorkerOptions> = {
+				name: "worker",
+				entrypoint: "NOT_REAL",
+				bindings: {
+					DB: { type: "hyperdrive", id: "db", localConnectionString },
+				},
+			};
+			const bundle = makeEsbuildBundle(`export default {
+				async fetch(request, env, ctx) {
+					const socket = env.DB.connect();
+					const writer = socket.writable.getWriter();
+					await writer.write(new TextEncoder().encode("👋"));
+
+					const reader = socket.readable.getReader();
+					const { value } = await reader.read();
+
+					if (value) {
+						const text = new TextDecoder().decode(value);
+						throw new Error(text);
+					}
+
+					await writer.close();
+					return new Response(value);
+				}
+			}`);
+			controller.onBundleStart({
+				type: "bundleStart",
+				config: configDefaults(config),
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config: configDefaults(config),
+				bundle,
+			});
+
+			const event = await bus.waitFor("reloadComplete");
+			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
+			expect(res.status).toBe(500);
+			const errorText = await res.text();
+			expect(errorText).toContain(
+				"Error: Server does not support SSL, but client requires SSL"
+			);
 		});
 	});
 });

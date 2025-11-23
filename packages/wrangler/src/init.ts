@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path, { dirname } from "node:path";
-import { UserError } from "@cloudflare/workers-utils";
+import { FatalError, UserError } from "@cloudflare/workers-utils";
 import { execa } from "execa";
 import { fetchResult } from "./cfetch";
 import { fetchWorkerDefinitionFromDash } from "./cfetch/internal";
@@ -163,6 +163,12 @@ export async function downloadWorker(accountId: string, workerName: string) {
 		entrypoint,
 		accountId
 	);
+
+	if (config.assets) {
+		throw new FatalError(
+			"`wrangler init --from-dash` is not yet supported for Workers with Assets"
+		);
+	}
 
 	return {
 		modules,

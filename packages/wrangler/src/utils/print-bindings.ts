@@ -13,6 +13,7 @@ import type { WorkerRegistry } from "miniflare";
 export function printBindings(
 	bindings: Partial<CfWorkerInit["bindings"]>,
 	tailConsumers: CfTailConsumer[] = [],
+	streamingTailConsumers: CfTailConsumer[] = [],
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
@@ -705,21 +706,33 @@ export function printBindings(
 	} else {
 		title = "Your Worker is sending Tail events to the following Workers:";
 	}
-	if (tailConsumers !== undefined && tailConsumers.length > 0) {
+
+	const allTailConsumers = [
+		...(tailConsumers ?? []).map((c) => ({
+			service: c.service,
+			streaming: false,
+		})),
+		...(streamingTailConsumers ?? []).map((c) => ({
+			service: c.service,
+			streaming: true,
+		})),
+	];
+	if (allTailConsumers.length > 0) {
 		logger.log(
-			`${title}\n${tailConsumers
-				.map(({ service }) => {
+			`${title}\n${allTailConsumers
+				.map(({ service, streaming }) => {
+					const displayName = `${service}${streaming ? ` (streaming)` : ""}`;
 					if (context.local && context.registry !== null) {
 						const registryDefinition = context.registry?.[service];
 						hasConnectionStatus = true;
 
 						if (registryDefinition) {
-							return `- ${service} ${chalk.green("[connected]")}`;
+							return `- ${displayName} ${chalk.green("[connected]")}`;
 						} else {
-							return `- ${service} ${chalk.red("[not connected]")}`;
+							return `- ${displayName} ${chalk.red("[not connected]")}`;
 						}
 					} else {
-						return `- ${service}`;
+						return `- ${displayName}`;
 					}
 				})
 				.join("\n")}`

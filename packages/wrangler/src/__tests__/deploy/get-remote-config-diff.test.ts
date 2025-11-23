@@ -480,6 +480,47 @@ describe("getRemoteConfigsDiff", () => {
 		expect(diff).toBeNull();
 	});
 
+	it("should ignore all fields from an assets binding besides the binding name (since remotely only that information is stored)", () => {
+		const { diff, nonDestructive } = getRemoteConfigDiff(
+			{
+				name: "my-worker-id",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: false,
+				compatibility_date: "2025-07-08",
+				account_id: "account-id-123",
+				assets: {
+					binding: "ASSETS",
+				},
+			},
+			{
+				name: "my-worker-id",
+				main: "/tmp/src/index.js",
+				workers_dev: true,
+				preview_urls: false,
+				compatibility_date: "2025-07-08",
+				account_id: "account-id-123",
+				assets: {
+					binding: "MY_ASSETS",
+					// Note: The directory and html_handling fields are ignored
+					directory: "public",
+					html_handling: "drop-trailing-slash",
+				},
+			} as unknown as Config
+		);
+		assert(diff);
+		expect(normalizeDiff(diff.toString())).toMatchInlineSnapshot(`
+			" {
+			   assets: {
+			-    binding: \\"ASSETS\\"
+			+    binding: \\"MY_ASSETS\\"
+			   }
+			 }
+			"
+		`);
+		expect(nonDestructive).toBe(false);
+	});
+
 	// The Observability field in the remote configuration has some specific behaviors, for that we have
 	// the following tests to make double sure to get these various observability cases right
 	// (note: this is however a best effort diffing since we cannot really perform a full one since we loose

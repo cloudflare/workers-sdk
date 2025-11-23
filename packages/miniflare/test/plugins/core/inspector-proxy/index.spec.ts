@@ -9,6 +9,7 @@ import {
 	MiniflareOptions,
 } from "miniflare";
 import WebSocket from "ws";
+import { waitUntil } from "../../../test-shared";
 
 const nullScript =
 	'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));';
@@ -208,9 +209,15 @@ test("InspectorProxy: should allow inspector port updating via miniflare#setOpti
 	res = await fetch(`http://localhost:${newInspectorPort}/json/version`);
 	t.is(res.status, 200);
 
-	await t.throwsAsync(
-		fetch(`http://localhost:${initialInspectorPort}/json/version`)
-	);
+	await waitUntil(t, async (t) => {
+		try {
+			await fetch(`http://localhost:${initialInspectorPort}/json/version`);
+		} catch {
+			t.pass("Old inspector port no longer responding");
+			return;
+		}
+		t.fail("Old inspector port still responding");
+	});
 });
 
 test("InspectorProxy: should keep the same inspector port on miniflare#setOptions calls with inspectorPort set to 0", async (t) => {

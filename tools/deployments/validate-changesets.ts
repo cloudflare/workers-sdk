@@ -29,7 +29,12 @@ export function validateChangesets(
 						`Invalid package name "${release.name}" in changeset at "${file}".`
 					);
 				}
-				if (!["major", "minor", "patch", "none"].includes(release.type)) {
+				if (release.type === "major") {
+					errors.push(
+						`Major version bumps are not allowed for package "${release.name}" in changeset at "${file}".`
+					);
+				}
+				if (!["minor", "patch", "none"].includes(release.type)) {
 					errors.push(
 						`Invalid type "${release.type}" for package "${release.name}" in changeset at "${file}".`
 					);

@@ -757,7 +757,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		if (props.dryRun) {
 			workerBundle = createWorkerUploadForm(worker);
-			printBindings({ ...bindings, vars: maskedVars }, config.tail_consumers);
+			printBindings(
+				{ ...bindings, vars: maskedVars },
+				config.tail_consumers,
+				config.streaming_tail_consumers
+			);
 		} else {
 			assert(accountId, "Missing accountId");
 			if (getFlag("RESOURCES_PROVISION")) {
@@ -792,14 +796,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;
-				printBindings({ ...bindings, vars: maskedVars }, config.tail_consumers);
+				printBindings(
+					{ ...bindings, vars: maskedVars },
+					config.tail_consumers,
+					config.streaming_tail_consumers
+				);
 				versionId = result.id;
 				hasPreview = result.metadata.has_preview;
 			} catch (err) {
 				if (!bindingsPrinted) {
 					printBindings(
 						{ ...bindings, vars: maskedVars },
-						config.tail_consumers
+						config.tail_consumers,
+						config.streaming_tail_consumers
 					);
 				}
 

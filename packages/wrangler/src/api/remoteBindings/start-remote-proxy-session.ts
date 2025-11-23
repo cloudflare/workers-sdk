@@ -1,6 +1,7 @@
 import path from "path";
 import getPort from "get-port";
 import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
+import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker";
@@ -43,7 +44,11 @@ export async function startRemoteProxySession(
 				port: await getPort(),
 			},
 			inspector: false,
-			logLevel: "error",
+			logLevel:
+				// If the logger has a logLevel of "debug" it means that the user is likely trying to debug some issue,
+				// so we should respect that here as well for the remote proxy session. In any other case, to avoid noisy
+				// logs, we just simply fall back to "error"
+				logger.loggerLevel === "debug" ? "debug" : "error",
 		},
 		bindings: rawBindings,
 	}).catch((startWorkerError) => {

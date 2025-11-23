@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { execSync } from "node:child_process";
 import events from "node:events";
 import getPort from "get-port";
 import dedent from "ts-dedent";
@@ -494,7 +495,6 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 			});
 		}
 
-		const kvAssetHandler = require.resolve("@cloudflare/kv-asset-handler");
 		await helper.seed({
 			"public/index.html": "<h1>👋</h1>",
 			"wrangler.toml": dedent`
@@ -504,8 +504,16 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				[site]
 				bucket = "./public"
 			`,
+			"package.json": dedent`
+				{
+					"name": "workers-site",
+					"dependencies": {
+						"@cloudflare/kv-asset-handler": "*"
+					}
+				}
+			`,
 			"src/index.ts": dedent`
-				import { getAssetFromKV, KVError } from ${JSON.stringify(kvAssetHandler)};
+				import { getAssetFromKV, KVError } from "@cloudflare/kv-asset-handler";
 				import manifestJSON from "__STATIC_CONTENT_MANIFEST";
 				const manifest = JSON.parse(manifestJSON);
 				export default {
@@ -527,6 +535,8 @@ describe.sequential.each(RUNTIMES)("Bindings: $flags", ({ runtime, flags }) => {
 				}
 			`,
 		});
+
+		execSync("npm install", { cwd: helper.tmpPath, stdio: "inherit" });
 
 		const worker = helper.runLongLived(
 			`wrangler dev ${flags} --port ${port} --inspector-port ${inspectorPort}`

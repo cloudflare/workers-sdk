@@ -78,7 +78,7 @@ export function writeDeployConfig(
 		let entryWorkerConfigPath: string | undefined;
 		const auxiliaryWorkers: DeployConfig["auxiliaryWorkers"] = [];
 
-		for (const environmentName of Object.keys(resolvedPluginConfig.workers)) {
+		for (const environmentName of resolvedPluginConfig.environmentNameToWorkerMap.keys()) {
 			const outputDirectory =
 				resolvedViteConfig.environments[environmentName]?.build.outDir;
 

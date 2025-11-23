@@ -22,11 +22,11 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 		});
 		expect(std.out).toMatchInlineSnapshot(
 			`
-				"
-				Auto-detected Project Settings:
-				 - Worker Name: my-project
-				"
-			`
+			"
+			Detected Project Settings:
+			 - Worker Name: my-project
+			"
+		`
 		);
 	});
 
@@ -40,14 +40,14 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			outputDir: "dist",
 		});
 		expect(std.out).toMatchInlineSnapshot(`
-				"
-				Auto-detected Project Settings:
-				 - Worker Name: my-astro-app
-				 - Framework: Astro
-				 - Build Command: astro build
-				 - Output Directory: dist
-				"
-			`);
+			"
+			Detected Project Settings:
+			 - Worker Name: my-astro-app
+			 - Framework: Astro
+			 - Build Command: astro build
+			 - Output Directory: dist
+			"
+		`);
 	});
 
 	it("should omit the framework entry when they it is not part of the details object", () => {
@@ -59,13 +59,13 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			outputDir: "dist",
 		});
 		expect(std.out).toMatchInlineSnapshot(`
-				"
-				Auto-detected Project Settings:
-				 - Worker Name: my-app
-				 - Build Command: npm run build
-				 - Output Directory: dist
-				"
-			`);
+			"
+			Detected Project Settings:
+			 - Worker Name: my-app
+			 - Build Command: npm run build
+			 - Output Directory: dist
+			"
+		`);
 	});
 
 	it("should omit the framework and build command entries when they are not part of the details object", () => {
@@ -76,11 +76,11 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			outputDir: "dist",
 		});
 		expect(std.out).toMatchInlineSnapshot(`
-				"
-				Auto-detected Project Settings:
-				 - Worker Name: my-site
-				 - Output Directory: dist
-				"
-			`);
+			"
+			Detected Project Settings:
+			 - Worker Name: my-site
+			 - Output Directory: dist
+			"
+		`);
 	});
 });

@@ -47,7 +47,7 @@ export function getVarsForDev(
 	const configDir = path.resolve(configPath ? path.dirname(configPath) : ".");
 
 	// If envFiles are not explicitly provided, try to load from .dev.vars first
-	if (envFiles === undefined) {
+	if (!envFiles?.length) {
 		const devVarsPath = path.resolve(configDir, ".dev.vars");
 		const loaded = loadDotDevDotVars(devVarsPath, env);
 		if (loaded !== undefined) {

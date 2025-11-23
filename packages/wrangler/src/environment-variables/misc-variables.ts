@@ -313,3 +313,11 @@ export const getDisableConfigWatching = getBooleanEnvironmentVariableFactory({
 	variableName: "WRANGLER_CI_DISABLE_CONFIG_WATCHING",
 	defaultValue: false,
 });
+
+/**
+ * Hide the Wrangler version banner and command status (deprecated/experimental) warnings
+ */
+export const getWranglerHideBanner = getBooleanEnvironmentVariableFactory({
+	variableName: "WRANGLER_HIDE_BANNER",
+	defaultValue: false,
+});

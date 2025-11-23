@@ -11,6 +11,7 @@ export default defineConfig([
 		"emitted-types",
 		"kv-asset-handler.js",
 		"**/templates/**/*.*",
+		".tmp/**",
 	]),
 	sharedConfig,
 	{
