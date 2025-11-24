@@ -46,16 +46,15 @@ describe("'wrangler dev', when reading redirected config,", () => {
 	}) => {
 		build("production");
 
-		let error = "";
-		try {
-			const { getOutput } = await runWranglerDev(basePath, [
-				"--port=0",
-				"--inspector-port=0",
-				"--env=staging",
-			]);
-		} catch (e) {
-			error = e as string;
-		}
+		const error = await runWranglerDev(basePath, [
+			"--port=0",
+			"--inspector-port=0",
+			"--env=staging",
+		]).then(
+			// it is doesn't error then stop the process
+			({ stop }) => stop(),
+			(e) => e
+		);
 
 		expect(error).toMatch(
 			'You have specified the environment "staging" via the `--env/-e` CLI argument.'
