@@ -1,6 +1,7 @@
 import { error, logRaw, setLogLevel } from "@cloudflare/cli";
 import { Logger } from "../logger";
-import { mockCLIOutput, mockConsoleMethods } from "./helpers/mock-console";
+import { mockCLIOutput } from "./helpers/mock-cli-output";
+import { mockConsoleMethods } from "./helpers/mock-console";
 
 describe("logger", () => {
 	const std = mockConsoleMethods();

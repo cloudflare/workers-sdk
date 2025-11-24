@@ -4,9 +4,9 @@ import {
 	experimental_readRawConfig,
 	normalizeAndValidateConfig,
 } from "@cloudflare/workers-utils";
+import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { readConfig } from "../../config";
 import { run } from "../../experimental-flags";
-import { normalizeString } from "../helpers/normalize";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type {

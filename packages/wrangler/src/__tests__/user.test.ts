@@ -1,3 +1,4 @@
+import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { vi } from "vitest";
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
@@ -21,7 +22,6 @@ import {
 	mswSuccessOauthHandlers,
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
-import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
