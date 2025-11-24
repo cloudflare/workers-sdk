@@ -12,6 +12,7 @@ export const d1DeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a D1 database",
 		status: "stable",
+		epilogue: "This command acts on remote D1 Databases.",
 		owner: "Product: D1",
 	},
 	behaviour: {

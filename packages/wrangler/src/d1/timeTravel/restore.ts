@@ -1,4 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
+import dedent from "ts-dedent";
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
@@ -13,8 +14,9 @@ import type { RestoreBookmarkResponse } from "./types";
 export const d1TimeTravelRestoreCommand = createCommand({
 	metadata: {
 		description: "Restore a database back to a specific point-in-time",
-		epilogue:
-			"For more information about Time Travel, see https://developers.cloudflare.com/d1/reference/time-travel/",
+		epilogue: dedent`
+			This command acts on remote D1 Databases.
+			For more information about Time Travel, see https://developers.cloudflare.com/d1/reference/time-travel/`,
 		status: "stable",
 		owner: "Product: D1",
 	},

@@ -21,6 +21,7 @@ import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
+import { dedent } from "../utils/dedent";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
 import type { ComplianceConfig } from "../environment-variables/misc-variables";
@@ -47,8 +48,9 @@ export const d1ExecuteCommand = createCommand({
 		description: "Execute a command or SQL file",
 		status: "stable",
 		owner: "Product: D1",
-		epilogue:
-			"You must provide either --command or --file for this command to run successfully.",
+		epilogue: dedent`
+			You must provide either --command or --file for this command to run successfully.
+			This command acts on local D1 Databases by default.`,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

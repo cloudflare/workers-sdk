@@ -50,6 +50,7 @@ export const d1CreateCommand = createCommand({
 	metadata: {
 		description:
 			"Creates a new D1 database, and provides the binding and UUID that you will put in your Wrangler file.",
+		epilogue: "This command acts on remote D1 Databases.",
 		status: "stable",
 		owner: "Product: D1",
 	},

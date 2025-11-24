@@ -8,6 +8,7 @@ import type { Database } from "./types";
 export const d1ListCommand = createCommand({
 	metadata: {
 		description: "List all D1 databases in your account",
+		epilogue: "This command acts on remote D1 Databases.",
 		status: "stable",
 		owner: "Product: D1",
 	},
