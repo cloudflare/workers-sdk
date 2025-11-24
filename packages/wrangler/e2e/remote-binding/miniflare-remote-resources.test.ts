@@ -532,7 +532,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 		"Skipping remote bindings E2E tests because CLOUDFLARE_ACCOUNT_ID is not set"
 	);
 } else {
-	describe("Remote bindings (proxy enabled)", () => {
+	describe("Remote bindings (remote proxy session enabled)", () => {
 		let helper: WranglerE2ETestHelper;
 		let mf: MiniflareType;
 		const onTeardown = useTeardown({ timeout: testCases.length * 15_000 });
@@ -546,11 +546,17 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 				testConfigs.push(await testCase.setup(helper));
 			}
 			const remoteProxySession = await startRemoteProxySession(
-				mergeObjects(
-					testConfigs.map((config) => config.remoteProxySessionConfig.bindings)
+				Object.assign(
+					{},
+					...testConfigs.map(
+						(config) => config.remoteProxySessionConfig.bindings
+					)
 				),
-				mergeObjects(
-					testConfigs.map((config) => config.remoteProxySessionConfig.options)
+				Object.assign(
+					{},
+					...testConfigs.map(
+						(config) => config.remoteProxySessionConfig.options
+					)
 				)
 			);
 
@@ -691,7 +697,7 @@ if (!CLOUDFLARE_ACCOUNT_ID) {
 	});
 }
 
-describe("Remote bindings (proxy disabled)", () => {
+describe("Remote bindings (remote proxy session disabled)", () => {
 	let helper: WranglerE2ETestHelper;
 	let mf: MiniflareType;
 	const onTeardown = useTeardown({ timeout: testCases.length * 15_000 });
@@ -741,10 +747,6 @@ describe("Remote bindings (proxy disabled)", () => {
 		});
 	}
 });
-
-function mergeObjects<T>(target: T[]): T {
-	return Object.assign({}, ...target);
-}
 
 function useTeardown(options: { timeout?: number } = {}) {
 	const tearDownCallbacks: Array<() => Awaitable<void>> = [];
