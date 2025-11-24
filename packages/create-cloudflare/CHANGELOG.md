@@ -1,5 +1,17 @@
 # create-cloudflare
 
+## 2.55.1
+
+### Patch Changes
+
+- [#11298](https://github.com/cloudflare/workers-sdk/pull/11298) [`2b6f423`](https://github.com/cloudflare/workers-sdk/commit/2b6f4230a12d318ae64fce777345a136e0673f38) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From    | To     |
+  | ---------------------- | ------- | ------ |
+  | @tanstack/create-start | 0.34.15 | 0.36.2 |
+
 ## 2.55.0
 
 ### Minor Changes

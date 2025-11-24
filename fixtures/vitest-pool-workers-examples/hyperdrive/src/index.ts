@@ -4,7 +4,14 @@ export default <ExportedHandler<Env>>{
 		if (request.body === null) return new Response();
 
 		const socket = env.ECHO_SERVER_HYPERDRIVE.connect();
-		await request.body.pipeTo(socket.writable);
-		return new Response(socket.readable);
+		const writer = socket.writable.getWriter();
+
+		// parse body
+		const value = await request.text();
+		await writer.write(new TextEncoder().encode(value));
+		const result = await socket.readable.getReader().read();
+
+		writer.close();
+		return new Response(result.value);
 	},
 };

@@ -6,10 +6,6 @@ on:
 permissions:
   contents: read
 
-env:
-  # TODO: switch back to 20.x onces node@20.x includes a fix for https://github.com/nodejs/node/issues/57869
-  NODE_VERSION: 22
-
 jobs:
   e2e:
     # Runs the non-frameworks C3 E2E tests on all supported operating systems and package managers.
@@ -53,11 +49,14 @@ jobs:
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
-          node-version: ${{ env.NODE_VERSION }}
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Install Python uv
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        uses: ./.github/actions/install-python-uv
 
       - name: Bump package versions
         if: steps.changes.outputs.everything_but_markdown == 'true'

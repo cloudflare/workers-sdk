@@ -25,6 +25,8 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
+        with:
+          pnpm-filters: "./tools"
 
       - name: Configure Git
         run: |

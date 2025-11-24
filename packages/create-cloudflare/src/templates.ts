@@ -39,6 +39,7 @@ import queuesTemplate from "templates/queues/c3";
 import qwikTemplate from "templates/qwik/c3";
 import reactRouterTemplate from "templates/react-router/c3";
 import reactTemplate from "templates/react/c3";
+import redwoodTemplate from "templates/redwood/c3";
 import scheduledTemplate from "templates/scheduled/c3";
 import solidTemplate from "templates/solid/c3";
 import svelteTemplate from "templates/svelte/c3";
@@ -252,6 +253,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			qwik: qwikTemplate,
 			react: reactTemplate,
 			"react-router": reactRouterTemplate,
+			redwood: redwoodTemplate,
 			solid: solidTemplate,
 			svelte: svelteTemplate,
 			"tanstack-start": tanStackStartTemplate,

@@ -1,5 +1,11 @@
 # @cloudflare/workers-utils
 
+## 0.2.0
+
+### Minor Changes
+
+- [#11233](https://github.com/cloudflare/workers-sdk/pull/11233) [`c922a81`](https://github.com/cloudflare/workers-sdk/commit/c922a810808f640b82fcad08a96363323029de83) Thanks [@emily-shen](https://github.com/emily-shen)! - Add `containers.unsafe` to allow internal users to use additional container features
+
 ## 0.1.2
 
 ### Patch Changes

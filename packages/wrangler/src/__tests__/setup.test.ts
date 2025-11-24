@@ -1,10 +1,10 @@
+import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, expect, test, vi } from "vitest";
 import * as c3 from "../autoconfig/c3-vendor/packages";
 import * as run from "../autoconfig/run";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { seed } from "./helpers/seed";
 
 vi.mock("../package-manager", () => ({
 	getPackageManager() {

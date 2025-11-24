@@ -40,19 +40,22 @@ jobs:
             everything_but_markdown:
               - '!**/*.md'
 
-      - uses: Ana06/get-changed-files@v1.2
-        id: files
-        with:
-          format: "json"
-
       - name: Install Dependencies
         if: steps.changes.outputs.everything_but_markdown == 'true'
         uses: ./.github/actions/install-dependencies
         with:
+          pnpm-filters: "./tools"
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: List changed files
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        id: files
+        uses: Ana06/get-changed-files@v2.3.0
+        with:
+          format: "json"
 
       - run: node -r esbuild-register tools/deployments/validate-pr-description.ts
         if: steps.changes.outputs.everything_but_markdown == 'true'
