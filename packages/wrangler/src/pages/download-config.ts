@@ -1,6 +1,10 @@
 import { existsSync } from "fs";
 import { writeFile } from "node:fs/promises";
-import { FatalError, formatCompatibilityDate } from "@cloudflare/workers-utils";
+import {
+	COMPLIANCE_REGION_CONFIG_PUBLIC,
+	FatalError,
+	formatCompatibilityDate,
+} from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { supportedCompatibilityDate } from "miniflare";
 import TOML from "smol-toml";
@@ -8,7 +12,6 @@ import { fetchResult } from "../cfetch";
 import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
-import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";

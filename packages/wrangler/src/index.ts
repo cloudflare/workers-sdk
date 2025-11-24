@@ -59,7 +59,6 @@ import {
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
-import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
@@ -1606,15 +1605,10 @@ export async function main(argv: string[]): Promise<void> {
 		// Update logger level, before we do any logging
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
-			// Also set the CLI package log level to match
-			setLogLevel(args.logLevel as LoggerLevel);
 		}
-		const envLogLevel = getEnvironmentVariableFactory({
-			variableName: "WRANGLER_LOG",
-		})()?.toLowerCase();
-		if (envLogLevel) {
-			setLogLevel(envLogLevel as LoggerLevel);
-		}
+		// Also set the CLI package log level to match
+		setLogLevel(logger.loggerLevel);
+
 		// Middleware called for each sub-command, but only want to record once
 		if (recordedCommand) {
 			return;

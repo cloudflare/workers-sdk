@@ -197,7 +197,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				projectRoot: path.resolve("."),
 				build: {
 					custom: {
-						command: "cp custom_build_dir/index.ts out.ts",
+						command: `node -e "fs.cpSync('custom_build_dir/index.ts', 'out.ts')"`,
 						watch: "custom_build_dir",
 					},
 					moduleRoot: path.resolve("."),
@@ -359,7 +359,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				projectRoot: path.resolve("."),
 				build: {
 					custom: {
-						command: "cp custom_build_dir/index.ts out.ts",
+						command: `node -e "fs.cpSync('custom_build_dir/index.ts', 'out.ts')"`,
 						watch: "custom_build_dir",
 					},
 					moduleRoot: path.resolve("."),
@@ -443,7 +443,7 @@ describe("BundleController", { retry: 5, timeout: 10_000 }, () => {
 				projectRoot: process.cwd(),
 				build: {
 					custom: {
-						command: "cp custom_build_dir/index.ts out.ts",
+						command: `node -e "fs.cpSync('custom_build_dir/index.ts', 'out.ts')"`,
 						watch: "custom_build_dir",
 					},
 					moduleRoot: process.cwd(),

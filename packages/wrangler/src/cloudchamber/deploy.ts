@@ -1,8 +1,7 @@
 import assert from "assert";
-import { UserError } from "@cloudflare/workers-utils";
+import { getDockerPath, UserError } from "@cloudflare/workers-utils";
 import { containersScope } from "../containers";
 import { apply } from "../containers/deploy";
-import { getDockerPath } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { fetchVersion } from "../versions/api";
 import { buildAndMaybePush } from "./build";

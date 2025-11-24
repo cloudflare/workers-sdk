@@ -1,9 +1,9 @@
+import { getWranglerHideBanner } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import semiver from "semiver";
 import stripAnsi from "strip-ansi";
 import supportsColor from "supports-color";
 import { version as wranglerVersion } from "../package.json";
-import { getWranglerHideBanner } from "./environment-variables/misc-variables";
 import { logger } from "./logger";
 import { updateCheck } from "./update-check";
 
