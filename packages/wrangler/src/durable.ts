@@ -26,7 +26,12 @@ export async function getMigrationsToUpload(
 	let migrations;
 	if (config.migrations.length > 0) {
 		// get current migration tag
-		type ScriptData = { id: string; migration_tag?: string };
+		type NamedHandler = { name: string; handlers: string[] };
+		type ScriptData = {
+			id: string;
+			migration_tag?: string;
+			named_handlers: NamedHandler[];
+		};
 		let script: ScriptData | undefined;
 		if (props.dispatchNamespace) {
 			try {
