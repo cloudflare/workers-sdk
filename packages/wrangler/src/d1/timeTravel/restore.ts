@@ -13,6 +13,8 @@ import type { RestoreBookmarkResponse } from "./types";
 export const d1TimeTravelRestoreCommand = createCommand({
 	metadata: {
 		description: "Restore a database back to a specific point-in-time",
+		epilogue:
+			"For more information about Time Travel, see https://developers.cloudflare.com/d1/reference/time-travel/",
 		status: "stable",
 		owner: "Product: D1",
 	},
@@ -32,7 +34,7 @@ export const d1TimeTravelRestoreCommand = createCommand({
 		timestamp: {
 			type: "string",
 			description:
-				"Accepts a Unix (seconds from epoch) or RFC3339 timestamp (e.g. 2023-07-13T08:46:42.228Z) to retrieve a bookmark for",
+				"Accepts a Unix (seconds from epoch) or RFC3339 timestamp (e.g. 2023-07-13T08:46:42.228Z) to retrieve a bookmark for (within the last 30 days)",
 		},
 		json: {
 			type: "boolean",

@@ -9,6 +9,8 @@ export const d1TimeTravelInfoCommand = createCommand({
 	metadata: {
 		description:
 			"Retrieve information about a database at a specific point-in-time using Time Travel",
+		epilogue:
+			"For more information about Time Travel, see https://developers.cloudflare.com/d1/reference/time-travel/",
 		status: "stable",
 		owner: "Product: D1",
 	},

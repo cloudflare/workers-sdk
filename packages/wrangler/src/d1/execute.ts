@@ -47,6 +47,8 @@ export const d1ExecuteCommand = createCommand({
 		description: "Execute a command or SQL file",
 		status: "stable",
 		owner: "Product: D1",
+		epilogue:
+			"You must provide either --command or --file for this command to run successfully.",
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
@@ -57,6 +59,15 @@ export const d1ExecuteCommand = createCommand({
 			type: "string",
 			demandOption: true,
 			description: "The name or binding of the DB",
+		},
+		command: {
+			type: "string",
+			description:
+				"The SQL query you wish to execute, or multiple queries separated by ';'",
+		},
+		file: {
+			type: "string",
+			description: "A .sql file to ingest",
 		},
 		yes: {
 			type: "boolean",
@@ -71,20 +82,12 @@ export const d1ExecuteCommand = createCommand({
 		remote: {
 			type: "boolean",
 			description:
-				"Execute commands/files against a remote DB for use with wrangler dev",
-		},
-		file: {
-			type: "string",
-			description: "A .sql file to ingest",
-		},
-		command: {
-			type: "string",
-			description: "A single SQL statement to execute",
+				"Execute commands/files against a remote D1 database for use with remote bindings or your deployed Worker",
 		},
 		"persist-to": {
 			type: "string",
 			description:
-				"Specify directory to use for local persistence (for --local)",
+				"Specify directory to use for local persistence (for use with --local)",
 			requiresArg: true,
 		},
 		json: {
@@ -94,7 +97,7 @@ export const d1ExecuteCommand = createCommand({
 		},
 		preview: {
 			type: "boolean",
-			description: "Execute commands/files against a preview D1 DB",
+			description: "Execute commands/files against a preview D1 database",
 			default: false,
 		},
 	},

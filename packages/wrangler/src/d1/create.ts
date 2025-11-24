@@ -48,7 +48,8 @@ export async function createD1Database(
 
 export const d1CreateCommand = createCommand({
 	metadata: {
-		description: "Create D1 database",
+		description:
+			"Creates a new D1 database, and provides the binding and UUID that you will put in your Wrangler file.",
 		status: "stable",
 		owner: "Product: D1",
 	},
@@ -56,7 +57,7 @@ export const d1CreateCommand = createCommand({
 		name: {
 			type: "string",
 			demandOption: true,
-			description: "The name of the new DB",
+			description: "The name of the new D1 database",
 		},
 		location: {
 			type: "string",
