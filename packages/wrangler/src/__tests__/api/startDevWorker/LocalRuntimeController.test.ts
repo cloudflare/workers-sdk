@@ -12,13 +12,14 @@ import { createPostgresEchoHandler } from "../../../../e2e/helpers/postgres-echo
 import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";
 import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { RuleTypeToModuleType } from "../../../deployment-bundle/module-collection";
+import { usingLocalSecretsStoreSecretAPI } from "../../../secrets-store/commands";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { useTeardown } from "../../helpers/teardown";
 import { unusable } from "../../helpers/unusable";
 import type { Bundle, File, StartDevWorkerOptions } from "../../../api";
-import type { Rule } from "@cloudflare/workers-utils";
+import type { Config, Rule } from "@cloudflare/workers-utils";
 
 export type Module<ModuleType extends Rule["type"] = Rule["type"]> = File<
 	string | Uint8Array
@@ -117,12 +118,13 @@ function configDefaults(
 ): StartDevWorkerOptions {
 	return {
 		name: "test-worker",
+		compatibilityDate: "2025-10-10",
 		complianceRegion: undefined,
 		entrypoint: "NOT_REAL",
 		projectRoot: "NOT_REAL",
 		build: unusable<StartDevWorkerOptions["build"]>(),
 		legacy: {},
-		dev: { persist: "./persist" },
+		dev: { persist: "./persist", remote: false },
 		...config,
 	};
 }
@@ -667,18 +669,19 @@ describe("LocalRuntimeController", () => {
 				dev: { persist: "./persist" },
 			};
 
-			const bundle = makeEsbuildBundle(`export default {
-			async fetch(request, env, ctx) {
-				const key = "http://localhost/";
-				if (request.method === "POST") {
-					const response = new Response("cached", {
-						headers: { "Cache-Control": "max-age=3600" }
-					});
-					await caches.default.put(key, response);
-				}
-				return (await caches.default.match(key)) ?? new Response("miss");
-			}
-		}`);
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					async fetch(request, env, ctx) {
+						const key = "http://localhost/";
+						if (request.method === "POST") {
+							const response = new Response("cached", {
+								headers: { "Cache-Control": "max-age=3600" }
+							});
+							await caches.default.put(key, response);
+						}
+						return (await caches.default.match(key)) ?? new Response("miss");
+					}
+				}`);
 
 			controller.onBundleStart({
 				type: "bundleStart",
@@ -738,12 +741,13 @@ describe("LocalRuntimeController", () => {
 				bindings: { NAMESPACE: { type: "kv_namespace", id: "ns" } },
 				dev: { persist: "./persist" },
 			};
-			const bundle = makeEsbuildBundle(`export default {
-			async fetch(request, env, ctx) {
-				if (request.method === "POST") await env.NAMESPACE.put("key", "value");
-				return new Response(await env.NAMESPACE.get("key"));
-			}
-		}`);
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					async fetch(request, env, ctx) {
+						if (request.method === "POST") await env.NAMESPACE.put("key", "value");
+						return new Response(await env.NAMESPACE.get("key"));
+					}
+				}`);
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -790,6 +794,115 @@ describe("LocalRuntimeController", () => {
 			res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
 			expect(await res.text()).toBe("");
 		});
+		it("should support Secrets Store bindings", async () => {
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const store_id = "37009502100840c0a9800b4990ed0449";
+			const secret_name = "well-known-secret";
+			const secretValue = "my-secret-value";
+			await usingLocalSecretsStoreSecretAPI(
+				"./persist",
+				{} as Config,
+				store_id,
+				secret_name,
+				(api) => api.create(secretValue)
+			);
+
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					async fetch(request, env, ctx) {
+						return new Response(await env.SECRET.get());
+					}
+				}`);
+
+			const config = configDefaults({
+				bindings: {
+					SECRET: {
+						type: "secrets_store_secret",
+						store_id,
+						secret_name,
+					},
+				},
+			});
+			controller.onBundleStart({
+				type: "bundleStart",
+				config,
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle,
+			});
+
+			const event = await bus.waitFor("reloadComplete");
+			const res = await fetch(urlFromParts(event.proxyData.userWorkerUrl));
+			expect(await res.text()).toBe(secretValue);
+		});
+		it("should support Hello World bindings", async () => {
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					async fetch(request, env, ctx) {
+						if (request.method === "POST") {
+							await env.BINDING.set(await request.text());
+						}
+						const result = await env.BINDING.get();
+						if (!result.value) {
+							return new Response('Not found', { status: 404 });
+						}
+						return Response.json(result);
+					}
+				}`);
+
+			const config = configDefaults({
+				bindings: {
+					BINDING: {
+						type: "unsafe_hello_world",
+					},
+				},
+			});
+			controller.onBundleStart({
+				type: "bundleStart",
+				config,
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle,
+			});
+
+			const event = await bus.waitFor("reloadComplete");
+			const url = urlFromParts(event.proxyData.userWorkerUrl);
+			const headers = { "MF-Disable-Pretty-Error": "true" };
+			const res1 = await fetch(url, { headers });
+			expect(await res1.text()).toBe("Not found");
+			expect(res1.status).toBe(404);
+
+			const res2 = await fetch(url, {
+				method: "POST",
+				body: "hello world",
+				headers,
+			});
+			expect(await res2.json()).toEqual({ value: "hello world" });
+			expect(res2.status).toBe(200);
+
+			const res3 = await fetch(url, { headers });
+			expect(await res3.json()).toEqual({ value: "hello world" });
+			expect(res3.status).toBe(200);
+
+			const res4 = await fetch(url, {
+				method: "POST",
+				body: "",
+				headers,
+			});
+			expect(await res4.text()).toBe("Not found");
+			expect(res4.status).toBe(404);
+		});
 		it("should support Workers Sites bindings", async () => {
 			const bus = new FakeBus();
 			const controller = new LocalRuntimeController(bus);
@@ -804,20 +917,20 @@ describe("LocalRuntimeController", () => {
 				entrypoint: "NOT_REAL",
 				legacy: { site: { bucket: ".", include: ["*.txt"] } },
 			};
-			const bundle = makeEsbuildBundle(`
-		import manifestJSON from "__STATIC_CONTENT_MANIFEST";
-		const manifest = JSON.parse(manifestJSON);
-		export default {
-			async fetch(request, env, ctx) {
-				const { pathname } = new URL(request.url);
-				const path = pathname.substring(1);
-				const key = manifest[path];
-				if (key === undefined) return new Response(null, { status: 404 });
-				const value = await env.__STATIC_CONTENT.get(key, "stream");
-				if (value === null) return new Response(null, { status: 404 });
-				return new Response(value);
-			}
-		}`);
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				import manifestJSON from "__STATIC_CONTENT_MANIFEST";
+				const manifest = JSON.parse(manifestJSON);
+				export default {
+					async fetch(request, env, ctx) {
+						const { pathname } = new URL(request.url);
+						const path = pathname.substring(1);
+						const key = manifest[path];
+						if (key === undefined) return new Response(null, { status: 404 });
+						const value = await env.__STATIC_CONTENT.get(key, "stream");
+						if (value === null) return new Response(null, { status: 404 });
+						return new Response(value);
+					}
+				}`);
 
 			controller.onBundleStart({
 				type: "bundleStart",
@@ -873,13 +986,14 @@ describe("LocalRuntimeController", () => {
 				bindings: { BUCKET: { type: "r2_bucket", bucket_name: "bucket" } },
 				dev: { persist: "./persist" },
 			};
-			const bundle = makeEsbuildBundle(`export default {
-			async fetch(request, env, ctx) {
-				if (request.method === "POST") await env.BUCKET.put("key", "value");
-				const object = await env.BUCKET.get("key");
-				return new Response(object?.body);
-			}
-		}`);
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					async fetch(request, env, ctx) {
+						if (request.method === "POST") await env.BUCKET.put("key", "value");
+						const object = await env.BUCKET.get("key");
+						return new Response(object?.body);
+					}
+				}`);
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -939,16 +1053,17 @@ describe("LocalRuntimeController", () => {
 				},
 				dev: { persist: "./persist" },
 			};
-			const bundle = makeEsbuildBundle(`export default {
-			async fetch(request, env, ctx) {
-				await env.DB.exec("CREATE TABLE IF NOT EXISTS entries (key text PRIMARY KEY, value text)");
-				if (request.method === "POST") {
-					await env.DB.prepare("INSERT INTO entries (key, value) VALUES (?, ?)").bind("key", "value").run();
-				}
-				const result = await env.DB.prepare("SELECT * FROM entries").all();
-				return Response.json(result.results);
-			}
-		}`);
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					async fetch(request, env, ctx) {
+						await env.DB.exec("CREATE TABLE IF NOT EXISTS entries (key text PRIMARY KEY, value text)");
+						if (request.method === "POST") {
+							await env.DB.prepare("INSERT INTO entries (key, value) VALUES (?, ?)").bind("key", "value").run();
+						}
+						const result = await env.DB.prepare("SELECT * FROM entries").all();
+						return Response.json(result.results);
+					}
+				}`);
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -1019,18 +1134,19 @@ describe("LocalRuntimeController", () => {
 				],
 				dev: { persist: "./persist" },
 			};
-			const bundle = makeEsbuildBundle(`export default {
-			async fetch(request, env, ctx) {
-				await env.QUEUE.send("message");
-				return new Response(null, { status: 204 });
-			},
-			async queue(batch, env, ctx) {
-				await env.BATCH_REPORT.fetch("http://placeholder", {
-					method: "POST",
-					body: JSON.stringify(batch.messages.map(({ body }) => body))
-				});
-			}
-		}`);
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					async fetch(request, env, ctx) {
+						await env.QUEUE.send("message");
+						return new Response(null, { status: 204 });
+					},
+					async queue(batch, env, ctx) {
+						await env.BATCH_REPORT.fetch("http://placeholder", {
+							method: "POST",
+							body: JSON.stringify(batch.messages.map(({ body }) => body))
+						});
+					}
+				}`);
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -1074,20 +1190,21 @@ describe("LocalRuntimeController", () => {
 					DB: { type: "hyperdrive", id: "db", localConnectionString },
 				},
 			};
-			const bundle = makeEsbuildBundle(`export default {
-				async fetch(request, env, ctx) {
-					const socket = env.DB.connect();
-					const writer = socket.writable.getWriter();
-					await writer.write(new TextEncoder().encode("👋"));
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					async fetch(request, env, ctx) {
+						const socket = env.DB.connect();
+						const writer = socket.writable.getWriter();
+						await writer.write(new TextEncoder().encode("👋"));
 
-					// wait for response from proxy instead of reading immmediately from read stream
-					const reader = socket.readable.getReader();
-					const { value } = await reader.read();
+						// wait for response from proxy instead of reading immmediately from read stream
+						const reader = socket.readable.getReader();
+						const { value } = await reader.read();
 
-					writer.close();
-					return new Response(value);
-				}
-			}`);
+						writer.close();
+						return new Response(value);
+					}
+				}`);
 			controller.onBundleStart({
 				type: "bundleStart",
 				config: configDefaults(config),
@@ -1220,6 +1337,89 @@ describe("LocalRuntimeController", () => {
 				"Error: Server does not support SSL, but client requires SSL"
 			);
 		});
+		it("should support Pipeline bindings", async () => {
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					async fetch(request, env, ctx) {
+						let log = {
+							url: request.url,
+							method: request.method,
+							headers: Object.fromEntries(request.headers),
+						};
+						await env.PIPELINE.send([log]);
+						return new Response("Data sent to env.PIPELINE");
+					}
+				}`);
+
+			const config = configDefaults({
+				bindings: {
+					PIPELINE: {
+						type: "pipeline",
+						pipeline: "preserve-e2e-pipelines",
+					},
+				},
+			});
+			controller.onBundleStart({
+				type: "bundleStart",
+				config,
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle,
+			});
+
+			const event = await bus.waitFor("reloadComplete");
+			const url = urlFromParts(event.proxyData.userWorkerUrl);
+			const res = await fetch(url);
+			await expect(res.text()).resolves.toBe("Data sent to env.PIPELINE");
+		});
+		it("should support Images bindings", async () => {
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					async fetch(request, env, ctx) {
+						return new Response("env.IMAGES is " + (env.IMAGES === undefined ? "not available" : "available"));
+					}
+				}`);
+
+			const config = configDefaults({
+				bindings: {
+					IMAGES: {
+						type: "images",
+					},
+				},
+			});
+			controller.onBundleStart({
+				type: "bundleStart",
+				config,
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config,
+				bundle,
+			});
+
+			const event = await bus.waitFor("reloadComplete");
+			const url = urlFromParts(event.proxyData.userWorkerUrl);
+			const res = await fetch(url);
+			await expect(res.text()).resolves.toBe("env.IMAGES is available");
+		});
+		it.todo("should support Media bindings"); // Media bindings are only available remotely
+		it.todo("supports Workflow bindings");
+		it.todo("exposes send email bindings");
+		it.todo("exposes browser bindings");
+		it.todo("exposes Workers AI bindings");
+		it.todo("exposes Analytics Engine bindings");
+		it.todo("exposes dispatch namespace bindings");
+		it.todo("exposes mTLS bindings");
 	});
 });
 

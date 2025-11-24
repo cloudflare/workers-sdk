@@ -1,13 +1,13 @@
 import {
 	defaultWranglerConfig,
 	FatalError,
+	getWranglerHideBanner,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
-import { getWranglerHideBanner } from "../environment-variables/misc-variables";
 import { hasDefinedEnvironments } from "../environments";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";

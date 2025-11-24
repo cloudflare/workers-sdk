@@ -14,11 +14,16 @@
 	"license": "MIT OR Apache-2.0",
 	"author": "workers-devprod@cloudflare.com",
 	"exports": {
-		"browser": "./dist/browser.mjs",
-		"import": "./dist/index.mjs"
+		".": {
+			"browser": "./dist/browser.mjs",
+			"import": "./dist/index.mjs",
+			"types": "./dist/index.d.mts"
+		},
+		"./test-helpers": {
+			"import": "./dist/test-helpers/index.mjs",
+			"types": "./dist/test-helpers/index.d.mts"
+		}
 	},
-	"main": "dist/index.mjs",
-	"types": "dist/index.d.mts",
 	"files": [
 		"dist"
 	],
@@ -47,7 +52,8 @@
 		"tsdown": "^0.15.9",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "catalog:default",
+		"xdg-app-paths": "^8.3.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

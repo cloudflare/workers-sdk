@@ -2,9 +2,8 @@ import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "./constants";
 import { listDatabases } from "./list";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Database, DatabaseInfo } from "./types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export function getDatabaseInfoFromConfig(
 	config: Config,

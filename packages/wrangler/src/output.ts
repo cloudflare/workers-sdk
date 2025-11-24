@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import {
 	getOutputFileDirectoryFromEnv,
 	getOutputFilePathFromEnv,
-} from "./environment-variables/misc-variables";
+} from "@cloudflare/workers-utils";
 import { ensureDirectoryExistsSync } from "./utils/filesystem";
 
 /**

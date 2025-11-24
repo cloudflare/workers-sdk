@@ -214,6 +214,9 @@ import url from "node:url";
 import { TextEncoder } from "node:util";
 import {
 	configFileName,
+	getCloudflareApiEnvironmentFromEnv,
+	getCloudflareComplianceRegion,
+	getGlobalWranglerConfigPath,
 	parseTOML,
 	readFileSync,
 	UserError,
@@ -227,11 +230,6 @@ import {
 	saveToConfigCache,
 } from "../config-cache";
 import { NoDefaultValueProvided, select } from "../dialogs";
-import {
-	getCloudflareApiEnvironmentFromEnv,
-	getCloudflareComplianceRegion,
-} from "../environment-variables/misc-variables";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -251,8 +249,8 @@ import {
 import { getAccountChoices } from "./choose-account";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ChooseAccountItem } from "./choose-account";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
 

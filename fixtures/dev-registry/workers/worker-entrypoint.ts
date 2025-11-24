@@ -14,7 +14,7 @@ export class NamedEntrypoint extends WorkerEntrypoint {
 
 export default class Worker extends WorkerEntrypoint<{
 	SERVICE_WORKER: Fetcher;
-	MODULE_WORKER: Fetcher;
+	EXPORTED_HANDLER: Fetcher;
 	WORKER_ENTRYPOINT: Fetcher;
 	WORKER_ENTRYPOINT_WITH_ASSETS: Fetcher;
 	NAMED_ENTRYPOINT: Fetcher;
@@ -42,8 +42,8 @@ export default class Worker extends WorkerEntrypoint<{
 					service = this.env.SERVICE_WORKER;
 					break;
 				}
-				case "module-worker": {
-					service = this.env.MODULE_WORKER;
+				case "exported-handler": {
+					service = this.env.EXPORTED_HANDLER;
 					break;
 				}
 				case "worker-entrypoint": {

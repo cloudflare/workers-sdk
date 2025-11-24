@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
+import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { Binding, StartRemoteProxySessionOptions } from "../../api";
@@ -12,7 +13,6 @@ import {
 } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { seed } from "../helpers/seed";
 import type { StartDevOptions } from "../../dev";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
@@ -30,12 +30,7 @@ vi.mock("../../dev/start-dev", async () => {
 		...actual,
 		async startDev(args: StartDevOptions) {
 			const result = await actual.startDev(args);
-			stopWrangler = () => {
-				stopWrangler = async () => {
-					throw new Error("Stop worker already called");
-				};
-				return result.devEnv.teardown();
-			};
+			stopWrangler = () => result.devEnv.teardown();
 			return result;
 		},
 	};

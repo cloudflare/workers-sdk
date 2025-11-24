@@ -3,13 +3,15 @@ import { existsSync, lstatSync, readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path, { join, resolve as resolvePath } from "node:path";
 import { cwd } from "node:process";
-import { FatalError } from "@cloudflare/workers-utils";
+import {
+	COMPLIANCE_REGION_CONFIG_PUBLIC,
+	FatalError,
+} from "@cloudflare/workers-utils";
 import { FormData } from "undici";
 import { fetchResult } from "../../cfetch";
 import { readPagesConfig } from "../../config";
 import { shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
-import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../../environment-variables/misc-variables";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";
 import { buildFunctions } from "../../pages/buildFunctions";

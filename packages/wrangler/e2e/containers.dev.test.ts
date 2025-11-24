@@ -1,6 +1,7 @@
 import { execSync } from "child_process";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import { getDockerPath } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import {
 	afterAll,
@@ -13,7 +14,6 @@ import {
 } from "vitest";
 import { buildImage } from "../../containers-shared/src/build";
 import { generateContainerBuildId } from "../../containers-shared/src/utils";
-import { getDockerPath } from "../src/environment-variables/misc-variables";
 import { dedent } from "../src/utils/dedent";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";

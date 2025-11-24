@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
-import { resolve } from "path";
 import { PassThrough } from "stream";
 import chalk from "chalk";
 import { passthrough } from "msw";
@@ -54,6 +53,19 @@ vi.mock("child_process", async (importOriginal) => {
 			}
 			return cp.spawnSync(binary, ...args);
 		}),
+	};
+});
+
+vi.mock("os", async (importOriginal) => {
+	const os = await importOriginal<typeof import("os")>();
+	function homedir() {
+		// Let's just grab the HOME env var and then we can override that in tests
+		return (process.env as Record<string, string>).HOME;
+	}
+	return {
+		...os,
+		default: { ...os, homedir },
+		homedir,
 	};
 });
 
@@ -146,19 +158,6 @@ vi.mock("../is-ci", async (importOriginal) => {
 vi.mock("../user/generate-random-state", () => {
 	return {
 		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
-	};
-});
-
-vi.mock("xdg-app-paths", () => {
-	return {
-		__esModule: true,
-		default: vi.fn().mockImplementation(() => {
-			return {
-				config() {
-					return resolve("test-xdg-config");
-				},
-			};
-		}),
 	};
 });
 

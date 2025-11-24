@@ -1,5 +1,7 @@
-import { getEnvironmentVariableFactory } from "../environment-variables/factory";
-import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
+import {
+	getCloudflareApiEnvironmentFromEnv,
+	getEnvironmentVariableFactory,
+} from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import { getAccessToken } from "./access";
 

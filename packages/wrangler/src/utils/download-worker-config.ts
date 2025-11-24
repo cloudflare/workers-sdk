@@ -1,6 +1,8 @@
-import { constructWranglerConfig } from "@cloudflare/workers-utils";
+import {
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	constructWranglerConfig,
+} from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
-import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "../environment-variables/misc-variables";
 import type {
 	RawConfig,
 	ServiceMetadataRes,
