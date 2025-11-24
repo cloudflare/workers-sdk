@@ -158,7 +158,7 @@ const create = async (ctx: C3Context) => {
 
 const configure = async (ctx: C3Context) => {
 	startSection(
-		"Configuring your application for Cloudflare via `wrangler setup`",
+		`Configuring your application for Cloudflare${ctx.args.experimental ? ` via \`wrangler setup\`` : ""}`,
 		"Step 2 of 3",
 	);
 
