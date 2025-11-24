@@ -1,5 +1,52 @@
 # @cloudflare/vite-plugin
 
+## 1.15.2
+
+### Patch Changes
+
+- [#11342](https://github.com/cloudflare/workers-sdk/pull/11342) [`a55c0e4`](https://github.com/cloudflare/workers-sdk/commit/a55c0e41d55edf458e7ec240e3d1fcab3e3154c9) Thanks [@jamesopstad](https://github.com/jamesopstad)! - fix: `email` method not working in ExportedHandler exports in development
+
+- [#11322](https://github.com/cloudflare/workers-sdk/pull/11322) [`49eada3`](https://github.com/cloudflare/workers-sdk/commit/49eada38c5c08884fad4d292d8d4e91d190fb3d8) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add `cloudflare:node` to built-in modules
+
+- Updated dependencies [[`0cf696d`](https://github.com/cloudflare/workers-sdk/commit/0cf696dfde285eac0eca3f86e6c407f2bcc43899), [`524a6e5`](https://github.com/cloudflare/workers-sdk/commit/524a6e52dd5e6740bc36ee1135ba350a2d5b9e44), [`c922a81`](https://github.com/cloudflare/workers-sdk/commit/c922a810808f640b82fcad08a96363323029de83), [`bb44120`](https://github.com/cloudflare/workers-sdk/commit/bb4412042f86deb747259bbb353103e5d0322447), [`4a158e9`](https://github.com/cloudflare/workers-sdk/commit/4a158e9f4815778145969287d38720e61d956eee)]:
+  - @cloudflare/unenv-preset@2.7.11
+  - wrangler@4.50.0
+  - miniflare@4.20251118.1
+
+## 1.15.1
+
+### Patch Changes
+
+- [#11331](https://github.com/cloudflare/workers-sdk/pull/11331) [`52ebfa9`](https://github.com/cloudflare/workers-sdk/commit/52ebfa935c41695e58aabb36e5a5abacfcf51a4f) Thanks [@edmundhung](https://github.com/edmundhung)! - Dispose Miniflare when preview server is closed
+
+- Updated dependencies [[`e5ec8cf`](https://github.com/cloudflare/workers-sdk/commit/e5ec8cf5ac23df57734a3fc819beaa5b7a0af9ca), [`c758809`](https://github.com/cloudflare/workers-sdk/commit/c7588091b425d353cb25625d4efa2b42e0478b86), [`dfba912`](https://github.com/cloudflare/workers-sdk/commit/dfba9126615993b7bbb6d8bf7d1e31b5eebab9f6)]:
+  - miniflare@4.20251118.0
+  - wrangler@4.49.1
+
+## 1.15.0
+
+### Minor Changes
+
+- [#11238](https://github.com/cloudflare/workers-sdk/pull/11238) [`da8442f`](https://github.com/cloudflare/workers-sdk/commit/da8442ff4ccd70118738bd05f6ac06a79ff951e5) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add support for `ctx.exports`. See https://developers.cloudflare.com/workers/runtime-apis/context/#exports for more details.
+
+### Patch Changes
+
+- [#11274](https://github.com/cloudflare/workers-sdk/pull/11274) [`fa39c78`](https://github.com/cloudflare/workers-sdk/commit/fa39c782f6d544d0769a28abb26471de4cb66906) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Ensure process.on("exit") handlers are only added once.
+
+- [#11273](https://github.com/cloudflare/workers-sdk/pull/11273) [`17431db`](https://github.com/cloudflare/workers-sdk/commit/17431dbb0c69678954816577e08155f554f73f54) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Ensure static routing exclude rules for static assets are only evaluated once per request in development.
+
+- Updated dependencies [[`c5c4ee5`](https://github.com/cloudflare/workers-sdk/commit/c5c4ee5219091951aef2a0cce1584010bf1775d9), [`d0041e2`](https://github.com/cloudflare/workers-sdk/commit/d0041e20cb352a053526364f98c3ae38f3504f4d), [`827d017`](https://github.com/cloudflare/workers-sdk/commit/827d017d8a856aad9564ecea9b49538918131feb), [`7035804`](https://github.com/cloudflare/workers-sdk/commit/7035804a859b90fcaaebe8d774cd98fcf57def5b), [`a352c7f`](https://github.com/cloudflare/workers-sdk/commit/a352c7f9e19d4bfbe27c77988ec6c5bb18f991c3), [`8e99766`](https://github.com/cloudflare/workers-sdk/commit/8e99766700b03c17bdaf9153112c466acea74f9b), [`d0d3fe6`](https://github.com/cloudflare/workers-sdk/commit/d0d3fe682c7a5564de685c7014c91287f949f156), [`d014fa7`](https://github.com/cloudflare/workers-sdk/commit/d014fa72ef8ced30330e159e107da244e39b431c), [`92afbba`](https://github.com/cloudflare/workers-sdk/commit/92afbbae22de80e40f9d3c1f96935d73ee6dec17), [`65b4afe`](https://github.com/cloudflare/workers-sdk/commit/65b4afe8686efab6ac50fa686ef00efacd9d6e7e), [`da8442f`](https://github.com/cloudflare/workers-sdk/commit/da8442ff4ccd70118738bd05f6ac06a79ff951e5), [`15b8460`](https://github.com/cloudflare/workers-sdk/commit/15b846037dc9853e0fef1cf0bc576b8c460be188), [`09cb720`](https://github.com/cloudflare/workers-sdk/commit/09cb720182dbdd5e403af2c9eae75461c4058682), [`793e2b4`](https://github.com/cloudflare/workers-sdk/commit/793e2b40cf1a2da5498e71a405538e2f9776e3dc), [`8e99766`](https://github.com/cloudflare/workers-sdk/commit/8e99766700b03c17bdaf9153112c466acea74f9b), [`9cbf126`](https://github.com/cloudflare/workers-sdk/commit/9cbf126164ef2a5c7a1047245121c988fb7ae984), [`2011b6a`](https://github.com/cloudflare/workers-sdk/commit/2011b6ae8a42cc72f506d1edd255960c99647a14), [`dd1e560`](https://github.com/cloudflare/workers-sdk/commit/dd1e560e49da008c98b766e91ada7be865f68e8c)]:
+  - miniflare@4.20251113.0
+  - wrangler@4.49.0
+
+## 1.14.2
+
+### Patch Changes
+
+- Updated dependencies [[`43fe9f3`](https://github.com/cloudflare/workers-sdk/commit/43fe9f31092d2b5e540fbc5f33ef8a494515b837), [`3908162`](https://github.com/cloudflare/workers-sdk/commit/3908162d8adf3d970e4c07bc0d722b85b5a7e11f), [`305ffb3`](https://github.com/cloudflare/workers-sdk/commit/305ffb304d44e44a8045a08d43c655d1e1f17c88), [`14d79f2`](https://github.com/cloudflare/workers-sdk/commit/14d79f2fe87289a83637bc5402479c5129a1cbb5), [`dfc6513`](https://github.com/cloudflare/workers-sdk/commit/dfc6513f2be1236770f0dda7a8b9d79a5fee438f), [`46ccf0e`](https://github.com/cloudflare/workers-sdk/commit/46ccf0e9f79c909cd678af6dcb2e72ec2a12fc90)]:
+  - wrangler@4.48.0
+  - miniflare@4.20251109.1
+
 ## 1.14.1
 
 ### Patch Changes

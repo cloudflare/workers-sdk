@@ -83,6 +83,7 @@ import {
 	ServiceDesignatorSchema,
 } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
+import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import { imagesLocalFetcher } from "./plugins/images/fetcher";
 import {
 	Config,
@@ -948,6 +949,9 @@ export class Miniflare {
 	#maybeInspectorProxyController?: InspectorProxyController;
 	#previousRuntimeInspectorPort?: number;
 
+	#hyperdriveProxyController: HyperdriveProxyController =
+		new HyperdriveProxyController();
+
 	constructor(opts: MiniflareOptions) {
 		// Split and validate options
 		const [sharedOpts, workerOpts] = validateOptions(opts);
@@ -1720,6 +1724,7 @@ export class Miniflare {
 				unsafeEphemeralDurableObjects,
 				queueProducers,
 				queueConsumers,
+				hyperdriveProxyController: this.#hyperdriveProxyController,
 			};
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const workerOptions = this.#getWorkerOptsForPlugin(key, workerOpts);
@@ -2688,6 +2693,9 @@ export class Miniflare {
 			await this.#maybeInspectorProxyController?.dispose();
 			// Unregister workers from dev registry and stop the file watcher
 			await this.#devRegistry.dispose();
+
+			// shutdown hyperdrive proxies if any exist
+			await this.#hyperdriveProxyController.dispose();
 
 			// Remove from instance registry as last step in `finally`, to make sure
 			// all dispose steps complete

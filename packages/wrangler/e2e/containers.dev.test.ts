@@ -1,5 +1,6 @@
 import { execSync } from "child_process";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
 import {
 	afterAll,
@@ -156,7 +157,7 @@ for (const source of imageSource) {
 					"wrangler.json": JSON.stringify(wranglerConfig),
 				});
 				// wait a bit for the image to be available to pull
-				await new Promise((resolve) => setTimeout(resolve, 5_000));
+				await setTimeout(5_000);
 			}
 		}, 30_000);
 		beforeEach(async () => {
@@ -164,7 +165,7 @@ for (const source of imageSource) {
 				"wrangler.json": JSON.stringify(wranglerConfig),
 			});
 			/// wait a bit in case the expected cleanup from shutting down wrangler dev is already happening
-			await new Promise((resolve) => setTimeout(resolve, 500));
+			await setTimeout(500);
 			// cleanup any running containers. this does happen automatically when we shut down wrangler,
 			// but treekill is being uncooperative. this is also tested in interactive-dev-fixture
 			// where it is working as expected
@@ -177,7 +178,7 @@ for (const source of imageSource) {
 		});
 		afterAll(async () => {
 			// wait a bit in case the expected cleanup from shutting down wrangler dev is already happening
-			await new Promise((resolve) => setTimeout(resolve, 500));
+			await setTimeout(500);
 			// again this should happen automatically when we shut down wrangler, but treekill is being uncooperative.
 			// this is tested in interactive-dev-fixture where it is working as expected.
 			const ids = getContainerIds("e2econtainer");

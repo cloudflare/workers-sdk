@@ -6,6 +6,7 @@ import { logger } from "./logger";
 export interface PackageManager {
 	type: "npm" | "yarn" | "pnpm" | "bun";
 	npx: string;
+	dlx: string[];
 }
 
 export async function getPackageManager(): Promise<PackageManager> {
@@ -16,42 +17,35 @@ export async function getPackageManager(): Promise<PackageManager> {
 		supportsBun(),
 	]);
 
-	logger.log({
-		hasYarn,
-		hasNpm,
-		hasPnpm,
-		hasBun,
-	});
-
 	const userAgent = sniffUserAgent();
 
 	// check the user agent
 	if (userAgent === "npm" && hasNpm) {
-		logger.log("Using npm as package manager.");
+		logger.debug("Using npm as package manager.");
 		return { ...NpmPackageManager };
 	} else if (userAgent === "pnpm" && hasPnpm) {
-		logger.log("Using pnpm as package manager.");
+		logger.debug("Using pnpm as package manager.");
 		return { ...PnpmPackageManager };
 	} else if (userAgent === "yarn" && hasYarn) {
-		logger.log("Using yarn as package manager.");
+		logger.debug("Using yarn as package manager.");
 		return { ...YarnPackageManager };
 	} else if (userAgent === "bun" && hasBun) {
-		logger.log("Using bun as package manager.");
+		logger.debug("Using bun as package manager.");
 		return { ...BunPackageManager };
 	}
 
 	// lastly, check what's installed
 	if (hasNpm) {
-		logger.log("Using npm as package manager.");
+		logger.debug("Using npm as package manager.");
 		return { ...NpmPackageManager };
 	} else if (hasYarn) {
-		logger.log("Using yarn as package manager.");
+		logger.debug("Using yarn as package manager.");
 		return { ...YarnPackageManager };
 	} else if (hasPnpm) {
-		logger.log("Using pnpm as package manager.");
+		logger.debug("Using pnpm as package manager.");
 		return { ...PnpmPackageManager };
 	} else if (hasBun) {
-		logger.log("Using bun as package manager.");
+		logger.debug("Using bun as package manager.");
 		return { ...BunPackageManager };
 	} else {
 		throw new UserError(
@@ -76,6 +70,7 @@ export function getPackageManagerName(packageManager: PackageManager): string {
 const NpmPackageManager: PackageManager = {
 	type: "npm",
 	npx: "npx",
+	dlx: ["npx"],
 };
 
 /**
@@ -84,6 +79,7 @@ const NpmPackageManager: PackageManager = {
 const PnpmPackageManager: PackageManager = {
 	type: "pnpm",
 	npx: "pnpm",
+	dlx: ["pnpm", "dlx"],
 };
 
 /**
@@ -91,7 +87,8 @@ const PnpmPackageManager: PackageManager = {
  */
 const YarnPackageManager: PackageManager = {
 	type: "yarn",
-	npx: "yarn dlx",
+	npx: "yarn",
+	dlx: ["yarn", "dlx"],
 };
 
 /**
@@ -100,6 +97,7 @@ const YarnPackageManager: PackageManager = {
 const BunPackageManager: PackageManager = {
 	type: "bun",
 	npx: "bunx",
+	dlx: ["bunx"],
 };
 
 async function supports(name: string): Promise<boolean> {

@@ -10,8 +10,8 @@ import {
 	getCORSPolicy,
 	putCORSPolicy,
 	tableFromCORSPolicyResponse,
-} from "./helpers";
-import type { CORSRule } from "./helpers";
+} from "./helpers/bucket";
+import type { CORSRule } from "./helpers/bucket";
 
 export const r2BucketCORSNamespace = createNamespace({
 	metadata: {

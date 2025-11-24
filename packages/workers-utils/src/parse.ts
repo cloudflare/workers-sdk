@@ -1,7 +1,7 @@
 import { readFileSync as fsReadFileSync } from "node:fs";
 import { resolve } from "node:path";
-import TOML from "@iarna/toml";
 import * as jsoncParser from "jsonc-parser";
+import TOML, { TomlError } from "smol-toml";
 import { UserError } from "./errors";
 import type { TelemetryMessage } from "./errors";
 import type { ParseError as JsoncParseError } from "jsonc-parser";
@@ -81,38 +81,26 @@ export class APIError extends ParseError {
 	}
 }
 
-const TOML_ERROR_NAME = "TomlError";
-const TOML_ERROR_SUFFIX = " at row ";
-
-type TomlError = Error & {
-	line: number;
-	col: number;
-};
-
 /**
  * A wrapper around `TOML.parse` that throws a `ParseError`.
  */
 export function parseTOML<T>(input: string, file?: string): T | never {
 	try {
-		// Normalize CRLF to LF to avoid hitting https://github.com/iarna/iarna-toml/issues/33.
-		const normalizedInput = input.replace(/\r\n/g, "\n");
-		return TOML.parse(normalizedInput) as T;
+		return TOML.parse(input) as T;
 	} catch (err) {
-		const { name, message, line, col } = err as TomlError;
-		if (name !== TOML_ERROR_NAME) {
+		if (!(err instanceof TomlError)) {
 			throw err;
 		}
-		const text = message.substring(0, message.lastIndexOf(TOML_ERROR_SUFFIX));
-		const lineText = input.split("\n")[line];
+
 		const location = {
-			lineText,
-			line: line + 1,
-			column: col - 1,
+			lineText: input.split("\n")[err.line - 1],
+			line: err.line,
+			column: err.column - 1,
 			file,
 			fileText: input,
 		};
 		throw new ParseError({
-			text,
+			text: err.message.substring(0, err.message.indexOf("\n")),
 			location,
 			telemetryMessage: "TOML parse error",
 		});

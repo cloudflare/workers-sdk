@@ -23,19 +23,10 @@ import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
 import type { EphemeralDirectory } from "../../paths";
-import type { ControllerEventMap } from "./BaseController";
-import type {
-	BundleCompleteEvent,
-	BundleStartEvent,
-	ConfigUpdateEvent,
-} from "./events";
+import type { ConfigUpdateEvent } from "./events";
 import type { StartDevWorkerOptions } from "./types";
 
-type BundlerControllerEventMap = ControllerEventMap & {
-	bundleStart: [BundleStartEvent];
-	bundleComplete: [BundleCompleteEvent];
-};
-export class BundlerController extends Controller<BundlerControllerEventMap> {
+export class BundlerController extends Controller {
 	#currentBundle?: EsbuildBundle;
 
 	#customBuildWatcher?: ReturnType<typeof watch>;
@@ -390,12 +381,12 @@ export class BundlerController extends Controller<BundlerControllerEventMap> {
 	}
 
 	emitBundleStartEvent(config: StartDevWorkerOptions) {
-		this.emit("bundleStart", { type: "bundleStart", config });
+		this.bus.dispatch({ type: "bundleStart", config });
 	}
 	emitBundleCompleteEvent(
 		config: StartDevWorkerOptions,
 		bundle: EsbuildBundle
 	) {
-		this.emit("bundleComplete", { type: "bundleComplete", config, bundle });
+		this.bus.dispatch({ type: "bundleComplete", config, bundle });
 	}
 }

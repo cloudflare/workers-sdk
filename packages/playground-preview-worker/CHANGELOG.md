@@ -1,5 +1,11 @@
 # playground-preview-worker
 
+## 0.1.7
+
+### Patch Changes
+
+- [#11217](https://github.com/cloudflare/workers-sdk/pull/11217) [`9ed1542`](https://github.com/cloudflare/workers-sdk/commit/9ed1542e854be65f7c03ed9596ec36767ce8aa36) Thanks [@penalosa](https://github.com/penalosa)! - Use toucan-js v4
+
 ## 0.1.6
 
 ### Patch Changes

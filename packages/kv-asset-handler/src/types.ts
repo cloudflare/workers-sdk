@@ -1,3 +1,8 @@
+declare global {
+	const __STATIC_CONTENT: KVNamespace | undefined;
+	const __STATIC_CONTENT_MANIFEST: Record<string, string> | undefined;
+}
+
 export type CacheControl = {
 	browserTTL: number;
 	edgeTTL: number;

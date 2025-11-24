@@ -11,6 +11,10 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { fetchWithETag } from "./helpers/fetch-with-etag";
 import { generateResourceName } from "./helpers/generate-resource-name";
+import {
+	createPostgresEchoHandler,
+	POSTGRES_SSL_REQUEST_PACKET,
+} from "./helpers/postgres-echo-handler";
 import { retry } from "./helpers/retry";
 import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
 
@@ -590,7 +594,11 @@ describe("hyperdrive dev tests", () => {
 	let server: nodeNet.Server;
 
 	beforeEach(async () => {
-		server = nodeNet.createServer().listen();
+		server = nodeNet
+			.createServer((socket) => {
+				socket.on("data", createPostgresEchoHandler(socket));
+			})
+			.listen();
 	});
 
 	it("matches expected configuration parameters", async () => {
@@ -677,9 +685,13 @@ describe("hyperdrive dev tests", () => {
 					`,
 		});
 		const socketMsgPromise = new Promise((resolve, _) => {
-			server.on("connection", (sock) => {
-				sock.on("data", (data) => {
-					expect(new TextDecoder().decode(data)).toBe("test string");
+			server.on("connection", (socket) => {
+				socket.on("data", (chunk) => {
+					if (chunk.equals(POSTGRES_SSL_REQUEST_PACKET)) {
+						socket.write("N");
+						return;
+					}
+					expect(new TextDecoder().decode(chunk)).toBe("test string");
 					server.close();
 					resolve({});
 				});
@@ -739,9 +751,13 @@ describe("hyperdrive dev tests", () => {
 
 		const { url } = await worker.waitForReady();
 		const socketMsgPromise = new Promise((resolve, _) => {
-			server.on("connection", (sock) => {
-				sock.on("data", (data) => {
-					expect(new TextDecoder().decode(data)).toBe("test string");
+			server.on("connection", (socket) => {
+				socket.on("data", (chunk) => {
+					if (POSTGRES_SSL_REQUEST_PACKET.equals(chunk)) {
+						socket.write("N");
+						return;
+					}
+					expect(new TextDecoder().decode(chunk)).toBe("test string");
 					server.close();
 					resolve({});
 				});

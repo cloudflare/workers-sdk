@@ -9,7 +9,7 @@ import { logger } from "../../logger";
 import { getSourceMappedString } from "../../sourcemap";
 import { updateCheck } from "../../update-check";
 import { warnOrError } from "../../utils/print-bindings";
-import { getClassNamesWhichUseSQLite } from "../class-names-sqlite";
+import { getDurableObjectClassNameToUseSQLiteMap } from "../class-names-sqlite";
 import type { ServiceFetch } from "../../api";
 import type { AssetsOptions } from "../../assets";
 import type { LoggerLevel } from "../../logger";
@@ -84,6 +84,7 @@ export interface ConfigBundle {
 	inspect: boolean;
 	services: Config["services"] | undefined;
 	tails: Config["tail_consumers"] | undefined;
+	streamingTails: Config["streaming_tail_consumers"] | undefined;
 	serviceBindings: Record<string, ServiceFetch>;
 	testScheduled: boolean;
 	containerDOClassNames: Set<string> | undefined;
@@ -397,6 +398,7 @@ type WorkerOptionsBindings = Pick<
 	| "email"
 	| "analyticsEngineDatasets"
 	| "tails"
+	| "streamingTails"
 	| "browserRendering"
 	| "vectorize"
 	| "vpcServices"
@@ -418,6 +420,7 @@ type MiniflareBindingsConfig = Pick<
 	| "services"
 	| "serviceBindings"
 	| "tails"
+	| "streamingTails"
 	| "complianceRegion"
 	| "containerDOClassNames"
 	| "containerBuildId"
@@ -484,7 +487,14 @@ export function buildMiniflareBindingOptions(
 		tails.push({ name: tail.service });
 	}
 
-	const classNameToUseSQLite = getClassNamesWhichUseSQLite(config.migrations);
+	const streamingTails: NonNullable<WorkerOptions["streamingTails"]> = [];
+	for (const streamingTail of config.streamingTails ?? []) {
+		streamingTails.push({ name: streamingTail.service });
+	}
+
+	const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
+		config.migrations
+	);
 
 	const durableObjects = bindings.durable_objects?.bindings ?? [];
 
@@ -773,6 +783,7 @@ export function buildMiniflareBindingOptions(
 		serviceBindings,
 		wrappedBindings: wrappedBindings,
 		tails,
+		streamingTails,
 	};
 
 	return {

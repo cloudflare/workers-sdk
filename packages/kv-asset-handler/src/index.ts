@@ -8,11 +8,6 @@ import {
 } from "./types";
 import type { AssetManifestType } from "./types";
 
-declare global {
-	const __STATIC_CONTENT: KVNamespace | undefined,
-		__STATIC_CONTENT_MANIFEST: string;
-}
-
 const defaultCacheControl: CacheControl = {
 	browserTTL: null,
 	edgeTTL: 2 * 60 * 60 * 24, // 2 days
@@ -24,24 +19,26 @@ const parseStringAsObject = <T>(maybeString: string | T): T =>
 		? (JSON.parse(maybeString) as T)
 		: maybeString;
 
-const getAssetFromKVDefaultOptions: Partial<Options> = {
-	ASSET_NAMESPACE:
-		typeof __STATIC_CONTENT !== "undefined" ? __STATIC_CONTENT : undefined,
-	ASSET_MANIFEST:
-		typeof __STATIC_CONTENT_MANIFEST !== "undefined"
-			? parseStringAsObject<AssetManifestType>(__STATIC_CONTENT_MANIFEST)
-			: {},
-	cacheControl: defaultCacheControl,
-	defaultMimeType: "text/plain",
-	defaultDocument: "index.html",
-	pathIsEncoded: false,
-	defaultETag: "strong",
-};
+function getAssetFromKVDefaultOptions(): Partial<Options> {
+	return {
+		ASSET_NAMESPACE:
+			typeof __STATIC_CONTENT !== "undefined" ? __STATIC_CONTENT : undefined,
+		ASSET_MANIFEST:
+			typeof __STATIC_CONTENT_MANIFEST !== "undefined"
+				? parseStringAsObject<AssetManifestType>(__STATIC_CONTENT_MANIFEST)
+				: {},
+		cacheControl: defaultCacheControl,
+		defaultMimeType: "text/plain",
+		defaultDocument: "index.html",
+		pathIsEncoded: false,
+		defaultETag: "strong",
+	};
+}
 
 function assignOptions(options?: Partial<Options>): Options {
 	// Assign any missing options passed in to the default
 	// options.mapRequestToAsset is handled manually later
-	return <Options>Object.assign({}, getAssetFromKVDefaultOptions, options);
+	return <Options>Object.assign({}, getAssetFromKVDefaultOptions(), options);
 }
 
 /**

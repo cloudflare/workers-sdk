@@ -6,14 +6,16 @@ import { logger } from "../logger";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
-	formatActionDescription,
 	getLifecycleRules,
-	isNonNegativeNumber,
-	isValidDate,
 	putLifecycleRules,
 	tableFromLifecycleRulesResponse,
-} from "./helpers";
-import type { LifecycleRule } from "./helpers";
+} from "./helpers/bucket";
+import {
+	formatActionDescription,
+	isNonNegativeNumber,
+	isValidDate,
+} from "./helpers/misc";
+import type { LifecycleRule } from "./helpers/bucket";
 
 export const r2BucketLifecycleNamespace = createNamespace({
 	metadata: {

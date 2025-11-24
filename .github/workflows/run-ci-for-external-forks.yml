@@ -22,7 +22,7 @@ jobs:
   create-draft-pr:
     name: Create Draft PR
     if: ${{ inputs.reviewed == true }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
