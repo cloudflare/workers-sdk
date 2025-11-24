@@ -3,6 +3,7 @@ name: CI
 on:
   merge_group:
   pull_request:
+    types: [synchronize, opened, reopened, labeled, unlabeled]
 
 permissions:
   contents: read
@@ -211,7 +212,11 @@ jobs:
       - name: Run tests (packages)
         # We are running the package tests first be able to get early feedback on changes.
         # There is no point in running the fixtures if a package is broken.
-        if: steps.changes.outputs.everything_but_markdown == 'true'
+        if: ${{
+          steps.changes.outputs.everything_but_markdown == 'true' &&
+          matrix.node_version != 24 ||
+          contains(github.event.pull_request.labels.*.name, 'test on node 24')
+          }}
         run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*"
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
