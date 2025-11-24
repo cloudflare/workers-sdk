@@ -80,10 +80,10 @@ export function validatePutOptions(
 				`Invalid ${KVParams.EXPIRATION_TTL} of ${rawExpirationTtl}. Please specify integer greater than 0.`
 			);
 		}
-		if (expirationTtl < KVLimits.MIN_CACHE_TTL) {
+		if (expirationTtl < KVLimits.MIN_EXPIRATION_TTL) {
 			throw new HttpError(
 				400,
-				`Invalid ${KVParams.EXPIRATION_TTL} of ${rawExpirationTtl}. Expiration TTL must be at least ${KVLimits.MIN_CACHE_TTL}.`
+				`Invalid ${KVParams.EXPIRATION_TTL} of ${rawExpirationTtl}. Expiration TTL must be at least ${KVLimits.MIN_EXPIRATION_TTL}.`
 			);
 		}
 		expiration = now + expirationTtl;
@@ -95,10 +95,10 @@ export function validatePutOptions(
 				`Invalid ${KVParams.EXPIRATION} of ${rawExpiration}. Please specify integer greater than the current number of seconds since the UNIX epoch.`
 			);
 		}
-		if (expiration < now + KVLimits.MIN_CACHE_TTL) {
+		if (expiration < now + KVLimits.MIN_EXPIRATION_TTL) {
 			throw new HttpError(
 				400,
-				`Invalid ${KVParams.EXPIRATION} of ${rawExpiration}. Expiration times must be at least ${KVLimits.MIN_CACHE_TTL} seconds in the future.`
+				`Invalid ${KVParams.EXPIRATION} of ${rawExpiration}. Expiration times must be at least ${KVLimits.MIN_EXPIRATION_TTL} seconds in the future.`
 			);
 		}
 	}
