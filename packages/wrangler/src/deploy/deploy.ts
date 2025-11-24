@@ -752,6 +752,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			content: content,
 			type: bundleType,
 		};
+
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main,
@@ -951,29 +952,55 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						startup_time_ms: versionResult.startup_time_ms,
 					};
 				} else {
-					result = await retryOnAPIFailure(async () =>
-						fetchResult<{
-							id: string | null;
-							etag: string | null;
-							pipeline_hash: string | null;
-							mutable_pipeline_id: string | null;
-							deployment_id: string | null;
-							startup_time_ms: number;
-						}>(
-							config,
-							workerUrl,
-							{
-								method: "PUT",
-								body: workerBundle,
-								headers: await getMetricsUsageHeaders(config.send_metrics),
-							},
-							new URLSearchParams({
-								// pass excludeScript so the whole body of the
-								// script doesn't get included in the response
-								excludeScript: "true",
-							})
-						)
-					);
+					// TODO Nomitch:
+					// I think what I have to do is to catch a specific type of error here, and then
+					// if it's a certain type of error, the error has to return
+					// the list of all classes that have gone missing
+					// and then on the next call, have to pass in a list of classes to
+					// rename and to what, or a list to delete
+
+					// Can it look like this? - And then these become one offs?
+					// renames: {"Foo": "Bar", "Baz": "Qux"}
+					// deletions: ["Woz", "Wiz"]
+
+					// BUT, if the user did have a migration, they
+					// need to migrate it to whatever the new state is probably
+					// otherwise this is hella confusing!
+
+					// So, given the last point, the error from the
+					// API has to differentiate between auto-renamable/deletable
+					// classes, and ones that require an explicit migration
+
+					result = await retryOnAPIFailure(async () => {
+						try {
+							return fetchResult<{
+								id: string | null;
+								etag: string | null;
+								pipeline_hash: string | null;
+								mutable_pipeline_id: string | null;
+								deployment_id: string | null;
+								startup_time_ms: number;
+							}>(
+								config,
+								workerUrl,
+								{
+									method: "PUT",
+									body: workerBundle,
+									headers: await getMetricsUsageHeaders(config.send_metrics),
+								},
+								new URLSearchParams({
+									// pass excludeScript so the whole body of the
+									// script doesn't get included in the response
+									excludeScript: "true",
+								})
+							);
+						} catch (e) {
+							// TODO: Check for specifically the error around
+							// auto-renaming/deleting classes here
+							logger.log("Oh noes", e);
+							throw e;
+						}
+					});
 
 					// Update service and environment tags when using environments
 					const nextTags = applyServiceAndEnvironmentTags(config, tags);

@@ -650,6 +650,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			encoding: "utf-8",
 		});
 
+		// TODO: Nomitch come back here later to check if you need to migrate here too!
 		// durable object migrations
 		const migrations = !props.dryRun
 			? await getMigrationsToUpload(scriptName, {
