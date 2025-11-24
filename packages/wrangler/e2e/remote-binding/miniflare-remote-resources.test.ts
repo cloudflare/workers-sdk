@@ -350,7 +350,6 @@ const testCases: TestCase[] = [
 	{
 		name: "Media",
 		scriptPath: "media.js",
-		// skip: true,
 		setup: () => ({
 			remoteProxySessionConfig: {
 				bindings: {
