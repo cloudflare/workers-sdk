@@ -206,6 +206,8 @@ type WorkerMetadataPut = {
 	};
 	observability?: Observability | undefined;
 	// Allow unsafe.metadata to add arbitrary properties at runtime
+	durableObjectRenames?: Record<string, string>;
+	durableObjectDeletes?: string[];
 	[key: string]: unknown;
 };
 
@@ -240,6 +242,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 		keep_assets,
 		assets,
 		observability,
+		durableObjectRenames,
+		durableObjectDeletes,
 	} = worker;
 
 	const assetConfig: AssetConfigMetadata = {
@@ -782,6 +786,8 @@ export function createWorkerUploadForm(worker: CfWorkerInit): FormData {
 			},
 		}),
 		...(observability && { observability }),
+		...(durableObjectRenames && { durableObjectRenames }),
+		...(durableObjectDeletes && { durableObjectDeletes }),
 	};
 
 	if (bindings.unsafe?.metadata !== undefined) {

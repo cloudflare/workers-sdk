@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { URLSearchParams } from "node:url";
 import { cancel } from "@cloudflare/cli";
+import { inputPrompt } from "@cloudflare/cli/interactive";
 import { verifyDockerInstalled } from "@cloudflare/containers-shared";
 import PQueue from "p-queue";
 import { Response } from "undici";
@@ -878,7 +879,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.config
 				);
 			}
-			workerBundle = createWorkerUploadForm(worker);
 
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
@@ -896,6 +896,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 				// If we're using the new APIs, first upload the version
 				if (canUseNewVersionsDeploymentsApi) {
+					workerBundle = createWorkerUploadForm(worker);
 					// Upload new version
 					const versionResult = await retryOnAPIFailure(async () =>
 						fetchResult<ApiVersion>(
@@ -971,8 +972,160 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					// API has to differentiate between auto-renamable/deletable
 					// classes, and ones that require an explicit migration
 
+					// For IAC, there probably has to be some way
+					// to declare a rename or delete of an existing class tho
+					// Can this just be a migration that references a
+					// class that didn't have an ititial migration?
+					// (seems better than a retroactive create migration)
+
+					// So the logic is:
+					//  - If I have just a new class, make it
+					//  - If I have one or more "missing" classes (and no new one)
+					// 	  - Error from the API
+					//    - Prompt the user if they want to delet eit
+					//    - Re-call the API with a deletedDOs field
+					//  - If I have one or more "missing" classes and one or more "new" classes
+					//    - Prompt the user on each if they want to rename or delete, if they pick rename
+					//      then ask them which one gets the old class's data
+					//    - Re-call the API with a renamedDOs field and/or deletedDOs fields
+
+					// TODO: Hoist these up out of the function
+
+					const isMissingAutoMigrationError = (err: any) => {
+						return (
+							err instanceof APIError &&
+							err.code === 10068 &&
+							err.notes
+								.map((note) => note.text)
+								.some((text) => text.includes("foobar"))
+						);
+					};
+
+					// const exampleRemoval = "foobar error: Durable Object class missing. The following Durable Object classes were removed with no singal to delete them: 'Foo'";
+					// const exampleRenameString = "foobar error: Durable Object class missing. The following Durable Object classes were removed with no singal to delete or rename them: 'Foo', 'Bar'. The following Durable Object classes were added with no signal to migrate data: 'Baz', 'Qux'";
+
+					const getClassesFromApiError = (err: APIError) => {
+						const message = err.notes
+							.map((note) => note.text)
+							.find((text) => text.includes("foobar"));
+						const removed = message?.matchAll(
+							/removed with no signal to delete(?: or rename)?:\s*'([^']+)'/g
+						);
+						const added = message?.matchAll(
+							/added with no signal to migrate data: '([^']+)'/
+						);
+						const removedClasses = removed
+							? Array.from(removed, (m) => m[1])
+							: [];
+						const addedClasses = added ? Array.from(added, (m) => m[1]) : [];
+
+						return {
+							removedClasses: removedClasses,
+							addedClasses: addedClasses,
+						};
+					};
+
+					const getActionsFromPrompt = async (
+						removedClasses: string[],
+						addedClasses: string[]
+					) => {
+						const renamedDOs: Record<string, string> = {};
+						const deletedDOs: string[] = [];
+
+						removedClasses.forEach(async (removedClass) => {
+							if (addedClasses.length > 0) {
+								// Prompt to rename or delete
+								const migrateOrDelete = await inputPrompt({
+									type: "select",
+									question: `Durable Object class "${removedClass}" is missing. What do you want to do with it?`,
+									label: "action",
+									options: [
+										{
+											label: "Migrate data from existing Durable Object",
+											value: "migrate",
+										},
+										{
+											label: "Delete the Durable Object data permanently",
+											value: "delete",
+										},
+									],
+									defaultValue: "migrate",
+								});
+
+								if (migrateOrDelete === "migrate") {
+									// Prompt which one to rename to
+									const variantOptions = addedClasses.map((addedClass) => ({
+										label: addedClass,
+										value: addedClass,
+									}));
+									const toRenameTo = await inputPrompt({
+										type: "select",
+										question: `Select a Durable Object class to migrate "${removedClass}" to:`,
+										label: "to",
+										options: variantOptions,
+										defaultValue: variantOptions[0].value,
+									});
+
+									renamedDOs[removedClass] = toRenameTo;
+
+									// Remove from addedClasses so it's not re-used
+									const index = addedClasses.indexOf(toRenameTo);
+									addedClasses.splice(index, 1);
+								} else {
+									deletedDOs.push(removedClass);
+								}
+							} else {
+								// No added classes left to rename to, confirm deletion
+								const confirmDeletion = await confirm(
+									`Durable Object class "${removedClass}" is missing and there are no new Durable Object classes to rename to. Do you want to delete it?`
+								);
+								if (confirmDeletion) {
+									deletedDOs.push(removedClass);
+								} else {
+									cancel(
+										"Aborting deploy... Durable Object class missing with no action taken."
+									);
+									throw new UserError(
+										`Deploy aborted due to missing Durable Object class "${removedClass}".`,
+										{ telemetryMessage: true }
+									);
+								}
+							}
+						});
+
+						// This should be empty in the case of a one-to-one rename
+						for (const addedClass of addedClasses) {
+							// For any remaining added classes, we will confirm that we want to add this class without
+							// any migration of data
+
+							// This isn't strictly necessary, but it's a nice safety check in case somebody
+							// fat fingered the migration/rename process
+
+							const confirmAddition = await confirm(
+								`Durable Object class "${addedClass}" is new and has no existing data to migrate. Do you want to add this namespace with empty data?`
+							);
+							if (!confirmAddition) {
+								cancel(
+									"Aborting deploy... New Durable Object class addition not confirmed."
+								);
+								throw new UserError(
+									`Deploy aborted due to new Durable Object class "${addedClass}".`,
+									{ telemetryMessage: true }
+								);
+							}
+						}
+
+						return { renamedDOs, deletedDOs };
+					};
+
 					result = await retryOnAPIFailure(async () => {
-						try {
+						// Defining this within the await to capture the context,
+						// but be able to re-pass new config if we need to modify
+						// it in the catch
+
+						// TODO: Give this an idiomatic name
+						const doUploadBundle = async (threadedWorker: CfWorkerInit) => {
+							workerBundle = createWorkerUploadForm(threadedWorker);
 							return fetchResult<{
 								id: string | null;
 								etag: string | null;
@@ -994,11 +1147,37 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 									excludeScript: "true",
 								})
 							);
+						};
+
+						try {
+							return doUploadBundle(worker);
 						} catch (e) {
-							// TODO: Check for specifically the error around
-							// auto-renaming/deleting classes here
-							logger.log("Oh noes", e);
-							throw e;
+							// If the bundle is uploaded and has an error related to missing automigration info
+							// Prompt the user for the info and try a re-upload
+							// We can only get this information from the validation step on upload,
+							// So the initial upload isn't a waste, though in an ideal world, we would validate
+							// only once and upload the whole thing only once. Since this is a relatively rare
+							// case where we are removing a DO class without an explicit migration, it is okay
+							// to call this twice for now.
+							if (isMissingAutoMigrationError(e)) {
+								const { addedClasses, removedClasses } = getClassesFromApiError(
+									e as APIError
+								);
+
+								const { renamedDOs, deletedDOs } = await getActionsFromPrompt(
+									removedClasses,
+									addedClasses
+								);
+
+								worker.durableObjectDeletes = deletedDOs;
+								worker.durableObjectRenames = renamedDOs;
+
+								return doUploadBundle(worker);
+							} else {
+								// TODO: Nomitch remove this
+								logger.log("Was not the right type of error", e);
+								throw e;
+							}
 						}
 					});
 

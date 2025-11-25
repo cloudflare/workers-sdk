@@ -462,6 +462,8 @@ export interface CfWorkerInit {
 		  }
 		| undefined;
 	observability: Observability | undefined;
+	durableObjectRenames: Record<string, string> | undefined;
+	durableObjectDeletes: string[] | undefined;
 }
 
 export interface CfWorkerContext {
