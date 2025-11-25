@@ -19,6 +19,7 @@ export const d1ExportCommand = createCommand({
 	metadata: {
 		description:
 			"Export the contents or schema of your database as a .sql file",
+		epilogue: "This command acts on local D1 Databases by default",
 		status: "stable",
 		owner: "Product: D1",
 	},
@@ -29,7 +30,7 @@ export const d1ExportCommand = createCommand({
 		name: {
 			type: "string",
 			demandOption: true,
-			description: "The name of the DB",
+			description: "The name of the D1 database to export",
 		},
 		local: {
 			type: "boolean",
@@ -38,8 +39,17 @@ export const d1ExportCommand = createCommand({
 		},
 		remote: {
 			type: "boolean",
-			description: "Export from your live D1",
+			description: "Export from a remote D1 database",
 			conflicts: "local",
+		},
+		output: {
+			type: "string",
+			description: "Path to the SQL file for your export",
+			demandOption: true,
+		},
+		table: {
+			type: "string",
+			description: "Specify which tables to include in export",
 		},
 		"no-schema": {
 			type: "boolean",
@@ -63,15 +73,6 @@ export const d1ExportCommand = createCommand({
 			type: "boolean",
 			hidden: true,
 			default: true,
-		},
-		table: {
-			type: "string",
-			description: "Specify which tables to include in export",
-		},
-		output: {
-			type: "string",
-			description: "Which .sql file to output to",
-			demandOption: true,
 		},
 	},
 	positionalArgs: ["name"],

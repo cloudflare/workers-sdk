@@ -13,7 +13,7 @@ import {
 
 export const d1MigrationsListCommand = createCommand({
 	metadata: {
-		description: "List your D1 migrations",
+		description: "View a list of unapplied migration files",
 		status: "stable",
 		owner: "Product: D1",
 	},
@@ -29,16 +29,16 @@ export const d1MigrationsListCommand = createCommand({
 		local: {
 			type: "boolean",
 			description:
-				"Execute commands/files against a local DB for use with wrangler dev",
+				"Check migrations against a local DB for use with wrangler dev",
 		},
 		remote: {
 			type: "boolean",
 			description:
-				"Execute commands/files against a remote DB for use with wrangler dev --remote",
+				"Check migrations against a remote DB for use with wrangler dev --remote",
 		},
 		preview: {
 			type: "boolean",
-			description: "Execute commands/files against a preview D1 DB",
+			description: "Check migrations against a preview D1 DB",
 			default: false,
 		},
 		"persist-to": {
