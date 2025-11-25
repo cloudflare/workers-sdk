@@ -239,6 +239,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			gatsby: gatsbyTemplate,
 			svelte: svelteTemplate,
 			docusaurus: docusaurusTemplate,
+			astro: astroTemplate,
 		};
 	} else {
 		return {
