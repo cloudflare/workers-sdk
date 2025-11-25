@@ -24,7 +24,7 @@ describe("errors during dev with remote bindings", () => {
 		msw.use(...mswSuccessUserHandlers);
 	});
 
-	it("errors triggered when creating the remote proxy session are appropriately surfaced", async () => {
+	it("errors triggered when creating the remote proxy session are surfaced", async () => {
 		let thrownError: Error | undefined;
 
 		try {
@@ -53,7 +53,7 @@ describe("errors during dev with remote bindings", () => {
 		);
 	});
 
-	it("errors triggered when establishing the remote proxy session (after it has been created) are appropriately surfaced", async () => {
+	it("errors triggered when establishing the remote proxy session (after it has been created) are surfaced", async () => {
 		vi.mocked(createPreviewSession).mockResolvedValue({
 			id: "test-session-id",
 			value: "test-session-value",

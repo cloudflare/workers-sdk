@@ -169,7 +169,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 			// we need to skip this on windows since in CI we're using node 20
 			// we should look into re-enable this once we can move to a node a newer version of node
 			test.skipIf(process.platform === "win32")(
-				"cannot connect to remote bindings",
+				"exit with a non zero error code and log an error",
 				async ({ expect }) => {
 					const proc = await runLongLived("pnpm", command, projectPath);
 
