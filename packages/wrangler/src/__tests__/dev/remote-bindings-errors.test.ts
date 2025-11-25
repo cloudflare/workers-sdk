@@ -62,22 +62,14 @@ describe("errors during dev with remote bindings", () => {
 		});
 
 		vi.mocked(createWorkerPreview).mockImplementation(async () => {
-			throw new Error(
-				"R2 bucket 'non-existent-0' not found. Please use a different name and try again."
-			);
+			throw new Error("The remote worker preview failed.");
 		});
 
 		let thrownError: Error | undefined;
 
 		try {
 			await startRemoteProxySession(
-				{
-					MY_R2: {
-						type: "r2_bucket",
-						bucket_name: "non-existent",
-						remote: true,
-					},
-				},
+				{},
 				{
 					auth: {
 						accountId: "test-account-id",
@@ -98,7 +90,7 @@ describe("errors during dev with remote bindings", () => {
 
 		expect(thrownError.cause).toMatchInlineSnapshot(`
 			Object {
-			  "cause": [Error: R2 bucket 'non-existent-0' not found. Please use a different name and try again.],
+			  "cause": [Error: The remote worker preview failed.],
 			  "data": undefined,
 			  "reason": "Failed to obtain a preview token",
 			  "source": "RemoteRuntimeController",
