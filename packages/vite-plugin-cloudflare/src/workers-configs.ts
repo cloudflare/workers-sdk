@@ -1,7 +1,12 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { unstable_readConfig } from "wrangler";
+import {
+	unstable_defaultWranglerConfig,
+	unstable_getDevCompatibilityDate,
+	unstable_readConfig,
+	unstable_toValidWorkerName,
+} from "wrangler";
 import type { AssetsOnlyConfig, WorkerConfig } from "./plugin-config";
 import type { Optional } from "./utils";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";
@@ -342,6 +347,52 @@ export function getWorkerConfig(
 	};
 }
 
+/**
+ * Generates a default worker config for zero-config mode when no wrangler config file is found.
+ * The worker name is derived from package.json name or directory basename.
+ * The compatibility date is taken from the installed workerd runtime.
+ *
+ * @param root the root of the vite project
+ * @returns an assets-only worker config with sensible defaults
+ */
+export function getDefaultWorkerConfig(
+	root: string
+): AssetsOnlyWorkerResolvedConfig {
+	// Get worker name from package.json name or directory basename
+	const packageJsonPath = path.join(root, "package.json");
+	let workerName: string;
+	try {
+		const packageJsonContent = fs.readFileSync(packageJsonPath, "utf-8");
+		const packageJson = JSON.parse(packageJsonContent) as { name?: string };
+		if (packageJson.name) {
+			workerName = unstable_toValidWorkerName(packageJson.name);
+		}
+	} catch {}
+	workerName ??= unstable_toValidWorkerName(path.basename(root));
+
+	// Get compatibility date from installed workerd runtime
+	const compatibilityDate = unstable_getDevCompatibilityDate(undefined);
+
+	// Start with the full default config to ensure all required fields have proper defaults,
+	// then override the fields specific to this zero-config worker
+	const config: RawWorkerConfig = {
+		...unstable_defaultWranglerConfig,
+		topLevelName: workerName,
+		name: workerName,
+		compatibility_date: compatibilityDate,
+	};
+
+	return {
+		type: "assets-only",
+		raw: config,
+		config: config as AssetsOnlyConfig,
+		nonApplicable: {
+			replacedByVite: new Set(),
+			notRelevant: new Set(),
+		},
+	};
+}
+
 const ENTRY_MODULE_EXTENSIONS = [".js", ".mjs", ".ts", ".mts", ".jsx", ".tsx"];
 
 /**
@@ -373,13 +424,23 @@ function maybeResolveMain(main: string, configPath: string): string {
  * @param root the root of the vite project
  * @param requestedConfigPath the requested config path, if any
  * @param isForAuxiliaryWorker whether the config path is being requested for an auxiliary worker
- * @returns a valid path to a config file
+ * @returns a valid path to a config file, or undefined for entry workers when no config is found (zero-config mode)
  */
 export function getValidatedWranglerConfigPath(
 	root: string,
 	requestedConfigPath: string | undefined,
+	isForAuxiliaryWorker: true
+): string;
+export function getValidatedWranglerConfigPath(
+	root: string,
+	requestedConfigPath: string | undefined,
+	isForAuxiliaryWorker?: boolean
+): string | undefined;
+export function getValidatedWranglerConfigPath(
+	root: string,
+	requestedConfigPath: string | undefined,
 	isForAuxiliaryWorker = false
-) {
+): string | undefined {
 	if (requestedConfigPath) {
 		const configPath = path.resolve(root, requestedConfigPath);
 
@@ -423,12 +484,7 @@ export function getValidatedWranglerConfigPath(
 
 	const configPath = findWranglerConfig(root);
 
-	if (!configPath) {
-		throw new Error(
-			`No config file found in the ${root} directory. Please add a wrangler.(jsonc|json|toml) file.`
-		);
-	}
-
+	// Return undefined for zero-config mode when no config file is found
 	return configPath;
 }
 

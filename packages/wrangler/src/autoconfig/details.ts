@@ -201,7 +201,7 @@ function checkWorkerNameValidity(
  * @param input The input to convert
  * @returns The input itself if it was already valid, the input converted to a valid worker name otherwise
  */
-function toValidWorkerName(input: string): string {
+export function toValidWorkerName(input: string): string {
 	if (checkWorkerNameValidity(input).valid) {
 		return input;
 	}
