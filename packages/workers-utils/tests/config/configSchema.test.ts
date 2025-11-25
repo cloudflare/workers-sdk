@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { describe, expect, test } from "vitest";
 
 describe("src/config/environment.ts", () => {
 	// `@default` values must not be escaped in order to generate a valid schema.

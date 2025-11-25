@@ -17,13 +17,16 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 
 		process.chdir(tmpDir);
 		vi.stubEnv("PWD", tmpDir);
-
-		// Override where the home directory is so that we can write our own user config,
-		// without destroying the real thing.
 		// The path that is returned from `homedir()` should be absolute.
 		const absHomedir = path.resolve(tmpDir, homedir);
+		// Override where the home directory is so that we can write our own user config,
+		// without destroying the real thing.
 		fs.mkdirSync(absHomedir, { recursive: true });
-		vi.stubEnv("HOME", absHomedir);
+		// Note it is very important that we use the "default" value from "node:os" (e.g. `import os from "node:os";`)
+		// rather than an alias to the module (e.g. `import * as os from "node:os";`).
+		// This is because the module gets transpiled so that the "method" `homedir()` gets converted to a
+		// getter that is not configurable (and so cannot be spied upon).
+		vi.spyOn(os, "homedir")?.mockReturnValue(absHomedir);
 	});
 
 	afterEach(() => {

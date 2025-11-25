@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { brandColor } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { getGlobalWranglerCachePath } from "@cloudflare/workers-utils";
 import {
 	Browser,
 	CDP_WEBSOCKET_ENDPOINT_REGEX,
@@ -15,7 +16,6 @@ import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
 import { z } from "zod";
 import { kVoid } from "../../runtime";
 import { Log } from "../../shared";
-import { getGlobalWranglerCachePath } from "../../shared/wrangler";
 import {
 	getUserBindingServiceName,
 	Plugin,

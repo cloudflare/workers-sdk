@@ -47,6 +47,7 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@types/command-exists": "^1.2.0",
 		"@types/cross-spawn": "^6.0.2",
 		"@types/deepmerge": "^2.2.0",
