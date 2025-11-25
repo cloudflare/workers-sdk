@@ -103,15 +103,6 @@ describe("validateChangesets()", () => {
 
 		  chore: test`,
 				},
-				{
-					file: "valid-three.md",
-					contents: dedent`
-          ---
-          "package-c": major
-          ---
-
-		  fix: test`,
-				},
 				{ file: "invalid-frontmatter.md", contents: "" },
 				{
 					file: "invalid-package.md",
@@ -135,9 +126,12 @@ describe("validateChangesets()", () => {
 		);
 		expect(errors).toMatchInlineSnapshot(`
 			[
+			  "Changesets with "minor" bumps are not allowed in the V3 maintenance branch: package "package-b" in changeset at "valid-two.md".",
+			  "Changesets with "major" bumps are not allowed in the V3 maintenance branch: package "package-c" in changeset at "valid-three.md".",
 			  "Error: could not parse changeset - invalid frontmatter: at file "invalid-frontmatter.md"",
 			  "Invalid package name "package-invalid" in changeset at "invalid-package.md".",
-			  "Invalid type "foo" for package "package-a" in changeset at "invalid-type.md".",
+			  "Changesets with "major" bumps are not allowed in the V3 maintenance branch: package "package-invalid" in changeset at "invalid-package.md".",
+			  "Changesets with "foo" bumps are not allowed in the V3 maintenance branch: package "package-a" in changeset at "invalid-type.md".",
 			]
 		`);
 	});

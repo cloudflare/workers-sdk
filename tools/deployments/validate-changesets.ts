@@ -29,7 +29,11 @@ export function validateChangesets(
 						`Invalid package name "${release.name}" in changeset at "${file}".`
 					);
 				}
-				if (!["major", "minor", "patch", "none"].includes(release.type)) {
+				if (release.type !== "patch" && release.type !== "none") {
+					errors.push(
+						`Changesets with "${release.type}" bumps are not allowed in the V3 maintenance branch: package "${release.name}" in changeset at "${file}".`
+					);
+				} else if (!["patch", "none"].includes(release.type)) {
 					errors.push(
 						`Invalid type "${release.type}" for package "${release.name}" in changeset at "${file}".`
 					);
