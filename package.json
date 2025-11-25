@@ -22,7 +22,7 @@
 		"fix": "dotenv -- turbo check:lint -- --fix && pnpm run prettify",
 		"prettify": "prettier . --write --ignore-unknown",
 		"test": "dotenv -- turbo test",
-		"test:ci": "dotenv -- turbo test:ci",
+		"test:ci": "dotenv -- turbo test:ci --no-cache",
 		"test:e2e": "dotenv -- turbo test:e2e",
 		"test:e2e:c3": "dotenv -- node -r esbuild-register packages/create-cloudflare/scripts/e2e/run-tests.ts",
 		"test:e2e:wrangler": "dotenv -- node -r esbuild-register tools/e2e/runIndividualE2EFiles.ts",

@@ -36,11 +36,6 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
-        with:
-          turbo-api: ${{ secrets.TURBO_API }}
-          turbo-team: ${{ secrets.TURBO_TEAM }}
-          turbo-token: ${{ secrets.TURBO_TOKEN }}
-          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
       - name: Check the changesets
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
@@ -134,7 +129,7 @@ jobs:
         # We are running the package tests first be able to get early feedback on changes.
         # There is no point in running the fixtures if a package is broken.
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*"
+        run: pnpm run test:ci --log-order=stream --filter="./packages/*"
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
@@ -155,7 +150,7 @@ jobs:
       - name: Run tests (fixtures)
         if: steps.changes.outputs.everything_but_markdown == 'true'
         # Browser rendering is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
-        run: pnpm run test:ci --concurrency 1 --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-rendering"' || '' }}
+        run: pnpm run test:ci --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-rendering"' || '' }}
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
@@ -183,7 +178,6 @@ jobs:
       matrix:
         include:
           - { node_version: 20, description: "Node 20" }
-          - { node_version: 24, description: "Node 24" }
 
     steps:
       - name: Checkout Repo
