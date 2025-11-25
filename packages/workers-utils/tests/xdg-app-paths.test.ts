@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import xdgAppPaths from "xdg-app-paths";
 import {
 	getGlobalWranglerCachePath,
@@ -11,6 +11,13 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 
 describe("getGlobalWranglerCachePath()", () => {
 	runInTempDir();
+
+	beforeEach(() => {
+		const cachePath = xdgAppPaths({ name: "wrangler" }).cache();
+		console.log("CACHE_PATH", cachePath);
+		const configPath = xdgAppPaths({ name: "wrangler" }).config();
+		console.log("CONFIG_PATH", configPath);
+	});
 
 	it('should use XDG "wrangler" cache path by default', () => {
 		const cachePath = xdgAppPaths({ name: "wrangler" }).cache();
