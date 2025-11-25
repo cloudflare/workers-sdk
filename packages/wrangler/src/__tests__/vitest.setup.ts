@@ -31,11 +31,11 @@ vi.mock("ansi-escapes", () => {
 
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
 vi.mock("get-port", async (importOriginal) => {
-	const getPort = await importOriginal<typeof import("get-port")>();
+	const { default: getPort } =
+		await importOriginal<typeof import("get-port")>();
 	return {
 		__esModule: true,
-		default: vi.fn(getPort.default),
-		portNumbers: getPort.portNumbers,
+		default: vi.fn(getPort),
 	};
 });
 
