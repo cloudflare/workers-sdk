@@ -31,8 +31,6 @@ const command =
 	`pnpm test:e2e --log-order=stream --output-logs=new-only --summarize --filter wrangler ` +
 	extraParams.join(" ");
 
-const failed: string[] = [];
-
 const wranglerPath = path.join(__dirname, "../../packages/wrangler");
 assert(statSync(wranglerPath).isDirectory());
 
@@ -44,7 +42,18 @@ let tests = Array.from(
 	})
 );
 
+const failedTest = new Set<string>();
+
 for (let i = 0; i < RETRIES; i++) {
+	if (i > 0) {
+		console.log(
+			`Retrying ${tests.length} failed tests...` +
+				tests.map((file) => `\n - ${file}`)
+		);
+	}
+
+	failedTest.clear();
+
 	for (const testFile of tests) {
 		const options: ExecSyncOptionsWithBufferEncoding = {
 			stdio: "inherit",
@@ -52,29 +61,25 @@ for (let i = 0; i < RETRIES; i++) {
 		};
 
 		console.log(`::group::Testing: ${testFile}`);
-
 		try {
 			execSync(command, options);
 		} catch {
-			failed.push(testFile);
+			failedTest.add(testFile);
 		}
 		console.log("::endgroup::");
 	}
-	if (failed.length === 0) {
-		break;
-	} else {
-		console.log(
-			`Retrying ${failed.length} failed tests...` +
-				failed.map((file) => `\n - ${file}`)
-		);
-		tests = failed.splice(0, failed.length);
+
+	if (failedTest.size === 0) {
+		process.exit(0);
 	}
+
+	tests = [...failedTest];
 }
 
-if (failed.length > 0) {
+if (failedTest.size > 0) {
 	console.error(
 		"At least one task failed (even on retry):" +
-			failed.map((file) => `\n - ${file}`)
+			[...failedTest].map((file) => `\n - ${file}`)
 	);
-	process.exitCode = 1;
+	process.exit(1);
 }
