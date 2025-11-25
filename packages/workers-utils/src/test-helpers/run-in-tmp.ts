@@ -24,7 +24,6 @@ export function runInTempDir({ homedir } = { homedir: "./home" }) {
 		const absHomedir = path.resolve(tmpDir, homedir);
 		fs.mkdirSync(absHomedir, { recursive: true });
 		vi.stubEnv("HOME", absHomedir);
-		vi.stubEnv("XDG_CONFIG_HOME", path.resolve(absHomedir, ".config"));
 	});
 
 	afterEach(() => {
