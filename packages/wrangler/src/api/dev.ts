@@ -231,7 +231,6 @@ export async function unstable_dev(
 			// TODO: can we make this work?
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: false,
-			DEPLOY_REMOTE_DIFF_CHECK: false,
 			AUTOCREATE_RESOURCES: false,
 		},
 		() => startDev(devOptions)

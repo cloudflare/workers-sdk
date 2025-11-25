@@ -229,13 +229,6 @@ export const deployCommand = createCommand({
 				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. ",
 			choices: ["immediate", "gradual"] as const,
 		},
-		"experimental-deploy-remote-diff-check": {
-			describe: "Experimental: Enable The Deployment Remote Diff check",
-			type: "boolean",
-			hidden: true,
-			default: true,
-			alias: ["x-remote-diff-check"],
-		},
 		strict: {
 			describe:
 				"Enables strict mode for the deploy command, this prevents deployments to occur when there are even small potential risks.",
@@ -255,7 +248,6 @@ export const deployCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			DEPLOY_REMOTE_DIFF_CHECK: args.experimentalDeployRemoteDiffCheck ?? false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,

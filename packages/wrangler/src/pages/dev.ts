@@ -877,7 +877,6 @@ export const pagesDevCommand = createCommand({
 			{
 				MULTIWORKER: Array.isArray(args.config),
 				RESOURCES_PROVISION: false,
-				DEPLOY_REMOTE_DIFF_CHECK: false,
 				AUTOCREATE_RESOURCES: false,
 			},
 			() =>

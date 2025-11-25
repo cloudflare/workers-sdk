@@ -402,66 +402,54 @@ export default async function deploy(props: Props): Promise<{
 			tags = script.tags ?? tags;
 
 			if (script.last_deployed_from === "dash") {
-				let configDiff: ReturnType<typeof getRemoteConfigDiff> | undefined;
-				if (getFlag("DEPLOY_REMOTE_DIFF_CHECK")) {
-					const remoteWorkerConfig = await downloadWorkerConfig(
-						name,
-						serviceMetaData.default_environment.environment,
-						entry.file,
-						accountId
-					);
+				const remoteWorkerConfig = await downloadWorkerConfig(
+					name,
+					serviceMetaData.default_environment.environment,
+					entry.file,
+					accountId
+				);
 
-					configDiff = getRemoteConfigDiff(remoteWorkerConfig, {
-						...config,
-						// We also want to include all the routes used for deployment
-						routes: allDeploymentRoutes,
-					});
-				}
+				const configDiff = getRemoteConfigDiff(remoteWorkerConfig, {
+					...config,
+					// We also want to include all the routes used for deployment
+					routes: allDeploymentRoutes,
+				});
 
-				if (configDiff) {
-					// If there are only additive changes (or no changes at all) there should be no problem,
-					// just using the local config (and override the remote one) should be totally fine
-					if (!configDiff.nonDestructive) {
-						logger.warn(
-							"The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:" +
-								`\n${configDiff.diff}\n\n` +
-								"Deploying the Worker will override the remote configuration with your local one."
-						);
-						if (!(await deployConfirm("Would you like to continue?"))) {
-							if (
-								config.userConfigPath &&
-								/\.jsonc?$/.test(config.userConfigPath)
-							) {
-								if (
-									await confirm(
-										"Would you like to update the local config file with the remote values?",
-										{
-											defaultValue: true,
-											fallbackValue: true,
-										}
-									)
-								) {
-									const patchObj: RawConfig = getConfigPatch(
-										configDiff.diff,
-										props.env
-									);
-
-									experimental_patchConfig(
-										config.userConfigPath,
-										patchObj,
-										false
-									);
-								}
-							}
-
-							return { versionId, workerTag };
-						}
-					}
-				} else {
+				// If there are only additive changes (or no changes at all) there should be no problem,
+				// just using the local config (and override the remote one) should be totally fine
+				if (!configDiff.nonDestructive) {
 					logger.warn(
-						`You are about to publish a Workers Service that was last published via the Cloudflare Dashboard.\nEdits that have been made via the dashboard will be overridden by your local code and config.`
+						"The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:" +
+							`\n${configDiff.diff}\n\n` +
+							"Deploying the Worker will override the remote configuration with your local one."
 					);
 					if (!(await deployConfirm("Would you like to continue?"))) {
+						if (
+							config.userConfigPath &&
+							/\.jsonc?$/.test(config.userConfigPath)
+						) {
+							if (
+								await confirm(
+									"Would you like to update the local config file with the remote values?",
+									{
+										defaultValue: true,
+										fallbackValue: true,
+									}
+								)
+							) {
+								const patchObj: RawConfig = getConfigPatch(
+									configDiff.diff,
+									props.env
+								);
+
+								experimental_patchConfig(
+									config.userConfigPath,
+									patchObj,
+									false
+								);
+							}
+						}
+
 						return { versionId, workerTag };
 					}
 				}
