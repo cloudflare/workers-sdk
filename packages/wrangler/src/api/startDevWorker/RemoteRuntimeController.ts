@@ -73,6 +73,14 @@ export class RemoteRuntimeController extends RuntimeController {
 			}
 
 			handlePreviewSessionCreationError(err, props.accountId);
+
+			this.emitErrorEvent({
+				type: "error",
+				reason: "Failed to create a preview token",
+				cause: castErrorCause(err),
+				source: "RemoteRuntimeController",
+				data: undefined,
+			});
 		}
 	}
 

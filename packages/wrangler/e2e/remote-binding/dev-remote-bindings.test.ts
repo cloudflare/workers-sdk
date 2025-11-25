@@ -211,7 +211,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						expect(worker.currentOutput).toContain(
 							"Could not resolve service binding 'REMOTE_WORKER'. Target script 'non-existent-service-binding' not found."
 						),
-					5_000
+					7_000
 				);
 			});
 
@@ -238,7 +238,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 						expect(worker.currentOutput).toContain(
 							"KV namespace 'non-existent-kv' is not valid."
 						),
-					5_000
+					7_000
 				);
 			});
 		});
