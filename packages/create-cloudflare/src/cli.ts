@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { mkdirSync } from "fs";
-import { dirname } from "path";
-import { chdir } from "process";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { chdir } from "node:process";
 import {
 	cancel,
 	checkMacOSVersion,

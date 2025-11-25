@@ -1,6 +1,6 @@
-import assert from "assert";
-import { existsSync } from "fs";
-import path from "path";
+import assert from "node:assert";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { fetch } from "undici";
 import { runCommand } from "./command";

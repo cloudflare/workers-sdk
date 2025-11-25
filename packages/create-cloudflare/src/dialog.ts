@@ -1,4 +1,4 @@
-import { relative } from "path";
+import { relative } from "node:path";
 import { hyperlink, logRaw, shapes, stripAnsi } from "@cloudflare/cli";
 import { bgGreen, blue, gray } from "@cloudflare/cli/colors";
 import { quoteShellArgs } from "helpers/command";

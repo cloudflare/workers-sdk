@@ -1,7 +1,7 @@
-import assert from "assert";
-import { existsSync } from "fs";
+import assert from "node:assert";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import { join } from "path";
 import getPort from "get-port";
 import { runCommand } from "helpers/command";
 import {
@@ -29,7 +29,7 @@ import { runC3 } from "./run-c3";
 import { kill, spawnWithLogging } from "./spawn";
 import type { TemplateConfig } from "../../src/templates";
 import type { RunnerConfig } from "./run-c3";
-import type { Writable } from "stream";
+import type { Writable } from "node:stream";
 
 export type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;

@@ -1,4 +1,4 @@
-import { writeFileSync } from "fs";
+import { writeFileSync } from "node:fs";
 import { applyEdits, format, modify } from "jsonc-parser";
 import TOML from "smol-toml";
 import { parseJSONC, parseTOML, readFileSync } from "../parse";

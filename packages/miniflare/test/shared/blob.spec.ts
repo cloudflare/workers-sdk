@@ -1,9 +1,9 @@
-import assert from "assert";
-import { Blob } from "buffer";
-import { existsSync } from "fs";
-import fs from "fs/promises";
-import path from "path";
-import { ReadableStream } from "stream/web";
+import assert from "node:assert";
+import { Blob } from "node:buffer";
+import { existsSync } from "node:fs";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { ReadableStream } from "node:stream/web";
 import anyTest, { TestFn } from "ava";
 import { InclusiveRange, Miniflare, Response } from "miniflare";
 import { useTmp } from "../test-shared";

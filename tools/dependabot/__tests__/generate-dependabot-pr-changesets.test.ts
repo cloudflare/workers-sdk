@@ -1,5 +1,5 @@
-import { spawnSync } from "child_process";
-import { writeFileSync } from "fs";
+import { spawnSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
 import dedent from "ts-dedent";
 import { beforeEach, describe, it, vitest } from "vitest";
 import {

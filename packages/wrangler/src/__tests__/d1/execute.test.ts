@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { join } from "path";
+import { join } from "node:path";
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";

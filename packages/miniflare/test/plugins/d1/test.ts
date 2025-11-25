@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import { TestFn } from "ava";
 import { miniflareTest, MiniflareTestContext } from "../../test-shared";
 import type { D1Database } from "@cloudflare/workers-types/experimental";

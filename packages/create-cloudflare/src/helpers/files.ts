@@ -1,5 +1,5 @@
-import fs, { existsSync, statSync } from "fs";
-import { join } from "path";
+import fs, { existsSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { parse, stringify } from "comment-json";
 import TOML from "smol-toml";
 import type { C3Context, PackageJson } from "types";

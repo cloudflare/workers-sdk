@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "node:assert";
 import { CommandRegistry } from "../../core/CommandRegistry";
 import {
 	createAlias,

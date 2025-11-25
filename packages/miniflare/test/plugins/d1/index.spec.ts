@@ -1,5 +1,5 @@
-import fs from "fs/promises";
-import path from "path";
+import fs from "node:fs/promises";
+import path from "node:path";
 import test from "ava";
 import { Miniflare } from "miniflare";
 import { FIXTURES_PATH, useTmp } from "../../test-shared";

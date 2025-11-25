@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
-import { PassThrough } from "stream";
+import { PassThrough } from "node:stream";
 import chalk from "chalk";
 import { passthrough } from "msw";
 import { afterAll, afterEach, beforeAll, vi } from "vitest";

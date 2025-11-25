@@ -8,7 +8,7 @@ import { isExperimental, runDeployTests } from "./constants";
 import { runC3 } from "./run-c3";
 import { kill, spawnWithLogging, waitForExit } from "./spawn";
 import type { WorkerTestConfig } from "../tests/workers/test-config";
-import type { Writable } from "stream";
+import type { Writable } from "node:stream";
 
 const { name: pm } = detectPackageManager();
 

@@ -414,7 +414,7 @@ export const WorkerdTests: Record<string, () => void> = {
 	async testAsyncHooksRequire() {
 		const module = await import("node:module");
 		const require = module.createRequire("/");
-		const asyncHooks = require("async_hooks");
+		const asyncHooks = require("node:async_hooks");
 
 		const storage = new asyncHooks.AsyncLocalStorage();
 		const result = await storage.run({ test: "require" }, async () => {

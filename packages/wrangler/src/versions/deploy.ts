@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "node:assert";
 import * as cli from "@cloudflare/cli";
 import { brandColor, gray, white } from "@cloudflare/cli/colors";
 import {

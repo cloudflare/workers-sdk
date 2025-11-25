@@ -1,8 +1,8 @@
-import crypto, { createHash } from "crypto";
-import { existsSync } from "fs";
-import fs from "fs/promises";
-import path from "path";
-import { fileURLToPath, pathToFileURL } from "url";
+import crypto, { createHash } from "node:crypto";
+import { existsSync } from "node:fs";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { z } from "zod";
 import {
 	Extension,

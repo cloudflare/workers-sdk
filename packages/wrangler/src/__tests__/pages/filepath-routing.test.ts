@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import {
 	compareRoutes,
 	generateConfigFromFileTree,

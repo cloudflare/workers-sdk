@@ -1,8 +1,8 @@
-import assert from "assert";
-import { Blob } from "buffer";
-import fs from "fs/promises";
-import path from "path";
-import consumers from "stream/consumers";
+import assert from "node:assert";
+import { Blob } from "node:buffer";
+import fs from "node:fs/promises";
+import path from "node:path";
+import consumers from "node:stream/consumers";
 import { Macro, ThrowsExpectation } from "ava";
 import {
 	KV_PLUGIN_NAME,

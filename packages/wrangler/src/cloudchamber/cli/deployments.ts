@@ -1,4 +1,4 @@
-import { exit } from "process";
+import { exit } from "node:process";
 import { cancel, endSection, log, newline } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { brandColor, dim, yellow } from "@cloudflare/cli/colors";

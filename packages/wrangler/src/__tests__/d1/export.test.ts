@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";

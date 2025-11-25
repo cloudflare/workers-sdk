@@ -1,5 +1,5 @@
 import "cloudflare/shims/web";
-import process from "process";
+import process from "node:process";
 import { FatalError } from "@cloudflare/workers-utils";
 import { hideBin } from "yargs/helpers";
 import {

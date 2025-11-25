@@ -1,6 +1,6 @@
 // noinspection HttpUrlsUsage
 
-import { URL } from "url";
+import { URL } from "node:url";
 import test from "ava";
 import { matchRoutes, parseRoutes, RouterError } from "miniflare";
 

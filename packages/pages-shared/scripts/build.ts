@@ -1,6 +1,6 @@
-import { execFileSync } from "child_process";
-import { rmSync } from "fs";
-import path from "path";
+import { execFileSync } from "node:child_process";
+import { rmSync } from "node:fs";
+import path from "node:path";
 import * as esbuild from "esbuild";
 
 function resolve(...segments: string[]) {

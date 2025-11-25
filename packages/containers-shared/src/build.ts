@@ -1,5 +1,5 @@
-import { spawn } from "child_process";
-import { readFileSync } from "fs";
+import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { UserError } from "./error";
 import type {
 	BuildArgs,

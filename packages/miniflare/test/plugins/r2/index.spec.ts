@@ -1,10 +1,10 @@
 // noinspection TypeScriptValidateJSTypes
 
-import assert from "assert";
-import crypto from "crypto";
-import fs from "fs/promises";
-import path from "path";
-import { text } from "stream/consumers";
+import assert from "node:assert";
+import crypto from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { text } from "node:stream/consumers";
 import { Macro, ThrowsExpectation } from "ava";
 import {
 	Headers,

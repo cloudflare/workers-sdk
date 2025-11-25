@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync } from "node:fs";
 import { mockWorkersTypesDirectory } from "helpers/__tests__/mocks";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";

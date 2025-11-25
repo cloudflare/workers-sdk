@@ -1,5 +1,5 @@
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
 import dedent from "ts-dedent";
 import { findAdditionalModules } from "../deployment-bundle/find-additional-modules";
 import { mockConsoleMethods } from "./helpers/mock-console";

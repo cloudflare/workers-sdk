@@ -1,11 +1,11 @@
-import { execFileSync, spawn } from "child_process";
-import { randomUUID } from "crypto";
-import { existsSync, statSync } from "fs";
-import path from "path";
+import { execFileSync, spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { existsSync, statSync } from "node:fs";
+import path from "node:path";
 import { UserError } from "./error";
 import { dockerImageInspect } from "./inspect";
 import type { ContainerDevOptions } from "./types";
-import type { StdioOptions } from "child_process";
+import type { StdioOptions } from "node:child_process";
 
 /** helper for simple docker command call that don't require any io handling */
 export const runDockerCmd = (

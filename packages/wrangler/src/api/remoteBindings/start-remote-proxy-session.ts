@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import getPort from "get-port";
 import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
 import { logger } from "../../logger";

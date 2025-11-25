@@ -1,13 +1,13 @@
-import assert from "assert";
-import crypto from "crypto";
-import fs from "fs/promises";
-import path from "path";
+import assert from "node:assert";
+import crypto from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
 import {
 	ReadableByteStreamController,
 	ReadableStream,
 	ReadableStreamBYOBRequest,
-} from "stream/web";
-import { TextDecoder, TextEncoder } from "util";
+} from "node:stream/web";
+import { TextDecoder, TextEncoder } from "node:util";
 import { ExecutionContext } from "ava";
 import { sanitisePath } from "miniflare";
 

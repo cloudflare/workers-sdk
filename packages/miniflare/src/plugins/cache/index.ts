@@ -1,4 +1,4 @@
-import fs from "fs/promises";
+import fs from "node:fs/promises";
 import SCRIPT_CACHE_OBJECT from "worker:cache/cache";
 import SCRIPT_CACHE_ENTRY from "worker:cache/cache-entry";
 import SCRIPT_CACHE_ENTRY_NOOP from "worker:cache/cache-entry-noop";

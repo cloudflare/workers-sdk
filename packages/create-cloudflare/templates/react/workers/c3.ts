@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "node:assert";
 import { logRaw } from "@cloudflare/cli";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";

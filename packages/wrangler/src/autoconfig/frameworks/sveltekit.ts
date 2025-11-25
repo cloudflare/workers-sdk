@@ -1,4 +1,4 @@
-import { writeFileSync } from "fs";
+import { writeFileSync } from "node:fs";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { getPackageManager } from "../../package-manager";
 import { runCommand } from "../c3-vendor/command";
