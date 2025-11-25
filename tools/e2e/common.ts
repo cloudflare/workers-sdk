@@ -86,6 +86,12 @@ async function apiFetchResponse(
 	});
 
 	if (response.status >= 400) {
+		console.error(
+			"API Fetch failed",
+			response.status,
+			response.statusText,
+			await response.text()
+		);
 		throw { url, init, response };
 	}
 
@@ -132,7 +138,6 @@ async function apiFetchList<T>(path: string, queryParams = {}): Promise<T[]> {
 				{ method: "GET" },
 				{
 					page,
-					per_page: 100,
 					...queryParams,
 				}
 			);
