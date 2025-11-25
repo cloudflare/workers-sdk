@@ -159,6 +159,10 @@ export async function getCurrentWorkerNameToExportTypesMap(
 	viteDevServer: vite.ViteDevServer,
 	miniflare: Miniflare
 ): Promise<Map<string, ExportTypes>> {
+	// Vite's internal CSS plugins rely on `buildStart` being called for the client environment before modules are transformed in server environments
+	// Vite calls this method when initialising the dev server but we need to make requests before that happens
+	await viteDevServer.environments.client.pluginContainer.buildStart();
+
 	const results = await Promise.all(
 		[...resolvedPluginConfig.environmentNameToWorkerMap].map(
 			async ([environmentName, worker]) => {
