@@ -198,8 +198,9 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 		await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 
 		expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token.[0m
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token[0m
 
+			  from <cwd>/home/.config/wrangler/config/default.toml.
 			  This is no longer supported in the current version of Wrangler.
 			  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
 			  environment variable.
