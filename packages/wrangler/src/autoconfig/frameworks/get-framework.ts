@@ -3,13 +3,16 @@ import { Static } from "./static";
 import { SvelteKit } from "./sveltekit";
 import type { Framework } from ".";
 
-export function getFramework(id?: string, name?: string): Framework {
-	if (id === "astro") {
-		return new Astro(name);
+export function getFramework(detectedFramework?: {
+	id: string;
+	name: string;
+}): Framework {
+	switch (detectedFramework?.id) {
+		case "astro":
+			return new Astro(detectedFramework.name);
+		case "svelte-kit":
+			return new SvelteKit(detectedFramework.name);
+		default:
+			return new Static(detectedFramework?.name);
 	}
-	if (id === "svelte-kit") {
-		return new SvelteKit(name);
-	}
-
-	return new Static(name);
 }

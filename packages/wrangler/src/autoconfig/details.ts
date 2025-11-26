@@ -103,10 +103,7 @@ export async function getDetailsForAutoConfig({
 
 	const detectedFramework: Settings | undefined = buildSettings?.[0];
 
-	const framework = getFramework(
-		detectedFramework?.framework?.id,
-		detectedFramework?.framework?.name
-	);
+	const framework = getFramework(detectedFramework?.framework);
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
