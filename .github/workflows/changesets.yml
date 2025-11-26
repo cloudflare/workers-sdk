@@ -27,10 +27,14 @@ jobs:
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
         with:
+          node-version: 24
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Check npm version
+        run: node -r esbuild-register tools/deployments/check-npm-version.ts
 
       - name: Check the changesets
         run: node -r esbuild-register tools/deployments/validate-changesets.ts
