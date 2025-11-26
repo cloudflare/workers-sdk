@@ -3,6 +3,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
+		"check:type": "tsc --build",
 		"dev": "node server.js"
 	},
 	"devDependencies": {
