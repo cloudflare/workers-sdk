@@ -173,7 +173,7 @@ export interface StartDevWorkerInput {
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;
 		legacyAssets?: Hook<Config["legacy_assets"], [Config]>;
-		enableServiceEnvironments?: boolean;
+		useServiceEnvironments?: boolean;
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
 	assets?: string;

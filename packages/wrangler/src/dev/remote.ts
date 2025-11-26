@@ -89,7 +89,7 @@ export async function createRemoteWorkerInit(props: {
 	modules: CfModule[];
 	accountId: string;
 	name: string;
-	legacyEnv: boolean | undefined;
+	useServiceEnvironments: boolean | undefined;
 	env: string | undefined;
 	isWorkersSite: boolean;
 	assets: AssetsOptions | undefined;
@@ -120,7 +120,8 @@ export async function createRemoteWorkerInit(props: {
 		// have added the env name on to the script name. However, we must
 		// include it in the kv namespace name regardless (since there's no
 		// concept of service environments for kv namespaces yet).
-		props.name + (!props.legacyEnv && props.env ? `-${props.env}` : ""),
+		props.name +
+			(props.useServiceEnvironments && props.env ? `-${props.env}` : ""),
 		props.isWorkersSite ? props.legacyAssetPaths : undefined,
 		true,
 		false,
@@ -193,7 +194,7 @@ export async function createRemoteWorkerInit(props: {
 export async function getWorkerAccountAndContext(props: {
 	accountId: string;
 	env: string | undefined;
-	legacyEnv: boolean | undefined;
+	useServiceEnvironments: boolean | undefined;
 	host: string | undefined;
 	routes: Route[] | undefined;
 	sendMetrics: boolean | undefined;
@@ -213,7 +214,7 @@ export async function getWorkerAccountAndContext(props: {
 
 	const workerContext: CfWorkerContext = {
 		env: props.env,
-		legacyEnv: props.legacyEnv,
+		useServiceEnvironments: props.useServiceEnvironments,
 		zone: zoneId,
 		host: props.host ?? getInferredHost(props.routes, props.configPath),
 		routes: props.routes,

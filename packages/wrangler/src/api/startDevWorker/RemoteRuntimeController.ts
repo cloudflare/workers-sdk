@@ -91,7 +91,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				{
 					accountId: props.accountId,
 					env: props.env,
-					legacyEnv: props.legacyEnv,
+					useServiceEnvironments: props.useServiceEnvironments,
 					host: props.host,
 					routes: props.routes,
 					sendMetrics: props.sendMetrics,
@@ -115,7 +115,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				modules: props.modules,
 				accountId: props.accountId,
 				name: scriptId,
-				legacyEnv: props.legacyEnv,
+				useServiceEnvironments: props.useServiceEnvironments,
 				env: props.env,
 				isWorkersSite: props.isWorkersSite,
 				assets: props.assets,
@@ -191,7 +191,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			this.#session ??= await this.#previewSession({
 				accountId: auth.accountId,
 				env: config.env, // deprecated service environments -- just pass it through for now
-				legacyEnv: !config.legacy?.enableServiceEnvironments, // wrangler environment -- just pass it through for now
+				useServiceEnvironments: config.legacy?.useServiceEnvironments, // wrangler environment -- just pass it through for now
 				host: config.dev.origin?.hostname,
 				routes,
 				sendMetrics: config.sendMetrics,
@@ -213,7 +213,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				modules: bundle.modules,
 				accountId: auth.accountId,
 				name: config.name,
-				legacyEnv: !config.legacy?.enableServiceEnvironments,
+				useServiceEnvironments: config.legacy?.useServiceEnvironments,
 				env: config.env,
 				isWorkersSite: config.legacy?.site !== undefined,
 				assets: config.assets,
