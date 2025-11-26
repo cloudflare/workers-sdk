@@ -617,6 +617,21 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			},
 			nodeCompat: true,
 		},
+		{
+			name: "vike",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Vike",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Vike",
+			},
+			nodeCompat: false,
+		},
 	];
 }
 
