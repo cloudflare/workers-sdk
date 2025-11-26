@@ -9,7 +9,8 @@ Containers: Allow users to directly authenticate external image registries in lo
 Previously, we always queried the API for stored registry credentials and used those to pull images.
 This means that if you are using an external registry (ECR, dockerhub) then you have to configure
 registry credentials remotely before running local dev. Also, it meant that the Vite-plugin didn't
-work with external image registries, since the plugin could not call the containers API.
+work with any image registry, since the plugin could not call the containers AP and would always fail
+cryptically on that step.
 
 Now you can directly authenticate with your external registry provider (using `docker login` etc.),
 and Wrangler or Vite will be able to pull the image specified in the `contaienrs.image` field in your
