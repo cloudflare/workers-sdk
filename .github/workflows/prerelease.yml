@@ -30,7 +30,6 @@ jobs:
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
         with:
-          pnpm-filters: "./packages/*"
           turbo-api: ${{ secrets.TURBO_API }}
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
