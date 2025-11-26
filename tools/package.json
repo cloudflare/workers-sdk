@@ -11,10 +11,12 @@
 	"devDependencies": {
 		"@cloudflare/eslint-config-worker": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@types/semver": "^7.7.1",
 		"@typescript-eslint/eslint-plugin": "^6.9.0",
 		"@typescript-eslint/parser": "^6.9.0",
 		"find-up": "^6.3.0",
 		"glob": "^10.4.5",
+		"semver": "^7.7.3",
 		"ts-dedent": "^2.2.0",
 		"undici": "catalog:default"
 	}
