@@ -22,7 +22,7 @@ test("serveSinglePageApp returns root asset path when request path ends in .html
 	const expected_request = testRequest("/index.html");
 	const actual_request = serveSinglePageApp(request);
 
-	expect(expected_request).toEqual(actual_request);
+	expect(expected_request.url).toEqual(actual_request.url);
 });
 
 test("serveSinglePageApp returns root asset path when request path does not have extension", async () => {
@@ -32,7 +32,7 @@ test("serveSinglePageApp returns root asset path when request path does not have
 	const expected_request = testRequest("/index.html");
 	const actual_request = serveSinglePageApp(request);
 
-	expect(expected_request).toEqual(actual_request);
+	expect(expected_request.url).toEqual(actual_request.url);
 });
 
 test("serveSinglePageApp returns requested asset when request path has non-html extension", async () => {
@@ -42,5 +42,5 @@ test("serveSinglePageApp returns requested asset when request path has non-html 
 	const expected_request = request;
 	const actual_request = serveSinglePageApp(request);
 
-	expect(expected_request).toEqual(actual_request);
+	expect(expected_request.url).toEqual(actual_request.url);
 });

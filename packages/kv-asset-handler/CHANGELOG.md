@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.1
+
+### Patch Changes
+
+- [#11348](https://github.com/cloudflare/workers-sdk/pull/11348) [`4d61fae`](https://github.com/cloudflare/workers-sdk/commit/4d61faed1c0c5cb0f7a7f085d31c3dca9a83c802) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - refactor to generate ESM modules and support Node 22+
+
 ## 0.4.0
 
 ### Minor Changes

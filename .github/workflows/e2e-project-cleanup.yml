@@ -24,8 +24,6 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
-        with:
-          pnpm-filters: "./tools"
 
       - name: Cleanup E2E test projects
         run: node -r esbuild-register tools/e2e/e2eCleanup.ts

@@ -1,5 +1,33 @@
 # create-cloudflare
 
+## 2.56.0
+
+### Minor Changes
+
+- [#11221](https://github.com/cloudflare/workers-sdk/pull/11221) [`6701036`](https://github.com/cloudflare/workers-sdk/commit/67010366c5c2aeb20eb7d11262a8e8fd07b783c5) Thanks [@peterp](https://github.com/peterp)! - Add RedwoodSDK as a framework option
+
+- [#11345](https://github.com/cloudflare/workers-sdk/pull/11345) [`d524e55`](https://github.com/cloudflare/workers-sdk/commit/d524e5524cf701e33b367d33616db5430a126fa9) Thanks [@penalosa](https://github.com/penalosa)! - Enable experimental support for autoconfig-powered Astro projects
+
+### Patch Changes
+
+- [#11384](https://github.com/cloudflare/workers-sdk/pull/11384) [`f607ea4`](https://github.com/cloudflare/workers-sdk/commit/f607ea431e13738d4ef97125d2a53e901c8ccab1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To     |
+  | --------------- | ------- | ------ |
+  | @angular/create | 20.3.10 | 21.0.0 |
+
+- [#11387](https://github.com/cloudflare/workers-sdk/pull/11387) [`03be5b8`](https://github.com/cloudflare/workers-sdk/commit/03be5b83d34954810b8be28d70640e71e5a647f5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From            | To              |
+  | ----------- | --------------- | --------------- |
+  | create-waku | 0.12.5-0.27.0-0 | 0.12.5-0.27.1-0 |
+
+- [#11395](https://github.com/cloudflare/workers-sdk/pull/11395) [`e9d4db4`](https://github.com/cloudflare/workers-sdk/commit/e9d4db4bc422248c05b0d515c022c4fd3e40ebf5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix step 2 saying that the will be configured using `wrangler setup` when it is not
+
 ## 2.55.1
 
 ### Patch Changes
