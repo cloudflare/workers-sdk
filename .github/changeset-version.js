@@ -72,7 +72,9 @@ function main() {
 	// 2. Run standard `changeset version` command to apply changesets, bump
 	//    versions, and update changelogs
 	console.log("Applying changesets and updating versions...");
-	execSync("pnpm exec changeset version", { stdio: "inherit" });
+	execSync("pnpm exec changeset version", {
+		stdio: ["ignore", "inherit", "inherit"],
+	});
 
 	// 3. Force `miniflare`'s minor version to be the same as `workerd`
 	console.log("Getting miniflare and workerd versions...");
