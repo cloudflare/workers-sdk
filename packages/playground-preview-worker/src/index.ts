@@ -217,6 +217,23 @@ app.get(`${rootDomain}/api/inspector`, async (c) => {
 	return userObject.fetch(c.req.raw);
 });
 
+app.get(`${rootDomain}/api/tail`, async (c) => {
+	const url = new URL(c.req.url);
+	const userId = url.searchParams.get("user");
+	if (!userId) {
+		throw new PreviewRequestFailed("", false);
+	}
+	let userObjectId: DurableObjectId;
+	try {
+		userObjectId = c.env.UserSession.idFromString(userId);
+	} catch {
+		throw new PreviewRequestFailed(userId, false);
+	}
+	const userObject = c.env.UserSession.get(userObjectId);
+
+	return userObject.fetch(c.req.raw);
+});
+
 /**
  * Given a preview session, the client should obtain a specific preview token
  * This endpoint takes in the URL parameters:
