@@ -7,7 +7,7 @@ export type ConfigurationOptions = {
 	dryRun: boolean;
 };
 export abstract class Framework {
-	abstract name: string;
+	constructor(public name: string = "Static") {}
 
 	// Override commands used to configure the project. Most frameworks should not need to do this, as their default detected build command will be sufficient
 	preview?: string; // default is `npm run build && wrangler dev`

@@ -131,9 +131,7 @@ export async function getDetailsForAutoConfig({
 
 	const detectedFramework: Settings | undefined = buildSettings?.[0];
 
-	const framework: AutoConfigDetails["framework"] = getFramework(
-		detectedFramework?.framework.id
-	);
+	const framework = getFramework(detectedFramework?.framework);
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
