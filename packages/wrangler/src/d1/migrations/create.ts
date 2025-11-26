@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import path from "path";
+import path from "node:path";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";

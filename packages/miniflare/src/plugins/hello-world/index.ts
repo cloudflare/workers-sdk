@@ -1,4 +1,4 @@
-import fs from "fs/promises";
+import fs from "node:fs/promises";
 import BINDING_SCRIPT from "worker:hello-world/binding";
 import OBJECT_SCRIPT from "worker:hello-world/object";
 import { z } from "zod";

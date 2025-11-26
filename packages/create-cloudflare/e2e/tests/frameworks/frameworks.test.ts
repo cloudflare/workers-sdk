@@ -1,6 +1,6 @@
-import { existsSync } from "fs";
-import { cp } from "fs/promises";
-import { join } from "path";
+import { existsSync } from "node:fs";
+import { cp } from "node:fs/promises";
+import { join } from "node:path";
 import { beforeAll, describe, expect } from "vitest";
 import { deleteProject, deleteWorker } from "../../../scripts/common";
 import {

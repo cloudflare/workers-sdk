@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { randomUUID } from "node:crypto";
 import { logRaw } from "@cloudflare/cli";
 import { bold, brandColor, cyanBright, yellow } from "@cloudflare/cli/colors";
 import { ApiError, OpenAPI } from "@cloudflare/containers-shared";

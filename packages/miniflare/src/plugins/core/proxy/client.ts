@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-function-type */
-import assert from "assert";
-import crypto from "crypto";
-import { ReadableStream, TransformStream } from "stream/web";
-import util from "util";
+import assert from "node:assert";
+import crypto from "node:crypto";
+import { ReadableStream, TransformStream } from "node:stream/web";
+import util from "node:util";
 import { stringify } from "devalue";
 import { Headers } from "undici";
 import { DispatchFetch, Request, Response } from "../../../http";

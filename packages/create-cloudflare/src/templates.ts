@@ -1,7 +1,7 @@
-import { existsSync } from "fs";
-import { cp, mkdtemp, rename } from "fs/promises";
-import { tmpdir } from "os";
-import { basename, dirname, join, resolve } from "path";
+import { existsSync } from "node:fs";
+import { cp, mkdtemp, rename } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, dirname, join, resolve } from "node:path";
 import { shapes, updateStatus, warn } from "@cloudflare/cli";
 import { blue, brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";

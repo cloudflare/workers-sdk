@@ -1,6 +1,6 @@
-import { mkdir, readFile, writeFile } from "fs/promises";
 import * as fs from "node:fs";
-import path from "path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 import dedent from "ts-dedent";
 import { vi } from "vitest";
 import { unstable_dev } from "../api";

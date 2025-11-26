@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,

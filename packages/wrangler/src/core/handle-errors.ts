@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "node:assert";
 import { ApiError } from "@cloudflare/containers-shared";
 import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import {

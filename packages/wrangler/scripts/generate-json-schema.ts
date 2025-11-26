@@ -1,5 +1,5 @@
-import { writeFileSync } from "fs";
-import { join } from "path";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { createGenerator } from "ts-json-schema-generator";
 import type { Config, Schema } from "ts-json-schema-generator";
 

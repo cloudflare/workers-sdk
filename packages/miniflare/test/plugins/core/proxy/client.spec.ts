@@ -1,9 +1,9 @@
-import assert from "assert";
-import { Blob } from "buffer";
-import http from "http";
-import { text } from "stream/consumers";
-import { ReadableStream, WritableStream } from "stream/web";
-import util from "util";
+import assert from "node:assert";
+import { Blob } from "node:buffer";
+import http from "node:http";
+import { text } from "node:stream/consumers";
+import { ReadableStream, WritableStream } from "node:stream/web";
+import util from "node:util";
 import test, { ThrowsExpectation } from "ava";
 import {
 	DeferredPromise,

@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";

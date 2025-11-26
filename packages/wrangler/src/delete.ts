@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "node:assert";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "./cfetch";
 import { createCommand } from "./core/create-command";

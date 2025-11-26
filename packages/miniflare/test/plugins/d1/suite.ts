@@ -1,5 +1,5 @@
-import assert from "assert";
-import fs from "fs/promises";
+import assert from "node:assert";
+import fs from "node:fs/promises";
 import { type D1Database } from "@cloudflare/workers-types/experimental";
 import { ExecutionContext } from "ava";
 import { Miniflare, MiniflareOptions } from "miniflare";

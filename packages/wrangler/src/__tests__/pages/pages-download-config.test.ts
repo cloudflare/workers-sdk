@@ -1,5 +1,5 @@
-import { randomUUID } from "crypto";
-import { readFile } from "fs/promises";
+import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { supportedCompatibilityDate } from "miniflare";
 import { http, HttpResponse } from "msw";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";

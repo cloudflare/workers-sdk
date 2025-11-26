@@ -1,5 +1,5 @@
-import * as fs from "fs/promises";
-import { scheduler } from "timers/promises";
+import * as fs from "node:fs/promises";
+import { scheduler } from "node:timers/promises";
 import test from "ava";
 import { Miniflare, MiniflareOptions } from "miniflare";
 import { useTmp } from "../../test-shared";

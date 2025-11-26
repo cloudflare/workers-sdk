@@ -1,6 +1,6 @@
-import assert from "assert";
-import { readFileSync, realpathSync, writeFileSync } from "fs";
-import path from "path";
+import assert from "node:assert";
+import { readFileSync, realpathSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { watch } from "chokidar";
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { getBundleType } from "../../deployment-bundle/bundle-type";

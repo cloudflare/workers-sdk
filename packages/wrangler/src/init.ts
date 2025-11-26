@@ -19,7 +19,7 @@ import { downloadWorkerConfig } from "./utils/download-worker-config";
 import * as shellquote from "./utils/shell-quote";
 import type { PackageManager } from "./package-manager";
 import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
-import type { ReadableStream } from "stream/web";
+import type { ReadableStream } from "node:stream/web";
 
 export const init = createCommand({
 	metadata: {

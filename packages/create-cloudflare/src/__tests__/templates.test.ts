@@ -1,4 +1,4 @@
-import { existsSync, statSync } from "fs";
+import { existsSync, statSync } from "node:fs";
 import { spinner } from "@cloudflare/cli/interactive";
 import degit from "degit";
 import { mockSpinner } from "helpers/__tests__/mocks";
@@ -14,7 +14,7 @@ import {
 	deriveCorrelatedArgs,
 	downloadRemoteTemplate,
 } from "../templates";
-import type { PathLike } from "fs";
+import type { PathLike } from "node:fs";
 import type { C3Args, C3Context } from "types";
 
 vi.mock("degit");

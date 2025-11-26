@@ -1,5 +1,5 @@
-import { readFileSync } from "fs";
-import { readFile } from "fs/promises";
+import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { Miniflare } from "miniflare";
 import { version } from "workerd";
 import { logger } from "../../logger";

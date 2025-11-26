@@ -1,5 +1,4 @@
-import { execSync } from "child_process";
-import child_process from "node:child_process";
+import child_process, { execSync } from "node:child_process";
 import * as nodeNet from "node:net";
 import { promisify } from "node:util";
 import dedent from "ts-dedent";

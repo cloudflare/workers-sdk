@@ -1,6 +1,6 @@
-import assert from "assert";
-import { writeFile } from "fs/promises";
-import path from "path";
+import assert from "node:assert";
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
 import { getPackageManager } from "../../package-manager";

@@ -1,6 +1,6 @@
-import assert from "assert";
-import { mkdir, readFile, stat, writeFile } from "fs/promises";
-import path from "path";
+import assert from "node:assert";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { dim } from "kleur/colors";
 import { fetch } from "undici";
 import { Plugins } from "./plugins";
