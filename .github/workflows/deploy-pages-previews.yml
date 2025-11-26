@@ -55,7 +55,7 @@ jobs:
         run: |
           output=$(pnpm --filter @cloudflare/chrome-devtools-patches run deploy)
           echo "Extracting deployed URL from command output"
-          url=$(echo "$output" | grep -oP 'Take a peek over at \K\S+')
+          url=$(echo "$output" | sed -nE "s/.*Take a peek over at (\S+).*/\1/p")
           echo "Extracted URL: $url"
           echo "VITE_DEVTOOLS_PREVIEW_URL=$url" >> $GITHUB_ENV
         env:
@@ -74,7 +74,7 @@ jobs:
         run: |
           output=$(pnpm --filter workers-playground run build:testing && pnpm --filter workers-playground run deploy)
           echo "Extracting deployed URL from command output"
-          url=$(echo "$output" | grep -oP 'Take a peek over at \K\S+')
+          url=$(echo "$output" | sed -nE "s/.*Take a peek over at (\S+).*/\1/p")
           echo "Extracted URL: $url"
           echo "PLAYGROUND_URL=$url" >> $GITHUB_ENV
         env:
