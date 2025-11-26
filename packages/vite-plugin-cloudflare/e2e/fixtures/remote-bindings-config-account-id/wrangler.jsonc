@@ -1,0 +1,14 @@
+{
+	"name": "cloudflare-vite-e2e-remote-bindings-config-account-id-worker",
+	"main": "./src/index.ts",
+	"compatibility_date": "2024-12-30",
+	"compatibility_flags": ["nodejs_compat"],
+	"account_id": "not-a-valid-account-id-abc",
+	"services": [
+		{
+			"binding": "REMOTE_WORKER",
+			"service": "MY_REMOTE_WORKER",
+			"remote": true,
+		},
+	],
+}
