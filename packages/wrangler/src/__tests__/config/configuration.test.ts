@@ -2925,7 +2925,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						DEPLOY_REMOTE_DIFF_CHECK: false,
 						AUTOCREATE_RESOURCES: false,
 					},
 					() =>
@@ -3077,7 +3076,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						DEPLOY_REMOTE_DIFF_CHECK: false,
 						AUTOCREATE_RESOURCES: false,
 					},
 					() =>
@@ -3414,7 +3412,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						DEPLOY_REMOTE_DIFF_CHECK: false,
 						AUTOCREATE_RESOURCES: false,
 					},
 					() =>
