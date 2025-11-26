@@ -7,13 +7,25 @@ if (require.main === module) {
 			details: "Packages failed to publish",
 		});
 	}
-	const deploymentStatus = JSON.parse(process.env.DEPLOYMENT_STATUS as string);
 
-	for (const [pkg, err] of Object.entries(deploymentStatus)) {
-		status.push({
-			label: pkg,
-			details: err,
-		});
+	if (process.env.DEPLOYMENT_STATUS) {
+		try {
+			const deploymentStatus = JSON.parse(
+				process.env.DEPLOYMENT_STATUS as string
+			);
+
+			for (const [pkg, err] of Object.entries(deploymentStatus)) {
+				status.push({
+					label: pkg,
+					details: err,
+				});
+			}
+		} catch (e) {
+			status.push({
+				label: "Deployment status",
+				details: `Failed to parse deployment status: ${e}. Received: "${process.env.DEPLOYMENT_STATUS}"`,
+			});
+		}
 	}
 
 	if (status.length > 0) {
