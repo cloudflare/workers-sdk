@@ -90,9 +90,7 @@ export function getWorkerNameFromProject(projectPath: string): string {
 			packageJsonPath
 		);
 		packageJsonName = packageJson.name;
-	} catch {
-		logger.debug("No package.json found when deriving worker name");
-	}
+	} catch {}
 
 	return getWorkerName(packageJsonName, projectPath);
 }
