@@ -23,7 +23,7 @@ if (require.main === module) {
 		} catch (e) {
 			status.push({
 				label: "Deployment status",
-				details: `Failed to parse deployment status: ${e}`,
+				details: `Failed to parse deployment status: ${e}. Received: "${process.env.DEPLOYMENT_STATUS}"`,
 			});
 		}
 	}
