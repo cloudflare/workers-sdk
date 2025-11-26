@@ -136,12 +136,6 @@ export class UserSession {
 			return fetch(this.inspectorUrl, request);
 		}
 
-		// This is a tail request. Forward to the correct tail URL
-		if (request.headers.get("Upgrade") && url.pathname === "/api/tail") {
-			assert(this.tailUrl !== undefined);
-			return fetch(this.tailUrl, request);
-		}
-
 		// This is a request to run the user-worker. Forward, adding the correct authentication headers
 		if (request.headers.has("cf-run-user-worker")) {
 			assert(this.previewToken !== undefined);
@@ -258,7 +252,7 @@ export class UserSession {
 			inspector: `/api/inspector?user=${userSession}&h=${await hash(
 				this.inspectorUrl
 			)}`,
-			tail: `/api/tail?user=${userSession}&t=${await hash(this.tailUrl)}`,
+			tail: this.tailUrl,
 			preview: userSession,
 		});
 	}

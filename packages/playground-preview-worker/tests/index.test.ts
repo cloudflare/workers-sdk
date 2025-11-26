@@ -461,7 +461,7 @@ describe("Upload Worker", () => {
 			body: TEST_WORKER,
 		});
 		expect(await w.json()).toMatchObject({
-			tail: expect.stringContaining("/api/tail?user="),
+			tail: expect.stringContaining("tail.developers.workers.dev"),
 		});
 	});
 	it("should provide error message on invalid worker", async () => {
