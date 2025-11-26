@@ -1,0 +1,6 @@
+{
+	"name": "auxiliary-worker",
+	"main": "./index.ts",
+	// compatibility_date is required so we can run `wrangler build`
+	"compatibility_date": "2025-11-01",
+}
