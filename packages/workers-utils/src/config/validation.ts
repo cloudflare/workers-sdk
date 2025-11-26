@@ -981,24 +981,124 @@ function normalizeAndValidatePlacement(
 	rawEnv: RawEnvironment
 ): Config["placement"] {
 	if (rawEnv.placement) {
-		validateRequiredProperty(
-			diagnostics,
-			"placement",
-			"mode",
-			rawEnv.placement.mode,
-			"string",
-			["off", "smart"]
-		);
-		validateOptionalProperty(
-			diagnostics,
-			"placement",
-			"hint",
-			rawEnv.placement.hint,
-			"string"
-		);
-		if (rawEnv.placement.hint && rawEnv.placement.mode !== "smart") {
+		const placement = rawEnv.placement as Record<string, unknown>;
+
+		// Detect which format is being used
+		const hasHint = "hint" in placement;
+		const hasRegion = "region" in placement;
+		const hasHost = "host" in placement;
+		const hasHostname = "hostname" in placement;
+		const hasTargetedFields = hasRegion || hasHost || hasHostname;
+
+		// Validate that formats aren't mixed
+		if (hasHint && hasTargetedFields) {
 			diagnostics.errors.push(
-				`"placement.hint" cannot be set if "placement.mode" is not "smart"`
+				`"placement" cannot have both "hint" (smart format) and "region"/"host"/"hostname" (targeted format) fields`
+			);
+			return inheritable(
+				diagnostics,
+				topLevelEnv,
+				rawEnv,
+				"placement",
+				() => true,
+				undefined
+			);
+		}
+
+		// Validate old format (with hint)
+		if (hasHint) {
+			validateRequiredProperty(
+				diagnostics,
+				"placement",
+				"mode",
+				placement.mode,
+				"string",
+				["off", "smart"]
+			);
+
+			const mode = placement.mode as string;
+			const hint = placement.hint;
+
+			// Hint must be a string (if provided)
+			if (hint !== undefined && typeof hint !== "string") {
+				diagnostics.errors.push(
+					`"placement.hint" must be a string when "placement.mode" is "${mode}"`
+				);
+			}
+			if (hint && mode !== "smart") {
+				diagnostics.errors.push(
+					`"placement.hint" can only be set when "placement.mode" is "smart"`
+				);
+			}
+		}
+		// Validate new format (with region/host/hostname)
+		else if (hasTargetedFields) {
+			// Mode is optional for new format, but if present must be "off" or "targeted"
+			validateOptionalProperty(
+				diagnostics,
+				"placement",
+				"mode",
+				placement.mode,
+				"string",
+				["off", "targeted"]
+			);
+
+			// Validate that region/host/hostname are strings if present
+			if (hasRegion) {
+				validateOptionalProperty(
+					diagnostics,
+					"placement",
+					"region",
+					placement.region,
+					"string"
+				);
+			}
+			if (hasHost) {
+				validateOptionalProperty(
+					diagnostics,
+					"placement",
+					"host",
+					placement.host,
+					"string"
+				);
+			}
+			if (hasHostname) {
+				validateOptionalProperty(
+					diagnostics,
+					"placement",
+					"hostname",
+					placement.hostname,
+					"string"
+				);
+			}
+
+			// Validate that region/host/hostname are mutually exclusive
+			const fieldsPresent = [hasRegion, hasHost, hasHostname].filter(Boolean);
+			if (fieldsPresent.length > 1) {
+				const presentFields = [];
+				if (hasRegion) {
+					presentFields.push("region");
+				}
+				if (hasHost) {
+					presentFields.push("host");
+				}
+				if (hasHostname) {
+					presentFields.push("hostname");
+				}
+				diagnostics.errors.push(
+					`"placement" fields ${presentFields.map((f) => `"${f}"`).join(", ")} are mutually exclusive. Only one can be specified.`
+				);
+			}
+		}
+		// Just mode, no hint or new format fields
+		else {
+			validateRequiredProperty(
+				diagnostics,
+				"placement",
+				"mode",
+				placement.mode,
+				"string",
+				["off", "smart", "targeted"]
 			);
 		}
 	}
