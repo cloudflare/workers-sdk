@@ -1,5 +1,15 @@
 # @cloudflare/vite-plugin
 
+## 1.15.3
+
+### Patch Changes
+
+- [#11404](https://github.com/cloudflare/workers-sdk/pull/11404) [`f19d3b5`](https://github.com/cloudflare/workers-sdk/commit/f19d3b5e89a750abd230566439fce2ce67223d58) Thanks [@jamesopstad](https://github.com/jamesopstad)! - fix: CSS imports in Worker modules causing dev server to crash when starting up
+
+- Updated dependencies [[`69f4dc3`](https://github.com/cloudflare/workers-sdk/commit/69f4dc30496406b0c40f946ee8ace28d94667097), [`1133c4d`](https://github.com/cloudflare/workers-sdk/commit/1133c4db5fc4703a2ad416fdcb3a086f498cbbc6), [`4d61fae`](https://github.com/cloudflare/workers-sdk/commit/4d61faed1c0c5cb0f7a7f085d31c3dca9a83c802), [`d524e55`](https://github.com/cloudflare/workers-sdk/commit/d524e5524cf701e33b367d33616db5430a126fa9), [`43903a3`](https://github.com/cloudflare/workers-sdk/commit/43903a38f00d2a0da1d19a9be1fc90a4e38454cf), [`e496280`](https://github.com/cloudflare/workers-sdk/commit/e4962809487e618d4bd99c56b0628b078fab7402)]:
+  - miniflare@4.20251125.0
+  - wrangler@4.51.0
+
 ## 1.15.2
 
 ### Patch Changes
