@@ -7,8 +7,16 @@ settings:
 catalogs:
   default:
     '@cloudflare/workers-types':
+<<<<<<< HEAD
       specifier: ^4.20251126.0
       version: 4.20251126.0
+||||||| parent of ae9734c71 (fix lockfile)
+      specifier: ^4.20251125.0
+      version: 4.20251125.0
+=======
+      specifier: ^4.20251125.0
+      version: 4.20251126.0
+>>>>>>> ae9734c71 (fix lockfile)
     '@typescript-eslint/eslint-plugin':
       specifier: ^8.35.1
       version: 8.46.3
@@ -41,7 +49,7 @@ catalogs:
       version: 1.5.2
     typescript:
       specifier: ^5.8.3
-      version: 5.9.3
+      version: 5.8.3
     undici:
       specifier: 7.14.0
       version: 7.14.0
@@ -139,7 +147,7 @@ importers:
         version: 2.2.3
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:default
         version: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
