@@ -22,6 +22,10 @@ import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { DatabaseInfo } from "../d1/types";
 import type { Settings } from "../deployment-bundle/bindings";
 
+vi.mock("../utils/fetch-secrets", () => ({
+	fetchSecrets: async () => [],
+}));
+
 describe("--x-provision", () => {
 	const std = mockConsoleMethods();
 	mockAccountId();
