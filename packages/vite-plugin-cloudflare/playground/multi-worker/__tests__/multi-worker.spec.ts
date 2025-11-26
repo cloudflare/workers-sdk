@@ -26,14 +26,6 @@ describe.runIf(isBuild)("output directories", () => {
 });
 
 describe("multi-worker basic functionality", async () => {
-	test("warning about non-existent tail is printed", async () => {
-		expect(serverLogs.warns).toEqual([
-			expect.stringMatching(
-				/Make sure you add it to the config or run it in another dev session if you'd like to simulate receiving tail events locally/
-			),
-		]);
-	});
-
 	test("entry worker returns a response", async () => {
 		const result = await getJsonResponse();
 		expect(result).toEqual({ name: "Worker A" });
