@@ -5,6 +5,7 @@ import * as vite from "vite";
 import { getWorkerConfigs } from "./deploy-config";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import {
+	getDefaultWorkerConfig,
 	getValidatedWranglerConfigPath,
 	getWorkerConfig,
 } from "./workers-configs";
@@ -137,14 +138,14 @@ export function resolvePluginConfig(
 		pluginConfig.configPath
 	);
 
-	const entryWorkerResolvedConfig = getWorkerConfig(
-		entryWorkerConfigPath,
-		cloudflareEnv,
-		{
-			visitedConfigPaths: configPaths,
-			isEntryWorker: true,
-		}
-	);
+	// Handle zero-config mode when no wrangler config file is found
+	const entryWorkerResolvedConfig =
+		entryWorkerConfigPath === undefined
+			? getDefaultWorkerConfig(root)
+			: getWorkerConfig(entryWorkerConfigPath, cloudflareEnv, {
+					visitedConfigPaths: configPaths,
+					isEntryWorker: true,
+				});
 
 	if (entryWorkerResolvedConfig.type === "assets-only") {
 		return {

@@ -60,6 +60,7 @@ const generateASSETSBinding: (
 export { generateASSETSBinding as unstable_generateASSETSBinding };
 
 export {
+	defaultWranglerConfig as unstable_defaultWranglerConfig,
 	experimental_readRawConfig,
 	type ConfigBindingOptions as Experimental_ConfigBindingOptions,
 } from "@cloudflare/workers-utils";

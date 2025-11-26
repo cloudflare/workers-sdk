@@ -9,8 +9,9 @@ const isWindows = process.platform === "win32";
 
 describe("valid cases", () => {
 	test("should return the value of a found wrangler config", () => {
-		const path = getValidatedWranglerConfigPath(fixturesPath, undefined);
-		expect(normalize(path)).toMatch(
+		const result = getValidatedWranglerConfigPath(fixturesPath, undefined);
+		expect(result).toBeDefined();
+		expect(normalize(result!)).toMatch(
 			isWindows
 				? /\\__tests__\\fixtures\\wrangler\.jsonc/
 				: /\/__tests__\/fixtures\/wrangler\.jsonc/
@@ -18,11 +19,12 @@ describe("valid cases", () => {
 	});
 
 	test("should return the value of a requested wrangler config", () => {
-		const path = getValidatedWranglerConfigPath(
+		const result = getValidatedWranglerConfigPath(
 			fixturesPath,
 			join(fixturesPath, "simple-wrangler.jsonc")
 		);
-		expect(normalize(path)).toMatch(
+		expect(result).toBeDefined();
+		expect(normalize(result!)).toMatch(
 			isWindows
 				? /\\__tests__\\fixtures\\simple-wrangler\.jsonc/
 				: /\/__tests__\/fixtures\/simple-wrangler\.jsonc/
@@ -30,18 +32,17 @@ describe("valid cases", () => {
 	});
 });
 
-describe("invalid cases", () => {
-	test("should error with an helpful message if a wrangler config could not be found", () => {
-		expect(() => {
-			getValidatedWranglerConfigPath(
-				join(fixturesPath, "empty-dir"),
-				undefined
-			);
-		}).toThrowError(
-			/No config file found in the .*?empty-dir directory\. Please add a wrangler.\(jsonc\|json\|toml\) file\./
+describe("zero-config cases", () => {
+	test("should return undefined when no wrangler config is found (zero-config mode)", () => {
+		const result = getValidatedWranglerConfigPath(
+			join(fixturesPath, "empty-dir"),
+			undefined
 		);
+		expect(result).toBeUndefined();
 	});
+});
 
+describe("invalid cases", () => {
 	[false, true].forEach((forAuxiliaryWorker) => {
 		const testPrefix = forAuxiliaryWorker
 			? "[auxiliary worker]"
