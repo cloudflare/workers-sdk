@@ -4,8 +4,8 @@ import * as path from "node:path";
 import {
 	unstable_defaultWranglerConfig,
 	unstable_getDevCompatibilityDate,
+	unstable_getWorkerNameFromProject,
 	unstable_readConfig,
-	unstable_toValidWorkerName,
 } from "wrangler";
 import type { AssetsOnlyConfig, WorkerConfig } from "./plugin-config";
 import type { Optional } from "./utils";
@@ -358,19 +358,7 @@ export function getWorkerConfig(
 export function getDefaultWorkerConfig(
 	root: string
 ): AssetsOnlyWorkerResolvedConfig {
-	// Get worker name from package.json name or directory basename
-	const packageJsonPath = path.join(root, "package.json");
-	let workerName: string;
-	try {
-		const packageJsonContent = fs.readFileSync(packageJsonPath, "utf-8");
-		const packageJson = JSON.parse(packageJsonContent) as { name?: string };
-		if (packageJson.name) {
-			workerName = unstable_toValidWorkerName(packageJson.name);
-		}
-	} catch {}
-	workerName ??= unstable_toValidWorkerName(path.basename(root));
-
-	// Get compatibility date from installed workerd runtime
+	const workerName = unstable_getWorkerNameFromProject(root);
 	const compatibilityDate = unstable_getDevCompatibilityDate(undefined);
 
 	// Start with the full default config to ensure all required fields have proper defaults,

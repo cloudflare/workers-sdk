@@ -67,6 +67,36 @@ function getWorkerName(projectOrWorkerName = "", projectPath: string): string {
 	return toValidWorkerName(rawName);
 }
 
+/**
+ * Derives a valid worker name from a project directory.
+ *
+ * The name is determined by (in order of precedence):
+ * 1. The WRANGLER_CI_OVERRIDE_NAME environment variable (for CI environments)
+ * 2. The `name` field from package.json in the project directory
+ * 3. The directory basename
+ *
+ * The resulting name is sanitized to be a valid worker name.
+ *
+ * @param projectPath The path to the project directory
+ * @returns A valid worker name
+ */
+export function getWorkerNameFromProject(projectPath: string): string {
+	const packageJsonPath = resolve(projectPath, "package.json");
+	let packageJsonName: string | undefined;
+
+	try {
+		const packageJson = parsePackageJSON(
+			readFileSync(packageJsonPath),
+			packageJsonPath
+		);
+		packageJsonName = packageJson.name;
+	} catch {
+		logger.debug("No package.json found when deriving worker name");
+	}
+
+	return getWorkerName(packageJsonName, projectPath);
+}
+
 export async function getDetailsForAutoConfig({
 	projectPath = process.cwd(),
 	wranglerConfig,
