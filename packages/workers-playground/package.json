@@ -52,6 +52,7 @@
 		"@typescript-eslint/parser": "catalog:default",
 		"@vitejs/plugin-react": "^4.3.3",
 		"eslint": "catalog:default",
+		"react-use-websocket": "^4.13.0",
 		"tsx": "^3.12.8",
 		"undici": "catalog:default",
 		"vite": "catalog:default",
