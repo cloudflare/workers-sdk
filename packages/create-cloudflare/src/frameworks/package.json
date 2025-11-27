@@ -18,7 +18,7 @@
 		"create-solid": "0.6.11",
 		"create-vue": "3.18.2",
 		"create-waku": "0.12.5-0.27.1-0",
-		"@tanstack/create-start": "0.36.2",
+		"@tanstack/create-start": "0.37.2",
 		"gatsby": "5.15.0",
 		"sv": "0.9.14",
 		"nuxi": "3.30.0"
