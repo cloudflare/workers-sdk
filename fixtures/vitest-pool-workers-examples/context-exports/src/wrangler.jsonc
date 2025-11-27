@@ -6,4 +6,10 @@
 	"vars": {
 		"NAME": "MainWorker",
 	},
+	"services": [
+		{
+			"binding": "AUXILIARY_WORKER",
+			"service": "auxiliary-worker",
+		},
+	],
 }
