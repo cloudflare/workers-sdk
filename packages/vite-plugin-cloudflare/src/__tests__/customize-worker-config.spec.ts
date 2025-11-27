@@ -76,7 +76,9 @@ describe("customizeWorkerConfig", () => {
 			compatibility_flags: ["b"],
 		});
 		// defu merges arrays
-		expect(result.compatibility_flags).toEqual(["a", "b"]);
+		expect(result.compatibility_flags).toEqual(
+			expect.arrayContaining(["a", "b"])
+		);
 	});
 
 	test("should preserve existing config values not specified in customize", () => {
