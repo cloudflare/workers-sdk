@@ -74,8 +74,7 @@ jobs:
         run: |
           output=$(pnpm --filter workers-playground run build:testing && pnpm --filter workers-playground run deploy)
           echo "Extracting deployed URL from command output"
-          echo $output
-          url=$(echo "$output" | sed -nE "s/.*Take a peek over at (\S+).*/\1/p")
+          url=$(echo "$output" | sed -nE 's/.*Take a peek over at (https?:\/\/[^ ]+).*/\1/p')
           echo "Extracted URL: $url"
           echo "PLAYGROUND_URL=$url" >> $GITHUB_ENV
         env:
