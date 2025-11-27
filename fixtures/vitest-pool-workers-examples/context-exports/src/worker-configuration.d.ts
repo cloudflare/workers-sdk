@@ -5,7 +5,6 @@ declare namespace Cloudflare {
 	}
 	interface Env {
 		NAME: string;
-		COUNTER: DurableObjectNamespace<import("./index").Counter>;
 	}
 }
 interface Env extends Cloudflare.Env {}
