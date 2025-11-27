@@ -15561,6 +15561,69 @@ export default{
 				"
 			`);
 		});
+
+		it("should abort the deployment when it would (likely unintentionally) override remote secrets in non-interactive strict mode", async () => {
+			setIsTTY(false);
+
+			writeWorkerSource();
+			mockGetServiceByName("test-name", "production", "dash");
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					vars: {
+						MY_SECRET: 123,
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.json"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ wranglerConfigPath: "./wrangler.json" });
+			mockGetServiceBindings("test-name", []);
+			mockGetServiceRoutes("test-name", []);
+			mockGetServiceCustomDomainRecords([]);
+			mockGetServiceSubDomainData("test-name", {
+				enabled: true,
+				previews_enabled: true,
+			});
+			mockGetServiceSchedules("test-name", { schedules: [] });
+			mockGetServiceMetadata("test-name", {
+				created_on: "2025-08-07T09:34:47.846308Z",
+				modified_on: "2025-08-08T10:48:12.688997Z",
+				script: {
+					created_on: "2025-08-07T09:34:47.846308Z",
+					modified_on: "2025-08-08T10:48:12.688997Z",
+					id: "my-worker-id",
+					observability: { enabled: true, head_sampling_rate: 1 },
+					compatibility_date: "2024-04-24",
+				},
+			} as unknown as ServiceMetadataRes["default_environment"]);
+
+			vi.mocked(fetchSecrets).mockResolvedValue([
+				{ name: "MY_SECRET", type: "secret_text" },
+			]);
+
+			await runWrangler("deploy --strict");
+
+			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
+				"▲ [WARNING] Environment variable \`MY_SECRET\` conflicts with an existing remote secret. This deployment will replace the remote secret with your environment variable.
+
+				"
+			`);
+
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
+
+				"
+			`);
+
+			// note: the test and the wrangler run share the same process, and we expect the deploy command (which fails)
+			//       to set a non-zero exit code
+			expect(process.exitCode).not.toBe(0);
+		});
 	});
 });
 
