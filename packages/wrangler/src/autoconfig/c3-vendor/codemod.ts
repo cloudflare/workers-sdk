@@ -1,5 +1,5 @@
-import { existsSync, lstatSync, readdirSync, writeFileSync } from "fs";
-import path, { extname, join } from "path";
+import { existsSync, lstatSync, readdirSync, writeFileSync } from "node:fs";
+import path, { extname, join } from "node:path";
 import { readFileSync } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import * as esprimaParser from "recast/parsers/esprima";

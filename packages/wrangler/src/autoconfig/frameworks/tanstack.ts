@@ -1,5 +1,5 @@
-import assert from "assert";
-import path from "path";
+import assert from "node:assert";
+import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import * as recast from "recast";
 import { transformFile } from "../c3-vendor/codemod";
@@ -117,8 +117,6 @@ function transformViteConfig(projectPath: string) {
 }
 
 export class TanstackStart extends Framework {
-	name = "tanstack-start";
-
 	async configure({
 		dryRun,
 		projectPath,
