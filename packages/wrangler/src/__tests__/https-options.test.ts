@@ -5,7 +5,6 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 
 describe("validateHttpsOptions()", () => {
 	runInTempDir();
-	const std = mockConsoleMethods();
 
 	it("should return undefined if nothing is passed in", async () => {
 		const result = await validateHttpsOptions();
