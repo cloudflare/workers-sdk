@@ -16,6 +16,7 @@ import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
 import { getSubdomainValues } from "../triggers/deploy";
 import { writeAuthConfigFile } from "../user";
+import { fetchSecrets } from "../utils/fetch-secrets";
 import { diagnoseScriptSizeError } from "../utils/friendly-validator-errors";
 import { captureRequestsFrom } from "./helpers/capture-requests-from";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -86,6 +87,8 @@ vi.mock("../check/commands", async (importOriginal) => {
 	};
 });
 
+vi.mock("../utils/fetch-secrets");
+
 vi.mock("../package-manager", async (importOriginal) => ({
 	...(await importOriginal()),
 	sniffUserAgent: () => "npm",
@@ -127,6 +130,7 @@ describe("deploy", () => {
 				return HttpResponse.json(createFetchResult({}));
 			})
 		);
+		vi.mocked(fetchSecrets).mockResolvedValue([]);
 	});
 
 	afterEach(() => {
@@ -15349,110 +15353,13 @@ export default{
 				"
 			`);
 		});
-	});
 
-	it("in non-intractive (and non-strict) mode, should present a diff when there are differences between the local config and the dash config, and proceed with the deployment", async () => {
-		setIsTTY(false);
-
-		fs.mkdirSync("./public");
-
-		await mockAUSRequest([]);
-
-		writeWorkerSource();
-		mockGetServiceByName("test-name", "production", "dash");
-		writeWranglerConfig(
-			{
-				compatibility_date: "2024-04-24",
-				main: "./index.js",
-				workers_dev: true,
-				preview_urls: true,
-				vars: {
-					MY_VAR: "this is a toml file",
-				},
-				assets: {
-					binding: "ASSETS",
-					// Note: remotely we only get the assets' binding name, so in the diff below you can see that
-					//       no diff for the directory configuration is shown
-					directory: "public",
-				},
-				observability: {
-					enabled: true,
-				},
-			},
-			"./wrangler.toml"
-		);
-		mockSubDomainRequest();
-		mockUploadWorkerRequest();
-		mockGetServiceBindings("test-name", [
-			{ name: "MY_VAR", text: "abc", type: "plain_text" },
-		]);
-		mockGetServiceRoutes("test-name", []);
-		mockGetServiceCustomDomainRecords([]);
-		mockGetServiceSubDomainData("test-name", {
-			enabled: true,
-			previews_enabled: true,
-		});
-		mockGetServiceSchedules("test-name", { schedules: [] });
-		mockGetServiceMetadata("test-name", {
-			created_on: "2025-08-07T09:34:47.846308Z",
-			modified_on: "2025-08-08T10:48:12.688997Z",
-			script: {
-				created_on: "2025-08-07T09:34:47.846308Z",
-				modified_on: "2025-08-08T10:48:12.688997Z",
-				id: "my-worker-id",
-				observability: { enabled: true, head_sampling_rate: 1 },
-				compatibility_date: "2024-04-24",
-			},
-		} as unknown as ServiceMetadataRes["default_environment"]);
-
-		await runWrangler("deploy");
-
-		// Note: we display the toml config diff in json format since code-wise we'd have to convert the rawConfig to toml
-		//       to be able to show toml content/diffs, that combined with the fact that json(c) config files are the
-		//       recommended ones moving forward makes this small shortcoming of the config diffing acceptable
-		expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
-			"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
-
-			   {
-			  +  assets: {
-			  +    binding: \\"ASSETS\\"
-			  +  }
-			     vars: {
-			  -    MY_VAR: \\"abc\\"
-			  +    MY_VAR: \\"this is a toml file\\"
-			     }
-			   }
-
-
-			  Deploying the Worker will override the remote configuration with your local one.
-
-			"
-		`);
-
-		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			? Would you like to continue?
-			🤖 Using fallback value in non-interactive context: yes
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                                 Resource
-			env.ASSETS                              Assets
-			env.MY_VAR (\\"this is a toml file\\")      Environment Variable
-
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
-		expect(std.err).toMatchInlineSnapshot(`""`);
-	});
-
-	describe("with strict mode enabled", () => {
-		it("should error if there are remote config difference in non-interactive mode", async () => {
+		it("in non-intractive (and non-strict) mode, should present a diff when there are differences between the local config and the dash config, and proceed with the deployment", async () => {
 			setIsTTY(false);
+
+			fs.mkdirSync("./public");
+
+			await mockAUSRequest([]);
 
 			writeWorkerSource();
 			mockGetServiceByName("test-name", "production", "dash");
@@ -15462,6 +15369,201 @@ export default{
 					main: "./index.js",
 					workers_dev: true,
 					preview_urls: true,
+					vars: {
+						MY_VAR: "this is a toml file",
+					},
+					assets: {
+						binding: "ASSETS",
+						// Note: remotely we only get the assets' binding name, so in the diff below you can see that
+						//       no diff for the directory configuration is shown
+						directory: "public",
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.toml"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockGetServiceBindings("test-name", [
+				{ name: "MY_VAR", text: "abc", type: "plain_text" },
+			]);
+			mockGetServiceRoutes("test-name", []);
+			mockGetServiceCustomDomainRecords([]);
+			mockGetServiceSubDomainData("test-name", {
+				enabled: true,
+				previews_enabled: true,
+			});
+			mockGetServiceSchedules("test-name", { schedules: [] });
+			mockGetServiceMetadata("test-name", {
+				created_on: "2025-08-07T09:34:47.846308Z",
+				modified_on: "2025-08-08T10:48:12.688997Z",
+				script: {
+					created_on: "2025-08-07T09:34:47.846308Z",
+					modified_on: "2025-08-08T10:48:12.688997Z",
+					id: "my-worker-id",
+					observability: { enabled: true, head_sampling_rate: 1 },
+					compatibility_date: "2024-04-24",
+				},
+			} as unknown as ServiceMetadataRes["default_environment"]);
+
+			await runWrangler("deploy");
+
+			// Note: we display the toml config diff in json format since code-wise we'd have to convert the rawConfig to toml
+			//       to be able to show toml content/diffs, that combined with the fact that json(c) config files are the
+			//       recommended ones moving forward makes this small shortcoming of the config diffing acceptable
+			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
+				"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
+
+				   {
+				  +  assets: {
+				  +    binding: \\"ASSETS\\"
+				  +  }
+				     vars: {
+				  -    MY_VAR: \\"abc\\"
+				  +    MY_VAR: \\"this is a toml file\\"
+				     }
+				   }
+
+
+				  Deploying the Worker will override the remote configuration with your local one.
+
+				"
+			`);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				? Would you like to continue?
+				🤖 Using fallback value in non-interactive context: yes
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                                 Resource
+				env.ASSETS                              Assets
+				env.MY_VAR (\\"this is a toml file\\")      Environment Variable
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		describe("with strict mode enabled", () => {
+			it("should error if there are remote config difference in non-interactive mode", async () => {
+				setIsTTY(false);
+
+				writeWorkerSource();
+				mockGetServiceByName("test-name", "production", "dash");
+				writeWranglerConfig(
+					{
+						compatibility_date: "2024-04-24",
+						main: "./index.js",
+						workers_dev: true,
+						preview_urls: true,
+					},
+					"./wrangler.json"
+				);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({ wranglerConfigPath: "./wrangler.json" });
+				mockGetServiceBindings("test-name", []);
+				mockGetServiceRoutes("test-name", []);
+				mockGetServiceCustomDomainRecords([]);
+				mockGetServiceSubDomainData("test-name", {
+					enabled: true,
+					previews_enabled: true,
+				});
+				mockGetServiceSchedules("test-name", { schedules: [] });
+				mockGetServiceMetadata("test-name", {
+					created_on: "2025-08-07T09:34:47.846308Z",
+					modified_on: "2025-08-08T10:48:12.688997Z",
+					script: {
+						created_on: "2025-08-07T09:34:47.846308Z",
+						modified_on: "2025-08-08T10:48:12.688997Z",
+						id: "my-worker-id",
+						observability: { enabled: true, head_sampling_rate: 1 },
+						compatibility_date: "2024-04-24",
+					},
+				} as unknown as ServiceMetadataRes["default_environment"]);
+
+				await runWrangler("deploy --strict");
+
+				expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
+					"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
+
+					   {
+					     observability: {
+					  -    enabled: true
+					  +    enabled: false
+					       logs: {
+					  -      enabled: true
+					  +      enabled: false
+					       }
+					     }
+					   }
+
+
+					  Deploying the Worker will override the remote configuration with your local one.
+
+					"
+				`);
+
+				expect(std.err).toMatchInlineSnapshot(`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
+
+					"
+				`);
+				// note: the test and the wrangler run share the same process, and we expect the deploy command (which fails)
+				//       to set a non-zero exit code
+				expect(process.exitCode).not.toBe(0);
+			});
+
+			it("should error when worker was last deployed from api", async () => {
+				setIsTTY(false);
+
+				msw.use(...mswSuccessDeploymentScriptAPI);
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+
+				await runWrangler("deploy ./index --strict");
+
+				expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to publish a Workers Service that was last updated via the script API.[0m
+
+				  Edits that have been made via the script API will be overridden by your local code and config.
+
+				"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
+
+					"
+				`);
+				// note: the test and the wrangler run share the same process, and we expect the deploy command (which fails)
+				//       to set a non-zero exit code
+				expect(process.exitCode).not.toBe(0);
+			});
+		});
+
+		it("should warn the user when the deployment would (likely unintentionally) override remote secrets", async () => {
+			writeWorkerSource();
+			mockGetServiceByName("test-name", "production", "dash");
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					vars: {
+						MY_SECRET: 123,
+					},
+					observability: {
+						enabled: true,
+					},
 				},
 				"./wrangler.json"
 			);
@@ -15487,24 +15589,71 @@ export default{
 				},
 			} as unknown as ServiceMetadataRes["default_environment"]);
 
+			vi.mocked(fetchSecrets).mockResolvedValue([
+				{ name: "MY_SECRET", type: "secret_text" },
+			]);
+			mockConfirm({
+				text: "Would you like to continue?",
+				result: true,
+			});
+
+			await runWrangler("deploy");
+
+			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
+				"▲ [WARNING] Environment variable \`MY_SECRET\` conflicts with an existing remote secret. This deployment will replace the remote secret with your environment variable.
+
+				"
+			`);
+		});
+
+		it("should abort the deployment when it would (likely unintentionally) override remote secrets in non-interactive strict mode", async () => {
+			setIsTTY(false);
+
+			writeWorkerSource();
+			mockGetServiceByName("test-name", "production", "dash");
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					vars: {
+						MY_SECRET: 123,
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.json"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ wranglerConfigPath: "./wrangler.json" });
+			mockGetServiceBindings("test-name", []);
+			mockGetServiceRoutes("test-name", []);
+			mockGetServiceCustomDomainRecords([]);
+			mockGetServiceSubDomainData("test-name", {
+				enabled: true,
+				previews_enabled: true,
+			});
+			mockGetServiceSchedules("test-name", { schedules: [] });
+			mockGetServiceMetadata("test-name", {
+				created_on: "2025-08-07T09:34:47.846308Z",
+				modified_on: "2025-08-08T10:48:12.688997Z",
+				script: {
+					created_on: "2025-08-07T09:34:47.846308Z",
+					modified_on: "2025-08-08T10:48:12.688997Z",
+					id: "my-worker-id",
+					observability: { enabled: true, head_sampling_rate: 1 },
+					compatibility_date: "2024-04-24",
+				},
+			} as unknown as ServiceMetadataRes["default_environment"]);
+
+			vi.mocked(fetchSecrets).mockResolvedValue([
+				{ name: "MY_SECRET", type: "secret_text" },
+			]);
+
 			await runWrangler("deploy --strict");
 
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
-				"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
-
-				   {
-				     observability: {
-				  -    enabled: true
-				  +    enabled: false
-				       logs: {
-				  -      enabled: true
-				  +      enabled: false
-				       }
-				     }
-				   }
-
-
-				  Deploying the Worker will override the remote configuration with your local one.
+				"▲ [WARNING] Environment variable \`MY_SECRET\` conflicts with an existing remote secret. This deployment will replace the remote secret with your environment variable.
 
 				"
 			`);
@@ -15514,34 +15663,7 @@ export default{
 
 				"
 			`);
-			// note: the test and the wrangler run share the same process, and we expect the deploy command (which fails)
-			//       to set a non-zero exit code
-			expect(process.exitCode).not.toBe(0);
-		});
 
-		it("should error when worker was last deployed from api", async () => {
-			setIsTTY(false);
-
-			msw.use(...mswSuccessDeploymentScriptAPI);
-			writeWranglerConfig();
-			writeWorkerSource();
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
-
-			await runWrangler("deploy ./index --strict");
-
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to publish a Workers Service that was last updated via the script API.[0m
-
-			  Edits that have been made via the script API will be overridden by your local code and config.
-
-			"
-			`);
-			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
-
-				"
-			`);
 			// note: the test and the wrangler run share the same process, and we expect the deploy command (which fails)
 			//       to set a non-zero exit code
 			expect(process.exitCode).not.toBe(0);

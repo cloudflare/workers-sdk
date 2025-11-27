@@ -27,6 +27,10 @@ import {
 } from "./helpers/write-wrangler-config";
 import type { DatabaseInfo } from "../d1/types";
 
+vi.mock("../utils/fetch-secrets", () => ({
+	fetchSecrets: async () => [],
+}));
+
 describe("resource provisioning", () => {
 	const std = mockConsoleMethods();
 	mockAccountId();

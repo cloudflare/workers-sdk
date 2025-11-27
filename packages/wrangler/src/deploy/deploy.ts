@@ -41,7 +41,7 @@ import {
 	warnOnErrorUpdatingServiceAndEnvironmentTags,
 } from "../environments";
 import { getFlag } from "../experimental-flags";
-import { isNonInteractiveOrCI } from "../is-interactive";
+import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
@@ -69,6 +69,7 @@ import {
 } from "../versions/api";
 import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
+import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { AssetsOptions } from "../assets";
 import type { Entry } from "../deployment-bundle/entry";
@@ -468,6 +469,20 @@ export default async function deploy(props: Props): Promise<{
 				throw e;
 			} else {
 				workerExists = false;
+			}
+		}
+	}
+
+	if (isInteractive() || props.strict) {
+		const remoteSecretsCheck = await checkRemoteSecretsOverride(
+			config,
+			props.env
+		);
+
+		if (remoteSecretsCheck?.override) {
+			logger.warn(remoteSecretsCheck.deployErrorMessage);
+			if (!(await deployConfirm("Would you like to continue?"))) {
+				return { versionId, workerTag };
 			}
 		}
 	}
