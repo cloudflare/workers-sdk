@@ -10722,6 +10722,50 @@ addEventListener('fetch', event => {});`
 				expect(std.err).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
+
+			it("should support the internal and non-public facing cross_account_grant service binding field", async () => {
+				writeWranglerConfig({
+					services: [
+						{
+							binding: "FOO",
+							service: "foo-service",
+							// @ts-expect-error - cross_account_gran is purposely not included in the config types (since it is an internal-only feature)
+							cross_account_grant: "grant-service",
+						},
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							cross_account_grant: "grant-service",
+							name: "FOO",
+							service: "foo-service",
+							type: "service",
+						},
+					],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					Binding                    Resource
+					env.FOO (foo-service)      Worker
+
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
 		});
 
 		describe("[analytics_engine_datasets]", () => {
