@@ -11,6 +11,7 @@ export type StepSelector = {
 type UserEvent = {
 	type: string;
 	payload: unknown;
+	timestamp?: Date;
 };
 
 export class WorkflowInstanceModifier extends RpcTarget {
@@ -153,7 +154,7 @@ export class WorkflowInstanceModifier extends RpcTarget {
 
 	async mockEvent(event: UserEvent): Promise<void> {
 		const myEvent: Event = {
-			timestamp: new Date(),
+			timestamp: event.timestamp ?? new Date(),
 			payload: event.payload,
 			type: event.type,
 		};

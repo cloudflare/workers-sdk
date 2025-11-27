@@ -117,6 +117,7 @@ it("should be reviewed, accepted and complete", async () => {
 		await m.mockEvent({
 			type: "moderation-decision",
 			payload: { moderatorAction: "approve" },
+			timestamp: new Date("01-01-2033"),
 		});
 	});
 
@@ -129,7 +130,7 @@ it("should be reviewed, accepted and complete", async () => {
 	);
 	expect(
 		await instance.waitForStepResult({ name: "apply moderator decision" })
-	).toEqual({ status: "moderated", decision: "approve" });
+	).toEqual({ status: "moderated", decision: "approve", year: 2033 });
 
 	await expect(instance.waitForStatus(STATUS_COMPLETE)).resolves.not.toThrow();
 });

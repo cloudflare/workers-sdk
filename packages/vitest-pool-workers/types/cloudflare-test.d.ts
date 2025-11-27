@@ -369,9 +369,13 @@ declare module "cloudflare:test" {
 		 *   );
 		 * ```
 		 *
-		 * @param event - The event to send, including its `type` and `payload`.
+		 * @param event - The event to send, including its `type` and `payload`. A timestamp for the event can also be provided.
 		 */
-		mockEvent(event: { type: string; payload: unknown }): Promise<void>;
+		mockEvent(event: {
+			type: string;
+			payload: unknown;
+			timestamp?: Date;
+		}): Promise<void>;
 
 		/**
 		 * Forces a `step.waitForEvent()` to time out instantly, causing the step to fail.

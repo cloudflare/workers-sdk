@@ -5,7 +5,7 @@ import {
 } from "cloudflare:workers";
 
 export class ModeratorWorkflow extends WorkflowEntrypoint<Env> {
-	async run(_event: Readonly<WorkflowEvent<unknown>>, step: WorkflowStep) {
+	async run(event: Readonly<WorkflowEvent<unknown>>, step: WorkflowStep) {
 		await step.sleep("sleep for a while", "10 seconds");
 
 		// Get an initial analysis from an AI model
@@ -46,11 +46,16 @@ export class ModeratorWorkflow extends WorkflowEntrypoint<Env> {
 		if (eventPayload) {
 			// The moderator responded in time.
 			const decision = eventPayload.payload.moderatorAction; // e.g., "approve" or "reject"
+			const result = {
+				status: "moderated",
+				decision,
+				year: event.timestamp.getFullYear(),
+			};
 			await step.do("apply moderator decision", async () => {
 				// API call to update content status based on the decision
-				return { status: "moderated", decision: decision };
+				return result;
 			});
-			return { status: "moderated", decision: decision };
+			return result;
 		}
 	}
 }
