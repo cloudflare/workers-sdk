@@ -8,7 +8,7 @@ test("the importable env is accessible from outside the request handler", async 
 });
 
 test("the fetch handler env contains the correct entries", async () => {
-	const json = await getJsonResponse();
+	const json = (await getJsonResponse()) as Record<string, unknown>;
 	expect(json?.["entries of the fetch handler env"]).toEqual([
 		{
 			key: "importable-env_VAR",
@@ -22,7 +22,7 @@ test("the fetch handler env contains the correct entries", async () => {
 });
 
 test("the imported env contains the correct entries", async () => {
-	const json = await getJsonResponse();
+	const json = (await getJsonResponse()) as Record<string, unknown>;
 	expect(json?.["entries of the imported env"]).toEqual([
 		{
 			key: "importable-env_VAR",
@@ -36,6 +36,6 @@ test("the imported env contains the correct entries", async () => {
 });
 
 test("the entries in the fetch handler env and the imported env are the same", async () => {
-	const json = await getJsonResponse();
+	const json = (await getJsonResponse()) as Record<string, unknown>;
 	expect(json?.["are the two set of entries the same?"]).toEqual(true);
 });

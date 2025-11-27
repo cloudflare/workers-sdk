@@ -1,5 +1,5 @@
 {
-	"name": "@playground/ai",
+	"name": "@playground/external-workers",
 	"private": true,
 	"type": "module",
 	"scripts": {

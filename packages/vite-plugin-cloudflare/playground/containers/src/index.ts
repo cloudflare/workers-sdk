@@ -1,5 +1,9 @@
 import { DurableObject } from "cloudflare:workers";
 
+interface Env {
+	CONTAINER: DurableObjectNamespace;
+}
+
 export class Container extends DurableObject<Env> {
 	container: globalThis.Container;
 	monitor?: Promise<unknown>;
@@ -9,7 +13,7 @@ export class Container extends DurableObject<Env> {
 		this.container = ctx.container!;
 	}
 
-	async fetch(req: Request) {
+	override async fetch(req: Request) {
 		const path = new URL(req.url).pathname;
 		switch (path) {
 			case "/status":
