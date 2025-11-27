@@ -9,8 +9,6 @@ import type { ConfigurationOptions } from ".";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 export class Angular extends Framework {
-	name = "angular";
-
 	async configure({
 		workerName,
 		outputDir,
