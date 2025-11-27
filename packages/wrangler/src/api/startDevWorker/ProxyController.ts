@@ -384,11 +384,16 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		// inspector endpoint.
 		const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
 
-		return (
-			this.latestConfig?.dev.inspector !== false &&
-			!inVscodeJsDebugTerminal &&
-			!this.latestConfig?.experimental?.tailLogs
-		);
+		const shouldEnableInspector =
+			this.latestConfig?.dev.inspector !== false && !inVscodeJsDebugTerminal;
+
+		if (this.latestConfig?.dev.remote) {
+			// In `wrangler dev --remote`, only enable the inspector if the `--x-tail-logs` flag is disabled
+			return (
+				shouldEnableInspector && !this.latestConfig?.experimental?.tailLogs
+			);
+		}
+		return shouldEnableInspector;
 	}
 
 	// ******************

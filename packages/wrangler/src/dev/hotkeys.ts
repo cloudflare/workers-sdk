@@ -6,7 +6,11 @@ import type { DevEnv } from "../api";
 
 export default function registerDevHotKeys(
 	devEnv: DevEnv,
-	args: { forceLocal?: boolean; experimentalTailLogs: boolean }
+	args: {
+		forceLocal?: boolean;
+		experimentalTailLogs: boolean;
+		remote: boolean;
+	}
 ) {
 	const unregisterHotKeys = registerHotKeys([
 		{
@@ -20,7 +24,7 @@ export default function registerDevHotKeys(
 		{
 			keys: ["d"],
 			label: "open devtools",
-			disabled: args.experimentalTailLogs,
+			disabled: args.remote && args.experimentalTailLogs,
 			handler: async () => {
 				const { inspectorUrl } = await devEnv.proxy.ready.promise;
 
