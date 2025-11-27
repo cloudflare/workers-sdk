@@ -245,7 +245,7 @@ export function DevtoolsIframe({ url }: { url: string }) {
 			});
 
 			messageHistory.splice(idx, 0, messageEvent);
-			setMessageHistory(messageHistory);
+			setMessageHistory([...messageHistory]);
 		},
 	});
 
