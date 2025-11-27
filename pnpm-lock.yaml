@@ -2384,6 +2384,9 @@ importers:
       playwright-chromium:
         specifier: catalog:default
         version: 1.56.1
+      strip-ansi:
+        specifier: ^7.1.0
+        version: 7.1.0
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
