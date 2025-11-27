@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import { validateHttpsOptions } from "../https-options";
-import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
 describe("validateHttpsOptions()", () => {
