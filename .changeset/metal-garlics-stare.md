@@ -1,5 +1,5 @@
 ---
-"@cloudflare/playground-preview-worker": patch
+"@cloudflare/playground-preview-worker": minor
 ---
 
 Return `tail_url` from Worker uploads
