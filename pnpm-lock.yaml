@@ -4049,9 +4049,6 @@ importers:
       rimraf:
         specifier: catalog:default
         version: 6.0.1
-      selfsigned:
-        specifier: ^2.0.1
-        version: 2.1.1
       semiver:
         specifier: ^1.1.0
         version: 1.1.0
@@ -13194,10 +13191,6 @@ packages:
 
   scule@1.3.0:
     resolution: {integrity: sha512-6FtHJEvt+pVMIB9IBY+IcCJ6Z5f1iQnytgyfKMhDKgmzYG+TeH/wx1y3l27rshSbLiSanrR9ffZDrEsmjlQF2g==}
-
-  selfsigned@2.1.1:
-    resolution: {integrity: sha512-GSL3aowiF7wa/WtSFwnUrludWFoNhftq8bUkH9pkzjpN2XSPOAYEgg6e0sS9s0rZwgJzJiQRPU18A6clnoW5wQ==}
-    engines: {node: '>=10'}
 
   sembear@0.7.0:
     resolution: {integrity: sha512-XyLTEich2D02FODCkfdto3mB9DetWPLuTzr4tvoofe9SvyM27h4nQSbV3+iVcYQz94AFyKtqBv5pcZbj3k2hdA==}
@@ -24754,10 +24747,6 @@ snapshots:
   scheduler@0.26.0: {}
 
   scule@1.3.0: {}
-
-  selfsigned@2.1.1:
-    dependencies:
-      node-forge: 1.3.1
 
   sembear@0.7.0:
     dependencies:
