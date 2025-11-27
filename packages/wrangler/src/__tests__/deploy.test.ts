@@ -10729,8 +10729,7 @@ addEventListener('fetch', event => {});`
 						{
 							binding: "FOO",
 							service: "foo-service",
-							// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-							// @ts-ignore
+							// @ts-expect-error - cross_account_gran is purposely not included in the config types (since it is an internal-only feature)
 							cross_account_grant: "grant-service",
 						},
 					],
