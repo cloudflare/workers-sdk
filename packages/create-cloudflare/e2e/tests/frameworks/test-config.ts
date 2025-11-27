@@ -599,6 +599,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			verifyPreview: {
 				route: "/",
 				expectedText: "TanStack Start Starter",
+				build: true,
 			},
 			nodeCompat: true,
 		},
