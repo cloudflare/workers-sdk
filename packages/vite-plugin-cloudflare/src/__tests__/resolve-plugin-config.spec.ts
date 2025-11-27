@@ -3,7 +3,11 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { resolvePluginConfig } from "../plugin-config";
-import type { PluginConfig, WorkersResolvedConfig } from "../plugin-config";
+import type {
+	AssetsOnlyResolvedConfig,
+	PluginConfig,
+	WorkersResolvedConfig,
+} from "../plugin-config";
 
 describe("resolvePluginConfig - auxiliary workers", () => {
 	let tempDir: string;
@@ -225,5 +229,460 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 		expect(() =>
 			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
 		).toThrow();
+	});
+});
+
+describe("resolvePluginConfig - entry worker configure()", () => {
+	let tempDir: string;
+
+	beforeEach(() => {
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
+	});
+
+	afterEach(() => {
+		fs.rmSync(tempDir, { recursive: true, force: true });
+	});
+
+	const viteEnv = { mode: "development", command: "serve" as const };
+
+	test("should convert assets-only worker to worker with server logic when configure() adds main", () => {
+		// Create a config file without main (assets-only)
+		const configPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({
+				name: "my-worker",
+				compatibility_date: "2024-01-01",
+				// No main field - would normally be assets-only
+			})
+		);
+
+		// Create the main file so validation passes
+		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
+
+		const pluginConfig: PluginConfig = {
+			configPath,
+			configure: {
+				main: "./src/index.ts",
+			},
+		};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		);
+
+		// Should now be a worker with server logic, not assets-only
+		expect(result.type).toBe("workers");
+		const workersResult = result as WorkersResolvedConfig;
+		expect(workersResult.rawConfigs.entryWorker.type).toBe("worker");
+		expect(workersResult.rawConfigs.entryWorker.config.main).toMatch(
+			/index\.ts$/
+		);
+	});
+
+	test("should allow configure() function to add main field", () => {
+		const configPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({
+				name: "my-worker",
+				compatibility_date: "2024-01-01",
+			})
+		);
+
+		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
+
+		const pluginConfig: PluginConfig = {
+			configPath,
+			configure: () => ({
+				main: "./src/index.ts",
+			}),
+		};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("workers");
+		const workersResult = result as WorkersResolvedConfig;
+		expect(workersResult.rawConfigs.entryWorker.type).toBe("worker");
+	});
+
+	test("should remain assets-only when configure() does not add main", () => {
+		const configPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({
+				name: "my-worker",
+				compatibility_date: "2024-01-01",
+			})
+		);
+
+		const pluginConfig: PluginConfig = {
+			configPath,
+			configure: {
+				compatibility_flags: ["nodejs_compat"],
+			},
+		};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("assets-only");
+		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
+		expect(assetsOnlyResult.config.compatibility_flags).toContain(
+			"nodejs_compat"
+		);
+	});
+});
+
+describe("resolvePluginConfig - zero-config mode", () => {
+	let tempDir: string;
+
+	beforeEach(() => {
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
+	});
+
+	afterEach(() => {
+		fs.rmSync(tempDir, { recursive: true, force: true });
+	});
+
+	const viteEnv = { mode: "development", command: "serve" as const };
+
+	test("should return an assets-only config when no wrangler config exists", () => {
+		const pluginConfig: PluginConfig = {};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("assets-only");
+	});
+
+	test("should derive worker name from package.json name", () => {
+		fs.writeFileSync(
+			path.join(tempDir, "package.json"),
+			JSON.stringify({ name: "my-awesome-app" })
+		);
+
+		const pluginConfig: PluginConfig = {};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("assets-only");
+		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
+		expect(assetsOnlyResult.config.name).toBe("my-awesome-app");
+		expect(assetsOnlyResult.config.topLevelName).toBe("my-awesome-app");
+	});
+
+	test("should normalize invalid worker names from package.json", () => {
+		fs.writeFileSync(
+			path.join(tempDir, "package.json"),
+			JSON.stringify({ name: "@scope/my_package_name" })
+		);
+
+		const pluginConfig: PluginConfig = {};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("assets-only");
+		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
+		// underscores become dashes, invalid chars removed
+		expect(assetsOnlyResult.config.name).toBe("scope-my-package-name");
+	});
+
+	test("should fall back to directory name when package.json has no name", () => {
+		const namedDir = path.join(tempDir, "my-test-project");
+		fs.mkdirSync(namedDir);
+		fs.writeFileSync(
+			path.join(namedDir, "package.json"),
+			JSON.stringify({ version: "1.0.0" })
+		);
+
+		const pluginConfig: PluginConfig = {};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: namedDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("assets-only");
+		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
+		expect(assetsOnlyResult.config.name).toBe("my-test-project");
+	});
+
+	test("should fall back to directory name when no package.json exists", () => {
+		const namedDir = path.join(tempDir, "another-project");
+		fs.mkdirSync(namedDir);
+
+		const pluginConfig: PluginConfig = {};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: namedDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("assets-only");
+		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
+		expect(assetsOnlyResult.config.name).toBe("another-project");
+	});
+
+	test("should set a compatibility date in zero-config mode", () => {
+		const pluginConfig: PluginConfig = {};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("assets-only");
+		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
+		expect(assetsOnlyResult.config.compatibility_date).toMatch(
+			/^\d{4}-\d{2}-\d{2}$/
+		);
+	});
+
+	test("should allow configure() to add main in zero-config mode", () => {
+		fs.writeFileSync(
+			path.join(tempDir, "package.json"),
+			JSON.stringify({ name: "my-worker" })
+		);
+		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
+
+		const pluginConfig: PluginConfig = {
+			configure: {
+				main: "./src/index.ts",
+			},
+		};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("workers");
+		const workersResult = result as WorkersResolvedConfig;
+		expect(workersResult.rawConfigs.entryWorker.type).toBe("worker");
+		expect(workersResult.rawConfigs.entryWorker.config.name).toBe("my-worker");
+	});
+});
+
+describe("resolvePluginConfig - defaults fill in missing fields", () => {
+	let tempDir: string;
+
+	beforeEach(() => {
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
+	});
+
+	afterEach(() => {
+		fs.rmSync(tempDir, { recursive: true, force: true });
+	});
+
+	const viteEnv = { mode: "development", command: "serve" as const };
+
+	test("should accept wrangler.toml with only name, filling in compatibility_date from defaults", () => {
+		const configPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({
+				name: "my-worker",
+				// No compatibility_date - should be filled from defaults
+			})
+		);
+
+		const pluginConfig: PluginConfig = {
+			configPath,
+		};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("assets-only");
+		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
+		expect(assetsOnlyResult.config.name).toBe("my-worker");
+		// compatibility_date should be filled from defaults (matches date format)
+		expect(assetsOnlyResult.config.compatibility_date).toMatch(
+			/^\d{4}-\d{2}-\d{2}$/
+		);
+	});
+
+	test("should accept wrangler.toml missing name when configure() provides it", () => {
+		const configPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({
+				compatibility_date: "2024-01-01",
+				// No name - should be provided by configure()
+			})
+		);
+
+		const pluginConfig: PluginConfig = {
+			configPath,
+			configure: {
+				name: "configured-worker",
+			},
+		};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("assets-only");
+		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
+		expect(assetsOnlyResult.config.name).toBe("configured-worker");
+	});
+
+	test("should accept wrangler.toml missing compatibility_date when configure() provides it", () => {
+		const configPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({
+				name: "my-worker",
+				// No compatibility_date
+			})
+		);
+
+		const pluginConfig: PluginConfig = {
+			configPath,
+			configure: {
+				compatibility_date: "2025-06-01",
+			},
+		};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("assets-only");
+		const assetsOnlyResult = result as AssetsOnlyResolvedConfig;
+		expect(assetsOnlyResult.config.compatibility_date).toBe("2025-06-01");
+	});
+
+	test("should accept minimal wrangler.toml when all required fields come from configure()", () => {
+		const configPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({
+				// Minimal config - just empty object or some other field
+				compatibility_flags: ["nodejs_compat"],
+			})
+		);
+
+		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
+
+		const pluginConfig: PluginConfig = {
+			configPath,
+			configure: {
+				name: "configured-worker",
+				compatibility_date: "2025-01-01",
+				main: "./src/index.ts",
+			},
+		};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("workers");
+		const workersResult = result as WorkersResolvedConfig;
+		expect(workersResult.rawConfigs.entryWorker.config.name).toBe(
+			"configured-worker"
+		);
+		expect(workersResult.rawConfigs.entryWorker.config.compatibility_date).toBe(
+			"2025-01-01"
+		);
+		expect(
+			workersResult.rawConfigs.entryWorker.config.compatibility_flags
+		).toContain("nodejs_compat");
+	});
+
+	test("should accept auxiliary worker wrangler.toml missing fields when configure() provides them", () => {
+		// Create entry worker config
+		const entryConfigPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			entryConfigPath,
+			JSON.stringify({
+				name: "entry-worker",
+				main: "./src/index.ts",
+				compatibility_date: "2024-01-01",
+			})
+		);
+		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
+
+		// Create auxiliary worker config with only some fields
+		const auxDir = path.join(tempDir, "aux");
+		fs.mkdirSync(auxDir, { recursive: true });
+		const auxConfigPath = path.join(auxDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			auxConfigPath,
+			JSON.stringify({
+				// Only has main, missing name
+				main: "./worker.ts",
+			})
+		);
+		fs.writeFileSync(path.join(auxDir, "worker.ts"), "export default {}");
+
+		const pluginConfig: PluginConfig = {
+			configPath: entryConfigPath,
+			auxiliaryWorkers: [
+				{
+					configPath: auxConfigPath,
+					configure: {
+						name: "aux-from-configure",
+					},
+				},
+			],
+		};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		);
+
+		expect(result.type).toBe("workers");
+		const workersResult = result as WorkersResolvedConfig;
+		expect(workersResult.rawConfigs.auxiliaryWorkers[0]?.config.name).toBe(
+			"aux-from-configure"
+		);
+		// compatibility_date should be filled from defaults
+		expect(
+			workersResult.rawConfigs.auxiliaryWorkers[0]?.config.compatibility_date
+		).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 	});
 });

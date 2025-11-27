@@ -1,19 +1,23 @@
-import assert from "node:assert";
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import { defu } from "defu";
 import * as vite from "vite";
+import {
+	unstable_defaultWranglerConfig,
+	unstable_getDevCompatibilityDate,
+	unstable_getWorkerNameFromProject,
+} from "wrangler";
 import { getWorkerConfigs } from "./deploy-config";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import {
-	getDefaultAuxiliaryWorkerConfig,
-	getDefaultWorkerConfig,
 	getValidatedWranglerConfigPath,
-	getWorkerConfig,
+	readWorkerConfigFromFile,
+	resolveWorkerType,
 } from "./workers-configs";
 import type { Defined } from "./utils";
 import type {
 	AssetsOnlyWorkerResolvedConfig,
+	NonApplicableConfigMap,
 	SanitizedWorkerConfig,
 	WorkerResolvedConfig,
 	WorkerWithServerLogicResolvedConfig,
@@ -133,6 +137,65 @@ export function customizeWorkerConfig<T extends SanitizedWorkerConfig>(
 	return resolvedConfig;
 }
 
+/**
+ * Resolves the config for a single worker, applying defaults, file config, and configure().
+ */
+function resolveWorkerConfig({
+	configPath,
+	env,
+	configure,
+	visitedConfigPaths,
+	isEntryWorker,
+	root,
+}: {
+	configPath: string | undefined;
+	env: string | undefined;
+	configure: ConfigureWorker | undefined;
+	visitedConfigPaths: Set<string>;
+	isEntryWorker: boolean;
+	root: string;
+}): WorkerResolvedConfig {
+	let config: SanitizedWorkerConfig;
+	let raw: Unstable_Config;
+	let nonApplicable: NonApplicableConfigMap;
+
+	if (configPath) {
+		// File config already has defaults applied
+		({ raw, config, nonApplicable } = readWorkerConfigFromFile(
+			configPath,
+			env,
+			{
+				visitedConfigPaths,
+			}
+		));
+	} else {
+		// No file: start with defaults
+		config = { ...unstable_defaultWranglerConfig };
+		raw = { ...config };
+		nonApplicable = {
+			replacedByVite: new Set(),
+			notRelevant: new Set(),
+		};
+	}
+
+	config.compatibility_date ??= unstable_getDevCompatibilityDate(undefined);
+
+	// Apply configure()
+	config = customizeWorkerConfig(config, configure);
+
+	if (isEntryWorker) {
+		config.name ??= unstable_getWorkerNameFromProject(root);
+	}
+	// Auto-populate topLevelName from name
+	config.topLevelName ??= config.name;
+
+	return resolveWorkerType(config, raw, nonApplicable, {
+		isEntryWorker,
+		configPath,
+		env,
+	});
+}
+
 export function resolvePluginConfig(
 	pluginConfig: PluginConfig,
 	userConfig: vite.UserConfig,
@@ -165,26 +228,20 @@ export function resolvePluginConfig(
 
 	const configPaths = new Set<string>();
 	const cloudflareEnv = prefixedEnv.CLOUDFLARE_ENV;
-	const entryWorkerConfigPath = getValidatedWranglerConfigPath(
+	const configPath = getValidatedWranglerConfigPath(
 		root,
 		pluginConfig.configPath
 	);
 
-	// Handle zero-config mode when no wrangler config file is found
-	const entryWorkerResolvedConfig =
-		entryWorkerConfigPath === undefined
-			? getDefaultWorkerConfig(root)
-			: getWorkerConfig(entryWorkerConfigPath, cloudflareEnv, {
-					visitedConfigPaths: configPaths,
-					isEntryWorker: true,
-				});
-
-	if (pluginConfig.configure) {
-		entryWorkerResolvedConfig.config = customizeWorkerConfig(
-			entryWorkerResolvedConfig.config,
-			pluginConfig.configure
-		);
-	}
+	// Build entry worker config: defaults → file config → configure()
+	const entryWorkerResolvedConfig = resolveWorkerConfig({
+		root,
+		configPath,
+		env: prefixedEnv.CLOUDFLARE_ENV,
+		configure: pluginConfig.configure,
+		visitedConfigPaths: configPaths,
+		isEntryWorker: true,
+	});
 
 	if (entryWorkerResolvedConfig.type === "assets-only") {
 		return {
@@ -226,40 +283,23 @@ export function resolvePluginConfig(
 			auxiliaryWorker.configPath,
 			true
 		);
-		const workerResolvedConfig = workerConfigPath
-			? getWorkerConfig(workerConfigPath, cloudflareEnv, {
-					visitedConfigPaths: configPaths,
-				})
-			: getDefaultAuxiliaryWorkerConfig();
 
-		if ("configure" in auxiliaryWorker) {
-			workerResolvedConfig.config = customizeWorkerConfig(
-				workerResolvedConfig.config,
-				auxiliaryWorker.configure
-			);
-		}
+		// Build auxiliary worker config: defaults → file config → configure()
+		const workerResolvedConfig = resolveWorkerConfig({
+			root,
+			configPath: workerConfigPath,
+			env: cloudflareEnv,
+			configure:
+				"configure" in auxiliaryWorker ? auxiliaryWorker.configure : undefined,
+			visitedConfigPaths: configPaths,
+			isEntryWorker: false,
+		});
 
-		const workerConfig = workerResolvedConfig.config;
-
-		assert(
-			workerResolvedConfig.type === "worker",
-			"Unexpected error: received AssetsOnlyResult with auxiliary workers."
-		);
-		assert(
-			workerConfig.name,
-			"Auxiliary worker config must have a name defined"
-		);
-		assert(workerConfig.main, "Auxiliary worker config must have a main field");
-
-		workerConfig.topLevelName ??= workerConfig.name;
-
-		auxiliaryWorkersResolvedConfigs.push(
-			workerResolvedConfig as WorkerResolvedConfig
-		);
+		auxiliaryWorkersResolvedConfigs.push(workerResolvedConfig);
 
 		const workerEnvironmentName =
 			auxiliaryWorker.viteEnvironment?.name ??
-			workerNameToEnvironmentName(workerConfig.topLevelName);
+			workerNameToEnvironmentName(workerResolvedConfig.config.topLevelName);
 
 		if (environmentNameToWorkerMap.has(workerEnvironmentName)) {
 			throw new Error(
@@ -269,7 +309,7 @@ export function resolvePluginConfig(
 
 		environmentNameToWorkerMap.set(
 			workerEnvironmentName,
-			resolveWorker(workerConfig as WorkerConfig)
+			resolveWorker(workerResolvedConfig.config as WorkerConfig)
 		);
 	}
 

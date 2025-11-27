@@ -42,16 +42,10 @@ describe("customizeWorkerConfig", () => {
 		expect(result.name).toBe("modified-test-worker");
 	});
 
-	test("should return original config when function returns undefined", () => {
-		const config = createMockConfig();
-		const result = customizeWorkerConfig(config, () => undefined);
-		expect(result).toBe(config);
-	});
-
-	test("should return original config when function returns void", () => {
+	test("should return original config when function returns undefined/void", () => {
 		const config = createMockConfig();
 		const result = customizeWorkerConfig(config, () => {
-			// Function that returns void without mutating
+			// Function that returns void/undefined
 		});
 		expect(result).toBe(config);
 	});
@@ -91,17 +85,5 @@ describe("customizeWorkerConfig", () => {
 		});
 		expect(result.name).toBe("original-name");
 		expect(result.compatibility_date).toBe("2025-01-01");
-	});
-
-	test("should allow function to inspect current config", () => {
-		const config = createMockConfig({ name: "my-worker" });
-		let inspectedName: string | undefined;
-
-		customizeWorkerConfig(config, (cfg) => {
-			inspectedName = cfg.name;
-			return { compatibility_date: "2025-01-01" };
-		});
-
-		expect(inspectedName).toBe("my-worker");
 	});
 });
