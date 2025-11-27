@@ -16,7 +16,7 @@ import {
 	handleStructuredLogs,
 	WranglerLog,
 } from "../../dev/miniflare";
-import { getHttpsOptions } from "../../https-options";
+import { validateHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
 import { Controller } from "./BaseController";
@@ -67,7 +67,7 @@ export class ProxyController extends Controller {
 			(this.inspectorEnabled &&
 				this.latestConfig.dev?.inspector &&
 				this.latestConfig.dev?.inspector?.secure)
-				? getHttpsOptions(
+				? validateHttpsOptions(
 						this.latestConfig.dev.server?.httpsKeyPath,
 						this.latestConfig.dev.server?.httpsCertPath
 					)
