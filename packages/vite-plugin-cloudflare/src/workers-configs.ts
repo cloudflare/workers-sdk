@@ -1,4 +1,3 @@
-import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import {
@@ -25,6 +24,12 @@ export interface WorkerWithServerLogicResolvedConfig
 	extends WorkerBaseResolvedConfig {
 	type: "worker";
 	config: WorkerConfig;
+}
+
+export interface PartialAuxiliaryWorkerResolvedConfig
+	extends WorkerBaseResolvedConfig {
+	type: "worker";
+	config: SanitizedWorkerConfig;
 }
 
 interface WorkerBaseResolvedConfig {
@@ -363,7 +368,7 @@ export function getDefaultWorkerConfig(
 
 	// Start with the full default config to ensure all required fields have proper defaults,
 	// then override the fields specific to this zero-config worker
-	const config: RawWorkerConfig = {
+	const config: AssetsOnlyConfig = {
 		...unstable_defaultWranglerConfig,
 		topLevelName: workerName,
 		name: workerName,
@@ -373,7 +378,26 @@ export function getDefaultWorkerConfig(
 	return {
 		type: "assets-only",
 		raw: config,
-		config: config as AssetsOnlyConfig,
+		config,
+		nonApplicable: {
+			replacedByVite: new Set(),
+			notRelevant: new Set(),
+		},
+	};
+}
+
+export function getDefaultAuxiliaryWorkerConfig(): PartialAuxiliaryWorkerResolvedConfig {
+	const compatibilityDate = unstable_getDevCompatibilityDate(undefined);
+
+	const config: RawWorkerConfig = {
+		...unstable_defaultWranglerConfig,
+		compatibility_date: compatibilityDate,
+	};
+
+	return {
+		type: "worker",
+		raw: config,
+		config,
 		nonApplicable: {
 			replacedByVite: new Set(),
 			notRelevant: new Set(),
@@ -412,18 +436,8 @@ function maybeResolveMain(main: string, configPath: string): string {
  * @param root the root of the vite project
  * @param requestedConfigPath the requested config path, if any
  * @param isForAuxiliaryWorker whether the config path is being requested for an auxiliary worker
- * @returns a valid path to a config file, or undefined for entry workers when no config is found (zero-config mode)
+ * @returns a valid path to a config file, or undefined for entry workers when no config is found
  */
-export function getValidatedWranglerConfigPath(
-	root: string,
-	requestedConfigPath: string | undefined,
-	isForAuxiliaryWorker: true
-): string;
-export function getValidatedWranglerConfigPath(
-	root: string,
-	requestedConfigPath: string | undefined,
-	isForAuxiliaryWorker?: boolean
-): string | undefined;
 export function getValidatedWranglerConfigPath(
 	root: string,
 	requestedConfigPath: string | undefined,
@@ -463,17 +477,11 @@ export function getValidatedWranglerConfigPath(
 
 		return configPath;
 	}
-
-	// the plugin's API requires auxiliary workers to always specify their config paths
-	assert(
-		isForAuxiliaryWorker === false,
-		"Unexpected Error: trying to find the wrangler config for an auxiliary worker"
-	);
-
-	const configPath = findWranglerConfig(root);
-
-	// Return undefined for zero-config mode when no config file is found
-	return configPath;
+	// We don't try to find a wrangler config for auxiliary workers when no configPath is provided
+	if (isForAuxiliaryWorker) {
+		return undefined;
+	}
+	return findWranglerConfig(root);
 }
 
 // We can't rely on `readConfig` from Wrangler to find the config as it may be relative to a different root that's set by the user.

@@ -1,10 +1,12 @@
 import assert from "node:assert";
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
+import { defu } from "defu";
 import * as vite from "vite";
 import { getWorkerConfigs } from "./deploy-config";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import {
+	getDefaultAuxiliaryWorkerConfig,
 	getDefaultWorkerConfig,
 	getValidatedWranglerConfigPath,
 	getWorkerConfig,
@@ -29,14 +31,27 @@ interface EntryWorkerConfig extends BaseWorkerConfig {
 	configPath?: string;
 }
 
-interface AuxiliaryWorkerConfig extends BaseWorkerConfig {
+interface AuxiliaryWorkerFileConfig extends BaseWorkerConfig {
 	configPath: string;
 }
+
+interface AuxiliaryWorkerInlineConfig extends BaseWorkerConfig {
+	configPath?: string;
+	configure: ConfigureWorker;
+}
+
+type AuxiliaryWorkerConfig =
+	| AuxiliaryWorkerFileConfig
+	| AuxiliaryWorkerInlineConfig;
 
 interface Experimental {
 	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 	headersAndRedirectsDevModeSupport?: boolean;
 }
+
+type ConfigureWorker =
+	| Partial<SanitizedWorkerConfig>
+	| ((config: SanitizedWorkerConfig) => Partial<SanitizedWorkerConfig> | void);
 
 export interface PluginConfig extends EntryWorkerConfig {
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
@@ -44,6 +59,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
 	experimental?: Experimental;
+	configure?: ConfigureWorker;
 }
 
 export interface AssetsOnlyConfig extends SanitizedWorkerConfig {
@@ -101,6 +117,22 @@ export type ResolvedPluginConfig =
 	| WorkersResolvedConfig
 	| PreviewResolvedConfig;
 
+export function customizeWorkerConfig<T extends SanitizedWorkerConfig>(
+	resolvedConfig: T,
+	configure: ConfigureWorker | undefined
+): T {
+	// The `configure` option can either be an object to merge into the config,
+	// a function that returns such an object, or a function that mutates the config in place.
+	const configureResult =
+		typeof configure === "function" ? configure(resolvedConfig) : configure;
+
+	// If the configureResult is defined, merge it into the existing config.
+	if (configureResult) {
+		return defu(configureResult, resolvedConfig) as T;
+	}
+	return resolvedConfig;
+}
+
 export function resolvePluginConfig(
 	pluginConfig: PluginConfig,
 	userConfig: vite.UserConfig,
@@ -147,6 +179,13 @@ export function resolvePluginConfig(
 					isEntryWorker: true,
 				});
 
+	if (pluginConfig.configure) {
+		entryWorkerResolvedConfig.config = customizeWorkerConfig(
+			entryWorkerResolvedConfig.config,
+			pluginConfig.configure
+		);
+	}
+
 	if (entryWorkerResolvedConfig.type === "assets-only") {
 		return {
 			...shared,
@@ -187,22 +226,36 @@ export function resolvePluginConfig(
 			auxiliaryWorker.configPath,
 			true
 		);
-		const workerResolvedConfig = getWorkerConfig(
-			workerConfigPath,
-			cloudflareEnv,
-			{
-				visitedConfigPaths: configPaths,
-			}
-		);
+		const workerResolvedConfig = workerConfigPath
+			? getWorkerConfig(workerConfigPath, cloudflareEnv, {
+					visitedConfigPaths: configPaths,
+				})
+			: getDefaultAuxiliaryWorkerConfig();
 
-		auxiliaryWorkersResolvedConfigs.push(workerResolvedConfig);
+		if ("configure" in auxiliaryWorker) {
+			workerResolvedConfig.config = customizeWorkerConfig(
+				workerResolvedConfig.config,
+				auxiliaryWorker.configure
+			);
+		}
+
+		const workerConfig = workerResolvedConfig.config;
 
 		assert(
 			workerResolvedConfig.type === "worker",
 			"Unexpected error: received AssetsOnlyResult with auxiliary workers."
 		);
+		assert(
+			workerConfig.name,
+			"Auxiliary worker config must have a name defined"
+		);
+		assert(workerConfig.main, "Auxiliary worker config must have a main field");
 
-		const workerConfig = workerResolvedConfig.config;
+		workerConfig.topLevelName ??= workerConfig.name;
+
+		auxiliaryWorkersResolvedConfigs.push(
+			workerResolvedConfig as WorkerResolvedConfig
+		);
 
 		const workerEnvironmentName =
 			auxiliaryWorker.viteEnvironment?.name ??
@@ -216,7 +269,7 @@ export function resolvePluginConfig(
 
 		environmentNameToWorkerMap.set(
 			workerEnvironmentName,
-			resolveWorker(workerConfig)
+			resolveWorker(workerConfig as WorkerConfig)
 		);
 	}
 
