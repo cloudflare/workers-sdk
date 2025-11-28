@@ -1,10 +1,10 @@
 import assert from "node:assert";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import * as recast from "recast";
 import { transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
-import { usesTypescript } from "../uses-typescript";
 import { Framework } from ".";
 import type { ConfigurationOptions } from ".";
 import type { RawConfig } from "@cloudflare/workers-utils";
@@ -24,10 +24,18 @@ function isPluginsProp(
 }
 
 function transformViteConfig(projectPath: string) {
-	const filePath = path.join(
-		projectPath,
-		`vite.config.${usesTypescript(projectPath) ? "ts" : "js"}`
-	);
+	const filePathTS = path.join(projectPath, `vite.config.ts`);
+	const filePathJS = path.join(projectPath, `vite.config.ts`);
+
+	let filePath: string;
+
+	if (existsSync(filePathTS)) {
+		filePath = filePathTS;
+	} else if (existsSync(filePathJS)) {
+		filePath = filePathJS;
+	} else {
+		throw new Error("Could not find Vite config file to modify");
+	}
 
 	transformFile(filePath, {
 		visitProgram(n) {
