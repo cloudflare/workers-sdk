@@ -137,6 +137,28 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 				);
 			});
 		});
+
+	describe("remote bindings without actually establishing a remote connection", () => {
+		const projectPath = seed("remote-bindings-config-account-id", "pnpm");
+
+		test("for connection to remote bindings during dev the account_id present in the wrangler config file is used", async ({
+			expect,
+		}) => {
+			const proc = await runLongLived("pnpm", "dev", projectPath);
+			await vi.waitFor(
+				async () => {
+					expect(proc.stderr).toMatch(
+						// Note: this error message shows that we're attempting to establish the remote proxy connection
+						//       using the "not-a-valid-account-id-abc" account id
+						/A request to the Cloudflare API \(\/accounts\/not-a-valid-account-id-abc\/.*?\) failed/
+					);
+				},
+				{
+					timeout: 10_000,
+				}
+			);
+		});
+	});
 }
 
 describe("remote bindings disabled", () => {
@@ -159,28 +181,6 @@ describe("remote bindings disabled", () => {
 
 				expect(responseText).toContain("Error");
 				expect(responseText).toContain("Binding AI needs to be run remotely");
-			}
-		);
-	});
-});
-
-describe("remote bindings without actually establishing a remote connection", () => {
-	const projectPath = seed("remote-bindings-config-account-id", "pnpm");
-
-	test("for connection to remote bindings during dev the account_id present in the wrangler config file is used", async ({
-		expect,
-	}) => {
-		const proc = await runLongLived("pnpm", "dev", projectPath);
-		await vi.waitFor(
-			async () => {
-				expect(proc.stderr).toMatch(
-					// Note: this error message shows that we're attempting to establish the remote proxy connection
-					//       using the "not-a-valid-account-id-abc" account id
-					/A request to the Cloudflare API \(\/accounts\/not-a-valid-account-id-abc\/.*?\) failed/
-				);
-			},
-			{
-				timeout: 10_000,
 			}
 		);
 	});
