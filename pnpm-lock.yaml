@@ -15965,16 +15965,8 @@ snapshots:
       esbuild: 0.17.19
       miniflare: 3.20250310.0
       semver: 7.7.3
-<<<<<<< HEAD
-      vitest: 2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.30.2)
-      wrangler: 3.114.1(@cloudflare/workers-types@4.20251128.0)
-||||||| parent of c052a1628 (Bump to latest MSW & fix bug in ProxyController where multiple // caused ws/MSW to drop the request host from the URL, breaking MSW)
-      vitest: 2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.30.2)
-      wrangler: 3.114.1(@cloudflare/workers-types@4.20251127.0)
-=======
       vitest: 2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.9.3))
-      wrangler: 3.114.1(@cloudflare/workers-types@4.20251127.0)
->>>>>>> c052a1628 (Bump to latest MSW & fix bug in ProxyController where multiple // caused ws/MSW to drop the request host from the URL, breaking MSW)
+      wrangler: 3.114.1(@cloudflare/workers-types@4.20251128.0)
       zod: 3.22.3
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
@@ -15990,16 +15982,8 @@ snapshots:
       devalue: 4.3.3
       miniflare: 4.20250417.0
       semver: 7.7.3
-<<<<<<< HEAD
-      vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
-      wrangler: 4.12.1(@cloudflare/workers-types@4.20251128.0)
-||||||| parent of c052a1628 (Bump to latest MSW & fix bug in ProxyController where multiple // caused ws/MSW to drop the request host from the URL, breaking MSW)
-      vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.4.3(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
-      wrangler: 4.12.1(@cloudflare/workers-types@4.20251127.0)
-=======
       vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
-      wrangler: 4.12.1(@cloudflare/workers-types@4.20251127.0)
->>>>>>> c052a1628 (Bump to latest MSW & fix bug in ProxyController where multiple // caused ws/MSW to drop the request host from the URL, breaking MSW)
+      wrangler: 4.12.1(@cloudflare/workers-types@4.20251128.0)
       zod: 3.22.3
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
