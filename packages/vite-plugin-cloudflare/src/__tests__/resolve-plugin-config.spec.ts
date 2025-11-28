@@ -112,10 +112,7 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 	test("should resolve inline auxiliary worker with configure function", () => {
 		const entryConfigPath = createEntryWorkerConfig(tempDir);
 		// Create the inline worker's main file
-		fs.writeFileSync(
-			path.join(tempDir, "src/fn-aux.ts"),
-			"export default {}"
-		);
+		fs.writeFileSync(path.join(tempDir, "src/fn-aux.ts"), "export default {}");
 
 		const pluginConfig: PluginConfig = {
 			configPath: entryConfigPath,
