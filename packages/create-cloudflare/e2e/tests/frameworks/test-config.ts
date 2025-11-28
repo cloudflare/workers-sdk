@@ -745,6 +745,26 @@ function getExperimentalFrameworkTestConfig(
 			nodeCompat: true,
 			verifyTypes: false,
 		},
+		{
+			name: "angular:workers",
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["bun"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Congratulations! Your app is running.",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "Congratulations! Your app is running.",
+			},
+			nodeCompat: false,
+			flags: ["--style", "sass"],
+			verifyTypes: false,
+		},
 	];
 }
 

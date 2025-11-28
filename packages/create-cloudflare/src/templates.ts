@@ -241,6 +241,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			docusaurus: docusaurusTemplate,
 			astro: astroTemplate,
 			"tanstack-start": tanStackStartTemplate,
+			angular: angularTemplate,
 		};
 	} else {
 		return {
