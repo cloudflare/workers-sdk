@@ -2,6 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import { parseJSONC } from "@cloudflare/workers-utils";
 import { dedent } from "../../utils/dedent";
 import { installPackages } from "../c3-vendor/packages";
 import { Framework } from ".";
@@ -32,7 +33,7 @@ export class Angular extends Framework {
 async function updateAngularJson(projectName: string) {
 	const s = spinner();
 	s.start(`Updating angular.json config`);
-	const angularJson = JSON.parse(
+	const angularJson = parseJSONC(
 		await readFile(resolve("angular.json"), "utf8")
 	) as AngularJson;
 
