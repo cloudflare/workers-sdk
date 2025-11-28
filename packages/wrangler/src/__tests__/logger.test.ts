@@ -1,4 +1,5 @@
 import { error, logRaw, setLogLevel } from "@cloudflare/cli";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Logger } from "../logger";
 import { mockCLIOutput } from "./helpers/mock-cli-output";
 import { mockConsoleMethods } from "./helpers/mock-console";

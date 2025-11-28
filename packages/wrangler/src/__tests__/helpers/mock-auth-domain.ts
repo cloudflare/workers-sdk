@@ -1,3 +1,5 @@
+import { afterEach, beforeEach } from "vitest";
+
 const ORIGINAL_WRANGLER_AUTH_DOMAIN = process.env.WRANGLER_AUTH_DOMAIN;
 
 /**

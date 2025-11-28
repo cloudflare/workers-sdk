@@ -11,7 +11,7 @@ import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
 import { getSubdomainValues } from "../triggers/deploy";
@@ -15079,7 +15079,7 @@ export default{
 			`);
 		});
 
-		test("environments with redirected config", async ({ expect }) => {
+		test("environments with redirected config", async () => {
 			mockGetScriptWithTags(["some-tag"]);
 			mockUploadWorkerRequest({
 				expectedScriptName: "test-name-production",

@@ -3,6 +3,7 @@ import {
 	getCloudflareContainerRegistry,
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";

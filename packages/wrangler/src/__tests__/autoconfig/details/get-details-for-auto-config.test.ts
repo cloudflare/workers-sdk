@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as details from "../../../autoconfig/details";
 import { clearOutputFilePath } from "../../../output";
 import { mockConsoleMethods } from "../../helpers/mock-console";

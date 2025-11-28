@@ -4,6 +4,7 @@ import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import TOML from "smol-toml";
 import dedent from "ts-dedent";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { version } from "../../../package.json";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";
 import { ApiErrorCodes } from "../../pages/errors";

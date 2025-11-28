@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { getHostFromUrl } from "../zones";
 
 //return the host given a url-like string

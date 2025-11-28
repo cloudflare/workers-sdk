@@ -1,4 +1,5 @@
 import { APIError } from "@cloudflare/workers-utils";
+import { beforeEach, describe, expect, it } from "vitest";
 import { logger } from "../../logger";
 import { retryOnAPIFailure } from "../../utils/retry";
 import { mockConsoleMethods } from "../helpers/mock-console";
