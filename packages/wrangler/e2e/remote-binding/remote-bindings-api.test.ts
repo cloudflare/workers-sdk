@@ -87,68 +87,27 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				await remoteProxySession.dispose();
 			});
 
-			test("user provided (incorrect but then corrected) auth data", async () => {
-				const remoteProxySession = await startRemoteProxySession(
-					{
-						MY_SERVICE: {
-							type: "service",
-							service: remoteWorkerName,
-						},
-					},
-					{
-						auth: {
-							accountId: CLOUDFLARE_ACCOUNT_ID,
-							apiToken: {
-								apiToken: "This is an incorrect API TOKEN!",
+			test("user provided incorrect auth data", async () => {
+				await expect(
+					startRemoteProxySession(
+						{
+							MY_SERVICE: {
+								type: "service",
+								service: remoteWorkerName,
 							},
 						},
-					}
-				);
-				await remoteProxySession.ready;
-
-				const mf = new Miniflare(
-					getMfOptions(remoteProxySession.remoteProxyConnectionString)
-				);
-
-				const noResponse = await timedDispatchFetch(mf);
-				// We are unable to fetch from the worker since the remote connection is not correctly established
-				expect(noResponse).toBe(null);
-
-				assert(process.env.CLOUDFLARE_API_TOKEN);
-
-				const amendedRemoteProxySession = await startRemoteProxySession(
-					{
-						MY_SERVICE: {
-							type: "service",
-							service: remoteWorkerName,
-						},
-					},
-					{
-						auth: {
-							accountId: CLOUDFLARE_ACCOUNT_ID,
-							apiToken: {
-								apiToken: process.env.CLOUDFLARE_API_TOKEN,
+						{
+							auth: {
+								accountId: CLOUDFLARE_ACCOUNT_ID,
+								apiToken: {
+									apiToken: "This is an incorrect API TOKEN!",
+								},
 							},
-						},
-					}
+						}
+					)
+				).rejects.toMatchInlineSnapshot(
+					`[Error: Failed to start the remote proxy session. There is likely additional logging output above.]`
 				);
-
-				await amendedRemoteProxySession.ready;
-
-				await mf.setOptions(
-					getMfOptions(amendedRemoteProxySession.remoteProxyConnectionString)
-				);
-
-				const response = await timedDispatchFetch(mf);
-				const responseText = await response?.text();
-
-				expect(responseText).toEqual(
-					"worker response: Hello from a remote worker"
-				);
-
-				await mf.dispose();
-				await remoteProxySession.dispose();
-				await amendedRemoteProxySession.dispose();
 			});
 		});
 
@@ -183,74 +142,29 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				await proxySessionData.session.dispose();
 			});
 
-			test("user provided (incorrect but then corrected) auth data", async () => {
-				let proxySessionData = await maybeStartOrUpdateRemoteProxySession(
-					{
-						bindings: {
-							MY_SERVICE: {
-								type: "service",
-								service: remoteWorkerName,
-								remote: true,
+			test("user provided incorrect auth data", async () => {
+				await expect(
+					maybeStartOrUpdateRemoteProxySession(
+						{
+							bindings: {
+								MY_SERVICE: {
+									type: "service",
+									service: remoteWorkerName,
+									remote: true,
+								},
 							},
 						},
-					},
-					undefined,
-					{
-						accountId: CLOUDFLARE_ACCOUNT_ID,
-						apiToken: {
-							apiToken: "This is an incorrect API TOKEN!",
-						},
-					}
-				);
-
-				assert(proxySessionData);
-
-				await proxySessionData.session.ready;
-
-				const mf = new Miniflare(
-					getMfOptions(proxySessionData.session.remoteProxyConnectionString)
-				);
-
-				const noResponse = await timedDispatchFetch(mf);
-				// We are unable to fetch from the worker since the remote connection is not correctly established
-				expect(noResponse).toBe(null);
-
-				assert(process.env.CLOUDFLARE_API_TOKEN);
-
-				proxySessionData = await maybeStartOrUpdateRemoteProxySession(
-					{
-						bindings: {
-							MY_SERVICE: {
-								type: "service",
-								service: remoteWorkerName,
-								remote: true,
+						undefined,
+						{
+							accountId: CLOUDFLARE_ACCOUNT_ID,
+							apiToken: {
+								apiToken: "This is an incorrect API TOKEN!",
 							},
-						},
-					},
-					proxySessionData,
-					{
-						accountId: CLOUDFLARE_ACCOUNT_ID,
-						apiToken: {
-							apiToken: process.env.CLOUDFLARE_API_TOKEN,
-						},
-					}
+						}
+					)
+				).rejects.toMatchInlineSnapshot(
+					`[Error: Failed to start the remote proxy session. There is likely additional logging output above.]`
 				);
-
-				assert(proxySessionData);
-
-				await mf.setOptions(
-					getMfOptions(proxySessionData.session.remoteProxyConnectionString)
-				);
-
-				const response = await timedDispatchFetch(mf);
-				const responseText = await response?.text();
-
-				expect(responseText).toEqual(
-					"worker response: Hello from a remote worker"
-				);
-
-				await mf.dispose();
-				await proxySessionData.session.dispose();
 			});
 		});
 	}
