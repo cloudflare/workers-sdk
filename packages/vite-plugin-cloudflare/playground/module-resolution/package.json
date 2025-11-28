@@ -5,7 +5,7 @@
 	"scripts": {
 		"build": "vite build --app",
 		"build:nodejs-compat": "vite build --app -c ./vite.config.nodejs-compat.ts",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"dev:nodejs-compat": "vite dev -c ./vite.config.nodejs-compat.ts",
 		"preview": "vite preview",

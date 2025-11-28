@@ -16,7 +16,7 @@ import {
 	handleStructuredLogs,
 	WranglerLog,
 } from "../../dev/miniflare";
-import { getHttpsOptions } from "../../https-options";
+import { validateHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
 import { Controller } from "./BaseController";
@@ -67,7 +67,7 @@ export class ProxyController extends Controller {
 			(this.inspectorEnabled &&
 				this.latestConfig.dev?.inspector &&
 				this.latestConfig.dev?.inspector?.secure)
-				? getHttpsOptions(
+				? validateHttpsOptions(
 						this.latestConfig.dev.server?.httpsKeyPath,
 						this.latestConfig.dev.server?.httpsCertPath
 					)
@@ -401,11 +401,16 @@ export class ProxyController extends Controller {
 		// inspector endpoint.
 		const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
 
-		return (
-			this.latestConfig?.dev.inspector !== false &&
-			!inVscodeJsDebugTerminal &&
-			!this.latestConfig?.experimental?.tailLogs
-		);
+		const shouldEnableInspector =
+			this.latestConfig?.dev.inspector !== false && !inVscodeJsDebugTerminal;
+
+		if (this.latestConfig?.dev.remote) {
+			// In `wrangler dev --remote`, only enable the inspector if the `--x-tail-logs` flag is disabled
+			return (
+				shouldEnableInspector && !this.latestConfig?.experimental?.tailLogs
+			);
+		}
+		return shouldEnableInspector;
 	}
 
 	// ******************

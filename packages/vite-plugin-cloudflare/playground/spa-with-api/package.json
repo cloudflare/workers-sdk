@@ -8,7 +8,7 @@
 		"build:https": "vite build -c ./vite.config.https.ts",
 		"build:run-worker-first": "vite build -c ./vite.config.run-worker-first.ts",
 		"build:static-routing": "vite build -c ./vite.config.static-routing.ts",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"dev:https": "vite dev -c ./vite.config.https.ts",
 		"dev:run-worker-first": "vite dev -c ./vite.config.run-worker-first.ts",

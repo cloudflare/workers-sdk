@@ -73,7 +73,7 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20251126.0"
+		"workerd": "1.20251128.0"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -148,7 +148,6 @@
 		"prompts": "^2.4.2",
 		"resolve": "^1.22.8",
 		"rimraf": "catalog:default",
-		"selfsigned": "^2.0.1",
 		"semiver": "^1.1.0",
 		"shell-quote": "^1.8.1",
 		"signal-exit": "^3.0.7",

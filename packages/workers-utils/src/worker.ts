@@ -256,6 +256,7 @@ export interface CfService {
 	entrypoint?: string;
 	props?: Record<string, unknown>;
 	remote?: boolean;
+	cross_account_grant?: string;
 }
 
 export interface CfVpcService {
