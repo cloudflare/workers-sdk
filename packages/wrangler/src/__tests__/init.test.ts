@@ -717,6 +717,7 @@ describe("init", () => {
 				),
 				http.get(
 					`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content/v2`,
+					// @ts-expect-error Something's up with the MSW types
 					async () => {
 						if (typeof worker.content === "string") {
 							return HttpResponse.text(worker.content, {
