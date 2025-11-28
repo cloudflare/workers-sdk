@@ -248,8 +248,13 @@ if (auth) {
 				);
 
 				expect(errorSpy).toHaveBeenCalledOnce();
-				expect(errorSpy.mock.calls?.[0]?.[0]).toMatchInlineSnapshot(`
-					"[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/NOT a valid account id/workers/subdomain/edge-preview) failed.[0m
+				expect(
+					`${errorSpy.mock.calls?.[0]?.[0]}`
+						// Windows gets a different marker for ✘, so let's normalize it here
+						// so that these tests can be platform independent
+						.replaceAll("✘", "X")
+				).toMatchInlineSnapshot(`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mA request to the Cloudflare API (/accounts/NOT a valid account id/workers/subdomain/edge-preview) failed.[0m
 
 					"
 				`);
