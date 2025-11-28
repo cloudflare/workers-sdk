@@ -6,25 +6,26 @@ import { parseJSONC } from "@cloudflare/workers-utils";
 import { dedent } from "../../utils/dedent";
 import { installPackages } from "../c3-vendor/packages";
 import { Framework } from ".";
-import type { ConfigurationOptions } from ".";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { ConfigurationOptions, ConfigurationResults } from ".";
 
 export class Angular extends Framework {
 	async configure({
 		workerName,
 		outputDir,
 		dryRun,
-	}: ConfigurationOptions): Promise<RawConfig> {
+	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
 			await updateAngularJson(workerName);
 			await overrideServerFile();
 			await installAdditionalDependencies();
 		}
 		return {
-			main: "./dist/server/server.mjs",
-			assets: {
-				binding: "ASSETS",
-				directory: `${outputDir}browser`,
+			wranglerConfig: {
+				main: "./dist/server/server.mjs",
+				assets: {
+					binding: "ASSETS",
+					directory: `${outputDir}browser`,
+				},
 			},
 		};
 	}
