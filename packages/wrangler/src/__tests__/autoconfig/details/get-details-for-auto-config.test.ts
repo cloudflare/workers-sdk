@@ -1,6 +1,5 @@
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, expect, it } from "vitest";
 import * as details from "../../../autoconfig/details";
@@ -111,7 +110,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		await writeFile("index.html", `<h1>Hello World</h1>`);
 
 		await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-			outputDir: process.cwd(),
+			outputDir: ".",
 		});
 	});
 
@@ -122,7 +121,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 
 		await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-			outputDir: join(process.cwd(), "public"),
+			outputDir: "public",
 		});
 	});
 
@@ -133,7 +132,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 
 		await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-			outputDir: process.cwd(),
+			outputDir: ".",
 		});
 	});
 
