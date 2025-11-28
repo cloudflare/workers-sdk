@@ -32,6 +32,7 @@
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc -p ./tsconfig.json",
 		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
+		"test": "vitest",
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
