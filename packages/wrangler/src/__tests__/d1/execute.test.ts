@@ -1,6 +1,8 @@
 import fs from "node:fs";
-import { join } from "path";
+import { join } from "node:path";
 import { http, HttpResponse } from "msw";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { UserError } from "../../errors";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -183,6 +185,24 @@ describe("execute", () => {
 
 		await runWrangler("d1 execute db --command 'select 1;' --json");
 		expect(std.out).not.toContain("⛅️ wrangler x.x.x");
+	});
+
+	it("should treat SQLite constraint errors as UserErrors", async () => {
+		// First create a table with a foreign key constraint
+		const setupSQL = `
+			CREATE TABLE users (id INTEGER PRIMARY KEY);
+			CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER, FOREIGN KEY(user_id) REFERENCES users(id));
+		`;
+		fs.writeFileSync("setup.sql", setupSQL);
+		await runWrangler("d1 execute db --file setup.sql --local");
+
+		// Now try to violate the foreign key constraint
+		const violationSQL = `INSERT INTO posts (id, user_id) VALUES (1, 999);`;
+		fs.writeFileSync("violation.sql", violationSQL);
+
+		await expect(
+			runWrangler("d1 execute db --file violation.sql --local")
+		).rejects.toThrow(UserError);
 	});
 
 	describe("duration formatting", () => {
