@@ -171,11 +171,10 @@ export async function findAdditionalModules(
 				{ type: "Data", globs: ["**/*"], fallthrough: true },
 			];
 			const vendoredModules = (
-				await matchFiles(
-					pythonModulesFiles,
-					pythonModulesDir,
-					parseRules(vendoredRules)
-				)
+				await matchFiles(pythonModulesFiles, pythonModulesDir, {
+					rules: vendoredRules,
+					removedRules: [],
+				})
 			)
 				.filter((m) => {
 					// Check if the file matches any exclusion pattern
