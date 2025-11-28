@@ -120,7 +120,7 @@ describe("wrangler setup", () => {
 				Detected Project Settings:
 				 - Worker Name: <WORKER_NAME>
 				 - Framework: Static
-				 - Output Directory: <cwd>/public
+				 - Output Directory: public
 
 
 				📄 Create wrangler.jsonc:
