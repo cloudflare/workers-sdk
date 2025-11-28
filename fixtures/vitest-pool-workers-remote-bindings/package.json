@@ -9,7 +9,7 @@
 	"devDependencies": {
 		"@cloudflare/vitest-pool-workers": "workspace:*",
 		"typescript": "^5.5.2",
-		"vitest": "~3.0.7",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	}
 }
