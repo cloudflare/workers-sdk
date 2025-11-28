@@ -95,7 +95,6 @@ async function updateNextConfig(nextConfigPath: string) {
 	const updatedConfigFile =
 		configContent +
 		`
-		// added by create cloudflare to enable calling \`getCloudflareContext()\` in \`next dev\`
 		import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
 		initOpenNextCloudflareForDev();
 		`.replace(/\n\t*/g, "\n");
