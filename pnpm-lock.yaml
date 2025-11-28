@@ -72,6 +72,9 @@ patchedDependencies:
   '@cloudflare/component-listbox@1.10.6':
     hash: r2d7tqjujhdts7e7zxsa3stjki
     path: patches/@cloudflare__component-listbox@1.10.6.patch
+  '@netlify/build-info':
+    hash: m4wvy4p7g3z4a5zv6jw4gevqr4
+    path: patches/@netlify__build-info.patch
   comment-json:
     hash: hbbonhdeq6rxrctdf7euss7qte
     path: patches/comment-json.patch
@@ -3871,7 +3874,7 @@ importers:
         version: 0.8.1
       '@netlify/build-info':
         specifier: ^10.0.9
-        version: 10.0.9
+        version: 10.0.9(patch_hash=m4wvy4p7g3z4a5zv6jw4gevqr4)
       '@sentry/node':
         specifier: ^7.86.0
         version: 7.87.0(supports-color@9.2.2)
@@ -17159,7 +17162,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  '@netlify/build-info@10.0.9':
+  '@netlify/build-info@10.0.9(patch_hash=m4wvy4p7g3z4a5zv6jw4gevqr4)':
     dependencies:
       '@bugsnag/js': 8.6.0
       '@iarna/toml': 2.2.5
