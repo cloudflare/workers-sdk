@@ -2,6 +2,6 @@
 	"name": "static-mpa",
 	"assets": {
 		"html_handling": "auto-trailing-slash",
-		"not_found_handling": "404-page"
-	}
+		"not_found_handling": "404-page",
+	},
 }
