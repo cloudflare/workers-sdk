@@ -94,13 +94,12 @@ const config: TemplateConfig = {
 	path: "templates/angular/workers",
 	devScript: "start",
 	deployScript: "deploy",
-	previewScript: "preview",
+	previewScript: "start",
 	generate,
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
 			start: `${npm} run build && wrangler dev`,
-			preview: `${npm} run build && wrangler dev`,
 			build: `ng build`,
 			deploy: `${npm} run build && wrangler deploy`,
 			"cf-typegen": `wrangler types`,
