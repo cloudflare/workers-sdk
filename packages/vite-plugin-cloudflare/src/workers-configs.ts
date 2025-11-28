@@ -305,8 +305,10 @@ export function readWorkerConfigFromFile(
 
 interface ResolveWorkerTypeOptions {
 	isEntryWorker?: boolean;
-	/** Config path for resolving main field to absolute path. If not provided, main is not resolved. */
+	/** Config path for resolving main field to absolute path. */
 	configPath?: string;
+	/** Root directory for resolving main field when configPath is not provided. */
+	root?: string;
 	/** Environment name for error messages. */
 	env?: string;
 }
@@ -372,10 +374,11 @@ export function resolveWorkerType(
 		);
 	}
 
-	const resolvedMain =
-		opts?.configPath !== undefined
-			? maybeResolveMain(config.main, opts.configPath)
-			: config.main;
+	const resolvedMain = maybeResolveMain(
+		config.main,
+		opts?.configPath,
+		opts?.root
+	);
 
 	return {
 		type: "worker",
@@ -396,13 +399,23 @@ const ENTRY_MODULE_EXTENSIONS = [".js", ".mjs", ".ts", ".mts", ".jsx", ".tsx"];
  * Else `main` is returned as is so that it can be resolved by Vite.
  * This enables resolving entry modules relative to the Worker config while also supporting virtual modules and package exports.
  */
-function maybeResolveMain(main: string, configPath: string): string {
+function maybeResolveMain(
+	main: string,
+	configPath: string | undefined,
+	root: string | undefined
+): string {
 	if (!ENTRY_MODULE_EXTENSIONS.some((extension) => main.endsWith(extension))) {
 		return main;
 	}
 
+	// Determine the base directory for resolution
+	const baseDir = configPath ? path.dirname(configPath) : root;
+	if (!baseDir) {
+		return main;
+	}
+
 	// Resolve `main` to an absolute path
-	const resolvedMain = path.resolve(path.dirname(configPath), main);
+	const resolvedMain = path.resolve(baseDir, main);
 
 	if (!fs.existsSync(resolvedMain)) {
 		throw new Error(

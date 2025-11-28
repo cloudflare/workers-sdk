@@ -76,6 +76,8 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 
 	test("should resolve inline auxiliary worker with configure object", () => {
 		const entryConfigPath = createEntryWorkerConfig(tempDir);
+		// Create the inline worker's main file
+		fs.writeFileSync(path.join(tempDir, "src/aux.ts"), "export default {}");
 
 		const pluginConfig: PluginConfig = {
 			configPath: entryConfigPath,
@@ -101,13 +103,19 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 		expect(workersResult.rawConfigs.auxiliaryWorkers[0]?.config.name).toBe(
 			"inline-aux-worker"
 		);
+		// main should now be resolved to an absolute path
 		expect(workersResult.rawConfigs.auxiliaryWorkers[0]?.config.main).toBe(
-			"./src/aux.ts"
+			path.join(tempDir, "src/aux.ts")
 		);
 	});
 
 	test("should resolve inline auxiliary worker with configure function", () => {
 		const entryConfigPath = createEntryWorkerConfig(tempDir);
+		// Create the inline worker's main file
+		fs.writeFileSync(
+			path.join(tempDir, "src/fn-aux.ts"),
+			"export default {}"
+		);
 
 		const pluginConfig: PluginConfig = {
 			configPath: entryConfigPath,
@@ -136,6 +144,8 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 
 	test("should auto-populate topLevelName from name if not set", () => {
 		const entryConfigPath = createEntryWorkerConfig(tempDir);
+		// Create the inline worker's main file
+		fs.writeFileSync(path.join(tempDir, "src/aux.ts"), "export default {}");
 
 		const pluginConfig: PluginConfig = {
 			configPath: entryConfigPath,

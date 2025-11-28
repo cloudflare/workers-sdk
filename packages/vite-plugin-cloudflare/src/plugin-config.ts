@@ -192,6 +192,7 @@ function resolveWorkerConfig({
 	return resolveWorkerType(config, raw, nonApplicable, {
 		isEntryWorker,
 		configPath,
+		root,
 		env,
 	});
 }
