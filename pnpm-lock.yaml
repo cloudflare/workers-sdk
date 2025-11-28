@@ -3055,6 +3055,7 @@ importers:
     dependencies:
       react:
 <<<<<<< HEAD
+<<<<<<< HEAD
         specifier: ^19.2.1
         version: 19.2.1
 ||||||| parent of c055aee7e (Update Vite react plugin)
@@ -3064,7 +3065,15 @@ importers:
         specifier: ^19.1.0
         version: 19.2.0
 >>>>>>> c055aee7e (Update Vite react plugin)
+||||||| parent of da83244d4 (pin react)
+        specifier: ^19.1.0
+        version: 19.2.0
+=======
+        specifier: 19.1.0
+        version: 19.1.0
+>>>>>>> da83244d4 (pin react)
       react-dom:
+<<<<<<< HEAD
 <<<<<<< HEAD
         specifier: ^19.2.1
         version: 19.2.1(react@19.2.1)
@@ -3075,6 +3084,13 @@ importers:
         specifier: ^19.1.0
         version: 19.1.0(react@19.2.0)
 >>>>>>> c055aee7e (Update Vite react plugin)
+||||||| parent of da83244d4 (pin react)
+        specifier: ^19.1.0
+        version: 19.1.0(react@19.2.0)
+=======
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+>>>>>>> da83244d4 (pin react)
     devDependencies:
       '@cloudflare/vite-plugin':
         specifier: workspace:*
@@ -3086,10 +3102,10 @@ importers:
         specifier: catalog:default
         version: 4.20251202.0
       '@types/react':
-        specifier: ^19.1.0
+        specifier: 19.1.0
         version: 19.1.0
       '@types/react-dom':
-        specifier: ^19.1.1
+        specifier: 19.1.1
         version: 19.1.1(@types/react@19.1.0)
       typescript:
         specifier: catalog:default
