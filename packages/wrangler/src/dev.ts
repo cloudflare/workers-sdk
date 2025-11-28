@@ -15,6 +15,7 @@ import { logger } from "./logger";
 import { mergeWithOverride } from "./utils/mergeWithOverride";
 import { getHostFromRoute } from "./zones";
 import type { Trigger } from "./api";
+import type { EventName } from "chokidar/handler.js";
 import type { EnablePagesAssetsServiceBindingOptions } from "./miniflare-cli/types";
 import type {
 	CfD1Database,
@@ -684,7 +685,7 @@ export function getBindings(
 }
 
 export function getAssetChangeMessage(
-	eventName: "add" | "addDir" | "change" | "unlink" | "unlinkDir",
+	eventName: 	 EventName,
 	assetPath: string
 ): string {
 	let message = `${assetPath} changed`;
