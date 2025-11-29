@@ -956,6 +956,24 @@ function getExperimentalFrameworkTestConfig(
 				GITHUB_API_TOKEN: process.env.GITHUB_TOKEN,
 			},
 		},
+		{
+			name: "analog",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "The fullstack Angular meta-framework",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/api/v1/hello",
+				expectedText: "Hello World",
+			},
+			nodeCompat: false,
+			flags: ["--skipTailwind"],
+			verifyTypes: false,
+		},
 	];
 }
 

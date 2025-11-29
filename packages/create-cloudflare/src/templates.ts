@@ -237,6 +237,7 @@ export type TemplateMap = Record<
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
+			analog: analogTemplate,
 			angular: angularTemplate,
 			astro: astroTemplate,
 			docusaurus: docusaurusTemplate,
