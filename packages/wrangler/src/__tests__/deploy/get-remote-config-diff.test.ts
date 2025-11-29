@@ -1,3 +1,4 @@
+import { assert, describe, expect, it } from "vitest";
 import { getRemoteConfigDiff } from "../../deploy/config-diffs";
 import type { Config, RawConfig } from "@cloudflare/workers-utils";
 

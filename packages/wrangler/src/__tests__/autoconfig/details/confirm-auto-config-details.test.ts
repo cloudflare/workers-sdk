@@ -1,4 +1,4 @@
-import { describe, expect } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { confirmAutoConfigDetails } from "../../../autoconfig/details";
 import { mockConfirm, mockPrompt } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";

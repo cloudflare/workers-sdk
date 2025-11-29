@@ -1,5 +1,6 @@
 import path from "node:path";
 import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	generateRawConfigForPages,
 	generateRawEnvConfigForPages,

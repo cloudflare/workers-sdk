@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { experimental_patchConfig } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
+import { describe, expect, it } from "vitest";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { RawConfig } from "@cloudflare/workers-utils";

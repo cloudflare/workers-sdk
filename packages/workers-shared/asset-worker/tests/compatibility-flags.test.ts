@@ -1,3 +1,4 @@
+import { describe, expect, test } from "vitest";
 import { resolveCompatibilityOptions } from "../src/compatibility-flags";
 
 describe("resolveCompatibilityOptions", () => {

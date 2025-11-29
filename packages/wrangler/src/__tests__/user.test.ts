@@ -4,7 +4,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CI } from "../is-ci";
 import {
 	getAuthConfigFilePath,

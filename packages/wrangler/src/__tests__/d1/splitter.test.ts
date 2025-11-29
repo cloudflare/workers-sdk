@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import splitSqlQuery, { mayContainMultipleStatements } from "../../d1/splitter";
 
 describe("mayContainMultipleStatements()", () => {

@@ -7,6 +7,7 @@ import {
 	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { describe, expect, it } from "vitest";
 
 describe("errors", () => {
 	describe("UserError", () => {

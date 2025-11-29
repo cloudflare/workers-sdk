@@ -1,3 +1,4 @@
+import { assert, describe, expect, it, vi } from "vitest";
 import { checkRemoteSecretsOverride } from "../../deploy/check-remote-secrets-override";
 import { fetchSecrets } from "../../utils/fetch-secrets";
 import type { Config } from "@cloudflare/workers-utils";

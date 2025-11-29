@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { mayContainTransaction, trimSqlQuery } from "../../d1/trimmer";
 
 describe("mayContainTransaction()", () => {
@@ -57,16 +58,16 @@ describe("trimSqlQuery()", () => {
 		INSERT INTO Customers VALUES(13,'Bs Beverages','Random Name');
 		COMMIT;`)
 		).toMatchInlineSnapshot(`
-		"PRAGMA foreign_keys=OFF;
-				
-				CREATE TABLE d1_kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-				CREATE TABLE Customers (CustomerID INT, CompanyName TEXT, ContactName TEXT, PRIMARY KEY ('CustomerID'));
-				INSERT INTO Customers VALUES(1,'Alfreds Futterkiste','Maria Anders');
-				INSERT INTO Customers VALUES(4,'Around the Horn','Thomas Hardy');
-				INSERT INTO Customers VALUES(11,'Bs Beverages','Victoria Ashworth');
-				INSERT INTO Customers VALUES(13,'Bs Beverages','Random Name');
-				"
-	`);
+			"PRAGMA foreign_keys=OFF;
+					
+					CREATE TABLE d1_kv (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+					CREATE TABLE Customers (CustomerID INT, CompanyName TEXT, ContactName TEXT, PRIMARY KEY ('CustomerID'));
+					INSERT INTO Customers VALUES(1,'Alfreds Futterkiste','Maria Anders');
+					INSERT INTO Customers VALUES(4,'Around the Horn','Thomas Hardy');
+					INSERT INTO Customers VALUES(11,'Bs Beverages','Victoria Ashworth');
+					INSERT INTO Customers VALUES(13,'Bs Beverages','Random Name');
+					"
+		`);
 	});
 	it("should throw when provided multiple transactions", () => {
 		expect(() =>

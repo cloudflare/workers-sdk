@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { expect } from "vitest";
 import { msw } from "./msw";
 
 type LegacyScriptInfo = { id: string; migration_tag?: string };

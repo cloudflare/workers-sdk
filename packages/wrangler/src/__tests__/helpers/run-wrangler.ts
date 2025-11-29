@@ -1,4 +1,5 @@
 import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
+import { vi } from "vitest";
 import { main } from "../../index";
 import * as shellquote from "../../utils/shell-quote";
 

@@ -5,6 +5,7 @@ import {
 	normalizeAndValidateConfig,
 } from "@cloudflare/workers-utils";
 import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
+import { describe, expect, it, test, vi } from "vitest";
 import { readConfig } from "../../config";
 import { run } from "../../experimental-flags";
 import { runInTempDir } from "../helpers/run-in-tmp";
