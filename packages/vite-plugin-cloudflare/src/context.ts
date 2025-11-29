@@ -148,6 +148,17 @@ export class PluginContext {
 			: undefined;
 	}
 
+	getAllWorkerConfigs() {
+		switch (this.resolvedPluginConfig.type) {
+			case "workers":
+				return Object.values(this.resolvedPluginConfig.workers);
+			case "preview":
+				return this.resolvedPluginConfig.workers;
+			default:
+				return [];
+		}
+	}
+
 	get entryWorkerConfig(): WorkerConfig | undefined {
 		if (this.resolvedPluginConfig.type !== "workers") {
 			return;
