@@ -67,7 +67,12 @@ describe("wrangler check startup", () => {
 		await expect(
 			runWrangler("check startup --args 'abc'")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: The entry-point file at "abc" was not found.]`
+			`
+			[Error: The entry-point file at "abc" was not found.
+
+			This might mean that your entry-point file needs to be generated (which is the general case when a framework is being used).
+			If that's the case please run your project's build command and try again.]
+		`
 		);
 	});
 
