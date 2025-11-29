@@ -53,6 +53,7 @@ export type Entry = {
 export async function getEntry(
 	args: {
 		script?: string;
+		path?: string;
 		moduleRoot?: string;
 		assets?: string | undefined;
 	},
@@ -65,8 +66,10 @@ export async function getEntry(
 		| { absolutePath: string; relativePath: string; projectRoot?: string }
 		| undefined;
 
-	if (args.script) {
-		paths = resolveEntryWithScript(args.script);
+	const entryPath = args.path ?? args.script;
+
+	if (entryPath) {
+		paths = resolveEntryWithScript(entryPath);
 	} else if (config.main !== undefined) {
 		paths = resolveEntryWithMain(config.main, config);
 	} else if (entryPoint) {

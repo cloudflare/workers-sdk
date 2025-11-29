@@ -22,6 +22,7 @@ import type {
 export type ReadConfigCommandArgs = NormalizeAndValidateConfigArgs & {
 	config?: string;
 	script?: string;
+	path?: string;
 };
 
 export type ReadConfigOptions = ResolveConfigPathOptions & {

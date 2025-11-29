@@ -503,13 +503,13 @@ export function validateAssetsArgsAndConfig(
 export function validateAssetsArgsAndConfig(
 	args:
 		| Pick<StartDevOptions, "site" | "assets" | "script">
-		| Pick<DeployArgs, "site" | "assets" | "script">,
+		| Pick<DeployArgs, "site" | "assets" | "path">,
 	config: Config
 ): void;
 export function validateAssetsArgsAndConfig(
 	args:
 		| Pick<StartDevOptions, "site" | "assets" | "script">
-		| Pick<DeployArgs, "site" | "assets" | "script">
+		| Pick<DeployArgs, "site" | "assets" | "path">
 		| Pick<StartDevWorkerOptions, "legacy" | "assets" | "entrypoint">,
 	config?: Config
 ): void {
@@ -533,7 +533,11 @@ export function validateAssetsArgsAndConfig(
 	if (
 		"legacy" in args
 			? args.entrypoint === noOpEntrypoint && args.assets?.binding
-			: !(args.script || config?.main) && config?.assets?.binding
+			: !(
+					("script" in args && args.script) ||
+					("path" in args && args.path) ||
+					config?.main
+				) && config?.assets?.binding
 	) {
 		throw new UserError(
 			"Cannot use assets with a binding in an assets-only Worker.\n" +
