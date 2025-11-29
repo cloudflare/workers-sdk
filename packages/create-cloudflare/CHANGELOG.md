@@ -1,5 +1,33 @@
 # create-cloudflare
 
+## 2.56.1
+
+### Patch Changes
+
+- [#11448](https://github.com/cloudflare/workers-sdk/pull/11448) [`2b4813b`](https://github.com/cloudflare/workers-sdk/commit/2b4813b18076817bb739491246313c32b403651f) Thanks [@edmundhung](https://github.com/edmundhung)! - Builds package with esbuild `v0.27.0`
+
+- [#11385](https://github.com/cloudflare/workers-sdk/pull/11385) [`e51aa7a`](https://github.com/cloudflare/workers-sdk/commit/e51aa7a5573d602c43762331fae8b4f1e75cfb20) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To     |
+  | ---------------------- | ------ | ------ |
+  | @tanstack/create-start | 0.36.2 | 0.37.2 |
+
+- [#11386](https://github.com/cloudflare/workers-sdk/pull/11386) [`8e8ab6f`](https://github.com/cloudflare/workers-sdk/commit/8e8ab6f2ce0cb3acf0545d72d86b3a5280b033a3) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.9.14 | 0.10.5 |
+
+- [#11330](https://github.com/cloudflare/workers-sdk/pull/11330) [`5a873bb`](https://github.com/cloudflare/workers-sdk/commit/5a873bbb0f018b02cf26a48da59c5389ef306589) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update the Angular starter to set a `preview` script instead of a `start` one
+
+- [#11375](https://github.com/cloudflare/workers-sdk/pull/11375) [`9a1de61`](https://github.com/cloudflare/workers-sdk/commit/9a1de617412f610a332f2516f4d61bec12556919) Thanks [@penalosa](https://github.com/penalosa)! - Support Tanstack in autoconfig `--experimental` flow
+
+- [#11330](https://github.com/cloudflare/workers-sdk/pull/11330) [`5a873bb`](https://github.com/cloudflare/workers-sdk/commit/5a873bbb0f018b02cf26a48da59c5389ef306589) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Angular in `--experimental` mode
+
 ## 2.56.0
 
 ### Minor Changes

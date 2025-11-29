@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/unenv-preset",
-	"version": "2.7.11",
+	"version": "2.7.12",
 	"description": "cloudflare preset for unenv",
 	"keywords": [
 		"cloudflare",
