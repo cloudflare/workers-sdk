@@ -47,6 +47,8 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					containerOptions: [...containerTagToOptionsMap.values()],
 					onContainerImagePreparationStart: () => {},
 					onContainerImagePreparationEnd: () => {},
+					logger: vitePreviewServer.config.logger,
+					isVite: true,
 				});
 
 				const containerImageTags = new Set(containerTagToOptionsMap.keys());
