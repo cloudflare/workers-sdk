@@ -404,12 +404,13 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
-			declare namespace Cloudflare {
-				interface Env {
-					var: \\"from wrangler toml\\";
-				}
+			interface BaseEnv {
+				var: \\"from wrangler toml\\";
 			}
-			interface Env extends Cloudflare.Env {}
+			declare namespace Cloudflare {
+				interface Env extends BaseEnv {}
+			}
+			interface Env extends BaseEnv {}
 
 			Generating runtime types...
 
@@ -427,12 +428,13 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
-			declare namespace Cloudflare {
-				interface Env {
-					var: \\"from my-wrangler-config-a\\";
-				}
+			interface BaseEnv {
+				var: \\"from my-wrangler-config-a\\";
 			}
-			interface Env extends Cloudflare.Env {}
+			declare namespace Cloudflare {
+				interface Env extends BaseEnv {}
+			}
+			interface Env extends BaseEnv {}
 
 			Generating runtime types...
 
@@ -450,12 +452,13 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
-			declare namespace Cloudflare {
-				interface Env {
-					var: \\"from my-wrangler-config-b\\";
-				}
+			interface BaseEnv {
+				var: \\"from my-wrangler-config-b\\";
 			}
-			interface Env extends Cloudflare.Env {}
+			declare namespace Cloudflare {
+				interface Env extends BaseEnv {}
+			}
+			interface Env extends BaseEnv {}
 
 			Generating runtime types...
 
@@ -505,57 +508,58 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
+			interface BaseEnv {
+				TEST_KV_NAMESPACE: KVNamespace;
+				SOMETHING: \\"asdasdfasdf\\";
+				ANOTHER: \\"thing\\";
+				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
+				\\"some-other-var\\": \\"some-other-value\\";
+				DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
+				DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
+				DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
+				DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
+				DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
+				R2_BUCKET_BINDING: R2Bucket;
+				D1_TESTING_SOMETHING: D1Database;
+				SECRET: SecretsStoreSecret;
+				HELLO_WORLD: HelloWorldBinding;
+				RATE_LIMITER: RateLimit;
+				WORKER_LOADER_BINDING: WorkerLoader;
+				SERVICE_BINDING: Fetcher /* service_name */;
+				OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
+				OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
+				AE_DATASET_BINDING: AnalyticsEngineDataset;
+				NAMESPACE_BINDING: DispatchNamespace;
+				LOGFWDR_SCHEMA: any;
+				SOME_DATA_BLOB1: ArrayBuffer;
+				SOME_DATA_BLOB2: ArrayBuffer;
+				SOME_TEXT_BLOB1: string;
+				SOME_TEXT_BLOB2: string;
+				testing_unsafe: any;
+				UNSAFE_RATELIMIT: RateLimit;
+				TEST_QUEUE_BINDING: Queue;
+				SEND_EMAIL_BINDING: SendEmail;
+				VECTORIZE_BINDING: VectorizeIndex;
+				HYPERDRIVE_BINDING: Hyperdrive;
+				VPC_SERVICE_BINDING: Fetcher;
+				MTLS_BINDING: Fetcher;
+				BROWSER_BINDING: Fetcher;
+				AI_BINDING: Ai;
+				IMAGES_BINDING: ImagesBinding;
+				MEDIA_BINDING: MediaBinding;
+				VERSION_METADATA_BINDING: WorkerVersionMetadata;
+				ASSETS_BINDING: Fetcher;
+				MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
+				PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+			}
 			declare namespace Cloudflare {
 				interface GlobalProps {
 					mainModule: typeof import(\\"./index\\");
 					durableNamespaces: \\"DurableDirect\\" | \\"DurableReexport\\";
 				}
-				interface Env {
-					TEST_KV_NAMESPACE: KVNamespace;
-					SOMETHING: \\"asdasdfasdf\\";
-					ANOTHER: \\"thing\\";
-					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-					\\"some-other-var\\": \\"some-other-value\\";
-					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
-					DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
-					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
-					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
-					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
-					R2_BUCKET_BINDING: R2Bucket;
-					D1_TESTING_SOMETHING: D1Database;
-					SECRET: SecretsStoreSecret;
-					HELLO_WORLD: HelloWorldBinding;
-					RATE_LIMITER: RateLimit;
-					WORKER_LOADER_BINDING: WorkerLoader;
-					SERVICE_BINDING: Fetcher /* service_name */;
-					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
-					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
-					AE_DATASET_BINDING: AnalyticsEngineDataset;
-					NAMESPACE_BINDING: DispatchNamespace;
-					LOGFWDR_SCHEMA: any;
-					SOME_DATA_BLOB1: ArrayBuffer;
-					SOME_DATA_BLOB2: ArrayBuffer;
-					SOME_TEXT_BLOB1: string;
-					SOME_TEXT_BLOB2: string;
-					testing_unsafe: any;
-					UNSAFE_RATELIMIT: RateLimit;
-					TEST_QUEUE_BINDING: Queue;
-					SEND_EMAIL_BINDING: SendEmail;
-					VECTORIZE_BINDING: VectorizeIndex;
-					HYPERDRIVE_BINDING: Hyperdrive;
-					VPC_SERVICE_BINDING: Fetcher;
-					MTLS_BINDING: Fetcher;
-					BROWSER_BINDING: Fetcher;
-					AI_BINDING: Ai;
-					IMAGES_BINDING: ImagesBinding;
-					MEDIA_BINDING: MediaBinding;
-					VERSION_METADATA_BINDING: WorkerVersionMetadata;
-					ASSETS_BINDING: Fetcher;
-					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
-				}
+				interface Env extends BaseEnv {}
 			}
-			interface Env extends Cloudflare.Env {}
+			interface Env extends BaseEnv {}
 			declare module \\"*.txt\\" {
 				const value: string;
 				export default value;
@@ -615,58 +619,59 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
+			interface BaseEnv {
+				TEST_KV_NAMESPACE: KVNamespace;
+				SOMETHING: \\"asdasdfasdf\\";
+				ANOTHER: \\"thing\\";
+				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
+				\\"some-other-var\\": \\"some-other-value\\";
+				SECRET: string;
+				DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
+				DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
+				DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
+				DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
+				DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
+				R2_BUCKET_BINDING: R2Bucket;
+				D1_TESTING_SOMETHING: D1Database;
+				SECRET: SecretsStoreSecret;
+				HELLO_WORLD: HelloWorldBinding;
+				RATE_LIMITER: RateLimit;
+				WORKER_LOADER_BINDING: WorkerLoader;
+				SERVICE_BINDING: Fetcher /* service_name */;
+				OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
+				OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
+				AE_DATASET_BINDING: AnalyticsEngineDataset;
+				NAMESPACE_BINDING: DispatchNamespace;
+				LOGFWDR_SCHEMA: any;
+				SOME_DATA_BLOB1: ArrayBuffer;
+				SOME_DATA_BLOB2: ArrayBuffer;
+				SOME_TEXT_BLOB1: string;
+				SOME_TEXT_BLOB2: string;
+				testing_unsafe: any;
+				UNSAFE_RATELIMIT: RateLimit;
+				TEST_QUEUE_BINDING: Queue;
+				SEND_EMAIL_BINDING: SendEmail;
+				VECTORIZE_BINDING: VectorizeIndex;
+				HYPERDRIVE_BINDING: Hyperdrive;
+				VPC_SERVICE_BINDING: Fetcher;
+				MTLS_BINDING: Fetcher;
+				BROWSER_BINDING: Fetcher;
+				AI_BINDING: Ai;
+				IMAGES_BINDING: ImagesBinding;
+				MEDIA_BINDING: MediaBinding;
+				VERSION_METADATA_BINDING: WorkerVersionMetadata;
+				ASSETS_BINDING: Fetcher;
+				MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
+				PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+			}
 			declare namespace Cloudflare {
 				interface GlobalProps {
 					mainModule: typeof import(\\"./index\\");
 					durableNamespaces: \\"DurableDirect\\" | \\"DurableReexport\\";
 				}
-				interface Env {
-					TEST_KV_NAMESPACE: KVNamespace;
-					SOMETHING: \\"asdasdfasdf\\";
-					ANOTHER: \\"thing\\";
-					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-					\\"some-other-var\\": \\"some-other-value\\";
-					SECRET: string;
-					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
-					DURABLE_RE_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableReexport>;
-					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
-					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
-					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
-					R2_BUCKET_BINDING: R2Bucket;
-					D1_TESTING_SOMETHING: D1Database;
-					SECRET: SecretsStoreSecret;
-					HELLO_WORLD: HelloWorldBinding;
-					RATE_LIMITER: RateLimit;
-					WORKER_LOADER_BINDING: WorkerLoader;
-					SERVICE_BINDING: Fetcher /* service_name */;
-					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
-					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
-					AE_DATASET_BINDING: AnalyticsEngineDataset;
-					NAMESPACE_BINDING: DispatchNamespace;
-					LOGFWDR_SCHEMA: any;
-					SOME_DATA_BLOB1: ArrayBuffer;
-					SOME_DATA_BLOB2: ArrayBuffer;
-					SOME_TEXT_BLOB1: string;
-					SOME_TEXT_BLOB2: string;
-					testing_unsafe: any;
-					UNSAFE_RATELIMIT: RateLimit;
-					TEST_QUEUE_BINDING: Queue;
-					SEND_EMAIL_BINDING: SendEmail;
-					VECTORIZE_BINDING: VectorizeIndex;
-					HYPERDRIVE_BINDING: Hyperdrive;
-					VPC_SERVICE_BINDING: Fetcher;
-					MTLS_BINDING: Fetcher;
-					BROWSER_BINDING: Fetcher;
-					AI_BINDING: Ai;
-					IMAGES_BINDING: ImagesBinding;
-					MEDIA_BINDING: MediaBinding;
-					VERSION_METADATA_BINDING: WorkerVersionMetadata;
-					ASSETS_BINDING: Fetcher;
-					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
-				}
+				interface Env extends BaseEnv {}
 			}
-			interface Env extends Cloudflare.Env {}
+			interface Env extends BaseEnv {}
 			type StringifyValues<EnvType extends Record<string, unknown>> = {
 				[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 			};
@@ -790,58 +795,59 @@ describe("generate types", () => {
 			- Found Worker 'service_name_2' at 'c/index.ts' (c/wrangler.jsonc)
 			Generating project types...
 
+			interface BaseEnv {
+				TEST_KV_NAMESPACE: KVNamespace;
+				SOMETHING: \\"asdasdfasdf\\";
+				ANOTHER: \\"thing\\";
+				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
+				\\"some-other-var\\": \\"some-other-value\\";
+				SECRET: string;
+				DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
+				DURABLE_RE_EXPORT: DurableObjectNamespace /* DurableReexport */;
+				DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
+				DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
+				DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace<import(\\"../c/index\\").RealDurableExternal>;
+				R2_BUCKET_BINDING: R2Bucket;
+				D1_TESTING_SOMETHING: D1Database;
+				SECRET: SecretsStoreSecret;
+				HELLO_WORLD: HelloWorldBinding;
+				RATE_LIMITER: RateLimit;
+				WORKER_LOADER_BINDING: WorkerLoader;
+				SERVICE_BINDING: Service<typeof import(\\"../b/index\\").default>;
+				OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
+				OTHER_SERVICE_BINDING_ENTRYPOINT: Service<typeof import(\\"../c/index\\").RealEntrypoint>;
+				AE_DATASET_BINDING: AnalyticsEngineDataset;
+				NAMESPACE_BINDING: DispatchNamespace;
+				LOGFWDR_SCHEMA: any;
+				SOME_DATA_BLOB1: ArrayBuffer;
+				SOME_DATA_BLOB2: ArrayBuffer;
+				SOME_TEXT_BLOB1: string;
+				SOME_TEXT_BLOB2: string;
+				testing_unsafe: any;
+				UNSAFE_RATELIMIT: RateLimit;
+				TEST_QUEUE_BINDING: Queue;
+				SEND_EMAIL_BINDING: SendEmail;
+				VECTORIZE_BINDING: VectorizeIndex;
+				HYPERDRIVE_BINDING: Hyperdrive;
+				VPC_SERVICE_BINDING: Fetcher;
+				MTLS_BINDING: Fetcher;
+				BROWSER_BINDING: Fetcher;
+				AI_BINDING: Ai;
+				IMAGES_BINDING: ImagesBinding;
+				MEDIA_BINDING: MediaBinding;
+				VERSION_METADATA_BINDING: WorkerVersionMetadata;
+				ASSETS_BINDING: Fetcher;
+				MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
+				PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+			}
 			declare namespace Cloudflare {
 				interface GlobalProps {
 					mainModule: typeof import(\\"./index\\");
 					durableNamespaces: \\"DurableDirect\\" | \\"DurableReexport\\";
 				}
-				interface Env {
-					TEST_KV_NAMESPACE: KVNamespace;
-					SOMETHING: \\"asdasdfasdf\\";
-					ANOTHER: \\"thing\\";
-					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-					\\"some-other-var\\": \\"some-other-value\\";
-					SECRET: string;
-					DURABLE_DIRECT_EXPORT: DurableObjectNamespace<import(\\"./index\\").DurableDirect>;
-					DURABLE_RE_EXPORT: DurableObjectNamespace /* DurableReexport */;
-					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
-					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
-					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace<import(\\"../c/index\\").RealDurableExternal>;
-					R2_BUCKET_BINDING: R2Bucket;
-					D1_TESTING_SOMETHING: D1Database;
-					SECRET: SecretsStoreSecret;
-					HELLO_WORLD: HelloWorldBinding;
-					RATE_LIMITER: RateLimit;
-					WORKER_LOADER_BINDING: WorkerLoader;
-					SERVICE_BINDING: Service<typeof import(\\"../b/index\\").default>;
-					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
-					OTHER_SERVICE_BINDING_ENTRYPOINT: Service<typeof import(\\"../c/index\\").RealEntrypoint>;
-					AE_DATASET_BINDING: AnalyticsEngineDataset;
-					NAMESPACE_BINDING: DispatchNamespace;
-					LOGFWDR_SCHEMA: any;
-					SOME_DATA_BLOB1: ArrayBuffer;
-					SOME_DATA_BLOB2: ArrayBuffer;
-					SOME_TEXT_BLOB1: string;
-					SOME_TEXT_BLOB2: string;
-					testing_unsafe: any;
-					UNSAFE_RATELIMIT: RateLimit;
-					TEST_QUEUE_BINDING: Queue;
-					SEND_EMAIL_BINDING: SendEmail;
-					VECTORIZE_BINDING: VectorizeIndex;
-					HYPERDRIVE_BINDING: Hyperdrive;
-					VPC_SERVICE_BINDING: Fetcher;
-					MTLS_BINDING: Fetcher;
-					BROWSER_BINDING: Fetcher;
-					AI_BINDING: Ai;
-					IMAGES_BINDING: ImagesBinding;
-					MEDIA_BINDING: MediaBinding;
-					VERSION_METADATA_BINDING: WorkerVersionMetadata;
-					ASSETS_BINDING: Fetcher;
-					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
-				}
+				interface Env extends BaseEnv {}
 			}
-			interface Env extends Cloudflare.Env {}
+			interface Env extends BaseEnv {}
 			type StringifyValues<EnvType extends Record<string, unknown>> = {
 				[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 			};
@@ -886,20 +892,21 @@ describe("generate types", () => {
 		expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8"))
 			.toMatchInlineSnapshot(`
 				"/* eslint-disable */
-				// Generated by Wrangler by running \`wrangler\` (hash: d172d29d98306b9c96cfcaf16aef9056)
+				// Generated by Wrangler by running \`wrangler\` (hash: eb625c5efe434e0ffe6401fd79fdff97)
 				// Runtime types generated with workerd@
+				interface BaseEnv {
+					SOMETHING: \\"asdasdfasdf\\";
+					ANOTHER: \\"thing\\";
+					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
+					\\"some-other-var\\": \\"some-other-value\\";
+				}
 				declare namespace Cloudflare {
 					interface GlobalProps {
 						mainModule: typeof import(\\"./index\\");
 					}
-					interface Env {
-						SOMETHING: \\"asdasdfasdf\\";
-						ANOTHER: \\"thing\\";
-						OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-						\\"some-other-var\\": \\"some-other-value\\";
-					}
+					interface Env extends BaseEnv {}
 				}
-				interface Env extends Cloudflare.Env {}
+				interface Env extends BaseEnv {}
 
 				// Begin runtime types
 				<runtime types go here>"
@@ -1003,14 +1010,15 @@ describe("generate types", () => {
 				──────────────────
 				Generating project types...
 
+				interface BaseEnv {
+				}
 				declare namespace Cloudflare {
 					interface GlobalProps {
 						mainModule: typeof import(\\"./index\\");
 					}
-					interface Env {
-					}
+					interface Env extends BaseEnv {}
 				}
-				interface Env extends Cloudflare.Env {}
+				interface Env extends BaseEnv {}
 
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
@@ -1104,15 +1112,16 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
-			declare namespace Cloudflare {
-				interface Env {
-					SOMETHING: \\"asdasdfasdf\\";
-					ANOTHER: \\"thing\\";
-					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-					\\"some-other-var\\": \\"some-other-value\\";
-				}
+			interface BaseEnv {
+				SOMETHING: \\"asdasdfasdf\\";
+				ANOTHER: \\"thing\\";
+				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
+				\\"some-other-var\\": \\"some-other-value\\";
 			}
-			interface Env extends Cloudflare.Env {}
+			declare namespace Cloudflare {
+				interface Env extends BaseEnv {}
+			}
+			interface Env extends BaseEnv {}
 
 			Generating runtime types...
 
@@ -1146,15 +1155,16 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
-			declare namespace Cloudflare {
-				interface Env {
-					SOMETHING: \\"asdasdfasdf\\";
-					ANOTHER: \\"thing\\";
-					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-					\\"some-other-var\\": \\"some-other-value\\";
-				}
+			interface BaseEnv {
+				SOMETHING: \\"asdasdfasdf\\";
+				ANOTHER: \\"thing\\";
+				OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
+				\\"some-other-var\\": \\"some-other-value\\";
 			}
-			interface Env extends Cloudflare.Env {}
+			declare namespace Cloudflare {
+				interface Env extends BaseEnv {}
+			}
+			interface Env extends BaseEnv {}
 
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
@@ -1203,16 +1213,17 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
-			declare namespace Cloudflare {
-				interface Env {
-					myTomlVarA: \\"A from wrangler toml\\";
-					myTomlVarB: \\"B from wrangler toml\\";
-					SECRET_A: string;
-					MULTI_LINE_SECRET: string;
-					UNQUOTED_SECRET: string;
-				}
+			interface BaseEnv {
+				myTomlVarA: \\"A from wrangler toml\\";
+				myTomlVarB: \\"B from wrangler toml\\";
+				SECRET_A: string;
+				MULTI_LINE_SECRET: string;
+				UNQUOTED_SECRET: string;
 			}
-			interface Env extends Cloudflare.Env {}
+			declare namespace Cloudflare {
+				interface Env extends BaseEnv {}
+			}
+			interface Env extends BaseEnv {}
 
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
@@ -1257,14 +1268,15 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
-			declare namespace Cloudflare {
-				interface Env {
-					myTomlVarA: \\"A from wrangler toml\\";
-					SECRET_FROM_TEMPLATE: string;
-					TEMPLATE_ONLY: string;
-				}
+			interface BaseEnv {
+				myTomlVarA: \\"A from wrangler toml\\";
+				SECRET_FROM_TEMPLATE: string;
+				TEMPLATE_ONLY: string;
 			}
-			interface Env extends Cloudflare.Env {}
+			declare namespace Cloudflare {
+				interface Env extends BaseEnv {}
+			}
+			interface Env extends BaseEnv {}
 
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
@@ -1307,16 +1319,17 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
-			declare namespace Cloudflare {
-				interface Env {
-					myTomlVarA: \\"A from wrangler toml\\";
-					myTomlVarB: \\"B from wrangler toml\\";
-					SECRET_A_DOT_ENV: string;
-					MULTI_LINE_SECRET: string;
-					UNQUOTED_SECRET: string;
-				}
+			interface BaseEnv {
+				myTomlVarA: \\"A from wrangler toml\\";
+				myTomlVarB: \\"B from wrangler toml\\";
+				SECRET_A_DOT_ENV: string;
+				MULTI_LINE_SECRET: string;
+				UNQUOTED_SECRET: string;
 			}
-			interface Env extends Cloudflare.Env {}
+			declare namespace Cloudflare {
+				interface Env extends BaseEnv {}
+			}
+			interface Env extends BaseEnv {}
 
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
@@ -1348,15 +1361,16 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
-			declare namespace Cloudflare {
-				interface Env {
-					varStr: string;
-					varArrNum: number[];
-					varArrMix: (boolean|number|string)[];
-					varObj: object;
-				}
+			interface BaseEnv {
+				varStr: string;
+				varArrNum: number[];
+				varArrMix: (boolean|number|string)[];
+				varObj: object;
 			}
-			interface Env extends Cloudflare.Env {}
+			declare namespace Cloudflare {
+				interface Env extends BaseEnv {}
+			}
+			interface Env extends BaseEnv {}
 
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
@@ -1393,13 +1407,14 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
-			declare namespace Cloudflare {
-				interface Env {
-					MY_VARIABLE_A: string;
-					MY_VARIABLE_B: string;
-				}
+			interface BaseEnv {
+				MY_VARIABLE_A: string;
+				MY_VARIABLE_B: string;
 			}
-			interface Env extends Cloudflare.Env {}
+			declare namespace Cloudflare {
+				interface Env extends BaseEnv {}
+			}
+			interface Env extends BaseEnv {}
 
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
@@ -1435,22 +1450,23 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
-			declare namespace Cloudflare {
-				interface Env {
-					\\"1\\": 1;
-					\\"12345\\": 12345;
-					\\"var-a\\": \\"/\\"a///\\"/\\"\\";
-					\\"var-a-1\\": \\"/\\"a/////\\"\\";
-					\\"var-a-b\\": \\"/\\"a////b/\\"\\";
-					\\"var-a-b-\\": \\"/\\"a////b///\\"/\\"\\";
-					true: true;
-					false: false;
-					\\"multi
+			interface BaseEnv {
+				\\"1\\": 1;
+				\\"12345\\": 12345;
+				\\"var-a\\": \\"/\\"a///\\"/\\"\\";
+				\\"var-a-1\\": \\"/\\"a/////\\"\\";
+				\\"var-a-b\\": \\"/\\"a////b/\\"\\";
+				\\"var-a-b-\\": \\"/\\"a////b///\\"/\\"\\";
+				true: true;
+				false: false;
+				\\"multi
 			line
 			var\\": \\"this/nis/na/nmulti/nline/nvariable!\\";
-				}
 			}
-			interface Env extends Cloudflare.Env {}
+			declare namespace Cloudflare {
+				interface Env extends BaseEnv {}
+			}
+			interface Env extends BaseEnv {}
 
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
@@ -1500,15 +1516,16 @@ describe("generate types", () => {
 				──────────────────
 				Generating project types...
 
-				declare namespace Cloudflare {
-					interface Env {
-						MY_VAR: \\"a var\\";
-						MY_VAR_A: \\"A (dev)\\" | \\"A (prod)\\" | \\"A (stag)\\";
-						MY_VAR_B: {\\"value\\":\\"B (dev)\\"} | {\\"value\\":\\"B (prod)\\"};
-						MY_VAR_C: [\\"a\\",\\"b\\",\\"c\\"] | [1,2,3];
-					}
+				interface BaseEnv {
+					MY_VAR: \\"a var\\";
+					MY_VAR_A: \\"A (dev)\\" | \\"A (prod)\\" | \\"A (stag)\\";
+					MY_VAR_B: {\\"value\\":\\"B (dev)\\"} | {\\"value\\":\\"B (prod)\\"};
+					MY_VAR_C: [\\"a\\",\\"b\\",\\"c\\"] | [1,2,3];
 				}
-				interface Env extends Cloudflare.Env {}
+				declare namespace Cloudflare {
+					interface Env extends BaseEnv {}
+				}
+				interface Env extends BaseEnv {}
 
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
@@ -1527,15 +1544,16 @@ describe("generate types", () => {
 				──────────────────
 				Generating project types...
 
-				declare namespace Cloudflare {
-					interface Env {
-						MY_VAR: string;
-						MY_VAR_A: string;
-						MY_VAR_B: object;
-						MY_VAR_C: string[] | number[];
-					}
+				interface BaseEnv {
+					MY_VAR: string;
+					MY_VAR_A: string;
+					MY_VAR_B: object;
+					MY_VAR_C: string[] | number[];
 				}
-				interface Env extends Cloudflare.Env {}
+				declare namespace Cloudflare {
+					interface Env extends BaseEnv {}
+				}
+				interface Env extends BaseEnv {}
 
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
@@ -1566,15 +1584,16 @@ describe("generate types", () => {
 					──────────────────
 					Generating project types...
 
-					declare namespace Cloudflare {
-						interface Env {
-							SOMETHING: \\"asdasdfasdf\\";
-							ANOTHER: \\"thing\\";
-							OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-							\\"some-other-var\\": \\"some-other-value\\";
-						}
+					interface BaseEnv {
+						SOMETHING: \\"asdasdfasdf\\";
+						ANOTHER: \\"thing\\";
+						OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
+						\\"some-other-var\\": \\"some-other-value\\";
 					}
-					interface CloudflareEnv extends Cloudflare.Env {}
+					declare namespace Cloudflare {
+						interface Env extends BaseEnv {}
+					}
+					interface CloudflareEnv extends BaseEnv {}
 
 					────────────────────────────────────────────────────────────
 					✨ Types written to worker-configuration.d.ts
@@ -1667,17 +1686,18 @@ describe("generate types", () => {
 				expect(fs.readFileSync("./cloudflare-env.d.ts", "utf-8"))
 					.toMatchInlineSnapshot(`
 						"/* eslint-disable */
-						// Generated by Wrangler by running \`wrangler\` (hash: 9dfd5cc18984b8cc3421a9e726587833)
+						// Generated by Wrangler by running \`wrangler\` (hash: 44bf61c08b4ba19d5abca21a0025840b)
 						// Runtime types generated with workerd@
-						declare namespace Cloudflare {
-							interface Env {
-								SOMETHING: \\"asdasdfasdf\\";
-								ANOTHER: \\"thing\\";
-								OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-								\\"some-other-var\\": \\"some-other-value\\";
-							}
+						interface BaseEnv {
+							SOMETHING: \\"asdasdfasdf\\";
+							ANOTHER: \\"thing\\";
+							OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
+							\\"some-other-var\\": \\"some-other-value\\";
 						}
-						interface Env extends Cloudflare.Env {}
+						declare namespace Cloudflare {
+							interface Env extends BaseEnv {}
+						}
+						interface Env extends BaseEnv {}
 
 						// Begin runtime types
 						<runtime types go here>"
@@ -1725,17 +1745,18 @@ describe("generate types", () => {
 			expect(fs.readFileSync("./my-cloudflare-env-interface.d.ts", "utf-8"))
 				.toMatchInlineSnapshot(`
 					"/* eslint-disable */
-					// Generated by Wrangler by running \`wrangler\` (hash: c4701684dd76f087c31740a06b0cbdb6)
+					// Generated by Wrangler by running \`wrangler\` (hash: cb081c427bca3495c1908f7fcbf23427)
 					// Runtime types generated with workerd@
-					declare namespace Cloudflare {
-						interface Env {
-							SOMETHING: \\"asdasdfasdf\\";
-							ANOTHER: \\"thing\\";
-							OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
-							\\"some-other-var\\": \\"some-other-value\\";
-						}
+					interface BaseEnv {
+						SOMETHING: \\"asdasdfasdf\\";
+						ANOTHER: \\"thing\\";
+						OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
+						\\"some-other-var\\": \\"some-other-value\\";
 					}
-					interface MyCloudflareEnvInterface extends Cloudflare.Env {}
+					declare namespace Cloudflare {
+						interface Env extends BaseEnv {}
+					}
+					interface MyCloudflareEnvInterface extends BaseEnv {}
 
 					// Begin runtime types
 					<runtime types go here>"
@@ -1864,16 +1885,17 @@ describe("generate types", () => {
 			──────────────────
 			Generating project types...
 
+			interface BaseEnv {
+				VPC_API: Fetcher;
+				VPC_DATABASE: Fetcher;
+			}
 			declare namespace Cloudflare {
 				interface GlobalProps {
 					mainModule: typeof import(\\"./index\\");
 				}
-				interface Env {
-					VPC_API: Fetcher;
-					VPC_DATABASE: Fetcher;
-				}
+				interface Env extends BaseEnv {}
 			}
-			interface Env extends Cloudflare.Env {}
+			interface Env extends BaseEnv {}
 
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
