@@ -236,12 +236,13 @@ export type TemplateMap = Record<
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
-			gatsby: gatsbyTemplate,
-			svelte: svelteTemplate,
-			docusaurus: docusaurusTemplate,
-			astro: astroTemplate,
-			"tanstack-start": tanStackStartTemplate,
 			angular: angularTemplate,
+			astro: astroTemplate,
+			docusaurus: docusaurusTemplate,
+			gatsby: gatsbyTemplate,
+			nuxt: nuxtTemplate,
+			svelte: svelteTemplate,
+			"tanstack-start": tanStackStartTemplate,
 		};
 	} else {
 		return {
