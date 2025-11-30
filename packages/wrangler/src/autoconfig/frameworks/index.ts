@@ -7,17 +7,20 @@ export type ConfigurationOptions = {
 	dryRun: boolean;
 };
 
+export type PackageJsonScriptsOverrides = {
+	preview?: string; // default is `npm run build && wrangler dev`
+	deploy?: string; // default is `npm run build && wrangler deploy`
+	typegen?: string; // default is `wrangler types`
+};
+
 export type ConfigurationResults = {
 	wranglerConfig: RawConfig;
+	// Scripts to override in the package.json. Most frameworks should not need to do this, as their default detected build command will be sufficient
+	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides;
 };
 
 export abstract class Framework {
 	constructor(public name: string = "Static") {}
-
-	// Override commands used to configure the project. Most frameworks should not need to do this, as their default detected build command will be sufficient
-	preview?: string; // default is `npm run build && wrangler dev`
-	deploy?: string; // default is `npm run build && wrangler deploy`
-	typegen?: string; // default is `wrangler types`
 
 	/** Some frameworks (i.e. Nuxt) don't need additional configuration */
 	get configured() {
