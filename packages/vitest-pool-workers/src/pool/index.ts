@@ -771,6 +771,8 @@ async function getProjectMiniflare(
 		await forEachMiniflare(project.mf, (mf) => mf.setOptions(mfOptions));
 	} else {
 		log.debug(`Reusing runtime for ${project.relativePath}...`);
+		// Set same options to reset DB connections
+		await forEachMiniflare(project.mf, (mf) => mf.setOptions(mfOptions));
 	}
 
 	return project.mf;
