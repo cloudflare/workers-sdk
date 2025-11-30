@@ -9,6 +9,7 @@ export type ConfigurationOptions = {
 
 export type ConfigurationResults = {
 	wranglerConfig: RawConfig;
+	buildCommand?: string;
 };
 
 export abstract class Framework {

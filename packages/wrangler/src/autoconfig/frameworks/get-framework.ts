@@ -1,5 +1,6 @@
 import { Angular } from "./angular";
 import { Astro } from "./astro";
+import { NextJs } from "./next";
 import { Static } from "./static";
 import { SvelteKit } from "./sveltekit";
 import { TanstackStart } from "./tanstack";
@@ -18,6 +19,8 @@ export function getFramework(detectedFramework?: {
 			return new TanstackStart(detectedFramework.name);
 		case "angular":
 			return new Angular(detectedFramework.name);
+		case "next":
+			return new NextJs(detectedFramework.name);
 		default:
 			return new Static(detectedFramework?.name);
 	}
