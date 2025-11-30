@@ -53,7 +53,6 @@ const updateNuxtConfig = (projectPath: string) => {
 
 export class Nuxt extends Framework {
 	async configure({
-		outputDir,
 		dryRun,
 		projectPath,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
