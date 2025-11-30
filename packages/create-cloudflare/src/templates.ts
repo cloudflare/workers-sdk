@@ -243,6 +243,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			"tanstack-start": tanStackStartTemplate,
 			angular: angularTemplate,
 			solid: solidTemplate,
+			qwik: qwikTemplate,
 		};
 	} else {
 		return {
