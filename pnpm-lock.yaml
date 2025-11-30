@@ -2305,6 +2305,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: ^0.8.0
         version: 0.8.0
+      defu:
+        specifier: ^6.1.4
+        version: 6.1.4
       get-port:
         specifier: ^7.1.0
         version: 7.1.0
