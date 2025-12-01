@@ -68,7 +68,6 @@ export default defineConfig({
 		setupFiles: path.resolve(__dirname, "src/__tests__/vitest.setup.ts"),
 		globalSetup: path.resolve(__dirname, "src/__tests__/vitest.global.ts"),
 		reporters: ["default", "html"],
-		globals: true,
 		snapshotFormat: {
 			escapeString: true,
 			printBasicPrototype: true,
