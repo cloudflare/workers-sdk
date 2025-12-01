@@ -1,7 +1,7 @@
 import path from "node:path";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
-import { describe, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ConfigController } from "../../../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../../../api/startDevWorker/utils";
 import { logger } from "../../../logger";

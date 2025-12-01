@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { checkExposedPorts, isDockerfile } from "./../src/utils";
 import { runInTempDir } from "./helpers/run-in-tmp-dir";
 import type { ContainerDevOptions } from "../src/types";

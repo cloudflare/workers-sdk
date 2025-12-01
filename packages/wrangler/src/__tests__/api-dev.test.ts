@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import { Request } from "undici";
-import { vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { unstable_dev } from "../api";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";

@@ -2,7 +2,7 @@
 	"extends": "@cloudflare/workers-tsconfig/tsconfig.json",
 	"compilerOptions": {
 		"module": "preserve",
-		"types": ["node", "vitest/globals"]
+		"types": ["node"]
 	},
 	"include": ["**/*.ts"]
 }

@@ -2,6 +2,7 @@ import {
 	defaultWranglerConfig,
 	validatePagesConfig,
 } from "@cloudflare/workers-utils";
+import { describe, expect, it } from "vitest";
 import type { Config } from "@cloudflare/workers-utils";
 
 describe("validatePagesConfig()", () => {

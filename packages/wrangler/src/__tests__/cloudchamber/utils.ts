@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
+import { vi } from "vitest";
 import * as user from "../../user";
 import { msw } from "../helpers/msw";
 import type { CompleteAccountCustomer } from "@cloudflare/containers-shared";

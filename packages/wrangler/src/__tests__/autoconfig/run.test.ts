@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as c3 from "../../autoconfig/c3-vendor/packages";
 import * as details from "../../autoconfig/details";
 import { Static } from "../../autoconfig/frameworks/static";
@@ -150,7 +150,9 @@ describe("autoconfig (deploy)", () => {
 			});
 			await writeFile(".gitignore", "");
 			const configureSpy = vi.fn(async ({ outputDir }) => ({
-				assets: { directory: outputDir },
+				wranglerConfig: {
+					assets: { directory: outputDir },
+				},
 			}));
 			await run.runAutoConfig({
 				projectPath: process.cwd(),

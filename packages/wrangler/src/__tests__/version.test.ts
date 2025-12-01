@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { version } from "./../../package.json";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";

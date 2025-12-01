@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { logger } from "../../logger";
 import {
 	EXIT_CODE_INVALID_PAGES_CONFIG,

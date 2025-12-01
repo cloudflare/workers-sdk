@@ -1,3 +1,4 @@
+import { describe, expect, it, vi } from "vitest";
 import { getCloudflareContainerRegistry } from "./../src/knobs";
 
 describe("getCloudflareContainerRegistry", () => {

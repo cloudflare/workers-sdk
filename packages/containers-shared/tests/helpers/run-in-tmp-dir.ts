@@ -10,7 +10,7 @@ import * as fs from "node:fs";
 import { rm } from "node:fs/promises";
 import os from "node:os";
 import * as path from "node:path";
-import { vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
 const originalCwd = process.cwd();
 

@@ -1,5 +1,6 @@
 import path from "node:path";
 import getPort from "get-port";
+import { DeferredPromise } from "miniflare";
 import remoteBindingsWorkerPath from "worker:remoteBindings/ProxyServerWorker";
 import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
@@ -65,6 +66,26 @@ export async function startRemoteProxySession(
 		);
 	});
 
+	const maybeErrorPromise = new DeferredPromise<{ error: unknown }>();
+
+	worker.raw.addListener("error", (e) =>
+		maybeErrorPromise.resolve({ error: e })
+	);
+
+	const maybeError = await Promise.race([
+		maybeErrorPromise,
+		worker.raw.proxy.localServerReady.promise,
+	]);
+
+	if (maybeError && maybeError.error) {
+		throw new Error(
+			"Failed to start the remote proxy session. There is likely additional logging output above.",
+			{
+				cause: maybeError.error,
+			}
+		);
+	}
+
 	const remoteProxyConnectionString =
 		(await worker.url) as RemoteProxyConnectionString;
 
@@ -88,6 +109,7 @@ export async function startRemoteProxySession(
 		dispose: worker.dispose,
 	};
 }
+
 export type RemoteProxySession = Pick<Worker, "ready" | "dispose"> & {
 	updateBindings: (bindings: StartDevWorkerInput["bindings"]) => Promise<void>;
 	remoteProxyConnectionString: RemoteProxyConnectionString;

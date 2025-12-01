@@ -1,5 +1,5 @@
 import { setTimeout } from "node:timers/promises";
-import { vitest } from "vitest";
+import { beforeEach, describe, expect, it, vi, vitest } from "vitest";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
 import { mockConsoleMethods } from "./helpers/mock-console";
