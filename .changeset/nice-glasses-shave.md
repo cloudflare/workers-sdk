@@ -2,11 +2,11 @@
 "@cloudflare/vite-plugin": minor
 ---
 
-Allow plugin to customize the worker config
+Allow Worker config to be customized in the plugin config
 
-The Vite plugin can now be used to generate a worker configuration instead of needing a wrangler config file, or to customize an existing user-provided configuration.
+The Vite plugin can now be used to generate a Worker configuration instead of needing a Wrangler config file, or to customize an existing user-provided configuration.
 
-This is done via a new `config` option on the plugin, which accepts either a partial worker configuration object, or a function that receives the current configuration and returns a partial modified config object, or modifies the current config in place.
+This is done via a new `config` option on the plugin, which accepts either a partial Worker configuration object, or a function that receives the current configuration and returns a partial config object, or modifies the current config in place.
 
 ```ts
 import cloudflare from "@cloudflare/vite-plugin";
@@ -25,6 +25,7 @@ export default defineConfig({
 });
 
 // Return a partial config from a function, conditional on some logic
+
 export default defineConfig({
 	plugins: [
 		cloudflare({

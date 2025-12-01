@@ -171,18 +171,18 @@ function resolveWorkerConfig({
 	} else {
 		// No file: start with defaults
 		workerConfig = { ...unstable_defaultWranglerConfig };
-		raw = { ...workerConfig };
+		raw = structuredClone(workerConfig);
 		nonApplicable = {
 			replacedByVite: new Set(),
 			notRelevant: new Set(),
 		};
 	}
 
-	workerConfig.compatibility_date ??=
-		unstable_getDevCompatibilityDate(undefined);
-
 	// Apply config()
 	workerConfig = customizeWorkerConfig(workerConfig, config);
+
+	workerConfig.compatibility_date ??=
+		unstable_getDevCompatibilityDate(undefined);
 
 	if (isEntryWorker) {
 		workerConfig.name ??= unstable_getWorkerNameFromProject(root);

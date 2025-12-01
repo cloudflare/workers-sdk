@@ -272,10 +272,7 @@ function missingFieldErrorMessage(
 	configPath: string | undefined,
 	env: string | undefined
 ) {
-	if (!configPath) {
-		return `Worker config must have a '${field}' field`;
-	}
-	return `No '${field}' field provided in '${configPath}'${env ? ` for '${env}' environment` : ""}`;
+	return `No '${field}' field provided${configPath ? ` in '${configPath}'` : ""}${env ? ` for '${env}' environment` : ""}`;
 }
 
 /**
