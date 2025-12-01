@@ -7,7 +7,7 @@
 	"dependencies": {
 		"create-astro": "4.13.2",
 		"create-analog": "1.8.1",
-		"@angular/create": "21.0.0",
+		"@angular/create": "21.0.1",
 		"create-docusaurus": "3.9.2",
 		"create-hono": "0.19.3",
 		"create-next-app": "15.5.6",
@@ -16,9 +16,9 @@
 		"create-rwsdk": "3.1.0",
 		"create-react-router": "7.9.6",
 		"create-solid": "0.6.11",
-		"create-vue": "3.18.2",
+		"create-vue": "3.18.3",
 		"create-waku": "0.12.5-0.27.1-0",
-		"@tanstack/create-start": "0.37.2",
+		"@tanstack/create-start": "0.40.0",
 		"gatsby": "5.15.0",
 		"sv": "0.10.5",
 		"nuxi": "3.30.0"
