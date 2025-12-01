@@ -5,13 +5,18 @@ import type {
 } from "./client";
 import type { ApplicationAffinityHardwareGeneration } from "./client/models/ApplicationAffinityHardwareGeneration";
 
-export interface Logger {
+export interface WranglerLogger {
 	debug: (...args: unknown[]) => void;
 	debugWithSanitization: (label: string, ...args: unknown[]) => void;
 	log: (...args: unknown[]) => void;
 	info: (...args: unknown[]) => void;
 	warn: (...args: unknown[]) => void;
 	error: (...args: unknown[]) => void;
+}
+export interface ViteLogger {
+	info: (msg: string) => void;
+	warn: (msg: string) => void;
+	error: (msg: string) => void;
 }
 
 export type BuildArgs = {

@@ -243,6 +243,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			astro: astroTemplate,
 			"tanstack-start": tanStackStartTemplate,
 			angular: angularTemplate,
+			solid: solidTemplate,
 		};
 	} else {
 		return {
