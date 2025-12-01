@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { isRoutingRuleMatch } from "../pages-dev-util";
 
 describe("isRoutingRuleMatch", () => {
