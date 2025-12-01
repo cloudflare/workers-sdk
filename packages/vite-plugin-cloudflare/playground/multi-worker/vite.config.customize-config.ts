@@ -5,8 +5,8 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			configPath: "./worker-a/wrangler.jsonc",
-			// Test configure as a function on entry worker
-			configure: () => ({
+			// Test config as a function on entry worker
+			config: () => ({
 				compatibility_date: "2025-01-15",
 				vars: {
 					CONFIGURED_VAR: "entry-worker-value",
@@ -15,8 +15,8 @@ export default defineConfig({
 			auxiliaryWorkers: [
 				{
 					configPath: "./worker-b/wrangler.jsonc",
-					// Test configure as an object on auxiliary worker
-					configure: {
+					// Test config as an object on auxiliary worker
+					config: {
 						vars: {
 							CONFIGURED_VAR: "auxiliary-worker-value",
 						},

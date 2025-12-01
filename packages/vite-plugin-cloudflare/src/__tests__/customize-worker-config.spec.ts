@@ -17,7 +17,7 @@ function createMockConfig(overrides: Partial<WorkerConfig> = {}): WorkerConfig {
 }
 
 describe("customizeWorkerConfig", () => {
-	test("should return the original config when configure is undefined", () => {
+	test("should return the original config when config is undefined", () => {
 		const config = createMockConfig();
 		const result = customizeWorkerConfig(config, undefined);
 		expect(result).toBe(config);

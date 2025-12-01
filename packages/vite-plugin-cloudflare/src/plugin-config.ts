@@ -41,7 +41,7 @@ interface AuxiliaryWorkerFileConfig extends BaseWorkerConfig {
 
 interface AuxiliaryWorkerInlineConfig extends BaseWorkerConfig {
 	configPath?: string;
-	configure: ConfigureWorker;
+	config: WorkerConfigCustomizer;
 }
 
 type AuxiliaryWorkerConfig =
@@ -53,7 +53,7 @@ interface Experimental {
 	headersAndRedirectsDevModeSupport?: boolean;
 }
 
-type ConfigureWorker =
+type WorkerConfigCustomizer =
 	| Partial<SanitizedWorkerConfig>
 	| ((config: SanitizedWorkerConfig) => Partial<SanitizedWorkerConfig> | void);
 
@@ -63,7 +63,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
 	experimental?: Experimental;
-	configure?: ConfigureWorker;
+	config?: WorkerConfigCustomizer;
 }
 
 export interface AssetsOnlyConfig extends SanitizedWorkerConfig {
@@ -123,73 +123,74 @@ export type ResolvedPluginConfig =
 
 export function customizeWorkerConfig<T extends SanitizedWorkerConfig>(
 	resolvedConfig: T,
-	configure: ConfigureWorker | undefined
+	config: WorkerConfigCustomizer | undefined
 ): T {
-	// The `configure` option can either be an object to merge into the config,
-	// a function that returns such an object, or a function that mutates the config in place.
-	const configureResult =
-		typeof configure === "function" ? configure(resolvedConfig) : configure;
+	// The `config` option can either be an object to merge into the worker config,
+	// a function that returns such an object, or a function that mutates the worker config in place.
+	const configResult =
+		typeof config === "function" ? config(resolvedConfig) : config;
 
-	// If the configureResult is defined, merge it into the existing config.
-	if (configureResult) {
-		return defu(configureResult, resolvedConfig) as T;
+	// If the configResult is defined, merge it into the existing config.
+	if (configResult) {
+		return defu(configResult, resolvedConfig) as T;
 	}
 	return resolvedConfig;
 }
 
 /**
- * Resolves the config for a single worker, applying defaults, file config, and configure().
+ * Resolves the config for a single worker, applying defaults, file config, and config().
  */
 function resolveWorkerConfig({
 	configPath,
 	env,
-	configure,
+	config,
 	visitedConfigPaths,
 	isEntryWorker,
 	root,
 }: {
 	configPath: string | undefined;
 	env: string | undefined;
-	configure: ConfigureWorker | undefined;
+	config: WorkerConfigCustomizer | undefined;
 	visitedConfigPaths: Set<string>;
 	isEntryWorker: boolean;
 	root: string;
 }): WorkerResolvedConfig {
-	let config: SanitizedWorkerConfig;
+	let workerConfig: SanitizedWorkerConfig;
 	let raw: Unstable_Config;
 	let nonApplicable: NonApplicableConfigMap;
 
 	if (configPath) {
 		// File config already has defaults applied
-		({ raw, config, nonApplicable } = readWorkerConfigFromFile(
-			configPath,
-			env,
-			{
-				visitedConfigPaths,
-			}
-		));
+		({
+			raw,
+			config: workerConfig,
+			nonApplicable,
+		} = readWorkerConfigFromFile(configPath, env, {
+			visitedConfigPaths,
+		}));
 	} else {
 		// No file: start with defaults
-		config = { ...unstable_defaultWranglerConfig };
-		raw = { ...config };
+		workerConfig = { ...unstable_defaultWranglerConfig };
+		raw = { ...workerConfig };
 		nonApplicable = {
 			replacedByVite: new Set(),
 			notRelevant: new Set(),
 		};
 	}
 
-	config.compatibility_date ??= unstable_getDevCompatibilityDate(undefined);
+	workerConfig.compatibility_date ??=
+		unstable_getDevCompatibilityDate(undefined);
 
-	// Apply configure()
-	config = customizeWorkerConfig(config, configure);
+	// Apply config()
+	workerConfig = customizeWorkerConfig(workerConfig, config);
 
 	if (isEntryWorker) {
-		config.name ??= unstable_getWorkerNameFromProject(root);
+		workerConfig.name ??= unstable_getWorkerNameFromProject(root);
 	}
 	// Auto-populate topLevelName from name
-	config.topLevelName ??= config.name;
+	workerConfig.topLevelName ??= workerConfig.name;
 
-	return resolveWorkerType(config, raw, nonApplicable, {
+	return resolveWorkerType(workerConfig, raw, nonApplicable, {
 		isEntryWorker,
 		configPath,
 		root,
@@ -234,12 +235,12 @@ export function resolvePluginConfig(
 		pluginConfig.configPath
 	);
 
-	// Build entry worker config: defaults → file config → configure()
+	// Build entry worker config: defaults → file config → config()
 	const entryWorkerResolvedConfig = resolveWorkerConfig({
 		root,
 		configPath,
 		env: prefixedEnv.CLOUDFLARE_ENV,
-		configure: pluginConfig.configure,
+		config: pluginConfig.config,
 		visitedConfigPaths: configPaths,
 		isEntryWorker: true,
 	});
@@ -285,13 +286,12 @@ export function resolvePluginConfig(
 			true
 		);
 
-		// Build auxiliary worker config: defaults → file config → configure()
+		// Build auxiliary worker config: defaults → file config → config()
 		const workerResolvedConfig = resolveWorkerConfig({
 			root,
 			configPath: workerConfigPath,
 			env: cloudflareEnv,
-			configure:
-				"configure" in auxiliaryWorker ? auxiliaryWorker.configure : undefined,
+			config: "config" in auxiliaryWorker ? auxiliaryWorker.config : undefined,
 			visitedConfigPaths: configPaths,
 			isEntryWorker: false,
 		});

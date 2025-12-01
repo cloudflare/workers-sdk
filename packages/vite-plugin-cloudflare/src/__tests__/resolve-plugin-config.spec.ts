@@ -74,7 +74,7 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 		);
 	});
 
-	test("should resolve inline auxiliary worker with configure object", () => {
+	test("should resolve inline auxiliary worker with config object", () => {
 		const entryConfigPath = createEntryWorkerConfig(tempDir);
 		// Create the inline worker's main file
 		fs.writeFileSync(path.join(tempDir, "src/aux.ts"), "export default {}");
@@ -83,7 +83,7 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 			configPath: entryConfigPath,
 			auxiliaryWorkers: [
 				{
-					configure: {
+					config: {
 						name: "inline-aux-worker",
 						main: "./src/aux.ts",
 					},
@@ -109,7 +109,7 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 		);
 	});
 
-	test("should resolve inline auxiliary worker with configure function", () => {
+	test("should resolve inline auxiliary worker with config function", () => {
 		const entryConfigPath = createEntryWorkerConfig(tempDir);
 		// Create the inline worker's main file
 		fs.writeFileSync(path.join(tempDir, "src/fn-aux.ts"), "export default {}");
@@ -118,7 +118,7 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 			configPath: entryConfigPath,
 			auxiliaryWorkers: [
 				{
-					configure: () => ({
+					config: () => ({
 						name: "fn-aux-worker",
 						main: "./src/fn-aux.ts",
 					}),
@@ -148,7 +148,7 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 			configPath: entryConfigPath,
 			auxiliaryWorkers: [
 				{
-					configure: {
+					config: {
 						name: "my-aux-worker",
 						main: "./src/aux.ts",
 					},
@@ -172,7 +172,7 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 		).toBe("my-aux-worker");
 	});
 
-	test("should apply configure to file-based auxiliary worker", () => {
+	test("should apply config to file-based auxiliary worker", () => {
 		const entryConfigPath = createEntryWorkerConfig(tempDir);
 
 		// Create auxiliary worker config with initial values
@@ -194,7 +194,7 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 			auxiliaryWorkers: [
 				{
 					configPath: auxConfigPath,
-					configure: {
+					config: {
 						compatibility_date: "2025-01-01",
 					},
 				},
@@ -209,7 +209,7 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 
 		expect(result.type).toBe("workers");
 		const workersResult = result as WorkersResolvedConfig;
-		// The configure should override the file's compatibility_date
+		// The config should override the file's compatibility_date
 		expect(
 			workersResult.rawConfigs.auxiliaryWorkers[0]?.config.compatibility_date
 		).toBe("2025-01-01");
@@ -226,7 +226,7 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 			configPath: entryConfigPath,
 			auxiliaryWorkers: [
 				{
-					configure: {
+					config: {
 						// Missing name and main
 					},
 				},
@@ -239,7 +239,7 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 	});
 });
 
-describe("resolvePluginConfig - entry worker configure()", () => {
+describe("resolvePluginConfig - entry worker config()", () => {
 	let tempDir: string;
 
 	beforeEach(() => {
@@ -252,7 +252,7 @@ describe("resolvePluginConfig - entry worker configure()", () => {
 
 	const viteEnv = { mode: "development", command: "serve" as const };
 
-	test("should convert assets-only worker to worker with server logic when configure() adds main", () => {
+	test("should convert assets-only worker to worker with server logic when config() adds main", () => {
 		// Create a config file without main (assets-only)
 		const configPath = path.join(tempDir, "wrangler.jsonc");
 		fs.writeFileSync(
@@ -270,7 +270,7 @@ describe("resolvePluginConfig - entry worker configure()", () => {
 
 		const pluginConfig: PluginConfig = {
 			configPath,
-			configure: {
+			config: {
 				main: "./src/index.ts",
 			},
 		};
@@ -290,7 +290,7 @@ describe("resolvePluginConfig - entry worker configure()", () => {
 		);
 	});
 
-	test("should allow configure() function to add main field", () => {
+	test("should allow config() function to add main field", () => {
 		const configPath = path.join(tempDir, "wrangler.jsonc");
 		fs.writeFileSync(
 			configPath,
@@ -305,7 +305,7 @@ describe("resolvePluginConfig - entry worker configure()", () => {
 
 		const pluginConfig: PluginConfig = {
 			configPath,
-			configure: () => ({
+			config: () => ({
 				main: "./src/index.ts",
 			}),
 		};
@@ -321,7 +321,7 @@ describe("resolvePluginConfig - entry worker configure()", () => {
 		expect(workersResult.rawConfigs.entryWorker.type).toBe("worker");
 	});
 
-	test("should remain assets-only when configure() does not add main", () => {
+	test("should remain assets-only when config() does not add main", () => {
 		const configPath = path.join(tempDir, "wrangler.jsonc");
 		fs.writeFileSync(
 			configPath,
@@ -333,7 +333,7 @@ describe("resolvePluginConfig - entry worker configure()", () => {
 
 		const pluginConfig: PluginConfig = {
 			configPath,
-			configure: {
+			config: {
 				compatibility_flags: ["nodejs_compat"],
 			},
 		};
@@ -471,7 +471,7 @@ describe("resolvePluginConfig - zero-config mode", () => {
 		);
 	});
 
-	test("should allow configure() to add main in zero-config mode", () => {
+	test("should allow config() to add main in zero-config mode", () => {
 		fs.writeFileSync(
 			path.join(tempDir, "package.json"),
 			JSON.stringify({ name: "my-worker" })
@@ -480,7 +480,7 @@ describe("resolvePluginConfig - zero-config mode", () => {
 		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
 
 		const pluginConfig: PluginConfig = {
-			configure: {
+			config: {
 				main: "./src/index.ts",
 			},
 		};
@@ -540,19 +540,19 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 		);
 	});
 
-	test("should accept wrangler.toml missing name when configure() provides it", () => {
+	test("should accept wrangler.toml missing name when config() provides it", () => {
 		const configPath = path.join(tempDir, "wrangler.jsonc");
 		fs.writeFileSync(
 			configPath,
 			JSON.stringify({
 				compatibility_date: "2024-01-01",
-				// No name - should be provided by configure()
+				// No name - should be provided by config()
 			})
 		);
 
 		const pluginConfig: PluginConfig = {
 			configPath,
-			configure: {
+			config: {
 				name: "configured-worker",
 			},
 		};
@@ -568,7 +568,7 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 		expect(assetsOnlyResult.config.name).toBe("configured-worker");
 	});
 
-	test("should accept wrangler.toml missing compatibility_date when configure() provides it", () => {
+	test("should accept wrangler.toml missing compatibility_date when config() provides it", () => {
 		const configPath = path.join(tempDir, "wrangler.jsonc");
 		fs.writeFileSync(
 			configPath,
@@ -580,7 +580,7 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 
 		const pluginConfig: PluginConfig = {
 			configPath,
-			configure: {
+			config: {
 				compatibility_date: "2025-06-01",
 			},
 		};
@@ -596,7 +596,7 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 		expect(assetsOnlyResult.config.compatibility_date).toBe("2025-06-01");
 	});
 
-	test("should accept minimal wrangler.toml when all required fields come from configure()", () => {
+	test("should accept minimal wrangler.toml when all required fields come from config()", () => {
 		const configPath = path.join(tempDir, "wrangler.jsonc");
 		fs.writeFileSync(
 			configPath,
@@ -611,7 +611,7 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 
 		const pluginConfig: PluginConfig = {
 			configPath,
-			configure: {
+			config: {
 				name: "configured-worker",
 				compatibility_date: "2025-01-01",
 				main: "./src/index.ts",
@@ -637,7 +637,7 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 		).toContain("nodejs_compat");
 	});
 
-	test("should accept auxiliary worker wrangler.toml missing fields when configure() provides them", () => {
+	test("should accept auxiliary worker wrangler.toml missing fields when config() provides them", () => {
 		// Create entry worker config
 		const entryConfigPath = path.join(tempDir, "wrangler.jsonc");
 		fs.writeFileSync(
@@ -669,8 +669,8 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 			auxiliaryWorkers: [
 				{
 					configPath: auxConfigPath,
-					configure: {
-						name: "aux-from-configure",
+					config: {
+						name: "aux-from-config",
 					},
 				},
 			],
@@ -685,7 +685,7 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 		expect(result.type).toBe("workers");
 		const workersResult = result as WorkersResolvedConfig;
 		expect(workersResult.rawConfigs.auxiliaryWorkers[0]?.config.name).toBe(
-			"aux-from-configure"
+			"aux-from-config"
 		);
 		// compatibility_date should be filled from defaults
 		expect(

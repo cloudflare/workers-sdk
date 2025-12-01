@@ -6,7 +6,7 @@ Allow plugin to customize the worker config
 
 The Vite plugin can now be used to generate a worker configuration instead of needing a wrangler config file, or to customize an existing user-provided configuration.
 
-This is done via a new `configure` option on the plugin, which accepts either a partial worker configuration object, or a function that receives the current configuration and returns a partial modified config object, or modifies the current config in place.
+This is done via a new `config` option on the plugin, which accepts either a partial worker configuration object, or a function that receives the current configuration and returns a partial modified config object, or modifies the current config in place.
 
 ```ts
 import cloudflare from "@cloudflare/vite-plugin";
@@ -17,7 +17,7 @@ import { defineConfig } from "vite";
 export default defineConfig({
 	plugins: [
 		cloudflare({
-			configure: {
+			config: {
 				compatibility_date: "2025-01-01",
 			},
 		}),
@@ -28,8 +28,8 @@ export default defineConfig({
 export default defineConfig({
 	plugins: [
 		cloudflare({
-			configure: (config) => {
-				if (config.name === "my-worker") {
+			config: (workerConfig) => {
+				if (workerConfig.name === "my-worker") {
 					return {
 						compatibility_flags: ["nodejs_compat"],
 					};
@@ -44,8 +44,8 @@ export default defineConfig({
 export default defineConfig({
 	plugins: [
 		cloudflare({
-			configure: (config) => {
-				config.compatibility_date = "2025-01-01";
+			config: (workerConfig) => {
+				workerConfig.compatibility_date = "2025-01-01";
 			},
 		}),
 	],

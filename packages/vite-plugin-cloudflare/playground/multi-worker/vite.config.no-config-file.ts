@@ -5,7 +5,7 @@ export default defineConfig({
 	plugins: [
 		cloudflare({
 			// No configPath - worker-c has no wrangler config file
-			configure: {
+			config: {
 				name: "worker-c",
 				main: "./worker-c/index.ts",
 				compatibility_date: "2024-12-30",
@@ -14,7 +14,7 @@ export default defineConfig({
 			auxiliaryWorkers: [
 				{
 					// No configPath - worker-d has no wrangler config file
-					configure: {
+					config: {
 						name: "worker-d",
 						main: "./worker-d/index.ts",
 						compatibility_date: "2024-12-30",

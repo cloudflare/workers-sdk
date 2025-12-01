@@ -317,7 +317,7 @@ interface ResolveWorkerTypeOptions {
  * Validates required fields and determines whether the config represents
  * an assets-only worker or a worker with server logic.
  *
- * @param config The sanitized worker config (after merging defaults, file config, and configure())
+ * @param config The sanitized worker config (after merging defaults, file config, and config())
  * @param raw The raw config (before sanitization)
  * @param nonApplicable The non-applicable config map
  * @param opts Options for validation
