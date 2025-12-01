@@ -1,6 +1,7 @@
 import { Angular } from "./angular";
 import { Astro } from "./astro";
 import { Nuxt } from "./nuxt";
+import { SolidStart } from "./solid-start";
 import { Static } from "./static";
 import { SvelteKit } from "./sveltekit";
 import { TanstackStart } from "./tanstack";
@@ -21,6 +22,8 @@ export function getFramework(detectedFramework?: {
 			return new Angular(detectedFramework.name);
 		case "nuxt":
 			return new Nuxt(detectedFramework.name);
+		case "solid-start":
+			return new SolidStart(detectedFramework.name);
 		default:
 			return new Static(detectedFramework?.name);
 	}
