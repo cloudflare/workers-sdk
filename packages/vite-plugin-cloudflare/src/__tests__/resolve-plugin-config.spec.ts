@@ -92,7 +92,8 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 			viteEnv
 		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
-		const auxWorker = result.environmentNameToWorkerMap.get("inline_aux_worker");
+		const auxWorker =
+			result.environmentNameToWorkerMap.get("inline_aux_worker");
 		expect(auxWorker).toBeDefined();
 		expect(auxWorker?.config.name).toBe("inline-aux-worker");
 		// main should now be resolved to an absolute path
