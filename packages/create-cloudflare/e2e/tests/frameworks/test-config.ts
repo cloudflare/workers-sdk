@@ -632,6 +632,12 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "Vike",
 			},
 			nodeCompat: false,
+			promptHandlers: [
+				{
+					matcher: /Select a UI framework:/,
+					input: [keys.enter],
+				},
+			],
 		},
 	];
 }
