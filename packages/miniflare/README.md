@@ -531,7 +531,7 @@ parameter in module format Workers.
 
 #### Durable Objects
 
-- `durableObjects?: Record<string, string | { className: string, scriptName?: string, useSQLite?: bool }>`
+- `durableObjects?: Record<string, string | { className: string, scriptName?: string, useSQLite?: boolean }>`
 
   Record mapping binding name to Durable Object class designators to inject as
   `DurableObjectNamespace` bindings into this Worker.
