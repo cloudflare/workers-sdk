@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Support Tanstack in autoconfig
+Support TanStack Start in autoconfig
