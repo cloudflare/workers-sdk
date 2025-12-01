@@ -39,6 +39,7 @@ type UploadToken = z.infer<typeof UploadToken>;
 const UploadResult = APIResponse(
 	z.object({
 		preview_token: z.string(),
+		tail_url: z.string(),
 	})
 );
 export type UploadResult = z.infer<typeof UploadResult>;

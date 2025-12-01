@@ -66,8 +66,8 @@ declare module "cloudflare:test" {
 	 * Respects `isolatedStorage` if enabled, i.e. objects created in a different
 	 * test won't be returned.
 	 */
-	export function listDurableObjectIds(
-		namespace: DurableObjectNamespace
+	export function listDurableObjectIds<T>(
+		namespace: DurableObjectNamespace<T>
 	): Promise<DurableObjectId[]>;
 
 	/**

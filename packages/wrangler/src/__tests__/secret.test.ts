@@ -3,7 +3,7 @@ import { writeFileSync } from "node:fs";
 import readline from "node:readline";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../secret";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";

@@ -59,7 +59,9 @@ export async function runAutoConfig(
 	autoConfigDetails = updatedAutoConfigDetails;
 
 	if (!autoConfigDetails.outputDir) {
-		throw new FatalError("Cannot deploy project without an output directory");
+		throw new FatalError(
+			"Cannot configure project without an output directory"
+		);
 	}
 
 	const wranglerConfig: RawConfig = {
@@ -71,18 +73,21 @@ export async function runAutoConfig(
 		},
 	} satisfies RawConfig;
 
-	const modifications = await buildOperationsSummary(autoConfigDetails, {
-		...wranglerConfig,
-		...(await autoConfigDetails.framework?.configure({
+	const dryRunConfigurationResults =
+		await autoConfigDetails.framework?.configure({
 			outputDir: autoConfigDetails.outputDir,
 			projectPath: autoConfigDetails.projectPath,
 			workerName: autoConfigDetails.workerName,
 			dryRun: true,
-		})),
+		});
+
+	const modifications = await buildOperationsSummary(autoConfigDetails, {
+		...wranglerConfig,
+		...dryRunConfigurationResults?.wranglerConfig,
 	});
 
 	if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
-		throw new FatalError("Deployment aborted");
+		throw new FatalError("Setup cancelled");
 	}
 
 	if (dryRun) {
@@ -96,10 +101,6 @@ export async function runAutoConfig(
 	logger.debug(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
-
-	if (modifications.wranglerInstall) {
-		await installWrangler();
-	}
 
 	if (autoConfigDetails.packageJson) {
 		await writeFile(
@@ -117,17 +118,24 @@ export async function runAutoConfig(
 			)
 		);
 	}
-	const additionalConfigDetails =
-		(await autoConfigDetails.framework?.configure({
-			outputDir: autoConfigDetails.outputDir,
-			projectPath: autoConfigDetails.projectPath,
-			workerName: autoConfigDetails.workerName,
-			dryRun: false,
-		})) ?? {};
+
+	if (modifications.wranglerInstall) {
+		await installWrangler();
+	}
+	const configurationResults = await autoConfigDetails.framework?.configure({
+		outputDir: autoConfigDetails.outputDir,
+		projectPath: autoConfigDetails.projectPath,
+		workerName: autoConfigDetails.workerName,
+		dryRun: false,
+	});
 
 	await writeFile(
 		resolve(autoConfigDetails.projectPath, "wrangler.jsonc"),
-		JSON.stringify({ ...wranglerConfig, ...additionalConfigDetails }, null, 2)
+		JSON.stringify(
+			{ ...wranglerConfig, ...configurationResults?.wranglerConfig },
+			null,
+			2
+		)
 	);
 
 	addWranglerToGitIgnore(autoConfigDetails.projectPath);

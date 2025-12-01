@@ -1,10 +1,10 @@
 {
-	"name": "@playground/ai",
+	"name": "@playground/external-workers",
 	"private": true,
 	"type": "module",
 	"scripts": {
 		"build": "vite build --app",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"preview": "vite preview"
 	},

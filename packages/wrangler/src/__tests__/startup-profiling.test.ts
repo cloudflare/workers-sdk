@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { logger } from "../logger";
 import { collectCLIOutput } from "./helpers/collect-cli-output";
 import { mockConsoleMethods } from "./helpers/mock-console";

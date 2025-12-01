@@ -1,4 +1,5 @@
 import { http, HttpResponse } from "msw";
+import { expect } from "vitest";
 import { EventSourceType } from "../../queues/subscription-types";
 import { msw } from "../helpers/msw";
 import type { QueueResponse } from "../../queues/client";

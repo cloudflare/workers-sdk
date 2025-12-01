@@ -236,21 +236,21 @@ const localTestConfigs: TestConfig[] = [
 	],
 	// node:punycode
 	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
+		// TODO: add test for disabled by date (2025-12-04)
+		// TODO: add test for enabled by date (2025-12-04)
 		{
 			name: "punycode enabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_punycode_module", "experimental"],
+			compatibilityFlags: ["enable_nodejs_punycode_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_punycode_module: true,
 			},
 		},
-		// TODO: update the date past the default enable date (when defined)
+		// TODO: update the date past the default enable date (2025-12-04)
 		{
 			name: "punycode disabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_punycode_module", "experimental"],
+			compatibilityFlags: ["disable_nodejs_punycode_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_punycode_module: false,
 			},
@@ -258,21 +258,21 @@ const localTestConfigs: TestConfig[] = [
 	],
 	// node:cluster
 	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
+		// TODO: add test for disabled by date (2025-12-04)
+		// TODO: add test for enabled by date (2025-12-04)
 		{
 			name: "cluster enabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_cluster_module", "experimental"],
+			compatibilityFlags: ["enable_nodejs_cluster_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_cluster_module: true,
 			},
 		},
-		// TODO: update the date past the default enable date (when defined)
+		// TODO: update the date past the default enable date (2025-12-04)
 		{
 			name: "cluster disabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_cluster_module", "experimental"],
+			compatibilityFlags: ["disable_nodejs_cluster_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_cluster_module: false,
 			},
@@ -280,24 +280,21 @@ const localTestConfigs: TestConfig[] = [
 	],
 	// trace_events
 	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
+		// TODO: add test for disabled by date (2025-12-04)
+		// TODO: add test for enabled by date (2025-12-04)
 		{
 			name: "trace_events enabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_trace_events_module", "experimental"],
+			compatibilityFlags: ["enable_nodejs_trace_events_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_trace_events_module: true,
 			},
 		},
-		// TODO: update the date past the default enable date (when defined)
+		// TODO: update the date past the default enable date (2025-12-04)
 		{
 			name: "trace_events disabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: [
-				"disable_nodejs_trace_events_module",
-				"experimental",
-			],
+			compatibilityFlags: ["disable_nodejs_trace_events_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_trace_events_module: false,
 			},
@@ -305,21 +302,21 @@ const localTestConfigs: TestConfig[] = [
 	],
 	// domain
 	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
+		// TODO: add test for disabled by date (2025-12-04)
+		// TODO: add test for enabled by date (2025-12-04)
 		{
 			name: "domain enabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_domain_module", "experimental"],
+			compatibilityFlags: ["enable_nodejs_domain_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_domain_module: true,
 			},
 		},
-		// TODO: update the date past the default enable date (when defined)
+		// TODO: update the date past the default enable date (2025-12-04)
 		{
 			name: "domain disabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_domain_module", "experimental"],
+			compatibilityFlags: ["disable_nodejs_domain_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_domain_module: false,
 			},

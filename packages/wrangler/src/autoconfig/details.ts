@@ -1,6 +1,6 @@
 import { statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
+import { basename, join, relative, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli/colors";
 import {
 	FatalError,
@@ -47,14 +47,14 @@ async function hasIndexHtml(dir: string): Promise<boolean> {
  */
 async function findAssetsDir(from: string): Promise<string | undefined> {
 	if (await hasIndexHtml(from)) {
-		return from;
+		return ".";
 	}
 	const children = await readdir(from);
 	for (const child of children) {
 		const path = join(from, child);
 		const stats = await stat(path);
 		if (stats.isDirectory() && (await hasIndexHtml(path))) {
-			return path;
+			return relative(from, path);
 		}
 	}
 	return undefined;

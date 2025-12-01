@@ -28,6 +28,12 @@ runs:
         cache: "pnpm"
         registry-url: "https://registry.npmjs.org"
 
+    # Enable node compile cache (effective for Node 22+)
+    # See https://nodejs.org/docs/v24.11.1/api/module.html#module-compile-cache
+    - name: Enable Node Compile Cache
+      shell: bash
+      run: echo "NODE_COMPILE_CACHE=$HOME/.node_compile_cache" >> $GITHUB_ENV
+
     - name: "Configure turbo repo cache environment variables"
       if: inputs.turbo-api
       shell: bash

@@ -283,13 +283,14 @@ test("get: validates but ignores cache ttl", async (t) => {
 	await t.throwsAsync(kv.get("key", { cacheTtl: "not a number" as any }), {
 		instanceOf: Error,
 		message:
-			"KV GET failed: 400 Invalid cache_ttl of 0. Cache TTL must be at least 60.",
+			"KV GET failed: 400 Invalid cache_ttl of 0. Cache TTL must be at least 30.",
 	});
 	await t.throwsAsync(kv.get("key", { cacheTtl: 10 }), {
 		instanceOf: Error,
 		message:
-			"KV GET failed: 400 Invalid cache_ttl of 10. Cache TTL must be at least 60.",
+			"KV GET failed: 400 Invalid cache_ttl of 10. Cache TTL must be at least 30.",
 	});
+	t.not(await kv.get("key", { cacheTtl: 30 }), undefined);
 	t.not(await kv.get("key", { cacheTtl: 60 }), undefined);
 });
 

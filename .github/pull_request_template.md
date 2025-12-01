@@ -10,7 +10,7 @@ The following selections do not need to be completed if this PR only contains ch
 -->
 
 - Tests
-  - [ ] Tests included
+  - [ ] Tests included/updated
   - [ ] Tests not necessary because:
 - Public documentation
   - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->

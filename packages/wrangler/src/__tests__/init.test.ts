@@ -6,7 +6,7 @@ import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { parseConfigFileTextToJson } from "typescript";
 import { FormData } from "undici";
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { downloadWorker } from "../init";
 import { writeMetricsConfig } from "../metrics/metrics-config";
 import { getPackageManager } from "../package-manager";
@@ -717,6 +717,7 @@ describe("init", () => {
 				),
 				http.get(
 					`*/accounts/:accountId/workers/services/:fromDashScriptName/environments/:environment/content/v2`,
+					// @ts-expect-error Something's up with the MSW types
 					async () => {
 						if (typeof worker.content === "string") {
 							return HttpResponse.text(worker.content, {

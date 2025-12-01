@@ -1,4 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
+import { describe, expect, test } from "vitest";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runWrangler } from "../../helpers/run-wrangler";
 

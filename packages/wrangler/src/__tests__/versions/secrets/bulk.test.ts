@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import readline from "node:readline";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, it, test, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs } from "../../helpers/mock-dialogs";

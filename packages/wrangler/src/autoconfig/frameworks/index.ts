@@ -6,6 +6,11 @@ export type ConfigurationOptions = {
 	workerName: string;
 	dryRun: boolean;
 };
+
+export type ConfigurationResults = {
+	wranglerConfig: RawConfig;
+};
+
 export abstract class Framework {
 	constructor(public name: string = "Static") {}
 
@@ -21,7 +26,7 @@ export abstract class Framework {
 
 	abstract configure(
 		options: ConfigurationOptions
-	): Promise<RawConfig> | RawConfig;
+	): Promise<ConfigurationResults> | ConfigurationResults;
 
 	configurationDescription?: string;
 }
