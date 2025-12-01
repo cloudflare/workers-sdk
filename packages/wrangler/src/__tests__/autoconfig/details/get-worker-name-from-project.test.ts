@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { getWorkerNameFromProject } from "../../../autoconfig/details";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 
