@@ -465,7 +465,6 @@ export class RemoteRuntimeController extends RuntimeController {
 		logger.debug("RemoteRuntimeController teardown beginning...");
 		this.#session = undefined;
 		this.#abortController.abort();
-		this.#activeTail?.terminate();
 		logger.debug("RemoteRuntimeController teardown complete");
 	}
 
