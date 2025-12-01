@@ -18,7 +18,7 @@ import type { Defined } from "./utils";
 import type {
 	AssetsOnlyWorkerResolvedConfig,
 	NonApplicableConfigMap,
-	SanitizedWorkerConfig,
+	WorkerConfig,
 	WorkerResolvedConfig,
 	WorkerWithServerLogicResolvedConfig,
 } from "./workers-configs";
@@ -54,8 +54,8 @@ interface Experimental {
 }
 
 type WorkerConfigCustomizer =
-	| Partial<SanitizedWorkerConfig>
-	| ((config: SanitizedWorkerConfig) => Partial<SanitizedWorkerConfig> | void);
+	| Partial<WorkerConfig>
+	| ((config: WorkerConfig) => Partial<WorkerConfig> | void);
 
 export interface PluginConfig extends EntryWorkerConfig {
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
@@ -66,18 +66,18 @@ export interface PluginConfig extends EntryWorkerConfig {
 	config?: WorkerConfigCustomizer;
 }
 
-export interface AssetsOnlyConfig extends SanitizedWorkerConfig {
-	topLevelName: Defined<SanitizedWorkerConfig["topLevelName"]>;
-	name: Defined<SanitizedWorkerConfig["name"]>;
-	compatibility_date: Defined<SanitizedWorkerConfig["compatibility_date"]>;
+export interface ResolvedAssetsOnlyConfig extends WorkerConfig {
+	topLevelName: Defined<WorkerConfig["topLevelName"]>;
+	name: Defined<WorkerConfig["name"]>;
+	compatibility_date: Defined<WorkerConfig["compatibility_date"]>;
 }
 
-export interface WorkerConfig extends AssetsOnlyConfig {
-	main: Defined<SanitizedWorkerConfig["main"]>;
+export interface ResolvedWorkerConfig extends ResolvedAssetsOnlyConfig {
+	main: Defined<WorkerConfig["main"]>;
 }
 
 export interface Worker {
-	config: WorkerConfig;
+	config: ResolvedWorkerConfig;
 	nodeJsCompat: NodeJsCompat | undefined;
 }
 
@@ -92,7 +92,7 @@ export interface AssetsOnlyResolvedConfig extends BaseResolvedConfig {
 	type: "assets-only";
 	configPaths: Set<string>;
 	cloudflareEnv: string | undefined;
-	config: AssetsOnlyConfig;
+	config: ResolvedAssetsOnlyConfig;
 	rawConfigs: {
 		entryWorker: AssetsOnlyWorkerResolvedConfig;
 	};
@@ -121,7 +121,7 @@ export type ResolvedPluginConfig =
 	| WorkersResolvedConfig
 	| PreviewResolvedConfig;
 
-export function customizeWorkerConfig<T extends SanitizedWorkerConfig>(
+export function customizeWorkerConfig<T extends WorkerConfig>(
 	resolvedConfig: T,
 	config: WorkerConfigCustomizer | undefined
 ): T {
@@ -155,7 +155,7 @@ function resolveWorkerConfig({
 	isEntryWorker: boolean;
 	root: string;
 }): WorkerResolvedConfig {
-	let workerConfig: SanitizedWorkerConfig;
+	let workerConfig: WorkerConfig;
 	let raw: Unstable_Config;
 	let nonApplicable: NonApplicableConfigMap;
 
@@ -310,7 +310,7 @@ export function resolvePluginConfig(
 
 		environmentNameToWorkerMap.set(
 			workerEnvironmentName,
-			resolveWorker(workerResolvedConfig.config as WorkerConfig)
+			resolveWorker(workerResolvedConfig.config as ResolvedWorkerConfig)
 		);
 	}
 
@@ -335,7 +335,7 @@ function workerNameToEnvironmentName(workerName: string) {
 	return workerName.replaceAll("-", "_");
 }
 
-function resolveWorker(workerConfig: WorkerConfig) {
+function resolveWorker(workerConfig: ResolvedWorkerConfig) {
 	return {
 		config: workerConfig,
 		nodeJsCompat: hasNodeJsCompat(workerConfig)

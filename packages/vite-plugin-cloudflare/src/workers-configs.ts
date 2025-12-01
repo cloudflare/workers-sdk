@@ -1,7 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { unstable_readConfig } from "wrangler";
-import type { AssetsOnlyConfig, WorkerConfig } from "./plugin-config";
+import type {
+	ResolvedAssetsOnlyConfig,
+	ResolvedWorkerConfig,
+} from "./plugin-config";
 import type { Optional } from "./utils";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";
 
@@ -12,13 +15,13 @@ export type WorkerResolvedConfig =
 export interface AssetsOnlyWorkerResolvedConfig
 	extends WorkerBaseResolvedConfig {
 	type: "assets-only";
-	config: AssetsOnlyConfig;
+	config: ResolvedAssetsOnlyConfig;
 }
 
 export interface WorkerWithServerLogicResolvedConfig
 	extends WorkerBaseResolvedConfig {
 	type: "worker";
-	config: WorkerConfig;
+	config: ResolvedWorkerConfig;
 }
 
 interface WorkerBaseResolvedConfig {
@@ -26,10 +29,7 @@ interface WorkerBaseResolvedConfig {
 	nonApplicable: NonApplicableConfigMap;
 }
 
-export type SanitizedWorkerConfig = Omit<
-	RawWorkerConfig,
-	keyof NonApplicableConfig
->;
+export type WorkerConfig = Omit<RawWorkerConfig, keyof NonApplicableConfig>;
 
 export type NonApplicableConfigMap = {
 	replacedByVite: Set<
@@ -114,7 +114,7 @@ function readWorkerConfig(
 	env: string | undefined
 ): {
 	raw: RawWorkerConfig;
-	config: SanitizedWorkerConfig;
+	config: WorkerConfig;
 	nonApplicable: NonApplicableConfigMap;
 } {
 	const nonApplicable: NonApplicableConfigMap = {
@@ -162,7 +162,7 @@ function readWorkerConfig(
 	return {
 		raw,
 		nonApplicable,
-		config: config as SanitizedWorkerConfig,
+		config: config as WorkerConfig,
 	};
 }
 
@@ -286,7 +286,7 @@ export function readWorkerConfigFromFile(
 	}
 ): {
 	raw: RawWorkerConfig;
-	config: SanitizedWorkerConfig;
+	config: WorkerConfig;
 	nonApplicable: NonApplicableConfigMap;
 } {
 	if (opts?.visitedConfigPaths?.has(configPath)) {
@@ -320,7 +320,7 @@ interface ResolveWorkerTypeOptions {
  * @param opts Options for validation
  */
 export function resolveWorkerType(
-	config: SanitizedWorkerConfig,
+	config: WorkerConfig,
 	raw: RawWorkerConfig,
 	nonApplicable: NonApplicableConfigMap,
 	opts?: ResolveWorkerTypeOptions

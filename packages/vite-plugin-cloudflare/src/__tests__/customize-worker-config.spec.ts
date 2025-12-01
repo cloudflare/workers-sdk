@@ -1,9 +1,11 @@
 import { describe, expect, test } from "vitest";
 import { customizeWorkerConfig } from "../plugin-config";
-import type { WorkerConfig } from "../plugin-config";
+import type { ResolvedWorkerConfig } from "../plugin-config";
 
 // Create a minimal mock config for testing
-function createMockConfig(overrides: Partial<WorkerConfig> = {}): WorkerConfig {
+function createMockConfig(
+	overrides: Partial<ResolvedWorkerConfig> = {}
+): ResolvedWorkerConfig {
 	return {
 		name: "test-worker",
 		topLevelName: "test-worker",
@@ -13,7 +15,7 @@ function createMockConfig(overrides: Partial<WorkerConfig> = {}): WorkerConfig {
 		limits: {},
 		rules: [],
 		...overrides,
-	} as WorkerConfig;
+	} as ResolvedWorkerConfig;
 }
 
 describe("customizeWorkerConfig", () => {

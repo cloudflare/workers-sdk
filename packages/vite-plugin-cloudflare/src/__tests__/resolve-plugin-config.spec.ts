@@ -64,14 +64,9 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 			pluginConfig,
 			{ root: tempDir },
 			viteEnv
-		);
-
+		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
-		const workersResult = result as WorkersResolvedConfig;
-		expect(workersResult.rawConfigs.auxiliaryWorkers).toHaveLength(1);
-		expect(workersResult.rawConfigs.auxiliaryWorkers[0]?.config.name).toBe(
-			"aux-worker"
-		);
+		expect(result.environmentNameToWorkerMap.get("aux_worker")).toBeDefined();
 	});
 
 	test("should resolve inline auxiliary worker with config object", () => {
@@ -95,18 +90,13 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 			pluginConfig,
 			{ root: tempDir },
 			viteEnv
-		);
-
+		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
-		const workersResult = result as WorkersResolvedConfig;
-		expect(workersResult.rawConfigs.auxiliaryWorkers).toHaveLength(1);
-		expect(workersResult.rawConfigs.auxiliaryWorkers[0]?.config.name).toBe(
-			"inline-aux-worker"
-		);
+		const auxWorker = result.environmentNameToWorkerMap.get("inline_aux_worker");
+		expect(auxWorker).toBeDefined();
+		expect(auxWorker?.config.name).toBe("inline-aux-worker");
 		// main should now be resolved to an absolute path
-		expect(workersResult.rawConfigs.auxiliaryWorkers[0]?.config.main).toBe(
-			path.join(tempDir, "src/aux.ts")
-		);
+		expect(auxWorker?.config.main).toBe(path.join(tempDir, "src/aux.ts"));
 	});
 
 	test("should resolve inline auxiliary worker with config function", () => {
@@ -130,13 +120,11 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 			pluginConfig,
 			{ root: tempDir },
 			viteEnv
-		);
-
+		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
-		const workersResult = result as WorkersResolvedConfig;
-		expect(workersResult.rawConfigs.auxiliaryWorkers[0]?.config.name).toBe(
-			"fn-aux-worker"
-		);
+		const auxWorker = result.environmentNameToWorkerMap.get("fn_aux_worker");
+		expect(auxWorker).toBeDefined();
+		expect(auxWorker?.config.name).toBe("fn-aux-worker");
 	});
 
 	test("should auto-populate topLevelName from name if not set", () => {
@@ -160,16 +148,12 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 			pluginConfig,
 			{ root: tempDir },
 			viteEnv
-		);
-
+		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
-		const workersResult = result as WorkersResolvedConfig;
-		expect(workersResult.rawConfigs.auxiliaryWorkers[0]?.config.name).toBe(
-			"my-aux-worker"
-		);
-		expect(
-			workersResult.rawConfigs.auxiliaryWorkers[0]?.config.topLevelName
-		).toBe("my-aux-worker");
+		const auxWorker = result.environmentNameToWorkerMap.get("my_aux_worker");
+		expect(auxWorker).toBeDefined();
+		expect(auxWorker?.config.name).toBe("my-aux-worker");
+		expect(auxWorker?.config.topLevelName).toBe("my-aux-worker");
 	});
 
 	test("should apply config to file-based auxiliary worker", () => {
@@ -205,18 +189,14 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 			pluginConfig,
 			{ root: tempDir },
 			viteEnv
-		);
-
+		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
-		const workersResult = result as WorkersResolvedConfig;
+		const auxWorker = result.environmentNameToWorkerMap.get("aux_worker");
+		expect(auxWorker).toBeDefined();
 		// The config should override the file's compatibility_date
-		expect(
-			workersResult.rawConfigs.auxiliaryWorkers[0]?.config.compatibility_date
-		).toBe("2025-01-01");
+		expect(auxWorker?.config.compatibility_date).toBe("2025-01-01");
 		// But preserve the name from file
-		expect(workersResult.rawConfigs.auxiliaryWorkers[0]?.config.name).toBe(
-			"aux-worker"
-		);
+		expect(auxWorker?.config.name).toBe("aux-worker");
 	});
 
 	test("should throw if inline auxiliary worker is missing required fields", () => {
@@ -279,15 +259,14 @@ describe("resolvePluginConfig - entry worker config()", () => {
 			pluginConfig,
 			{ root: tempDir },
 			viteEnv
-		);
-
+		) as WorkersResolvedConfig;
 		// Should now be a worker with server logic, not assets-only
 		expect(result.type).toBe("workers");
-		const workersResult = result as WorkersResolvedConfig;
-		expect(workersResult.rawConfigs.entryWorker.type).toBe("worker");
-		expect(workersResult.rawConfigs.entryWorker.config.main).toMatch(
-			/index\.ts$/
+		const entryWorker = result.environmentNameToWorkerMap.get(
+			result.entryWorkerEnvironmentName
 		);
+		expect(entryWorker).toBeDefined();
+		expect(entryWorker?.config.main).toMatch(/index\.ts$/);
 	});
 
 	test("should allow config() function to add main field", () => {
@@ -314,11 +293,12 @@ describe("resolvePluginConfig - entry worker config()", () => {
 			pluginConfig,
 			{ root: tempDir },
 			viteEnv
-		);
-
+		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
-		const workersResult = result as WorkersResolvedConfig;
-		expect(workersResult.rawConfigs.entryWorker.type).toBe("worker");
+		const entryWorker = result.environmentNameToWorkerMap.get(
+			result.entryWorkerEnvironmentName
+		);
+		expect(entryWorker).toBeDefined();
 	});
 
 	test("should remain assets-only when config() does not add main", () => {
@@ -489,12 +469,13 @@ describe("resolvePluginConfig - zero-config mode", () => {
 			pluginConfig,
 			{ root: tempDir },
 			viteEnv
-		);
-
+		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
-		const workersResult = result as WorkersResolvedConfig;
-		expect(workersResult.rawConfigs.entryWorker.type).toBe("worker");
-		expect(workersResult.rawConfigs.entryWorker.config.name).toBe("my-worker");
+		const entryWorker = result.environmentNameToWorkerMap.get(
+			result.entryWorkerEnvironmentName
+		);
+		expect(entryWorker).toBeDefined();
+		expect(entryWorker?.config.name).toBe("my-worker");
 	});
 });
 
@@ -511,7 +492,7 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 
 	const viteEnv = { mode: "development", command: "serve" as const };
 
-	test("should accept wrangler.toml with only name, filling in compatibility_date from defaults", () => {
+	test("should accept Wrangler config file with only name, filling in compatibility_date from defaults", () => {
 		const configPath = path.join(tempDir, "wrangler.jsonc");
 		fs.writeFileSync(
 			configPath,
@@ -540,7 +521,7 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 		);
 	});
 
-	test("should accept wrangler.toml missing name when config() provides it", () => {
+	test("should accept Wrangler config file missing name when config() provides it", () => {
 		const configPath = path.join(tempDir, "wrangler.jsonc");
 		fs.writeFileSync(
 			configPath,
@@ -568,7 +549,7 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 		expect(assetsOnlyResult.config.name).toBe("configured-worker");
 	});
 
-	test("should accept wrangler.toml missing compatibility_date when config() provides it", () => {
+	test("should accept Wrangler config file missing compatibility_date when config() provides it", () => {
 		const configPath = path.join(tempDir, "wrangler.jsonc");
 		fs.writeFileSync(
 			configPath,
@@ -596,7 +577,7 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 		expect(assetsOnlyResult.config.compatibility_date).toBe("2025-06-01");
 	});
 
-	test("should accept minimal wrangler.toml when all required fields come from config()", () => {
+	test("should accept minimal Wrangler config file when all required fields come from config()", () => {
 		const configPath = path.join(tempDir, "wrangler.jsonc");
 		fs.writeFileSync(
 			configPath,
@@ -622,22 +603,18 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 			pluginConfig,
 			{ root: tempDir },
 			viteEnv
-		);
-
+		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
-		const workersResult = result as WorkersResolvedConfig;
-		expect(workersResult.rawConfigs.entryWorker.config.name).toBe(
-			"configured-worker"
+		const entryWorker = result.environmentNameToWorkerMap.get(
+			result.entryWorkerEnvironmentName
 		);
-		expect(workersResult.rawConfigs.entryWorker.config.compatibility_date).toBe(
-			"2025-01-01"
-		);
-		expect(
-			workersResult.rawConfigs.entryWorker.config.compatibility_flags
-		).toContain("nodejs_compat");
+		expect(entryWorker).toBeDefined();
+		expect(entryWorker?.config.name).toBe("configured-worker");
+		expect(entryWorker?.config.compatibility_date).toBe("2025-01-01");
+		expect(entryWorker?.config.compatibility_flags).toContain("nodejs_compat");
 	});
 
-	test("should accept auxiliary worker wrangler.toml missing fields when config() provides them", () => {
+	test("should accept auxiliary worker Wrangler config file missing fields when config() provides them", () => {
 		// Create entry worker config
 		const entryConfigPath = path.join(tempDir, "wrangler.jsonc");
 		fs.writeFileSync(
@@ -680,16 +657,12 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 			pluginConfig,
 			{ root: tempDir },
 			viteEnv
-		);
-
+		) as WorkersResolvedConfig;
 		expect(result.type).toBe("workers");
-		const workersResult = result as WorkersResolvedConfig;
-		expect(workersResult.rawConfigs.auxiliaryWorkers[0]?.config.name).toBe(
-			"aux-from-config"
-		);
+		const auxWorker = result.environmentNameToWorkerMap.get("aux_from_config");
+		expect(auxWorker).toBeDefined();
+		expect(auxWorker?.config.name).toBe("aux-from-config");
 		// compatibility_date should be filled from defaults
-		expect(
-			workersResult.rawConfigs.auxiliaryWorkers[0]?.config.compatibility_date
-		).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+		expect(auxWorker?.config.compatibility_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 	});
 });

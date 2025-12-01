@@ -12,7 +12,10 @@ import {
 } from "./shared";
 import { debuglog, getOutputDirectory } from "./utils";
 import type { ExportTypes } from "./export-types";
-import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
+import type {
+	ResolvedWorkerConfig,
+	WorkersResolvedConfig,
+} from "./plugin-config";
 import type { MessageEvent, Miniflare, WebSocket } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 
@@ -93,7 +96,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 
 	async initRunner(
 		miniflare: Miniflare,
-		workerConfig: WorkerConfig,
+		workerConfig: ResolvedWorkerConfig,
 		isEntryWorker: boolean
 	): Promise<void> {
 		const response = await miniflare.dispatchFetch(
@@ -119,7 +122,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 
 	async fetchWorkerExportTypes(
 		miniflare: Miniflare,
-		workerConfig: WorkerConfig
+		workerConfig: ResolvedWorkerConfig
 	): Promise<ExportTypes> {
 		// Wait for dependencies to be optimized before making the request
 		await this.depsOptimizer?.init();
@@ -172,7 +175,7 @@ export function createCloudflareEnvironmentOptions({
 	isEntryWorker,
 	hasNodeJsCompat,
 }: {
-	workerConfig: WorkerConfig;
+	workerConfig: ResolvedWorkerConfig;
 	userConfig: vite.UserConfig;
 	mode: vite.ConfigEnv["mode"];
 	environmentName: string;
