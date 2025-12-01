@@ -244,6 +244,8 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			angular: angularTemplate,
 			solid: solidTemplate,
 			qwik: qwikTemplate,
+			vue: vueTemplate,
+			react: reactTemplate,
 		};
 	} else {
 		return {

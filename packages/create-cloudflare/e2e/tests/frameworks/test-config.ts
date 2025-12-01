@@ -818,6 +818,54 @@ function getExperimentalFrameworkTestConfig(
 			nodeCompat: true,
 			verifyTypes: false,
 		},
+		{
+			name: "vue:workers",
+			argv: ["--platform", "workers", "--ts"],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Vite App",
+			},
+			verifyPreview: {
+				previewArgs: ["--host=127.0.0.1"],
+				route: "/",
+				expectedText: "Vite App",
+			},
+			nodeCompat: false,
+			verifyTypes: false,
+		},
+		{
+			name: "react:workers",
+			argv: ["--platform", "workers"],
+			promptHandlers: [
+				{
+					matcher: /Select a variant:/,
+					input: [keys.enter],
+				},
+			],
+			unsupportedOSs: ["win32"],
+			testCommitMessage: true,
+			verifyDeploy: {
+				route: "/",
+				// Note that this is the text in the static HTML that is returned
+				// This React SPA will change this at runtime but we are only making a fetch request
+				// not actually running the client side JS.
+				expectedText: "Vite + React + TS",
+			},
+			verifyPreview: {
+				route: "/",
+				// We need to run the preview on the specific IP address on which we make the request.
+				// By default `vite preview` runs on `localhost` that doesn't always include 127.0.0.1.
+				previewArgs: ["--host=127.0.0.1"],
+				// Note that this is the text in the static HTML that is returned
+				// This React SPA will change this at runtime but we are only making a fetch request
+				// not actually running the client side JS.
+				expectedText: "Vite + React + TS",
+			},
+			nodeCompat: false,
+			verifyTypes: false,
+		},
 	];
 }
 
