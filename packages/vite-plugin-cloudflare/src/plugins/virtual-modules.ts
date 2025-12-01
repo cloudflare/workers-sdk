@@ -26,10 +26,11 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 				const workerConfig = ctx.getWorkerConfig(this.environment.name);
 				assert(workerConfig, "Expected `workerConfig` to be defined");
 				const main = await this.resolve(workerConfig.main);
-				assert(
-					main,
-					`Failed to resolve main entry file "${workerConfig.main}" for environment "${this.environment.name}"`
-				);
+				if (!main) {
+					throw new Error(
+						`Failed to resolve main entry file "${workerConfig.main}" for environment "${this.environment.name}"`
+					);
+				}
 				return main;
 			}
 		},
