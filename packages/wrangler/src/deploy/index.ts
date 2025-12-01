@@ -246,6 +246,7 @@ export const deployCommand = createCommand({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			ASSETS_RPC: false,
+			REALISH_TAIL_LOGS: false,
 		}),
 	},
 	validateArgs(args) {
