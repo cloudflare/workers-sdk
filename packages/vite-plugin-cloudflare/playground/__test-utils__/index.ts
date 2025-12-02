@@ -1,8 +1,15 @@
 import fs from "node:fs";
 import { onTestFinished, test } from "vitest";
+import { isWindows } from "../vitest-setup";
 
 export * from "../vitest-setup";
 export * from "./responses";
+
+/** Common options to use with `vi.waitFor()` */
+export const WAIT_FOR_OPTIONS = {
+	timeout: isWindows ? 10_000 : 5_000,
+	interval: 500,
+};
 
 export function failsIf(condition: boolean) {
 	return condition ? test.fails : test;
