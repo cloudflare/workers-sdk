@@ -4,6 +4,7 @@ import type { NamedEntrypoint } from "../worker-b";
 interface Env {
 	WORKER_B: Fetcher<WorkerB>;
 	NAMED_ENTRYPOINT: Fetcher<NamedEntrypoint>;
+	CONFIGURED_VAR?: string;
 }
 
 export default {
@@ -45,6 +46,17 @@ export default {
 				return Response.json({
 					result,
 				});
+			}
+			case "/config-test": {
+				return Response.json({
+					configuredVar: env.CONFIGURED_VAR,
+				});
+			}
+			case "/config-test/auxiliary": {
+				const response = await env.WORKER_B.fetch(
+					new Request("http://localhost/config-test")
+				);
+				return response;
 			}
 		}
 

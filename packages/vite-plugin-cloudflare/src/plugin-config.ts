@@ -1,18 +1,24 @@
-import assert from "node:assert";
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
+import { defu } from "defu";
 import * as vite from "vite";
+import {
+	unstable_defaultWranglerConfig,
+	unstable_getDevCompatibilityDate,
+	unstable_getWorkerNameFromProject,
+} from "wrangler";
 import { getWorkerConfigs } from "./deploy-config";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import {
-	getDefaultWorkerConfig,
 	getValidatedWranglerConfigPath,
-	getWorkerConfig,
+	readWorkerConfigFromFile,
+	resolveWorkerType,
 } from "./workers-configs";
 import type { Defined } from "./utils";
 import type {
 	AssetsOnlyWorkerResolvedConfig,
-	SanitizedWorkerConfig,
+	NonApplicableConfigMap,
+	WorkerConfig,
 	WorkerResolvedConfig,
 	WorkerWithServerLogicResolvedConfig,
 } from "./workers-configs";
@@ -29,14 +35,27 @@ interface EntryWorkerConfig extends BaseWorkerConfig {
 	configPath?: string;
 }
 
-interface AuxiliaryWorkerConfig extends BaseWorkerConfig {
+interface AuxiliaryWorkerFileConfig extends BaseWorkerConfig {
 	configPath: string;
 }
+
+interface AuxiliaryWorkerInlineConfig extends BaseWorkerConfig {
+	configPath?: string;
+	config: WorkerConfigCustomizer;
+}
+
+type AuxiliaryWorkerConfig =
+	| AuxiliaryWorkerFileConfig
+	| AuxiliaryWorkerInlineConfig;
 
 interface Experimental {
 	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 	headersAndRedirectsDevModeSupport?: boolean;
 }
+
+type WorkerConfigCustomizer =
+	| Partial<WorkerConfig>
+	| ((config: WorkerConfig) => Partial<WorkerConfig> | void);
 
 export interface PluginConfig extends EntryWorkerConfig {
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
@@ -44,20 +63,21 @@ export interface PluginConfig extends EntryWorkerConfig {
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
 	experimental?: Experimental;
+	config?: WorkerConfigCustomizer;
 }
 
-export interface AssetsOnlyConfig extends SanitizedWorkerConfig {
-	topLevelName: Defined<SanitizedWorkerConfig["topLevelName"]>;
-	name: Defined<SanitizedWorkerConfig["name"]>;
-	compatibility_date: Defined<SanitizedWorkerConfig["compatibility_date"]>;
+export interface ResolvedAssetsOnlyConfig extends WorkerConfig {
+	topLevelName: Defined<WorkerConfig["topLevelName"]>;
+	name: Defined<WorkerConfig["name"]>;
+	compatibility_date: Defined<WorkerConfig["compatibility_date"]>;
 }
 
-export interface WorkerConfig extends AssetsOnlyConfig {
-	main: Defined<SanitizedWorkerConfig["main"]>;
+export interface ResolvedWorkerConfig extends ResolvedAssetsOnlyConfig {
+	main: Defined<WorkerConfig["main"]>;
 }
 
 export interface Worker {
-	config: WorkerConfig;
+	config: ResolvedWorkerConfig;
 	nodeJsCompat: NodeJsCompat | undefined;
 }
 
@@ -72,7 +92,7 @@ export interface AssetsOnlyResolvedConfig extends BaseResolvedConfig {
 	type: "assets-only";
 	configPaths: Set<string>;
 	cloudflareEnv: string | undefined;
-	config: AssetsOnlyConfig;
+	config: ResolvedAssetsOnlyConfig;
 	rawConfigs: {
 		entryWorker: AssetsOnlyWorkerResolvedConfig;
 	};
@@ -100,6 +120,83 @@ export type ResolvedPluginConfig =
 	| AssetsOnlyResolvedConfig
 	| WorkersResolvedConfig
 	| PreviewResolvedConfig;
+
+export function customizeWorkerConfig<T extends WorkerConfig>(
+	resolvedConfig: T,
+	config: WorkerConfigCustomizer | undefined
+): T {
+	// The `config` option can either be an object to merge into the worker config,
+	// a function that returns such an object, or a function that mutates the worker config in place.
+	const configResult =
+		typeof config === "function" ? config(resolvedConfig) : config;
+
+	// If the configResult is defined, merge it into the existing config.
+	if (configResult) {
+		return defu(configResult, resolvedConfig) as T;
+	}
+	return resolvedConfig;
+}
+
+/**
+ * Resolves the config for a single worker, applying defaults, file config, and config().
+ */
+function resolveWorkerConfig({
+	configPath,
+	env,
+	config,
+	visitedConfigPaths,
+	isEntryWorker,
+	root,
+}: {
+	configPath: string | undefined;
+	env: string | undefined;
+	config: WorkerConfigCustomizer | undefined;
+	visitedConfigPaths: Set<string>;
+	isEntryWorker: boolean;
+	root: string;
+}): WorkerResolvedConfig {
+	let workerConfig: WorkerConfig;
+	let raw: Unstable_Config;
+	let nonApplicable: NonApplicableConfigMap;
+
+	if (configPath) {
+		// File config already has defaults applied
+		({
+			raw,
+			config: workerConfig,
+			nonApplicable,
+		} = readWorkerConfigFromFile(configPath, env, {
+			visitedConfigPaths,
+		}));
+	} else {
+		// No file: start with defaults
+		workerConfig = { ...unstable_defaultWranglerConfig };
+		raw = structuredClone(workerConfig);
+		nonApplicable = {
+			replacedByVite: new Set(),
+			notRelevant: new Set(),
+		};
+	}
+
+	// Apply config()
+	workerConfig = customizeWorkerConfig(workerConfig, config);
+
+	workerConfig.compatibility_date ??=
+		unstable_getDevCompatibilityDate(undefined);
+
+	if (isEntryWorker) {
+		workerConfig.name ??= unstable_getWorkerNameFromProject(root);
+	}
+	// Auto-populate topLevelName from name
+	workerConfig.topLevelName ??= workerConfig.name;
+
+	return resolveWorkerType(workerConfig, raw, nonApplicable, {
+		isEntryWorker,
+		configPath,
+		root,
+		env,
+	});
+}
 
 export function resolvePluginConfig(
 	pluginConfig: PluginConfig,
@@ -133,19 +230,20 @@ export function resolvePluginConfig(
 
 	const configPaths = new Set<string>();
 	const cloudflareEnv = prefixedEnv.CLOUDFLARE_ENV;
-	const entryWorkerConfigPath = getValidatedWranglerConfigPath(
+	const configPath = getValidatedWranglerConfigPath(
 		root,
 		pluginConfig.configPath
 	);
 
-	// Handle zero-config mode when no wrangler config file is found
-	const entryWorkerResolvedConfig =
-		entryWorkerConfigPath === undefined
-			? getDefaultWorkerConfig(root)
-			: getWorkerConfig(entryWorkerConfigPath, cloudflareEnv, {
-					visitedConfigPaths: configPaths,
-					isEntryWorker: true,
-				});
+	// Build entry worker config: defaults → file config → config()
+	const entryWorkerResolvedConfig = resolveWorkerConfig({
+		root,
+		configPath,
+		env: prefixedEnv.CLOUDFLARE_ENV,
+		config: pluginConfig.config,
+		visitedConfigPaths: configPaths,
+		isEntryWorker: true,
+	});
 
 	if (entryWorkerResolvedConfig.type === "assets-only") {
 		return {
@@ -187,26 +285,22 @@ export function resolvePluginConfig(
 			auxiliaryWorker.configPath,
 			true
 		);
-		const workerResolvedConfig = getWorkerConfig(
-			workerConfigPath,
-			cloudflareEnv,
-			{
-				visitedConfigPaths: configPaths,
-			}
-		);
+
+		// Build auxiliary worker config: defaults → file config → config()
+		const workerResolvedConfig = resolveWorkerConfig({
+			root,
+			configPath: workerConfigPath,
+			env: cloudflareEnv,
+			config: "config" in auxiliaryWorker ? auxiliaryWorker.config : undefined,
+			visitedConfigPaths: configPaths,
+			isEntryWorker: false,
+		});
 
 		auxiliaryWorkersResolvedConfigs.push(workerResolvedConfig);
 
-		assert(
-			workerResolvedConfig.type === "worker",
-			"Unexpected error: received AssetsOnlyResult with auxiliary workers."
-		);
-
-		const workerConfig = workerResolvedConfig.config;
-
 		const workerEnvironmentName =
 			auxiliaryWorker.viteEnvironment?.name ??
-			workerNameToEnvironmentName(workerConfig.topLevelName);
+			workerNameToEnvironmentName(workerResolvedConfig.config.topLevelName);
 
 		if (environmentNameToWorkerMap.has(workerEnvironmentName)) {
 			throw new Error(
@@ -216,7 +310,7 @@ export function resolvePluginConfig(
 
 		environmentNameToWorkerMap.set(
 			workerEnvironmentName,
-			resolveWorker(workerConfig)
+			resolveWorker(workerResolvedConfig.config as ResolvedWorkerConfig)
 		);
 	}
 
@@ -241,7 +335,7 @@ function workerNameToEnvironmentName(workerName: string) {
 	return workerName.replaceAll("-", "_");
 }
 
-function resolveWorker(workerConfig: WorkerConfig) {
+function resolveWorker(workerConfig: ResolvedWorkerConfig) {
 	return {
 		config: workerConfig,
 		nodeJsCompat: hasNodeJsCompat(workerConfig)
