@@ -11,7 +11,7 @@ import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
 import { getSubdomainValues } from "../triggers/deploy";
@@ -15079,7 +15079,7 @@ export default{
 			`);
 		});
 
-		test("environments with redirected config", async ({ expect }) => {
+		test("environments with redirected config", async () => {
 			mockGetScriptWithTags(["some-tag"]);
 			mockUploadWorkerRequest({
 				expectedScriptName: "test-name-production",
@@ -15283,6 +15283,32 @@ export default{
 
 				"
 			`);
+		});
+
+		it("should not present a diff warning to the user when there are differences between the local config (json/jsonc) and the dash config in dry-run mode", async () => {
+			writeWorkerSource();
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					workers_dev: true,
+					preview_urls: true,
+					vars: {
+						MY_VAR: 123,
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.json"
+			);
+
+			// Note: we don't set any mocks here since in dry-run we don't expect wragnler to interact
+			//       with the rest API in any way
+
+			await runWrangler("deploy --dry-run");
+
+			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should present a diff warning to the user when there are differences between the local config (toml) and the dash config", async () => {
@@ -15599,11 +15625,41 @@ export default{
 
 			await runWrangler("deploy");
 
+			expect(fetchSecrets).toHaveBeenCalled();
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
 				"▲ [WARNING] Environment variable \`MY_SECRET\` conflicts with an existing remote secret. This deployment will replace the remote secret with your environment variable.
 
 				"
 			`);
+		});
+
+		it("should not fetch remote secrets in dry-run mode", async () => {
+			writeWorkerSource();
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					vars: {
+						MY_SECRET: 123,
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.json"
+			);
+
+			// Note: we don't set any mocks here since in dry-run we don't expect wragnler to interact
+			//       with the rest API in any way
+
+			vi.mocked(fetchSecrets).mockResolvedValue([
+				{ name: "MY_SECRET", type: "secret_text" },
+			]);
+
+			await runWrangler("deploy --dry-run");
+
+			expect(fetchSecrets).not.toHaveBeenCalled();
+			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should abort the deployment when it would (likely unintentionally) override remote secrets in non-interactive strict mode", async () => {
@@ -15651,6 +15707,8 @@ export default{
 			]);
 
 			await runWrangler("deploy --strict");
+
+			expect(fetchSecrets).toHaveBeenCalled();
 
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
 				"▲ [WARNING] Environment variable \`MY_SECRET\` conflicts with an existing remote secret. This deployment will replace the remote secret with your environment variable.

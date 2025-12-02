@@ -796,7 +796,7 @@ describe("hyperdrive dev tests", () => {
 		});
 
 		const { url } = await worker.waitForReady();
-		const socketMsgPromise = new Promise((resolve, _) => {
+		const socketMsgPromise = new Promise((resolve, reject) => {
 			server.on("connection", (socket) => {
 				socket.on("data", (chunk) => {
 					if (POSTGRES_SSL_REQUEST_PACKET.equals(chunk)) {
@@ -806,6 +806,10 @@ describe("hyperdrive dev tests", () => {
 					expect(new TextDecoder().decode(chunk)).toBe("test string");
 					server.close();
 					resolve({});
+				});
+				socket.on("error", (err) => {
+					console.error("Socket error:", err);
+					reject(err);
 				});
 			});
 		});

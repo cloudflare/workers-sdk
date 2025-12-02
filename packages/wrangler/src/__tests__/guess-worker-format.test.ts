@@ -1,5 +1,6 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
+import { describe, expect, it } from "vitest";
 import { guessWorkerFormat } from "../deployment-bundle/guess-worker-format";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";

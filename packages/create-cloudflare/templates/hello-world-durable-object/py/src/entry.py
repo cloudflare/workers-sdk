@@ -30,7 +30,7 @@ class MyDurableObject(DurableObject):
         super().__init__(ctx, env)
 
     """
-     * The Durable Object exposes an RPC method `say_hello` which will be invoked when when a Durable
+     * The Durable Object exposes an RPC method `say_hello` which will be invoked when a Durable
      *  Object instance receives a request from a Worker via the same method invocation on the stub
      *
      * @param {string} name - The name provided to a Durable Object instance from a Worker

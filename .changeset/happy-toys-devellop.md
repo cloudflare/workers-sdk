@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": patch
+"create-cloudflare": minor
 ---
 
-Support Tanstack in autoconfig `--experimental` flow
+Support TanStack Start in autoconfig `--experimental` flow

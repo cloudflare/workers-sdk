@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Remove uses `eval()` from the Wrangler bundle
+Remove uses of `eval()` from the Wrangler bundle

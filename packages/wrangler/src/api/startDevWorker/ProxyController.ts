@@ -269,6 +269,9 @@ export class ProxyController extends Controller {
 
 			webSocket = new WebSocket(inspectorProxyWorkerUrl, {
 				headers: { Authorization: this.secret },
+				// If compression is on, we sometimes get race conditions with MockHttpSocket closing down
+				// while the deflate extension is still trying to send decompressed chunks.
+				perMessageDeflate: false,
 			});
 		} catch (cause) {
 			if (this._torndown) {

@@ -1,4 +1,5 @@
 import { setImmediate } from "node:timers/promises";
+import { describe, expect, test } from "vitest";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runWrangler } from "../helpers/run-wrangler";
 

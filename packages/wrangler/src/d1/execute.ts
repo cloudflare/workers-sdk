@@ -620,14 +620,17 @@ function shorten(query: string | undefined, length: number) {
 
 async function checkForSQLiteBinary(filename: string) {
 	const buffer = Buffer.alloc(15);
+	let fd: fs.FileHandle | undefined;
 
 	try {
-		const fd = await fs.open(filename, "r");
+		fd = await fs.open(filename, "r");
 		await fd.read(buffer, 0, 15);
 	} catch {
 		throw new UserError(
 			`Unable to read SQL text file "${filename}". Please check the file path and try again.`
 		);
+	} finally {
+		await fd?.close();
 	}
 
 	if (buffer.toString("utf8") === "SQLite format 3") {

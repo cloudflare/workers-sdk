@@ -473,7 +473,7 @@ export default async function deploy(props: Props): Promise<{
 		}
 	}
 
-	if (isInteractive() || props.strict) {
+	if (accountId && (isInteractive() || props.strict)) {
 		const remoteSecretsCheck = await checkRemoteSecretsOverride(
 			config,
 			props.env
