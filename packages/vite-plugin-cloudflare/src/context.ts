@@ -8,7 +8,7 @@ import type {
 	AssetsOnlyResolvedConfig,
 	PreviewResolvedConfig,
 	ResolvedPluginConfig,
-	WorkerConfig,
+	ResolvedWorkerConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type { MiniflareOptions } from "miniflare";
@@ -140,7 +140,7 @@ export class PluginContext {
 		return this.#resolvedViteConfig;
 	}
 
-	getWorkerConfig(environmentName: string): WorkerConfig | undefined {
+	getWorkerConfig(environmentName: string): ResolvedWorkerConfig | undefined {
 		return this.resolvedPluginConfig.type === "workers"
 			? this.resolvedPluginConfig.environmentNameToWorkerMap.get(
 					environmentName
@@ -148,7 +148,7 @@ export class PluginContext {
 			: undefined;
 	}
 
-	get entryWorkerConfig(): WorkerConfig | undefined {
+	get entryWorkerConfig(): ResolvedWorkerConfig | undefined {
 		if (this.resolvedPluginConfig.type !== "workers") {
 			return;
 		}

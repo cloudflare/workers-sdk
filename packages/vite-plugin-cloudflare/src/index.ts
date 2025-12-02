@@ -23,6 +23,7 @@ import type { SharedContext } from "./context";
 import type { PluginConfig } from "./plugin-config";
 
 export type { PluginConfig } from "./plugin-config";
+export type { WorkerConfig } from "./workers-configs";
 
 const sharedContext: SharedContext = {
 	hasShownWorkerConfigWarnings: false,
