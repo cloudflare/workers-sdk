@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": patch
+"create-cloudflare": minor
 ---
 
-Support Nuxt in `--experimental` mode
+Support Nuxt in autoconfig `--experimental` flow
