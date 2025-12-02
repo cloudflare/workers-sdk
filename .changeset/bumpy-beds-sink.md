@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": patch
+"create-cloudflare": minor
 ---
 
-Support SolidStart in `--experimental` mode
+Support SolidStart in autoconfig `--experimental` flow

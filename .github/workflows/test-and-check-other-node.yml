@@ -52,8 +52,8 @@ jobs:
         # We are running the package tests first be able to get early feedback on changes.
         # There is no point in running the fixtures if a package is broken.
         if: ${{
-          matrix.node_version != 24 ||
-          contains(github.event.pull_request.labels.*.name, 'test on node 24')
+          steps.changes.outputs.everything_but_markdown == 'true' &&
+          (matrix.node_version != 24 || contains(github.event.pull_request.labels.*.name, 'test on node 24'))
           }}
         run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*"
         env:
