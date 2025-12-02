@@ -4,7 +4,7 @@
 
 ### Minor Changes
 
-- [#11435](https://github.com/cloudflare/workers-sdk/pull/11435) [`ccf877e`](https://github.com/cloudflare/workers-sdk/commit/ccf877ea1a45e90e5aa7162624649220730920b9) Thanks [@penalosa](https://github.com/penalosa)! - Return `tail_url` from Worker uploads
+- [#11435](https://github.com/cloudflare/workers-sdk/pull/11435) [`ccf877e`](https://github.com/cloudflare/workers-sdk/commit/ccf877ea1a45e90e5aa7162624649220730920b9) Thanks [@penalosa](https://github.com/penalosa)! - Return `tail_url` from Worker upload s
 
 ## 0.1.7
 
