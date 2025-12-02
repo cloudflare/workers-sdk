@@ -30,7 +30,10 @@ export const d1MigrationsApplyCommand = createCommand({
 		captured.
 
 		If applying a migration results in an error, this migration will be rolled back,
-		and the previous successful migration will remain applied.`,
+		and the previous successful migration will remain applied.
+
+		This command acts on local D1 Databases by default.
+		`,
 		status: "stable",
 		owner: "Product: D1",
 	},

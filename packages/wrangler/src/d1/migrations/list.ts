@@ -16,6 +16,7 @@ export const d1MigrationsListCommand = createCommand({
 		description: "View a list of unapplied migration files",
 		status: "stable",
 		owner: "Product: D1",
+		epilogue: "This command acts on local D1 Databases by default.",
 	},
 	behaviour: {
 		printResourceLocation: true,
