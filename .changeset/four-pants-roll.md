@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
 Improve the `wrangler deploy` flow to also check for potential overrides of [secrets](https://developers.cloudflare.com/workers/configuration/secrets/).

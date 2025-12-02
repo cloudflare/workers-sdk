@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": patch
+"create-cloudflare": minor
 ---
 
-Support Angular in `--experimental` mode
+Support Angular in autoconfig `--experimental` flow
