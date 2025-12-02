@@ -1,4 +1,4 @@
 {
 	"extends": ["@cloudflare/workers-tsconfig/worker.json"],
-	"include": ["worker-a", "worker-b"]
+	"include": ["worker-a", "worker-b", "worker-c", "worker-d"]
 }
