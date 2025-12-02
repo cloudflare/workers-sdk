@@ -58,6 +58,9 @@ function embedWorkersPlugin() {
 
 export default defineConfig({
 	plugins: [embedWorkersPlugin()],
+	build: {
+		sourcemap: false,
+	},
 	test: {
 		testTimeout: 15_000,
 		pool: "forks",
