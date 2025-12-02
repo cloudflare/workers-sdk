@@ -34,7 +34,6 @@ export class Qwik extends Framework {
 			await runCommand(cmd);
 
 			addBindingsProxy(projectPath);
-			populateCloudflareEnv();
 
 			await addAssetsIgnoreFile(projectPath);
 		}
@@ -131,40 +130,6 @@ function addBindingsProxy(projectPath: string) {
 	});
 
 	s.stop(`${brandColor("updated")} \`vite.config.ts\``);
-}
-
-function populateCloudflareEnv() {
-	const entrypointPath = "src/entry.cloudflare-pages.tsx";
-
-	const s = spinner();
-	s.start(`Updating \`${entrypointPath}\``);
-
-	transformFile(entrypointPath, {
-		visitTSInterfaceDeclaration: function (n) {
-			const b = recast.types.builders;
-			const id = n.node.id as recast.types.namedTypes.Identifier;
-			if (id.name !== "QwikCityPlatform") {
-				this.traverse(n);
-			}
-
-			const newBody = [
-				["env", "Env"],
-				// Qwik doesn't supply `cf` to the platform object. Should they do so, uncomment this
-				// ["cf", "CfProperties"],
-			].map(([varName, type]) =>
-				b.tsPropertySignature(
-					b.identifier(varName),
-					b.tsTypeAnnotation(b.tsTypeReference(b.identifier(type)))
-				)
-			);
-
-			n.node.body.body = newBody;
-
-			return false;
-		},
-	});
-
-	s.stop(`${brandColor("updated")} \`${entrypointPath}\``);
 }
 
 async function addAssetsIgnoreFile(projectPath: string) {
