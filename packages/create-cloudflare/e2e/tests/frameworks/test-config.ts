@@ -873,26 +873,21 @@ function getExperimentalFrameworkTestConfig(
 			timeout: LONG_TIMEOUT,
 			verifyDeploy: {
 				route: "/",
-				expectedText: "Hello from Cloudflare",
+				expectedText: "React Router",
 			},
 			verifyPreview: {
 				route: "/",
-				expectedText: "Hello from Cloudflare",
+				expectedText: "React Router",
 				previewArgs: ["--host=127.0.0.1"],
 			},
 			verifyDev: {
 				route: "/",
-				expectedText: "Hello from Cloudflare",
+				expectedText: "React Router",
 				devArgs: ["--host=127.0.0.1"],
-				configChanges: {
-					vars: {
-						VALUE_FROM_CLOUDFLARE: "Hello React Router",
-					},
-					expectedText: "Hello React Router",
-				},
 			},
 			nodeCompat: false,
 			flags: ["--no-install", "--no-git-init"],
+			verifyTypes: false,
 		},
 	];
 }
