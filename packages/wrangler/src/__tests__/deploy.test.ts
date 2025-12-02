@@ -15847,8 +15847,7 @@ export default{
 
 		assert(deployOutputEntry?.type === "deploy");
 
-		expect(deployOutputEntry.experimental_autoconfig_summary)
-			.toMatchInlineSnapshot(`
+		expect(deployOutputEntry.autoconfig_summary).toMatchInlineSnapshot(`
 			Object {
 			  "scripts": Object {
 			    "build": "npm run build-my-static-site",
@@ -15896,7 +15895,7 @@ export default{
 
 		assert(deployOutputEntry?.type === "deploy");
 
-		expect(deployOutputEntry.experimental_autoconfig_summary).toBeUndefined();
+		expect(deployOutputEntry.autoconfig_summary).toBeUndefined();
 	});
 });
 

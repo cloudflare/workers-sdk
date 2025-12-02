@@ -100,7 +100,7 @@ interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	/** wrangler environment used */
 	wrangler_environment: string | undefined;
 	/** The summary of the autoconfig process if it did run, undefined if autoconfig didn't run. */
-	experimental_autoconfig_summary: AutoConfigSummary | undefined;
+	autoconfig_summary: AutoConfigSummary | undefined;
 }
 
 interface OutputEntryPagesDeployment extends OutputEntryBase<"pages-deploy"> {

@@ -428,7 +428,7 @@ export const deployCommand = createCommand({
 			targets,
 			wrangler_environment: args.env,
 			worker_name_overridden: workerNameOverridden,
-			experimental_autoconfig_summary: autoConfigSummary,
+			autoconfig_summary: autoConfigSummary,
 		});
 
 		metrics.sendMetricsEvent(
