@@ -1,5 +1,65 @@
 # create-cloudflare
 
+## 2.57.0
+
+### Minor Changes
+
+- [#11478](https://github.com/cloudflare/workers-sdk/pull/11478) [`2aec2b4`](https://github.com/cloudflare/workers-sdk/commit/2aec2b4e0ef710ec7e3897f823eca38d22991662) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support SolidStart in autoconfig `--experimental` flow
+
+- [#11375](https://github.com/cloudflare/workers-sdk/pull/11375) [`9a1de61`](https://github.com/cloudflare/workers-sdk/commit/9a1de617412f610a332f2516f4d61bec12556919) Thanks [@penalosa](https://github.com/penalosa)! - Support TanStack Start in autoconfig `--experimental` flow
+
+- [#11330](https://github.com/cloudflare/workers-sdk/pull/11330) [`5a873bb`](https://github.com/cloudflare/workers-sdk/commit/5a873bbb0f018b02cf26a48da59c5389ef306589) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Angular in autoconfig `--experimental` flow
+
+### Patch Changes
+
+- [#11448](https://github.com/cloudflare/workers-sdk/pull/11448) [`2b4813b`](https://github.com/cloudflare/workers-sdk/commit/2b4813b18076817bb739491246313c32b403651f) Thanks [@edmundhung](https://github.com/edmundhung)! - Builds package with esbuild `v0.27.0`
+
+- [#11385](https://github.com/cloudflare/workers-sdk/pull/11385) [`e51aa7a`](https://github.com/cloudflare/workers-sdk/commit/e51aa7a5573d602c43762331fae8b4f1e75cfb20) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To     |
+  | ---------------------- | ------ | ------ |
+  | @tanstack/create-start | 0.36.2 | 0.37.2 |
+
+- [#11386](https://github.com/cloudflare/workers-sdk/pull/11386) [`8e8ab6f`](https://github.com/cloudflare/workers-sdk/commit/8e8ab6f2ce0cb3acf0545d72d86b3a5280b033a3) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.9.14 | 0.10.5 |
+
+- [#11473](https://github.com/cloudflare/workers-sdk/pull/11473) [`efac6c5`](https://github.com/cloudflare/workers-sdk/commit/efac6c58f9fadba777d584f20dfbea56ea9e772d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.18.2 | 3.18.3 |
+
+- [#11474](https://github.com/cloudflare/workers-sdk/pull/11474) [`b4dc50b`](https://github.com/cloudflare/workers-sdk/commit/b4dc50b1f761982dfcbbd4ec3432f114d7f84978) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.0.0 | 21.0.1 |
+
+- [#11475](https://github.com/cloudflare/workers-sdk/pull/11475) [`452a300`](https://github.com/cloudflare/workers-sdk/commit/452a3009c16d2838a15b784c31d749018987ca4f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To     |
+  | ---------------------- | ------ | ------ |
+  | @tanstack/create-start | 0.37.2 | 0.40.0 |
+
+- [#11478](https://github.com/cloudflare/workers-sdk/pull/11478) [`2aec2b4`](https://github.com/cloudflare/workers-sdk/commit/2aec2b4e0ef710ec7e3897f823eca38d22991662) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove unnecessary nitropack installation
+
+- [#11480](https://github.com/cloudflare/workers-sdk/pull/11480) [`86d1e25`](https://github.com/cloudflare/workers-sdk/commit/86d1e257a58a1c9d98879c2deafa90a23f989d81) Thanks [@Hypercookie](https://github.com/Hypercookie)! - fix typos in `hello-world-durable-object` templates
+
+- [#11330](https://github.com/cloudflare/workers-sdk/pull/11330) [`5a873bb`](https://github.com/cloudflare/workers-sdk/commit/5a873bbb0f018b02cf26a48da59c5389ef306589) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update the Angular starter to set a `preview` script instead of a `start` one
+
 ## 2.56.0
 
 ### Minor Changes
