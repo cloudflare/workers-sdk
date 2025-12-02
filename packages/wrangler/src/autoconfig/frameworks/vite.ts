@@ -4,9 +4,10 @@ import { transformViteConfig } from "./utils";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
-export class TanstackStart extends Framework {
+export class Vite extends Framework {
 	async configure({
 		dryRun,
+		outputDir,
 		projectPath,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
@@ -16,16 +17,15 @@ export class TanstackStart extends Framework {
 				doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
 			});
 
-			transformViteConfig(projectPath, { viteEnvironmentName: "ssr" });
+			transformViteConfig(projectPath);
 		}
 
 		return {
 			wranglerConfig: {
-				compatibility_flags: ["nodejs_compat"],
-				main: "@tanstack/react-start/server-entry",
+				assets: {
+					directory: outputDir,
+				},
 			},
 		};
 	}
-
-	configurationDescription = "Configuring project for Tanstack Start";
 }
