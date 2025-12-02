@@ -1,5 +1,5 @@
 import { expect, test, vi } from "vitest";
-import { getTextResponse } from "../../../__test-utils__";
+import { getTextResponse, WAIT_FOR_OPTIONS } from "../../../__test-utils__";
 
 test("crypto.X509Certificate is implemented", async () => {
 	await vi.waitFor(async () => {
@@ -21,5 +21,5 @@ test("crypto.X509Certificate is implemented", async () => {
 	-----END CERTIFICATE-----
 	"
 	`);
-	});
+	}, WAIT_FOR_OPTIONS);
 });
