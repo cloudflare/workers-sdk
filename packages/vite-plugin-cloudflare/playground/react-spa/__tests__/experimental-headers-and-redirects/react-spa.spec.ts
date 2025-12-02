@@ -1,7 +1,13 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test, vi } from "vitest";
-import { failsIf, isBuild, page, viteTestUrl } from "../../../__test-utils__";
+import {
+	failsIf,
+	isBuild,
+	page,
+	viteTestUrl,
+	WAIT_FOR_OPTIONS,
+} from "../../../__test-utils__";
 
 describe(
 	"react-spa (with experimental support)",
@@ -111,7 +117,7 @@ describe("reloading the server", () => {
 					redirect: "manual",
 				});
 				expect(redirectAfter.status).not.toBe(302);
-			});
+			}, WAIT_FOR_OPTIONS);
 		}
 	);
 });
