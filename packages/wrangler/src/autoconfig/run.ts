@@ -13,7 +13,11 @@ import { confirmAutoConfigDetails, displayAutoConfigDetails } from "./details";
 import { Static } from "./frameworks/static";
 import { usesTypescript } from "./uses-typescript";
 import type { PackageJsonScriptsOverrides } from "./frameworks";
-import type { AutoConfigDetails, AutoConfigOptions } from "./types";
+import type {
+	AutoConfigDetails,
+	AutoConfigOptions,
+	AutoConfigSummary,
+} from "./types";
 import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
 type AutoConfigMetrics = Pick<
@@ -26,7 +30,7 @@ type AutoConfigMetrics = Pick<
 export async function runAutoConfig(
 	autoConfigDetails: AutoConfigDetails,
 	autoConfigOptions: AutoConfigOptions = {}
-): Promise<void> {
+): Promise<AutoConfigSummary> {
 	const dryRun = autoConfigOptions.dryRun === true;
 	const runBuild = !dryRun && (autoConfigOptions.runBuild ?? true);
 	const skipConfirmations =
@@ -82,7 +86,7 @@ export async function runAutoConfig(
 			dryRun: true,
 		});
 
-	const modifications = await buildOperationsSummary(autoConfigDetails, {
+	const autoConfigSummary = await buildOperationsSummary(autoConfigDetails, {
 		...wranglerConfig,
 		...dryRunConfigurationResults?.wranglerConfig,
 	});
@@ -96,14 +100,31 @@ export async function runAutoConfig(
 			`✋  ${"Autoconfig process run in dry-run mode, existing now."}`
 		);
 		logger.log("");
-		return;
+		return autoConfigSummary;
 	}
 
 	logger.debug(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (modifications.wranglerInstall) {
+	if (autoConfigDetails.packageJson) {
+		await writeFile(
+			resolve(autoConfigDetails.projectPath, "package.json"),
+			JSON.stringify(
+				{
+					...autoConfigDetails.packageJson,
+					scripts: {
+						...autoConfigDetails.packageJson.scripts,
+						...autoConfigSummary.scripts,
+					},
+				},
+				null,
+				2
+			)
+		);
+	}
+
+	if (autoConfigSummary.wranglerInstall) {
 		await installWrangler();
 	}
 
@@ -140,7 +161,7 @@ export async function runAutoConfig(
 					scripts: {
 						...existingPackageJson.scripts,
 						...autoConfigDetails.packageJson.scripts,
-						...modifications.scripts,
+						...autoConfigSummary.scripts,
 					},
 				} satisfies PackageJSON,
 				null,
@@ -188,34 +209,31 @@ export async function runAutoConfig(
 		{}
 	);
 
-	return;
+	return autoConfigSummary;
 }
-
-type Modifications = {
-	wranglerInstall: boolean;
-	scripts: Record<string, string>;
-};
 
 export async function buildOperationsSummary(
 	autoConfigDetails: AutoConfigDetails,
 	wranglerConfigToWrite: RawConfig,
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
-): Promise<Modifications> {
+): Promise<AutoConfigSummary> {
 	logger.log("");
 
-	const modifications: Modifications = {
+	const summary: AutoConfigSummary = {
 		wranglerInstall: false,
 		scripts: {},
+		wranglerConfig: wranglerConfigToWrite,
 	};
+
 	if (autoConfigDetails.packageJson) {
 		// If there is a package.json file we will want to install wrangler
-		modifications.wranglerInstall = true;
+		summary.wranglerInstall = true;
 
 		logger.log("📦 Install packages:");
 		logger.log(` - wrangler (devDependency)`);
 		logger.log("");
 
-		modifications.scripts = {
+		summary.scripts = {
 			deploy:
 				packageJsonScriptsOverrides?.deploy ??
 				(autoConfigDetails.buildCommand
@@ -236,12 +254,12 @@ export async function buildOperationsSummary(
 			usesTypescript(autoConfigDetails.projectPath) &&
 			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
 		) {
-			modifications.scripts["cf-typegen"] =
+			summary.scripts["cf-typegen"] =
 				packageJsonScriptsOverrides?.typegen ?? "wrangler types";
 		}
 
 		logger.log("📝 Update package.json scripts:");
-		for (const [name, script] of Object.entries(modifications.scripts)) {
+		for (const [name, script] of Object.entries(summary.scripts)) {
 			logger.log(` - "${name}": "${script}"`);
 		}
 		logger.log("");
@@ -258,14 +276,13 @@ export async function buildOperationsSummary(
 		!(autoConfigDetails.framework instanceof Static) &&
 		!autoConfigDetails.framework.configured
 	) {
-		logger.log(
-			`🛠️  ${
-				autoConfigDetails.framework.configurationDescription ??
-				`Configuring project for ${autoConfigDetails.framework.name}`
-			}`
-		);
+		summary.frameworkConfiguration =
+			autoConfigDetails.framework.configurationDescription ??
+			`Configuring project for ${autoConfigDetails.framework.name}`;
+
+		logger.log(`🛠️  ${summary.frameworkConfiguration}`);
 		logger.log("");
 	}
 
-	return modifications;
+	return summary;
 }

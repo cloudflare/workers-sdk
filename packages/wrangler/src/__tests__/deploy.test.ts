@@ -3,6 +3,7 @@ import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
+import { readFile } from "node:fs/promises";
 import * as path from "node:path";
 import {
 	APIError,
@@ -15,7 +16,19 @@ import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
+import {
+	afterEach,
+	assert,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	test,
+	vi,
+} from "vitest";
+import { getDetailsForAutoConfig } from "../autoconfig/details";
+import { Static } from "../autoconfig/frameworks/static";
+import { runAutoConfig } from "../autoconfig/run";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
 import { getSubdomainValues } from "../triggers/deploy";
@@ -72,6 +85,7 @@ import {
 } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
+import type { OutputEntry } from "../output";
 import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
 import type {
 	Config,
@@ -103,6 +117,9 @@ vi.mock("../package-manager", async (importOriginal) => ({
 		};
 	},
 }));
+
+vi.mock("../autoconfig/details");
+vi.mock("../autoconfig/run");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -15785,6 +15802,101 @@ export default{
 			//       to set a non-zero exit code
 			expect(process.exitCode).not.toBe(0);
 		});
+	});
+
+	it("should output a deploy output entry to WRANGLER_OUTPUT_FILE_PATH containing a field with the autoconfig summary if autoconfig run", async () => {
+		const outputFile = "./output.json";
+
+		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
+			configured: false,
+			framework: new Static("static"),
+			workerName: "my-site",
+			projectPath: ".",
+		});
+
+		vi.mocked(runAutoConfig).mockImplementation(async () => {
+			const wranglerConfig = {
+				name: "my-site",
+				compatibility_date: "2025-12-02",
+				assets: {
+					directory: ".",
+				},
+			};
+
+			writeWranglerConfig(wranglerConfig);
+
+			return {
+				scripts: {
+					build: "npm run build-my-static-site",
+				},
+				wranglerInstall: true,
+				wranglerConfig,
+			};
+		});
+
+		await runWrangler("deploy --x-autoconfig --dry-run", {
+			...process.env,
+			WRANGLER_OUTPUT_FILE_PATH: outputFile,
+		});
+
+		const deployOutputEntry = (await readFile(outputFile, "utf8"))
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line))
+			.find((obj) => obj.type === "deploy") as OutputEntry | undefined;
+
+		assert(deployOutputEntry?.type === "deploy");
+
+		expect(deployOutputEntry.experimental_autoconfig_summary)
+			.toMatchInlineSnapshot(`
+			Object {
+			  "scripts": Object {
+			    "build": "npm run build-my-static-site",
+			  },
+			  "wranglerConfig": Object {
+			    "assets": Object {
+			      "directory": ".",
+			    },
+			    "compatibility_date": "2025-12-02",
+			    "name": "my-site",
+			  },
+			  "wranglerInstall": true,
+			}
+		`);
+	});
+
+	it("should output a deploy output entry to WRANGLER_OUTPUT_FILE_PATH not containing a field with the autoconfig summary if autoconfig didn't run", async () => {
+		const outputFile = "./output.json";
+
+		writeWranglerConfig({
+			name: "worker-name",
+			compatibility_date: "2025-12-02",
+			assets: {
+				directory: ".",
+			},
+		});
+
+		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
+			configured: true,
+			framework: new Static("static"),
+			workerName: "my-worker",
+			projectPath: ".",
+		});
+
+		await runWrangler("deploy --x-autoconfig --dry-run", {
+			...process.env,
+			WRANGLER_OUTPUT_FILE_PATH: outputFile,
+		});
+
+		const deployOutputEntry = (await readFile(outputFile, "utf8"))
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line))
+			.find((obj) => obj.type === "deploy") as OutputEntry | undefined;
+
+		assert(deployOutputEntry?.type === "deploy");
+
+		expect(deployOutputEntry.experimental_autoconfig_summary).toBeUndefined();
 	});
 });
 
