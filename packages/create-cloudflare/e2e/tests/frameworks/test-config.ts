@@ -866,6 +866,34 @@ function getExperimentalFrameworkTestConfig(
 			nodeCompat: false,
 			verifyTypes: false,
 		},
+		{
+			name: "react-router",
+			unsupportedOSs: ["win32"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello from Cloudflare",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Hello from Cloudflare",
+				previewArgs: ["--host=127.0.0.1"],
+			},
+			verifyDev: {
+				route: "/",
+				expectedText: "Hello from Cloudflare",
+				devArgs: ["--host=127.0.0.1"],
+				configChanges: {
+					vars: {
+						VALUE_FROM_CLOUDFLARE: "Hello React Router",
+					},
+					expectedText: "Hello React Router",
+				},
+			},
+			nodeCompat: false,
+			flags: ["--no-install", "--no-git-init"],
+		},
 	];
 }
 

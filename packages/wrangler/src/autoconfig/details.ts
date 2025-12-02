@@ -124,6 +124,15 @@ export async function getDetailsForAutoConfig({
 
 	const buildSettings = await project.getBuildSettings();
 
+	// Workaround for https://github.com/netlify/build/pull/6806, and can be removed once merged
+	if (
+		buildSettings.length === 2 &&
+		buildSettings[0].framework.id === "react-router" &&
+		buildSettings[1].framework.id === "vite"
+	) {
+		buildSettings.pop();
+	}
+
 	// If we've detected multiple frameworks, it's too complex for us to try and configure—let's just bail
 	if (buildSettings && buildSettings?.length > 1) {
 		throw new MultipleFrameworksError(buildSettings.map((b) => b.name));
