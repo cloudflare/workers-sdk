@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Use correctly-formatted names when displayed detected framework details
+Use correctly-formatted names when displaying detected framework details
