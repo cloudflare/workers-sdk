@@ -69,7 +69,7 @@ export const WorkerdTests: Record<string, () => void> = {
 			"expected `console` to be the same as `consoleImport.default`"
 		);
 
-		assertTypeOf(importNamespace.default, "object", "consoleImport.default");
+		assertTypeOf(importNamespace, "default", "object");
 
 		for (const target of [importNamespace, globalObject]) {
 			assertTypeOfProperties(target, {
