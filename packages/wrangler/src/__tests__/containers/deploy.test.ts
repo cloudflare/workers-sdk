@@ -109,6 +109,10 @@ describe("wrangler deploy with containers", () => {
 					getCloudflareContainerRegistry() +
 					"/some-account-id/my-container:Galaxy",
 			},
+			durable_objects: {
+				// uses namespace_id when the DO is a binding
+				namespace_id: "1",
+			},
 		});
 
 		await runWrangler("deploy index.js");
@@ -692,6 +696,12 @@ describe("wrangler deploy with containers", () => {
 					},
 				],
 			},
+			migrations: [
+				{
+					tag: "v1",
+					new_sqlite_classes: ["DurableObjectClass2", "ExampleDurableObject"],
+				},
+			],
 			containers: [
 				DEFAULT_CONTAINER_FROM_DOCKERFILE,
 				{
@@ -1970,6 +1980,255 @@ describe("wrangler deploy with containers", () => {
 			"
 		`);
 	});
+
+	describe("ctx.exports", async () => {
+		// note how mockGetVersion is NOT mocked in any of these
+		it("should be able to deploy a new container", async () => {
+			writeWranglerConfig({
+				// no DO!
+				migrations: [
+					{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+				],
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						rollout_active_grace_period: 600,
+					},
+				],
+			});
+
+			mockGetApplications([]);
+			mockListDurableObjects([
+				{
+					id: "some-id",
+					name: "name",
+					script: "test-name",
+					class: "ExampleDurableObject",
+				},
+			]);
+			mockUploadWorkerRequest({
+				expectedBindings: [],
+				useOldUploadApi: true,
+				expectedContainers: [{ class_name: "ExampleDurableObject" }],
+			});
+			mockCreateApplication({
+				name: "my-container",
+				max_instances: 10,
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				rollout_active_grace_period: 600,
+				durable_objects: {
+					namespace_id: "some-id",
+				},
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ NEW my-container
+				│
+				│   [[containers]]
+				│   name = \\"my-container\\"
+				│   scheduling_policy = \\"default\\"
+				│   instances = 0
+				│   max_instances = 10
+				│   rollout_active_grace_period = 600
+				│
+				│   [containers.configuration]
+				│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+				│   instance_type = \\"lite\\"
+				│
+				│   [containers.constraints]
+				│   tier = 1
+				│
+				│   [containers.durable_objects]
+				│   namespace_id = \\"some-id\\"
+				│
+				│
+				│  SUCCESS  Created application my-container (Application ID: undefined)
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
+
+		it("should error if a container name has been used before but attached to a different DO", async () => {
+			writeWranglerConfig({
+				migrations: [
+					{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+				],
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						rollout_active_grace_period: 600,
+					},
+				],
+			});
+
+			mockGetApplications([
+				{
+					id: "abc",
+					name: "my-container",
+					instances: 0,
+					max_instances: 10,
+					created_at: new Date().toString(),
+					version: 1,
+					account_id: "1",
+					scheduling_policy: SchedulingPolicy.DEFAULT,
+					rollout_active_grace_period: 0,
+					configuration: {
+						image: `${getCloudflareContainerRegistry()}/some-account-id/my-container:Galaxy`,
+						disk: {
+							size: "2GB",
+							size_mb: 2000,
+						},
+						vcpu: 0.0625,
+						memory: "256MB",
+						memory_mib: 256,
+					},
+					constraints: {
+						tier: 1,
+					},
+					durable_objects: {
+						namespace_id: "something-else",
+					},
+				},
+			]);
+			mockListDurableObjects([
+				{
+					id: "something",
+					name: "name",
+					script: "test-name",
+					class: "ExampleDurableObject",
+				},
+			]);
+			mockUploadWorkerRequest({
+				expectedBindings: [],
+				useOldUploadApi: true,
+				expectedContainers: [{ class_name: "ExampleDurableObject" }],
+			});
+
+			await expect(
+				runWrangler("deploy index.js")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: There is already an application with the name my-container deployed that is associated with a different durable object namespace (something-else). Either change the container name or delete the existing application first.]`
+			);
+		});
+
+		it("should be able to redeploy an existing application", async () => {
+			writeWranglerConfig({
+				migrations: [
+					{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+				],
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						rollout_active_grace_period: 600,
+					},
+				],
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [],
+				useOldUploadApi: true,
+				expectedContainers: [{ class_name: "ExampleDurableObject" }],
+			});
+			mockListDurableObjects([
+				{
+					id: "something",
+					name: "name",
+					script: "test-name",
+					class: "ExampleDurableObject",
+				},
+			]);
+			mockGetApplications([
+				{
+					id: "abc",
+					name: "my-container",
+					instances: 0,
+					max_instances: 2,
+					created_at: new Date().toString(),
+					version: 1,
+					account_id: "1",
+					scheduling_policy: SchedulingPolicy.DEFAULT,
+					configuration: {
+						image: "registry.cloudflare.com/some-account-id/hello:world",
+						disk: {
+							size: "2GB",
+							size_mb: 2000,
+						},
+						vcpu: 0.0625,
+						memory: "256MB",
+						memory_mib: 256,
+					},
+					constraints: {
+						tier: 1,
+					},
+					durable_objects: {
+						namespace_id: "something",
+					},
+					rollout_active_grace_period: 500,
+				},
+			]);
+			fs.writeFileSync("./Dockerfile", "FROM scratch");
+			mockGenerateImageRegistryCredentials();
+			mockModifyApplication({
+				configuration: {
+					image: "registry.cloudflare.com/some-account-id/hello:world",
+				},
+				max_instances: 10,
+				rollout_active_grace_period: 600,
+			});
+			mockCreateApplicationRollout({
+				description: "Progressive update",
+				strategy: "rolling",
+				kind: "full_auto",
+			});
+			await runWrangler("deploy index.js");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ EDIT my-container
+				│
+				│   [[containers]]
+				│ - max_instances = 2
+				│ + max_instances = 10
+				│   name = \\"my-container\\"
+				│ - rollout_active_grace_period = 500
+				│ + rollout_active_grace_period = 600
+				│   scheduling_policy = \\"default\\"
+				│   [containers.configuration]
+				│
+				│
+				│  SUCCESS  Modified application my-container (Application ID: abc)
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
+	});
 });
 
 // This is a separate describe block because we intentionally do not mock any
@@ -1982,11 +2241,11 @@ describe("wrangler deploy with containers dry run", () => {
 	beforeEach(() => {
 		clearCachedAccount();
 		expect(process.env.CLOUDFLARE_API_TOKEN).toBeUndefined();
+		vi.mocked(spawn).mockReset();
 	});
 
 	afterEach(() => {
 		vi.unstubAllEnvs();
-		vi.mocked(spawn).mockReset();
 	});
 
 	it("builds the image without pushing", async () => {
@@ -2400,6 +2659,24 @@ function mockGetApplications(applications: Application[]) {
 		http.get("*/applications", async () => {
 			return HttpResponse.json({ success: true, result: applications });
 		})
+	);
+}
+
+function mockListDurableObjects(
+	durableObjects: Array<{
+		id: string;
+		name: string;
+		script: string;
+		class: string;
+	}>
+) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/workers/durable_objects/namespaces",
+			async () => {
+				return HttpResponse.json(createFetchResult(durableObjects));
+			}
+		)
 	);
 }
 
