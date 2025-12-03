@@ -61,6 +61,7 @@ import {
 import triggersDeploy from "../triggers/deploy";
 import { downloadWorkerConfig } from "../utils/download-worker-config";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
+import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
 import {
@@ -79,7 +80,6 @@ import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
 import type {
 	CfModule,
-	CfPlacement,
 	CfWorkerInit,
 	ComplianceConfig,
 	Config,
@@ -788,11 +788,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			});
 		}
 
-		// The upload API only accepts an empty string or no specified placement for the "off" mode.
-		const placement: CfPlacement | undefined =
-			config.placement?.mode === "smart"
-				? { mode: "smart", hint: config.placement.hint }
-				: undefined;
+		const placement = parseConfigPlacement(config);
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
 		const main: CfModule = {
