@@ -53,6 +53,7 @@ import {
 	putConsumer,
 	putConsumerById,
 } from "../queues/client";
+import { parseBulkInputToObject } from "../secret";
 import { syncWorkersSite } from "../sites";
 import {
 	getSourceMappedString,
@@ -86,6 +87,7 @@ import type {
 	CustomDomainRoute,
 	RawConfig,
 	Route,
+	WorkerMetadataBinding,
 	ZoneIdRoute,
 	ZoneNameRoute,
 } from "@cloudflare/workers-utils";
@@ -129,6 +131,7 @@ type Props = {
 	metafile: string | boolean | undefined;
 	containersRollout: "immediate" | "gradual" | undefined;
 	strict: boolean | undefined;
+	secretsFile: string | undefined;
 };
 
 export type RouteObject = ZoneIdRoute | ZoneNameRoute | CustomDomainRoute;
@@ -779,6 +782,20 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			},
 		});
 
+		let rawBindings: WorkerMetadataBinding[] | undefined;
+		if (props.secretsFile) {
+			const secretsContent = await parseBulkInputToObject(props.secretsFile);
+			if (secretsContent) {
+				rawBindings = Object.entries(secretsContent).map(
+					([secretName, secretValue]) => ({
+						type: "secret_text",
+						name: secretName,
+						text: secretValue,
+					})
+				);
+			}
+		}
+
 		if (workersSitesAssets.manifest) {
 			modules.push({
 				name: "__STATIC_CONTENT_MANIFEST",
@@ -805,6 +822,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			name: scriptName,
 			main,
 			bindings,
+			rawBindings,
 			migrations,
 			modules,
 			containers: config.containers ?? undefined,
@@ -814,7 +832,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			compatibility_date: compatibilityDate,
 			compatibility_flags: compatibilityFlags,
 			keepVars,
-			keepSecrets: keepVars, // keepVars implies keepSecrets
+			keepSecrets: keepVars || !!props.secretsFile,
 			logpush: props.logpush !== undefined ? props.logpush : config.logpush,
 			placement,
 			tail_consumers: config.tail_consumers,
