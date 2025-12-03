@@ -132,9 +132,9 @@ test("Miniflare: automatically collects modules", async (t) => {
 
 	// Check validates module rules
 	await t.throwsAsync(
-		// @ts-expect-error intentionally testing incorrect types
 		mf.setOptions({
 			modules: true,
+			// @ts-expect-error intentionally testing incorrect types
 			modulesRules: [{ type: "PNG", include: ["**/*.png"] }],
 			script: "",
 		}),
