@@ -13,7 +13,6 @@ import {
 import chalk from "chalk";
 import md5File from "md5-file";
 import { Miniflare } from "miniflare";
-import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
