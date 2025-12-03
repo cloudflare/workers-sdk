@@ -1,10 +1,17 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { installPackages } from "../c3-vendor/packages";
-import { transformViteConfig } from "./utils";
+import {
+	checkIfViteConfigUsesCloudflarePlugin,
+	transformViteConfig,
+} from "./utils";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
 export class Vite extends Framework {
+	isConfigured(projectPath: string): boolean {
+		return checkIfViteConfigUsesCloudflarePlugin(projectPath);
+	}
+
 	async configure({
 		dryRun,
 		outputDir,

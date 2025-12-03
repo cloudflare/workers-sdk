@@ -8,10 +8,62 @@ import type { types } from "recast";
 const b = recast.types.builders;
 const t = recast.types.namedTypes;
 
-export function transformViteConfig(
-	projectPath: string,
-	options: { viteEnvironmentName?: string } = {}
-) {
+export function checkIfViteConfigUsesCloudflarePlugin(
+	projectPath: string
+): boolean {
+	const filePath = getViteConfigPath(projectPath);
+
+	let importsCloudflarePlugin = false;
+	let usesCloudflarePlugin = false;
+
+	transformFile(filePath, {
+		visitProgram(n) {
+			// Only import if not already imported
+			if (
+				n.node.body.some(
+					(s) =>
+						s.type === "ImportDeclaration" &&
+						s.source.value === "@cloudflare/vite-plugin"
+				)
+			) {
+				importsCloudflarePlugin = true;
+				return this.traverse(n);
+			}
+
+			this.traverse(n);
+		},
+		visitCallExpression: function (n) {
+			const callee = n.node.callee as types.namedTypes.Identifier;
+			if (callee.name !== "defineConfig") {
+				return this.traverse(n);
+			}
+
+			const config = n.node.arguments[0];
+			assert(t.ObjectExpression.check(config));
+			const pluginsProp = config.properties.find((prop) => isPluginsProp(prop));
+			assert(pluginsProp && t.ArrayExpression.check(pluginsProp.value));
+
+			// Only add the Cloudflare plugin if it's not already present
+			if (
+				pluginsProp.value.elements.some(
+					(el) =>
+						el?.type === "CallExpression" &&
+						el.callee.type === "Identifier" &&
+						el.callee.name === "cloudflare"
+				)
+			) {
+				usesCloudflarePlugin = true;
+				return this.traverse(n);
+			}
+
+			this.traverse(n);
+		},
+	});
+
+	return importsCloudflarePlugin && usesCloudflarePlugin;
+}
+
+function getViteConfigPath(projectPath: string): string {
 	const filePathTS = path.join(projectPath, `vite.config.ts`);
 	const filePathJS = path.join(projectPath, `vite.config.ts`);
 
@@ -24,6 +76,15 @@ export function transformViteConfig(
 	} else {
 		throw new Error("Could not find Vite config file to modify");
 	}
+
+	return filePath;
+}
+
+export function transformViteConfig(
+	projectPath: string,
+	options: { viteEnvironmentName?: string } = {}
+) {
+	const filePath = getViteConfigPath(projectPath);
 
 	transformFile(filePath, {
 		visitProgram(n) {
