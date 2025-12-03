@@ -26,9 +26,17 @@ const config: TemplateConfig = {
 	platform: "workers",
 	frameworkCli: "create-react-router",
 	displayName: "React Router (formerly Remix)",
+	copyFiles: {
+		path: "./ts",
+	},
 	generate,
-	// configure,
 	transformPackageJson: async () => ({
+		dependencies: {
+			"react-router": "^7.10.0",
+		},
+		devDependencies: {
+			"@react-router/dev": "^7.10.0",
+		},
 		scripts: {
 			deploy: `${npm} run build && wrangler deploy`,
 			preview: `${npm} run build && vite preview`,

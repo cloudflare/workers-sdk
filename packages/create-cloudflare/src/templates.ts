@@ -241,6 +241,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			docusaurus: docusaurusTemplate,
 			gatsby: gatsbyTemplate,
 			nuxt: nuxtTemplate,
+			qwik: qwikTemplate,
 			solid: solidTemplate,
 			svelte: svelteTemplate,
 			"tanstack-start": tanStackStartTemplate,

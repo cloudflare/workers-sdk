@@ -817,6 +817,31 @@ function getExperimentalFrameworkTestConfig(
 			nodeCompat: true,
 			verifyTypes: false,
 		},
+		{
+			name: "qwik:workers",
+			argv: ["--platform", "workers"],
+			promptHandlers: [
+				{
+					matcher: /Yes looks good, finish update/,
+					input: [keys.enter],
+				},
+			],
+			flags: [],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["yarn"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Qwik",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "Welcome to Qwik",
+			},
+			nodeCompat: true,
+			verifyTypes: false,
+		},
 	];
 }
 
