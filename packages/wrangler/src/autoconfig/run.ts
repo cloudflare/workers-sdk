@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { FatalError } from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
@@ -12,8 +12,9 @@ import { installWrangler } from "./c3-vendor/packages";
 import { confirmAutoConfigDetails, displayAutoConfigDetails } from "./details";
 import { Static } from "./frameworks/static";
 import { usesTypescript } from "./uses-typescript";
+import type { PackageJsonScriptsOverrides } from "./frameworks";
 import type { AutoConfigDetails, AutoConfigOptions } from "./types";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
 type AutoConfigMetrics = Pick<
 	AutoConfigDetails,
@@ -102,32 +103,51 @@ export async function runAutoConfig(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (autoConfigDetails.packageJson) {
-		await writeFile(
-			resolve(autoConfigDetails.projectPath, "package.json"),
-			JSON.stringify(
-				{
-					...autoConfigDetails.packageJson,
-					scripts: {
-						...autoConfigDetails.packageJson.scripts,
-						...modifications.scripts,
-					},
-				},
-				null,
-				2
-			)
-		);
-	}
-
 	if (modifications.wranglerInstall) {
 		await installWrangler();
 	}
+
 	const configurationResults = await autoConfigDetails.framework?.configure({
 		outputDir: autoConfigDetails.outputDir,
 		projectPath: autoConfigDetails.projectPath,
 		workerName: autoConfigDetails.workerName,
 		dryRun: false,
 	});
+
+	if (autoConfigDetails.packageJson) {
+		const packageJsonPath = resolve(
+			autoConfigDetails.projectPath,
+			"package.json"
+		);
+		const existingPackageJson = JSON.parse(
+			await readFile(packageJsonPath, "utf8")
+		) as PackageJSON;
+
+		await writeFile(
+			packageJsonPath,
+			JSON.stringify(
+				{
+					...existingPackageJson,
+					name: autoConfigDetails.packageJson.name ?? existingPackageJson.name,
+					dependencies: {
+						...existingPackageJson.dependencies,
+						...autoConfigDetails.packageJson.dependencies,
+					},
+					devDependencies: {
+						...existingPackageJson.devDependencies,
+						...autoConfigDetails.packageJson.devDependencies,
+					},
+					scripts: {
+						...existingPackageJson.scripts,
+						...autoConfigDetails.packageJson.scripts,
+						...modifications.scripts,
+					},
+				} satisfies PackageJSON,
+				null,
+				2
+			)
+		);
+	}
 
 	await writeFile(
 		resolve(autoConfigDetails.projectPath, "wrangler.jsonc"),
@@ -178,7 +198,8 @@ type Modifications = {
 
 export async function buildOperationsSummary(
 	autoConfigDetails: AutoConfigDetails,
-	wranglerConfigToWrite: RawConfig
+	wranglerConfigToWrite: RawConfig,
+	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
 ): Promise<Modifications> {
 	logger.log("");
 
@@ -196,12 +217,12 @@ export async function buildOperationsSummary(
 
 		modifications.scripts = {
 			deploy:
-				autoConfigDetails.framework?.deploy ??
+				packageJsonScriptsOverrides?.deploy ??
 				(autoConfigDetails.buildCommand
 					? `${autoConfigDetails.buildCommand} && wrangler deploy`
 					: `wrangler deploy`),
 			preview:
-				autoConfigDetails.framework?.preview ??
+				packageJsonScriptsOverrides?.preview ??
 				(autoConfigDetails.buildCommand
 					? `${autoConfigDetails.buildCommand} && wrangler dev`
 					: `wrangler dev`),
@@ -216,7 +237,7 @@ export async function buildOperationsSummary(
 			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
 		) {
 			modifications.scripts["cf-typegen"] =
-				autoConfigDetails.framework?.typegen ?? "wrangler types";
+				packageJsonScriptsOverrides?.typegen ?? "wrangler types";
 		}
 
 		logger.log("📝 Update package.json scripts:");
