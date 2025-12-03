@@ -3,10 +3,12 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import * as recast from "recast";
+import semiver from "semiver";
 import dedent from "ts-dedent";
+import { logger } from "../../logger";
 import { transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
-import { Framework } from ".";
+import { Framework, getInstalledPackageVersion } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 import type { types } from "recast";
 
@@ -124,7 +126,10 @@ function transformViteConfig(projectPath: string) {
 	});
 }
 
-function transformReactRouterConfig(projectPath: string) {
+function transformReactRouterConfig(
+	projectPath: string,
+	viteEnvironmentKey: ReturnType<typeof configPropertyName>
+) {
 	const filePathTS = path.join(projectPath, `react-router.config.ts`);
 	const filePathJS = path.join(projectPath, `react-router.config.ts`);
 
@@ -149,7 +154,7 @@ function transformReactRouterConfig(projectPath: string) {
 		 * and add or modify the `future` property to look like:
 		 *
 		 *   future: {
-		 *     unstable_viteEnvironmentApi: true
+		 *     unstable_viteEnvironmentApi: true // v8_viteEnvironment depending on the React Router version
 		 *   }
 		 *
 		 * For some extra complexity, this also supports TS `as` and `satisfies` expressions
@@ -166,7 +171,7 @@ function transformReactRouterConfig(projectPath: string) {
 				node = n.node.declaration;
 			} else {
 				throw new Error(
-					"Could not parse React Router config file. Please add the following snippet manually:\n  future: {\n    unstable_viteEnvironmentApi: true,\n  }"
+					`Could not parse React Router config file. Please add the following snippet manually:\n  future: {\n    ${viteEnvironmentKey}: true,\n  }`
 				);
 			}
 
@@ -192,7 +197,7 @@ function transformReactRouterConfig(projectPath: string) {
 					(p) =>
 						p.type === "ObjectProperty" &&
 						p.key.type === "Identifier" &&
-						p.key.name === "unstable_viteEnvironmentApi" &&
+						p.key.name === viteEnvironmentKey &&
 						p.value.type === "BooleanLiteral"
 				);
 
@@ -206,7 +211,7 @@ function transformReactRouterConfig(projectPath: string) {
 					prop.value.value = true;
 				} else {
 					const prop = b.objectProperty(
-						b.identifier("unstable_viteEnvironmentApi"),
+						b.identifier(viteEnvironmentKey),
 						b.booleanLiteral(true)
 					);
 					future.value.properties.push(prop);
@@ -217,7 +222,7 @@ function transformReactRouterConfig(projectPath: string) {
 						b.identifier("future"),
 						b.objectExpression([
 							b.objectProperty(
-								b.identifier("unstable_viteEnvironmentApi"),
+								b.identifier(viteEnvironmentKey),
 								b.booleanLiteral(true)
 							),
 						])
@@ -230,11 +235,30 @@ function transformReactRouterConfig(projectPath: string) {
 	});
 }
 
+function configPropertyName(projectPath: string) {
+	const reactRouterVersion = getInstalledPackageVersion(
+		"react-router",
+		projectPath
+	);
+
+	if (!reactRouterVersion) {
+		return "v8_viteEnvironmentApi";
+	}
+
+	// version less than 7.10.0
+	if (semiver(reactRouterVersion, "7.10.0") === -1) {
+		return "unstable_viteEnvironmentApi";
+	} else {
+		return "v8_viteEnvironmentApi";
+	}
+}
+
 export class ReactRouter extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
+		const viteEnvironmentKey = configPropertyName(projectPath);
 		if (!dryRun) {
 			await installPackages(["@cloudflare/vite-plugin"], {
 				dev: true,
@@ -279,9 +303,10 @@ export class ReactRouter extends Framework {
 				doneText: `${brandColor(`installed`)} ${dim("isbot")}`,
 			});
 
-			writeFileSync(
-				`app/entry.server.tsx`,
-				dedent/* javascript */ `
+			if (!existsSync("app/entry.server.tsx")) {
+				writeFileSync(
+					`app/entry.server.tsx`,
+					dedent/* javascript */ `
 					import type { AppLoadContext, EntryContext } from "react-router";
 					import { ServerRouter } from "react-router";
 					import { isbot } from "isbot";
@@ -326,10 +351,15 @@ export class ReactRouter extends Framework {
 						});
 					}
 				`
-			);
+				);
+			} else {
+				logger.warn(
+					"The file `app/entry.server.tsx` already exists on disk, and so we're not modifying it. This may lead to deployment failures if `app/entry.server.tsx` is not set up correctly."
+				);
+			}
 
 			transformViteConfig(projectPath);
-			transformReactRouterConfig(projectPath);
+			transformReactRouterConfig(projectPath, viteEnvironmentKey);
 		}
 
 		return {
