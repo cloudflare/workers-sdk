@@ -1,5 +1,6 @@
 import { Angular } from "./angular";
 import { Astro } from "./astro";
+import { Qwik } from "./qwik";
 import { SolidStart } from "./solid-start";
 import { Static } from "./static";
 import { SvelteKit } from "./sveltekit";
@@ -21,6 +22,8 @@ export function getFramework(detectedFramework?: {
 			return new Angular(detectedFramework.name);
 		case "solid-start":
 			return new SolidStart(detectedFramework.name);
+		case "qwik":
+			return new Qwik(detectedFramework.name);
 		default:
 			return new Static(detectedFramework?.name);
 	}
