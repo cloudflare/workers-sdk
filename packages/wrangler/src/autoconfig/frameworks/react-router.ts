@@ -177,7 +177,7 @@ function transformReactRouterConfig(
 
 			assert(node.type === "ObjectExpression");
 
-			// Is therer an existing `future` key? If there is, we should modufy it rather than creating a new one
+			// Is there an existing `future` key? If there is, we should modify it rather than creating a new one
 			const futureKey = node.properties.findIndex(
 				(p) =>
 					p.type === "ObjectProperty" &&
