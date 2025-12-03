@@ -27,7 +27,7 @@ function isPluginsProp(
 
 function transformViteConfig(projectPath: string) {
 	const filePathTS = path.join(projectPath, `vite.config.ts`);
-	const filePathJS = path.join(projectPath, `vite.config.ts`);
+	const filePathJS = path.join(projectPath, `vite.config.js`);
 
 	let filePath: string;
 
