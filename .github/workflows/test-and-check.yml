@@ -73,7 +73,7 @@ jobs:
         run: node packages/wrangler/src/__tests__/test-old-node-version.js error
 
   test:
-    timeout-minutes: 45
+    timeout-minutes: 60
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-test
       cancel-in-progress: true
