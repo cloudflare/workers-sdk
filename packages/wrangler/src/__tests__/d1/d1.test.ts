@@ -17,7 +17,7 @@ describe("d1", () => {
 			🗄  Manage Workers D1 databases
 
 			COMMANDS
-			  wrangler d1 create <name>       Creates a new D1 database, and provides the binding and UUID that you will put in your Wrangler file.
+			  wrangler d1 create <name>       Creates a new D1 database, and provides the binding and UUID that you will put in your config file
 			  wrangler d1 info <name>         Get information about a D1 database, including the current database size and state
 			  wrangler d1 list                List all D1 databases in your account
 			  wrangler d1 delete <name>       Delete a D1 database
@@ -25,7 +25,7 @@ describe("d1", () => {
 			  wrangler d1 export <name>       Export the contents or schema of your database as a .sql file
 			  wrangler d1 time-travel         Use Time Travel to restore, fork or copy a database at a specific point-in-time
 			  wrangler d1 migrations          Interact with D1 migrations
-			  wrangler d1 insights <name>     Get information about the queries run on a D1 database. [experimental]
+			  wrangler d1 insights <name>     Get information about the queries run on a D1 database [experimental]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -54,7 +54,7 @@ describe("d1", () => {
 			🗄  Manage Workers D1 databases
 
 			COMMANDS
-			  wrangler d1 create <name>       Creates a new D1 database, and provides the binding and UUID that you will put in your Wrangler file.
+			  wrangler d1 create <name>       Creates a new D1 database, and provides the binding and UUID that you will put in your config file
 			  wrangler d1 info <name>         Get information about a D1 database, including the current database size and state
 			  wrangler d1 list                List all D1 databases in your account
 			  wrangler d1 delete <name>       Delete a D1 database
@@ -62,7 +62,7 @@ describe("d1", () => {
 			  wrangler d1 export <name>       Export the contents or schema of your database as a .sql file
 			  wrangler d1 time-travel         Use Time Travel to restore, fork or copy a database at a specific point-in-time
 			  wrangler d1 migrations          Interact with D1 migrations
-			  wrangler d1 insights <name>     Get information about the queries run on a D1 database. [experimental]
+			  wrangler d1 insights <name>     Get information about the queries run on a D1 database [experimental]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]

@@ -20,7 +20,6 @@ export const d1ExportCommand = createCommand({
 	metadata: {
 		description:
 			"Export the contents or schema of your database as a .sql file",
-		epilogue: "This command acts on local D1 Databases by default",
 		status: "stable",
 		owner: "Product: D1",
 	},

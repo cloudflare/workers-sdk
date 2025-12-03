@@ -48,10 +48,8 @@ export const d1ExecuteCommand = createCommand({
 		description: "Execute a command or SQL file",
 		status: "stable",
 		owner: "Product: D1",
-		epilogue: dedent`
-			You must provide either --command or --file for this command to run successfully.
-
-			This command acts on local D1 Databases by default.`,
+		epilogue:
+			"You must provide either --command or --file for this command to run successfully.",
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
