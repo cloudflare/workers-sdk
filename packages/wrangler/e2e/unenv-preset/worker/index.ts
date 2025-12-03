@@ -103,8 +103,8 @@ export const WorkerdTests: Record<string, () => void> = {
 
 		// These undocumented APIs are only on the global object not the import.
 		assertTypeOfProperties(global.console, {
-			_stdErr: "object",
-			_stdOut: "object",
+			_stderr: "object",
+			_stdout: "object",
 			_times: "object",
 			_stdoutErrorHandler: "function",
 			_stderrErrorHandler: "function",
