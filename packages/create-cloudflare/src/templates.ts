@@ -242,9 +242,12 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			gatsby: gatsbyTemplate,
 			nuxt: nuxtTemplate,
 			qwik: qwikTemplate,
+			react: reactTemplate,
+			"react-router": reactRouterTemplate,
 			solid: solidTemplate,
 			svelte: svelteTemplate,
 			"tanstack-start": tanStackStartTemplate,
+			vue: vueTemplate,
 		};
 	} else {
 		return {

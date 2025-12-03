@@ -17,7 +17,7 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 		applyToEnvironment(environment) {
 			return ctx.getWorkerConfig(environment.name) !== undefined;
 		},
-		resolveId(source) {
+		async resolveId(source) {
 			if (source === VIRTUAL_WORKER_ENTRY || source === VIRTUAL_EXPORT_TYPES) {
 				return `\0${source}`;
 			}
@@ -25,8 +25,13 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 			if (source === VIRTUAL_USER_ENTRY) {
 				const workerConfig = ctx.getWorkerConfig(this.environment.name);
 				assert(workerConfig, "Expected `workerConfig` to be defined");
-
-				return this.resolve(workerConfig.main);
+				const main = await this.resolve(workerConfig.main);
+				if (!main) {
+					throw new Error(
+						`Failed to resolve main entry file "${workerConfig.main}" for environment "${this.environment.name}"`
+					);
+				}
+				return main;
 			}
 		},
 		load(id) {

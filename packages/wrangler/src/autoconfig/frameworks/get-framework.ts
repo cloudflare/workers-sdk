@@ -2,6 +2,7 @@ import { Angular } from "./angular";
 import { Astro } from "./astro";
 import { Nuxt } from "./nuxt";
 import { Qwik } from "./qwik";
+import { ReactRouter } from "./react-router";
 import { SolidStart } from "./solid-start";
 import { Static } from "./static";
 import { SvelteKit } from "./sveltekit";
@@ -19,6 +20,8 @@ export function getFramework(detectedFramework?: {
 			return new SvelteKit(detectedFramework.name);
 		case "tanstack-start":
 			return new TanstackStart(detectedFramework.name);
+		case "react-router":
+			return new ReactRouter(detectedFramework.name);
 		case "angular":
 			return new Angular(detectedFramework.name);
 		case "nuxt":

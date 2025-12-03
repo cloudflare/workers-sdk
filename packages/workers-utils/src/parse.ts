@@ -112,6 +112,7 @@ export function parseTOML<T>(input: string, file?: string): T | never {
  */
 export type PackageJSON = {
 	name?: string;
+	version?: string;
 	devDependencies?: Record<string, unknown>;
 	dependencies?: Record<string, unknown>;
 	scripts?: Record<string, unknown>;
