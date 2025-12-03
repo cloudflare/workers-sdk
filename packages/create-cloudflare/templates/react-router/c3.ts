@@ -29,6 +29,12 @@ const config: TemplateConfig = {
 	generate,
 	// configure,
 	transformPackageJson: async () => ({
+		dependencies: {
+			"react-router": "^7.10.0",
+		},
+		devDependencies: {
+			"@react-router/dev": "^7.10.0",
+		},
 		scripts: {
 			deploy: `${npm} run build && wrangler deploy`,
 			preview: `${npm} run build && vite preview`,
