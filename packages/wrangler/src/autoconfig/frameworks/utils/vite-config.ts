@@ -43,7 +43,6 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 			const pluginsProp = config.properties.find((prop) => isPluginsProp(prop));
 			assert(pluginsProp && t.ArrayExpression.check(pluginsProp.value));
 
-			// Only add the Cloudflare plugin if it's not already present
 			if (
 				pluginsProp.value.elements.some(
 					(el) =>
