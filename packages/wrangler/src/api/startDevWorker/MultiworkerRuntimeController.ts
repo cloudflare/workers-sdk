@@ -210,6 +210,8 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 					logger.log(chalk.dim("⎔ Reloading local server..."));
 
 					await this.#mf.setOptions(mergedMfOptions);
+
+					logger.log(chalk.dim("⎔ Local server updated and ready"));
 				}
 
 				// All asynchronous `Miniflare` methods will wait for all `setOptions()`
