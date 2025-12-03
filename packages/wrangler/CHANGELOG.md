@@ -1,5 +1,14 @@
 # wrangler
 
+## 4.52.1
+
+### Patch Changes
+
+- [#11504](https://github.com/cloudflare/workers-sdk/pull/11504) [`7e80340`](https://github.com/cloudflare/workers-sdk/commit/7e803402ee22df65427dbc08b17f4f928d42dda2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix `wrangler deploy` failing for new workers containing environment variables or bindings
+
+- Updated dependencies [[`59534ba`](https://github.com/cloudflare/workers-sdk/commit/59534baa89d893e2d7b4656e365a215425094f00)]:
+  - miniflare@4.20251202.0
+
 ## 4.52.0
 
 ### Minor Changes
