@@ -14,7 +14,6 @@ export class Vite extends Framework {
 
 	async configure({
 		dryRun,
-		outputDir,
 		projectPath,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
@@ -28,11 +27,7 @@ export class Vite extends Framework {
 		}
 
 		return {
-			wranglerConfig: {
-				assets: {
-					directory: outputDir,
-				},
-			},
+			wranglerConfig: {},
 		};
 	}
 }
