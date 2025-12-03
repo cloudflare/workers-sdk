@@ -27,6 +27,7 @@ import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import deploy from "./deploy";
+import type { AutoConfigSummary } from "../autoconfig/types";
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -277,6 +278,8 @@ export const deployCommand = createCommand({
 			!args.script &&
 			!args.assets;
 
+		let autoConfigSummary: AutoConfigSummary | undefined;
+
 		if (shouldRunAutoConfig) {
 			const details = await getDetailsForAutoConfig({
 				wranglerConfig: config,
@@ -284,7 +287,7 @@ export const deployCommand = createCommand({
 
 			// Only run auto config if the project is not already configured
 			if (!details.configured) {
-				await runAutoConfig(details);
+				autoConfigSummary = await runAutoConfig(details);
 
 				// If autoconfig worked, there should now be a new config file, and so we need to read config again
 				config = readConfig(args, {
@@ -425,6 +428,7 @@ export const deployCommand = createCommand({
 			targets,
 			wrangler_environment: args.env,
 			worker_name_overridden: workerNameOverridden,
+			autoconfig_summary: autoConfigSummary,
 		});
 
 		metrics.sendMetricsEvent(
