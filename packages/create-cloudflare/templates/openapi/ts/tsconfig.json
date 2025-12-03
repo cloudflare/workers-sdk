@@ -3,7 +3,7 @@
 		/* Base Options: */
 		"esModuleInterop": true,
 		"skipLibCheck": true,
-		"target": "es2022",
+		"target": "es2024",
 		"verbatimModuleSyntax": false,
 		"allowJs": true,
 		"resolveJsonModule": true,
@@ -18,7 +18,7 @@
 		"moduleResolution": "Bundler",
 		"module": "es2022",
 		"noEmit": true,
-		"lib": ["es2022"],
+		"lib": ["es2024"],
 		"types": [
 			"@types/node",
 			"@types/service-worker-mock",

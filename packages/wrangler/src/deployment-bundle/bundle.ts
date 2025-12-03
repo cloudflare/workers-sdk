@@ -43,8 +43,9 @@ const escapeRegex = (str: string) => {
 };
 
 export const COMMON_ESBUILD_OPTIONS = {
-	// Our workerd runtime uses the same V8 version as recent Chrome, which is highly ES2022 compliant: https://kangax.github.io/compat-table/es2016plus/
-	target: "es2022",
+	// v8 supports es2024 features as of 11.9
+	// workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
+	target: "es2024",
 	loader: { ".js": "jsx", ".mjs": "jsx", ".cjs": "jsx" },
 } as const;
 

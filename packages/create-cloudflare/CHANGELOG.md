@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.57.1
+
+### Patch Changes
+
+- [#11507](https://github.com/cloudflare/workers-sdk/pull/11507) [`7b24eb0`](https://github.com/cloudflare/workers-sdk/commit/7b24eb0bfbc0adb5c56d634dac9156fa5b2d3701) Thanks [@jamesopstad](https://github.com/jamesopstad)! - fix: React Router configuration mismatch with v7.10.0
+
 ## 2.57.0
 
 ### Minor Changes
