@@ -25,7 +25,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 
 	describe("interactive mode", () => {
 		test("presents a summary for a simple project where only a wrangler.jsonc file needs to be created", async () => {
-			await buildOperationsSummary(
+			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
@@ -47,10 +47,25 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				  }
 				"
 			`);
+
+			expect(summary).toMatchInlineSnapshot(`
+				Object {
+				  "scripts": Object {},
+				  "wranglerConfig": Object {
+				    "$schema": "node_modules/wrangler/config-schema.json",
+				    "compatibility_date": "2025-01-01",
+				    "name": "worker-name",
+				    "observability": Object {
+				      "enabled": true,
+				    },
+				  },
+				  "wranglerInstall": false,
+				}
+			`);
 		});
 
 		test("shows that wrangler will be added as a devDependency when not already installed as such", async () => {
-			await buildOperationsSummary(
+			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
@@ -69,10 +84,28 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				 - wrangler (devDependency)
 				`
 			);
+
+			expect(summary).toMatchInlineSnapshot(`
+				Object {
+				  "scripts": Object {
+				    "deploy": "wrangler deploy",
+				    "preview": "wrangler dev",
+				  },
+				  "wranglerConfig": Object {
+				    "$schema": "node_modules/wrangler/config-schema.json",
+				    "compatibility_date": "2025-01-01",
+				    "name": "worker-name",
+				    "observability": Object {
+				      "enabled": true,
+				    },
+				  },
+				  "wranglerInstall": true,
+				}
+			`);
 		});
 
 		test("when a package.json is present wrangler@latest will be unconditionally installed (even if already present)", async () => {
-			await buildOperationsSummary(
+			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
@@ -93,10 +126,28 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				 - wrangler (devDependency)
 				`
 			);
+
+			expect(summary).toMatchInlineSnapshot(`
+				Object {
+				  "scripts": Object {
+				    "deploy": "wrangler deploy",
+				    "preview": "wrangler dev",
+				  },
+				  "wranglerConfig": Object {
+				    "$schema": "node_modules/wrangler/config-schema.json",
+				    "compatibility_date": "2025-01-01",
+				    "name": "worker-name",
+				    "observability": Object {
+				      "enabled": true,
+				    },
+				  },
+				  "wranglerInstall": true,
+				}
+			`);
 		});
 
 		test("shows that when needed a framework specific configuration will be run", async () => {
-			await buildOperationsSummary(
+			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
@@ -109,10 +160,14 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			expect(std.out).toContain(
 				'🛠️  Configuring project for Astro with "astro add cloudflare"'
 			);
+
+			expect(summary.frameworkConfiguration).toBe(
+				'Configuring project for Astro with "astro add cloudflare"'
+			);
 		});
 
 		test("doesn't show the framework specific configuration step for the Static framework", async () => {
-			await buildOperationsSummary(
+			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
@@ -123,6 +178,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(std.out).not.toContain("🛠️  Configuring project for");
+			expect(summary.frameworkConfiguration).toBeUndefined();
 		});
 	});
 });
