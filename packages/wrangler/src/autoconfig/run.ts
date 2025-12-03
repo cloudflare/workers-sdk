@@ -257,7 +257,7 @@ export async function buildOperationsSummary(
 	if (
 		autoConfigDetails.framework &&
 		!(autoConfigDetails.framework instanceof Static) &&
-		!autoConfigDetails.framework.configured
+		!autoConfigDetails.framework.isConfigured(autoConfigDetails.projectPath)
 	) {
 		summary.frameworkConfiguration =
 			autoConfigDetails.framework.configurationDescription ??
