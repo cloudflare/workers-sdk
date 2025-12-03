@@ -1,3 +1,4 @@
+import { getDefaultDevRegistryPath, getWorkerRegistry } from "miniflare";
 import colors from "picocolors";
 import { unstable_printBindings } from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
@@ -40,6 +41,7 @@ export function addBindingsShortcut(
 		return;
 	}
 
+	const registryPath = getDefaultDevRegistryPath();
 	const printBindingsShortcut = {
 		key: "b",
 		description: "list configured Cloudflare bindings",
@@ -71,6 +73,7 @@ export function addBindingsShortcut(
 					{
 						isMultiWorkers: workerConfigs.length > 1,
 						name: workerConfig.name ?? "Your Worker",
+						registry: getWorkerRegistry(registryPath),
 						log: (message) => server.config.logger.info(message),
 					}
 				);
