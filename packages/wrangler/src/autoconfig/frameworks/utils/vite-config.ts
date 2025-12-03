@@ -18,7 +18,6 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 
 	transformFile(filePath, {
 		visitProgram(n) {
-			// Only import if not already imported
 			if (
 				n.node.body.some(
 					(s) =>
