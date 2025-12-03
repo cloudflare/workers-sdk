@@ -165,7 +165,10 @@ export const cloudflareBuiltInModules = [
 ];
 
 const defaultConditions = ["workerd", "worker", "module", "browser"];
-const target = "es2022";
+
+// v8 supports es2024 features as of 11.9
+// workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
+const target = "es2024";
 
 export function createCloudflareEnvironmentOptions({
 	workerConfig,
