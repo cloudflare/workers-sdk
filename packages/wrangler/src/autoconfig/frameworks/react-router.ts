@@ -131,7 +131,7 @@ function transformReactRouterConfig(
 	viteEnvironmentKey: ReturnType<typeof configPropertyName>
 ) {
 	const filePathTS = path.join(projectPath, `react-router.config.ts`);
-	const filePathJS = path.join(projectPath, `react-router.config.ts`);
+	const filePathJS = path.join(projectPath, `react-router.config.js`);
 
 	let filePath: string;
 
