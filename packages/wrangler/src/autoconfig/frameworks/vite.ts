@@ -27,7 +27,11 @@ export class Vite extends Framework {
 		}
 
 		return {
-			wranglerConfig: {},
+			wranglerConfig: {
+				assets: {
+					not_found_handling: "single-page-application",
+				},
+			},
 		};
 	}
 }
