@@ -19,11 +19,16 @@ export default defineConfig([
 		outDir: "dist",
 		tsconfig: "tsconfig.json",
 		// metafile: true,
-		external: ["jsonc-parser", "@cloudflare/*", "vitest", "msw", "undici"],
+		external: ["@cloudflare/*", "vitest", "msw", "undici"],
 		sourcemap: process.env.SOURCEMAPS !== "false",
-		// mainFields: ["module", "main"],
 		define: {
 			"process.env.NODE_ENV": `'${"production"}'`,
+		},
+		inputOptions: {
+			// This is required to support jsonc-parser. See https://github.com/microsoft/node-jsonc-parser/issues/57
+			resolve: {
+				mainFields: ["module", "main"],
+			},
 		},
 	},
 ]);

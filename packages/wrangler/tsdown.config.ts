@@ -107,10 +107,9 @@ export default scriptPath;
 	};
 }
 
-export default defineConfig((options) => [
+export default defineConfig([
 	{
 		treeshake: true,
-		keepNames: true,
 		entry: ["src/cli.ts"],
 		platform: "node",
 		format: "cjs",
@@ -130,7 +129,6 @@ export default defineConfig((options) => [
 		},
 		outDir: "wrangler-dist",
 		tsconfig: "tsconfig.json",
-		metafile: true,
 		external: EXTERNAL_DEPENDENCIES,
 		banner: {
 			js: 'require("cloudflare/shims/web");',
@@ -159,5 +157,11 @@ export default defineConfig((options) => [
 				: {}),
 		},
 		plugins: [embedWorkersPlugin()],
+		inputOptions: {
+			// This is required to support jsonc-parser. See https://github.com/microsoft/node-jsonc-parser/issues/57
+			resolve: {
+				mainFields: ["module", "main"],
+			},
+		},
 	},
 ]);
