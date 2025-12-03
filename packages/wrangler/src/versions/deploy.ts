@@ -14,9 +14,9 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
-import { APIError } from "../parse";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
+import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import {
 	createDeployment,
 	fetchDeployableVersions,
@@ -268,8 +268,7 @@ export async function confirmLatestDeploymentOverwrite(
 			});
 		}
 	} catch (e) {
-		const isNotFound = e instanceof APIError && e.code == 10007;
-		if (!isNotFound) {
+		if (!isWorkerNotFoundError(e)) {
 			throw e;
 		}
 	}
