@@ -59,6 +59,59 @@ function generateTestListResponse(testName: string): Response {
 // Test functions executed on worked.
 // The test can be executing by fetching the `/${testName}` url.
 export const WorkerdTests: Record<string, () => void> = {
+	async testConsole() {
+		const importNamespace = await import("node:console");
+		const globalObject = globalThis.console;
+
+		assert.strictEqual(
+			globalThis.console,
+			importNamespace.default,
+			"expected `console` to be the same as `consoleImport.default`"
+		);
+
+		assertTypeOf(importNamespace, "default", "object");
+
+		for (const target of [importNamespace, globalObject]) {
+			assertTypeOfProperties(target, {
+				Console: "function",
+				assert: "function",
+				clear: "function",
+				count: "function",
+				countReset: "function",
+				debug: "function",
+				dir: "function",
+				dirxml: "function",
+				error: "function",
+				group: "function",
+				groupCollapsed: "function",
+				groupEnd: "function",
+				info: "function",
+				log: "function",
+				profile: "function",
+				profileEnd: "function",
+				table: "function",
+				time: "function",
+				timeEnd: "function",
+				timeLog: "function",
+				trace: "function",
+				warn: "function",
+				// These undocumented APIs are supported in Node.js, unenv, and workerd natively.
+				context: "function",
+				createTask: "function",
+			});
+		}
+
+		// These undocumented APIs are only on the global object not the import.
+		assertTypeOfProperties(global.console, {
+			_stderr: "object",
+			_stdout: "object",
+			_times: "object",
+			_stdoutErrorHandler: "function",
+			_stderrErrorHandler: "function",
+			_ignoreErrors: "boolean",
+		});
+	},
+
 	async testCryptoGetRandomValues() {
 		const crypto = await import("node:crypto");
 

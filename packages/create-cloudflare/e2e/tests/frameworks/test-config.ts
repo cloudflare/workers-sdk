@@ -866,6 +866,29 @@ function getExperimentalFrameworkTestConfig(
 			nodeCompat: false,
 			verifyTypes: false,
 		},
+		{
+			name: "react-router",
+			unsupportedOSs: ["win32"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "React Router",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "React Router",
+				previewArgs: ["--host=127.0.0.1"],
+			},
+			verifyDev: {
+				route: "/",
+				expectedText: "React Router",
+				devArgs: ["--host=127.0.0.1"],
+			},
+			nodeCompat: false,
+			flags: ["--no-install", "--no-git-init"],
+			verifyTypes: false,
+		},
 	];
 }
 

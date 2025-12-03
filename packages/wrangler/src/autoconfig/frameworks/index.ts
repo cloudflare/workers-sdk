@@ -1,3 +1,5 @@
+import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
+import { findUpSync } from "find-up";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 export type ConfigurationOptions = {
@@ -32,4 +34,24 @@ export abstract class Framework {
 	): Promise<ConfigurationResults> | ConfigurationResults;
 
 	configurationDescription?: string;
+}
+
+// Make a best-effort attempt to find the exact version of the installed package
+export function getInstalledPackageVersion(
+	packageName: string,
+	projectPath: string
+): string | undefined {
+	try {
+		const packagePath = require.resolve(packageName, {
+			paths: [projectPath],
+		});
+		const packageJsonPath = findUpSync("package.json", { cwd: packagePath });
+		if (packageJsonPath) {
+			const packageJson = parsePackageJSON(
+				readFileSync(packageJsonPath),
+				packageJsonPath
+			);
+			return packageJson.version;
+		}
+	} catch {}
 }

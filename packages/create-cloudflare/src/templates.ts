@@ -246,6 +246,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			qwik: qwikTemplate,
 			vue: vueTemplate,
 			react: reactTemplate,
+			"react-router": reactRouterTemplate,
 		};
 	} else {
 		return {

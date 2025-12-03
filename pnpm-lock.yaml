@@ -2284,8 +2284,8 @@ importers:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
       workerd:
-        specifier: ^1.20251125.0
-        version: 1.20251126.0
+        specifier: ^1.20251202.0
+        version: 1.20251202.0
     devDependencies:
       '@types/node-unenv':
         specifier: npm:@types/node@^22.14.0
@@ -4056,8 +4056,8 @@ importers:
         specifier: ^2.4.2
         version: 2.4.2
       recast:
-        specifier: 0.22.0
-        version: 0.22.0
+        specifier: 0.23.11
+        version: 0.23.11
       resolve:
         specifier: ^1.22.8
         version: 1.22.8
@@ -4823,12 +4823,6 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@cloudflare/workerd-darwin-64@1.20251126.0':
-    resolution: {integrity: sha512-TlZEz94vrVq0fdbabfPvfKsz/M0uzmrtdMvszlHjoNqzg3EvCUcVt7evrfmqIF3H4dQyUSDftxDGv/kIFYzFeg==}
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [darwin]
-
   '@cloudflare/workerd-darwin-64@1.20251202.0':
     resolution: {integrity: sha512-/uvEAWEukTWb1geHhbjGUeZqcSSSyYzp0mvoPUBl+l0ont4NVGao3fgwM0q8wtKvgoKCHSG6zcG23wj9Opj3Nw==}
     engines: {node: '>=16'}
@@ -4843,12 +4837,6 @@ packages:
 
   '@cloudflare/workerd-darwin-arm64@1.20250417.0':
     resolution: {integrity: sha512-dSlk18F4i3T1OTzFBxx3pKpXRMP6w2xZ26+oIV32BFWrCi/HxGzUd6gVA0q37oLGqITRt8xU693J4Gl1CwC/Ag==}
-    engines: {node: '>=16'}
-    cpu: [arm64]
-    os: [darwin]
-
-  '@cloudflare/workerd-darwin-arm64@1.20251126.0':
-    resolution: {integrity: sha512-nOsSCANd+jZ/KMs24VT5caCYURcWGsOQyREuSo+J6meMaOk/3uG2gmsYT5eErM24ovithe7ucPJbNpJk5F1ioQ==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
@@ -4871,12 +4859,6 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@cloudflare/workerd-linux-64@1.20251126.0':
-    resolution: {integrity: sha512-UqLaKUVMv+DX2HibvcBq0Wk7YvaOibotpEKFgsoYpJoQlbUkRPbTrFTgfckAPltmq2EgmHiFo84l2hnE0V1XTg==}
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [linux]
-
   '@cloudflare/workerd-linux-64@1.20251202.0':
     resolution: {integrity: sha512-HYXinF5RBH7oXbsFUMmwKCj+WltpYbf5mRKUBG5v3EuPhUjSIFB84U+58pDyfBJjcynHdy3EtvTWcvh/+lcgow==}
     engines: {node: '>=16'}
@@ -4895,12 +4877,6 @@ packages:
     cpu: [arm64]
     os: [linux]
 
-  '@cloudflare/workerd-linux-arm64@1.20251126.0':
-    resolution: {integrity: sha512-9gdAdIc1rF7Yh2s4MLQpARTVcy9ceHwZdssXY25BsFnQWfW2m/823YUxbenFhCMZvezBa0D+EIreb4bFQjDbtg==}
-    engines: {node: '>=16'}
-    cpu: [arm64]
-    os: [linux]
-
   '@cloudflare/workerd-linux-arm64@1.20251202.0':
     resolution: {integrity: sha512-++L02Jdoxz7hEA9qDaQjbVU1RzQS+S+eqIi22DkPe2Tgiq2M3UfNpeu+75k5L9DGRIkZPYvwMBMbcmKvQqdIIg==}
     engines: {node: '>=16'}
@@ -4915,12 +4891,6 @@ packages:
 
   '@cloudflare/workerd-windows-64@1.20250417.0':
     resolution: {integrity: sha512-PDwATFioff+geVHfgTzSWsxgwjgotrdXStb0EL0lMyMT5zNmHArAnOx83CbDtud63Uv9rVX1BAfPP4tyD1O+5A==}
-    engines: {node: '>=16'}
-    cpu: [x64]
-    os: [win32]
-
-  '@cloudflare/workerd-windows-64@1.20251126.0':
-    resolution: {integrity: sha512-5lg8Ajdmo1G8RWwdH/GpPcKPr1SAd24SGUsnQMOJeMGGD3vGp/gaPh9LeMxxoLFApa8EGCVZwtOxS47ilgxBEQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
@@ -8655,8 +8625,8 @@ packages:
     resolution: {integrity: sha512-NfJ4UzBCcQGLDlQq7nHxH+tv3kyZ0hHQqF5BO6J7tNJeP5do1llPr8dZ8zHonfhAu0PHAdMkSo+8o0wxg9lZWw==}
     engines: {node: '>=0.8'}
 
-  assert@2.0.0:
-    resolution: {integrity: sha512-se5Cd+js9dXJnu6Ag2JFc00t+HmHOen+8Q+L7O9zI0PqQXr20uk2J0XQqMxZEeo5U50o8Nvmmx7dZrl+Ufr35A==}
+  assert@2.1.0:
+    resolution: {integrity: sha512-eLHpSK/Y4nhMJ07gDaAzoX/XAKS8PSaojml3M0DM4JpV1LAi5JOJ/p6H/XWrl8L+DzVEvVCW1z3vWAaB9oTsQw==}
 
   assertion-error@2.0.1:
     resolution: {integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==}
@@ -8676,6 +8646,10 @@ packages:
 
   ast-types@0.15.2:
     resolution: {integrity: sha512-c27loCv9QkZinsa5ProX751khO9DJl/AcB5c2KNtA6NRvHKS0PgLfcftz72KVq504vB0Gku5s2kUZzDBvQWvHg==}
+    engines: {node: '>=4'}
+
+  ast-types@0.16.1:
+    resolution: {integrity: sha512-6t10qk83GOG8p0vKmaCr8eiilZwO171AvbROMtvvNiwrTly62t+7XkA8RdIIVbpMhCASAsxgAzdRSwh6nw/5Dg==}
     engines: {node: '>=4'}
 
   async-sema@3.1.1:
@@ -8903,10 +8877,6 @@ packages:
   cac@6.7.14:
     resolution: {integrity: sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==}
     engines: {node: '>=8'}
-
-  call-bind-apply-helpers@1.0.1:
-    resolution: {integrity: sha512-BhYE+WDaywFg2TBWYNXAE+8B1ATnThNBqXHP5nQu0jWJdVvY2hvkpyB3qOmtmDePiS5/BDQ8wASEWGMWRG148g==}
-    engines: {node: '>= 0.4'}
 
   call-bind-apply-helpers@1.0.2:
     resolution: {integrity: sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ==}
@@ -9781,9 +9751,6 @@ packages:
     resolution: {integrity: sha512-w+5mJ3GuFL+NjVtJlvydShqE1eN3h3PbI7/5LAsYJP/2qtuMXjfL2LpHSRqo4b4eSF5K/DH1JXKUAHSB2UW50g==}
     engines: {node: '>= 0.4'}
 
-  es6-object-assign@1.1.0:
-    resolution: {integrity: sha512-MEl9uirslVwqQU369iHNWZXsI8yaZYGg/D65aOgZkeyFJwHYSxilf7rQzXKI7DdDuBPrBXbfk3sl9hJhmd5AUw==}
-
   esbuild-register@3.5.0:
     resolution: {integrity: sha512-+4G/XmakeBAsvJuDugJvtyF1x+XJT4FMocynNpxrvEBViirpfUn2PgNpCHedfWhF4WokNsO/OvMKrmJOIJsI5A==}
     peerDependencies:
@@ -10358,14 +10325,6 @@ packages:
     resolution: {integrity: sha512-2nk+7SIVb14QrgXFHcm84tD4bKQz0RxPuMT8Ag5KPOq7J5fEmAg0UbXdTOSHqNuHSU28k55qnceesxXRZGzKWA==}
     engines: {node: '>=18'}
 
-  get-intrinsic@1.2.5:
-    resolution: {integrity: sha512-Y4+pKa7XeRUPWFNvOOYHkRYrfzW07oraURSvjDmRVOJ748OrVmeXtpE4+GCEHncjCjkTxPNRt8kEbxDhsn6VTg==}
-    engines: {node: '>= 0.4'}
-
-  get-intrinsic@1.2.7:
-    resolution: {integrity: sha512-VW6Pxhsrk0KAOqs3WEd0klDiF/+V7gQOpAvY1jVU/LHmaD/kQO4523aiJuikX/QAKYiW6x8Jh+RJej1almdtCA==}
-    engines: {node: '>= 0.4'}
-
   get-intrinsic@1.3.0:
     resolution: {integrity: sha512-9fSjSaos/fRIVIp+xSJlE6lfwhES7LNtKaCBIamHsjr2na1BiABJPo0mOjjz8GJDURarmCPGqaiVg5mfjb98CQ==}
     engines: {node: '>= 0.4'}
@@ -10740,8 +10699,8 @@ packages:
     resolution: {integrity: sha512-1ANGLZ+Nkv1ptFb2pa8oG8Lem4krflKuX/gINiHJHjJUKaJHk/SXk5x6K3J+39/p0h1RQ2saROclJJ+QLvETCQ==}
     engines: {node: '>=8'}
 
-  is-arguments@1.1.1:
-    resolution: {integrity: sha512-8Q7EARjzEnKpt/PCD7e1cgUS0a6X8u5tdSiMqXhojOdoV9TsMsiO+9VLC5vAmO8N7/GmXn7yjR8qnA6bVAEzfA==}
+  is-arguments@1.2.0:
+    resolution: {integrity: sha512-7bVbi0huj/wrIAOzb8U1aszg9kdi3KN/CyU19CTI7tAoZYEZoL9yCDXpbXN+uPsuWnP02cyug1gleqq+TU+YCA==}
     engines: {node: '>= 0.4'}
 
   is-array-buffer@3.0.4:
@@ -10974,10 +10933,6 @@ packages:
 
   is-symbol@1.1.1:
     resolution: {integrity: sha512-9gGx6GTtCQM73BgmHQXfDmLtfjjTUDSyoxTCbp5WtoixAhfgsDirWIcVQ/IHpvI5Vgd5i/J5F7B9cN/WlVbC/w==}
-    engines: {node: '>= 0.4'}
-
-  is-typed-array@1.1.13:
-    resolution: {integrity: sha512-uZ25/bUAlUY5fR4OKT4rZQEBrzQWYV9ZJYGGsUmEJ6thodVJ1HX64ePQ6Z0qPWP+m+Uq6e9UugrE38jeYsDSMw==}
     engines: {node: '>= 0.4'}
 
   is-typed-array@1.1.15:
@@ -11915,16 +11870,12 @@ packages:
     resolution: {integrity: sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==}
     engines: {node: '>= 0.4'}
 
-  object-is@1.1.5:
-    resolution: {integrity: sha512-3cyDsyHgtmi7I7DfSSI2LDp6SK2lwvtbg0p0R1e0RvTqF5ceGx+K2dfSjm1bKDMVCFEDAQvy+o8c6a7VujOddw==}
+  object-is@1.1.6:
+    resolution: {integrity: sha512-F8cZ+KfGlSGi09lJT7/Nd6KJZ9ygtvYC0/UYYLI9nmQKLMnydpB9yvbv9K1uSkEu7FU9vYPmVwLg328tX+ot3Q==}
     engines: {node: '>= 0.4'}
 
   object-keys@1.1.1:
     resolution: {integrity: sha512-NuAESUOUMrlIXOfHKzD6bpPu3tYt3xvjNdRIQ+FeT0lNb4K8WR70CaDxhuNguS2XG+GjkyMwOzsN5ZktImfhLA==}
-    engines: {node: '>= 0.4'}
-
-  object.assign@4.1.5:
-    resolution: {integrity: sha512-byy+U7gp+FVwmyzKPYhW2h5l3crpmGsxl7X2s8y43IgxvG4g3QZ6CffDtsNQy1WsmZpQbO+ybo0AlW7TY6DcBQ==}
     engines: {node: '>= 0.4'}
 
   object.assign@4.1.7:
@@ -12928,6 +12879,10 @@ packages:
     resolution: {integrity: sha512-5AAx+mujtXijsEavc5lWXBPQqrM4+Dl5qNH96N2aNeuJFUzpiiToKPsxQD/zAIJHspz7zz0maX0PCtCTFVlixQ==}
     engines: {node: '>= 4'}
 
+  recast@0.23.11:
+    resolution: {integrity: sha512-YTUo+Flmw4ZXiWfQKGcwwc11KnoRAYgzAE2E7mXKCjSviTKShtxBsN6YUUBB2gtaBzKzeKunxhUwNHQuRryhWA==}
+    engines: {node: '>= 4'}
+
   reflect.getprototypeof@1.0.10:
     resolution: {integrity: sha512-00o4I+DVrefhv+nX0ulyi3biSHCPDe+yLv5o/p6d/UVlirijB8E16FtfwSAi4g3tcqrQ4lRAqQSoFEZJehYEcw==}
     engines: {node: '>= 0.4'}
@@ -13699,6 +13654,9 @@ packages:
 
   timeago.js@4.0.2:
     resolution: {integrity: sha512-a7wPxPdVlQL7lqvitHGGRsofhdwtkoSXPGATFuSOA2i1ZNQEPLrGnj68vOp2sOJTCFAQVXPeNMX/GctBaO9L2w==}
+
+  tiny-invariant@1.3.3:
+    resolution: {integrity: sha512-+FbBPE1o9QAYvviau/qC5SE3caw21q3xkvWKBtja5vgqOWIHHJ3ioaq1VPfn/Szqctz2bU/oYeKd9/z5BL+PVg==}
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
@@ -14546,10 +14504,6 @@ packages:
     resolution: {integrity: sha512-n1brCuqClxfFfq/Rb0ICg9giSZqCS+pLtccdag6C2HyufBrh3fBOiy9nb6ggRMvWOVH5GrdJskj5iGTZNxd7SA==}
     engines: {node: '>=4'}
 
-  which-typed-array@1.1.16:
-    resolution: {integrity: sha512-g+N+GAWiRj66DngFwHvISJd+ITsyphZvD1vChfVg6cEdnzy53GzB3oy0fUNlvhz7H7+MiqhYr26qxQShCpKTTQ==}
-    engines: {node: '>= 0.4'}
-
   which-typed-array@1.1.19:
     resolution: {integrity: sha512-rEvr90Bck4WZt9HHFC4DJMsjvu7x+r6bImz0/BrbWb7A2djJ8hnZMrWnHo9F8ssv0OMErasDhftrfROTyqSDrw==}
     engines: {node: '>= 0.4'}
@@ -14581,11 +14535,6 @@ packages:
 
   workerd@1.20250417.0:
     resolution: {integrity: sha512-naz6oJiVODd3/Lkp9l3vtc56HKOOvx+AWDvEsTa5eSfi5SI9V0HYpLYSPblAwrfazbQ4ff1Vl3jkTl/5JxqCAA==}
-    engines: {node: '>=16'}
-    hasBin: true
-
-  workerd@1.20251126.0:
-    resolution: {integrity: sha512-VMKtzD2uKWTS7g139XvkvttrmcZO/aie5jNGkpkcW742Tr8TJiyCra4kyiFBGv7PVEzMFa1JpZ6NJqxX6H5zqQ==}
     engines: {node: '>=16'}
     hasBin: true
 
@@ -16001,9 +15950,6 @@ snapshots:
   '@cloudflare/workerd-darwin-64@1.20250417.0':
     optional: true
 
-  '@cloudflare/workerd-darwin-64@1.20251126.0':
-    optional: true
-
   '@cloudflare/workerd-darwin-64@1.20251202.0':
     optional: true
 
@@ -16011,9 +15957,6 @@ snapshots:
     optional: true
 
   '@cloudflare/workerd-darwin-arm64@1.20250417.0':
-    optional: true
-
-  '@cloudflare/workerd-darwin-arm64@1.20251126.0':
     optional: true
 
   '@cloudflare/workerd-darwin-arm64@1.20251202.0':
@@ -16025,9 +15968,6 @@ snapshots:
   '@cloudflare/workerd-linux-64@1.20250417.0':
     optional: true
 
-  '@cloudflare/workerd-linux-64@1.20251126.0':
-    optional: true
-
   '@cloudflare/workerd-linux-64@1.20251202.0':
     optional: true
 
@@ -16037,9 +15977,6 @@ snapshots:
   '@cloudflare/workerd-linux-arm64@1.20250417.0':
     optional: true
 
-  '@cloudflare/workerd-linux-arm64@1.20251126.0':
-    optional: true
-
   '@cloudflare/workerd-linux-arm64@1.20251202.0':
     optional: true
 
@@ -16047,9 +15984,6 @@ snapshots:
     optional: true
 
   '@cloudflare/workerd-windows-64@1.20250417.0':
-    optional: true
-
-  '@cloudflare/workerd-windows-64@1.20251126.0':
     optional: true
 
   '@cloudflare/workerd-windows-64@1.20251202.0':
@@ -19684,11 +19618,12 @@ snapshots:
 
   assert-plus@1.0.0: {}
 
-  assert@2.0.0:
+  assert@2.1.0:
     dependencies:
-      es6-object-assign: 1.1.0
+      call-bind: 1.0.8
       is-nan: 1.3.2
-      object-is: 1.1.5
+      object-is: 1.1.6
+      object.assign: 4.1.7
       util: 0.12.5
 
   assertion-error@2.0.1: {}
@@ -19708,6 +19643,10 @@ snapshots:
       tslib: 2.8.1
 
   ast-types@0.15.2:
+    dependencies:
+      tslib: 2.8.1
+
+  ast-types@0.16.1:
     dependencies:
       tslib: 2.8.1
 
@@ -19987,11 +19926,6 @@ snapshots:
 
   cac@6.7.14: {}
 
-  call-bind-apply-helpers@1.0.1:
-    dependencies:
-      es-errors: 1.3.0
-      function-bind: 1.1.2
-
   call-bind-apply-helpers@1.0.2:
     dependencies:
       es-errors: 1.3.0
@@ -20006,8 +19940,8 @@ snapshots:
 
   call-bound@1.0.3:
     dependencies:
-      call-bind-apply-helpers: 1.0.1
-      get-intrinsic: 1.2.7
+      call-bind-apply-helpers: 1.0.2
+      get-intrinsic: 1.3.0
 
   call-bound@1.0.4:
     dependencies:
@@ -20775,7 +20709,7 @@ snapshots:
       es-set-tostringtag: 2.0.3
       es-to-primitive: 1.2.1
       function.prototype.name: 1.1.6
-      get-intrinsic: 1.2.7
+      get-intrinsic: 1.3.0
       get-symbol-description: 1.0.2
       globalthis: 1.0.4
       gopd: 1.2.0
@@ -20791,11 +20725,11 @@ snapshots:
       is-regex: 1.1.4
       is-shared-array-buffer: 1.0.3
       is-string: 1.0.7
-      is-typed-array: 1.1.13
+      is-typed-array: 1.1.15
       is-weakref: 1.0.2
       object-inspect: 1.13.3
       object-keys: 1.1.1
-      object.assign: 4.1.5
+      object.assign: 4.1.7
       regexp.prototype.flags: 1.5.3
       safe-array-concat: 1.1.2
       safe-regex-test: 1.0.3
@@ -20807,7 +20741,7 @@ snapshots:
       typed-array-byte-offset: 1.0.3
       typed-array-length: 1.0.7
       unbox-primitive: 1.0.2
-      which-typed-array: 1.1.16
+      which-typed-array: 1.1.19
 
   es-abstract@1.24.0:
     dependencies:
@@ -20929,8 +20863,6 @@ snapshots:
       is-callable: 1.2.7
       is-date-object: 1.1.0
       is-symbol: 1.1.1
-
-  es6-object-assign@1.1.0: {}
 
   esbuild-register@3.5.0(esbuild@0.27.0):
     dependencies:
@@ -21874,30 +21806,6 @@ snapshots:
 
   get-east-asian-width@1.2.0: {}
 
-  get-intrinsic@1.2.5:
-    dependencies:
-      call-bind-apply-helpers: 1.0.2
-      dunder-proto: 1.0.1
-      es-define-property: 1.0.1
-      es-errors: 1.3.0
-      function-bind: 1.1.2
-      gopd: 1.2.0
-      has-symbols: 1.1.0
-      hasown: 2.0.2
-
-  get-intrinsic@1.2.7:
-    dependencies:
-      call-bind-apply-helpers: 1.0.2
-      es-define-property: 1.0.1
-      es-errors: 1.3.0
-      es-object-atoms: 1.1.1
-      function-bind: 1.1.2
-      get-proto: 1.0.1
-      gopd: 1.2.0
-      has-symbols: 1.1.0
-      hasown: 2.0.2
-      math-intrinsics: 1.1.0
-
   get-intrinsic@1.3.0:
     dependencies:
       call-bind-apply-helpers: 1.0.2
@@ -22295,9 +22203,9 @@ snapshots:
 
   irregular-plurals@3.5.0: {}
 
-  is-arguments@1.1.1:
+  is-arguments@1.2.0:
     dependencies:
-      call-bind: 1.0.8
+      call-bound: 1.0.4
       has-tostringtag: 1.0.2
 
   is-array-buffer@3.0.4:
@@ -22508,10 +22416,6 @@ snapshots:
       call-bound: 1.0.4
       has-symbols: 1.1.0
       safe-regex-test: 1.1.0
-
-  is-typed-array@1.1.13:
-    dependencies:
-      which-typed-array: 1.1.19
 
   is-typed-array@1.1.15:
     dependencies:
@@ -23406,19 +23310,12 @@ snapshots:
 
   object-inspect@1.13.4: {}
 
-  object-is@1.1.5:
+  object-is@1.1.6:
     dependencies:
       call-bind: 1.0.8
       define-properties: 1.2.1
 
   object-keys@1.1.1: {}
-
-  object.assign@4.1.5:
-    dependencies:
-      call-bind: 1.0.8
-      define-properties: 1.2.1
-      has-symbols: 1.1.0
-      object-keys: 1.1.1
 
   object.assign@4.1.7:
     dependencies:
@@ -24423,10 +24320,18 @@ snapshots:
 
   recast@0.22.0:
     dependencies:
-      assert: 2.0.0
+      assert: 2.1.0
       ast-types: 0.15.2
       esprima: 4.0.1
       source-map: 0.6.1
+      tslib: 2.8.1
+
+  recast@0.23.11:
+    dependencies:
+      ast-types: 0.16.1
+      esprima: 4.0.1
+      source-map: 0.6.1
+      tiny-invariant: 1.3.3
       tslib: 2.8.1
 
   reflect.getprototypeof@1.0.10:
@@ -24947,7 +24852,7 @@ snapshots:
   side-channel@1.0.4:
     dependencies:
       call-bind: 1.0.8
-      get-intrinsic: 1.2.5
+      get-intrinsic: 1.3.0
       object-inspect: 1.13.3
 
   side-channel@1.1.0:
@@ -25420,6 +25325,8 @@ snapshots:
   time-zone@1.0.0: {}
 
   timeago.js@4.0.2: {}
+
+  tiny-invariant@1.3.3: {}
 
   tinybench@2.9.0: {}
 
@@ -25954,7 +25861,7 @@ snapshots:
   util@0.12.5:
     dependencies:
       inherits: 2.0.4
-      is-arguments: 1.1.1
+      is-arguments: 1.2.0
       is-generator-function: 1.0.10
       is-typed-array: 1.1.15
       which-typed-array: 1.1.19
@@ -26493,14 +26400,6 @@ snapshots:
 
   which-pm-runs@1.1.0: {}
 
-  which-typed-array@1.1.16:
-    dependencies:
-      available-typed-arrays: 1.0.7
-      call-bind: 1.0.8
-      for-each: 0.3.5
-      gopd: 1.2.0
-      has-tostringtag: 1.0.2
-
   which-typed-array@1.1.19:
     dependencies:
       available-typed-arrays: 1.0.7
@@ -26543,14 +26442,6 @@ snapshots:
       '@cloudflare/workerd-linux-64': 1.20250417.0
       '@cloudflare/workerd-linux-arm64': 1.20250417.0
       '@cloudflare/workerd-windows-64': 1.20250417.0
-
-  workerd@1.20251126.0:
-    optionalDependencies:
-      '@cloudflare/workerd-darwin-64': 1.20251126.0
-      '@cloudflare/workerd-darwin-arm64': 1.20251126.0
-      '@cloudflare/workerd-linux-64': 1.20251126.0
-      '@cloudflare/workerd-linux-arm64': 1.20251126.0
-      '@cloudflare/workerd-windows-64': 1.20251126.0
 
   workerd@1.20251202.0:
     optionalDependencies:
