@@ -4,7 +4,11 @@ import { spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { findWranglerConfig, ParseError } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	findWranglerConfig,
+	ParseError,
+} from "@cloudflare/workers-utils";
 import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
@@ -15630,6 +15634,61 @@ export default{
 				"▲ [WARNING] Environment variable \`MY_SECRET\` conflicts with an existing remote secret. This deployment will replace the remote secret with your environment variable.
 
 				"
+			`);
+		});
+
+		it("should handle the remote secrets fetching check for new workers", async () => {
+			writeWorkerSource();
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					vars: {
+						MY_SECRET: 123,
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.json"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ wranglerConfigPath: "./wrangler.json" });
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+					() => {
+						const workerNotFoundAPIError = new APIError({
+							status: 404,
+							text: "A request to the Cloudflare API (/accounts/xxx/workers/scripts/yyy/secrets) failed.",
+						});
+
+						workerNotFoundAPIError.code = 10007;
+						throw workerNotFoundAPIError;
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler("deploy");
+
+			expect(fetchSecrets).toHaveBeenCalled();
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                  Resource
+				env.MY_SECRET (123)      Environment Variable
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
 			`);
 		});
 
