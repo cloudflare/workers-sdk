@@ -34,21 +34,21 @@ mCWw+vbGTBwIr/9X1S4UL1/f3zDICC7YSA==
 // emailAddress            = optional
 
 // [ req_distinguished_name ]
-// countryName                     = US
+// countryName                     = Country Name
 // countryName_default             = US
 // countryName_min                 = 2
 // countryName_max                 = 2
-// stateOrProvinceName             = Texas
+// stateOrProvinceName             = State or Province Name
 // stateOrProvinceName_default     = Texas
-// localityName                    = Austin
-// localityName_default            = Austin ## This is the default value
-// 0.organizationName              = Cloudflare ## Print this message
-// 0.organizationName_default      = Cloudflare ## This is the default value
-// organizationalUnitName          = Workers ## Print this message
-// organizationalUnitName_default  = Workers## This is the default value
-// commonName                      = localhost
+// localityName                    = Locality
+// localityName_default            = Austin
+// 0.organizationName              = Organization Name
+// 0.organizationName_default      = Cloudflare
+// organizationalUnitName          = Organizational Unit Name
+// organizationalUnitName_default  = Workers
+// commonName                      = Common Name
 // commonName_max                  = 64
-// emailAddress                    = workers@cloudflare.dev
+// emailAddress                    = Email Address
 // emailAddress_max                = 64
 
 // [ v3_ca ]
@@ -58,21 +58,38 @@ mCWw+vbGTBwIr/9X1S4UL1/f3zDICC7YSA==
 // nsComment = "OpenSSL Generated Certificate"
 // keyUsage = keyCertSign,digitalSignature,nonRepudiation,keyEncipherment,dataEncipherment
 // extendedKeyUsage = serverAuth,clientAuth,codeSigning,timeStamping
+// subjectAltName = @alt_names
+
+// [alt_names]
+// DNS.0 = localhost
+// IP.1 = 127.0.0.1
+
+// Interactive answers:
+// Country Name [US]:
+// State or Province Name [Texas]:
+// Locality [Austin]:
+// Organization Name [Cloudflare]:
+// Organizational Unit Name [Workers]:
+// Common Name []:localhost
+// Email Address []:wrangler@cloudflare.com
 export const CERT = `
 -----BEGIN CERTIFICATE-----
-MIICcDCCAhegAwIBAgIUE97EcbEWw3YZMN/ucGBSzJ/5qA4wCgYIKoZIzj0EAwIw
-VTELMAkGA1UEBhMCVVMxDjAMBgNVBAgMBVRleGFzMQ8wDQYDVQQHDAZBdXN0aW4x
-EzARBgNVBAoMCkNsb3VkZmxhcmUxEDAOBgNVBAsMB1dvcmtlcnMwIBcNMjMwNjIy
-MTg1ODQ3WhgPMjEyMzA1MjkxODU4NDdaMFUxCzAJBgNVBAYTAlVTMQ4wDAYDVQQI
-DAVUZXhhczEPMA0GA1UEBwwGQXVzdGluMRMwEQYDVQQKDApDbG91ZGZsYXJlMRAw
-DgYDVQQLDAdXb3JrZXJzMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEtrIEgzog
-jrUHIvB4qgjg/cT7blhWuLUfSUp6H62NCo21NrVWgPtCmCWw+vbGTBwIr/9X1S4U
-L1/f3zDICC7YSKOBwjCBvzAdBgNVHQ4EFgQUSXahTksi00c6KhUECHIY4FLW7Sow
-HwYDVR0jBBgwFoAUSXahTksi00c6KhUECHIY4FLW7SowDwYDVR0TAQH/BAUwAwEB
-/zAsBglghkgBhvhCAQ0EHxYdT3BlblNTTCBHZW5lcmF0ZWQgQ2VydGlmaWNhdGUw
-CwYDVR0PBAQDAgL0MDEGA1UdJQQqMCgGCCsGAQUFBwMBBggrBgEFBQcDAgYIKwYB
-BQUHAwMGCCsGAQUFBwMIMAoGCCqGSM49BAMCA0cAMEQCIE2qnXbKTHQ8wtwI+9XR
-h4ivDyz7w7iGxn3+ccmj/CQqAiApdX/Iz/jGRzi04xFlE4GoPVG/zaMi64ckmIpE
-ez/dHA==
+MIIDBzCCAq2gAwIBAgIUaEibZTawMcz6xQ/0rGNlEBKwkUowCgYIKoZIzj0EAwIw
+gZExCzAJBgNVBAYTAlVTMQ4wDAYDVQQIDAVUZXhhczEPMA0GA1UEBwwGQXVzdGlu
+MRMwEQYDVQQKDApDbG91ZGZsYXJlMRAwDgYDVQQLDAdXb3JrZXJzMRIwEAYDVQQD
+DAlsb2NhbGhvc3QxJjAkBgkqhkiG9w0BCQEWF3dyYW5nbGVyQGNsb3VkZmxhcmUu
+Y29tMCAXDTI1MTAwMjEzMzQ1MloYDzIxMjUwOTA4MTMzNDUyWjCBkTELMAkGA1UE
+BhMCVVMxDjAMBgNVBAgMBVRleGFzMQ8wDQYDVQQHDAZBdXN0aW4xEzARBgNVBAoM
+CkNsb3VkZmxhcmUxEDAOBgNVBAsMB1dvcmtlcnMxEjAQBgNVBAMMCWxvY2FsaG9z
+dDEmMCQGCSqGSIb3DQEJARYXd3JhbmdsZXJAY2xvdWRmbGFyZS5jb20wWTATBgcq
+hkjOPQIBBggqhkjOPQMBBwNCAAS2sgSDOiCOtQci8HiqCOD9xPtuWFa4tR9JSnof
+rY0KjbU2tVaA+0KYJbD69sZMHAiv/1fVLhQvX9/fMMgILthIo4HeMIHbMB0GA1Ud
+DgQWBBRJdqFOSyLTRzoqFQQIchjgUtbtKjAfBgNVHSMEGDAWgBRJdqFOSyLTRzoq
+FQQIchjgUtbtKjAPBgNVHRMBAf8EBTADAQH/MCwGCWCGSAGG+EIBDQQfFh1PcGVu
+U1NMIEdlbmVyYXRlZCBDZXJ0aWZpY2F0ZTALBgNVHQ8EBAMCAvQwMQYDVR0lBCow
+KAYIKwYBBQUHAwEGCCsGAQUFBwMCBggrBgEFBQcDAwYIKwYBBQUHAwgwGgYDVR0R
+BBMwEYIJbG9jYWxob3N0hwR/AAABMAoGCCqGSM49BAMCA0gAMEUCIQDNxEiZc6Q6
+8hK0q3y/9lDWc+dHr74gAnBHVJZEo5uyRQIgW6eL31hH7qouqUi9+efWU1N85n0z
+X3kip4YDAFo8ozE=
 -----END CERTIFICATE-----
 `;

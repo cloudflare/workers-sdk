@@ -1,4 +1,4 @@
-import { spawnSync } from "child_process";
+import { spawnSync } from "node:child_process";
 import { UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { logger } from "../logger";

@@ -1,5 +1,5 @@
-import { createReadStream, promises as fs } from "fs";
 import assert from "node:assert";
+import { createReadStream, promises as fs } from "node:fs";
 import path from "node:path";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
 import {
@@ -23,7 +23,6 @@ import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type {
 	Database,
 	ImportInitResponse,
@@ -31,7 +30,7 @@ import type {
 	PollingFailure,
 } from "./types";
 import type { D1Result } from "@cloudflare/workers-types/experimental";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];
@@ -621,14 +620,17 @@ function shorten(query: string | undefined, length: number) {
 
 async function checkForSQLiteBinary(filename: string) {
 	const buffer = Buffer.alloc(15);
+	let fd: fs.FileHandle | undefined;
 
 	try {
-		const fd = await fs.open(filename, "r");
+		fd = await fs.open(filename, "r");
 		await fd.read(buffer, 0, 15);
 	} catch {
 		throw new UserError(
 			`Unable to read SQL text file "${filename}". Please check the file path and try again.`
 		);
+	} finally {
+		await fd?.close();
 	}
 
 	if (buffer.toString("utf8") === "SQLite format 3") {

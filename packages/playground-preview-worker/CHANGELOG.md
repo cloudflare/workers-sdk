@@ -1,5 +1,17 @@
 # playground-preview-worker
 
+## 0.2.0
+
+### Minor Changes
+
+- [#11435](https://github.com/cloudflare/workers-sdk/pull/11435) [`ccf877e`](https://github.com/cloudflare/workers-sdk/commit/ccf877ea1a45e90e5aa7162624649220730920b9) Thanks [@penalosa](https://github.com/penalosa)! - Return `tail_url` from Worker uploads
+
+## 0.1.7
+
+### Patch Changes
+
+- [#11217](https://github.com/cloudflare/workers-sdk/pull/11217) [`9ed1542`](https://github.com/cloudflare/workers-sdk/commit/9ed1542e854be65f7c03ed9596ec36767ce8aa36) Thanks [@penalosa](https://github.com/penalosa)! - Use toucan-js v4
+
 ## 0.1.6
 
 ### Patch Changes

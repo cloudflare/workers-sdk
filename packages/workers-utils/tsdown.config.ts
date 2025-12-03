@@ -4,7 +4,7 @@ export default defineConfig([
 	{
 		treeshake: true,
 		// keepNames: true,
-		entry: ["src/index.ts", "src/browser.ts"],
+		entry: ["src/index.ts", "src/browser.ts", "src/test-helpers/index.ts"],
 		platform: "node",
 		format: "esm",
 		dts: {
@@ -19,7 +19,7 @@ export default defineConfig([
 		outDir: "dist",
 		tsconfig: "tsconfig.json",
 		// metafile: true,
-		external: ["jsonc-parser"],
+		external: ["jsonc-parser", "@cloudflare/*", "vitest", "msw", "undici"],
 		sourcemap: process.env.SOURCEMAPS !== "false",
 		// mainFields: ["module", "main"],
 		define: {

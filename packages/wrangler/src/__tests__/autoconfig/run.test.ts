@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as c3 from "../../autoconfig/c3-vendor/packages";
 import * as details from "../../autoconfig/details";
 import { Static } from "../../autoconfig/frameworks/static";
@@ -150,7 +150,9 @@ describe("autoconfig (deploy)", () => {
 			});
 			await writeFile(".gitignore", "");
 			const configureSpy = vi.fn(async ({ outputDir }) => ({
-				assets: { directory: outputDir },
+				wranglerConfig: {
+					assets: { directory: outputDir },
+				},
 			}));
 			await run.runAutoConfig({
 				projectPath: process.cwd(),
@@ -158,7 +160,7 @@ describe("autoconfig (deploy)", () => {
 				configured: false,
 				workerName: "my-worker",
 				framework: {
-					name: "fake",
+					name: "Fake",
 					configure: configureSpy,
 				} as unknown as Framework,
 				outputDir: "dist",
@@ -173,7 +175,7 @@ describe("autoconfig (deploy)", () => {
 				"
 				Detected Project Settings:
 				 - Worker Name: my-worker
-				 - Framework: fake
+				 - Framework: Fake
 				 - Build Command: echo 'built' > build.txt
 				 - Output Directory: dist
 
@@ -339,6 +341,25 @@ describe("autoconfig (deploy)", () => {
 				!.env.example
 				"
 			`);
+		});
+
+		it("errors if no output directory is specified in the autoconfig details", async () => {
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: false,
+			});
+
+			await expect(
+				run.runAutoConfig({
+					projectPath: process.cwd(),
+					configured: false,
+					framework: new Static("static"),
+					workerName: "my-worker",
+					outputDir: "",
+				})
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Cannot configure project without an output directory]`
+			);
 		});
 	});
 });

@@ -1,6 +1,6 @@
-import assert from "assert";
-import crypto from "crypto";
-import fs from "fs/promises";
+import assert from "node:assert";
+import crypto from "node:crypto";
+import fs from "node:fs/promises";
 import {
 	CACHE_PLUGIN_NAME,
 	HeadersInit,

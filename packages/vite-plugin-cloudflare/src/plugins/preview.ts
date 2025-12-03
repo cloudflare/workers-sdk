@@ -21,6 +21,13 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 		async configurePreviewServer(vitePreviewServer) {
 			assertIsPreview(ctx);
 
+			// Ensure Miniflare is disposed when the preview server is closed during prerendering
+			const closePreviewServer =
+				vitePreviewServer.close.bind(vitePreviewServer);
+			vitePreviewServer.close = async () => {
+				await Promise.all([ctx.disposeMiniflare(), closePreviewServer()]);
+			};
+
 			const { miniflareOptions, containerTagToOptionsMap } =
 				await getPreviewMiniflareOptions(ctx, vitePreviewServer);
 
@@ -40,6 +47,8 @@ export const previewPlugin = createPlugin("preview", (ctx) => {
 					containerOptions: [...containerTagToOptionsMap.values()],
 					onContainerImagePreparationStart: () => {},
 					onContainerImagePreparationEnd: () => {},
+					logger: vitePreviewServer.config.logger,
+					isVite: true,
 				});
 
 				const containerImageTags = new Set(containerTagToOptionsMap.keys());

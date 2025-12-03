@@ -1,7 +1,10 @@
-import { APIError, UserError } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	getCloudflareApiEnvironmentFromEnv,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
 import { confirm } from "../dialogs";
-import { getCloudflareApiEnvironmentFromEnv } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
@@ -13,8 +16,8 @@ import {
 	enableR2CatalogCompaction,
 	enableR2CatalogTableCompaction,
 	getR2Catalog,
-	upsertR2DataCatalogCredential,
-} from "./helpers";
+	upsertR2CatalogCredential,
+} from "./helpers/catalog";
 
 export const r2BucketCatalogNamespace = createNamespace({
 	metadata: {
@@ -242,7 +245,7 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 				);
 			}
 
-			await upsertR2DataCatalogCredential(
+			await upsertR2CatalogCredential(
 				config,
 				accountId,
 				args.bucket,

@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { describe, expect, test } from "vitest";
 import { isProcessEnvPopulated } from "../process-env";
 
 describe("isProcessEnvPopulated", () => {

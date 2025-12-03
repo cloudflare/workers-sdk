@@ -108,18 +108,18 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 	it("supports service worker fetch over service binding", async ({
 		devRegistryPath,
 	}) => {
-		const moduleWorkers = await runWranglerDev(
-			"wrangler.module-worker.jsonc",
+		const exportedHandler = await runWranglerDev(
+			"wrangler.exported-handler.jsonc",
 			devRegistryPath
 		);
 
-		// Test fallback service before module-worker is started
+		// Test fallback service before service-worker is started
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "service-worker",
 				"test-method": "fetch",
 			});
-			const response = await fetch(`${moduleWorkers}?${searchParams}`);
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
 
 			expect({
 				status: response.status,
@@ -132,20 +132,20 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 
 		await runWranglerDev("wrangler.service-worker.jsonc", devRegistryPath);
 
-		// Test module worker -> service worker
+		// Test exported-handler -> service worker
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "service-worker",
 				"test-method": "fetch",
 			});
-			const response = await fetch(`${moduleWorkers}?${searchParams}`);
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
 
 			expect(await response.text()).toBe("Hello from service worker!");
 			expect(response.status).toBe(200);
 		}, waitForTimeout);
 	});
 
-	it("supports module worker fetch over service binding", async ({
+	it("supports exported handler fetch over service binding", async ({
 		devRegistryPath,
 	}) => {
 		const singleWorkerWithAssets = await runWranglerDev(
@@ -153,10 +153,10 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			devRegistryPath
 		);
 
-		// Test fallback service before module-worker is started
+		// Test fallback before exported-handler is started
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
-				"test-service": "module-worker",
+				"test-service": "exported-handler",
 				"test-method": "fetch",
 			});
 			const response = await fetch(`${singleWorkerWithAssets}?${searchParams}`);
@@ -166,12 +166,12 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				body: await response.text(),
 			}).toEqual({
 				status: 503,
-				body: `Couldn't find a local dev session for the "default" entrypoint of service "module-worker" to proxy to`,
+				body: `Couldn't find a local dev session for the "default" entrypoint of service "exported-handler" to proxy to`,
 			});
 		}, waitForTimeout);
 
 		const multiWorkers = await runWranglerDev(
-			["wrangler.module-worker.jsonc", "wrangler.worker-entrypoint.jsonc"],
+			["wrangler.exported-handler.jsonc", "wrangler.worker-entrypoint.jsonc"],
 			devRegistryPath
 		);
 
@@ -187,7 +187,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			expect(response.status).toBe(200);
 
 			// Test fetching asset from "worker-entrypoint-with-assets" over service binding
-			// Module worker has no assets, so it will hit the user worker and
+			// Exported handler has no assets, so it will hit the user worker and
 			// forward the request to "worker-entrypoint-with-assets" with the asset path
 			const assetResponse = await fetch(
 				`${multiWorkers}/example.txt?${searchParams}`
@@ -198,12 +198,12 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 		// Test single worker -> multi workers
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
-				"test-service": "module-worker",
+				"test-service": "exported-handler",
 				"test-method": "fetch",
 			});
 			const response = await fetch(`${singleWorkerWithAssets}?${searchParams}`);
 
-			expect(await response.text()).toEqual("Hello from Module Worker!");
+			expect(await response.text()).toEqual("Hello from exported handler!");
 			expect(response.status).toBe(200);
 		}, waitForTimeout);
 
@@ -331,7 +331,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 		await runWranglerDev(
 			[
 				"wrangler.internal-durable-object.jsonc",
-				"wrangler.module-worker.jsonc",
+				"wrangler.exported-handler.jsonc",
 			],
 			devRegistryPath
 		);
@@ -354,7 +354,7 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 		const externalDurableObject = await runWranglerDev(
 			[
 				"wrangler.external-durable-object.jsonc",
-				"wrangler.module-worker.jsonc",
+				"wrangler.exported-handler.jsonc",
 			],
 			devRegistryPath
 		);
@@ -397,8 +397,8 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 	});
 
 	it("supports tail handler", async ({ devRegistryPath }) => {
-		const moduleWorkerWithAssets = await runWranglerDev(
-			"wrangler.module-worker-with-assets.jsonc",
+		const exportedHandlerWithAssets = await runWranglerDev(
+			"wrangler.exported-handler-with-assets.jsonc",
 			devRegistryPath
 		);
 		const workerEntrypoint = await runWranglerDev(
@@ -414,12 +414,12 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 		});
 
 		await vi.waitFor(async () => {
-			// Trigger tail handler of worker-entrypoint via module-worker
-			await fetch(`${moduleWorkerWithAssets}?${searchParams}`, {
+			// Trigger tail handler of worker-entrypoint via exported handler
+			await fetch(`${exportedHandlerWithAssets}?${searchParams}`, {
 				method: "POST",
 				body: JSON.stringify(["hello world", "this is the 2nd log"]),
 			});
-			await fetch(`${moduleWorkerWithAssets}?${searchParams}`, {
+			await fetch(`${exportedHandlerWithAssets}?${searchParams}`, {
 				method: "POST",
 				body: JSON.stringify(["some other log"]),
 			});
@@ -429,14 +429,14 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 			expect(await response.json()).toEqual({
 				worker: "Worker Entrypoint",
 				tailEvents: expect.arrayContaining([
-					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
-					[["[Module Worker]"], ["some other log"]],
+					[["[exported-handler]"], ["hello world", "this is the 2nd log"]],
+					[["[exported-handler]"], ["some other log"]],
 				]),
 			});
 		}, waitForTimeout);
 
 		await vi.waitFor(async () => {
-			// Trigger tail handler of module-worker via worker-entrypoint
+			// Trigger tail handler of exported-handler via worker-entrypoint
 			await fetch(`${workerEntrypoint}?${searchParams}`, {
 				method: "POST",
 				body: JSON.stringify(["hello from test"]),
@@ -445,10 +445,12 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 				method: "POST",
 				body: JSON.stringify(["yet another log", "and another one"]),
 			});
-			const response = await fetch(`${moduleWorkerWithAssets}?${searchParams}`);
+			const response = await fetch(
+				`${exportedHandlerWithAssets}?${searchParams}`
+			);
 
 			expect(await response.json()).toEqual({
-				worker: "Module Worker",
+				worker: "exported-handler",
 				tailEvents: expect.arrayContaining([
 					[
 						["[worker-entrypoint]", "[Worker Entrypoint]"],
@@ -465,18 +467,19 @@ describe("Dev Registry: wrangler dev <-> wrangler dev", () => {
 });
 
 describe("Dev Registry: vite dev <-> vite dev", () => {
-	it("supports module worker fetch over service binding", async ({
+	it("supports exported handler fetch over service binding", async ({
 		devRegistryPath,
 	}) => {
 		const workerEntrypointWithAssets = await runViteDev(
 			"vite.worker-entrypoint-with-assets.config.ts",
 			devRegistryPath
 		);
+		await runViteDev("vite.worker-entrypoint.config.ts", devRegistryPath);
 
-		// Test fallback service before module-worker is started
+		// Test fallback before exported-handler is started
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
-				"test-service": "module-worker",
+				"test-service": "exported-handler",
 				"test-method": "fetch",
 			});
 			const response = await fetch(
@@ -485,62 +488,88 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 
 			expect(response.status).toBe(503);
 			expect(await response.text()).toEqual(
-				`Couldn't find a local dev session for the "default" entrypoint of service "module-worker" to proxy to`
+				`Couldn't find a local dev session for the "default" entrypoint of service "exported-handler" to proxy to`
 			);
 		}, waitForTimeout);
 
-		const moduleWorker = await runViteDev(
-			"vite.module-worker.config.ts",
+		const exportedHandler = await runViteDev(
+			"vite.exported-handler.config.ts",
 			devRegistryPath
 		);
 
-		// Test module-worker -> worker-entrypoint
+		// Test exported-handler -> worker-entrypoint-with-assets
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "worker-entrypoint-with-assets",
 				"test-method": "fetch",
 			});
-			const response = await fetch(`${moduleWorker}?${searchParams}`);
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
 
 			expect(await response.text()).toBe("Hello from Worker Entrypoint!");
 			expect(response.status).toBe(200);
 
 			// Test fetching asset from "worker-entrypoint-with-assets" over service binding
-			// Module worker has no assets, so it will hit the user worker and
+			// Exported handler has no assets, so it will hit the user worker and
 			// forward the request to "worker-entrypoint-with-assets" with the asset path
 			const assetResponse = await fetch(
-				`${moduleWorker}/example.txt?${searchParams}`
+				`${exportedHandler}/example.txt?${searchParams}`
 			);
 			expect(await assetResponse.text()).toBe("This is an example asset file");
 		}, waitForTimeout);
 
-		// Test worker-entrypoint -> module-worker
+		// Test worker-entrypoint-with-assets -> exported-handler
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
-				"test-service": "module-worker",
+				"test-service": "exported-handler",
 				"test-method": "fetch",
 			});
 			const response = await fetch(
 				`${workerEntrypointWithAssets}?${searchParams}`
 			);
 
-			expect(await response.text()).toEqual("Hello from Module Worker!");
+			expect(await response.text()).toEqual("Hello from exported handler!");
+			expect(response.status).toBe(200);
+		}, waitForTimeout);
+
+		// Test exported-handler -> named-entrypoint
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
+
+			expect(await response.text()).toEqual("Hello from Named Entrypoint!");
+			expect(response.status).toBe(200);
+		}, waitForTimeout);
+
+		// Test exported-handler -> named-entrypoint-with-assets
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint-with-assets",
+				"test-method": "fetch",
+			});
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
+
+			expect(await response.text()).toEqual("Hello from Named Entrypoint!");
 			expect(response.status).toBe(200);
 		}, waitForTimeout);
 	});
 
 	it("supports RPC over service binding", async ({ devRegistryPath }) => {
-		const workerEntrypoint = await runViteDev(
-			"vite.worker-entrypoint.config.ts",
+		const exportedHandler = await runViteDev(
+			"vite.exported-handler.config.ts",
 			devRegistryPath
 		);
+		await runViteDev("vite.worker-entrypoint.config.ts", devRegistryPath);
 
+		// Test fallback before worker-entrypoint-with-assets is started
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "worker-entrypoint-with-assets",
 				"test-method": "rpc",
 			});
-			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
 
 			expect(response.status).toBe(500);
 			expect(await response.text()).toEqual(
@@ -548,39 +577,63 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			);
 		}, waitForTimeout);
 
-		const workerEntrypointWithAssets = await runViteDev(
+		await runViteDev(
 			"vite.worker-entrypoint-with-assets.config.ts",
 			devRegistryPath
 		);
 
+		// Test exported-handler -> worker-entrypoint RPC
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "worker-entrypoint",
 				"test-method": "rpc",
 			});
-			const response = await fetch(
-				`${workerEntrypointWithAssets}?${searchParams}`
-			);
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong");
 		}, waitForTimeout);
 
+		// Test exported-handler -> worker-entrypoint-with-assets RPC
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "worker-entrypoint-with-assets",
 				"test-method": "rpc",
 			});
-			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
 
 			expect(response.status).toBe(200);
 			expect(await response.text()).toEqual("Pong");
 		}, waitForTimeout);
+
+		// Test exported-handler -> named-entrypoint RPC
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong from Named Entrypoint");
+		}, waitForTimeout);
+
+		// Test exported-handler -> named-entrypoint-with-assets RPC
+		await vi.waitFor(async () => {
+			const searchParams = new URLSearchParams({
+				"test-service": "named-entrypoint-with-assets",
+				"test-method": "rpc",
+			});
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toEqual("Pong from Named Entrypoint");
+		}, waitForTimeout);
 	});
 
 	it("supports tail handler", async ({ devRegistryPath }) => {
-		const moduleWorker = await runViteDev(
-			"vite.module-worker.config.ts",
+		const exportedHandler = await runViteDev(
+			"vite.exported-handler.config.ts",
 			devRegistryPath
 		);
 		const workerEntrypointWithAssets = await runViteDev(
@@ -593,12 +646,12 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 		});
 
 		await vi.waitFor(async () => {
-			// Trigger tail handler of worker-entrypoint via module-worker
-			await fetch(`${moduleWorker}?${searchParams}`, {
+			// Trigger tail handler of worker-entrypoint via exported-handler
+			await fetch(`${exportedHandler}?${searchParams}`, {
 				method: "POST",
 				body: JSON.stringify(["hello world", "this is the 2nd log"]),
 			});
-			await fetch(`${moduleWorker}?${searchParams}`, {
+			await fetch(`${exportedHandler}?${searchParams}`, {
 				method: "POST",
 				body: JSON.stringify(["some other log"]),
 			});
@@ -610,14 +663,14 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 			expect(await response.json()).toEqual({
 				worker: "Worker Entrypoint",
 				tailEvents: expect.arrayContaining([
-					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
-					[["[Module Worker]"], ["some other log"]],
+					[["[exported-handler]"], ["hello world", "this is the 2nd log"]],
+					[["[exported-handler]"], ["some other log"]],
 				]),
 			});
 		});
 
 		await vi.waitFor(async () => {
-			// Trigger tail handler of module-worker via worker-entrypoint
+			// Trigger tail handler of exported-handler via worker-entrypoint
 			await fetch(`${workerEntrypointWithAssets}?${searchParams}`, {
 				method: "POST",
 				body: JSON.stringify(["hello from test"]),
@@ -627,10 +680,10 @@ describe("Dev Registry: vite dev <-> vite dev", () => {
 				body: JSON.stringify(["yet another log", "and another one"]),
 			});
 
-			const response = await fetch(`${moduleWorker}?${searchParams}`);
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
 
 			expect(await response.json()).toEqual({
-				worker: "Module Worker",
+				worker: "exported-handler",
 				tailEvents: expect.arrayContaining([
 					[["[Worker Entrypoint]"], ["hello from test"]],
 					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
@@ -645,7 +698,9 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		const workerEntrypoint = await runViteDev(
 			"vite.worker-entrypoint.config.ts"
 		);
-		const moduleWorker = await runWranglerDev("wrangler.module-worker.jsonc");
+		const exportedHandler = await runWranglerDev(
+			"wrangler.exported-handler.jsonc"
+		);
 
 		// Test wrangler dev -> vite dev yet
 		await vi.waitFor(async () => {
@@ -653,7 +708,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				"test-service": "worker-entrypoint",
 				"test-method": "fetch",
 			});
-			const response = await fetch(`${moduleWorker}?${searchParams}`);
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
 			expect(await response.text()).toBe("Hello from Worker Entrypoint!");
 			expect(response.status).toBe(200);
 		}, waitForTimeout);
@@ -661,16 +716,16 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		// Test vite dev -> wrangler dev
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
-				"test-service": "module-worker",
+				"test-service": "exported-handler",
 				"test-method": "fetch",
 			});
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
-			expect(await response.text()).toBe("Hello from Module Worker!");
+			expect(await response.text()).toBe("Hello from exported handler!");
 			expect(response.status).toBe(200);
 		}, waitForTimeout);
 	});
 
-	it("supports module worker fetch over service binding", async ({
+	it("supports exported handler fetch over service binding", async ({
 		devRegistryPath,
 	}) => {
 		const workerEntrypoint = await runViteDev(
@@ -678,22 +733,22 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			devRegistryPath
 		);
 
-		// Test fallback service before module-worker is started
+		// Test fallback service before exported-handler is started
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
-				"test-service": "module-worker",
+				"test-service": "exported-handler",
 				"test-method": "fetch",
 			});
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
 
 			expect(await response.text()).toEqual(
-				`Couldn't find a local dev session for the "default" entrypoint of service "module-worker" to proxy to`
+				`Couldn't find a local dev session for the "default" entrypoint of service "exported-handler" to proxy to`
 			);
 			expect(response.status).toBe(503);
 		}, waitForTimeout);
 
-		const moduleWorker = await runWranglerDev(
-			"wrangler.module-worker.jsonc",
+		const exportedHandler = await runWranglerDev(
+			"wrangler.exported-handler.jsonc",
 			devRegistryPath
 		);
 
@@ -703,7 +758,7 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 				"test-service": "worker-entrypoint",
 				"test-method": "fetch",
 			});
-			const response = await fetch(`${moduleWorker}?${searchParams}`);
+			const response = await fetch(`${exportedHandler}?${searchParams}`);
 			expect(await response.text()).toBe("Hello from Worker Entrypoint!");
 			expect(response.status).toBe(200);
 		}, waitForTimeout);
@@ -711,11 +766,11 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		// Test vite dev -> wrangler dev
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
-				"test-service": "module-worker",
+				"test-service": "exported-handler",
 				"test-method": "fetch",
 			});
 			const response = await fetch(`${workerEntrypoint}?${searchParams}`);
-			expect(await response.text()).toBe("Hello from Module Worker!");
+			expect(await response.text()).toBe("Hello from exported handler!");
 			expect(response.status).toBe(200);
 		}, waitForTimeout);
 	});
@@ -724,11 +779,11 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		devRegistryPath,
 	}) => {
 		const viteDevURL = await runViteDev(
-			"vite.module-worker.config.ts",
+			"vite.exported-handler.config.ts",
 			devRegistryPath
 		);
 
-		// Test fallback service before module-worker is started
+		// Test fallback before exported-handler is started
 		await vi.waitFor(async () => {
 			const searchParams = new URLSearchParams({
 				"test-service": "service-worker",
@@ -806,8 +861,8 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 	});
 
 	it("supports tail handler", async ({ devRegistryPath }) => {
-		const moduleWorkerWithStaticAssets = await runViteDev(
-			"vite.module-worker-with-assets.config.ts",
+		const exportedHandlerWithStaticAssets = await runViteDev(
+			"vite.exported-handler-with-assets.config.ts",
 			devRegistryPath
 		);
 		const workerEntrypoint = await runWranglerDev(
@@ -820,12 +875,12 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 		});
 
 		await vi.waitFor(async () => {
-			// Trigger tail handler of worker-entrypoint via module-worker
-			await fetch(`${moduleWorkerWithStaticAssets}?${searchParams}`, {
+			// Trigger tail handler of worker-entrypoint via exported-handler
+			await fetch(`${exportedHandlerWithStaticAssets}?${searchParams}`, {
 				method: "POST",
 				body: JSON.stringify(["hello world", "this is the 2nd log"]),
 			});
-			await fetch(`${moduleWorkerWithStaticAssets}?${searchParams}`, {
+			await fetch(`${exportedHandlerWithStaticAssets}?${searchParams}`, {
 				method: "POST",
 				body: JSON.stringify(["some other log"]),
 			});
@@ -835,14 +890,14 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			expect(await response.json()).toEqual({
 				worker: "Worker Entrypoint",
 				tailEvents: expect.arrayContaining([
-					[["[Module Worker]"], ["hello world", "this is the 2nd log"]],
-					[["[Module Worker]"], ["some other log"]],
+					[["[exported-handler]"], ["hello world", "this is the 2nd log"]],
+					[["[exported-handler]"], ["some other log"]],
 				]),
 			});
 		}, waitForTimeout);
 
 		await vi.waitFor(async () => {
-			// Trigger tail handler of module-worker via worker-entrypoint
+			// Trigger tail handler of exported-handler via worker-entrypoint
 			await fetch(`${workerEntrypoint}?${searchParams}`, {
 				method: "POST",
 				body: JSON.stringify(["hello from test"]),
@@ -853,11 +908,11 @@ describe("Dev Registry: vite dev <-> wrangler dev", () => {
 			});
 
 			const response = await fetch(
-				`${moduleWorkerWithStaticAssets}?${searchParams}`
+				`${exportedHandlerWithStaticAssets}?${searchParams}`
 			);
 
 			expect(await response.json()).toEqual({
-				worker: "Module Worker",
+				worker: "exported-handler",
 				tailEvents: expect.arrayContaining([
 					[["[Worker Entrypoint]"], ["hello from test"]],
 					[["[Worker Entrypoint]"], ["yet another log", "and another one"]],
@@ -885,11 +940,11 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		}, waitForTimeout);
 
 		await vi.waitFor(async () => {
-			const response = await env.MODULE_WORKER.fetch("http://localhost");
+			const response = await env.EXPORTED_HANDLER.fetch("http://localhost");
 
 			expect(response.status).toBe(503);
 			expect(await response.text()).toEqual(
-				`Couldn't find a local dev session for the "default" entrypoint of service "module-worker" to proxy to`
+				`Couldn't find a local dev session for the "default" entrypoint of service "exported-handler" to proxy to`
 			);
 		}, waitForTimeout);
 
@@ -907,20 +962,20 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 		}, waitForTimeout);
 
 		await vi.waitFor(async () => {
-			const response = await env.MODULE_WORKER.fetch("http://localhost");
+			const response = await env.EXPORTED_HANDLER.fetch("http://localhost");
 
 			expect(response.status).toBe(503);
 			expect(await response.text()).toEqual(
-				`Couldn't find a local dev session for the "default" entrypoint of service "module-worker" to proxy to`
+				`Couldn't find a local dev session for the "default" entrypoint of service "exported-handler" to proxy to`
 			);
 		}, waitForTimeout);
 
-		await runWranglerDev("wrangler.module-worker.jsonc", devRegistryPath);
+		await runWranglerDev("wrangler.exported-handler.jsonc", devRegistryPath);
 
 		await vi.waitFor(async () => {
-			const response = await env.MODULE_WORKER.fetch("http://localhost");
+			const response = await env.EXPORTED_HANDLER.fetch("http://localhost");
 
-			expect(await response.text()).toEqual("Hello from Module Worker!");
+			expect(await response.text()).toEqual("Hello from exported handler!");
 			expect(response.status).toBe(200);
 		}, waitForTimeout);
 
@@ -935,7 +990,7 @@ describe("Dev Registry: getPlatformProxy -> wrangler / vite dev", () => {
 
 	it("supports RPC over service binding", async ({ devRegistryPath }) => {
 		const { env } = await setupPlatformProxy(
-			"wrangler.module-worker.jsonc",
+			"wrangler.exported-handler.jsonc",
 			devRegistryPath
 		);
 

@@ -75,6 +75,8 @@ export function getCloudflarePreset({
 	const punycodeOverrides = getPunycodeOverrides(compat);
 	const clusterOverrides = getClusterOverrides(compat);
 	const traceEventsOverrides = getTraceEventsOverrides(compat);
+	const domainOverrides = getDomainOverrides(compat);
+	const wasiOverrides = getWasiOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -86,6 +88,8 @@ export function getCloudflarePreset({
 		...punycodeOverrides.nativeModules,
 		...clusterOverrides.nativeModules,
 		...traceEventsOverrides.nativeModules,
+		...domainOverrides.nativeModules,
+		...wasiOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -98,6 +102,8 @@ export function getCloudflarePreset({
 		...punycodeOverrides.hybridModules,
 		...clusterOverrides.hybridModules,
 		...traceEventsOverrides.hybridModules,
+		...domainOverrides.hybridModules,
+		...wasiOverrides.hybridModules,
 	];
 
 	return {
@@ -319,12 +325,11 @@ function getFsOverrides({
  * Returns the overrides for `node:punycode` (unenv or workerd)
  *
  * The native punycode implementation:
- * - is experimental
+ * - is enabled starting from 2025-12-04
  * - can be enabled with the "enable_nodejs_punycode_module" flag
  * - can be disabled with the "disable_nodejs_punycode_module" flag
  */
 function getPunycodeOverrides({
-	// eslint-disable-next-line unused-imports/no-unused-vars
 	compatibilityDate,
 	compatibilityFlags,
 }: {
@@ -335,12 +340,13 @@ function getPunycodeOverrides({
 		"disable_nodejs_punycode_module"
 	);
 
-	// TODO: add `enabledByDate` when a date is defined in workerd
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_punycode_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_punycode_module"
+	);
 
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabledByDate = compatibilityDate >= "2025-12-04";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	return enabled
 		? {
@@ -357,12 +363,11 @@ function getPunycodeOverrides({
  * Returns the overrides for `node:cluster` (unenv or workerd)
  *
  * The native cluster implementation:
- * - is experimental
+ * - is enabled starting from 2025-12-04
  * - can be enabled with the "enable_nodejs_cluster_module" flag
  * - can be disabled with the "disable_nodejs_cluster_module" flag
  */
 function getClusterOverrides({
-	// eslint-disable-next-line unused-imports/no-unused-vars
 	compatibilityDate,
 	compatibilityFlags,
 }: {
@@ -373,12 +378,13 @@ function getClusterOverrides({
 		"disable_nodejs_cluster_module"
 	);
 
-	// TODO: add `enabledByDate` when a date is defined in workerd
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_cluster_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_cluster_module"
+	);
 
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabledByDate = compatibilityDate >= "2025-12-04";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	return enabled
 		? {
@@ -395,12 +401,11 @@ function getClusterOverrides({
  * Returns the overrides for `node:trace_events` (unenv or workerd)
  *
  * The native trace_events implementation:
- * - is experimental
+ * - is enabled starting from 2025-12-04
  * - can be enabled with the "enable_nodejs_trace_events_module" flag
  * - can be disabled with the "disable_nodejs_trace_events_module" flag
  */
 function getTraceEventsOverrides({
-	// eslint-disable-next-line unused-imports/no-unused-vars
 	compatibilityDate,
 	compatibilityFlags,
 }: {
@@ -411,16 +416,93 @@ function getTraceEventsOverrides({
 		"disable_nodejs_trace_events_module"
 	);
 
-	// TODO: add `enabledByDate` when a date is defined in workerd
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_trace_events_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_trace_events_module"
+	);
 
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabledByDate = compatibilityDate >= "2025-12-04";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	return enabled
 		? {
 				nativeModules: ["trace_events"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:domain` (unenv or workerd)
+ *
+ * The native domain implementation:
+ * - is enabled starting from 2025-12-04
+ * - can be enabled with the "enable_nodejs_domain_module" flag
+ * - can be disabled with the "disable_nodejs_domain_module" flag
+ */
+function getDomainOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_domain_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_domain_module"
+	);
+
+	const enabledByDate = compatibilityDate >= "2025-12-04";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["domain"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:wasi` (unenv or workerd)
+ *
+ * The native wasi implementation:
+ * - is enabled starting from 2025-12-04
+ * - can be enabled with the "enable_nodejs_wasi_module" flag
+ * - can be disabled with the "disable_nodejs_wasi_module" flag
+ */
+function getWasiOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_wasi_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_wasi_module"
+	);
+
+	const enabledByDate = compatibilityDate >= "2025-12-04";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["wasi"],
 				hybridModules: [],
 			}
 		: {

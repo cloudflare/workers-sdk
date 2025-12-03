@@ -1,5 +1,5 @@
 import http from "node:http";
-import { vi } from "vitest";
+import { beforeEach, vi } from "vitest";
 import type { Request } from "undici";
 
 /**

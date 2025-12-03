@@ -1,4 +1,5 @@
 import { mkdirSync } from "node:fs";
+import { beforeEach, describe, expect, it } from "vitest";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";

@@ -1,10 +1,10 @@
-import assert from "assert";
-import { readFileSync } from "fs";
-import fs from "fs/promises";
-import path from "path";
-import { Readable } from "stream";
-import tls from "tls";
-import { TextEncoder } from "util";
+import assert from "node:assert";
+import { readFileSync } from "node:fs";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { Readable } from "node:stream";
+import tls from "node:tls";
+import { TextEncoder } from "node:util";
 import { bold } from "kleur/colors";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";

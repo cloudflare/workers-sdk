@@ -8,7 +8,7 @@ import {
 	NodeJsCompatWarnings,
 } from "../nodejs-compat";
 import { createPlugin } from "../utils";
-import type { WorkerConfig } from "../plugin-config";
+import type { ResolvedWorkerConfig } from "../plugin-config";
 
 /**
  * Plugin to support the `nodejs_als` compatibility flag
@@ -154,7 +154,7 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 	"nodejs-compat-warnings",
 	(ctx) => {
 		const nodeJsCompatWarningsMap = new Map<
-			WorkerConfig,
+			ResolvedWorkerConfig,
 			NodeJsCompatWarnings
 		>();
 

@@ -4,17 +4,13 @@ import {
 	testPackageManager,
 	testPackageManagerVersion,
 } from "../../e2e/helpers/constants";
-import { getFrameworksTests } from "../../e2e/tests/frameworks/test-config";
 
 class TestRunner {
 	#failed: string[] = [];
 
-	/** Runs the tests for a given testGroup and other options */
-	execTests(
-		description: string,
-		testFilter: "cli" | "workers" | "frameworks",
-		extraEnv: Record<string, string> = {},
-	) {
+	execTests(testFilter: "cli" | "workers" | "frameworks") {
+		const description = `Testing ${testFilter}`;
+
 		try {
 			console.log(
 				`::group::${description} (${testPackageManager}${testPackageManagerVersion ? `@${testPackageManagerVersion}` : ""}${isExperimental ? " / experimental" : ""})`,
@@ -28,7 +24,6 @@ class TestRunner {
 						E2E_EXPERIMENTAL: `${isExperimental}`,
 						E2E_TEST_PM: testPackageManager,
 						E2E_TEST_PM_VERSION: testPackageManagerVersion,
-						...extraEnv,
 					},
 				},
 			);
@@ -46,38 +41,28 @@ class TestRunner {
 		if (this.#failed.length > 0) {
 			throw new Error(
 				"At least one task failed:" +
-					this.#failed.map((file) => `\n - ${file}`),
+					this.#failed.map((group) => `\n - ${group}`),
 			);
 		}
 	}
 }
 
-/**
- * Gets the list of framework names (minus the variant) from the framework tests.
- */
-function getFrameworksGroups() {
-	const frameworkTests = getFrameworksTests();
-	return Array.from(
-		new Set(frameworkTests.map((testConfig) => testConfig.name.split(":")[0])),
-	);
-}
-
 function main() {
 	const testRunner = new TestRunner();
 	if (!process.env.E2E_TEST_FILTER || process.env.E2E_TEST_FILTER === "cli") {
-		testRunner.execTests(`Testing CLI`, "cli");
+		testRunner.execTests("cli");
 	}
 	if (
 		!process.env.E2E_TEST_FILTER ||
 		process.env.E2E_TEST_FILTER === "workers"
 	) {
-		testRunner.execTests(`Testing Workers`, "workers");
+		testRunner.execTests("workers");
 	}
 	if (
 		!process.env.E2E_TEST_FILTER ||
 		process.env.E2E_TEST_FILTER === "frameworks"
 	) {
-		testRunner.execTests(`Testing Framework`, "frameworks");
+		testRunner.execTests("frameworks");
 	}
 	testRunner.assertNoFailures();
 }

@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { experimental_patchConfig } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
+import { describe, expect, it } from "vitest";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { RawConfig } from "@cloudflare/workers-utils";
@@ -686,6 +687,35 @@ describe("experimental_patchConfig()", () => {
 				`);
 			});
 		});
+
+		it("should not error if a `null` is passed in", () => {
+			const jsonc = `
+				{
+					"compatibility_date": "2022-01-12",
+					"name": "test-name",
+				}
+				`;
+			writeFileSync("./wrangler.jsonc", jsonc);
+			const patch = {
+				// Note: `null` is not a valid value here, but we are just making sure that the function
+				//       doesn't unexpectedly error when it encounters a `null` value
+				tail_consumers: null,
+			};
+			const result = experimental_patchConfig(
+				"./wrangler.jsonc",
+				patch as unknown as RawConfig,
+				false
+			);
+			expect(result).not.toBeFalsy();
+			expect(result).toMatchInlineSnapshot(`
+				"{
+					\\"compatibility_date\\": \\"2022-01-12\\",
+					\\"name\\": \\"test-name\\",
+					\\"tail_consumers\\": null,
+				}"
+			`);
+		});
+
 		describe("edit existing bindings", () => {
 			it("isArrayInsertion = false", () => {
 				const jsonc = `

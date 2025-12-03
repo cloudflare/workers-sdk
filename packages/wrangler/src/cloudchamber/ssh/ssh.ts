@@ -1,5 +1,5 @@
-import { readdir, readFile, stat } from "fs/promises";
-import { homedir, userInfo } from "os";
+import { readdir, readFile, stat } from "node:fs/promises";
+import { homedir, userInfo } from "node:os";
 import {
 	endSection,
 	log,

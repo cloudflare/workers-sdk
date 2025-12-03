@@ -1,12 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { UserError } from "@cloudflare/workers-utils";
-import chalk from "chalk";
-import * as esbuild from "esbuild";
 import {
 	getBuildConditionsFromEnv,
 	getBuildPlatformFromEnv,
-} from "../environment-variables/misc-variables";
+	UserError,
+} from "@cloudflare/workers-utils";
+import chalk from "chalk";
+import * as esbuild from "esbuild";
 import { getFlag } from "../experimental-flags";
 import { getBasePath, getWranglerTmpDir } from "../paths";
 import { applyMiddlewareLoaderFacade } from "./apply-middleware";

@@ -2,7 +2,9 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { FatalError } from "@cloudflare/workers-utils";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { clearOutputFilePath, writeOutput } from "../output";
+import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { OutputEntry } from "../output";
@@ -10,6 +12,7 @@ import type { OutputEntry } from "../output";
 describe("writeOutput()", () => {
 	runInTempDir({ homedir: "home" });
 	afterEach(clearOutputFilePath);
+	mockConsoleMethods();
 
 	it("should do nothing with no env vars set", () => {
 		vi.stubEnv("WRANGLER_OUTPUT_FILE_DIRECTORY", "");

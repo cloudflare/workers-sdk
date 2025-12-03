@@ -1,4 +1,4 @@
-import { setTimeout } from "timers/promises";
+import { setTimeout } from "node:timers/promises";
 import test from "ava";
 import { DeferredPromise, Mutex, WaitGroup } from "miniflare";
 

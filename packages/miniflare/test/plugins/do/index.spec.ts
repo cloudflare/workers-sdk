@@ -1,7 +1,7 @@
-import assert from "assert";
-import fs from "fs/promises";
-import path from "path";
-import { setTimeout } from "timers/promises";
+import assert from "node:assert";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import test from "ava";
 import {
 	DeferredPromise,

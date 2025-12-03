@@ -1,5 +1,148 @@
 # @cloudflare/vite-plugin
 
+## 1.16.0
+
+### Minor Changes
+
+- [#11445](https://github.com/cloudflare/workers-sdk/pull/11445) [`c8e22c3`](https://github.com/cloudflare/workers-sdk/commit/c8e22c3124db1b4b8d3b8465295df8fb19f50f25) Thanks [@ascorbic](https://github.com/ascorbic)! - Allow Worker config to be customized in the plugin config
+
+  The Vite plugin can now be used to generate a Worker configuration instead of needing a Wrangler config file, or to customize an existing user-provided configuration.
+
+  This is done via a new `config` option on the plugin, which accepts either a partial Worker configuration object, or a function that receives the current configuration and returns a partial config object, or modifies the current config in place.
+
+  ```ts
+  import cloudflare from "@cloudflare/vite-plugin";
+  import { defineConfig } from "vite";
+
+  // Define a partial config object
+
+  export default defineConfig({
+  	plugins: [
+  		cloudflare({
+  			config: {
+  				compatibility_date: "2025-01-01",
+  			},
+  		}),
+  	],
+  });
+
+  // Return a partial config from a function, conditional on some logic
+
+  export default defineConfig({
+  	plugins: [
+  		cloudflare({
+  			config: (workerConfig) => {
+  				if (workerConfig.name === "my-worker") {
+  					return {
+  						compatibility_flags: ["nodejs_compat"],
+  					};
+  				}
+  			},
+  		}),
+  	],
+  });
+
+  // Modify the config in place
+
+  export default defineConfig({
+  	plugins: [
+  		cloudflare({
+  			config: (workerConfig) => {
+  				workerConfig.compatibility_date = "2025-01-01";
+  			},
+  		}),
+  	],
+  });
+  ```
+
+- [#11360](https://github.com/cloudflare/workers-sdk/pull/11360) [`6b38532`](https://github.com/cloudflare/workers-sdk/commit/6b38532298a17fc4fd643dd8eb96647d9ef98e2f) Thanks [@emily-shen](https://github.com/emily-shen)! - Containers: Allow users to directly authenticate external image registries in local dev
+
+  Previously, we always queried the API for stored registry credentials and used those to pull images. This means that if you are using an external registry (ECR, dockerhub) then you have to configure registry credentials remotely before running local dev.
+
+  Now you can directly authenticate with your external registry provider (using `docker login` etc.), and Wrangler or Vite will be able to pull the image specified in the `containers.image` field in your config file.
+
+  The Cloudflare-managed registry (registry.cloudflare.com) currently still does not work with the Vite plugin.
+
+- [#11408](https://github.com/cloudflare/workers-sdk/pull/11408) [`f29e699`](https://github.com/cloudflare/workers-sdk/commit/f29e699bc022ad0dde2cfddfbea6fa3906068d94) Thanks [@ascorbic](https://github.com/ascorbic)! - Support zero-config operation
+
+  If the Vite plugin is used in a project without an existing Wrangler config file, it should be able to operate in "zero-config" mode by generating a default Wrangler configuration for an assets-only worker.
+
+- [#11417](https://github.com/cloudflare/workers-sdk/pull/11417) [`2ca70b1`](https://github.com/cloudflare/workers-sdk/commit/2ca70b1cba96f940ad1cda0c5371435edf0ba12e) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Register named entrypoints with the dev registry.
+
+  This enables binding to [named entrypoints](https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/rpc/#named-entrypoints) defined in a `vite dev` session from another `vite dev` or `wrangler dev` session running locally.
+
+### Patch Changes
+
+- [#11383](https://github.com/cloudflare/workers-sdk/pull/11383) [`1d685cb`](https://github.com/cloudflare/workers-sdk/commit/1d685cbae8d37e6b06149563a89868e6a0ca2481) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix: Ensure that `vite dev` and `vite preview` hard error with an appropriate error message when a remote proxy session is required but if the connection with it fails to be established
+
+  When using remote bindings, either with `vite dev` or `vite preview`, the remote proxy session necessary to connect to the remote resources can fail to be created. This might happen if for example you try to set a binding with some invalid values such as:
+
+  ```js
+  MY_R2: {
+  	type: "r2_bucket",
+  	bucket_name: "non-existent", // No bucket called "non-existent" exists
+  	remote: true,
+  },
+  ```
+
+  Before, this could go undetected and cause unwanted behaviors such as requests handling hanging indefinitely. Now, a hard error will be thrown instead causing the vite process to crash, clearly indicating that something went wrong during the remote session's creation.
+
+- [#11009](https://github.com/cloudflare/workers-sdk/pull/11009) [`e4ddbc2`](https://github.com/cloudflare/workers-sdk/commit/e4ddbc2f0b64172552f58b148912cfe0b0aa5a71) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Make sure that the `account_id` present in the user's config file is used for remote bindings
+
+- Updated dependencies [[`2b4813b`](https://github.com/cloudflare/workers-sdk/commit/2b4813b18076817bb739491246313c32b403651f), [`abe49d8`](https://github.com/cloudflare/workers-sdk/commit/abe49d88ba9db6a033a779e186972901e00a81de), [`b154de2`](https://github.com/cloudflare/workers-sdk/commit/b154de2ffa93bf8eb448ae83a50e8bf3f8250398), [`f29e699`](https://github.com/cloudflare/workers-sdk/commit/f29e699bc022ad0dde2cfddfbea6fa3906068d94), [`5ee3780`](https://github.com/cloudflare/workers-sdk/commit/5ee3780448935a24974e29a3b3837b639157e959), [`6e63b57`](https://github.com/cloudflare/workers-sdk/commit/6e63b57c699d56f29c2acf810b2c81baf88c0330), [`71ab562`](https://github.com/cloudflare/workers-sdk/commit/71ab562f4ba9f8ddc443dc33c486a48fc694e74e), [`76f0540`](https://github.com/cloudflare/workers-sdk/commit/76f05405f990b207f90669fa4046db8806de1267), [`2342d2f`](https://github.com/cloudflare/workers-sdk/commit/2342d2f618b50c508bf5b0bfbab547a801d82d9f), [`5e937c1`](https://github.com/cloudflare/workers-sdk/commit/5e937c181d3189216b6e9fb47ba0776828236c91), [`9a1de61`](https://github.com/cloudflare/workers-sdk/commit/9a1de617412f610a332f2516f4d61bec12556919), [`6b38532`](https://github.com/cloudflare/workers-sdk/commit/6b38532298a17fc4fd643dd8eb96647d9ef98e2f), [`e4ddbc2`](https://github.com/cloudflare/workers-sdk/commit/e4ddbc2f0b64172552f58b148912cfe0b0aa5a71), [`2aec2b4`](https://github.com/cloudflare/workers-sdk/commit/2aec2b4e0ef710ec7e3897f823eca38d22991662), [`695fa25`](https://github.com/cloudflare/workers-sdk/commit/695fa25ae7eb5c66db1b8be7bd59a53a5ee72c1c), [`504e258`](https://github.com/cloudflare/workers-sdk/commit/504e25840cc34bedffcdf3a0f0fcd6fe3dea7f3f), [`5a873bb`](https://github.com/cloudflare/workers-sdk/commit/5a873bbb0f018b02cf26a48da59c5389ef306589), [`d25f7e2`](https://github.com/cloudflare/workers-sdk/commit/d25f7e277f6228c50b7a6c780153474c6a58f236), [`1cfae2d`](https://github.com/cloudflare/workers-sdk/commit/1cfae2d079dd50163545ba914296da1d8ae36d83), [`e7b690b`](https://github.com/cloudflare/workers-sdk/commit/e7b690b6463d49a0c5e9159442533cfcb47e1ee6), [`1d685cb`](https://github.com/cloudflare/workers-sdk/commit/1d685cbae8d37e6b06149563a89868e6a0ca2481), [`edf896d`](https://github.com/cloudflare/workers-sdk/commit/edf896d3bdf4f1a4a085216ee0f06750a5a3d0b8), [`2b4813b`](https://github.com/cloudflare/workers-sdk/commit/2b4813b18076817bb739491246313c32b403651f), [`c47ad11`](https://github.com/cloudflare/workers-sdk/commit/c47ad114f5e5d111a005bc04feb587a1261f4525), [`a977701`](https://github.com/cloudflare/workers-sdk/commit/a9777016bc199f1409324f8383e2b3ab43d1c212), [`9eaa9e2`](https://github.com/cloudflare/workers-sdk/commit/9eaa9e2350893f145ce405f35b04dd8919db6699)]:
+  - miniflare@4.20251128.0
+  - wrangler@4.52.0
+  - @cloudflare/unenv-preset@2.7.12
+
+## 1.15.3
+
+### Patch Changes
+
+- [#11404](https://github.com/cloudflare/workers-sdk/pull/11404) [`f19d3b5`](https://github.com/cloudflare/workers-sdk/commit/f19d3b5e89a750abd230566439fce2ce67223d58) Thanks [@jamesopstad](https://github.com/jamesopstad)! - fix: CSS imports in Worker modules causing dev server to crash when starting up
+
+- Updated dependencies [[`69f4dc3`](https://github.com/cloudflare/workers-sdk/commit/69f4dc30496406b0c40f946ee8ace28d94667097), [`1133c4d`](https://github.com/cloudflare/workers-sdk/commit/1133c4db5fc4703a2ad416fdcb3a086f498cbbc6), [`4d61fae`](https://github.com/cloudflare/workers-sdk/commit/4d61faed1c0c5cb0f7a7f085d31c3dca9a83c802), [`d524e55`](https://github.com/cloudflare/workers-sdk/commit/d524e5524cf701e33b367d33616db5430a126fa9), [`43903a3`](https://github.com/cloudflare/workers-sdk/commit/43903a38f00d2a0da1d19a9be1fc90a4e38454cf), [`e496280`](https://github.com/cloudflare/workers-sdk/commit/e4962809487e618d4bd99c56b0628b078fab7402)]:
+  - miniflare@4.20251125.0
+  - wrangler@4.51.0
+
+## 1.15.2
+
+### Patch Changes
+
+- [#11342](https://github.com/cloudflare/workers-sdk/pull/11342) [`a55c0e4`](https://github.com/cloudflare/workers-sdk/commit/a55c0e41d55edf458e7ec240e3d1fcab3e3154c9) Thanks [@jamesopstad](https://github.com/jamesopstad)! - fix: `email` method not working in ExportedHandler exports in development
+
+- [#11322](https://github.com/cloudflare/workers-sdk/pull/11322) [`49eada3`](https://github.com/cloudflare/workers-sdk/commit/49eada38c5c08884fad4d292d8d4e91d190fb3d8) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add `cloudflare:node` to built-in modules
+
+- Updated dependencies [[`0cf696d`](https://github.com/cloudflare/workers-sdk/commit/0cf696dfde285eac0eca3f86e6c407f2bcc43899), [`524a6e5`](https://github.com/cloudflare/workers-sdk/commit/524a6e52dd5e6740bc36ee1135ba350a2d5b9e44), [`c922a81`](https://github.com/cloudflare/workers-sdk/commit/c922a810808f640b82fcad08a96363323029de83), [`bb44120`](https://github.com/cloudflare/workers-sdk/commit/bb4412042f86deb747259bbb353103e5d0322447), [`4a158e9`](https://github.com/cloudflare/workers-sdk/commit/4a158e9f4815778145969287d38720e61d956eee)]:
+  - @cloudflare/unenv-preset@2.7.11
+  - wrangler@4.50.0
+  - miniflare@4.20251118.1
+
+## 1.15.1
+
+### Patch Changes
+
+- [#11331](https://github.com/cloudflare/workers-sdk/pull/11331) [`52ebfa9`](https://github.com/cloudflare/workers-sdk/commit/52ebfa935c41695e58aabb36e5a5abacfcf51a4f) Thanks [@edmundhung](https://github.com/edmundhung)! - Dispose Miniflare when preview server is closed
+
+- Updated dependencies [[`e5ec8cf`](https://github.com/cloudflare/workers-sdk/commit/e5ec8cf5ac23df57734a3fc819beaa5b7a0af9ca), [`c758809`](https://github.com/cloudflare/workers-sdk/commit/c7588091b425d353cb25625d4efa2b42e0478b86), [`dfba912`](https://github.com/cloudflare/workers-sdk/commit/dfba9126615993b7bbb6d8bf7d1e31b5eebab9f6)]:
+  - miniflare@4.20251118.0
+  - wrangler@4.49.1
+
+## 1.15.0
+
+### Minor Changes
+
+- [#11238](https://github.com/cloudflare/workers-sdk/pull/11238) [`da8442f`](https://github.com/cloudflare/workers-sdk/commit/da8442ff4ccd70118738bd05f6ac06a79ff951e5) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add support for `ctx.exports`. See https://developers.cloudflare.com/workers/runtime-apis/context/#exports for more details.
+
+### Patch Changes
+
+- [#11274](https://github.com/cloudflare/workers-sdk/pull/11274) [`fa39c78`](https://github.com/cloudflare/workers-sdk/commit/fa39c782f6d544d0769a28abb26471de4cb66906) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Ensure process.on("exit") handlers are only added once.
+
+- [#11273](https://github.com/cloudflare/workers-sdk/pull/11273) [`17431db`](https://github.com/cloudflare/workers-sdk/commit/17431dbb0c69678954816577e08155f554f73f54) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Ensure static routing exclude rules for static assets are only evaluated once per request in development.
+
+- Updated dependencies [[`c5c4ee5`](https://github.com/cloudflare/workers-sdk/commit/c5c4ee5219091951aef2a0cce1584010bf1775d9), [`d0041e2`](https://github.com/cloudflare/workers-sdk/commit/d0041e20cb352a053526364f98c3ae38f3504f4d), [`827d017`](https://github.com/cloudflare/workers-sdk/commit/827d017d8a856aad9564ecea9b49538918131feb), [`7035804`](https://github.com/cloudflare/workers-sdk/commit/7035804a859b90fcaaebe8d774cd98fcf57def5b), [`a352c7f`](https://github.com/cloudflare/workers-sdk/commit/a352c7f9e19d4bfbe27c77988ec6c5bb18f991c3), [`8e99766`](https://github.com/cloudflare/workers-sdk/commit/8e99766700b03c17bdaf9153112c466acea74f9b), [`d0d3fe6`](https://github.com/cloudflare/workers-sdk/commit/d0d3fe682c7a5564de685c7014c91287f949f156), [`d014fa7`](https://github.com/cloudflare/workers-sdk/commit/d014fa72ef8ced30330e159e107da244e39b431c), [`92afbba`](https://github.com/cloudflare/workers-sdk/commit/92afbbae22de80e40f9d3c1f96935d73ee6dec17), [`65b4afe`](https://github.com/cloudflare/workers-sdk/commit/65b4afe8686efab6ac50fa686ef00efacd9d6e7e), [`da8442f`](https://github.com/cloudflare/workers-sdk/commit/da8442ff4ccd70118738bd05f6ac06a79ff951e5), [`15b8460`](https://github.com/cloudflare/workers-sdk/commit/15b846037dc9853e0fef1cf0bc576b8c460be188), [`09cb720`](https://github.com/cloudflare/workers-sdk/commit/09cb720182dbdd5e403af2c9eae75461c4058682), [`793e2b4`](https://github.com/cloudflare/workers-sdk/commit/793e2b40cf1a2da5498e71a405538e2f9776e3dc), [`8e99766`](https://github.com/cloudflare/workers-sdk/commit/8e99766700b03c17bdaf9153112c466acea74f9b), [`9cbf126`](https://github.com/cloudflare/workers-sdk/commit/9cbf126164ef2a5c7a1047245121c988fb7ae984), [`2011b6a`](https://github.com/cloudflare/workers-sdk/commit/2011b6ae8a42cc72f506d1edd255960c99647a14), [`dd1e560`](https://github.com/cloudflare/workers-sdk/commit/dd1e560e49da008c98b766e91ada7be865f68e8c)]:
+  - miniflare@4.20251113.0
+  - wrangler@4.49.0
+
 ## 1.14.2
 
 ### Patch Changes

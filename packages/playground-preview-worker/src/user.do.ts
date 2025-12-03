@@ -39,11 +39,13 @@ type UploadedMetadata = z.infer<typeof UploadedMetadata>;
  *  - Maintains a Realish preview session on behalf of the user
  *  - Handles worker uploads, inflating them with the relevant Realish preview authentication for the upload
  *  - Proxies inspector connections to the current inspector URL for the Realish preview session
+ *  - Proxies tail connections to the current live logs URL for the Realish preview session
  *  - Forwards requests to the running previewed user worker
  */
 export class UserSession {
 	config: RealishPreviewConfig | undefined;
 	previewToken: string | undefined;
+	tailUrl: string | undefined;
 	inspectorUrl: string | undefined;
 	workerName!: string;
 	constructor(
@@ -61,6 +63,7 @@ export class UserSession {
 			this.workerName = workerName;
 
 			this.previewToken = await this.state.storage.get<string>("previewToken");
+			this.tailUrl = await this.state.storage.get<string>("tailUrl");
 			this.inspectorUrl = await this.state.storage.get<string>("inspectorUrl");
 		});
 	}
@@ -116,9 +119,11 @@ export class UserSession {
 			},
 		});
 		this.previewToken = uploadResult.result.preview_token;
+		this.tailUrl = uploadResult.result.tail_url;
 		this.inspectorUrl = inspector.href;
 
 		await this.state.storage.put("previewToken", this.previewToken);
+		await this.state.storage.put("tailUrl", this.tailUrl);
 		await this.state.storage.put("inspectorUrl", this.inspectorUrl);
 	}
 
@@ -130,6 +135,7 @@ export class UserSession {
 			assert(this.inspectorUrl !== undefined);
 			return fetch(this.inspectorUrl, request);
 		}
+
 		// This is a request to run the user-worker. Forward, adding the correct authentication headers
 		if (request.headers.has("cf-run-user-worker")) {
 			assert(this.previewToken !== undefined);
@@ -238,6 +244,7 @@ export class UserSession {
 		await this.uploadWorker(this.workerName, worker);
 
 		assert(this.inspectorUrl !== undefined);
+		assert(this.tailUrl !== undefined);
 
 		return Response.json({
 			// Include a hash of the inspector URL so as to ensure the client will reconnect
@@ -245,6 +252,7 @@ export class UserSession {
 			inspector: `/api/inspector?user=${userSession}&h=${await hash(
 				this.inspectorUrl
 			)}`,
+			tail: this.tailUrl,
 			preview: userSession,
 		});
 	}

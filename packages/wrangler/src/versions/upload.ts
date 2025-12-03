@@ -8,6 +8,9 @@ import {
 	configFileName,
 	formatCompatibilityDate,
 	formatConfigSnippet,
+	getCIGeneratePreviewAlias,
+	getCIOverrideName,
+	getWorkersCIBranchName,
 	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -34,11 +37,6 @@ import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
-import {
-	getCIGeneratePreviewAlias,
-	getCIOverrideName,
-	getWorkersCIBranchName,
-} from "../environment-variables/misc-variables";
 import {
 	applyServiceAndEnvironmentTags,
 	tagsAreEqual,
@@ -276,7 +274,6 @@ export const versionsUploadCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			DEPLOY_REMOTE_DIFF_CHECK: false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,

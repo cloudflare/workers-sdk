@@ -17,6 +17,7 @@ import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
+import { fetchSecrets } from "../utils/fetch-secrets";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
@@ -365,7 +366,6 @@ export const secretListCommand = createCommand({
 		printBanner: (args) => args.format === "pretty",
 	},
 	async handler(args, { config }) {
-		const isServiceEnv = useServiceEnvironments(config) && args.env;
 		if (config.pages_build_output_dir) {
 			throw new UserError(
 				"It looks like you've run a Workers-specific command in a Pages project.\n" +
@@ -380,15 +380,9 @@ export const secretListCommand = createCommand({
 			);
 		}
 
-		const accountId = await requireAuth(config);
-
-		const url = isServiceEnv
-			? `/accounts/${accountId}/workers/services/${scriptName}/environments/${args.env}/secrets`
-			: `/accounts/${accountId}/workers/scripts/${scriptName}/secrets`;
-
-		const secrets = await fetchResult<{ name: string; type: string }[]>(
-			config,
-			url
+		const secrets = await fetchSecrets(
+			{ ...config, name: scriptName },
+			args.env
 		);
 
 		if (args.format === "pretty") {

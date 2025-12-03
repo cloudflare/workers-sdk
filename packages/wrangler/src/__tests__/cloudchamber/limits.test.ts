@@ -2,6 +2,7 @@ import {
 	dockerImageInspect,
 	InstanceType,
 } from "@cloudflare/containers-shared";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	ensureContainerLimits,
 	ensureImageFitsLimits,

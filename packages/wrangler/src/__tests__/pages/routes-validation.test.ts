@@ -1,4 +1,5 @@
 import { FatalError } from "@cloudflare/workers-utils";
+import { describe, expect, it } from "vitest";
 import {
 	MAX_FUNCTIONS_ROUTES_RULE_LENGTH,
 	MAX_FUNCTIONS_ROUTES_RULES,

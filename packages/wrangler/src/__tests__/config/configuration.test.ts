@@ -1,12 +1,13 @@
-import * as fs from "fs";
+import * as fs from "node:fs";
 import path from "node:path";
 import {
 	experimental_readRawConfig,
 	normalizeAndValidateConfig,
 } from "@cloudflare/workers-utils";
+import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
+import { describe, expect, it, test, vi } from "vitest";
 import { readConfig } from "../../config";
 import { run } from "../../experimental-flags";
-import { normalizeString } from "../helpers/normalize";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type {
@@ -15,6 +16,7 @@ import type {
 	RawConfig,
 	RawDevConfig,
 	RawEnvironment,
+	RedirectedRawConfig,
 } from "@cloudflare/workers-utils";
 
 describe("readConfig()", () => {
@@ -2924,7 +2926,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						DEPLOY_REMOTE_DIFF_CHECK: false,
 						AUTOCREATE_RESOURCES: false,
 					},
 					() =>
@@ -3076,7 +3077,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						DEPLOY_REMOTE_DIFF_CHECK: false,
 						AUTOCREATE_RESOURCES: false,
 					},
 					() =>
@@ -3413,7 +3413,6 @@ describe("normalizeAndValidateConfig()", () => {
 					{
 						RESOURCES_PROVISION: true,
 						MULTIWORKER: false,
-						DEPLOY_REMOTE_DIFF_CHECK: false,
 						AUTOCREATE_RESOURCES: false,
 					},
 					() =>
@@ -4796,6 +4795,35 @@ describe("normalizeAndValidateConfig()", () => {
 			});
 		});
 
+		it("should accept unsafe fields under containers", () => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				{
+					containers: [
+						{
+							name: "test-container",
+							class_name: "TestContainer",
+							image: "registry.cloudflare.com/test:image",
+							unsafe: {
+								custom_field: "value",
+							},
+						},
+					],
+				} as unknown as RawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				"
+			`);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				"
+			`);
+		});
+
 		describe("[placement]", () => {
 			it(`should error if placement hint is set with placement mode "off"`, () => {
 				const { diagnostics } = normalizeAndValidateConfig(
@@ -4846,6 +4874,108 @@ describe("normalizeAndValidateConfig()", () => {
 	});
 
 	describe("named environments", () => {
+		it("should use --env CLI arg to select the active environment", () => {
+			const rawConfig: RawConfig = {
+				name: "my-worker",
+				env: {
+					dev: {
+						kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+					},
+					prod: {
+						kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
+					},
+				},
+			};
+			const { config: configDev } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{ env: "dev" }
+			);
+			expect(configDev).toEqual(
+				expect.objectContaining({
+					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+				})
+			);
+
+			const { config: configProd } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{ env: "prod" }
+			);
+			expect(configProd).toEqual(
+				expect.objectContaining({
+					kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
+				})
+			);
+		});
+
+		it("should use CLOUDFLARE_ENV environment variable to select the active environment", () => {
+			const rawConfig: RawConfig = {
+				name: "my-worker",
+				env: {
+					dev: {
+						kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+					},
+					prod: {
+						kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
+					},
+				},
+			};
+			vi.stubEnv("CLOUDFLARE_ENV", "dev");
+			const { config: configDev } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{}
+			);
+			expect(configDev).toEqual(
+				expect.objectContaining({
+					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+				})
+			);
+
+			vi.stubEnv("CLOUDFLARE_ENV", "prod");
+			const { config: configProd } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{}
+			);
+			expect(configProd).toEqual(
+				expect.objectContaining({
+					kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
+				})
+			);
+		});
+
+		it("should use the `--env` CLI arg over the CLOUDFLARE_ENV environment variable to select the active environment", () => {
+			const rawConfig: RawConfig = {
+				name: "my-worker",
+				env: {
+					dev: {
+						kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+					},
+					prod: {
+						kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
+					},
+				},
+			};
+			vi.stubEnv("CLOUDFLARE_ENV", "dev");
+			const { config } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{ env: "prod" }
+			);
+			expect(config).toEqual(
+				expect.objectContaining({
+					kv_namespaces: [{ binding: "KV", id: "yyyy-yyyy-yyyy-yyyy" }],
+				})
+			);
+		});
+
 		it("should warn if we specify an environment but there are no named environments", () => {
 			const rawConfig: RawConfig = {
 				name: "my-worker",
@@ -4880,6 +5010,74 @@ describe("normalizeAndValidateConfig()", () => {
 				    \`\`\`
 				"
 			`);
+		});
+
+		describe("with redirected config", () => {
+			it("should error if we specify an environment via an argument that doesn't match the original target environment", () => {
+				const rawConfig: RedirectedRawConfig = {
+					name: "my-worker",
+					targetEnvironment: "prod",
+					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+				};
+				expect(() =>
+					normalizeAndValidateConfig(
+						rawConfig,
+						"./redirected-config.jsonc",
+						"./original-config.jsonc",
+						{
+							env: "dev",
+						}
+					)
+				).toThrowErrorMatchingInlineSnapshot(`
+					[Error: You have specified the environment "dev" via the \`--env/-e\` CLI argument.
+					This does not match the target environment "prod" that was used when building the application.
+					Perhaps you need to re-run the custom build of the project with "dev" as the selected environment?]
+				`);
+			});
+
+			it("should error if we specify an environment via an environment variable that doesn't match the original target environment", () => {
+				const rawConfig: RedirectedRawConfig = {
+					name: "my-worker",
+					targetEnvironment: "prod",
+					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+				};
+				vi.stubEnv("CLOUDFLARE_ENV", "dev");
+				expect(() =>
+					normalizeAndValidateConfig(
+						rawConfig,
+						"./redirected-config.jsonc",
+						"./original-config.jsonc",
+						{}
+					)
+				).toThrowErrorMatchingInlineSnapshot(`
+					[Error: You have specified the environment "dev" via the CLOUDFLARE_ENV environment variable.
+					This does not match the target environment "prod" that was used when building the application.
+					Perhaps you need to re-run the custom build of the project with "dev" as the selected environment?]
+				`);
+			});
+
+			it("should error if we specify an environment via both an argument and CLOUDFLARE_ENV that doesn't match the original target environment", () => {
+				const rawConfig: RedirectedRawConfig = {
+					name: "my-worker",
+					targetEnvironment: "prod",
+					kv_namespaces: [{ binding: "KV", id: "xxxx-xxxx-xxxx-xxxx" }],
+				};
+				vi.stubEnv("CLOUDFLARE_ENV", "staging");
+				expect(() =>
+					normalizeAndValidateConfig(
+						rawConfig,
+						"./redirected-config.jsonc",
+						"./original-config.jsonc",
+						{
+							env: "dev",
+						}
+					)
+				).toThrowErrorMatchingInlineSnapshot(`
+					[Error: You have specified the environment "dev" via the \`--env/-e\` CLI argument.
+					This does not match the target environment "prod" that was used when building the application.
+					Perhaps you need to re-run the custom build of the project with "dev" as the selected environment?]
+				`);
+			});
 		});
 
 		it("should error if we specify an environment that does not match the named environments", () => {

@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mockJaegerBinding } from "../../utils/tracing";
 import { Analytics } from "../src/analytics";
 import { SEC_FETCH_MODE_NAVIGATE_HEADER_PREFERS_ASSET_SERVING } from "../src/compatibility-flags";

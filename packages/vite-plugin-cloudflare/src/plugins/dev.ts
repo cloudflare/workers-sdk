@@ -206,6 +206,8 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 						containerOptions: [...containerTagToOptionsMap.values()],
 						onContainerImagePreparationStart: () => {},
 						onContainerImagePreparationEnd: () => {},
+						logger: viteDevServer.config.logger,
+						isVite: true,
 					});
 
 					containerImageTags = new Set(containerTagToOptionsMap.keys());

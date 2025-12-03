@@ -275,6 +275,49 @@ describe("Create Cloudflare CLI", () => {
 			},
 		);
 
+		test.skipIf(isWindows)(
+			"Filtering templates when --lang=python is specified",
+			async ({ logStream, project }) => {
+				const { output } = await runC3(
+					[
+						project.path,
+						"--lang=python",
+						"--type=hello-world",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream,
+				);
+
+				expect(project.path).toExist();
+				expect(output).toContain(`category Hello World example`);
+				expect(output).toContain(`type Worker only`);
+				expect(output).toContain(`lang Python`);
+			},
+		);
+
+		test.skipIf(isWindows)(
+			"Error when --lang=python is used with a category that has no Python templates",
+			async ({ logStream, project }) => {
+				const { errors } = await runC3(
+					[
+						project.path,
+						"--lang=python",
+						"--category=demo",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream,
+				);
+
+				expect(errors).toContain(
+					`No templates available for language "python" in the "demo" category`,
+				);
+			},
+		);
+
 		/*
 		 * Skipping in yarn due to node version resolution conflict
 		 * The Openapi C3 template depends on `chanfana`, which has a dependency
@@ -512,7 +555,7 @@ describe("Create Cloudflare CLI", () => {
 					    npm create cloudflare -- --framework next -- --ts
 					    pnpm create cloudflare --framework next -- --ts
 					    Allowed Values:
-					      gatsby
+					      gatsby, svelte, docusaurus, astro, tanstack-start, angular, solid
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:
@@ -614,7 +657,7 @@ describe("Create Cloudflare CLI", () => {
 					    npm create cloudflare -- --framework next -- --ts
 					    pnpm create cloudflare --framework next -- --ts
 					    Allowed Values:
-					      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, solid, svelte, tanstack-start, vue, waku
+					      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vue, waku
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:

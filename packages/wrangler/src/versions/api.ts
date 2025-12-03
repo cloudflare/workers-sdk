@@ -1,5 +1,4 @@
 import { fetchResult } from "../cfetch";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type {
 	ApiDeployment,
 	ApiVersion,
@@ -8,6 +7,7 @@ import type {
 	VersionId,
 } from "./types";
 import type {
+	ComplianceConfig,
 	Observability,
 	StreamingTailConsumer,
 	TailConsumer,

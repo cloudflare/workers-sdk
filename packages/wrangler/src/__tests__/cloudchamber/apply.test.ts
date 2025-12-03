@@ -6,8 +6,10 @@ import {
 } from "@cloudflare/containers-shared";
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
-import { mockCLIOutput, mockConsoleMethods } from "../helpers/mock-console";
+import { mockCLIOutput } from "../helpers/mock-cli-output";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";

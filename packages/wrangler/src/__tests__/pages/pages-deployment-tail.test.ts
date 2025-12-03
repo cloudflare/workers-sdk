@@ -1,6 +1,7 @@
+import { setTimeout } from "node:timers/promises";
 import { http, HttpResponse } from "msw";
 import { Headers, Request } from "undici";
-import { vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import MockWebSocketServer from "vitest-websocket-mock";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -1096,7 +1097,7 @@ function mockTailAPIs(
 		 */
 		async closeHelper() {
 			api.ws.close();
-			await new Promise((resolve) => setTimeout(resolve, 0));
+			await setTimeout(0);
 		},
 	};
 

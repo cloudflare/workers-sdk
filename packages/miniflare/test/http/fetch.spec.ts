@@ -1,8 +1,8 @@
-import assert from "assert";
-import { Blob } from "buffer";
-import http from "http";
-import { AddressInfo } from "net";
-import { URLSearchParams } from "url";
+import assert from "node:assert";
+import { Blob } from "node:buffer";
+import http from "node:http";
+import { AddressInfo } from "node:net";
+import { URLSearchParams } from "node:url";
 import test from "ava";
 import {
 	CloseEvent,

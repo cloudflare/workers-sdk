@@ -11,6 +11,10 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { fetchWithETag } from "./helpers/fetch-with-etag";
 import { generateResourceName } from "./helpers/generate-resource-name";
+import {
+	createPostgresEchoHandler,
+	POSTGRES_SSL_REQUEST_PACKET,
+} from "./helpers/postgres-echo-handler";
 import { retry } from "./helpers/retry";
 import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
 
@@ -25,8 +29,10 @@ import { getStartedWorkerdProcesses } from "./helpers/workerd-processes";
 const workerName = generateResourceName();
 
 describe.each([
-	{ cmd: "wrangler dev --port=0" },
-	...(CLOUDFLARE_ACCOUNT_ID ? [{ cmd: "wrangler dev --remote" }] : []),
+	{ cmd: "wrangler dev --port=0 --inspector-port=0" },
+	...(CLOUDFLARE_ACCOUNT_ID
+		? [{ cmd: "wrangler dev --remote --port=0 --inspector-port=0" }]
+		: []),
 ])("basic js dev: $cmd", ({ cmd }) => {
 	it(`can modify Worker during ${cmd}`, async () => {
 		const helper = new WranglerE2ETestHelper();
@@ -75,6 +81,50 @@ describe.each([
 		expect([...worker.currentOutput.matchAll(/GET /g)].length).toBe(1);
 
 		await expect(fetchText(url)).resolves.toMatchSnapshot();
+	});
+
+	it("works with basic service worker", async () => {
+		const helper = new WranglerE2ETestHelper();
+		const isLocal = cmd.includes("--remote") ? false : true;
+		await helper.seed({
+			"wrangler.toml": dedent`
+				name = "${workerName}"
+				main = "src/index.ts"
+				compatibility_date = "2023-01-01"
+				# TODO: This is a workaround for an EWC bug where remote dev workers only log properly if they have bindings.
+				#       Remove the below line when MR:7727 is merged
+				version_metadata = { binding = "METADATA" }
+			`,
+			"src/index.ts": dedent`
+				addEventListener("fetch", (event) => {
+					const { pathname } = new URL(event.request.url);
+					if (pathname === "/") {
+						event.respondWith(new Response("service worker"));
+					} else if (pathname === "/error") {
+						throw new Error("monkey");
+					} else {
+						event.respondWith(new Response(null, { status: 404 }));
+					}
+				});
+			`,
+		});
+		const worker = helper.runLongLived(cmd);
+		const { url } = await worker.waitForReady();
+		let res = await fetch(url);
+		expect(await res.text()).toBe("service worker");
+
+		res = await fetch(new URL("/error", url), {
+			headers: { Accept: "text/plain" },
+		});
+		const text = await res.text();
+		if (isLocal) {
+			expect(text).toContain("Error: monkey");
+			expect(text).toContain("src/index.ts:6:9");
+		}
+		await worker.readUntil(/monkey/, 30_000);
+		if (isLocal) {
+			await worker.readUntil(/src\/index\.ts:6:9/, 30_000);
+		}
 	});
 
 	it(`hotkeys can be disabled with ${cmd}`, async () => {
@@ -590,7 +640,11 @@ describe("hyperdrive dev tests", () => {
 	let server: nodeNet.Server;
 
 	beforeEach(async () => {
-		server = nodeNet.createServer().listen();
+		server = nodeNet
+			.createServer((socket) => {
+				socket.on("data", createPostgresEchoHandler(socket));
+			})
+			.listen();
 	});
 
 	it("matches expected configuration parameters", async () => {
@@ -677,9 +731,13 @@ describe("hyperdrive dev tests", () => {
 					`,
 		});
 		const socketMsgPromise = new Promise((resolve, _) => {
-			server.on("connection", (sock) => {
-				sock.on("data", (data) => {
-					expect(new TextDecoder().decode(data)).toBe("test string");
+			server.on("connection", (socket) => {
+				socket.on("data", (chunk) => {
+					if (chunk.equals(POSTGRES_SSL_REQUEST_PACKET)) {
+						socket.write("N");
+						return;
+					}
+					expect(new TextDecoder().decode(chunk)).toBe("test string");
 					server.close();
 					resolve({});
 				});
@@ -738,12 +796,20 @@ describe("hyperdrive dev tests", () => {
 		});
 
 		const { url } = await worker.waitForReady();
-		const socketMsgPromise = new Promise((resolve, _) => {
-			server.on("connection", (sock) => {
-				sock.on("data", (data) => {
-					expect(new TextDecoder().decode(data)).toBe("test string");
+		const socketMsgPromise = new Promise((resolve, reject) => {
+			server.on("connection", (socket) => {
+				socket.on("data", (chunk) => {
+					if (POSTGRES_SSL_REQUEST_PACKET.equals(chunk)) {
+						socket.write("N");
+						return;
+					}
+					expect(new TextDecoder().decode(chunk)).toBe("test string");
 					server.close();
 					resolve({});
+				});
+				socket.on("error", (err) => {
+					console.error("Socket error:", err);
+					reject(err);
 				});
 			});
 		});

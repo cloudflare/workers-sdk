@@ -599,6 +599,22 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			verifyPreview: {
 				route: "/",
 				expectedText: "TanStack Start Starter",
+				build: true,
+			},
+			nodeCompat: true,
+		},
+		{
+			name: "redwood",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "RedwoodSDK",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "RedwoodSDK",
 			},
 			nodeCompat: true,
 		},
@@ -608,7 +624,9 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 /**
  * Gets the list of experimental framework test configurations.
  */
-function getExperimentalFrameworkTestConfig() {
+function getExperimentalFrameworkTestConfig(
+	pm: string,
+): NamedFrameworkTestConfig[] {
 	return [
 		{
 			name: "gatsby:workers",
@@ -633,6 +651,148 @@ function getExperimentalFrameworkTestConfig() {
 			},
 			nodeCompat: false,
 		},
+		{
+			name: "svelte:workers",
+			argv: ["--platform", "workers"],
+			flags: [
+				"--no-install",
+				"--no-add-ons",
+				"--template",
+				"minimal",
+				"--types",
+				"ts",
+			],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["npm", "yarn"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "SvelteKit app",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: false,
+			verifyTypes: false,
+		},
+		{
+			name: "docusaurus:workers",
+			argv: ["--platform", "workers"],
+			unsupportedPms: ["bun"],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Dinosaurs are cool",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "Dinosaurs are cool",
+			},
+			nodeCompat: false,
+			flags: [`--package-manager`, pm],
+			promptHandlers: [
+				{
+					matcher: /Which language do you want to use\?/,
+					input: [keys.enter],
+				},
+			],
+		},
+		{
+			name: "astro:workers",
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello, Astronaut!",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: true,
+			flags: [
+				"--skip-houston",
+				"--no-install",
+				"--no-git",
+				"--template",
+				"blog",
+				"--typescript",
+				"strict",
+			],
+			verifyTypes: false,
+		},
+		{
+			name: "tanstack-start",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "TanStack Start Starter",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "TanStack Start Starter",
+				build: true,
+			},
+			nodeCompat: true,
+			verifyTypes: false,
+		},
+		{
+			name: "angular:workers",
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["bun"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Congratulations! Your app is running.",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "Congratulations! Your app is running.",
+			},
+			nodeCompat: false,
+			flags: ["--style", "sass"],
+			verifyTypes: false,
+		},
+		{
+			name: "solid",
+			promptHandlers: [
+				{
+					matcher: /Which template would you like to use/,
+					input: [keys.enter],
+				},
+			],
+			flags: ["--ts"],
+			extraEnv: {
+				BEGIT_GH_API_KEY: process.env.GITHUB_TOKEN,
+			},
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedPms: ["npm", "yarn"],
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Hello world",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "Hello world",
+			},
+			nodeCompat: true,
+			verifyTypes: false,
+		},
 	];
 }
 
@@ -646,7 +806,7 @@ function getExperimentalFrameworkTestConfig() {
 export function getFrameworksTests(): NamedFrameworkTestConfig[] {
 	const packageManager = detectPackageManager();
 	const frameworkTests = isExperimental
-		? getExperimentalFrameworkTestConfig()
+		? getExperimentalFrameworkTestConfig(packageManager.name)
 		: getFrameworkTestConfig(packageManager.name);
 	return frameworkTests.filter((testConfig) => {
 		if (!frameworkToTestFilter) {

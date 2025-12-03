@@ -1,4 +1,5 @@
 import { resolveDockerHost } from "@cloudflare/containers-shared";
+import { getDockerPath, getRegistryPath } from "@cloudflare/workers-utils";
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
@@ -12,10 +13,6 @@ import {
 	buildSitesOptions,
 	getImageNameFromDOClassName,
 } from "../../../dev/miniflare";
-import {
-	getDockerPath,
-	getRegistryPath,
-} from "../../../environment-variables/misc-variables";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
@@ -40,6 +37,8 @@ import type {
 export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
 export { readConfig as unstable_readConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
+export { getDevCompatibilityDate as unstable_getDevCompatibilityDate } from "../../../utils/compatibility-date";
+export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
 export type {
 	Config as Unstable_Config,
 	RawConfig as Unstable_RawConfig,

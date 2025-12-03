@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execSync } from "node:child_process";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch, Request } from "undici";

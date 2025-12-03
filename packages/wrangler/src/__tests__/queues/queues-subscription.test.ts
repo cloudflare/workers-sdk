@@ -1,3 +1,4 @@
+import { describe, expect, it } from "vitest";
 import { EventSourceType } from "../../queues/subscription-types";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";

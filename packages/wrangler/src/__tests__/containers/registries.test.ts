@@ -1,7 +1,9 @@
 import { http, HttpResponse } from "msw";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mockAccount } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
-import { mockCLIOutput, mockConsoleMethods } from "../helpers/mock-console";
+import { mockCLIOutput } from "../helpers/mock-cli-output";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import {

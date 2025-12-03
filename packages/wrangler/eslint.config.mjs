@@ -11,7 +11,8 @@ export default defineConfig([
 		"emitted-types",
 		"kv-asset-handler.js",
 		"**/templates/**/*.*",
-		".tmp/**",
+		".e2e-test-report",
+		".tmp",
 	]),
 	sharedConfig,
 	{

@@ -1,6 +1,6 @@
-import assert from "assert";
-import { writeFile } from "fs/promises";
-import path from "path";
+import assert from "node:assert";
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
 import { getPackageManager } from "../../package-manager";
@@ -25,6 +25,31 @@ export const installPackages = async (
 	config: InstallConfig = {}
 ) => {
 	if (packages.length === 0) {
+		const { type } = await getPackageManager();
+
+		let cmd;
+		switch (type) {
+			case "yarn":
+				break;
+			case "npm":
+			case "pnpm":
+			default:
+				cmd = "install";
+				break;
+		}
+
+		await runCommand(
+			[
+				type,
+				...(cmd ? [cmd] : []),
+				...packages,
+				...(type === "pnpm" ? ["--no-frozen-lockfile"] : []),
+			],
+			{
+				...config,
+				silent: true,
+			}
+		);
 		return;
 	}
 

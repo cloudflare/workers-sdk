@@ -71,9 +71,11 @@ function main() {
 
 	// 2. Run standard `changeset version` command to apply changesets, bump
 	//    versions, and update changelogs
+	console.log("Applying changesets and updating versions...");
 	execSync("pnpm exec changeset version", { stdio: "inherit" });
 
 	// 3. Force `miniflare`'s minor version to be the same as `workerd`
+	console.log("Getting miniflare and workerd versions...");
 	const miniflarePkg = getPkg(miniflarePkgPath);
 	const miniflareVersion = miniflarePkg.version;
 	const workerdVersion = getWorkerdVersion();
@@ -86,17 +88,20 @@ function main() {
 		// If `changeset version` didn't produce the correct version on its own...
 
 		// ...update `miniflare`'s `package.json` version
+		console.log(`Updating miniflare version to ${nextMiniflareVersion}...`);
 		miniflarePkg.version = nextMiniflareVersion;
 		setPkg(miniflarePkgPath, miniflarePkg);
 
 		const changedPathsBuffer = execSync("git ls-files --modified", {
 			cwd: rootPath,
 		});
+		console.log("Checking modified files...");
 		const changedPaths = changedPathsBuffer.toString().trim().split("\n");
 		for (const relativeChangedPath of changedPaths) {
 			const changedPath = path.resolve(rootPath, relativeChangedPath);
 			const name = path.basename(changedPath);
 			if (name === "package.json") {
+				console.log("Updating dependencies in", changedPath);
 				// ...update `miniflare` version in dependencies of other packages
 				const pkg = getPkg(changedPath);
 				let changed = false;
@@ -115,6 +120,7 @@ function main() {
 				}
 				if (changed) setPkg(changedPath, pkg);
 			} else if (name === "CHANGELOG.md") {
+				console.log("Updating changelog in", changedPath);
 				// ...update `CHANGELOG.md`s with correct version
 				let changelog = fs.readFileSync(changedPath, "utf8");
 				// Replace version header in `miniflare` `CHANGELOG.md`
@@ -133,7 +139,9 @@ function main() {
 	}
 
 	// 4. Update the lockfile
+	console.log("Updating lockfile...");
 	execSync("pnpm install --lockfile-only", { stdio: "inherit" });
+	console.log("Done.");
 }
 
 if (require.main === module) main();

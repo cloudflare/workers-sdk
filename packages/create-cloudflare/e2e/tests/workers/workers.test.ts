@@ -1,5 +1,5 @@
-import { existsSync } from "fs";
-import { join } from "path";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { readJSON, readToml } from "helpers/files";
 import { beforeAll, describe, expect } from "vitest";
 import { deleteWorker } from "../../../scripts/common";

@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import { http, HttpResponse } from "msw";
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
@@ -713,8 +713,9 @@ describe("metrics", () => {
 					},
 				});
 				await runWrangler(`${cmd} status`);
-				expect(std.out).toContain("Status: Enabled");
-				expect(std.out).not.toContain("Status: Disabled");
+				const out = std.getAndClearOut();
+				expect(out).toContain("Status: Enabled");
+				expect(out).not.toContain("Status: Disabled");
 				writeMetricsConfig({
 					permission: {
 						enabled: false,

@@ -1,9 +1,10 @@
 import { statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
-import { basename, join, resolve } from "node:path";
+import { basename, join, relative, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli/colors";
 import {
 	FatalError,
+	getCIOverrideName,
 	parsePackageJSON,
 	readFileSync,
 } from "@cloudflare/workers-utils";
@@ -11,7 +12,6 @@ import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
 import { confirm, prompt } from "../dialogs";
-import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 import { getFramework } from "./frameworks/get-framework";
@@ -47,14 +47,14 @@ async function hasIndexHtml(dir: string): Promise<boolean> {
  */
 async function findAssetsDir(from: string): Promise<string | undefined> {
 	if (await hasIndexHtml(from)) {
-		return from;
+		return ".";
 	}
 	const children = await readdir(from);
 	for (const child of children) {
 		const path = join(from, child);
 		const stats = await stat(path);
 		if (stats.isDirectory() && (await hasIndexHtml(path))) {
-			return path;
+			return relative(from, path);
 		}
 	}
 	return undefined;
@@ -65,6 +65,34 @@ function getWorkerName(projectOrWorkerName = "", projectPath: string): string {
 		getCIOverrideName() ?? (projectOrWorkerName || basename(projectPath));
 
 	return toValidWorkerName(rawName);
+}
+
+/**
+ * Derives a valid worker name from a project directory.
+ *
+ * The name is determined by (in order of precedence):
+ * 1. The WRANGLER_CI_OVERRIDE_NAME environment variable (for CI environments)
+ * 2. The `name` field from package.json in the project directory
+ * 3. The directory basename
+ *
+ * The resulting name is sanitized to be a valid worker name.
+ *
+ * @param projectPath The path to the project directory
+ * @returns A valid worker name
+ */
+export function getWorkerNameFromProject(projectPath: string): string {
+	const packageJsonPath = resolve(projectPath, "package.json");
+	let packageJsonName: string | undefined;
+
+	try {
+		const packageJson = parsePackageJSON(
+			readFileSync(packageJsonPath),
+			packageJsonPath
+		);
+		packageJsonName = packageJson.name;
+	} catch {}
+
+	return getWorkerName(packageJsonName, projectPath);
 }
 
 export async function getDetailsForAutoConfig({
@@ -103,9 +131,7 @@ export async function getDetailsForAutoConfig({
 
 	const detectedFramework: Settings | undefined = buildSettings?.[0];
 
-	const framework: AutoConfigDetails["framework"] = getFramework(
-		detectedFramework?.framework.id
-	);
+	const framework = getFramework(detectedFramework?.framework);
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
@@ -201,7 +227,7 @@ function checkWorkerNameValidity(
  * @param input The input to convert
  * @returns The input itself if it was already valid, the input converted to a valid worker name otherwise
  */
-function toValidWorkerName(input: string): string {
+export function toValidWorkerName(input: string): string {
 	if (checkWorkerNameValidity(input).valid) {
 		return input;
 	}

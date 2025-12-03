@@ -2,12 +2,25 @@ import assert from "node:assert";
 import events from "node:events";
 import net from "node:net";
 import util from "node:util";
-import type { GlobalSetupContext } from "vitest/node";
+import type { TestProject } from "vitest/node";
+
+export const POSTGRES_SSL_REQUEST_PACKET = Buffer.from([
+	0x00, 0x00, 0x00, 0x08, 0x04, 0xd2, 0x16, 0x2f,
+]);
 
 // Global setup runs inside Node.js, not `workerd`
-export default async function ({ provide }: GlobalSetupContext) {
+export default async function ({ provide }: TestProject) {
 	// Start echo server on random port
-	const server = net.createServer((socket) => socket.pipe(socket));
+	const server = net.createServer((socket) => {
+		socket.on("data", (chunk) => {
+			// on postgres ssl request packet respond with 'N' to indicate no SSL support
+			if (POSTGRES_SSL_REQUEST_PACKET.equals(chunk)) {
+				socket.write("N");
+			} else {
+				socket.write(chunk);
+			}
+		});
+	});
 	const listeningPromise = events.once(server, "listening");
 	server.listen(0, "127.0.0.1");
 	await listeningPromise;

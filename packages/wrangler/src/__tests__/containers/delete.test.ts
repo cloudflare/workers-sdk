@@ -1,8 +1,10 @@
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
-import { mockCLIOutput, mockConsoleMethods } from "../helpers/mock-console";
+import { mockCLIOutput } from "../helpers/mock-cli-output";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 

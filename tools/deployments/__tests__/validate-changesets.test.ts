@@ -97,57 +97,57 @@ describe("validateChangesets()", () => {
 				{
 					file: "valid-one.md",
 					contents: dedent`
-          ---
-          "package-a": patch
-          ---
+						---
+						"package-a": patch
+						---
 
-		  refactor: test`,
+						refactor: test`,
 				},
 				{
 					file: "valid-two.md",
 					contents: dedent`
-          ---
-          "package-b": minor
-          ---
+						---
+						"package-b": minor
+						---
 
-		  feature: test`,
+						feature: test`,
 				},
 				{
 					file: "valid-three.md",
 					contents: dedent`
-          ---
-          "package-c": major
-          ---
+						---
+						"package-c": minor
+						---
 
-		  chore: test`,
+						chore: test`,
 				},
 				{
 					file: "valid-three.md",
 					contents: dedent`
-          ---
-          "package-c": major
-          ---
+						---
+						"package-c": minor
+						---
 
-		  fix: test`,
+						fix: test`,
 				},
 				{ file: "invalid-frontmatter.md", contents: "" },
 				{
 					file: "invalid-package.md",
 					contents: dedent`
-          ---
-          "package-invalid": major
-          ---
+						---
+						"package-invalid": minor
+						---
 
-		  feat: test`,
+						feat: test`,
 				},
 				{
 					file: "invalid-type.md",
 					contents: dedent`
-          ---
-          "package-a": foo
-          ---
+						---
+						"package-a": foo
+						---
 
-		  docs: test`,
+						docs: test`,
 				},
 			]
 		);
@@ -156,6 +156,46 @@ describe("validateChangesets()", () => {
 			  "Error: could not parse changeset - invalid frontmatter: at file "invalid-frontmatter.md"",
 			  "Invalid package name "package-invalid" in changeset at "invalid-package.md".",
 			  "Invalid type "foo" for package "package-a" in changeset at "invalid-type.md".",
+			]
+		`);
+	});
+
+	it("should report errors for major bump changesets", ({ expect }) => {
+		const errors = validateChangesets(
+			new Set(["package-a", "package-b", "package-c"]),
+			[
+				{
+					file: "patch-one.md",
+					contents: dedent`
+						---
+						"package-a": patch
+						---
+		  				refactor: test`,
+				},
+				{
+					file: "minor-two.md",
+					contents: dedent`
+						---
+						"package-b": minor
+						---
+
+						feature: test`,
+				},
+				{
+					file: "major-three.md",
+					contents: dedent`
+						---
+						"package-c": major
+						---
+
+						breaking change!`,
+				},
+			]
+		);
+		expect(errors).toMatchInlineSnapshot(`
+			[
+			  "Major version bumps are not allowed for package "package-c" in changeset at "major-three.md".",
+			  "Invalid type "major" for package "package-c" in changeset at "major-three.md".",
 			]
 		`);
 	});

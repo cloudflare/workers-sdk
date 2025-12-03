@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-import { mkdirSync } from "fs";
-import { dirname } from "path";
-import { chdir } from "process";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { chdir } from "node:process";
 import {
 	cancel,
 	checkMacOSVersion,
@@ -158,7 +158,7 @@ const create = async (ctx: C3Context) => {
 
 const configure = async (ctx: C3Context) => {
 	startSection(
-		"Configuring your application for Cloudflare via `wrangler setup`",
+		`Configuring your application for Cloudflare${ctx.args.experimental ? ` via \`wrangler setup\`` : ""}`,
 		"Step 2 of 3",
 	);
 
