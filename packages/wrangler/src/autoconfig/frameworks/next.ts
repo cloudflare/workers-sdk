@@ -17,6 +17,7 @@ export class NextJs extends Framework {
 
 	async configure({
 		dryRun,
+		workerName,
 		projectPath,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const usesTs = usesTypescript(projectPath);
@@ -61,6 +62,12 @@ export class NextJs extends Framework {
 					binding: "ASSETS",
 					directory: ".open-next/assets",
 				},
+				services: [
+					{
+						binding: "WORKER_SELF_REFERENCE",
+						service: workerName,
+					},
+				],
 			},
 			buildCommand: `${npx} @opennextjs/cloudflare build`,
 		};
