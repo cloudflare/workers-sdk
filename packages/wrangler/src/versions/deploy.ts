@@ -125,6 +125,8 @@ export const versionsDeployCommand = createCommand({
 
 		await printLatestDeployment(config, accountId, workerName, versionCache);
 
+		const acceptDefault = args.yes || isNonInteractiveOrCI();
+
 		// prompt to confirm or change the versionIds from the args
 		const confirmedVersionsToDeploy = await promptVersionsToDeploy(
 			config,
@@ -132,7 +134,7 @@ export const versionsDeployCommand = createCommand({
 			workerName,
 			[...optionalVersionTraffic.keys()],
 			versionCache,
-			args.yes
+			acceptDefault,
 		);
 
 		// validate we have at least 1 version
@@ -154,7 +156,7 @@ export const versionsDeployCommand = createCommand({
 		const confirmedVersionTraffic = await promptPercentages(
 			confirmedVersionsToDeploy,
 			optionalVersionTraffic,
-			args.yes
+			acceptDefault,
 		);
 
 		// prompt for deployment message
