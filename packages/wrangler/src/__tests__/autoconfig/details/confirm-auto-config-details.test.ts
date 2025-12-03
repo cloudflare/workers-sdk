@@ -116,7 +116,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "configured": false,
 				  "framework": Object {
 				    "configure": [Function],
-				    "configured": false,
+				    "isConfigured": [Function],
 				    "name": "astro",
 				  },
 				  "outputDir": "",
