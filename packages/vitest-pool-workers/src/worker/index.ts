@@ -320,5 +320,5 @@ export class RunnerObject implements DurableObject {
 
 export default createWorkerEntrypointWrapper("default");
 
-// Re-export user Durable Object wrappers
+// Re-export user export wrappers
 export * from "__VITEST_POOL_WORKERS_USER_OBJECT";
