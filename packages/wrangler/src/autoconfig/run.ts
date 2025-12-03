@@ -107,23 +107,6 @@ export async function runAutoConfig(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (autoConfigDetails.packageJson) {
-		await writeFile(
-			resolve(autoConfigDetails.projectPath, "package.json"),
-			JSON.stringify(
-				{
-					...autoConfigDetails.packageJson,
-					scripts: {
-						...autoConfigDetails.packageJson.scripts,
-						...autoConfigSummary.scripts,
-					},
-				},
-				null,
-				2
-			)
-		);
-	}
-
 	if (autoConfigSummary.wranglerInstall) {
 		await installWrangler();
 	}
