@@ -23,6 +23,7 @@ export type MultipartUploadRow = {
 	http_metadata: string; // JSON-serialised `R2HTTPMetadata` (workers-types)
 	custom_metadata: string; // JSON-serialised user-defined metadata
 	state: ValueOf<typeof MultipartUploadState>;
+	initiated_at?: number; // milliseconds since unix epoch (nullable for backwards compatibility)
 	// NOTE: we need to keep completed/aborted uploads around for referential
 	// integrity, and because error messages are different when attempting to
 	// upload parts to them
@@ -35,6 +36,7 @@ export type MultipartPartRow = {
 	etag: string; // NOTE: multipart part ETag's are not MD5 checksums
 	checksum_md5: string; // NOTE: used in construction of final object's ETag
 	object_key: string | null; // null if in-progress upload
+	uploaded_at?: number; // milliseconds since unix epoch (nullable for backwards compatibility)
 };
 export const SQL_SCHEMA = `
 CREATE TABLE IF NOT EXISTS _mf_objects (
@@ -53,7 +55,8 @@ CREATE TABLE IF NOT EXISTS _mf_multipart_uploads (
     key TEXT NOT NULL,
     http_metadata TEXT NOT NULL,
     custom_metadata TEXT NOT NULL,
-    state TINYINT DEFAULT 0 NOT NULL
+    state TINYINT DEFAULT 0 NOT NULL,
+    initiated_at INTEGER
 );
 CREATE TABLE IF NOT EXISTS _mf_multipart_parts (
     upload_id TEXT NOT NULL REFERENCES _mf_multipart_uploads(upload_id),
@@ -63,6 +66,7 @@ CREATE TABLE IF NOT EXISTS _mf_multipart_parts (
     etag TEXT NOT NULL,
     checksum_md5 TEXT NOT NULL,
     object_key TEXT REFERENCES _mf_objects(key) DEFERRABLE INITIALLY DEFERRED,
+    uploaded_at INTEGER,
     PRIMARY KEY (upload_id, part_number)
 );
 `;
@@ -229,6 +233,23 @@ export const R2AbortMultipartUploadRequestSchema = z.object({
 	uploadId: z.string(),
 });
 
+export const R2ListPartsRequestSchema = z.object({
+	method: z.literal("listParts"),
+	object: z.string(),
+	uploadId: z.string(),
+	maxParts: z.onumber(),
+	partNumberMarker: z.onumber(),
+});
+
+export const R2ListMultipartUploadsRequestSchema = z.object({
+	method: z.literal("listMultipartUploads"),
+	limit: z.onumber(),
+	prefix: z.ostring(),
+	cursor: z.ostring(),
+	delimiter: z.ostring(),
+	startAfter: z.ostring(),
+});
+
 export const R2ListRequestSchema = z.object({
 	method: z.literal("list"),
 	limit: z.onumber(),
@@ -262,6 +283,8 @@ export const R2BindingRequestSchema = z.union([
 	R2UploadPartRequestSchema,
 	R2CompleteMultipartUploadRequestSchema,
 	R2AbortMultipartUploadRequestSchema,
+	R2ListPartsRequestSchema,
+	R2ListMultipartUploadsRequestSchema,
 	R2ListRequestSchema,
 	R2DeleteRequestSchema,
 ]);
@@ -278,6 +301,12 @@ export type InternalR2ListOptions = OmitRequest<
 >;
 export type InternalR2CreateMultipartUploadOptions = OmitRequest<
 	z.infer<typeof R2CreateMultipartUploadRequestSchema>
+>;
+export type InternalR2ListPartsOptions = OmitRequest<
+	z.infer<typeof R2ListPartsRequestSchema>
+>;
+export type InternalR2ListMultipartUploadsOptions = OmitRequest<
+	z.infer<typeof R2ListMultipartUploadsRequestSchema>
 >;
 
 export interface R2ErrorResponse {
@@ -318,6 +347,31 @@ export type R2CompleteMultipartUploadResponse = R2PutResponse;
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface R2AbortMultipartUploadResponse {}
+
+export interface R2ListPartsResponse {
+	uploadId: string;
+	object: string;
+	parts: Array<{
+		partNumber: number;
+		etag: string;
+		size: number;
+		uploaded: number; // milliseconds since unix epoch
+	}>;
+	truncated: boolean;
+	nextPartNumberMarker?: number;
+}
+
+export interface R2ListMultipartUploadsResponse {
+	uploads: Array<{
+		uploadId: string;
+		object: string;
+		initiated?: number; // milliseconds since unix epoch
+		storageClass?: string;
+	}>;
+	truncated: boolean;
+	cursor?: string;
+	delimitedPrefixes: string[];
+}
 
 export interface R2ListResponse {
 	objects: R2HeadResponse[];

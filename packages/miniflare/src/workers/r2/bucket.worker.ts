@@ -39,7 +39,9 @@ import {
 import {
 	InternalR2CreateMultipartUploadOptions,
 	InternalR2GetOptions,
+	InternalR2ListMultipartUploadsOptions,
 	InternalR2ListOptions,
+	InternalR2ListPartsOptions,
 	InternalR2PutOptions,
 	MultipartPartRow,
 	MultipartUploadRow,
@@ -48,6 +50,8 @@ import {
 	R2BindingRequestSchema,
 	R2Conditional,
 	R2CreateMultipartUploadResponse,
+	R2ListMultipartUploadsResponse,
+	R2ListPartsResponse,
 	R2PublishedPart,
 	R2UploadPartResponse,
 	SQL_SCHEMA,
@@ -272,8 +276,8 @@ function sqlStmts(db: TypedSql) {
 	);
 	const stmtPutPart = db.stmt<Omit<MultipartPartRow, "object_key">>(
 		// For recording metadata when uploading parts
-		`INSERT OR REPLACE INTO _mf_multipart_parts (upload_id, part_number, blob_id, size, etag, checksum_md5)
-    VALUES (:upload_id, :part_number, :blob_id, :size, :etag, :checksum_md5)`
+		`INSERT OR REPLACE INTO _mf_multipart_parts (upload_id, part_number, blob_id, size, etag, checksum_md5, uploaded_at)
+    VALUES (:upload_id, :part_number, :blob_id, :size, :etag, :checksum_md5, :uploaded_at)`
 	);
 	const stmtLinkPart = db.stmt<
 		Pick<MultipartPartRow, "upload_id" | "part_number" | "object_key">
@@ -319,6 +323,33 @@ function sqlStmts(db: TypedSql) {
 		// requests, so we only need to read blobs containing the required data
 		"SELECT blob_id, size FROM _mf_multipart_parts WHERE object_key = :object_key ORDER BY part_number"
 	);
+
+	// For listParts operation with pagination
+	const stmtListPartsWithPagination = db.stmt<
+		{ upload_id: string; part_number_marker: number | null; limit: number },
+		MultipartPartRow
+	>(`
+		SELECT upload_id, part_number, blob_id, size, etag, checksum_md5, object_key, uploaded_at
+		FROM _mf_multipart_parts
+		WHERE upload_id = :upload_id
+		  AND (:part_number_marker IS NULL OR part_number > :part_number_marker)
+		ORDER BY part_number
+		LIMIT :limit
+	`);
+
+	// For listMultipartUploads operation with pagination
+	const stmtListMultipartUploads = db.stmt<
+		{ limit: number; prefix: string; start_after: string | null },
+		MultipartUploadRow
+	>(`
+		SELECT upload_id, key, http_metadata, custom_metadata, state, initiated_at
+		FROM _mf_multipart_uploads
+		WHERE state = 0
+		  AND substr(key, 1, length(:prefix)) = :prefix
+		  AND (:start_after IS NULL OR key > :start_after)
+		ORDER BY key, upload_id
+		LIMIT :limit
+	`);
 
 	return {
 		getByKey: stmtGetByKey,
@@ -412,8 +443,8 @@ function sqlStmts(db: TypedSql) {
     `),
 
 		createMultipartUpload: db.stmt<Omit<MultipartUploadRow, "state">>(`
-      INSERT INTO _mf_multipart_uploads (upload_id, key, http_metadata, custom_metadata)
-      VALUES (:upload_id, :key, :http_metadata, :custom_metadata)
+      INSERT INTO _mf_multipart_uploads (upload_id, key, http_metadata, custom_metadata, initiated_at)
+      VALUES (:upload_id, :key, :http_metadata, :custom_metadata, :initiated_at)
     `),
 		putPart: db.txn(
 			(key: string, newRow: Omit<MultipartPartRow, "object_key">) => {
@@ -587,6 +618,9 @@ function sqlStmts(db: TypedSql) {
 
 			return oldBlobIds;
 		}),
+		listPartsWithPagination: stmtListPartsWithPagination,
+		listMultipartUploads: stmtListMultipartUploads,
+		getUploadState: stmtGetUploadState,
 	};
 }
 
@@ -620,7 +654,39 @@ export class R2BucketObject extends MiniflareDurableObject {
 		super(state, env);
 		this.db.exec("PRAGMA case_sensitive_like = TRUE");
 		this.db.exec(SQL_SCHEMA);
+		this.#migrateSchema();
 		this.#stmts = sqlStmts(this.db);
+	}
+
+	#migrateSchema() {
+		// Check if we need to add timestamp columns (backwards compatibility)
+		// This migration is idempotent - it's safe to run multiple times
+
+		// Check if initiated_at column exists in _mf_multipart_uploads
+		const uploadsColumns = all(
+			this.db.exec<{ name: string }>(
+				"SELECT name FROM pragma_table_info('_mf_multipart_uploads') WHERE name = 'initiated_at'"
+			)
+		);
+		if (uploadsColumns.length === 0) {
+			// Add initiated_at column if it doesn't exist
+			this.db.exec(
+				"ALTER TABLE _mf_multipart_uploads ADD COLUMN initiated_at INTEGER"
+			);
+		}
+
+		// Check if uploaded_at column exists in _mf_multipart_parts
+		const partsColumns = all(
+			this.db.exec<{ name: string }>(
+				"SELECT name FROM pragma_table_info('_mf_multipart_parts') WHERE name = 'uploaded_at'"
+			)
+		);
+		if (partsColumns.length === 0) {
+			// Add uploaded_at column if it doesn't exist
+			this.db.exec(
+				"ALTER TABLE _mf_multipart_parts ADD COLUMN uploaded_at INTEGER"
+			);
+		}
 	}
 
 	#acquireBlob(blobId: BlobId) {
@@ -943,6 +1009,7 @@ export class R2BucketObject extends MiniflareDurableObject {
 			upload_id: uploadId,
 			http_metadata: JSON.stringify(opts.httpMetadata ?? {}),
 			custom_metadata: JSON.stringify(opts.customMetadata ?? {}),
+			initiated_at: Date.now(),
 		});
 		return { uploadId };
 	}
@@ -977,6 +1044,7 @@ export class R2BucketObject extends MiniflareDurableObject {
 				size: valueSize,
 				etag,
 				checksum_md5: md5Digest.toString("hex"),
+				uploaded_at: Date.now(),
 			});
 		} catch (e) {
 			// Probably upload not found. In any case, the put transaction failed,
@@ -1014,9 +1082,162 @@ export class R2BucketObject extends MiniflareDurableObject {
 		for (const blobId of oldBlobIds) this.#backgroundDelete(blobId);
 	}
 
+	async #listParts(
+		key: string,
+		uploadId: string,
+		opts: InternalR2ListPartsOptions
+	): Promise<R2ListPartsResponse> {
+		validate.key(key);
+
+		// Check if upload exists and get its state
+		const uploadRow = get(
+			this.#stmts.getUploadState({ key, upload_id: uploadId })
+		);
+		if (uploadRow === undefined) {
+			throw new NoSuchUpload();
+		}
+		if (uploadRow.state !== MultipartUploadState.IN_PROGRESS) {
+			throw new NoSuchUpload();
+		}
+
+		// Set defaults for pagination
+		const maxParts = Math.min(opts.maxParts ?? 1000, 1000);
+		const partNumberMarker = opts.partNumberMarker ?? null;
+
+		// Get one extra part to check if there are more
+		const parts = all(
+			this.#stmts.listPartsWithPagination({
+				upload_id: uploadId,
+				part_number_marker: partNumberMarker,
+				limit: maxParts + 1,
+			})
+		);
+
+		// Check if results are truncated
+		const truncated = parts.length > maxParts;
+		const resultParts = truncated ? parts.slice(0, maxParts) : parts;
+		const nextPartNumberMarker = truncated
+			? resultParts[resultParts.length - 1].part_number
+			: undefined;
+
+		return {
+			uploadId,
+			object: key,
+			parts: resultParts.map((part) => ({
+				partNumber: part.part_number,
+				etag: part.etag,
+				size: part.size,
+				uploaded: part.uploaded_at ?? Date.now(),
+			})),
+			truncated,
+			nextPartNumberMarker,
+		};
+	}
+
+	async #listMultipartUploads(
+		opts: InternalR2ListMultipartUploadsOptions
+	): Promise<R2ListMultipartUploadsResponse> {
+		// Set defaults
+		const limit = Math.min(opts.limit ?? 1000, 1000);
+		const prefix = opts.prefix ?? "";
+		const delimiter = opts.delimiter;
+
+		// Handle cursor
+		let startAfter: string | null = null;
+		if (opts.cursor !== undefined) {
+			startAfter = base64Decode(opts.cursor);
+		}
+		if (opts.startAfter !== undefined) {
+			if (startAfter === null || opts.startAfter > startAfter) {
+				startAfter = opts.startAfter;
+			}
+		}
+
+		// Get one extra upload to check if there are more
+		const uploads = all(
+			this.#stmts.listMultipartUploads({
+				limit: limit + 1,
+				prefix,
+				start_after: startAfter,
+			})
+		);
+
+		// Process uploads and handle delimiter
+		const resultUploads: Array<{
+			uploadId: string;
+			object: string;
+			initiated?: number;
+			storageClass?: string;
+		}> = [];
+		const delimitedPrefixes: string[] = [];
+		const prefixSet = new Set<string>();
+
+		for (let i = 0; i < Math.min(uploads.length, limit); i++) {
+			const upload = uploads[i];
+
+			// Handle delimiter logic similar to list objects
+			if (delimiter !== undefined) {
+				const keyAfterPrefix = upload.key.substring(prefix.length);
+				const delimiterIndex = keyAfterPrefix.indexOf(delimiter);
+
+				if (delimiterIndex !== -1) {
+					// This key contains the delimiter after the prefix
+					const delimitedPrefix =
+						prefix +
+						keyAfterPrefix.substring(0, delimiterIndex + delimiter.length);
+					if (!prefixSet.has(delimitedPrefix)) {
+						prefixSet.add(delimitedPrefix);
+						delimitedPrefixes.push(delimitedPrefix);
+					}
+				} else {
+					// No delimiter found, include the upload
+					resultUploads.push({
+						uploadId: upload.upload_id,
+						object: upload.key,
+						initiated: upload.initiated_at ?? undefined,
+						storageClass: "Standard",
+					});
+				}
+			} else {
+				// No delimiter, include all uploads
+				resultUploads.push({
+					uploadId: upload.upload_id,
+					object: upload.key,
+					initiated: upload.initiated_at ?? undefined,
+					storageClass: "Standard",
+				});
+			}
+		}
+
+		// Check truncation and get cursor
+		const truncated = uploads.length > limit;
+		const nextCursor = truncated
+			? base64Encode(uploads[limit - 1].key)
+			: undefined;
+
+		return {
+			uploads: resultUploads,
+			truncated,
+			cursor: nextCursor,
+			delimitedPrefixes,
+		};
+	}
+
 	@GET("/")
 	get: RouteHandler = async (req) => {
 		const metadata = decodeHeaderMetadata(req);
+
+		if (metadata.method === "listParts") {
+			const result = await this.#listParts(
+				metadata.object,
+				metadata.uploadId,
+				metadata
+			);
+			return encodeJSONResult(result);
+		} else if (metadata.method === "listMultipartUploads") {
+			const result = await this.#listMultipartUploads(metadata);
+			return encodeJSONResult(result);
+		}
 
 		let result: InternalR2Object | InternalR2ObjectBody | InternalR2Objects;
 		if (metadata.method === "head") {
@@ -1037,9 +1258,7 @@ export class R2BucketObject extends MiniflareDurableObject {
 		const { metadata, metadataSize, value } = await decodeMetadata(req);
 
 		if (metadata.method === "delete") {
-			await this.#delete(
-				"object" in metadata ? metadata.object : metadata.objects
-			);
+			this.#delete("object" in metadata ? metadata.object : metadata.objects);
 			return new Response();
 		} else if (metadata.method === "put") {
 			// Safety of `!`: `parseInt(null)` is `NaN`
