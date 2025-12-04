@@ -78,9 +78,17 @@ function getViteConfigPath(projectPath: string): string {
 	return filePath;
 }
 
+/**
+ * Name of vite plugins that we know are incompatible with the Cloudflare one
+ */
+const knownIncompatiblePlugins = ["nitro", "nitroV2Plugin", "netlify"];
+
 export function transformViteConfig(
 	projectPath: string,
-	options: { viteEnvironmentName?: string } = {}
+	options: {
+		viteEnvironmentName?: string;
+		incompatibleVitePlugins?: string[];
+	} = {}
 ) {
 	const filePath = getViteConfigPath(projectPath);
 
@@ -158,13 +166,17 @@ export function transformViteConfig(
 				);
 			}
 
-			// Remove nitro or netlify plugins, as they conflict
-			//  nitro(), nitroV2Plugin(), netlify()
+			const incompatibleVitePlugins = [
+				...knownIncompatiblePlugins,
+				...(options.incompatibleVitePlugins ?? []),
+			];
+
+			// Remove incompatible plugins
 			pluginsProp.value.elements = pluginsProp.value.elements.filter((el) => {
 				if (
 					el?.type === "CallExpression" &&
 					el.callee.type === "Identifier" &&
-					["nitro", "nitroV2Plugin", "netlify"].includes(el.callee.name)
+					incompatibleVitePlugins.includes(el.callee.name)
 				) {
 					return false;
 				}
