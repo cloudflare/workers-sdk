@@ -24,7 +24,7 @@ export type ConfigurationResults = {
 export abstract class Framework {
 	constructor(public name: string = "Static") {}
 
-	isConfigured(_projectPath: string): boolean | Promise<boolean> {
+	isConfigured(_projectPath: string): boolean {
 		return false;
 	}
 

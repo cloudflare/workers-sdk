@@ -162,7 +162,7 @@ export async function getDetailsForAutoConfig({
 
 	return {
 		projectPath: projectPath,
-		configured: (await framework?.isConfigured(projectPath)) ?? false,
+		configured: framework?.isConfigured(projectPath) ?? false,
 		framework,
 		packageJson,
 		buildCommand: detectedFramework?.buildCommand ?? packageJsonBuild,
