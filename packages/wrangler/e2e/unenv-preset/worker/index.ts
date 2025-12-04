@@ -698,6 +698,36 @@ export const WorkerdTests: Record<string, () => void> = {
 			/not implemented/
 		);
 	},
+
+	async testVm() {
+		const vm = await import("node:vm");
+
+		assertTypeOfProperties(vm, {
+			Script: "function",
+			constants: "object",
+			compileFunction: "function",
+			createContext: "function",
+			createScript: "function",
+			isContext: "function",
+			measureMemory: "function",
+			runInContext: "function",
+			runInThisContext: "function",
+			runInNewContext: "function",
+		});
+
+		assertTypeOfProperties(vm.default, {
+			Script: "function",
+			compileFunction: "function",
+			constants: "object",
+			createContext: "function",
+			isContext: "function",
+			measureMemory: "function",
+			runInContext: "function",
+			runInNewContext: "function",
+			runInThisContext: "function",
+			createScript: "function",
+		});
+	},
 };
 
 /**
