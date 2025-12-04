@@ -21,7 +21,7 @@ import type { C3Context } from "types";
  * - enabling observability
  * - adding comments with links to documentation for common configuration options
  * - substituting placeholders with actual values
- *   - `__WORKER_NAME__` with the project name
+ *   - `<WORKER_NAME>` with the project name
  *
  * If both `wrangler.toml` and `wrangler.json`/`wrangler.jsonc` are present, only
  * the `wrangler.json`/`wrangler.jsonc` file will be updated.
@@ -29,7 +29,7 @@ import type { C3Context } from "types";
 export const updateWranglerConfig = async (ctx: C3Context) => {
 	// Placeholders to replace in the wrangler config files
 	const substitutions: Record<string, string> = {
-		__WORKER_NAME__: ctx.project.name,
+		"<WORKER_NAME>": ctx.project.name,
 	};
 
 	if (wranglerJsonExists(ctx)) {
