@@ -13,7 +13,6 @@ export default defineConfig([
 		"**/templates/**/*.*",
 		".e2e-test-report",
 		".tmp",
-		"e2e/**/fixtures",
 	]),
 	sharedConfig,
 	{
