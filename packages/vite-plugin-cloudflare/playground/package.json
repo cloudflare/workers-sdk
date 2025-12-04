@@ -17,6 +17,7 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"playwright-chromium": "catalog:default",
+		"strip-ansi": "^7.1.0",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default"
 	}

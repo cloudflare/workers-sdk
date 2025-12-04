@@ -12,6 +12,7 @@ import {
 } from "./plugins/nodejs-compat";
 import { outputConfigPlugin } from "./plugins/output-config";
 import { previewPlugin } from "./plugins/preview";
+import { shortcutsPlugin } from "./plugins/shortcuts";
 import { triggerHandlersPlugin } from "./plugins/trigger-handlers";
 import {
 	virtualClientFallbackPlugin,
@@ -67,6 +68,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		configPlugin(ctx),
 		devPlugin(ctx),
 		previewPlugin(ctx),
+		shortcutsPlugin(ctx),
 		debugPlugin(ctx),
 		triggerHandlersPlugin(ctx),
 		virtualModulesPlugin(ctx),
