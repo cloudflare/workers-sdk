@@ -16,6 +16,7 @@
 		"create-rwsdk": "3.1.0",
 		"create-react-router": "7.9.6",
 		"create-solid": "0.6.11",
+		"create-vike": "0.0.528",
 		"create-vue": "3.18.3",
 		"create-waku": "0.12.5-0.27.1-0",
 		"@tanstack/create-start": "0.40.0",
