@@ -19,6 +19,7 @@ import { requireAuth } from "../user";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
+import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import type { Config } from "../config";
 import type { WorkerMetadataBinding } from "../deployment-bundle/create-worker-upload-form";
 
@@ -36,14 +37,6 @@ type InheritBindingUpload = {
 };
 
 type SecretBindingRedacted = Omit<SecretBindingUpload, "text">;
-
-function isMissingWorkerError(e: unknown): e is { code: 10007 } {
-	return (
-		typeof e === "object" &&
-		e !== null &&
-		(e as { code: number }).code === 10007
-	);
-}
 
 async function createDraftWorker({
 	config,
@@ -227,7 +220,7 @@ export const secretPutCommand = createCommand({
 				sendMetrics: config.send_metrics,
 			});
 		} catch (e) {
-			if (isMissingWorkerError(e)) {
+			if (isWorkerNotFoundError(e)) {
 				// create a draft worker and try again
 				const result = await createDraftWorker({
 					config,
@@ -474,7 +467,7 @@ export const secretBulkCommand = createCommand({
 			const settings = await getSettings();
 			existingBindings = settings.bindings;
 		} catch (e) {
-			if (isMissingWorkerError(e)) {
+			if (isWorkerNotFoundError(e)) {
 				// create a draft worker before patching
 				const result = await createDraftWorker({
 					config,
