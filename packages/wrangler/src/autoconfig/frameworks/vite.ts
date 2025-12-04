@@ -3,7 +3,7 @@ import { installPackages } from "../c3-vendor/packages";
 import {
 	checkIfViteConfigUsesCloudflarePlugin,
 	transformViteConfig,
-} from "./utils";
+} from "./utils/vite-config";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
