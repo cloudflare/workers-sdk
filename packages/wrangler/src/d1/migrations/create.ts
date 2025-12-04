@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
+import dedent from "ts-dedent";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
@@ -10,6 +11,15 @@ import { getMigrationsPath, getNextMigrationNumber } from "./helpers";
 export const d1MigrationsCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new migration",
+		epilogue: dedent`
+			This will generate a new versioned file inside the 'migrations' folder. Name
+			your migration file as a description of your change. This will make it easier
+			for you to find your migration in the 'migrations' folder. An example filename
+			looks like:
+
+				0000_create_user_table.sql
+
+			The filename will include a version number and the migration name you specify.`,
 		status: "stable",
 		owner: "Product: D1",
 	},
