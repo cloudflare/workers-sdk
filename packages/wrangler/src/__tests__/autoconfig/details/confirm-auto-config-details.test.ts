@@ -31,13 +31,13 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-					Object {
-					  "buildCommand": "npm run build",
-					  "configured": false,
-					  "projectPath": "<PROJECT_PATH>",
-					  "workerName": "worker-name",
-					}
-				`);
+				{
+				  "buildCommand": "npm run build",
+				  "configured": false,
+				  "projectPath": "<PROJECT_PATH>",
+				  "workerName": "worker-name",
+				}
+			`);
 		});
 
 		test("settings can be updated in a plain static site without a framework nor a build script", async () => {
@@ -68,7 +68,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				configured: false,
 			});
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run app:build",
 				  "configured": false,
 				  "outputDir": "./_public_",
@@ -111,10 +111,10 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				configured: false,
 			});
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "configured": false,
-				  "framework": Object {
+				  "framework": {
 				    "configure": [Function],
 				    "configured": false,
 				    "name": "astro",
@@ -139,7 +139,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "buildCommand": "npm run build",
 				  "configured": false,
 				  "projectPath": "<PROJECT_PATH>",

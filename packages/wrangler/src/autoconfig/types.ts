@@ -36,7 +36,7 @@ export type AutoConfigOptions = {
 	/**
 	 * Whether to install Wrangler during autoconfig
 	 */
-	installWrangler?: boolean;
+	enableWranglerInstallation?: boolean;
 };
 
 export type AutoConfigSummary = {

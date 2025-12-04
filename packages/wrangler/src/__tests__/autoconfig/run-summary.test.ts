@@ -39,25 +39,25 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				"
 				📄 Create wrangler.jsonc:
 				  {
-				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				    \\"name\\": \\"worker-name\\",
-				    \\"compatibility_date\\": \\"2025-01-01\\",
-				    \\"observability\\": {
-				      \\"enabled\\": true
+				    "$schema": "node_modules/wrangler/config-schema.json",
+				    "name": "worker-name",
+				    "compatibility_date": "2025-01-01",
+				    "observability": {
+				      "enabled": true
 				    }
 				  }
 				"
 			`);
 
 			expect(summary).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "outputDir": "public",
-				  "scripts": Object {},
-				  "wranglerConfig": Object {
+				  "scripts": {},
+				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
 				    "name": "worker-name",
-				    "observability": Object {
+				    "observability": {
 				      "enabled": true,
 				    },
 				  },
@@ -89,17 +89,17 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(summary).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "outputDir": "dist",
-				  "scripts": Object {
+				  "scripts": {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
 				  },
-				  "wranglerConfig": Object {
+				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
 				    "name": "worker-name",
-				    "observability": Object {
+				    "observability": {
 				      "enabled": true,
 				    },
 				  },
@@ -133,17 +133,17 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			);
 
 			expect(summary).toMatchInlineSnapshot(`
-				Object {
+				{
 				  "outputDir": "out",
-				  "scripts": Object {
+				  "scripts": {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
 				  },
-				  "wranglerConfig": Object {
+				  "wranglerConfig": {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
 				    "name": "worker-name",
-				    "observability": Object {
+				    "observability": {
 				      "enabled": true,
 				    },
 				  },

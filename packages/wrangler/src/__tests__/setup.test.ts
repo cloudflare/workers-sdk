@@ -35,7 +35,7 @@ describe("wrangler setup", () => {
 			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
-			  -y, --yes      Answer \\"yes\\" to any prompts for configuring your project  [boolean] [default: false]
+			  -y, --yes      Answer "yes" to any prompts for configuring your project  [boolean] [default: false]
 			      --build    Run your project's build command once it has been configured  [boolean] [default: false]
 			      --dry-run  Runs the command without applying any filesystem modifications  [boolean]"
 		`);
@@ -168,14 +168,14 @@ describe("wrangler setup", () => {
 
 				📄 Create wrangler.jsonc:
 				  {
-				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
-				    \\"name\\": \\"<WORKER_NAME>\\",
-				    \\"compatibility_date\\": \\"yyyy-mm-dd\\",
-				    \\"observability\\": {
-				      \\"enabled\\": true
+				    "$schema": "node_modules/wrangler/config-schema.json",
+				    "name": "<WORKER_NAME>",
+				    "compatibility_date": "yyyy-mm-dd",
+				    "observability": {
+				      "enabled": true
 				    },
-				    \\"assets\\": {
-				      \\"directory\\": \\"<DIR>\\"
+				    "assets": {
+				      "directory": "<DIR>"
 				    }
 				  }
 

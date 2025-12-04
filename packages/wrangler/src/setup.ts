@@ -60,7 +60,7 @@ export const setupCommand = createCommand({
 				runBuild: args.build,
 				skipConfirmations: args.yes,
 				dryRun: args.dryRun,
-				installWrangler: args.installWrangler,
+				enableWranglerInstallation: args.installWrangler,
 			});
 			if (!args.dryRun) {
 				logCompletionMessage(
