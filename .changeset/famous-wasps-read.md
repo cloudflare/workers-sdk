@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": patch
+"create-cloudflare": minor
 ---
 
 Support Qwik in `--experimental` mode

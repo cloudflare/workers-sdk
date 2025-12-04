@@ -130,7 +130,7 @@ export const HYPERDRIVE_PLUGIN: Plugin<typeof HyperdriveInputOptionsSchema> = {
 			services.push({
 				name: `${HYPERDRIVE_PLUGIN_NAME}:${name}`,
 				external: {
-					address: `localhost:${proxyPort}`,
+					address: `127.0.0.1:${proxyPort}`,
 					tcp: {},
 				},
 			});

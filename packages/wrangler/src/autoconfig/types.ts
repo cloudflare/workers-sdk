@@ -1,5 +1,5 @@
 import type { Framework } from "./frameworks/index";
-import type { PackageJSON } from "@cloudflare/workers-utils";
+import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
 export type AutoConfigDetails = {
 	/** The name of the worker */
@@ -33,4 +33,11 @@ export type AutoConfigOptions = {
 	 * Note: When `dryRun` is `true` the the confirmation prompts are always skipped.
 	 */
 	skipConfirmations?: boolean;
+};
+
+export type AutoConfigSummary = {
+	scripts: Record<string, string>;
+	wranglerInstall: boolean;
+	wranglerConfig: RawConfig;
+	frameworkConfiguration?: string;
 };
