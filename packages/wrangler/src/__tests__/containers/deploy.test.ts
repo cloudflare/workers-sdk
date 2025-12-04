@@ -127,6 +127,9 @@ describe("wrangler deploy with containers", () => {
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
+			The following containers are available:
+			- my-container (<cwd>/Dockerfile)
+
 			Uploaded test-name (TIMINGS)
 			Building image my-container:Galaxy
 			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
@@ -201,6 +204,9 @@ describe("wrangler deploy with containers", () => {
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+			The following containers are available:
+			- my-container (registry.cloudflare.com/hello:world)
 
 			Uploaded test-name (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
@@ -287,6 +293,9 @@ describe("wrangler deploy with containers", () => {
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+			The following containers are available:
+			- my-container (registry.cloudflare.com/hello:world)
 
 			Uploaded test-name (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
@@ -386,6 +395,9 @@ describe("wrangler deploy with containers", () => {
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
+			The following containers are available:
+			- my-container (registry.cloudflare.com/hello:world)
+
 			Uploaded test-name (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -476,23 +488,6 @@ describe("wrangler deploy with containers", () => {
 
 		await runWrangler("deploy --cwd src");
 
-		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                                            Resource
-			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
-
-			Uploaded test-name (TIMINGS)
-			Building image my-container:Galaxy
-			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
@@ -548,6 +543,9 @@ describe("wrangler deploy with containers", () => {
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+			The following containers are available:
+			- my-container (<cwd>/Dockerfile)
 
 			Uploaded test-name (TIMINGS)
 			Building image my-container:Galaxy
@@ -2029,6 +2027,9 @@ describe("wrangler deploy with containers", () => {
 				──────────────────
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
+				The following containers are available:
+				- my-container (registry.cloudflare.com/hello:world)
+
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -2277,6 +2278,9 @@ describe("wrangler deploy with containers dry run", () => {
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
+			The following containers are available:
+			- my-container (<cwd>/Dockerfile)
+
 			--dry-run: exiting now."
 		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`""`);
@@ -2303,6 +2307,9 @@ describe("wrangler deploy with containers dry run", () => {
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+			The following containers are available:
+			- my-container (registry.cloudflare.com/hello:world)
 
 			--dry-run: exiting now."
 		`);

@@ -211,6 +211,7 @@ async function resolveBindings(
 			},
 			input.tailConsumers ?? config.tail_consumers,
 			input.streamingTailConsumers ?? config.streaming_tail_consumers,
+			config.containers,
 			{
 				registry,
 				local: !input.dev?.remote,

@@ -492,6 +492,7 @@ export async function provisionBindings(
 			printable,
 			config.tail_consumers,
 			config.streaming_tail_consumers,
+			[],
 			{ provisioning: true }
 		);
 		logger.log();

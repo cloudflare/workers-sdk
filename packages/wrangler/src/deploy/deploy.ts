@@ -911,6 +911,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				{ ...withoutStaticAssets, vars: maskedVars },
 				config.tail_consumers,
 				config.streaming_tail_consumers,
+				config.containers,
 				{ warnIfNoBindings: true }
 			);
 		} else {
@@ -1050,7 +1051,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				printBindings(
 					{ ...withoutStaticAssets, vars: maskedVars },
 					config.tail_consumers,
-					config.streaming_tail_consumers
+					config.streaming_tail_consumers,
+					config.containers
 				);
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);
@@ -1080,7 +1082,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					printBindings(
 						{ ...withoutStaticAssets, vars: maskedVars },
 						config.tail_consumers,
-						config.streaming_tail_consumers
+						config.streaming_tail_consumers,
+						config.containers
 					);
 				}
 				const message = await helpIfErrorIsSizeOrScriptStartup(
