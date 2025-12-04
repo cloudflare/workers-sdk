@@ -37,7 +37,7 @@ describe("update wrangler config", () => {
 			`compatibility_date = "<TBD>"`,
 			`[[services]]`,
 			`binding = "SELF_SERVICE"`,
-			`service = "__WORKER_NAME__"`,
+			`service = "<WORKER_NAME>"`,
 		].join("\n");
 		vi.mocked(readFile).mockReturnValue(toml);
 
@@ -105,7 +105,7 @@ describe("update wrangler config", () => {
 			services: [
 				{
 					binding: "SELF_SERVICE",
-					service: "__WORKER_NAME__",
+					service: "<WORKER_NAME>",
 				},
 			],
 		});
