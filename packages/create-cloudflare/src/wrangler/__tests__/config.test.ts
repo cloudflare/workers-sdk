@@ -35,6 +35,9 @@ describe("update wrangler config", () => {
 			`name = "<TBD>"`,
 			`main = "src/index.ts"`,
 			`compatibility_date = "<TBD>"`,
+			`[[services]]`,
+			`binding = "SELF_SERVICE"`,
+			`service = "__WORKER_NAME__"`,
 		].join("\n");
 		vi.mocked(readFile).mockReturnValue(toml);
 
@@ -48,6 +51,10 @@ describe("update wrangler config", () => {
 			name = "test"
 			main = "src/index.ts"
 			compatibility_date = "2024-01-17"
+
+			[[services]]
+			binding = "SELF_SERVICE"
+			service = "test"
 
 			[observability]
 			enabled = true
@@ -95,6 +102,12 @@ describe("update wrangler config", () => {
 			name: "<TBD>",
 			main: "src/index.ts",
 			compatibility_date: "<TBD>",
+			services: [
+				{
+					binding: "SELF_SERVICE",
+					service: "__WORKER_NAME__",
+				},
+			],
 		});
 		vi.mocked(readFile).mockReturnValueOnce(json);
 
@@ -111,6 +124,12 @@ describe("update wrangler config", () => {
 				"name": "test",
 				"main": "src/index.ts",
 				"compatibility_date": "2024-01-17",
+				"services": [
+					{
+						"binding": "SELF_SERVICE",
+						"service": "test"
+					}
+				],
 				"observability": {
 					"enabled": true
 				}
