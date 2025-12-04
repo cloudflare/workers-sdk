@@ -19,14 +19,14 @@ import { dedent } from "../../../utils/dedent";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
-import type { AssetsOptions } from "../../../assets";
-import type { RemoteProxySession } from "../../remoteBindings";
-import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	Config,
 	RawConfig,
 	RawEnvironment,
-} from "@cloudflare/workers-utils";
+} from "../../../../../workers-utils/src";
+import type { AssetsOptions } from "../../../assets";
+import type { RemoteProxySession } from "../../remoteBindings";
+import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	MiniflareOptions,
 	ModuleRule,
