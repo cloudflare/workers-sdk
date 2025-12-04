@@ -10,6 +10,7 @@ import { blue, bold, brandColor, dim, gray, white } from "./colors";
 import { CancelError } from "./error";
 import SelectRefreshablePrompt from "./select-list";
 import { stdout } from "./streams";
+import TypeaheadSelectPrompt from "./typeahead-select";
 import {
 	cancel,
 	crash,
@@ -95,19 +96,25 @@ export type ListPromptConfig = BasePromptConfig & {
 	onRefresh?: () => Promise<OptionWithDetails[]>;
 };
 
+export type TypeaheadSelectPromptConfig = BaseSelectPromptConfig & {
+	type: "typeahead";
+};
+
 export type PromptConfig =
 	| TextPromptConfig
 	| ConfirmPromptConfig
 	| SelectPromptConfig
 	| MultiSelectPromptConfig
-	| ListPromptConfig;
+	| ListPromptConfig
+	| TypeaheadSelectPromptConfig;
 
 type RenderProps =
 	| Omit<SelectPrompt<Option>, "prompt">
 	| Omit<MultiSelectPrompt<Option>, "prompt">
 	| Omit<TextPrompt, "prompt">
 	| Omit<ConfirmPrompt, "prompt">
-	| Omit<SelectRefreshablePrompt, "prompt">;
+	| Omit<SelectRefreshablePrompt, "prompt">
+	| Omit<TypeaheadSelectPrompt, "prompt">;
 
 function acceptDefault<T>(
 	promptConfig: PromptConfig,
@@ -142,7 +149,8 @@ export const inputPrompt = async <T = string>(
 		| TextPrompt
 		| ConfirmPrompt
 		| MultiSelectPrompt<Option>
-		| SelectRefreshablePrompt;
+		| SelectRefreshablePrompt
+		| TypeaheadSelectPrompt;
 
 	// Looks up the needed renderer by the current state ('initial', 'submitted', etc.)
 	const dispatchRender = (props: RenderProps, p: Prompt): string | void => {
@@ -224,6 +232,21 @@ export const inputPrompt = async <T = string>(
 				return dispatchRender(this, prompt);
 			},
 		});
+	} else if (promptConfig.type === "typeahead") {
+		const initialValue = String(promptConfig.defaultValue);
+
+		if (promptConfig.acceptDefault) {
+			return acceptDefault<T>(promptConfig, renderers, initialValue as T);
+		}
+
+		prompt = new TypeaheadSelectPrompt({
+			...promptConfig,
+			options: promptConfig.options.filter((o) => !o.hidden),
+			initialValue,
+			render() {
+				return dispatchRender(this, prompt);
+			},
+		});
 	} else {
 		const initialValue =
 			promptConfig.initialValue ?? String(promptConfig.defaultValue ?? "");
@@ -293,6 +316,8 @@ export const getRenderers = (config: PromptConfig) => {
 			return getSelectRenderers(config);
 		case "list":
 			return getSelectListRenderers(config);
+		case "typeahead":
+			return getTypeaheadSelectRenderers(config);
 	}
 };
 
@@ -579,6 +604,140 @@ const getSelectListRenderers = (config: ListPromptConfig) => {
 			return renderSubmit(
 				config,
 				options.find((o) => o.value === value)?.value as string
+			);
+		},
+		cancel: defaultRenderer,
+	};
+};
+
+const getTypeaheadSelectRenderers = (config: TypeaheadSelectPromptConfig) => {
+	const { options, question, helpText: _helpText } = config;
+	const helpText = _helpText ?? "";
+	const maxItemsPerPage = config.maxItemsPerPage ?? 32;
+
+	const defaultRenderer: Renderer = ({ cursor = 0 }, prompt: Prompt) => {
+		let filteredOptions = options.filter((o) => !o.hidden);
+		let searchTerm = "";
+
+		if (prompt instanceof TypeaheadSelectPrompt) {
+			filteredOptions = prompt.filteredOptions;
+			searchTerm = prompt.searchTerm;
+		}
+
+		const renderOption = (opt: Option, i: number) => {
+			const { label: optionLabel } = opt;
+			const active = i === cursor;
+			const color = active ? blue : white;
+			const text = active ? color.underline(optionLabel) : color(optionLabel);
+			const sublabel = opt.sublabel ? color.grey(opt.sublabel) : "";
+
+			const indicator = active
+				? color(opt.activeIcon ?? shapes.radioActive)
+				: color(opt.inactiveIcon ?? shapes.radioInactive);
+
+			return `${space(2)}${indicator} ${text} ${sublabel}`;
+		};
+
+		const renderOptionCondition = (_: unknown, i: number): boolean => {
+			if (filteredOptions.length <= maxItemsPerPage) {
+				return true;
+			}
+
+			if (i < cursor) {
+				return filteredOptions.length - i <= maxItemsPerPage;
+			}
+
+			return cursor + maxItemsPerPage > i;
+		};
+
+		const activeOption = filteredOptions.at(cursor);
+
+		// Build the search input display
+		const searchDisplay = searchTerm
+			? `${dim("Search:")} ${brandColor(searchTerm)}${gray("│")}`
+			: `${dim("Type to search...")}`;
+
+		const lines = [
+			`${blCorner} ${bold(question)} ${dim(helpText)}`,
+			`${space(2)}${searchDisplay}`,
+			`${
+				cursor > 0 && filteredOptions.length > maxItemsPerPage
+					? `${space(2)}${dim("...")}\n`
+					: ""
+			}${
+				filteredOptions.length > 0
+					? filteredOptions
+							.map(renderOption)
+							.filter(renderOptionCondition)
+							.join(`\n`)
+					: `${space(2)}${dim("No matches found")}`
+			}${
+				cursor + maxItemsPerPage < filteredOptions.length &&
+				filteredOptions.length > maxItemsPerPage
+					? `\n${space(2)}${dim("...")}`
+					: ""
+			}`,
+			``, // extra line for readability
+		];
+
+		if (activeOption?.description) {
+			// To wrap the text by words instead of characters
+			const wordSegmenter = new Intl.Segmenter("en", { granularity: "word" });
+			const padding = space(2);
+			const availableWidth =
+				process.stdout.columns - stripAnsi(padding).length * 2;
+
+			// The description cannot have any ANSI code
+			// As the segmenter will split the code to several segments
+			const description = stripAnsi(activeOption.description);
+			const descriptionLines: string[] = [];
+			let descriptionLineNumber = 0;
+
+			for (const data of wordSegmenter.segment(description)) {
+				let line = descriptionLines[descriptionLineNumber] ?? "";
+
+				const currentLineWidth = line.length;
+				const segmentSize = data.segment.length;
+
+				if (currentLineWidth + segmentSize > availableWidth) {
+					descriptionLineNumber++;
+					line = "";
+
+					// To avoid starting a new line with a space
+					if (data.segment.match(/^\s+$/)) {
+						continue;
+					}
+				}
+
+				descriptionLines[descriptionLineNumber] = line + data.segment;
+			}
+
+			lines.push(
+				dim(
+					descriptionLines.map((line) => padding + line + padding).join("\n")
+				),
+				``
+			);
+		}
+
+		return lines;
+	};
+
+	return {
+		initial: defaultRenderer,
+		active: defaultRenderer,
+		confirm: defaultRenderer,
+		error: (opts: { value: Arg; error: string }, prompt: Prompt) => {
+			return [
+				`${leftT} ${status.error} ${dim(opts.error)}`,
+				`${grayBar}`,
+				...defaultRenderer(opts, prompt),
+			];
+		},
+		submit: ({ value }: { value: Arg }) => {
+			return renderSubmit(
+				config,
+				options.find((o) => o.value === value)?.label as string
 			);
 		},
 		cancel: defaultRenderer,
