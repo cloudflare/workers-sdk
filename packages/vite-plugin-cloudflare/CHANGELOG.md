@@ -1,5 +1,20 @@
 # @cloudflare/vite-plugin
 
+## 1.17.0
+
+### Minor Changes
+
+- [#11506](https://github.com/cloudflare/workers-sdk/pull/11506) [`79d30d4`](https://github.com/cloudflare/workers-sdk/commit/79d30d4321b057f3cb4451ab43fa67653f1a8ee5) Thanks [@vicb](https://github.com/vicb)! - Set the target JS version to ES2024
+
+### Patch Changes
+
+- [#11466](https://github.com/cloudflare/workers-sdk/pull/11466) [`4f15699`](https://github.com/cloudflare/workers-sdk/commit/4f15699371e08eedc5b8dae8ef6273b1dfeef7d5) Thanks [@ascorbic](https://github.com/ascorbic)! - Throw a more helpful error message when a Worker's entry module can't be resolved
+
+- Updated dependencies [[`819e287`](https://github.com/cloudflare/workers-sdk/commit/819e287c1a471c3681112fe333e5692f3c386571), [`af54c63`](https://github.com/cloudflare/workers-sdk/commit/af54c630d9a6593252d07b2b77586da2f67220e8), [`9988cc9`](https://github.com/cloudflare/workers-sdk/commit/9988cc9b9b157e453bb5eade439a8e69bfa0c7bd), [`ce295bf`](https://github.com/cloudflare/workers-sdk/commit/ce295bffdc7a45494b6683ee5fef04dbfca54345), [`45480b1`](https://github.com/cloudflare/workers-sdk/commit/45480b1a897c4236575e9ddd2cfdb89e0610fc67), [`9514c9a`](https://github.com/cloudflare/workers-sdk/commit/9514c9a0ed28fed349126384d1f646c9165be914), [`94c67e8`](https://github.com/cloudflare/workers-sdk/commit/94c67e87a3e9bd6057f8221aa4723252a4d9871d), [`ac861f8`](https://github.com/cloudflare/workers-sdk/commit/ac861f8ec24357c0238fa939b33da71236df7095), [`79d30d4`](https://github.com/cloudflare/workers-sdk/commit/79d30d4321b057f3cb4451ab43fa67653f1a8ee5), [`56e78c8`](https://github.com/cloudflare/workers-sdk/commit/56e78c8a5c02756f0d2b62ef80ad7d1a8045422c), [`0aa959a`](https://github.com/cloudflare/workers-sdk/commit/0aa959ac6fa294a18af10c1905e9494715556d45), [`f550b62`](https://github.com/cloudflare/workers-sdk/commit/f550b62fd4fdd60c2600390754631d713140afd3)]:
+  - @cloudflare/unenv-preset@2.7.13
+  - wrangler@4.53.0
+  - miniflare@4.20251202.1
+
 ## 1.16.1
 
 ### Patch Changes
