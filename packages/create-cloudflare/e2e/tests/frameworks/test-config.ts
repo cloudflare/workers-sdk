@@ -787,6 +787,30 @@ function getExperimentalFrameworkTestConfig(
 			verifyTypes: false,
 		},
 		{
+			name: "nuxt:workers",
+			promptHandlers: [
+				{
+					matcher: /Would you like to install any of the official modules\?/,
+					input: [keys.enter],
+				},
+			],
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Nuxt!",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: false,
+			verifyTypes: false,
+		},
+		{
 			name: "solid",
 			promptHandlers: [
 				{

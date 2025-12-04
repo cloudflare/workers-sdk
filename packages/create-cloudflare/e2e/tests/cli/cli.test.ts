@@ -524,7 +524,7 @@ describe("Create Cloudflare CLI", () => {
 
 	describe("help text", () => {
 		test("--help", async ({ logStream }) => {
-			if (!isExperimental) {
+			if (isExperimental) {
 				const { output } = await runC3(
 					["--help", "--experimental"],
 					[],
@@ -555,7 +555,7 @@ describe("Create Cloudflare CLI", () => {
 					    npm create cloudflare -- --framework next -- --ts
 					    pnpm create cloudflare --framework next -- --ts
 					    Allowed Values:
-					      gatsby, svelte, docusaurus, astro, tanstack-start, angular, solid, qwik, vue, react, react-router
+					      angular, astro, docusaurus, gatsby, nuxt, qwik, react, react-router, solid, svelte, tanstack-start, vue
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:
