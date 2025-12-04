@@ -31,7 +31,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-				{
+				Object {
 				  "buildCommand": "npm run build",
 				  "configured": false,
 				  "projectPath": "<PROJECT_PATH>",
@@ -68,7 +68,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				configured: false,
 			});
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-				{
+				Object {
 				  "buildCommand": "npm run app:build",
 				  "configured": false,
 				  "outputDir": "./_public_",
@@ -111,10 +111,10 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				configured: false,
 			});
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-				{
+				Object {
 				  "buildCommand": "npm run build",
 				  "configured": false,
-				  "framework": {
+				  "framework": Object {
 				    "configure": [Function],
 				    "configured": false,
 				    "name": "astro",
@@ -139,7 +139,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-				{
+				Object {
 				  "buildCommand": "npm run build",
 				  "configured": false,
 				  "projectPath": "<PROJECT_PATH>",

@@ -187,19 +187,19 @@ describe("autoconfig (deploy)", () => {
 				 - wrangler (devDependency)
 
 				📝 Update package.json scripts:
-				 - "deploy": "echo 'built' > build.txt && wrangler deploy"
-				 - "preview": "echo 'built' > build.txt && wrangler dev"
+				 - \\"deploy\\": \\"echo 'built' > build.txt && wrangler deploy\\"
+				 - \\"preview\\": \\"echo 'built' > build.txt && wrangler dev\\"
 
 				📄 Create wrangler.jsonc:
 				  {
-				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "name": "my-worker",
-				    "compatibility_date": "2000-01-01",
-				    "observability": {
-				      "enabled": true
+				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				    \\"name\\": \\"my-worker\\",
+				    \\"compatibility_date\\": \\"2000-01-01\\",
+				    \\"observability\\": {
+				      \\"enabled\\": true
 				    },
-				    "assets": {
-				      "directory": "dist"
+				    \\"assets\\": {
+				      \\"directory\\": \\"dist\\"
 				    }
 				  }
 
@@ -210,14 +210,14 @@ describe("autoconfig (deploy)", () => {
 
 			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
 				"{
-				  "$schema": "node_modules/wrangler/config-schema.json",
-				  "name": "my-worker",
-				  "compatibility_date": "2000-01-01",
-				  "observability": {
-				    "enabled": true
+				  \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				  \\"name\\": \\"my-worker\\",
+				  \\"compatibility_date\\": \\"2000-01-01\\",
+				  \\"observability\\": {
+				    \\"enabled\\": true
 				  },
-				  "assets": {
-				    "directory": "dist"
+				  \\"assets\\": {
+				    \\"directory\\": \\"dist\\"
 				  }
 				}"
 			`);
@@ -288,14 +288,14 @@ describe("autoconfig (deploy)", () => {
 
 				📄 Create wrangler.jsonc:
 				  {
-				    "$schema": "node_modules/wrangler/config-schema.json",
-				    "name": "edited-worker-name",
-				    "compatibility_date": "2000-01-01",
-				    "observability": {
-				      "enabled": true
+				    \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				    \\"name\\": \\"edited-worker-name\\",
+				    \\"compatibility_date\\": \\"2000-01-01\\",
+				    \\"observability\\": {
+				      \\"enabled\\": true
 				    },
-				    "assets": {
-				      "directory": "dist"
+				    \\"assets\\": {
+				      \\"directory\\": \\"dist\\"
 				    }
 				  }
 				"
@@ -303,14 +303,14 @@ describe("autoconfig (deploy)", () => {
 
 			expect(readFileSync("wrangler.jsonc")).toMatchInlineSnapshot(`
 				"{
-				  "$schema": "node_modules/wrangler/config-schema.json",
-				  "name": "edited-worker-name",
-				  "compatibility_date": "2000-01-01",
-				  "observability": {
-				    "enabled": true
+				  \\"$schema\\": \\"node_modules/wrangler/config-schema.json\\",
+				  \\"name\\": \\"edited-worker-name\\",
+				  \\"compatibility_date\\": \\"2000-01-01\\",
+				  \\"observability\\": {
+				    \\"enabled\\": true
 				  },
-				  "assets": {
-				    "directory": "dist"
+				  \\"assets\\": {
+				    \\"directory\\": \\"dist\\"
 				  }
 				}"
 			`);
