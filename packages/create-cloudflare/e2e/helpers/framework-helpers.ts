@@ -359,7 +359,7 @@ export async function verifyCloudflareVitePluginConfigured(
 	{ verifyCloudflareVitePluginConfigured: verify }: FrameworkTestConfig,
 	projectPath: string,
 ) {
-	if (verify === false) {
+	if (!verify) {
 		return;
 	}
 
