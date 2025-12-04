@@ -17,7 +17,7 @@ export default defineConfig([
 	sharedConfig,
 	{
 		files: ["**/*.ts"],
-		ignores: ["**/*.test.ts", "tsup.config.ts", "scripts/**", "e2e/**"],
+		ignores: ["**/*.test.ts", "tsdown.config.ts", "scripts/**", "e2e/**"],
 		rules: {
 			"no-console": "error",
 			"no-restricted-globals": [

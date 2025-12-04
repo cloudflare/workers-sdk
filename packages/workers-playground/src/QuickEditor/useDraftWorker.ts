@@ -109,7 +109,7 @@ export function serialiseWorker(service: PartialWorker): FormData {
 	for (const { name, content, type } of typedModules) {
 		formData.set(
 			name,
-			new Blob([content.contents], {
+			new Blob([content.contents as Uint8Array<ArrayBuffer>], {
 				type: content.type ?? toMimeType(type ?? "esm"),
 			}),
 			name

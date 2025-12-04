@@ -381,7 +381,7 @@ export default async function deploy(props: Props): Promise<{
 		custom_domain: true,
 	}));
 	const routes =
-		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
+		props.routes ?? config.routes ?? (config.route ? [config.route] : []);
 	const allDeploymentRoutes = [...routes, ...domainRoutes];
 
 	if (!props.dispatchNamespace && accountId) {

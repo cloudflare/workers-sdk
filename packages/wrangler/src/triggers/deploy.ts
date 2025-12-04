@@ -43,7 +43,7 @@ export default async function triggersDeploy(
 
 	const schedules = props.triggers || config.triggers?.crons;
 	const routes =
-		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
+		props.routes ?? config.routes ?? (config.route ? [config.route] : []);
 	const routesOnly: Array<Route> = [];
 	const customDomainsOnly: Array<RouteObject> = [];
 	validateRoutes(routes, props.assetsOptions);
