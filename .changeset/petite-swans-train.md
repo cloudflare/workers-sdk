@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Install Vite plugin to vite projects in autoconfig
+When a Vite project is detected, installed `@cloudflare/vite-plugin`
