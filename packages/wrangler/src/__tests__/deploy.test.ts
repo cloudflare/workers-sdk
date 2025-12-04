@@ -15831,6 +15831,7 @@ export default{
 				},
 				wranglerInstall: true,
 				wranglerConfig,
+				outputDir: "public",
 			};
 		});
 
@@ -15849,6 +15850,7 @@ export default{
 
 		expect(deployOutputEntry.autoconfig_summary).toMatchInlineSnapshot(`
 			Object {
+			  "outputDir": "public",
 			  "scripts": Object {
 			    "build": "npm run build-my-static-site",
 			  },

@@ -30,6 +30,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
 					configured: false,
+					outputDir: "public",
 				},
 				testRawConfig
 			);
@@ -50,6 +51,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 
 			expect(summary).toMatchInlineSnapshot(`
 				Object {
+				  "outputDir": "public",
 				  "scripts": Object {},
 				  "wranglerConfig": Object {
 				    "$schema": "node_modules/wrangler/config-schema.json",
@@ -74,6 +76,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 						devDependencies: {},
 					},
 					configured: false,
+					outputDir: "dist",
 				},
 				testRawConfig
 			);
@@ -87,6 +90,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 
 			expect(summary).toMatchInlineSnapshot(`
 				Object {
+				  "outputDir": "dist",
 				  "scripts": Object {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
@@ -116,6 +120,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 						},
 					},
 					configured: false,
+					outputDir: "out",
 				},
 				testRawConfig
 			);
@@ -129,6 +134,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 
 			expect(summary).toMatchInlineSnapshot(`
 				Object {
+				  "outputDir": "out",
 				  "scripts": Object {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
@@ -153,6 +159,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					projectPath: "<PROJECT_PATH>",
 					framework: new Astro(),
 					configured: false,
+					outputDir: "dist",
 				},
 				testRawConfig
 			);
@@ -173,6 +180,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					projectPath: "<PROJECT_PATH>",
 					framework: new Static("static"),
 					configured: false,
+					outputDir: "public",
 				},
 				testRawConfig
 			);
