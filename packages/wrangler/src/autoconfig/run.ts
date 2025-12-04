@@ -110,7 +110,7 @@ export async function runAutoConfig(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (autoConfigSummary.wranglerInstall) {
+	if (autoConfigSummary.wranglerInstall && autoConfigOptions.installWrangler) {
 		await installWrangler();
 	}
 
