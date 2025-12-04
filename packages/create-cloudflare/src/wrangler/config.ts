@@ -14,10 +14,24 @@ import type { CommentObject } from "comment-json";
 import type { C3Context } from "types";
 
 /**
- * Update the `wrangler.(toml|json|jsonc)` file for this project by setting the name
- * to the selected project name and adding the latest compatibility date.
+ * Update the `wrangler.(toml|json|jsonc)` file for this project by:
+ *
+ * - setting the `name` to the passed project name
+ * - adding the latest compatibility date when no valid one is present
+ * - enabling observability
+ * - adding comments with links to documentation for common configuration options
+ * - substituting placeholders with actual values
+ *   - `__WORKER_NAME__` with the project name
+ *
+ * If both `wrangler.toml` and `wrangler.json`/`wrangler.jsonc` are present, only
+ * the `wrangler.json`/`wrangler.jsonc` file will be updated.
  */
 export const updateWranglerConfig = async (ctx: C3Context) => {
+	// Placeholders to replace in the wrangler config files
+	const substitutions: Record<string, string> = {
+		__WORKER_NAME__: ctx.project.name,
+	};
+
 	if (wranglerJsonExists(ctx)) {
 		let wranglerJson = readWranglerJson(ctx);
 
@@ -70,7 +84,11 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			},
 		]);
 
-		writeWranglerJson(ctx, wranglerJson);
+		writeWranglerJson(ctx, wranglerJson, (_key, value) =>
+			typeof value === "string" && value in substitutions
+				? substitutions[value]
+				: value,
+		);
 		addVscodeConfig(ctx);
 	} else if (wranglerTomlExists(ctx)) {
 		const wranglerTomlStr = readWranglerToml(ctx);
@@ -79,14 +97,17 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		parsed["compatibility_date"] = await getCompatibilityDate(parsed);
 		parsed["observability"] ??= { enabled: true };
 
-		const comment = `#:schema node_modules/wrangler/config-schema.json\n# For more details on how to configure Wrangler, refer to:\n# https://developers.cloudflare.com/workers/wrangler/configuration/\n`;
+		let strToml = TOML.stringify(parsed);
 
-		const stringified = comment + TOML.stringify(parsed);
+		for (const [key, value] of Object.entries(substitutions)) {
+			strToml = strToml.replaceAll(key, value);
+		}
 
 		writeWranglerToml(
 			ctx,
-			stringified +
-				`
+			`#:schema node_modules/wrangler/config-schema.json
+# For more details on how to configure Wrangler, refer to:\n# https://developers.cloudflare.com/workers/wrangler/configuration/
+${strToml}
 # Smart Placement
 # Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 # [placement]
@@ -166,13 +187,32 @@ export const writeWranglerToml = (ctx: C3Context, contents: string) => {
 	return writeFile(wranglerTomlPath, contents);
 };
 
-export const writeWranglerJson = (ctx: C3Context, config: CommentObject) => {
+/**
+ * Writes the passed JSON object as the configuration file for this project.
+ *
+ * If there is an existing `wrangler.json` file, it will be overwritten.
+ * If not, `wrangler.jsonc` will be created/overwritten.
+ *
+ * @param ctx The C3 context.
+ * @param config The JSON object (with comment properties) to write.
+ * @param replacer A function that transforms the results or
+ *                 an array of strings and numbers that acts as an approved list for selecting
+ *                 the object properties that will be stringified.
+ */
+export const writeWranglerJson = (
+	ctx: C3Context,
+	config: CommentObject,
+	replacer?:
+		| ((key: string, value: unknown) => unknown)
+		| Array<number | string>
+		| null,
+) => {
 	const wranglerJsonPath = getWranglerJsonPath(ctx);
 	if (existsSync(wranglerJsonPath)) {
-		return writeJSONWithComments(wranglerJsonPath, config);
+		return writeJSONWithComments(wranglerJsonPath, config, replacer);
 	}
 	const wranglerJsoncPath = getWranglerJsoncPath(ctx);
-	return writeJSONWithComments(wranglerJsoncPath, config);
+	return writeJSONWithComments(wranglerJsoncPath, config, replacer);
 };
 
 export const addVscodeConfig = (ctx: C3Context) => {
@@ -193,16 +233,26 @@ export const addVscodeConfig = (ctx: C3Context) => {
 	});
 };
 
+/**
+ * Gets the compatibility date to use from the wrangler config.
+ *
+ * If the compatibility date is missing or invalid, it sets it to the latest workerd date.
+ *
+ * @param config Wrangler config
+ * @returns The compatibility date to use in the form "YYYY-MM-DD"
+ */
 async function getCompatibilityDate<T extends Record<string, unknown>>(
 	config: T,
-) {
+): Promise<string> {
 	const validCompatDateRe = /^\d{4}-\d{2}-\d{2}$/m;
+	const dateFromConfig = config["compatibility_date"];
 	if (
-		typeof config["compatibility_date"] === "string" &&
-		config["compatibility_date"].match(validCompatDateRe)
+		typeof dateFromConfig === "string" &&
+		dateFromConfig.match(validCompatDateRe)
 	) {
 		// If the compat date is already a valid one, leave it since it may be there for a specific compat reason
-		return config["compatibility_date"];
+		return dateFromConfig;
 	}
+	// If the compat date is missing or invalid, set it to the latest workerd date
 	return await getWorkerdCompatibilityDate();
 }

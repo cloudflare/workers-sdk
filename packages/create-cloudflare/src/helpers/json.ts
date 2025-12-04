@@ -22,12 +22,19 @@ export function readJSONWithComments(jsonFilePath: string): CommentObject {
  * Writes a JSON object to a file, preserving comments.
  * @param jsonObject - The JSON object (with comment properties) to write.
  * @param jsonFilePath - The path to the JSON file.
+ * @param replacer A function that transforms the results or
+ *                 an array of strings and numbers that acts as an approved list for selecting
+ *                 the object properties that will be stringified.
  */
 export function writeJSONWithComments(
 	jsonFilePath: string,
 	jsonObject: CommentObject,
+	replacer?:
+		| ((key: string, value: unknown) => unknown)
+		| Array<number | string>
+		| null,
 ): void {
-	const jsonStr = stringify(jsonObject, null, "\t");
+	const jsonStr = stringify(jsonObject, replacer, "\t");
 	writeFile(jsonFilePath, jsonStr);
 }
 
