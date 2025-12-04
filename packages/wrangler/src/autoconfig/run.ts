@@ -86,10 +86,13 @@ export async function runAutoConfig(
 			dryRun: true,
 		});
 
-	const autoConfigSummary = await buildOperationsSummary(autoConfigDetails, {
-		...wranglerConfig,
-		...dryRunConfigurationResults?.wranglerConfig,
-	});
+	const autoConfigSummary = await buildOperationsSummary(
+		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
+		{
+			...wranglerConfig,
+			...dryRunConfigurationResults?.wranglerConfig,
+		}
+	);
 
 	if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
 		throw new FatalError("Setup cancelled");
@@ -196,7 +199,9 @@ export async function runAutoConfig(
 }
 
 export async function buildOperationsSummary(
-	autoConfigDetails: AutoConfigDetails,
+	autoConfigDetails: Omit<AutoConfigDetails, "outputDir"> & {
+		outputDir: NonNullable<AutoConfigDetails["outputDir"]>;
+	},
 	wranglerConfigToWrite: RawConfig,
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
 ): Promise<AutoConfigSummary> {
@@ -206,6 +211,7 @@ export async function buildOperationsSummary(
 		wranglerInstall: false,
 		scripts: {},
 		wranglerConfig: wranglerConfigToWrite,
+		outputDir: autoConfigDetails.outputDir,
 	};
 
 	if (autoConfigDetails.packageJson) {

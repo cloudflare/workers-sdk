@@ -40,4 +40,5 @@ export type AutoConfigSummary = {
 	wranglerInstall: boolean;
 	wranglerConfig: RawConfig;
 	frameworkConfiguration?: string;
+	outputDir: string;
 };
