@@ -744,7 +744,7 @@ export function printBindings(
 		);
 	}
 
-	if (containers.length > 0) {
+	if (containers.length > 0 && !context.provisioning) {
 		let containersTitle = "The following containers are available:";
 		if (context.name && getFlag("MULTIWORKER")) {
 			containersTitle = `The following containers are available from ${chalk.blue(context.name)}:`;

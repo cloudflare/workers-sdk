@@ -1,5 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
 import * as fs from "node:fs";
+import path from "node:path";
 import { PassThrough, Writable } from "node:stream";
 import {
 	getCloudflareContainerRegistry,
@@ -487,6 +488,33 @@ describe("wrangler deploy with containers", () => {
 		});
 
 		await runWrangler("deploy --cwd src");
+
+		// we filter stdout normally to replace cwd since that is temporary
+		// however in this case since we pass a cwd to wrangler, the cwd wrangler runs in
+		// is different from the cwd for the test so our normal matching doesn't work
+		const wranglerCWD = process.cwd().split(path.sep);
+		wranglerCWD.splice(-1);
+		expect(std.out.replace(wranglerCWD.join(path.sep), "<test-cwd>"))
+			.toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                                            Resource
+				env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+				The following containers are available:
+				- my-container (<test-cwd>/Dockerfile)
+
+				Uploaded test-name (TIMINGS)
+				Building image my-container:Galaxy
+				Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -1980,7 +2008,8 @@ describe("wrangler deploy with containers", () => {
 	});
 
 	describe("ctx.exports", async () => {
-		// note how mockGetVersion is NOT mocked in any of these
+		// note how mockGetVersion is NOT mocked in any of these, unlike the other tests.
+		// instead we mock the list durable objects endpoint, which the ctx.exports path uses instead
 		it("should be able to deploy a new container", async () => {
 			writeWranglerConfig({
 				// no DO!
