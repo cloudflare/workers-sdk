@@ -57,6 +57,7 @@ import type {
 	ComplianceConfig,
 	Config,
 	ContainerApp,
+	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 
 type DeployContainersArgs = {
@@ -101,13 +102,18 @@ export async function deployContainers(
 				scriptName,
 				versionId
 			);
+			type DurableObjectBinding = Extract<
+				WorkerMetadataBinding,
+				{ type: "durable_object_namespace" }
+			>;
 			const targetDurableObject = maybeVersionInfo.resources.bindings.find(
-				(durableObject) =>
-					durableObject.type === "durable_object_namespace" &&
-					durableObject.class_name === container.class_name &&
+				(binding): binding is DurableObjectBinding =>
+					binding.type === "durable_object_namespace" &&
+					binding.class_name === container.class_name &&
 					// DO cannot be defined in a different script to the container
-					durableObject.script_name === undefined &&
-					durableObject.namespace_id !== undefined
+					(binding.script_name === undefined ||
+						binding.script_name === scriptName) &&
+					binding.namespace_id !== undefined
 			);
 			if (!targetDurableObject) {
 				throw new UserError(
@@ -115,8 +121,7 @@ export async function deployContainers(
 				);
 			}
 			assert(
-				targetDurableObject.type === "durable_object_namespace" &&
-					targetDurableObject.namespace_id !== undefined
+				targetDurableObject && targetDurableObject.namespace_id !== undefined
 			);
 
 			await apply(
@@ -137,12 +142,7 @@ export async function deployContainers(
 					durableObject.script === scriptName
 			);
 
-			// should not be reachable
-			if (!targetDurableObject) {
-				throw new Error(
-					"Could not find a durable object that matches the given script name and class name"
-				);
-			}
+			assert(targetDurableObject, "Durable Object not returned from list API");
 			await apply(
 				{
 					imageRef,
