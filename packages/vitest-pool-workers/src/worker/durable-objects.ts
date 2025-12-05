@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { exports } from "cloudflare:workers";
 import { getSerializedOptions, internalEnv } from "./env";
 import type { RunnerObject } from "./index";
 
@@ -10,9 +11,8 @@ const actionResults = new Map<number /* id */, unknown>();
 
 function isDurableObjectNamespace(v: unknown): v is DurableObjectNamespace {
 	return (
-		typeof v === "object" &&
-		v !== null &&
-		v.constructor.name === "DurableObjectNamespace" &&
+		v instanceof Object &&
+		/^(?:Loopback)?DurableObjectNamespace$/.test(v.constructor.name) &&
 		"newUniqueId" in v &&
 		typeof v.newUniqueId === "function" &&
 		"idFromName" in v &&
@@ -60,7 +60,8 @@ function getSameIsolateNamespaces(): DurableObjectNamespace[] {
 			continue;
 		}
 
-		const namespace = internalEnv[key];
+		const namespace =
+			internalEnv[key] ?? (exports as Record<string, unknown>)?.[key];
 		assert(
 			isDurableObjectNamespace(namespace),
 			`Expected ${key} to be a DurableObjectNamespace binding`

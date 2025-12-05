@@ -6,7 +6,7 @@ import {
 } from "cloudflare:workers";
 import { maybeHandleRunRequest, runInRunnerObject } from "./durable-objects";
 import { getResolvedMainPath, stripInternalEnv } from "./env";
-import { patchAndRunWithHandlerContext } from "./wait-until";
+import { patchAndRunWithHandlerContext } from "./patch-ctx";
 
 // =============================================================================
 // Common Entrypoint Helpers
