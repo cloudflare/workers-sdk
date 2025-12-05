@@ -1809,7 +1809,7 @@ describe("wrangler deploy with containers", () => {
 			max_instances: 10,
 			scheduling_policy: SchedulingPolicy.DEFAULT,
 			configuration: {
-				image: "docker.io/hello:world",
+				image: "registry.cloudflare.com/some-account-id/hello:world",
 				wrangler_ssh: {
 					enabled: true,
 					port: 1010,
@@ -1826,19 +1826,6 @@ describe("wrangler deploy with containers", () => {
 
 		await runWrangler("deploy index.js");
 
-		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                                            Resource
-			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
-
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
-		// no deprecation warnings should show up on this run
 		expect(std.warn).toBe("");
 		expect(std.err).toBe("");
 
@@ -1856,23 +1843,23 @@ describe("wrangler deploy with containers", () => {
 			│   max_instances = 10
 			│   rollout_active_grace_period = 0
 			│
-			│     [containers.configuration]
-			│     image = \\"docker.io/hello:world\\"
-			│     instance_type = \\"dev\\"
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│   instance_type = \\"lite\\"
 			│
-			│       [containers.configuration.wrangler_ssh]
-			│       enabled = true
-			│       port = 1_010
+			│   [containers.configuration.wrangler_ssh]
+			│   enabled = true
+			│   port = 1010
 			│
-			│       [[containers.configuration.authorized_keys]]
-			│       name = \\"jeff\\"
-			│       public_key = \\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm\\"
+			│   [[containers.configuration.authorized_keys]]
+			│   name = \\"jeff\\"
+			│   public_key = \\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm\\"
 			│
-			│     [containers.constraints]
-			│     tier = 1
+			│   [containers.constraints]
+			│   tier = 1
 			│
-			│     [containers.durable_objects]
-			│     namespace_id = \\"1\\"
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
 			│
 			│
 			│  SUCCESS  Created application my-container (Application ID: undefined)
@@ -1915,7 +1902,7 @@ describe("wrangler deploy with containers", () => {
 				max_instances: 10,
 				scheduling_policy: SchedulingPolicy.DEFAULT,
 				configuration: {
-					image: "docker.io/hello:world",
+					image: "registry.cloudflare.com/hello:world",
 				},
 				durable_objects: {
 					namespace_id: "1",
@@ -1925,7 +1912,7 @@ describe("wrangler deploy with containers", () => {
 
 		mockModifyApplication({
 			configuration: {
-				image: "docker.io/hello:world",
+				image: "registry.cloudflare.com/some-account-id/hello:world",
 				wrangler_ssh: {
 					enabled: true,
 				},
@@ -1947,19 +1934,6 @@ describe("wrangler deploy with containers", () => {
 
 		await runWrangler("deploy index.js");
 
-		expect(std.out).toMatchInlineSnapshot(`
-			"Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                                            Resource
-			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
-
-			Uploaded test-name (TIMINGS)
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
-		// no deprecation warnings should show up on this run
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 
@@ -1974,18 +1948,19 @@ describe("wrangler deploy with containers", () => {
 			│   scheduling_policy = \\"default\\"
 			│   version = 1
 			│ + rollout_active_grace_period = 0
-			│     [containers.configuration]
-			│     image = \\"docker.io/hello:world\\"
-			│ +   instance_type = \\"dev\\"
-			│ +     [[containers.configuration.authorized_keys]]
-			│ +     name = \\"jeff\\"
-			│ +     public_key = \\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm\\"
-			│ +     [containers.configuration.wrangler_ssh]
-			│ +     enabled = true
-			│     [containers.durable_objects]
-			│     namespace_id = \\"1\\"
-			│ +   [containers.constraints]
-			│ +   tier = 1
+			│   [containers.configuration]
+			│ - image = \\"registry.cloudflare.com/hello:world\\"
+			│ + image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│ + instance_type = \\"lite\\"
+			│ + [[containers.configuration.authorized_keys]]
+			│ + name = \\"jeff\\"
+			│ + public_key = \\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm\\"
+			│ + [containers.configuration.wrangler_ssh]
+			│ + enabled = true
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
+			│ + [containers.constraints]
+			│ + tier = 1
 			│
 			│
 			│  SUCCESS  Modified application my-container (Application ID: abc)

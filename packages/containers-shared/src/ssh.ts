@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { WebSocket } from "undici";
+import { WebSocket } from "ws";
 import type { WranglerSSHResponse } from "./client";
 import type { Server } from "node:net";
 
@@ -54,6 +54,8 @@ export function createSshTcpProxy(sshResponse: WranglerSSHResponse): Server {
 			},
 		});
 
+		ws.binaryType = "arraybuffer";
+
 		ws.addEventListener("error", (err) => {
 			console.error("Web socket error:", err.error);
 			inbound.end();
@@ -70,10 +72,8 @@ export function createSshTcpProxy(sshResponse: WranglerSSHResponse): Server {
 				proxy.close();
 			});
 
-			ws.addEventListener("message", async ({ data }) => {
-				const arrayBuffer = await data.arrayBuffer();
-				const arr = new Uint8Array(arrayBuffer);
-
+			ws.on("message", (data: ArrayBuffer) => {
+				const arr = new Uint8Array(data);
 				inbound.write(arr);
 			});
 

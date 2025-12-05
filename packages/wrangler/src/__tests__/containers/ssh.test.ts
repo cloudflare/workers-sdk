@@ -1,5 +1,6 @@
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import MockWebSocketServer from "vitest-websocket-mock";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -24,8 +25,6 @@ describe("containers ssh", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers ssh [ID]
-
-			SSH into a container
 
 			POSITIONALS
 			  ID  id of the container instance  [string]

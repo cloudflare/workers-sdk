@@ -23,16 +23,15 @@
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
-	"dependencies": {
-		"undici": "catalog:default"
-	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/node": "catalog:default",
+		"@types/ws": "^8.18.1",
 		"eslint": "catalog:default",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "catalog:default",
+		"ws": "^8.18.3"
 	},
 	"engines": {
 		"node": ">20.0.0"

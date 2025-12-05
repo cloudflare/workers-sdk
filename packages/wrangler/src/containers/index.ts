@@ -89,7 +89,8 @@ export const containers = (
 		)
 		.command(
 			"ssh [ID]",
-			"SSH into a container",
+			// "SSH into a container",
+			false, // hides it for now so it doesn't show up in help until it is ready
 			(args) => sshYargs(args),
 			(args) =>
 				handleFailure(

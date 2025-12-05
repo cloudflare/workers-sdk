@@ -432,20 +432,12 @@ function buildSshArgs(
 		flags.push("-m", sshArgs.macSpec);
 	}
 
-	if (sshArgs.ctlCmd !== undefined) {
-		flags.push("-O", sshArgs.ctlCmd);
-	}
-
 	if (sshArgs.option !== undefined) {
 		flags.push("-o", sshArgs.option);
 	}
 
 	if (sshArgs.tag !== undefined) {
 		flags.push("-P", sshArgs.tag);
-	}
-
-	if (sshArgs.ctlPath !== undefined) {
-		flags.push("-S", sshArgs.ctlPath);
 	}
 
 	return flags;
