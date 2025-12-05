@@ -18,8 +18,8 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
-		"@types/react": "^19.1.0",
-		"@types/react-dom": "^19.1.1",
+		"@types/react": "19.1.0",
+		"@types/react-dom": "19.1.1",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
 		"wrangler": "workspace:*"
