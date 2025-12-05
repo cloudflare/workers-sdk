@@ -1,3 +1,4 @@
+import { exports } from "cloudflare:workers";
 import { env } from "./env";
 import { registerGlobalWaitUntil, waitForWaitUntil } from "./wait-until";
 
@@ -22,6 +23,9 @@ class ExecutionContext {
 			throw new TypeError("Illegal constructor");
 		}
 	}
+
+	// Expose the ctx.exports from the main "SELF" Worker if there is one.
+	readonly exports = exports;
 
 	waitUntil(promise: unknown) {
 		if (!(this instanceof ExecutionContext)) {
