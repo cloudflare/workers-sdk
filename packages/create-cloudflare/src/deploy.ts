@@ -13,9 +13,9 @@ import TOML from "smol-toml";
 import { isInsideGitRepo } from "./git";
 import { chooseAccount, wranglerLogin } from "./wrangler/accounts";
 import {
-	readWranglerJson,
+	readWranglerJsonOrJsonc,
 	readWranglerToml,
-	wranglerJsonExists,
+	wranglerJsonOrJsoncExists,
 } from "./wrangler/config";
 import type { C3Context } from "types";
 
@@ -81,8 +81,8 @@ const isDeployable = async (ctx: C3Context) => {
 };
 
 const readWranglerConfig = (ctx: C3Context) => {
-	if (wranglerJsonExists(ctx)) {
-		return readWranglerJson(ctx);
+	if (wranglerJsonOrJsoncExists(ctx)) {
+		return readWranglerJsonOrJsonc(ctx);
 	}
 	const wranglerTomlStr = readWranglerToml(ctx);
 	return TOML.parse(wranglerTomlStr.replace(/\r\n/g, "\n"));

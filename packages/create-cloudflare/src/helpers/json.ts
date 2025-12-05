@@ -5,16 +5,21 @@ import type {
 	CommentObject,
 	CommentSymbol,
 	CommentToken,
+	Reviver,
 } from "comment-json";
 
 /**
  * Reads a JSON file and preserves comments.
  * @param jsonFilePath - The path to the JSON file.
+ * @param reviver A function that transforms the results. This function is called for each member of the object.
  * @returns The parsed JSON object with comments.
  */
-export function readJSONWithComments(jsonFilePath: string): CommentObject {
+export function readJSONWithComments(
+	jsonFilePath: string,
+	reviver?: Reviver | null,
+): CommentObject {
 	const jsonString = readFile(jsonFilePath);
-	const jsonObject = parse(jsonString) as unknown as CommentObject;
+	const jsonObject = parse(jsonString, reviver) as unknown as CommentObject;
 	return jsonObject;
 }
 
@@ -22,12 +27,19 @@ export function readJSONWithComments(jsonFilePath: string): CommentObject {
  * Writes a JSON object to a file, preserving comments.
  * @param jsonObject - The JSON object (with comment properties) to write.
  * @param jsonFilePath - The path to the JSON file.
+ * @param replacer A function that transforms the results or
+ *                 an array of strings and numbers that acts as an approved list for selecting
+ *                 the object properties that will be stringified.
  */
 export function writeJSONWithComments(
 	jsonFilePath: string,
 	jsonObject: CommentObject,
+	replacer?:
+		| ((key: string, value: unknown) => unknown)
+		| Array<number | string>
+		| null,
 ): void {
-	const jsonStr = stringify(jsonObject, null, "\t");
+	const jsonStr = stringify(jsonObject, replacer, "\t");
 	writeFile(jsonFilePath, jsonStr);
 }
 

@@ -30,6 +30,35 @@ describe("json helpers", () => {
 			expect(mockReadFile).toHaveBeenCalledWith("/path/to/file.json");
 			expect(result).toEqual({ name: "test" });
 		});
+
+		test("using a reviver function", () => {
+			mockReadFile.mockReturnValue(
+				JSON.stringify({
+					name: "test",
+					rootValue: "<REPLACE_ME>",
+					keep: "<DO_NOT_REPLACE_ME>",
+					nested: {
+						value: "<REPLACE_ME>",
+						list: [["<REPLACE_ME>"], "<DO_NOT_REPLACE_ME>"],
+					},
+				}),
+			);
+
+			const result = readJSONWithComments(
+				"/path/to/file.json",
+				(_key, value) => (value === "<REPLACE_ME>" ? "REPLACED" : value),
+			);
+			expect(mockReadFile).toHaveBeenCalledWith("/path/to/file.json");
+			expect(result).toEqual({
+				name: "test",
+				rootValue: "REPLACED",
+				keep: "<DO_NOT_REPLACE_ME>",
+				nested: {
+					value: "REPLACED",
+					list: [["REPLACED"], "<DO_NOT_REPLACE_ME>"],
+				},
+			});
+		});
 	});
 
 	describe("writeJSONWithComments", () => {
@@ -48,6 +77,44 @@ describe("json helpers", () => {
 					"name": "test"
 				}
 				// post-comment"
+			`);
+		});
+
+		test("using a function replacer", () => {
+			mockReadFile.mockReturnValue(
+				JSON.stringify({
+					name: "test",
+					rootValue: "<REPLACE_ME>",
+					keep: "<DO_NOT_REPLACE_ME>",
+					nested: {
+						value: "<REPLACE_ME>",
+						list: [["<REPLACE_ME>"], "<DO_NOT_REPLACE_ME>"],
+					},
+				}),
+			);
+
+			const result = readJSONWithComments("/path/to/file.json");
+			writeJSONWithComments("/path/to/file.json", result, (_key, value) =>
+				value === "<REPLACE_ME>" ? "REPLACED" : value,
+			);
+			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
+				`"/path/to/file.json"`,
+			);
+			expect(mockWriteFile.mock.calls[0][1]).toMatchInlineSnapshot(`
+				"{
+					"name": "test",
+					"rootValue": "REPLACED",
+					"keep": "<DO_NOT_REPLACE_ME>",
+					"nested": {
+						"value": "REPLACED",
+						"list": [
+							[
+								"REPLACED"
+							],
+							"<DO_NOT_REPLACE_ME>"
+						]
+					}
+				}"
 			`);
 		});
 	});
