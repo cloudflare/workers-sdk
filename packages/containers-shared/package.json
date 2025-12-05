@@ -27,11 +27,9 @@
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/node": "catalog:default",
-		"@types/ws": "^8.18.1",
 		"eslint": "catalog:default",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default",
-		"ws": "^8.18.3"
+		"vitest": "catalog:default"
 	},
 	"engines": {
 		"node": ">20.0.0"

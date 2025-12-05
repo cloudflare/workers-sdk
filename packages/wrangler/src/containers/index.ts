@@ -13,10 +13,9 @@ import {
 	infoYargs,
 	listCommand,
 	listYargs,
-	sshCommand,
-	sshYargs,
 } from "./containers";
 import { registryCommands } from "./registries";
+import { sshCommand, sshYargs } from "./ssh";
 import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
 import type { CommandModule } from "yargs";
 

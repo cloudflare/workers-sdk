@@ -1,4 +1,3 @@
-import { spawn } from "node:child_process";
 import {
 	cancel,
 	endSection,
@@ -9,16 +8,9 @@ import {
 import { processArgument } from "@cloudflare/cli/args";
 import { dim, gray } from "@cloudflare/cli/colors";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
-import {
-	ApiError,
-	ApplicationsService,
-	createSshTcpProxy,
-	DeploymentsService,
-	verifySshInstalled,
-} from "@cloudflare/containers-shared";
-import { APIError, UserError } from "@cloudflare/workers-utils";
+import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
+import { UserError } from "@cloudflare/workers-utils";
 import YAML from "yaml";
-import { promiseSpinner } from "../cloudchamber/common";
 import { wrap } from "../cloudchamber/helpers/wrap";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
@@ -29,7 +21,6 @@ import type {
 import type {
 	Application,
 	ListApplications,
-	WranglerSSHResponse,
 } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -156,148 +147,6 @@ export async function listCommand(
 	await listCommandHandle(listArgs, config);
 }
 
-export function sshYargs(args: CommonYargsArgv) {
-	return (
-		args
-			.positional("ID", {
-				describe: "id of the container instance",
-				type: "string",
-				demandOption: true,
-			})
-			// Following are SSH flags that should be directly passed in
-			.option("cipher", {
-				describe:
-					"SSH option: Selects the cipher specification for encrypting the session",
-				type: "string",
-			})
-			.option("log-file", {
-				describe:
-					"SSH option: Append debug logs to log_file instead of standard error",
-				type: "string",
-			})
-			.option("escape-char", {
-				describe:
-					"SSH option: Sets the escape character for sessions with a pty (default: ‘~’)",
-				type: "string",
-			})
-			.option("config-file", {
-				describe:
-					"SSH option: Specifies an alternative per-user configuration file",
-				type: "string",
-			})
-			.option("pkcs11", {
-				describe:
-					"SSH option: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication",
-				type: "string",
-			})
-			.option("identity-file", {
-				describe:
-					"SSH option: Selects a file from which the identity (private key) for public key authentication is read",
-				type: "string",
-			})
-			.option("mac-spec", {
-				describe:
-					"SSH option: A comma-separated list of MAC (message authentication code) algorithms, specified in order of preference",
-				type: "string",
-			})
-			.option("option", {
-				describe:
-					"SSH option: Can be used to give options in the format used in the configuration file",
-				type: "string",
-			})
-			.option("tag", {
-				describe:
-					"SSH option: Specify a tag name that may be used to select configuration in ssh_config(5)",
-				type: "string",
-			})
-	);
-}
-
-export async function sshCommand(
-	sshArgs: StrictYargsOptionsToInterface<typeof sshYargs>,
-	_config: Config
-) {
-	if (sshArgs.ID.length !== 64) {
-		throw new UserError(`Expected an instance ID but got ${sshArgs.ID}`);
-	}
-
-	// Check that ssh is enabled
-	let sshResponse: WranglerSSHResponse;
-	try {
-		sshResponse = await promiseSpinner(
-			DeploymentsService.containerWranglerSsh(sshArgs.ID),
-			{ message: "Authenticating" }
-		);
-	} catch (err) {
-		if (!(err instanceof Error)) {
-			throw err;
-		}
-
-		if (err instanceof ApiError) {
-			if (err.status === 400 || err.status === 404) {
-				throw new UserError(
-					`There has been an error when trying to SSH into the container.\n${err.body.error}`
-				);
-			}
-
-			throw new APIError({
-				text: `There has been an unknown error when trying to SSH into the container.\n${JSON.stringify(err.body)}`,
-			});
-		}
-
-		throw new Error(
-			`There has been an internal error when trying to SSH into the container.\n${err.message}`
-		);
-	}
-
-	const proxy = createSshTcpProxy(sshResponse);
-	const proxyController = new AbortController();
-	proxy.listen({ port: 0, signal: proxyController.signal });
-
-	const proxyAddress = proxy.address();
-	if (proxyAddress === null || typeof proxyAddress !== "object") {
-		throw new Error("Couldn't get local SSH TCP proxy address");
-	}
-
-	await verifySshInstalled("ssh");
-
-	const child = spawn(
-		"ssh",
-		[
-			"cloudchamber@127.0.0.1",
-			"-p",
-			`${proxyAddress.port}`,
-			...buildSshArgs(sshArgs),
-		],
-		{
-			stdio: ["inherit", "inherit", "inherit"],
-			detached: true,
-		}
-	);
-
-	const childKilled = new Promise((resolve, reject) => {
-		child.on("close", () => {
-			resolve(undefined);
-		});
-
-		child.on("error", reject);
-
-		child.on("exit", (code) => {
-			// Ssh errors exit with code 255
-			if (code !== 255) {
-				resolve(undefined);
-			} else {
-				reject(
-					new Error(`ssh exited unsuccessfully. Is the container running?`)
-				);
-			}
-		});
-	});
-	await childKilled;
-
-	proxyController.abort();
-}
-
 async function listCommandHandle(
 	_args: StrictYargsOptionsToInterface<typeof listYargs>,
 	_config: Config
@@ -397,48 +246,4 @@ async function listContainersAndChoose(
 	});
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	return applications.find((a) => a.id === application)!;
-}
-
-function buildSshArgs(
-	sshArgs: StrictYargsOptionsToInterface<typeof sshYargs>
-): string[] {
-	const flags: string[] = [];
-
-	if (sshArgs.cipher !== undefined) {
-		flags.push("-c", sshArgs.cipher);
-	}
-
-	if (sshArgs.logFile !== undefined) {
-		flags.push("-E", sshArgs.logFile);
-	}
-
-	if (sshArgs.escapeChar !== undefined) {
-		flags.push("-e", sshArgs.escapeChar);
-	}
-
-	if (sshArgs.configFile !== undefined) {
-		flags.push("-F", sshArgs.configFile);
-	}
-
-	if (sshArgs.pkcs11 !== undefined) {
-		flags.push("-I", sshArgs.pkcs11);
-	}
-
-	if (sshArgs.identityFile !== undefined) {
-		flags.push("-i", sshArgs.identityFile);
-	}
-
-	if (sshArgs.macSpec !== undefined) {
-		flags.push("-m", sshArgs.macSpec);
-	}
-
-	if (sshArgs.option !== undefined) {
-		flags.push("-o", sshArgs.option);
-	}
-
-	if (sshArgs.tag !== undefined) {
-		flags.push("-P", sshArgs.tag);
-	}
-
-	return flags;
 }

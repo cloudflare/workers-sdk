@@ -75,11 +75,14 @@ describe("containers ssh", () => {
 			})
 		);
 
-		await expect(runWrangler(`containers ssh ${instanceId}`)).rejects
-			.toMatchInlineSnapshot(`
-			[APIError: There has been an unknown error when trying to SSH into the container.
-			{"error":"something happened"}]
-		`);
+		await expect(
+			runWrangler(`containers ssh ${instanceId}`)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`
+			[Error: There has been an error verifying SSH access.
+			something happened]
+		`
+		);
 	});
 
 	// This covers up to trying to connect to the container with ssh. The
