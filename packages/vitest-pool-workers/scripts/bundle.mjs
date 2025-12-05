@@ -91,6 +91,7 @@ const commonOptions = {
 	external: [
 		// Node.js built-ins (handled automatically by esbuild but listed for completeness)
 		"node:*",
+		// Cloudflare/workerd built-ins
 		"cloudflare:*",
 		"workerd:*",
 		// Virtual/runtime modules
@@ -100,6 +101,7 @@ const commonOptions = {
 		"birpc",
 		"cjs-module-lexer",
 		"devalue",
+		"esbuild",
 		"miniflare",
 		"semver",
 		"semver/*",

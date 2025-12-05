@@ -8,13 +8,24 @@ export default {
 			const stub = ctx.exports.Counter.get(id);
 			return stub.fetch(request);
 		}
+		if (pathname === "/props") {
+			return new Response(
+				"👋 " +
+					(await ctx.exports
+						.NamedEntryPoint({ props: { extra: "\nAdditional props!!" } })
+						.greet())
+			);
+		}
 		return new Response("👋 " + (await ctx.exports.NamedEntryPoint.greet()));
 	},
 } satisfies ExportedHandler;
 
-export class NamedEntryPoint extends WorkerEntrypoint {
+export class NamedEntryPoint extends WorkerEntrypoint<Env, { extra?: string }> {
 	greet() {
-		return `Hello ${this.env.NAME} from Main NamedEntryPoint!`;
+		return (
+			`Hello ${this.env.NAME} from Main NamedEntryPoint!` +
+			(this.ctx.props.extra ?? "")
+		);
 	}
 }
 
