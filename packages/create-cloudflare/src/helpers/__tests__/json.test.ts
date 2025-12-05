@@ -30,6 +30,35 @@ describe("json helpers", () => {
 			expect(mockReadFile).toHaveBeenCalledWith("/path/to/file.json");
 			expect(result).toEqual({ name: "test" });
 		});
+
+		test("using a reviver function", () => {
+			mockReadFile.mockReturnValue(
+				JSON.stringify({
+					name: "test",
+					rootValue: "<REPLACE_ME>",
+					keep: "<DO_NOT_REPLACE_ME>",
+					nested: {
+						value: "<REPLACE_ME>",
+						list: [["<REPLACE_ME>"], "<DO_NOT_REPLACE_ME>"],
+					},
+				}),
+			);
+
+			const result = readJSONWithComments(
+				"/path/to/file.json",
+				(_key, value) => (value === "<REPLACE_ME>" ? "REPLACED" : value),
+			);
+			expect(mockReadFile).toHaveBeenCalledWith("/path/to/file.json");
+			expect(result).toEqual({
+				name: "test",
+				rootValue: "REPLACED",
+				keep: "<DO_NOT_REPLACE_ME>",
+				nested: {
+					value: "REPLACED",
+					list: [["REPLACED"], "<DO_NOT_REPLACE_ME>"],
+				},
+			});
+		});
 	});
 
 	describe("writeJSONWithComments", () => {
@@ -55,18 +84,18 @@ describe("json helpers", () => {
 			mockReadFile.mockReturnValue(
 				JSON.stringify({
 					name: "test",
-					rootValue: "_REPLACE_ME_",
-					keep: "DO_NOT_REPLACE_ME_",
+					rootValue: "<REPLACE_ME>",
+					keep: "<DO_NOT_REPLACE_ME>",
 					nested: {
-						value: "_REPLACE_ME_",
-						list: [["_REPLACE_ME_"], "DO_NOT_REPLACE_ME_"],
+						value: "<REPLACE_ME>",
+						list: [["<REPLACE_ME>"], "<DO_NOT_REPLACE_ME>"],
 					},
 				}),
 			);
 
 			const result = readJSONWithComments("/path/to/file.json");
 			writeJSONWithComments("/path/to/file.json", result, (_key, value) =>
-				value === "_REPLACE_ME_" ? "REPLACED" : value,
+				value === "<REPLACE_ME>" ? "REPLACED" : value,
 			);
 			expect(mockWriteFile.mock.calls[0][0]).toMatchInlineSnapshot(
 				`"/path/to/file.json"`,
@@ -75,14 +104,14 @@ describe("json helpers", () => {
 				"{
 					"name": "test",
 					"rootValue": "REPLACED",
-					"keep": "DO_NOT_REPLACE_ME_",
+					"keep": "<DO_NOT_REPLACE_ME>",
 					"nested": {
 						"value": "REPLACED",
 						"list": [
 							[
 								"REPLACED"
 							],
-							"DO_NOT_REPLACE_ME_"
+							"<DO_NOT_REPLACE_ME>"
 						]
 					}
 				}"

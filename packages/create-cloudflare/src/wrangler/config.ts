@@ -10,7 +10,7 @@ import {
 	writeJSONWithComments,
 } from "helpers/json";
 import TOML from "smol-toml";
-import type { CommentObject } from "comment-json";
+import type { CommentObject, Reviver } from "comment-json";
 import type { C3Context } from "types";
 
 /**
@@ -22,6 +22,7 @@ import type { C3Context } from "types";
  * - adding comments with links to documentation for common configuration options
  * - substituting placeholders with actual values
  *   - `<WORKER_NAME>` with the project name
+ *   - `<COMPATIBILITY_DATE>` with the max compatibility date of the installed worked
  *
  * If both `wrangler.toml` and `wrangler.json`/`wrangler.jsonc` are present, only
  * the `wrangler.json`/`wrangler.jsonc` file will be updated.
@@ -30,10 +31,15 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 	// Placeholders to replace in the wrangler config files
 	const substitutions: Record<string, string> = {
 		"<WORKER_NAME>": ctx.project.name,
+		"<COMPATIBILITY_DATE>": await getWorkerdCompatibilityDate(),
 	};
 
-	if (wranglerJsonExists(ctx)) {
-		let wranglerJson = readWranglerJson(ctx);
+	if (wranglerJsonOrJsoncExists(ctx)) {
+		let wranglerJson = readWranglerJsonOrJsonc(ctx, (_key, value) =>
+			typeof value === "string" && value in substitutions
+				? substitutions[value]
+				: value,
+		);
 
 		// Put the schema at the top of the file
 		wranglerJson = insertJSONProperty(
@@ -46,7 +52,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		wranglerJson = appendJSONProperty(
 			wranglerJson,
 			"compatibility_date",
-			await getCompatibilityDate(wranglerJson),
+			await getCompatibilityDate(wranglerJson.compatibility_date),
 		);
 		wranglerJson = appendJSONProperty(wranglerJson, "observability", {
 			enabled: true,
@@ -84,30 +90,27 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			},
 		]);
 
-		writeWranglerJson(ctx, wranglerJson, (_key, value) =>
-			typeof value === "string" && value in substitutions
-				? substitutions[value]
-				: value,
-		);
+		writeWranglerJsonOrJsonc(ctx, wranglerJson);
 		addVscodeConfig(ctx);
 	} else if (wranglerTomlExists(ctx)) {
-		const wranglerTomlStr = readWranglerToml(ctx);
-		const parsed = TOML.parse(wranglerTomlStr);
-		parsed.name = ctx.project.name;
-		parsed["compatibility_date"] = await getCompatibilityDate(parsed);
-		parsed["observability"] ??= { enabled: true };
-
-		let strToml = TOML.stringify(parsed);
+		let strToml = readWranglerToml(ctx);
 
 		for (const [key, value] of Object.entries(substitutions)) {
 			strToml = strToml.replaceAll(key, value);
 		}
 
+		const wranglerToml = TOML.parse(strToml);
+		wranglerToml.name = ctx.project.name;
+		wranglerToml.compatibility_date = await getCompatibilityDate(
+			wranglerToml.compatibility_date,
+		);
+		wranglerToml.observability ??= { enabled: true };
+
 		writeWranglerToml(
 			ctx,
 			`#:schema node_modules/wrangler/config-schema.json
 # For more details on how to configure Wrangler, refer to:\n# https://developers.cloudflare.com/workers/wrangler/configuration/
-${strToml}
+${TOML.stringify(wranglerToml)}
 # Smart Placement
 # Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 # [placement]
@@ -161,8 +164,8 @@ export const wranglerTomlExists = (ctx: C3Context) => {
 	return existsSync(wranglerTomlPath);
 };
 
-/** Checks for wrangler.json and wrangler.jsonc */
-export const wranglerJsonExists = (ctx: C3Context) => {
+/** Checks for an existing `wrangler.json` or `wrangler.jsonc` */
+export const wranglerJsonOrJsoncExists = (ctx: C3Context) => {
 	const wranglerJsonPath = getWranglerJsonPath(ctx);
 	const wranglerJsoncPath = getWranglerJsoncPath(ctx);
 	return existsSync(wranglerJsonPath) || existsSync(wranglerJsoncPath);
@@ -173,13 +176,25 @@ export const readWranglerToml = (ctx: C3Context) => {
 	return readFile(wranglerTomlPath);
 };
 
-export const readWranglerJson = (ctx: C3Context) => {
+/**
+ * Reads the JSON configuration file for this project.
+ *
+ * If both `wrangler.json` and `wrangler.jsonc` are present, `wrangler.json` will be read.
+ *
+ * @param ctx The C3 context.
+ * @param reviver A function that transforms the results. This function is called for each member of the object.
+ * @returns The parsed JSON object with comments.
+ */
+export const readWranglerJsonOrJsonc = (
+	ctx: C3Context,
+	reviver?: Reviver | null,
+): CommentObject => {
 	const wranglerJsonPath = getWranglerJsonPath(ctx);
 	if (existsSync(wranglerJsonPath)) {
-		return readJSONWithComments(wranglerJsonPath);
+		return readJSONWithComments(wranglerJsonPath, reviver);
 	}
 	const wranglerJsoncPath = getWranglerJsoncPath(ctx);
-	return readJSONWithComments(wranglerJsoncPath);
+	return readJSONWithComments(wranglerJsoncPath, reviver);
 };
 
 export const writeWranglerToml = (ctx: C3Context, contents: string) => {
@@ -199,7 +214,7 @@ export const writeWranglerToml = (ctx: C3Context, contents: string) => {
  *                 an array of strings and numbers that acts as an approved list for selecting
  *                 the object properties that will be stringified.
  */
-export const writeWranglerJson = (
+export const writeWranglerJsonOrJsonc = (
 	ctx: C3Context,
 	config: CommentObject,
 	replacer?:
@@ -234,25 +249,23 @@ export const addVscodeConfig = (ctx: C3Context) => {
 };
 
 /**
- * Gets the compatibility date to use from the wrangler config.
+ * Gets the compatibility date to use.
  *
- * If the compatibility date is missing or invalid, it sets it to the latest workerd date.
+ * If the tentative date is valid, it is returned. Otherwise the latest workerd date is used.
  *
- * @param config Wrangler config
+ * @param tentativeDate A tentative compatibility date, usually from wrangler config.
  * @returns The compatibility date to use in the form "YYYY-MM-DD"
  */
-async function getCompatibilityDate<T extends Record<string, unknown>>(
-	config: T,
-): Promise<string> {
+async function getCompatibilityDate(tentativeDate: unknown): Promise<string> {
 	const validCompatDateRe = /^\d{4}-\d{2}-\d{2}$/m;
-	const dateFromConfig = config["compatibility_date"];
 	if (
-		typeof dateFromConfig === "string" &&
-		dateFromConfig.match(validCompatDateRe)
+		typeof tentativeDate === "string" &&
+		tentativeDate.match(validCompatDateRe)
 	) {
-		// If the compat date is already a valid one, leave it since it may be there for a specific compat reason
-		return dateFromConfig;
+		// Use the tentative date when it is valid.
+		// It may be there for a specific compat reason
+		return tentativeDate;
 	}
-	// If the compat date is missing or invalid, set it to the latest workerd date
+	// Fallback to the latest workerd date
 	return await getWorkerdCompatibilityDate();
 }
