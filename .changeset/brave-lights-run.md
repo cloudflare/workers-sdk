@@ -4,4 +4,7 @@
 
 Add template string substitution in wrangler config files.
 
-The value `"<WORKER_NAME>"` will be replaced by the project name when wrangler create a config file (in all of the toml, json, and jsonc formats).
+When c3 updates the config file:
+
+- The value `"<WORKER_NAME>"` is replaced with the worker name.
+- The value `"<COMPATIBILITY_DATE>"` is replaced with the latest worked compatibility date.
