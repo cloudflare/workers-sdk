@@ -15,6 +15,7 @@ import {
 	listYargs,
 } from "./containers";
 import { registryCommands } from "./registries";
+import { sshCommand, sshYargs } from "./ssh";
 import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
 import type { CommandModule } from "yargs";
 
@@ -82,6 +83,18 @@ export const containers = (
 				handleFailure(
 					`wrangler containers delete`,
 					deleteCommand,
+					containersScope
+				)(args)
+		)
+		.command(
+			"ssh [ID]",
+			// "SSH into a container",
+			false, // hides it for now so it doesn't show up in help until it is ready
+			(args) => sshYargs(args),
+			(args) =>
+				handleFailure(
+					`wrangler containers ssh`,
+					sshCommand,
 					containersScope
 				)(args)
 		)
