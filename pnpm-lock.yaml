@@ -1938,8 +1938,8 @@ importers:
         specifier: 4.1.0-beta.10
         version: 4.1.0-beta.10(patch_hash=flgmw54jmjdxqmelxigtxg6kum)
       zod:
-        specifier: 3.22.3
-        version: 3.22.3
+        specifier: 3.25.76
+        version: 3.25.76
     devDependencies:
       '@ava/typescript':
         specifier: ^4.1.0
