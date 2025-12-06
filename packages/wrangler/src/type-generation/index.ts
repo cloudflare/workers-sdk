@@ -18,6 +18,7 @@ import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqli
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
 import { isProcessEnvPopulated } from "../process-env";
+import { getDevCompatibilityDate } from "../utils/compatibility-date";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Entry } from "../deployment-bundle/entry";
@@ -62,6 +63,17 @@ export const typesCommand = createCommand({
 			type: "boolean",
 			default: true,
 			describe: "Generate literal and union types for variables",
+		},
+		"compatibility-date": {
+			type: "string",
+			describe:
+				"Compatibility date for runtime types (defaults to the latest date of the currently installed workerd)",
+			requiresArg: true,
+		},
+		"compatibility-flags": {
+			type: "array",
+			describe: "Compatibility flags for runtime types",
+			requiresArg: true,
 		},
 		"experimental-include-runtime": {
 			alias: "x-include-runtime",
@@ -120,6 +132,7 @@ export const typesCommand = createCommand({
 	async handler(args) {
 		let config: Config;
 		const secondaryConfigs: Config[] = [];
+
 		if (Array.isArray(args.config)) {
 			config = readConfig({ ...args, config: args.config[0] });
 			for (const configPath of args.config.slice(1)) {
@@ -129,17 +142,22 @@ export const typesCommand = createCommand({
 			config = readConfig(args);
 		}
 
+		const hasConfigFile = Boolean(config.configPath);
 		const { envInterface, path: outputPath } = args;
 
-		if (
-			!config.configPath ||
-			!fs.existsSync(config.configPath) ||
-			fs.statSync(config.configPath).isDirectory()
-		) {
-			throw new UserError(
-				`No config file detected${args.config ? ` (at ${args.config})` : ""}. This command requires a Wrangler configuration file.`,
-				{ telemetryMessage: "No config file detected" }
+		if (!hasConfigFile && args.includeRuntime && !args.compatibilityDate) {
+			const date = getDevCompatibilityDate(config, args.compatibilityDate);
+			args.compatibilityDate = date;
+			logger.log(
+				`No config file detected. Using the installed Workers runtime's latest supported date: ${date}\n`
 			);
+		}
+
+		if (!hasConfigFile && args.includeEnv === true) {
+			logger.log(
+				"No config file detected. Setting --include-env to false (only runtime types will be generated).\n"
+			);
+			args.includeEnv = false;
 		}
 
 		const secondaryEntries: Map<string, Entry> = new Map();
@@ -170,13 +188,10 @@ export const typesCommand = createCommand({
 		}
 
 		const configContainsEntrypoint =
-			config.main !== undefined || !!config.site?.["entry-point"];
+			config?.main !== undefined || !!config?.site?.["entry-point"];
 
 		let entrypoint: Entry | undefined;
-		if (configContainsEntrypoint) {
-			// this will throw if an entrypoint is expected, but doesn't exist
-			// e.g. before building. however someone might still want to generate types
-			// so we default to module worker
+		if (configContainsEntrypoint && config) {
 			try {
 				entrypoint = await getEntry({}, config, "types");
 			} catch {
@@ -187,7 +202,7 @@ export const typesCommand = createCommand({
 
 		const header = ["/* eslint-disable */"];
 		const content = [];
-		if (args.includeEnv) {
+		if (args.includeEnv && config) {
 			logger.log(`Generating project types...\n`);
 
 			const { envHeader, envTypes } = await generateEnvTypes(
@@ -206,8 +221,18 @@ export const typesCommand = createCommand({
 
 		if (args.includeRuntime) {
 			logger.log("Generating runtime types...\n");
-			const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
+			const compatibilityDate = getDevCompatibilityDate(
 				config,
+				args.compatibilityDate ?? config?.compatibility_date
+			);
+			const compatibilityFlags =
+				args.compatibilityFlags ?? config?.compatibility_flags ?? [];
+
+			const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
+				config: {
+					compatibility_date: compatibilityDate,
+					compatibility_flags: compatibilityFlags as string[],
+				},
 				outFile: outputPath || undefined,
 			});
 			header.push(runtimeHeader);
@@ -217,7 +242,6 @@ export const typesCommand = createCommand({
 
 		logHorizontalRule();
 
-		// don't write an empty Env type for service worker syntax
 		if ((header.length && content.length) || entrypointFormat === "modules") {
 			fs.writeFileSync(
 				outputPath,
@@ -226,19 +250,30 @@ export const typesCommand = createCommand({
 			);
 			logger.log(`✨ Types written to ${outputPath}\n`);
 		}
-		const tsconfigPath =
-			config.tsconfig ?? join(dirname(config.configPath), "tsconfig.json");
-		const tsconfigTypes = readTsconfigTypes(tsconfigPath);
-		const { mode } = getNodeCompat(
-			config.compatibility_date,
-			config.compatibility_flags
-		);
-		if (args.includeRuntime) {
-			logRuntimeTypesMessage(tsconfigTypes, mode !== null);
+
+		if (config?.configPath) {
+			const tsconfigPath =
+				config.tsconfig ?? join(dirname(config.configPath), "tsconfig.json");
+			const tsconfigTypes = readTsconfigTypes(tsconfigPath);
+			const compatibilityDate = getDevCompatibilityDate(
+				config,
+				args.compatibilityDate ?? config.compatibility_date
+			);
+			const compatibilityFlags: string[] = (args.compatibilityFlags ??
+				config.compatibility_flags ??
+				[]) as string[];
+			const { mode } = getNodeCompat(compatibilityDate, compatibilityFlags);
+			if (args.includeRuntime) {
+				logRuntimeTypesMessage(tsconfigTypes, mode !== null);
+			}
+			logger.log(
+				`📣 Remember to rerun 'wrangler types' after you change your ${configFileName(config.configPath)} file.\n`
+			);
+		} else if (args.includeRuntime) {
+			logger.log(
+				`📣 Remember to rerun 'wrangler types' after you change your compatibility settings.\n`
+			);
 		}
-		logger.log(
-			`📣 Remember to rerun 'wrangler types' after you change your ${configFileName(config.configPath)} file.\n`
-		);
 	},
 });
 
