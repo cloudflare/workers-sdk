@@ -7,6 +7,7 @@ import { SolidStart } from "./solid-start";
 import { Static } from "./static";
 import { SvelteKit } from "./sveltekit";
 import { TanstackStart } from "./tanstack";
+import { Vite } from "./vite";
 import type { Framework } from ".";
 
 export function getFramework(detectedFramework?: {
@@ -30,6 +31,8 @@ export function getFramework(detectedFramework?: {
 			return new SolidStart(detectedFramework.name);
 		case "qwik":
 			return new Qwik(detectedFramework.name);
+		case "vite":
+			return new Vite(detectedFramework.name);
 		default:
 			return new Static(detectedFramework?.name);
 	}
