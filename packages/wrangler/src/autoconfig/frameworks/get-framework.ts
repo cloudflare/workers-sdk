@@ -10,6 +10,7 @@ import { SolidStart } from "./solid-start";
 import { Static } from "./static";
 import { SvelteKit } from "./sveltekit";
 import { TanstackStart } from "./tanstack";
+import { Vike } from "./vike";
 import { Vite } from "./vite";
 import type { Framework } from ".";
 
@@ -42,6 +43,8 @@ export function getFramework(detectedFramework?: {
 			return new NextJs(detectedFramework.name);
 		case "hono":
 			return new Hono(detectedFramework.name);
+		case "vike":
+			return new Vike(detectedFramework.name);
 		default:
 			return new Static(detectedFramework?.name);
 	}
