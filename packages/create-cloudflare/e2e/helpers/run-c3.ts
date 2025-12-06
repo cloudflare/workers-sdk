@@ -60,9 +60,13 @@ export type RunnerConfig = {
 		};
 	};
 	/**
-	 * Specifies whether to verify generated types for the project
+	 * Specifies whether to verify generated types for the project.
 	 */
 	verifyTypes?: boolean;
+	/**
+	 * Verifies whether the Cloudflare Vite plugin has been installed and configured.
+	 */
+	verifyCloudflareVitePluginConfigured?: boolean;
 };
 
 export const runC3 = async (

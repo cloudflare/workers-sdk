@@ -1,10 +1,17 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { installPackages } from "../c3-vendor/packages";
-import { transformViteConfig } from "./utils/vite-config";
+import {
+	checkIfViteConfigUsesCloudflarePlugin,
+	transformViteConfig,
+} from "./utils/vite-config";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
-export class TanstackStart extends Framework {
+export class Vite extends Framework {
+	isConfigured(projectPath: string): boolean {
+		return checkIfViteConfigUsesCloudflarePlugin(projectPath);
+	}
+
 	async configure({
 		dryRun,
 		projectPath,
@@ -16,16 +23,15 @@ export class TanstackStart extends Framework {
 				doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
 			});
 
-			transformViteConfig(projectPath, { viteEnvironmentName: "ssr" });
+			transformViteConfig(projectPath);
 		}
 
 		return {
 			wranglerConfig: {
-				compatibility_flags: ["nodejs_compat"],
-				main: "@tanstack/react-start/server-entry",
+				assets: {
+					not_found_handling: "single-page-application",
+				},
 			},
 		};
 	}
-
-	configurationDescription = "Configuring project for Tanstack Start";
 }

@@ -910,6 +910,7 @@ function getExperimentalFrameworkTestConfig(
 			},
 			nodeCompat: false,
 			verifyTypes: false,
+			verifyCloudflareVitePluginConfigured: true,
 		},
 		{
 			name: "react-router",
