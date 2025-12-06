@@ -64,6 +64,7 @@ import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-er
 import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
+import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import {
 	createDeployment,
 	patchNonVersionedScriptSettings,
@@ -463,12 +464,10 @@ export default async function deploy(props: Props): Promise<{
 				}
 			}
 		} catch (e) {
-			// code: 10090, message: workers.api.error.service_not_found
-			// is thrown from the above fetchResult on the first deploy of a Worker
-			if ((e as { code?: number }).code !== 10090) {
-				throw e;
-			} else {
+			if (isWorkerNotFoundError(e)) {
 				workerExists = false;
+			} else {
+				throw e;
 			}
 		}
 	}
