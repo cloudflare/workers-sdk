@@ -1382,8 +1382,7 @@ async function fetchAuthToken(body: URLSearchParams) {
 			logger.error(
 				"Failed to fetch auth token:",
 				response.status,
-				response.statusText,
-				await response.text()
+				response.statusText
 			);
 		}
 		return response;
