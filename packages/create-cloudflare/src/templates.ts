@@ -245,6 +245,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			qwik: qwikTemplate,
 			react: reactTemplate,
 			"react-router": reactRouterTemplate,
+			redwood: redwoodTemplate,
 			solid: solidTemplate,
 			svelte: svelteTemplate,
 			"tanstack-start": tanStackStartTemplate,

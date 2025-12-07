@@ -936,6 +936,26 @@ function getExperimentalFrameworkTestConfig(
 			flags: ["--no-install", "--no-git-init"],
 			verifyTypes: false,
 		},
+		{
+			name: "redwood",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "RedwoodSDK",
+			},
+			verifyPreview: {
+				build: true,
+				route: "/",
+				expectedText: "RedwoodSDK",
+			},
+			nodeCompat: true,
+			verifyTypes: false,
+			extraEnv: {
+				GITHUB_API_TOKEN: process.env.GITHUB_TOKEN,
+			},
+		},
 	];
 }
 
