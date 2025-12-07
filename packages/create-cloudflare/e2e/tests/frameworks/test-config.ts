@@ -935,6 +935,21 @@ function getExperimentalFrameworkTestConfig(
 			flags: ["--no-install", "--no-git-init"],
 			verifyTypes: false,
 		},
+		{
+			name: "waku",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Waku",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Waku",
+			},
+			nodeCompat: false,
+		},
 	];
 }
 

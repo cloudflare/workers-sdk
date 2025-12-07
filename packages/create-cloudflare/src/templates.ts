@@ -249,6 +249,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			svelte: svelteTemplate,
 			"tanstack-start": tanStackStartTemplate,
 			vue: vueTemplate,
+			waku: wakuTemplate,
 		};
 	} else {
 		return {

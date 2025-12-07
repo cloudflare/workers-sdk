@@ -8,6 +8,7 @@ import { Static } from "./static";
 import { SvelteKit } from "./sveltekit";
 import { TanstackStart } from "./tanstack";
 import { Vite } from "./vite";
+import { Waku } from "./waku";
 import type { Framework } from ".";
 
 export function getFramework(detectedFramework?: {
@@ -33,6 +34,8 @@ export function getFramework(detectedFramework?: {
 			return new Qwik(detectedFramework.name);
 		case "vite":
 			return new Vite(detectedFramework.name);
+		case "waku":
+			return new Waku(detectedFramework.name);
 		default:
 			return new Static(detectedFramework?.name);
 	}
