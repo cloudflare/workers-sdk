@@ -3445,8 +3445,8 @@ importers:
         specifier: workspace:*
         version: link:../wrangler
       zod:
-        specifier: ^3.22.3
-        version: 3.22.3
+        specifier: ^3.25.76
+        version: 3.25.76
     devDependencies:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
