@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { ApiError, DeploymentsService } from "@cloudflare/containers-shared";
-import { APIError, UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
 import { WebSocket } from "ws";
 import { promiseSpinner } from "../cloudchamber/common";
 import { logger } from "../logger";
