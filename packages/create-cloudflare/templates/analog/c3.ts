@@ -77,7 +77,7 @@ const config: TemplateConfig = {
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			preview: `${npm} run build && npx wrangler dev`,
+			preview: `${npm} run build && wrangler dev`,
 			deploy: `${npm} run build && wrangler deploy`,
 			"cf-typegen": `wrangler types`,
 		},
