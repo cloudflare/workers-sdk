@@ -27,6 +27,7 @@ import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import deploy from "./deploy";
+import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 import type { AutoConfigSummary } from "../autoconfig/types";
 
 export const deployCommand = createCommand({
@@ -268,6 +269,15 @@ export const deployCommand = createCommand({
 					"For Pages, please run `wrangler pages deploy` instead.",
 				{ telemetryMessage: true }
 			);
+		}
+
+		const deploymentDelegatedToOpenNext =
+			!args.dryRun &&
+			(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
+
+		if (deploymentDelegatedToOpenNext) {
+			// We've delegated the deployment to open-next so we must not run any actual deployment logic now
+			return;
 		}
 
 		const shouldRunAutoConfig =
