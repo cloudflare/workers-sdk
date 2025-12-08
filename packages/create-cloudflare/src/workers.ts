@@ -113,7 +113,7 @@ export async function updateTsConfig(
 				return;
 			}
 			const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
-			const explicitEntrypoint = (currentTypes as string[]).some((t) =>
+			const explicitEntrypoint = currentTypes.some((t) =>
 				t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/),
 			);
 			// If a type declaration with an explicit entrypoint exists, leave the types as is.
@@ -135,9 +135,9 @@ export async function updateTsConfig(
 				)
 			) {
 				newTypes = new Set(
-					newTypes
-						.values()
-						.filter((type) => !type.startsWith("@cloudflare/workers-types")),
+					[...newTypes.values()].filter(
+						(type) => !type.startsWith("@cloudflare/workers-types"),
+					),
 				);
 			}
 		}
