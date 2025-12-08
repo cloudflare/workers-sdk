@@ -78,9 +78,9 @@ export default {
 
 		logErrors();
 
-		await fetch(new URL("http://example.com"));
+		await fetch(new URL("https://example.com"));
 		await fetch(
-			new Request("http://example.com", { method: "POST", body: "foo" })
+			new Request("https://example.com", { method: "POST", body: "foo" })
 		);
 
 		console.log("end of request");
