@@ -43,7 +43,6 @@
 				"string constant.other.placeholder",
 				"variable.other.object",
 				"variable.other.readwrite",
-				"variable.other.object",
 				"variable.other.property"
 			],
 			"settings": {

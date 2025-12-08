@@ -1,5 +1,11 @@
 # miniflare
 
+## 4.20251202.1
+
+### Patch Changes
+
+- [#11443](https://github.com/cloudflare/workers-sdk/pull/11443) [`56e78c8`](https://github.com/cloudflare/workers-sdk/commit/56e78c8a5c02756f0d2b62ef80ad7d1a8045422c) Thanks [@Ltadrian](https://github.com/Ltadrian)! - Improve local Hyperdrive binding latency on Windows.
+
 ## 4.20251202.0
 
 ### Patch Changes

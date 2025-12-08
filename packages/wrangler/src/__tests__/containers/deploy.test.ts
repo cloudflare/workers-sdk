@@ -1779,6 +1779,197 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
+
+	it("should enable ssh when provided for new container", async () => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					wrangler_ssh: {
+						enabled: true,
+						port: 1010,
+					},
+					authorized_keys: [
+						{
+							name: "jeff",
+							public_key:
+								"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+						},
+					],
+				},
+			],
+		});
+
+		mockGetApplications([]);
+
+		mockCreateApplication({
+			name: "my-container",
+			max_instances: 10,
+			scheduling_policy: SchedulingPolicy.DEFAULT,
+			configuration: {
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+				wrangler_ssh: {
+					enabled: true,
+					port: 1010,
+				},
+				authorized_keys: [
+					{
+						name: "jeff",
+						public_key:
+							"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+					},
+				],
+			},
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(std.warn).toBe("");
+		expect(std.err).toBe("");
+
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ NEW my-container
+			│
+			│   [[containers]]
+			│   name = \\"my-container\\"
+			│   scheduling_policy = \\"default\\"
+			│   instances = 0
+			│   max_instances = 10
+			│   rollout_active_grace_period = 0
+			│
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│   instance_type = \\"lite\\"
+			│
+			│   [containers.configuration.wrangler_ssh]
+			│   enabled = true
+			│   port = 1010
+			│
+			│   [[containers.configuration.authorized_keys]]
+			│   name = \\"jeff\\"
+			│   public_key = \\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm\\"
+			│
+			│   [containers.constraints]
+			│   tier = 1
+			│
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
+			│
+			│
+			│  SUCCESS  Created application my-container (Application ID: undefined)
+			│
+			╰ Applied changes
+
+			"
+		`);
+	});
+
+	it("should enable ssh when provided for an existing container", async () => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					wrangler_ssh: {
+						enabled: true,
+					},
+					authorized_keys: [
+						{
+							name: "jeff",
+							public_key:
+								"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+						},
+					],
+				},
+			],
+		});
+
+		mockGetApplications([
+			{
+				id: "abc",
+				instances: 0,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				name: "my-container",
+				max_instances: 10,
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				configuration: {
+					image: "registry.cloudflare.com/hello:world",
+				},
+				durable_objects: {
+					namespace_id: "1",
+				},
+			},
+		]);
+
+		mockModifyApplication({
+			configuration: {
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+				wrangler_ssh: {
+					enabled: true,
+				},
+				authorized_keys: [
+					{
+						name: "jeff",
+						public_key:
+							"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+					},
+				],
+			},
+		});
+
+		mockCreateApplicationRollout({
+			description: "Progressive update",
+			strategy: "rolling",
+			kind: "full_auto",
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container
+			│
+			│   name = \\"my-container\\"
+			│   scheduling_policy = \\"default\\"
+			│   version = 1
+			│ + rollout_active_grace_period = 0
+			│   [containers.configuration]
+			│ - image = \\"registry.cloudflare.com/hello:world\\"
+			│ + image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│ + instance_type = \\"lite\\"
+			│ + [[containers.configuration.authorized_keys]]
+			│ + name = \\"jeff\\"
+			│ + public_key = \\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm\\"
+			│ + [containers.configuration.wrangler_ssh]
+			│ + enabled = true
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
+			│ + [containers.constraints]
+			│ + tier = 1
+			│
+			│
+			│  SUCCESS  Modified application my-container (Application ID: abc)
+			│
+			╰ Applied changes
+
+			"
+		`);
+	});
 });
 
 // This is a separate describe block because we intentionally do not mock any

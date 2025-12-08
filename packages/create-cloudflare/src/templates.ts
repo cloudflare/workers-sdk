@@ -44,6 +44,7 @@ import scheduledTemplate from "templates/scheduled/c3";
 import solidTemplate from "templates/solid/c3";
 import svelteTemplate from "templates/svelte/c3";
 import tanStackStartTemplate from "templates/tanstack-start/c3";
+import vikeTemplate from "templates/vike/c3";
 import vueTemplate from "templates/vue/c3";
 import wakuTemplate from "templates/waku/c3";
 import { isInsideGitRepo } from "./git";
@@ -236,17 +237,18 @@ export type TemplateMap = Record<
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
-			gatsby: gatsbyTemplate,
-			svelte: svelteTemplate,
-			docusaurus: docusaurusTemplate,
-			astro: astroTemplate,
-			"tanstack-start": tanStackStartTemplate,
 			angular: angularTemplate,
-			solid: solidTemplate,
+			astro: astroTemplate,
+			docusaurus: docusaurusTemplate,
+			gatsby: gatsbyTemplate,
+			nuxt: nuxtTemplate,
 			qwik: qwikTemplate,
-			vue: vueTemplate,
 			react: reactTemplate,
 			"react-router": reactRouterTemplate,
+			solid: solidTemplate,
+			svelte: svelteTemplate,
+			"tanstack-start": tanStackStartTemplate,
+			vue: vueTemplate,
 		};
 	} else {
 		return {
@@ -265,6 +267,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			solid: solidTemplate,
 			svelte: svelteTemplate,
 			"tanstack-start": tanStackStartTemplate,
+			vike: vikeTemplate,
 			vue: vueTemplate,
 			waku: wakuTemplate,
 		};

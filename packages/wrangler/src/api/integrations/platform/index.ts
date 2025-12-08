@@ -19,14 +19,16 @@ import { dedent } from "../../../utils/dedent";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
-import type { AssetsOptions } from "../../../assets";
-import type { RemoteProxySession } from "../../remoteBindings";
-import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
+// TODO: import from `@cloudflare/workers-utils` after migrating to `tsdown`
+// This is a temporary fix to ensure that the types are included in the build output
 import type {
 	Config,
 	RawConfig,
 	RawEnvironment,
-} from "@cloudflare/workers-utils";
+} from "../../../../../workers-utils/src";
+import type { AssetsOptions } from "../../../assets";
+import type { RemoteProxySession } from "../../remoteBindings";
+import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	MiniflareOptions,
 	ModuleRule,

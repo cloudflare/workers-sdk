@@ -1,5 +1,29 @@
 # create-cloudflare
 
+## 2.58.0
+
+### Minor Changes
+
+- [#11477](https://github.com/cloudflare/workers-sdk/pull/11477) [`9988cc9`](https://github.com/cloudflare/workers-sdk/commit/9988cc9b9b157e453bb5eade439a8e69bfa0c7bd) Thanks [@ascorbic](https://github.com/ascorbic)! - Support Nuxt in autoconfig `--experimental` flow
+
+- [#11472](https://github.com/cloudflare/workers-sdk/pull/11472) [`ce295bf`](https://github.com/cloudflare/workers-sdk/commit/ce295bffdc7a45494b6683ee5fef04dbfca54345) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Qwik in `--experimental` mode
+
+- [#11485](https://github.com/cloudflare/workers-sdk/pull/11485) [`f1b76f7`](https://github.com/cloudflare/workers-sdk/commit/f1b76f70fa6f4a25dd607333fef104f0392332e7) Thanks [@penalosa](https://github.com/penalosa)! - Add React & Vue to C3's experimental mode
+
+- [#11442](https://github.com/cloudflare/workers-sdk/pull/11442) [`a75352b`](https://github.com/cloudflare/workers-sdk/commit/a75352bb717663a902a0c156fbe424e7b558ca97) Thanks [@brillout](https://github.com/brillout)! - add Vike framework template
+
+- [#11498](https://github.com/cloudflare/workers-sdk/pull/11498) [`ac861f8`](https://github.com/cloudflare/workers-sdk/commit/ac861f8ec24357c0238fa939b33da71236df7095) Thanks [@penalosa](https://github.com/penalosa)! - Add React Router support in autoconfig
+
+- [#11506](https://github.com/cloudflare/workers-sdk/pull/11506) [`79d30d4`](https://github.com/cloudflare/workers-sdk/commit/79d30d4321b057f3cb4451ab43fa67653f1a8ee5) Thanks [@vicb](https://github.com/vicb)! - Set the target JS version to ES2024
+
+### Patch Changes
+
+- [#11472](https://github.com/cloudflare/workers-sdk/pull/11472) [`ce295bf`](https://github.com/cloudflare/workers-sdk/commit/ce295bffdc7a45494b6683ee5fef04dbfca54345) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: remove unnecessary step in qwik templates
+
+  The step that modifies the `src/entry.cloudflare-pages.tsx` file doesn't seem to change the file in any way anymore, so it's been removed
+
+- [#11483](https://github.com/cloudflare/workers-sdk/pull/11483) [`f550b62`](https://github.com/cloudflare/workers-sdk/commit/f550b62fd4fdd60c2600390754631d713140afd3) Thanks [@edmundhung](https://github.com/edmundhung)! - stop running `npm install` with `--legacy-peer-deps` flag when setting up a project
+
 ## 2.57.1
 
 ### Patch Changes

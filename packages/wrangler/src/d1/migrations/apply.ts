@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
+import dedent from "ts-dedent";
 import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
 import { isNonInteractiveOrCI } from "../../is-interactive";
@@ -17,7 +18,20 @@ import type { ParseError } from "@cloudflare/workers-utils";
 
 export const d1MigrationsApplyCommand = createCommand({
 	metadata: {
-		description: "Apply D1 migrations",
+		description: "Apply any unapplied D1 migrations",
+		epilogue: dedent`
+			This command will prompt you to confirm the migrations you are about to apply.
+			Confirm that you would like to proceed. After applying, a backup will be captured.
+
+			The progress of each migration will be printed in the console.
+
+			When running the apply command in a CI/CD environment or another non-interactive
+			command line, the confirmation step will be skipped, but the backup will still be
+			captured.
+
+			If applying a migration results in an error, this migration will be rolled back,
+			and the previous successful migration will remain applied.
+		`,
 		status: "stable",
 		owner: "Product: D1",
 	},

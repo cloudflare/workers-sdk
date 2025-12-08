@@ -377,6 +377,39 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:vm
+	[
+		{
+			name: "vm disabled by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_vm_module: false,
+			},
+		},
+		{
+			name: "vm enabled by date",
+			compatibilityDate: "2025-10-01",
+			expectRuntimeFlags: {
+				enable_nodejs_vm_module: true,
+			},
+		},
+		{
+			name: "vm enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_vm_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_vm_module: true,
+			},
+		},
+		{
+			name: "vm disabled by flag",
+			compatibilityDate: "2025-10-01",
+			compatibilityFlags: ["disable_nodejs_vm_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_vm_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(localTestConfigs)(
