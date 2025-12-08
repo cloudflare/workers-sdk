@@ -150,21 +150,17 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "analog",
-			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
-			// The analog template works with yarn, but the build takes so long that it
-			// becomes flaky in CI
-			unsupportedPms: ["yarn", "bun"],
 			verifyDeploy: {
 				route: "/",
-				expectedText: "The fullstack meta-framework for Angular!",
+				expectedText: "The fullstack Angular meta-framework",
 			},
 			verifyPreview: {
 				previewArgs: ["--inspector-port=0"],
-				route: "/api/v1/test",
-				expectedText: "C3_TEST",
+				route: "/api/v1/hello",
+				expectedText: "Hello World",
 			},
 			nodeCompat: false,
 			flags: ["--skipTailwind"],
