@@ -922,9 +922,20 @@ function updatePythonPackageName(path: string, projectName: string) {
 	s.stop(`${brandColor("updated")} ${dim("`pyproject.toml`")}`);
 }
 
-export const updatePackageName = async (ctx: C3Context) => {
-	// Update package.json with project name
-	const placeholderNames = ["<TBD>", "TBD", ""];
+/**
+ * Updates package.json with project name.
+ *
+ * This function replaces any of the following placeholder names in the `package.json`
+ * file with the actual project name:
+ * - `<PACKAGE_NAME>`
+ * - `<TBD>`
+ * - `TBD`
+ * - `""`
+ *
+ * @param ctx The project configuration
+ */
+export const updatePackageName = (ctx: C3Context): void => {
+	const placeholderNames = ["<PACKAGE_NAME>", "<TBD>", "TBD", ""];
 	const pkgJsonPath = resolve(ctx.project.path, "package.json");
 	const pkgJson = readJSON(pkgJsonPath) as PackageJson;
 

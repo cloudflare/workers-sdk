@@ -147,7 +147,7 @@ const create = async (ctx: C3Context) => {
 	if (!ctx.args.experimental) {
 		await copyTemplateFiles(ctx);
 	}
-	await updatePackageName(ctx);
+	updatePackageName(ctx);
 
 	chdir(ctx.project.path);
 	await npmInstall(ctx);
