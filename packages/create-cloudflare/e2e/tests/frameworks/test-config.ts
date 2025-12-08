@@ -616,6 +616,9 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				route: "/",
 				expectedText: "RedwoodSDK",
 			},
+			extraEnv: {
+				GITHUB_API_TOKEN: process.env.GITHUB_TOKEN,
+			},
 			nodeCompat: true,
 		},
 		{
