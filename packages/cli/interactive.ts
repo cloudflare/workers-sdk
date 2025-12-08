@@ -98,6 +98,8 @@ export type ListPromptConfig = BasePromptConfig & {
 
 export type TypeaheadSelectPromptConfig = BaseSelectPromptConfig & {
 	type: "typeahead";
+	// Called after prompt completes with metadata about the interaction
+	onComplete?: (metadata: { usedTypeahead: boolean }) => void;
 };
 
 export type PromptConfig =
@@ -274,6 +276,16 @@ export const inputPrompt = async <T = string>(
 			cancel("Operation cancelled");
 			process.exit(0);
 		}
+	}
+
+	// Call onComplete callback for typeahead prompts
+	if (
+		promptConfig.type === "typeahead" &&
+		prompt instanceof TypeaheadSelectPrompt
+	) {
+		promptConfig.onComplete?.({
+			usedTypeahead: prompt.searchTerm.length > 0,
+		});
 	}
 
 	return input;

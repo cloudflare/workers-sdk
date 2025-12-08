@@ -420,7 +420,12 @@ export const processArgument = async <Key extends keyof C3Args>(
 		async promise() {
 			const value = args[key];
 			const error = promptConfig.validate?.(value) ?? null;
-			const result = await inputPrompt<Required<C3Args>[Key]>({
+
+			// Track typeahead usage for analytics
+			let usedTypeahead: boolean | undefined;
+
+			// Build the input config, adding onComplete callback for typeahead prompts
+			const baseConfig = {
 				...promptConfig,
 				// Accept the default value if the arg is already set
 				acceptDefault:
@@ -428,7 +433,21 @@ export const processArgument = async <Key extends keyof C3Args>(
 				defaultValue: value ?? promptConfig.defaultValue,
 				initialErrorMessage: error,
 				throwOnError: true,
-			});
+			};
+
+			const inputConfig =
+				promptConfig.type === "typeahead"
+					? {
+							...baseConfig,
+							// Capture typeahead metadata for analytics
+							onComplete: (metadata: { usedTypeahead: boolean }) => {
+								usedTypeahead = metadata.usedTypeahead;
+							},
+						}
+					: baseConfig;
+
+			const result =
+				await inputPrompt<Required<C3Args>[Key]>(inputConfig);
 
 			// Update value in args before returning the result
 			args[key] = result;
@@ -436,6 +455,11 @@ export const processArgument = async <Key extends keyof C3Args>(
 			// Set properties for prompt completed event
 			reporter.setEventProperty("answer", result);
 			reporter.setEventProperty("isDefaultValue", result === C3_DEFAULTS[key]);
+
+			// Set typeahead usage if this was a typeahead prompt
+			if (usedTypeahead !== undefined) {
+				reporter.setEventProperty("usedTypeahead", usedTypeahead);
+			}
 
 			return result;
 		},

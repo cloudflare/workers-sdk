@@ -404,6 +404,12 @@ export type Event =
 				 *  Whether the answer is the same as the default value of the prompt.
 				 */
 				isDefaultValue?: boolean;
+
+				/**
+				 * Whether the user typed to filter options in a typeahead prompt.
+				 * Only present for typeahead prompts.
+				 */
+				usedTypeahead?: boolean;
 			};
 	  }
 	| {
