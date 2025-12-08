@@ -605,6 +605,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "redwood",
+			// quarantined until the changes in https://github.com/redwoodjs/create-rwsdk/pull/4 are released
 			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
