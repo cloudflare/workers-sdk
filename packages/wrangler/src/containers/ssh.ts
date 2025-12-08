@@ -24,47 +24,47 @@ export function sshYargs(args: CommonYargsArgv) {
 			// Following are SSH flags that should be directly passed in
 			.option("cipher", {
 				describe:
-					"SSH option: Selects the cipher specification for encrypting the session",
+					"Sets `ssh -c`: Select the cipher specification for encrypting the session",
 				type: "string",
 			})
 			.option("log-file", {
 				describe:
-					"SSH option: Append debug logs to log_file instead of standard error",
+					"Sets `ssh -E`: Append debug logs to log_file instead of standard error",
 				type: "string",
 			})
 			.option("escape-char", {
 				describe:
-					"SSH option: Sets the escape character for sessions with a pty (default: ‘~’)",
+					"Sets `ssh -e`: Set the escape character for sessions with a pty (default: ‘~’)",
 				type: "string",
 			})
 			.option("config-file", {
 				describe:
-					"SSH option: Specifies an alternative per-user configuration file",
+					"Sets `ssh -F`: Specify an alternative per-user ssh configuration file",
 				type: "string",
 			})
 			.option("pkcs11", {
 				describe:
-					"SSH option: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication",
+					"`Sets `ssh -I`: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication",
 				type: "string",
 			})
 			.option("identity-file", {
 				describe:
-					"SSH option: Selects a file from which the identity (private key) for public key authentication is read",
+					"Sets `ssh -i`: Select a file from which the identity (private key) for public key authentication is read",
 				type: "string",
 			})
 			.option("mac-spec", {
 				describe:
-					"SSH option: A comma-separated list of MAC (message authentication code) algorithms, specified in order of preference",
+					"Sets `ssh -m`: A comma-separated list of MAC (message authentication code) algorithms, specified in order of preference",
 				type: "string",
 			})
 			.option("option", {
 				describe:
-					"SSH option: Can be used to give options in the format used in the configuration file",
+					"Sets `ssh -o`: Can be used to give options in the format used in the ssh configuration file",
 				type: "string",
 			})
 			.option("tag", {
 				describe:
-					"SSH option: Specify a tag name that may be used to select configuration in ssh_config(5)",
+					"Sets `ssh -P`: Specify a tag name that may be used to select configuration in ssh_config",
 				type: "string",
 			})
 	);

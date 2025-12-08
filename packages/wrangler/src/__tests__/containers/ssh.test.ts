@@ -24,10 +24,10 @@ describe("containers ssh", () => {
 		await runWrangler("containers ssh --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers ssh [ID]
+			"wrangler containers ssh ID
 
 			POSITIONALS
-			  ID  id of the container instance  [string]
+			  ID  id of the container instance  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -38,15 +38,15 @@ describe("containers ssh", () => {
 			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
-			      --cipher         SSH option: Selects the cipher specification for encrypting the session  [string]
-			      --log-file       SSH option: Append debug logs to log_file instead of standard error  [string]
-			      --escape-char    SSH option: Sets the escape character for sessions with a pty (default: ‘~’)  [string]
-			      --config-file    SSH option: Specifies an alternative per-user configuration file  [string]
-			      --pkcs11         SSH option: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication  [string]
-			      --identity-file  SSH option: Selects a file from which the identity (private key) for public key authentication is read  [string]
-			      --mac-spec       SSH option: A comma-separated list of MAC (message authentication code) algorithms, specified in order of preference  [string]
-			      --option         SSH option: Can be used to give options in the format used in the configuration file  [string]
-			      --tag            SSH option: Specify a tag name that may be used to select configuration in ssh_config(5)  [string]"
+			      --cipher         Sets \`ssh -c\`: Select the cipher specification for encrypting the session  [string]
+			      --log-file       Sets \`ssh -E\`: Append debug logs to log_file instead of standard error  [string]
+			      --escape-char    Sets \`ssh -e\`: Set the escape character for sessions with a pty (default: ‘~’)  [string]
+			      --config-file    Sets \`ssh -F\`: Specify an alternative per-user ssh configuration file  [string]
+			      --pkcs11         \`Sets \`ssh -I\`: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication  [string]
+			      --identity-file  Sets \`ssh -i\`: Select a file from which the identity (private key) for public key authentication is read  [string]
+			      --mac-spec       Sets \`ssh -m\`: A comma-separated list of MAC (message authentication code) algorithms, specified in order of preference  [string]
+			      --option         Sets \`ssh -o\`: Can be used to give options in the format used in the ssh configuration file  [string]
+			      --tag            Sets \`ssh -P\`: Specify a tag name that may be used to select configuration in ssh_config  [string]"
 		`);
 	});
 
