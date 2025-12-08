@@ -652,7 +652,7 @@ describe("getNormalizedContainerOptions", () => {
 	});
 
 	describe("image validation and resolution", async () => {
-		it("should reject unsupported image registries", async () => {
+		it("should allow any image registry", async () => {
 			const config: Config = {
 				name: "test-worker",
 				configPath: "/test/wrangler.toml",
@@ -676,12 +676,11 @@ describe("getNormalizedContainerOptions", () => {
 					],
 				},
 			} as Partial<Config> as Config;
-			await expect(getNormalizedContainerOptions(config, {})).rejects
-				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: docker.io is not a supported image registry.
-				Currently we support the following non-Cloudflare registries: AWS ECR.
-				To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images]
-			`);
+			const result = await getNormalizedContainerOptions(config, {});
+			expect(result).toHaveLength(1);
+			expect(result[0]).toMatchObject({
+				image_uri: "docker.io/test:latest",
+			});
 		});
 		it("should not try and add an account id to non containers registry uris", async () => {
 			const config: Config = {
