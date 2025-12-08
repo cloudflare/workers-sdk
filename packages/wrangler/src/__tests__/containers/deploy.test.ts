@@ -493,8 +493,8 @@ describe("wrangler deploy with containers", () => {
 		// however in this case since we pass a cwd to wrangler, the cwd wrangler runs in
 		// is different from the cwd for the test so our normal matching doesn't work
 		const wranglerCWD = process.cwd().split(path.sep);
-		wranglerCWD.splice(-1);
-		expect(std.out.replace(wranglerCWD.join(path.sep), "<test-cwd>"))
+		wranglerCWD.splice(-1, 1);
+		expect(std.out.replace(wranglerCWD.join("/"), "<test-cwd>"))
 			.toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
