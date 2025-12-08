@@ -40,7 +40,7 @@ catalogs:
       specifier: ^1.5.2
       version: 1.5.2
     typescript:
-      specifier: 5.8.x
+      specifier: ~5.8.3
       version: 5.8.3
     undici:
       specifier: 7.14.0
