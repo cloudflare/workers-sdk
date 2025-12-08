@@ -74,10 +74,22 @@ function registryConfigureYargs(args: CommonYargsArgv) {
 			})
 			.option("public-credential", {
 				type: "string",
-				description:
-					"The public part of the registry credentials, e.g. `AWS_ACCESS_KEY_ID` for ECR",
-				demandOption: true,
-				alias: ["aws-access-key-id"],
+				demandOption: false,
+				hidden: true,
+				deprecated: true,
+				conflicts: ["dockerhub-username", "aws-access-key-id"],
+			})
+			.option("aws-access-key-id", {
+				type: "string",
+				description: "When configuring Amazon ECR, `AWS_ACCESS_KEY_ID`",
+				demandOption: false,
+				conflicts: ["public-credential", "dockerhub-username"],
+			})
+			.option("dockerhub-username", {
+				type: "string",
+				description: "When configuring DockerHub, the DockerHub username",
+				demandOption: false,
+				conflicts: ["public-credential", "aws-access-key-id"],
 			})
 			.option("secret-store-id", {
 				type: "string",
@@ -104,6 +116,20 @@ async function registryConfigureCommand(
 
 	const registryType = getAndValidateRegistryType(configureArgs.DOMAIN);
 
+	const publicCredential =
+		configureArgs.awsAccessKeyId ??
+		configureArgs.dockerhubUsername ??
+		configureArgs.publicCredential;
+	if (!publicCredential) {
+		const arg =
+			registryType.type === ExternalRegistryKind.DOCKER_HUB
+				? "dockerhub-username"
+				: registryType.type === ExternalRegistryKind.ECR
+					? "aws-access-key-id"
+					: "public-credential";
+		throw new UserError(`Missing required argument: ${arg}`);
+	}
+
 	log(`Configuring ${registryType.name} registry: ${configureArgs.DOMAIN}\n`);
 
 	if (configureArgs.secretName) {
@@ -119,6 +145,7 @@ async function registryConfigureCommand(
 			return;
 		// this can be extended to any registry type that requires credentials
 		case ExternalRegistryKind.ECR:
+		case ExternalRegistryKind.DOCKER_HUB:
 			log(`Getting ${registryType.secretType}...\n`);
 			secret = await getSecret(registryType.secretType);
 			break;
@@ -126,8 +153,7 @@ async function registryConfigureCommand(
 			throw new UserError(`Unhandled registry type: ${registryType.type}`);
 	}
 
-	log("\n");
-	log("Setting up integration with Secrets Store...\n");
+	log("\nSetting up integration with Secrets Store...\n");
 	const accountId = await getAccountId(config);
 	let secretStoreId = configureArgs.secretStoreId;
 	if (!secretStoreId) {
@@ -190,7 +216,7 @@ async function registryConfigureCommand(
 				domain: configureArgs.DOMAIN,
 				is_public: false,
 				auth: {
-					public_credential: configureArgs.publicCredential,
+					public_credential: publicCredential,
 					private_credential: {
 						store_id: secretStoreId,
 						secret_name: secretName,

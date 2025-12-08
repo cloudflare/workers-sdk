@@ -15,8 +15,33 @@ import { useMockStdin } from "../helpers/mock-stdin";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
-describe("containers registries configure", () => {
+describe("containers registries --help", () => {
 	const std = mockConsoleMethods();
+
+	it("should help", async () => {
+		await runWrangler("containers registries --help");
+		expect(std.out).toMatchInlineSnapshot(`
+			"wrangler containers registries
+
+			Configure and manage non-Cloudflare registries
+
+			COMMANDS
+			  wrangler containers registries configure <DOMAIN>  Configure credentials for a non-Cloudflare container registry
+			  wrangler containers registries list                List all configured container registries
+			  wrangler containers registries delete <DOMAIN>     Delete a configured container registry
+
+			GLOBAL FLAGS
+			  -c, --config    Path to Wrangler configuration file  [string]
+			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+			  -h, --help      Show help  [boolean]
+			  -v, --version   Show version number  [boolean]"
+		`);
+	});
+});
+
+describe("containers registries configure", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const cliStd = mockCLIOutput();
 	mockAccountId();
@@ -28,42 +53,40 @@ describe("containers registries configure", () => {
 	afterEach(() => {
 		clearDialogs();
 	});
-
-	it("should not show in top level help (remove this when ready for public)", async () => {
-		await runWrangler("containers --help");
-		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers
-
-			📦 Manage Containers [open-beta]
-
-			COMMANDS
-			  wrangler containers build [PATH]  Build a container image
-			  wrangler containers push [TAG]    Push a tagged image to a Cloudflare managed registry
-			  wrangler containers images        Perform operations on images in your Cloudflare managed registry
-			  wrangler containers info [ID]     Get information about a specific container
-			  wrangler containers list          List containers
-			  wrangler containers delete [ID]   Delete a container
-
-			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
-		`);
-	});
-
 	it("should reject unsupported registry domains", async () => {
 		await expect(
 			runWrangler(
-				`containers registries configure docker.io --public-credential=test-id`
+				`containers registries configure unsupported.domain --public-credential=test-id`
 			)
 		).rejects.toThrowErrorMatchingInlineSnapshot(`
-			[Error: docker.io is not a supported image registry.
-			Currently we support the following non-Cloudflare registries: AWS ECR.
+			[Error: unsupported.domain is not a supported image registry.
+			Currently we support the following non-Cloudflare registries: AWS ECR, DockerHub.
 			To use an existing image from another repository, see https://developers.cloudflare.com/containers/platform-details/image-management/#using-pre-built-container-images]
 		`);
+	});
+
+	it("should enforce mutual exclusivity for public credential arguments", async () => {
+		await expect(
+			runWrangler(`containers registries configure docker.io`)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Missing required argument: dockerhub-username]`
+		);
+
+		await expect(
+			runWrangler(
+				`containers registries configure 123456789012.dkr.ecr.region.amazonaws.com`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Missing required argument: aws-access-key-id]`
+		);
+
+		await expect(
+			runWrangler(
+				`containers registries configure docker.io --public-credential=test-id --dockerhub-username=another-test-id`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Arguments public-credential and dockerhub-username are mutually exclusive]`
+		);
 	});
 
 	it("should no-op on cloudflare registry (default)", async () => {
@@ -219,7 +242,6 @@ describe("containers registries configure", () => {
 				│ Getting AWS Secret Access Key...
 				│
 				│
-				│
 				│ Setting up integration with Secrets Store...
 				│
 				│
@@ -268,6 +290,93 @@ describe("containers registries configure", () => {
 				});
 				await runWrangler(
 					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --secret-name=AWS_Secret_Access_Key`
+				);
+			});
+		});
+	});
+
+	describe("DockerHub registry configuration", () => {
+		it("should configure DockerHub registry with interactive prompts", async () => {
+			setIsTTY(true);
+			const dockerHubDomain = "docker.io";
+			const storeId = "test-store-id-123";
+			mockPrompt({
+				text: "Enter DockerHub PAT Token:",
+				options: { isSecret: true },
+				result: "test-pat-token",
+			});
+			mockPrompt({
+				text: "Secret name:",
+				options: { isSecret: false, defaultValue: "DockerHub_PAT_Token" },
+				result: "DockerHub_PAT_Token",
+			});
+
+			mockListSecretStores([
+				{
+					id: storeId,
+					account_id: "some-account-id",
+					name: "Default",
+					created: "2024-01-01T00:00:00Z",
+					modified: "2024-01-01T00:00:00Z",
+				},
+			]);
+			mockCreateSecret(storeId);
+			mockPutRegistry({
+				domain: "docker.io",
+				is_public: false,
+				auth: {
+					public_credential: "cloudchambertest",
+					private_credential: {
+						store_id: storeId,
+						secret_name: "DockerHub_PAT_Token",
+					},
+				},
+				kind: "DockerHub",
+			});
+
+			await runWrangler(
+				`containers registries configure ${dockerHubDomain} --dockerhub-username=cloudchambertest`
+			);
+
+			expect(cliStd.stdout).toContain("Using existing Secret Store Default");
+		});
+
+		describe("non-interactive", () => {
+			beforeEach(() => {
+				setIsTTY(false);
+			});
+			const dockerHubDomain = "docker.io";
+			const mockStdIn = useMockStdin({ isTTY: false });
+
+			it("should accept the secret from piped input", async () => {
+				const secret = "example-pat-token";
+				const storeId = "test-store-id-999";
+
+				mockStdIn.send(secret);
+				mockListSecretStores([
+					{
+						id: storeId,
+						account_id: "some-account-id",
+						name: "Default",
+						created: "2024-01-01T00:00:00Z",
+						modified: "2024-01-01T00:00:00Z",
+					},
+				]);
+				mockCreateSecret(storeId);
+				mockPutRegistry({
+					domain: dockerHubDomain,
+					is_public: false,
+					auth: {
+						public_credential: "cloudchambertest",
+						private_credential: {
+							store_id: storeId,
+							secret_name: "DockerHub_PAT_Token",
+						},
+					},
+					kind: "DockerHub",
+				});
+				await runWrangler(
+					`containers registries configure ${dockerHubDomain} --public-credential=cloudchambertest --secret-name=DockerHub_PAT_Token`
 				);
 			});
 		});
