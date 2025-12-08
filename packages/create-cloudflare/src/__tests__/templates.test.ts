@@ -383,37 +383,34 @@ describe("addWranglerToGitIgnore", () => {
 });
 
 describe("downloadRemoteTemplate", () => {
-	function mockDegit() {
-		// @ts-expect-error only clone will be used
-		return vi.mocked(degit).mockReturnValue({
-			clone: () => Promise.resolve(),
-		});
-	}
+	let cloneMock: ReturnType<typeof vi.fn>;
+
+	beforeEach(() => {
+		cloneMock = vi.fn().mockResolvedValue(undefined);
+		vi.mocked(degit).mockReturnValue({
+			clone: cloneMock,
+		} as unknown as ReturnType<typeof degit>);
+	});
 
 	test("should download template using degit", async () => {
-		const mock = mockDegit();
-
 		await downloadRemoteTemplate("cloudflare/workers-sdk");
 
-		expect(mock).toBeCalled();
+		expect(degit).toHaveBeenCalled();
+		expect(cloneMock).toHaveBeenCalled();
 	});
 
 	test("should not use a spinner", async () => {
 		// Degit runs `git clone` internally which might prompt for credentials
 		// A spinner will suppress the prompt and keep the CLI waiting in the cloning stage
-		mockDegit();
-
 		await downloadRemoteTemplate("cloudflare/workers-sdk");
 
-		expect(spinner).not.toBeCalled();
+		expect(spinner).not.toHaveBeenCalled();
 	});
 
 	test("should call degit with a mode of undefined if not specified", async () => {
-		const mock = mockDegit();
-
 		await downloadRemoteTemplate("cloudflare/workers-sdk");
 
-		expect(mock).toBeCalledWith("cloudflare/workers-sdk", {
+		expect(degit).toHaveBeenCalledWith("cloudflare/workers-sdk", {
 			cache: false,
 			verbose: false,
 			force: true,
@@ -422,16 +419,22 @@ describe("downloadRemoteTemplate", () => {
 	});
 
 	test("should call degit with a mode of 'git' if specified", async () => {
-		const mock = mockDegit();
+		await downloadRemoteTemplate("cloudflare/workers-sdk", { mode: "git" });
 
-		await downloadRemoteTemplate("cloudflare/workers-sdk", "git");
-
-		expect(mock).toBeCalledWith("cloudflare/workers-sdk", {
+		expect(degit).toHaveBeenCalledWith("cloudflare/workers-sdk", {
 			cache: false,
 			verbose: false,
 			force: true,
 			mode: "git",
 		});
+	});
+
+	test("should clone into the passed folder", async () => {
+		await downloadRemoteTemplate("cloudflare/workers-sdk", {
+			intoFolder: "/path/to/clone",
+		});
+
+		expect(cloneMock).toHaveBeenCalledWith("/path/to/clone");
 	});
 });
 
