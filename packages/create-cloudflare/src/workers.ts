@@ -135,7 +135,7 @@ export async function updateTsConfig(
 				)
 			) {
 				newTypes = new Set(
-					[...newTypes.values()].filter(
+					[...newTypes].filter(
 						(type) => !type.startsWith("@cloudflare/workers-types"),
 					),
 				);
