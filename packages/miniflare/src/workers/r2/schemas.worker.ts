@@ -23,7 +23,7 @@ export type MultipartUploadRow = {
 	http_metadata: string; // JSON-serialised `R2HTTPMetadata` (workers-types)
 	custom_metadata: string; // JSON-serialised user-defined metadata
 	state: ValueOf<typeof MultipartUploadState>;
-	initiated_at?: number; // milliseconds since unix epoch (nullable for backwards compatibility)
+	initiated_at: number; // milliseconds since unix epoch
 	// NOTE: we need to keep completed/aborted uploads around for referential
 	// integrity, and because error messages are different when attempting to
 	// upload parts to them
@@ -36,7 +36,7 @@ export type MultipartPartRow = {
 	etag: string; // NOTE: multipart part ETag's are not MD5 checksums
 	checksum_md5: string; // NOTE: used in construction of final object's ETag
 	object_key: string | null; // null if in-progress upload
-	uploaded_at?: number; // milliseconds since unix epoch (nullable for backwards compatibility)
+	uploaded_at: number; // milliseconds since unix epoch
 };
 export const SQL_SCHEMA = `
 CREATE TABLE IF NOT EXISTS _mf_objects (
@@ -365,8 +365,8 @@ export interface R2ListMultipartUploadsResponse {
 	uploads: Array<{
 		uploadId: string;
 		object: string;
-		initiated?: number; // milliseconds since unix epoch
-		storageClass?: string;
+		initiated: number; // milliseconds since unix epoch
+		storageClass: string;
 	}>;
 	truncated: boolean;
 	cursor?: string;

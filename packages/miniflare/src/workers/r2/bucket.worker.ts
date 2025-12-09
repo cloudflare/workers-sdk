@@ -674,6 +674,10 @@ export class R2BucketObject extends MiniflareDurableObject {
 				"ALTER TABLE _mf_multipart_uploads ADD COLUMN initiated_at INTEGER"
 			);
 		}
+		// Backfill any rows with NULL initiated_at
+		this.db.exec(
+			`UPDATE _mf_multipart_uploads SET initiated_at = ${Date.now()} WHERE initiated_at IS NULL`
+		);
 
 		// Check if uploaded_at column exists in _mf_multipart_parts
 		const partsColumns = all(
@@ -687,6 +691,10 @@ export class R2BucketObject extends MiniflareDurableObject {
 				"ALTER TABLE _mf_multipart_parts ADD COLUMN uploaded_at INTEGER"
 			);
 		}
+		// Backfill any rows with NULL uploaded_at
+		this.db.exec(
+			`UPDATE _mf_multipart_parts SET uploaded_at = ${Date.now()} WHERE uploaded_at IS NULL`
+		);
 	}
 
 	#acquireBlob(blobId: BlobId) {
@@ -1127,7 +1135,7 @@ export class R2BucketObject extends MiniflareDurableObject {
 				partNumber: part.part_number,
 				etag: part.etag,
 				size: part.size,
-				uploaded: part.uploaded_at ?? Date.now(),
+				uploaded: part.uploaded_at,
 			})),
 			truncated,
 			nextPartNumberMarker,
@@ -1166,8 +1174,8 @@ export class R2BucketObject extends MiniflareDurableObject {
 		const resultUploads: Array<{
 			uploadId: string;
 			object: string;
-			initiated?: number;
-			storageClass?: string;
+			initiated: number;
+			storageClass: string;
 		}> = [];
 		const delimitedPrefixes: string[] = [];
 		const prefixSet = new Set<string>();
@@ -1194,7 +1202,7 @@ export class R2BucketObject extends MiniflareDurableObject {
 					resultUploads.push({
 						uploadId: upload.upload_id,
 						object: upload.key,
-						initiated: upload.initiated_at ?? undefined,
+						initiated: upload.initiated_at,
 						storageClass: "Standard",
 					});
 				}
@@ -1203,7 +1211,7 @@ export class R2BucketObject extends MiniflareDurableObject {
 				resultUploads.push({
 					uploadId: upload.upload_id,
 					object: upload.key,
-					initiated: upload.initiated_at ?? undefined,
+					initiated: upload.initiated_at,
 					storageClass: "Standard",
 				});
 			}
