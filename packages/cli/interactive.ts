@@ -338,6 +338,8 @@ const getSelectRenderers = (
 	const maxItemsPerPage = config.maxItemsPerPage ?? 32;
 
 	const defaultRenderer: Renderer = ({ cursor = 0, value }) => {
+		const visibleOptions = options.filter((o) => !o.hidden);
+
 		const renderOption = (opt: Option, i: number) => {
 			const { label: optionLabel, value: optionValue } = opt;
 			const active = i === cursor;
@@ -356,31 +358,30 @@ const getSelectRenderers = (
 		};
 
 		const renderOptionCondition = (_: unknown, i: number): boolean => {
-			if (options.length <= maxItemsPerPage) {
+			if (visibleOptions.length <= maxItemsPerPage) {
 				return true;
 			}
 
 			if (i < cursor) {
-				return options.length - i <= maxItemsPerPage;
+				return visibleOptions.length - i <= maxItemsPerPage;
 			}
 
 			return cursor + maxItemsPerPage > i;
 		};
 
-		const visibleOptions = options.filter((o) => !o.hidden);
 		const activeOption = visibleOptions.at(cursor);
 		const lines = [
 			`${blCorner} ${bold(question)} ${dim(helpText)}`,
 			`${
-				cursor > 0 && options.length > maxItemsPerPage
+				cursor > 0 && visibleOptions.length > maxItemsPerPage
 					? `${space(2)}${dim("...")}\n`
 					: ""
 			}${visibleOptions
 				.map(renderOption)
 				.filter(renderOptionCondition)
 				.join(`\n`)}${
-				cursor + maxItemsPerPage < options.length &&
-				options.length > maxItemsPerPage
+				cursor + maxItemsPerPage < visibleOptions.length &&
+				visibleOptions.length > maxItemsPerPage
 					? `\n${space(2)}${dim("...")}`
 					: ""
 			}`,
@@ -465,8 +466,9 @@ const getSelectListRenderers = (config: ListPromptConfig) => {
 	const { question, helpText: _helpText } = config;
 	let options = config.options;
 	const helpText = _helpText ?? "";
-	const { rows } = stdout;
 	const defaultRenderer: Renderer = ({ cursor, value }, prompt: Prompt) => {
+		// Get current terminal rows on each render to handle terminal resize
+		const { rows } = stdout;
 		if (prompt instanceof SelectRefreshablePrompt) {
 			options = prompt.options;
 		}
