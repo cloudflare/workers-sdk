@@ -146,11 +146,6 @@ export async function updateTsConfig(
 			newTypes.add("node");
 		}
 
-		if ([...newTypes].sort() === currentTypes.sort()) {
-			// Do not update tsconfig if no types have changed
-			return;
-		}
-
 		// If we detect any tabs, use tabs, otherwise use spaces.
 		// We need to pass an explicit value here in order to preserve formatting properly.
 		const useSpaces = !tsconfig.match(/\t/g);
