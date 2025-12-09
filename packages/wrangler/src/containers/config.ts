@@ -64,7 +64,12 @@ export const getNormalizedContainerOptions = async (
 		assert(container.name, "container name should have been set by validation");
 		const allDOs = getDurableObjectClassNameToUseSQLiteMap(config.migrations);
 
-		if (!allDOs.has(container.class_name)) {
+		if (
+			!allDOs.has(container.class_name) &&
+			config.durable_objects.bindings.find(
+				(doBinding) => doBinding.class_name === container.class_name
+			) === undefined
+		) {
 			throw new UserError(
 				`The container class_name ${container.class_name} does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.`,
 				{ telemetryMessage: "no DO defined that matches container class_name" }
