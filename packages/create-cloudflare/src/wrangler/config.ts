@@ -210,7 +210,6 @@ export const writeWranglerToml = (ctx: C3Context, contents: string) => {
  *
  * @param ctx The C3 context.
  * @param config The JSON object (with comment properties) to write.
- * @param replacer A function that transforms the results, called recursively for each property of the object.
  */
 const writeWranglerJsonOrJsonc = (ctx: C3Context, config: CommentObject) => {
 	const wranglerJsonPath = getWranglerJsonPath(ctx);
