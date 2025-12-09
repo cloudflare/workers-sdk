@@ -10,7 +10,7 @@
 	},
 	"dependencies": {
 		"partyserver": "^0.0.64",
-		"partysocket": "^1.0.3",
+		"partysocket": "^1.1.6",
 		"react": "^19.2.1",
 		"react-dom": "^19.2.1"
 	},
