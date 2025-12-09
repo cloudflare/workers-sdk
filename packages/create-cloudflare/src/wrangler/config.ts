@@ -210,24 +210,15 @@ export const writeWranglerToml = (ctx: C3Context, contents: string) => {
  *
  * @param ctx The C3 context.
  * @param config The JSON object (with comment properties) to write.
- * @param replacer A function that transforms the results or
- *                 an array of strings and numbers that acts as an approved list for selecting
- *                 the object properties that will be stringified.
+ * @param replacer A function that transforms the results, called recursively for each property of the object.
  */
-export const writeWranglerJsonOrJsonc = (
-	ctx: C3Context,
-	config: CommentObject,
-	replacer?:
-		| ((key: string, value: unknown) => unknown)
-		| Array<number | string>
-		| null,
-) => {
+const writeWranglerJsonOrJsonc = (ctx: C3Context, config: CommentObject) => {
 	const wranglerJsonPath = getWranglerJsonPath(ctx);
 	if (existsSync(wranglerJsonPath)) {
-		return writeJSONWithComments(wranglerJsonPath, config, replacer);
+		return writeJSONWithComments(wranglerJsonPath, config);
 	}
 	const wranglerJsoncPath = getWranglerJsoncPath(ctx);
-	return writeJSONWithComments(wranglerJsoncPath, config, replacer);
+	return writeJSONWithComments(wranglerJsoncPath, config);
 };
 
 export const addVscodeConfig = (ctx: C3Context) => {

@@ -2,7 +2,7 @@
 "create-cloudflare": minor
 ---
 
-Add template string substitution in wrangler config files.
+Add placeholder substitution in wrangler config files.
 
 When c3 updates the config file:
 
