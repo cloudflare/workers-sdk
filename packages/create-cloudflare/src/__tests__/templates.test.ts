@@ -383,7 +383,7 @@ describe("addWranglerToGitIgnore", () => {
 });
 
 describe("downloadRemoteTemplate", () => {
-	let cloneMock: ReturnType<typeof vi.fn>;
+	let cloneMock: Mock;
 
 	beforeEach(() => {
 		cloneMock = vi.fn().mockResolvedValue(undefined);
