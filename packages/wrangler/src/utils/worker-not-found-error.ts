@@ -22,7 +22,8 @@ export const workerNotFoundErrorMessage =
  */
 export function isWorkerNotFoundError(error: unknown): boolean {
 	return (
-		typeof error === "object" && error !== null &&
+		typeof error === "object" &&
+		error !== null &&
 		"code" in error &&
 		(error.code === WORKER_NOT_FOUND_ERR_CODE ||
 			error.code === WORKER_LEGACY_ENVIRONMENT_NOT_FOUND_ERR_CODE)
