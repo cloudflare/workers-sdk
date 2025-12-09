@@ -779,9 +779,9 @@ export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 		defaultValue: C3_DEFAULTS.template,
 	});
 
-	const src = templateUrl;
-
-	const path = await downloadRemoteTemplate(src, { mode: args.templateMode });
+	const path = await downloadRemoteTemplate(templateUrl, {
+		mode: args.templateMode,
+	});
 	const config = inferTemplateConfig(path);
 
 	validateTemplate(path, config);
