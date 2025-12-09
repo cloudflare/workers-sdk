@@ -4,7 +4,9 @@ import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 
 /**
- * Delegates the deployment to `@opennextjs/cloudflare`.
+ * Checks whether a project is an OpenNext one and in such case delegates the deployment to `@opennextjs/cloudflare`.
+ * If the project is not an OpenNext one, or the `OPEN_NEXT_DEPLOY` environment variable is set (meaning that `wrangler
+ * deploy` has been called from OpenNext itself), then no delegation happens.
  *
  * Why?
  *  `wrangler deploy` shouldn't be run on an open-next project, since open-next has its own deploy command,
