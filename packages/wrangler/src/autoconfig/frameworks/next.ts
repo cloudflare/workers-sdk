@@ -12,9 +12,6 @@ import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
 export class NextJs extends Framework {
-	preview = "opennextjs-cloudflare build && opennextjs-cloudflare preview";
-	deploy = "opennextjs-cloudflare build && opennextjs-cloudflare deploy";
-
 	async configure({
 		dryRun,
 		workerName,
@@ -68,6 +65,10 @@ export class NextJs extends Framework {
 						service: workerName,
 					},
 				],
+			},
+			packageJsonScriptsOverrides: {
+				preview: "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+				deploy: "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
 			},
 			buildCommand: `${npx} @opennextjs/cloudflare build`,
 		};
