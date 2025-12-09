@@ -91,7 +91,8 @@ export async function runAutoConfig(
 		{
 			...wranglerConfig,
 			...dryRunConfigurationResults?.wranglerConfig,
-		}
+		},
+		dryRunConfigurationResults?.packageJsonScriptsOverrides
 	);
 
 	if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
