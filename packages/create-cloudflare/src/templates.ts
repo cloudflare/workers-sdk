@@ -243,6 +243,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			astro: astroTemplate,
 			docusaurus: docusaurusTemplate,
 			gatsby: gatsbyTemplate,
+			next: nextExperimentalTemplate,
 			nuxt: nuxtTemplate,
 			qwik: qwikTemplate,
 			react: reactTemplate,
@@ -252,7 +253,6 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			svelte: svelteTemplate,
 			"tanstack-start": tanStackStartTemplate,
 			vue: vueTemplate,
-			next: nextExperimentalTemplate,
 		};
 	} else {
 		return {
