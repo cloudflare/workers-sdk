@@ -121,7 +121,7 @@ beforeAll(async (s) => {
 
 	try {
 		page.on("console", (msg) => {
-			console.timeLog(logLabel, `BROWSER LOG [${msg.type()}]: ${msg.text()}`);
+			console.log(`BROWSER LOG [${msg.type()}]: ${msg.text()}`);
 			// ignore favicon requests in headed browser
 			if (
 				process.env.VITE_DEBUG_SERVE &&
@@ -133,7 +133,7 @@ beforeAll(async (s) => {
 			browserLogs.push(msg.text());
 		});
 		page.on("pageerror", (error) => {
-			console.timeLog(logLabel, `BROWSER ERROR: ${error.message}`);
+			console.log(`BROWSER ERROR: ${error.message}`);
 			browserErrors.push(error);
 		});
 
