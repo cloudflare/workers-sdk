@@ -552,8 +552,8 @@ describe("Create Cloudflare CLI", () => {
 					    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
 					    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (e.g. "create-astro" is used for Astro).
 					    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
-					    npm create cloudflare -- --framework next -- --ts
-					    pnpm create cloudflare --framework next -- --ts
+					    npm create cloudflare -- --framework svelte -- --types=ts
+					    pnpm create cloudflare --framework svelte -- --types=ts
 					    Allowed Values:
 					      angular, astro, docusaurus, gatsby, nuxt, qwik, react, react-router, solid, svelte, tanstack-start, vue
 					  --platform=<value>
@@ -654,8 +654,8 @@ describe("Create Cloudflare CLI", () => {
 					    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
 					    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (e.g. "create-astro" is used for Astro).
 					    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
-					    npm create cloudflare -- --framework next -- --ts
-					    pnpm create cloudflare --framework next -- --ts
+					    npm create cloudflare -- --framework svelte -- --types=ts
+					    pnpm create cloudflare --framework svelte -- --types=ts
 					    Allowed Values:
 					      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vike, vue, waku
 					  --platform=<value>
