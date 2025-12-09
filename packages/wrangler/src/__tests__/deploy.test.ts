@@ -15986,7 +15986,7 @@ export default{
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				The project seems to be an open-next one, calling \`opennextjs-cloudflare deploy\`"
+				OpenNext project detected, calling \`opennextjs-cloudflare deploy\`"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`""`);

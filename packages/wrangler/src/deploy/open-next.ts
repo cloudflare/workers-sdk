@@ -31,7 +31,7 @@ export async function maybeDelegateToOpenNextDeployCommand(
 		const openNextDeploy = process.env["OPEN_NEXT_DEPLOY"];
 		if (!openNextDeploy) {
 			logger.log(
-				"The project seems to be an open-next one, calling `opennextjs-cloudflare deploy`"
+				"OpenNext project detected, calling `opennextjs-cloudflare deploy`"
 			);
 
 			const { npx } = await getPackageManager();
