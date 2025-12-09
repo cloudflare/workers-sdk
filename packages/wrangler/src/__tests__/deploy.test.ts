@@ -15982,14 +15982,18 @@ export default{
 				},
 			});
 
-			expect(std.out).toMatchInlineSnapshot(`
-				"
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				OpenNext project detected, calling \`opennextjs-cloudflare deploy\`"
+				OpenNext project detected, calling \`opennextjs-cloudflare deploy\`",
+				  "warn": "",
+				}
 			`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
-			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should not delegate to open-next deploy when run in an open-next project and OPEN_NEXT_DEPLOY is set", async () => {
