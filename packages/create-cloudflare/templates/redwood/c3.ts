@@ -1,30 +1,22 @@
-import { resolve } from "node:path";
 import { logRaw } from "@cloudflare/cli";
 import { runFrameworkGenerator } from "frameworks/index";
-import { readJSON, writeJSON } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
+import { installPackages } from "helpers/packages";
 import type { TemplateConfig } from "../../src/templates";
-import type { C3Context, PackageJson } from "types";
+import type { C3Context } from "types";
 
 const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
 	await runFrameworkGenerator(ctx, [ctx.project.name]);
 
-	const pkgJsonPath = resolve(ctx.project.path, "package.json");
-	const pkgJson = readJSON(pkgJsonPath) as PackageJson;
-
-	if (
-		!pkgJson.devDependencies ||
-		!/^\d+\.\d+\.\d+$/.test(pkgJson.devDependencies["wrangler"])
-	) {
-		return;
-	}
-
-	pkgJson.devDependencies["wrangler"] =
-		`^${pkgJson.devDependencies["wrangler"]}`;
-
-	writeJSON(pkgJsonPath, pkgJson);
+	// Note: for redwood projects we need to force install the latest version of wrangler
+	//       if we don't do the CI npm e2e fails to install the app's dependencies
+	//       (we couldn't reproduce this locally, but it can possibly happen to users as well?)
+	await installPackages([`wrangler@latest`], {
+		dev: true,
+		force: true,
+	});
 
 	logRaw("");
 };

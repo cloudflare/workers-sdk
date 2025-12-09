@@ -12,6 +12,7 @@ type InstallConfig = {
 	startText?: string;
 	doneText?: string;
 	dev?: boolean;
+	force?: boolean;
 };
 
 /**
@@ -21,6 +22,7 @@ type InstallConfig = {
  * @param config.dev - Add packages as `devDependencies`
  * @param config.startText - Spinner start text
  * @param config.doneText - Spinner done text
+ * @param config.force - Add `--force` flag
  */
 export const installPackages = async (
 	packages: string[],
@@ -51,10 +53,21 @@ export const installPackages = async (
 			break;
 	}
 
-	await runCommand([npm, cmd, ...(saveFlag ? [saveFlag] : []), ...packages], {
-		...config,
+	const { force, ...commandConfig } = config;
+
+	await runCommand(
+		[
+			npm,
+			cmd,
+			...(saveFlag ? [saveFlag] : []),
+			...(force ? ["--force"] : []),
+			...packages,
+		],
+		{
+			...commandConfig,
 		silent: true,
-	});
+		},
+	);
 
 	if (npm === "npm") {
 		// Npm install will update the package.json with a caret-range rather than the exact version/range we asked for.
