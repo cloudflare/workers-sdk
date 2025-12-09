@@ -6,7 +6,7 @@
 	],
 	"dependencies": {
 		"create-astro": "4.13.2",
-		"create-analog": "1.8.1",
+		"create-analog": "2.1.3",
 		"@angular/create": "21.0.1",
 		"create-docusaurus": "3.9.2",
 		"create-hono": "0.19.3",
