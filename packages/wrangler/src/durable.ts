@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { configFileName } from "@cloudflare/workers-utils";
 import { fetchResult } from "./cfetch";
 import { logger } from "./logger";
+import { isWorkerNotFoundError } from "./utils/worker-not-found-error";
 import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 
 /**
@@ -111,10 +112,8 @@ export async function getMigrationsToUpload(
 
 const suppressNotFoundError = (err: unknown) => {
 	if (
-		![
-			10090, // corresponds to workers.api.error.service_not_found, so the script wasn't previously published at all
-			10092, // workers.api.error.environment_not_found, so the script wasn't published to this environment yet
-		].includes((err as { code: number }).code)
+		!isWorkerNotFoundError(err) &&
+		(err as { code: number }).code !== 10092 // workers.api.error.environment_not_found, so the script wasn't published to this environment yet
 	) {
 		throw err;
 	}
