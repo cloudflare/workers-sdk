@@ -2,4 +2,4 @@
 "create-cloudflare": patch
 ---
 
-Support Next.js in `--experimental` mode
+Support Next.js (via OpenNext) in `--experimental` mode

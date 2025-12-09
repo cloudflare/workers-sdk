@@ -2,4 +2,4 @@
 "wrangler": minor
 ---
 
-Support Next.js projects in autoconfig
+Support Next.js (via OpenNext) projects in autoconfig
