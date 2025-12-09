@@ -30,11 +30,14 @@ describe("update wrangler config", () => {
 		);
 	});
 
-	test("placeholder replacement", async () => {
+	test("placeholder replacement `<TBD>`", async () => {
 		const toml = [
 			`name = "<TBD>"`,
 			`main = "src/index.ts"`,
 			`compatibility_date = "<TBD>"`,
+			`[[services]]`,
+			`binding = "SELF_SERVICE"`,
+			`service = "<WORKER_NAME>"`,
 		].join("\n");
 		vi.mocked(readFile).mockReturnValue(toml);
 
@@ -48,6 +51,10 @@ describe("update wrangler config", () => {
 			name = "test"
 			main = "src/index.ts"
 			compatibility_date = "2024-01-17"
+
+			[[services]]
+			binding = "SELF_SERVICE"
+			service = "test"
 
 			[observability]
 			enabled = true
@@ -87,7 +94,71 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("placeholder replacement (json)", async () => {
+	test("placeholder replacement", async () => {
+		const toml = [
+			`name = "<WORKER_NAME>"`,
+			`main = "src/index.ts"`,
+			`compatibility_date = "<COMPATIBILITY_DATE>"`,
+			`[[services]]`,
+			`binding = "SELF_SERVICE"`,
+			`service = "<WORKER_NAME>"`,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toMatchInlineSnapshot(`
+			"#:schema node_modules/wrangler/config-schema.json
+			# For more details on how to configure Wrangler, refer to:
+			# https://developers.cloudflare.com/workers/wrangler/configuration/
+			name = "test"
+			main = "src/index.ts"
+			compatibility_date = "2024-01-17"
+
+			[[services]]
+			binding = "SELF_SERVICE"
+			service = "test"
+
+			[observability]
+			enabled = true
+
+			# Smart Placement
+			# Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+			# [placement]
+			# mode = "smart"
+
+			###
+			# Bindings
+			# Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+			# databases, object storage, AI inference, real-time communication and more.
+			# https://developers.cloudflare.com/workers/runtime-apis/bindings/
+			###
+
+			# Environment Variables
+			# https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+			# [vars]
+			# MY_VARIABLE = "production_value"
+
+			# Note: Use secrets to store sensitive data.
+			# https://developers.cloudflare.com/workers/configuration/secrets/
+
+			# Static Assets
+			# https://developers.cloudflare.com/workers/static-assets/binding/
+			# [assets]
+			# directory = "./public/"
+			# binding = "ASSETS"
+
+			# Service Bindings (communicate between multiple Workers)
+			# https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+			# [[services]]
+			# binding = "MY_SERVICE"
+			# service = "my-service"
+			"
+		`);
+	});
+
+	test("placeholder replacement `<TBD>` (json)", async () => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
 			(f as string).endsWith(".json"),
 		);
@@ -95,6 +166,12 @@ describe("update wrangler config", () => {
 			name: "<TBD>",
 			main: "src/index.ts",
 			compatibility_date: "<TBD>",
+			services: [
+				{
+					binding: "SELF_SERVICE",
+					service: "<WORKER_NAME>",
+				},
+			],
 		});
 		vi.mocked(readFile).mockReturnValueOnce(json);
 
@@ -111,6 +188,85 @@ describe("update wrangler config", () => {
 				"name": "test",
 				"main": "src/index.ts",
 				"compatibility_date": "2024-01-17",
+				"services": [
+					{
+						"binding": "SELF_SERVICE",
+						"service": "test"
+					}
+				],
+				"observability": {
+					"enabled": true
+				}
+				/**
+				 * Smart Placement
+				 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+				 */
+				// "placement": { "mode": "smart" }
+				/**
+				 * Bindings
+				 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+				 * databases, object storage, AI inference, real-time communication and more.
+				 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+				 */
+				/**
+				 * Environment Variables
+				 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+				 */
+				// "vars": { "MY_VARIABLE": "production_value" }
+				/**
+				 * Note: Use secrets to store sensitive data.
+				 * https://developers.cloudflare.com/workers/configuration/secrets/
+				 */
+				/**
+				 * Static Assets
+				 * https://developers.cloudflare.com/workers/static-assets/binding/
+				 */
+				// "assets": { "directory": "./public/", "binding": "ASSETS" }
+				/**
+				 * Service Bindings (communicate between multiple Workers)
+				 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+				 */
+				// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+			}"
+		`);
+	});
+
+	test("placeholder replacement (json)", async () => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const json = JSON.stringify({
+			name: "<WORKER_NAME>",
+			main: "src/index.ts",
+			compatibility_date: "<COMPATIBILITY_DATE>",
+			services: [
+				{
+					binding: "SELF_SERVICE",
+					service: "<WORKER_NAME>",
+				},
+			],
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(ctx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).toMatchInlineSnapshot(`
+			"/**
+			 * For more details on how to configure Wrangler, refer to:
+			 * https://developers.cloudflare.com/workers/wrangler/configuration/
+			 */
+			{
+				"$schema": "node_modules/wrangler/config-schema.json",
+				"name": "test",
+				"main": "src/index.ts",
+				"compatibility_date": "2024-01-17",
+				"services": [
+					{
+						"binding": "SELF_SERVICE",
+						"service": "test"
+					}
+				],
 				"observability": {
 					"enabled": true
 				}
