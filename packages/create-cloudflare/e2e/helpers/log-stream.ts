@@ -48,8 +48,14 @@ function getLogPath(suite: RunnerTestSuite) {
 		: "unknown";
 
 	return path.join(
-		"./.e2e-logs" + (isExperimental ? "-experimental" : ""),
-		testPackageManager,
+		getLogFolder(isExperimental, testPackageManager),
 		suiteFilename,
+	);
+}
+
+export function getLogFolder(experimental: boolean, packageManager: string) {
+	return path.join(
+		"./.e2e-logs" + (experimental ? "-experimental" : ""),
+		packageManager,
 	);
 }
