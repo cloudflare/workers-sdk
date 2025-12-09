@@ -187,7 +187,7 @@ export const readWranglerToml = (ctx: C3Context) => {
  */
 export const readWranglerJsonOrJsonc = (
 	ctx: C3Context,
-	reviver?: Reviver | null,
+	reviver?: Reviver,
 ): CommentObject => {
 	const wranglerJsonPath = getWranglerJsonPath(ctx);
 	if (existsSync(wranglerJsonPath)) {
