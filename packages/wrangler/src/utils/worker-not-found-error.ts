@@ -15,14 +15,14 @@ export const workerNotFoundErrorMessage =
 	"This Worker does not exist on your account.";
 
 /**
- * Given an error from the Cloudflare API discerns wether it is caused by a worker that could not be found on the target account
+ * Given an error from the Cloudflare API discerns whether it is caused by a worker that could not be found on the target account
  *
  * @param error The error object
- * @returns true is the object represents an error from the Cloudflare API caused by a not found worker, false otherwise
+ * @returns true if the object represents an error from the Cloudflare API caused by a not found worker, false otherwise
  */
 export function isWorkerNotFoundError(error: unknown): boolean {
 	return (
-		error instanceof Object &&
+		typeof error === "object" && error !== null &&
 		"code" in error &&
 		(error.code === WORKER_NOT_FOUND_ERR_CODE ||
 			error.code === WORKER_LEGACY_ENVIRONMENT_NOT_FOUND_ERR_CODE)
