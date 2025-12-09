@@ -61,10 +61,10 @@
 	"pnpm": {
 		"peerDependencyRules": {
 			"allowedVersions": {
-				"react": "18",
-				"react-dom": "18",
-				"@types/react": "18",
-				"@types/react-dom": "18"
+				"react": ">=18 <20",
+				"react-dom": ">=18 <20",
+				"@types/react": ">=18 <20",
+				"@types/react-dom": ">=18 <20"
 			}
 		},
 		"overrides": {
