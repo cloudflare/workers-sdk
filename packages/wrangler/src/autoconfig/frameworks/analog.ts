@@ -5,8 +5,8 @@ import { updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
 import * as recast from "recast";
 import semiver from "semiver";
+import { getDevCompatibilityDate } from "../../utils/compatibility-date";
 import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
-import { getWorkerdCompatibilityDate } from "../c3-vendor/helpers";
 import { Framework, getInstalledPackageVersion } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
@@ -46,7 +46,7 @@ async function updateViteConfig(projectPath: string) {
 		throw new Error("Could not find Vite config file to modify");
 	}
 
-	const compatDate = await getWorkerdCompatibilityDate();
+	const compatDate = getDevCompatibilityDate(undefined);
 
 	updateStatus(`Updating configuration in ${blue(viteConfigPath)}`);
 
