@@ -42,11 +42,12 @@ export type QueryResult = {
 };
 
 // Common SQLite Codes
-// See https://www.sqlite.org/rescode.html#constraint
+// See https://www.sqlite.org/rescode.html
 const SQLITE_RESULT_CODES = [
 	"SQLITE_ERROR",
 	"SQLITE_CONSTRAINT",
 	"SQLITE_MISMATCH",
+	"SQLITE_AUTH",
 ];
 
 function isSqliteUserError(error: unknown): error is Error {
