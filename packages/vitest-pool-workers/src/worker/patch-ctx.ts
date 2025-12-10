@@ -50,7 +50,7 @@ export function getCtxExportsProxy(
 			console.warn(
 				`Attempted to access 'ctx.exports.${p}', which was not defined for the main 'SELF' Worker.\n` +
 					`Check that '${p}' is exported as an entry-point from the Worker.\n` +
-					`The 'vitest-pool-worker' tries to infer these exports by analyzing the source code of the main Worker.\n`
+					`The '@cloudflare/vitest-pool-workers' integration tries to infer these exports by analyzing the source code of the main Worker.\n`
 			);
 			return undefined;
 		},

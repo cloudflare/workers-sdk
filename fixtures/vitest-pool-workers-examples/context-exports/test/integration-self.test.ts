@@ -23,7 +23,7 @@ it("will warn on missing context exports on the SELF worker", async () => {
 	expect(warnSpy).toHaveBeenCalledWith(
 		"Attempted to access 'ctx.exports.InvalidExport', which was not defined for the main 'SELF' Worker.\n" +
 			"Check that 'InvalidExport' is exported as an entry-point from the Worker.\n" +
-			"The 'vitest-pool-worker' tries to infer these exports by analyzing the source code of the main Worker.\n"
+			"The '@cloudflare/vitest-pool-workers' integration tries to infer these exports by analyzing the source code of the main Worker.\n"
 	);
 });
 
@@ -36,7 +36,7 @@ it("will warn on implicit re-exports that will exist in production but cannot no
 	expect(warnSpy).toHaveBeenCalledWith(
 		"Attempted to access 'ctx.exports.ReexportedVirtualEntryPoint', which was not defined for the main 'SELF' Worker.\n" +
 			"Check that 'ReexportedVirtualEntryPoint' is exported as an entry-point from the Worker.\n" +
-			"The 'vitest-pool-worker' tries to infer these exports by analyzing the source code of the main Worker.\n"
+			"The '@cloudflare/vitest-pool-workers' integration tries to infer these exports by analyzing the source code of the main Worker.\n"
 	);
 });
 
