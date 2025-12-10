@@ -1,7 +1,14 @@
 import { handlerContextStore, registerGlobalWaitUntil } from "./wait-until";
 
-export const patchedHandlerContexts = new WeakSet<ExecutionContext>();
+const patchedHandlerContexts = new WeakSet<ExecutionContext>();
 
+/**
+ * Executes the given callback within the provided ExecutionContext,
+ * patching the context to ensure that:
+ *
+ *  - waitUntil calls are registered globally
+ *  - ctx.exports shows a warning if accessing missing exports
+ */
 export function patchAndRunWithHandlerContext<T>(
 	/* mut */ ctx: ExecutionContext,
 	callback: () => T
@@ -27,6 +34,11 @@ export function patchAndRunWithHandlerContext<T>(
 	return handlerContextStore.run(ctx, callback);
 }
 
+/**
+ * Creates a proxy to the `ctx.exports` object that will warn the user if they attempt
+ * to access an undefined property. This could be a valid mistake by the user or
+ * it could mean that our static analysis of the main Worker's exports missed something.
+ */
 export function getCtxExportsProxy(
 	exports: Cloudflare.Exports
 ): Cloudflare.Exports {
