@@ -502,7 +502,7 @@ describe("updatePackageName", () => {
 		updatePackageName(ctx);
 
 		expect(writeJSONMock).toHaveBeenCalledWith(
-			expect.stringContaining("my-project/package.json"),
+			expect.stringContaining("package.json"),
 			expect.objectContaining({ name: "my-project" }),
 		);
 	});
@@ -522,7 +522,7 @@ describe("updatePackageName", () => {
 		});
 
 		vi.mocked(readFile).mockImplementation((path: string) => {
-			if (path.endsWith("my-project/pyproject.toml")) {
+			if (path.endsWith("pyproject.toml")) {
 				return `[project]
 name = "<PROJECT_NAME>"
 version = "0.1.0"`;
@@ -533,12 +533,12 @@ version = "0.1.0"`;
 		updatePackageName(ctx);
 
 		expect(writeJSONMock).toHaveBeenCalledWith(
-			expect.stringContaining("my-project/package.json"),
+			expect.stringContaining("package.json"),
 			expect.objectContaining({ name: "my-project" }),
 		);
 
 		expect(writeFileMock).toHaveBeenCalledWith(
-			expect.stringContaining("my-project/pyproject.toml"),
+			expect.stringContaining("pyproject.toml"),
 			expect.stringContaining(`name = "my-project"`),
 		);
 	});
