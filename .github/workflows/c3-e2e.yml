@@ -90,7 +90,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
-          name: ${{ format('e2e-logs-{0}-{1}-{2}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
+          name: ${{ format('e2e-logs-{0}-{1}-{2}-{3}-{4}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.pm.name, matrix.filter) }}
           path: packages/create-cloudflare/.e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}/${{ matrix.pm.name }}/${{ matrix.filter }}
           include-hidden-files: true
 
