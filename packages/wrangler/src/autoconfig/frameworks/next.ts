@@ -19,7 +19,7 @@ export class NextJs extends Framework {
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const usesTs = usesTypescript(projectPath);
 
-		const nextConfigPath = probeForNextConfigPath(usesTs);
+		const nextConfigPath = findNextConfigPath(usesTs);
 		if (!nextConfigPath) {
 			throw new AutoConfigFrameworkConfigurationError(
 				"No Next.js configuration file could be detected. Note: only next.config.ts and next.config.mjs files are supported."
@@ -77,13 +77,13 @@ export class NextJs extends Framework {
 	configurationDescription = "Configuring project for Next.js with OpenNext";
 }
 
-function probeForNextConfigPath(usesTs: boolean): string | undefined {
-	const pathsToProbe = [
+function findNextConfigPath(usesTs: boolean): string | undefined {
+	const pathsToCheck = [
 		...(usesTs ? ["next.config.ts"] : []),
 		"next.config.mjs",
 	];
 
-	for (const path of pathsToProbe) {
+	for (const path of pathsToCheck) {
 		const stats = statSync(path, {
 			throwIfNoEntry: false,
 		});
