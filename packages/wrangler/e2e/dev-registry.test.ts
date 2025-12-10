@@ -306,7 +306,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			);
 
 			expect(normalizeOutput(workerA.currentOutput)).toContain(
-				"connect to other wrangler or vite dev processes running locally"
+				"connect to other Wrangler or Vite dev processes running locally"
 			);
 		});
 
@@ -595,7 +595,7 @@ describe.each([{ cmd: "wrangler dev" }])("dev registry $cmd", ({ cmd }) => {
 			);
 
 			expect(normalizeOutput(workerA.currentOutput)).toContain(
-				"connect to other wrangler or vite dev processes running locally"
+				"connect to other Wrangler or Vite dev processes running locally"
 			);
 		});
 

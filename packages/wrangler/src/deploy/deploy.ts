@@ -19,8 +19,9 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { buildContainer, deployContainers } from "../cloudchamber/deploy";
+import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
+import { deployContainers } from "../containers/deploy";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
@@ -909,6 +910,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				{ ...withoutStaticAssets, vars: maskedVars },
 				config.tail_consumers,
 				config.streaming_tail_consumers,
+				config.containers,
 				{ warnIfNoBindings: true }
 			);
 		} else {
@@ -1048,7 +1050,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				printBindings(
 					{ ...withoutStaticAssets, vars: maskedVars },
 					config.tail_consumers,
-					config.streaming_tail_consumers
+					config.streaming_tail_consumers,
+					config.containers
 				);
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);
@@ -1078,7 +1081,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					printBindings(
 						{ ...withoutStaticAssets, vars: maskedVars },
 						config.tail_consumers,
-						config.streaming_tail_consumers
+						config.streaming_tail_consumers,
+						config.containers
 					);
 				}
 				const message = await helpIfErrorIsSizeOrScriptStartup(
@@ -1177,7 +1181,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			versionId,
 			accountId,
 			scriptName,
-			dryRun: props.dryRun ?? false,
 		});
 	}
 

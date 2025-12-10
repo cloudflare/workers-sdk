@@ -51,17 +51,18 @@ export class FixtureTestContainer extends DurableObject<Env> {
 }
 
 export default {
-	async fetch(request, env): Promise<Response> {
+	async fetch(request, env, ctx: ExecutionContext): Promise<Response> {
 		const url = new URL(request.url);
 		if (url.pathname === "/second") {
 			// This is a second Durable Object that can be used to test multiple DOs
-			const id = env.CONTAINER.idFromName("second-container");
-			const stub = env.CONTAINER.get(id);
+			const id =
+				ctx.exports.FixtureTestContainer.idFromName("second-container");
+			const stub = ctx.exports.FixtureTestContainer.get(id);
 			const query = url.searchParams.get("req");
 			return stub.fetch("http://example.com/" + query);
 		}
-		const id = env.CONTAINER.idFromName("container");
-		const stub = env.CONTAINER.get(id);
+		const id = ctx.exports.FixtureTestContainer.idFromName("container");
+		const stub = ctx.exports.FixtureTestContainer.get(id);
 		return stub.fetch(request);
 	},
 } satisfies ExportedHandler<Env>;
