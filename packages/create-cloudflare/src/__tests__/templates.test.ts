@@ -16,6 +16,7 @@ import {
 } from "../templates";
 import type { PathLike } from "node:fs";
 import type { C3Args, C3Context } from "types";
+import type { Mock } from "vitest";
 
 vi.mock("degit");
 vi.mock("fs");
