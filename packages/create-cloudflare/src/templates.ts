@@ -914,24 +914,23 @@ export async function downloadRemoteTemplate(
 }
 
 function updatePythonPackageName(path: string, projectName: string) {
-	const pyprojectTomlPath = resolve(path, "pyproject.toml");
-	if (!existsSync(pyprojectTomlPath)) {
+	const pyProjectFile = resolve(path, "pyproject.toml");
+	if (!existsSync(pyProjectFile)) {
 		// Not a python template
 		return;
 	}
 	const s = spinner();
 	s.start("Updating name in `pyproject.toml`");
-	let pyprojectTomlContents = readFile(pyprojectTomlPath);
-	pyprojectTomlContents = pyprojectTomlContents.replace(
-		'"TBD"',
-		`"${projectName}"`,
-	);
-	writeFile(pyprojectTomlPath, pyprojectTomlContents);
+	let pyProject = readFile(pyProjectFile);
+	pyProject = pyProject
+		.replace('"TBD"', `"${projectName}"`)
+		.replace('"<PROJECT_NAME>"', `"${projectName}"`);
+	writeFile(pyProjectFile, pyProject);
 	s.stop(`${brandColor("updated")} ${dim("`pyproject.toml`")}`);
 }
 
 /**
- * Updates package.json with project name.
+ * Updates `package.json` and `pyproject.toml` with project name.
  *
  * This function replaces any of the following placeholder names in the `package.json`
  * file with the actual project name:
@@ -939,6 +938,8 @@ function updatePythonPackageName(path: string, projectName: string) {
  * - `<TBD>`
  * - `TBD`
  * - `""`
+ *
+ * It also replaces `<PROJECT_NAME>` in `pyproject.toml` if it exists.
  *
  * @param ctx The project configuration
  */
@@ -953,11 +954,10 @@ export const updatePackageName = (ctx: C3Context): void => {
 
 	const s = spinner();
 	s.start("Updating name in `package.json`");
-
 	pkgJson.name = ctx.project.name;
-
 	writeJSON(pkgJsonPath, pkgJson);
 	s.stop(`${brandColor("updated")} ${dim("`package.json`")}`);
+
 	updatePythonPackageName(ctx.project.path, ctx.project.name);
 };
 

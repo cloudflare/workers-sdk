@@ -6,13 +6,16 @@ import {
 	appendFile,
 	directoryExists,
 	readFile,
+	readJSON,
 	writeFile,
+	writeJSON,
 } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
 	addWranglerToGitIgnore,
 	deriveCorrelatedArgs,
 	downloadRemoteTemplate,
+	updatePackageName,
 } from "../templates";
 import type { PathLike } from "node:fs";
 import type { C3Args, C3Context } from "types";
@@ -23,34 +26,17 @@ vi.mock("fs");
 vi.mock("helpers/files");
 vi.mock("@cloudflare/cli/interactive");
 
-beforeEach(() => {
-	mockSpinner();
-});
-
 describe("addWranglerToGitIgnore", () => {
-	const writeFileResults: {
-		file: string | undefined;
-		content: string | undefined;
-	} = { file: undefined, content: undefined };
-	const appendFileResults: {
-		file: string | undefined;
-		content: string | undefined;
-	} = { file: undefined, content: undefined };
+	let writeFileMock: Mock;
+	let appendFileMock: Mock;
 
 	beforeEach(() => {
-		vi.mocked(writeFile).mockImplementation((file: string, content: string) => {
-			writeFileResults.file = file;
-			writeFileResults.content = content;
-		});
-		vi.mocked(appendFile).mockImplementation(
-			(file: string, content: string) => {
-				appendFileResults.file = file;
-				appendFileResults.content = content;
-			},
-		);
-	});
+		vi.resetAllMocks();
+		mockSpinner();
 
-	beforeEach(() => {
+		writeFileMock = vi.mocked(writeFile);
+		appendFileMock = vi.mocked(appendFile);
+
 		vi.mocked(statSync).mockImplementation(
 			// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 			// @ts-ignore
@@ -60,13 +46,6 @@ describe("addWranglerToGitIgnore", () => {
 				},
 			}),
 		);
-		vi.mocked(existsSync).mockReset();
-		vi.mocked(readFile).mockReset();
-		vi.mocked(directoryExists).mockReset();
-		appendFileResults.file = undefined;
-		appendFileResults.content = undefined;
-		writeFileResults.file = undefined;
-		writeFileResults.content = undefined;
 	});
 
 	test("should append the wrangler section to a standard gitignore file", () => {
@@ -80,11 +59,11 @@ describe("addWranglerToGitIgnore", () => {
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
-		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`,
-		);
-		expect(appendFileResults.content).toMatchInlineSnapshot(`
-			"
+		expect(appendFileMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.gitignore",
+			    "
 
 			# wrangler files
 			.wrangler
@@ -92,10 +71,11 @@ describe("addWranglerToGitIgnore", () => {
 			!.dev.vars.example
 			.env*
 			!.env.example
-			"
+			",
+			  ],
+			]
 		`);
 	});
-
 	test("should not touch the gitignore file if it already contains all wrangler files", () => {
 		mockGitIgnore(
 			"my-project/.gitignore",
@@ -113,8 +93,7 @@ describe("addWranglerToGitIgnore", () => {
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
-		expect(appendFileResults.file).toBeUndefined();
-		expect(appendFileResults.content).toBeUndefined();
+		expect(appendFileMock).not.toHaveBeenCalled();
 	});
 
 	test("should not touch the gitignore file if contains all wrangler files (and can cope with comments)", () => {
@@ -134,8 +113,7 @@ describe("addWranglerToGitIgnore", () => {
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
-		expect(appendFileResults.file).toBeUndefined();
-		expect(appendFileResults.content).toBeUndefined();
+		expect(appendFileMock).not.toHaveBeenCalled();
 	});
 
 	test("should append to the gitignore file the missing wrangler files when some are already present (should add the section heading if including .wrangler and some others)", () => {
@@ -150,18 +128,20 @@ describe("addWranglerToGitIgnore", () => {
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
-		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`,
-		);
-		expect(appendFileResults.content).toMatchInlineSnapshot(`
-			"
+		expect(appendFileMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.gitignore",
+			    "
 
 			# wrangler files
 			.wrangler
 			!.dev.vars.example
 			.env*
 			!.env.example
-			"
+			",
+			  ],
+			]
 		`);
 	});
 
@@ -178,16 +158,18 @@ describe("addWranglerToGitIgnore", () => {
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
-		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`,
-		);
-		expect(appendFileResults.content).toMatchInlineSnapshot(`
-			"
+		expect(appendFileMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.gitignore",
+			    "
 
 			!.dev.vars.example
 			.env*
 			!.env.example
-			"
+			",
+			  ],
+			]
 		`);
 	});
 
@@ -206,14 +188,16 @@ describe("addWranglerToGitIgnore", () => {
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
-		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`,
-		);
-		expect(appendFileResults.content).toMatchInlineSnapshot(`
-			"
+		expect(appendFileMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.gitignore",
+			    "
 
 			.wrangler
-			"
+			",
+			  ],
+			]
 		`);
 	});
 
@@ -234,13 +218,15 @@ describe("addWranglerToGitIgnore", () => {
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
-		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`,
-		);
-		expect(appendFileResults.content).toMatchInlineSnapshot(`
-			"
+		expect(appendFileMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.gitignore",
+			    "
 			.wrangler
-			"
+			",
+			  ],
+			]
 		`);
 	});
 
@@ -257,17 +243,21 @@ describe("addWranglerToGitIgnore", () => {
 		} as unknown as C3Context);
 
 		// writeFile wrote the (empty) gitignore file
-		expect(writeFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`,
-		);
-		expect(writeFileResults.content).toMatchInlineSnapshot(`""`);
+		expect(writeFileMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.gitignore",
+			    "",
+			  ],
+			]
+		`);
 
 		// and the correct lines were then added to it
-		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`,
-		);
-		expect(appendFileResults.content).toMatchInlineSnapshot(`
-			"
+		expect(appendFileMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.gitignore",
+			    "
 
 			# wrangler files
 			.wrangler
@@ -275,7 +265,9 @@ describe("addWranglerToGitIgnore", () => {
 			!.dev.vars.example
 			.env*
 			!.env.example
-			"
+			",
+			  ],
+			]
 		`);
 	});
 
@@ -289,8 +281,7 @@ describe("addWranglerToGitIgnore", () => {
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
-		expect(writeFileResults.file).toBeUndefined();
-		expect(writeFileResults.content).toBeUndefined();
+		expect(writeFileMock).not.toHaveBeenCalled();
 	});
 
 	test("should add the wildcard .dev.vars* entry even if a .dev.vars is already included", () => {
@@ -306,18 +297,20 @@ describe("addWranglerToGitIgnore", () => {
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
-		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`,
-		);
-		expect(appendFileResults.content).toMatchInlineSnapshot(`
-			"
+		expect(appendFileMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.gitignore",
+			    "
 			# wrangler files
 			.wrangler
 			.dev.vars*
 			!.dev.vars.example
 			.env*
 			!.env.example
-			"
+			",
+			  ],
+			]
 		`);
 	});
 
@@ -334,16 +327,18 @@ describe("addWranglerToGitIgnore", () => {
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
-		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`,
-		);
-		expect(appendFileResults.content).toMatchInlineSnapshot(`
-			"
+		expect(appendFileMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.gitignore",
+			    "
 			# wrangler files
 			.wrangler
 			.dev.vars*
 			!.dev.vars.example
-			"
+			",
+			  ],
+			]
 		`);
 	});
 
@@ -360,16 +355,18 @@ describe("addWranglerToGitIgnore", () => {
 			project: { path: "my-project" },
 		} as unknown as C3Context);
 
-		expect(appendFileResults.file).toMatchInlineSnapshot(
-			`"my-project/.gitignore"`,
-		);
-		expect(appendFileResults.content).toMatchInlineSnapshot(`
-			"
+		expect(appendFileMock.mock.calls).toMatchInlineSnapshot(`
+			[
+			  [
+			    "my-project/.gitignore",
+			    "
 			.dev.vars*
 			!.dev.vars.example
 			.env*
 			!.env.example
-			"
+			",
+			  ],
+			]
 		`);
 	});
 
@@ -382,7 +379,6 @@ describe("addWranglerToGitIgnore", () => {
 		);
 	}
 });
-
 describe("downloadRemoteTemplate", () => {
 	let cloneMock: Mock;
 
@@ -473,6 +469,77 @@ describe("deriveCorrelatedArgs", () => {
 			}),
 		).toThrow(
 			"The `--ts` argument cannot be specified in conjunction with the `--lang` argument",
+		);
+	});
+});
+
+describe("updatePackageName", () => {
+	let writeJSONMock: Mock;
+	let writeFileMock: Mock;
+
+	beforeEach(() => {
+		vi.resetAllMocks();
+		mockSpinner();
+		writeJSONMock = vi.mocked(writeJSON);
+		writeFileMock = vi.mocked(writeFile);
+		vi.mocked(readFile).mockReturnValue("");
+	});
+
+	test('should update the "name" field in package.json', () => {
+		const ctx = {
+			project: { path: "my-project", name: "my-project" },
+			args: {},
+		} as unknown as C3Context;
+
+		vi.mocked(readJSON).mockReturnValue({
+			name: "<PACKAGE_NAME>",
+			version: "1.0.0",
+		});
+
+		// There is no `pyproject.toml`
+		vi.mocked(existsSync).mockReturnValue(false);
+
+		updatePackageName(ctx);
+
+		expect(writeJSONMock).toHaveBeenCalledWith(
+			expect.stringContaining("package.json"),
+			expect.objectContaining({ name: "my-project" }),
+		);
+	});
+
+	test("it should update pyproject.toml if it exists", () => {
+		const ctx = {
+			project: { path: "my-project", name: "my-project" },
+			args: {},
+		} as unknown as C3Context;
+
+		// There is a `pyproject.toml`
+		vi.mocked(existsSync).mockReturnValue(true);
+
+		vi.mocked(readJSON).mockReturnValue({
+			name: "<PACKAGE_NAME>",
+			version: "1.0.0",
+		});
+
+		vi.mocked(readFile).mockImplementation((path: string) => {
+			if (path.endsWith("pyproject.toml")) {
+				return `[project]
+name = "<PROJECT_NAME>"
+version = "0.1.0"`;
+			}
+			return "";
+		});
+
+		updatePackageName(ctx);
+
+		expect(writeJSONMock).toHaveBeenCalledWith(
+			expect.stringContaining("package.json"),
+			expect.objectContaining({ name: "my-project" }),
+		);
+
+		expect(writeFileMock).toHaveBeenCalledWith(
+			expect.stringContaining("pyproject.toml"),
+			expect.stringContaining(`name = "my-project"`),
 		);
 	});
 });
