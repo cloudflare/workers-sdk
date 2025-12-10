@@ -921,7 +921,9 @@ function updatePythonPackageName(path: string, projectName: string) {
 	const s = spinner();
 	s.start("Updating name in `pyproject.toml`");
 	let pyProject = readFile(pyProjectFile);
-	pyProject = pyProject.replace('"<PROJECT_NAME>"', `"${projectName}"`);
+	pyProject = pyProject
+		.replace('"TBD"', `"${projectName}"`)
+		.replace('"<PROJECT_NAME>"', `"${projectName}"`);
 	writeFile(pyProjectFile, pyProject);
 	s.stop(`${brandColor("updated")} ${dim("`pyproject.toml`")}`);
 }
