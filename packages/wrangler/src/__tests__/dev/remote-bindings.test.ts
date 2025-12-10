@@ -1,7 +1,15 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { fetch } from "undici";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	onTestFailed,
+	vi,
+} from "vitest";
 import { Binding, StartRemoteProxySessionOptions } from "../../api";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -478,6 +486,9 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 	it.each(testCases)(
 		"should attempt to setup remote $name bindings when starting `wrangler dev`",
 		async ({ config, expectedProxyWorkerBindings, expectedWorkerOptions }) => {
+			// Dump out the std out if the test fails for easier debugging
+			onTestFailed(async () => console.error("Wrangler output:\n", std.out));
+
 			await seed({
 				"wrangler.jsonc": JSON.stringify(
 					{
@@ -492,6 +503,7 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 				"index.js": `export default { fetch() { return new Response("hello") } }`,
 			});
 			const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+
 			await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
 				timeout: 5_000,
 			});
