@@ -1,4 +1,4 @@
-import { networkInterfaces } from "os";
+import { networkInterfaces } from "node:os";
 
 export function getAccessibleHosts(ipv4Only = false): string[] {
 	const hosts: string[] = [];

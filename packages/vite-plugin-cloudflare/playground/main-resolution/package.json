@@ -7,7 +7,7 @@
 		"build:nested-config": "vite build -c vite.config.nested-config.ts",
 		"build:package-export-main": "vite build -c vite.config.package-export-main.ts",
 		"build:virtual-module-main": "vite build -c vite.config.virtual-module-main.ts",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"dev:nested-config": "vite dev -c vite.config.nested-config.ts",
 		"dev:package-export-main": "vite dev -c vite.config.package-export-main.ts",

@@ -1,10 +1,10 @@
-import assert from "assert";
-import childProcess, { spawn } from "child_process";
-import { randomBytes } from "crypto";
-import { Abortable, once } from "events";
-import path from "path";
-import rl from "readline";
-import { Readable, Transform } from "stream";
+import assert from "node:assert";
+import childProcess, { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
+import { Abortable, once } from "node:events";
+import path from "node:path";
+import rl from "node:readline";
+import { Readable, Transform } from "node:stream";
 import { $ as $colors, red } from "kleur/colors";
 import workerdPath, {
 	compatibilityDate as supportedCompatibilityDate,

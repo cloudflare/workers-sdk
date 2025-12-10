@@ -1,3 +1,4 @@
+import { beforeEach, describe, expect, it, test } from "vitest";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
 	assignAndDistributePercentages,

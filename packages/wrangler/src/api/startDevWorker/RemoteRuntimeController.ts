@@ -73,6 +73,14 @@ export class RemoteRuntimeController extends RuntimeController {
 			}
 
 			handlePreviewSessionCreationError(err, props.accountId);
+
+			this.emitErrorEvent({
+				type: "error",
+				reason: "Failed to create a preview token",
+				cause: castErrorCause(err),
+				source: "RemoteRuntimeController",
+				data: undefined,
+			});
 		}
 	}
 
@@ -192,6 +200,14 @@ export class RemoteRuntimeController extends RuntimeController {
 				this.#session = await this.#previewSession(props);
 				return this.#previewToken(props);
 			}
+
+			this.emitErrorEvent({
+				type: "error",
+				reason: "Failed to obtain a preview token",
+				cause: castErrorCause(err),
+				source: "RemoteRuntimeController",
+				data: undefined,
+			});
 		}
 	}
 
@@ -244,6 +260,7 @@ export class RemoteRuntimeController extends RuntimeController {
 		const { bindings } = await convertBindingsToCfWorkerInitBindings(
 			config.bindings
 		);
+
 		// If we received a new `bundleComplete` event before we were able to
 		// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 		if (bundleId !== this.#currentBundleId) {

@@ -1,20 +1,13 @@
 import { Framework } from ".";
-import type { ConfigurationOptions } from ".";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { ConfigurationOptions, ConfigurationResults } from ".";
 
 export class Static extends Framework {
-	name: string;
-	constructor(name: string) {
-		super();
-		this.name = name ?? "static";
-	}
-
-	configure({
-		outputDir,
-	}: ConfigurationOptions): Promise<RawConfig> | RawConfig {
+	configure({ outputDir }: ConfigurationOptions): ConfigurationResults {
 		return {
-			assets: {
-				directory: outputDir,
+			wranglerConfig: {
+				assets: {
+					directory: outputDir,
+				},
 			},
 		};
 	}

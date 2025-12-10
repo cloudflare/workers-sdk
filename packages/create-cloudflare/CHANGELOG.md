@@ -1,5 +1,123 @@
 # create-cloudflare
 
+## 2.58.0
+
+### Minor Changes
+
+- [#11477](https://github.com/cloudflare/workers-sdk/pull/11477) [`9988cc9`](https://github.com/cloudflare/workers-sdk/commit/9988cc9b9b157e453bb5eade439a8e69bfa0c7bd) Thanks [@ascorbic](https://github.com/ascorbic)! - Support Nuxt in autoconfig `--experimental` flow
+
+- [#11472](https://github.com/cloudflare/workers-sdk/pull/11472) [`ce295bf`](https://github.com/cloudflare/workers-sdk/commit/ce295bffdc7a45494b6683ee5fef04dbfca54345) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Qwik in `--experimental` mode
+
+- [#11485](https://github.com/cloudflare/workers-sdk/pull/11485) [`f1b76f7`](https://github.com/cloudflare/workers-sdk/commit/f1b76f70fa6f4a25dd607333fef104f0392332e7) Thanks [@penalosa](https://github.com/penalosa)! - Add React & Vue to C3's experimental mode
+
+- [#11442](https://github.com/cloudflare/workers-sdk/pull/11442) [`a75352b`](https://github.com/cloudflare/workers-sdk/commit/a75352bb717663a902a0c156fbe424e7b558ca97) Thanks [@brillout](https://github.com/brillout)! - add Vike framework template
+
+- [#11498](https://github.com/cloudflare/workers-sdk/pull/11498) [`ac861f8`](https://github.com/cloudflare/workers-sdk/commit/ac861f8ec24357c0238fa939b33da71236df7095) Thanks [@penalosa](https://github.com/penalosa)! - Add React Router support in autoconfig
+
+- [#11506](https://github.com/cloudflare/workers-sdk/pull/11506) [`79d30d4`](https://github.com/cloudflare/workers-sdk/commit/79d30d4321b057f3cb4451ab43fa67653f1a8ee5) Thanks [@vicb](https://github.com/vicb)! - Set the target JS version to ES2024
+
+### Patch Changes
+
+- [#11472](https://github.com/cloudflare/workers-sdk/pull/11472) [`ce295bf`](https://github.com/cloudflare/workers-sdk/commit/ce295bffdc7a45494b6683ee5fef04dbfca54345) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: remove unnecessary step in qwik templates
+
+  The step that modifies the `src/entry.cloudflare-pages.tsx` file doesn't seem to change the file in any way anymore, so it's been removed
+
+- [#11483](https://github.com/cloudflare/workers-sdk/pull/11483) [`f550b62`](https://github.com/cloudflare/workers-sdk/commit/f550b62fd4fdd60c2600390754631d713140afd3) Thanks [@edmundhung](https://github.com/edmundhung)! - stop running `npm install` with `--legacy-peer-deps` flag when setting up a project
+
+## 2.57.1
+
+### Patch Changes
+
+- [#11507](https://github.com/cloudflare/workers-sdk/pull/11507) [`7b24eb0`](https://github.com/cloudflare/workers-sdk/commit/7b24eb0bfbc0adb5c56d634dac9156fa5b2d3701) Thanks [@jamesopstad](https://github.com/jamesopstad)! - fix: React Router configuration mismatch with v7.10.0
+
+## 2.57.0
+
+### Minor Changes
+
+- [#11478](https://github.com/cloudflare/workers-sdk/pull/11478) [`2aec2b4`](https://github.com/cloudflare/workers-sdk/commit/2aec2b4e0ef710ec7e3897f823eca38d22991662) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support SolidStart in autoconfig `--experimental` flow
+
+- [#11375](https://github.com/cloudflare/workers-sdk/pull/11375) [`9a1de61`](https://github.com/cloudflare/workers-sdk/commit/9a1de617412f610a332f2516f4d61bec12556919) Thanks [@penalosa](https://github.com/penalosa)! - Support TanStack Start in autoconfig `--experimental` flow
+
+- [#11330](https://github.com/cloudflare/workers-sdk/pull/11330) [`5a873bb`](https://github.com/cloudflare/workers-sdk/commit/5a873bbb0f018b02cf26a48da59c5389ef306589) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Angular in autoconfig `--experimental` flow
+
+### Patch Changes
+
+- [#11448](https://github.com/cloudflare/workers-sdk/pull/11448) [`2b4813b`](https://github.com/cloudflare/workers-sdk/commit/2b4813b18076817bb739491246313c32b403651f) Thanks [@edmundhung](https://github.com/edmundhung)! - Builds package with esbuild `v0.27.0`
+
+- [#11385](https://github.com/cloudflare/workers-sdk/pull/11385) [`e51aa7a`](https://github.com/cloudflare/workers-sdk/commit/e51aa7a5573d602c43762331fae8b4f1e75cfb20) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To     |
+  | ---------------------- | ------ | ------ |
+  | @tanstack/create-start | 0.36.2 | 0.37.2 |
+
+- [#11386](https://github.com/cloudflare/workers-sdk/pull/11386) [`8e8ab6f`](https://github.com/cloudflare/workers-sdk/commit/8e8ab6f2ce0cb3acf0545d72d86b3a5280b033a3) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.9.14 | 0.10.5 |
+
+- [#11473](https://github.com/cloudflare/workers-sdk/pull/11473) [`efac6c5`](https://github.com/cloudflare/workers-sdk/commit/efac6c58f9fadba777d584f20dfbea56ea9e772d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.18.2 | 3.18.3 |
+
+- [#11474](https://github.com/cloudflare/workers-sdk/pull/11474) [`b4dc50b`](https://github.com/cloudflare/workers-sdk/commit/b4dc50b1f761982dfcbbd4ec3432f114d7f84978) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.0.0 | 21.0.1 |
+
+- [#11475](https://github.com/cloudflare/workers-sdk/pull/11475) [`452a300`](https://github.com/cloudflare/workers-sdk/commit/452a3009c16d2838a15b784c31d749018987ca4f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To     |
+  | ---------------------- | ------ | ------ |
+  | @tanstack/create-start | 0.37.2 | 0.40.0 |
+
+- [#11478](https://github.com/cloudflare/workers-sdk/pull/11478) [`2aec2b4`](https://github.com/cloudflare/workers-sdk/commit/2aec2b4e0ef710ec7e3897f823eca38d22991662) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove unnecessary nitropack installation
+
+- [#11480](https://github.com/cloudflare/workers-sdk/pull/11480) [`86d1e25`](https://github.com/cloudflare/workers-sdk/commit/86d1e257a58a1c9d98879c2deafa90a23f989d81) Thanks [@Hypercookie](https://github.com/Hypercookie)! - fix typos in `hello-world-durable-object` templates
+
+- [#11330](https://github.com/cloudflare/workers-sdk/pull/11330) [`5a873bb`](https://github.com/cloudflare/workers-sdk/commit/5a873bbb0f018b02cf26a48da59c5389ef306589) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update the Angular starter to set a `preview` script instead of a `start` one
+
+## 2.56.0
+
+### Minor Changes
+
+- [#11221](https://github.com/cloudflare/workers-sdk/pull/11221) [`6701036`](https://github.com/cloudflare/workers-sdk/commit/67010366c5c2aeb20eb7d11262a8e8fd07b783c5) Thanks [@peterp](https://github.com/peterp)! - Add RedwoodSDK as a framework option
+
+- [#11345](https://github.com/cloudflare/workers-sdk/pull/11345) [`d524e55`](https://github.com/cloudflare/workers-sdk/commit/d524e5524cf701e33b367d33616db5430a126fa9) Thanks [@penalosa](https://github.com/penalosa)! - Enable experimental support for autoconfig-powered Astro projects
+
+### Patch Changes
+
+- [#11384](https://github.com/cloudflare/workers-sdk/pull/11384) [`f607ea4`](https://github.com/cloudflare/workers-sdk/commit/f607ea431e13738d4ef97125d2a53e901c8ccab1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From    | To     |
+  | --------------- | ------- | ------ |
+  | @angular/create | 20.3.10 | 21.0.0 |
+
+- [#11387](https://github.com/cloudflare/workers-sdk/pull/11387) [`03be5b8`](https://github.com/cloudflare/workers-sdk/commit/03be5b83d34954810b8be28d70640e71e5a647f5) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From            | To              |
+  | ----------- | --------------- | --------------- |
+  | create-waku | 0.12.5-0.27.0-0 | 0.12.5-0.27.1-0 |
+
+- [#11395](https://github.com/cloudflare/workers-sdk/pull/11395) [`e9d4db4`](https://github.com/cloudflare/workers-sdk/commit/e9d4db4bc422248c05b0d515c022c4fd3e40ebf5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix step 2 saying that the will be configured using `wrangler setup` when it is not
+
 ## 2.55.1
 
 ### Patch Changes

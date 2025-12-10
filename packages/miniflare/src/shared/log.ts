@@ -1,4 +1,4 @@
-import path from "path";
+import path from "node:path";
 import { Colorize, dim, green, grey, red, reset, yellow } from "kleur/colors";
 import { LogLevel } from "../workers";
 

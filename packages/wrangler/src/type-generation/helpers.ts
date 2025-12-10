@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync } from "node:fs";
 import { version } from "workerd";
 import { logger } from "../logger";
 import { generateEnvTypes } from ".";

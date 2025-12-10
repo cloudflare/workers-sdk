@@ -1,4 +1,4 @@
-import { spawn } from "child_process";
+import { spawn } from "node:child_process";
 import { UserError } from "./error";
 
 export async function dockerImageInspect(

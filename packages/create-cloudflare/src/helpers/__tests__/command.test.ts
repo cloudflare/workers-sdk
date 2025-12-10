@@ -1,10 +1,10 @@
-import { existsSync } from "fs";
+import { existsSync } from "node:fs";
 import { spawn } from "cross-spawn";
 import { readMetricsConfig } from "helpers/metrics-config";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import { quoteShellArgs, runCommand } from "../command";
-import type { ChildProcess } from "child_process";
+import type { ChildProcess } from "node:child_process";
 
 // We can change how the mock spawn works by setting these variables
 let spawnResultCode = 0;

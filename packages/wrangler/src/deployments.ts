@@ -1,4 +1,4 @@
-import { URLSearchParams } from "url";
+import { URLSearchParams } from "node:url";
 import {
 	configFileName,
 	mapWorkerMetadataBindings,

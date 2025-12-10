@@ -1,5 +1,39 @@
 # @cloudflare/workers-utils
 
+## 0.4.0
+
+### Minor Changes
+
+- [#10937](https://github.com/cloudflare/workers-sdk/pull/10937) [`9514c9a`](https://github.com/cloudflare/workers-sdk/commit/9514c9a0ed28fed349126384d1f646c9165be914) Thanks [@ReppCodes](https://github.com/ReppCodes)! - Add support for "targeted" placement mode with region, host, and hostname fields
+
+  This change adds a new mode to `placement` configuration. You can specify one of the following fields to target specific external resources for Worker placement:
+
+  - `region`: Specify a region identifier (e.g., "aws:us-east-1") to target a region from another cloud service provider
+  - `host`: Specify a host with (required) port (e.g., "example.com:8123") to target a TCP service
+  - `hostname`: Specify a hostname (e.g., "example.com") to target an HTTP resource
+
+  These fields are mutually exclusive - only one can be specified at a time.
+
+  Example configuration:
+
+  ```toml
+  [placement]
+  host = "example.com:8123"
+  ```
+
+## 0.3.0
+
+### Minor Changes
+
+- [#11349](https://github.com/cloudflare/workers-sdk/pull/11349) [`aa4a5f1`](https://github.com/cloudflare/workers-sdk/commit/aa4a5f112e22c2b1697cbc06eebb0aec362f3032) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Adds a new `test-helpers` entry-point to the workers-utils package
+
+- [#11228](https://github.com/cloudflare/workers-sdk/pull/11228) [`43903a3`](https://github.com/cloudflare/workers-sdk/commit/43903a38f00d2a0da1d19a9be1fc90a4e38454cf) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support `CLOUDFLARE_ENV` environment variable for selecting the active environment
+
+  This change enables users to select the environment for commands such as `CLOUDFLARE_ENV=prod wrangler versions upload`. The `--env` command line argument takes precedence.
+
+  The `CLOUDFLARE_ENV` environment variable is mostly used with the `@cloudflare/vite-plugin` to select the environment for building the Worker to be deployed. This build also generates a "redirected deploy config" that is flattened to only contain the active environment.
+  To avoid accidentally deploying a version that is built for one environment to a different environment, there is an additional check to ensure that if the user specifies an environment in Wrangler it matches the original selected environment from the build.
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,16 +1,15 @@
-import { writeFileSync } from "fs";
+import { writeFileSync } from "node:fs";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { getPackageManager } from "../../package-manager";
 import { runCommand } from "../c3-vendor/command";
 import { installPackages } from "../c3-vendor/packages";
 import { Framework } from ".";
-import type { ConfigurationOptions } from ".";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { ConfigurationOptions, ConfigurationResults } from ".";
 
 export class SvelteKit extends Framework {
-	name = "svelte-kit";
-
-	async configure({ dryRun }: ConfigurationOptions): Promise<RawConfig> {
+	async configure({
+		dryRun,
+	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const { dlx } = await getPackageManager();
 		if (!dryRun) {
 			await runCommand(
@@ -38,11 +37,13 @@ export class SvelteKit extends Framework {
 			});
 		}
 		return {
-			main: ".svelte-kit/cloudflare/_worker.js",
-			compatibility_flags: ["nodejs_als"],
-			assets: {
-				binding: "ASSETS",
-				directory: ".svelte-kit/cloudflare",
+			wranglerConfig: {
+				main: ".svelte-kit/cloudflare/_worker.js",
+				compatibility_flags: ["nodejs_als"],
+				assets: {
+					binding: "ASSETS",
+					directory: ".svelte-kit/cloudflare",
+				},
 			},
 		};
 	}

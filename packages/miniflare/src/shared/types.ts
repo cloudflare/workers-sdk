@@ -1,5 +1,5 @@
-import assert from "assert";
-import path from "path";
+import assert from "node:assert";
+import path from "node:path";
 import { ParseParams, z } from "zod";
 
 export function zAwaitable<T extends z.ZodTypeAny>(

@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "node:assert";
 import { parseStack } from "./callsite";
 import type { Options } from "@cspotcode/source-map-support";
 

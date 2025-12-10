@@ -39,7 +39,6 @@ export const dev = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: Array.isArray(args.config),
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			DEPLOY_REMOTE_DIFF_CHECK: false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 	},
@@ -261,7 +260,8 @@ export const dev = createCommand({
 			alias: ["x-tail-logs"],
 			describe:
 				"Experimental: Get runtime logs for the remote worker via Workers Tails rather than the Devtools inspector",
-			default: false,
+			default: true,
+			hidden: true,
 		},
 	},
 	async validateArgs(args) {

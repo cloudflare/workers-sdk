@@ -1,6 +1,6 @@
-import http from "http";
-import { AddressInfo } from "net";
-import { URL } from "url";
+import http from "node:http";
+import { AddressInfo } from "node:net";
+import { URL } from "node:url";
 import { ExecutionContext } from "ava";
 import stoppable from "stoppable";
 import NodeWebSocket, { WebSocketServer } from "ws";

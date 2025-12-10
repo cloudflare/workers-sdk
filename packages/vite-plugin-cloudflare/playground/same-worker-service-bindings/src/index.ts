@@ -11,7 +11,7 @@ export class NamedEntrypoint extends WorkerEntrypoint {
 }
 
 export default {
-	async fetch(request, env) {
+	async fetch(_, env) {
 		const result = await env.NAMED_ENTRYPOINT.multiply(4, 5);
 		return Response.json({ result });
 	},

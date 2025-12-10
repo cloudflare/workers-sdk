@@ -1,6 +1,5 @@
 {
 	"name": "static-mpa",
-	"compatibility_date": "2024-12-30",
 	"assets": {
 		"html_handling": "auto-trailing-slash",
 		"not_found_handling": "404-page",

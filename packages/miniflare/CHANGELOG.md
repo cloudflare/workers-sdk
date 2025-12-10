@@ -1,5 +1,77 @@
 # miniflare
 
+## 4.20251202.1
+
+### Patch Changes
+
+- [#11443](https://github.com/cloudflare/workers-sdk/pull/11443) [`56e78c8`](https://github.com/cloudflare/workers-sdk/commit/56e78c8a5c02756f0d2b62ef80ad7d1a8045422c) Thanks [@Ltadrian](https://github.com/Ltadrian)! - Improve local Hyperdrive binding latency on Windows.
+
+## 4.20251202.0
+
+### Patch Changes
+
+- [#11495](https://github.com/cloudflare/workers-sdk/pull/11495) [`59534ba`](https://github.com/cloudflare/workers-sdk/commit/59534baa89d893e2d7b4656e365a215425094f00) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251128.0 | 1.20251202.0 |
+
+## 4.20251128.0
+
+### Patch Changes
+
+- [#11448](https://github.com/cloudflare/workers-sdk/pull/11448) [`2b4813b`](https://github.com/cloudflare/workers-sdk/commit/2b4813b18076817bb739491246313c32b403651f) Thanks [@edmundhung](https://github.com/edmundhung)! - Builds package with esbuild `v0.27.0`
+
+- [#11419](https://github.com/cloudflare/workers-sdk/pull/11419) [`5ee3780`](https://github.com/cloudflare/workers-sdk/commit/5ee3780448935a24974e29a3b3837b639157e959) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251125.0 | 1.20251126.0 |
+
+- [#11444](https://github.com/cloudflare/workers-sdk/pull/11444) [`6e63b57`](https://github.com/cloudflare/workers-sdk/commit/6e63b57c699d56f29c2acf810b2c81baf88c0330) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251126.0 | 1.20251127.0 |
+
+- [#11457](https://github.com/cloudflare/workers-sdk/pull/11457) [`71ab562`](https://github.com/cloudflare/workers-sdk/commit/71ab562f4ba9f8ddc443dc33c486a48fc694e74e) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251127.0 | 1.20251128.0 |
+
+- [#11391](https://github.com/cloudflare/workers-sdk/pull/11391) [`5e937c1`](https://github.com/cloudflare/workers-sdk/commit/5e937c181d3189216b6e9fb47ba0776828236c91) Thanks [@pmiguel](https://github.com/pmiguel)! - Set minimum KV Cache TTL in Miniflare to 30 seconds
+
+## 4.20251125.0
+
+### Patch Changes
+
+- [#11376](https://github.com/cloudflare/workers-sdk/pull/11376) [`69f4dc3`](https://github.com/cloudflare/workers-sdk/commit/69f4dc30496406b0c40f946ee8ace28d94667097) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251118.0 | 1.20251121.0 |
+
+- [#11396](https://github.com/cloudflare/workers-sdk/pull/11396) [`1133c4d`](https://github.com/cloudflare/workers-sdk/commit/1133c4db5fc4703a2ad416fdcb3a086f498cbbc6) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251121.0 | 1.20251125.0 |
+
+- [#11348](https://github.com/cloudflare/workers-sdk/pull/11348) [`4d61fae`](https://github.com/cloudflare/workers-sdk/commit/4d61faed1c0c5cb0f7a7f085d31c3dca9a83c802) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add resilience to reading and writing the dev registry files
+
 ## 4.20251118.1
 
 ### Minor Changes

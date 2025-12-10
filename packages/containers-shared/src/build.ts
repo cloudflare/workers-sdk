@@ -1,16 +1,16 @@
-import { spawn } from "child_process";
-import { readFileSync } from "fs";
+import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { UserError } from "./error";
 import type {
 	BuildArgs,
 	ContainerDevOptions,
 	ImageURIConfig,
-	Logger,
+	WranglerLogger,
 } from "./types";
 
 export async function constructBuildCommand(
 	options: BuildArgs,
-	logger?: Logger
+	logger?: WranglerLogger
 ) {
 	const platform = options.platform ?? "linux/amd64";
 	const buildCmd = [

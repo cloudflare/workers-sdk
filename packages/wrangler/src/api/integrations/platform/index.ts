@@ -19,14 +19,16 @@ import { dedent } from "../../../utils/dedent";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
-import type { AssetsOptions } from "../../../assets";
-import type { RemoteProxySession } from "../../remoteBindings";
-import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
+// TODO: import from `@cloudflare/workers-utils` after migrating to `tsdown`
+// This is a temporary fix to ensure that the types are included in the build output
 import type {
 	Config,
 	RawConfig,
 	RawEnvironment,
-} from "@cloudflare/workers-utils";
+} from "../../../../../workers-utils/src";
+import type { AssetsOptions } from "../../../assets";
+import type { RemoteProxySession } from "../../remoteBindings";
+import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	MiniflareOptions,
 	ModuleRule,
@@ -37,6 +39,8 @@ import type {
 export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
 export { readConfig as unstable_readConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
+export { getDevCompatibilityDate as unstable_getDevCompatibilityDate } from "../../../utils/compatibility-date";
+export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
 export type {
 	Config as Unstable_Config,
 	RawConfig as Unstable_RawConfig,

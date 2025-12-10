@@ -1,5 +1,11 @@
 # @cloudflare/workflows-shared
 
+## 0.3.9
+
+### Patch Changes
+
+- [#11448](https://github.com/cloudflare/workers-sdk/pull/11448) [`2b4813b`](https://github.com/cloudflare/workers-sdk/commit/2b4813b18076817bb739491246313c32b403651f) Thanks [@edmundhung](https://github.com/edmundhung)! - Builds package with esbuild `v0.27.0`
+
 ## 0.3.8
 
 ### Patch Changes

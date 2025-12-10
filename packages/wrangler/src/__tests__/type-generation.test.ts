@@ -1,4 +1,13 @@
-import * as fs from "fs";
+import * as fs from "node:fs";
+import {
+	afterAll,
+	beforeAll,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 import {
 	constructTSModuleGlob,
 	constructTypeKey,

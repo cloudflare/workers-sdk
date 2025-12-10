@@ -3,8 +3,12 @@ import { writeFileSync } from "node:fs";
 import readline from "node:readline";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
-import { vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../secret";
+import {
+	WORKER_NOT_FOUND_ERR_CODE,
+	workerNotFoundErrorMessage,
+} from "../utils/worker-not-found-error";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
@@ -53,8 +57,8 @@ function mockNoWorkerFound(isBulk = false) {
 					return HttpResponse.json(
 						createFetchResult(null, false, [
 							{
-								code: 10007,
-								message: "This Worker does not exist on your account.",
+								code: WORKER_NOT_FOUND_ERR_CODE,
+								message: workerNotFoundErrorMessage,
 							},
 						])
 					);
@@ -70,8 +74,8 @@ function mockNoWorkerFound(isBulk = false) {
 					return HttpResponse.json(
 						createFetchResult(null, false, [
 							{
-								code: 10007,
-								message: "This Worker does not exist on your account.",
+								code: WORKER_NOT_FOUND_ERR_CODE,
+								message: workerNotFoundErrorMessage,
 							},
 						])
 					);

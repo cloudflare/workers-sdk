@@ -1,8 +1,5 @@
 import { page, viteTestUrl } from "./index";
 
-/** Common options to use with `vi.waitFor()` */
-export const WAIT_FOR_OPTIONS = { timeout: 5_000, interval: 500 };
-
 export async function getTextResponse(path = "/"): Promise<string> {
 	const response = await getResponse(path);
 	return response.text();

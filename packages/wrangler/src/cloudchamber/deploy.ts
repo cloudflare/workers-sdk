@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "node:assert";
 import { getDockerPath, UserError } from "@cloudflare/workers-utils";
 import { containersScope } from "../containers";
 import { apply } from "../containers/deploy";

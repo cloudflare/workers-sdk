@@ -6,6 +6,12 @@ import wasm from "./modules/wasm-example.wasm";
 import init from "./modules/wasm-example.wasm?init";
 import wasmWithModuleParam from "./modules/wasm-example.wasm?module";
 
+interface Instance {
+	exports: {
+		add(a: number, b: number): number;
+	};
+}
+
 export default {
 	async fetch(request) {
 		const url = new URL(request.url);
@@ -28,19 +34,21 @@ export default {
 				});
 			}
 			case "/wasm": {
-				const instance = await WebAssembly.instantiate(wasm);
+				const instance = (await WebAssembly.instantiate(wasm)) as Instance;
 				const result = instance.exports.add(3, 4);
 
 				return Response.json({ result });
 			}
 			case "/wasm-with-module-param": {
-				const instance = await WebAssembly.instantiate(wasmWithModuleParam);
+				const instance = (await WebAssembly.instantiate(
+					wasmWithModuleParam
+				)) as Instance;
 				const result = instance.exports.add(5, 6);
 
 				return Response.json({ result });
 			}
 			case "/wasm-with-init-param": {
-				const instance = await init();
+				const instance = (await init()) as Instance;
 				const result = instance.exports.add(7, 8);
 
 				return Response.json({ result });

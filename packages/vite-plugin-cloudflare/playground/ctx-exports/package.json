@@ -5,7 +5,7 @@
 	"scripts": {
 		"build": "vite build",
 		"cf-typegen": "wrangler types --no-include-runtime",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"preview": "vite preview"
 	},

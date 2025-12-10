@@ -1,0 +1,15 @@
+{
+	"name": "main-worker",
+	"main": "./index.ts",
+	"compatibility_date": "2025-11-01",
+	"compatibility_flags": ["enable_ctx_exports"],
+	"vars": {
+		"NAME": "MainWorker",
+	},
+	"services": [
+		{
+			"binding": "AUXILIARY_WORKER",
+			"service": "auxiliary-worker",
+		},
+	],
+}

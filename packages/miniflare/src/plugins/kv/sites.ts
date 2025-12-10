@@ -1,6 +1,6 @@
-import assert from "assert";
-import fs from "fs/promises";
-import path from "path";
+import assert from "node:assert";
+import fs from "node:fs/promises";
+import path from "node:path";
 import SCRIPT_KV_SITES from "worker:kv/sites";
 import { Service, Worker_Binding } from "../../runtime";
 import { globsToRegExps } from "../../shared";

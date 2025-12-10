@@ -1,6 +1,6 @@
-import assert from "assert";
-import { writeFile } from "fs/promises";
-import path from "path";
+import assert from "node:assert";
+import { writeFile } from "node:fs/promises";
+import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
 import { getPackageManager } from "../../package-manager";
@@ -70,22 +70,10 @@ export const installPackages = async (
 			break;
 	}
 
-	await runCommand(
-		[
-			type,
-			cmd,
-			...(saveFlag ? [saveFlag] : []),
-			...packages,
-			// Add --legacy-peer-deps so that installing Wrangler v4 doesn't case issues with
-			// frameworks that haven't updated their peer dependency for Wrangler v4
-			// TODO: Remove this once Wrangler v4 has been released and framework templates are updated
-			...(type === "npm" ? ["--legacy-peer-deps"] : []),
-		],
-		{
-			...config,
-			silent: true,
-		}
-	);
+	await runCommand([type, cmd, ...(saveFlag ? [saveFlag] : []), ...packages], {
+		...config,
+		silent: true,
+	});
 
 	if (type === "npm") {
 		// Npm install will update the package.json with a caret-range rather than the exact version/range we asked for.

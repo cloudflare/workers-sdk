@@ -1,7 +1,7 @@
-import assert from "assert";
-import { existsSync } from "fs";
+import assert from "node:assert";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { setTimeout } from "node:timers/promises";
-import { join } from "path";
 import getPort from "get-port";
 import { runCommand } from "helpers/command";
 import {
@@ -29,7 +29,7 @@ import { runC3 } from "./run-c3";
 import { kill, spawnWithLogging } from "./spawn";
 import type { TemplateConfig } from "../../src/templates";
 import type { RunnerConfig } from "./run-c3";
-import type { Writable } from "stream";
+import type { Writable } from "node:stream";
 
 export type FrameworkTestConfig = RunnerConfig & {
 	testCommitMessage: boolean;
@@ -256,6 +256,11 @@ export async function verifyPreviewScript(
 		"Expected a preview script is we are verifying the preview in " +
 			projectPath,
 	);
+	if (verifyPreview.build) {
+		await runCommand([packageManager.name, "run", "build"], {
+			cwd: projectPath,
+		});
+	}
 
 	// Run the dev-server on random ports to avoid colliding with other tests
 	const port = await getPort();
@@ -348,6 +353,43 @@ export async function verifyTypes(
 	if (nodeCompat) {
 		expect(tsconfigTypes).toContain(`node`);
 	}
+}
+
+export async function verifyCloudflareVitePluginConfigured(
+	{ verifyCloudflareVitePluginConfigured: verify }: FrameworkTestConfig,
+	projectPath: string,
+) {
+	if (!verify) {
+		return;
+	}
+
+	const viteConfigTsPAth = join(projectPath, `vite.config.ts`);
+	const viteConfigJsPath = join(projectPath, `vite.config.js`);
+
+	let viteConfigPath: string;
+
+	if (existsSync(viteConfigTsPAth)) {
+		viteConfigPath = viteConfigTsPAth;
+	} else if (existsSync(viteConfigJsPath)) {
+		viteConfigPath = viteConfigJsPath;
+	} else {
+		throw new Error("Could not find Vite config file to modify");
+	}
+
+	const prePackageJson = JSON.parse(
+		readFile(join(projectPath, "package.json")),
+	) as { devDependencies: Record<string, string> };
+
+	expect(
+		prePackageJson.devDependencies?.["@cloudflare/vite-plugin"],
+	).not.toBeUndefined();
+
+	const viteConfig = readFile(viteConfigPath);
+
+	expect(viteConfig).toContain(
+		'import { cloudflare } from "@cloudflare/vite-plugin"',
+	);
+	expect(viteConfig).toMatch(/plugins:\s*?\[.*?cloudflare.*?]/);
 }
 
 export function shouldRunTest(testConfig: FrameworkTestConfig) {

@@ -1,5 +1,5 @@
-import { readdirSync } from "fs";
-import { resolve } from "path";
+import { readdirSync } from "node:fs";
+import { resolve } from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { getLatestPackageVersion } from "./packages";

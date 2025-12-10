@@ -1,5 +1,5 @@
 import "cloudflare/shims/web";
-import process from "process";
+import process from "node:process";
 import { FatalError } from "@cloudflare/workers-utils";
 import { hideBin } from "yargs/helpers";
 import {
@@ -60,6 +60,7 @@ const generateASSETSBinding: (
 export { generateASSETSBinding as unstable_generateASSETSBinding };
 
 export {
+	defaultWranglerConfig as unstable_defaultWranglerConfig,
 	experimental_readRawConfig,
 	type ConfigBindingOptions as Experimental_ConfigBindingOptions,
 } from "@cloudflare/workers-utils";

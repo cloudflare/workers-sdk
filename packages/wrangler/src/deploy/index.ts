@@ -27,6 +27,7 @@ import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import deploy from "./deploy";
+import type { AutoConfigSummary } from "../autoconfig/types";
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -229,13 +230,6 @@ export const deployCommand = createCommand({
 				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. ",
 			choices: ["immediate", "gradual"] as const,
 		},
-		"experimental-deploy-remote-diff-check": {
-			describe: "Experimental: Enable The Deployment Remote Diff check",
-			type: "boolean",
-			hidden: true,
-			default: true,
-			alias: ["x-remote-diff-check"],
-		},
 		strict: {
 			describe:
 				"Enables strict mode for the deploy command, this prevents deployments to occur when there are even small potential risks.",
@@ -255,7 +249,6 @@ export const deployCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			DEPLOY_REMOTE_DIFF_CHECK: args.experimentalDeployRemoteDiffCheck ?? false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
@@ -285,6 +278,8 @@ export const deployCommand = createCommand({
 			!args.script &&
 			!args.assets;
 
+		let autoConfigSummary: AutoConfigSummary | undefined;
+
 		if (shouldRunAutoConfig) {
 			const details = await getDetailsForAutoConfig({
 				wranglerConfig: config,
@@ -292,7 +287,7 @@ export const deployCommand = createCommand({
 
 			// Only run auto config if the project is not already configured
 			if (!details.configured) {
-				await runAutoConfig(details);
+				autoConfigSummary = await runAutoConfig(details);
 
 				// If autoconfig worked, there should now be a new config file, and so we need to read config again
 				config = readConfig(args, {
@@ -433,6 +428,7 @@ export const deployCommand = createCommand({
 			targets,
 			wrangler_environment: args.env,
 			worker_name_overridden: workerNameOverridden,
+			autoconfig_summary: autoConfigSummary,
 		});
 
 		metrics.sendMetricsEvent(

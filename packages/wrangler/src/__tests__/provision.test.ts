@@ -1,6 +1,7 @@
 import { rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { http, HttpResponse } from "msw";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockPrompt, mockSelect } from "./helpers/mock-dialogs";
@@ -26,6 +27,10 @@ import {
 	writeWranglerConfig,
 } from "./helpers/write-wrangler-config";
 import type { DatabaseInfo } from "../d1/types";
+
+vi.mock("../utils/fetch-secrets", () => ({
+	fetchSecrets: async () => [],
+}));
 
 describe("resource provisioning", () => {
 	const std = mockConsoleMethods();

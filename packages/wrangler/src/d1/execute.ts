@@ -1,5 +1,5 @@
-import { createReadStream, promises as fs } from "fs";
 import assert from "node:assert";
+import { createReadStream, promises as fs } from "node:fs";
 import path from "node:path";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
 import {
@@ -46,6 +46,8 @@ export const d1ExecuteCommand = createCommand({
 		description: "Execute a command or SQL file",
 		status: "stable",
 		owner: "Product: D1",
+		epilogue:
+			"You must provide either --command or --file for this command to run successfully.",
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
@@ -56,6 +58,15 @@ export const d1ExecuteCommand = createCommand({
 			type: "string",
 			demandOption: true,
 			description: "The name or binding of the DB",
+		},
+		command: {
+			type: "string",
+			description:
+				"The SQL query you wish to execute, or multiple queries separated by ';'",
+		},
+		file: {
+			type: "string",
+			description: "A .sql file to ingest",
 		},
 		yes: {
 			type: "boolean",
@@ -70,20 +81,12 @@ export const d1ExecuteCommand = createCommand({
 		remote: {
 			type: "boolean",
 			description:
-				"Execute commands/files against a remote DB for use with wrangler dev",
-		},
-		file: {
-			type: "string",
-			description: "A .sql file to ingest",
-		},
-		command: {
-			type: "string",
-			description: "A single SQL statement to execute",
+				"Execute commands/files against a remote D1 database for use with remote bindings or your deployed Worker",
 		},
 		"persist-to": {
 			type: "string",
 			description:
-				"Specify directory to use for local persistence (for --local)",
+				"Specify directory to use for local persistence (for use with --local)",
 			requiresArg: true,
 		},
 		json: {
@@ -93,7 +96,7 @@ export const d1ExecuteCommand = createCommand({
 		},
 		preview: {
 			type: "boolean",
-			description: "Execute commands/files against a preview D1 DB",
+			description: "Execute commands/files against a preview D1 database",
 			default: false,
 		},
 	},
@@ -620,14 +623,17 @@ function shorten(query: string | undefined, length: number) {
 
 async function checkForSQLiteBinary(filename: string) {
 	const buffer = Buffer.alloc(15);
+	let fd: fs.FileHandle | undefined;
 
 	try {
-		const fd = await fs.open(filename, "r");
+		fd = await fs.open(filename, "r");
 		await fd.read(buffer, 0, 15);
 	} catch {
 		throw new UserError(
 			`Unable to read SQL text file "${filename}". Please check the file path and try again.`
 		);
+	} finally {
+		await fd?.close();
 	}
 
 	if (buffer.toString("utf8") === "SQLite format 3") {

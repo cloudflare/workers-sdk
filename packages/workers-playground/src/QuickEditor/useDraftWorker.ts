@@ -13,6 +13,7 @@ export const DeployPlaygroundWorkerResponse = eg.union([
 	eg.object({
 		inspector: eg.string,
 		preview: eg.string,
+		tail: eg.string,
 	}),
 	eg.object({
 		error: eg.string,
@@ -160,9 +161,7 @@ async function updatePreviewHash(content: Worker): Promise<PreviewHash> {
 		previewUrl: `https://${v4()}.${
 			import.meta.env.VITE_PLAYGROUND_PREVIEW
 		}/.update-preview-token?token=${encodeURIComponent(deploy.preview)}`,
-		devtoolsUrl: `wss://${import.meta.env.VITE_PLAYGROUND_ROOT}${
-			deploy.inspector
-		}`,
+		devtoolsUrl: deploy.tail,
 		serialised: serialised,
 	};
 }

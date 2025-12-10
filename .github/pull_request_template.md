@@ -10,7 +10,7 @@ The following selections do not need to be completed if this PR only contains ch
 -->
 
 - Tests
-  - [ ] Tests included
+  - [ ] Tests included/updated
   - [ ] Tests not necessary because:
 - Public documentation
   - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
@@ -18,6 +18,8 @@ The following selections do not need to be completed if this PR only contains ch
 - Wrangler V3 Backport
   - [ ] Wrangler PR: <!--e.g. <https://github.com/cloudflare/workers-sdk/pull/>...-->
   - [ ] Not necessary because: <!--e.g. not a patch change, not a Wrangler change...-->
+
+*A picture of a cute animal (not mandatory, but encouraged)*
 
 <!--
 Have you read our [Contributing guide](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md)?

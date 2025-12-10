@@ -1006,10 +1006,9 @@ export function createCLIParser(argv: string[]) {
 	// D1 commands are registered using the CommandRegistry
 	registry.define([
 		{ command: "wrangler d1", definition: d1Namespace },
-		{ command: "wrangler d1 list", definition: d1ListCommand },
-		{ command: "wrangler d1 info", definition: d1InfoCommand },
-		{ command: "wrangler d1 insights", definition: d1InsightsCommand },
 		{ command: "wrangler d1 create", definition: d1CreateCommand },
+		{ command: "wrangler d1 info", definition: d1InfoCommand },
+		{ command: "wrangler d1 list", definition: d1ListCommand },
 		{ command: "wrangler d1 delete", definition: d1DeleteCommand },
 		{ command: "wrangler d1 execute", definition: d1ExecuteCommand },
 		{ command: "wrangler d1 export", definition: d1ExportCommand },
@@ -1024,17 +1023,18 @@ export function createCLIParser(argv: string[]) {
 		},
 		{ command: "wrangler d1 migrations", definition: d1MigrationsNamespace },
 		{
-			command: "wrangler d1 migrations list",
-			definition: d1MigrationsListCommand,
-		},
-		{
 			command: "wrangler d1 migrations create",
 			definition: d1MigrationsCreateCommand,
+		},
+		{
+			command: "wrangler d1 migrations list",
+			definition: d1MigrationsListCommand,
 		},
 		{
 			command: "wrangler d1 migrations apply",
 			definition: d1MigrationsApplyCommand,
 		},
+		{ command: "wrangler d1 insights", definition: d1InsightsCommand },
 	]);
 	registry.registerNamespace("d1");
 

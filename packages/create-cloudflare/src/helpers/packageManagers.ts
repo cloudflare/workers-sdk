@@ -1,5 +1,5 @@
-import { existsSync, rmSync } from "fs";
-import path from "path";
+import { existsSync, rmSync } from "node:fs";
+import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import semver from "semver";
 import whichPmRuns from "which-pm-runs";

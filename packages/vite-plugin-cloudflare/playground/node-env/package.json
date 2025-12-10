@@ -5,14 +5,14 @@
 	"scripts": {
 		"build": "vite build",
 		"build:nodejs-compat": "vite build -c vite.config.nodejs-compat.ts",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"dev:nodejs-compat": "vite dev -c vite.config.nodejs-compat.ts",
 		"preview": "vite preview"
 	},
 	"dependencies": {
-		"react": "^19.1.0",
-		"react-dom": "^19.1.0"
+		"react": "^19.2.1",
+		"react-dom": "^19.2.1"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",

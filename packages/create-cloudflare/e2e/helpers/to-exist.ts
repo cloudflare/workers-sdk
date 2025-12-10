@@ -1,4 +1,4 @@
-import { existsSync } from "fs";
+import { existsSync } from "node:fs";
 import { expect } from "vitest";
 
 declare module "vitest" {

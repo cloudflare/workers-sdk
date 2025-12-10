@@ -1,6 +1,6 @@
-import { existsSync } from "fs";
-import { cp } from "fs/promises";
-import { join } from "path";
+import { existsSync } from "node:fs";
+import { cp } from "node:fs/promises";
+import { join } from "node:path";
 import { beforeAll, describe, expect } from "vitest";
 import { deleteProject, deleteWorker } from "../../../scripts/common";
 import {
@@ -16,6 +16,7 @@ import {
 	runC3ForFrameworkTest,
 	shouldRunTest,
 	testGitCommitMessage,
+	verifyCloudflareVitePluginConfigured,
 	verifyDeployment,
 	verifyDevScript,
 	verifyPreviewScript,
@@ -150,6 +151,11 @@ describe
 						);
 
 						await verifyTypes(testConfig, frameworkConfig, project.path);
+
+						await verifyCloudflareVitePluginConfigured(
+							testConfig,
+							project.path,
+						);
 					} catch (e) {
 						expect.fail(
 							"Failed due to an exception while running C3. See logs for more details. Error: " +

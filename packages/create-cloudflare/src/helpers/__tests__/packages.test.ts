@@ -34,7 +34,7 @@ describe("Package Helpers", () => {
 			await npmInstall(createTestContext());
 
 			expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
-				["npm", "install", "--legacy-peer-deps"],
+				["npm", "install"],
 				expect.anything(),
 			);
 		});
@@ -58,11 +58,7 @@ describe("Package Helpers", () => {
 		};
 
 		const cases: TestCase[] = [
-			{
-				pm: "npm",
-				initialArgs: ["npm", "install"],
-				additionalArgs: ["--legacy-peer-deps"],
-			},
+			{ pm: "npm", initialArgs: ["npm", "install"] },
 			{ pm: "pnpm", initialArgs: ["pnpm", "install"] },
 			{ pm: "bun", initialArgs: ["bun", "add"] },
 			{ pm: "yarn", initialArgs: ["yarn", "add"] },
@@ -107,11 +103,7 @@ describe("Package Helpers", () => {
 		);
 
 		const devCases: TestCase[] = [
-			{
-				pm: "npm",
-				initialArgs: ["npm", "install", "--save-dev"],
-				additionalArgs: ["--legacy-peer-deps"],
-			},
+			{ pm: "npm", initialArgs: ["npm", "install", "--save-dev"] },
 			{ pm: "pnpm", initialArgs: ["pnpm", "install", "--save-dev"] },
 			{ pm: "bun", initialArgs: ["bun", "add", "-d"] },
 			{ pm: "yarn", initialArgs: ["yarn", "add", "-D"] },
@@ -165,7 +157,7 @@ describe("Package Helpers", () => {
 		await installWrangler();
 
 		expect(vi.mocked(runCommand)).toHaveBeenCalledWith(
-			["npm", "install", "--save-dev", "wrangler@latest", "--legacy-peer-deps"],
+			["npm", "install", "--save-dev", "wrangler@latest"],
 			expect.anything(),
 		);
 	});

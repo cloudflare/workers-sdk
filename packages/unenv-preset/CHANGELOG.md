@@ -1,5 +1,27 @@
 # @cloudflare/unenv-preset
 
+## 2.7.13
+
+### Patch Changes
+
+- [#10606](https://github.com/cloudflare/workers-sdk/pull/10606) [`819e287`](https://github.com/cloudflare/workers-sdk/commit/819e287c1a471c3681112fe333e5692f3c386571) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use workerd `node:console` when it is available
+
+  It is enabled when the `enable_nodejs_console_module` compatibility flag is set.
+  This flag defaults to true when `nodejs_compat` is turned on and the date is >= 2025-09-21.
+
+- [#10621](https://github.com/cloudflare/workers-sdk/pull/10621) [`0aa959a`](https://github.com/cloudflare/workers-sdk/commit/0aa959ac6fa294a18af10c1905e9494715556d45) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use native node:vm module when available
+
+  It is enabled starting on 2025-10-01 or when the `enable_nodejs_vm_module` compatibility flag is set.
+
+## 2.7.12
+
+### Patch Changes
+
+- [#11397](https://github.com/cloudflare/workers-sdk/pull/11397) [`b154de2`](https://github.com/cloudflare/workers-sdk/commit/b154de2ffa93bf8eb448ae83a50e8bf3f8250398) Thanks [@vicb](https://github.com/vicb)! - Use more workerd native modules
+
+  Node modules `punycode`, `trace_events`, `cluster`, `wasi`, and `domains` will be used when enabled
+  via a compatibility flag or by default when the compatibility date is greater or equal to 2025-12-04.
+
 ## 2.7.11
 
 ### Patch Changes

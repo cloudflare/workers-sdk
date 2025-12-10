@@ -6,7 +6,8 @@
 		"types": ["@cloudflare/workers-types"],
 		"module": "es2022",
 		"moduleResolution": "bundler",
-		"skipLibCheck": true
+		"skipLibCheck": true,
+		"noEmit": true
 	},
 	"exclude": ["dist", "node_modules"]
 }

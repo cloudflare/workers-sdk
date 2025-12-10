@@ -1,7 +1,7 @@
 import { ParseError } from "@cloudflare/workers-utils";
 import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { FormData } from "undici";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import * as checkCommands from "../check/commands";
 import { logger } from "../logger";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";

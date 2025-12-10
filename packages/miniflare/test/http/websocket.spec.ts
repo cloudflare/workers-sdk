@@ -1,7 +1,7 @@
-import assert from "assert";
-import http from "http";
-import { AddressInfo } from "net";
-import { setImmediate } from "timers/promises";
+import assert from "node:assert";
+import http from "node:http";
+import { AddressInfo } from "node:net";
+import { setImmediate } from "node:timers/promises";
 import test from "ava";
 import { expectTypeOf } from "expect-type";
 import {

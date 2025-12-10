@@ -1,7 +1,8 @@
-import path from "path";
+import path from "node:path";
 import { defaultWranglerConfig } from "@cloudflare/workers-utils";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import dedent from "ts-dedent";
+import { describe, expect, it } from "vitest";
 import { getEntry } from "../deployment-bundle/entry";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";

@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import path, { dirname } from "node:path";
 import {
-	getAndValidateRegistryType,
 	InstanceType,
 	isDockerfile,
 	resolveImageName,
@@ -118,6 +117,8 @@ export const getNormalizedContainerOptions = async (
 					config.observability?.logs?.enabled ??
 					config.observability?.enabled === true,
 			},
+			wrangler_ssh: container.wrangler_ssh,
+			authorized_keys: container.authorized_keys,
 		};
 
 		let instanceTypeOrLimits: InstanceTypeOrLimits;
@@ -173,7 +174,6 @@ export const getNormalizedContainerOptions = async (
 				image_vars: container.image_vars,
 			});
 		} else {
-			getAndValidateRegistryType(container.image);
 			normalizedContainers.push({
 				...shared,
 				...instanceTypeOrLimits,
