@@ -469,7 +469,6 @@ async function buildProjectWorkerOptions(
 
 	// Build wrappers for entrypoints and Durable Objects defined in this worker
 	runnerWorker.durableObjects ??= {};
-	// Sort for deterministic output to minimise `Miniflare` restarts
 	const durableObjectClassNames = getDurableObjectClasses(runnerWorker);
 
 	const workflowClassNames = getWorkflowClasses(
@@ -540,9 +539,10 @@ async function buildProjectWorkerOptions(
 		wrappers.push(wrapper);
 	}
 
-	// Make sure we define the `RunnerObject` Durable Object
+	// Make sure we define the `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__` Durable Object,
+	// which is the singleton host for running tests.
 	runnerWorker.durableObjects[RUNNER_OBJECT_BINDING] = {
-		className: "RunnerObject",
+		className: "__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__",
 		// Make the runner object ephemeral, so it doesn't write any `.sqlite` files
 		// that would disrupt stacked storage because we prevent eviction
 		unsafeUniqueKey: kUnsafeEphemeralUniqueKey,

@@ -15,7 +15,7 @@ import { patchAndRunWithHandlerContext } from "./patch-ctx";
 /**
  * Internal method for importing a module using Vite's transformation and
  * execution pipeline. Can be called from any I/O context, and will ensure the
- * request is run from within the `RunnerObject`.
+ * request is run from within the `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__`.
  */
 function importModule(
 	env: Env,
