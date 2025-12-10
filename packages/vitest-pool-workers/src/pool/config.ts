@@ -12,7 +12,7 @@ import { z } from "zod";
 import { getProjectPath, getRelativeProjectPath } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
-import type { WorkspaceProject } from "vitest/node";
+import type { TestProject, WorkspaceProject } from "vitest/node";
 import type { Binding, RemoteProxySession } from "wrangler";
 import type { ParseParams, ZodError } from "zod";
 
@@ -340,7 +340,8 @@ async function parseCustomPoolOptions(
 }
 
 export async function parseProjectOptions(
-	project: WorkspaceProject
+	project: TestProject,
+	poolOptions: unknown
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Make sure the user hasn't specified a custom environment. This was how
 	// users enabled Miniflare 2's Vitest environment, so it's likely users will
@@ -368,19 +369,8 @@ export async function parseProjectOptions(
 	const projectPath = getProjectPath(project);
 	const rootPath =
 		typeof projectPath === "string" ? path.dirname(projectPath) : "";
-	const poolOptions = project.config.poolOptions;
-	let workersPoolOptions = poolOptions?.workers ?? {};
 	try {
-		if (typeof workersPoolOptions === "function") {
-			// https://github.com/vitest-dev/vitest/blob/v2.1.1/packages/vitest/src/integrations/inject.ts
-			const inject = <K extends keyof ProvidedContext>(
-				key: K
-			): ProvidedContext[K] => {
-				return project.getProvidedContext()[key];
-			};
-			workersPoolOptions = await workersPoolOptions({ inject });
-		}
-		return await parseCustomPoolOptions(rootPath, workersPoolOptions, {
+		return await parseCustomPoolOptions(rootPath, poolOptions, {
 			path: OPTIONS_PATH_ARRAY,
 		});
 	} catch (e) {
@@ -389,9 +379,7 @@ export async function parseProjectOptions(
 		}
 		let formatted: string;
 		try {
-			formatted = formatZodError(e, {
-				test: { poolOptions: { workers: workersPoolOptions } },
-			});
+			formatted = formatZodError(e, poolOptions);
 		} catch {
 			throw e;
 		}

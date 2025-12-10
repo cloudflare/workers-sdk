@@ -23,7 +23,9 @@ export default defineConfig([
 	},
 	worker("asset-worker"),
 	worker("router-worker"),
-	worker("runner-worker", { noExternal: ["vite/module-runner"] }),
+	worker("runner-worker", {
+		noExternal: ["vite/module-runner", "vitest/worker"],
+	}),
 	worker("vite-proxy-worker"),
 ]);
 

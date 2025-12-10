@@ -637,6 +637,7 @@ class ViteMiniflareLogger extends Log {
 	}
 
 	override logWithLevel(level: LogLevel, message: string) {
+		console.log(level, message);
 		switch (level) {
 			case LogLevel.ERROR:
 				return this.logger.error(message);

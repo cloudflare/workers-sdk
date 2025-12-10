@@ -17,11 +17,13 @@ import { patchAndRunWithHandlerContext } from "./wait-until";
  * execution pipeline. Can be called from any I/O context, and will ensure the
  * request is run from within the `RunnerObject`.
  */
-function importModule(
+async function importModule(
 	env: Env,
 	specifier: string
 ): Promise<Record<string, unknown>> {
-	return runInRunnerObject(env, (instance) => {
+	// __console.log("import");
+
+	return await runInRunnerObject(env, (instance) => {
 		if (instance.executor === undefined) {
 			const message =
 				"Expected Vitest to start running before importing modules.\n" +
@@ -29,7 +31,7 @@ function importModule(
 				"Use your package manager's `why` command to list versions and why each is installed (e.g. `npm why vitest`).";
 			throw new Error(message);
 		}
-		return instance.executor.executeId(specifier);
+		return instance.executor.import(specifier);
 	});
 }
 
@@ -226,12 +228,13 @@ async function getWorkerEntrypointExport(
 	entrypoint: string
 ): Promise<{ mainPath: string; entrypointValue: unknown }> {
 	const mainPath = getResolvedMainPath("service");
-	const mainModule = await importModule(env, mainPath);
+	const exports = await importModule(env, mainPath);
 	const entrypointValue =
-		typeof mainModule === "object" &&
-		mainModule !== null &&
-		entrypoint in mainModule &&
-		mainModule[entrypoint];
+		typeof exports === "object" &&
+		exports !== null &&
+		entrypoint in exports &&
+		exports[entrypoint];
+	// __console.log(entrypointValue);
 	if (!entrypointValue) {
 		const message =
 			`${mainPath} does not export a ${entrypoint} entrypoint. \`@cloudflare/vitest-pool-workers\` does not support service workers or named entrypoints for \`SELF\`.\n` +
@@ -286,6 +289,8 @@ async function getWorkerEntrypointRPCProperty(
 export function createWorkerEntrypointWrapper(
 	entrypoint: string
 ): typeof WorkerEntrypoint {
+	// console.log("wrapper");
+
 	const Wrapper = createProxyPrototypeClass(
 		WorkerEntrypoint,
 		function (this: WorkerEntrypoint<InternalUserEnv>, key) {
@@ -310,8 +315,23 @@ export function createWorkerEntrypointWrapper(
 				this.env,
 				entrypoint
 			);
+
 			const userEnv = stripInternalEnv(this.env);
-			return patchAndRunWithHandlerContext(this.ctx, () => {
+
+			// __console.log(mainPath, entrypointValue, userEnv);
+			return await patchAndRunWithHandlerContext(this.ctx, async () => {
+				// __console.log(
+				// 	mainPath,
+				// 	entrypointValue,
+				// 	userEnv,
+				// 	typeof entrypointValue
+				// );
+				// __console.log((entrypointValue as Record<string, unknown>)[key]);
+
+				// const maybeFn = (entrypointValue as Record<string, unknown>)[key];
+				// __console.log(maybeFn.toString());
+				// await maybeFn.call(entrypointValue, thing, userEnv, this.ctx);
+
 				if (typeof entrypointValue === "object" && entrypointValue !== null) {
 					// Assuming the user has defined an `ExportedHandler`
 					const maybeFn = (entrypointValue as Record<string, unknown>)[key];
@@ -345,7 +365,7 @@ export function createWorkerEntrypointWrapper(
 			});
 		};
 	}
-
+	// console.log(Wrapper);
 	return Wrapper;
 }
 

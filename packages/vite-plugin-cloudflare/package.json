@@ -50,6 +50,7 @@
 		"picocolors": "^1.1.1",
 		"tinyglobby": "^0.2.12",
 		"unenv": "2.0.0-rc.24",
+		"vitest": "https://pkg.pr.new/vitest@5d26b87",
 		"wrangler": "workspace:*",
 		"ws": "catalog:default"
 	},
@@ -66,8 +67,7 @@
 		"tree-kill": "^1.2.2",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
-		"vite": "catalog:vite-plugin",
-		"vitest": "catalog:default"
+		"vite": "catalog:vite-plugin"
 	},
 	"peerDependencies": {
 		"vite": "^6.1.0 || ^7.0.0",

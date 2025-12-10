@@ -132,6 +132,10 @@ function createConfigPlugin(): Plugin<WorkersConfigPluginAPI> {
 			config.resolve.mainFields ??= [];
 			config.ssr ??= {};
 			config.test ??= {};
+			config.inspector = {
+				enabled: false,
+			};
+			config.test.snapshotEnvironment = "cloudflare:snapshot";
 
 			// Remove "node" condition added by the `vitest:project` plugin. We're
 			// running tests inside `workerd`, not Node.js, so "node" isn't needed.

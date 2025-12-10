@@ -69,14 +69,14 @@
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@types/node": "catalog:default",
 		"@types/semver": "^7.5.1",
-		"@vitest/runner": "catalog:default",
-		"@vitest/snapshot": "catalog:default",
+		"@vitest/runner": "https://pkg.pr.new/@vitest/runner@5d26b87",
+		"@vitest/snapshot": "https://pkg.pr.new/@vitest/snapshot@5d26b87",
 		"capnp-es": "^0.0.11",
 		"eslint": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "https://pkg.pr.new/vitest@5d26b87"
 	},
 	"peerDependencies": {
 		"@vitest/runner": "2.0.x - 3.2.x",

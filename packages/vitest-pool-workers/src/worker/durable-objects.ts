@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { env } from "cloudflare:workers";
 import { getSerializedOptions, internalEnv } from "./env";
 import type { RunnerObject } from "./index";
 
@@ -102,10 +103,12 @@ async function runInStub<O extends DurableObject, R>(
 	const response = await stub.fetch("http://x", {
 		cf: { [CF_KEY_ACTION]: id },
 	});
+
 	// `result` may be `undefined`
 	assert(actionResults.has(id), `Expected action result for ${id}`);
 	const result = actionResults.get(id);
 	actionResults.delete(id);
+
 	if (result === kUseResponse) {
 		return response as R;
 	} else if (response.ok) {
@@ -168,11 +171,17 @@ export async function runDurableObjectAlarm(
  * handler) without using this function will result in a `Cannot perform I/O on
  * behalf of a different request` error.
  */
-export function runInRunnerObject<R>(
-	env: Env,
+export async function runInRunnerObject<R>(
+	_env: Env,
 	callback: (instance: RunnerObject) => R | Promise<R>
 ): Promise<R> {
-	const stub = env.__VITEST_POOL_WORKERS_RUNNER_OBJECT.get("singleton");
+	// throw new Error("hi");
+	// const id = await (env.MY as DurableObjectNamespace).get(
+	// 	(env.MY as DurableObjectNamespace).idFromName("test")
+	// );
+	// __console.log("hi", id, id.hellow());
+
+	const stub = env.__VITEST_POOL_WORKERS_RUNNER_OBJECT.getByName("singleton");
 	return runInStub(stub, callback);
 }
 
@@ -181,13 +190,19 @@ export async function maybeHandleRunRequest(
 	instance: unknown,
 	state?: DurableObjectState
 ): Promise<Response | undefined> {
+	// console.log("run req");
+
 	const actionId = request.cf?.[CF_KEY_ACTION];
+	// console.log("run req", actionId);
+
 	if (actionId === undefined) {
 		return;
 	}
+
 	assert(typeof actionId === "number", `Expected numeric ${CF_KEY_ACTION}`);
 	try {
 		const callback = actionResults.get(actionId);
+		// console.log(callback);
 		assert(typeof callback === "function", `Expected callback for ${actionId}`);
 		const result = await callback(instance, state);
 		// If the callback returns a `Response`, we can't pass it back to the

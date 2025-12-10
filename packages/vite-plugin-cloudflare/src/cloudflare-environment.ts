@@ -99,6 +99,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		workerConfig: ResolvedWorkerConfig,
 		isEntryWorker: boolean
 	): Promise<void> {
+		console.log("initRunner");
 		const response = await miniflare.dispatchFetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
