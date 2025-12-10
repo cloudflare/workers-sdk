@@ -150,21 +150,17 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "analog",
-			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
-			// The analog template works with yarn, but the build takes so long that it
-			// becomes flaky in CI
-			unsupportedPms: ["yarn", "bun"],
 			verifyDeploy: {
 				route: "/",
-				expectedText: "The fullstack meta-framework for Angular!",
+				expectedText: "The fullstack Angular meta-framework",
 			},
 			verifyPreview: {
 				previewArgs: ["--inspector-port=0"],
-				route: "/api/v1/test",
-				expectedText: "C3_TEST",
+				route: "/api/v1/hello",
+				expectedText: "Hello World",
 			},
 			nodeCompat: false,
 			flags: ["--skipTailwind"],
@@ -605,6 +601,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "redwood",
+			// quarantined while we investigate CI failures
+			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
@@ -615,6 +613,9 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			verifyPreview: {
 				route: "/",
 				expectedText: "RedwoodSDK",
+			},
+			extraEnv: {
+				GITHUB_API_TOKEN: process.env.GITHUB_TOKEN,
 			},
 			nodeCompat: true,
 		},
@@ -933,6 +934,44 @@ function getExperimentalFrameworkTestConfig(
 			},
 			nodeCompat: false,
 			flags: ["--no-install", "--no-git-init"],
+			verifyTypes: false,
+		},
+		{
+			name: "redwood",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "RedwoodSDK",
+			},
+			verifyPreview: {
+				build: true,
+				route: "/",
+				expectedText: "RedwoodSDK",
+			},
+			nodeCompat: true,
+			verifyTypes: false,
+			extraEnv: {
+				GITHUB_API_TOKEN: process.env.GITHUB_TOKEN,
+			},
+		},
+		{
+			name: "analog",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "The fullstack Angular meta-framework",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/api/v1/hello",
+				expectedText: "Hello World",
+			},
+			nodeCompat: false,
+			flags: ["--skipTailwind"],
 			verifyTypes: false,
 		},
 	];

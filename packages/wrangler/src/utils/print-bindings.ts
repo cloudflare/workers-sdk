@@ -4,7 +4,11 @@ import chalk from "chalk";
 import stripAnsi from "strip-ansi";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
-import type { CfTailConsumer, CfWorkerInit } from "@cloudflare/workers-utils";
+import type {
+	CfTailConsumer,
+	CfWorkerInit,
+	ContainerApp,
+} from "@cloudflare/workers-utils";
 import type { WorkerRegistry } from "miniflare";
 
 /**
@@ -14,6 +18,7 @@ export function printBindings(
 	bindings: Partial<CfWorkerInit["bindings"]>,
 	tailConsumers: CfTailConsumer[] = [],
 	streamingTailConsumers: CfTailConsumer[] = [],
+	containers: ContainerApp[] = [],
 	context: {
 		registry?: WorkerRegistry | null;
 		local?: boolean;
@@ -739,10 +744,26 @@ export function printBindings(
 		);
 	}
 
+	if (containers.length > 0 && !context.provisioning) {
+		let containersTitle = "The following containers are available:";
+		if (context.name && getFlag("MULTIWORKER")) {
+			containersTitle = `The following containers are available from ${chalk.blue(context.name)}:`;
+		}
+
+		logger.log(
+			`${containersTitle}\n${containers
+				.map((c) => {
+					return `- ${c.name} (${c.image})`;
+				})
+				.join("\n")}`
+		);
+		logger.log();
+	}
+
 	if (hasConnectionStatus) {
 		logger.once.info(
 			dim(
-				`\nService bindings, Durable Object bindings, and Tail consumers connect to other wrangler or vite dev processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
+				`\nService bindings, Durable Object bindings, and Tail consumers connect to other Wrangler or Vite dev processes running locally, with their connection status indicated by ${chalk.green("[connected]")} or ${chalk.red("[not connected]")}. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development\n`
 			)
 		);
 	}

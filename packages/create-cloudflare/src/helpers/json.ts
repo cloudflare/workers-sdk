@@ -5,16 +5,21 @@ import type {
 	CommentObject,
 	CommentSymbol,
 	CommentToken,
+	Reviver,
 } from "comment-json";
 
 /**
  * Reads a JSON file and preserves comments.
  * @param jsonFilePath - The path to the JSON file.
+ * @param reviver A function that transforms the results. This function is called for each member of the object.
  * @returns The parsed JSON object with comments.
  */
-export function readJSONWithComments(jsonFilePath: string): CommentObject {
+export function readJSONWithComments(
+	jsonFilePath: string,
+	reviver?: Reviver,
+): CommentObject {
 	const jsonString = readFile(jsonFilePath);
-	const jsonObject = parse(jsonString) as unknown as CommentObject;
+	const jsonObject = parse(jsonString, reviver) as unknown as CommentObject;
 	return jsonObject;
 }
 

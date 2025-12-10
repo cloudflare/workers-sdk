@@ -17,6 +17,7 @@ import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import { downloadWorkerConfig } from "./utils/download-worker-config";
 import * as shellquote from "./utils/shell-quote";
+import { isWorkerNotFoundError } from "./utils/worker-not-found-error";
 import type { PackageManager } from "./package-manager";
 import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
 import type { ReadableStream } from "node:stream/web";
@@ -83,7 +84,7 @@ export const init = createCommand({
 					`/accounts/${accountId}/workers/services/${args.fromDash}`
 				);
 			} catch (err) {
-				if ((err as { code?: number }).code === 10090) {
+				if (isWorkerNotFoundError(err)) {
 					throw new UserError(
 						"wrangler couldn't find a Worker with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account.",
 						{
