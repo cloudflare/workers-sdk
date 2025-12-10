@@ -1,3 +1,4 @@
+import { Analog } from "./analog";
 import { Angular } from "./angular";
 import { Astro } from "./astro";
 import { Nuxt } from "./nuxt";
@@ -33,6 +34,8 @@ export function getFramework(detectedFramework?: {
 			return new Qwik(detectedFramework.name);
 		case "vite":
 			return new Vite(detectedFramework.name);
+		case "analog":
+			return new Analog(detectedFramework.name);
 		default:
 			return new Static(detectedFramework?.name);
 	}
