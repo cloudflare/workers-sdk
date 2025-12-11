@@ -64,7 +64,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			"*\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n ",
 		);
 
-		addJSONComment(wranglerJson, "after:observability", [
+		addJSONComment(wranglerJson, "after", [
 			"*\n * Smart Placement\n * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement\n ",
 			{
 				type: "LineComment",
