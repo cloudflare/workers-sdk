@@ -11,6 +11,7 @@ import {
 } from "helpers/json";
 import TOML from "smol-toml";
 import type { CommentObject, Reviver } from "comment-json";
+import type { TomlTable } from "smol-toml";
 import type { C3Context } from "types";
 
 /**
@@ -58,37 +59,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			enabled: true,
 		});
 
-		addJSONComment(
-			wranglerJson,
-			"before-all",
-			"*\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n ",
-		);
-
-		addJSONComment(wranglerJson, "after:observability", [
-			"*\n * Smart Placement\n * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement\n ",
-			{
-				type: "LineComment",
-				value: ` "placement": { "mode": "smart" }`,
-			},
-			"*\n * Bindings\n * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including\n * databases, object storage, AI inference, real-time communication and more.\n * https://developers.cloudflare.com/workers/runtime-apis/bindings/\n ",
-			"*\n * Environment Variables\n * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables\n ",
-			{
-				type: "LineComment",
-				value: ' "vars": { "MY_VARIABLE": "production_value" }',
-			},
-			"*\n * Note: Use secrets to store sensitive data.\n * https://developers.cloudflare.com/workers/configuration/secrets/\n ",
-			"*\n * Static Assets\n * https://developers.cloudflare.com/workers/static-assets/binding/\n ",
-			{
-				type: "LineComment",
-				value: ' "assets": { "directory": "./public/", "binding": "ASSETS" }',
-			},
-			"*\n * Service Bindings (communicate between multiple Workers)\n * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings\n ",
-			{
-				type: "LineComment",
-				value:
-					' "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]',
-			},
-		]);
+		addHintsAsJsonComments(wranglerJson);
 
 		writeWranglerJsonOrJsonc(ctx, wranglerJson);
 		addVscodeConfig(ctx);
@@ -111,37 +82,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			`#:schema node_modules/wrangler/config-schema.json
 # For more details on how to configure Wrangler, refer to:\n# https://developers.cloudflare.com/workers/wrangler/configuration/
 ${TOML.stringify(wranglerToml)}
-# Smart Placement
-# Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
-# [placement]
-# mode = "smart"
-
-###
-# Bindings
-# Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
-# databases, object storage, AI inference, real-time communication and more.
-# https://developers.cloudflare.com/workers/runtime-apis/bindings/
-###
-
-# Environment Variables
-# https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-# [vars]
-# MY_VARIABLE = "production_value"
-
-# Note: Use secrets to store sensitive data.
-# https://developers.cloudflare.com/workers/configuration/secrets/
-
-# Static Assets
-# https://developers.cloudflare.com/workers/static-assets/binding/
-# [assets]
-# directory = "./public/"
-# binding = "ASSETS"
-
-# Service Bindings (communicate between multiple Workers)
-# https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-# [[services]]
-# binding = "MY_SERVICE"
-# service = "my-service"
+${generateHintsAsTomlComments(wranglerToml)}
 `,
 		);
 	}
@@ -258,4 +199,114 @@ async function getCompatibilityDate(tentativeDate: unknown): Promise<string> {
 	}
 	// Fallback to the latest workerd date
 	return await getWorkerdCompatibilityDate();
+}
+
+/**
+ * Common configuration hints to add as comments to wrangler configs.
+ */
+const hints: Record<string, { value?: unknown; comment: string }> = {
+	placement: {
+		value: { mode: "smart" },
+		comment: `Smart Placement
+https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement`,
+	},
+	bindings: {
+		comment: `Bindings
+Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+databases, object storage, AI inference, real-time communication and more.
+https://developers.cloudflare.com/workers/runtime-apis/bindings/`,
+	},
+	vars: {
+		value: { MY_VARIABLE: "production_value" },
+		comment: `Environment Variables
+https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+Note: Use secrets to store sensitive data.
+https://developers.cloudflare.com/workers/configuration/secrets/`,
+	},
+	assets: {
+		value: { directory: "./public/", binding: "ASSETS" },
+		comment: `Static Assets
+https://developers.cloudflare.com/workers/static-assets/binding/`,
+	},
+	services: {
+		value: [{ binding: "MY_SERVICE", service: "my-service" }],
+		comment: `Service Bindings (communicate between multiple Workers)
+https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings`,
+	},
+};
+
+/**
+ * Adds comments with hints for common configuration options to a JSON wrangler config.
+ *
+ * Note: existing properties in the config will not receive hints.
+ *
+ * @param wranglerConfig The wrangler JSON configuration object to add comments to.
+ */
+function addHintsAsJsonComments(wranglerConfig: CommentObject) {
+	addJSONComment(
+		wranglerConfig,
+		"before-all",
+		"*\n * For more details on how to configure Wrangler, refer to:\n * https://developers.cloudflare.com/workers/wrangler/configuration/\n ",
+	);
+
+	const commentsToAdd = [];
+
+	for (const [key, hint] of Object.entries(hints)) {
+		// Only add hints for properties not already present in the config
+		if (!(key in wranglerConfig)) {
+			// Add block comment with the hint description
+			commentsToAdd.push(
+				`*\n\t * ${hint.comment.split("\n").join("\n\t * ")}\n\t `,
+			);
+
+			// Add line comment with the example value
+			if (hint.value) {
+				commentsToAdd.push({
+					type: "LineComment" as const,
+					value: JSON.stringify({ [key]: hint.value }, null, 1)
+						.replaceAll("\n", "")
+						.slice(1, -1),
+				});
+			}
+		}
+	}
+
+	if (commentsToAdd.length > 0) {
+		addJSONComment(wranglerConfig, "after", commentsToAdd);
+	}
+}
+
+/**
+ * Generates TOML comments with hints for common configuration options.
+ *
+ * Note: existing properties in the config will not receive hints.
+ *
+ * @param wranglerConfig The wrangler TOML configuration.
+ * @returns The generated TOML comments as a string.
+ */
+function generateHintsAsTomlComments(wranglerConfig: TomlTable): string {
+	const commentLines: string[] = [];
+
+	for (const [key, hint] of Object.entries(hints)) {
+		// Only add hints for properties not already present in the config
+		if (!(key in wranglerConfig)) {
+			// Add block comment with the hint description
+			commentLines.push(`# ${hint.comment.split("\n").join("\n# ")}`);
+
+			// Add line comment with the example value
+			if (hint.value) {
+				commentLines.push(
+					TOML.stringify({ [key]: hint.value })
+						.trimEnd()
+						.split("\n")
+						.map((line) => `# ${line}`)
+						.join("\n"),
+				);
+			}
+
+			commentLines.push(""); // Add an empty line after each hint for readability
+		}
+	}
+
+	return commentLines.join("\n");
 }

@@ -1,5 +1,43 @@
 # create-cloudflare
 
+## 2.59.0
+
+### Minor Changes
+
+- [#11560](https://github.com/cloudflare/workers-sdk/pull/11560) [`2d9a30c`](https://github.com/cloudflare/workers-sdk/commit/2d9a30c843a0a73d572974b3aa6ff50ccafb7721) Thanks [@vicb](https://github.com/vicb)! - Support `<PACKAGE_NAME>` as a placeholder for the package name in `package.json`
+
+  `"name": "<PACKAGE_NAME>"` is replaced with the project name when c3 updates a `package.json` using `updatePackageName`.
+  Previously only `"<TBD>"`, `"TBD"`, and `""` were supported placeholder names.
+
+- [#11551](https://github.com/cloudflare/workers-sdk/pull/11551) [`f261472`](https://github.com/cloudflare/workers-sdk/commit/f26147263b2ed5763a0e771b2693d2d223a9863f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support RedwoodSDK in `--experimental` mode
+
+- [#11520](https://github.com/cloudflare/workers-sdk/pull/11520) [`85ec269`](https://github.com/cloudflare/workers-sdk/commit/85ec26985a05b2cc5e0dd3c4904f5b96b9e2de80) Thanks [@vicb](https://github.com/vicb)! - Add placeholder substitution in wrangler config files.
+
+  When c3 updates the config file:
+
+  - The value `"<WORKER_NAME>"` is replaced with the worker name.
+  - The value `"<COMPATIBILITY_DATE>"` is replaced with the latest worked compatibility date.
+
+- [#11576](https://github.com/cloudflare/workers-sdk/pull/11576) [`bb47e20`](https://github.com/cloudflare/workers-sdk/commit/bb47e2090cd4c0c4c56abe97fffb35f3101414bf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Analog in `--experimental` mode
+
+### Patch Changes
+
+- [#11557](https://github.com/cloudflare/workers-sdk/pull/11557) [`632fb6d`](https://github.com/cloudflare/workers-sdk/commit/632fb6dd7753daf1d771f15144baf8f1a451d9fa) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-rwsdk | 3.1.0 | 3.1.2 |
+
+- [#11577](https://github.com/cloudflare/workers-sdk/pull/11577) [`85d70c8`](https://github.com/cloudflare/workers-sdk/commit/85d70c8b143579aab236d647f0e4ded1a487fe3b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update help message not to recommend non-applicable `--ts` create-next-app argument
+
+  C3 uses it's own template when running create-next-app, so providing a `--ts` argument to it doesn't have any effect, the C3 help message however shows that as an example on how to pass arguments to underlying framework CLIs. The changes here update the error message to instead use svelte's `--types=ts` as the example
+
+- [#11563](https://github.com/cloudflare/workers-sdk/pull/11563) [`df7cd47`](https://github.com/cloudflare/workers-sdk/commit/df7cd47b38f4f86a1da5065e20867c1040d09c01) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix analog template and tests - bumping to 2.1.3
+
+- [#11558](https://github.com/cloudflare/workers-sdk/pull/11558) [`d53462c`](https://github.com/cloudflare/workers-sdk/commit/d53462c9ff9a44761207f75041a0c854bea36029) Thanks [@vicb](https://github.com/vicb)! - fix: make sure c3 does not add duplicated types
+
 ## 2.58.0
 
 ### Minor Changes

@@ -60,24 +60,21 @@ describe("update wrangler config", () => {
 			enabled = true
 
 			# Smart Placement
-			# Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+			# https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 			# [placement]
 			# mode = "smart"
 
-			###
 			# Bindings
 			# Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
 			# databases, object storage, AI inference, real-time communication and more.
 			# https://developers.cloudflare.com/workers/runtime-apis/bindings/
-			###
 
 			# Environment Variables
 			# https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-			# [vars]
-			# MY_VARIABLE = "production_value"
-
 			# Note: Use secrets to store sensitive data.
 			# https://developers.cloudflare.com/workers/configuration/secrets/
+			# [vars]
+			# MY_VARIABLE = "production_value"
 
 			# Static Assets
 			# https://developers.cloudflare.com/workers/static-assets/binding/
@@ -85,11 +82,6 @@ describe("update wrangler config", () => {
 			# directory = "./public/"
 			# binding = "ASSETS"
 
-			# Service Bindings (communicate between multiple Workers)
-			# https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-			# [[services]]
-			# binding = "MY_SERVICE"
-			# service = "my-service"
 			"
 		`);
 	});
@@ -124,24 +116,21 @@ describe("update wrangler config", () => {
 			enabled = true
 
 			# Smart Placement
-			# Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+			# https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 			# [placement]
 			# mode = "smart"
 
-			###
 			# Bindings
 			# Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
 			# databases, object storage, AI inference, real-time communication and more.
 			# https://developers.cloudflare.com/workers/runtime-apis/bindings/
-			###
 
 			# Environment Variables
 			# https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-			# [vars]
-			# MY_VARIABLE = "production_value"
-
 			# Note: Use secrets to store sensitive data.
 			# https://developers.cloudflare.com/workers/configuration/secrets/
+			# [vars]
+			# MY_VARIABLE = "production_value"
 
 			# Static Assets
 			# https://developers.cloudflare.com/workers/static-assets/binding/
@@ -149,11 +138,6 @@ describe("update wrangler config", () => {
 			# directory = "./public/"
 			# binding = "ASSETS"
 
-			# Service Bindings (communicate between multiple Workers)
-			# https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-			# [[services]]
-			# binding = "MY_SERVICE"
-			# service = "my-service"
 			"
 		`);
 	});
@@ -199,9 +183,9 @@ describe("update wrangler config", () => {
 				}
 				/**
 				 * Smart Placement
-				 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+				 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 				 */
-				// "placement": { "mode": "smart" }
+				// "placement": {  "mode": "smart" }
 				/**
 				 * Bindings
 				 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
@@ -211,22 +195,15 @@ describe("update wrangler config", () => {
 				/**
 				 * Environment Variables
 				 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-				 */
-				// "vars": { "MY_VARIABLE": "production_value" }
-				/**
 				 * Note: Use secrets to store sensitive data.
 				 * https://developers.cloudflare.com/workers/configuration/secrets/
 				 */
+				// "vars": {  "MY_VARIABLE": "production_value" }
 				/**
 				 * Static Assets
 				 * https://developers.cloudflare.com/workers/static-assets/binding/
 				 */
-				// "assets": { "directory": "./public/", "binding": "ASSETS" }
-				/**
-				 * Service Bindings (communicate between multiple Workers)
-				 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-				 */
-				// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+				// "assets": {  "directory": "./public/",  "binding": "ASSETS" }
 			}"
 		`);
 	});
@@ -272,9 +249,9 @@ describe("update wrangler config", () => {
 				}
 				/**
 				 * Smart Placement
-				 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+				 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 				 */
-				// "placement": { "mode": "smart" }
+				// "placement": {  "mode": "smart" }
 				/**
 				 * Bindings
 				 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
@@ -284,22 +261,15 @@ describe("update wrangler config", () => {
 				/**
 				 * Environment Variables
 				 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-				 */
-				// "vars": { "MY_VARIABLE": "production_value" }
-				/**
 				 * Note: Use secrets to store sensitive data.
 				 * https://developers.cloudflare.com/workers/configuration/secrets/
 				 */
+				// "vars": {  "MY_VARIABLE": "production_value" }
 				/**
 				 * Static Assets
 				 * https://developers.cloudflare.com/workers/static-assets/binding/
 				 */
-				// "assets": { "directory": "./public/", "binding": "ASSETS" }
-				/**
-				 * Service Bindings (communicate between multiple Workers)
-				 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-				 */
-				// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+				// "assets": {  "directory": "./public/",  "binding": "ASSETS" }
 			}"
 		`);
 	});
@@ -325,24 +295,21 @@ describe("update wrangler config", () => {
 			enabled = true
 
 			# Smart Placement
-			# Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+			# https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 			# [placement]
 			# mode = "smart"
 
-			###
 			# Bindings
 			# Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
 			# databases, object storage, AI inference, real-time communication and more.
 			# https://developers.cloudflare.com/workers/runtime-apis/bindings/
-			###
 
 			# Environment Variables
 			# https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-			# [vars]
-			# MY_VARIABLE = "production_value"
-
 			# Note: Use secrets to store sensitive data.
 			# https://developers.cloudflare.com/workers/configuration/secrets/
+			# [vars]
+			# MY_VARIABLE = "production_value"
 
 			# Static Assets
 			# https://developers.cloudflare.com/workers/static-assets/binding/
@@ -355,6 +322,7 @@ describe("update wrangler config", () => {
 			# [[services]]
 			# binding = "MY_SERVICE"
 			# service = "my-service"
+
 			"
 		`);
 	});
@@ -378,24 +346,21 @@ describe("update wrangler config", () => {
 			enabled = true
 
 			# Smart Placement
-			# Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+			# https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 			# [placement]
 			# mode = "smart"
 
-			###
 			# Bindings
 			# Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
 			# databases, object storage, AI inference, real-time communication and more.
 			# https://developers.cloudflare.com/workers/runtime-apis/bindings/
-			###
 
 			# Environment Variables
 			# https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-			# [vars]
-			# MY_VARIABLE = "production_value"
-
 			# Note: Use secrets to store sensitive data.
 			# https://developers.cloudflare.com/workers/configuration/secrets/
+			# [vars]
+			# MY_VARIABLE = "production_value"
 
 			# Static Assets
 			# https://developers.cloudflare.com/workers/static-assets/binding/
@@ -408,6 +373,7 @@ describe("update wrangler config", () => {
 			# [[services]]
 			# binding = "MY_SERVICE"
 			# service = "my-service"
+
 			"
 		`);
 	});
@@ -433,24 +399,21 @@ describe("update wrangler config", () => {
 			enabled = true
 
 			# Smart Placement
-			# Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+			# https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 			# [placement]
 			# mode = "smart"
 
-			###
 			# Bindings
 			# Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
 			# databases, object storage, AI inference, real-time communication and more.
 			# https://developers.cloudflare.com/workers/runtime-apis/bindings/
-			###
 
 			# Environment Variables
 			# https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-			# [vars]
-			# MY_VARIABLE = "production_value"
-
 			# Note: Use secrets to store sensitive data.
 			# https://developers.cloudflare.com/workers/configuration/secrets/
+			# [vars]
+			# MY_VARIABLE = "production_value"
 
 			# Static Assets
 			# https://developers.cloudflare.com/workers/static-assets/binding/
@@ -463,6 +426,7 @@ describe("update wrangler config", () => {
 			# [[services]]
 			# binding = "MY_SERVICE"
 			# service = "my-service"
+
 			"
 		`);
 	});

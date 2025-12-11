@@ -10,16 +10,17 @@ import { join, resolve } from "node:path";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import {
-	findPackageNames,
+	findPackages,
 	readChangesets,
 	validateChangesets,
 } from "../validate-changesets";
+import type { PackageJSON } from "../validate-changesets";
 
 describe("findPackageNames()", () => {
 	it("should return all the private packages which contain deploy scripts", ({
 		expect,
 	}) => {
-		expect(findPackageNames()).toEqual(
+		expect(new Set(findPackages().keys())).toEqual(
 			new Set([
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli",
@@ -92,7 +93,12 @@ describe("readChangesets()", () => {
 describe("validateChangesets()", () => {
 	it("should report errors for any invalid changesets", ({ expect }) => {
 		const errors = validateChangesets(
-			new Set(["package-a", "package-b", "package-c"]),
+			new Map<string, PackageJSON>([
+				["package-a", { name: "package-a" }],
+				["package-b", { name: "package-b" }],
+				["package-c", { name: "package-c" }],
+				["package-d", { name: "package-d", "workers-sdk": { deploy: true } }],
+			]),
 			[
 				{
 					file: "valid-one.md",
@@ -149,20 +155,34 @@ describe("validateChangesets()", () => {
 
 						docs: test`,
 				},
+				{
+					file: "deployable-package.md",
+					contents: dedent`
+						---
+						"package-d": patch
+						---
+
+						fix: test`,
+				},
 			]
 		);
 		expect(errors).toMatchInlineSnapshot(`
 			[
 			  "Error: could not parse changeset - invalid frontmatter: at file "invalid-frontmatter.md"",
-			  "Invalid package name "package-invalid" in changeset at "invalid-package.md".",
+			  "Unknown package name "package-invalid" in changeset at "invalid-package.md".",
 			  "Invalid type "foo" for package "package-a" in changeset at "invalid-type.md".",
+			  "Currently we are not allowing changes to package "package-d" in changeset at "deployable-package.md" since it would trigger a Worker/Pages deployment.",
 			]
 		`);
 	});
 
 	it("should report errors for major bump changesets", ({ expect }) => {
 		const errors = validateChangesets(
-			new Set(["package-a", "package-b", "package-c"]),
+			new Map<string, PackageJSON>([
+				["package-a", { name: "package-a" }],
+				["package-b", { name: "package-b" }],
+				["package-c", { name: "package-c" }],
+			]),
 			[
 				{
 					file: "patch-one.md",

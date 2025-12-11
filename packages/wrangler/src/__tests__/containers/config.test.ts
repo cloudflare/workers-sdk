@@ -97,6 +97,7 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 		} as Partial<Config> as Config;
 
 		await expect(getNormalizedContainerOptions(config, {})).rejects.toThrow(
@@ -132,6 +133,7 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config, {});
@@ -176,6 +178,7 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config, {});
@@ -219,6 +222,7 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config, {});
@@ -260,6 +264,7 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config, {});
@@ -307,6 +312,7 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config, {});
@@ -351,6 +357,7 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config, {});
@@ -393,6 +400,7 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config, {});
@@ -448,6 +456,7 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config, {});
@@ -500,6 +509,7 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config, {});
@@ -552,6 +562,9 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [
+				{ tag: "v1", new_sqlite_classes: ["Container1", "Container2"] },
+			],
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config, {});
@@ -583,6 +596,7 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config, {});
@@ -615,6 +629,7 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config, {});
@@ -644,6 +659,7 @@ describe("getNormalizedContainerOptions", () => {
 					},
 				],
 			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 		} as Partial<Config> as Config;
 
 		const result = await getNormalizedContainerOptions(config, {});
@@ -675,6 +691,7 @@ describe("getNormalizedContainerOptions", () => {
 						},
 					],
 				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 			} as Partial<Config> as Config;
 			const result = await getNormalizedContainerOptions(config, {});
 			expect(result).toHaveLength(1);
@@ -705,6 +722,7 @@ describe("getNormalizedContainerOptions", () => {
 						},
 					],
 				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 			} as Partial<Config> as Config;
 			const result = await getNormalizedContainerOptions(config, {});
 			expect(result).toHaveLength(1);
@@ -736,6 +754,7 @@ describe("getNormalizedContainerOptions", () => {
 						},
 					],
 				},
+				migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
 			} as Partial<Config> as Config;
 			const result = await getNormalizedContainerOptions(config, {
 				dryRun: true,

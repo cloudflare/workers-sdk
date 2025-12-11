@@ -7,6 +7,7 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
+import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getAccountId } from "../user";
 import type {
 	ApplicationAffinities,
@@ -61,19 +62,25 @@ export const getNormalizedContainerOptions = async (
 
 	for (const container of config.containers) {
 		assert(container.name, "container name should have been set by validation");
-		const targetDurableObject = config.durable_objects.bindings.find(
-			(durableObject) => durableObject.class_name === container.class_name
-		);
-		if (!targetDurableObject) {
+		const allDOs = getDurableObjectClassNameToUseSQLiteMap(config.migrations);
+
+		if (
+			!allDOs.has(container.class_name) &&
+			config.durable_objects.bindings.find(
+				(doBinding) => doBinding.class_name === container.class_name
+			) === undefined
+		) {
 			throw new UserError(
 				`The container class_name ${container.class_name} does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.`,
 				{ telemetryMessage: "no DO defined that matches container class_name" }
 			);
 		}
-
-		if (targetDurableObject.script_name !== undefined) {
+		const maybeBoundDO = config.durable_objects.bindings.find(
+			(durableObject) => durableObject.class_name === container.class_name
+		);
+		if (maybeBoundDO && maybeBoundDO.script_name !== undefined) {
 			throw new UserError(
-				`The container ${container.name} is referencing the durable object ${container.class_name}, which appears to be defined on the ${targetDurableObject.script_name} Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.`,
+				`The container ${container.name} is referencing the durable object ${container.class_name}, which appears to be defined on the ${maybeBoundDO.script_name} Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.`,
 				{
 					telemetryMessage:
 						"contaienr class_name refers to an external durable object",

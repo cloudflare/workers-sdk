@@ -448,7 +448,7 @@ describe.sequential("wrangler pages dev", () => {
 			env.VAR1 ("(hidden)")                                                    Environment Variable      local
 			env.VAR2 ("VAR_2_TOML")                                                  Environment Variable      local
 			env.VAR3 ("(hidden)")                                                    Environment Variable      local
-			Service bindings, Durable Object bindings, and Tail consumers connect to other wrangler or vite dev processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
+			Service bindings, Durable Object bindings, and Tail consumers connect to other Wrangler or Vite dev processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
 			"
 		`);
 	});
