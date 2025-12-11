@@ -70,7 +70,7 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 		existingRuntimeHeader && existingRuntimeHeader !== newRuntimeHeader;
 
 	const changed = envOutOfDate || runtimeOutOfDate;
-	if (changed && config.dev.types) {
+	if (changed && config.dev.generate_types) {
 		const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
 			config,
 			outFile: DEFAULT_WORKERS_TYPES_FILE_PATH,

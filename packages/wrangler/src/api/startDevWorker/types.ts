@@ -212,7 +212,7 @@ export interface StartDevWorkerInput {
 		containerEngine?: ContainerEngine;
 
 		/** Generate types from your Worker configuration when you start your local development server. */
-		types?: boolean;
+		generate_types?: boolean;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;

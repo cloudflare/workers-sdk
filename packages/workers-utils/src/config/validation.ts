@@ -113,7 +113,7 @@ export type NormalizeAndValidateConfigArgs = {
 	upstreamProtocol?: string;
 	script?: string;
 	enableContainers?: boolean;
-	types?: boolean;
+	generate_types?: boolean;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -567,7 +567,7 @@ function normalizeAndValidateDev(
 		upstreamProtocol: upstreamProtocolArg,
 		remote: remoteArg,
 		enableContainers: enableContainersArg,
-		types: generateTypesArg,
+		generate_types: generateTypesArg,
 	} = args;
 	assert(
 		localProtocolArg === undefined ||
@@ -606,7 +606,7 @@ function normalizeAndValidateDev(
 		host,
 		enable_containers = enableContainersArg ?? true,
 		container_engine,
-		types = generateTypesArg ?? false,
+		generate_types = generateTypesArg ?? false,
 		...rest
 	} = rawDev;
 	validateAdditionalProperties(diagnostics, "dev", Object.keys(rest), []);
@@ -653,7 +653,13 @@ function normalizeAndValidateDev(
 		"string"
 	);
 
-	validateOptionalProperty(diagnostics, "dev", "types", types, "boolean");
+	validateOptionalProperty(
+		diagnostics,
+		"dev",
+		"generate_types",
+		generate_types,
+		"boolean"
+	);
 
 	return {
 		ip,
@@ -664,7 +670,7 @@ function normalizeAndValidateDev(
 		host,
 		enable_containers,
 		container_engine,
-		types,
+		generate_types,
 	};
 }
 

@@ -282,7 +282,7 @@ async function setupDevEnv(
 				dockerPath: args.dockerPath,
 				// initialise with a random id
 				containerBuildId: generateContainerBuildId(),
-				types: args.types,
+				generate_types: args.types,
 			},
 			legacy: {
 				site: (configParam) => {

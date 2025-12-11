@@ -258,7 +258,7 @@ export interface DevConfig {
 	 *
 	 * @default false
 	 */
-	types: boolean;
+	generate_types: boolean;
 }
 
 export type RawDevConfig = Partial<DevConfig>;
@@ -305,7 +305,7 @@ export const defaultWranglerConfig: Config = {
 		// Note this one is also workers only
 		enable_containers: true,
 		container_engine: undefined,
-		types: false,
+		generate_types: false,
 	},
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/
