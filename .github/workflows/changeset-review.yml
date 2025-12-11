@@ -1,8 +1,8 @@
 name: Changeset Review
 
 on:
-  # Use pull_request_target to access secrets for PRs (including from forks)
-  # This is safe because we only read files, we don't execute PR code
+  # Use pull_request_target to access secrets while keeping the workflow secure.
+  # We only checkout main (trusted code) and use GitHub API to inspect PR content.
   pull_request_target:
     types: [opened, synchronize, reopened]
     paths:
@@ -26,34 +26,9 @@ jobs:
   review-changesets:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout PR head
+      # Checkout main branch only - never checkout untrusted PR code
+      - name: Checkout base branch
         uses: actions/checkout@v4
-        with:
-          # For pull_request_target, we need to explicitly checkout the PR head
-          # This is safe because we're only reading files, not executing code
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0
-
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v45
-        with:
-          files: |
-            packages/**
-          files_ignore: |
-            **/*.test.ts
-            **/*.spec.ts
-            **/__tests__/**
-            **/fixtures/**
-
-      - name: Get changeset files
-        id: changeset-files
-        uses: tj-actions/changed-files@v45
-        with:
-          files: |
-            .changeset/*.md
-          files_ignore: |
-            .changeset/README.md
 
       - name: Review Changesets with Claude
         uses: anthropics/claude-code-action@beta
@@ -66,17 +41,26 @@ jobs:
 
             Read `.changeset/README.md` for the complete changeset guidelines. Use those rules to validate the changesets in this PR.
 
-            ## Context
+            ## PR Information
 
-            This PR has the following characteristics:
-            - Changed package files: ${{ steps.changed-files.outputs.all_changed_files }}
-            - Changeset files added/modified: ${{ steps.changeset-files.outputs.all_changed_files }}
-            - Has package changes: ${{ steps.changed-files.outputs.any_changed }}
-            - Has changeset changes: ${{ steps.changeset-files.outputs.any_changed }}
+            PR Number: ${{ github.event.pull_request.number || inputs.pr_number }}
+
+            Use the GitHub CLI to inspect the PR. The `gh` command is available and authenticated.
+
+            Useful commands:
+            - `gh pr view <number> --json files,additions,deletions` - get list of changed files
+            - `gh pr diff <number>` - see the full diff
+            - `gh pr diff <number> -- '.changeset/*.md'` - see just changeset changes
+            - `gh api repos/${{ github.repository }}/contents/<path>?ref=<branch>` - fetch file from PR branch
 
             ## Your Task
 
-            Review this PR's changesets against the code changes. Validate:
+            1. First, run `gh pr view` to get the list of changed files
+            2. Identify which packages under `packages/` were modified (excluding test files, fixtures)
+            3. Check what changeset files were added/modified using `gh pr diff`
+            4. Read the full content of any new changeset files from the PR branch
+
+            Then validate:
 
             1. **Missing Changeset**: If packages were modified with user-facing changes, a changeset is required
             2. **Package Coverage**: All affected packages should be referenced in changesets
@@ -98,4 +82,6 @@ jobs:
 
             If there are no changesets and no package changes, confirm no changeset is needed.
 
-            Begin your review now by reading the guidelines and examining the PR's files.
+            Begin your review now.
+        env:
+          GH_TOKEN: ${{ github.token }}
