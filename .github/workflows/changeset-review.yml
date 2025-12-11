@@ -3,7 +3,7 @@ name: Changeset Review
 on:
   # Use pull_request_target to access secrets while keeping the workflow secure.
   # We only checkout main (trusted code) and use GitHub API to inspect PR content.
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - ".changeset/*.md"
@@ -16,15 +16,14 @@ on:
         required: true
         type: number
 
-permissions:
-  contents: read
-  pull-requests: write
-  issues: write
-  id-token: write
-
 jobs:
   review-changesets:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
     steps:
       # Checkout main branch only - never checkout untrusted PR code
       - name: Checkout base branch
@@ -32,7 +31,7 @@ jobs:
 
       - name: Review Changesets with Claude
         id: claude-review
-        uses: anthropics/claude-code-action@v1
+        uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           use_sticky_comment: true
