@@ -2223,6 +2223,80 @@ describe.sequential("wrangler dev", () => {
 			`);
 		});
 	});
+
+	describe("generate types", () => {
+		it("should default `generate_types` to false", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev");
+			expect(config.input.dev?.generate_types).toBe(undefined);
+		});
+
+		it("should set `generate_types` to `true` when `--types` flag is passed", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev --types");
+			expect(config.input.dev?.generate_types).toBe(true);
+		});
+
+		it("should set `generate_types` to `true` when `--types=true` is passed", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev --types=true");
+			expect(config.input.dev?.generate_types).toBe(true);
+		});
+
+		it("should set `generate_types` to `false` when `--types=false` is passed", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev --types=false");
+			expect(config.input.dev?.generate_types).toBe(false);
+		});
+
+		it("should read `dev.generate_types` from wrangler config file", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				dev: {
+					generate_types: true,
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev");
+			expect(config.dev.generate_types).toBe(true);
+		});
+
+		it("should allow `--types` flag to override `dev.generate_types` from config", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				dev: {
+					generate_types: false,
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev --types");
+			expect(config.input.dev?.generate_types).toBe(true);
+		});
+
+		it("should allow `--types=false` to override `dev.generate_types` from config", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				dev: {
+					generate_types: true,
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev --types=false");
+			expect(config.input.dev?.generate_types).toBe(false);
+		});
+	});
 });
 
 function mockGetZones(domain: string, zones: { id: string }[] = []) {
