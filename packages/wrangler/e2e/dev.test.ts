@@ -639,12 +639,16 @@ describe("hyperdrive dev tests", () => {
 		});
 
 		const { url } = await worker.waitForReady();
-		const socketMsgPromise = new Promise((resolve, _) => {
+		const socketMsgPromise = new Promise((resolve, reject) => {
 			server.on("connection", (sock) => {
 				sock.on("data", (data) => {
 					expect(new TextDecoder().decode(data)).toBe("test string");
 					server.close();
 					resolve({});
+				});
+				sock.on("error", (err) => {
+					console.error("Socket error:", err);
+					reject(err);
 				});
 			});
 		});
