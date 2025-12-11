@@ -1,9 +1,9 @@
 name: Changeset Review
 
 on:
-  # Use pull_request_target to access secrets while keeping the workflow secure.
-  # We only checkout main (trusted code) and use GitHub API to inspect PR content.
-  pull_request_target:
+  # Note: This won't run for PRs from forks (no access to secrets)
+  # but will work for internal PRs from branches on the main repo
+  pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - ".changeset/*.md"
@@ -26,9 +26,31 @@ jobs:
   review-changesets:
     runs-on: ubuntu-latest
     steps:
-      # Checkout main branch only - never checkout untrusted PR code
-      - name: Checkout base branch
+      - name: Checkout PR branch
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed package files
+        id: changed-packages
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            packages/**
+          files_ignore: |
+            **/*.test.ts
+            **/*.spec.ts
+            **/__tests__/**
+            **/fixtures/**
+
+      - name: Get changed changeset files
+        id: changed-changesets
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            .changeset/*.md
+          files_ignore: |
+            .changeset/README.md
 
       - name: Review Changesets with Claude
         id: claude-review
@@ -43,24 +65,16 @@ jobs:
 
             Read `.changeset/README.md` for the complete changeset guidelines. Use those rules to validate the changesets in this PR.
 
-            ## PR Information
+            ## Changed Files
 
-            PR Number: ${{ github.event.pull_request.number || inputs.pr_number }}
-
-            Use the GitHub CLI to inspect the PR. The `gh` command is available and authenticated.
-
-            Useful commands:
-            - `gh pr view <number> --json files,additions,deletions` - get list of changed files
-            - `gh pr diff <number>` - see the full diff
-            - `gh pr diff <number> -- '.changeset/*.md'` - see just changeset changes
-            - `gh api repos/${{ github.repository }}/contents/<path>?ref=<branch>` - fetch file from PR branch
+            Package files changed: ${{ steps.changed-packages.outputs.all_changed_files }}
+            Changeset files changed: ${{ steps.changed-changesets.outputs.all_changed_files }}
 
             ## Your Task
 
-            1. First, run `gh pr view` to get the list of changed files
-            2. Identify which packages under `packages/` were modified (excluding test files, fixtures)
-            3. Check what changeset files were added/modified using `gh pr diff`
-            4. Read the full content of any new changeset files from the PR branch
+            1. Review the changed package files listed above to understand what was modified
+            2. Read the changeset files listed above (if any) to review their contents
+            3. Cross-reference to ensure all affected packages are covered
 
             Then validate:
 
