@@ -75,9 +75,6 @@ patchedDependencies:
   '@netlify/build-info':
     hash: m4wvy4p7g3z4a5zv6jw4gevqr4
     path: patches/@netlify__build-info.patch
-  comment-json@4.5.0:
-    hash: tmn7k2ag44l564yrjm3wgffhj4
-    path: patches/comment-json@4.5.0.patch
   postal-mime:
     hash: ngwql2fj2dlex3jjynq4iizhk4
     path: patches/postal-mime.patch
@@ -1659,7 +1656,7 @@ importers:
         version: 1.2.9
       comment-json:
         specifier: ^4.5.0
-        version: 4.5.0(patch_hash=tmn7k2ag44l564yrjm3wgffhj4)
+        version: 4.5.0
       cross-spawn:
         specifier: ^7.0.3
         version: 7.0.6
@@ -20131,7 +20128,7 @@ snapshots:
 
   commander@7.2.0: {}
 
-  comment-json@4.5.0(patch_hash=tmn7k2ag44l564yrjm3wgffhj4):
+  comment-json@4.5.0:
     dependencies:
       array-timsort: 1.0.3
       core-util-is: 1.0.3

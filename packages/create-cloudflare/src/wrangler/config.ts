@@ -255,7 +255,9 @@ function addHintsAsJsonComments(wranglerConfig: CommentObject) {
 		// Only add hints for properties not already present in the config
 		if (!(key in wranglerConfig)) {
 			// Add block comment with the hint description
-			commentsToAdd.push(`*\n * ${hint.comment.split("\n").join("\n * ")}\n `);
+			commentsToAdd.push(
+				`*\n\t * ${hint.comment.split("\n").join("\n\t * ")}\n\t `,
+			);
 
 			// Add line comment with the example value
 			if (hint.value) {
