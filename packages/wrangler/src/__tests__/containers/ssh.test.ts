@@ -45,7 +45,7 @@ describe("containers ssh", () => {
 			      --pkcs11         Sets \`ssh -I\`: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication  [string]
 			  -i, --identity-file  Sets \`ssh -i\`: Select a file from which the identity (private key) for public key authentication is read  [string]
 			      --mac-spec       Sets \`ssh -m\`: A comma-separated list of MAC (message authentication code) algorithms, specified in order of preference  [string]
-			  -o, --option         Sets \`ssh -o\`: Can be used to give options in the format used in the ssh configuration file. May be repeated  [string]
+			  -o, --option         Sets \`ssh -o\`: Set options in the format used in the ssh configuration file. May be repeated  [string]
 			      --tag            Sets \`ssh -P\`: Specify a tag name that may be used to select configuration in ssh_config  [string]"
 		`);
 	});
