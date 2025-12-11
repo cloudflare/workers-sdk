@@ -31,84 +31,42 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get changed package files
-        id: changed-packages
-        uses: tj-actions/changed-files@v45
-        with:
-          files: |
-            packages/**
-          files_ignore: |
-            **/*.test.ts
-            **/*.spec.ts
-            **/__tests__/**
-            **/fixtures/**
-
-      - name: Get changed changeset files
-        id: changed-changesets
-        uses: tj-actions/changed-files@v45
-        with:
-          files: |
-            .changeset/*.md
-          files_ignore: |
-            .changeset/README.md
-
       - name: Review Changesets with Claude
         id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           use_sticky_comment: true
+          claude_args: |
+            --json-schema '{"type":"object","properties":{"passed":{"type":"boolean"}},"required":["passed"]}'
           prompt: |
-            You are a changeset reviewer for the Cloudflare Workers SDK monorepo. Your job is to ensure changesets are correct, complete, and provide good changelog entries.
+            Review the changesets in this PR for the Cloudflare Workers SDK.
 
             ## Guidelines
 
-            Read `.changeset/README.md` for the complete changeset guidelines. Use those rules to validate the changesets in this PR.
+            Read `.changeset/README.md` for the complete changeset guidelines.
 
-            ## Changed Files
+            ## Key Points
 
-            Package files changed: ${{ steps.changed-packages.outputs.all_changed_files }}
-            Changeset files changed: ${{ steps.changed-changesets.outputs.all_changed_files }}
+            - Changesets describe **user-facing changes only** (for the CHANGELOG)
+            - Internal refactors, implementation details, and code reorganization do NOT need changesets
+            - Major versions are forbidden for wrangler
+            - No h1/h2/h3 headers in changeset content (breaks formatting)
+
+            ## PR Info
+
+            Title: ${{ github.event.pull_request.title }}
+            Description: ${{ github.event.pull_request.body }}
 
             ## Your Task
 
-            1. Review the changed package files listed above to understand what was modified
-            2. Read the changeset files listed above (if any) to review their contents
-            3. Cross-reference to ensure all affected packages are covered
+            1. List changeset files in `.changeset/` (excluding README.md)
+            2. Read each changeset file to review its contents
+            3. If needed, check what packages changed using `git diff --name-only origin/${{ github.base_ref }}`
+            4. Validate changesets cover user-facing changes appropriately
 
-            Then validate:
+            Set `passed` to false only for blocking issues (missing changeset for user-facing changes, wrong version type, forbidden major, very poor quality).
 
-            1. **Missing Changeset**: If packages were modified with user-facing changes, a changeset is required
-            2. **Package Coverage**: All affected packages should be referenced in changesets
-            3. **Version Type**: Correct use of patch/minor/major (noting major forbidden constraints in the changeset README)
-            4. **Changelog Quality**: Descriptions should be meaningful with examples for features
-            5. **Multiple Changesets**: Separate changesets for unrelated changes
-            6. **Markdown Headers**: No h1/h2/h3 headers (breaks changelog formatting)
-
-            ## Output Format
-
-            1. **Summary**: One-line assessment (✅ Changesets look good / ⚠️ Issues found / ❌ Missing changeset)
-
-            2. **Issues** (if any): List each issue with:
-               - What's wrong
-               - Which file/package it affects
-               - Suggested fix
-
-            3. **Suggestions** (if any): Optional improvements that aren't blocking
-
-            If there are no changesets and no package changes, confirm no changeset is needed.
-
-            ## IMPORTANT: Failing the check
-
-            If there are blocking issues (missing changeset, wrong version type, forbidden major version, or very poor changelog quality), you MUST fail this check by running:
-            ```
-            exit 1
-            ```
-            This will block the PR from being merged until the issues are fixed.
-
-            Only pass (don't exit 1) if:
-            - Changesets look good, OR
-            - No changeset is required for this PR, OR
-            - Issues are minor suggestions only (not blocking)
-
-            Begin your review now.
+      - name: Fail if review did not pass
+        if: ${{ fromJSON(steps.claude-review.outputs.structured_output).passed == false }}
+        run: exit 1
