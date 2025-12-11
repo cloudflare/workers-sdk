@@ -75,9 +75,9 @@ patchedDependencies:
   '@netlify/build-info':
     hash: m4wvy4p7g3z4a5zv6jw4gevqr4
     path: patches/@netlify__build-info.patch
-  comment-json:
-    hash: hbbonhdeq6rxrctdf7euss7qte
-    path: patches/comment-json.patch
+  comment-json@4.5.0:
+    hash: tmn7k2ag44l564yrjm3wgffhj4
+    path: patches/comment-json@4.5.0.patch
   postal-mime:
     hash: ngwql2fj2dlex3jjynq4iizhk4
     path: patches/postal-mime.patch
@@ -1658,8 +1658,8 @@ importers:
         specifier: ^1.2.9
         version: 1.2.9
       comment-json:
-        specifier: ^4.2.5
-        version: 4.2.5(patch_hash=hbbonhdeq6rxrctdf7euss7qte)
+        specifier: ^4.5.0
+        version: 4.5.0(patch_hash=tmn7k2ag44l564yrjm3wgffhj4)
       cross-spawn:
         specifier: ^7.0.3
         version: 7.0.6
@@ -9109,8 +9109,8 @@ packages:
     resolution: {integrity: sha512-QrWXB+ZQSVPmIWIhtEO9H+gwHaMGYiF5ChvoJ+K9ZGHG/sVsa6yiesAD1GC/x46sET00Xlwo1u49RVVVzvcSkw==}
     engines: {node: '>= 10'}
 
-  comment-json@4.2.5:
-    resolution: {integrity: sha512-bKw/r35jR3HGt5PEPm1ljsQQGyCrR8sFGNiN5L+ykDHdpO8Smxkrkla9Yi6NkQyUrb8V54PGhfMs6NrIwtxtdw==}
+  comment-json@4.5.0:
+    resolution: {integrity: sha512-aKl8CwoMKxVTfAK4dFN4v54AEvuUh9pzmgVIBeK6gBomLwMgceQUKKWHzJdW1u1VQXQuwnJ7nJGWYYMTl5U4yg==}
     engines: {node: '>= 6'}
 
   common-path-prefix@3.0.0:
@@ -10509,10 +10509,6 @@ packages:
 
   has-flag@4.0.0:
     resolution: {integrity: sha512-EykJT/Q1KjTWctppgIAgfSO0tKVuZUjhgMr17kqTumMl6Afv3EISleU7qZUzoXDFTAHTDC4NOoG/ZxU3EvlMPQ==}
-    engines: {node: '>=8'}
-
-  has-own-prop@2.0.0:
-    resolution: {integrity: sha512-Pq0h+hvsVm6dDEa8x82GnLSYHOzNDt7f0ddFa3FqcQlgzEiptPqL+XrOJNavjOzSYiYWIrgeVYYgGlLmnxwilQ==}
     engines: {node: '>=8'}
 
   has-property-descriptors@1.0.2:
@@ -12922,10 +12918,6 @@ packages:
 
   remove-accents@0.4.2:
     resolution: {integrity: sha512-7pXIJqJOq5tFgG1A2Zxti3Ht8jJF337m4sowbuHsW30ZnkQFnDzy9qBNhgzX8ZLW4+UBcXiiR7SwR6pokHsxiA==}
-
-  repeat-string@1.6.1:
-    resolution: {integrity: sha512-PV0dzCYDNfRi1jCDbJzpW7jNNDRuCOG/jI5ctQcGKt/clZD+YcPS3yIlWuTJMmESC8aevCFmWJy5wjAFgNqN6w==}
-    engines: {node: '>=0.10'}
 
   require-directory@2.1.1:
     resolution: {integrity: sha512-fGxEI7+wsG9xrvdjsrlmL22OMTTiHRwAMroiEeMgq8gzoLC/PQr7RsRDSTLUg/bZAZtF+TVIkHc6/4RIKrui+Q==}
@@ -20139,13 +20131,11 @@ snapshots:
 
   commander@7.2.0: {}
 
-  comment-json@4.2.5(patch_hash=hbbonhdeq6rxrctdf7euss7qte):
+  comment-json@4.5.0(patch_hash=tmn7k2ag44l564yrjm3wgffhj4):
     dependencies:
       array-timsort: 1.0.3
       core-util-is: 1.0.3
       esprima: 4.0.1
-      has-own-prop: 2.0.0
-      repeat-string: 1.6.1
 
   common-path-prefix@3.0.0: {}
 
@@ -22017,8 +22007,6 @@ snapshots:
   has-bigints@1.0.2: {}
 
   has-flag@4.0.0: {}
-
-  has-own-prop@2.0.0: {}
 
   has-property-descriptors@1.0.2:
     dependencies:
@@ -24370,8 +24358,6 @@ snapshots:
       type-fest: 4.41.0
 
   remove-accents@0.4.2: {}
-
-  repeat-string@1.6.1: {}
 
   require-directory@2.1.1: {}
 
