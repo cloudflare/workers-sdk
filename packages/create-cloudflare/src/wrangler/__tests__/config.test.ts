@@ -16,9 +16,7 @@ describe("update wrangler config", () => {
 	const ctx = createTestContext();
 
 	beforeEach(() => {
-		vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(
-			Promise.resolve(mockCompatDate),
-		);
+		vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(mockCompatDate);
 		vi.mocked(existsSync).mockImplementation((f) =>
 			(f as string).endsWith(".toml"),
 		);
