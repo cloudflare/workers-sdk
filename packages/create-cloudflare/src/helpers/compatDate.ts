@@ -10,13 +10,11 @@ import type { C3Context } from "types";
  *
  * @returns The latest compatibility date for workerd in the form "YYYY-MM-DD"
  */
-export async function getWorkerdCompatibilityDate() {
+export function getWorkerdCompatibilityDate(projectPath: string) {
 	const s = spinner();
 	s.start("Retrieving current workerd compatibility date");
 
-	const { date, source } = await getLatestWorkerdCompatibilityDate({
-		remote: true,
-	});
+	const { date, source } = getLatestWorkerdCompatibilityDate({ projectPath });
 
 	if (source === "fallback") {
 		s.stop(
@@ -29,17 +27,6 @@ export async function getWorkerdCompatibilityDate() {
 	}
 	return date;
 }
-
-/**
- * Return that latest compatibility date formatted as a command line flag when
- * working with `wrangler`.
- *
- * @returns The latest workerd compatibility date in the form "--compatibility-date=YYYY-MM-DD"
- */
-export const compatDateFlag = async () => {
-	const workerdCompatDate = await getWorkerdCompatibilityDate();
-	return `--compatibility-date=${workerdCompatDate}`;
-};
 
 /**
  * Looks up the latest entrypoint found in the locally installed `@cloudflare/workers-types`

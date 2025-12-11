@@ -221,7 +221,6 @@ function resolveWorkerConfig(
 
 	const { date } = getLatestWorkerdCompatibilityDate({
 		projectPath: root,
-		remote: false,
 	});
 
 	workerConfig.compatibility_date ??= date;
