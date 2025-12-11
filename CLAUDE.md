@@ -106,10 +106,12 @@ pnpm changeset add --empty
 ```
 
 This creates an empty changeset file. Edit it to add:
+
 1. The affected package(s) and version bump type (patch/minor/major)
 2. A meaningful description for the changelog
 
 **Key rules:**
+
 - Major versions for `wrangler` are forbidden
 - No h1/h2/h3 markdown headers (breaks changelog formatting)
 - Include usage examples for new features

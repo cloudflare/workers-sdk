@@ -400,12 +400,14 @@ CLOUDFLARE_ACCOUNT_ID="<Account ID for the token you just created>" CLOUDFLARE_A
 Every non-trivial change to the project - those that should appear in the changelog - must be captured in a "changeset".
 
 See the [.changeset/README.md](.changeset/README.md) for detailed guidelines on:
+
 - Creating changesets
 - Choosing version types (patch/minor/major)
 - Writing good changeset descriptions
 - Formatting rules
 
 Quick start:
+
 ```sh
 pnpm changeset
 git add .changeset/*.md
