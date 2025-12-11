@@ -1,6 +1,5 @@
 import { getLatestWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import {
-	compatDateFlag,
 	getLatestTypesEntrypoint,
 	getWorkerdCompatibilityDate,
 } from "helpers/compatDate";
@@ -26,12 +25,12 @@ describe("Compatibility Date Helpers", () => {
 
 	describe("getWorkerdCompatibilityDate()", () => {
 		test("normal flow", async () => {
-			vi.mocked(getLatestWorkerdCompatibilityDate).mockResolvedValue({
+			vi.mocked(getLatestWorkerdCompatibilityDate).mockReturnValue({
 				date: "2025-01-10",
-				source: "remote-workerd",
+				source: "workerd",
 			});
 
-			const date = await getWorkerdCompatibilityDate();
+			const date = getWorkerdCompatibilityDate("./my-app");
 
 			const expectedDate = "2025-01-10";
 			expect(date).toBe(expectedDate);
@@ -42,12 +41,12 @@ describe("Compatibility Date Helpers", () => {
 		});
 
 		test("fallback result", async () => {
-			vi.mocked(getLatestWorkerdCompatibilityDate).mockResolvedValue({
+			vi.mocked(getLatestWorkerdCompatibilityDate).mockReturnValue({
 				date: "2025-09-27",
 				source: "fallback",
 			});
 
-			const date = await getWorkerdCompatibilityDate();
+			const date = getWorkerdCompatibilityDate("./my-app");
 
 			const fallbackDate = "2025-09-27";
 			expect(date).toBe(fallbackDate);
@@ -56,16 +55,6 @@ describe("Compatibility Date Helpers", () => {
 				expect.stringContaining(fallbackDate),
 			);
 		});
-	});
-
-	test("compatDateFlag", async () => {
-		vi.mocked(getLatestWorkerdCompatibilityDate).mockResolvedValue({
-			date: "2025-01-10",
-			source: "remote-workerd",
-		});
-
-		const flag = await compatDateFlag();
-		expect(flag).toBe("--compatibility-date=2025-01-10");
 	});
 
 	describe("getLatestTypesEntrypoint", () => {

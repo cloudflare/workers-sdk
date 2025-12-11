@@ -23,8 +23,8 @@ const configure = async (ctx: C3Context) => {
 	usesTypescript(ctx);
 	const filePath = `app.config.${usesTypescript(ctx) ? "ts" : "js"}`;
 
-	const { date: compatDate } = await getLatestWorkerdCompatibilityDate({
-		remote: true,
+	const { date: compatDate } = getLatestWorkerdCompatibilityDate({
+		projectPath: ctx.project.path,
 	});
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);

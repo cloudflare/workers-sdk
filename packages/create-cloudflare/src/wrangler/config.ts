@@ -32,7 +32,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 	// Placeholders to replace in the wrangler config files
 	const substitutions: Record<string, string> = {
 		"<WORKER_NAME>": ctx.project.name,
-		"<COMPATIBILITY_DATE>": await getWorkerdCompatibilityDate(),
+		"<COMPATIBILITY_DATE>": getWorkerdCompatibilityDate(ctx.project.path),
 	};
 
 	if (wranglerJsonOrJsoncExists(ctx)) {
@@ -53,7 +53,10 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		wranglerJson = appendJSONProperty(
 			wranglerJson,
 			"compatibility_date",
-			await getCompatibilityDate(wranglerJson.compatibility_date),
+			await getCompatibilityDate(
+				wranglerJson.compatibility_date,
+				ctx.project.path,
+			),
 		);
 		wranglerJson = appendJSONProperty(wranglerJson, "observability", {
 			enabled: true,
@@ -74,6 +77,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		wranglerToml.name = ctx.project.name;
 		wranglerToml.compatibility_date = await getCompatibilityDate(
 			wranglerToml.compatibility_date,
+			ctx.project.path,
 		);
 		wranglerToml.observability ??= { enabled: true };
 
@@ -187,7 +191,10 @@ export const addVscodeConfig = (ctx: C3Context) => {
  * @param tentativeDate A tentative compatibility date, usually from wrangler config.
  * @returns The compatibility date to use in the form "YYYY-MM-DD"
  */
-async function getCompatibilityDate(tentativeDate: unknown): Promise<string> {
+async function getCompatibilityDate(
+	tentativeDate: unknown,
+	projectPath: string,
+): Promise<string> {
 	const validCompatDateRe = /^\d{4}-\d{2}-\d{2}$/m;
 	if (
 		typeof tentativeDate === "string" &&
@@ -198,7 +205,7 @@ async function getCompatibilityDate(tentativeDate: unknown): Promise<string> {
 		return tentativeDate;
 	}
 	// Fallback to the latest workerd date
-	return await getWorkerdCompatibilityDate();
+	return getWorkerdCompatibilityDate(projectPath);
 }
 
 /**
