@@ -1,5 +1,5 @@
 ---
-"wrangler": patch
+"wrangler": minor
 ---
 
-Added Workflows send-event command to wrangler.
+Add Workflows send-event to wrangler commands.

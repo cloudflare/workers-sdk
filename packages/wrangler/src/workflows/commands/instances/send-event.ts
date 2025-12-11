@@ -11,7 +11,7 @@ export const workflowsInstancesSendEventCommand = createCommand({
 		status: "stable",
 	},
 
-	positionalArgs: ["name", "id", "type", "payload"],
+	positionalArgs: ["name", "id"],
 	args: {
 		name: {
 			describe: "Name of the workflow",
@@ -31,9 +31,10 @@ export const workflowsInstancesSendEventCommand = createCommand({
 		},
 		payload: {
 			describe:
-				'JSON payload for the workflow event (e.g., \'{"key": "value"}\'). Defaults to an empty object if not provided.',
+				'JSON string for the workflow event (e.g., \'{"key": "value"}\')',
 			type: "string",
 			demandOption: false,
+			default: "{}",
 		},
 	},
 
@@ -60,7 +61,7 @@ export const workflowsInstancesSendEventCommand = createCommand({
 			id = instances[0].id;
 		}
 
-		const payload = args.payload ? JSON.parse(args.payload) : {};
+		const payload = JSON.parse(args.payload);
 
 		await fetchResult(
 			config,
@@ -75,7 +76,7 @@ export const workflowsInstancesSendEventCommand = createCommand({
 		);
 
 		logger.info(
-			`📤 The event "${args.type}" was sent to the instance "${id}" from ${args.name}`
+			`📤 The event with type "${args.type}" and payload "${args.payload}" was sent to the instance "${id}" from ${args.name}`
 		);
 	},
 });
