@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { showCursor } from "@cloudflare/cli";
+import { bold } from "@cloudflare/cli/colors";
 import { ApiError, DeploymentsService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { WebSocket } from "ws";
@@ -63,7 +64,7 @@ export function sshYargs(args: CommonYargsArgv) {
 			.option("option", {
 				alias: "o",
 				describe:
-					"Sets `ssh -o`: Can be used to give options in the format used in the ssh configuration file",
+					"Sets `ssh -o`: Set options in the format used in the ssh configuration file. May be repeated",
 				type: "string",
 			})
 			.option("tag", {
@@ -152,7 +153,12 @@ export async function sshCommand(
 				resolve(undefined);
 			} else {
 				reject(
-					new Error(`SSH exited unsuccessfully. Is the container running?`)
+					new Error(
+						[
+							"SSH exited unsuccessfully. Is the container running?",
+							`${bold("NOTE:")} SSH does not automatically wake a container or count as activity to keep a container alive`,
+						].join("\n")
+					)
 				);
 			}
 		});
@@ -268,6 +274,11 @@ function buildSshArgs(
 		"-o",
 		"StrictHostKeyChecking=no",
 	];
+
+	// Hide warnings from SSH unless debug logging is enabled
+	if (process.env.WRANGLER_LOG !== "debug") {
+		flags.push("-o", "LogLevel=ERROR");
+	}
 
 	if (sshArgs.cipher !== undefined) {
 		flags.push("-c", sshArgs.cipher);
