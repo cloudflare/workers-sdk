@@ -27,7 +27,7 @@ describe("containers ssh", () => {
 			"wrangler containers ssh ID
 
 			POSITIONALS
-			  ID  id of the container instance  [string] [required]
+			  ID  ID of the container instance  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -41,11 +41,11 @@ describe("containers ssh", () => {
 			      --cipher         Sets \`ssh -c\`: Select the cipher specification for encrypting the session  [string]
 			      --log-file       Sets \`ssh -E\`: Append debug logs to log_file instead of standard error  [string]
 			      --escape-char    Sets \`ssh -e\`: Set the escape character for sessions with a pty (default: ‘~’)  [string]
-			      --config-file    Sets \`ssh -F\`: Specify an alternative per-user ssh configuration file  [string]
-			      --pkcs11         \`Sets \`ssh -I\`: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication  [string]
-			      --identity-file  Sets \`ssh -i\`: Select a file from which the identity (private key) for public key authentication is read  [string]
+			  -F, --config-file    Sets \`ssh -F\`: Specify an alternative per-user ssh configuration file  [string]
+			      --pkcs11         Sets \`ssh -I\`: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication  [string]
+			  -i, --identity-file  Sets \`ssh -i\`: Select a file from which the identity (private key) for public key authentication is read  [string]
 			      --mac-spec       Sets \`ssh -m\`: A comma-separated list of MAC (message authentication code) algorithms, specified in order of preference  [string]
-			      --option         Sets \`ssh -o\`: Can be used to give options in the format used in the ssh configuration file  [string]
+			  -o, --option         Sets \`ssh -o\`: Set options in the format used in the ssh configuration file. May be repeated  [string]
 			      --tag            Sets \`ssh -P\`: Specify a tag name that may be used to select configuration in ssh_config  [string]"
 		`);
 	});
@@ -79,8 +79,7 @@ describe("containers ssh", () => {
 			runWrangler(`containers ssh ${instanceId}`)
 		).rejects.toThrowErrorMatchingInlineSnapshot(
 			`
-			[Error: There has been an error verifying SSH access.
-			something happened]
+			[Error: Error verifying SSH access: something happened]
 		`
 		);
 	});
@@ -109,7 +108,8 @@ describe("containers ssh", () => {
 		const mockWebSocket = new MockWebSocketServer(wsUrl);
 		await expect(runWrangler(`containers ssh ${instanceId}`)).rejects
 			.toMatchInlineSnapshot(`
-			[Error: ssh exited unsuccessfully. Is the container running?]
+			[Error: SSH exited unsuccessfully. Is the container running?
+			NOTE: SSH does not automatically wake a container or count as activity to keep a container alive]
 		`);
 
 		// We got a connection
