@@ -1,0 +1,138 @@
+name: Changeset Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".changeset/*.md"
+      - "packages/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  review-changesets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            packages/**
+          files_ignore: |
+            **/*.test.ts
+            **/*.spec.ts
+            **/__tests__/**
+            **/fixtures/**
+
+      - name: Get changeset files
+        id: changeset-files
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            .changeset/*.md
+          files_ignore: |
+            .changeset/README.md
+
+      - name: Review Changesets with Claude
+        uses: anthropics/claude-code-action@beta
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          direct_prompt: |
+            You are a changeset reviewer for the Cloudflare Workers SDK monorepo. Your job is to ensure changesets are correct, complete, and provide good changelog entries.
+
+            ## Context
+
+            This PR has the following characteristics:
+            - Changed package files: ${{ steps.changed-files.outputs.all_changed_files }}
+            - Changeset files added/modified: ${{ steps.changeset-files.outputs.all_changed_files }}
+            - Has package changes: ${{ steps.changed-files.outputs.any_changed }}
+            - Has changeset changes: ${{ steps.changeset-files.outputs.any_changed }}
+
+            ## Your Task
+
+            Review this PR's changesets against the code changes. Check for these issues and report them:
+
+            ### 1. Missing Changeset
+            If packages under `packages/` were modified (excluding test files, fixtures, and non-functional changes like comments), a changeset is required unless:
+            - The changes are purely internal refactoring with no user-facing impact
+            - The changes are only to devDependencies
+            - The changes are documentation-only within the package
+
+            ### 2. Package Coverage
+            Each changeset should reference all packages that have user-facing changes. Look at:
+            - Which packages under `packages/` were actually modified
+            - Whether each modified package is mentioned in a changeset
+            - If a change affects multiple packages, they should all be listed (can be in one changeset or separate changesets)
+
+            ### 3. Version Type Validation
+            - **patch**: Bug fixes, small improvements, documentation fixes
+            - **minor**: New features, new CLI commands, new configuration options, deprecations
+            - **major**: Breaking changes (FORBIDDEN for wrangler - must use minor with migration path)
+
+            Flag issues:
+            - Major versions for `wrangler` are FORBIDDEN - suggest using minor with deprecation/migration path
+            - Major versions for other packages need strong justification
+            - A new feature marked as `patch` should be `minor`
+            - A breaking change marked as `patch` or `minor` should be reconsidered
+
+            ### 4. Changelog Quality
+            For anything beyond trivial patches, the changeset description should:
+            - Explain WHAT changed and WHY (not just "fix bug")
+            - For new features: include a brief example of usage
+            - For bug fixes: describe the symptom that was fixed
+            - For breaking changes: explain migration path
+            - Be written from a user's perspective (they'll see this in the changelog)
+
+            Examples of GOOD changeset descriptions:
+            ```
+            Add `wrangler d1 export` command for exporting D1 databases to SQL files
+
+            You can now export your D1 database to a local SQL file:
+            ```bash
+            wrangler d1 export my-database --output backup.sql
+            ```
+            ```
+
+            ```
+            Fix `wrangler dev` failing to start when `wrangler.toml` contains Unicode characters
+
+            Previously, projects with non-ASCII characters in configuration values would fail with "Invalid UTF-8 sequence". This is now handled correctly.
+            ```
+
+            Examples of BAD changeset descriptions (flag these):
+            - "fix bug" (what bug?)
+            - "update dependency" (which one? why?)
+            - "Add new feature" (what feature?)
+            - "refactor" (why does this warrant a release?)
+
+            ### 5. Multiple Changesets
+            If a PR makes multiple distinct user-facing changes, it MAY need multiple changesets so each gets its own changelog entry. Flag if:
+            - A single changeset describes multiple unrelated changes
+            - Different types of changes (bug fix + new feature) are lumped together
+
+            ## Output Format
+
+            After your review, provide:
+
+            1. **Summary**: One-line assessment (✅ Changesets look good / ⚠️ Issues found / ❌ Missing changeset)
+
+            2. **Issues** (if any): List each issue with:
+               - What's wrong
+               - Which file/package it affects
+               - Suggested fix
+
+            3. **Suggestions** (if any): Optional improvements that aren't blocking
+
+            If there are no changesets and no package changes, simply confirm no changeset is needed.
+
+            Begin your review now by examining the PR's changed files and any changeset files.
