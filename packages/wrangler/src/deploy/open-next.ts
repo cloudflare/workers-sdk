@@ -38,9 +38,7 @@ export async function maybeDelegateToOpenNextDeployCommand(
 
 			await runCommand([npx, "opennextjs-cloudflare", "deploy"], {
 				env: {
-					// Note: we set `OPEN_NEXT_DEPLOY` just in case to make sure that even if open-next stops
-					//       setting the variable we set it for it here (note: open-next does forward env variable
-					//       to its `wrangler deploy` call)
+					// We set `OPEN_NEXT_DEPLOY` here so that it's passed through to the `wrangler deploy` command that OpenNext delegates to in order to prevent an infinite loop
 					OPEN_NEXT_DEPLOY: "true",
 				},
 			});
