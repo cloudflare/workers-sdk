@@ -7,7 +7,7 @@ import type { Entry } from "../deployment-bundle/entry";
 import type { Config } from "@cloudflare/workers-utils";
 
 export const DEFAULT_WORKERS_TYPES_FILE_NAME = "worker-configuration.d.ts";
-const DEFAULT_WORKERS_TYPES_FILE_PATH = `./${DEFAULT_WORKERS_TYPES_FILE_NAME}`;
+export const DEFAULT_WORKERS_TYPES_FILE_PATH = `./${DEFAULT_WORKERS_TYPES_FILE_NAME}`;
 
 // Checks the default location for a generated types file and compares if the
 // recorded Env hash, workerd version or compat date and flags have changed
