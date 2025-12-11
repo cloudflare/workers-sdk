@@ -1,31 +1,27 @@
 import assert from "node:assert";
+import { statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import chalk from "chalk";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { configFileName } from "../config";
-import { createAlias, createCommand } from "../core/create-command";
+import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
+import { confirm, prompt } from "../dialogs";
 import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
 import * as metrics from "../metrics";
 import { writeOutput } from "../output";
-import { getLegacyAssetPaths, getSiteAssetPaths } from "../sites";
+import { getSiteAssetPaths } from "../sites";
 import { requireAuth } from "../user";
 import { collectKeyValues } from "../utils/collectKeyValues";
+import { formatCompatibilityDate } from "../utils/compatibility-date";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
+import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import deploy from "./deploy";
-import type { Config } from "../config";
-
-async function standardPricingWarning(config: Config) {
-	if (config.usage_model !== undefined) {
-		logger.warn(
-			`The \`usage_model\` defined in your ${configFileName(config.configPath)} file is deprecated and no longer used. Visit our developer docs for details: https://developers.cloudflare.com/workers/wrangler/configuration/#usage-model`
-		);
-	}
-}
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -91,33 +87,6 @@ export const deployCommand = createCommand({
 			type: "string",
 			requiresArg: true,
 		},
-		format: {
-			choices: ["modules", "service-worker"] as const,
-			describe: "Choose an entry type",
-			deprecated: true,
-			hidden: true,
-		},
-		"experimental-public": {
-			describe: "(Deprecated) Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
-		},
-		public: {
-			describe: "(Deprecated) Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
-		},
-		"legacy-assets": {
-			describe: "Static assets to be served",
-			type: "string",
-			requiresArg: true,
-			deprecated: true,
-			hidden: true,
-		},
 		site: {
 			describe: "Root folder of static assets for Workers Sites",
 			type: "string",
@@ -175,6 +144,13 @@ export const deployCommand = createCommand({
 			requiresArg: true,
 			array: true,
 		},
+		domains: {
+			describe: "Custom domains to deploy to",
+			alias: "domain",
+			type: "string",
+			requiresArg: true,
+			array: true,
+		},
 		"jsx-factory": {
 			describe: "The function that is called for each JSX element",
 			type: "string",
@@ -197,14 +173,25 @@ export const deployCommand = createCommand({
 		"node-compat": {
 			describe: "Enable Node.js compatibility",
 			type: "boolean",
+			hidden: true,
+			deprecated: true,
 		},
 		"dry-run": {
 			describe: "Don't actually deploy",
 			type: "boolean",
 		},
+		metafile: {
+			describe:
+				"Path to output build metadata from esbuild. If flag is used without a path, defaults to 'bundle-meta.json' inside the directory specified by --outdir.",
+			type: "string",
+			coerce: (v: string) => (!v ? true : v),
+		},
 		"keep-vars": {
 			describe:
-				"Stop Wrangler from deleting vars that are not present in the Wrangler configuration file\nBy default Wrangler will remove all vars and replace them with those found in the Wrangler configuration.\nIf your development approach is to modify vars after deployment via the dashboard you may wish to set this flag.",
+				"When not used (or set to false), Wrangler will delete all vars before setting those found in the Wrangler configuration.\n" +
+				"When used (and set to true), the environment variables are not deleted before the deployment.\n" +
+				"If you set variables via the dashboard you probably want to use this flag.\n" +
+				"Note that secrets are never deleted by deployments.",
 			default: false,
 			type: "boolean",
 		},
@@ -232,12 +219,22 @@ export const deployCommand = createCommand({
 				"Name of a dispatch namespace to deploy the Worker to (Workers for Platforms)",
 			type: "string",
 		},
-		"experimental-auto-create": {
-			describe: "Automatically provision draft bindings with new resources",
+		"containers-rollout": {
+			describe:
+				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. ",
+			choices: ["immediate", "gradual"] as const,
+		},
+		"experimental-deploy-remote-diff-check": {
+			describe: "Experimental: Enable The Deployment Remote Diff check",
 			type: "boolean",
-			default: true,
 			hidden: true,
-			alias: "x-auto-create",
+			alias: ["x-remote-diff-check"],
+		},
+		strict: {
+			describe:
+				"Enables strict mode for the deploy command, this prevents deployments to occur when there are even small potential risks.",
+			type: "boolean",
+			default: false,
 		},
 	},
 	behaviour: {
@@ -245,25 +242,16 @@ export const deployCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			ASSETS_RPC: false,
+			REMOTE_BINDINGS: args.experimentalRemoteBindings ?? true,
+			DEPLOY_REMOTE_DIFF_CHECK: args.experimentalDeployRemoteDiffCheck ?? false,
+			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
+		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
 	},
 	validateArgs(args) {
-		if (args.legacyAssets) {
-			logger.warn(
-				`The --legacy-assets argument has been deprecated. Please use --assets instead.\n` +
-					`To learn more about Workers with assets, visit our documentation at https://developers.cloudflare.com/workers/frameworks/.`
-			);
-		}
-		if (args.public) {
+		if (args.nodeCompat) {
 			throw new UserError(
-				"The --public field has been deprecated, try --legacy-assets instead.",
-				{ telemetryMessage: true }
-			);
-		}
-		if (args.experimentalPublic) {
-			throw new UserError(
-				"The --experimental-public field has been deprecated, try --legacy-assets instead.",
+				"The --node-compat flag is no longer supported as of Wrangler v4. Instead, use the `nodejs_compat` compatibility flag. This includes the functionality from legacy `node_compat` polyfills and natively implemented Node.js APIs. See https://developers.cloudflare.com/workers/runtime-apis/nodejs for more information.",
 				{ telemetryMessage: true }
 			);
 		}
@@ -281,22 +269,29 @@ export const deployCommand = createCommand({
 		const projectRoot =
 			config.userConfigPath && path.dirname(config.userConfigPath);
 
+		if (!config.configPath) {
+			// Attempt to interactively handle `wrangler deploy <directory>`
+			if (args.script) {
+				try {
+					const stats = statSync(args.script);
+					if (stats.isDirectory()) {
+						args = await handleMaybeAssetsDeployment(args.script, args);
+					}
+				} catch (error) {
+					// If this is our UserError, re-throw it
+					if (error instanceof UserError) {
+						throw error;
+					}
+					// If stat fails, let the original flow handle the error
+				}
+			}
+			// atttempt to interactively handle `wrangler deploy --assets <directory>` missing compat date or name
+			else if (args.assets && (!args.compatibilityDate || !args.name)) {
+				args = await handleMaybeAssetsDeployment(args.assets, args);
+			}
+		}
+
 		const entry = await getEntry(args, config, "deploy");
-
-		if (
-			(args.legacyAssets || config.legacy_assets) &&
-			(args.site || config.site)
-		) {
-			throw new UserError(
-				"Cannot use legacy assets and Workers Sites in the same Worker.",
-				{ telemetryMessage: true }
-			);
-		}
-
-		if (config.workflows?.length) {
-			logger.once.warn("Workflows is currently in open beta.");
-		}
-
 		validateAssetsArgsAndConfig(args, config);
 
 		const assetsOptions = getAssetsOptions(args, config);
@@ -313,19 +308,12 @@ export const deployCommand = createCommand({
 
 		const accountId = args.dryRun ? undefined : await requireAuth(config);
 
-		const legacyAssetPaths =
-			args.legacyAssets || config.legacy_assets
-				? getLegacyAssetPaths(config, args.legacyAssets)
-				: getSiteAssetPaths(
-						config,
-						args.site,
-						args.siteInclude,
-						args.siteExclude
-					);
-
-		if (!args.dryRun) {
-			await standardPricingWarning(config);
-		}
+		const siteAssetPaths = getSiteAssetPaths(
+			config,
+			args.site,
+			args.siteInclude,
+			args.siteExclude
+		);
 
 		const beforeUpload = Date.now();
 		let name = getScriptName(args, config);
@@ -349,7 +337,12 @@ export const deployCommand = createCommand({
 
 		if (!args.dryRun) {
 			assert(accountId, "Missing account ID");
-			await verifyWorkerMatchesCITag(accountId, name, config.configPath);
+			await verifyWorkerMatchesCITag(
+				config,
+				accountId,
+				name,
+				config.configPath
+			);
 		}
 		const { sourceMapSize, versionId, workerTag, targets } = await deploy({
 			config,
@@ -359,7 +352,7 @@ export const deployCommand = createCommand({
 			entry,
 			env: args.env,
 			compatibilityDate: args.latest
-				? new Date().toISOString().substring(0, 10)
+				? formatCompatibilityDate(new Date())
 				: args.compatibilityDate,
 			compatibilityFlags: args.compatibilityFlags,
 			vars: cliVars,
@@ -370,15 +363,16 @@ export const deployCommand = createCommand({
 			jsxFragment: args.jsxFragment,
 			tsconfig: args.tsconfig,
 			routes: args.routes,
+			domains: args.domains,
 			assetsOptions,
-			legacyAssetPaths,
-			legacyEnv: isLegacyEnv(config),
+			legacyAssetPaths: siteAssetPaths,
+			useServiceEnvironments: useServiceEnvironments(config),
 			minify: args.minify,
-			nodeCompat: args.nodeCompat,
 			isWorkersSite: Boolean(args.site || config.site),
 			outDir: args.outdir,
 			outFile: args.outfile,
 			dryRun: args.dryRun,
+			metafile: args.metafile,
 			noBundle: !(args.bundle ?? !config.no_bundle),
 			keepVars: args.keepVars,
 			logpush: args.logpush,
@@ -387,6 +381,8 @@ export const deployCommand = createCommand({
 			projectRoot,
 			dispatchNamespace: args.dispatchNamespace,
 			experimentalAutoCreate: args.experimentalAutoCreate,
+			containersRollout: args.containersRollout,
+			strict: args.strict,
 		});
 
 		writeOutput({
@@ -416,12 +412,89 @@ export const deployCommand = createCommand({
 
 export type DeployArgs = (typeof deployCommand)["args"];
 
-export const publishAlias = createAlias({
-	aliasOf: "wrangler deploy",
-	metadata: {
-		deprecated: true,
-		deprecatedMessage:
-			"`wrangler publish` is deprecated and will be removed in the next major version.\nPlease use `wrangler deploy` instead, which accepts exactly the same arguments.",
-		hidden: true,
-	},
-});
+/**
+ * Handles the case where:
+ * - a user provides a directory as a positional argument probably intending to deploy static assets. e.g. wrangler deploy ./public
+ * - a user provides `--assets` but does not provide a name or compatibility date.
+ * We then interactively take the user through deployment (missing name and/or compatibility date)
+ * and ask to output this as a wrangler.jsonc for future deployments.
+ * If this successfully completes, continue deploying with the updated values.
+ */
+export async function handleMaybeAssetsDeployment(
+	assetDirectory: string,
+	args: DeployArgs
+): Promise<DeployArgs> {
+	if (isNonInteractiveOrCI()) {
+		return args;
+	}
+
+	// Ask if user intended to deploy assets only
+	logger.log("");
+	if (!args.assets) {
+		const deployAssets = await confirm(
+			"It looks like you are trying to deploy a directory of static assets only. Is this correct?",
+			{ defaultValue: true }
+		);
+		logger.log("");
+		if (deployAssets) {
+			args.assets = assetDirectory;
+			args.script = undefined;
+		} else {
+			// let the usual error handling path kick in
+			return args;
+		}
+	}
+
+	// Check if name is provided, if not ask for it
+	if (!args.name) {
+		const defaultName = process.cwd().split(path.sep).pop()?.replace("_", "-");
+		const isValidName = defaultName && /^[a-zA-Z0-9-]+$/.test(defaultName);
+		const projectName = await prompt("What do you want to name your project?", {
+			defaultValue: isValidName ? defaultName : "my-project",
+		});
+		args.name = projectName;
+		logger.log("");
+	}
+
+	// Set compatibility date if not provided
+	if (!args.compatibilityDate) {
+		const compatibilityDate = formatCompatibilityDate(new Date());
+		args.compatibilityDate = compatibilityDate;
+		logger.log(
+			`${chalk.bold("No compatibility date found")} Defaulting to today:`,
+			compatibilityDate
+		);
+		logger.log("");
+	}
+
+	// Ask if user wants to write config file
+	const writeConfig = await confirm(
+		`Do you want Wrangler to write a wrangler.json config file to store this configuration?\n${chalk.dim("This will allow you to simply run `wrangler deploy` on future deployments.")}`
+	);
+
+	if (writeConfig) {
+		const configPath = path.join(process.cwd(), "wrangler.jsonc");
+		const jsonString = JSON.stringify(
+			{
+				name: args.name,
+				compatibility_date: args.compatibilityDate,
+				assets: { directory: args.assets },
+			},
+			null,
+			2
+		);
+		writeFileSync(configPath, jsonString);
+		logger.log(`Wrote \n${jsonString}\n to ${chalk.bold(configPath)}.`);
+		logger.log(
+			`Please run ${chalk.bold("`wrangler deploy`")} instead of ${chalk.bold(`\`wrangler deploy ${args.assets}\``)} next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.`
+		);
+	} else {
+		logger.log(
+			`You should run ${chalk.bold(
+				`wrangler deploy --name ${args.name} --compatibility-date ${args.compatibilityDate} --assets ${args.assets}`
+			)} next time to deploy this Worker without going through this flow again.`
+		);
+	}
+	logger.log("\nProceeding with deployment...\n");
+	return args;
+}

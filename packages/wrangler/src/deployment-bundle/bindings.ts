@@ -1,18 +1,24 @@
 import assert from "node:assert";
 import { fetchResult } from "../cfetch";
+import {
+	experimental_patchConfig,
+	PatchConfigError,
+} from "../config/patch-config";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
 import { getDatabaseInfoFromIdOrName } from "../d1/utils";
 import { prompt, select } from "../dialogs";
 import { UserError } from "../errors";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { APIError } from "../parse";
 import { createR2Bucket, getR2Bucket, listR2Buckets } from "../r2/helpers";
-import { isLegacyEnv } from "../utils/isLegacyEnv";
 import { printBindings } from "../utils/print-bindings";
-import type { Config } from "../config";
+import { useServiceEnvironments } from "../utils/useServiceEnvironments";
+import type { Config, RawConfig } from "../config";
+import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { WorkerMetadataBinding } from "./create-worker-upload-form";
 import type {
 	CfD1Database,
@@ -52,6 +58,7 @@ export function getBindings(
 		d1_databases: config?.d1_databases,
 		vectorize: config?.vectorize,
 		hyperdrive: config?.hyperdrive,
+		secrets_store_secrets: config?.secrets_store_secrets,
 		services: config?.services,
 		analytics_engine_datasets: config?.analytics_engine_datasets,
 		dispatch_namespaces: options?.pages
@@ -72,6 +79,11 @@ export function getBindings(
 					metadata: config?.unsafe.metadata,
 					capnp: config?.unsafe.capnp,
 				},
+		unsafe_hello_world: options?.pages ? undefined : config?.unsafe_hello_world,
+		ratelimits: config?.ratelimits,
+		worker_loaders: config?.worker_loaders,
+		vpc_services: config?.vpc_services,
+		media: config?.media,
 	};
 }
 
@@ -87,6 +99,7 @@ abstract class ProvisionResourceHandler<
 		public type: T,
 		public binding: B,
 		public idField: keyof B,
+		public complianceConfig: ComplianceConfig,
 		public accountId: string
 	) {}
 
@@ -157,8 +170,10 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 	get name(): string | undefined {
 		return this.binding.bucket_name as string;
 	}
+
 	async create(name: string) {
 		await createR2Bucket(
+			this.complianceConfig,
 			this.accountId,
 			name,
 			undefined,
@@ -166,15 +181,37 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 		);
 		return name;
 	}
-	constructor(binding: CfR2Bucket, accountId: string) {
-		super("r2_bucket", binding, "bucket_name", accountId);
+	constructor(
+		binding: CfR2Bucket,
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) {
+		super("r2_bucket", binding, "bucket_name", complianceConfig, accountId);
 	}
+
+	/**
+	 * Inheriting an R2 binding replaces the id property (bucket_name for R2) with the inheritance symbol.
+	 * This works when deploying (and is appropriate for all other binding types), but it means that the
+	 * bucket_name for an R2 bucket is not displayed when deploying. As such, only use the inheritance symbol
+	 * if the R2 binding has no `bucket_name`.
+	 */
+	override inherit(): void {
+		this.binding.bucket_name ??= INHERIT_SYMBOL;
+	}
+
+	/**
+	 * R2 bindings can be inherited if the binding name and jurisdiction match.
+	 * Additionally, if the user has specified a bucket_name in config, make sure that matches
+	 */
 	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
 			(existing) =>
 				existing.type === this.type &&
 				existing.name === this.binding.binding &&
-				existing.jurisdiction === this.binding.jurisdiction
+				existing.jurisdiction === this.binding.jurisdiction &&
+				(this.binding.bucket_name
+					? this.binding.bucket_name === existing.bucket_name
+					: true)
 		);
 	}
 	async isConnectedToExistingResource(): Promise<boolean> {
@@ -186,6 +223,7 @@ class R2Handler extends ProvisionResourceHandler<"r2_bucket", CfR2Bucket> {
 		}
 		try {
 			await getR2Bucket(
+				this.complianceConfig,
 				this.accountId,
 				this.binding.bucket_name,
 				this.binding.jurisdiction
@@ -212,10 +250,14 @@ class KVHandler extends ProvisionResourceHandler<
 		return undefined;
 	}
 	async create(name: string) {
-		return await createKVNamespace(this.accountId, name);
+		return await createKVNamespace(this.complianceConfig, this.accountId, name);
 	}
-	constructor(binding: CfKvNamespace, accountId: string) {
-		super("kv_namespace", binding, "id", accountId);
+	constructor(
+		binding: CfKvNamespace,
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) {
+		super("kv_namespace", binding, "id", complianceConfig, accountId);
 	}
 	canInherit(settings: Settings | undefined): boolean {
 		return !!settings?.bindings.find(
@@ -233,11 +275,19 @@ class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
 		return this.binding.database_name as string;
 	}
 	async create(name: string) {
-		const db = await createD1Database(this.accountId, name);
+		const db = await createD1Database(
+			this.complianceConfig,
+			this.accountId,
+			name
+		);
 		return db.uuid;
 	}
-	constructor(binding: CfD1Database, accountId: string) {
-		super("d1", binding, "database_id", accountId);
+	constructor(
+		binding: CfD1Database,
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) {
+		super("d1", binding, "database_id", complianceConfig, accountId);
 	}
 	async canInherit(settings: Settings | undefined): Promise<boolean> {
 		const maybeInherited = settings?.bindings.find(
@@ -254,6 +304,7 @@ class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
 			// ...and the user HAS specified a name in their config, so we need to check if the database_name they provided
 			// matches the database_name of the existing binding (which isn't present in settings, so we'll need to make an API call to check)
 			const dbFromId = await getDatabaseInfoFromIdOrName(
+				this.complianceConfig,
 				this.accountId,
 				maybeInherited.id
 			);
@@ -272,6 +323,7 @@ class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
 		}
 		try {
 			const db = await getDatabaseInfoFromIdOrName(
+				this.complianceConfig,
 				this.accountId,
 				this.binding.database_name
 			);
@@ -316,16 +368,31 @@ const HANDLERS = {
 };
 
 const LOADERS = {
-	kv_namespaces: async (accountId: string) => {
-		const preExistingKV = await listKVNamespaces(accountId, true);
+	kv_namespaces: async (
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) => {
+		const preExistingKV = await listKVNamespaces(
+			complianceConfig,
+			accountId,
+			true
+		);
 		return preExistingKV.map((ns) => ({ title: ns.title, value: ns.id }));
 	},
-	d1_databases: async (accountId: string) => {
-		const preExisting = await listDatabases(accountId, true, 1000);
+	d1_databases: async (
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) => {
+		const preExisting = await listDatabases(
+			complianceConfig,
+			accountId,
+			true,
+			1000
+		);
 		return preExisting.map((db) => ({ title: db.name, value: db.uuid }));
 	},
-	r2_buckets: async (accountId: string) => {
-		const preExisting = await listR2Buckets(accountId);
+	r2_buckets: async (complianceConfig: ComplianceConfig, accountId: string) => {
+		const preExisting = await listR2Buckets(complianceConfig, accountId);
 		return preExisting.map((bucket) => ({
 			title: bucket.name,
 			value: bucket.name,
@@ -340,30 +407,39 @@ type PendingResource = {
 };
 
 async function collectPendingResources(
+	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string,
-	bindings: CfWorkerInit["bindings"]
+	bindings: CfWorkerInit["bindings"],
+	requireRemote: boolean
 ): Promise<PendingResource[]> {
 	let settings: Settings | undefined;
 
 	try {
-		settings = await getSettings(accountId, scriptName);
-	} catch (error) {
+		settings = await getSettings(complianceConfig, accountId, scriptName);
+	} catch {
 		logger.debug("No settings found");
 	}
 
 	const pendingResources: PendingResource[] = [];
 
 	try {
-		settings = await getSettings(accountId, scriptName);
-	} catch (error) {
+		settings = await getSettings(complianceConfig, accountId, scriptName);
+	} catch {
 		logger.debug("No settings found");
 	}
 	for (const resourceType of Object.keys(
 		HANDLERS
 	) as (keyof typeof HANDLERS)[]) {
 		for (const resource of bindings[resourceType] ?? []) {
-			const h = new HANDLERS[resourceType].Handler(resource, accountId);
+			if (requireRemote && !resource.remote) {
+				continue;
+			}
+			const h = new HANDLERS[resourceType].Handler(
+				resource,
+				complianceConfig,
+				accountId
+			);
 
 			if (await h.shouldProvision(settings)) {
 				pendingResources.push({
@@ -379,21 +455,31 @@ async function collectPendingResources(
 		(a, b) => HANDLERS[a.resourceType].sort - HANDLERS[b.resourceType].sort
 	);
 }
+
 export async function provisionBindings(
 	bindings: CfWorkerInit["bindings"],
 	accountId: string,
 	scriptName: string,
 	autoCreate: boolean,
-	config: Config
+	config: Config,
+	requireRemote = false
 ): Promise<void> {
+	const configPath = config.userConfigPath ?? config.configPath;
 	const pendingResources = await collectPendingResources(
+		config,
 		accountId,
 		scriptName,
-		bindings
+		bindings,
+		requireRemote
 	);
 
 	if (pendingResources.length > 0) {
-		if (!isLegacyEnv(config)) {
+		assert(
+			configPath,
+			"Provisioning resources is not possible without a config file"
+		);
+
+		if (useServiceEnvironments(config)) {
 			throw new UserError(
 				"Provisioning resources is not supported with a service environment"
 			);
@@ -404,14 +490,16 @@ export async function provisionBindings(
 			printable[resource.resourceType] ??= [];
 			printable[resource.resourceType].push({ binding: resource.binding });
 		}
-		printBindings(printable, { provisioning: true });
+
+		printBindings(printable, config.tail_consumers, { provisioning: true });
 		logger.log();
 
 		const existingResources: Record<string, NormalisedResourceInfo[]> = {};
 
 		for (const resource of pendingResources) {
-			existingResources[resource.resourceType] ??=
-				await LOADERS[resource.resourceType](accountId);
+			existingResources[resource.resourceType] ??= await LOADERS[
+				resource.resourceType
+			](config, accountId);
 
 			await runProvisioningFlow(
 				resource,
@@ -420,6 +508,56 @@ export async function provisionBindings(
 				scriptName,
 				autoCreate
 			);
+		}
+
+		const patch: RawConfig = {};
+
+		const allChanges: Map<string, CfKvNamespace | CfR2Bucket | CfD1Database> =
+			new Map();
+
+		for (const resource of pendingResources) {
+			allChanges.set(resource.binding, resource.handler.binding);
+		}
+
+		for (const resourceType of Object.keys(
+			HANDLERS
+		) as (keyof typeof HANDLERS)[]) {
+			for (const binding of bindings[resourceType] ?? []) {
+				patch[resourceType] ??= [];
+
+				const bindingToWrite = allChanges.has(binding.binding)
+					? // Gated by Map.has()
+						// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+						allChanges.get(binding.binding)!
+					: binding;
+
+				patch[resourceType].push(
+					Object.fromEntries(
+						Object.entries(bindingToWrite).filter(
+							// Make sure all the values are JSON serialisable.
+							// Otherwise we end up with "undefined" in the config
+							([_, value]) => typeof value === "string"
+						)
+					) as NonNullable<(typeof patch)[typeof resourceType]>[number]
+				);
+			}
+		}
+
+		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
+		// This is not necessary, as future deploys can use inherited resources, but it can help with
+		// portability of the config file, and adds robustness to bindings being renamed.
+		if (!isNonInteractiveOrCI()) {
+			try {
+				await experimental_patchConfig(configPath, patch, false);
+				logger.log(
+					"Your Worker was deployed with provisioned resources. We've written the IDs of these resources to your config file, which you can choose to save or discard. Either way future deploys will continue to work."
+				);
+			} catch (e) {
+				// no-op — if the user is using TOML config we can't update it.
+				if (!(e instanceof PatchConfigError)) {
+					throw e;
+				}
+			}
 		}
 
 		const resourceCount = pendingResources.reduce(
@@ -431,14 +569,20 @@ export async function provisionBindings(
 			{} as Record<string, number>
 		);
 		logger.log(`🎉 All resources provisioned, continuing with deployment...\n`);
+
 		metrics.sendMetricsEvent("provision resources", resourceCount, {
 			sendMetrics: config.send_metrics,
 		});
 	}
 }
 
-function getSettings(accountId: string, scriptName: string) {
+export function getSettings(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	scriptName: string
+) {
 	return fetchResult<Settings>(
+		complianceConfig,
 		`/accounts/${accountId}/workers/scripts/${scriptName}/settings`
 	);
 }
@@ -473,7 +617,7 @@ async function runProvisioningFlow(
 		});
 	}
 
-	const defaultName = `${scriptName}-${item.binding.toLowerCase().replace("_", "-")}`;
+	const defaultName = `${scriptName}-${item.binding.toLowerCase().replaceAll("_", "-")}`;
 	logger.log("Provisioning", item.binding, `(${friendlyBindingName})...`);
 
 	if (item.handler.name) {
@@ -496,6 +640,7 @@ async function runProvisioningFlow(
 						{ title: "Create new", value: NEW_OPTION_VALUE },
 					]),
 					defaultOption: options.length,
+					fallbackOption: options.length,
 				}
 			);
 		}
