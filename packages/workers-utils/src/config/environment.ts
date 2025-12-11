@@ -172,6 +172,24 @@ export type ContainerApp = {
 				disk_mb?: number;
 		  };
 
+	wrangler_ssh?: {
+		/**
+		 * If enabled, those with write access to a container will be able to SSH into it through Wrangler.
+		 * @default false
+		 */
+		enabled: boolean;
+		/**
+		 * Port that the SSH service is running on
+		 * @defaults to 22
+		 */
+		port?: number;
+	};
+
+	/**
+	 * SSH public keys to put in the container's authorized_keys file.
+	 */
+	authorized_keys?: { name: string; public_key: string }[];
+
 	/**
 	 * @deprecated Use top level `containers` fields instead.
 	 * `configuration.image` should be `image`
@@ -566,7 +584,12 @@ interface EnvironmentInheritable {
 	 *
 	 * @inheritable
 	 */
-	placement: { mode: "off" | "smart"; hint?: string } | undefined;
+	placement:
+		| { mode: "off" | "smart"; hint?: string }
+		| { mode?: "targeted"; region: string }
+		| { mode?: "targeted"; host: string }
+		| { mode?: "targeted"; hostname: string }
+		| undefined;
 
 	/**
 	 * Specify the directory of static assets to deploy/serve

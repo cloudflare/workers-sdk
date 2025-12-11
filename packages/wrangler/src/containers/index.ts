@@ -15,6 +15,7 @@ import {
 	listYargs,
 } from "./containers";
 import { registryCommands } from "./registries";
+import { sshCommand, sshYargs } from "./ssh";
 import type { CommonYargsArgv, CommonYargsOptions } from "../yargs-types";
 import type { CommandModule } from "yargs";
 
@@ -26,7 +27,7 @@ export const containers = (
 ) => {
 	return yargs
 		.command(
-			"build [PATH]",
+			"build PATH",
 			"Build a container image",
 			(args) => buildYargs(args),
 			(args) =>
@@ -37,7 +38,7 @@ export const containers = (
 				)(args)
 		)
 		.command(
-			"push [TAG]",
+			"push TAG",
 			"Push a tagged image to a Cloudflare managed registry",
 			(args) => pushYargs(args),
 			(args) =>
@@ -53,7 +54,7 @@ export const containers = (
 			(args) => imagesCommand(args, containersScope).command(subHelp)
 		)
 		.command(
-			"info [ID]",
+			"info ID",
 			"Get information about a specific container",
 			(args) => infoYargs(args),
 			(args) =>
@@ -75,13 +76,25 @@ export const containers = (
 				)(args)
 		)
 		.command(
-			"delete [ID]",
+			"delete ID",
 			"Delete a container",
 			(args) => deleteYargs(args),
 			(args) =>
 				handleFailure(
 					`wrangler containers delete`,
 					deleteCommand,
+					containersScope
+				)(args)
+		)
+		.command(
+			"ssh ID",
+			// "SSH into a container",
+			false, // hides it for now so it doesn't show up in help until it is ready
+			(args) => sshYargs(args),
+			(args) =>
+				handleFailure(
+					`wrangler containers ssh`,
+					sshCommand,
 					containersScope
 				)(args)
 		)

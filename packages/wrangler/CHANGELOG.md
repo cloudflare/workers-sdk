@@ -1,5 +1,119 @@
 # wrangler
 
+## 4.54.0
+
+### Minor Changes
+
+- [#11512](https://github.com/cloudflare/workers-sdk/pull/11512) [`c15e99e`](https://github.com/cloudflare/workers-sdk/commit/c15e99e840e80cd74c0190036476e209625325e0) Thanks [@emily-shen](https://github.com/emily-shen)! - Enable using `ctx.exports` with containers
+
+  You can now use containers with Durable Objects that are accessed via [`ctx.exports`](https://developers.cloudflare.com/workers/runtime-apis/context/#exports).
+
+  Now your config file can look something like this:
+
+  ```
+  {
+  	"name": "container-app",
+  	"main": "src/index.ts",
+  	"compatibility_date": "2025-12-01",
+  	"compatibility_flags": ["enable_ctx_exports"], // compat flag needed for now.
+  	"containers": [
+  		{
+  			"image": "./Dockerfile",
+  			"class_name": "MyDOClassname",
+  			"name": "my-container"
+  		},
+  	],
+  	"migrations": [
+  		{
+  			"tag": "v1",
+  			"new_sqlite_classes": ["MyDOClassname"],
+  		},
+  	],
+  	// no need to declare your durable object binding here
+  }
+  ```
+
+  Note that when using `ctx.exports`, where you previously accessed a Durable Object via something like `env.DO`, you should now access with `ctx.exports.MyDOClassname`.
+
+  Refer to [the docs for more information on using `ctx.exports`](https://developers.cloudflare.com/workers/runtime-apis/context/#exports).
+
+- [#11508](https://github.com/cloudflare/workers-sdk/pull/11508) [`b17797c`](https://github.com/cloudflare/workers-sdk/commit/b17797c7e83a9f431ba68bd543032fccddb5f6b5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Wrangler will no longer try to add additional configuration to projects using `@cloudflare/vite-plugin` when deploying or running `wrangler setup`
+
+- [#11508](https://github.com/cloudflare/workers-sdk/pull/11508) [`b17797c`](https://github.com/cloudflare/workers-sdk/commit/b17797c7e83a9f431ba68bd543032fccddb5f6b5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - When a Vite project is detected, install `@cloudflare/vite-plugin`
+
+- [#11576](https://github.com/cloudflare/workers-sdk/pull/11576) [`bb47e20`](https://github.com/cloudflare/workers-sdk/commit/bb47e2090cd4c0c4c56abe97fffb35f3101414bf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Analog projects in autoconfig
+
+- [#10582](https://github.com/cloudflare/workers-sdk/pull/10582) [`991760d`](https://github.com/cloudflare/workers-sdk/commit/991760d13168f613a99a4b6e70a43887934cddfb) Thanks [@flakey5](https://github.com/flakey5)! - Add `containers ssh` command
+
+### Patch Changes
+
+- [#11467](https://github.com/cloudflare/workers-sdk/pull/11467) [`235d325`](https://github.com/cloudflare/workers-sdk/commit/235d325c1ccd8238befd7036e6875242c9361dfb) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: prevent reporting SQLite error from `wrangler d1 execute` to Sentry
+
+- [#11414](https://github.com/cloudflare/workers-sdk/pull/11414) [`41103f5`](https://github.com/cloudflare/workers-sdk/commit/41103f560cb1a60e1b8cebe009e408813da85300) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add extra logging to user log-in flow for diagnosing failed login requests
+
+- [#11559](https://github.com/cloudflare/workers-sdk/pull/11559) [`ea6fbec`](https://github.com/cloudflare/workers-sdk/commit/ea6fbec8de83493c86b72c9da1809c6eac832a5b) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Remove image validation for containers on wrangler deploy.
+
+  Internal customers are able to use additional image registries and will run into failures with this validation. Image registry validation will now be handled by the API.
+
+- Updated dependencies [[`31c162a`](https://github.com/cloudflare/workers-sdk/commit/31c162a161966cb01d94da5b85462162c20c4b71), [`bd5f087`](https://github.com/cloudflare/workers-sdk/commit/bd5f08783d561bf27d52202ccf29993b416f4674), [`c6dd86f`](https://github.com/cloudflare/workers-sdk/commit/c6dd86f014a07d6b914736b0b8b704d506336e5a)]:
+  - miniflare@4.20251210.0
+
+## 4.53.0
+
+### Minor Changes
+
+- [#11500](https://github.com/cloudflare/workers-sdk/pull/11500) [`af54c63`](https://github.com/cloudflare/workers-sdk/commit/af54c630d9a6593252d07b2b77586da2f67220e8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add new `autoconfig_summary` field to the deploy output entry
+
+  This change augments `wrangler deploy` output being printed to `WRANGLER_OUTPUT_FILE_DIRECTORY` or `WRANGLER_OUTPUT_FILE_PATH` to also include a new `autoconfig_summary` field containing the possible summary details for the autoconfig process (the field is `undefined` if autoconfig didn't run).
+
+  Note: the field is experimental and could change while autoconfig is not GA
+
+- [#11477](https://github.com/cloudflare/workers-sdk/pull/11477) [`9988cc9`](https://github.com/cloudflare/workers-sdk/commit/9988cc9b9b157e453bb5eade439a8e69bfa0c7bd) Thanks [@ascorbic](https://github.com/ascorbic)! - Support Nuxt in autoconfig
+
+- [#11472](https://github.com/cloudflare/workers-sdk/pull/11472) [`ce295bf`](https://github.com/cloudflare/workers-sdk/commit/ce295bffdc7a45494b6683ee5fef04dbfca54345) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Qwik projects in autoconfig
+
+- [#10937](https://github.com/cloudflare/workers-sdk/pull/10937) [`9514c9a`](https://github.com/cloudflare/workers-sdk/commit/9514c9a0ed28fed349126384d1f646c9165be914) Thanks [@ReppCodes](https://github.com/ReppCodes)! - Add support for "targeted" placement mode with region, host, and hostname fields
+
+  This change adds a new mode to `placement` configuration. You can specify one of the following fields to target specific external resources for Worker placement:
+
+  - `region`: Specify a region identifier (e.g., "aws:us-east-1") to target a region from another cloud service provider
+  - `host`: Specify a host with (required) port (e.g., "example.com:8123") to target a TCP service
+  - `hostname`: Specify a hostname (e.g., "example.com") to target an HTTP resource
+
+  These fields are mutually exclusive - only one can be specified at a time.
+
+  Example configuration:
+
+  ```toml
+  [placement]
+  host = "example.com:8123"
+  ```
+
+- [#11498](https://github.com/cloudflare/workers-sdk/pull/11498) [`ac861f8`](https://github.com/cloudflare/workers-sdk/commit/ac861f8ec24357c0238fa939b33da71236df7095) Thanks [@penalosa](https://github.com/penalosa)! - Add React Router support in autoconfig
+
+- [#11506](https://github.com/cloudflare/workers-sdk/pull/11506) [`79d30d4`](https://github.com/cloudflare/workers-sdk/commit/79d30d4321b057f3cb4451ab43fa67653f1a8ee5) Thanks [@vicb](https://github.com/vicb)! - Set the target JS version to ES2024
+
+### Patch Changes
+
+- [#11393](https://github.com/cloudflare/workers-sdk/pull/11393) [`45480b1`](https://github.com/cloudflare/workers-sdk/commit/45480b1a897c4236575e9ddd2cfdb89e0610fc67) Thanks [@alsuren](https://github.com/alsuren)! - improved --help text for wrangler d1 subcommands
+
+- [#11523](https://github.com/cloudflare/workers-sdk/pull/11523) [`94c67e8`](https://github.com/cloudflare/workers-sdk/commit/94c67e87a3e9bd6057f8221aa4723252a4d9871d) Thanks [@jamesopstad](https://github.com/jamesopstad)! - fix: types from @cloudflare/workers-utils not being exported correctly from Wrangler
+
+- [#11483](https://github.com/cloudflare/workers-sdk/pull/11483) [`f550b62`](https://github.com/cloudflare/workers-sdk/commit/f550b62fd4fdd60c2600390754631d713140afd3) Thanks [@edmundhung](https://github.com/edmundhung)! - stop running `npm install` with `--legacy-peer-deps` flag when setting up a project
+
+- Updated dependencies [[`819e287`](https://github.com/cloudflare/workers-sdk/commit/819e287c1a471c3681112fe333e5692f3c386571), [`56e78c8`](https://github.com/cloudflare/workers-sdk/commit/56e78c8a5c02756f0d2b62ef80ad7d1a8045422c), [`0aa959a`](https://github.com/cloudflare/workers-sdk/commit/0aa959ac6fa294a18af10c1905e9494715556d45)]:
+  - @cloudflare/unenv-preset@2.7.13
+  - miniflare@4.20251202.1
+
+## 4.52.1
+
+### Patch Changes
+
+- [#11504](https://github.com/cloudflare/workers-sdk/pull/11504) [`7e80340`](https://github.com/cloudflare/workers-sdk/commit/7e803402ee22df65427dbc08b17f4f928d42dda2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix `wrangler deploy` failing for new workers containing environment variables or bindings
+
+- Updated dependencies [[`59534ba`](https://github.com/cloudflare/workers-sdk/commit/59534baa89d893e2d7b4656e365a215425094f00)]:
+  - miniflare@4.20251202.0
+
 ## 4.52.0
 
 ### Minor Changes

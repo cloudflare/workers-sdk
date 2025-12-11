@@ -51,22 +51,10 @@ export const installPackages = async (
 			break;
 	}
 
-	await runCommand(
-		[
-			npm,
-			cmd,
-			...(saveFlag ? [saveFlag] : []),
-			...packages,
-			// Add --legacy-peer-deps so that installing Wrangler v4 doesn't case issues with
-			// frameworks that haven't updated their peer dependency for Wrangler v4
-			// TODO: Remove this once Wrangler v4 has been released and framework templates are updated
-			...(npm === "npm" ? ["--legacy-peer-deps"] : []),
-		],
-		{
-			...config,
-			silent: true,
-		},
-	);
+	await runCommand([npm, cmd, ...(saveFlag ? [saveFlag] : []), ...packages], {
+		...config,
+		silent: true,
+	});
 
 	if (npm === "npm") {
 		// Npm install will update the package.json with a caret-range rather than the exact version/range we asked for.
@@ -103,17 +91,11 @@ export const npmInstall = async (ctx: C3Context) => {
 
 	const { npm } = detectPackageManager();
 
-	await runCommand(
-		// Add --legacy-peer-deps so that installing Wrangler v4 doesn't case issues with
-		// frameworks that haven't updated their peer dependency for Wrangler v4
-		// TODO: Remove this once Wrangler v4 has been released and framework templates are updated
-		[npm, "install", ...(npm === "npm" ? ["--legacy-peer-deps"] : [])],
-		{
-			silent: true,
-			startText: "Installing dependencies",
-			doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-		},
-	);
+	await runCommand([npm, "install"], {
+		silent: true,
+		startText: "Installing dependencies",
+		doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
+	});
 };
 
 type NpmInfoResponse = {

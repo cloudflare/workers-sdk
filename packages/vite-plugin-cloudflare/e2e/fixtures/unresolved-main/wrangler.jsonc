@@ -1,0 +1,5 @@
+{
+	"name": "worker",
+	"main": "nonexistent-bare-module",
+	"compatibility_date": "2025-11-28",
+}

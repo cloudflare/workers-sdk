@@ -1,5 +1,51 @@
 # miniflare
 
+## 4.20251210.0
+
+### Patch Changes
+
+- [#11552](https://github.com/cloudflare/workers-sdk/pull/11552) [`31c162a`](https://github.com/cloudflare/workers-sdk/commit/31c162a161966cb01d94da5b85462162c20c4b71) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251202.0 | 1.20251205.0 |
+
+- [#11583](https://github.com/cloudflare/workers-sdk/pull/11583) [`bd5f087`](https://github.com/cloudflare/workers-sdk/commit/bd5f08783d561bf27d52202ccf29993b416f4674) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251205.0 | 1.20251209.0 |
+
+- [#11584](https://github.com/cloudflare/workers-sdk/pull/11584) [`c6dd86f`](https://github.com/cloudflare/workers-sdk/commit/c6dd86f014a07d6b914736b0b8b704d506336e5a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251209.0 | 1.20251210.0 |
+
+## 4.20251202.1
+
+### Patch Changes
+
+- [#11443](https://github.com/cloudflare/workers-sdk/pull/11443) [`56e78c8`](https://github.com/cloudflare/workers-sdk/commit/56e78c8a5c02756f0d2b62ef80ad7d1a8045422c) Thanks [@Ltadrian](https://github.com/Ltadrian)! - Improve local Hyperdrive binding latency on Windows.
+
+## 4.20251202.0
+
+### Patch Changes
+
+- [#11495](https://github.com/cloudflare/workers-sdk/pull/11495) [`59534ba`](https://github.com/cloudflare/workers-sdk/commit/59534baa89d893e2d7b4656e365a215425094f00) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251128.0 | 1.20251202.0 |
+
 ## 4.20251128.0
 
 ### Patch Changes

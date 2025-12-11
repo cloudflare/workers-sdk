@@ -355,6 +355,43 @@ export async function verifyTypes(
 	}
 }
 
+export async function verifyCloudflareVitePluginConfigured(
+	{ verifyCloudflareVitePluginConfigured: verify }: FrameworkTestConfig,
+	projectPath: string,
+) {
+	if (!verify) {
+		return;
+	}
+
+	const viteConfigTsPAth = join(projectPath, `vite.config.ts`);
+	const viteConfigJsPath = join(projectPath, `vite.config.js`);
+
+	let viteConfigPath: string;
+
+	if (existsSync(viteConfigTsPAth)) {
+		viteConfigPath = viteConfigTsPAth;
+	} else if (existsSync(viteConfigJsPath)) {
+		viteConfigPath = viteConfigJsPath;
+	} else {
+		throw new Error("Could not find Vite config file to modify");
+	}
+
+	const prePackageJson = JSON.parse(
+		readFile(join(projectPath, "package.json")),
+	) as { devDependencies: Record<string, string> };
+
+	expect(
+		prePackageJson.devDependencies?.["@cloudflare/vite-plugin"],
+	).not.toBeUndefined();
+
+	const viteConfig = readFile(viteConfigPath);
+
+	expect(viteConfig).toContain(
+		'import { cloudflare } from "@cloudflare/vite-plugin"',
+	);
+	expect(viteConfig).toMatch(/plugins:\s*?\[.*?cloudflare.*?]/);
+}
+
 export function shouldRunTest(testConfig: FrameworkTestConfig) {
 	return (
 		// Skip if the test is quarantined

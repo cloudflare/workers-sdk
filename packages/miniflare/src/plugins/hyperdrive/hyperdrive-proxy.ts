@@ -53,7 +53,7 @@ export class HyperdriveProxyController {
 			);
 		});
 		const port = await new Promise<number>((resolve, reject) => {
-			server.listen(0, "localhost", () => {
+			server.listen(0, "127.0.0.1", () => {
 				const address = server.address() as net.AddressInfo;
 				if (address && typeof address !== "string") {
 					resolve(address.port);

@@ -201,6 +201,39 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:console
+	[
+		{
+			name: "console disabled by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_console_module: false,
+			},
+		},
+		{
+			name: "console enabled by date",
+			compatibilityDate: "2025-09-21",
+			expectRuntimeFlags: {
+				enable_nodejs_console_module: true,
+			},
+		},
+		{
+			name: "console enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_console_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_console_module: true,
+			},
+		},
+		{
+			name: "console disabled by flag",
+			compatibilityDate: "2025-09-21",
+			compatibilityFlags: ["disable_nodejs_console_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_console_module: false,
+			},
+		},
+	],
 	// node:process v2
 	[
 		{
@@ -341,6 +374,39 @@ const localTestConfigs: TestConfig[] = [
 			compatibilityFlags: ["disable_nodejs_wasi_module", "experimental"],
 			expectRuntimeFlags: {
 				enable_nodejs_wasi_module: false,
+			},
+		},
+	],
+	// node:vm
+	[
+		{
+			name: "vm disabled by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_vm_module: false,
+			},
+		},
+		{
+			name: "vm enabled by date",
+			compatibilityDate: "2025-10-01",
+			expectRuntimeFlags: {
+				enable_nodejs_vm_module: true,
+			},
+		},
+		{
+			name: "vm enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_vm_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_vm_module: true,
+			},
+		},
+		{
+			name: "vm disabled by flag",
+			compatibilityDate: "2025-10-01",
+			compatibilityFlags: ["disable_nodejs_vm_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_vm_module: false,
 			},
 		},
 	],

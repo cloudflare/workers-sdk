@@ -1,5 +1,11 @@
 # solarflare-theme
 
+## 0.0.6
+
+### Patch Changes
+
+- [#11515](https://github.com/cloudflare/workers-sdk/pull/11515) [`643f9e8`](https://github.com/cloudflare/workers-sdk/commit/643f9e86056aaa4e34d1ac4941cf28caa7fbd129) Thanks [@dmmulroy](https://github.com/dmmulroy)! - Fix light theme syntax highlighting for variables by adding missing `variable` scope
+
 ## 0.0.5
 
 ### Patch Changes

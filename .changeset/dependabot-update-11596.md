@@ -8,4 +8,4 @@ The following dependency versions have been updated:
 
 | Dependency | From         | To           |
 | ---------- | ------------ | ------------ |
-| workerd    | 1.20251128.0 | 1.20251202.0 |
+| workerd    | 1.20251210.0 | 1.20251211.0 |

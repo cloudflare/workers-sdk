@@ -1,5 +1,18 @@
 # @cloudflare/unenv-preset
 
+## 2.7.13
+
+### Patch Changes
+
+- [#10606](https://github.com/cloudflare/workers-sdk/pull/10606) [`819e287`](https://github.com/cloudflare/workers-sdk/commit/819e287c1a471c3681112fe333e5692f3c386571) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use workerd `node:console` when it is available
+
+  It is enabled when the `enable_nodejs_console_module` compatibility flag is set.
+  This flag defaults to true when `nodejs_compat` is turned on and the date is >= 2025-09-21.
+
+- [#10621](https://github.com/cloudflare/workers-sdk/pull/10621) [`0aa959a`](https://github.com/cloudflare/workers-sdk/commit/0aa959ac6fa294a18af10c1905e9494715556d45) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use native node:vm module when available
+
+  It is enabled starting on 2025-10-01 or when the `enable_nodejs_vm_module` compatibility flag is set.
+
 ## 2.7.12
 
 ### Patch Changes

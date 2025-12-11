@@ -3,15 +3,32 @@ import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
+import { readFile } from "node:fs/promises";
 import * as path from "node:path";
-import { findWranglerConfig, ParseError } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	findWranglerConfig,
+	ParseError,
+} from "@cloudflare/workers-utils";
 import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
+import {
+	afterEach,
+	assert,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	test,
+	vi,
+} from "vitest";
+import { getDetailsForAutoConfig } from "../autoconfig/details";
+import { Static } from "../autoconfig/frameworks/static";
+import { runAutoConfig } from "../autoconfig/run";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
 import { getSubdomainValues } from "../triggers/deploy";
@@ -68,6 +85,7 @@ import {
 } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
+import type { OutputEntry } from "../output";
 import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
 import type {
 	Config,
@@ -99,6 +117,9 @@ vi.mock("../package-manager", async (importOriginal) => ({
 		};
 	},
 }));
+
+vi.mock("../autoconfig/details");
+vi.mock("../autoconfig/run");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -712,15 +733,21 @@ describe("deploy", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token.[0m
 
-			  This is no longer supported in the current version of Wrangler.
-			  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
-			  environment variable.
+			// The current working directory is replaced with `<cwd>` to make the snapshot consistent across environments
+			// But since the actual working directory could be a long string on some operating systems it is possible that the string gets wrapped to a new line.
+			// To avoid failures across different environments, we remove any newline before `<cwd>` in the snapshot.
+			expect(std.warn.replaceAll(/from[ \r\n]+<cwd>/g, "from <cwd>"))
+				.toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token[0m
 
-			"
-		`);
+					  from <cwd>/home/.config/.wrangler/config/default.toml.
+					  This is no longer supported in the current version of Wrangler.
+					  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
+					  environment variable.
+
+					"
+				`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -15633,6 +15660,61 @@ export default{
 			`);
 		});
 
+		it("should handle the remote secrets fetching check for new workers", async () => {
+			writeWorkerSource();
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					vars: {
+						MY_SECRET: 123,
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.json"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ wranglerConfigPath: "./wrangler.json" });
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+					() => {
+						const workerNotFoundAPIError = new APIError({
+							status: 404,
+							text: "A request to the Cloudflare API (/accounts/xxx/workers/scripts/yyy/secrets) failed.",
+						});
+
+						workerNotFoundAPIError.code = 10007;
+						throw workerNotFoundAPIError;
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler("deploy");
+
+			expect(fetchSecrets).toHaveBeenCalled();
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                  Resource
+				env.MY_SECRET (123)      Environment Variable
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
 		it("should not fetch remote secrets in dry-run mode", async () => {
 			writeWorkerSource();
 			writeWranglerConfig(
@@ -15726,6 +15808,102 @@ export default{
 			//       to set a non-zero exit code
 			expect(process.exitCode).not.toBe(0);
 		});
+	});
+
+	it("should output a deploy output entry to WRANGLER_OUTPUT_FILE_PATH containing a field with the autoconfig summary if autoconfig run", async () => {
+		const outputFile = "./output.json";
+
+		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
+			configured: false,
+			framework: new Static("static"),
+			workerName: "my-site",
+			projectPath: ".",
+		});
+
+		vi.mocked(runAutoConfig).mockImplementation(async () => {
+			const wranglerConfig = {
+				name: "my-site",
+				compatibility_date: "2025-12-02",
+				assets: {
+					directory: ".",
+				},
+			};
+
+			writeWranglerConfig(wranglerConfig);
+
+			return {
+				scripts: {
+					build: "npm run build-my-static-site",
+				},
+				wranglerInstall: true,
+				wranglerConfig,
+				outputDir: "public",
+			};
+		});
+
+		await runWrangler("deploy --x-autoconfig --dry-run", {
+			...process.env,
+			WRANGLER_OUTPUT_FILE_PATH: outputFile,
+		});
+
+		const deployOutputEntry = (await readFile(outputFile, "utf8"))
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line))
+			.find((obj) => obj.type === "deploy") as OutputEntry | undefined;
+
+		assert(deployOutputEntry?.type === "deploy");
+
+		expect(deployOutputEntry.autoconfig_summary).toMatchInlineSnapshot(`
+			Object {
+			  "outputDir": "public",
+			  "scripts": Object {
+			    "build": "npm run build-my-static-site",
+			  },
+			  "wranglerConfig": Object {
+			    "assets": Object {
+			      "directory": ".",
+			    },
+			    "compatibility_date": "2025-12-02",
+			    "name": "my-site",
+			  },
+			  "wranglerInstall": true,
+			}
+		`);
+	});
+
+	it("should output a deploy output entry to WRANGLER_OUTPUT_FILE_PATH not containing a field with the autoconfig summary if autoconfig didn't run", async () => {
+		const outputFile = "./output.json";
+
+		writeWranglerConfig({
+			name: "worker-name",
+			compatibility_date: "2025-12-02",
+			assets: {
+				directory: ".",
+			},
+		});
+
+		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
+			configured: true,
+			framework: new Static("static"),
+			workerName: "my-worker",
+			projectPath: ".",
+		});
+
+		await runWrangler("deploy --x-autoconfig --dry-run", {
+			...process.env,
+			WRANGLER_OUTPUT_FILE_PATH: outputFile,
+		});
+
+		const deployOutputEntry = (await readFile(outputFile, "utf8"))
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line))
+			.find((obj) => obj.type === "deploy") as OutputEntry | undefined;
+
+		assert(deployOutputEntry?.type === "deploy");
+
+		expect(deployOutputEntry.autoconfig_summary).toBeUndefined();
 	});
 });
 

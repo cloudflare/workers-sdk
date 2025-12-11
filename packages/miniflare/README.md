@@ -531,7 +531,7 @@ parameter in module format Workers.
 
 #### Durable Objects
 
-- `durableObjects?: Record<string, string | { className: string, scriptName?: string }>`
+- `durableObjects?: Record<string, string | { className: string, scriptName?: string, useSQLite?: boolean }>`
 
   Record mapping binding name to Durable Object class designators to inject as
   `DurableObjectNamespace` bindings into this Worker.
@@ -542,6 +542,7 @@ parameter in module format Workers.
     should be the name of a `class` exported by this Worker.
   - Otherwise, `className` should be the name of a `class` exported by the
     Worker with a `name` of `scriptName`.
+  - To use the Durable Object SQLite API you must pass `useSQLite: true`.
 
 #### KV
 

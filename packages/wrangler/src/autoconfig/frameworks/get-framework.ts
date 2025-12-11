@@ -1,9 +1,14 @@
+import { Analog } from "./analog";
 import { Angular } from "./angular";
 import { Astro } from "./astro";
+import { Nuxt } from "./nuxt";
+import { Qwik } from "./qwik";
+import { ReactRouter } from "./react-router";
 import { SolidStart } from "./solid-start";
 import { Static } from "./static";
 import { SvelteKit } from "./sveltekit";
 import { TanstackStart } from "./tanstack";
+import { Vite } from "./vite";
 import type { Framework } from ".";
 
 export function getFramework(detectedFramework?: {
@@ -17,10 +22,20 @@ export function getFramework(detectedFramework?: {
 			return new SvelteKit(detectedFramework.name);
 		case "tanstack-start":
 			return new TanstackStart(detectedFramework.name);
+		case "react-router":
+			return new ReactRouter(detectedFramework.name);
 		case "angular":
 			return new Angular(detectedFramework.name);
+		case "nuxt":
+			return new Nuxt(detectedFramework.name);
 		case "solid-start":
 			return new SolidStart(detectedFramework.name);
+		case "qwik":
+			return new Qwik(detectedFramework.name);
+		case "vite":
+			return new Vite(detectedFramework.name);
+		case "analog":
+			return new Analog(detectedFramework.name);
 		default:
 			return new Static(detectedFramework?.name);
 	}

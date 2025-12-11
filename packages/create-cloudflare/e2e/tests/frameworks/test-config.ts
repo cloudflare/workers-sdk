@@ -150,21 +150,17 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "analog",
-			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
-			// The analog template works with yarn, but the build takes so long that it
-			// becomes flaky in CI
-			unsupportedPms: ["yarn", "bun"],
 			verifyDeploy: {
 				route: "/",
-				expectedText: "The fullstack meta-framework for Angular!",
+				expectedText: "The fullstack Angular meta-framework",
 			},
 			verifyPreview: {
 				previewArgs: ["--inspector-port=0"],
-				route: "/api/v1/test",
-				expectedText: "C3_TEST",
+				route: "/api/v1/hello",
+				expectedText: "Hello World",
 			},
 			nodeCompat: false,
 			flags: ["--skipTailwind"],
@@ -605,6 +601,8 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 		},
 		{
 			name: "redwood",
+			// quarantined while we investigate CI failures
+			quarantine: true,
 			testCommitMessage: true,
 			timeout: LONG_TIMEOUT,
 			unsupportedOSs: ["win32"],
@@ -616,7 +614,31 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				route: "/",
 				expectedText: "RedwoodSDK",
 			},
+			extraEnv: {
+				GITHUB_API_TOKEN: process.env.GITHUB_TOKEN,
+			},
 			nodeCompat: true,
+		},
+		{
+			name: "vike",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Vike",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Vike",
+			},
+			nodeCompat: false,
+			promptHandlers: [
+				{
+					matcher: /Select a UI framework:/,
+					input: [keys.enter],
+				},
+			],
 		},
 	];
 }
@@ -766,6 +788,30 @@ function getExperimentalFrameworkTestConfig(
 			verifyTypes: false,
 		},
 		{
+			name: "nuxt:workers",
+			promptHandlers: [
+				{
+					matcher: /Would you like to install any of the official modules\?/,
+					input: [keys.enter],
+				},
+			],
+			argv: ["--platform", "workers"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Nuxt!",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/test",
+				expectedText: "C3_TEST",
+			},
+			nodeCompat: false,
+			verifyTypes: false,
+		},
+		{
 			name: "solid",
 			promptHandlers: [
 				{
@@ -791,6 +837,141 @@ function getExperimentalFrameworkTestConfig(
 				expectedText: "Hello world",
 			},
 			nodeCompat: true,
+			verifyTypes: false,
+		},
+		{
+			name: "qwik:workers",
+			argv: ["--platform", "workers"],
+			promptHandlers: [
+				{
+					matcher: /Yes looks good, finish update/,
+					input: [keys.enter],
+				},
+			],
+			flags: [],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			unsupportedPms: ["yarn"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Welcome to Qwik",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/",
+				expectedText: "Welcome to Qwik",
+			},
+			nodeCompat: true,
+			verifyTypes: false,
+		},
+		{
+			name: "vue:workers",
+			argv: ["--platform", "workers", "--ts"],
+			testCommitMessage: true,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Vite App",
+			},
+			verifyPreview: {
+				previewArgs: ["--host=127.0.0.1"],
+				route: "/",
+				expectedText: "Vite App",
+			},
+			nodeCompat: false,
+			verifyTypes: false,
+		},
+		{
+			name: "react:workers",
+			argv: ["--platform", "workers"],
+			promptHandlers: [
+				{
+					matcher: /Select a variant:/,
+					input: [keys.enter],
+				},
+			],
+			unsupportedOSs: ["win32"],
+			testCommitMessage: true,
+			verifyDeploy: {
+				route: "/",
+				// Note that this is the text in the static HTML that is returned
+				// This React SPA will change this at runtime but we are only making a fetch request
+				// not actually running the client side JS.
+				expectedText: "Vite + React + TS",
+			},
+			verifyPreview: {
+				route: "/",
+				// We need to run the preview on the specific IP address on which we make the request.
+				// By default `vite preview` runs on `localhost` that doesn't always include 127.0.0.1.
+				previewArgs: ["--host=127.0.0.1"],
+				// Note that this is the text in the static HTML that is returned
+				// This React SPA will change this at runtime but we are only making a fetch request
+				// not actually running the client side JS.
+				expectedText: "Vite + React + TS",
+			},
+			nodeCompat: false,
+			verifyTypes: false,
+			verifyCloudflareVitePluginConfigured: true,
+		},
+		{
+			name: "react-router",
+			unsupportedOSs: ["win32"],
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			verifyDeploy: {
+				route: "/",
+				expectedText: "React Router",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "React Router",
+				previewArgs: ["--host=127.0.0.1"],
+			},
+			verifyDev: {
+				route: "/",
+				expectedText: "React Router",
+				devArgs: ["--host=127.0.0.1"],
+			},
+			nodeCompat: false,
+			flags: ["--no-install", "--no-git-init"],
+			verifyTypes: false,
+		},
+		{
+			name: "redwood",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "RedwoodSDK",
+			},
+			verifyPreview: {
+				build: true,
+				route: "/",
+				expectedText: "RedwoodSDK",
+			},
+			nodeCompat: true,
+			verifyTypes: false,
+			extraEnv: {
+				GITHUB_API_TOKEN: process.env.GITHUB_TOKEN,
+			},
+		},
+		{
+			name: "analog",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "The fullstack Angular meta-framework",
+			},
+			verifyPreview: {
+				previewArgs: ["--inspector-port=0"],
+				route: "/api/v1/hello",
+				expectedText: "Hello World",
+			},
+			nodeCompat: false,
+			flags: ["--skipTailwind"],
 			verifyTypes: false,
 		},
 	];
