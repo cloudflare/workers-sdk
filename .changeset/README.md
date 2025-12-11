@@ -9,7 +9,7 @@ We use the [`changesets`](https://github.com/changesets/changesets/blob/main/REA
 pnpm changeset
 ```
 
-1. Select which workspaces are affected by the change
+1. Select which packages are affected by the change
 2. Choose whether the version requires a major, minor, or patch release
 3. Write a description of the change (see format below)
 4. Include the generated changeset in your commit:
@@ -21,7 +21,7 @@ pnpm changeset
 
 - **patch**: Bug fixes, small improvements, documentation fixes
 - **minor**: New features, new CLI commands, new configuration options, deprecations, and changes to experimental/beta/pre-1.0 features (including breaking changes to those features). When adding or changing experimental features, call this out explicitly in the changeset description.
-- **major**: Breaking changes to stable features (when deprecations take effect, or functional breaking behavior is added)
+- **major**: Breaking changes to stable features (when deprecations take effect, or functional breaking behavior is added). Note: breaking changes to experimental/beta features do NOT require a major version bump.
 
 **Important restrictions:**
 

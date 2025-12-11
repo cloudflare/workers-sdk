@@ -34,6 +34,7 @@ jobs:
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          use_sticky_comment: true
           direct_prompt: |
             You are a changeset reviewer for the Cloudflare Workers SDK monorepo. Your job is to ensure changesets are correct, complete, and provide good changelog entries.
 
@@ -96,5 +97,3 @@ jobs:
             - Issues are minor suggestions only (not blocking)
 
             Begin your review now.
-        env:
-          GH_TOKEN: ${{ github.token }}
