@@ -20,7 +20,7 @@ pnpm changeset
 ## Version Types
 
 - **patch**: Bug fixes, small improvements, documentation fixes
-- **minor**: New features, new CLI commands, new configuration options, deprecations, and changes to experimental/beta/pre-1.0 features (including breaking changes to those features)
+- **minor**: New features, new CLI commands, new configuration options, deprecations, and changes to experimental/beta/pre-1.0 features (including breaking changes to those features). When adding or changing experimental features, call this out explicitly in the changeset description.
 - **major**: Breaking changes to stable features (when deprecations take effect, or functional breaking behavior is added)
 
 **Important restrictions:**
@@ -101,6 +101,7 @@ Each changeset should reference all packages that have user-facing changes:
 
 - If a change affects multiple packages, list them all in the changeset
 - Alternatively, create separate changesets for each package if the changes warrant different descriptions
+- You do NOT need to include packages that will only be released because they depend on a changed package - changesets handles this automatically
 
 ## When a Changeset is NOT Required
 
@@ -108,6 +109,7 @@ Each changeset should reference all packages that have user-facing changes:
 - Changes only to devDependencies
 - Documentation-only changes within a package
 - Test-only changes
+- CI/workflow changes that don't affect package behavior
 
 ## File Example
 
