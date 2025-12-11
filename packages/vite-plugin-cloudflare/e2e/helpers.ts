@@ -190,7 +190,8 @@ async function updateVitePluginAndWranglerVersion(projectPath: string) {
 		if (pkg[field]?.["@cloudflare/vite-plugin"]) {
 			pkg[field]["@cloudflare/vite-plugin"] = vitePluginPackage.version;
 		}
-		if (pkg[field]?.["wrangler"]) {
+		// Some fixtures require the current version of wrangler to be installed
+		if (pkg[field]?.["wrangler"] === "*") {
 			pkg[field]["wrangler"] = wranglerPackage.version;
 		}
 	}

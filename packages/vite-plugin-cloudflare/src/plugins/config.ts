@@ -15,7 +15,7 @@ import { getWarningForWorkersConfigs } from "../workers-configs";
  */
 export const configPlugin = createPlugin("config", (ctx) => {
 	return {
-		async config(userConfig, env) {
+		config(userConfig, env) {
 			if (ctx.resolvedPluginConfig.type === "preview") {
 				return { appType: "custom" };
 			}

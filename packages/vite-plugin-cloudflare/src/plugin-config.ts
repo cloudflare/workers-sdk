@@ -2,11 +2,7 @@ import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
 import { defu } from "defu";
 import * as vite from "vite";
-import {
-	unstable_defaultWranglerConfig,
-	unstable_getDevCompatibilityDate,
-	unstable_getWorkerNameFromProject,
-} from "wrangler";
+import * as wrangler from "wrangler";
 import { getWorkerConfigs } from "./deploy-config";
 import { hasNodeJsCompat, NodeJsCompat } from "./nodejs-compat";
 import {
@@ -170,7 +166,7 @@ function resolveWorkerConfig({
 		}));
 	} else {
 		// No file: start with defaults
-		workerConfig = { ...unstable_defaultWranglerConfig };
+		workerConfig = { ...wrangler.unstable_defaultWranglerConfig };
 		raw = structuredClone(workerConfig);
 		nonApplicable = {
 			replacedByVite: new Set(),
@@ -182,10 +178,10 @@ function resolveWorkerConfig({
 	workerConfig = customizeWorkerConfig(workerConfig, config);
 
 	workerConfig.compatibility_date ??=
-		unstable_getDevCompatibilityDate(undefined);
+		wrangler.unstable_getDevCompatibilityDate(undefined);
 
 	if (isEntryWorker) {
-		workerConfig.name ??= unstable_getWorkerNameFromProject(root);
+		workerConfig.name ??= wrangler.unstable_getWorkerNameFromProject(root);
 	}
 	// Auto-populate topLevelName from name
 	workerConfig.topLevelName ??= workerConfig.name;
