@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
+import { showCursor } from "@cloudflare/cli";
+import { bold } from "@cloudflare/cli/colors";
 import { ApiError, DeploymentsService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { WebSocket } from "ws";
@@ -17,7 +19,7 @@ export function sshYargs(args: CommonYargsArgv) {
 	return (
 		args
 			.positional("ID", {
-				describe: "id of the container instance",
+				describe: "ID of the container instance",
 				type: "string",
 				demandOption: true,
 			})
@@ -38,16 +40,18 @@ export function sshYargs(args: CommonYargsArgv) {
 				type: "string",
 			})
 			.option("config-file", {
+				alias: "F",
 				describe:
 					"Sets `ssh -F`: Specify an alternative per-user ssh configuration file",
 				type: "string",
 			})
 			.option("pkcs11", {
 				describe:
-					"`Sets `ssh -I`: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication",
+					"Sets `ssh -I`: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication",
 				type: "string",
 			})
 			.option("identity-file", {
+				alias: "i",
 				describe:
 					"Sets `ssh -i`: Select a file from which the identity (private key) for public key authentication is read",
 				type: "string",
@@ -58,8 +62,9 @@ export function sshYargs(args: CommonYargsArgv) {
 				type: "string",
 			})
 			.option("option", {
+				alias: "o",
 				describe:
-					"Sets `ssh -o`: Can be used to give options in the format used in the ssh configuration file",
+					"Sets `ssh -o`: Set options in the format used in the ssh configuration file. May be repeated",
 				type: "string",
 			})
 			.option("tag", {
@@ -87,10 +92,18 @@ export async function sshCommand(
 		);
 	} catch (e) {
 		if (e instanceof ApiError) {
-			throw new Error(
-				"There has been an error verifying SSH access.\n" + e.body.error
-			);
+			if (e.status === 404) {
+				throw new Error(`Instance ${sshArgs.ID} not found`);
+			}
+
+			let msg = `Error verifying SSH access`;
+			if (e.body.error !== undefined) {
+				msg += `: ${e.body.error}`;
+			}
+
+			throw new Error(msg);
 		}
+
 		throw e;
 	}
 
@@ -105,6 +118,11 @@ export async function sshCommand(
 
 	await verifySshInstalled("ssh");
 
+	// Get arguments passed to the SSH command itself. yargs includes
+	// "containers" and "ssh" as the first two elements of the array, which
+	// we don't want, so we don't include those.
+	const [, , ...rest] = sshArgs._;
+
 	const child = spawn(
 		"ssh",
 		[
@@ -112,10 +130,13 @@ export async function sshCommand(
 			"-p",
 			`${proxyAddress.port}`,
 			...buildSshArgs(sshArgs),
+			"--",
+			...rest.map((v) => v.toString()),
 		],
 		{
 			stdio: ["inherit", "inherit", "inherit"],
 			detached: true,
+			signal: proxyController.signal,
 		}
 	);
 
@@ -132,21 +153,31 @@ export async function sshCommand(
 				resolve(undefined);
 			} else {
 				reject(
-					new Error(`ssh exited unsuccessfully. Is the container running?`)
+					new Error(
+						[
+							"SSH exited unsuccessfully. Is the container running?",
+							`${bold("NOTE:")} SSH does not automatically wake a container or count as activity to keep a container alive`,
+						].join("\n")
+					)
 				);
 			}
 		});
 	});
+
+	// Ensure the cursor is visible.
+	showCursor(true);
+
 	await childKilled;
+
+	// Hide the cursor again.
+	showCursor(false);
 
 	proxyController.abort();
 }
 
 export function verifySshInstalled(sshPath: string): Promise<undefined> {
 	return new Promise<undefined>((resolve, reject) => {
-		const child = spawn(sshPath, ["-V"], {
-			detached: true,
-		});
+		const child = spawn(sshPath, ["-V"]);
 
 		let errorHandled = false;
 		child.on("close", (code) => {
@@ -161,7 +192,7 @@ export function verifySshInstalled(sshPath: string): Promise<undefined> {
 		child.on("error", (err) => {
 			if (!errorHandled) {
 				errorHandled = true;
-				reject(new Error(`verifying ssh installation failed: ${err.message}`));
+				reject(new Error(`Verifying SSH installation failed: ${err.message}`));
 			}
 		});
 	});
@@ -195,7 +226,7 @@ export function createSshTcpProxy(sshResponse: WranglerSSHResponse): Server {
 		ws.binaryType = "arraybuffer";
 
 		ws.addEventListener("error", (err) => {
-			logger.error("Web socket error:", err.error);
+			logger.error("Web socket error:", err.message);
 			inbound.end();
 			proxy.close();
 		});
@@ -228,7 +259,26 @@ export function createSshTcpProxy(sshResponse: WranglerSSHResponse): Server {
 function buildSshArgs(
 	sshArgs: StrictYargsOptionsToInterface<typeof sshYargs>
 ): string[] {
-	const flags: string[] = [];
+	const flags = [
+		// Never use a control socket.
+		"-o",
+		"ControlMaster=no",
+		"-o",
+		"ControlPersist=no",
+		// Disable writing host keys to user known hosts file.
+		"-o",
+		"UserKnownHostsFile=/dev/null",
+		// Do not perform strict host key checking: we use the same IP
+		// address to connect to every container, all of which can have
+		// separate host keys.
+		"-o",
+		"StrictHostKeyChecking=no",
+	];
+
+	// Hide warnings from SSH unless debug logging is enabled
+	if (process.env.WRANGLER_LOG !== "debug") {
+		flags.push("-o", "LogLevel=ERROR");
+	}
 
 	if (sshArgs.cipher !== undefined) {
 		flags.push("-c", sshArgs.cipher);
@@ -259,7 +309,10 @@ function buildSshArgs(
 	}
 
 	if (sshArgs.option !== undefined) {
-		flags.push("-o", sshArgs.option);
+		const options = Array.isArray(sshArgs.option)
+			? sshArgs.option
+			: [sshArgs.option];
+		options.forEach((o) => flags.push("-o", o));
 	}
 
 	if (sshArgs.tag !== undefined) {
