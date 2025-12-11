@@ -1,3 +1,4 @@
+import { getOpenNextDeployFromEnv } from "@cloudflare/workers-utils";
 import { runCommand } from "../autoconfig/c3-vendor/command";
 import { getInstalledPackageVersion } from "../autoconfig/frameworks";
 import { logger } from "../logger";
@@ -27,8 +28,7 @@ export async function maybeDelegateToOpenNextDeployCommand(
 	const isOpenNextProject = openNextVersion !== undefined;
 
 	if (isOpenNextProject) {
-		// eslint-disable-next-line turbo/no-undeclared-env-vars
-		const openNextDeploy = process.env["OPEN_NEXT_DEPLOY"];
+		const openNextDeploy = getOpenNextDeployFromEnv();
 		if (!openNextDeploy) {
 			logger.log(
 				"OpenNext project detected, calling `opennextjs-cloudflare deploy`"
