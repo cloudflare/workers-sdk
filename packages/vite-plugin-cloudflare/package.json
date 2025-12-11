@@ -59,6 +59,7 @@
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:vite-plugin",
 		"@types/ws": "^8.5.13",
 		"magic-string": "^0.30.12",

@@ -39,7 +39,6 @@ import type {
 export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
 export { readConfig as unstable_readConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
-export { getDevCompatibilityDate as unstable_getDevCompatibilityDate } from "../../../utils/compatibility-date";
 export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
 export type {
 	Config as Unstable_Config,

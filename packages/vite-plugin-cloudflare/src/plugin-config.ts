@@ -1,10 +1,10 @@
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
+import { getLatestWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import { defu } from "defu";
 import * as vite from "vite";
 import {
 	unstable_defaultWranglerConfig,
-	unstable_getDevCompatibilityDate,
 	unstable_getWorkerNameFromProject,
 } from "wrangler";
 import { getWorkerConfigs } from "./deploy-config";
@@ -181,8 +181,12 @@ function resolveWorkerConfig({
 	// Apply config()
 	workerConfig = customizeWorkerConfig(workerConfig, config);
 
-	workerConfig.compatibility_date ??=
-		unstable_getDevCompatibilityDate(undefined);
+	const { date } = getLatestWorkerdCompatibilityDate({
+		projectPath: root,
+		remote: false,
+	});
+
+	workerConfig.compatibility_date ??= date;
 
 	if (isEntryWorker) {
 		workerConfig.name ??= unstable_getWorkerNameFromProject(root);
