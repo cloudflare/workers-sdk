@@ -64,7 +64,7 @@ jobs:
 
             1. **Missing Changeset**: If packages were modified with user-facing changes, a changeset is required
             2. **Package Coverage**: All affected packages should be referenced in changesets
-            3. **Version Type**: Correct use of patch/minor/major (major is forbidden for wrangler)
+            3. **Version Type**: Correct use of patch/minor/major (noting major forbidden constraints in the changeset README)
             4. **Changelog Quality**: Descriptions should be meaningful with examples for features
             5. **Multiple Changesets**: Separate changesets for unrelated changes
             6. **Markdown Headers**: No h1/h2/h3 headers (breaks changelog formatting)
