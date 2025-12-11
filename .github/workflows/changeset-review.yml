@@ -31,11 +31,11 @@ jobs:
 
       - name: Review Changesets with Claude
         id: claude-review
-        uses: anthropics/claude-code-action@beta
+        uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           use_sticky_comment: true
-          direct_prompt: |
+          prompt: |
             You are a changeset reviewer for the Cloudflare Workers SDK monorepo. Your job is to ensure changesets are correct, complete, and provide good changelog entries.
 
             ## Guidelines
