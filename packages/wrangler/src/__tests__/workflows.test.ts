@@ -173,13 +173,13 @@ describe("wrangler workflows", () => {
 				Manage Workflow instances
 
 				COMMANDS
-				  wrangler workflows instances list <name>                              Instance related commands (list, describe, terminate, pause, resume)
-				  wrangler workflows instances describe <name> [id]                     Describe a workflow instance - see its logs, retries and errors
-				  wrangler workflows instances send-event <name> <id> <type> [payload]  Send an event to a workflow instance
-				  wrangler workflows instances terminate <name> <id>                    Terminate a workflow instance
-				  wrangler workflows instances restart <name> <id>                      Restart a workflow instance
-				  wrangler workflows instances pause <name> <id>                        Pause a workflow instance
-				  wrangler workflows instances resume <name> <id>                       Resume a workflow instance
+				  wrangler workflows instances list <name>             Instance related commands (list, describe, terminate, pause, resume)
+				  wrangler workflows instances describe <name> [id]    Describe a workflow instance - see its logs, retries and errors
+				  wrangler workflows instances send-event <name> <id>  Send an event to a workflow instance
+				  wrangler workflows instances terminate <name> <id>   Terminate a workflow instance
+				  wrangler workflows instances restart <name> <id>     Restart a workflow instance
+				  wrangler workflows instances pause <name> <id>       Pause a workflow instance
+				  wrangler workflows instances resume <name> <id>      Resume a workflow instance
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]
@@ -521,10 +521,10 @@ describe("wrangler workflows", () => {
 			await mockSendEventRequest("bar", event);
 
 			await runWrangler(
-				`workflows instances send-event some-workflow bar ${event}`
+				`workflows instances send-event some-workflow bar --type ${event}`
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"📤 The event \\"my-event\\" was sent to the instance \\"bar\\" from some-workflow"`
+				`"📤 The event with type \\"my-event\\" and payload \\"{}\\" was sent to the instance \\"bar\\" from some-workflow"`
 			);
 		});
 
@@ -534,10 +534,10 @@ describe("wrangler workflows", () => {
 			await mockSendEventRequest("bar", event);
 
 			await runWrangler(
-				`workflows instances send-event some-workflow bar ${event} '{"key": "value"}'`
+				`workflows instances send-event some-workflow bar --type ${event} --payload '{"key": "value"}'`
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"📤 The event \\"my-event\\" was sent to the instance \\"bar\\" from some-workflow"`
+				`"📤 The event with type \\"my-event\\" and payload \\"{\\"key\\": \\"value\\"}\\" was sent to the instance \\"bar\\" from some-workflow"`
 			);
 		});
 	});
