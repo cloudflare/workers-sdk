@@ -3,7 +3,7 @@ name: Changeset Review
 on:
   # Use pull_request_target to access secrets while keeping the workflow secure.
   # We only checkout main (trusted code) and use GitHub API to inspect PR content.
-  pull_request:
+  pull_request_target:
     types: [opened, synchronize, reopened]
     paths:
       - ".changeset/*.md"
