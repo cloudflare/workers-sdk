@@ -468,13 +468,9 @@ async function resolveConfig(
 		}
 	}
 
-	// prompt user to update their types if we detect that it is out of date
-	const typesChanged = await checkTypesDiff(config, entry);
-	if (typesChanged) {
-		logger.log(
-			"❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
-		);
-	}
+	// Prompt the user to update their types if we detect both that their types are out of date
+	// and that they do not have `dev.types` enabled, which will update them anyway.
+	await checkTypesDiff(config, entry);
 
 	return { config: resolved, printCurrentBindings };
 }
@@ -570,6 +566,7 @@ export class ConfigController extends Controller {
 							: input.dev?.server?.secure
 								? "https"
 								: "http",
+					types: input.dev?.types,
 				},
 				{ useRedirectIfAvailable: true }
 			);

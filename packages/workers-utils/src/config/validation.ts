@@ -113,6 +113,7 @@ export type NormalizeAndValidateConfigArgs = {
 	upstreamProtocol?: string;
 	script?: string;
 	enableContainers?: boolean;
+	types?: boolean;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -566,6 +567,7 @@ function normalizeAndValidateDev(
 		upstreamProtocol: upstreamProtocolArg,
 		remote: remoteArg,
 		enableContainers: enableContainersArg,
+		types: generateTypesArg,
 	} = args;
 	assert(
 		localProtocolArg === undefined ||
@@ -581,6 +583,9 @@ function normalizeAndValidateDev(
 	assert(
 		enableContainersArg === undefined ||
 			typeof enableContainersArg === "boolean"
+	);
+	assert(
+		generateTypesArg === undefined || typeof generateTypesArg === "boolean"
 	);
 	const {
 		// On Windows, when specifying `localhost` as the socket hostname, `workerd`
@@ -601,6 +606,7 @@ function normalizeAndValidateDev(
 		host,
 		enable_containers = enableContainersArg ?? true,
 		container_engine,
+		types = generateTypesArg ?? false,
 		...rest
 	} = rawDev;
 	validateAdditionalProperties(diagnostics, "dev", Object.keys(rest), []);
@@ -647,6 +653,8 @@ function normalizeAndValidateDev(
 		"string"
 	);
 
+	validateOptionalProperty(diagnostics, "dev", "types", types, "boolean");
+
 	return {
 		ip,
 		port,
@@ -656,6 +664,7 @@ function normalizeAndValidateDev(
 		host,
 		enable_containers,
 		container_engine,
+		types,
 	};
 }
 

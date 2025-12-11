@@ -263,6 +263,11 @@ export const dev = createCommand({
 			default: true,
 			hidden: true,
 		},
+		types: {
+			default: false,
+			describe: "Generate types from your Worker configuration",
+			type: "boolean",
+		},
 	},
 	async validateArgs(args) {
 		if (args.nodeCompat) {
