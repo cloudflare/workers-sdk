@@ -1,6 +1,6 @@
 ---
 "@cloudflare/containers-shared": minor
-"wrangler": patch
+"wrangler": minor
 ---
 
 Add `containers ssh` command
