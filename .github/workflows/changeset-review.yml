@@ -1,11 +1,20 @@
 name: Changeset Review
 
 on:
-  pull_request:
+  # Use pull_request_target to access secrets for PRs (including from forks)
+  # This is safe because we only read files, we don't execute PR code
+  pull_request_target:
     types: [opened, synchronize, reopened]
     paths:
       - ".changeset/*.md"
       - "packages/**"
+  # Manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to review"
+        required: true
+        type: number
 
 permissions:
   contents: read
@@ -17,9 +26,12 @@ jobs:
   review-changesets:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout PR head
         uses: actions/checkout@v4
         with:
+          # For pull_request_target, we need to explicitly checkout the PR head
+          # This is safe because we're only reading files, not executing code
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
 
       - name: Get changed files
@@ -119,6 +131,11 @@ jobs:
             If a PR makes multiple distinct user-facing changes, it MAY need multiple changesets so each gets its own changelog entry. Flag if:
             - A single changeset describes multiple unrelated changes
             - Different types of changes (bug fix + new feature) are lumped together
+
+            ### 6. Markdown Header Levels
+            Changeset descriptions must NOT use h1 (`#`), h2 (`##`), or h3 (`###`) headers.
+            The changelog uses h3 for section headers, so any headers in changeset content must be h4 (`####`) or smaller.
+            Flag any changeset that contains `#`, `##`, or `###` at the start of a line (but not inside code blocks).
 
             ## Output Format
 
