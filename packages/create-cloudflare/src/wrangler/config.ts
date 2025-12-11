@@ -285,17 +285,17 @@ function addHintsAsJsonComments(wranglerConfig: CommentObject) {
  * @returns The generated TOML comments as a string.
  */
 function generateHintsAsTomlComments(wranglerConfig: TomlTable): string {
-	const commentsToAdd: string[] = [];
+	const commentLines: string[] = [];
 
 	for (const [key, hint] of Object.entries(hints)) {
 		// Only add hints for properties not already present in the config
 		if (!(key in wranglerConfig)) {
 			// Add block comment with the hint description
-			commentsToAdd.push(`# ${hint.comment.split("\n").join("\n# ")}`);
+			commentLines.push(`# ${hint.comment.split("\n").join("\n# ")}`);
 
 			// Add line comment with the example value
 			if (hint.value) {
-				commentsToAdd.push(
+				commentLines.push(
 					TOML.stringify({ [key]: hint.value })
 						.trimEnd()
 						.split("\n")
@@ -304,9 +304,9 @@ function generateHintsAsTomlComments(wranglerConfig: TomlTable): string {
 				);
 			}
 
-			commentsToAdd.push(""); // Add an empty line after each hint for readability
+			commentLines.push(""); // Add an empty line after each hint for readability
 		}
 	}
 
-	return commentsToAdd.join("\n");
+	return commentLines.join("\n");
 }
