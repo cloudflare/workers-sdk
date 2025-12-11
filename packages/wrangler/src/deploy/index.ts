@@ -271,15 +271,6 @@ export const deployCommand = createCommand({
 			);
 		}
 
-		const deploymentDelegatedToOpenNext =
-			!args.dryRun &&
-			(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
-
-		if (deploymentDelegatedToOpenNext) {
-			// We've delegated the deployment to open-next so we must not run any actual deployment logic now
-			return;
-		}
-
 		const shouldRunAutoConfig =
 			args.experimentalAutoconfig &&
 			// If there is a positional parameter or an assets directory specified via --assets then
@@ -305,6 +296,18 @@ export const deployCommand = createCommand({
 					useRedirectIfAvailable: true,
 				});
 			}
+		}
+
+		// Note: the open-next delegation should happen after we run the auto-config logic so that we
+		//       make sure that the deployment of brand newly auto-configured Next.js apps is correctly
+		//       delegated here
+		const deploymentDelegatedToOpenNext =
+			!args.dryRun &&
+			(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
+
+		if (deploymentDelegatedToOpenNext) {
+			// We've delegated the deployment to open-next so we must not run any actual deployment logic now
+			return;
 		}
 
 		if (!config.configPath) {
