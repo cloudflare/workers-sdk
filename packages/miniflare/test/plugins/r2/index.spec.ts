@@ -1588,6 +1588,223 @@ test("list: is multipart aware", async (t) => {
 	t.deepEqual(object?.httpMetadata, { contentType: "text/plain" });
 });
 
+test("listParts", async (t) => {
+	const { r2, ns } = t.context;
+	const PART_SIZE = 5 * 1024 * 1024; // 5MB
+
+	// Test listing parts for in-progress upload
+	const upload = await r2.createMultipartUpload("key");
+
+	// Initially no parts
+	let result = await (upload as any).listParts();
+	t.is(result.uploadId, upload.uploadId);
+	t.is(result.object, `${ns}key`);
+	t.deepEqual(result.parts, []);
+	t.is(result.truncated, false);
+
+	// Upload some parts
+	const part1 = await upload.uploadPart(1, "a".repeat(PART_SIZE));
+	const part2 = await upload.uploadPart(2, "b".repeat(PART_SIZE));
+	const part3 = await upload.uploadPart(3, "c".repeat(10));
+
+	// List all parts
+	result = await (upload as any).listParts();
+	t.is(result.parts.length, 3);
+	t.is(result.parts[0].partNumber, 1);
+	t.is(result.parts[0].etag, part1.etag);
+	t.is(result.parts[0].size, PART_SIZE);
+	t.is(result.parts[1].partNumber, 2);
+	t.is(result.parts[1].etag, part2.etag);
+	t.is(result.parts[1].size, PART_SIZE);
+	t.is(result.parts[2].partNumber, 3);
+	t.is(result.parts[2].etag, part3.etag);
+	t.is(result.parts[2].size, 10);
+	t.is(result.truncated, false);
+
+	// Test pagination with maxParts
+	result = await (upload as any).listParts({ maxParts: 2 });
+	t.is(result.parts.length, 2);
+	t.is(result.parts[0].partNumber, 1);
+	t.is(result.parts[1].partNumber, 2);
+	t.is(result.truncated, true);
+	t.is(result.nextPartNumberMarker, 2);
+
+	// Test pagination with partNumberMarker
+	result = await (upload as any).listParts({ partNumberMarker: 1 });
+	t.is(result.parts.length, 2);
+	t.is(result.parts[0].partNumber, 2);
+	t.is(result.parts[1].partNumber, 3);
+	t.is(result.truncated, false);
+
+	// Test pagination with both
+	result = await (upload as any).listParts({
+		partNumberMarker: 1,
+		maxParts: 1,
+	});
+	t.is(result.parts.length, 1);
+	t.is(result.parts[0].partNumber, 2);
+	t.is(result.truncated, true);
+	t.is(result.nextPartNumberMarker, 2);
+
+	// Test overriding a part
+	const part1b = await upload.uploadPart(1, "d".repeat(PART_SIZE));
+	result = await (upload as any).listParts();
+	t.is(result.parts.length, 3);
+	t.is(result.parts[0].etag, part1b.etag); // Should show new etag
+	t.not(result.parts[0].etag, part1.etag); // Different from old etag
+
+	// Test that completed upload can't list parts
+	await upload.complete([part1b, part2, part3]);
+	await t.throwsAsync((upload as any).listParts(), {
+		instanceOf: Error,
+		message: /no such upload/i,
+	});
+
+	// Test that aborted upload can't list parts
+	const upload2 = await r2.createMultipartUpload("key2");
+	await upload2.uploadPart(1, "data");
+	await upload2.abort();
+	await t.throwsAsync((upload2 as any).listParts(), {
+		instanceOf: Error,
+		message: /no such upload/i,
+	});
+
+	// Test non-existent upload
+	const badUpload = r2.resumeMultipartUpload("key3", "bad-upload-id");
+	await t.throwsAsync((badUpload as any).listParts(), {
+		instanceOf: Error,
+		message: /no such upload/i,
+	});
+});
+
+test("listMultipartUploads", async (t) => {
+	const { r2, ns } = t.context;
+	const PART_SIZE = 5 * 1024 * 1024; // 5MB
+
+	// Initially no uploads
+	let result = await (r2 as any).listMultipartUploads();
+	t.deepEqual(result.uploads, []);
+	t.is(result.truncated, false);
+	t.deepEqual(result.delimitedPrefixes, []);
+
+	// Create some uploads
+	const upload1 = await r2.createMultipartUpload("key1");
+	const upload2 = await r2.createMultipartUpload("key2");
+	const upload3 = await r2.createMultipartUpload("folder/key3");
+	const upload4 = await r2.createMultipartUpload("folder/key4");
+
+	// List all uploads
+	result = await (r2 as any).listMultipartUploads();
+	t.is(result.uploads.length, 4);
+	t.is(result.uploads[0].object, `${ns}folder/key3`);
+	t.is(result.uploads[0].uploadId, upload3.uploadId);
+	t.is(result.uploads[1].object, `${ns}folder/key4`);
+	t.is(result.uploads[1].uploadId, upload4.uploadId);
+	t.is(result.uploads[2].object, `${ns}key1`);
+	t.is(result.uploads[2].uploadId, upload1.uploadId);
+	t.is(result.uploads[3].object, `${ns}key2`);
+	t.is(result.uploads[3].uploadId, upload2.uploadId);
+	t.is(result.truncated, false);
+
+	// Test prefix filtering
+	result = await (r2 as any).listMultipartUploads({ prefix: `${ns}folder/` });
+	t.is(result.uploads.length, 2);
+	t.is(result.uploads[0].object, `${ns}folder/key3`);
+	t.is(result.uploads[1].object, `${ns}folder/key4`);
+
+	// Test delimiter
+	result = await (r2 as any).listMultipartUploads({ delimiter: "/" });
+	t.is(result.uploads.length, 2); // Only root level keys
+	t.is(result.uploads[0].object, `${ns}key1`);
+	t.is(result.uploads[1].object, `${ns}key2`);
+	t.deepEqual(result.delimitedPrefixes, [`${ns}folder/`]);
+
+	// Test pagination with limit
+	result = await (r2 as any).listMultipartUploads({ limit: 2 });
+	t.is(result.uploads.length, 2);
+	t.is(result.uploads[0].object, `${ns}folder/key3`);
+	t.is(result.uploads[1].object, `${ns}folder/key4`);
+	t.is(result.truncated, true);
+	t.not(result.cursor, undefined);
+
+	// Continue with cursor
+	const cursor = result.cursor;
+	result = await (r2 as any).listMultipartUploads({ cursor });
+	t.is(result.uploads.length, 2);
+	t.is(result.uploads[0].object, `${ns}key1`);
+	t.is(result.uploads[1].object, `${ns}key2`);
+	t.is(result.truncated, false);
+
+	// Test startAfter
+	result = await (r2 as any).listMultipartUploads({ startAfter: `${ns}key1` });
+	t.is(result.uploads.length, 1);
+	t.is(result.uploads[0].object, `${ns}key2`);
+
+	// Test that completed uploads are not listed
+	const part1 = await upload1.uploadPart(1, "a".repeat(PART_SIZE));
+	await upload1.complete([part1]);
+	result = await (r2 as any).listMultipartUploads();
+	t.is(result.uploads.length, 3); // One less than before
+
+	// Test that aborted uploads are not listed
+	await upload2.abort();
+	result = await (r2 as any).listMultipartUploads();
+	t.is(result.uploads.length, 2); // Two less than original
+
+	// Test multiple uploads for same key
+	const upload5 = await r2.createMultipartUpload("key1");
+	const upload6 = await r2.createMultipartUpload("key1");
+	result = await (r2 as any).listMultipartUploads({ prefix: `${ns}key1` });
+	t.is(result.uploads.length, 2); // Both new uploads for key1
+	t.is(result.uploads[0].uploadId, upload5.uploadId);
+	t.is(result.uploads[1].uploadId, upload6.uploadId);
+
+	// Test storage class field
+	result = await (r2 as any).listMultipartUploads();
+	for (const upload of result.uploads) {
+		t.is(upload.storageClass, "Standard");
+	}
+});
+
+test("backwards compatibility for timestamps", async (t) => {
+	const { r2, object: objectStub } = t.context;
+	const PART_SIZE = 5 * 1024 * 1024; // 5MB
+
+	// Create an upload and parts
+	const upload = await r2.createMultipartUpload("test-key");
+	await upload.uploadPart(1, "a".repeat(PART_SIZE));
+	await upload.uploadPart(2, "b".repeat(PART_SIZE));
+
+	// Manually set timestamps to NULL to simulate old data
+	await objectStub.sqlQuery(
+		`UPDATE _mf_multipart_uploads SET initiated_at = NULL WHERE upload_id = ?`,
+		upload.uploadId
+	);
+	await objectStub.sqlQuery(
+		`UPDATE _mf_multipart_parts SET uploaded_at = NULL WHERE upload_id = ?`,
+		upload.uploadId
+	);
+
+	// Test that listParts still works with NULL timestamps
+	const partsResult = await (upload as any).listParts();
+	t.is(partsResult.parts.length, 2);
+	// Should have fallback timestamps
+	t.truthy(partsResult.parts[0].uploaded);
+	t.truthy(partsResult.parts[1].uploaded);
+
+	// Test that listMultipartUploads still works with NULL timestamps
+	const uploadsResult = await (r2 as any).listMultipartUploads();
+	const thisUpload = uploadsResult.uploads.find(
+		(u: any) => u.uploadId === upload.uploadId
+	);
+	t.truthy(thisUpload);
+	// initiated field is optional, so it can be undefined for old data
+	t.true(
+		thisUpload.initiated === undefined ||
+			typeof thisUpload.initiated === "number"
+	);
+});
+
 test("migrates database to new location", async (t) => {
 	// Copy legacy data to temporary directory
 	const tmp = await useTmp(t);
