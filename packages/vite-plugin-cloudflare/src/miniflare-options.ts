@@ -16,11 +16,7 @@ import {
 } from "miniflare";
 import { globSync } from "tinyglobby";
 import * as vite from "vite";
-import {
-	maybeStartOrUpdateRemoteProxySession,
-	unstable_convertConfigBindingsToStartWorkerBindings,
-	unstable_getMiniflareWorkerOptions,
-} from "wrangler";
+import * as wrangler from "wrangler";
 import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
@@ -246,7 +242,7 @@ export async function getDevMiniflareOptions(
 					[...resolvedPluginConfig.environmentNameToWorkerMap].map(
 						async ([environmentName, worker]) => {
 							const bindings =
-								unstable_convertConfigBindingsToStartWorkerBindings(
+								wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
 									worker.config
 								);
 
@@ -258,7 +254,7 @@ export async function getDevMiniflareOptions(
 								!resolvedPluginConfig.remoteBindings
 									? // if remote bindings are not enabled then the proxy session can simply be null
 										null
-									: await maybeStartOrUpdateRemoteProxySession(
+									: await wrangler.maybeStartOrUpdateRemoteProxySession(
 											{
 												name: worker.config.name,
 												bindings: bindings ?? {},
@@ -294,20 +290,21 @@ export async function getDevMiniflareOptions(
 								}
 							}
 
-							const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
-								{
-									...worker.config,
-									assets: undefined,
-								},
-								resolvedPluginConfig.cloudflareEnv,
-								{
-									remoteProxyConnectionString:
-										remoteProxySessionData?.session
-											?.remoteProxyConnectionString,
+							const miniflareWorkerOptions =
+								wrangler.unstable_getMiniflareWorkerOptions(
+									{
+										...worker.config,
+										assets: undefined,
+									},
+									resolvedPluginConfig.cloudflareEnv,
+									{
+										remoteProxyConnectionString:
+											remoteProxySessionData?.session
+												?.remoteProxyConnectionString,
 
-									containerBuildId,
-								}
-							);
+										containerBuildId,
+									}
+								);
 
 							const { externalWorkers, workerOptions } = miniflareWorkerOptions;
 
@@ -527,7 +524,9 @@ export async function getPreviewMiniflareOptions(
 		await Promise.all(
 			resolvedPluginConfig.workers.map(async (workerConfig, i) => {
 				const bindings =
-					unstable_convertConfigBindingsToStartWorkerBindings(workerConfig);
+					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
+						workerConfig
+					);
 
 				const preExistingRemoteProxySessionData = workerConfig.configPath
 					? remoteProxySessionsDataMap.get(workerConfig.configPath)
@@ -536,7 +535,7 @@ export async function getPreviewMiniflareOptions(
 				const remoteProxySessionData = !resolvedPluginConfig.remoteBindings
 					? // if remote bindings are not enabled then the proxy session can simply be null
 						null
-					: await maybeStartOrUpdateRemoteProxySession(
+					: await wrangler.maybeStartOrUpdateRemoteProxySession(
 							{
 								name: workerConfig.name,
 								bindings: bindings ?? {},
@@ -571,16 +570,13 @@ export async function getPreviewMiniflareOptions(
 					}
 				}
 
-				const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
-					workerConfig,
-					undefined,
-					{
+				const miniflareWorkerOptions =
+					wrangler.unstable_getMiniflareWorkerOptions(workerConfig, undefined, {
 						remoteProxyConnectionString:
 							remoteProxySessionData?.session?.remoteProxyConnectionString,
 
 						containerBuildId,
-					}
-				);
+					});
 
 				const { externalWorkers } = miniflareWorkerOptions;
 

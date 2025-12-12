@@ -4,7 +4,7 @@ import { runLongLived, seed } from "./helpers";
 // This test validates that warnings are displayed when nodejs_compat is missing
 // and Node.js imports are used without the compatibility flag.
 describe("nodejs_compat warnings", () => {
-	const projectPath = seed("nodejs-compat-warnings", "pnpm");
+	const projectPath = seed("nodejs-compat-warnings", { pm: "pnpm" });
 
 	test("displays warnings if Node.js built-ins are imported and the nodejs_compat flag is not enabled", async ({
 		expect,

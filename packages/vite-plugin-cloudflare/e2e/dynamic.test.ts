@@ -5,7 +5,7 @@ const packageManagers = ["pnpm", "npm", "yarn"] as const;
 
 describe("prebundling Node.js compatibility", () => {
 	describe.each(packageManagers)('with "%s" package manager', (pm) => {
-		const projectPath = seed("dynamic", pm);
+		const projectPath = seed("dynamic", { pm });
 
 		test("will not cause a reload on a dynamic import of a Node.js module", async ({
 			expect,
