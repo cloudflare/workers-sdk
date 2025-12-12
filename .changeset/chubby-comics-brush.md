@@ -1,6 +1,5 @@
 ---
 "@cloudflare/vite-plugin": minor
-"wrangler": minor
 ---
 
 Add keyboard shortcut to display Worker bindings during development

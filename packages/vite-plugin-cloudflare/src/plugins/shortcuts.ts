@@ -35,7 +35,7 @@ export function addBindingsShortcut(
 	server: vite.ViteDevServer | vite.PreviewServer,
 	ctx: PluginContext
 ) {
-	const workerConfigs = ctx.getAllWorkerConfigs();
+	const workerConfigs = ctx.allWorkerConfigs;
 
 	if (workerConfigs.length === 0) {
 		return;
@@ -51,6 +51,8 @@ export function addBindingsShortcut(
 			for (const workerConfig of workerConfigs) {
 				unstable_printBindings(
 					{
+						// The printBindings helper expects the deployment bundle format
+						// which is slightly different from the wrangler config
 						...workerConfig,
 						assets: workerConfig.assets?.binding
 							? {
@@ -73,7 +75,7 @@ export function addBindingsShortcut(
 					workerConfig.containers,
 					{
 						warnIfNoBindings: true,
-						isMultiWorkers: workerConfigs.length > 1,
+						isMultiWorker: workerConfigs.length > 1,
 						name: workerConfig.name ?? "Your Worker",
 						registry: getWorkerRegistry(registryPath),
 						log: (message) => server.config.logger.info(message),

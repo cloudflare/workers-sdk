@@ -28,7 +28,7 @@ export function printBindings(
 		log?: (message: string) => void;
 		registry?: WorkerRegistry | null;
 		local?: boolean;
-		isMultiWorkers?: boolean;
+		isMultiWorker?: boolean;
 		remoteBindingsDisabled?: boolean;
 		name?: string;
 		provisioning?: boolean;
@@ -38,7 +38,7 @@ export function printBindings(
 	let hasConnectionStatus = false;
 
 	const log = context.log ?? logger.log;
-	const isMultiWorkers = context.isMultiWorkers ?? getFlag("MULTIWORKER");
+	const isMultiWorker = context.isMultiWorker ?? getFlag("MULTIWORKER");
 	const getMode = createGetMode({
 		isProvisioning: context.provisioning,
 		isLocalDev: context.local,
@@ -625,7 +625,7 @@ export function printBindings(
 
 	if (output.length === 0) {
 		if (context.warnIfNoBindings) {
-			if (context.name && isMultiWorkers) {
+			if (context.name && isMultiWorker) {
 				log(`No bindings found for ${chalk.blue(context.name)}`);
 			} else {
 				log("No bindings found.");
@@ -635,7 +635,7 @@ export function printBindings(
 		let title: string;
 		if (context.provisioning) {
 			title = `${chalk.red("Experimental:")} The following bindings need to be provisioned:`;
-		} else if (context.name && isMultiWorkers) {
+		} else if (context.name && isMultiWorker) {
 			title = `${chalk.blue(context.name)} has access to the following bindings:`;
 		} else {
 			title = "Your Worker has access to the following bindings:";
@@ -716,7 +716,7 @@ export function printBindings(
 		log("");
 	}
 	let title: string;
-	if (context.name && isMultiWorkers) {
+	if (context.name && isMultiWorker) {
 		title = `${chalk.blue(context.name)} is sending Tail events to the following Workers:`;
 	} else {
 		title = "Your Worker is sending Tail events to the following Workers:";
@@ -756,7 +756,7 @@ export function printBindings(
 
 	if (containers.length > 0 && !context.provisioning) {
 		let containersTitle = "The following containers are available:";
-		if (context.name && isMultiWorkers) {
+		if (context.name && isMultiWorker) {
 			containersTitle = `The following containers are available from ${chalk.blue(context.name)}:`;
 		}
 
