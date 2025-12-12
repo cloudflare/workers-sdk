@@ -1,5 +1,22 @@
 # wrangler
 
+## 4.55.0
+
+### Minor Changes
+
+- [#11045](https://github.com/cloudflare/workers-sdk/pull/11045) [`12a63ef`](https://github.com/cloudflare/workers-sdk/commit/12a63ef6df4f5741320b34b8bddd4e2a0f891f0e) Thanks [@edmundhung](https://github.com/edmundhung)! - Add an internal `unstable_printBindings` API for vite plugin integration
+
+### Patch Changes
+
+- [#11615](https://github.com/cloudflare/workers-sdk/pull/11615) [`ed42010`](https://github.com/cloudflare/workers-sdk/commit/ed42010436cd2a04df9a47c4e1fed3dff45aed90) Thanks [@elithrar](https://github.com/elithrar)! - Add helpful warning when SSL certificate errors occur due to corporate proxies or VPNs intercepting HTTPS traffic. When errors like "self-signed certificate in certificate chain" are detected, wrangler now displays guidance about installing missing system roots from your corporate proxy vendor.
+
+- [#11578](https://github.com/cloudflare/workers-sdk/pull/11578) [`4201472`](https://github.com/cloudflare/workers-sdk/commit/4201472291fa1c864dbcca40c173a76e5b571a04) Thanks [@gpanders](https://github.com/gpanders)! - Fixup UX papercuts in containers SSH
+
+- [#11550](https://github.com/cloudflare/workers-sdk/pull/11550) [`95d81e1`](https://github.com/cloudflare/workers-sdk/commit/95d81e1b6371a1293f58da281adc3fd37bd0ea0b) Thanks [@hiendv](https://github.com/hiendv)! - Fix "TypeError: Body is unusable: Body has already been read" when failing to exchange oauth code because of double `response.text()`.
+
+- Updated dependencies [[`5d085fb`](https://github.com/cloudflare/workers-sdk/commit/5d085fbf385ca3f3a034ee47004229a87a044823), [`b75b710`](https://github.com/cloudflare/workers-sdk/commit/b75b710734c8382a9a929b1db2bb34fcb3e96468)]:
+  - miniflare@4.20251212.0
+
 ## 4.54.0
 
 ### Minor Changes

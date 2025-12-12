@@ -1,5 +1,11 @@
 # create-cloudflare
 
+## 2.59.1
+
+### Patch Changes
+
+- [#11597](https://github.com/cloudflare/workers-sdk/pull/11597) [`3122607`](https://github.com/cloudflare/workers-sdk/commit/312260751a27f6be75c67a1b345edf1e431438ee) Thanks [@vicb](https://github.com/vicb)! - make sure comments are always added to the end of `wrangler.jsonc`
+
 ## 2.59.0
 
 ### Minor Changes
