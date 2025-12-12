@@ -1,9 +1,13 @@
 import fs from "node:fs";
+import { version } from "vite";
 import { onTestFinished, test } from "vitest";
 import { isWindows } from "../vitest-setup";
 
 export * from "../vitest-setup";
 export * from "./responses";
+
+// TODO: remove when all tests are passing with Vite 8
+export const isVite8 = version.split(".")[0] === "8";
 
 /** Common options to use with `vi.waitFor()` */
 export const WAIT_FOR_OPTIONS = {
