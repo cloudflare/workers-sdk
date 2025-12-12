@@ -2,7 +2,7 @@ import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as vite from "vite";
-import { unstable_readConfig } from "wrangler";
+import * as wrangler from "wrangler";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
@@ -31,7 +31,7 @@ export function getWorkerConfigs(root: string) {
 			path.dirname(deployConfigPath),
 			configPath
 		);
-		return unstable_readConfig({ config: resolvedConfigPath });
+		return wrangler.unstable_readConfig({ config: resolvedConfigPath });
 	});
 }
 

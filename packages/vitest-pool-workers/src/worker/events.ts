@@ -1,4 +1,6 @@
+import { exports } from "cloudflare:workers";
 import { env } from "./env";
+import { getCtxExportsProxy, isCtxExportsEnabled } from "./patch-ctx";
 import { registerGlobalWaitUntil, waitForWaitUntil } from "./wait-until";
 
 // `workerd` doesn't allow these internal classes to be constructed directly.
@@ -22,6 +24,11 @@ class ExecutionContext {
 			throw new TypeError("Illegal constructor");
 		}
 	}
+
+	// Expose the ctx.exports from the main "SELF" Worker if there is one.
+	readonly exports = isCtxExportsEnabled(exports)
+		? getCtxExportsProxy(exports)
+		: undefined;
 
 	waitUntil(promise: unknown) {
 		if (!(this instanceof ExecutionContext)) {

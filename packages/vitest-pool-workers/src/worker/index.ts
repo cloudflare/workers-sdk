@@ -175,9 +175,9 @@ class WebSocketMessagePort extends events.EventEmitter {
 			// If the user tried to perform a dynamic `import()` or `console.log()`
 			// from inside a `export default { fetch() { ... } }` handler using `SELF`
 			// or from inside their own Durable Object, Vitest will try to send an
-			// RPC message from a non-`RunnerObject` I/O context. There's nothing we
-			// can really do to prevent this: we want to run these things in different
-			// I/O contexts with the behaviour this causes. We'd still like to send
+			// RPC message from the I/O context that is different to the Runner Durable Object.
+			// There's nothing we can really do to prevent this: we want to run these things
+			// in different I/O contexts with the behaviour this causes. We'd still like to send
 			// the RPC message though, so if we detect this, we try resend the message
 			// from the runner object.
 			if (isDifferentIOContextError(error)) {
@@ -244,9 +244,9 @@ function applyDefines() {
 	}
 }
 
-// `RunnerObject` is a singleton and "colo local" ephemeral object. Refer to:
+// `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__` is a singleton and "colo local" ephemeral object. Refer to:
 // https://github.com/cloudflare/workerd/blob/v1.20231206.0/src/workerd/server/workerd.capnp#L529-L543
-export class RunnerObject extends DurableObject {
+export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject {
 	#getExecutor: any | undefined;
 
 	get executor() {
@@ -417,14 +417,6 @@ export class RunnerObject extends DurableObject {
 }
 
 export default createWorkerEntrypointWrapper("default");
-// export default {
-// 	async fetch(r, env) {
-// 		const id = await (env.MY as DurableObjectNamespace).get(
-// 			(env.MY as DurableObjectNamespace).idFromName("test")
-// 		);
-// 		__console.log(await id.hello());
-// 		return new Response(await id.hello());
-// 	},
-// };
-// Re-export user Durable Object wrappers
+
+// Re-export user export wrappers
 export * from "__VITEST_POOL_WORKERS_USER_OBJECT";

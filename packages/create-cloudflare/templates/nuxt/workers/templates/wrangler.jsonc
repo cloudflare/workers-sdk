@@ -1,7 +1,7 @@
 {
-  "name": "<TBD>",
+  "name": "<WORKER_NAME>",
   "main": "./.output/server/index.mjs",
-  "compatibility_date": "<TBD>",
+  "compatibility_date": "<COMPATIBILITY_DATE>",
   "assets": {
     "binding": "ASSETS",
     "directory": "./.output/public/"

@@ -36,12 +36,12 @@ describe("containers push", () => {
 		await runWrangler("containers push --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers push [TAG]
+			"wrangler containers push TAG
 
 			Push a tagged image to a Cloudflare managed registry
 
 			POSITIONALS
-			  TAG  [string]
+			  TAG  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]

@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { unstable_readConfig } from "wrangler";
+import * as wrangler from "wrangler";
 import type {
 	ResolvedAssetsOnlyConfig,
 	ResolvedWorkerConfig,
@@ -122,7 +122,7 @@ function readWorkerConfig(
 		notRelevant: new Set(),
 	};
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
-		unstable_readConfig(
+		wrangler.unstable_readConfig(
 			{ config: configPath, env },
 			// Preserve the original `main` value so that Vite can resolve it
 			{ preserveOriginalMain: true }

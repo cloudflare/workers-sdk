@@ -139,17 +139,6 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
           CI_OS: ${{ matrix.description }}
-          NODE_DEBUG: "@cloudflare:vite-plugin"
-
-      - name: Run tests (vite-plugin playgrounds)
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --log-order=stream --filter="@vite-plugin-cloudflare/playground"
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/vite-plugin-playgrounds/index.html
-          CI_OS: ${{ matrix.description }}
-          NODE_DEBUG: "@cloudflare:vite-plugin"
 
       - name: Run tests (fixtures)
         if: steps.changes.outputs.everything_but_markdown == 'true'
@@ -160,7 +149,6 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.description }}
-          NODE_DEBUG: "@cloudflare:vite-plugin"
 
       - name: Upload turbo logs
         if: always()

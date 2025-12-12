@@ -82,8 +82,8 @@ jobs:
           name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
           path: .turbo/runs
 
-  e2e-vite-test:
-    name: ${{ format('Vite ({0})', matrix.description) }}
+  e2e-vite-plugin-test:
+    name: ${{ format('Vite plugin ({0})', matrix.description) }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}-vite
       cancel-in-progress: true
@@ -126,7 +126,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
-      - name: Run Vite E2E tests
+      - name: Run Vite plugin E2E tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
         timeout-minutes: 15

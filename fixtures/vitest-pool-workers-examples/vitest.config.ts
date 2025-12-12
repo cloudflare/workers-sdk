@@ -4,6 +4,7 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
 	test: {
+		teardownTimeout: 1_000,
 		projects: ["*/vitest.*config.*ts"],
 		globalSetup: ["./vitest.global.ts"],
 	},

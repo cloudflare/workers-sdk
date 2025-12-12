@@ -1,4 +1,11 @@
 {
 	"extends": "../../tsconfig.workerd.json",
-	"include": ["./**/*.ts"]
+	"include": ["./**/*.ts"],
+	"compilerOptions": {
+		"paths": {
+			// This path is used to simulate a virtual module that Vitest and TypeScript can understand,
+			// but esbuild (used by the vitest-pool-workers to guess exports) cannot.
+			"@virtual-module": ["./virtual.ts"]
+		}
+	}
 }

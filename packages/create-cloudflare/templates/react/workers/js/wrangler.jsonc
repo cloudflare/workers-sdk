@@ -1,7 +1,7 @@
 {
-	"name": "<TBD>",
+	"name": "<WORKER_NAME>",
 	"main": "worker/index.js",
-	"compatibility_date": "<TBD>",
+	"compatibility_date": "<COMPATIBILITY_DATE>",
 	"assets": { "not_found_handling": "single-page-application" },
 	"observability": {
 		"enabled": true

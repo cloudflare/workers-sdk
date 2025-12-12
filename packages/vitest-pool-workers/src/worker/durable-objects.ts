@@ -1,7 +1,7 @@
 import assert from "node:assert";
-import { env } from "cloudflare:workers";
+import { env, exports } from "cloudflare:workers";
 import { getSerializedOptions, internalEnv } from "./env";
-import type { RunnerObject } from "./index";
+import type { __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ } from "./index";
 
 const CF_KEY_ACTION = "vitestPoolWorkersDurableObjectAction";
 
@@ -11,9 +11,8 @@ const actionResults = new Map<number /* id */, unknown>();
 
 function isDurableObjectNamespace(v: unknown): v is DurableObjectNamespace {
 	return (
-		typeof v === "object" &&
-		v !== null &&
-		v.constructor.name === "DurableObjectNamespace" &&
+		v instanceof Object &&
+		/^(?:Loopback)?DurableObjectNamespace$/.test(v.constructor.name) &&
 		"newUniqueId" in v &&
 		typeof v.newUniqueId === "function" &&
 		"idFromName" in v &&
@@ -61,7 +60,8 @@ function getSameIsolateNamespaces(): DurableObjectNamespace[] {
 			continue;
 		}
 
-		const namespace = internalEnv[key];
+		const namespace =
+			internalEnv[key] ?? (exports as Record<string, unknown>)?.[key];
 		assert(
 			isDurableObjectNamespace(namespace),
 			`Expected ${key} to be a DurableObjectNamespace binding`
@@ -162,18 +162,22 @@ export async function runDurableObjectAlarm(
 }
 
 /**
- * Internal method for running `callback` inside the singleton `RunnerObject`'s
- * I/O context. Tests run in this context by default. This is required for
- * performing operations that use Vitest's RPC mechanism as the `RunnerObject`
+ * Internal method for running `callback` inside the I/O context of the
+ * Runner Durable Object.
+ *
+ * Tests run in this context by default. This is required for performing
+ * operations that use Vitest's RPC mechanism as the Durable Object
  * owns the RPC WebSocket. For example, importing modules or sending logs.
  * Trying to perform those operations from a different context (e.g. within
  * a `export default { fetch() {} }` handler or user Durable Object's `fetch()`
  * handler) without using this function will result in a `Cannot perform I/O on
  * behalf of a different request` error.
  */
-export async function runInRunnerObject<R>(
-	_env: Env,
-	callback: (instance: RunnerObject) => R | Promise<R>
+export function runInRunnerObject<R>(
+	env: Env,
+	callback: (
+		instance: __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__
+	) => R | Promise<R>
 ): Promise<R> {
 	// throw new Error("hi");
 	// const id = await (env.MY as DurableObjectNamespace).get(

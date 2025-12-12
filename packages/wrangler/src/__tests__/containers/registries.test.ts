@@ -37,12 +37,12 @@ describe("containers registries configure", () => {
 			📦 Manage Containers [open-beta]
 
 			COMMANDS
-			  wrangler containers build [PATH]  Build a container image
-			  wrangler containers push [TAG]    Push a tagged image to a Cloudflare managed registry
-			  wrangler containers images        Perform operations on images in your Cloudflare managed registry
-			  wrangler containers info [ID]     Get information about a specific container
-			  wrangler containers list          List containers
-			  wrangler containers delete [ID]   Delete a container
+			  wrangler containers build PATH  Build a container image
+			  wrangler containers push TAG    Push a tagged image to a Cloudflare managed registry
+			  wrangler containers images      Perform operations on images in your Cloudflare managed registry
+			  wrangler containers info ID     Get information about a specific container
+			  wrangler containers list        List containers
+			  wrangler containers delete ID   Delete a container
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]

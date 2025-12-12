@@ -1,3 +1,4 @@
+import { Analog } from "./analog";
 import { Angular } from "./angular";
 import { Astro } from "./astro";
 import { Nuxt } from "./nuxt";
@@ -7,6 +8,7 @@ import { SolidStart } from "./solid-start";
 import { Static } from "./static";
 import { SvelteKit } from "./sveltekit";
 import { TanstackStart } from "./tanstack";
+import { Vite } from "./vite";
 import type { Framework } from ".";
 
 export function getFramework(detectedFramework?: {
@@ -30,6 +32,10 @@ export function getFramework(detectedFramework?: {
 			return new SolidStart(detectedFramework.name);
 		case "qwik":
 			return new Qwik(detectedFramework.name);
+		case "vite":
+			return new Vite(detectedFramework.name);
+		case "analog":
+			return new Analog(detectedFramework.name);
 		default:
 			return new Static(detectedFramework?.name);
 	}

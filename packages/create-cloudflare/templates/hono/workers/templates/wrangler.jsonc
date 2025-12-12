@@ -1,7 +1,7 @@
 {
-  "name": "<TBD>",
+  "name": "<WORKER_NAME>",
   "main": "src/index.ts",
-  "compatibility_date": "<TBD>",
+  "compatibility_date": "<COMPATIBILITY_DATE>",
   "assets": {
     "binding": "ASSETS",
     "directory": "./public"

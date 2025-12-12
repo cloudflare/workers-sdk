@@ -41,6 +41,31 @@ export type QueryResult = {
 	query?: string;
 };
 
+// Common SQLite Codes
+// See https://www.sqlite.org/rescode.html
+const SQLITE_RESULT_CODES = [
+	"SQLITE_ERROR",
+	"SQLITE_CONSTRAINT",
+	"SQLITE_MISMATCH",
+	"SQLITE_AUTH",
+];
+
+function isSqliteUserError(error: unknown): error is Error {
+	if (!(error instanceof Error)) {
+		return false;
+	}
+
+	const message = error.message.toUpperCase();
+
+	for (const code of SQLITE_RESULT_CODES) {
+		if (message.includes(code)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 export const d1ExecuteCommand = createCommand({
 	metadata: {
 		description: "Execute a command or SQL file",
@@ -313,7 +338,13 @@ async function executeLocally({
 	try {
 		results = await db.batch(queries.map((query) => db.prepare(query)));
 	} catch (e: unknown) {
-		throw (e as { cause?: unknown })?.cause ?? e;
+		const cause = (e as { cause?: unknown })?.cause ?? e;
+
+		if (isSqliteUserError(cause)) {
+			throw new UserError(cause.message);
+		}
+
+		throw cause;
 	} finally {
 		await mf.dispose();
 	}

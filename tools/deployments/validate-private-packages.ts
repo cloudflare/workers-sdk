@@ -31,7 +31,7 @@ async function getPrivatePackageJsons() {
 			// The package.jsons in the fixtures directory use the `@fixture/` scope
 			// TODO: consider if we should use the `@cloudflare/` scope instead
 			"fixtures/**",
-			// C3 template package.jsons have <TBD> names that are populated by C3 during the app creation
+			// C3 template package.jsons have placeholder names that are populated by C3 during the app creation
 			"packages/create-cloudflare/templates/**",
 			// The package.jsons in the vite-plugin playground use the `@playground/` scope
 			// TODO: consider if we should use the `@cloudflare/` scope instead

@@ -398,60 +398,20 @@ CLOUDFLARE_ACCOUNT_ID="<Account ID for the token you just created>" CLOUDFLARE_A
 ## Changesets
 
 Every non-trivial change to the project - those that should appear in the changelog - must be captured in a "changeset".
-We use the [`changesets`](https://github.com/changesets/changesets/blob/main/README.md) tool for creating changesets, publishing versions and updating the changelog.
 
-- Create a changeset for the current change.
+See the [.changeset/README.md](.changeset/README.md) for detailed guidelines on:
 
-  ```sh
-  pnpm changeset
-  ```
+- Creating changesets
+- Choosing version types (patch/minor/major)
+- Writing good changeset descriptions
+- Formatting rules
 
-- Select which workspaces are affected by the change and whether the version requires a major, minor or patch release.
-- Update the generated changeset with a description of the change.
-- Include the generate changeset in the current commit.
+Quick start:
 
-  ```sh
-  git add ./changeset/*.md
-  ```
-
-### Changeset message format
-
-Each changeset is a file that describes the change being merged. This file is used to generate the changelog when the changes are released.
-
-To help maintain consistency in the changelog, changesets should have the following format:
-
-```plain
-<TITLE>
-
-<BODY>
+```sh
+pnpm changeset
+git add .changeset/*.md
 ```
-
-- `TITLE` should be a single sentence containing an imperative description of the change.
-- `BODY` should be one or more paragraphs that go into more detail about the reason for the change and anything notable about the approach taken.
-
-### Changeset file example
-
-The generated changeset file will contain the package name and type of change (eg. `patch`, `minor`, or `major`), followed by our changeset format described above.
-
-Here's an example of a `patch` to the `wrangler` package:
-
-```plain
----
-"wrangler": patch
----
-
-Replace the word "publish" with "deploy" everywhere.
-
-We should be consistent with the word that describes how we get a worker to the edge. The command is `deploy`, so let's use that everywhere.
-```
-
-### Types of changes
-
-We use the following guidelines to determine the kind of change for a PR:
-
-- Bugfixes are considered to be 'patch' changes. Be sure to log warnings when experimental features are used.
-- New stable features as well as changes to experimental, beta, and pre-1.0-package features are considered 'minor' changes. New deprecation warnings for future breaking changes are also considered 'minor' changes—these changes shouldn't break existing code, but the deprecation warnings should suggest alternate solutions to not trigger the warning.
-- Breaking changes are considered to be 'major' changes. These are usually when deprecations take effect, or functional breaking behaviour is added with relevant logs (either as errors or warnings). Note: breaking changes for experimental, beta, or pre-1.0-package features are considered to be 'minor' changes.
 
 ### Styleguide
 

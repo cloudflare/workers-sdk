@@ -24,8 +24,7 @@ export type ConfigurationResults = {
 export abstract class Framework {
 	constructor(public name: string = "Static") {}
 
-	/** Some frameworks (i.e. Nuxt) don't need additional configuration */
-	get configured() {
+	isConfigured(_projectPath: string): boolean {
 		return false;
 	}
 

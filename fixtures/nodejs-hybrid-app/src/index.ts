@@ -209,7 +209,7 @@ async function testPostgresLibrary(env: Env, ctx: Context) {
 		database: env.DB_NAME,
 	});
 	await client.connect();
-	const result = await client.query(`SELECT * FROM rnc_database`);
+	const result = await client.query(`SELECT * FROM rnc_database LIMIT 5`);
 	// Return the first row as JSON
 	const resp = new Response(JSON.stringify(result.rows[0]), {
 		headers: { "Content-Type": "application/json" },

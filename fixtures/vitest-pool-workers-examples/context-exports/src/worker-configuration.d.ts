@@ -1,7 +1,7 @@
 declare namespace Cloudflare {
 	interface GlobalProps {
 		mainModule: typeof import("./index");
-		durableNamespaces: "Counter";
+		durableNamespaces: "Counter" | "ConfiguredVirtualDurableObject";
 	}
 	interface Env {
 		NAME: string;

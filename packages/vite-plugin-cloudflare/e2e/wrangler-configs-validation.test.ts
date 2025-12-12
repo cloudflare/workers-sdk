@@ -7,7 +7,7 @@ import { runLongLived, seed } from "./helpers";
 describe("during development wrangler config files are validated", () => {
 	const noWranglerConfigAuxProjectPath = seed(
 		"no-wrangler-config-for-auxiliary-worker",
-		"pnpm"
+		{ pm: "pnpm" }
 	);
 	test("for auxiliary workers", async ({ expect }) => {
 		const proc = await runLongLived(

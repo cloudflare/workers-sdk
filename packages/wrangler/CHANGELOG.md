@@ -1,5 +1,63 @@
 # wrangler
 
+## 4.54.0
+
+### Minor Changes
+
+- [#11512](https://github.com/cloudflare/workers-sdk/pull/11512) [`c15e99e`](https://github.com/cloudflare/workers-sdk/commit/c15e99e840e80cd74c0190036476e209625325e0) Thanks [@emily-shen](https://github.com/emily-shen)! - Enable using `ctx.exports` with containers
+
+  You can now use containers with Durable Objects that are accessed via [`ctx.exports`](https://developers.cloudflare.com/workers/runtime-apis/context/#exports).
+
+  Now your config file can look something like this:
+
+  ```
+  {
+  	"name": "container-app",
+  	"main": "src/index.ts",
+  	"compatibility_date": "2025-12-01",
+  	"compatibility_flags": ["enable_ctx_exports"], // compat flag needed for now.
+  	"containers": [
+  		{
+  			"image": "./Dockerfile",
+  			"class_name": "MyDOClassname",
+  			"name": "my-container"
+  		},
+  	],
+  	"migrations": [
+  		{
+  			"tag": "v1",
+  			"new_sqlite_classes": ["MyDOClassname"],
+  		},
+  	],
+  	// no need to declare your durable object binding here
+  }
+  ```
+
+  Note that when using `ctx.exports`, where you previously accessed a Durable Object via something like `env.DO`, you should now access with `ctx.exports.MyDOClassname`.
+
+  Refer to [the docs for more information on using `ctx.exports`](https://developers.cloudflare.com/workers/runtime-apis/context/#exports).
+
+- [#11508](https://github.com/cloudflare/workers-sdk/pull/11508) [`b17797c`](https://github.com/cloudflare/workers-sdk/commit/b17797c7e83a9f431ba68bd543032fccddb5f6b5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Wrangler will no longer try to add additional configuration to projects using `@cloudflare/vite-plugin` when deploying or running `wrangler setup`
+
+- [#11508](https://github.com/cloudflare/workers-sdk/pull/11508) [`b17797c`](https://github.com/cloudflare/workers-sdk/commit/b17797c7e83a9f431ba68bd543032fccddb5f6b5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - When a Vite project is detected, install `@cloudflare/vite-plugin`
+
+- [#11576](https://github.com/cloudflare/workers-sdk/pull/11576) [`bb47e20`](https://github.com/cloudflare/workers-sdk/commit/bb47e2090cd4c0c4c56abe97fffb35f3101414bf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Analog projects in autoconfig
+
+- [#10582](https://github.com/cloudflare/workers-sdk/pull/10582) [`991760d`](https://github.com/cloudflare/workers-sdk/commit/991760d13168f613a99a4b6e70a43887934cddfb) Thanks [@flakey5](https://github.com/flakey5)! - Add `containers ssh` command
+
+### Patch Changes
+
+- [#11467](https://github.com/cloudflare/workers-sdk/pull/11467) [`235d325`](https://github.com/cloudflare/workers-sdk/commit/235d325c1ccd8238befd7036e6875242c9361dfb) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: prevent reporting SQLite error from `wrangler d1 execute` to Sentry
+
+- [#11414](https://github.com/cloudflare/workers-sdk/pull/11414) [`41103f5`](https://github.com/cloudflare/workers-sdk/commit/41103f560cb1a60e1b8cebe009e408813da85300) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add extra logging to user log-in flow for diagnosing failed login requests
+
+- [#11559](https://github.com/cloudflare/workers-sdk/pull/11559) [`ea6fbec`](https://github.com/cloudflare/workers-sdk/commit/ea6fbec8de83493c86b72c9da1809c6eac832a5b) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Remove image validation for containers on wrangler deploy.
+
+  Internal customers are able to use additional image registries and will run into failures with this validation. Image registry validation will now be handled by the API.
+
+- Updated dependencies [[`31c162a`](https://github.com/cloudflare/workers-sdk/commit/31c162a161966cb01d94da5b85462162c20c4b71), [`bd5f087`](https://github.com/cloudflare/workers-sdk/commit/bd5f08783d561bf27d52202ccf29993b416f4674), [`c6dd86f`](https://github.com/cloudflare/workers-sdk/commit/c6dd86f014a07d6b914736b0b8b704d506336e5a)]:
+  - miniflare@4.20251210.0
+
 ## 4.53.0
 
 ### Minor Changes

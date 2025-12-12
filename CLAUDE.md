@@ -62,7 +62,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 
 **Code Style:**
 
-- All significant changes require a changeset: `pnpm changeset`
+- All significant changes require a changeset (see below)
 
 **Testing Standards:**
 
@@ -94,6 +94,28 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 **Workers runtime tests:** Use vitest-pool-workers for workerd-specific behavior
 
 Run `pnpm check` before submitting changes to ensure all quality gates pass.
+
+## Changesets
+
+Every user-facing change requires a changeset. See `.changeset/README.md` for complete guidelines.
+
+**Creating a changeset:**
+
+```sh
+pnpm changeset add --empty
+```
+
+This creates an empty changeset file. Edit it to add:
+
+1. The affected package(s) and version bump type (patch/minor/major)
+2. A meaningful description for the changelog
+
+**Key rules:**
+
+- Major versions for `wrangler` are forbidden
+- No h1/h2/h3 markdown headers (breaks changelog formatting)
+- Include usage examples for new features
+- Describe the symptom fixed for bug fixes
 
 ## Keeping CLAUDE.md up to date
 

@@ -28,6 +28,36 @@ import type { ReadConfigCommandArgs } from "../config";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 /**
+ * SSL/TLS certificate error messages that indicate a corporate proxy or VPN
+ * may be intercepting HTTPS traffic with a custom root certificate.
+ */
+const SSL_ERROR_SELF_SIGNED_CERT =
+	"self-signed certificate in certificate chain";
+const SSL_ERROR_UNABLE_TO_VERIFY = "unable to verify the first certificate";
+const SSL_ERROR_UNABLE_TO_GET_ISSUER = "unable to get local issuer certificate";
+
+const SSL_CERT_ERROR_MESSAGES = [
+	SSL_ERROR_SELF_SIGNED_CERT,
+	SSL_ERROR_UNABLE_TO_VERIFY,
+	SSL_ERROR_UNABLE_TO_GET_ISSUER,
+];
+
+/**
+ * Check if an error (or its cause) is related to SSL/TLS certificate validation,
+ * which commonly occurs when a corporate proxy or VPN intercepts HTTPS traffic.
+ */
+function isCertificateError(e: unknown): boolean {
+	const message = e instanceof Error ? e.message : String(e);
+	const causeMessage =
+		e instanceof Error && e.cause instanceof Error ? e.cause.message : "";
+
+	return SSL_CERT_ERROR_MESSAGES.some(
+		(errorText) =>
+			message.includes(errorText) || causeMessage.includes(errorText)
+	);
+}
+
+/**
  * Handles an error thrown during command execution.
  *
  * This can involve filtering, transforming and logging the error appropriately.
@@ -42,6 +72,16 @@ export async function handleError(
 	let loggableException = e;
 
 	logger.log(""); // Just adds a bit of space
+
+	// Log a helpful warning for SSL certificate errors caused by corporate proxies/VPNs
+	if (isCertificateError(e)) {
+		logger.warn(
+			"Wrangler detected that a corporate proxy or VPN might be enabled on your machine, " +
+				"resulting in API calls failing due to a certificate mismatch. " +
+				"It is likely that you need to install the missing system roots provided by your corporate proxy vendor."
+		);
+	}
+
 	if (e instanceof CommandLineArgsError) {
 		logger.error(e.message);
 		// We are not able to ask the `wrangler` CLI parser to show help for a subcommand programmatically.

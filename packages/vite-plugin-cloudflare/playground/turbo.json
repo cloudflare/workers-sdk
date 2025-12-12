@@ -4,6 +4,16 @@
 	"tasks": {
 		"test:ci": {
 			"env": ["NODE_DEBUG"]
+		},
+		"test:ci:serve": {
+			"dependsOn": ["build"],
+			"env": ["NODE_DEBUG"],
+			"outputLogs": "new-only"
+		},
+		"test:ci:build": {
+			"dependsOn": ["build"],
+			"env": ["NODE_DEBUG"],
+			"outputLogs": "new-only"
 		}
 	}
 }
