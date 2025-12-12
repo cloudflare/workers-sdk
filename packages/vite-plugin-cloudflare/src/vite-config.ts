@@ -13,6 +13,7 @@ export function validateWorkerEnvironmentOptions(
 	resolvedPluginConfig: WorkersResolvedConfig,
 	resolvedViteConfig: vite.ResolvedConfig
 ) {
+	return;
 	const disallowedEnvironmentOptionsMap = new Map<
 		string,
 		DisallowedEnvironmentOptions

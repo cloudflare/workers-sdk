@@ -21,6 +21,8 @@ function importModule(
 	env: Env,
 	specifier: string
 ): Promise<Record<string, unknown>> {
+	// __console.log("import");
+
 	return runInRunnerObject(env, (instance) => {
 		if (instance.executor === undefined) {
 			const message =
@@ -29,7 +31,7 @@ function importModule(
 				"Use your package manager's `why` command to list versions and why each is installed (e.g. `npm why vitest`).";
 			throw new Error(message);
 		}
-		return instance.executor.executeId(specifier);
+		return instance.executor.import(specifier);
 	});
 }
 
@@ -232,6 +234,7 @@ async function getWorkerEntrypointExport(
 		mainModule !== null &&
 		entrypoint in mainModule &&
 		mainModule[entrypoint];
+	// __console.log(entrypointValue);
 	if (!entrypointValue) {
 		const message =
 			`${mainPath} does not export a ${entrypoint} entrypoint. \`@cloudflare/vitest-pool-workers\` does not support service workers or named entrypoints for \`SELF\`.\n` +
@@ -286,6 +289,8 @@ async function getWorkerEntrypointRPCProperty(
 export function createWorkerEntrypointWrapper(
 	entrypoint: string
 ): typeof WorkerEntrypoint {
+	// console.log("wrapper");
+
 	const Wrapper = createProxyPrototypeClass(
 		WorkerEntrypoint,
 		function (this: WorkerEntrypoint<InternalUserEnv>, key) {
@@ -310,8 +315,23 @@ export function createWorkerEntrypointWrapper(
 				this.env,
 				entrypoint
 			);
+
 			const userEnv = stripInternalEnv(this.env);
+
+			// __console.log(mainPath, entrypointValue, userEnv);
 			return patchAndRunWithHandlerContext(this.ctx, () => {
+				// __console.log(
+				// 	mainPath,
+				// 	entrypointValue,
+				// 	userEnv,
+				// 	typeof entrypointValue
+				// );
+				// __console.log((entrypointValue as Record<string, unknown>)[key]);
+
+				// const maybeFn = (entrypointValue as Record<string, unknown>)[key];
+				// __console.log(maybeFn.toString());
+				// await maybeFn.call(entrypointValue, thing, userEnv, this.ctx);
+
 				if (typeof entrypointValue === "object" && entrypointValue !== null) {
 					// Assuming the user has defined an `ExportedHandler`
 					const maybeFn = (entrypointValue as Record<string, unknown>)[key];
@@ -345,7 +365,7 @@ export function createWorkerEntrypointWrapper(
 			});
 		};
 	}
-
+	// console.log(Wrapper);
 	return Wrapper;
 }
 
@@ -408,6 +428,8 @@ export function createDurableObjectWrapper(
 		const property = getDurableObjectRPCProperty(this, className, key);
 		return getRPCPropertyCallableThenable(key, property);
 	});
+
+	// Wrapper[Symbol.hasInstance] = () => true
 
 	Wrapper.prototype[kEnsureInstance] = async function (
 		this: DurableObjectWrapper

@@ -49,10 +49,9 @@
 		"vite": "catalog:default",
 		"vitest": "catalog:default"
 	},
-	"packageManager": "pnpm@9.12.0",
+	"packageManager": "pnpm@10.25.0",
 	"engines": {
-		"node": ">=18.20.0",
-		"pnpm": "^9.12.0"
+		"node": ">=18.20.0"
 	},
 	"volta": {
 		"node": "20.19.3",
@@ -72,9 +71,9 @@
 			"@types/react-tabs>@types/react": "^18",
 			"@types/react-transition-group>@types/react": "^18",
 			"@cloudflare/elements>@types/react": "^18",
-			"@types/node": "$@types/node",
-			"vitest>vite": "^5.0.0",
-			"@types/node>undici-types": "catalog:default"
+			"@types/node": "catalog:default",
+			"@types/node>undici-types": "catalog:default",
+			"vitest": "link:../../../../Library/pnpm/global/5/node_modules/vitest"
 		},
 		"patchedDependencies": {
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",

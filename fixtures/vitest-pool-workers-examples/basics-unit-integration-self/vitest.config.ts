@@ -1,19 +1,19 @@
-import { defineWorkersProject } from "@cloudflare/vitest-pool-workers/config";
+import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 
-export default defineWorkersProject({
-	test: {
-		poolOptions: {
-			workers: {
-				singleWorker: true,
-				miniflare: {
-					// Required to use `SELF.scheduled()`. This is an experimental
-					// compatibility flag, and cannot be enabled in production.
-					compatibilityFlags: ["service_binding_extra_handlers"],
-				},
-				wrangler: {
-					configPath: "./wrangler.jsonc",
-				},
-			},
-		},
-	},
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+    plugins: [cloudflareTest({
+        singleWorker: true,
+        miniflare: {
+            // Required to use `SELF.scheduled()`. This is an experimental
+            // compatibility flag, and cannot be enabled in production.
+            compatibilityFlags: ["service_binding_extra_handlers"],
+        },
+        wrangler: {
+            configPath: "./wrangler.jsonc",
+        },
+    })],
+
+    test: {}
 });

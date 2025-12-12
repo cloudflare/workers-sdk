@@ -98,9 +98,7 @@ const commonOptions = {
 		"__VITEST_POOL_WORKERS_DEFINES",
 		"__VITEST_POOL_WORKERS_USER_OBJECT",
 		// All npm packages (previously handled by packages: "external")
-		"birpc",
 		"cjs-module-lexer",
-		"devalue",
 		"esbuild",
 		"miniflare",
 		"semver",
@@ -131,7 +129,7 @@ const esmOptions = {
 	format: "esm",
 	outExtension: { ".js": ".mjs" },
 	entryPoints: [
-		path.join(pkgRoot, "src", "pool", "index.ts"),
+		path.join(pkgRoot, "src", "src", "index.ts"),
 		path.join(pkgRoot, "src", "worker", "index.ts"),
 		...libPaths.filter((libPath) => /\.m?ts$/.test(libPath)),
 	],
@@ -139,12 +137,9 @@ const esmOptions = {
 
 const cjsOptions = {
 	...commonOptions,
-	format: "cjs",
-	outExtension: { ".js": ".cjs" },
-	entryPoints: [
-		path.join(pkgRoot, "src", "config", "index.ts"),
-		...libPaths.filter((libPath) => /\.cts$/.test(libPath)),
-	],
+	format: "esm",
+	outExtension: { ".js": ".mjs" },
+	entryPoints: [...libPaths.filter((libPath) => /\.cts$/.test(libPath))],
 };
 
 if (watch) {

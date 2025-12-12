@@ -1,24 +1,12 @@
 import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vitest/config";
-
-// Configuration for the "auxiliary" Worker under test.
-// Unfortunately, auxiliary Workers cannot load their configuration
-// from wrangler config files, and must be configured with Miniflare
-// `WorkerOptions`.
-export const auxiliaryWorker = {
-	name: "auxiliary-worker",
-	modules: true,
-	scriptPath: "./auxiliary-worker/dist/index.js", // Built by `global-setup.ts`
-	compatibilityDate: "2025-11-01",
-	compatibilityFlags: ["nodejs_compat", "enable_ctx_exports"],
-	bindings: {
-		NAME: "AuxiliaryWorker",
-	},
-};
+import { kCurrentWorker } from "../../../packages/miniflare/dist/src";
+import { auxiliaryWorker } from "./vitest.config";
 
 export default defineConfig({
 	plugins: [
 		cloudflareTest({
+			singleWorker: true,
 			wrangler: { configPath: "./src/wrangler.jsonc" },
 			miniflare: {
 				workers: [auxiliaryWorker],
@@ -31,7 +19,9 @@ export default defineConfig({
 	],
 
 	test: {
+		name: "context-exports-single-worker",
 		globalSetup: ["./global-setup.ts"],
+
 		alias: {
 			// This alias is used to simulate a virtual module that Vitest and TypeScript can understand,
 			// but esbuild (used by the vitest-pool-workers to guess exports) cannot.

@@ -1,5 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { ModuleRunner, ssrModuleExportsKey } from "vite/module-runner";
+import { init, runBaseTests, setupEnvironment } from "vitest/worker";
 import {
 	INIT_PATH,
 	UNKNOWN_HOST,
@@ -13,6 +14,8 @@ import type {
 	ModuleEvaluator,
 	ModuleRunnerOptions,
 } from "vite/module-runner";
+
+console.log("import.meta.url", import.meta.url);
 
 /**
  * Custom `ModuleRunner`.
@@ -68,6 +71,7 @@ export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
 	 * @throws Error if the path is invalid or the module runner is already initialized
 	 */
 	override async fetch(request: Request) {
+		console.log("init fetch");
 		const { pathname } = new URL(request.url);
 
 		if (pathname !== INIT_PATH) {
@@ -83,6 +87,8 @@ export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
 		const { 0: client, 1: server } = new WebSocketPair();
 		server.accept();
 		this.#webSocket = server;
+		// this.#webSocket.addEventListener("open", console.log);
+		// this.#webSocket.addEventListener("message", console.log);
 		moduleRunner = await createModuleRunner(this.env, this.#webSocket);
 
 		return new Response(null, { status: 101, webSocket: client });
@@ -149,6 +155,7 @@ async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 			transport: {
 				connect({ onMessage }) {
 					webSocket.addEventListener("message", async ({ data }) => {
+						console.log("DATA", data);
 						onMessage(JSON.parse(data.toString()));
 					});
 
