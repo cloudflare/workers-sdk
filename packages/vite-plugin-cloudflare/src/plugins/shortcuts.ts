@@ -1,6 +1,6 @@
 import { getDefaultDevRegistryPath, getWorkerRegistry } from "miniflare";
 import colors from "picocolors";
-import { unstable_printBindings } from "wrangler";
+import * as wrangler from "wrangler";
 import { assertIsNotPreview, assertIsPreview } from "../context";
 import { createPlugin, satisfiesViteVersion } from "../utils";
 import type { PluginContext } from "../context";
@@ -49,7 +49,7 @@ export function addBindingsShortcut(
 			server.config.logger.info("");
 
 			for (const workerConfig of workerConfigs) {
-				unstable_printBindings(
+				wrangler.unstable_printBindings(
 					{
 						// The printBindings helper expects the deployment bundle format
 						// which is slightly different from the wrangler config
