@@ -7,6 +7,7 @@ import {
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
+import semverGte from "semver/functions/gte";
 import type { PluginContext } from "./context";
 import type * as http from "node:http";
 import type * as vite from "vite";
@@ -104,37 +105,7 @@ const require = createRequire(import.meta.url);
 
 export function satisfiesViteVersion(minVersion: string): boolean {
 	const viteVersion = require("vite/package.json").version as string;
-	return satisfiesMinVersion(viteVersion, minVersion);
-}
-
-/**
- * Checks if a version meets or exceeds a minimum semantic version
- */
-export function satisfiesMinVersion(
-	version: string,
-	minVersion: string
-): boolean {
-	const isVersionNumbers = (
-		numbers: unknown[]
-	): numbers is [number, number, number] =>
-		numbers.length === 3 && numbers.every((n) => !Number.isNaN(n));
-
-	const versionNumbers = version.split(".").map(Number);
-	const minVersionNumbers = minVersion.split(".").map(Number);
-
-	if (
-		!isVersionNumbers(versionNumbers) ||
-		!isVersionNumbers(minVersionNumbers)
-	) {
-		return false;
-	}
-
-	for (const i of [0, 1, 2] as const) {
-		if (versionNumbers[i] > minVersionNumbers[i]) return true;
-		if (versionNumbers[i] < minVersionNumbers[i]) return false;
-	}
-
-	return true;
+	return semverGte(viteVersion, minVersion);
 }
 
 function toMiniflareRequest(request: Request): MiniflareRequest {

@@ -2344,7 +2344,7 @@ importers:
         version: 20.19.9
       '@types/semver':
         specifier: ^7.5.1
-        version: 7.5.1
+        version: 7.7.1
       '@types/ws':
         specifier: ^8.5.13
         version: 8.5.13
@@ -8057,6 +8057,9 @@ packages:
 
   '@types/semver@7.5.1':
     resolution: {integrity: sha512-cJRQXpObxfNKkFAZbJl2yjWtJCqELQIdShsogr1d2MilP8dKD9TE/nEKHkJgUNHdGKCQaf9HbIynuV2csLGVLg==}
+
+  '@types/semver@7.7.1':
+    resolution: {integrity: sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA==}
 
   '@types/send@0.17.4':
     resolution: {integrity: sha512-x2EM6TJOybec7c52BX0ZspPodMsQUd5L6PRwOunVyVUhXiBSKf3AezDL8Dgvgt5o0UfKNfuA0eMLr2wLT4AiBA==}
@@ -18670,6 +18673,8 @@ snapshots:
   '@types/resolve@1.20.6': {}
 
   '@types/semver@7.5.1': {}
+
+  '@types/semver@7.7.1': {}
 
   '@types/send@0.17.4':
     dependencies:
