@@ -35,6 +35,9 @@ export const EXTERNAL_DEPENDENCIES = [
 
 	// workerd contains a native binary, so must be external. Wrangler depends on a pinned version.
 	"workerd",
+
+	// cloudflare SDK must be external to avoid code splitting issues with shims auto-initialization
+	"cloudflare",
 ];
 
 const pathToPackageJson = path.resolve(__dirname, "..", "package.json");

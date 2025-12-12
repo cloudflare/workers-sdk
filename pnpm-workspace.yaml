@@ -37,6 +37,7 @@ catalog:
   "@cloudflare/workers-types": "^4.20251212.0"
   workerd: "1.20251212.0"
   eslint: "^9.39.1"
+  tsdown: "0.16.4"
   smol-toml: "^1.5.2"
 
 catalogs:
