@@ -135,6 +135,15 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		const stub = this.env.ENGINE.get(stubId);
 		return await stub.waitForStatus(status);
 	}
+
+	public async unsafeGetOutputOrError(
+		instanceId: string,
+		isOutput: boolean
+	): Promise<unknown> {
+		const stubId = this.env.ENGINE.idFromName(instanceId);
+		const stub = this.env.ENGINE.get(stubId);
+		return await stub.getOutputOrError(isOutput);
+	}
 }
 
 export class WorkflowHandle extends RpcTarget implements WorkflowInstance {

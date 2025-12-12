@@ -54,6 +54,13 @@ class WorkflowImpl implements Workflow {
 	async unsafeWaitForStatus(instanceId: string, status: string): Promise<void> {
 		return await this.binding.unsafeWaitForStatus(instanceId, status);
 	}
+
+	public async unsafeGetOutputOrError(
+		instanceId: string,
+		isOutput: boolean
+	): Promise<unknown> {
+		return this.binding.unsafeGetOutputOrError(instanceId, isOutput);
+	}
 }
 
 class InstanceImpl implements WorkflowInstance {
