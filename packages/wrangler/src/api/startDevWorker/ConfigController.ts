@@ -566,7 +566,7 @@ export class ConfigController extends Controller {
 							: input.dev?.server?.secure
 								? "https"
 								: "http",
-					generate_types: input.dev?.generate_types,
+					generateTypes: input.dev?.generateTypes,
 				},
 				{ useRedirectIfAvailable: true }
 			);

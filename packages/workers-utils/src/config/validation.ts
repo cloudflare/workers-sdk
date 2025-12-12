@@ -113,7 +113,7 @@ export type NormalizeAndValidateConfigArgs = {
 	upstreamProtocol?: string;
 	script?: string;
 	enableContainers?: boolean;
-	generate_types?: boolean;
+	generateTypes?: boolean;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -567,7 +567,7 @@ function normalizeAndValidateDev(
 		upstreamProtocol: upstreamProtocolArg,
 		remote: remoteArg,
 		enableContainers: enableContainersArg,
-		generate_types: generateTypesArg,
+		generateTypes: generateTypesArg,
 	} = args;
 	assert(
 		localProtocolArg === undefined ||
