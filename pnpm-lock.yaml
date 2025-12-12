@@ -34,16 +34,8 @@ catalogs:
       specifier: ^1.5.2
       version: 1.5.2
     typescript:
-<<<<<<< HEAD
-      specifier: ^5.8.3
-      version: 5.9.3
-||||||| 867232123
-      specifier: ^5.8.3
-      version: 5.8.3
-=======
       specifier: ~5.8.3
       version: 5.8.3
->>>>>>> origin/main
     undici:
       specifier: 7.14.0
       version: 7.14.0
@@ -74,22 +66,6 @@ patchedDependencies:
   '@netlify/build-info':
     hash: 33ea78efb143b613c74982678a25159c8700b1677e6a009776a6c8b690c87045
     path: patches/@netlify__build-info.patch
-<<<<<<< HEAD
-  comment-json:
-    hash: e80ea04a60e46f4e0ed2aec278cc48965515f783358caeaffdfb6112505d81ba
-    path: patches/comment-json.patch
-  pg@8.11.3:
-    hash: 4b5b12e2c09b3557af52d3348de71b9dfbf6f640e516f4701a62807d73bdab11
-    path: patches/pg@8.11.3.patch
-||||||| 867232123
-  comment-json:
-    hash: hbbonhdeq6rxrctdf7euss7qte
-    path: patches/comment-json.patch
-  pg@8.11.3:
-    hash: afbi5l3roukyz2s7kkn56yzjte
-    path: patches/pg@8.11.3.patch
-=======
->>>>>>> origin/main
   postal-mime:
     hash: 44bc62560d3d339b5c0836c18991f42b3b998db144f5ee7101d6758bbe74d3f2
     path: patches/postal-mime.patch
@@ -151,7 +127,7 @@ importers:
         version: 2.2.3
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:default
         version: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
@@ -169,7 +145,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -196,7 +172,7 @@ importers:
         version: 20.19.9
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vitest:
         specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
         version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
@@ -217,7 +193,7 @@ importers:
         version: 2.2.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -232,7 +208,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -253,7 +229,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -277,7 +253,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -373,7 +349,7 @@ importers:
         version: 6.4.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -397,7 +373,7 @@ importers:
         version: link:../../packages/miniflare
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vitest:
         specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
         version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
@@ -418,7 +394,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -470,7 +446,7 @@ importers:
         version: 6.0.3
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vitest:
         specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
         version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
@@ -525,7 +501,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -565,7 +541,7 @@ importers:
         version: link:../../packages/miniflare
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vitest:
         specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
         version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
@@ -609,16 +585,8 @@ importers:
         specifier: 4.4.1
         version: 4.4.1(supports-color@9.2.2)
       pg:
-<<<<<<< HEAD
-        specifier: 8.11.3
-        version: 8.11.3(patch_hash=4b5b12e2c09b3557af52d3348de71b9dfbf6f640e516f4701a62807d73bdab11)
-||||||| 867232123
-        specifier: 8.11.3
-        version: 8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte)
-=======
         specifier: 8.16.3
         version: 8.16.3
->>>>>>> origin/main
       pg-cloudflare:
         specifier: ^1.2.7
         version: 1.2.7
@@ -642,7 +610,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -663,7 +631,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -691,7 +659,7 @@ importers:
         version: link:../pages-plugin-example
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -712,7 +680,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -730,7 +698,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -751,7 +719,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -772,7 +740,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -793,7 +761,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -833,7 +801,7 @@ importers:
         version: link:../pages-plugin-example
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -854,7 +822,7 @@ importers:
         version: link:../../packages/miniflare
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -890,7 +858,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -911,7 +879,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -929,7 +897,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -947,7 +915,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -965,7 +933,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -983,7 +951,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1001,7 +969,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1022,7 +990,7 @@ importers:
         version: link:../../packages/miniflare
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vitest:
         specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
         version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
@@ -1040,7 +1008,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1180,29 +1148,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
-  fixtures/v4-playground:
-    devDependencies:
-      '@cloudflare/vite-plugin':
-        specifier: workspace:*
-        version: link:../../packages/vite-plugin-cloudflare
-      '@cloudflare/vitest-pool-workers':
-        specifier: workspace:*
-        version: link:../../packages/vitest-pool-workers
-      picocolors:
-        specifier: 1.1.1
-        version: 1.1.1
-      typescript:
-        specifier: ^5.5.2
-        version: 5.9.3
-      vitest:
-        specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
-        version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
-      wrangler:
-        specifier: workspace:*
-        version: link:../../packages/wrangler
-
   fixtures/vitest-pool-workers-examples:
     devDependencies:
+      '@better-auth/stripe':
+        specifier: ^1.4.6
+        version: 1.4.6(@better-auth/core@1.4.6(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.18)(better-call@1.1.5(zod@4.1.13))(jose@5.9.3)(kysely@0.28.8)(nanostores@1.1.0))(better-auth@1.4.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(stripe@9.16.0)
       '@cloudflare/containers':
         specifier: ^0.0.25
         version: 0.0.25
@@ -1218,6 +1168,9 @@ importers:
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
+      better-auth:
+        specifier: ^1.4.6
+        version: 1.4.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       discord-api-types:
         specifier: 0.37.98
         version: 0.37.98
@@ -1225,7 +1178,7 @@ importers:
         specifier: file:./module-resolution/vendor/ext-dep
         version: file:fixtures/vitest-pool-workers-examples/module-resolution/vendor/ext-dep
       jose:
-        specifier: ^5.2.2
+        specifier: ^5.9.3
         version: 5.9.3
       miniflare:
         specifier: workspace:*
@@ -1238,7 +1191,7 @@ importers:
         version: 4.0.0(patch_hash=60bdb1dcdbde0a135bb56d6fa1a1027caba891b149e2cfcb48d6a5b3524e0a91)
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:default
         version: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
@@ -1295,7 +1248,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1316,7 +1269,7 @@ importers:
         version: 7.1.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vitest:
         specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
         version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
@@ -1373,7 +1326,7 @@ importers:
         version: 1.1.6
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1394,7 +1347,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1415,7 +1368,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1436,7 +1389,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1457,7 +1410,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1490,7 +1443,7 @@ importers:
         version: 1.56.1
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1514,7 +1467,7 @@ importers:
         version: 1.56.1
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1535,7 +1488,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1553,7 +1506,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1622,7 +1575,7 @@ importers:
         version: 9.39.1(jiti@2.6.0)
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vitest:
         specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
         version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
@@ -1688,10 +1641,10 @@ importers:
         version: 17.0.24
       '@typescript-eslint/eslint-plugin':
         specifier: catalog:default
-        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3))(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3)
+        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3))(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
       '@typescript-eslint/parser':
         specifier: catalog:default
-        version: 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3)
+        version: 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
       chalk:
         specifier: ^5.2.0
         version: 5.3.0
@@ -1699,16 +1652,8 @@ importers:
         specifier: ^1.2.9
         version: 1.2.9
       comment-json:
-<<<<<<< HEAD
-        specifier: ^4.2.5
-        version: 4.2.5(patch_hash=e80ea04a60e46f4e0ed2aec278cc48965515f783358caeaffdfb6112505d81ba)
-||||||| 867232123
-        specifier: ^4.2.5
-        version: 4.2.5(patch_hash=hbbonhdeq6rxrctdf7euss7qte)
-=======
         specifier: ^4.5.0
         version: 4.5.0
->>>>>>> origin/main
       cross-spawn:
         specifier: ^7.0.3
         version: 7.0.6
@@ -1768,7 +1713,7 @@ importers:
         version: 1.5.2
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1777,7 +1722,7 @@ importers:
         version: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
       vite-tsconfig-paths:
         specifier: ^4.0.8
-        version: 4.2.0(typescript@5.9.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
+        version: 4.2.0(typescript@5.8.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
       vitest:
         specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
         version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
@@ -1928,13 +1873,7 @@ importers:
         version: link:../eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: ^0.7.0
-<<<<<<< HEAD
-        version: 0.7.8(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@4.0.15)(@vitest/snapshot@4.0.15)(vitest@..+..+..+Library+pnpm+global+5+node_modules+vitest)
-||||||| 867232123
-        version: 0.7.8(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)
-=======
-        version: 0.7.8(@cloudflare/workers-types@4.20251212.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)
->>>>>>> origin/main
+        version: 0.7.8(@cloudflare/workers-types@4.20251212.0)(@vitest/runner@4.0.15)(@vitest/snapshot@4.0.15)(vitest@..+..+..+Library+pnpm+global+5+node_modules+vitest)
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20251212.0
@@ -1949,7 +1888,7 @@ importers:
         version: 9.39.1(jiti@2.6.0)
       tsup:
         specifier: 8.3.0
-        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(supports-color@9.2.2)(typescript@5.9.3)(yaml@2.8.1)
+        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
       vitest:
         specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
         version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
@@ -2052,16 +1991,16 @@ importers:
         version: 8.5.10
       '@typescript-eslint/eslint-plugin':
         specifier: catalog:default
-        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3))(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3)
+        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3))(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
       '@typescript-eslint/parser':
         specifier: catalog:default
-        version: 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3)
+        version: 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
       ava:
         specifier: ^6.0.1
         version: 6.1.1(@ava/typescript@4.1.0)(encoding@0.1.13)
       capnp-es:
         specifier: ^0.0.11
-        version: 0.0.11(typescript@5.9.3)
+        version: 0.0.11(typescript@5.8.3)
       capnweb:
         specifier: ^0.1.0
         version: 0.1.0
@@ -2127,7 +2066,7 @@ importers:
         version: 2.2.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       which:
         specifier: ^2.0.2
         version: 2.0.2
@@ -2157,7 +2096,7 @@ importers:
         version: 2.2.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       verdaccio:
         specifier: ^6.0.5
         version: 6.0.5(encoding@0.1.13)(typanion@3.14.0)
@@ -2173,13 +2112,7 @@ importers:
         version: link:../eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: ^0.8.19
-<<<<<<< HEAD
-        version: 0.8.19(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@4.0.15)(@vitest/snapshot@4.0.15)(vitest@..+..+..+Library+pnpm+global+5+node_modules+vitest)
-||||||| 867232123
-        version: 0.8.19(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
-=======
-        version: 0.8.19(@cloudflare/workers-types@4.20251212.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
->>>>>>> origin/main
+        version: 0.8.19(@cloudflare/workers-types@4.20251212.0)(@vitest/runner@4.0.15)(@vitest/snapshot@4.0.15)(vitest@..+..+..+Library+pnpm+global+5+node_modules+vitest)
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared
@@ -2209,7 +2142,7 @@ importers:
         version: 6.0.1
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vitest:
         specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
         version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
@@ -2350,10 +2283,10 @@ importers:
         version: '@types/node@22.15.17'
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       unbuild:
         specifier: ^3.2.0
-        version: 3.3.1(typescript@5.9.3)(vue-tsc@2.0.29(typescript@5.9.3))
+        version: 3.3.1(typescript@5.8.3)(vue-tsc@2.0.29(typescript@5.8.3))
 
   packages/vite-plugin-cloudflare:
     dependencies:
@@ -2429,25 +2362,13 @@ importers:
         version: 1.2.2
       tsdown:
         specifier: 0.16.3
-        version: 0.16.3(ms@2.1.3)(typescript@5.9.3)
+        version: 0.16.3(ms@2.1.3)(typescript@5.8.3)
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
-<<<<<<< HEAD
-        version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
-||||||| 867232123
-        version: 7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
-      vitest:
-        specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
-=======
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
-      vitest:
-        specifier: catalog:default
-        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
->>>>>>> origin/main
 
   packages/vite-plugin-cloudflare/playground:
     devDependencies:
@@ -2465,7 +2386,7 @@ importers:
         version: 2.2.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
 
   packages/vite-plugin-cloudflare/playground/additional-modules:
     devDependencies:
@@ -2480,7 +2401,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2501,7 +2422,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2522,7 +2443,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2543,7 +2464,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2564,7 +2485,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2585,7 +2506,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2606,7 +2527,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2627,7 +2548,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2648,7 +2569,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2669,7 +2590,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2690,7 +2611,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2711,7 +2632,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2732,7 +2653,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2753,7 +2674,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2774,7 +2695,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2807,7 +2728,7 @@ importers:
         version: 2.2.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2828,7 +2749,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2849,7 +2770,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2870,7 +2791,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2891,7 +2812,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2912,7 +2833,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2933,7 +2854,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2957,7 +2878,7 @@ importers:
         version: file:packages/vite-plugin-cloudflare/playground/main-resolution/package
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -2984,7 +2905,7 @@ importers:
         version: 5.1.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3014,13 +2935,7 @@ importers:
         version: file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/requires
       '@remix-run/cloudflare':
         specifier: 2.12.0
-<<<<<<< HEAD
-        version: 2.12.0(@cloudflare/workers-types@4.20251202.0)(typescript@5.9.3)
-||||||| 867232123
-        version: 2.12.0(@cloudflare/workers-types@4.20251202.0)(typescript@5.8.3)
-=======
         version: 2.12.0(@cloudflare/workers-types@4.20251212.0)(typescript@5.8.3)
->>>>>>> origin/main
       '@types/react':
         specifier: ^18.3.11
         version: 18.3.18
@@ -3035,7 +2950,7 @@ importers:
         version: 6.2.1(express@4.21.2)
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3056,7 +2971,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3098,7 +3013,7 @@ importers:
         version: 1.2.7
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3132,7 +3047,7 @@ importers:
         version: 19.1.1(@types/react@19.1.0)
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3181,7 +3096,7 @@ importers:
         version: 4.0.15
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3205,13 +3120,13 @@ importers:
         version: 7.0.1
       '@prisma/client':
         specifier: ^7.0.0
-        version: 7.0.1(prisma@7.0.1(@types/react@19.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.9.3))(typescript@5.9.3)
+        version: 7.0.1(prisma@7.0.1(@types/react@19.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.8.3))(typescript@5.8.3)
       prisma:
         specifier: ^7.0.0
-        version: 7.0.1(@types/react@19.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.9.3)
+        version: 7.0.1(@types/react@19.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.8.3)
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3248,7 +3163,7 @@ importers:
         version: 4.3.4(vite@7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1))
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3269,7 +3184,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3290,7 +3205,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3330,7 +3245,7 @@ importers:
         version: 4.3.4(vite@7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1))
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3351,7 +3266,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3372,7 +3287,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3396,7 +3311,7 @@ importers:
         version: 2.0.0(vite@7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1))
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3417,7 +3332,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3438,7 +3353,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3459,7 +3374,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3480,7 +3395,7 @@ importers:
         version: 4.20251212.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:vite-plugin
         version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
@@ -3490,9 +3405,6 @@ importers:
 
   packages/vitest-pool-workers:
     dependencies:
-      birpc:
-        specifier: 0.2.14
-        version: 0.2.14
       cjs-module-lexer:
         specifier: ^1.2.3
         version: 1.2.3
@@ -3547,7 +3459,7 @@ importers:
         version: https://pkg.pr.new/@vitest/snapshot@5d26b87
       capnp-es:
         specifier: ^0.0.11
-        version: 0.0.11(typescript@5.9.3)
+        version: 0.0.11(typescript@5.8.3)
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.0)
@@ -3556,7 +3468,7 @@ importers:
         version: 2.2.0
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -3584,10 +3496,10 @@ importers:
         version: 18.3.3
       '@typescript-eslint/eslint-plugin':
         specifier: catalog:default
-        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3))(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3)
+        version: 8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3))(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
       '@typescript-eslint/parser':
         specifier: catalog:default
-        version: 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3)
+        version: 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
       '@vitejs/plugin-react':
         specifier: ^4.3.3
         version: 4.3.3(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
@@ -3602,13 +3514,13 @@ importers:
         version: 18.3.1(react@18.3.1)
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vite:
         specifier: catalog:default
         version: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
       vite-plugin-dts:
         specifier: ^4.0.1
-        version: 4.0.1(@types/node@20.19.9)(rollup@4.44.1)(typescript@5.9.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
+        version: 4.0.1(@types/node@20.19.9)(rollup@4.44.1)(typescript@5.8.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
 
   packages/workers-playground:
     dependencies:
@@ -3744,13 +3656,7 @@ importers:
         version: link:../eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: ^0.7.0
-<<<<<<< HEAD
-        version: 0.7.8(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@4.0.15)(@vitest/snapshot@4.0.15)(vitest@..+..+..+Library+pnpm+global+5+node_modules+vitest)
-||||||| 867232123
-        version: 0.7.8(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)
-=======
-        version: 0.7.8(@cloudflare/workers-types@4.20251212.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)
->>>>>>> origin/main
+        version: 0.7.8(@cloudflare/workers-types@4.20251212.0)(@vitest/runner@4.0.15)(@vitest/snapshot@4.0.15)(vitest@..+..+..+Library+pnpm+global+5+node_modules+vitest)
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
@@ -3783,7 +3689,7 @@ importers:
         version: 4.0.0(patch_hash=60bdb1dcdbde0a135bb56d6fa1a1027caba891b149e2cfcb48d6a5b3524e0a91)
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vitest:
         specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
         version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
@@ -3839,13 +3745,13 @@ importers:
         version: 2.2.0
       tsdown:
         specifier: ^0.15.9
-        version: 0.15.9(typescript@5.9.3)
+        version: 0.15.9(typescript@5.8.3)
       tsup:
         specifier: 8.3.0
-        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(supports-color@9.2.2)(typescript@5.9.3)(yaml@2.8.1)
+        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(supports-color@9.2.2)(typescript@5.8.3)(yaml@2.8.1)
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vitest:
         specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
         version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
@@ -3873,13 +3779,7 @@ importers:
         version: link:../eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: ^0.8.19
-<<<<<<< HEAD
-        version: 0.8.19(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@4.0.15)(@vitest/snapshot@4.0.15)(vitest@..+..+..+Library+pnpm+global+5+node_modules+vitest)
-||||||| 867232123
-        version: 0.8.19(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
-=======
-        version: 0.8.19(@cloudflare/workers-types@4.20251212.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
->>>>>>> origin/main
+        version: 0.8.19(@cloudflare/workers-types@4.20251212.0)(@vitest/runner@4.0.15)(@vitest/snapshot@4.0.15)(vitest@..+..+..+Library+pnpm+global+5+node_modules+vitest)
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
@@ -3900,7 +3800,7 @@ importers:
         version: 6.0.1
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       vitest:
         specifier: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
         version: link:../../../../../../Library/pnpm/global/5/node_modules/vitest
@@ -3929,24 +3829,8 @@ importers:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
       workerd:
-<<<<<<< HEAD
-        specifier: 1.20251202.0
-        version: 1.20251202.0
-||||||| 867232123
-        specifier: 1.20251202.0
-        version: 1.20251202.0
-    optionalDependencies:
-      fsevents:
-        specifier: ~2.3.2
-        version: 2.3.3
-=======
         specifier: 1.20251212.0
         version: 1.20251212.0
-    optionalDependencies:
-      fsevents:
-        specifier: ~2.3.2
-        version: 2.3.3
->>>>>>> origin/main
     devDependencies:
       '@aws-sdk/client-s3':
         specifier: ^3.721.0
@@ -4145,7 +4029,7 @@ importers:
         version: 9.3.1
       msw:
         specifier: 2.12.0
-        version: 2.12.0(@types/node@20.19.9)(typescript@5.9.3)
+        version: 2.12.0(@types/node@20.19.9)(typescript@5.8.3)
       node-forge:
         specifier: ^1.3.1
         version: 1.3.1
@@ -4205,10 +4089,10 @@ importers:
         version: 1.5.0
       tsup:
         specifier: 8.3.0
-        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(supports-color@9.2.2)(typescript@5.9.3)(yaml@2.8.1)
+        version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(supports-color@9.2.2)(typescript@5.8.3)(yaml@2.8.1)
       typescript:
         specifier: catalog:default
-        version: 5.9.3
+        version: 5.8.3
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -4606,6 +4490,34 @@ packages:
   '@babel/types@7.28.5':
     resolution: {integrity: sha512-qQ5m48eI/MFLQ5PxQj4PFaprjyCTLI37ElWMmNs0K8Lk3dVeOdNpB3ks8jc7yM5CDmVC73eMVk/trk3fgmrUpA==}
     engines: {node: '>=6.9.0'}
+
+  '@better-auth/core@1.4.6':
+    resolution: {integrity: sha512-cYjscr4wU5ZJPhk86JuUkecJT+LSYCFmUzYaitiLkizl+wCr1qdPFSEoAnRVZVTUEEoKpeS2XW69voBJ1NoB3g==}
+    peerDependencies:
+      '@better-auth/utils': 0.3.0
+      '@better-fetch/fetch': 1.1.18
+      better-call: 1.1.5
+      jose: ^6.1.0
+      kysely: ^0.28.5
+      nanostores: ^1.0.1
+
+  '@better-auth/stripe@1.4.6':
+    resolution: {integrity: sha512-yA4kPfP0XRHhgW81/AHa9SPGRm+4PSIdLmIDUZzZ+H/afEfCjnLQi9sejAwqKOetmuQ38be2L41cthVhTb/Big==}
+    peerDependencies:
+      '@better-auth/core': 1.4.6
+      better-auth: 1.4.6
+      stripe: ^18 || ^19 || ^20
+
+  '@better-auth/telemetry@1.4.6':
+    resolution: {integrity: sha512-idc9MGJXxWA7zl2U9zsbdG6+2ZCeqWdPq1KeFSfyqGMFtI1VPQOx9YWLqNPOt31YnOX77ojZSraU2sb7IRdBMA==}
+    peerDependencies:
+      '@better-auth/core': 1.4.6
+
+  '@better-auth/utils@0.3.0':
+    resolution: {integrity: sha512-W+Adw6ZA6mgvnSnhOki270rwJ42t4XzSK6YWGF//BbVXL6SwCLWfyzBc1lN2m/4RM28KubdBKQ4X5VMoLRNPQw==}
+
+  '@better-fetch/fetch@1.1.18':
+    resolution: {integrity: sha512-rEFOE1MYIsBmoMJtQbl32PGHHXuG2hDxvEd7rUHE0vCBoFQVSDqaVs9hkZEtHCxRoY+CljXKFCOuJ8uxqw1LcA==}
 
   '@bugsnag/browser@8.6.0':
     resolution: {integrity: sha512-7UGqTGnQqXUQ09gOlWbDTFUSbeLIIrP+hML3kTOq8Zdc8nP/iuOEflXGLV2TxWBWW8xIUPc928caFPr9EcaDuw==}
@@ -6612,6 +6524,14 @@ packages:
     resolution: {integrity: sha512-lkcEejs4D0gwDIVtyRpIXXIv4SPZOii9cstGI5eOsMwoMTlZRL/jniZOSeMk2ZS147l9ncD6vtKxaZPnW1MJew==}
     engines: {node: '>=18.14.0'}
     hasBin: true
+
+  '@noble/ciphers@2.1.1':
+    resolution: {integrity: sha512-bysYuiVfhxNJuldNXlFEitTVdNnYUc+XNJZd7Qm2a5j1vZHgY+fazadNFWFaMK/2vye0JVlxV3gHmC0WDfAOQw==}
+    engines: {node: '>= 20.19.0'}
+
+  '@noble/hashes@2.0.1':
+    resolution: {integrity: sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw==}
+    engines: {node: '>= 20.19.0'}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -8831,6 +8751,46 @@ packages:
 
   before-after-hook@2.2.3:
     resolution: {integrity: sha512-NzUnlZexiaH/46WDhANlyR2bXRopNg4F/zuSA3OpZnllCUgRaOF2znDioDWrmbNVsuZk6l9pMquQB38cfBZwkQ==}
+
+  better-auth@1.4.6:
+    resolution: {integrity: sha512-5wEBzjolrQA26b4uT6FVVYICsE3SmE/MzrZtl8cb2a3TJtswpP8v3OVV5yTso+ef9z85swgZk0/qBzcULFWVtA==}
+    peerDependencies:
+      '@lynx-js/react': '*'
+      '@sveltejs/kit': ^2.0.0
+      '@tanstack/react-start': ^1.0.0
+      next: ^14.0.0 || ^15.0.0 || ^16.0.0
+      react: ^18.0.0 || ^19.0.0
+      react-dom: ^18.0.0 || ^19.0.0
+      solid-js: ^1.0.0
+      svelte: ^4.0.0 || ^5.0.0
+      vue: ^3.0.0
+    peerDependenciesMeta:
+      '@lynx-js/react':
+        optional: true
+      '@sveltejs/kit':
+        optional: true
+      '@tanstack/react-start':
+        optional: true
+      next:
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
+      solid-js:
+        optional: true
+      svelte:
+        optional: true
+      vue:
+        optional: true
+
+  better-call@1.1.5:
+    resolution: {integrity: sha512-nQJ3S87v6wApbDwbZ++FrQiSiVxWvZdjaO+2v6lZJAG2WWggkB2CziUDjPciz3eAt9TqfRursIQMZIcpkBnvlw==}
+    peerDependencies:
+      zod: ^4.0.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
 
   better-path-resolve@1.0.0:
     resolution: {integrity: sha512-pbnl5XzGBdrFU/wT4jqmJVPn2B6UHPBOhzMQkY/SPUPB6QtUXtmBHBIwCbXJol93mOpGMnQyP/+BB19q04xj7g==}
@@ -11092,6 +11052,9 @@ packages:
   jose@5.9.3:
     resolution: {integrity: sha512-egLIoYSpcd+QUF+UHgobt5YzI2Pkw/H39ou9suW687MY6PmCwPmkNV/4TNjn1p2tX5xO3j0d0sq5hiYE24bSlg==}
 
+  jose@6.1.3:
+    resolution: {integrity: sha512-0TpaTfihd4QMNwrz/ob2Bp7X04yuxJkjRGi4aKmOqwhov54i6u79oCv7T+C7lo70MKH6BesI3vscD1yb/yzKXQ==}
+
   joycon@3.1.1:
     resolution: {integrity: sha512-34wB/Y7MW7bzjKRjUKTa46I2Z7eV62Rkhva+KkopW7Qvv/OSWBqvkSY7vusOPrNuZcUG3tApvdVgNB8POj3SPw==}
     engines: {node: '>=10'}
@@ -11211,6 +11174,10 @@ packages:
   ky@1.7.5:
     resolution: {integrity: sha512-HzhziW6sc5m0pwi5M196+7cEBtbt0lCYi67wNsiwMUmz833wloE0gbzJPWKs1gliFKQb34huItDQX97LyOdPdA==}
     engines: {node: '>=18'}
+
+  kysely@0.28.8:
+    resolution: {integrity: sha512-QUOgl5ZrS9IRuhq5FvOKFSsD/3+IA6MLE81/bOOTRA/YQpKDza2sFdN5g6JCB9BOpqMJDGefLCQ9F12hRS13TA==}
+    engines: {node: '>=20.0.0'}
 
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
@@ -11729,6 +11696,10 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
+  ms@4.0.0-nightly.202508271359:
+    resolution: {integrity: sha512-WC/Eo7NzFrOV/RRrTaI0fxKVbNCzEy76j2VqNV8SxDf9D69gSE2Lh0QwYvDlhiYmheBYExAvEAxVf5NoN0cj2A==}
+    engines: {node: '>=20'}
+
   msw@2.12.0:
     resolution: {integrity: sha512-jzf2eVnd8+iWXN74dccLrHUw3i3hFVvNVQRWS4vBl2KxaUt7Tdur0Eyda/DODGFkZDu2P5MXaeLe/9Qx8PZkrg==}
     engines: {node: '>=18'}
@@ -11778,6 +11749,10 @@ packages:
     resolution: {integrity: sha512-zDAl/llz8Ue/EblwSYwdxGBYfj46IM1dhjVi8dyp9LQffoIGxJEAHj2oeZ4uNcgycSRcQ83CnfcZqEJzVDLcDw==}
     engines: {node: ^18 || >=20}
     hasBin: true
+
+  nanostores@1.1.0:
+    resolution: {integrity: sha512-yJBmDJr18xy47dbNVlHcgdPrulSn1nhSE6Ns9vTG+Nx9VPT6iV1MD6aQFp/t52zpf82FhLLTXAXr30NuCnxvwA==}
+    engines: {node: ^20.0.0 || >=22.0.0}
 
   napi-build-utils@2.0.0:
     resolution: {integrity: sha512-GEbrYkbfF7MoNaoh2iGG84Mnf/WZfB0GdGEsM8wz7Expx/LlWf5U8t9nvJKXSp3qr5IsEbK04cBGhol/KwOsWA==}
@@ -13063,6 +13038,9 @@ packages:
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
+  rou3@0.7.11:
+    resolution: {integrity: sha512-ELguG3ENDw5NKNmWHO3OGEjcgdxkCNvnMR22gKHEgRXuwiriap5RIYdummOaOiqUNcC5yU5txGCHWNm7KlHuAA==}
+
   router@2.2.0:
     resolution: {integrity: sha512-nLTrUKm2UyiL7rlhapu/Zl45FwNgkZGaCpZbIHajDYgwlJCOzLSk+cIPAnsEqV955GjILJnKbdQC1nVPz+gAYQ==}
     engines: {node: '>= 18'}
@@ -13190,6 +13168,9 @@ packages:
 
   set-cookie-parser@2.6.0:
     resolution: {integrity: sha512-RVnVQxTXuerk653XfuliOxBP81Sf0+qfQE73LIYKcyMYHG94AuH0kgrQpRDuTZnSmjpysHmzxJXKNfa6PjFhyQ==}
+
+  set-cookie-parser@2.7.2:
+    resolution: {integrity: sha512-oeM1lpU/UvhTxw+g3cIfxXHyJRc/uidd3yK1P242gzHds0udQBYzs3y8j4gCCW+ZJ7ad0yctld8RYO+bdurlvw==}
 
   set-function-length@1.2.2:
     resolution: {integrity: sha512-pgRc4hJ4/sNjWCSS9AmnS40x3bNMDTknHgL5UaMBTMyJnU90EgWh1Rz+MC9eFu4BuN/UwZjKQuY/1v3rM7HMfg==}
@@ -13949,6 +13930,11 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  typescript@5.8.3:
+    resolution: {integrity: sha512-p1diW6TqL9L07nNxvRMM7hMMw4c5XOo/1ibL4aAIGmSAt9slTE1Xgw5KWuof2uTOvCg9BY7ZRi+GaF+7sfgPeQ==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
@@ -14177,96 +14163,8 @@ packages:
       terser:
         optional: true
 
-<<<<<<< HEAD
-  vite@7.0.0:
-    resolution: {integrity: sha512-ixXJB1YRgDIw2OszKQS9WxGHKwLdCsbQNkpJN171udl6szi/rIySHL6/Os3s2+oE4P/FLD4dxg4mD7Wust+u5g==}
-||||||| 867232123
-  vite@6.4.1:
-    resolution: {integrity: sha512-+Oxm7q9hDoLMyJOYfUYBuHQo+dkAloi33apOPP56pzj+vsdJDzr+j1NISE5pyaAuKL4A3UD34qd0lx5+kfKp2g==}
-    engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
-    hasBin: true
-    peerDependencies:
-      '@types/node': ^20.19.9
-      jiti: '>=1.21.0'
-      less: '*'
-      lightningcss: ^1.21.0
-      sass: '*'
-      sass-embedded: '*'
-      stylus: '*'
-      sugarss: '*'
-      terser: ^5.16.0
-      tsx: ^4.8.1
-      yaml: ^2.4.2
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-      jiti:
-        optional: true
-      less:
-        optional: true
-      lightningcss:
-        optional: true
-      sass:
-        optional: true
-      sass-embedded:
-        optional: true
-      stylus:
-        optional: true
-      sugarss:
-        optional: true
-      terser:
-        optional: true
-      tsx:
-        optional: true
-      yaml:
-        optional: true
-
-  vite@7.0.0:
-    resolution: {integrity: sha512-ixXJB1YRgDIw2OszKQS9WxGHKwLdCsbQNkpJN171udl6szi/rIySHL6/Os3s2+oE4P/FLD4dxg4mD7Wust+u5g==}
-=======
-  vite@6.4.1:
-    resolution: {integrity: sha512-+Oxm7q9hDoLMyJOYfUYBuHQo+dkAloi33apOPP56pzj+vsdJDzr+j1NISE5pyaAuKL4A3UD34qd0lx5+kfKp2g==}
-    engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
-    hasBin: true
-    peerDependencies:
-      '@types/node': ^20.19.9
-      jiti: '>=1.21.0'
-      less: '*'
-      lightningcss: ^1.21.0
-      sass: '*'
-      sass-embedded: '*'
-      stylus: '*'
-      sugarss: '*'
-      terser: ^5.16.0
-      tsx: ^4.8.1
-      yaml: ^2.4.2
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-      jiti:
-        optional: true
-      less:
-        optional: true
-      lightningcss:
-        optional: true
-      sass:
-        optional: true
-      sass-embedded:
-        optional: true
-      stylus:
-        optional: true
-      sugarss:
-        optional: true
-      terser:
-        optional: true
-      tsx:
-        optional: true
-      yaml:
-        optional: true
-
   vite@7.1.12:
     resolution: {integrity: sha512-ZWyE8YXEXqJrrSLvYgrRP7p62OziLW7xI5HYGWFzOvupfAlrLvURSzv/FyGyy0eidogEM3ujU+kUG1zuHgb6Ug==}
->>>>>>> origin/main
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -14305,90 +14203,6 @@ packages:
       yaml:
         optional: true
 
-<<<<<<< HEAD
-||||||| 867232123
-  vite@7.1.11:
-    resolution: {integrity: sha512-uzcxnSDVjAopEUjljkWh8EIrg6tlzrjFUfMcR1EVsRDGwf/ccef0qQPRyOrROwhrTDaApueq+ja+KLPlzR/zdg==}
-    engines: {node: ^20.19.0 || >=22.12.0}
-    hasBin: true
-    peerDependencies:
-      '@types/node': ^20.19.9
-      jiti: '>=1.21.0'
-      less: ^4.0.0
-      lightningcss: ^1.21.0
-      sass: ^1.70.0
-      sass-embedded: ^1.70.0
-      stylus: '>=0.54.8'
-      sugarss: ^5.0.0
-      terser: ^5.16.0
-      tsx: ^4.8.1
-      yaml: ^2.4.2
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-      jiti:
-        optional: true
-      less:
-        optional: true
-      lightningcss:
-        optional: true
-      sass:
-        optional: true
-      sass-embedded:
-        optional: true
-      stylus:
-        optional: true
-      sugarss:
-        optional: true
-      terser:
-        optional: true
-      tsx:
-        optional: true
-      yaml:
-        optional: true
-
-=======
-  vite@7.2.7:
-    resolution: {integrity: sha512-ITcnkFeR3+fI8P1wMgItjGrR10170d8auB4EpMLPqmx6uxElH3a/hHGQabSHKdqd4FXWO1nFIp9rRn7JQ34ACQ==}
-    engines: {node: ^20.19.0 || >=22.12.0}
-    hasBin: true
-    peerDependencies:
-      '@types/node': ^20.19.9
-      jiti: '>=1.21.0'
-      less: ^4.0.0
-      lightningcss: ^1.21.0
-      sass: ^1.70.0
-      sass-embedded: ^1.70.0
-      stylus: '>=0.54.8'
-      sugarss: ^5.0.0
-      terser: ^5.16.0
-      tsx: ^4.8.1
-      yaml: ^2.4.2
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-      jiti:
-        optional: true
-      less:
-        optional: true
-      lightningcss:
-        optional: true
-      sass:
-        optional: true
-      sass-embedded:
-        optional: true
-      stylus:
-        optional: true
-      sugarss:
-        optional: true
-      terser:
-        optional: true
-      tsx:
-        optional: true
-      yaml:
-        optional: true
-
->>>>>>> origin/main
   vitest-websocket-mock@0.4.0:
     resolution: {integrity: sha512-tGnOwE2nC8jfioQXDrX+lZ8EVrF+IO2NVqe1vV9h945W/hlR0S6ZYbMqCJGG3Nyd//c5XSe1IGLD2ZgE2D1I7Q==}
     peerDependencies:
@@ -14639,6 +14453,9 @@ packages:
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
+  zod@4.1.13:
+    resolution: {integrity: sha512-AvvthqfqrAhNH9dnfmrfKzX5upOdjUVJYFqNSlkmGf64gRaTzlPwz99IHYnVs28qYAybvAlBV+H7pn0saFY4Ig==}
 
 snapshots:
 
@@ -15350,6 +15167,46 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
 
+  '@better-auth/core@1.4.6(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.18)(better-call@1.1.5(zod@4.1.13))(jose@5.9.3)(kysely@0.28.8)(nanostores@1.1.0)':
+    dependencies:
+      '@better-auth/utils': 0.3.0
+      '@better-fetch/fetch': 1.1.18
+      '@standard-schema/spec': 1.0.0
+      better-call: 1.1.5(zod@4.1.13)
+      jose: 5.9.3
+      kysely: 0.28.8
+      nanostores: 1.1.0
+      zod: 4.1.13
+
+  '@better-auth/core@1.4.6(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.18)(better-call@1.1.5(zod@4.1.13))(jose@6.1.3)(kysely@0.28.8)(nanostores@1.1.0)':
+    dependencies:
+      '@better-auth/utils': 0.3.0
+      '@better-fetch/fetch': 1.1.18
+      '@standard-schema/spec': 1.0.0
+      better-call: 1.1.5(zod@4.1.13)
+      jose: 6.1.3
+      kysely: 0.28.8
+      nanostores: 1.1.0
+      zod: 4.1.13
+
+  '@better-auth/stripe@1.4.6(@better-auth/core@1.4.6(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.18)(better-call@1.1.5(zod@4.1.13))(jose@5.9.3)(kysely@0.28.8)(nanostores@1.1.0))(better-auth@1.4.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(stripe@9.16.0)':
+    dependencies:
+      '@better-auth/core': 1.4.6(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.18)(better-call@1.1.5(zod@4.1.13))(jose@5.9.3)(kysely@0.28.8)(nanostores@1.1.0)
+      better-auth: 1.4.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      defu: 6.1.4
+      stripe: 9.16.0
+      zod: 4.1.13
+
+  '@better-auth/telemetry@1.4.6(@better-auth/core@1.4.6(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.18)(better-call@1.1.5(zod@4.1.13))(jose@5.9.3)(kysely@0.28.8)(nanostores@1.1.0))':
+    dependencies:
+      '@better-auth/core': 1.4.6(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.18)(better-call@1.1.5(zod@4.1.13))(jose@5.9.3)(kysely@0.28.8)(nanostores@1.1.0)
+      '@better-auth/utils': 0.3.0
+      '@better-fetch/fetch': 1.1.18
+
+  '@better-auth/utils@0.3.0': {}
+
+  '@better-fetch/fetch@1.1.18': {}
+
   '@bugsnag/browser@8.6.0':
     dependencies:
       '@bugsnag/core': 8.6.0
@@ -15854,13 +15711,7 @@ snapshots:
       lodash.memoize: 4.1.2
       marked: 0.3.19
 
-<<<<<<< HEAD
-  '@cloudflare/vitest-pool-workers@0.7.8(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@4.0.15)(@vitest/snapshot@4.0.15)(vitest@..+..+..+Library+pnpm+global+5+node_modules+vitest)':
-||||||| 867232123
-  '@cloudflare/vitest-pool-workers@0.7.8(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)':
-=======
-  '@cloudflare/vitest-pool-workers@0.7.8(@cloudflare/workers-types@4.20251212.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)':
->>>>>>> origin/main
+  '@cloudflare/vitest-pool-workers@0.7.8(@cloudflare/workers-types@4.20251212.0)(@vitest/runner@4.0.15)(@vitest/snapshot@4.0.15)(vitest@..+..+..+Library+pnpm+global+5+node_modules+vitest)':
     dependencies:
       '@vitest/runner': 4.0.15
       '@vitest/snapshot': 4.0.15
@@ -15870,29 +15721,15 @@ snapshots:
       esbuild: 0.17.19
       miniflare: 3.20250310.0
       semver: 7.7.3
-<<<<<<< HEAD
       vitest: link:../../../../Library/pnpm/global/5/node_modules/vitest
-      wrangler: 3.114.1(@cloudflare/workers-types@4.20251202.0)
-||||||| 867232123
-      vitest: 2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.9.3))
-      wrangler: 3.114.1(@cloudflare/workers-types@4.20251202.0)
-=======
-      vitest: 2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.9.3))
       wrangler: 3.114.1(@cloudflare/workers-types@4.20251212.0)
->>>>>>> origin/main
       zod: 3.22.3
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
       - bufferutil
       - utf-8-validate
 
-<<<<<<< HEAD
-  '@cloudflare/vitest-pool-workers@0.8.19(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@4.0.15)(@vitest/snapshot@4.0.15)(vitest@..+..+..+Library+pnpm+global+5+node_modules+vitest)':
-||||||| 867232123
-  '@cloudflare/vitest-pool-workers@0.8.19(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)':
-=======
-  '@cloudflare/vitest-pool-workers@0.8.19(@cloudflare/workers-types@4.20251212.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)':
->>>>>>> origin/main
+  '@cloudflare/vitest-pool-workers@0.8.19(@cloudflare/workers-types@4.20251212.0)(@vitest/runner@4.0.15)(@vitest/snapshot@4.0.15)(vitest@..+..+..+Library+pnpm+global+5+node_modules+vitest)':
     dependencies:
       '@vitest/runner': 4.0.15
       '@vitest/snapshot': 4.0.15
@@ -15901,19 +15738,9 @@ snapshots:
       devalue: 4.3.3
       miniflare: 4.20250417.0
       semver: 7.7.3
-<<<<<<< HEAD
       vitest: link:../../../../Library/pnpm/global/5/node_modules/vitest
-      wrangler: 4.12.1(@cloudflare/workers-types@4.20251202.0)
-      zod: 3.25.76
-||||||| 867232123
-      vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
-      wrangler: 4.12.1(@cloudflare/workers-types@4.20251202.0)
-      zod: 3.22.3
-=======
-      vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler: 4.12.1(@cloudflare/workers-types@4.20251212.0)
-      zod: 3.22.3
->>>>>>> origin/main
+      zod: 3.25.76
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
       - bufferutil
@@ -17073,6 +16900,10 @@ snapshots:
       yaml: 2.8.1
       yargs: 17.7.2
 
+  '@noble/ciphers@2.1.1': {}
+
+  '@noble/hashes@2.0.1': {}
+
   '@nodelib/fs.scandir@2.1.5':
     dependencies:
       '@nodelib/fs.stat': 2.0.5
@@ -17300,12 +17131,12 @@ snapshots:
 
   '@prisma/client-runtime-utils@7.0.1': {}
 
-  '@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.9.3))(typescript@5.9.3)':
+  '@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.8.3))(typescript@5.8.3)':
     dependencies:
       '@prisma/client-runtime-utils': 7.0.1
     optionalDependencies:
-      prisma: 7.0.1(@types/react@19.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.9.3)
-      typescript: 5.9.3
+      prisma: 7.0.1(@types/react@19.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.8.3)
+      typescript: 5.8.3
 
   '@prisma/config@7.0.1':
     dependencies:
@@ -17320,7 +17151,7 @@ snapshots:
 
   '@prisma/debug@7.0.1': {}
 
-  '@prisma/dev@0.13.0(typescript@5.9.3)':
+  '@prisma/dev@0.13.0(typescript@5.8.3)':
     dependencies:
       '@electric-sql/pglite': 0.3.2
       '@electric-sql/pglite-socket': 0.0.6(@electric-sql/pglite@0.3.2)
@@ -17337,7 +17168,7 @@ snapshots:
       proper-lockfile: 4.1.2
       remeda: 2.21.3
       std-env: 3.9.0
-      valibot: 1.1.0(typescript@5.9.3)
+      valibot: 1.1.0(typescript@5.8.3)
       zeptomatch: 2.0.2
     transitivePeerDependencies:
       - typescript
@@ -17521,33 +17352,19 @@ snapshots:
     optionalDependencies:
       '@types/react': 18.3.3
 
-<<<<<<< HEAD
-  '@remix-run/cloudflare@2.12.0(@cloudflare/workers-types@4.20251202.0)(typescript@5.9.3)':
-||||||| 867232123
-  '@remix-run/cloudflare@2.12.0(@cloudflare/workers-types@4.20251202.0)(typescript@5.8.3)':
-=======
   '@remix-run/cloudflare@2.12.0(@cloudflare/workers-types@4.20251212.0)(typescript@5.8.3)':
->>>>>>> origin/main
     dependencies:
       '@cloudflare/kv-asset-handler': 0.1.3
-<<<<<<< HEAD
-      '@cloudflare/workers-types': 4.20251202.0
-      '@remix-run/server-runtime': 2.12.0(typescript@5.9.3)
-||||||| 867232123
-      '@cloudflare/workers-types': 4.20251202.0
-      '@remix-run/server-runtime': 2.12.0(typescript@5.8.3)
-=======
       '@cloudflare/workers-types': 4.20251212.0
       '@remix-run/server-runtime': 2.12.0(typescript@5.8.3)
->>>>>>> origin/main
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 5.8.3
 
   '@remix-run/node-fetch-server@0.8.0': {}
 
   '@remix-run/router@1.19.2': {}
 
-  '@remix-run/server-runtime@2.12.0(typescript@5.9.3)':
+  '@remix-run/server-runtime@2.12.0(typescript@5.8.3)':
     dependencies:
       '@remix-run/router': 1.19.2
       '@types/cookie': 0.6.0
@@ -17557,7 +17374,7 @@ snapshots:
       source-map: 0.7.4
       turbo-stream: 2.4.0
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 5.8.3
 
   '@rolldown/binding-android-arm64@1.0.0-beta.44':
     optional: true
@@ -18713,6 +18530,23 @@ snapshots:
       '@types/node': 20.19.9
     optional: true
 
+  '@typescript-eslint/eslint-plugin@8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3))(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)':
+    dependencies:
+      '@eslint-community/regexpp': 4.12.2
+      '@typescript-eslint/parser': 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
+      '@typescript-eslint/scope-manager': 8.46.3
+      '@typescript-eslint/type-utils': 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
+      '@typescript-eslint/utils': 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
+      '@typescript-eslint/visitor-keys': 8.46.3
+      eslint: 9.39.1(jiti@2.6.0)
+      graphemer: 1.4.0
+      ignore: 7.0.5
+      natural-compare: 1.4.0
+      ts-api-utils: 2.1.0(typescript@5.8.3)
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - supports-color
+
   '@typescript-eslint/eslint-plugin@8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3))(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
@@ -18730,6 +18564,18 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)':
+    dependencies:
+      '@typescript-eslint/scope-manager': 8.46.3
+      '@typescript-eslint/types': 8.46.3
+      '@typescript-eslint/typescript-estree': 8.46.3(typescript@5.8.3)
+      '@typescript-eslint/visitor-keys': 8.46.3
+      debug: 4.4.1(supports-color@9.2.2)
+      eslint: 9.39.1(jiti@2.6.0)
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - supports-color
+
   '@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3)':
     dependencies:
       '@typescript-eslint/scope-manager': 8.46.3
@@ -18739,6 +18585,15 @@ snapshots:
       debug: 4.4.1(supports-color@9.2.2)
       eslint: 9.39.1(jiti@2.6.0)
       typescript: 5.9.3
+    transitivePeerDependencies:
+      - supports-color
+
+  '@typescript-eslint/project-service@8.46.3(typescript@5.8.3)':
+    dependencies:
+      '@typescript-eslint/tsconfig-utils': 8.46.3(typescript@5.8.3)
+      '@typescript-eslint/types': 8.46.3
+      debug: 4.4.1(supports-color@9.2.2)
+      typescript: 5.8.3
     transitivePeerDependencies:
       - supports-color
 
@@ -18756,9 +18611,25 @@ snapshots:
       '@typescript-eslint/types': 8.46.3
       '@typescript-eslint/visitor-keys': 8.46.3
 
+  '@typescript-eslint/tsconfig-utils@8.46.3(typescript@5.8.3)':
+    dependencies:
+      typescript: 5.8.3
+
   '@typescript-eslint/tsconfig-utils@8.46.3(typescript@5.9.3)':
     dependencies:
       typescript: 5.9.3
+
+  '@typescript-eslint/type-utils@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)':
+    dependencies:
+      '@typescript-eslint/types': 8.46.3
+      '@typescript-eslint/typescript-estree': 8.46.3(typescript@5.8.3)
+      '@typescript-eslint/utils': 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
+      debug: 4.4.1(supports-color@9.2.2)
+      eslint: 9.39.1(jiti@2.6.0)
+      ts-api-utils: 2.1.0(typescript@5.8.3)
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - supports-color
 
   '@typescript-eslint/type-utils@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3)':
     dependencies:
@@ -18774,6 +18645,22 @@ snapshots:
 
   '@typescript-eslint/types@8.46.3': {}
 
+  '@typescript-eslint/typescript-estree@8.46.3(typescript@5.8.3)':
+    dependencies:
+      '@typescript-eslint/project-service': 8.46.3(typescript@5.8.3)
+      '@typescript-eslint/tsconfig-utils': 8.46.3(typescript@5.8.3)
+      '@typescript-eslint/types': 8.46.3
+      '@typescript-eslint/visitor-keys': 8.46.3
+      debug: 4.4.1(supports-color@9.2.2)
+      fast-glob: 3.3.2
+      is-glob: 4.0.3
+      minimatch: 9.0.5
+      semver: 7.7.3
+      ts-api-utils: 2.1.0(typescript@5.8.3)
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - supports-color
+
   '@typescript-eslint/typescript-estree@8.46.3(typescript@5.9.3)':
     dependencies:
       '@typescript-eslint/project-service': 8.46.3(typescript@5.9.3)
@@ -18787,6 +18674,17 @@ snapshots:
       semver: 7.7.3
       ts-api-utils: 2.1.0(typescript@5.9.3)
       typescript: 5.9.3
+    transitivePeerDependencies:
+      - supports-color
+
+  '@typescript-eslint/utils@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)':
+    dependencies:
+      '@eslint-community/eslint-utils': 4.9.0(eslint@9.39.1(jiti@2.6.0))
+      '@typescript-eslint/scope-manager': 8.46.3
+      '@typescript-eslint/types': 8.46.3
+      '@typescript-eslint/typescript-estree': 8.46.3(typescript@5.8.3)
+      eslint: 9.39.1(jiti@2.6.0)
+      typescript: 5.8.3
     transitivePeerDependencies:
       - supports-color
 
@@ -19157,7 +19055,7 @@ snapshots:
       de-indent: 1.0.2
       he: 1.2.0
 
-  '@vue/language-core@2.0.29(typescript@5.9.3)':
+  '@vue/language-core@2.0.29(typescript@5.8.3)':
     dependencies:
       '@volar/language-core': 2.4.0-alpha.18
       '@vue/compiler-dom': 3.4.36
@@ -19168,7 +19066,7 @@ snapshots:
       muggle-string: 0.4.1
       path-browserify: 1.0.1
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 5.8.3
 
   '@vue/reactivity-transform@3.3.4':
     dependencies:
@@ -19591,6 +19489,34 @@ snapshots:
 
   before-after-hook@2.2.3: {}
 
+  better-auth@1.4.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
+    dependencies:
+      '@better-auth/core': 1.4.6(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.18)(better-call@1.1.5(zod@4.1.13))(jose@6.1.3)(kysely@0.28.8)(nanostores@1.1.0)
+      '@better-auth/telemetry': 1.4.6(@better-auth/core@1.4.6(@better-auth/utils@0.3.0)(@better-fetch/fetch@1.1.18)(better-call@1.1.5(zod@4.1.13))(jose@5.9.3)(kysely@0.28.8)(nanostores@1.1.0))
+      '@better-auth/utils': 0.3.0
+      '@better-fetch/fetch': 1.1.18
+      '@noble/ciphers': 2.1.1
+      '@noble/hashes': 2.0.1
+      better-call: 1.1.5(zod@4.1.13)
+      defu: 6.1.4
+      jose: 6.1.3
+      kysely: 0.28.8
+      ms: 4.0.0-nightly.202508271359
+      nanostores: 1.1.0
+      zod: 4.1.13
+    optionalDependencies:
+      react: 19.2.1
+      react-dom: 19.2.1(react@19.2.1)
+
+  better-call@1.1.5(zod@4.1.13):
+    dependencies:
+      '@better-auth/utils': 0.3.0
+      '@better-fetch/fetch': 1.1.18
+      rou3: 0.7.11
+      set-cookie-parser: 2.7.2
+    optionalDependencies:
+      zod: 4.1.13
+
   better-path-resolve@1.0.0:
     dependencies:
       is-windows: 1.0.2
@@ -19764,9 +19690,9 @@ snapshots:
 
   caniuse-lite@1.0.30001669: {}
 
-  capnp-es@0.0.11(typescript@5.9.3):
+  capnp-es@0.0.11(typescript@5.8.3):
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 5.8.3
 
   capnweb@0.1.0: {}
 
@@ -19922,13 +19848,7 @@ snapshots:
 
   commander@7.2.0: {}
 
-<<<<<<< HEAD
-  comment-json@4.2.5(patch_hash=e80ea04a60e46f4e0ed2aec278cc48965515f783358caeaffdfb6112505d81ba):
-||||||| 867232123
-  comment-json@4.2.5(patch_hash=hbbonhdeq6rxrctdf7euss7qte):
-=======
   comment-json@4.5.0:
->>>>>>> origin/main
     dependencies:
       array-timsort: 1.0.3
       core-util-is: 1.0.3
@@ -22319,6 +22239,8 @@ snapshots:
 
   jose@5.9.3: {}
 
+  jose@6.1.3: {}
+
   joycon@3.1.1: {}
 
   js-base64@3.7.7: {}
@@ -22433,6 +22355,8 @@ snapshots:
   kolorist@1.8.0: {}
 
   ky@1.7.5: {}
+
+  kysely@0.28.8: {}
 
   levn@0.4.1:
     dependencies:
@@ -22831,7 +22755,7 @@ snapshots:
 
   mkdirp@1.0.4: {}
 
-  mkdist@2.2.0(typescript@5.9.3)(vue-tsc@2.0.29(typescript@5.9.3)):
+  mkdist@2.2.0(typescript@5.8.3)(vue-tsc@2.0.29(typescript@5.8.3)):
     dependencies:
       autoprefixer: 10.4.20(postcss@8.5.6)
       citty: 0.1.6
@@ -22847,8 +22771,8 @@ snapshots:
       semver: 7.7.3
       tinyglobby: 0.2.15
     optionalDependencies:
-      typescript: 5.9.3
-      vue-tsc: 2.0.29(typescript@5.9.3)
+      typescript: 5.8.3
+      vue-tsc: 2.0.29(typescript@5.8.3)
 
   mlly@1.7.4:
     dependencies:
@@ -22869,7 +22793,9 @@ snapshots:
 
   ms@2.1.3: {}
 
-  msw@2.12.0(@types/node@20.19.9)(typescript@5.9.3):
+  ms@4.0.0-nightly.202508271359: {}
+
+  msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3):
     dependencies:
       '@inquirer/confirm': 5.1.21(@types/node@20.19.9)
       '@mswjs/interceptors': 0.40.0
@@ -22890,7 +22816,7 @@ snapshots:
       until-async: 3.0.2
       yargs: 17.7.2
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 5.8.3
     transitivePeerDependencies:
       - '@types/node'
 
@@ -22930,6 +22856,8 @@ snapshots:
   nanoid@3.3.8: {}
 
   nanoid@5.1.0: {}
+
+  nanostores@1.1.0: {}
 
   napi-build-utils@2.0.0:
     optional: true
@@ -23313,18 +23241,6 @@ snapshots:
     dependencies:
       pg: 8.16.3
 
-<<<<<<< HEAD
-  pg-pool@3.6.2(pg@8.11.3(patch_hash=4b5b12e2c09b3557af52d3348de71b9dfbf6f640e516f4701a62807d73bdab11)):
-    dependencies:
-      pg: 8.11.3(patch_hash=4b5b12e2c09b3557af52d3348de71b9dfbf6f640e516f4701a62807d73bdab11)
-
-||||||| 867232123
-  pg-pool@3.6.2(pg@8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte)):
-    dependencies:
-      pg: 8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte)
-
-=======
->>>>>>> origin/main
   pg-protocol@1.10.3: {}
 
   pg-protocol@1.6.1: {}
@@ -23349,34 +23265,6 @@ snapshots:
       postgres-interval: 3.0.0
       postgres-range: 1.1.4
 
-<<<<<<< HEAD
-  pg@8.11.3(patch_hash=4b5b12e2c09b3557af52d3348de71b9dfbf6f640e516f4701a62807d73bdab11):
-    dependencies:
-      buffer-writer: 2.0.0
-      packet-reader: 1.0.0
-      pg-connection-string: 2.6.4
-      pg-pool: 3.6.2(pg@8.11.3(patch_hash=4b5b12e2c09b3557af52d3348de71b9dfbf6f640e516f4701a62807d73bdab11))
-      pg-protocol: 1.6.1
-      pg-types: 2.2.0
-      pgpass: 1.0.5
-    optionalDependencies:
-      pg-cloudflare: 1.1.1
-
-||||||| 867232123
-  pg@8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte):
-    dependencies:
-      buffer-writer: 2.0.0
-      packet-reader: 1.0.0
-      pg-connection-string: 2.6.4
-      pg-pool: 3.6.2(pg@8.11.3(patch_hash=afbi5l3roukyz2s7kkn56yzjte))
-      pg-protocol: 1.6.1
-      pg-types: 2.2.0
-      pgpass: 1.0.5
-    optionalDependencies:
-      pg-cloudflare: 1.1.1
-
-=======
->>>>>>> origin/main
   pg@8.16.3:
     dependencies:
       pg-connection-string: 2.9.1
@@ -23735,16 +23623,16 @@ snapshots:
     dependencies:
       react: 18.3.1
 
-  prisma@7.0.1(@types/react@19.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.9.3):
+  prisma@7.0.1(@types/react@19.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.8.3):
     dependencies:
       '@prisma/config': 7.0.1
-      '@prisma/dev': 0.13.0(typescript@5.9.3)
+      '@prisma/dev': 0.13.0(typescript@5.8.3)
       '@prisma/engines': 7.0.1
       '@prisma/studio-core': 0.8.2(@types/react@19.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       mysql2: 3.15.3
       postgres: 3.4.7
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 5.8.3
     transitivePeerDependencies:
       - '@types/react'
       - magicast
@@ -24177,7 +24065,7 @@ snapshots:
       glob: 11.0.3
       package-json-from-dist: 1.0.0
 
-  rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44)(typescript@5.9.3):
+  rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44)(typescript@5.8.3):
     dependencies:
       '@babel/generator': 7.28.3
       '@babel/parser': 7.28.4
@@ -24190,12 +24078,12 @@ snapshots:
       magic-string: 0.30.21
       rolldown: 1.0.0-beta.44
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 5.8.3
     transitivePeerDependencies:
       - oxc-resolver
       - supports-color
 
-  rolldown-plugin-dts@0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49)(typescript@5.9.3):
+  rolldown-plugin-dts@0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49)(typescript@5.8.3):
     dependencies:
       '@babel/generator': 7.28.5
       '@babel/parser': 7.28.5
@@ -24208,7 +24096,7 @@ snapshots:
       obug: 0.1.3(ms@2.1.3)
       rolldown: 1.0.0-beta.49
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 5.8.3
     transitivePeerDependencies:
       - ms
       - oxc-resolver
@@ -24253,11 +24141,11 @@ snapshots:
       '@rolldown/binding-win32-ia32-msvc': 1.0.0-beta.49
       '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.49
 
-  rollup-plugin-dts@6.1.1(rollup@4.30.1)(typescript@5.9.3):
+  rollup-plugin-dts@6.1.1(rollup@4.30.1)(typescript@5.8.3):
     dependencies:
       magic-string: 0.30.21
       rollup: 4.30.1
-      typescript: 5.9.3
+      typescript: 5.8.3
     optionalDependencies:
       '@babel/code-frame': 7.26.2
 
@@ -24325,6 +24213,8 @@ snapshots:
       '@rollup/rollup-win32-ia32-msvc': 4.44.1
       '@rollup/rollup-win32-x64-msvc': 4.44.1
       fsevents: 2.3.3
+
+  rou3@0.7.11: {}
 
   router@2.2.0:
     dependencies:
@@ -24486,6 +24376,8 @@ snapshots:
   set-blocking@2.0.0: {}
 
   set-cookie-parser@2.6.0: {}
+
+  set-cookie-parser@2.7.2: {}
 
   set-function-length@1.2.2:
     dependencies:
@@ -25102,6 +24994,10 @@ snapshots:
 
   tree-kill@1.2.2: {}
 
+  ts-api-utils@2.1.0(typescript@5.8.3):
+    dependencies:
+      typescript: 5.8.3
+
   ts-api-utils@2.1.0(typescript@5.9.3):
     dependencies:
       typescript: 5.9.3
@@ -25120,9 +25016,9 @@ snapshots:
       safe-stable-stringify: 2.4.3
       typescript: 5.3.3
 
-  tsconfck@2.1.1(typescript@5.9.3):
+  tsconfck@2.1.1(typescript@5.8.3):
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 5.8.3
 
   tsconfig-paths@3.15.0:
     dependencies:
@@ -25138,7 +25034,7 @@ snapshots:
       strip-bom: 3.0.0
       strip-json-comments: 2.0.1
 
-  tsdown@0.15.9(typescript@5.9.3):
+  tsdown@0.15.9(typescript@5.8.3):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14
@@ -25148,14 +25044,14 @@ snapshots:
       empathic: 2.0.0
       hookable: 5.5.3
       rolldown: 1.0.0-beta.44
-      rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44)(typescript@5.9.3)
+      rolldown-plugin-dts: 0.16.12(rolldown@1.0.0-beta.44)(typescript@5.8.3)
       semver: 7.7.3
       tinyexec: 1.0.1
       tinyglobby: 0.2.15
       tree-kill: 1.2.2
       unconfig: 7.3.3
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 5.8.3
     transitivePeerDependencies:
       - '@ts-macro/tsc'
       - '@typescript/native-preview'
@@ -25163,7 +25059,7 @@ snapshots:
       - supports-color
       - vue-tsc
 
-  tsdown@0.16.3(ms@2.1.3)(typescript@5.9.3):
+  tsdown@0.16.3(ms@2.1.3)(typescript@5.8.3):
     dependencies:
       ansis: 4.2.0
       cac: 6.7.14
@@ -25173,7 +25069,7 @@ snapshots:
       hookable: 5.5.3
       obug: 0.1.3(ms@2.1.3)
       rolldown: 1.0.0-beta.49
-      rolldown-plugin-dts: 0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49)(typescript@5.9.3)
+      rolldown-plugin-dts: 0.17.6(ms@2.1.3)(rolldown@1.0.0-beta.49)(typescript@5.8.3)
       semver: 7.7.3
       tinyexec: 1.0.2
       tinyglobby: 0.2.15
@@ -25181,7 +25077,7 @@ snapshots:
       unconfig-core: 7.4.1
       unrun: 0.2.8
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 5.8.3
     transitivePeerDependencies:
       - '@ts-macro/tsc'
       - '@typescript/native-preview'
@@ -25192,7 +25088,35 @@ snapshots:
 
   tslib@2.8.1: {}
 
-  tsup@8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(supports-color@9.2.2)(typescript@5.9.3)(yaml@2.8.1):
+  tsup@8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(supports-color@9.2.2)(typescript@5.8.3)(yaml@2.8.1):
+    dependencies:
+      bundle-require: 5.1.0(esbuild@0.23.1)
+      cac: 6.7.14
+      chokidar: 3.6.0
+      consola: 3.4.2
+      debug: 4.4.1(supports-color@9.2.2)
+      esbuild: 0.23.1
+      execa: 5.1.1
+      joycon: 3.1.1
+      picocolors: 1.1.1
+      postcss-load-config: 6.0.1(jiti@2.6.0)(postcss@8.5.6)(yaml@2.8.1)
+      resolve-from: 5.0.0
+      rollup: 4.44.1
+      source-map: 0.8.0-beta.0
+      sucrase: 3.35.0
+      tinyglobby: 0.2.15
+      tree-kill: 1.2.2
+    optionalDependencies:
+      '@microsoft/api-extractor': 7.52.8(@types/node@20.19.9)
+      postcss: 8.5.6
+      typescript: 5.8.3
+    transitivePeerDependencies:
+      - jiti
+      - supports-color
+      - tsx
+      - yaml
+
+  tsup@8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1):
     dependencies:
       bundle-require: 5.1.0(esbuild@0.23.1)
       cac: 6.7.14
@@ -25366,6 +25290,8 @@ snapshots:
 
   typescript@5.8.2: {}
 
+  typescript@5.8.3: {}
+
   typescript@5.9.3: {}
 
   ufo@1.5.4: {}
@@ -25389,7 +25315,7 @@ snapshots:
       has-symbols: 1.1.0
       which-boxed-primitive: 1.1.1
 
-  unbuild@3.3.1(typescript@5.9.3)(vue-tsc@2.0.29(typescript@5.9.3)):
+  unbuild@3.3.1(typescript@5.8.3)(vue-tsc@2.0.29(typescript@5.8.3)):
     dependencies:
       '@rollup/plugin-alias': 5.1.1(rollup@4.30.1)
       '@rollup/plugin-commonjs': 28.0.2(rollup@4.30.1)
@@ -25404,18 +25330,18 @@ snapshots:
       hookable: 5.5.3
       jiti: 2.4.2
       magic-string: 0.30.17
-      mkdist: 2.2.0(typescript@5.9.3)(vue-tsc@2.0.29(typescript@5.9.3))
+      mkdist: 2.2.0(typescript@5.8.3)(vue-tsc@2.0.29(typescript@5.8.3))
       mlly: 1.7.4
       pathe: 2.0.1
       pkg-types: 1.3.1
       pretty-bytes: 6.1.1
       rollup: 4.30.1
-      rollup-plugin-dts: 6.1.1(rollup@4.30.1)(typescript@5.9.3)
+      rollup-plugin-dts: 6.1.1(rollup@4.30.1)(typescript@5.8.3)
       scule: 1.3.0
       tinyglobby: 0.2.12
       untyped: 1.5.2
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 5.8.3
     transitivePeerDependencies:
       - sass
       - supports-color
@@ -25536,9 +25462,9 @@ snapshots:
 
   uuid@9.0.1: {}
 
-  valibot@1.1.0(typescript@5.9.3):
+  valibot@1.1.0(typescript@5.8.3):
     optionalDependencies:
-      typescript: 5.9.3
+      typescript: 5.8.3
 
   validate-npm-package-license@3.0.4:
     dependencies:
@@ -25625,145 +25551,19 @@ snapshots:
       core-util-is: 1.0.2
       extsprintf: 1.3.0
 
-<<<<<<< HEAD
-  vite-plugin-dts@4.0.1(@types/node@20.19.9)(rollup@4.44.1)(typescript@5.9.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)):
-||||||| 867232123
-  vite-node@2.1.9(@types/node@20.19.9)(lightningcss@1.30.2):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.4.1(supports-color@9.2.2)
-      es-module-lexer: 1.7.0
-      pathe: 1.1.2
-      vite: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
-    transitivePeerDependencies:
-      - '@types/node'
-      - less
-      - lightningcss
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-
-  vite-node@3.0.9(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.4.1(supports-color@9.2.2)
-      es-module-lexer: 1.7.0
-      pathe: 2.0.3
-      vite: 6.4.1(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
-    transitivePeerDependencies:
-      - '@types/node'
-      - jiti
-      - less
-      - lightningcss
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-      - tsx
-      - yaml
-
-  vite-node@3.2.3(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(supports-color@9.2.2)(yaml@2.8.1):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.4.1(supports-color@9.2.2)
-      es-module-lexer: 1.7.0
-      pathe: 2.0.3
-      vite: 7.1.11(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
-    transitivePeerDependencies:
-      - '@types/node'
-      - jiti
-      - less
-      - lightningcss
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-      - tsx
-      - yaml
-
   vite-plugin-dts@4.0.1(@types/node@20.19.9)(rollup@4.44.1)(typescript@5.8.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)):
-=======
-  vite-node@2.1.9(@types/node@20.19.9)(lightningcss@1.30.2):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.4.1(supports-color@9.2.2)
-      es-module-lexer: 1.7.0
-      pathe: 1.1.2
-      vite: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
-    transitivePeerDependencies:
-      - '@types/node'
-      - less
-      - lightningcss
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-
-  vite-node@3.0.9(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.4.1(supports-color@9.2.2)
-      es-module-lexer: 1.7.0
-      pathe: 2.0.3
-      vite: 6.4.1(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
-    transitivePeerDependencies:
-      - '@types/node'
-      - jiti
-      - less
-      - lightningcss
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-      - tsx
-      - yaml
-
-  vite-node@3.2.3(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(supports-color@9.2.2)(yaml@2.8.1):
-    dependencies:
-      cac: 6.7.14
-      debug: 4.4.1(supports-color@9.2.2)
-      es-module-lexer: 1.7.0
-      pathe: 2.0.3
-      vite: 7.2.7(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
-    transitivePeerDependencies:
-      - '@types/node'
-      - jiti
-      - less
-      - lightningcss
-      - sass
-      - sass-embedded
-      - stylus
-      - sugarss
-      - supports-color
-      - terser
-      - tsx
-      - yaml
-
-  vite-plugin-dts@4.0.1(@types/node@20.19.9)(rollup@4.44.1)(typescript@5.8.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)):
->>>>>>> origin/main
     dependencies:
       '@microsoft/api-extractor': 7.47.4(@types/node@20.19.9)
       '@rollup/pluginutils': 5.1.0(rollup@4.44.1)
       '@volar/typescript': 2.3.4
-      '@vue/language-core': 2.0.29(typescript@5.9.3)
+      '@vue/language-core': 2.0.29(typescript@5.8.3)
       compare-versions: 6.1.1
       debug: 4.4.1(supports-color@9.2.2)
       kolorist: 1.8.0
       local-pkg: 0.5.0
       magic-string: 0.30.17
-      typescript: 5.9.3
-      vue-tsc: 2.0.29(typescript@5.9.3)
+      typescript: 5.8.3
+      vue-tsc: 2.0.29(typescript@5.8.3)
     optionalDependencies:
       vite: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
     transitivePeerDependencies:
@@ -25771,11 +25571,11 @@ snapshots:
       - rollup
       - supports-color
 
-  vite-tsconfig-paths@4.2.0(typescript@5.9.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)):
+  vite-tsconfig-paths@4.2.0(typescript@5.8.3)(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)):
     dependencies:
       debug: 4.4.1(supports-color@9.2.2)
       globrex: 0.1.2
-      tsconfck: 2.1.1(typescript@5.9.3)
+      tsconfck: 2.1.1(typescript@5.8.3)
     optionalDependencies:
       vite: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
     transitivePeerDependencies:
@@ -25792,43 +25592,7 @@ snapshots:
       fsevents: 2.3.3
       lightningcss: 1.30.2
 
-<<<<<<< HEAD
-  vite@7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1):
-||||||| 867232123
-  vite@6.4.1(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1):
-    dependencies:
-      esbuild: 0.25.4
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
-      postcss: 8.5.6
-      rollup: 4.44.1
-      tinyglobby: 0.2.15
-    optionalDependencies:
-      '@types/node': 20.19.9
-      fsevents: 2.3.3
-      jiti: 2.6.0
-      lightningcss: 1.30.2
-      yaml: 2.8.1
-
-  vite@7.0.0(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1):
-=======
-  vite@6.4.1(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1):
-    dependencies:
-      esbuild: 0.25.4
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
-      postcss: 8.5.6
-      rollup: 4.44.1
-      tinyglobby: 0.2.15
-    optionalDependencies:
-      '@types/node': 20.19.9
-      fsevents: 2.3.3
-      jiti: 2.6.0
-      lightningcss: 1.30.2
-      yaml: 2.8.1
-
   vite@7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1):
->>>>>>> origin/main
     dependencies:
       esbuild: 0.25.4
       fdir: 6.5.0(picomatch@4.0.3)
@@ -25843,43 +25607,7 @@ snapshots:
       lightningcss: 1.30.2
       yaml: 2.8.1
 
-<<<<<<< HEAD
   vitest-websocket-mock@0.4.0(vitest@..+..+..+Library+pnpm+global+5+node_modules+vitest):
-||||||| 867232123
-  vite@7.1.11(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1):
-    dependencies:
-      esbuild: 0.25.4
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
-      postcss: 8.5.6
-      rollup: 4.44.1
-      tinyglobby: 0.2.15
-    optionalDependencies:
-      '@types/node': 20.19.9
-      fsevents: 2.3.3
-      jiti: 2.6.0
-      lightningcss: 1.30.2
-      yaml: 2.8.1
-
-  vitest-websocket-mock@0.4.0(vitest@3.2.3):
-=======
-  vite@7.2.7(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1):
-    dependencies:
-      esbuild: 0.25.4
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
-      postcss: 8.5.6
-      rollup: 4.44.1
-      tinyglobby: 0.2.15
-    optionalDependencies:
-      '@types/node': 20.19.9
-      fsevents: 2.3.3
-      jiti: 2.6.0
-      lightningcss: 1.30.2
-      yaml: 2.8.1
-
-  vitest-websocket-mock@0.4.0(vitest@3.2.3):
->>>>>>> origin/main
     dependencies:
       '@vitest/utils': 2.1.8
       mock-socket: 9.3.1
@@ -25887,12 +25615,12 @@ snapshots:
 
   vscode-uri@3.0.8: {}
 
-  vue-tsc@2.0.29(typescript@5.9.3):
+  vue-tsc@2.0.29(typescript@5.8.3):
     dependencies:
       '@volar/typescript': 2.4.0-alpha.18
-      '@vue/language-core': 2.0.29(typescript@5.9.3)
+      '@vue/language-core': 2.0.29(typescript@5.8.3)
       semver: 7.7.3
-      typescript: 5.9.3
+      typescript: 5.8.3
 
   warning@4.0.3:
     dependencies:
@@ -26186,3 +25914,5 @@ snapshots:
   zod@3.22.3: {}
 
   zod@3.25.76: {}
+
+  zod@4.1.13: {}

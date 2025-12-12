@@ -98,7 +98,6 @@ const commonOptions = {
 		"__VITEST_POOL_WORKERS_DEFINES",
 		"__VITEST_POOL_WORKERS_USER_OBJECT",
 		// All npm packages (previously handled by packages: "external")
-		"birpc",
 		"cjs-module-lexer",
 		"esbuild",
 		"miniflare",
