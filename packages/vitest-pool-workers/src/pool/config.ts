@@ -50,6 +50,27 @@ const WorkersPoolOptionsSchema = z.object({
 	 */
 	remoteBindings: z.boolean().default(true),
 	/**
+	 * Additional exports.
+	 * A map of module exports to be made available on the `ctx.exports`
+	 * that cannot be automatically inferred by analyzing the Worker source code.
+	 *
+	 * This is useful for exports that are re-exported implicitly, for example
+	 * through wildcard (`export * from "..."`) re-exports from virtual modules.
+	 */
+	additionalExports: z
+		.record(
+			z.string(),
+			z.union([
+				z.literal("WorkerEntrypoint"),
+				z.literal("DurableObject"),
+				z.literal("WorkflowEntrypoint"),
+			])
+		)
+		.default({}),
+	/**
+	 * If enabled, Workers will be run in a single shared worker instance.
+	 */
+	/**
 	 * Runs all tests in this project serially in the same worker, using the same
 	 * module cache. This can significantly speed up tests if you've got lots of
 	 * small test files.
