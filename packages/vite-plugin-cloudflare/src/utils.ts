@@ -1,4 +1,3 @@
-import { createRequire } from "node:module";
 import * as path from "node:path";
 import * as util from "node:util";
 import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
@@ -8,6 +7,7 @@ import {
 	Response as MiniflareResponse,
 } from "miniflare";
 import semverGte from "semver/functions/gte";
+import { version as viteVersion } from "vite";
 import type { PluginContext } from "./context";
 import type * as http from "node:http";
 import type * as vite from "vite";
@@ -101,10 +101,7 @@ export function createRequestHandler(
 	};
 }
 
-const require = createRequire(import.meta.url);
-
 export function satisfiesViteVersion(minVersion: string): boolean {
-	const viteVersion = require("vite/package.json").version as string;
 	return semverGte(viteVersion, minVersion);
 }
 
