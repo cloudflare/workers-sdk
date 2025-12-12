@@ -18,3 +18,9 @@ export function getRelativeProjectPath(project: TestProject): string {
 	const projectPath = getProjectPath(project);
 	return path.relative("", projectPath);
 }
+
+export function getRelativeProjectConfigPath(project: TestProject): string {
+	return project.config.config
+		? path.relative("", project.config.config)
+		: getRelativeProjectPath(project);
+}

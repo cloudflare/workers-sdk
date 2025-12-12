@@ -34,9 +34,19 @@ export function getSerializedOptions(): SerializedOptions {
 	const options = __vitest_worker__.providedContext.cloudflarePoolOptions;
 	// `options` should always be defined when running tests
 
-	assert(options !== undefined, "Expected serialised options");
+	assert(
+		options !== undefined,
+		"Expected serialised options" +
+			Object.keys(__vitest_worker__.providedContext)
+	);
 	// console.log({ options });
-	return JSON.parse(options);
+	const parsedOptions = JSON.parse(options);
+	return {
+		...parsedOptions,
+		durableObjectBindingDesignators: new Map(
+			parsedOptions.durableObjectBindingDesignators
+		),
+	};
 }
 
 export function getResolvedMainPath(

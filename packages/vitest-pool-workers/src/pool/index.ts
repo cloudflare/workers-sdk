@@ -27,8 +27,9 @@ import { createMethodsRPC } from "vitest/node";
 import { experimental_readRawConfig } from "wrangler";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { createChunkingSocket } from "../shared/chunking-socket";
+import { CloudflarePoolWorker, CustomOptions } from "./cloudflare-pool-worker";
 import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
-import { OPTIONS_PATH, parseProjectOptions } from "./config";
+import { parseProjectOptions } from "./config";
 import {
 	getProjectPath,
 	getRelativeProjectPath,
@@ -42,7 +43,6 @@ import {
 	waitForStorageReset,
 } from "./loopback";
 import { handleModuleFallbackRequest } from "./module-fallback";
-import { CustomOptions, CustomPoolWorker } from "./pool-worker";
 import type {
 	SourcelessWorkerOptions,
 	WorkersConfigPluginAPI,
@@ -180,7 +180,7 @@ interface Project {
 }
 const allProjects = new Map<string /* projectName */, Project>();
 
-function getRunnerName(project: TestProject, testFile?: string) {
+export function getRunnerName(project: TestProject, testFile?: string) {
 	const name = `${WORKER_NAME_PREFIX}runner-${project.name.replace(/[^a-z0-9-]/gi, "_")}`;
 	if (testFile === undefined) {
 		return name;
@@ -439,7 +439,7 @@ function buildProjectWorkerOptions(
 	const flagAssertions = new CompatibilityFlagAssertions({
 		compatibilityDate: runnerWorker.compatibilityDate,
 		compatibilityFlags: runnerWorker.compatibilityFlags,
-		optionsPath: `${OPTIONS_PATH}.miniflare`,
+		optionsPath: `miniflare`,
 		relativeProjectPath: project?.relativePath?.toString(),
 		relativeWranglerConfigPath,
 	});
@@ -625,13 +625,13 @@ function buildProjectWorkerOptions(
 				worker.name === ""
 			) {
 				throw new Error(
-					`In project ${project?.relativePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must be non-empty`
+					`In project ${project?.relativePath}, \`miniflare.workers[${i}].name\` must be non-empty`
 				);
 			}
 			// ...that doesn't start with our reserved prefix
 			if (worker.name.startsWith(WORKER_NAME_PREFIX)) {
 				throw new Error(
-					`In project ${project?.relativePath}, \`${OPTIONS_PATH}.miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${worker.name}`
+					`In project ${project?.relativePath}, \`miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${worker.name}`
 				);
 			}
 
@@ -815,7 +815,8 @@ export async function runTests(
 	ctx: Vitest,
 	mf: Miniflare,
 	workerName: string,
-	project: TestProject
+	project: TestProject,
+	main: string | undefined
 	// config: SerializedConfig
 	// files: string[],
 	// invalidates: string[] = []
@@ -842,13 +843,13 @@ export async function runTests(
 	// This allows that plugin to inject a virtual dependency on main so that vitest
 	// will automatically re-run tests when that gets updated, avoiding the user having
 	// to manually add such an import in their tests.
-	// const configPlugin = project.project.server.config.plugins.find(
-	// 	({ name }) => name === "@cloudflare/vitest-pool-workers:config"
-	// );
-	// if (configPlugin !== undefined) {
-	// 	const api = configPlugin.api as WorkersConfigPluginAPI;
-	// 	api.setMain(project.options.main);
-	// }
+	const configPlugin = project.vite.config.plugins.find(
+		({ name }) => name === "@cloudflare/vitest-pool-workers:config"
+	);
+	if (configPlugin !== undefined) {
+		const api = configPlugin.api as WorkersConfigPluginAPI;
+		api.setMain(main);
+	}
 
 	// We reset storage at the end of tests when the user is presumably looking at
 	// results. We don't need to reset storage on the first run as instances were
@@ -875,16 +876,16 @@ export async function runTests(
 	const webSocket = res.webSocket;
 	assert(webSocket !== null);
 
-	const chunkingSocket = createChunkingSocket({
-		post(message) {
-			webSocket.send(message);
-		},
-		on(listener) {
-			webSocket.addEventListener("message", (event) => {
-				listener(event.data);
-			});
-		},
-	});
+	// const chunkingSocket = createChunkingSocket({
+	// 	post(message) {
+	// 		webSocket.send(message);
+	// 	},
+	// 	on(listener) {
+	// 		webSocket.addEventListener("message", (event) => {
+	// 			listener(event.data);
+	// 		});
+	// 	},
+	// });
 
 	// Compile module rules for matching against
 	// const rules = project.options.miniflare?.modulesRules;
@@ -970,7 +971,7 @@ export async function runTests(
 	// }
 
 	// debuglog("DONE", files);
-	return chunkingSocket;
+	return webSocket;
 }
 
 interface PackageJson {
@@ -1292,9 +1293,16 @@ function ensureFeature(compatibilityFlags: string[], feature: string) {
 	}
 }
 
-export function pool(customOptions: WorkersPoolOptions): PoolRunnerInitializer {
+export function cloudflarePool(
+	poolOptions: WorkersPoolOptions
+): PoolRunnerInitializer {
 	return {
-		name: "custom-pool",
-		createPoolWorker: (options) => new CustomPoolWorker(options, customOptions),
+		name: "cloudflare-pool",
+		createPoolWorker: (options) =>
+			new CloudflarePoolWorker(options, poolOptions),
 	};
 }
+
+export { cloudflareTest } from "../config";
+export * from "../config/d1";
+export * from "../config/pages";

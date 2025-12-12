@@ -23,7 +23,10 @@ import {
 import { createChunkingSocket } from "../shared/chunking-socket";
 import type { SocketLike } from "../shared/chunking-socket";
 import type { VitestExecutor as VitestExecutorType } from "vitest/execute";
-import type { VitestModuleRunner as VitestModuleRunnerType } from "vitest/internal/module-runner";
+import type {
+	VitestModuleRunner,
+	VitestModuleRunner as VitestModuleRunnerType,
+} from "vitest/internal/module-runner";
 
 function structuredSerializableStringify(value: unknown): string {
 	return devalue.stringify(value, structuredSerializableReducers);
@@ -244,7 +247,11 @@ function applyDefines() {
 // `RunnerObject` is a singleton and "colo local" ephemeral object. Refer to:
 // https://github.com/cloudflare/workerd/blob/v1.20231206.0/src/workerd/server/workerd.capnp#L529-L543
 export class RunnerObject extends DurableObject {
-	executor: VitestModuleRunnerType | undefined;
+	#getExecutor: any | undefined;
+
+	get executor() {
+		return this.#getExecutor?.();
+	}
 
 	constructor(_state: DurableObjectState, env: Record<string, unknown> & Env) {
 		super(_state, env);
@@ -252,9 +259,6 @@ export class RunnerObject extends DurableObject {
 		ensurePatchedFunction(env.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		setEnv(env);
 		applyDefines();
-		this.executor = startVitestModuleRunner({
-			state: { moduleExecutionInfo: {} },
-		});
 	}
 	hello() {
 		return "world";
@@ -274,11 +278,37 @@ export class RunnerObject extends DurableObject {
 		assert("cwd" in wd && typeof wd.cwd === "string");
 		cwd = wd.cwd;
 
-		const { init, runBaseTests, setupEnvironment } = await import(
-			"vitest/worker"
-		);
+		const { init, runBaseTests, setupEnvironment, startModuleRunner } =
+			await import("vitest/worker");
 
 		poolSocket.accept();
+
+		// Internally, `runBaseTests()` calls `startModuleRunner()`, which
+		// constructs a singleton `VitestModuleRunner`. We'd like access to this singleton
+		// so we can transform and import code with Vite ourselves (e.g. for user worker's default exports
+		// and Durable Objects). Vitest exposes a `startVitestModuleRunner()`
+		// function that we can use to get a new instance of the module runner,
+		// but we need the _exact_ instance Vitest is using to run tests so
+		// that e.g. instanceof checks on DurableObjects during a test run works
+		// as expected.
+		// Now, we can't just call startModuleRunner _ourselves_ at this point.
+		// Since `runBaseTests()` hasn't run yet, we'd end up constructing the
+		// singleton rather than getting an existing instance (and well, we don't know which arguments to pass!)
+		// Instead, store the `startModuleRunner()` function and call it when it's
+		// actually needed (see `get executor()` above). At that point the singleton
+		// is guaranteed to exist, since we're within the context of a test. As such, at _that_
+		// point calling `startModuleRunner()` will return the existing singleton.
+		// TODO: Replace with this.#getExecutor = startModuleRunner; once https://github.com/vitest-dev/vitest/pull/9234 lands
+		const { VitestModuleRunner } = await import(
+			"vitest/internal/module-runner"
+		);
+		const originalResolveUrl = VitestModuleRunner.prototype.import;
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		const that = this;
+		VitestModuleRunner.prototype.import = function (...args) {
+			that.#getExecutor = () => this;
+			return originalResolveUrl.apply(this, args);
+		};
 
 		init({
 			post: (response) => {
@@ -331,28 +361,27 @@ export class RunnerObject extends DurableObject {
 			collectTests: (state, traces) => runBaseTests("collect", state, traces),
 			setup: setupEnvironment,
 		});
+
+		// // Internally, `runBaseTests()` calls `startModuleRunner()`, which
+		// // constructs a singleton `VitestModuleRunner`. We'd like access to this singleton
+		// // so we can transform and import code with Vite ourselves (e.g. for user worker's default exports
+		// // and Durable Objects). Vitest exposes a `startVitestModuleRunner()`
+		// // function that we can use to get a new instance of the module runner,
+		// // but we need the _exact_ instance Vitest is using to run tests so
+		// // that e.g. instanceof checks on DurableObjects during a test run works
+		// // as expected.
+		// // Now, we can't just call startModuleRunner _ourselves_ at this point.
+		// // Since `runBaseTests()` hasn't run yet, we'd end up constructing the
+		// // singleton rather than getting an existing instance (and well, we don't know which arguments to pass!)
+		// // Instead, store the `startModuleRunner()` function and call it when it's
+		// // actually needed (see `get executor()` above). At that point the singleton
+		// // is guaranteed to exist, since we're within the context of a test. As such, at _that_
+		// // point calling `startModuleRunner()` will return the existing singleton.
+		// this.#getExecutor = startModuleRunner;
+
 		// const port = new WebSocketMessagePort(poolSocket);
 		// try {
 		// 	const module = await import(wd.filePath);
-
-		// 	// HACK: Internally, Vitest's worker thread calls `startViteNode()`, which
-		// 	// constructs a singleton `VitestExecutor`. `VitestExecutor` is a subclass
-		// 	// of `ViteNodeRunner`, which is how the worker communicates with the
-		// 	// Vite server. We'd like access to this singleton so we can transform and
-		// 	// import code with Vite ourselves (e.g. for user worker's default exports
-		// 	// and Durable Objects). Unfortunately, Vitest doesn't publicly export the
-		// 	// `startViteNode()` function. Instead, we monkeypatch a `VitestExecutor`
-		// 	// method we know is called to get the singleton. :see_no_evil:
-		// 	// TODO(soon): see if we can get `startViteNode()` (https://github.com/vitest-dev/vitest/blob/8d183da4f7cc2986d11c802d16bacd221fb69b96/packages/vitest/src/runtime/execute.ts#L45)
-		// 	//  exported in `vitest/execute` (https://github.com/vitest-dev/vitest/blob/main/packages/vitest/src/public/execute.ts)
-		// 	const { VitestExecutor } = await import("vitest/execute");
-		// 	const originalResolveUrl = VitestExecutor.prototype.resolveUrl;
-		// 	// eslint-disable-next-line @typescript-eslint/no-this-alias
-		// 	const that = this;
-		// 	VitestExecutor.prototype.resolveUrl = function (...args) {
-		// 		that.executor = this;
-		// 		return originalResolveUrl.apply(this, args);
-		// 	};
 
 		// 	(wd.data as { port: WebSocketMessagePort }).port = port;
 		// 	module[wd.name](wd.data)

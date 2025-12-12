@@ -17,13 +17,13 @@ import { patchAndRunWithHandlerContext } from "./wait-until";
  * execution pipeline. Can be called from any I/O context, and will ensure the
  * request is run from within the `RunnerObject`.
  */
-async function importModule(
+function importModule(
 	env: Env,
 	specifier: string
 ): Promise<Record<string, unknown>> {
 	// __console.log("import");
 
-	return await runInRunnerObject(env, (instance) => {
+	return runInRunnerObject(env, (instance) => {
 		if (instance.executor === undefined) {
 			const message =
 				"Expected Vitest to start running before importing modules.\n" +
@@ -228,12 +228,12 @@ async function getWorkerEntrypointExport(
 	entrypoint: string
 ): Promise<{ mainPath: string; entrypointValue: unknown }> {
 	const mainPath = getResolvedMainPath("service");
-	const exports = await importModule(env, mainPath);
+	const mainModule = await importModule(env, mainPath);
 	const entrypointValue =
-		typeof exports === "object" &&
-		exports !== null &&
-		entrypoint in exports &&
-		exports[entrypoint];
+		typeof mainModule === "object" &&
+		mainModule !== null &&
+		entrypoint in mainModule &&
+		mainModule[entrypoint];
 	// __console.log(entrypointValue);
 	if (!entrypointValue) {
 		const message =
@@ -319,7 +319,7 @@ export function createWorkerEntrypointWrapper(
 			const userEnv = stripInternalEnv(this.env);
 
 			// __console.log(mainPath, entrypointValue, userEnv);
-			return await patchAndRunWithHandlerContext(this.ctx, async () => {
+			return patchAndRunWithHandlerContext(this.ctx, () => {
 				// __console.log(
 				// 	mainPath,
 				// 	entrypointValue,
@@ -428,6 +428,8 @@ export function createDurableObjectWrapper(
 		const property = getDurableObjectRPCProperty(this, className, key);
 		return getRPCPropertyCallableThenable(key, property);
 	});
+
+	// Wrapper[Symbol.hasInstance] = () => true
 
 	Wrapper.prototype[kEnsureInstance] = async function (
 		this: DurableObjectWrapper

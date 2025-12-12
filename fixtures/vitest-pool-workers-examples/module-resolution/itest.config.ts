@@ -4,14 +4,17 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
     plugins: [cloudflareTest({
-        singleWorker: true,
-        wrangler: {
-            configPath: "./wrangler.nodejs.jsonc",
-        },
+        wrangler: { configPath: "./wrangler.jsonc" },
     })],
 
     test: {
-        name: "misc-nodejs",
-        include: ["test/nodejs.test.ts"]
+        deps: {
+			optimizer: {
+				ssr: {
+					enabled: true,
+					include: ["discord-api-types/v10", "@microlabs/otel-cf-workers"],
+				},
+			},
+		}
     }
 });

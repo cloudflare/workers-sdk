@@ -24,7 +24,7 @@
 		"toucan-js": "4.0.0",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
-		"vitest": "catalog:default",
+		"vitest": "https://pkg.pr.new/vitest@5d26b87",
 		"wrangler": "workspace:*"
 	},
 	"volta": {

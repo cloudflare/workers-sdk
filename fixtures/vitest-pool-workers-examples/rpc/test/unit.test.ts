@@ -4,7 +4,7 @@ import {
 	runInDurableObject,
 	SELF,
 } from "cloudflare:test";
-import { RpcStub } from "cloudflare:workers";
+import { DurableObject, RpcStub } from "cloudflare:workers";
 import { describe, expect, it, onTestFinished } from "vitest";
 import { Counter, TestObject } from "../src";
 
@@ -94,10 +94,13 @@ describe("Durable Object", () => {
 		const id = env.TEST_OBJECT.idFromName("/path");
 		const stub = env.TEST_OBJECT.get(id);
 		const result = await runInDurableObject(stub, (instance: TestObject) => {
+			// throw new Error(Object.getPrototypeOf(instance) === TestObject.prototype);
+			// expect(instance).toBeInstanceOf(Object);
 			expect(instance).toBeInstanceOf(TestObject); // Exact same class as import
 			return instance.increment(1);
 		});
 		expect(result).toBe(1);
+		expect(await stub.value).toBe(1);
 
 		// Check direct access to properties and storage
 		await runInDurableObject(stub, async (instance: TestObject, state) => {

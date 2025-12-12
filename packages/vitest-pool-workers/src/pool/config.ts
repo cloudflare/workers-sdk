@@ -9,7 +9,11 @@ import {
 	PLUGINS,
 } from "miniflare";
 import { z } from "zod";
-import { getProjectPath, getRelativeProjectPath } from "./helpers";
+import {
+	getProjectPath,
+	getRelativeProjectConfigPath,
+	getRelativeProjectPath,
+} from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { TestProject, WorkspaceProject } from "vitest/node";
@@ -21,9 +25,6 @@ export interface WorkersConfigPluginAPI {
 }
 
 const PLUGIN_VALUES = Object.values(PLUGINS);
-
-const OPTIONS_PATH_ARRAY = ["test", "poolOptions", "workers"];
-export const OPTIONS_PATH = OPTIONS_PATH_ARRAY.join(".");
 
 const WorkersPoolOptionsSchema = z.object({
 	/**
@@ -188,13 +189,11 @@ const remoteProxySessionsDataMap = new Map<
 
 async function parseCustomPoolOptions(
 	rootPath: string,
-	value: unknown,
-	opts: PathParseParams
+	value: unknown
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Try to parse pool specific options
 	const options = WorkersPoolOptionsSchema.parse(
-		value,
-		opts
+		value
 	) as WorkersPoolOptionsWithDefines;
 	options.miniflare ??= {};
 
@@ -208,7 +207,7 @@ async function parseCustomPoolOptions(
 			rootPath,
 			options.miniflare,
 			/* withoutScript */ true, // (script provided by runner)
-			{ path: [...opts.path, "miniflare"] }
+			{ path: ["miniflare"] }
 		);
 	} catch (e) {
 		coalesceZodErrors(errorRef, e);
@@ -226,7 +225,7 @@ async function parseCustomPoolOptions(
 					worker,
 					/* withoutScript */ false,
 					{
-						path: [...opts.path, "miniflare", "workers", i],
+						path: ["miniflare", "workers", i],
 					}
 				);
 			} catch (e) {
@@ -367,12 +366,9 @@ export async function parseProjectOptions(
 	}
 
 	const projectPath = getProjectPath(project);
-	const rootPath =
-		typeof projectPath === "string" ? path.dirname(projectPath) : "";
+
 	try {
-		return await parseCustomPoolOptions(rootPath, poolOptions, {
-			path: OPTIONS_PATH_ARRAY,
-		});
+		return await parseCustomPoolOptions(projectPath, poolOptions);
 	} catch (e) {
 		if (!isZodErrorLike(e)) {
 			throw e;
@@ -383,9 +379,9 @@ export async function parseProjectOptions(
 		} catch {
 			throw e;
 		}
-		const relativePath = getRelativeProjectPath(project);
+		const relativePath = getRelativeProjectConfigPath(project);
 		throw new TypeError(
-			`Unexpected pool options in project ${relativePath}:\n${formatted}`
+			`Unexpected options in project ${relativePath}:\n${formatted}`
 		);
 	}
 }

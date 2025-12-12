@@ -137,8 +137,8 @@ const esmOptions = {
 
 const cjsOptions = {
 	...commonOptions,
-	format: "cjs",
-	outExtension: { ".js": ".cjs" },
+	format: "esm",
+	outExtension: { ".js": ".mjs" },
 	entryPoints: [
 		path.join(pkgRoot, "src", "config", "index.ts"),
 		...libPaths.filter((libPath) => /\.cts$/.test(libPath)),
