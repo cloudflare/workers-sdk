@@ -1498,6 +1498,9 @@ describe.sequential("wrangler dev", () => {
 				env.NAME_3 (CLASS_3)                           Durable Object      local
 				env.NAME_4 (CLASS_4, defined in SCRIPT_B)      Durable Object      local [not connected]
 
+
+				Service bindings, Durable Object bindings, and Tail consumers connect to other Wrangler or Vite dev processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
+
 				"
 			`);
 			expect(std.warn).toMatchInlineSnapshot(`

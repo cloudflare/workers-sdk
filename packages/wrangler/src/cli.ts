@@ -34,7 +34,7 @@ if (typeof vitest === "undefined" && require.main === module) {
  */
 export { unstable_dev, unstable_pages, unstable_DevEnv, unstable_startWorker };
 export type { Unstable_DevWorker, Unstable_DevOptions };
-
+export { printBindings as unstable_printBindings } from "./utils/print-bindings";
 export * from "./api/integrations";
 
 // Export internal APIs required by the Vitest integration as `unstable_`

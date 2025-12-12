@@ -13,6 +13,7 @@ import type {
 } from "./plugin-config";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
+import type { Unstable_Config } from "wrangler";
 
 /**
  * Used to store state that should persist across server restarts.
@@ -146,6 +147,19 @@ export class PluginContext {
 					environmentName
 				)?.config
 			: undefined;
+	}
+
+	get allWorkerConfigs(): Unstable_Config[] {
+		switch (this.resolvedPluginConfig.type) {
+			case "workers":
+				return Array.from(
+					this.resolvedPluginConfig.environmentNameToWorkerMap.values()
+				).map((worker) => worker.config);
+			case "preview":
+				return this.resolvedPluginConfig.workers;
+			default:
+				return [];
+		}
 	}
 
 	get entryWorkerConfig(): ResolvedWorkerConfig | undefined {
