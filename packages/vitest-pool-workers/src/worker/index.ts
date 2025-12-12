@@ -14,19 +14,11 @@ import {
 } from "cloudflare:test-internal";
 import { DurableObject } from "cloudflare:workers";
 import * as devalue from "devalue";
-import { startVitestModuleRunner } from "vitest/internal/module-runner";
 // Using relative path here to ensure `esbuild` bundles it
 import {
 	structuredSerializableReducers,
 	structuredSerializableRevivers,
 } from "../../../miniflare/src/workers/core/devalue";
-import { createChunkingSocket } from "../shared/chunking-socket";
-import type { SocketLike } from "../shared/chunking-socket";
-import type { VitestExecutor as VitestExecutorType } from "vitest/execute";
-import type {
-	VitestModuleRunner,
-	VitestModuleRunner as VitestModuleRunnerType,
-} from "vitest/internal/module-runner";
 
 function structuredSerializableStringify(value: unknown): string {
 	return devalue.stringify(value, structuredSerializableReducers);
@@ -45,6 +37,7 @@ process.cwd = () => {
 	return cwd;
 };
 // Required by vitest/worker
+// @ts-expect-error We don't actually implement `process.memoryUsage()`
 process.memoryUsage = () => ({});
 Object.setPrototypeOf(process, events.EventEmitter.prototype); // Required by `vitest`
 
@@ -141,59 +134,6 @@ function isDifferentIOContextError(e: unknown) {
 	);
 }
 
-// Wraps a `WebSocket` with a Node `MessagePort` like interface
-class WebSocketMessagePort extends events.EventEmitter {
-	#chunkingSocket: SocketLike<string>;
-
-	constructor(private readonly socket: WebSocket) {
-		super();
-		this.#chunkingSocket = createChunkingSocket({
-			post(message) {
-				socket.send(message);
-			},
-			on(listener) {
-				socket.addEventListener("message", (event) => {
-					listener(event.data);
-				});
-			},
-		});
-		this.#chunkingSocket.on((message) => {
-			const parsed = structuredSerializableParse(message);
-			this.emit("message", parsed);
-		});
-		socket.accept();
-	}
-
-	postMessage(data: unknown) {
-		const stringified = structuredSerializableStringify(data);
-		try {
-			// Accessing `readyState` may also throw different I/O context error
-			if (this.socket.readyState === WebSocket.READY_STATE_OPEN) {
-				this.#chunkingSocket.post(stringified);
-			}
-		} catch (error) {
-			// If the user tried to perform a dynamic `import()` or `console.log()`
-			// from inside a `export default { fetch() { ... } }` handler using `SELF`
-			// or from inside their own Durable Object, Vitest will try to send an
-			// RPC message from the I/O context that is different to the Runner Durable Object.
-			// There's nothing we can really do to prevent this: we want to run these things
-			// in different I/O contexts with the behaviour this causes. We'd still like to send
-			// the RPC message though, so if we detect this, we try resend the message
-			// from the runner object.
-			if (isDifferentIOContextError(error)) {
-				const promise = runInRunnerObject(internalEnv, () => {
-					this.#chunkingSocket.post(stringified);
-				}).catch((e) => {
-					__console.error("Error sending to pool inside runner:", e, data);
-				});
-				registerHandlerAndGlobalWaitUntil(promise);
-			} else {
-				__console.error("Error sending to pool:", error, data);
-			}
-		}
-	}
-}
-
 interface JsonError {
 	message?: string;
 	name?: string;
@@ -269,17 +209,18 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		const { 0: poolSocket, 1: poolResponseSocket } = new WebSocketPair();
 
 		const workerDataHeader = request.headers.get("MF-Vitest-Worker-Data");
-		// assert(workerDataHeader !== null);
+		assert(workerDataHeader);
+
 		const wd = structuredSerializableParse(workerDataHeader);
-		// assert(typeof wd === "object" && wd !== null);
-		// assert("filePath" in wd && typeof wd.filePath === "string");
-		// assert("name" in wd && typeof wd.name === "string");
-		// assert("data" in wd && typeof wd.data === "object" && wd.data !== null);
-		assert("cwd" in wd && typeof wd.cwd === "string");
+		assert(
+			wd && typeof wd === "object" && "cwd" in wd && typeof wd.cwd === "string"
+		);
+
 		cwd = wd.cwd;
 
-		const { init, runBaseTests, setupEnvironment, startModuleRunner } =
-			await import("vitest/worker");
+		const { init, runBaseTests, setupEnvironment } = await import(
+			"vitest/worker"
+		);
 
 		poolSocket.accept();
 
@@ -298,7 +239,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		// actually needed (see `get executor()` above). At that point the singleton
 		// is guaranteed to exist, since we're within the context of a test. As such, at _that_
 		// point calling `startModuleRunner()` will return the existing singleton.
-		// TODO: Replace with this.#getExecutor = startModuleRunner; once https://github.com/vitest-dev/vitest/pull/9234 lands
+		// TODO: Replace with `this.#getExecutor = startModuleRunner;` once https://github.com/vitest-dev/vitest/pull/9234 lands
 		const { VitestModuleRunner } = await import(
 			"vitest/internal/module-runner"
 		);
@@ -342,66 +283,13 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 			},
 			on: (callback) => {
 				poolSocket.addEventListener("message", (m) => {
-					const d = structuredSerializableParse(m.data);
-					// console.log("RECV WORKER", d);
-					callback(d);
-					// poolSocket.send("HELLO");
+					callback(structuredSerializableParse(m.data));
 				});
 			},
-			teardown: () => {
-				// Optional, provide a way to teardown worker, e.g. unsubscribe all the `on` listeners
-			},
-			// serialize: (value) => {
-			// 	// Optional, provide custom serializer for `post` calls
-			// },
-			// deserialize: (value) => {
-			// 	// Optional, provide custom deserializer for `on` callbacks
-			// },
 			runTests: (state, traces) => runBaseTests("run", state, traces),
 			collectTests: (state, traces) => runBaseTests("collect", state, traces),
 			setup: setupEnvironment,
 		});
-
-		// // Internally, `runBaseTests()` calls `startModuleRunner()`, which
-		// // constructs a singleton `VitestModuleRunner`. We'd like access to this singleton
-		// // so we can transform and import code with Vite ourselves (e.g. for user worker's default exports
-		// // and Durable Objects). Vitest exposes a `startVitestModuleRunner()`
-		// // function that we can use to get a new instance of the module runner,
-		// // but we need the _exact_ instance Vitest is using to run tests so
-		// // that e.g. instanceof checks on DurableObjects during a test run works
-		// // as expected.
-		// // Now, we can't just call startModuleRunner _ourselves_ at this point.
-		// // Since `runBaseTests()` hasn't run yet, we'd end up constructing the
-		// // singleton rather than getting an existing instance (and well, we don't know which arguments to pass!)
-		// // Instead, store the `startModuleRunner()` function and call it when it's
-		// // actually needed (see `get executor()` above). At that point the singleton
-		// // is guaranteed to exist, since we're within the context of a test. As such, at _that_
-		// // point calling `startModuleRunner()` will return the existing singleton.
-		// this.#getExecutor = startModuleRunner;
-
-		// const port = new WebSocketMessagePort(poolSocket);
-		// try {
-		// 	const module = await import(wd.filePath);
-
-		// 	(wd.data as { port: WebSocketMessagePort }).port = port;
-		// 	module[wd.name](wd.data)
-		// 		.then(() => {
-		// 			poolSocket.close(1000, "Done");
-		// 		})
-		// 		.catch((e: unknown) => {
-		// 			port.postMessage({ vitestPoolWorkersError: e });
-		// 			const error = reduceError(e);
-		// 			__console.error("Error running worker:", error.stack);
-		// 			poolSocket.close(1011, "Internal Error");
-		// 		});
-		// } catch (e) {
-		// 	const error = reduceError(e);
-		// 	__console.error("Error initialising worker:", error.stack);
-		// 	return Response.json(error, {
-		// 		status: 500,
-		// 		headers: { "MF-Experimental-Error-Stack": "true" },
-		// 	});
-		// }
 
 		return new Response(null, { status: 101, webSocket: poolResponseSocket });
 	}

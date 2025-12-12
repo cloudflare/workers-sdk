@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import util from "node:util";
 import * as devalue from "devalue";
+import { build } from "esbuild";
 import {
 	getNodeCompat,
 	kCurrentWorker,
@@ -23,10 +24,11 @@ import { CompatibilityFlagAssertions } from "./compatibility-flag-assertions";
 import { guessWorkerExports } from "./guess-exports";
 import {
 	getProjectPath,
+	getRelativeProjectPath,
 	isFileNotFoundError,
 	WORKER_NAME_PREFIX,
 } from "./helpers";
-import { ABORT_ALL_WORKER, handleLoopbackRequest } from "./loopback";
+import { handleLoopbackRequest } from "./loopback";
 import { handleModuleFallbackRequest } from "./module-fallback";
 import type {
 	SourcelessWorkerOptions,
@@ -180,17 +182,6 @@ export function getDurableObjectDesignators(
 	return result;
 }
 
-const POOL_WORKER_DIR = path.dirname(POOL_WORKER_PATH);
-const USER_OBJECT_MODULE_NAME = "__VITEST_POOL_WORKERS_USER_OBJECT";
-const USER_OBJECT_MODULE_PATH = path.join(
-	POOL_WORKER_DIR,
-	USER_OBJECT_MODULE_NAME
-);
-const DEFINES_MODULE_PATH = path.join(
-	POOL_WORKER_DIR,
-	"__VITEST_POOL_WORKERS_DEFINES"
-);
-
 /**
  * Gets a set of Durable Object class names for the SELF Worker.
  *
@@ -283,7 +274,8 @@ const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
 
 async function buildProjectWorkerOptions(
 	project: TestProject,
-	customOptions: WorkersPoolOptions
+	customOptions: WorkersPoolOptionsWithDefines,
+	main: string | undefined
 ): Promise<ProjectWorkers> {
 	const relativeWranglerConfigPath = maybeApply(
 		(v) => path.relative("", v),
@@ -306,7 +298,7 @@ async function buildProjectWorkerOptions(
 		// No compatibility date was provided, so infer the latest supported date
 		runnerWorker.compatibilityDate ??= supportedCompatibilityDate;
 		log.info(
-			`No compatibility date was provided for project ${project?.relativePath}, defaulting to latest supported date ${runnerWorker.compatibilityDate}.`
+			`No compatibility date was provided for project ${getRelativeProjectPath(project)}, defaulting to latest supported date ${runnerWorker.compatibilityDate}.`
 		);
 	}
 
@@ -314,7 +306,7 @@ async function buildProjectWorkerOptions(
 		compatibilityDate: runnerWorker.compatibilityDate,
 		compatibilityFlags: runnerWorker.compatibilityFlags,
 		optionsPath: `miniflare`,
-		relativeProjectPath: project?.relativePath?.toString(),
+		relativeProjectPath: getRelativeProjectPath(project),
 		relativeWranglerConfigPath,
 	});
 
@@ -391,8 +383,8 @@ async function buildProjectWorkerOptions(
 	) {
 		try {
 			const guessedExports = await guessWorkerExports(
-				project.options.main,
-				project.options.additionalExports
+				main,
+				customOptions.additionalExports
 			);
 			for (const [exportName, exportType] of guessedExports) {
 				switch (exportType) {
@@ -408,7 +400,7 @@ async function buildProjectWorkerOptions(
 				}
 			}
 		} catch (e) {
-			const message = `Failed to statically analyze the exports of the main Worker entry-point "${project.options.main}"\nMore details: ${e}`;
+			const message = `Failed to statically analyze the exports of the main Worker entry-point "${customOptions.main}"\nMore details: ${e}`;
 			for (const line of message.split("\n")) {
 				log.warn(line);
 			}
@@ -491,20 +483,21 @@ async function buildProjectWorkerOptions(
 	// TODO(now): need to add source URL comments here to ensure those are correct
 	const modulesRoot = process.platform === "win32" ? "Z:\\" : "/";
 	runnerWorker.modulesRoot = modulesRoot;
+
 	runnerWorker.modules = [
 		{
 			type: "ESModule",
-			path: path.join(modulesRoot, POOL_WORKER_PATH),
+			path: path.join(modulesRoot, "index.mjs"),
 			contents: fs.readFileSync(POOL_WORKER_PATH),
 		},
 		{
 			type: "ESModule",
-			path: path.join(modulesRoot, USER_OBJECT_MODULE_PATH),
+			path: path.join(modulesRoot, "__VITEST_POOL_WORKERS_USER_OBJECT"),
 			contents: wrappers.join("\n"),
 		},
 		{
 			type: "ESModule",
-			path: path.join(modulesRoot, DEFINES_MODULE_PATH),
+			path: path.join(modulesRoot, "__VITEST_POOL_WORKERS_DEFINES"),
 			contents: defines,
 		},
 		// The native workerd provided nodejs modules don't always support everything Vitest needs.
@@ -538,13 +531,13 @@ async function buildProjectWorkerOptions(
 				worker.name === ""
 			) {
 				throw new Error(
-					`In project ${project?.relativePath}, \`miniflare.workers[${i}].name\` must be non-empty`
+					`In project ${getRelativeProjectPath(project)}, \`miniflare.workers[${i}].name\` must be non-empty`
 				);
 			}
 			// ...that doesn't start with our reserved prefix
 			if (worker.name.startsWith(WORKER_NAME_PREFIX)) {
 				throw new Error(
-					`In project ${project?.relativePath}, \`miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${worker.name}`
+					`In project ${getRelativeProjectPath(project)}, \`miniflare.workers[${i}].name\` must not start with "${WORKER_NAME_PREFIX}", got ${worker.name}`
 				);
 			}
 
@@ -587,12 +580,14 @@ function getModuleFallbackService(ctx: Vitest): ModuleFallbackService {
 async function buildProjectMiniflareOptions(
 	ctx: Vitest,
 	project: TestProject,
-	customOptions: WorkersPoolOptions
+	customOptions: WorkersPoolOptions,
+	main: string | undefined
 ): Promise<MiniflareOptions> {
 	const moduleFallbackService = getModuleFallbackService(ctx);
 	const [runnerWorker, ...auxiliaryWorkers] = await buildProjectWorkerOptions(
 		project,
-		customOptions
+		customOptions,
+		main
 	);
 
 	assert(runnerWorker.name !== undefined);
@@ -606,18 +601,20 @@ async function buildProjectMiniflareOptions(
 		...SHARED_MINIFLARE_OPTIONS,
 		inspectorPort,
 		unsafeModuleFallbackService: moduleFallbackService,
-		workers: [runnerWorker, ABORT_ALL_WORKER, ...auxiliaryWorkers],
+		workers: [runnerWorker, ...auxiliaryWorkers],
 	};
 }
 export async function getProjectMiniflare(
 	ctx: Vitest,
 	project: TestProject,
-	poolOptions: WorkersPoolOptionsWithDefines
+	poolOptions: WorkersPoolOptionsWithDefines,
+	main: string | undefined
 ): Promise<Miniflare> {
 	const mfOptions = await buildProjectMiniflareOptions(
 		ctx,
 		project,
-		poolOptions
+		poolOptions,
+		main
 	);
 	const mf = new Miniflare(mfOptions);
 	await mf.ready;
@@ -749,16 +746,7 @@ function ensureFeature(compatibilityFlags: string[], feature: string) {
 	}
 }
 
-export function cloudflarePool(
-	poolOptions: WorkersPoolOptions
-): PoolRunnerInitializer {
-	return {
-		name: "cloudflare-pool",
-		createPoolWorker: (options) =>
-			new CloudflarePoolWorker(options, poolOptions),
-	};
-}
-
-export { cloudflareTest } from "../config";
-export * from "../config/d1";
-export * from "../config/pages";
+export { cloudflarePool } from "./pool";
+export { cloudflareTest } from "./plugin";
+export * from "./d1";
+export * from "./pages";

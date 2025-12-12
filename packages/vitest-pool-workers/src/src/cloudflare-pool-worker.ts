@@ -1,9 +1,9 @@
 import assert from "node:assert";
 import { compileModuleRules, testRegExps } from "miniflare";
 import { type ProvidedContext } from "vitest";
-import { type WorkerPoolOptionsContext } from "../config";
 import { workerdBuiltinModules } from "../shared/builtin-modules";
 import { parseProjectOptions } from "./config";
+import { type WorkerPoolOptionsContext } from "./plugin";
 import {
 	assertCompatibleVitestVersion,
 	connectToMiniflareSocket,
@@ -83,7 +83,8 @@ export class CloudflarePoolWorker implements PoolWorker {
 		this.mf = await getProjectMiniflare(
 			this.options.project.vitest,
 			this.options.project,
-			this.parsedPoolOptions
+			this.parsedPoolOptions,
+			this.main
 		);
 
 		this.socket = await connectToMiniflareSocket(

@@ -15,8 +15,7 @@ import {
 	getRelativeProjectPath,
 } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
-import type { ProvidedContext } from "vitest";
-import type { TestProject, WorkspaceProject } from "vitest/node";
+import type { TestProject } from "vitest/node";
 import type { Binding, RemoteProxySession } from "wrangler";
 import type { ParseParams, ZodError } from "zod";
 
@@ -37,14 +36,6 @@ const WorkersPoolOptionsSchema = z.object({
 	 * bindings.
 	 */
 	main: z.ostring(),
-	/**
-	 * Enables per-test isolated storage. If enabled, any writes to storage
-	 * performed in a test will be undone at the end of the test. The test storage
-	 * environment is copied from the containing suite, meaning `beforeAll()`
-	 * hooks can be used to seed data. If this is disabled, all tests will share
-	 * the same storage.
-	 */
-	isolatedStorage: z.boolean().default(true),
 	/**
 	 * Enables remote bindings to access remote resources configured
 	 * with `remote: true` in the wrangler configuration file.
@@ -68,15 +59,6 @@ const WorkersPoolOptionsSchema = z.object({
 			])
 		)
 		.default({}),
-	/**
-	 * If enabled, Workers will be run in a single shared worker instance.
-	 */
-	/**
-	 * Runs all tests in this project serially in the same worker, using the same
-	 * module cache. This can significantly speed up tests if you've got lots of
-	 * small test files.
-	 */
-	singleWorker: z.boolean().default(false),
 	miniflare: z
 		.object({
 			workers: z.array(z.object({}).passthrough()).optional(),
@@ -87,6 +69,7 @@ const WorkersPoolOptionsSchema = z.object({
 		.object({ configPath: z.ostring(), environment: z.ostring() })
 		.optional(),
 });
+
 export type SourcelessWorkerOptions = Omit<
 	WorkerOptions,
 	"script" | "scriptPath" | "modules" | "modulesRoot"
@@ -95,6 +78,7 @@ export type SourcelessWorkerOptions = Omit<
 	// from which `WorkerOptions` is derived. Therefore, we manually include it.
 	modulesRules?: ModuleRule[];
 };
+
 export type WorkersPoolOptions = z.input<typeof WorkersPoolOptionsSchema> & {
 	miniflare?: SourcelessWorkerOptions & {
 		workers?: WorkerOptions[];
@@ -307,22 +291,6 @@ async function parseCustomPoolOptions(
 				}
 			);
 
-		const wrappedBindings = Object.values(workerOptions.wrappedBindings ?? {});
-
-		const hasAIOrVectorizeBindings = wrappedBindings.some((binding) => {
-			return (
-				typeof binding === "object" &&
-				(binding.scriptName.includes("__WRANGLER_EXTERNAL_VECTORIZE_WORKER") ||
-					binding.scriptName.includes("__WRANGLER_EXTERNAL_AI_WORKER"))
-			);
-		});
-
-		if (hasAIOrVectorizeBindings) {
-			log.warn(
-				"Workers AI and Vectorize bindings will access your Cloudflare account and incur usage charges even in testing. We recommend mocking any usage of these bindings in your tests."
-			);
-		}
-
 		// If `main` wasn't explicitly configured, fall back to Wrangler config's
 		options.main ??= main;
 
@@ -381,7 +349,6 @@ export async function parseProjectOptions(
 			`Unexpected custom \`environment\` ${quotedEnvironment} in project ${relativePath}.`,
 			"The Workers pool always runs your tests inside of an environment providing Workers runtime APIs.",
 			`Please remove the \`environment\` configuration${migrationGuide}`,
-			"Use `poolMatchGlobs`/`environmentMatchGlobs` to run a subset of your tests in a different pool/environment.",
 		].join("\n");
 		throw new TypeError(message);
 	}

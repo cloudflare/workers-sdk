@@ -63,8 +63,6 @@ declare module "cloudflare:test" {
 	): Promise<boolean /* ran */>;
 	/**
 	 * Gets the IDs of all objects that have been created in the `namespace`.
-	 * Respects `isolatedStorage` if enabled, i.e. objects created in a different
-	 * test won't be returned.
 	 */
 	export function listDurableObjectIds<T>(
 		namespace: DurableObjectNamespace<T>

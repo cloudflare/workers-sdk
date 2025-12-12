@@ -100,7 +100,6 @@ const commonOptions = {
 		// All npm packages (previously handled by packages: "external")
 		"birpc",
 		"cjs-module-lexer",
-		"devalue",
 		"esbuild",
 		"miniflare",
 		"semver",
@@ -131,7 +130,7 @@ const esmOptions = {
 	format: "esm",
 	outExtension: { ".js": ".mjs" },
 	entryPoints: [
-		path.join(pkgRoot, "src", "pool", "index.ts"),
+		path.join(pkgRoot, "src", "src", "index.ts"),
 		path.join(pkgRoot, "src", "worker", "index.ts"),
 		...libPaths.filter((libPath) => /\.m?ts$/.test(libPath)),
 	],
@@ -141,10 +140,7 @@ const cjsOptions = {
 	...commonOptions,
 	format: "esm",
 	outExtension: { ".js": ".mjs" },
-	entryPoints: [
-		path.join(pkgRoot, "src", "config", "index.ts"),
-		...libPaths.filter((libPath) => /\.cts$/.test(libPath)),
-	],
+	entryPoints: [...libPaths.filter((libPath) => /\.cts$/.test(libPath))],
 };
 
 if (watch) {

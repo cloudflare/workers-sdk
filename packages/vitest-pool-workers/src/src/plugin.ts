@@ -1,17 +1,9 @@
-import assert from "node:assert";
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
-import { builtinModules } from "node:module";
 import path from "node:path";
-import { MessageChannel, receiveMessageOnPort } from "node:worker_threads";
-import { cloudflarePool } from "../pool";
-import { workerdBuiltinModules } from "../shared/builtin-modules";
-import type {
-	WorkersConfigPluginAPI,
-	WorkersPoolOptions,
-} from "../pool/config";
-import type { Awaitable, inject } from "vitest";
-import type { ConfigEnv, UserConfig, UserWorkspaceConfig } from "vitest/config";
+import { cloudflarePool } from "./pool";
+import type { WorkersPoolOptions } from "./config";
+import type { inject } from "vitest";
 import type { Vite, VitestPluginContext } from "vitest/node";
 
 const cloudflareTestPath = path.resolve(
@@ -19,64 +11,11 @@ const cloudflareTestPath = path.resolve(
 	"../worker/lib/cloudflare/test.mjs"
 );
 
-type ConfigFn<T extends UserConfig> = (env: ConfigEnv) => T | Promise<T>;
-
-export type AnyConfigExport<T extends UserConfig> =
-	| T
-	| Promise<T>
-	| ConfigFn<T>;
-
-function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
-	f: (t: T) => U,
-	config: T
-): U;
-function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
-	f: (t: T) => U,
-	config: Promise<T>
-): Promise<U>;
-function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
-	f: (t: T) => U,
-	config: ConfigFn<T>
-): ConfigFn<U>;
-function mapAnyConfigExport<T extends UserConfig, U extends UserConfig>(
-	f: (t: T) => U,
-	config: AnyConfigExport<T>
-): AnyConfigExport<U> {
-	if (typeof config === "function") {
-		return (env) => {
-			const t = config(env);
-			if (t instanceof Promise) {
-				return t.then(f);
-			} else {
-				return f(t);
-			}
-		};
-	} else if (config instanceof Promise) {
-		return config.then(f);
-	} else {
-		return f(config);
-	}
-}
-
 export interface WorkerPoolOptionsContext {
 	// For accessing values from `globalSetup()` (e.g. ports servers started on)
 	// in Miniflare options (e.g. bindings, upstream, hyperdrives, ...)
 	inject: typeof inject;
 }
-export type WorkersUserConfig<T extends UserConfig> = T & {
-	test?: {
-		pool?: "@cloudflare/vitest-pool-workers";
-		poolMatchGlobs?: never;
-		poolOptions?: {
-			workers?:
-				| WorkersPoolOptions
-				| ((ctx: WorkerPoolOptionsContext) => Awaitable<WorkersPoolOptions>);
-		};
-	};
-};
-
-export type WorkersUserConfigExport = WorkersUserConfig<UserConfig>;
-export type WorkersProjectConfigExport = WorkersUserConfig<UserWorkspaceConfig>;
 
 function ensureArrayIncludes<T>(array: T[], items: T[]) {
 	for (const item of items) {
@@ -111,26 +50,16 @@ export function cloudflareTest(options: WorkersPoolOptions): Vite.Plugin {
 			},
 		},
 		configureVitest(context: VitestPluginContext) {
-			// Pre-bundling dependencies with vite
-			context.project.config.deps ??= {};
-			context.project.config.deps.optimizer ??= {};
-			context.project.config.deps.optimizer.ssr ??= {};
-			context.project.config.deps.optimizer.ssr.enabled ??= true;
-			context.project.config.deps.optimizer.ssr.include ??= [];
+			context.project.config.server ??= {};
+			context.project.config.server.deps ??= {};
+			// See https://vitest.dev/config/server.html#inline
+			// Without this Vitest delegates to native import() for external deps in node_modules
+			// Previously we tried to make this work with a fallback module service which emulated Node.js resolution
+			// but that had various bugs. Inlining every dependency is a more accurate option
+			context.project.config.server.deps.inline = true;
 			context.project.config.poolRunner = cloudflarePool(options);
 			context.project.config.pool = "cloudflare-pool";
 			context.project.config.snapshotEnvironment = "cloudflare:snapshot";
-			ensureArrayIncludes(context.project.config.deps.optimizer.ssr.include, [
-				"vitest > @vitest/snapshot > magic-string",
-			]);
-			ensureArrayIncludes(context.project.config.deps.optimizer.ssr.include, [
-				"vitest > @vitest/expect > chai",
-			]);
-			context.project.config.deps.optimizer.ssr.exclude ??= [];
-			ensureArrayIncludes(context.project.config.deps.optimizer.ssr.exclude, [
-				...workerdBuiltinModules,
-				...builtinModules.concat(builtinModules.map((m) => `node:${m}`)),
-			]);
 		},
 		// Run after `vitest:project` plugin:
 		// https://github.com/vitest-dev/vitest/blob/v3.0.5/packages/vitest/src/node/plugins/workspace.ts#L37
@@ -176,6 +105,3 @@ export function cloudflareTest(options: WorkersPoolOptions): Vite.Plugin {
 		},
 	};
 }
-
-export * from "./d1";
-export * from "./pages";

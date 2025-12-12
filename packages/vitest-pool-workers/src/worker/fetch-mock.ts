@@ -1,8 +1,9 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
-import { isMockActive, MockAgent, setDispatcher } from "cloudflare:mock-agent";
+import mock from "cloudflare:mock-agent";
 import type { Dispatcher } from "undici";
 
+const { isMockActive, MockAgent, setDispatcher } = mock;
 const DECODER = new TextDecoder();
 
 /**
