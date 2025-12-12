@@ -12,23 +12,25 @@ import worker from "../src/index";
 // `Request` to pass to `worker.fetch()`.
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
-it.skip("has the correct context exports from `createExecutionContext()`", async () => {
+it("has the correct context exports from `createExecutionContext()`", async () => {
 	const ctx = createExecutionContext();
-	expect(ctx.exports.NamedEntryPoint.greet()).toBe(
-		`Hello MainWorker from Main NamedEntryPoint!`
+	expect(await ctx.exports.NamedEntryPoint.greet()).toMatchInlineSnapshot(
+		`"Hello MainWorker from Main NamedEntryPoint!"`
 	);
 });
 
-it.skip("has the correct imported context exports", async () => {
-	expect(importedExports.NamedEntryPoint.greet()).toBe(
-		`Hello MainWorker from Main NamedEntryPoint!`
+it("has the correct imported context exports", async () => {
+	expect(await importedExports.NamedEntryPoint.greet()).toMatchInlineSnapshot(
+		`"Hello MainWorker from Main NamedEntryPoint!"`
 	);
 });
 
-it.skip("can pass the context exports to a worker", async () => {
+it("can pass the context exports to a worker", async () => {
 	const request = new IncomingRequest("http://example.com");
 	const ctx = createExecutionContext();
 	const response = await worker.fetch(request, env, ctx);
 	await waitOnExecutionContext(ctx);
-	expect(await response.text()).toBe("👋 http://example.com/");
+	expect(await response.text()).toMatchInlineSnapshot(
+		`"👋 Hello MainWorker from Main NamedEntryPoint!"`
+	);
 });

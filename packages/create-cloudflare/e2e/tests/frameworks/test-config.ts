@@ -344,7 +344,6 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 			name: "next",
 			timeout: LONG_TIMEOUT,
 			testCommitMessage: true,
-			flags: ["--yes", "--import-alias", "@/*"],
 			verifyPreview: {
 				previewArgs: ["--", "--inspector-port=0"],
 				route: "/",
