@@ -1,5 +1,9 @@
 import { rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import {
+	writeRedirectedWranglerConfig,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -22,10 +26,6 @@ import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import {
-	writeRedirectedWranglerConfig,
-	writeWranglerConfig,
-} from "./helpers/write-wrangler-config";
 import type { DatabaseInfo } from "../d1/types";
 
 vi.mock("../utils/fetch-secrets", () => ({

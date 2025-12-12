@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import { join } from "node:path";
 import { UserError } from "@cloudflare/workers-utils";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -10,7 +11,6 @@ import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("execute", () => {
 	const std = mockConsoleMethods();

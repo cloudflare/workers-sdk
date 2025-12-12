@@ -1,9 +1,9 @@
 import * as fs from "node:fs";
 import { experimental_readRawConfig } from "@cloudflare/workers-utils";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { describe, expect, it } from "vitest";
 import { readConfig } from "../../config";
 import { runInTempDir } from "../helpers/run-in-tmp";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("readConfig()", () => {
 	runInTempDir();

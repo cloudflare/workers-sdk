@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import TOML from "smol-toml";
@@ -21,7 +22,6 @@ import { normalizeProgressSteps } from "../helpers/normalize-progress";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { toString } from "../helpers/serialize-form-data-entry";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { StrictRequest } from "msw";
 import type { FormDataEntryValue } from "undici";

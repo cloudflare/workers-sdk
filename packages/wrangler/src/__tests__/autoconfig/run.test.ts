@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as c3 from "../../autoconfig/c3-vendor/packages";
 import * as details from "../../autoconfig/details";
@@ -16,7 +17,6 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type { Framework } from "../../autoconfig/frameworks";
 import type { MockInstance } from "vitest";
 

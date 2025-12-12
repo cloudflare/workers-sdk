@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { actionsForEventCategories } from "../../r2/helpers/notification";
@@ -10,7 +11,6 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { createFetchResult, msw, mswR2handlers } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type { BucketLockRule } from "../../r2/helpers/bucket";
 import type {
 	PutNotificationRequestBody,

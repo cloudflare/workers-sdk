@@ -64,6 +64,10 @@ export {
 	experimental_readRawConfig,
 	type ConfigBindingOptions as Experimental_ConfigBindingOptions,
 } from "@cloudflare/workers-utils";
+
+// TODO: consider if we want to keep exporting `experimental_patchConfig` from wrangler.
+//       wouldn't it be better for consumers to depend and use it directly from
+//       @cloudflare/workers-utils instead?
 export { experimental_patchConfig } from "@cloudflare/workers-utils";
 
 export {

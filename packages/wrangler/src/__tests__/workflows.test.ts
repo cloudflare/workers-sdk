@@ -4,6 +4,7 @@ import {
 	mockModifiedDate,
 	mockQueuedDate,
 	mockStartDate,
+	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it } from "vitest";
@@ -15,7 +16,6 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { Instance, Workflow } from "../workflows/types";
 
 describe("wrangler workflows", () => {

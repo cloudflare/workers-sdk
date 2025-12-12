@@ -2,7 +2,10 @@ import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	getGlobalWranglerConfigPath,
 } from "@cloudflare/workers-utils";
-import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
+import {
+	normalizeString,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CI } from "../is-ci";
@@ -26,7 +29,6 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { UserAuthConfig } from "../user";
 import type { Config } from "@cloudflare/workers-utils";
 import type { MockInstance } from "vitest";

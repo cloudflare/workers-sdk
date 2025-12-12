@@ -1,3 +1,7 @@
+import {
+	writeRedirectedWranglerConfig,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, test, vi } from "vitest";
 import { dedent } from "../../utils/dedent";
@@ -16,10 +20,6 @@ import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { toString } from "../helpers/serialize-form-data-entry";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import {
-	writeRedirectedWranglerConfig,
-	writeWranglerConfig,
-} from "../helpers/write-wrangler-config";
 import type { WorkerMetadata } from "@cloudflare/workers-utils";
 
 describe("versions upload", () => {

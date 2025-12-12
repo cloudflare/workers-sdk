@@ -1,5 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
+import {
+	normalizeString,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { logger } from "../../logger";
 import {
@@ -9,7 +12,6 @@ import {
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("pages build env", () => {
 	const std = mockConsoleMethods();

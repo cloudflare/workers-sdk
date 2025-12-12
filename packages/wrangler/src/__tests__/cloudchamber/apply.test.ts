@@ -4,6 +4,7 @@ import {
 	SchedulingPolicy,
 	SecretAccessType,
 } from "@cloudflare/containers-shared";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
@@ -14,7 +15,6 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import { mockAccount } from "./utils";
 import type {
 	Application,

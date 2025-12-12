@@ -1,3 +1,4 @@
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { getDurationDates } from "../../d1/insights";
@@ -8,7 +9,6 @@ import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("getDurationDates()", () => {
 	beforeAll(() => {
