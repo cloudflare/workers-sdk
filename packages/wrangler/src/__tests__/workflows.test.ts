@@ -513,28 +513,26 @@ describe("wrangler workflows", () => {
 			},
 		];
 
-		const event = "my-event";
-
 		it("should send an event without payload to the bar instance given a name", async () => {
 			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
-			await mockSendEventRequest("bar", event);
+			await mockSendEventRequest("bar", "my-event");
 
 			await runWrangler(
-				`workflows instances send-event some-workflow bar --type ${event}`
+				"workflows instances send-event some-workflow bar --type my-event"
 			);
 			expect(std.info).toMatchInlineSnapshot(
-				`"📤 The event with type \\"my-event\\" and payload \\"{}\\" was sent to the instance \\"bar\\" from some-workflow"`
+				`"📤 The event with type \\"my-event\\" was sent to the instance \\"bar\\" from some-workflow"`
 			);
 		});
 
 		it("should send an event with payload to the bar instance given a name", async () => {
 			writeWranglerConfig();
 			await mockGetInstances(mockInstances);
-			await mockSendEventRequest("bar", event);
+			await mockSendEventRequest("bar", "my-event");
 
 			await runWrangler(
-				`workflows instances send-event some-workflow bar --type ${event} --payload '{"key": "value"}'`
+				`workflows instances send-event some-workflow bar --type my-event --payload '{"key": "value"}'`
 			);
 			expect(std.info).toMatchInlineSnapshot(
 				`"📤 The event with type \\"my-event\\" and payload \\"{\\"key\\": \\"value\\"}\\" was sent to the instance \\"bar\\" from some-workflow"`
