@@ -7,7 +7,6 @@ import {
 	loadConfigFromFile,
 	mergeConfig,
 	preview,
-	Rollup,
 } from "vite";
 import { beforeAll, inject } from "vitest";
 import type * as http from "node:http";
@@ -20,6 +19,7 @@ import type {
 	PluginOption,
 	PreviewServer,
 	ResolvedConfig,
+	Rollup,
 	UserConfig,
 	ViteDevServer,
 } from "vite";
