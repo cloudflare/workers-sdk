@@ -61,7 +61,15 @@ export const workflowsInstancesSendEventCommand = createCommand({
 			id = instances[0].id;
 		}
 
-		const payload = JSON.parse(args.payload);
+		let payload;
+		try {
+			payload = JSON.parse(args.payload);
+		} catch (e) {
+			logger.error(
+				`Error while parsing event payload: "${args.payload}" with ${e}' `
+			);
+			return;
+		}
 
 		await fetchResult(
 			config,
@@ -71,12 +79,14 @@ export const workflowsInstancesSendEventCommand = createCommand({
 				headers: {
 					"Content-Type": "application/json",
 				},
-				body: JSON.stringify(payload),
+				body: args.payload,
 			}
 		);
 
+		const payloadInfo =
+			Object.keys(payload).length > 0 ? ` and payload "${args.payload}"` : "";
 		logger.info(
-			`📤 The event with type "${args.type}" and payload "${args.payload}" was sent to the instance "${id}" from ${args.name}`
+			`📤 The event with type "${args.type}"${payloadInfo} was sent to the instance "${id}" from ${args.name}`
 		);
 	},
 });
