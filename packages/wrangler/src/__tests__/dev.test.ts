@@ -5,6 +5,7 @@ import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	FatalError,
 } from "@cloudflare/workers-utils";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import getPort from "get-port";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
@@ -26,7 +27,6 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	Binding,
 	StartDevWorkerInput,
