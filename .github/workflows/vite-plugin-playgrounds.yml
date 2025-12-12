@@ -53,7 +53,7 @@ jobs:
       - name: Build plugin with initial Vite version
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: |
-          pnpm build --filter @cloudflare/vite-plugin
+          pnpm turbo build --filter @cloudflare/vite-plugin
       - name: Downgrade to Vite 6
         if: steps.changes.outputs.everything_but_markdown == 'true' && matrix.vite == 'vite-6'
         run: |
@@ -64,10 +64,10 @@ jobs:
           pnpm update -r --no-save vite@beta
       - name: Run dev playground tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        # We place `--filter` directly after `pnpm` to bypass TurboRepo when running this command
-        # This ensures that the Vite plugin is not rebuilt using a different Vite version
+        # We use `--only` to prevent TurboRepo from rebuilding dependencies
+        # This ensures the Vite plugin is not rebuilt using a different Vite version
         run: |
-          pnpm --filter @vite-plugin-cloudflare/playground test:ci:serve
+          pnpm turbo test:ci:serve --filter @vite-plugin-cloudflare/playground --only
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
@@ -76,10 +76,10 @@ jobs:
           CI_OS: ${{ matrix.os }}
       - name: Run build/preview playground tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        # We place `--filter` directly after `pnpm` to bypass TurboRepo when running this command
-        # This ensures that the Vite plugin is not rebuilt using a different Vite version
+        # We use `--only` to prevent TurboRepo from rebuilding dependencies
+        # This ensures the Vite plugin is not rebuilt using a different Vite version
         run: |
-          pnpm --filter @vite-plugin-cloudflare/playground test:ci:build
+          pnpm turbo test:ci:build --filter @vite-plugin-cloudflare/playground --only
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
