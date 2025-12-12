@@ -185,6 +185,7 @@ describe("validatePagesConfig()", () => {
 						host: "test-host",
 						enable_containers: false,
 						container_engine: undefined,
+						generate_types: false,
 					},
 				},
 			};

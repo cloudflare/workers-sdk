@@ -44,6 +44,7 @@ describe("normalizeAndValidateConfig()", () => {
 				enable_containers: true,
 				inspector_port: undefined,
 				container_engine: undefined,
+				generate_types: false,
 			},
 			containers: undefined,
 			cloudchamber: {},
@@ -141,6 +142,7 @@ describe("normalizeAndValidateConfig()", () => {
 					local_protocol: "https",
 					upstream_protocol: "http",
 					enable_containers: false,
+					generate_types: false,
 				},
 			};
 
@@ -167,6 +169,7 @@ describe("normalizeAndValidateConfig()", () => {
 					local_protocol: "wss",
 					upstream_protocol: "ws",
 					enable_containers: true,
+					generate_types: false,
 				},
 			};
 
