@@ -25,7 +25,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 				"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": `preserve-e2e-vite-remote-alt`,
 			};
 
-			const projectPath = seed("remote-bindings", "pnpm", replacements);
+			const projectPath = seed("remote-bindings", { pm: "pnpm", replacements });
 
 			beforeAll(async () => {
 				try {
@@ -139,7 +139,9 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 		});
 
 	describe("remote bindings without actually establishing a remote connection", () => {
-		const projectPath = seed("remote-bindings-config-account-id", "pnpm");
+		const projectPath = seed("remote-bindings-config-account-id", {
+			pm: "pnpm",
+		});
 
 		test("for connection to remote bindings during dev the account_id present in the wrangler config file is used", async ({
 			expect,
@@ -161,7 +163,9 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 	});
 
 	describe("failure to connect to remote bindings", () => {
-		const projectPath = seed("remote-bindings-incorrect-r2-config", "pnpm");
+		const projectPath = seed("remote-bindings-incorrect-r2-config", {
+			pm: "pnpm",
+		});
 
 		describe.each(commands)('with "%s" command', (command) => {
 			// On Windows the path for the miniflare dependency gets pretty long and this fails in node < 22.7
@@ -187,7 +191,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 }
 
 describe("remote bindings disabled", () => {
-	const projectPath = seed("remote-bindings-disabled", "pnpm");
+	const projectPath = seed("remote-bindings-disabled", { pm: "pnpm" });
 
 	describe.each(commands)('with "%s" command', (command) => {
 		// On Windows the path for the miniflare dependency gets pretty long and this fails in node < 22.7
