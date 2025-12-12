@@ -104,7 +104,7 @@ export function cloudflareTest(options: WorkersPoolOptions): Vite.Plugin {
 	const uuid = crypto.randomUUID();
 	let main: string | undefined;
 	return {
-		name: "@cloudflare/vitest-pool-workers:config",
+		name: "@cloudflare/vitest-pool-workers",
 		api: {
 			setMain(newMain: string) {
 				main = newMain;
@@ -119,6 +119,7 @@ export function cloudflareTest(options: WorkersPoolOptions): Vite.Plugin {
 			context.project.config.deps.optimizer.ssr.include ??= [];
 			context.project.config.poolRunner = cloudflarePool(options);
 			context.project.config.pool = "cloudflare-pool";
+			context.project.config.snapshotEnvironment = "cloudflare:snapshot";
 			ensureArrayIncludes(context.project.config.deps.optimizer.ssr.include, [
 				"vitest > @vitest/snapshot > magic-string",
 			]);

@@ -28,13 +28,11 @@
 	"type": "module",
 	"exports": {
 		".": {
-			"types": "./types/cloudflare-test.d.ts",
+			"types": "./dist/pool/index.d.ts",
 			"import": "./dist/pool/index.mjs"
 		},
-		"./config": {
-			"types": "./dist/config/index.d.ts",
-			"import": "./dist/config/index.mjs",
-			"require": "./dist/config/index.mjs"
+		"./types": {
+			"types": "./types/cloudflare-test.d.ts"
 		}
 	},
 	"main": "dist/pool/index.mjs",
