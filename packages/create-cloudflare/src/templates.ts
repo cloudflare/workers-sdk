@@ -538,7 +538,7 @@ export const createContext = async (
 		);
 
 		const framework = await processArgument(args, "framework", {
-			type: "select",
+			type: "typeahead",
 			label: "framework",
 			question: "Which development framework do you want to use?",
 			options: frameworkOptions.concat(backOption),
@@ -639,7 +639,7 @@ export const createContext = async (
 		}
 
 		const type = await processArgument(args, "type", {
-			type: "select",
+			type: "typeahead",
 			question: "Which template would you like to use?",
 			label: "type",
 			options: templateOptions.concat(backOption),
