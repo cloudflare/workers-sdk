@@ -27,6 +27,7 @@ import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import deploy from "./deploy";
+import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 import type { AutoConfigSummary } from "../autoconfig/types";
 
 export const deployCommand = createCommand({
@@ -295,6 +296,18 @@ export const deployCommand = createCommand({
 					useRedirectIfAvailable: true,
 				});
 			}
+		}
+
+		// Note: the open-next delegation should happen after we run the auto-config logic so that we
+		//       make sure that the deployment of brand newly auto-configured Next.js apps is correctly
+		//       delegated here
+		const deploymentDelegatedToOpenNext =
+			!args.dryRun &&
+			(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
+
+		if (deploymentDelegatedToOpenNext) {
+			// We've delegated the deployment to open-next so we must not run any actual deployment logic now
+			return;
 		}
 
 		if (!config.configPath) {

@@ -114,7 +114,10 @@ type VariableNames =
 	/** Docker host configuration (handled separately from environment variable factory). */
 	| "WRANGLER_DOCKER_HOST"
 	/** Docker host configuration (handled separately from environment variable factory). */
-	| "DOCKER_HOST";
+	| "DOCKER_HOST"
+
+	/** Environment variable used to signal that the current process is being run by the open-next deploy command. */
+	| "OPEN_NEXT_DEPLOY";
 
 type DeprecatedNames =
 	| "CF_ACCOUNT_ID"

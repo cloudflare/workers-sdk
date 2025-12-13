@@ -328,3 +328,11 @@ export const getWranglerHideBanner = getBooleanEnvironmentVariableFactory({
 export const getCloudflareEnv = getEnvironmentVariableFactory({
 	variableName: "CLOUDFLARE_ENV",
 });
+
+/**
+ * `OPEN_NEXT_DEPLOY` is an environment variables that indicates that the current process is being
+ * run by the open-next deploy command
+ */
+export const getOpenNextDeployFromEnv = getEnvironmentVariableFactory({
+	variableName: "OPEN_NEXT_DEPLOY",
+});
