@@ -29,6 +29,7 @@ import { cloudchamber } from "./cloudchamber";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
+import { globalFlags } from "./global-flags";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { handleError } from "./core/handle-errors";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
@@ -97,6 +98,14 @@ import {
 	telemetryNamespace,
 	telemetryStatusCommand,
 } from "./metrics/commands";
+import {
+	completeCommand,
+	completionsBashCommand,
+	completionsFishCommand,
+	completionsNamespace,
+	completionsZshCommand,
+	setDefinitionTree,
+} from "./completions";
 import {
 	mTlsCertificateDeleteCommand,
 	mTlsCertificateListCommand,
@@ -346,53 +355,6 @@ if (proxy) {
 }
 
 export function createCLIParser(argv: string[]) {
-	const globalFlags = {
-		v: {
-			describe: "Show version number",
-			alias: "version",
-			type: "boolean",
-		},
-		cwd: {
-			describe:
-				"Run as if Wrangler was started in the specified directory instead of the current working directory",
-			type: "string",
-			requiresArg: true,
-		},
-		config: {
-			alias: "c",
-			describe: "Path to Wrangler configuration file",
-			type: "string",
-			requiresArg: true,
-		},
-		env: {
-			alias: "e",
-			describe:
-				"Environment to use for operations, and for selecting .env and .dev.vars files",
-			type: "string",
-			requiresArg: true,
-		},
-		"env-file": {
-			describe:
-				"Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files",
-			type: "string",
-			array: true,
-			requiresArg: true,
-		},
-		"experimental-provision": {
-			describe: `Experimental: Enable automatic resource provisioning`,
-			type: "boolean",
-			default: true,
-			hidden: true,
-			alias: ["x-provision"],
-		},
-		"experimental-auto-create": {
-			describe: "Automatically provision draft bindings with new resources",
-			type: "boolean",
-			default: true,
-			hidden: true,
-			alias: "x-auto-create",
-		},
-	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
 	const wrangler: CommonYargsArgv = makeCLI(argv)
@@ -1583,6 +1545,33 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("build");
+
+	registry.define([
+		{
+			command: "wrangler completions",
+			definition: completionsNamespace,
+		},
+		{
+			command: "wrangler completions bash",
+			definition: completionsBashCommand,
+		},
+		{
+			command: "wrangler completions zsh",
+			definition: completionsZshCommand,
+		},
+		{
+			command: "wrangler completions fish",
+			definition: completionsFishCommand,
+		},
+		{
+			command: "wrangler __complete",
+			definition: completeCommand,
+		},
+	]);
+	registry.registerNamespace("completions");
+
+	// Store definition tree for fish completions generation
+	setDefinitionTree(registry.getDefinitionTreeRoot().subtree);
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
