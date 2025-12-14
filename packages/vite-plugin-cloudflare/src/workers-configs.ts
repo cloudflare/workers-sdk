@@ -247,10 +247,11 @@ function getWorkerNonApplicableWarnLines(
 		);
 	}
 
-	if (notRelevant.size > 0)
+	if (notRelevant.size > 0) {
 		lines.push(
 			`${linePrefix}${[...notRelevant].map((config) => `\`${config}\``).join(", ")} which ${notRelevant.size > 1 ? "are" : "is"} not relevant in the context of a Vite project`
 		);
+	}
 
 	return lines;
 }
@@ -264,6 +265,7 @@ function isReplacedByVite(
 function isNotRelevant(
 	configName: string
 ): configName is NonApplicableConfigNotRelevant {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	return nonApplicableWorkerConfigs.notRelevant.includes(configName as any);
 }
 

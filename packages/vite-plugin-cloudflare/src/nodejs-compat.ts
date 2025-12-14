@@ -5,9 +5,9 @@ import { getCloudflarePreset } from "@cloudflare/unenv-preset";
 import { getNodeCompat } from "miniflare";
 import { resolvePathSync } from "mlly";
 import { defineEnv } from "unenv";
-import * as vite from "vite";
 import type { ResolvedWorkerConfig } from "./plugin-config";
 import type { ResolvedEnvironment } from "unenv";
+import type * as vite from "vite";
 
 type InjectsByModule = Map<
 	string,
@@ -240,8 +240,8 @@ export const NODEJS_MODULES_RE = new RegExp(
 	`^(node:)?(${builtinModules.join("|")})$`
 );
 
-export function isNodeAlsModule(path: string) {
-	return /^(node:)?async_hooks$/.test(path);
+export function isNodeAlsModule(modulePath: string) {
+	return /^(?:node:)?async_hooks$/.test(modulePath);
 }
 
 export function assertHasNodeJsCompat(

@@ -7,6 +7,7 @@ export default {
 		if (
 			url.pathname ===
 			// doing base path normalization, in real world you would built in framework features from libs like Hono
+			// eslint-disable-next-line turbo/no-undeclared-env-vars
 			`${import.meta.env.BASE_URL}/x-forwarded-host`.replace(/\/+/g, "/")
 		) {
 			return new Response(request.headers.get("X-Forwarded-Host"));

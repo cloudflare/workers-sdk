@@ -1,4 +1,4 @@
-function sleep(ms: number) {
+function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -38,6 +38,7 @@ export default {
 		if (url.pathname === "/") {
 			const { readable, writable } = new TransformStream();
 
+			// eslint-disable-next-line @typescript-eslint/no-floating-promises
 			streamResponse(writable);
 
 			return new Response(readable, {

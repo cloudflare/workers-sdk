@@ -49,6 +49,7 @@ export const additionalModulesPlugin = createPlugin(
 			},
 			hotUpdate(options) {
 				if (additionalModulePaths.has(options.file)) {
+					// eslint-disable-next-line @typescript-eslint/no-floating-promises
 					options.server.restart();
 					return [];
 				}
@@ -70,7 +71,7 @@ export const additionalModulesPlugin = createPlugin(
 
 					try {
 						source = await fsp.readFile(modulePath);
-					} catch (error) {
+					} catch {
 						throw new Error(
 							`Import "${modulePath}" not found. Does the file exist?`
 						);
