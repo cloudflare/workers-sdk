@@ -69,6 +69,15 @@ export async function runAutoConfig(
 		);
 	}
 
+	if (
+		autoConfigDetails.framework &&
+		!autoConfigDetails.framework?.autoConfigSupported
+	) {
+		throw new FatalError(
+			`The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+		);
+	}
+
 	const wranglerConfig: RawConfig = {
 		$schema: "node_modules/wrangler/config-schema.json",
 		name: autoConfigDetails.workerName,
