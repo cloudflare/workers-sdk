@@ -1912,9 +1912,9 @@ const validateVars =
 		let isValid = true;
 		const fieldPath =
 			config === undefined ? `${field}` : `env.${envName}.${field}`;
-		const configVars = Object.keys(config?.vars ?? {});
-		// If there are no top level vars then there is nothing to do here.
-		if (configVars.length > 0) {
+
+		// Validate var values if vars is defined
+		if (value !== undefined) {
 			if (typeof value !== "object" || value === null) {
 				diagnostics.errors.push(
 					`The field "${fieldPath}" should be an object but got ${JSON.stringify(
@@ -1923,6 +1923,22 @@ const validateVars =
 				);
 				isValid = false;
 			} else {
+				// Check each var value for invalid types (e.g., Date objects)
+				// and convert them to strings automatically
+				for (const [varName, varValue] of Object.entries(value)) {
+					if (varValue instanceof Date) {
+						// Convert Date to ISO date string (YYYY-MM-DD format)
+						const dateString = varValue.toISOString().split("T")[0];
+						(value as Record<string, unknown>)[varName] = dateString;
+					}
+				}
+			}
+		}
+
+		// Check for vars that exist at top level but not in the current environment
+		const configVars = Object.keys(config?.vars ?? {});
+		if (configVars.length > 0) {
+			if (typeof value === "object" && value !== null) {
 				for (const varName of configVars) {
 					if (!(varName in value)) {
 						diagnostics.warnings.push(
