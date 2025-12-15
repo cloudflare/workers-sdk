@@ -1,12 +1,11 @@
 import { createCommand, createNamespace } from "../core/create-command";
 import { handleComplete } from "./complete-handler";
 import { logger } from "../logger";
-import { getDefinitionTree } from "./registry-store";
 import { getBashScript, getFishScript, getZshScript } from "./scripts";
 
 export const completionsNamespace = createNamespace({
 	metadata: {
-		description: "Generate shell completion scripts",
+		description: "⌨️  Generate shell completion scripts",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		epilogue: `Installation:
@@ -27,8 +26,7 @@ export const completionsBashCommand = createCommand({
 		provideConfig: false,
 	},
 	handler() {
-		const tree = getDefinitionTree();
-		logger.log(getBashScript(tree));
+		logger.log(getBashScript());
 	},
 });
 
@@ -43,8 +41,7 @@ export const completionsZshCommand = createCommand({
 		provideConfig: false,
 	},
 	handler() {
-		const tree = getDefinitionTree();
-		logger.log(getZshScript(tree));
+		logger.log(getZshScript());
 	},
 });
 
@@ -59,8 +56,7 @@ export const completionsFishCommand = createCommand({
 		provideConfig: false,
 	},
 	handler() {
-		const tree = getDefinitionTree();
-		logger.log(getFishScript(tree));
+		logger.log(getFishScript());
 	},
 });
 

@@ -1,10 +1,8 @@
-import type { DefinitionTree } from "../core/types";
-
 /**
  * Generate dynamic bash completion script.
  * Calls `wrangler __complete` at runtime for completions.
  */
-export function getBashScript(_tree: DefinitionTree): string {
+export function getBashScript(): string {
 	return `###-begin-wrangler-completions-###
 #
 # wrangler bash completion
@@ -39,7 +37,7 @@ complete -o default -F _wrangler_completions wrangler
  * Generate dynamic zsh completion script.
  * Calls `wrangler __complete` at runtime for completions.
  */
-export function getZshScript(_tree: DefinitionTree): string {
+export function getZshScript(): string {
 	return `#compdef wrangler
 ###-begin-wrangler-completions-###
 #
@@ -69,7 +67,7 @@ compdef _wrangler wrangler
  * Generate dynamic fish completion script.
  * Calls `wrangler __complete` at runtime for completions.
  */
-export function getFishScript(_tree: DefinitionTree): string {
+export function getFishScript(): string {
 	return `###-begin-wrangler-completions-###
 #
 # wrangler fish completion

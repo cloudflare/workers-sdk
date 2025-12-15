@@ -1570,7 +1570,7 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("completions");
 
-	// Store definition tree for fish completions generation
+	// Store definition tree for completions generation
 	setDefinitionTree(registry.getDefinitionTreeRoot().subtree);
 
 	// This set to false to allow overwrite of default behaviour

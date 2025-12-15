@@ -16,7 +16,7 @@ function shellAvailable(shell: string): boolean {
 describe("wrangler", () => {
 	describe("completions", () => {
 		const std = mockConsoleMethods();
-		runInTempDir({ homedir: "./home" });
+		runInTempDir();
 
 		test("should show available shells in help", async ({ expect }) => {
 			const result = runWrangler("completions --help");

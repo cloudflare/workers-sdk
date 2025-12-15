@@ -208,8 +208,8 @@ function sanitizeDescription(desc: string): string {
 			.replace(/\t/g, " ")
 			// Remove newlines
 			.replace(/\n/g, " ")
-			// Trim and limit length
 			.trim()
+			// Limit to 80 chars to prevent terminal overflow
 			.slice(0, 80)
 	);
 }
