@@ -49,8 +49,7 @@ export const additionalModulesPlugin = createPlugin(
 			},
 			hotUpdate(options) {
 				if (additionalModulePaths.has(options.file)) {
-					// eslint-disable-next-line @typescript-eslint/no-floating-promises
-					options.server.restart();
+					void options.server.restart();
 					return [];
 				}
 			},
