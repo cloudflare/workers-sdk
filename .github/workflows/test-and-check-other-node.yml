@@ -12,7 +12,7 @@ permissions:
 jobs:
   test-other-node-versions:
     timeout-minutes: 45
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.node_version }}-test-other-node-versions
       cancel-in-progress: true
@@ -48,14 +48,70 @@ jobs:
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
 
-      - name: Run tests (packages)
+      - name: Run tests (miniflare)
         # We are running the package tests first be able to get early feedback on changes.
         # There is no point in running the fixtures if a package is broken.
         if: ${{
           steps.changes.outputs.everything_but_markdown == 'true' &&
           (matrix.node_version != 24 || contains(github.event.pull_request.labels.*.name, 'test on node 24'))
           }}
-        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*"
+        run: pnpm run test:ci --log-order=stream --filter="./packages/miniflare" --force
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
+          CI_OS: ${{ matrix.description }}
+
+      - name: Run tests (miniflare)
+        # We are running the package tests first be able to get early feedback on changes.
+        # There is no point in running the fixtures if a package is broken.
+        if: ${{
+          steps.changes.outputs.everything_but_markdown == 'true' &&
+          (matrix.node_version != 24 || contains(github.event.pull_request.labels.*.name, 'test on node 24'))
+          }}
+        run: pnpm run test:ci --log-order=stream --filter="./packages/miniflare" --force
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
+          CI_OS: ${{ matrix.description }}
+
+      - name: Run tests (miniflare)
+        # We are running the package tests first be able to get early feedback on changes.
+        # There is no point in running the fixtures if a package is broken.
+        if: ${{
+          steps.changes.outputs.everything_but_markdown == 'true' &&
+          (matrix.node_version != 24 || contains(github.event.pull_request.labels.*.name, 'test on node 24'))
+          }}
+        run: pnpm run test:ci --log-order=stream --filter="./packages/miniflare" --force
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
+          CI_OS: ${{ matrix.description }}
+
+      - name: Run tests (miniflare)
+        # We are running the package tests first be able to get early feedback on changes.
+        # There is no point in running the fixtures if a package is broken.
+        if: ${{
+          steps.changes.outputs.everything_but_markdown == 'true' &&
+          (matrix.node_version != 24 || contains(github.event.pull_request.labels.*.name, 'test on node 24'))
+          }}
+        run: pnpm run test:ci --log-order=stream --filter="./packages/miniflare" --force
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
+          CI_OS: ${{ matrix.description }}
+
+      - name: Run tests (miniflare)
+        # We are running the package tests first be able to get early feedback on changes.
+        # There is no point in running the fixtures if a package is broken.
+        if: ${{
+          steps.changes.outputs.everything_but_markdown == 'true' &&
+          (matrix.node_version != 24 || contains(github.event.pull_request.labels.*.name, 'test on node 24'))
+          }}
+        run: pnpm run test:ci --log-order=stream --filter="./packages/miniflare" --force
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
