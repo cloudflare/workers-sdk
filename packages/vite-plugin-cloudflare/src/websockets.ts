@@ -49,8 +49,7 @@ export function handleWebSocket(
 				socket,
 				head,
 				async (clientWebSocket) => {
-					// eslint-disable-next-line @typescript-eslint/no-floating-promises
-					coupleWebSocket(clientWebSocket, workerWebSocket);
+					void coupleWebSocket(clientWebSocket, workerWebSocket);
 					nodeWebSocket.emit("connection", clientWebSocket, request);
 				}
 			);
