@@ -23,7 +23,7 @@ export const r2BucketCatalogNamespace = createNamespace({
 	metadata: {
 		description:
 			"Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: R2 Data Catalog",
 	},
 });
@@ -31,7 +31,7 @@ export const r2BucketCatalogNamespace = createNamespace({
 export const r2BucketCatalogEnableCommand = createCommand({
 	metadata: {
 		description: "Enable the data catalog on an R2 bucket",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: R2 Data Catalog",
 	},
 	positionalArgs: ["bucket"],
@@ -71,7 +71,7 @@ For more details, refer to: https://developers.cloudflare.com/r2/api/s3/tokens/`
 export const r2BucketCatalogDisableCommand = createCommand({
 	metadata: {
 		description: "Disable the data catalog for an R2 bucket",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: R2 Data Catalog",
 	},
 	positionalArgs: ["bucket"],
@@ -115,7 +115,7 @@ export const r2BucketCatalogDisableCommand = createCommand({
 export const r2BucketCatalogGetCommand = createCommand({
 	metadata: {
 		description: "Get the status of the data catalog for an R2 bucket",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: R2 Data Catalog",
 	},
 	positionalArgs: ["bucket"],
@@ -168,7 +168,7 @@ export const r2BucketCatalogCompactionNamespace = createNamespace({
 	metadata: {
 		description:
 			"Control settings for automatic file compaction maintenance jobs for your R2 data catalog",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: R2 Data Catalog",
 	},
 });
@@ -177,7 +177,7 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 	metadata: {
 		description:
 			"Enable automatic file compaction for your R2 data catalog or a specific table",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: R2 Data Catalog",
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
@@ -273,7 +273,7 @@ export const r2BucketCatalogCompactionDisableCommand = createCommand({
 	metadata: {
 		description:
 			"Disable automatic file compaction for your R2 data catalog or a specific table",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: R2 Data Catalog",
 	},
 	positionalArgs: ["bucket", "namespace", "table"],

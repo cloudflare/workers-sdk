@@ -51,7 +51,7 @@ export type DeepFlatten<T> = T extends object
 export type Command = `wrangler${string}`;
 export type Metadata = {
 	description: string;
-	status: "experimental" | "alpha" | "private-beta" | "open-beta" | "stable";
+	status: "experimental" | "alpha" | "private beta" | "open beta" | "stable";
 	statusMessage?: string;
 	deprecated?: boolean;
 	deprecatedMessage?: string;

@@ -751,7 +751,7 @@ export const kvKeyDeleteCommand = createCommand({
 export const kvBulkGetCommand = createCommand({
 	metadata: {
 		description: "Gets multiple key-value pairs from a namespace",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: KV",
 	},
 	behaviour: {

@@ -55,7 +55,7 @@ function formatSqlResults(data: SqlQueryResponse, duration: number): void {
 export const r2SqlNamespace = createNamespace({
 	metadata: {
 		description: "Send queries and manage R2 SQL",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: R2 SQL",
 	},
 });
@@ -63,7 +63,7 @@ export const r2SqlNamespace = createNamespace({
 export const r2SqlQueryCommand = createCommand({
 	metadata: {
 		description: "Execute SQL query against R2 Data Catalog",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: R2",
 	},
 	positionalArgs: ["warehouse", "query"],
