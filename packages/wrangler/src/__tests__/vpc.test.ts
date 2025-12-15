@@ -26,7 +26,7 @@ describe("vpc help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler vpc
 
-			🌐 Manage VPC [open-beta]
+			🌐 Manage VPC [open beta]
 
 			COMMANDS
 			  wrangler vpc service  🔗 Manage VPC services

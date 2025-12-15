@@ -27,7 +27,7 @@ export const pipelinesSinksCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new sink",
 		owner: "Product: Pipelines",
-		status: "open-beta",
+		status: "open beta",
 	},
 	positionalArgs: ["sink"],
 	args: {

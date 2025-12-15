@@ -137,7 +137,7 @@ Errors are caught at the top-level and formatted for the console.
 
 ### Status / Deprecation
 
-Status can be alpha, private-beta, open-beta, or stable. Breaking changes can freely be made in alpha or private-beta. Try avoid breaking changes in open-beta but are acceptable and should be called out in [a changeset](../../CONTRIBUTING.md#Changesets).
+Status can be alpha, "private beta", "open beta", or stable. Breaking changes can freely be made in alpha or "private beta". Try avoid breaking changes in "open beta" but are acceptable and should be called out in [a changeset](../../CONTRIBUTING.md#Changesets).
 
 Stable commands should never have breaking changes.
 
