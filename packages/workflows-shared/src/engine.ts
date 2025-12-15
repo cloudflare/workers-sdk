@@ -59,7 +59,11 @@ export type Log = {
 	event: InstanceEvent;
 	group: string | null;
 	target: string | null;
-	metadata: string;
+	metadata: {
+		result: string;
+		payload: string;
+		error: { name: string; message: string };
+	};
 };
 
 export type EngineLogs = {
@@ -164,7 +168,7 @@ export class Engine extends DurableObject<Env> {
 		};
 	}
 
-	readLogsFromEvent(eventType: string): EngineLogs {
+	readLogsFromEvent(eventType: InstanceEvent): EngineLogs {
 		const logs = [
 			...this.ctx.storage.sql.exec<{
 				event: InstanceEvent;
@@ -374,16 +378,26 @@ export class Engine extends DurableObject<Env> {
 
 		if (isOutput) {
 			if (status !== InstanceStatus.Complete) {
-				throw new Error("Instance is not complete");
+				throw new Error(
+					`Cannot retrieve output: Workflow instance is in status "${instanceStatusName(status)}" but must be "complete" to have an output available`
+				);
 			}
-			const logs = this.readLogsFromEvent("WORKFLOW_SUCCESS");
-			return logs.logs.at(-1)?.metadata;
+			const logs = this.readLogsFromEvent(InstanceEvent.WORKFLOW_SUCCESS).logs;
+			return logs.at(0)?.metadata.result;
 		} else {
 			if (status !== InstanceStatus.Errored) {
-				throw new Error("Instance is not errored");
+				throw new Error(
+					`Cannot retrieve error: Workflow instance is in status "${instanceStatusName(status)}" but must be "errored" to have error information available`
+				);
 			}
-			const logs = this.readLogsFromEvent("WORKFLOW_FAILURE");
-			return logs.logs.at(-1)?.metadata;
+			const logs = this.readLogsFromEvent(InstanceEvent.WORKFLOW_FAILURE).logs;
+			const log = logs.at(0);
+			if (!log?.metadata.error) {
+				throw new Error(
+					"Cannot retrieve error: No workflow instance failure log found"
+				);
+			}
+			return log.metadata.error;
 		}
 	}
 
