@@ -80,6 +80,12 @@ export async function fetch(
 		return responsePromise;
 	}
 
+	// Sometimes, keep-alive connections can sometimes cause issues with sockets
+	// disconnecting unexpectedly. To mitigate this, try to avoid keep-alive race
+	// conditions by telling the runtime to close the connection immediately after
+	// the request is complete
+	request.headers.set("Connection", "close");
+
 	const response = await undici.fetch(request, {
 		dispatcher: requestInit?.dispatcher,
 	});
