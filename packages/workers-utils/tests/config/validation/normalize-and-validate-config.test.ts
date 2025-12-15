@@ -5466,6 +5466,61 @@ describe("normalizeAndValidateConfig()", () => {
 				      Please add \\"unsafe\\" to \\"env.ENV1\\"."
 			`);
 		});
+
+		it("should convert Date values in vars to strings (parsed by TOML)", () => {
+			const rawConfig = {
+				vars: {
+					VALID_VAR: "some string",
+					DATE_VAR: new Date("2024-01-01"),
+				},
+			} as unknown as RawConfig;
+
+			const { config, diagnostics } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.hasWarnings()).toBe(false);
+
+			// Verify the Date was converted to a string
+			expect(config.vars).toEqual({
+				VALID_VAR: "some string",
+				DATE_VAR: "2024-01-01",
+			});
+		});
+
+		it("should convert Date values in env vars to strings (parsed by TOML)", () => {
+			const rawConfig = {
+				env: {
+					production: {
+						vars: {
+							VALID_VAR: "some string",
+							RELEASE_DATE: new Date("2025-06-15"),
+						},
+					},
+				},
+			} as unknown as RawConfig;
+
+			const { config, diagnostics } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{ env: "production" }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(false);
+			expect(diagnostics.hasWarnings()).toBe(false);
+
+			// Verify the Date was converted to a string
+			expect(config.vars).toEqual({
+				VALID_VAR: "some string",
+				RELEASE_DATE: "2025-06-15",
+			});
+		});
+
 		it("should error on node_compat", () => {
 			const { diagnostics } = normalizeAndValidateConfig(
 				// @ts-expect-error node_compat has been removed
