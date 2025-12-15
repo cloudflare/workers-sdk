@@ -26,8 +26,8 @@ import {
 } from "./cert/cert";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
-import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { handleCompletion } from "./complete";
+import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandRegistry } from "./core/CommandRegistry";
