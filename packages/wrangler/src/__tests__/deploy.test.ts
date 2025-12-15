@@ -10,7 +10,11 @@ import {
 	findWranglerConfig,
 	ParseError,
 } from "@cloudflare/workers-utils";
-import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
+import {
+	normalizeString,
+	writeRedirectedWranglerConfig,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
@@ -80,10 +84,6 @@ import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import {
-	writeRedirectedWranglerConfig,
-	writeWranglerConfig,
-} from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type { OutputEntry } from "../output";
