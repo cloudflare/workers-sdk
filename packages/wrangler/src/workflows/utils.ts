@@ -96,9 +96,7 @@ export async function getInstanceIdFromArgs(
 				config,
 				`/accounts/${accountId}/workflows/${args.name}/instances/`
 			)
-		).sort((a, b) =>
-			b.created_on > a.created_on ? 1 : b.created_on < a.created_on ? -1 : 0
-		);
+		).sort((a, b) => b.created_on.localeCompare(a.created_on));
 
 		if (instances.length == 0) {
 			throw new UserError(

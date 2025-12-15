@@ -57,9 +57,7 @@ export const workflowsListCommand = createCommand({
 		);
 
 		const prettierWorkflows = workflows
-			.sort((a, b) =>
-				b.created_on > a.created_on ? 1 : b.created_on < a.created_on ? -1 : 0
-			)
+			.sort((a, b) => b.created_on.localeCompare(a.created_on))
 			.map((workflow) => ({
 				Name: workflow.name,
 				"Script name": workflow.script_name,
