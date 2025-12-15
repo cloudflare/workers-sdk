@@ -91,7 +91,8 @@ export async function runAutoConfig(
 		{
 			...wranglerConfig,
 			...dryRunConfigurationResults?.wranglerConfig,
-		}
+		},
+		dryRunConfigurationResults?.packageJsonScriptsOverrides
 	);
 
 	if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
@@ -172,16 +173,15 @@ export async function runAutoConfig(
 		addWranglerToAssetsIgnore(autoConfigDetails.projectPath);
 	}
 
-	if (autoConfigDetails.buildCommand && runBuild) {
-		await runCommand(
-			autoConfigDetails.buildCommand,
-			autoConfigDetails.projectPath,
-			"[build]"
-		);
+	const buildCommand =
+		configurationResults?.buildCommand ?? autoConfigDetails.buildCommand;
+
+	if (buildCommand && runBuild) {
+		await runCommand(buildCommand, autoConfigDetails.projectPath, "[build]");
 	}
 
 	const used: AutoConfigMetrics = {
-		buildCommand: autoConfigDetails.buildCommand,
+		buildCommand,
 		outputDir: autoConfigDetails.outputDir,
 		framework: autoConfigDetails.framework?.name,
 	};
