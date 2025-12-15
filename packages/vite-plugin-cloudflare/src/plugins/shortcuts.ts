@@ -6,6 +6,7 @@ import { createPlugin, satisfiesViteVersion } from "../utils";
 import type { PluginContext } from "../context";
 import type * as vite from "vite";
 
+
 export const shortcutsPlugin = createPlugin("shortcuts", (ctx) => {
 	// This requires Vite 7.2.7 which fixes custom CLI shortcuts support
 	// @see https://github.com/vitejs/vite/pull/21103
@@ -49,7 +50,6 @@ export function addBindingsShortcut(
 			viteServer.config.logger.info("");
 
 			for (const workerConfig of workerConfigs) {
-				// @ts-expect-error TODO: fix types
 				wrangler.unstable_printBindings(
 					{
 						// The printBindings helper expects the deployment bundle format
