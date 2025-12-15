@@ -185,8 +185,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 							req[kRequestType] = "asset";
 							next();
 						} else if (includeRulesMatcher({ request })) {
-							// eslint-disable-next-line @typescript-eslint/no-floating-promises
-							userWorkerHandler(req, res, next);
+							void userWorkerHandler(req, res, next);
 						} else {
 							next();
 						}
