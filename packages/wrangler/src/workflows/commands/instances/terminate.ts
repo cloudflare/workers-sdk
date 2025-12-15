@@ -1,8 +1,7 @@
-import { fetchResult } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
-import type { Instance } from "../../types";
+import { getInstanceIdFromArgs, updateInstanceStatus } from "../../utils";
 
 export const workflowsInstancesTerminateCommand = createCommand({
 	metadata: {
@@ -29,37 +28,9 @@ export const workflowsInstancesTerminateCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		let id = args.id;
+		const id = await getInstanceIdFromArgs(accountId, args, config);
 
-		if (id == "latest") {
-			const instances = (
-				await fetchResult<Instance[]>(
-					config,
-					`/accounts/${accountId}/workflows/${args.name}/instances`
-				)
-			).sort((a, b) => b.created_on.localeCompare(a.created_on));
-
-			if (instances.length == 0) {
-				logger.error(
-					`There are no deployed instances in workflow "${args.name}"`
-				);
-				return;
-			}
-
-			id = instances[0].id;
-		}
-
-		await fetchResult(
-			config,
-			`/accounts/${accountId}/workflows/${args.name}/instances/${id}/status`,
-			{
-				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({ status: "terminate" }),
-			}
-		);
+		await updateInstanceStatus(config, accountId, args.name, id, "terminate");
 
 		logger.info(
 			`🥷 The instance "${id}" from ${args.name} was terminated successfully`
