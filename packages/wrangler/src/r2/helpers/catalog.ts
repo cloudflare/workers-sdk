@@ -104,6 +104,48 @@ export async function enableR2CatalogCompaction(
 	);
 }
 
+type R2CatalogSnapshotExpirationConfig = {
+	state: "enabled" | "disabled";
+
+	// If undefined, the service will set the default value
+	olderThanDays?: number;
+
+	// If undefined, the service will set the default value
+	retainLast?: number;
+};
+
+type R2CatalogSnapshotExpirationResponse = {
+	success: boolean;
+};
+
+export async function enableR2CatalogSnapshotExpiration(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	olderThanDays: number | undefined,
+	retainLast: number | undefined
+): Promise<R2CatalogSnapshotExpirationResponse> {
+	const config: R2CatalogSnapshotExpirationConfig = {
+		state: "enabled",
+		olderThanDays,
+		retainLast,
+	};
+
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/maintenance-configs`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				snapshot_expiration: config,
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
+	);
+}
+
 /**
  * Disable compaction maintenance configuration for a table in the R2 catalog
  */
@@ -123,6 +165,30 @@ export async function disableR2CatalogCompaction(
 			method: "POST",
 			body: JSON.stringify({
 				compaction: config,
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
+	);
+}
+
+export async function disableR2CatalogSnapshotExpiration(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string
+): Promise<R2CatalogSnapshotExpirationResponse> {
+	const config: R2CatalogCompactionConfig = {
+		state: "disabled",
+	};
+
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/maintenance-configs`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				snapshot_expiration: config,
 			}),
 			headers: {
 				"Content-Type": "application/json",
@@ -216,6 +282,72 @@ export async function disableR2CatalogTableCompaction(
 			method: "POST",
 			body: JSON.stringify({
 				compaction: {
+					state: "disabled",
+				},
+			}),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
+	);
+}
+
+export async function enableR2CatalogTableSnapshotExpiration(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	namespace: string,
+	tableName: string,
+	olderThanDays?: number,
+	retainLast?: number
+): Promise<void> {
+	const body: {
+		snapshot_expiration: {
+			state: string;
+			older_than_days?: number;
+			retain_last?: number;
+		};
+	} = {
+		snapshot_expiration: {
+			state: "enabled",
+		},
+	};
+
+	if (olderThanDays !== undefined) {
+		body.snapshot_expiration.older_than_days = olderThanDays;
+	}
+
+	if (retainLast !== undefined) {
+		body.snapshot_expiration.retain_last = retainLast;
+	}
+
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/namespaces/${namespace}/tables/${tableName}/maintenance-configs`,
+		{
+			method: "POST",
+			body: JSON.stringify(body),
+			headers: {
+				"Content-Type": "application/json",
+			},
+		}
+	);
+}
+
+export async function disableR2CatalogTableSnapshotExpiration(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	bucketName: string,
+	namespace: string,
+	tableName: string
+): Promise<void> {
+	return await fetchResult(
+		complianceConfig,
+		`/accounts/${accountId}/r2-catalog/${bucketName}/namespaces/${namespace}/tables/${tableName}/maintenance-configs`,
+		{
+			method: "POST",
+			body: JSON.stringify({
+				snapshot_expiration: {
 					state: "disabled",
 				},
 			}),
