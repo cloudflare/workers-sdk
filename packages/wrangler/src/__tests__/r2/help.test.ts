@@ -23,7 +23,7 @@ describe("r2", () => {
 				COMMANDS
 				  wrangler r2 object  Manage R2 objects
 				  wrangler r2 bucket  Manage R2 buckets
-				  wrangler r2 sql     Send queries and manage R2 SQL [open-beta]
+				  wrangler r2 sql     Send queries and manage R2 SQL [open beta]
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]
@@ -54,7 +54,7 @@ describe("r2", () => {
 				COMMANDS
 				  wrangler r2 object  Manage R2 objects
 				  wrangler r2 bucket  Manage R2 buckets
-				  wrangler r2 sql     Send queries and manage R2 SQL [open-beta]
+				  wrangler r2 sql     Send queries and manage R2 SQL [open beta]
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]

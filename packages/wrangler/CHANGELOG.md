@@ -735,7 +735,7 @@
 
 ### Patch Changes
 
-- [#10602](https://github.com/cloudflare/workers-sdk/pull/10602) [`ff82d80`](https://github.com/cloudflare/workers-sdk/commit/ff82d80a2c5798f6a18653ac1351cc662b4b35ba) Thanks [@tukiminya](https://github.com/tukiminya)! - fix: update Secrets Store command status from alpha to open-beta
+- [#10602](https://github.com/cloudflare/workers-sdk/pull/10602) [`ff82d80`](https://github.com/cloudflare/workers-sdk/commit/ff82d80a2c5798f6a18653ac1351cc662b4b35ba) Thanks [@tukiminya](https://github.com/tukiminya)! - fix: update Secrets Store command status from alpha to open beta
 
 - [#10623](https://github.com/cloudflare/workers-sdk/pull/10623) [`7a6381c`](https://github.com/cloudflare/workers-sdk/commit/7a6381c4f9494dd871f70c305763d22e7049a0be) Thanks [@IRCody](https://github.com/IRCody)! - Handle more cases for correctly resolving the full uri for an image when using containers push.
 
@@ -1607,7 +1607,7 @@
   The Workers Containers API was built on top of Cloudchamber, but has now been moved to its own API
   with a reduced scoping and new token.
 
-- [#9712](https://github.com/cloudflare/workers-sdk/pull/9712) [`2a4c467`](https://github.com/cloudflare/workers-sdk/commit/2a4c467d83df640a9120b8bd7c45d8fd2ae9ed51) Thanks [@emily-shen](https://github.com/emily-shen)! - Make `wrangler container` commands print `open-beta` status
+- [#9712](https://github.com/cloudflare/workers-sdk/pull/9712) [`2a4c467`](https://github.com/cloudflare/workers-sdk/commit/2a4c467d83df640a9120b8bd7c45d8fd2ae9ed51) Thanks [@emily-shen](https://github.com/emily-shen)! - Make `wrangler container` commands print `open beta` status
 
 ## 4.20.5
 
@@ -2149,7 +2149,7 @@
 
 ### Patch Changes
 
-- [#8983](https://github.com/cloudflare/workers-sdk/pull/8983) [`f5ebb33`](https://github.com/cloudflare/workers-sdk/commit/f5ebb3376d918267df8c6722dcd73da35f5b4f81) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Remove open-beta disclaimer from workflows commands
+- [#8983](https://github.com/cloudflare/workers-sdk/pull/8983) [`f5ebb33`](https://github.com/cloudflare/workers-sdk/commit/f5ebb3376d918267df8c6722dcd73da35f5b4f81) Thanks [@Caio-Nogueira](https://github.com/Caio-Nogueira)! - Remove open beta disclaimer from workflows commands
 
 - [#8990](https://github.com/cloudflare/workers-sdk/pull/8990) [`6291fa1`](https://github.com/cloudflare/workers-sdk/commit/6291fa161571e0f02e22768dd506f7e3398fee94) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: When generating Env types, set type of version metadata binding to `WorkerVersionMetadata`. This means it now correctly includes the `timestamp` field.
 
@@ -4006,7 +4006,7 @@
 
 - [#7036](https://github.com/cloudflare/workers-sdk/pull/7036) [`e7ea600`](https://github.com/cloudflare/workers-sdk/commit/e7ea6005c1f283bbdfe7a6803d41403e5ebc13e5) Thanks [@penalosa](https://github.com/penalosa)! - Reduce KV bulk upload bucket size to 1000 (from the previous 5000)
 
-- [#7068](https://github.com/cloudflare/workers-sdk/pull/7068) [`a2afcf1`](https://github.com/cloudflare/workers-sdk/commit/a2afcf13ff4b6a9f72fdca108b3c7e493185adf6) Thanks [@RamIdeas](https://github.com/RamIdeas)! - log warning of Workflows open-beta status when running deploying a Worker that contains a Workflow binding
+- [#7068](https://github.com/cloudflare/workers-sdk/pull/7068) [`a2afcf1`](https://github.com/cloudflare/workers-sdk/commit/a2afcf13ff4b6a9f72fdca108b3c7e493185adf6) Thanks [@RamIdeas](https://github.com/RamIdeas)! - log warning of Workflows open beta status when running deploying a Worker that contains a Workflow binding
 
 - [#7065](https://github.com/cloudflare/workers-sdk/pull/7065) [`b219296`](https://github.com/cloudflare/workers-sdk/commit/b2192965e50602f8148c8bd9a6f10fdb059aefd3) Thanks [@penalosa](https://github.com/penalosa)! - Internal refactor to remove React/ink from all non-`wrangler dev` flows
 

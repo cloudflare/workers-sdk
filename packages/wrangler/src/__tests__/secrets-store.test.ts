@@ -30,11 +30,11 @@ describe("secrets-store help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler secrets-store
 
-			🔐 Manage the Secrets Store [open-beta]
+			🔐 Manage the Secrets Store [open beta]
 
 			COMMANDS
-			  wrangler secrets-store store   🔐 Manage Stores within the Secrets Store [open-beta]
-			  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [open-beta]
+			  wrangler secrets-store store   🔐 Manage Stores within the Secrets Store [open beta]
+			  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [open beta]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -60,11 +60,11 @@ describe("secrets-store help", () => {
 			"
 			wrangler secrets-store
 
-			🔐 Manage the Secrets Store [open-beta]
+			🔐 Manage the Secrets Store [open beta]
 
 			COMMANDS
-			  wrangler secrets-store store   🔐 Manage Stores within the Secrets Store [open-beta]
-			  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [open-beta]
+			  wrangler secrets-store store   🔐 Manage Stores within the Secrets Store [open beta]
+			  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [open beta]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]

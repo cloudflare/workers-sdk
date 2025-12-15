@@ -1235,7 +1235,7 @@ export function createCLIParser(argv: string[]) {
 	// containers
 	wrangler.command(
 		"containers",
-		`📦 Manage Containers${chalk.hex(betaCmdColor)("[open-beta]")}`,
+		`📦 Manage Containers${chalk.hex(betaCmdColor)("[open beta]")}`,
 		(containersArgs) => {
 			return containers(containersArgs.command(subHelp), subHelp);
 		}

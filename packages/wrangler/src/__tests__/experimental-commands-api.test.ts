@@ -121,8 +121,8 @@ describe("experimental_getWranglerCommands", () => {
 			expect([
 				"experimental",
 				"alpha",
-				"private-beta",
-				"open-beta",
+				"private beta",
+				"open beta",
 				"stable",
 			]).toContain(metadata.status);
 		}
