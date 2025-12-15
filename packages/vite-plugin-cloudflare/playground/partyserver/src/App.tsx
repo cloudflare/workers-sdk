@@ -7,8 +7,8 @@ function App() {
 	const socket = usePartySocket({
 		party: "my-server",
 		room: "room1",
-		onMessage(message) {
-			setMessage(message.data);
+		onMessage(msg) {
+			setMessage(msg.data);
 		},
 	});
 

@@ -5,9 +5,11 @@ describe("validateWorkerEnvironmentOptions", () => {
 	test("doesn't throw if there are no config violations", () => {
 		const resolvedPluginConfig = {
 			environmentNameToWorkerMap: new Map([["worker", { config: {} }]]),
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		} as any;
 		const resolvedViteConfig = {
 			environments: { worker: { resolve: { external: [] } } },
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		} as any;
 
 		expect(() =>
@@ -18,9 +20,11 @@ describe("validateWorkerEnvironmentOptions", () => {
 	test("throws with an appropriate error message if a Worker environment contains disallowed options", () => {
 		const resolvedPluginConfig = {
 			environmentNameToWorkerMap: new Map([["worker", { config: {} }]]),
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		} as any;
 		const resolvedViteConfig = {
 			environments: { worker: { resolve: { external: true } } },
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		} as any;
 
 		expect(() =>
@@ -42,6 +46,7 @@ describe("validateWorkerEnvironmentOptions", () => {
 				["workerB", { config: {} }],
 				["workerC", { config: {} }],
 			]),
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		} as any;
 		const resolvedViteConfig = {
 			environments: {
@@ -57,6 +62,7 @@ describe("validateWorkerEnvironmentOptions", () => {
 				},
 				workerC: { resolve: { external: [] } },
 			},
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		} as any;
 
 		expect(() =>

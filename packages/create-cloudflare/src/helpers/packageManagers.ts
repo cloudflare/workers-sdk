@@ -1,5 +1,5 @@
 import { existsSync, rmSync } from "node:fs";
-import path from "node:path";
+import nodePath from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import semver from "semver";
 import whichPmRuns from "which-pm-runs";
@@ -103,12 +103,12 @@ export const rectifyPmMismatch = async (ctx: C3Context) => {
 		return;
 	}
 
-	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
+	const nodeModulesPath = nodePath.join(ctx.project.path, "node_modules");
 	if (existsSync(nodeModulesPath)) {
 		rmSync(nodeModulesPath, { recursive: true });
 	}
 
-	const lockfilePath = path.join(ctx.project.path, "package-lock.json");
+	const lockfilePath = nodePath.join(ctx.project.path, "package-lock.json");
 	if (existsSync(lockfilePath)) {
 		rmSync(lockfilePath);
 	}
@@ -129,13 +129,13 @@ export const detectPmMismatch = (ctx: C3Context) => {
 		case "npm":
 			return false;
 		case "yarn":
-			return !existsSync(path.join(projectPath, "yarn.lock"));
+			return !existsSync(nodePath.join(projectPath, "yarn.lock"));
 		case "pnpm":
-			return !existsSync(path.join(projectPath, "pnpm-lock.yaml"));
+			return !existsSync(nodePath.join(projectPath, "pnpm-lock.yaml"));
 		case "bun":
 			return (
-				!existsSync(path.join(projectPath, "bun.lockb")) &&
-				!existsSync(path.join(projectPath, "bun.lock"))
+				!existsSync(nodePath.join(projectPath, "bun.lockb")) &&
+				!existsSync(nodePath.join(projectPath, "bun.lock"))
 			);
 	}
 };

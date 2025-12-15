@@ -9,6 +9,7 @@ export default {
 				React.createElement(
 					"p",
 					null,
+					// eslint-disable-next-line turbo/no-undeclared-env-vars
 					`The value of process.env.NODE_ENV is "${process.env.NODE_ENV}"`
 				),
 			])

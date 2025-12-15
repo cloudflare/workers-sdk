@@ -49,7 +49,7 @@ export const additionalModulesPlugin = createPlugin(
 			},
 			hotUpdate(options) {
 				if (additionalModulePaths.has(options.file)) {
-					options.server.restart();
+					void options.server.restart();
 					return [];
 				}
 			},
@@ -70,7 +70,7 @@ export const additionalModulesPlugin = createPlugin(
 
 					try {
 						source = await fsp.readFile(modulePath);
-					} catch (error) {
+					} catch {
 						throw new Error(
 							`Import "${modulePath}" not found. Does the file exist?`
 						);

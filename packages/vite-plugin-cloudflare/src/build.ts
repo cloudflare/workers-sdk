@@ -129,7 +129,7 @@ function getHasPublicAssets({ publicDir }: vite.ResolvedConfig): boolean {
 			if (files.length) {
 				hasPublicAssets = true;
 			}
-		} catch (error) {}
+		} catch {}
 	}
 
 	return hasPublicAssets;
