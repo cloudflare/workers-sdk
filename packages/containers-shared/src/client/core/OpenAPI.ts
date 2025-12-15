@@ -1,6 +1,6 @@
 /* istanbul ignore file */
 /* tslint:disable */
-import type { Logger } from "../../types";
+import type { WranglerLogger } from "../../types";
 import type { ApiRequestOptions } from "./ApiRequestOptions";
 
 type Resolver<T> = (options: ApiRequestOptions) => Promise<T>;
@@ -16,7 +16,7 @@ export type OpenAPIConfig = {
 	PASSWORD?: string | Resolver<string>;
 	HEADERS?: Headers | Resolver<Headers>;
 	ENCODE_PATH?: (path: string) => string;
-	LOGGER?: Logger | undefined;
+	LOGGER?: WranglerLogger | undefined;
 };
 
 export const OpenAPI: OpenAPIConfig = {

@@ -14,6 +14,7 @@ export default defineConfig(
 		"eslint.config.mjs",
 		"vitest.config.mts",
 		"**/dist/**/*",
+		".e2e-test-report/**",
 	]),
 	{
 		languageOptions: {
@@ -64,6 +65,8 @@ export default defineConfig(
 					ignoreRestSiblings: true,
 				},
 			],
+
+			"import/enforce-node-protocol-usage": ["error", "always"],
 
 			"unused-imports/no-unused-imports": "error",
 

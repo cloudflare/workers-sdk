@@ -1,5 +1,6 @@
+import { execSync } from "node:child_process";
 import fs, { readFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { detectPackageManager } from "helpers/packageManagers";
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../../../package.json";
@@ -274,6 +275,49 @@ describe("Create Cloudflare CLI", () => {
 			},
 		);
 
+		test.skipIf(isWindows)(
+			"Filtering templates when --lang=python is specified",
+			async ({ logStream, project }) => {
+				const { output } = await runC3(
+					[
+						project.path,
+						"--lang=python",
+						"--type=hello-world",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream,
+				);
+
+				expect(project.path).toExist();
+				expect(output).toContain(`category Hello World example`);
+				expect(output).toContain(`type Worker only`);
+				expect(output).toContain(`lang Python`);
+			},
+		);
+
+		test.skipIf(isWindows)(
+			"Error when --lang=python is used with a category that has no Python templates",
+			async ({ logStream, project }) => {
+				const { errors } = await runC3(
+					[
+						project.path,
+						"--lang=python",
+						"--category=demo",
+						"--no-deploy",
+						"--git=false",
+					],
+					[],
+					logStream,
+				);
+
+				expect(errors).toContain(
+					`No templates available for language "python" in the "demo" category`,
+				);
+			},
+		);
+
 		/*
 		 * Skipping in yarn due to node version resolution conflict
 		 * The Openapi C3 template depends on `chanfana`, which has a dependency
@@ -429,7 +473,31 @@ describe("Create Cloudflare CLI", () => {
 
 		test.skipIf(isWindows || pm === "yarn" || !CLOUDFLARE_API_TOKEN)(
 			"--existing-script",
+			{ timeout: 120_000 },
 			async ({ logStream, project }) => {
+				// Ensure the worker to download exists
+				try {
+					if (
+						(
+							await fetch(
+								"https://existing-script-test-do-not-delete.devprod-testing7928.workers.dev/",
+							)
+						).status === 404
+					) {
+						throw new Error("Remote worker not found");
+					}
+				} catch {
+					// eslint-disable-next-line no-console
+					console.log(
+						"Redeploying the existing-script-test-do-not-delete worker",
+					);
+					const workerPath = resolve(
+						__dirname,
+						"fixtures/existing-script-test-do-not-delete",
+					);
+					execSync("pnpx wrangler@latest deploy", { cwd: workerPath });
+				}
+
 				const { output } = await runC3(
 					[
 						project.path,
@@ -456,7 +524,7 @@ describe("Create Cloudflare CLI", () => {
 
 	describe("help text", () => {
 		test("--help", async ({ logStream }) => {
-			if (!isExperimental) {
+			if (isExperimental) {
 				const { output } = await runC3(
 					["--help", "--experimental"],
 					[],
@@ -464,7 +532,7 @@ describe("Create Cloudflare CLI", () => {
 				);
 				expect(normalizeOutput(output)).toMatchInlineSnapshot(`
 					"create-cloudflare <version>
-					  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
+					  The create-cloudflare CLI (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
 					USAGE
 					  <USAGE>
 					OPTIONS
@@ -484,8 +552,10 @@ describe("Create Cloudflare CLI", () => {
 					    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
 					    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (e.g. "create-astro" is used for Astro).
 					    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
-					    npm create cloudflare -- --framework next -- --ts
-					    pnpm create cloudflare --framework next -- --ts
+					    npm create cloudflare -- --framework svelte -- --types=ts
+					    pnpm create cloudflare --framework svelte -- --types=ts
+					    Allowed Values:
+					      analog, angular, astro, docusaurus, gatsby, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vue
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:
@@ -536,7 +606,7 @@ describe("Create Cloudflare CLI", () => {
 				const { output } = await runC3(["--help"], [], logStream);
 				expect(normalizeOutput(output)).toMatchInlineSnapshot(`
 					"create-cloudflare <version>
-					  The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
+					  The create-cloudflare CLI (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
 					USAGE
 					  <USAGE>
 					OPTIONS
@@ -584,10 +654,10 @@ describe("Create Cloudflare CLI", () => {
 					    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
 					    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (e.g. "create-astro" is used for Astro).
 					    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
-					    npm create cloudflare -- --framework next -- --ts
-					    pnpm create cloudflare --framework next -- --ts
+					    npm create cloudflare -- --framework svelte -- --types=ts
+					    pnpm create cloudflare --framework svelte -- --types=ts
 					    Allowed Values:
-					      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, solid, svelte, tanstack-start, vue, waku
+					      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vike, vue, waku
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:

@@ -1,18 +1,18 @@
 // noinspection TypeScriptValidateJSTypes
 
-import assert from "assert";
-import childProcess from "child_process";
-import { once } from "events";
-import { existsSync } from "fs";
-import fs from "fs/promises";
-import http from "http";
-import { AddressInfo } from "net";
-import os from "os";
-import path from "path";
-import { Writable } from "stream";
-import { json, text } from "stream/consumers";
-import url from "url";
-import util from "util";
+import assert from "node:assert";
+import childProcess from "node:child_process";
+import { once } from "node:events";
+import { existsSync } from "node:fs";
+import fs from "node:fs/promises";
+import http from "node:http";
+import { AddressInfo } from "node:net";
+import os from "node:os";
+import path from "node:path";
+import { Writable } from "node:stream";
+import { json, text } from "node:stream/consumers";
+import url from "node:url";
+import util from "node:util";
 import {
 	D1Database,
 	DurableObjectNamespace,
@@ -923,6 +923,7 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 
 test("Miniflare: tail consumer called", async (t) => {
 	const mf = new Miniflare({
+		handleRuntimeStdio: () => {},
 		workers: [
 			{
 				name: "a",
@@ -934,7 +935,7 @@ test("Miniflare: tail consumer called", async (t) => {
 				export default {
 					async fetch(request, env) {
 						if(request.url.includes("b")) { return env.B.fetch(request)}
-						console.log("log event")
+						console.log("Tail: log event")
 
 						return new Response("hello from a");
 					}
@@ -969,7 +970,7 @@ test("Miniflare: tail consumer called", async (t) => {
 				logs: { message: string[] }[];
 			}[]
 		)[0].logs[0].message,
-		["log event"]
+		["Tail: log event"]
 	);
 });
 

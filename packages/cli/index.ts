@@ -1,4 +1,4 @@
-import { exit } from "process";
+import { exit } from "node:process";
 import {
 	bgBlue,
 	bgGreen,
@@ -277,3 +277,4 @@ export const error = (
 };
 
 export { checkMacOSVersion } from "./check-macos-version";
+export { showCursor } from "./cursor";

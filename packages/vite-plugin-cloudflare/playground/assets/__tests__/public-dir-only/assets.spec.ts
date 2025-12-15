@@ -1,7 +1,12 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { expect, test, vi } from "vitest";
-import { getResponse, isBuild, testDir } from "../../../__test-utils__";
+import {
+	getResponse,
+	isBuild,
+	testDir,
+	WAIT_FOR_OPTIONS,
+} from "../../../__test-utils__";
 
 test("fetches public directory asset", async () => {
 	const response = await getResponse("/public-image.svg");
@@ -18,5 +23,5 @@ test.runIf(isBuild)("deletes fallback client entry file", async () => {
 
 	await vi.waitFor(() => {
 		expect(fs.existsSync(fallbackEntryPath)).toBe(false);
-	});
+	}, WAIT_FOR_OPTIONS);
 });

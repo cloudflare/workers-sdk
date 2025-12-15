@@ -1,5 +1,5 @@
-import { existsSync } from "fs";
-import { join } from "path";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import {
 	constructBuildCommand,
 	dockerBuild,
@@ -11,11 +11,11 @@ import {
 	runDockerCmd,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
 import {
 	getCIOverrideNetworkModeHost,
 	getDockerPath,
-} from "../environment-variables/misc-variables";
+	UserError,
+} from "@cloudflare/workers-utils";
 import { logger } from "../logger";
 import { getAccountId } from "../user";
 import { ensureContainerLimits } from "./limits";

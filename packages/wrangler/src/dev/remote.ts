@@ -12,7 +12,6 @@ import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
 import type { AssetsOptions } from "../assets";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { LegacyAssetPaths } from "../sites";
 import type { ApiCredentials } from "../user";
 import type { CfAccount } from "./create-worker-preview";
@@ -22,6 +21,7 @@ import type {
 	CfScriptFormat,
 	CfWorkerContext,
 	CfWorkerInit,
+	ComplianceConfig,
 	Route,
 } from "@cloudflare/workers-utils";
 
@@ -190,7 +190,8 @@ export async function createRemoteWorkerInit(props: {
 					}
 				: undefined,
 		placement: undefined, // no placement in dev
-		tail_consumers: undefined, // no tail consumers in dev - TODO revisit?
+		tail_consumers: undefined,
+		streaming_tail_consumers: undefined,
 		limits: undefined, // no limits in preview - not supported yet but can be added
 		observability: undefined, // no observability in dev,
 	};

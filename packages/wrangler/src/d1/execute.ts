@@ -1,5 +1,5 @@
-import { createReadStream, promises as fs } from "fs";
 import assert from "node:assert";
+import { createReadStream, promises as fs } from "node:fs";
 import path from "node:path";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
 import {
@@ -23,7 +23,6 @@ import { readableRelative } from "../paths";
 import { requireAuth } from "../user";
 import splitSqlQuery from "./splitter";
 import { getDatabaseByNameOrBinding, getDatabaseInfoFromConfig } from "./utils";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type {
 	Database,
 	ImportInitResponse,
@@ -31,7 +30,7 @@ import type {
 	PollingFailure,
 } from "./types";
 import type { D1Result } from "@cloudflare/workers-types/experimental";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export type QueryResult = {
 	results: Record<string, string | number | boolean>[];
@@ -42,11 +41,38 @@ export type QueryResult = {
 	query?: string;
 };
 
+// Common SQLite Codes
+// See https://www.sqlite.org/rescode.html
+const SQLITE_RESULT_CODES = [
+	"SQLITE_ERROR",
+	"SQLITE_CONSTRAINT",
+	"SQLITE_MISMATCH",
+	"SQLITE_AUTH",
+];
+
+function isSqliteUserError(error: unknown): error is Error {
+	if (!(error instanceof Error)) {
+		return false;
+	}
+
+	const message = error.message.toUpperCase();
+
+	for (const code of SQLITE_RESULT_CODES) {
+		if (message.includes(code)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 export const d1ExecuteCommand = createCommand({
 	metadata: {
 		description: "Execute a command or SQL file",
 		status: "stable",
 		owner: "Product: D1",
+		epilogue:
+			"You must provide either --command or --file for this command to run successfully.",
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,
@@ -57,6 +83,15 @@ export const d1ExecuteCommand = createCommand({
 			type: "string",
 			demandOption: true,
 			description: "The name or binding of the DB",
+		},
+		command: {
+			type: "string",
+			description:
+				"The SQL query you wish to execute, or multiple queries separated by ';'",
+		},
+		file: {
+			type: "string",
+			description: "A .sql file to ingest",
 		},
 		yes: {
 			type: "boolean",
@@ -71,20 +106,12 @@ export const d1ExecuteCommand = createCommand({
 		remote: {
 			type: "boolean",
 			description:
-				"Execute commands/files against a remote DB for use with wrangler dev",
-		},
-		file: {
-			type: "string",
-			description: "A .sql file to ingest",
-		},
-		command: {
-			type: "string",
-			description: "A single SQL statement to execute",
+				"Execute commands/files against a remote D1 database for use with remote bindings or your deployed Worker",
 		},
 		"persist-to": {
 			type: "string",
 			description:
-				"Specify directory to use for local persistence (for --local)",
+				"Specify directory to use for local persistence (for use with --local)",
 			requiresArg: true,
 		},
 		json: {
@@ -94,7 +121,7 @@ export const d1ExecuteCommand = createCommand({
 		},
 		preview: {
 			type: "boolean",
-			description: "Execute commands/files against a preview D1 DB",
+			description: "Execute commands/files against a preview D1 database",
 			default: false,
 		},
 	},
@@ -311,7 +338,13 @@ async function executeLocally({
 	try {
 		results = await db.batch(queries.map((query) => db.prepare(query)));
 	} catch (e: unknown) {
-		throw (e as { cause?: unknown })?.cause ?? e;
+		const cause = (e as { cause?: unknown })?.cause ?? e;
+
+		if (isSqliteUserError(cause)) {
+			throw new UserError(cause.message);
+		}
+
+		throw cause;
 	} finally {
 		await mf.dispose();
 	}
@@ -444,11 +477,9 @@ async function executeRemotely({
 			result: { num_queries, final_bookmark, meta },
 		} = finalResponse;
 		logger.log(
-			`🚣 Executed ${num_queries} queries in ${(meta.duration / 1000).toFixed(
+			`🚣 Executed ${num_queries} queries in ${meta.duration.toFixed(
 				2
-			)} seconds (${meta.rows_read} rows read, ${
-				meta.rows_written
-			} rows written)\n` +
+			)}ms (${meta.rows_read} rows read, ${meta.rows_written} rows written)\n` +
 				chalk.gray(`   Database is currently at bookmark ${final_bookmark}.`)
 		);
 
@@ -604,17 +635,15 @@ async function d1ApiPost<T>(
 }
 
 function logResult(r: QueryResult | QueryResult[]) {
-	logger.log(
-		`🚣 Executed ${
-			Array.isArray(r) && r.length !== 1 ? `${r.length} commands` : "1 command"
-		} in ${
-			Array.isArray(r)
-				? r
-						.map((d: QueryResult) => d.meta?.duration || 0)
-						.reduce((a: number, b: number) => a + b, 0)
-				: r.meta?.duration
-		}ms`
-	);
+	const commandsCount =
+		Array.isArray(r) && r.length !== 1 ? `${r.length} commands` : "1 command";
+	const durationMs = Array.isArray(r)
+		? r
+				.map((d: QueryResult) => d.meta?.duration || 0)
+				.reduce((a, b) => a + b, 0)
+		: r.meta?.duration ?? 0;
+
+	logger.log(`🚣 Executed ${commandsCount} in ${durationMs.toFixed(2)}ms`);
 }
 
 function shorten(query: string | undefined, length: number) {
@@ -625,14 +654,17 @@ function shorten(query: string | undefined, length: number) {
 
 async function checkForSQLiteBinary(filename: string) {
 	const buffer = Buffer.alloc(15);
+	let fd: fs.FileHandle | undefined;
 
 	try {
-		const fd = await fs.open(filename, "r");
+		fd = await fs.open(filename, "r");
 		await fd.read(buffer, 0, 15);
 	} catch {
 		throw new UserError(
 			`Unable to read SQL text file "${filename}". Please check the file path and try again.`
 		);
+	} finally {
+		await fd?.close();
 	}
 
 	if (buffer.toString("utf8") === "SQLite format 3") {

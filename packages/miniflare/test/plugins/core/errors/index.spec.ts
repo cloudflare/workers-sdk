@@ -1,7 +1,7 @@
-import assert from "assert";
-import fs from "fs/promises";
-import path from "path";
-import { fileURLToPath, pathToFileURL } from "url";
+import assert from "node:assert";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "ava";
 import Protocol from "devtools-protocol";
 import esbuild from "esbuild";

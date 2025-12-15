@@ -30,7 +30,7 @@ class MyDurableObject(DurableObject):
         super().__init__(ctx, env)
 
     """
-     * The Durable Object exposes an RPC method `say_hello` which will be invoked when when a Durable
+     * The Durable Object exposes an RPC method `say_hello` which will be invoked when a Durable
      *  Object instance receives a request from a Worker via the same method invocation on the stub
      *
      * @param {string} name - The name provided to a Durable Object instance from a Worker
@@ -50,15 +50,15 @@ class MyDurableObject(DurableObject):
 """
 class Default(WorkerEntrypoint):
     async def fetch(self, request):
-		# Create a stub to open a communication channel with the Durable Object
-		# instance named "foo".
-		#
-		# Requests from all Workers to the Durable Object instance named "foo"
-		# will go to a single remote Durable Object instance.
+        # Create a stub to open a communication channel with the Durable Object
+        # instance named "foo".
+        #
+        # Requests from all Workers to the Durable Object instance named "foo"
+        # will go to a single remote Durable Object instance.
         stub = self.env.MY_DURABLE_OBJECT.getByName("foo")
 
-		# Call the `say_hello()` RPC method on the stub to invoke the method on
-		# the remote Durable Object instance.
+        # Call the `say_hello()` RPC method on the stub to invoke the method on
+        # the remote Durable Object instance.
         greeting = await stub.say_hello("world")
 
         return Response(greeting)

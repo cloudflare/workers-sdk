@@ -1,4 +1,4 @@
-import { describe, expect } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { confirmAutoConfigDetails } from "../../../autoconfig/details";
 import { mockConfirm, mockPrompt } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
@@ -102,8 +102,8 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				workerName: "my-astro-site",
 				buildCommand: "astro build",
 				framework: {
-					configured: false,
-					configure: () => ({}),
+					isConfigured: () => false,
+					configure: () => ({ wranglerConfig: {} }),
 					name: "astro",
 				},
 				outputDir: "<OUTPUT_DIR>",
@@ -116,7 +116,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "configured": false,
 				  "framework": Object {
 				    "configure": [Function],
-				    "configured": false,
+				    "isConfigured": [Function],
 				    "name": "astro",
 				  },
 				  "outputDir": "",

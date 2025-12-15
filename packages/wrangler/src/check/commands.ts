@@ -1,8 +1,7 @@
-import { randomUUID } from "crypto";
-import { readFile } from "fs/promises";
+import { randomUUID } from "node:crypto";
 import events from "node:events";
-import { writeFile } from "node:fs/promises";
-import path from "path";
+import { readFile, writeFile } from "node:fs/promises";
+import path from "node:path";
 import { log } from "@cloudflare/cli";
 import { spinnerWhile } from "@cloudflare/cli/interactive";
 import { UserError } from "@cloudflare/workers-utils";

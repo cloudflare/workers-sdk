@@ -60,7 +60,6 @@ import {
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
-import { getEnvironmentVariableFactory } from "./environment-variables/factory";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
@@ -236,6 +235,8 @@ import {
 	r2BucketNotificationNamespace,
 } from "./r2/notification";
 import {
+	r2BulkNamespace,
+	r2BulkPutCommand,
 	r2ObjectDeleteCommand,
 	r2ObjectGetCommand,
 	r2ObjectNamespace,
@@ -278,6 +279,7 @@ import {
 	secretsStoreStoreListCommand,
 } from "./secrets-store/commands";
 import { addBreadcrumb, closeSentry, setupSentry } from "./sentry";
+import { setupCommand } from "./setup";
 import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
 import { typesCommand } from "./type-generation";
@@ -326,6 +328,7 @@ import { workflowsDescribeCommand } from "./workflows/commands/describe";
 import { workflowsInstancesDescribeCommand } from "./workflows/commands/instances/describe";
 import { workflowsInstancesListCommand } from "./workflows/commands/instances/list";
 import { workflowsInstancesPauseCommand } from "./workflows/commands/instances/pause";
+import { workflowsInstancesRestartCommand } from "./workflows/commands/instances/restart";
 import { workflowsInstancesResumeCommand } from "./workflows/commands/instances/resume";
 import { workflowsInstancesTerminateCommand } from "./workflows/commands/instances/terminate";
 import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/instances/terminate-all";
@@ -558,6 +561,14 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("deploy");
+
+	registry.define([
+		{
+			command: "wrangler setup",
+			definition: setupCommand,
+		},
+	]);
+	registry.registerNamespace("setup");
 
 	registry.define([
 		{ command: "wrangler deployments", definition: deploymentsNamespace },
@@ -982,16 +993,23 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler r2 sql query",
 			definition: r2SqlQueryCommand,
 		},
+		{
+			command: "wrangler r2 bulk",
+			definition: r2BulkNamespace,
+		},
+		{
+			command: "wrangler r2 bulk put",
+			definition: r2BulkPutCommand,
+		},
 	]);
 	registry.registerNamespace("r2");
 
 	// D1 commands are registered using the CommandRegistry
 	registry.define([
 		{ command: "wrangler d1", definition: d1Namespace },
-		{ command: "wrangler d1 list", definition: d1ListCommand },
-		{ command: "wrangler d1 info", definition: d1InfoCommand },
-		{ command: "wrangler d1 insights", definition: d1InsightsCommand },
 		{ command: "wrangler d1 create", definition: d1CreateCommand },
+		{ command: "wrangler d1 info", definition: d1InfoCommand },
+		{ command: "wrangler d1 list", definition: d1ListCommand },
 		{ command: "wrangler d1 delete", definition: d1DeleteCommand },
 		{ command: "wrangler d1 execute", definition: d1ExecuteCommand },
 		{ command: "wrangler d1 export", definition: d1ExportCommand },
@@ -1006,17 +1024,18 @@ export function createCLIParser(argv: string[]) {
 		},
 		{ command: "wrangler d1 migrations", definition: d1MigrationsNamespace },
 		{
-			command: "wrangler d1 migrations list",
-			definition: d1MigrationsListCommand,
-		},
-		{
 			command: "wrangler d1 migrations create",
 			definition: d1MigrationsCreateCommand,
+		},
+		{
+			command: "wrangler d1 migrations list",
+			definition: d1MigrationsListCommand,
 		},
 		{
 			command: "wrangler d1 migrations apply",
 			definition: d1MigrationsApplyCommand,
 		},
+		{ command: "wrangler d1 insights", definition: d1InsightsCommand },
 	]);
 	registry.registerNamespace("d1");
 
@@ -1362,6 +1381,10 @@ export function createCLIParser(argv: string[]) {
 			definition: workflowsInstancesTerminateCommand,
 		},
 		{
+			command: "wrangler workflows instances restart",
+			definition: workflowsInstancesRestartCommand,
+		},
+		{
 			command: "wrangler workflows instances terminate-all",
 			definition: workflowsInstancesTerminateAllCommand,
 		},
@@ -1589,15 +1612,10 @@ export async function main(argv: string[]): Promise<void> {
 		// Update logger level, before we do any logging
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
-			// Also set the CLI package log level to match
-			setLogLevel(args.logLevel as LoggerLevel);
 		}
-		const envLogLevel = getEnvironmentVariableFactory({
-			variableName: "WRANGLER_LOG",
-		})()?.toLowerCase();
-		if (envLogLevel) {
-			setLogLevel(envLogLevel as LoggerLevel);
-		}
+		// Also set the CLI package log level to match
+		setLogLevel(logger.loggerLevel);
+
 		// Middleware called for each sub-command, but only want to record once
 		if (recordedCommand) {
 			return;

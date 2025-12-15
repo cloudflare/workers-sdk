@@ -3,19 +3,37 @@ import { Buffer } from "node:buffer";
 import { spawnSync } from "node:child_process";
 import { randomFillSync } from "node:crypto";
 import * as fs from "node:fs";
+import { readFile } from "node:fs/promises";
 import * as path from "node:path";
-import { findWranglerConfig, ParseError } from "@cloudflare/workers-utils";
-import * as TOML from "@iarna/toml";
+import {
+	APIError,
+	findWranglerConfig,
+	ParseError,
+} from "@cloudflare/workers-utils";
+import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
+import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
-import { vi } from "vitest";
+import {
+	afterEach,
+	assert,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	test,
+	vi,
+} from "vitest";
+import { getDetailsForAutoConfig } from "../autoconfig/details";
+import { Static } from "../autoconfig/frameworks/static";
+import { runAutoConfig } from "../autoconfig/run";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
-import { sniffUserAgent } from "../package-manager";
 import { getSubdomainValues } from "../triggers/deploy";
 import { writeAuthConfigFile } from "../user";
+import { fetchSecrets } from "../utils/fetch-secrets";
 import { diagnoseScriptSizeError } from "../utils/friendly-validator-errors";
 import { captureRequestsFrom } from "./helpers/capture-requests-from";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -58,7 +76,6 @@ import {
 	mswSuccessUserHandlers,
 } from "./helpers/msw";
 import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions";
-import { normalizeString } from "./helpers/normalize";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
@@ -68,6 +85,7 @@ import {
 } from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
+import type { OutputEntry } from "../output";
 import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
 import type {
 	Config,
@@ -86,6 +104,22 @@ vi.mock("../check/commands", async (importOriginal) => {
 		},
 	};
 });
+
+vi.mock("../utils/fetch-secrets");
+
+vi.mock("../package-manager", async (importOriginal) => ({
+	...(await importOriginal()),
+	sniffUserAgent: () => "npm",
+	getPackageManager() {
+		return {
+			type: "npm",
+			npx: "npx",
+		};
+	},
+}));
+
+vi.mock("../autoconfig/details");
+vi.mock("../autoconfig/run");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -117,6 +151,7 @@ describe("deploy", () => {
 				return HttpResponse.json(createFetchResult({}));
 			})
 		);
+		vi.mocked(fetchSecrets).mockResolvedValue([]);
 	});
 
 	afterEach(() => {
@@ -698,15 +733,21 @@ describe("deploy", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token.[0m
 
-			  This is no longer supported in the current version of Wrangler.
-			  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
-			  environment variable.
+			// The current working directory is replaced with `<cwd>` to make the snapshot consistent across environments
+			// But since the actual working directory could be a long string on some operating systems it is possible that the string gets wrapped to a new line.
+			// To avoid failures across different environments, we remove any newline before `<cwd>` in the snapshot.
+			expect(std.warn.replaceAll(/from[ \r\n]+<cwd>/g, "from <cwd>"))
+				.toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token[0m
 
-			"
-		`);
+					  from <cwd>/home/.config/.wrangler/config/default.toml.
+					  This is no longer supported in the current version of Wrangler.
+					  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
+					  environment variable.
+
+					"
+				`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -2802,6 +2843,27 @@ export default{
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
+		it("should not trigger autoconfig on `wrangler deploy <script>` when called with `--x-autoconfig`", async () => {
+			vi.mock(import("../autoconfig/details"), { spy: true });
+			vi.mock(import("../autoconfig/run"), { spy: true });
+
+			const getDetailsForAutoConfigSpy = (await import("../autoconfig/details"))
+				.getDetailsForAutoConfig;
+
+			const runAutoConfigSpy = (await import("../autoconfig/run"))
+				.runAutoConfig;
+
+			writeWranglerConfig();
+			writeWorkerSource({ basePath: "./src" });
+			mockUploadWorkerRequest({ expectedEntry: "var foo = 100;" });
+			mockSubDomainRequest();
+
+			await runWrangler("deploy ./src/index.js --x-autoconfig");
+
+			expect(getDetailsForAutoConfigSpy).not.toHaveBeenCalled();
+			expect(runAutoConfigSpy).not.toHaveBeenCalled();
+		});
+
 		it("should preserve exports on a module format worker", async () => {
 			writeWranglerConfig();
 			fs.writeFileSync(
@@ -3095,7 +3157,6 @@ addEventListener('fetch', event => {});`
 		});
 
 		it("should error if there is no entry-point specified", async () => {
-			vi.mocked(sniffUserAgent).mockReturnValue("npm");
 			writeWranglerConfig();
 			writeWorkerSource();
 			mockUploadWorkerRequest();
@@ -3308,6 +3369,7 @@ addEventListener('fetch', event => {});`
 				vi.useRealTimers();
 			});
 
+			// TODO: remove this test once autoconfig goes GA and its experimental opt-in flag is removed
 			it("should handle `wrangler deploy <directory>`", async () => {
 				mockConfirm({
 					text: "It looks like you are trying to deploy a directory of static assets only. Is this correct?",
@@ -3377,6 +3439,88 @@ addEventListener('fetch', event => {});`
 				`);
 			});
 
+			it("should handle interactive `wrangler deploy <directory>` flows without triggering autoconfig when called with `--x-autoconfig`", async () => {
+				vi.mock(import("../autoconfig/details"), { spy: true });
+				vi.mock(import("../autoconfig/run"), { spy: true });
+
+				const getDetailsForAutoConfigSpy = (
+					await import("../autoconfig/details")
+				).getDetailsForAutoConfig;
+
+				const runAutoConfigSpy = (await import("../autoconfig/run"))
+					.runAutoConfig;
+
+				mockConfirm({
+					text: "It looks like you are trying to deploy a directory of static assets only. Is this correct?",
+					result: true,
+				});
+				mockPrompt({
+					text: "What do you want to name your project?",
+					options: { defaultValue: "my-site" },
+					result: "test-name",
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					result: true,
+				});
+
+				const bodies: AssetManifest[] = [];
+				await mockAUSRequest(bodies);
+
+				await runWrangler("deploy ./assets --x-autoconfig");
+				expect(bodies.length).toBe(1);
+				expect(bodies[0]).toEqual({
+					manifest: {
+						"/index.html": {
+							hash: "8308ce789f3d08668ce87176838d59d0",
+							size: 17,
+						},
+					},
+				});
+				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
+					.toMatchInlineSnapshot(`
+					"{
+					  \\"name\\": \\"test-name\\",
+					  \\"compatibility_date\\": \\"2024-01-01\\",
+					  \\"assets\\": {
+					    \\"directory\\": \\"./assets\\"
+					  }
+					}"
+				`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+
+
+
+					No compatibility date found Defaulting to today: 2024-01-01
+
+					Wrote
+					{
+					  \\"name\\": \\"test-name\\",
+					  \\"compatibility_date\\": \\"2024-01-01\\",
+					  \\"assets\\": {
+					    \\"directory\\": \\"./assets\\"
+					  }
+					}
+					 to <cwd>/wrangler.jsonc.
+					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+
+					Proceeding with deployment...
+
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(getDetailsForAutoConfigSpy).not.toHaveBeenCalled();
+				expect(runAutoConfigSpy).not.toHaveBeenCalled();
+			});
+
+			// TODO: remove this test once autoconfig goes GA and its experimental opt-in flag is removed
 			it("should handle `wrangler deploy --assets` without name or compat date", async () => {
 				// if the user has used --assets flag and args.script is not set, we just need to prompt for the name and add compat date
 				mockPrompt({
@@ -3440,6 +3584,164 @@ addEventListener('fetch', event => {});`
 					  https://test-name.test-sub-domain.workers.dev
 					Current Version ID: Galaxy-Class"
 				`);
+			});
+
+			it("should handle `wrangler deploy --assets` without name or compat date without triggering autoconfig when called with `--x-autoconfig`", async () => {
+				vi.mock(import("../autoconfig/details"), { spy: true });
+				vi.mock(import("../autoconfig/run"), { spy: true });
+
+				const getDetailsForAutoConfigSpy = (
+					await import("../autoconfig/details")
+				).getDetailsForAutoConfig;
+
+				const runAutoConfigSpy = (await import("../autoconfig/run"))
+					.runAutoConfig;
+
+				// if the user has used --assets flag and args.script is not set, we just need to prompt for the name and add compat date
+				mockPrompt({
+					text: "What do you want to name your project?",
+					options: { defaultValue: "my-site" },
+					result: "test-name",
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					result: true,
+				});
+
+				const bodies: AssetManifest[] = [];
+				await mockAUSRequest(bodies);
+
+				await runWrangler("deploy --assets ./assets --x-autoconfig");
+				expect(bodies.length).toBe(1);
+				expect(bodies[0]).toEqual({
+					manifest: {
+						"/index.html": {
+							hash: "8308ce789f3d08668ce87176838d59d0",
+							size: 17,
+						},
+					},
+				});
+				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
+					.toMatchInlineSnapshot(`
+					"{
+					  \\"name\\": \\"test-name\\",
+					  \\"compatibility_date\\": \\"2024-01-01\\",
+					  \\"assets\\": {
+					    \\"directory\\": \\"./assets\\"
+					  }
+					}"
+				`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+
+
+					No compatibility date found Defaulting to today: 2024-01-01
+
+					Wrote
+					{
+					  \\"name\\": \\"test-name\\",
+					  \\"compatibility_date\\": \\"2024-01-01\\",
+					  \\"assets\\": {
+					    \\"directory\\": \\"./assets\\"
+					  }
+					}
+					 to <cwd>/wrangler.jsonc.
+					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+
+					Proceeding with deployment...
+
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(getDetailsForAutoConfigSpy).not.toHaveBeenCalled();
+				expect(runAutoConfigSpy).not.toHaveBeenCalled();
+			});
+
+			it("should not trigger autoconfig on `wrangler deploy <script>` when called with `--x-autoconfig`", async () => {
+				vi.mock(import("../autoconfig/details"), { spy: true });
+				vi.mock(import("../autoconfig/run"), { spy: true });
+
+				const getDetailsForAutoConfigSpy = (
+					await import("../autoconfig/details")
+				).getDetailsForAutoConfig;
+
+				const runAutoConfigSpy = (await import("../autoconfig/run"))
+					.runAutoConfig;
+
+				mockConfirm({
+					text: "It looks like you are trying to deploy a directory of static assets only. Is this correct?",
+					result: true,
+				});
+				mockPrompt({
+					text: "What do you want to name your project?",
+					options: { defaultValue: "my-site" },
+					result: "test-name",
+				});
+				mockConfirm({
+					text: "Do you want Wrangler to write a wrangler.json config file to store this configuration?\nThis will allow you to simply run `wrangler deploy` on future deployments.",
+					result: true,
+				});
+
+				const bodies: AssetManifest[] = [];
+				await mockAUSRequest(bodies);
+
+				await runWrangler("deploy ./assets --x-autoconfig");
+				expect(bodies.length).toBe(1);
+				expect(bodies[0]).toEqual({
+					manifest: {
+						"/index.html": {
+							hash: "8308ce789f3d08668ce87176838d59d0",
+							size: 17,
+						},
+					},
+				});
+				expect(fs.readFileSync("wrangler.jsonc", "utf-8"))
+					.toMatchInlineSnapshot(`
+					"{
+					  \\"name\\": \\"test-name\\",
+					  \\"compatibility_date\\": \\"2024-01-01\\",
+					  \\"assets\\": {
+					    \\"directory\\": \\"./assets\\"
+					  }
+					}"
+				`);
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+
+
+
+					No compatibility date found Defaulting to today: 2024-01-01
+
+					Wrote
+					{
+					  \\"name\\": \\"test-name\\",
+					  \\"compatibility_date\\": \\"2024-01-01\\",
+					  \\"assets\\": {
+					    \\"directory\\": \\"./assets\\"
+					  }
+					}
+					 to <cwd>/wrangler.jsonc.
+					Please run \`wrangler deploy\` instead of \`wrangler deploy ./assets\` next time. Wrangler will automatically use the configuration saved to wrangler.jsonc.
+
+					Proceeding with deployment...
+
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(getDetailsForAutoConfigSpy).not.toHaveBeenCalled();
+				expect(runAutoConfigSpy).not.toHaveBeenCalled();
 			});
 
 			it("should suggest 'my-project' if the default name from the cwd is invalid", async () => {
@@ -8658,6 +8960,7 @@ addEventListener('fetch', event => {});`
 					{ service: "listener " },
 					{ service: "test-listener", environment: "production" },
 				],
+				streaming_tail_consumers: [{ service: "stream-listener " }],
 			});
 			await fs.promises.writeFile("index.js", `export default {};`);
 			mockSubDomainRequest();
@@ -8678,6 +8981,7 @@ addEventListener('fetch', event => {});`
 				Your Worker is sending Tail events to the following Workers:
 				- listener
 				- test-listener
+				- stream-listener  (streaming)
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -10426,6 +10730,50 @@ addEventListener('fetch', event => {});`
 							name: "FOO",
 							service: "foo-service",
 							props: { foo: 123, bar: { baz: "hello from props" } },
+						},
+					],
+				});
+
+				await runWrangler("deploy index.js");
+				expect(std.out).toMatchInlineSnapshot(`
+					"
+					 ⛅️ wrangler x.x.x
+					──────────────────
+					Total Upload: xx KiB / gzip: xx KiB
+					Worker Startup Time: 100 ms
+					Your Worker has access to the following bindings:
+					Binding                    Resource
+					env.FOO (foo-service)      Worker
+
+					Uploaded test-name (TIMINGS)
+					Deployed test-name triggers (TIMINGS)
+					  https://test-name.test-sub-domain.workers.dev
+					Current Version ID: Galaxy-Class"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`""`);
+				expect(std.warn).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should support the internal and non-public facing cross_account_grant service binding field", async () => {
+				writeWranglerConfig({
+					services: [
+						{
+							binding: "FOO",
+							service: "foo-service",
+							// @ts-expect-error - cross_account_gran is purposely not included in the config types (since it is an internal-only feature)
+							cross_account_grant: "grant-service",
+						},
+					],
+				});
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({
+					expectedBindings: [
+						{
+							cross_account_grant: "grant-service",
+							name: "FOO",
+							service: "foo-service",
+							type: "service",
 						},
 					],
 				});
@@ -14758,7 +15106,7 @@ export default{
 			`);
 		});
 
-		test("environments with redirected config", async ({ expect }) => {
+		test("environments with redirected config", async () => {
 			mockGetScriptWithTags(["some-tag"]);
 			mockUploadWorkerRequest({
 				expectedScriptName: "test-name-production",
@@ -14945,7 +15293,7 @@ export default{
 				result: true,
 			});
 
-			await runWrangler("deploy --x-remote-diff-check");
+			await runWrangler("deploy");
 
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
 				"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
@@ -14962,6 +15310,32 @@ export default{
 
 				"
 			`);
+		});
+
+		it("should not present a diff warning to the user when there are differences between the local config (json/jsonc) and the dash config in dry-run mode", async () => {
+			writeWorkerSource();
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					workers_dev: true,
+					preview_urls: true,
+					vars: {
+						MY_VAR: 123,
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.json"
+			);
+
+			// Note: we don't set any mocks here since in dry-run we don't expect wragnler to interact
+			//       with the rest API in any way
+
+			await runWrangler("deploy --dry-run");
+
+			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should present a diff warning to the user when there are differences between the local config (toml) and the dash config", async () => {
@@ -15011,7 +15385,7 @@ export default{
 				result: true,
 			});
 
-			await runWrangler("deploy --x-remote-diff-check");
+			await runWrangler("deploy");
 
 			// Note: we display the toml config diff in json format since code-wise we'd have to convert the rawConfig to toml
 			//       to be able to show toml content/diffs, that combined with the fact that json(c) config files are the
@@ -15032,11 +15406,13 @@ export default{
 				"
 			`);
 		});
-	});
 
-	describe("with strict mode enabled", () => {
-		it("should error if there are remote config difference (with --x-remote-diff-check) in non-interactive mode", async () => {
+		it("in non-intractive (and non-strict) mode, should present a diff when there are differences between the local config and the dash config, and proceed with the deployment", async () => {
 			setIsTTY(false);
+
+			fs.mkdirSync("./public");
+
+			await mockAUSRequest([]);
 
 			writeWorkerSource();
 			mockGetServiceByName("test-name", "production", "dash");
@@ -15046,6 +15422,201 @@ export default{
 					main: "./index.js",
 					workers_dev: true,
 					preview_urls: true,
+					vars: {
+						MY_VAR: "this is a toml file",
+					},
+					assets: {
+						binding: "ASSETS",
+						// Note: remotely we only get the assets' binding name, so in the diff below you can see that
+						//       no diff for the directory configuration is shown
+						directory: "public",
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.toml"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest();
+			mockGetServiceBindings("test-name", [
+				{ name: "MY_VAR", text: "abc", type: "plain_text" },
+			]);
+			mockGetServiceRoutes("test-name", []);
+			mockGetServiceCustomDomainRecords([]);
+			mockGetServiceSubDomainData("test-name", {
+				enabled: true,
+				previews_enabled: true,
+			});
+			mockGetServiceSchedules("test-name", { schedules: [] });
+			mockGetServiceMetadata("test-name", {
+				created_on: "2025-08-07T09:34:47.846308Z",
+				modified_on: "2025-08-08T10:48:12.688997Z",
+				script: {
+					created_on: "2025-08-07T09:34:47.846308Z",
+					modified_on: "2025-08-08T10:48:12.688997Z",
+					id: "my-worker-id",
+					observability: { enabled: true, head_sampling_rate: 1 },
+					compatibility_date: "2024-04-24",
+				},
+			} as unknown as ServiceMetadataRes["default_environment"]);
+
+			await runWrangler("deploy");
+
+			// Note: we display the toml config diff in json format since code-wise we'd have to convert the rawConfig to toml
+			//       to be able to show toml content/diffs, that combined with the fact that json(c) config files are the
+			//       recommended ones moving forward makes this small shortcoming of the config diffing acceptable
+			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
+				"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
+
+				   {
+				  +  assets: {
+				  +    binding: \\"ASSETS\\"
+				  +  }
+				     vars: {
+				  -    MY_VAR: \\"abc\\"
+				  +    MY_VAR: \\"this is a toml file\\"
+				     }
+				   }
+
+
+				  Deploying the Worker will override the remote configuration with your local one.
+
+				"
+			`);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				? Would you like to continue?
+				🤖 Using fallback value in non-interactive context: yes
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                                 Resource
+				env.ASSETS                              Assets
+				env.MY_VAR (\\"this is a toml file\\")      Environment Variable
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+
+		describe("with strict mode enabled", () => {
+			it("should error if there are remote config difference in non-interactive mode", async () => {
+				setIsTTY(false);
+
+				writeWorkerSource();
+				mockGetServiceByName("test-name", "production", "dash");
+				writeWranglerConfig(
+					{
+						compatibility_date: "2024-04-24",
+						main: "./index.js",
+						workers_dev: true,
+						preview_urls: true,
+					},
+					"./wrangler.json"
+				);
+				mockSubDomainRequest();
+				mockUploadWorkerRequest({ wranglerConfigPath: "./wrangler.json" });
+				mockGetServiceBindings("test-name", []);
+				mockGetServiceRoutes("test-name", []);
+				mockGetServiceCustomDomainRecords([]);
+				mockGetServiceSubDomainData("test-name", {
+					enabled: true,
+					previews_enabled: true,
+				});
+				mockGetServiceSchedules("test-name", { schedules: [] });
+				mockGetServiceMetadata("test-name", {
+					created_on: "2025-08-07T09:34:47.846308Z",
+					modified_on: "2025-08-08T10:48:12.688997Z",
+					script: {
+						created_on: "2025-08-07T09:34:47.846308Z",
+						modified_on: "2025-08-08T10:48:12.688997Z",
+						id: "my-worker-id",
+						observability: { enabled: true, head_sampling_rate: 1 },
+						compatibility_date: "2024-04-24",
+					},
+				} as unknown as ServiceMetadataRes["default_environment"]);
+
+				await runWrangler("deploy --strict");
+
+				expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
+					"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
+
+					   {
+					     observability: {
+					  -    enabled: true
+					  +    enabled: false
+					       logs: {
+					  -      enabled: true
+					  +      enabled: false
+					       }
+					     }
+					   }
+
+
+					  Deploying the Worker will override the remote configuration with your local one.
+
+					"
+				`);
+
+				expect(std.err).toMatchInlineSnapshot(`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
+
+					"
+				`);
+				// note: the test and the wrangler run share the same process, and we expect the deploy command (which fails)
+				//       to set a non-zero exit code
+				expect(process.exitCode).not.toBe(0);
+			});
+
+			it("should error when worker was last deployed from api", async () => {
+				setIsTTY(false);
+
+				msw.use(...mswSuccessDeploymentScriptAPI);
+				writeWranglerConfig();
+				writeWorkerSource();
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+
+				await runWrangler("deploy ./index --strict");
+
+				expect(std.warn).toMatchInlineSnapshot(`
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to publish a Workers Service that was last updated via the script API.[0m
+
+				  Edits that have been made via the script API will be overridden by your local code and config.
+
+				"
+				`);
+				expect(std.err).toMatchInlineSnapshot(`
+					"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
+
+					"
+				`);
+				// note: the test and the wrangler run share the same process, and we expect the deploy command (which fails)
+				//       to set a non-zero exit code
+				expect(process.exitCode).not.toBe(0);
+			});
+		});
+
+		it("should warn the user when the deployment would (likely unintentionally) override remote secrets", async () => {
+			writeWorkerSource();
+			mockGetServiceByName("test-name", "production", "dash");
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					vars: {
+						MY_SECRET: 123,
+					},
+					observability: {
+						enabled: true,
+					},
 				},
 				"./wrangler.json"
 			);
@@ -15071,61 +15642,268 @@ export default{
 				},
 			} as unknown as ServiceMetadataRes["default_environment"]);
 
-			await runWrangler("deploy --x-remote-diff-check --strict");
+			vi.mocked(fetchSecrets).mockResolvedValue([
+				{ name: "MY_SECRET", type: "secret_text" },
+			]);
+			mockConfirm({
+				text: "Would you like to continue?",
+				result: true,
+			});
 
+			await runWrangler("deploy");
+
+			expect(fetchSecrets).toHaveBeenCalled();
 			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
-				"▲ [WARNING] The local configuration being used (generated from your local configuration file) differs from the remote configuration of your Worker set via the Cloudflare Dashboard:
-
-				   {
-				     observability: {
-				  -    enabled: true
-				  +    enabled: false
-				     }
-				   }
-
-
-				  Deploying the Worker will override the remote configuration with your local one.
+				"▲ [WARNING] Environment variable \`MY_SECRET\` conflicts with an existing remote secret. This deployment will replace the remote secret with your environment variable.
 
 				"
 			`);
-
-			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
-
-				"
-			`);
-			// note: the test and the wrangler run share the same process, and we expect the deploy command (which fails)
-			//       to set a non-zero exit code
-			expect(process.exitCode).not.toBe(0);
 		});
 
-		it("should error when worker was last deployed from api", async () => {
+		it("should handle the remote secrets fetching check for new workers", async () => {
+			writeWorkerSource();
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					vars: {
+						MY_SECRET: 123,
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.json"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ wranglerConfigPath: "./wrangler.json" });
+
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+					() => {
+						const workerNotFoundAPIError = new APIError({
+							status: 404,
+							text: "A request to the Cloudflare API (/accounts/xxx/workers/scripts/yyy/secrets) failed.",
+						});
+
+						workerNotFoundAPIError.code = 10007;
+						throw workerNotFoundAPIError;
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler("deploy");
+
+			expect(fetchSecrets).toHaveBeenCalled();
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                  Resource
+				env.MY_SECRET (123)      Environment Variable
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
+		it("should not fetch remote secrets in dry-run mode", async () => {
+			writeWorkerSource();
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					vars: {
+						MY_SECRET: 123,
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.json"
+			);
+
+			// Note: we don't set any mocks here since in dry-run we don't expect wragnler to interact
+			//       with the rest API in any way
+
+			vi.mocked(fetchSecrets).mockResolvedValue([
+				{ name: "MY_SECRET", type: "secret_text" },
+			]);
+
+			await runWrangler("deploy --dry-run");
+
+			expect(fetchSecrets).not.toHaveBeenCalled();
+			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should abort the deployment when it would (likely unintentionally) override remote secrets in non-interactive strict mode", async () => {
 			setIsTTY(false);
 
-			msw.use(...mswSuccessDeploymentScriptAPI);
-			writeWranglerConfig();
 			writeWorkerSource();
+			mockGetServiceByName("test-name", "production", "dash");
+			writeWranglerConfig(
+				{
+					compatibility_date: "2024-04-24",
+					main: "./index.js",
+					vars: {
+						MY_SECRET: 123,
+					},
+					observability: {
+						enabled: true,
+					},
+				},
+				"./wrangler.json"
+			);
 			mockSubDomainRequest();
-			mockUploadWorkerRequest();
+			mockUploadWorkerRequest({ wranglerConfigPath: "./wrangler.json" });
+			mockGetServiceBindings("test-name", []);
+			mockGetServiceRoutes("test-name", []);
+			mockGetServiceCustomDomainRecords([]);
+			mockGetServiceSubDomainData("test-name", {
+				enabled: true,
+				previews_enabled: true,
+			});
+			mockGetServiceSchedules("test-name", { schedules: [] });
+			mockGetServiceMetadata("test-name", {
+				created_on: "2025-08-07T09:34:47.846308Z",
+				modified_on: "2025-08-08T10:48:12.688997Z",
+				script: {
+					created_on: "2025-08-07T09:34:47.846308Z",
+					modified_on: "2025-08-08T10:48:12.688997Z",
+					id: "my-worker-id",
+					observability: { enabled: true, head_sampling_rate: 1 },
+					compatibility_date: "2024-04-24",
+				},
+			} as unknown as ServiceMetadataRes["default_environment"]);
 
-			await runWrangler("deploy ./index --strict");
+			vi.mocked(fetchSecrets).mockResolvedValue([
+				{ name: "MY_SECRET", type: "secret_text" },
+			]);
 
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mYou are about to publish a Workers Service that was last updated via the script API.[0m
+			await runWrangler("deploy --strict");
 
-			  Edits that have been made via the script API will be overridden by your local code and config.
+			expect(fetchSecrets).toHaveBeenCalled();
 
-			"
+			expect(normalizeLogWithConfigDiff(std.warn)).toMatchInlineSnapshot(`
+				"▲ [WARNING] Environment variable \`MY_SECRET\` conflicts with an existing remote secret. This deployment will replace the remote secret with your environment variable.
+
+				"
 			`);
+
 			expect(std.err).toMatchInlineSnapshot(`
 				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mAborting the deployment operation because of conflicts. To override and deploy anyway remove the \`--strict\` flag[0m
 
 				"
 			`);
+
 			// note: the test and the wrangler run share the same process, and we expect the deploy command (which fails)
 			//       to set a non-zero exit code
 			expect(process.exitCode).not.toBe(0);
 		});
+	});
+
+	it("should output a deploy output entry to WRANGLER_OUTPUT_FILE_PATH containing a field with the autoconfig summary if autoconfig run", async () => {
+		const outputFile = "./output.json";
+
+		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
+			configured: false,
+			framework: new Static("static"),
+			workerName: "my-site",
+			projectPath: ".",
+		});
+
+		vi.mocked(runAutoConfig).mockImplementation(async () => {
+			const wranglerConfig = {
+				name: "my-site",
+				compatibility_date: "2025-12-02",
+				assets: {
+					directory: ".",
+				},
+			};
+
+			writeWranglerConfig(wranglerConfig);
+
+			return {
+				scripts: {
+					build: "npm run build-my-static-site",
+				},
+				wranglerInstall: true,
+				wranglerConfig,
+				outputDir: "public",
+			};
+		});
+
+		await runWrangler("deploy --x-autoconfig --dry-run", {
+			...process.env,
+			WRANGLER_OUTPUT_FILE_PATH: outputFile,
+		});
+
+		const deployOutputEntry = (await readFile(outputFile, "utf8"))
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line))
+			.find((obj) => obj.type === "deploy") as OutputEntry | undefined;
+
+		assert(deployOutputEntry?.type === "deploy");
+
+		expect(deployOutputEntry.autoconfig_summary).toMatchInlineSnapshot(`
+			Object {
+			  "outputDir": "public",
+			  "scripts": Object {
+			    "build": "npm run build-my-static-site",
+			  },
+			  "wranglerConfig": Object {
+			    "assets": Object {
+			      "directory": ".",
+			    },
+			    "compatibility_date": "2025-12-02",
+			    "name": "my-site",
+			  },
+			  "wranglerInstall": true,
+			}
+		`);
+	});
+
+	it("should output a deploy output entry to WRANGLER_OUTPUT_FILE_PATH not containing a field with the autoconfig summary if autoconfig didn't run", async () => {
+		const outputFile = "./output.json";
+
+		writeWranglerConfig({
+			name: "worker-name",
+			compatibility_date: "2025-12-02",
+			assets: {
+				directory: ".",
+			},
+		});
+
+		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
+			configured: true,
+			framework: new Static("static"),
+			workerName: "my-worker",
+			projectPath: ".",
+		});
+
+		await runWrangler("deploy --x-autoconfig --dry-run", {
+			...process.env,
+			WRANGLER_OUTPUT_FILE_PATH: outputFile,
+		});
+
+		const deployOutputEntry = (await readFile(outputFile, "utf8"))
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line))
+			.find((obj) => obj.type === "deploy") as OutputEntry | undefined;
+
+		assert(deployOutputEntry?.type === "deploy");
+
+		expect(deployOutputEntry.autoconfig_summary).toBeUndefined();
 	});
 });
 

@@ -4,14 +4,14 @@
 	"type": "module",
 	"scripts": {
 		"build": "vite build --app",
-		"check:types": "tsc --build",
+		"check:type": "tsc --build",
 		"dev": "vite dev",
 		"dev:server-headers": "vite dev -c ./vite.config.server-headers.ts",
 		"preview": "vite preview"
 	},
 	"dependencies": {
-		"react": "^19.0.0",
-		"react-dom": "^19.0.0"
+		"react": "^19.2.1",
+		"react-dom": "^19.2.1"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "workspace:*",

@@ -2,12 +2,13 @@ import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { Database } from "./types";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 export const d1ListCommand = createCommand({
 	metadata: {
-		description: "List D1 databases",
+		description: "List all D1 databases in your account",
+		epilogue: "This command acts on remote D1 Databases.",
 		status: "stable",
 		owner: "Product: D1",
 	},

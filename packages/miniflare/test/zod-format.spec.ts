@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "node:assert";
 import test from "ava";
 import { _forceColour, formatZodError } from "miniflare";
 import { z } from "zod";

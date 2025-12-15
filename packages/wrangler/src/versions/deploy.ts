@@ -1,4 +1,4 @@
-import assert from "assert";
+import assert from "node:assert";
 import * as cli from "@cloudflare/cli";
 import { brandColor, gray, white } from "@cloudflare/cli/colors";
 import {
@@ -7,7 +7,7 @@ import {
 	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli/interactive";
-import { APIError, UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -15,6 +15,7 @@ import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
+import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import {
 	createDeployment,
 	fetchDeployableVersions,
@@ -23,7 +24,6 @@ import {
 	fetchVersions,
 	patchNonVersionedScriptSettings,
 } from "./api";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type {
 	ApiDeployment,
 	ApiVersion,
@@ -31,7 +31,7 @@ import type {
 	VersionCache,
 	VersionId,
 } from "./types";
-import type { Config } from "@cloudflare/workers-utils";
+import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 const EPSILON = 0.001; // used to avoid floating-point errors. Comparions to a value +/- EPSILON will mean "roughly equals the value".
 const BLANK_INPUT = "-"; // To be used where optional user-input is displayed and the value is nullish
@@ -264,8 +264,7 @@ export async function confirmLatestDeploymentOverwrite(
 			});
 		}
 	} catch (e) {
-		const isNotFound = e instanceof APIError && e.code == 10007;
-		if (!isNotFound) {
+		if (!isWorkerNotFoundError(e)) {
 			throw e;
 		}
 	}
@@ -561,6 +560,7 @@ async function maybePatchSettings(
 	const maybeUndefinedSettings = {
 		logpush: config.logpush,
 		tail_consumers: config.tail_consumers,
+		streaming_tail_consumers: config.streaming_tail_consumers,
 		observability: config.observability, // TODO reconcile with how regular deploy handles empty state
 	};
 	const definedSettings = Object.fromEntries(
@@ -608,6 +608,10 @@ async function maybePatchSettings(
 					?.map((tc) =>
 						tc.environment ? `${tc.service} (${tc.environment})` : tc.service
 					)
+					.join("\n") ?? "<skipped>",
+			streaming_tail_consumers:
+				patchedSettings.streaming_tail_consumers
+					?.map((stc) => stc.service)
 					.join("\n") ?? "<skipped>",
 		},
 		{

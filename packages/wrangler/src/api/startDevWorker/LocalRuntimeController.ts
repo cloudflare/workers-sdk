@@ -7,10 +7,10 @@ import {
 	prepareContainerImagesForDev,
 	runDockerCmdWithOutput,
 } from "@cloudflare/containers-shared";
+import { getDockerPath } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Miniflare, Mutex } from "miniflare";
 import * as MF from "../../dev/miniflare";
-import { getDockerPath } from "../../environment-variables/misc-variables";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
@@ -141,6 +141,7 @@ export async function convertToConfigBundle(
 		serviceBindings: fetchers,
 		testScheduled: !!event.config.dev.testScheduled,
 		tails: event.config.tailConsumers,
+		streamingTails: event.config.streamingTailConsumers,
 		containerDOClassNames: new Set(
 			event.config.containers?.map((c) => c.class_name)
 		),
@@ -151,12 +152,12 @@ export async function convertToConfigBundle(
 }
 
 export class LocalRuntimeController extends RuntimeController {
+	#log = MF.buildLog();
+	#currentBundleId = 0;
+
 	// ******************
 	//   Event Handlers
 	// ******************
-
-	#log = MF.buildLog();
-	#currentBundleId = 0;
 
 	// This is given as a shared secret to the Proxy and User workers
 	// so that the User Worker can trust aspects of HTTP requests from the Proxy Worker
@@ -272,6 +273,8 @@ export class LocalRuntimeController extends RuntimeController {
 					onContainerImagePreparationEnd: () => {
 						this.containerBeingBuilt = undefined;
 					},
+					logger: logger,
+					isVite: false,
 				});
 				if (this.containerBeingBuilt) {
 					this.containerBeingBuilt.abortRequested = false;
@@ -438,13 +441,13 @@ export class LocalRuntimeController extends RuntimeController {
 	// *********************
 
 	emitReloadStartEvent(data: ReloadStartEvent) {
-		this.emit("reloadStart", data);
+		this.bus.dispatch(data);
 	}
 	emitReloadCompleteEvent(data: ReloadCompleteEvent) {
-		this.emit("reloadComplete", data);
+		this.bus.dispatch(data);
 	}
 	emitDevRegistryUpdateEvent(data: DevRegistryUpdateEvent): void {
-		this.emit("devRegistryUpdate", data);
+		this.bus.dispatch(data);
 	}
 }
 

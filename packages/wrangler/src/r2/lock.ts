@@ -7,11 +7,11 @@ import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	getBucketLockRules,
-	isValidDate,
 	putBucketLockRules,
 	tableFromBucketLockRulesResponse,
-} from "./helpers";
-import type { BucketLockRule } from "./helpers";
+} from "./helpers/bucket";
+import { isValidDate } from "./helpers/misc";
+import type { BucketLockRule } from "./helpers/bucket";
 
 export const r2BucketLockNamespace = createNamespace({
 	metadata: {

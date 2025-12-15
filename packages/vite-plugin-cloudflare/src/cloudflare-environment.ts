@@ -3,6 +3,7 @@ import { CoreHeaders } from "miniflare";
 import * as vite from "vite";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import {
+	GET_EXPORT_TYPES_PATH,
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
 	UNKNOWN_HOST,
@@ -10,7 +11,11 @@ import {
 	WORKER_ENTRY_PATH_HEADER,
 } from "./shared";
 import { debuglog, getOutputDirectory } from "./utils";
-import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
+import type { ExportTypes } from "./export-types";
+import type {
+	ResolvedWorkerConfig,
+	WorkersResolvedConfig,
+} from "./plugin-config";
 import type { MessageEvent, Miniflare, WebSocket } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 
@@ -91,9 +96,9 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 
 	async initRunner(
 		miniflare: Miniflare,
-		workerConfig: WorkerConfig,
+		workerConfig: ResolvedWorkerConfig,
 		isEntryWorker: boolean
-	) {
+	): Promise<void> {
 		const response = await miniflare.dispatchFetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
 			{
@@ -115,6 +120,26 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 		this.#webSocketContainer.webSocket = webSocket;
 	}
 
+	async fetchWorkerExportTypes(
+		miniflare: Miniflare,
+		workerConfig: ResolvedWorkerConfig
+	): Promise<ExportTypes> {
+		// Wait for dependencies to be optimized before making the request
+		await this.depsOptimizer?.init();
+
+		const response = await miniflare.dispatchFetch(
+			new URL(GET_EXPORT_TYPES_PATH, UNKNOWN_HOST),
+			{
+				headers: {
+					[CoreHeaders.ROUTE_OVERRIDE]: workerConfig.name,
+				},
+			}
+		);
+		const json = await response.json();
+
+		return json as ExportTypes;
+	}
+
 	override async fetchModule(
 		id: string,
 		importer?: string,
@@ -133,13 +158,17 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 
 export const cloudflareBuiltInModules = [
 	"cloudflare:email",
+	"cloudflare:node",
 	"cloudflare:sockets",
 	"cloudflare:workers",
 	"cloudflare:workflows",
 ];
 
 const defaultConditions = ["workerd", "worker", "module", "browser"];
-const target = "es2022";
+
+// v8 supports es2024 features as of 11.9
+// workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
+const target = "es2024";
 
 export function createCloudflareEnvironmentOptions({
 	workerConfig,
@@ -149,7 +178,7 @@ export function createCloudflareEnvironmentOptions({
 	isEntryWorker,
 	hasNodeJsCompat,
 }: {
-	workerConfig: WorkerConfig;
+	workerConfig: ResolvedWorkerConfig;
 	userConfig: vite.UserConfig;
 	mode: vite.ConfigEnv["mode"];
 	environmentName: string;
@@ -259,9 +288,9 @@ export function initRunners(
 	miniflare: Miniflare
 ): Promise<void[]> | undefined {
 	return Promise.all(
-		Object.entries(resolvedPluginConfig.workers).map(
-			async ([environmentName, workerConfig]) => {
-				debuglog("Initializing worker:", workerConfig.name);
+		[...resolvedPluginConfig.environmentNameToWorkerMap].map(
+			([environmentName, worker]) => {
+				debuglog("Initializing worker:", worker.config.name);
 				const isEntryWorker =
 					environmentName === resolvedPluginConfig.entryWorkerEnvironmentName;
 
@@ -269,7 +298,7 @@ export function initRunners(
 					viteDevServer.environments[
 						environmentName
 					] as CloudflareDevEnvironment
-				).initRunner(miniflare, workerConfig, isEntryWorker);
+				).initRunner(miniflare, worker.config, isEntryWorker);
 			}
 		)
 	);

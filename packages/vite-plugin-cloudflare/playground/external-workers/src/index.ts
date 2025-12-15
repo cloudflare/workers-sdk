@@ -16,7 +16,7 @@ async function waitForMutation(env: Env, mutationId: string) {
 export default {
 	async fetch(request: Request, env: Env): Promise<Response> {
 		const url = new URL(request.url);
-		const response = await env.AI.run("@cf/meta/llama-3.1-8b-instruct", {
+		const response = await env.AI.run("@cf/meta/llama-3-8b-instruct", {
 			prompt: "When I say PING, you say PONG. PING",
 		});
 

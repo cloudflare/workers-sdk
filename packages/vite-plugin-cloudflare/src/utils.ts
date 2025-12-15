@@ -6,6 +6,8 @@ import {
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
+import semverGte from "semver/functions/gte";
+import { version as viteVersion } from "vite";
 import type { PluginContext } from "./context";
 import type * as http from "node:http";
 import type * as vite from "vite";
@@ -97,6 +99,10 @@ export function createRequestHandler(
 			next(error);
 		}
 	};
+}
+
+export function satisfiesViteVersion(minVersion: string): boolean {
+	return semverGte(viteVersion, minVersion);
 }
 
 function toMiniflareRequest(request: Request): MiniflareRequest {

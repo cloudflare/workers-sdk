@@ -11,8 +11,8 @@
 		"preview": "vite preview"
 	},
 	"dependencies": {
-		"react": "^19.0.0",
-		"react-dom": "^19.0.0"
+		"react": "^19.2.1",
+		"react-dom": "^19.2.1"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "*",
@@ -27,6 +27,7 @@
 		"globals": "^15.14.0",
 		"typescript": "~5.7.2",
 		"typescript-eslint": "^8.22.0",
-		"vite": "^6.1.0"
+		"vite": "^7.0.0",
+		"wrangler": "*"
 	}
 }

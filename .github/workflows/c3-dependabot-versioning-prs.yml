@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   generate-changeset:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-slim
     if: |
       github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
@@ -21,8 +21,10 @@ jobs:
           fetch-depth: 2
           ref: ${{ github.head_ref }}
           token: ${{ secrets.GH_ACCESS_TOKEN }}
+
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
+
       - name: Configure Git
         run: |
           git config --global user.email wrangler@cloudflare.com

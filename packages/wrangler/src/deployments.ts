@@ -1,11 +1,11 @@
-import { URLSearchParams } from "url";
+import { URLSearchParams } from "node:url";
 import {
 	configFileName,
 	mapWorkerMetadataBindings,
 	UserError,
 } from "@cloudflare/workers-utils";
-import TOML from "@iarna/toml";
 import chalk from "chalk";
+import TOML from "smol-toml";
 import { FormData } from "undici";
 import { fetchResult } from "./cfetch";
 import { readConfig } from "./config";
@@ -15,9 +15,9 @@ import * as metrics from "./metrics";
 import { requireAuth } from "./user";
 import { getScriptName } from "./utils/getScriptName";
 import { printWranglerBanner } from "./wrangler-banner";
-import type { ComplianceConfig } from "./environment-variables/misc-variables";
 import type { CommonYargsOptions } from "./yargs-types";
 import type {
+	ComplianceConfig,
 	Config,
 	ServiceMetadataRes,
 	WorkerMetadataBinding,
@@ -336,7 +336,7 @@ Handlers:            ${
 --------------------------bindings--------------------------
 ${
 	bindings.length > 0
-		? TOML.stringify(mapWorkerMetadataBindings(bindings) as TOML.JsonMap)
+		? TOML.stringify(mapWorkerMetadataBindings(bindings))
 		: `None`
 }
 `;

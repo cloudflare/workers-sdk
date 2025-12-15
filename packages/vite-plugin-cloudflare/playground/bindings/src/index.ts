@@ -77,7 +77,7 @@ export default {
 				const value = Math.floor(Date.now() * Math.random()).toString(36);
 				await env.HELLO_WORLD.set(value);
 
-				const result = await env.HELLO_WORLD.get(value);
+				const result = await env.HELLO_WORLD.get();
 				if (value !== result.value) {
 					return new Response("Hello World binding failed to set value", {
 						status: 500,

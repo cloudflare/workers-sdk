@@ -1,4 +1,4 @@
-import fs from "fs/promises";
+import fs from "node:fs/promises";
 import { z } from "zod";
 import { CORE_PLUGIN } from "../plugins";
 import { HttpOptions, Socket_Https } from "../runtime";

@@ -1,9 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { chromium } from "playwright-chromium";
+import {
+	createBuilder,
+	createServer,
+	loadConfigFromFile,
+	mergeConfig,
+	preview,
+} from "vite";
 import { beforeAll, inject } from "vitest";
-import { getViteModuleToTest } from "./vite-module-to-test";
-import type * as http from "node:http";
 import type { Browser, Page } from "playwright-chromium";
 import type {
 	ConfigEnv,
@@ -33,7 +38,7 @@ export const isLocalWithoutDockerRunning =
 /**
  * Vite Dev Server when testing serve
  */
-export let viteServer: ViteDevServer;
+export let viteServer: ViteDevServer | PreviewServer;
 /**
  * Root of the Vite fixture
  */
@@ -70,20 +75,18 @@ export let browser: Browser = undefined!;
 export let viteTestUrl: string = "";
 export let watcher: Rollup.RollupWatcher | undefined = undefined;
 
-const vite = await getViteModuleToTest();
-
 export function setViteUrl(url: string): void {
 	viteTestUrl = url;
 }
 
 export function resetServerLogs() {
-	serverLogs.info = [];
-	serverLogs.warns = [];
-	serverLogs.errors = [];
+	serverLogs.info.splice(0, serverLogs.info.length);
+	serverLogs.warns.splice(0, serverLogs.warns.length);
+	serverLogs.errors.splice(0, serverLogs.errors.length);
 }
 
 beforeAll(async (s) => {
-	let server: ViteDevServer | http.Server | PreviewServer | undefined;
+	let server: ViteDevServer | PreviewServer | undefined;
 
 	const suite = s as RunnerTestFile;
 
@@ -192,7 +195,7 @@ beforeAll(async (s) => {
 		await watcher?.close();
 		await browser?.close();
 	};
-}, 20_000);
+}, 40_000);
 
 export async function loadConfig(configEnv: ConfigEnv) {
 	let config: UserConfig | null = null;
@@ -208,7 +211,7 @@ export async function loadConfig(configEnv: ConfigEnv) {
 				`vite.config.${variantName}.${extension}`
 			);
 			if (fs.existsSync(configVariantPath)) {
-				const res = await vite.loadConfigFromFile(configEnv, configVariantPath);
+				const res = await loadConfigFromFile(configEnv, configVariantPath);
 				if (res) {
 					config = res.config;
 					break;
@@ -218,7 +221,7 @@ export async function loadConfig(configEnv: ConfigEnv) {
 	}
 	// config file from test root dir
 	if (!config) {
-		const res = await vite.loadConfigFromFile(configEnv, undefined, rootDir);
+		const res = await loadConfigFromFile(configEnv, undefined, rootDir);
 		if (res) {
 			config = res.config;
 		}
@@ -254,18 +257,18 @@ export async function loadConfig(configEnv: ConfigEnv) {
 			config?.logLevel
 		),
 	};
-	return vite.mergeConfig(options, config || {});
+	return mergeConfig(options, config || {});
 }
 
 export async function startDefaultServe(): Promise<
-	ViteDevServer | http.Server | PreviewServer
+	ViteDevServer | PreviewServer
 > {
 	setupConsoleWarnCollector(serverLogs.warns);
 
 	if (!isBuild) {
 		process.env.VITE_INLINE = "inline-serve";
 		const config = await loadConfig({ command: "serve", mode: "development" });
-		viteServer = await (await vite.createServer(config)).listen();
+		viteServer = await (await createServer(config)).listen();
 		viteTestUrl = viteServer.resolvedUrls!.local[0]!;
 		if (viteServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
@@ -281,7 +284,7 @@ export async function startDefaultServe(): Promise<
 				resolvedConfig = config;
 			},
 		});
-		const buildConfig = vite.mergeConfig(
+		const buildConfig = mergeConfig(
 			await loadConfig({
 				command: "build",
 				mode: "production",
@@ -290,7 +293,7 @@ export async function startDefaultServe(): Promise<
 				plugins: [resolvedPlugin()],
 			}
 		);
-		const builder = await vite.createBuilder(buildConfig);
+		const builder = await createBuilder(buildConfig);
 		await builder.buildApp();
 
 		const previewConfig = await loadConfig({
@@ -302,9 +305,10 @@ export async function startDefaultServe(): Promise<
 		// Make sure we are running from within the playground.
 		// Otherwise workerd will error with messages about not being allowed to escape the starting directory with `..`.
 		process.chdir(previewConfig.root);
-		const previewServer = await vite.preview(previewConfig);
+		const previewServer = await preview(previewConfig);
 		// prevent preview change NODE_ENV
 		process.env.NODE_ENV = _nodeEnv;
+		viteServer = previewServer;
 		viteTestUrl = previewServer!.resolvedUrls!.local[0]!;
 		if (previewServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");

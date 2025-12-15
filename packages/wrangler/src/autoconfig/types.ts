@@ -1,5 +1,5 @@
 import type { Framework } from "./frameworks/index";
-import type { PackageJSON } from "@cloudflare/workers-utils";
+import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
 export type AutoConfigDetails = {
 	/** The name of the worker */
@@ -16,4 +16,29 @@ export type AutoConfigDetails = {
 	buildCommand?: string;
 	/** The output directory (if no framework is used, points to the raw asset files) */
 	outputDir?: string;
+};
+
+export type AutoConfigOptions = {
+	/** Whether to run autoconfig without actually applying any filesystem modification (default: false) */
+	dryRun?: boolean;
+	/**
+	 * Whether the build command should be run (default: true)
+	 *
+	 * Note: When `dryRun` is `true` the build command is never run.
+	 */
+	runBuild?: boolean;
+	/**
+	 * Whether the confirmation prompts should be skipped (default: false)
+	 *
+	 * Note: When `dryRun` is `true` the the confirmation prompts are always skipped.
+	 */
+	skipConfirmations?: boolean;
+};
+
+export type AutoConfigSummary = {
+	scripts: Record<string, string>;
+	wranglerInstall: boolean;
+	wranglerConfig: RawConfig;
+	frameworkConfiguration?: string;
+	outputDir: string;
 };

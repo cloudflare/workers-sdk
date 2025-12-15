@@ -44,7 +44,7 @@ export type ArgumentsDefinition = {
 
 export const cliDefinition: ArgumentsDefinition = {
 	intro: `
-    The create-cloudflare cli (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
+    The create-cloudflare CLI (also known as C3) is a command-line tool designed to help you set up and deploy new applications to Cloudflare. In addition to speed, it leverages officially developed templates for Workers and framework-specific setup guides to ensure each new application that you set up follows Cloudflare and any third-party best practices for deployment on the Cloudflare network.
   `,
 	positionals: [
 		{
@@ -113,8 +113,8 @@ export const cliDefinition: ArgumentsDefinition = {
 
       You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
 
-      npm create cloudflare -- --framework next -- --ts
-      pnpm create cloudflare --framework next -- --ts
+      npm create cloudflare -- --framework svelte -- --types=ts
+      pnpm create cloudflare --framework svelte -- --types=ts
       `,
 			values: (args) =>
 				getNamesAndDescriptions(

@@ -1,11 +1,11 @@
 import * as path from "node:path";
 import { maybeGetFile } from "@cloudflare/workers-shared";
-import dotenv from "dotenv";
-import { getDefaultEnvFiles, loadDotEnv } from "../config/dot-env";
 import {
 	getCloudflareIncludeProcessEnvFromEnv,
 	getCloudflareLoadDevVarsFromDotEnv,
-} from "../environment-variables/misc-variables";
+} from "@cloudflare/workers-utils";
+import dotenv from "dotenv";
+import { getDefaultEnvFiles, loadDotEnv } from "../config/dot-env";
 import { logger } from "../logger";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -47,7 +47,7 @@ export function getVarsForDev(
 	const configDir = path.resolve(configPath ? path.dirname(configPath) : ".");
 
 	// If envFiles are not explicitly provided, try to load from .dev.vars first
-	if (envFiles === undefined) {
+	if (!envFiles?.length) {
 		const devVarsPath = path.resolve(configDir, ".dev.vars");
 		const loaded = loadDotDevDotVars(devVarsPath, env);
 		if (loaded !== undefined) {

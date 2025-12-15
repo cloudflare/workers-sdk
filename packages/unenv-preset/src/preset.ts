@@ -47,7 +47,7 @@ const nativeModules = [
 ];
 
 // Modules implemented via a mix of workerd APIs and polyfills.
-const hybridModules = ["console", "process"];
+const hybridModules = ["process"];
 
 /**
  * Creates the Cloudflare preset for the given compatibility date and compatibility flags
@@ -74,6 +74,11 @@ export function getCloudflarePreset({
 	const fsOverrides = getFsOverrides(compat);
 	const punycodeOverrides = getPunycodeOverrides(compat);
 	const clusterOverrides = getClusterOverrides(compat);
+	const traceEventsOverrides = getTraceEventsOverrides(compat);
+	const domainOverrides = getDomainOverrides(compat);
+	const wasiOverrides = getWasiOverrides(compat);
+	const consoleOverrides = getConsoleOverrides(compat);
+	const vmOverrides = getVmOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -84,6 +89,11 @@ export function getCloudflarePreset({
 		...fsOverrides.nativeModules,
 		...punycodeOverrides.nativeModules,
 		...clusterOverrides.nativeModules,
+		...traceEventsOverrides.nativeModules,
+		...domainOverrides.nativeModules,
+		...wasiOverrides.nativeModules,
+		...consoleOverrides.nativeModules,
+		...vmOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -95,6 +105,11 @@ export function getCloudflarePreset({
 		...fsOverrides.hybridModules,
 		...punycodeOverrides.hybridModules,
 		...clusterOverrides.hybridModules,
+		...traceEventsOverrides.hybridModules,
+		...domainOverrides.hybridModules,
+		...wasiOverrides.hybridModules,
+		...consoleOverrides.hybridModules,
+		...vmOverrides.hybridModules,
 	];
 
 	return {
@@ -127,7 +142,7 @@ export function getCloudflarePreset({
 			global: false,
 			clearImmediate: false,
 			setImmediate: false,
-			console: "@cloudflare/unenv-preset/node/console",
+			...consoleOverrides.inject,
 			process: "@cloudflare/unenv-preset/node/process",
 		},
 		polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
@@ -316,12 +331,11 @@ function getFsOverrides({
  * Returns the overrides for `node:punycode` (unenv or workerd)
  *
  * The native punycode implementation:
- * - is experimental
+ * - is enabled starting from 2025-12-04
  * - can be enabled with the "enable_nodejs_punycode_module" flag
  * - can be disabled with the "disable_nodejs_punycode_module" flag
  */
 function getPunycodeOverrides({
-	// eslint-disable-next-line unused-imports/no-unused-vars
 	compatibilityDate,
 	compatibilityFlags,
 }: {
@@ -332,12 +346,13 @@ function getPunycodeOverrides({
 		"disable_nodejs_punycode_module"
 	);
 
-	// TODO: add `enabledByDate` when a date is defined in workerd
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_punycode_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_punycode_module"
+	);
 
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabledByDate = compatibilityDate >= "2025-12-04";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	return enabled
 		? {
@@ -354,12 +369,11 @@ function getPunycodeOverrides({
  * Returns the overrides for `node:cluster` (unenv or workerd)
  *
  * The native cluster implementation:
- * - is experimental
+ * - is enabled starting from 2025-12-04
  * - can be enabled with the "enable_nodejs_cluster_module" flag
  * - can be disabled with the "disable_nodejs_cluster_module" flag
  */
 function getClusterOverrides({
-	// eslint-disable-next-line unused-imports/no-unused-vars
 	compatibilityDate,
 	compatibilityFlags,
 }: {
@@ -370,16 +384,211 @@ function getClusterOverrides({
 		"disable_nodejs_cluster_module"
 	);
 
-	// TODO: add `enabledByDate` when a date is defined in workerd
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_cluster_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_cluster_module"
+	);
 
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabledByDate = compatibilityDate >= "2025-12-04";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	return enabled
 		? {
 				nativeModules: ["cluster"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:trace_events` (unenv or workerd)
+ *
+ * The native trace_events implementation:
+ * - is enabled starting from 2025-12-04
+ * - can be enabled with the "enable_nodejs_trace_events_module" flag
+ * - can be disabled with the "disable_nodejs_trace_events_module" flag
+ */
+function getTraceEventsOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_trace_events_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_trace_events_module"
+	);
+
+	const enabledByDate = compatibilityDate >= "2025-12-04";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["trace_events"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:domain` (unenv or workerd)
+ *
+ * The native domain implementation:
+ * - is enabled starting from 2025-12-04
+ * - can be enabled with the "enable_nodejs_domain_module" flag
+ * - can be disabled with the "disable_nodejs_domain_module" flag
+ */
+function getDomainOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_domain_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_domain_module"
+	);
+
+	const enabledByDate = compatibilityDate >= "2025-12-04";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["domain"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:wasi` (unenv or workerd)
+ *
+ * The native wasi implementation:
+ * - is enabled starting from 2025-12-04
+ * - can be enabled with the "enable_nodejs_wasi_module" flag
+ * - can be disabled with the "disable_nodejs_wasi_module" flag
+ */
+function getWasiOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_wasi_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_wasi_module"
+	);
+
+	const enabledByDate = compatibilityDate >= "2025-12-04";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	return enabled
+		? {
+				nativeModules: ["wasi"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:console` (unenv or workerd)
+ *
+ * The native console implementation:
+ * - is enabled starting from 2025-09-21
+ * - can be enabled with the "enable_nodejs_console_module" flag
+ * - can be disabled with the "disable_nodejs_console_module" flag
+ */
+function getConsoleOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): {
+	nativeModules: string[];
+	hybridModules: string[];
+	inject: Record<string, string>;
+} {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_console_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_console_module"
+	);
+	const enabledByDate = compatibilityDate >= "2025-09-21";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	// The native `console` module implements all the node APIs so we can use them directly
+	return enabled
+		? {
+				nativeModules: ["console"],
+				hybridModules: [],
+				inject: {},
+			}
+		: {
+				nativeModules: [],
+				hybridModules: ["console"],
+				inject: { console: "@cloudflare/unenv-preset/node/console" },
+			};
+}
+
+/**
+ * Returns the overrides for `node:vm` (unenv or workerd)
+ *
+ * The native vm implementation:
+ * - is enabled starting from 2025-10-01
+ * - can be enabled with the "enable_nodejs_vm_module" flag
+ * - can be disabled with the "disable_nodejs_vm_module" flag
+ */
+function getVmOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_vm_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes("enable_nodejs_vm_module");
+	const enabledByDate = compatibilityDate >= "2025-10-01";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	// The native `vm` module implements all the node APIs so we can use it directly
+	return enabled
+		? {
+				nativeModules: ["vm"],
 				hybridModules: [],
 			}
 		: {

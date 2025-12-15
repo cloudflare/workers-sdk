@@ -1,5 +1,5 @@
-import assert from "assert";
-import http from "http";
+import assert from "node:assert";
+import http from "node:http";
 import { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import * as undici from "undici";
 import { UndiciHeaders } from "undici/types/dispatcher";

@@ -39,12 +39,10 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
-        with:
-          node-version: 22
 
       - name: Build tools and libraries
         run: pnpm run build
@@ -57,7 +55,7 @@ jobs:
         run: |
           output=$(pnpm --filter @cloudflare/chrome-devtools-patches run deploy)
           echo "Extracting deployed URL from command output"
-          url=$(echo "$output" | grep -oP 'Take a peek over at \K\S+')
+          url=$(echo "$output" | sed -nE "s/.*Take a peek over at (\S+).*/\1/p")
           echo "Extracted URL: $url"
           echo "VITE_DEVTOOLS_PREVIEW_URL=$url" >> $GITHUB_ENV
         env:
@@ -76,7 +74,7 @@ jobs:
         run: |
           output=$(pnpm --filter workers-playground run build:testing && pnpm --filter workers-playground run deploy)
           echo "Extracting deployed URL from command output"
-          url=$(echo "$output" | grep -oP 'Take a peek over at \K\S+')
+          url=$(echo "$output" | sed -nE 's/.*Take a peek over at (https?:\/\/[^ ]+).*/\1/p')
           echo "Extracted URL: $url"
           echo "PLAYGROUND_URL=$url" >> $GITHUB_ENV
         env:
@@ -102,7 +100,7 @@ jobs:
             + https://8afc7d3d.cloudflare-devtools.pages.dev/js_app?theme=systemPreferred&ws=127.0.0.1%3A9229%2Fws&domain=tester&debugger=true
             ```
 
-      - name: "Comment on PR with Workers Playground Link"
+      - name: "Comment on PR with Combined Link"
         if: contains(github.event.*.labels.*.name, 'preview:chrome-devtools-patches') && contains(github.event.*.labels.*.name, 'preview:workers-playground')
         uses: marocchino/sticky-pull-request-comment@v2
         with:

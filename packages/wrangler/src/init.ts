@@ -1,14 +1,15 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path, { dirname } from "node:path";
-import { UserError } from "@cloudflare/workers-utils";
+import {
+	COMPLIANCE_REGION_CONFIG_UNKNOWN,
+	FatalError,
+	getC3CommandFromEnv,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { execa } from "execa";
 import { fetchResult } from "./cfetch";
 import { fetchWorkerDefinitionFromDash } from "./cfetch/internal";
 import { createCommand } from "./core/create-command";
-import {
-	COMPLIANCE_REGION_CONFIG_UNKNOWN,
-	getC3CommandFromEnv,
-} from "./environment-variables/misc-variables";
 import { logger } from "./logger";
 import { readMetricsConfig } from "./metrics/metrics-config";
 import { getPackageManager } from "./package-manager";
@@ -16,9 +17,10 @@ import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import { downloadWorkerConfig } from "./utils/download-worker-config";
 import * as shellquote from "./utils/shell-quote";
+import { isWorkerNotFoundError } from "./utils/worker-not-found-error";
 import type { PackageManager } from "./package-manager";
 import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
-import type { ReadableStream } from "stream/web";
+import type { ReadableStream } from "node:stream/web";
 
 export const init = createCommand({
 	metadata: {
@@ -82,7 +84,7 @@ export const init = createCommand({
 					`/accounts/${accountId}/workers/services/${args.fromDash}`
 				);
 			} catch (err) {
-				if ((err as { code?: number }).code === 10090) {
+				if (isWorkerNotFoundError(err)) {
 					throw new UserError(
 						"wrangler couldn't find a Worker with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account.",
 						{
@@ -163,6 +165,12 @@ export async function downloadWorker(accountId: string, workerName: string) {
 		entrypoint,
 		accountId
 	);
+
+	if (config.assets) {
+		throw new FatalError(
+			"`wrangler init --from-dash` is not yet supported for Workers with Assets"
+		);
+	}
 
 	return {
 		modules,

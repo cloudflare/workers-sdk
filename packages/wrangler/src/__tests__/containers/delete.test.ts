@@ -1,8 +1,10 @@
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
-import { mockCLIOutput, mockConsoleMethods } from "../helpers/mock-console";
+import { mockCLIOutput } from "../helpers/mock-cli-output";
+import { mockConsoleMethods } from "../helpers/mock-console";
 import { msw } from "../helpers/msw";
 import { runWrangler } from "../helpers/run-wrangler";
 
@@ -26,12 +28,12 @@ describe("containers delete", () => {
 		await runWrangler("containers delete --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers delete [ID]
+			"wrangler containers delete ID
 
 			Delete a container
 
 			POSITIONALS
-			  ID  id of the containers to delete  [string]
+			  ID  id of the containers to delete  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]

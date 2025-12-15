@@ -16,14 +16,13 @@ import {
 	handleStructuredLogs,
 	WranglerLog,
 } from "../../dev/miniflare";
-import { getHttpsOptions } from "../../https-options";
+import { validateHttpsOptions } from "../../https-options";
 import { logger } from "../../logger";
 import { getSourceMappedStack } from "../../sourcemap";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
 import { createDeferred } from "./utils";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
-import type { ControllerEventMap } from "./BaseController";
 import type {
 	BundleStartEvent,
 	ConfigUpdateEvent,
@@ -31,7 +30,6 @@ import type {
 	InspectorProxyWorkerIncomingWebSocketMessage,
 	InspectorProxyWorkerOutgoingRequestBody,
 	InspectorProxyWorkerOutgoingWebsocketMessage,
-	PreviewTokenExpiredEvent,
 	ProxyData,
 	ProxyWorkerIncomingRequestBody,
 	ProxyWorkerOutgoingRequestBody,
@@ -44,11 +42,7 @@ import type { StartDevWorkerOptions } from "./types";
 import type { DeferredPromise } from "./utils";
 import type { LogOptions, MiniflareOptions } from "miniflare";
 
-type ProxyControllerEventMap = ControllerEventMap & {
-	ready: [ReadyEvent];
-	previewTokenExpired: [PreviewTokenExpiredEvent];
-};
-export class ProxyController extends Controller<ProxyControllerEventMap> {
+export class ProxyController extends Controller {
 	public ready = createDeferred<ReadyEvent>();
 
 	public localServerReady = createDeferred<void>();
@@ -73,7 +67,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			(this.inspectorEnabled &&
 				this.latestConfig.dev?.inspector &&
 				this.latestConfig.dev?.inspector?.secure)
-				? getHttpsOptions(
+				? validateHttpsOptions(
 						this.latestConfig.dev.server?.httpsKeyPath,
 						this.latestConfig.dev.server?.httpsCertPath
 					)
@@ -269,12 +263,16 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			const inspectorProxyWorkerUrl = await this.proxyWorker.unsafeGetDirectURL(
 				"InspectorProxyWorker"
 			);
-			webSocket = new WebSocket(
-				`${inspectorProxyWorkerUrl.href}/cdn-cgi/InspectorProxyWorker/websocket`,
-				{
-					headers: { Authorization: this.secret },
-				}
-			);
+
+			inspectorProxyWorkerUrl.pathname =
+				"/cdn-cgi/InspectorProxyWorker/websocket";
+
+			webSocket = new WebSocket(inspectorProxyWorkerUrl, {
+				headers: { Authorization: this.secret },
+				// If compression is on, we sometimes get race conditions with MockHttpSocket closing down
+				// while the deflate extension is still trying to send decompressed chunks.
+				perMessageDeflate: false,
+			});
 		} catch (cause) {
 			if (this._torndown) {
 				return;
@@ -407,11 +405,16 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 		// inspector endpoint.
 		const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
 
-		return (
-			this.latestConfig?.dev.inspector !== false &&
-			!inVscodeJsDebugTerminal &&
-			!this.latestConfig?.experimental?.tailLogs
-		);
+		const shouldEnableInspector =
+			this.latestConfig?.dev.inspector !== false && !inVscodeJsDebugTerminal;
+
+		if (this.latestConfig?.dev.remote) {
+			// In `wrangler dev --remote`, only enable the inspector if the `--x-tail-logs` flag is disabled
+			return (
+				shouldEnableInspector && !this.latestConfig?.experimental?.tailLogs
+			);
+		}
+		return shouldEnableInspector;
 	}
 
 	// ******************
@@ -598,11 +601,10 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 			inspectorUrl,
 		};
 
-		this.emit("ready", data);
 		this.ready.resolve(data);
 	}
 	emitPreviewTokenExpiredEvent(proxyData: ProxyData) {
-		this.emit("previewTokenExpired", {
+		this.bus.dispatch({
 			type: "previewTokenExpired",
 			proxyData,
 		});

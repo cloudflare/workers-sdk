@@ -1,11 +1,12 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { logger } from "../../logger";
 import {
 	EXIT_CODE_INVALID_PAGES_CONFIG,
 	EXIT_CODE_NO_CONFIG_FOUND,
 } from "../../pages/errors";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { normalizeString } from "../helpers/normalize";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWranglerConfig } from "../helpers/write-wrangler-config";
@@ -129,11 +130,11 @@ describe("pages build env", () => {
 
 		expect(process.exitCode).toEqual(EXIT_CODE_INVALID_PAGES_CONFIG);
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid character, expected \\"=\\"[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mInvalid TOML document: incomplete key-value: cannot find end of key[0m
 
-			    <cwd>/wrangler.toml:1:8:
-			[37m      1 │ INVALID [32m[37m\\"FILE
-			        ╵         [32m^[0m
+			    <cwd>/wrangler.toml:1:0:
+			[37m      1 │ [32m[37mINVALID \\"FILE
+			        ╵ [32m^[0m
 
 			"
 		`);

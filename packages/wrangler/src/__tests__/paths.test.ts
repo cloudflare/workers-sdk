@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import { describe, expect, it } from "vitest";
 import { getBasePath, readableRelative } from "../paths";
 
 describe("paths", () => {

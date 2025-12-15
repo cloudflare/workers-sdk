@@ -1,32 +1,38 @@
-import { writeFileSync } from "fs";
+import { writeFileSync } from "node:fs";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { getPackageManager } from "../../package-manager";
 import { runCommand } from "../c3-vendor/command";
 import { Framework } from ".";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { ConfigurationOptions, ConfigurationResults } from ".";
 
 export class Astro extends Framework {
-	name = "astro";
-	async configure(outputDir: string): Promise<RawConfig> {
+	async configure({
+		outputDir,
+		dryRun,
+	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const { npx } = await getPackageManager();
-		await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
-			silent: true,
-			startText: "Installing adapter",
-			doneText: `${brandColor("installed")} ${dim(
-				`via \`${npx} astro add cloudflare\``
-			)}`,
-		});
-		await writeFileSync("public/.assetsignore", "_worker.js\n_routes.json");
+		if (!dryRun) {
+			await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
+				silent: true,
+				startText: "Installing adapter",
+				doneText: `${brandColor("installed")} ${dim(
+					`via \`${npx} astro add cloudflare\``
+				)}`,
+			});
+			writeFileSync("public/.assetsignore", "_worker.js\n_routes.json");
+		}
 		return {
-			main: `${outputDir}/_worker.js/index.js`,
-			compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
-			assets: {
-				binding: "ASSETS",
-				directory: outputDir,
-			},
-			observability: {
-				enabled: true,
+			wranglerConfig: {
+				main: `${outputDir}/_worker.js/index.js`,
+				compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
+				assets: {
+					binding: "ASSETS",
+					directory: outputDir,
+				},
 			},
 		};
 	}
+
+	configurationDescription =
+		'Configuring project for Astro with "astro add cloudflare"';
 }

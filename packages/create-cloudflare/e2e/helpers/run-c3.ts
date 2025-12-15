@@ -41,6 +41,7 @@ export type RunnerConfig = {
 		previewArgs?: string[];
 		route: string;
 		expectedText: string;
+		build?: boolean;
 	};
 	/**
 	 * Specifies whether to run the test script for the project and verify the exit code.
@@ -58,6 +59,14 @@ export type RunnerConfig = {
 			expectedText: string;
 		};
 	};
+	/**
+	 * Specifies whether to verify generated types for the project.
+	 */
+	verifyTypes?: boolean;
+	/**
+	 * Verifies whether the Cloudflare Vite plugin has been installed and configured.
+	 */
+	verifyCloudflareVitePluginConfigured?: boolean;
 };
 
 export const runC3 = async (

@@ -25,7 +25,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 				"<<REMOTE_WORKER_PLACEHOLDER_ALT>>": `preserve-e2e-vite-remote-alt`,
 			};
 
-			const projectPath = seed("remote-bindings", "pnpm", replacements);
+			const projectPath = seed("remote-bindings", { pm: "pnpm", replacements });
 
 			beforeAll(async () => {
 				try {
@@ -137,10 +137,61 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 				);
 			});
 		});
+
+	describe("remote bindings without actually establishing a remote connection", () => {
+		const projectPath = seed("remote-bindings-config-account-id", {
+			pm: "pnpm",
+		});
+
+		test("for connection to remote bindings during dev the account_id present in the wrangler config file is used", async ({
+			expect,
+		}) => {
+			const proc = await runLongLived("pnpm", "dev", projectPath);
+			await vi.waitFor(
+				async () => {
+					expect(proc.stderr).toMatch(
+						// Note: this error message shows that we're attempting to establish the remote proxy connection
+						//       using the "not-a-valid-account-id-abc" account id
+						/A request to the Cloudflare API \(\/accounts\/not-a-valid-account-id-abc\/.*?\) failed/
+					);
+				},
+				{
+					timeout: 10_000,
+				}
+			);
+		});
+	});
+
+	describe("failure to connect to remote bindings", () => {
+		const projectPath = seed("remote-bindings-incorrect-r2-config", {
+			pm: "pnpm",
+		});
+
+		describe.each(commands)('with "%s" command', (command) => {
+			// On Windows the path for the miniflare dependency gets pretty long and this fails in node < 22.7
+			// (see: https://github.com/shellscape/jsx-email/issues/225#issuecomment-2420567832), so
+			// we need to skip this on windows since in CI we're using node 20
+			// we should look into re-enable this once we can move to a node a newer version of node
+			test.skipIf(process.platform === "win32")(
+				"exit with a non zero error code and log an error",
+				async ({ expect }) => {
+					const proc = await runLongLived("pnpm", command, projectPath);
+
+					expect(await proc.exitCode).not.toBe(0);
+					expect(proc.stderr).toContain(
+						"R2 bucket 'non-existent-r2-bucket' not found. Please use a different name and try again. [code: 10085]"
+					);
+					expect(proc.stderr).toContain(
+						"Error: Failed to start the remote proxy session. There is likely additional logging output above."
+					);
+				}
+			);
+		});
+	});
 }
 
 describe("remote bindings disabled", () => {
-	const projectPath = seed("remote-bindings-disabled", "pnpm");
+	const projectPath = seed("remote-bindings-disabled", { pm: "pnpm" });
 
 	describe.each(commands)('with "%s" command', (command) => {
 		// On Windows the path for the miniflare dependency gets pretty long and this fails in node < 22.7

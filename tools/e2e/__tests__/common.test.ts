@@ -46,7 +46,6 @@ describe("listTmpE2EProjects()", () => {
 			.intercept({
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
 				query: {
-					per_page: 100,
 					page: 1,
 				},
 			})
@@ -80,7 +79,6 @@ describe("listTmpE2EProjects()", () => {
 			.intercept({
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/pages/projects`,
 				query: {
-					per_page: 100,
 					page: 2,
 				},
 			})
@@ -136,7 +134,6 @@ describe("listTmpKVNamespaces()", () => {
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces`,
 				method: "GET",
 				query: {
-					per_page: 100,
 					page: 1,
 				},
 			})
@@ -171,7 +168,6 @@ describe("listTmpKVNamespaces()", () => {
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/storage/kv/namespaces`,
 				method: "GET",
 				query: {
-					per_page: 100,
 					page: 2,
 				},
 			})
@@ -219,7 +215,6 @@ describe("listTmpDatabases()", () => {
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/d1/database`,
 				method: "GET",
 				query: {
-					per_page: 100,
 					page: 1,
 				},
 			})
@@ -258,7 +253,6 @@ describe("listTmpDatabases()", () => {
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/d1/database`,
 				method: "GET",
 				query: {
-					per_page: 100,
 					page: 2,
 				},
 			})
@@ -312,7 +306,7 @@ describe("listTmpE2EWorkers()", () => {
 			.get("https://api.cloudflare.com")
 			.intercept({
 				path: `/client/v4/accounts/${MOCK_CLOUDFLARE_ACCOUNT_ID}/workers/scripts`,
-				query: { per_page: 100, page: 1 },
+				query: { page: 1 },
 				method: "GET",
 			})
 			.reply(

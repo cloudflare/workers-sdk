@@ -1,3 +1,4 @@
+import { describe, expect, test } from "vitest";
 import { getConfigPatch } from "../../deploy/config-diffs";
 
 // Note: __old (as well as *__deleted) is the value in the remote config, __new is the value in the local one, so we do want the

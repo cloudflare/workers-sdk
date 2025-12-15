@@ -1,11 +1,13 @@
 import { execSync } from "node:child_process";
-import { FatalError } from "@cloudflare/workers-utils";
+import {
+	COMPLIANCE_REGION_CONFIG_PUBLIC,
+	FatalError,
+} from "@cloudflare/workers-utils";
 import { format as timeagoFormat } from "timeago.js";
 import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import { confirm, prompt } from "../dialogs";
-import { COMPLIANCE_REGION_CONFIG_PUBLIC } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";

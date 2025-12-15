@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.14.0",
+	"version": "1.17.1",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -23,12 +23,12 @@
 	"type": "module",
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
 		}
 	},
-	"main": "./dist/index.js",
-	"types": "./dist/index.d.ts",
+	"main": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
 	"files": [
 		"dist"
 	],
@@ -44,6 +44,7 @@
 	"dependencies": {
 		"@cloudflare/unenv-preset": "workspace:*",
 		"@remix-run/node-fetch-server": "^0.8.0",
+		"defu": "^6.1.4",
 		"get-port": "^7.1.0",
 		"miniflare": "workspace:*",
 		"picocolors": "^1.1.1",
@@ -59,10 +60,13 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/node": "catalog:vite-plugin",
+		"@types/semver": "^7.5.1",
 		"@types/ws": "^8.5.13",
 		"magic-string": "^0.30.12",
 		"mlly": "^1.7.4",
-		"tsdown": "^0.15.4",
+		"semver": "^7.7.1",
+		"tree-kill": "^1.2.2",
+		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
 		"vitest": "catalog:default"

@@ -3,6 +3,7 @@ import {
 	getCloudflareContainerRegistry,
 	runDockerCmd,
 } from "@cloudflare/containers-shared";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -24,18 +25,23 @@ describe("containers push", () => {
 
 	mockApiToken();
 	beforeEach(mockAccount);
-	afterEach(vi.clearAllMocks);
+
+	beforeEach(() => {
+		setIsTTY(false);
+		setWranglerConfig({});
+		vi.mocked(dockerImageInspect).mockResolvedValue("linux/amd64");
+	});
 
 	it("should help", async () => {
 		await runWrangler("containers push --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers push [TAG]
+			"wrangler containers push TAG
 
 			Push a tagged image to a Cloudflare managed registry
 
 			POSITIONALS
-			  TAG  [string]
+			  TAG  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -51,11 +57,6 @@ describe("containers push", () => {
 	});
 
 	it("should push image with valid platform", async () => {
-		setIsTTY(false);
-		setWranglerConfig({});
-		vi.mocked(dockerImageInspect).mockResolvedValue("linux/amd64");
-		expect(std.err).toMatchInlineSnapshot(`""`);
-
 		await runWrangler("containers push test-app:tag");
 
 		expect(runDockerCmd).toHaveBeenCalledTimes(2);
@@ -71,21 +72,13 @@ describe("containers push", () => {
 	});
 
 	it("should reject pushing image if platform is not linux/amd64", async () => {
-		setIsTTY(false);
-		setWranglerConfig({});
 		vi.mocked(dockerImageInspect).mockResolvedValue("linux/arm64");
-		expect(std.err).toMatchInlineSnapshot(`""`);
 		await expect(runWrangler("containers push test-app:tag")).rejects.toThrow(
 			"Unsupported platform"
 		);
 	});
 
 	it("should tag image with the correct uri if given an <image>:<tag> argument", async () => {
-		setIsTTY(false);
-		setWranglerConfig({});
-		vi.mocked(dockerImageInspect).mockResolvedValue("linux/amd64");
-		expect(std.err).toMatchInlineSnapshot(`""`);
-
 		await runWrangler("containers push test-app:tag");
 
 		expect(runDockerCmd).toHaveBeenCalledTimes(2);
@@ -116,11 +109,6 @@ describe("containers push", () => {
 	});
 
 	it("should tag image with the correct uri if given an registry.cloudflare.com/<image>:<tag> argument", async () => {
-		setIsTTY(false);
-		setWranglerConfig({});
-		vi.mocked(dockerImageInspect).mockResolvedValue("linux/amd64");
-		expect(std.err).toMatchInlineSnapshot(`""`);
-
 		await runWrangler("containers push registry.cloudflare.com/test-app:tag");
 
 		expect(runDockerCmd).toHaveBeenCalledTimes(2);
@@ -136,11 +124,6 @@ describe("containers push", () => {
 	});
 
 	it("should tag image with the correct uri if given an registry.cloudflare.com/some-account-id/<image>:<tag> argument", async () => {
-		setIsTTY(false);
-		setWranglerConfig({});
-		vi.mocked(dockerImageInspect).mockResolvedValue("linux/amd64");
-		expect(std.err).toMatchInlineSnapshot(`""`);
-
 		await runWrangler(
 			"containers push registry.cloudflare.com/some-account-id/test-app:tag"
 		);

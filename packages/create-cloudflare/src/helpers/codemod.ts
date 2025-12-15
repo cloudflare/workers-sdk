@@ -1,5 +1,5 @@
-import { existsSync, lstatSync, readdirSync } from "fs";
-import path, { extname, join } from "path";
+import { existsSync, lstatSync, readdirSync } from "node:fs";
+import path, { extname, join } from "node:path";
 import * as recast from "recast";
 import * as esprimaParser from "recast/parsers/esprima";
 import * as typescriptParser from "recast/parsers/typescript";

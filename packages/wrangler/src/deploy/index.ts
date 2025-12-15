@@ -4,6 +4,7 @@ import path from "node:path";
 import {
 	configFileName,
 	formatCompatibilityDate,
+	getCIOverrideName,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -14,7 +15,6 @@ import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
 import { confirm, prompt } from "../dialogs";
-import { getCIOverrideName } from "../environment-variables/misc-variables";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { verifyWorkerMatchesCITag } from "../match-tag";
@@ -27,6 +27,7 @@ import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import deploy from "./deploy";
+import type { AutoConfigSummary } from "../autoconfig/types";
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -229,12 +230,6 @@ export const deployCommand = createCommand({
 				"Rollout strategy for Containers changes. If set to immediate, it will override `rollout_percentage_steps` if configured and roll out to 100% of instances in one step. ",
 			choices: ["immediate", "gradual"] as const,
 		},
-		"experimental-deploy-remote-diff-check": {
-			describe: "Experimental: Enable The Deployment Remote Diff check",
-			type: "boolean",
-			hidden: true,
-			alias: ["x-remote-diff-check"],
-		},
 		strict: {
 			describe:
 				"Enables strict mode for the deploy command, this prevents deployments to occur when there are even small potential risks.",
@@ -254,7 +249,6 @@ export const deployCommand = createCommand({
 		overrideExperimentalFlags: (args) => ({
 			MULTIWORKER: false,
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
-			DEPLOY_REMOTE_DIFF_CHECK: args.experimentalDeployRemoteDiffCheck ?? false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
@@ -275,14 +269,25 @@ export const deployCommand = createCommand({
 				{ telemetryMessage: true }
 			);
 		}
-		if (args.experimentalAutoconfig) {
+
+		const shouldRunAutoConfig =
+			args.experimentalAutoconfig &&
+			// If there is a positional parameter or an assets directory specified via --assets then
+			// we don't want to run autoconfig since we assume that the user knows what they are doing
+			// and that they are specifying what needs to be deployed
+			!args.script &&
+			!args.assets;
+
+		let autoConfigSummary: AutoConfigSummary | undefined;
+
+		if (shouldRunAutoConfig) {
 			const details = await getDetailsForAutoConfig({
 				wranglerConfig: config,
 			});
 
 			// Only run auto config if the project is not already configured
 			if (!details.configured) {
-				await runAutoConfig(details);
+				autoConfigSummary = await runAutoConfig(details);
 
 				// If autoconfig worked, there should now be a new config file, and so we need to read config again
 				config = readConfig(args, {
@@ -291,10 +296,6 @@ export const deployCommand = createCommand({
 				});
 			}
 		}
-		// We use the `userConfigPath` to compute the root of a project,
-		// rather than a redirected (potentially generated) `configPath`.
-		const projectRoot =
-			config.userConfigPath && path.dirname(config.userConfigPath);
 
 		if (!config.configPath) {
 			// Attempt to interactively handle `wrangler deploy <directory>`
@@ -312,7 +313,7 @@ export const deployCommand = createCommand({
 					// If stat fails, let the original flow handle the error
 				}
 			}
-			// atttempt to interactively handle `wrangler deploy --assets <directory>` missing compat date or name
+			// attempt to interactively handle `wrangler deploy --assets <directory>` missing compat date or name
 			else if (args.assets && (!args.compatibilityDate || !args.name)) {
 				args = await handleMaybeAssetsDeployment(args.assets, args);
 			}
@@ -371,6 +372,12 @@ export const deployCommand = createCommand({
 				config.configPath
 			);
 		}
+
+		// We use the `userConfigPath` to compute the root of a project,
+		// rather than a redirected (potentially generated) `configPath`.
+		const projectRoot =
+			config.userConfigPath && path.dirname(config.userConfigPath);
+
 		const { sourceMapSize, versionId, workerTag, targets } = await deploy({
 			config,
 			accountId,
@@ -421,6 +428,7 @@ export const deployCommand = createCommand({
 			targets,
 			wrangler_environment: args.env,
 			worker_name_overridden: workerNameOverridden,
+			autoconfig_summary: autoConfigSummary,
 		});
 
 		metrics.sendMetricsEvent(

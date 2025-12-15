@@ -1,5 +1,5 @@
-import assert from "assert";
-import { once } from "events";
+import assert from "node:assert";
+import { once } from "node:events";
 import NodeWebSocket from "ws";
 import { TypedEventTarget } from "../shared";
 import { ValueOf, viewToBuffer } from "../workers";

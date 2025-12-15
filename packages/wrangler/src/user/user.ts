@@ -214,11 +214,14 @@ import url from "node:url";
 import { TextEncoder } from "node:util";
 import {
 	configFileName,
+	getCloudflareApiEnvironmentFromEnv,
+	getCloudflareComplianceRegion,
+	getGlobalWranglerConfigPath,
 	parseTOML,
 	readFileSync,
 	UserError,
 } from "@cloudflare/workers-utils";
-import TOML from "@iarna/toml";
+import TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import {
@@ -227,11 +230,6 @@ import {
 	saveToConfigCache,
 } from "../config-cache";
 import { NoDefaultValueProvided, select } from "../dialogs";
-import {
-	getCloudflareApiEnvironmentFromEnv,
-	getCloudflareComplianceRegion,
-} from "../environment-variables/misc-variables";
-import { getGlobalWranglerConfigPath } from "../global-wrangler-config-path";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -251,8 +249,8 @@ import {
 import { getAccountChoices } from "./choose-account";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { ChooseAccountItem } from "./choose-account";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
 
@@ -424,7 +422,8 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 			};
 		} else if (api_token) {
 			logger.warn(
-				"It looks like you have used Wrangler v1's `config` command to login with an API token.\n" +
+				"It looks like you have used Wrangler v1's `config` command to login with an API token\n" +
+					`from ${config === undefined ? getAuthConfigFilePath() : "in-memory config"}.\n` +
 					"This is no longer supported in the current version of Wrangler.\n" +
 					"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
 			);
@@ -589,26 +588,38 @@ class ErrorUnsupportedGrantType extends ErrorAccessTokenResponse {
 	}
 }
 
-const RawErrorToErrorClassMap: { [_: string]: typeof ErrorOAuth2 } = {
-	invalid_request: ErrorInvalidRequest,
-	invalid_grant: ErrorInvalidGrant,
-	unauthorized_client: ErrorUnauthorizedClient,
-	access_denied: ErrorAccessDenied,
-	unsupported_response_type: ErrorUnsupportedResponseType,
-	invalid_scope: ErrorInvalidScope,
-	server_error: ErrorServerError,
-	temporarily_unavailable: ErrorTemporarilyUnavailable,
-	invalid_client: ErrorInvalidClient,
-	unsupported_grant_type: ErrorUnsupportedGrantType,
-	invalid_json: ErrorInvalidJson,
-	invalid_token: ErrorInvalidToken,
-};
-
 /**
  * Translate the raw error strings returned from the server into error classes.
  */
-function toErrorClass(rawError: string): ErrorOAuth2 {
-	return new (RawErrorToErrorClassMap[rawError] || ErrorUnknown)();
+function toErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
+	switch (rawError) {
+		case "invalid_request":
+			return new ErrorInvalidRequest(rawError);
+		case "invalid_grant":
+			return new ErrorInvalidGrant(rawError);
+		case "unauthorized_client":
+			return new ErrorUnauthorizedClient(rawError);
+		case "access_denied":
+			return new ErrorAccessDenied(rawError);
+		case "unsupported_response_type":
+			return new ErrorUnsupportedResponseType(rawError);
+		case "invalid_scope":
+			return new ErrorInvalidScope(rawError);
+		case "server_error":
+			return new ErrorServerError(rawError);
+		case "temporarily_unavailable":
+			return new ErrorTemporarilyUnavailable(rawError);
+		case "invalid_client":
+			return new ErrorInvalidClient(rawError);
+		case "unsupported_grant_type":
+			return new ErrorUnsupportedGrantType(rawError);
+		case "invalid_json":
+			return new ErrorInvalidJson(rawError);
+		case "invalid_token":
+			return new ErrorInvalidToken(rawError);
+		default:
+			return new ErrorUnknown();
+	}
 }
 
 /**
@@ -909,7 +920,7 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 	mkdirSync(path.dirname(configPath), {
 		recursive: true,
 	});
-	writeFileSync(path.join(configPath), TOML.stringify(config as TOML.JsonMap), {
+	writeFileSync(path.join(configPath), TOML.stringify(config), {
 		encoding: "utf-8",
 	});
 
@@ -1371,8 +1382,7 @@ async function fetchAuthToken(body: URLSearchParams) {
 			logger.error(
 				"Failed to fetch auth token:",
 				response.status,
-				response.statusText,
-				await response.text()
+				response.statusText
 			);
 		}
 		return response;

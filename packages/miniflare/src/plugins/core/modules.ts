@@ -1,9 +1,9 @@
-import assert from "assert";
-import { readFileSync } from "fs";
-import { builtinModules } from "module";
-import path from "path";
-import { pathToFileURL } from "url";
-import { TextDecoder, TextEncoder } from "util";
+import assert from "node:assert";
+import { readFileSync } from "node:fs";
+import { builtinModules } from "node:module";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+import { TextDecoder, TextEncoder } from "node:util";
 import { parse } from "acorn";
 import { simple } from "acorn-walk";
 import { dim } from "kleur/colors";

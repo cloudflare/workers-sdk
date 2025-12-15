@@ -1,5 +1,5 @@
 import "cloudflare/shims/web";
-import process from "process";
+import process from "node:process";
 import { FatalError } from "@cloudflare/workers-utils";
 import { hideBin } from "yargs/helpers";
 import {
@@ -34,7 +34,7 @@ if (typeof vitest === "undefined" && require.main === module) {
  */
 export { unstable_dev, unstable_pages, unstable_DevEnv, unstable_startWorker };
 export type { Unstable_DevWorker, Unstable_DevOptions };
-
+export { printBindings as unstable_printBindings } from "./utils/print-bindings";
 export * from "./api/integrations";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
@@ -60,6 +60,7 @@ const generateASSETSBinding: (
 export { generateASSETSBinding as unstable_generateASSETSBinding };
 
 export {
+	defaultWranglerConfig as unstable_defaultWranglerConfig,
 	experimental_readRawConfig,
 	type ConfigBindingOptions as Experimental_ConfigBindingOptions,
 } from "@cloudflare/workers-utils";

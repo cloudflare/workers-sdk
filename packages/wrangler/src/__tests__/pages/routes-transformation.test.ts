@@ -1,3 +1,4 @@
+import { describe, expect, it, test } from "vitest";
 import {
 	MAX_FUNCTIONS_ROUTES_RULES,
 	ROUTES_SPEC_DESCRIPTION,

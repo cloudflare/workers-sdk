@@ -1,5 +1,9 @@
 import assert from "node:assert";
-import { VIRTUAL_WORKER_ENTRY, virtualPrefix } from "../shared";
+import {
+	VIRTUAL_EXPORT_TYPES,
+	VIRTUAL_WORKER_ENTRY,
+	virtualPrefix,
+} from "../shared";
 import { createPlugin } from "../utils";
 
 export const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
@@ -13,16 +17,21 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 		applyToEnvironment(environment) {
 			return ctx.getWorkerConfig(environment.name) !== undefined;
 		},
-		resolveId(source) {
-			if (source === VIRTUAL_WORKER_ENTRY) {
-				return `\0${VIRTUAL_WORKER_ENTRY}`;
+		async resolveId(source) {
+			if (source === VIRTUAL_WORKER_ENTRY || source === VIRTUAL_EXPORT_TYPES) {
+				return `\0${source}`;
 			}
 
 			if (source === VIRTUAL_USER_ENTRY) {
 				const workerConfig = ctx.getWorkerConfig(this.environment.name);
 				assert(workerConfig, "Expected `workerConfig` to be defined");
-
-				return this.resolve(workerConfig.main);
+				const main = await this.resolve(workerConfig.main);
+				if (!main) {
+					throw new Error(
+						`Failed to resolve main entry file "${workerConfig.main}" for environment "${this.environment.name}"`
+					);
+				}
+				return main;
 			}
 		},
 		load(id) {
@@ -31,11 +40,56 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 
 				return `
 ${nodeJsCompat ? nodeJsCompat.injectGlobalCode() : ""}
+import { getExportTypes } from "${VIRTUAL_EXPORT_TYPES}";
 import * as mod from "${VIRTUAL_USER_ENTRY}";
 export * from "${VIRTUAL_USER_ENTRY}";
 export default mod.default ?? {};
 if (import.meta.hot) {
-	import.meta.hot.accept();
+	import.meta.hot.accept((module) => {
+		const exportTypes = getExportTypes(module);
+		import.meta.hot.send("vite-plugin-cloudflare:worker-export-types", exportTypes);
+	});
+}
+				`;
+			}
+
+			if (id === `\0${VIRTUAL_EXPORT_TYPES}`) {
+				return `
+import {
+	WorkerEntrypoint,
+	DurableObject,
+	WorkflowEntrypoint,
+} from "cloudflare:workers";
+
+const baseClasses = new Map([
+	["WorkerEntrypoint", WorkerEntrypoint],
+	["DurableObject", DurableObject],
+	["WorkflowEntrypoint", WorkflowEntrypoint],
+]);
+
+export function getExportTypes(module) {
+	const exportTypes = {};
+
+	for (const [key, value] of Object.entries(module)) {
+		if (key === "default") {
+			continue;
+		}
+
+		let exportType
+
+		if (typeof value === "function") {
+			for (const [type, baseClass] of baseClasses) {
+				if (baseClass.prototype.isPrototypeOf(value.prototype)) {
+					exportType = type;
+					break;
+				}
+			}
+		}
+
+		exportTypes[key] = exportType;
+	}
+
+	return exportTypes;
 }
 				`;
 			}

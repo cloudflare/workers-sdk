@@ -198,7 +198,6 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 		return {
 			status: instanceStatusName(status),
 			__LOCAL_DEV_STEP_OUTPUTS: stepOutputs,
-			// @ts-expect-error types are wrong, will remove this expect-error once I fix them
 			output: workflowOutput,
 		}; // output, error
 	}

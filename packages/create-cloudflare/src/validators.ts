@@ -1,5 +1,5 @@
-import { existsSync, readdirSync } from "fs";
-import { basename, resolve } from "path";
+import { existsSync, readdirSync } from "node:fs";
+import { basename, resolve } from "node:path";
 import type { Arg } from "@cloudflare/cli/interactive";
 import type { C3Args } from "types";
 

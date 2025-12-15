@@ -1,7 +1,7 @@
 {
-	"name": "<TBD>",
+	"name": "<WORKER_NAME>",
 	"main": "src/entry.py",
-	"compatibility_date": "<TBD>",
+	"compatibility_date": "<COMPATIBILITY_DATE>",
 	"compatibility_flags": ["python_workers"],
 	"observability": {
 		"enabled": true,

@@ -1,8 +1,10 @@
-import { UserError } from "@cloudflare/workers-utils";
+import {
+	getD1ExtraLocationChoices,
+	UserError,
+} from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
-import { getD1ExtraLocationChoices } from "../environment-variables/misc-variables";
 import { logger } from "../logger";
 import { requireAuth } from "../user";
 import {
@@ -11,8 +13,8 @@ import {
 } from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
 import { JURISDICTION_CHOICES, LOCATION_CHOICES } from "./constants";
-import type { ComplianceConfig } from "../environment-variables/misc-variables";
 import type { DatabaseCreationResult } from "./types";
+import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 export async function createD1Database(
 	complianceConfig: ComplianceConfig,
@@ -48,7 +50,9 @@ export async function createD1Database(
 
 export const d1CreateCommand = createCommand({
 	metadata: {
-		description: "Create D1 database",
+		description:
+			"Creates a new D1 database, and provides the binding and UUID that you will put in your config file",
+		epilogue: "This command acts on remote D1 Databases.",
 		status: "stable",
 		owner: "Product: D1",
 	},
@@ -56,7 +60,7 @@ export const d1CreateCommand = createCommand({
 		name: {
 			type: "string",
 			demandOption: true,
-			description: "The name of the new DB",
+			description: "The name of the new D1 database",
 		},
 		location: {
 			type: "string",

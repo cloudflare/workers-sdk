@@ -3,6 +3,7 @@ import path from "node:path";
 import { isDockerfile } from "@cloudflare/containers-shared";
 import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/validators";
 import { dedent } from "ts-dedent";
+import { getCloudflareEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
 import { isRedirectedRawConfig } from "./config-helpers";
 import { Diagnostics } from "./diagnostics";
@@ -43,6 +44,7 @@ import type {
 	Observability,
 	RawEnvironment,
 	Rule,
+	StreamingTailConsumer,
 	TailConsumer,
 } from "./environment";
 import type { TypeofType, ValidatorFn } from "./validation-helpers";
@@ -256,21 +258,32 @@ export function normalizeAndValidateConfig(
 		);
 	}
 
-	//TODO: find a better way to define the type of Args that can be passed to the normalizeAndValidateConfig()
-	const envName = args.env;
+	// The environment can come from the CLI args (i.e. `--env`) or from the `CLOUDFLARE_ENV` environment variable.
+	const envName = args.env ?? getCloudflareEnv();
 	assert(envName === undefined || typeof envName === "string");
 
 	let activeEnv = topLevelEnv;
 
 	if (envName) {
 		if (isRedirectedConfig) {
-			// Note: we error if the user is specifying an environment, but not for pages
-			//       commands where the environment is always set (to either "preview" or "production")
-			if (!isPagesConfig(rawConfig)) {
-				diagnostics.errors.push(dedent`
-					You have specified the environment "${envName}", but are using a redirected configuration, produced by a build tool such as Vite.
-					You need to set the environment in your build tool, rather than via Wrangler.
-					For example, if you are using Vite, refer to these docs: https://developers.cloudflare.com/workers/vite-plugin/reference/cloudflare-environments/
+			// Check that if we are loading a redirected config, any specified environment must match the target environment
+			// from the original user config.
+			// Note: we don't error for pages commands where the environment is always set (to either "preview" or "production")
+			if (
+				!isPagesConfig(rawConfig) &&
+				rawConfig.targetEnvironment &&
+				rawConfig.targetEnvironment !== envName
+			) {
+				const via =
+					args.env !== undefined
+						? "via the `--env/-e` CLI argument"
+						: "via the CLOUDFLARE_ENV environment variable";
+				// We are throwing here rather than just adding to the diagnostics because this is a hard error
+				// and we'd like to collect Sentry data on when and how often this is happening.
+				throw new Error(dedent`
+					You have specified the environment "${envName}" ${via}.
+					This does not match the target environment "${rawConfig.targetEnvironment}" that was used when building the application.
+					Perhaps you need to re-run the custom build of the project with "${envName}" as the selected environment?
 				`);
 			}
 		} else {
@@ -968,24 +981,124 @@ function normalizeAndValidatePlacement(
 	rawEnv: RawEnvironment
 ): Config["placement"] {
 	if (rawEnv.placement) {
-		validateRequiredProperty(
-			diagnostics,
-			"placement",
-			"mode",
-			rawEnv.placement.mode,
-			"string",
-			["off", "smart"]
-		);
-		validateOptionalProperty(
-			diagnostics,
-			"placement",
-			"hint",
-			rawEnv.placement.hint,
-			"string"
-		);
-		if (rawEnv.placement.hint && rawEnv.placement.mode !== "smart") {
+		const placement = rawEnv.placement as Record<string, unknown>;
+
+		// Detect which format is being used
+		const hasHint = "hint" in placement;
+		const hasRegion = "region" in placement;
+		const hasHost = "host" in placement;
+		const hasHostname = "hostname" in placement;
+		const hasTargetedFields = hasRegion || hasHost || hasHostname;
+
+		// Validate that formats aren't mixed
+		if (hasHint && hasTargetedFields) {
 			diagnostics.errors.push(
-				`"placement.hint" cannot be set if "placement.mode" is not "smart"`
+				`"placement" cannot have both "hint" (smart format) and "region"/"host"/"hostname" (targeted format) fields`
+			);
+			return inheritable(
+				diagnostics,
+				topLevelEnv,
+				rawEnv,
+				"placement",
+				() => true,
+				undefined
+			);
+		}
+
+		// Validate old format (with hint)
+		if (hasHint) {
+			validateRequiredProperty(
+				diagnostics,
+				"placement",
+				"mode",
+				placement.mode,
+				"string",
+				["off", "smart"]
+			);
+
+			const mode = placement.mode as string;
+			const hint = placement.hint;
+
+			// Hint must be a string (if provided)
+			if (hint !== undefined && typeof hint !== "string") {
+				diagnostics.errors.push(
+					`"placement.hint" must be a string when "placement.mode" is "${mode}"`
+				);
+			}
+			if (hint && mode !== "smart") {
+				diagnostics.errors.push(
+					`"placement.hint" can only be set when "placement.mode" is "smart"`
+				);
+			}
+		}
+		// Validate new format (with region/host/hostname)
+		else if (hasTargetedFields) {
+			// Mode is optional for new format, but if present must be "off" or "targeted"
+			validateOptionalProperty(
+				diagnostics,
+				"placement",
+				"mode",
+				placement.mode,
+				"string",
+				["off", "targeted"]
+			);
+
+			// Validate that region/host/hostname are strings if present
+			if (hasRegion) {
+				validateOptionalProperty(
+					diagnostics,
+					"placement",
+					"region",
+					placement.region,
+					"string"
+				);
+			}
+			if (hasHost) {
+				validateOptionalProperty(
+					diagnostics,
+					"placement",
+					"host",
+					placement.host,
+					"string"
+				);
+			}
+			if (hasHostname) {
+				validateOptionalProperty(
+					diagnostics,
+					"placement",
+					"hostname",
+					placement.hostname,
+					"string"
+				);
+			}
+
+			// Validate that region/host/hostname are mutually exclusive
+			const fieldsPresent = [hasRegion, hasHost, hasHostname].filter(Boolean);
+			if (fieldsPresent.length > 1) {
+				const presentFields = [];
+				if (hasRegion) {
+					presentFields.push("region");
+				}
+				if (hasHost) {
+					presentFields.push("host");
+				}
+				if (hasHostname) {
+					presentFields.push("hostname");
+				}
+				diagnostics.errors.push(
+					`"placement" fields ${presentFields.map((f) => `"${f}"`).join(", ")} are mutually exclusive. Only one can be specified.`
+				);
+			}
+		}
+		// Just mode, no hint or new format fields
+		else {
+			validateRequiredProperty(
+				diagnostics,
+				"placement",
+				"mode",
+				placement.mode,
+				"string",
+				["off", "smart", "targeted"]
 			);
 		}
 	}
@@ -1051,6 +1164,59 @@ const validateTailConsumers: ValidatorFn = (diagnostics, field, value) => {
 	for (let i = 0; i < value.length; i++) {
 		isValid =
 			validateTailConsumer(diagnostics, `${field}[${i}]`, value[i]) && isValid;
+	}
+
+	return isValid;
+};
+
+/**
+ * Streaming tail consumers should match:
+ * {
+ *   service: string,
+ *   entrypoint?: string
+ * }
+ */
+function validateStreamingTailConsumer(
+	diagnostics: Diagnostics,
+	field: string,
+	value: StreamingTailConsumer
+) {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		diagnostics.errors.push(
+			`"${field}" should be an object but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	return validateRequiredProperty(
+		diagnostics,
+		field,
+		"service",
+		value.service,
+		"string"
+	);
+}
+
+const validateStreamingTailConsumers: ValidatorFn = (
+	diagnostics,
+	field,
+	value
+) => {
+	if (!value) {
+		return true;
+	}
+	if (!Array.isArray(value)) {
+		diagnostics.errors.push(
+			`Expected "${field}" to be an array but got ${JSON.stringify(value)}.`
+		);
+		return false;
+	}
+
+	let isValid = true;
+	for (let i = 0; i < value.length; i++) {
+		isValid =
+			validateStreamingTailConsumer(diagnostics, `${field}[${i}]`, value[i]) &&
+			isValid;
 	}
 
 	return isValid;
@@ -1451,6 +1617,16 @@ function normalizeAndValidateEnvironment(
 			envName,
 			"tail_consumers",
 			validateTailConsumers,
+			undefined
+		),
+		streaming_tail_consumers: notInheritable(
+			diagnostics,
+			topLevelEnv,
+			rawConfig,
+			rawEnv,
+			envName,
+			"streaming_tail_consumers",
+			validateStreamingTailConsumers,
 			undefined
 		),
 		unsafe: notInheritable(
@@ -2837,6 +3013,21 @@ function validateContainerApp(
 				);
 			}
 
+			// unsafe.containers
+			if ("unsafe" in containerAppOptional) {
+				if (
+					(containerAppOptional.unsafe &&
+						typeof containerAppOptional.unsafe !== "object") ||
+					Array.isArray(containerAppOptional.unsafe)
+				) {
+					diagnostics.errors.push(
+						`The field "containers.unsafe" should be an object but got ${JSON.stringify(
+							typeof containerAppOptional.unsafe
+						)}.`
+					);
+				}
+			}
+
 			validateAdditionalProperties(
 				diagnostics,
 				field,
@@ -2851,6 +3042,8 @@ function validateContainerApp(
 					"class_name",
 					"scheduling_policy",
 					"instance_type",
+					"wrangler_ssh",
+					"authorized_keys",
 					"configuration",
 					"constraints",
 					"affinities",
@@ -2858,6 +3051,7 @@ function validateContainerApp(
 					"rollout_kind",
 					"durable_objects",
 					"rollout_active_grace_period",
+					"unsafe",
 				]
 			);
 			if ("configuration" in containerAppOptional) {
@@ -2867,6 +3061,70 @@ function validateContainerApp(
 					Object.keys(containerAppOptional.configuration),
 					["image", "secrets", "labels", "disk", "vcpu", "memory_mib"]
 				);
+			}
+
+			if ("wrangler_ssh" in containerAppOptional) {
+				if (
+					!isRequiredProperty(
+						containerAppOptional.wrangler_ssh,
+						"enabled",
+						"boolean"
+					)
+				) {
+					diagnostics.errors.push(
+						`${field}.wrangler_ssh.enabled must be a boolean`
+					);
+				}
+
+				if (
+					!isOptionalProperty(
+						containerAppOptional.wrangler_ssh,
+						"port",
+						"number"
+					) ||
+					containerAppOptional.wrangler_ssh.port < 1 ||
+					containerAppOptional.wrangler_ssh.port > 65535
+				) {
+					diagnostics.errors.push(
+						`${field}.wrangler_ssh.port must be a number between 1 and 65535 inclusive`
+					);
+				}
+
+				if (
+					!("authorized_keys" in containerAppOptional) &&
+					containerAppOptional.wrangler_ssh.enabled
+				) {
+					diagnostics.errors.push(
+						`${field}.authorized_keys must be provided if wrangler ssh is enabled`
+					);
+				}
+			}
+
+			if ("authorized_keys" in containerAppOptional) {
+				if (!Array.isArray(containerAppOptional.authorized_keys)) {
+					diagnostics.errors.push(`${field}.authorized_keys must be an array`);
+				} else {
+					for (const index in containerAppOptional.authorized_keys) {
+						const fieldPath = `${field}.authorized_keys[${index}]`;
+						const key = containerAppOptional.authorized_keys[index];
+
+						if (!isRequiredProperty(key, "name", "string")) {
+							diagnostics.errors.push(`${fieldPath}.name must be a string`);
+						}
+
+						if (!isRequiredProperty(key, "public_key", "string")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key must be a string`
+							);
+						}
+
+						if (!key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key is a unsupported key type. Please provide a ED25519 public key.`
+							);
+						}
+					}
+				}
 			}
 
 			// Instance Type validation: When present, the instance type should be either (1) a string

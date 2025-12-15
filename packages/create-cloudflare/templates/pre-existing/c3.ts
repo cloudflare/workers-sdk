@@ -1,7 +1,7 @@
-import { existsSync } from "fs";
-import { cp, mkdtemp } from "fs/promises";
-import { tmpdir } from "os";
-import { join } from "path";
+import { existsSync } from "node:fs";
+import { cp, mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { processArgument } from "helpers/args";
 import { runCommand } from "helpers/command";

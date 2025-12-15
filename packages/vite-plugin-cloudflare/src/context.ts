@@ -1,16 +1,19 @@
 import assert from "node:assert";
 import { Miniflare } from "miniflare";
+import { getInitialWorkerNameToExportTypesMap } from "./export-types";
 import { debuglog } from "./utils";
+import type { ExportTypes } from "./export-types";
 import type { NodeJsCompat } from "./nodejs-compat";
 import type {
 	AssetsOnlyResolvedConfig,
 	PreviewResolvedConfig,
 	ResolvedPluginConfig,
-	WorkerConfig,
+	ResolvedWorkerConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
+import type { Unstable_Config } from "wrangler";
 
 /**
  * Used to store state that should persist across server restarts.
@@ -18,6 +21,7 @@ import type * as vite from "vite";
  */
 export interface SharedContext {
 	miniflare?: Miniflare;
+	workerNameToExportTypesMap?: Map<string, ExportTypes>;
 	hasShownWorkerConfigWarnings: boolean;
 	/** Used to track whether hooks are being called because of a server restart or a server close event */
 	isRestartingDevServer: boolean;
@@ -76,6 +80,24 @@ export class PluginContext {
 		return Number.parseInt(miniflareInspectorUrl.port);
 	}
 
+	setWorkerNameToExportTypesMap(
+		workerNameToExportTypesMap: Map<string, ExportTypes>
+	): void {
+		this.#sharedContext.workerNameToExportTypesMap = workerNameToExportTypesMap;
+	}
+
+	get workerNameToExportTypesMap(): Map<string, ExportTypes> {
+		if (!this.#sharedContext.workerNameToExportTypesMap) {
+			if (this.resolvedPluginConfig.type !== "workers") {
+				return new Map();
+			}
+
+			return getInitialWorkerNameToExportTypesMap(this.resolvedPluginConfig);
+		}
+
+		return this.#sharedContext.workerNameToExportTypesMap;
+	}
+
 	setHasShownWorkerConfigWarnings(hasShownWorkerConfigWarnings: boolean): void {
 		this.#sharedContext.hasShownWorkerConfigWarnings =
 			hasShownWorkerConfigWarnings;
@@ -119,25 +141,42 @@ export class PluginContext {
 		return this.#resolvedViteConfig;
 	}
 
-	getWorkerConfig(environmentName: string): WorkerConfig | undefined {
+	getWorkerConfig(environmentName: string): ResolvedWorkerConfig | undefined {
 		return this.resolvedPluginConfig.type === "workers"
-			? this.resolvedPluginConfig.workers[environmentName]
+			? this.resolvedPluginConfig.environmentNameToWorkerMap.get(
+					environmentName
+				)?.config
 			: undefined;
 	}
 
-	get entryWorkerConfig(): WorkerConfig | undefined {
+	get allWorkerConfigs(): Unstable_Config[] {
+		switch (this.resolvedPluginConfig.type) {
+			case "workers":
+				return Array.from(
+					this.resolvedPluginConfig.environmentNameToWorkerMap.values()
+				).map((worker) => worker.config);
+			case "preview":
+				return this.resolvedPluginConfig.workers;
+			default:
+				return [];
+		}
+	}
+
+	get entryWorkerConfig(): ResolvedWorkerConfig | undefined {
 		if (this.resolvedPluginConfig.type !== "workers") {
 			return;
 		}
 
-		return this.resolvedPluginConfig.workers[
+		return this.resolvedPluginConfig.environmentNameToWorkerMap.get(
 			this.resolvedPluginConfig.entryWorkerEnvironmentName
-		];
+		)?.config;
 	}
 
 	getNodeJsCompat(environmentName: string): NodeJsCompat | undefined {
 		return this.resolvedPluginConfig.type === "workers"
-			? this.resolvedPluginConfig.nodeJsCompatMap.get(environmentName)
+			? this.resolvedPluginConfig.environmentNameToWorkerMap.get(
+					environmentName
+				)?.nodeJsCompat
 			: undefined;
 	}
 }

@@ -66,6 +66,7 @@ export function createWorkerUploadForm(
 		logpush,
 		placement,
 		tail_consumers,
+		streaming_tail_consumers,
 		limits,
 		annotations,
 		keep_assets,
@@ -304,11 +305,19 @@ export function createWorkerUploadForm(
 	});
 
 	bindings.services?.forEach(
-		({ binding, service, environment, entrypoint, props }) => {
+		({
+			binding,
+			service,
+			environment,
+			entrypoint,
+			props,
+			cross_account_grant,
+		}) => {
 			metadataBindings.push({
 				name: binding,
 				type: "service",
 				service,
+				cross_account_grant,
 				...(environment && { environment }),
 				...(entrypoint && { entrypoint }),
 				...(props && { props }),
@@ -624,6 +633,7 @@ export function createWorkerUploadForm(
 		...(logpush !== undefined && { logpush }),
 		...(placement && { placement }),
 		...(tail_consumers && { tail_consumers }),
+		...(streaming_tail_consumers && { streaming_tail_consumers }),
 		...(limits && { limits }),
 		...(annotations && { annotations }),
 		...(keep_assets !== undefined && { keep_assets }),

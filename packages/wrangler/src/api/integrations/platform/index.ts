@@ -1,35 +1,34 @@
 import { resolveDockerHost } from "@cloudflare/containers-shared";
+import { getDockerPath, getRegistryPath } from "@cloudflare/workers-utils";
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
-import { getClassNamesWhichUseSQLite } from "../../../dev/class-names-sqlite";
+import { getDurableObjectClassNameToUseSQLiteMap } from "../../../dev/class-names-sqlite";
 import {
 	buildAssetOptions,
 	buildMiniflareBindingOptions,
 	buildSitesOptions,
 	getImageNameFromDOClassName,
 } from "../../../dev/miniflare";
-import {
-	getDockerPath,
-	getRegistryPath,
-} from "../../../environment-variables/misc-variables";
 import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
-import type { AssetsOptions } from "../../../assets";
-import type { RemoteProxySession } from "../../remoteBindings";
-import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
+// TODO: import from `@cloudflare/workers-utils` after migrating to `tsdown`
+// This is a temporary fix to ensure that the types are included in the build output
 import type {
 	Config,
 	RawConfig,
 	RawEnvironment,
-} from "@cloudflare/workers-utils";
+} from "../../../../../workers-utils/src";
+import type { AssetsOptions } from "../../../assets";
+import type { RemoteProxySession } from "../../remoteBindings";
+import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 import type {
 	MiniflareOptions,
 	ModuleRule,
@@ -39,6 +38,9 @@ import type {
 
 export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
 export { readConfig as unstable_readConfig };
+export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
+export { getDevCompatibilityDate as unstable_getDevCompatibilityDate } from "../../../utils/compatibility-date";
+export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
 export type {
 	Config as Unstable_Config,
 	RawConfig as Unstable_RawConfig,
@@ -237,6 +239,7 @@ async function getMiniflareOptionsFromConfig(args: {
 			serviceBindings: {},
 			migrations: config.migrations,
 			tails: [],
+			streamingTails: [],
 			containerDOClassNames: new Set(
 				config.containers?.map((c) => c.class_name)
 			),
@@ -403,6 +406,7 @@ export function unstable_getMiniflareWorkerOptions(
 			serviceBindings: {},
 			migrations: config.migrations,
 			tails: config.tail_consumers,
+			streamingTails: config.streaming_tail_consumers,
 			containerDOClassNames,
 			containerBuildId: options?.containerBuildId,
 			enableContainers,
@@ -440,7 +444,9 @@ export function unstable_getMiniflareWorkerOptions(
 			typeof bindingOptions.durableObjects
 		>[string];
 
-		const classNameToUseSQLite = getClassNamesWhichUseSQLite(config.migrations);
+		const classNameToUseSQLite = getDurableObjectClassNameToUseSQLiteMap(
+			config.migrations
+		);
 
 		bindingOptions.durableObjects = Object.fromEntries(
 			bindings.durable_objects.bindings.map((binding) => {

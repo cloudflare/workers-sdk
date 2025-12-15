@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { http, HttpResponse } from "msw";
+import { describe, expect, it } from "vitest";
 import { getAuthConfigFilePath, writeAuthConfigFile } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";

@@ -10,16 +10,17 @@ import { join, resolve } from "node:path";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, it } from "vitest";
 import {
-	findPackageNames,
+	findPackages,
 	readChangesets,
 	validateChangesets,
 } from "../validate-changesets";
+import type { PackageJSON } from "../validate-changesets";
 
 describe("findPackageNames()", () => {
 	it("should return all the private packages which contain deploy scripts", ({
 		expect,
 	}) => {
-		expect(findPackageNames()).toEqual(
+		expect(new Set(findPackages().keys())).toEqual(
 			new Set([
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli",
@@ -92,70 +93,129 @@ describe("readChangesets()", () => {
 describe("validateChangesets()", () => {
 	it("should report errors for any invalid changesets", ({ expect }) => {
 		const errors = validateChangesets(
-			new Set(["package-a", "package-b", "package-c"]),
+			new Map<string, PackageJSON>([
+				["package-a", { name: "package-a" }],
+				["package-b", { name: "package-b" }],
+				["package-c", { name: "package-c" }],
+				["package-d", { name: "package-d", "workers-sdk": { deploy: true } }],
+			]),
 			[
 				{
 					file: "valid-one.md",
 					contents: dedent`
-          ---
-          "package-a": patch
-          ---
+						---
+						"package-a": patch
+						---
 
-		  refactor: test`,
+						refactor: test`,
 				},
 				{
 					file: "valid-two.md",
 					contents: dedent`
-          ---
-          "package-b": minor
-          ---
+						---
+						"package-b": minor
+						---
 
-		  feature: test`,
+						feature: test`,
 				},
 				{
 					file: "valid-three.md",
 					contents: dedent`
-          ---
-          "package-c": major
-          ---
+						---
+						"package-c": minor
+						---
 
-		  chore: test`,
+						chore: test`,
 				},
 				{
 					file: "valid-three.md",
 					contents: dedent`
-          ---
-          "package-c": major
-          ---
+						---
+						"package-c": minor
+						---
 
-		  fix: test`,
+						fix: test`,
 				},
 				{ file: "invalid-frontmatter.md", contents: "" },
 				{
 					file: "invalid-package.md",
 					contents: dedent`
-          ---
-          "package-invalid": major
-          ---
+						---
+						"package-invalid": minor
+						---
 
-		  feat: test`,
+						feat: test`,
 				},
 				{
 					file: "invalid-type.md",
 					contents: dedent`
-          ---
-          "package-a": foo
-          ---
+						---
+						"package-a": foo
+						---
 
-		  docs: test`,
+						docs: test`,
+				},
+				{
+					file: "deployable-package.md",
+					contents: dedent`
+						---
+						"package-d": patch
+						---
+
+						fix: test`,
 				},
 			]
 		);
 		expect(errors).toMatchInlineSnapshot(`
 			[
 			  "Error: could not parse changeset - invalid frontmatter: at file "invalid-frontmatter.md"",
-			  "Invalid package name "package-invalid" in changeset at "invalid-package.md".",
+			  "Unknown package name "package-invalid" in changeset at "invalid-package.md".",
 			  "Invalid type "foo" for package "package-a" in changeset at "invalid-type.md".",
+			  "Currently we are not allowing changes to package "package-d" in changeset at "deployable-package.md" since it would trigger a Worker/Pages deployment.",
+			]
+		`);
+	});
+
+	it("should report errors for major bump changesets", ({ expect }) => {
+		const errors = validateChangesets(
+			new Map<string, PackageJSON>([
+				["package-a", { name: "package-a" }],
+				["package-b", { name: "package-b" }],
+				["package-c", { name: "package-c" }],
+			]),
+			[
+				{
+					file: "patch-one.md",
+					contents: dedent`
+						---
+						"package-a": patch
+						---
+		  				refactor: test`,
+				},
+				{
+					file: "minor-two.md",
+					contents: dedent`
+						---
+						"package-b": minor
+						---
+
+						feature: test`,
+				},
+				{
+					file: "major-three.md",
+					contents: dedent`
+						---
+						"package-c": major
+						---
+
+						breaking change!`,
+				},
+			]
+		);
+		expect(errors).toMatchInlineSnapshot(`
+			[
+			  "Major version bumps are not allowed for package "package-c" in changeset at "major-three.md".",
+			  "Invalid type "major" for package "package-c" in changeset at "major-three.md".",
 			]
 		`);
 	});

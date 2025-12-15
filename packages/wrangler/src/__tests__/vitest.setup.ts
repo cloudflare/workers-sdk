@@ -1,9 +1,8 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
-import { resolve } from "path";
-import { PassThrough } from "stream";
+import { PassThrough } from "node:stream";
 import chalk from "chalk";
 import { passthrough } from "msw";
-import { afterAll, afterEach, beforeAll, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { msw } from "./helpers/msw";
 
 //turn off chalk for tests due to inconsistencies between operating systems
@@ -35,11 +34,11 @@ vi.mock("ansi-escapes", () => {
 
 // Mock out getPort since we don't actually care about what ports are open in unit tests.
 vi.mock("get-port", async (importOriginal) => {
-	const { default: getPort } =
-		await importOriginal<typeof import("get-port")>();
+	const getPort = await importOriginal<typeof import("get-port")>();
 	return {
 		__esModule: true,
-		default: vi.fn(getPort),
+		default: vi.fn(getPort.default),
+		portNumbers: getPort.portNumbers,
 	};
 });
 
@@ -54,6 +53,19 @@ vi.mock("child_process", async (importOriginal) => {
 			}
 			return cp.spawnSync(binary, ...args);
 		}),
+	};
+});
+
+vi.mock("os", async (importOriginal) => {
+	const os = await importOriginal<typeof import("os")>();
+	function homedir() {
+		// Let's just grab the HOME env var and then we can override that in tests
+		return (process.env as Record<string, string>).HOME;
+	}
+	return {
+		...os,
+		default: { ...os, homedir },
+		homedir,
 	};
 });
 
@@ -146,19 +158,6 @@ vi.mock("../is-ci", async (importOriginal) => {
 vi.mock("../user/generate-random-state", () => {
 	return {
 		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
-	};
-});
-
-vi.mock("xdg-app-paths", () => {
-	return {
-		__esModule: true,
-		default: vi.fn().mockImplementation(() => {
-			return {
-				config() {
-					return resolve("test-xdg-config");
-				},
-			};
-		}),
 	};
 });
 

@@ -1,6 +1,7 @@
 import {
 	defaultWranglerConfig,
 	FatalError,
+	getWranglerHideBanner,
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
@@ -107,7 +108,7 @@ function createHandler(def: CommandDefinition, commandName: string) {
 			const shouldPrintBanner = def.behaviour?.printBanner;
 
 			if (
-				/* No defautl behaviour override: show the banner */
+				/* No default behaviour override: show the banner */
 				shouldPrintBanner === undefined ||
 				/* Explicit opt in: show the banner */
 				(typeof shouldPrintBanner === "boolean" &&
@@ -119,14 +120,15 @@ function createHandler(def: CommandDefinition, commandName: string) {
 				await printWranglerBanner();
 			}
 
-			if (def.metadata.deprecated) {
-				logger.warn(def.metadata.deprecatedMessage);
-			}
-			if (def.metadata.statusMessage) {
-				logger.warn(def.metadata.statusMessage);
-			}
+			if (!getWranglerHideBanner()) {
+				if (def.metadata.deprecated) {
+					logger.warn(def.metadata.deprecatedMessage);
+				}
 
-			// TODO(telemetry): send command started event
+				if (def.metadata.statusMessage) {
+					logger.warn(def.metadata.statusMessage);
+				}
+			}
 
 			await def.validateArgs?.(args);
 
@@ -160,7 +162,6 @@ function createHandler(def: CommandDefinition, commandName: string) {
 				: {
 						MULTIWORKER: false,
 						RESOURCES_PROVISION: args.experimentalProvision ?? false,
-						DEPLOY_REMOTE_DIFF_CHECK: false,
 						AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 					};
 

@@ -54,6 +54,12 @@ export {
 export { validatePagesConfig } from "./config/validation-pages";
 
 export {
+	hasProperty,
+	isRequiredProperty,
+	isOptionalProperty,
+} from "./config/validation-helpers";
+
+export {
 	resolveWranglerConfigPath,
 	findWranglerConfig,
 } from "./config/config-helpers";
@@ -65,7 +71,13 @@ export * from "./constants";
 
 export { formatCompatibilityDate } from "./format-compatibility-date";
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
+export { constructWranglerConfig } from "./construct-wrangler-config";
+
 export {
-	constructWranglerConfig,
-	type FullWorkerConfig,
-} from "./construct-wrangler-config";
+	getBooleanEnvironmentVariableFactory,
+	getEnvironmentVariableFactory,
+} from "./environment-variables/factory";
+
+export * from "./environment-variables/misc-variables";
+
+export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";

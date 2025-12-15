@@ -8,7 +8,7 @@ import {
 	NodeJsCompatWarnings,
 } from "../nodejs-compat";
 import { createPlugin } from "../utils";
-import type { WorkerConfig } from "../plugin-config";
+import type { ResolvedWorkerConfig } from "../plugin-config";
 
 /**
  * Plugin to support the `nodejs_als` compatibility flag
@@ -141,6 +141,12 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 	};
 });
 
+let exitCallback = () => {};
+
+process.on("exit", () => {
+	exitCallback();
+});
+
 /**
  * Plugin to warn if Node.js APIs are used without enabling the `nodejs_compat` compatibility flag
  */
@@ -148,9 +154,15 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 	"nodejs-compat-warnings",
 	(ctx) => {
 		const nodeJsCompatWarningsMap = new Map<
-			WorkerConfig,
+			ResolvedWorkerConfig,
 			NodeJsCompatWarnings
 		>();
+
+		exitCallback = () => {
+			for (const nodeJsCompatWarnings of nodeJsCompatWarningsMap.values()) {
+				nodeJsCompatWarnings.renderWarnings();
+			}
+		};
 
 		return {
 			// We must ensure that the `resolveId` hook runs before the built-in ones.

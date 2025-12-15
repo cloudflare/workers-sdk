@@ -4,8 +4,9 @@ import { resolve } from "node:path";
 import {
 	getOutputFileDirectoryFromEnv,
 	getOutputFilePathFromEnv,
-} from "./environment-variables/misc-variables";
+} from "@cloudflare/workers-utils";
 import { ensureDirectoryExistsSync } from "./utils/filesystem";
+import type { AutoConfigSummary } from "./autoconfig/types";
 
 /**
  * Write an entry to the output file.
@@ -98,6 +99,8 @@ interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	worker_name_overridden: boolean;
 	/** wrangler environment used */
 	wrangler_environment: string | undefined;
+	/** The summary of the autoconfig process if it did run, undefined if autoconfig didn't run. */
+	autoconfig_summary: AutoConfigSummary | undefined;
 }
 
 interface OutputEntryPagesDeployment extends OutputEntryBase<"pages-deploy"> {

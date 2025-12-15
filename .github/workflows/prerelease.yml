@@ -16,7 +16,7 @@ permissions:
 jobs:
   build:
     if: ${{ github.repository_owner == 'cloudflare' }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-slim
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
@@ -25,7 +25,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
@@ -34,12 +34,11 @@ jobs:
           turbo-team: ${{ secrets.TURBO_TEAM }}
           turbo-token: ${{ secrets.TURBO_TOKEN }}
           turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
-          node-version: 22
 
       - run: echo ${{ github.head_ref }}
 
       - name: Build
-        run: pnpm run build
+        run: pnpm build --filter="./packages/*"
         env:
           NODE_ENV: "production"
           CI_OS: ${{ runner.os }}

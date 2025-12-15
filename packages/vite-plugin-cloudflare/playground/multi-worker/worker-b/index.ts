@@ -1,7 +1,17 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 
-export default class extends WorkerEntrypoint {
-	override fetch() {
+interface Env {
+	CONFIGURED_VAR?: string;
+}
+
+export default class extends WorkerEntrypoint<Env> {
+	override fetch(request: Request) {
+		const url = new URL(request.url);
+		if (url.pathname === "/config-test") {
+			return Response.json({
+				configuredVar: this.env.CONFIGURED_VAR,
+			});
+		}
 		return Response.json({
 			name: "Worker B",
 		});

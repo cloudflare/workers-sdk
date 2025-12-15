@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.0.2",
+	"version": "0.4.0",
 	"description": "Utility package for common Worker operations",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
@@ -13,8 +13,17 @@
 	},
 	"license": "MIT OR Apache-2.0",
 	"author": "workers-devprod@cloudflare.com",
-	"main": "dist/index.mjs",
-	"types": "dist/index.d.mts",
+	"exports": {
+		".": {
+			"browser": "./dist/browser.mjs",
+			"import": "./dist/index.mjs",
+			"types": "./dist/index.d.mts"
+		},
+		"./test-helpers": {
+			"import": "./dist/test-helpers/index.mjs",
+			"types": "./dist/test-helpers/index.d.mts"
+		}
+	},
 	"files": [
 		"dist"
 	],
@@ -23,7 +32,9 @@
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc -p ./tsconfig.json",
 		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
-		"test:ci": "vitest run"
+		"test": "vitest",
+		"test:ci": "vitest run",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
 		"@cloudflare/containers-shared": "workspace:*",
@@ -31,18 +42,20 @@
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
-		"@iarna/toml": "^3.0.0",
 		"@types/node": "catalog:default",
 		"@vitest/ui": "catalog:default",
+		"cloudflare": "^5.2.0",
 		"concurrently": "^8.2.2",
 		"eslint": "catalog:default",
 		"find-up": "^6.3.0",
 		"jsonc-parser": "^3.2.0",
+		"smol-toml": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"tsdown": "^0.15.9",
 		"tsup": "8.3.0",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "catalog:default",
+		"xdg-app-paths": "^8.3.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

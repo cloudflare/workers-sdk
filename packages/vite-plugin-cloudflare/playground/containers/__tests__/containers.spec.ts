@@ -4,6 +4,7 @@ import {
 	isCINonLinux,
 	isLocalWithoutDockerRunning,
 	viteTestUrl,
+	WAIT_FOR_OPTIONS,
 } from "../../__test-utils__";
 
 // We can only really run these tests on Linux, because we build our images for linux/amd64,
@@ -19,13 +20,10 @@ test.skipIf(
 	const statusResponse = await getTextResponse("/status");
 	expect(statusResponse).toBe("true");
 
-	await vi.waitFor(
-		async () => {
-			const fetchResponse = await fetch(`${viteTestUrl}/fetch`, {
-				signal: AbortSignal.timeout(500),
-			});
-			expect(await fetchResponse.text()).toBe("Hello World!");
-		},
-		{ timeout: 2000, interval: 500 }
-	);
+	await vi.waitFor(async () => {
+		const fetchResponse = await fetch(`${viteTestUrl}/fetch`, {
+			signal: AbortSignal.timeout(500),
+		});
+		expect(await fetchResponse.text()).toBe("Hello World!");
+	}, WAIT_FOR_OPTIONS);
 });

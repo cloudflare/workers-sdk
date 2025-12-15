@@ -2,6 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { bold, green } from "@cloudflare/cli/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
+import { getRegistryPath } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { DevEnv } from "../api";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
@@ -9,7 +10,6 @@ import { NoOpProxyController } from "../api/startDevWorker/NoOpProxyController";
 import { convertCfWorkerInitBindingsToBindings } from "../api/startDevWorker/utils";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import registerDevHotKeys from "../dev/hotkeys";
-import { getRegistryPath } from "../environment-variables/misc-variables";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { getSiteAssetPaths } from "../sites";
@@ -78,9 +78,12 @@ export async function startDev(args: StartDevOptions) {
 		}
 
 		if (Array.isArray(args.config)) {
-			const runtime = new MultiworkerRuntimeController(args.config.length);
-
-			const primaryDevEnv = new DevEnv({ runtimes: [runtime] });
+			const numWorkers = args.config.length;
+			const primaryDevEnv = new DevEnv({
+				runtimeFactories: [
+					(d) => new MultiworkerRuntimeController(d, numWorkers),
+				],
+			});
 
 			// Set up the primary DevEnv (the one that the ProxyController will connect to)
 			devEnv = [
@@ -94,18 +97,14 @@ export async function startDev(args: StartDevOptions) {
 			devEnv.push(
 				...(await Promise.all(
 					(args.config as string[]).slice(1).map((c) => {
-						return setupDevEnv(
-							new DevEnv({
-								runtimes: [runtime],
-								proxy: new NoOpProxyController(),
-							}),
-							c,
-							authHook,
-							{
-								disableDevRegistry: args.disableDevRegistry,
-								multiworkerPrimary: false,
-							}
-						);
+						const auxDevEnv = new DevEnv({
+							runtimeFactories: [() => primaryDevEnv.runtimes[0]],
+							proxyFactory: (d) => new NoOpProxyController(d),
+						});
+						return setupDevEnv(auxDevEnv, c, authHook, {
+							disableDevRegistry: args.disableDevRegistry,
+							multiworkerPrimary: false,
+						});
 					})
 				))
 			);

@@ -1,5 +1,425 @@
 # wrangler
 
+## 4.54.0
+
+### Minor Changes
+
+- [#11512](https://github.com/cloudflare/workers-sdk/pull/11512) [`c15e99e`](https://github.com/cloudflare/workers-sdk/commit/c15e99e840e80cd74c0190036476e209625325e0) Thanks [@emily-shen](https://github.com/emily-shen)! - Enable using `ctx.exports` with containers
+
+  You can now use containers with Durable Objects that are accessed via [`ctx.exports`](https://developers.cloudflare.com/workers/runtime-apis/context/#exports).
+
+  Now your config file can look something like this:
+
+  ```
+  {
+  	"name": "container-app",
+  	"main": "src/index.ts",
+  	"compatibility_date": "2025-12-01",
+  	"compatibility_flags": ["enable_ctx_exports"], // compat flag needed for now.
+  	"containers": [
+  		{
+  			"image": "./Dockerfile",
+  			"class_name": "MyDOClassname",
+  			"name": "my-container"
+  		},
+  	],
+  	"migrations": [
+  		{
+  			"tag": "v1",
+  			"new_sqlite_classes": ["MyDOClassname"],
+  		},
+  	],
+  	// no need to declare your durable object binding here
+  }
+  ```
+
+  Note that when using `ctx.exports`, where you previously accessed a Durable Object via something like `env.DO`, you should now access with `ctx.exports.MyDOClassname`.
+
+  Refer to [the docs for more information on using `ctx.exports`](https://developers.cloudflare.com/workers/runtime-apis/context/#exports).
+
+- [#11508](https://github.com/cloudflare/workers-sdk/pull/11508) [`b17797c`](https://github.com/cloudflare/workers-sdk/commit/b17797c7e83a9f431ba68bd543032fccddb5f6b5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Wrangler will no longer try to add additional configuration to projects using `@cloudflare/vite-plugin` when deploying or running `wrangler setup`
+
+- [#11508](https://github.com/cloudflare/workers-sdk/pull/11508) [`b17797c`](https://github.com/cloudflare/workers-sdk/commit/b17797c7e83a9f431ba68bd543032fccddb5f6b5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - When a Vite project is detected, install `@cloudflare/vite-plugin`
+
+- [#11576](https://github.com/cloudflare/workers-sdk/pull/11576) [`bb47e20`](https://github.com/cloudflare/workers-sdk/commit/bb47e2090cd4c0c4c56abe97fffb35f3101414bf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Analog projects in autoconfig
+
+- [#10582](https://github.com/cloudflare/workers-sdk/pull/10582) [`991760d`](https://github.com/cloudflare/workers-sdk/commit/991760d13168f613a99a4b6e70a43887934cddfb) Thanks [@flakey5](https://github.com/flakey5)! - Add `containers ssh` command
+
+### Patch Changes
+
+- [#11467](https://github.com/cloudflare/workers-sdk/pull/11467) [`235d325`](https://github.com/cloudflare/workers-sdk/commit/235d325c1ccd8238befd7036e6875242c9361dfb) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: prevent reporting SQLite error from `wrangler d1 execute` to Sentry
+
+- [#11414](https://github.com/cloudflare/workers-sdk/pull/11414) [`41103f5`](https://github.com/cloudflare/workers-sdk/commit/41103f560cb1a60e1b8cebe009e408813da85300) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add extra logging to user log-in flow for diagnosing failed login requests
+
+- [#11559](https://github.com/cloudflare/workers-sdk/pull/11559) [`ea6fbec`](https://github.com/cloudflare/workers-sdk/commit/ea6fbec8de83493c86b72c9da1809c6eac832a5b) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Remove image validation for containers on wrangler deploy.
+
+  Internal customers are able to use additional image registries and will run into failures with this validation. Image registry validation will now be handled by the API.
+
+- Updated dependencies [[`31c162a`](https://github.com/cloudflare/workers-sdk/commit/31c162a161966cb01d94da5b85462162c20c4b71), [`bd5f087`](https://github.com/cloudflare/workers-sdk/commit/bd5f08783d561bf27d52202ccf29993b416f4674), [`c6dd86f`](https://github.com/cloudflare/workers-sdk/commit/c6dd86f014a07d6b914736b0b8b704d506336e5a)]:
+  - miniflare@4.20251210.0
+
+## 4.53.0
+
+### Minor Changes
+
+- [#11500](https://github.com/cloudflare/workers-sdk/pull/11500) [`af54c63`](https://github.com/cloudflare/workers-sdk/commit/af54c630d9a6593252d07b2b77586da2f67220e8) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add new `autoconfig_summary` field to the deploy output entry
+
+  This change augments `wrangler deploy` output being printed to `WRANGLER_OUTPUT_FILE_DIRECTORY` or `WRANGLER_OUTPUT_FILE_PATH` to also include a new `autoconfig_summary` field containing the possible summary details for the autoconfig process (the field is `undefined` if autoconfig didn't run).
+
+  Note: the field is experimental and could change while autoconfig is not GA
+
+- [#11477](https://github.com/cloudflare/workers-sdk/pull/11477) [`9988cc9`](https://github.com/cloudflare/workers-sdk/commit/9988cc9b9b157e453bb5eade439a8e69bfa0c7bd) Thanks [@ascorbic](https://github.com/ascorbic)! - Support Nuxt in autoconfig
+
+- [#11472](https://github.com/cloudflare/workers-sdk/pull/11472) [`ce295bf`](https://github.com/cloudflare/workers-sdk/commit/ce295bffdc7a45494b6683ee5fef04dbfca54345) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Qwik projects in autoconfig
+
+- [#10937](https://github.com/cloudflare/workers-sdk/pull/10937) [`9514c9a`](https://github.com/cloudflare/workers-sdk/commit/9514c9a0ed28fed349126384d1f646c9165be914) Thanks [@ReppCodes](https://github.com/ReppCodes)! - Add support for "targeted" placement mode with region, host, and hostname fields
+
+  This change adds a new mode to `placement` configuration. You can specify one of the following fields to target specific external resources for Worker placement:
+
+  - `region`: Specify a region identifier (e.g., "aws:us-east-1") to target a region from another cloud service provider
+  - `host`: Specify a host with (required) port (e.g., "example.com:8123") to target a TCP service
+  - `hostname`: Specify a hostname (e.g., "example.com") to target an HTTP resource
+
+  These fields are mutually exclusive - only one can be specified at a time.
+
+  Example configuration:
+
+  ```toml
+  [placement]
+  host = "example.com:8123"
+  ```
+
+- [#11498](https://github.com/cloudflare/workers-sdk/pull/11498) [`ac861f8`](https://github.com/cloudflare/workers-sdk/commit/ac861f8ec24357c0238fa939b33da71236df7095) Thanks [@penalosa](https://github.com/penalosa)! - Add React Router support in autoconfig
+
+- [#11506](https://github.com/cloudflare/workers-sdk/pull/11506) [`79d30d4`](https://github.com/cloudflare/workers-sdk/commit/79d30d4321b057f3cb4451ab43fa67653f1a8ee5) Thanks [@vicb](https://github.com/vicb)! - Set the target JS version to ES2024
+
+### Patch Changes
+
+- [#11393](https://github.com/cloudflare/workers-sdk/pull/11393) [`45480b1`](https://github.com/cloudflare/workers-sdk/commit/45480b1a897c4236575e9ddd2cfdb89e0610fc67) Thanks [@alsuren](https://github.com/alsuren)! - improved --help text for wrangler d1 subcommands
+
+- [#11523](https://github.com/cloudflare/workers-sdk/pull/11523) [`94c67e8`](https://github.com/cloudflare/workers-sdk/commit/94c67e87a3e9bd6057f8221aa4723252a4d9871d) Thanks [@jamesopstad](https://github.com/jamesopstad)! - fix: types from @cloudflare/workers-utils not being exported correctly from Wrangler
+
+- [#11483](https://github.com/cloudflare/workers-sdk/pull/11483) [`f550b62`](https://github.com/cloudflare/workers-sdk/commit/f550b62fd4fdd60c2600390754631d713140afd3) Thanks [@edmundhung](https://github.com/edmundhung)! - stop running `npm install` with `--legacy-peer-deps` flag when setting up a project
+
+- Updated dependencies [[`819e287`](https://github.com/cloudflare/workers-sdk/commit/819e287c1a471c3681112fe333e5692f3c386571), [`56e78c8`](https://github.com/cloudflare/workers-sdk/commit/56e78c8a5c02756f0d2b62ef80ad7d1a8045422c), [`0aa959a`](https://github.com/cloudflare/workers-sdk/commit/0aa959ac6fa294a18af10c1905e9494715556d45)]:
+  - @cloudflare/unenv-preset@2.7.13
+  - miniflare@4.20251202.1
+
+## 4.52.1
+
+### Patch Changes
+
+- [#11504](https://github.com/cloudflare/workers-sdk/pull/11504) [`7e80340`](https://github.com/cloudflare/workers-sdk/commit/7e803402ee22df65427dbc08b17f4f928d42dda2) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix `wrangler deploy` failing for new workers containing environment variables or bindings
+
+- Updated dependencies [[`59534ba`](https://github.com/cloudflare/workers-sdk/commit/59534baa89d893e2d7b4656e365a215425094f00)]:
+  - miniflare@4.20251202.0
+
+## 4.52.0
+
+### Minor Changes
+
+- [#11416](https://github.com/cloudflare/workers-sdk/pull/11416) [`abe49d8`](https://github.com/cloudflare/workers-sdk/commit/abe49d88ba9db6a033a779e186972901e00a81de) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove the `wrangler deploy`'s `--x-remote-diff-check` experimental flag
+
+  The remote diffing feature has been enabled by default for a while and its functionality is stable, as a result the experimental flag (only available for option-out of the feature right now) has been removed.
+
+- [#11408](https://github.com/cloudflare/workers-sdk/pull/11408) [`f29e699`](https://github.com/cloudflare/workers-sdk/commit/f29e699bc022ad0dde2cfddfbea6fa3906068d94) Thanks [@ascorbic](https://github.com/ascorbic)! - Export unstable helpers useful for generating wrangler config
+
+- [#11389](https://github.com/cloudflare/workers-sdk/pull/11389) [`2342d2f`](https://github.com/cloudflare/workers-sdk/commit/2342d2f618b50c508bf5b0bfbab547a801d82d9f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve the `wrangler deploy` flow to also check for potential overrides of [secrets](https://developers.cloudflare.com/workers/configuration/secrets/).
+
+  Now when you run `wrangler deploy` Wrangler will check the remote secrets for your workers for conflicts with the names of the bindings you're about to deploy. If there are conflicts, Wrangler will warn you and ask you for your permission before proceeding.
+
+- [#11375](https://github.com/cloudflare/workers-sdk/pull/11375) [`9a1de61`](https://github.com/cloudflare/workers-sdk/commit/9a1de617412f610a332f2516f4d61bec12556919) Thanks [@penalosa](https://github.com/penalosa)! - Support TanStack Start in autoconfig
+
+- [#11360](https://github.com/cloudflare/workers-sdk/pull/11360) [`6b38532`](https://github.com/cloudflare/workers-sdk/commit/6b38532298a17fc4fd643dd8eb96647d9ef98e2f) Thanks [@emily-shen](https://github.com/emily-shen)! - Containers: Allow users to directly authenticate external image registries in local dev
+
+  Previously, we always queried the API for stored registry credentials and used those to pull images. This means that if you are using an external registry (ECR, dockerhub) then you have to configure registry credentials remotely before running local dev.
+
+  Now you can directly authenticate with your external registry provider (using `docker login` etc.), and Wrangler or Vite will be able to pull the image specified in the `containers.image` field in your config file.
+
+  The Cloudflare-managed registry (registry.cloudflare.com) currently still does not work with the Vite plugin.
+
+- [#11009](https://github.com/cloudflare/workers-sdk/pull/11009) [`e4ddbc2`](https://github.com/cloudflare/workers-sdk/commit/e4ddbc2f0b64172552f58b148912cfe0b0aa5a71) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Allow users to provide an `account_id` as part of the `WorkerConfigObject` they pass to `maybeStartOrUpdateRemoteProxySession`
+
+- [#11478](https://github.com/cloudflare/workers-sdk/pull/11478) [`2aec2b4`](https://github.com/cloudflare/workers-sdk/commit/2aec2b4e0ef710ec7e3897f823eca38d22991662) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support SolidStart in autoconfig
+
+- [#11330](https://github.com/cloudflare/workers-sdk/pull/11330) [`5a873bb`](https://github.com/cloudflare/workers-sdk/commit/5a873bbb0f018b02cf26a48da59c5389ef306589) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Angular projects in autoconfig
+
+- [#11449](https://github.com/cloudflare/workers-sdk/pull/11449) [`e7b690b`](https://github.com/cloudflare/workers-sdk/commit/e7b690b6463d49a0c5e9159442533cfcb47e1ee6) Thanks [@penalosa](https://github.com/penalosa)! - Delegate generation of HTTPS certificates to Miniflare
+
+- [#11448](https://github.com/cloudflare/workers-sdk/pull/11448) [`2b4813b`](https://github.com/cloudflare/workers-sdk/commit/2b4813b18076817bb739491246313c32b403651f) Thanks [@edmundhung](https://github.com/edmundhung)! - Bumps `esbuild` version to [0.27.0](https://github.com/evanw/esbuild/releases/tag/v0.27.0)
+
+- [#11335](https://github.com/cloudflare/workers-sdk/pull/11335) [`c47ad11`](https://github.com/cloudflare/workers-sdk/commit/c47ad114f5e5d111a005bc04feb587a1261f4525) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support internal-only undocumented `cross_account_grant` service binding property
+
+- [#11346](https://github.com/cloudflare/workers-sdk/pull/11346) [`a977701`](https://github.com/cloudflare/workers-sdk/commit/a9777016bc199f1409324f8383e2b3ab43d1c212) Thanks [@penalosa](https://github.com/penalosa)! - We're soon going to make backend changes that mean that `wrangler dev --remote` sessions will no longer have an associated inspector connection. In advance of these backend changes, we've enabled a new `wrangler tail`-based logging strategy for `wrangler dev --remote`. For now, you can revert to the previous logging strategy with `wrangler dev --remote --no-x-tail-logs`, but in future it will not be possible to revert.
+
+  The impact of this will be that logs that were previously available via devtools will now be provided directly to the Wrangler console and it will no longer be possible to interact with the remote Worker via the devtools console.
+
+### Patch Changes
+
+- [#11397](https://github.com/cloudflare/workers-sdk/pull/11397) [`b154de2`](https://github.com/cloudflare/workers-sdk/commit/b154de2ffa93bf8eb448ae83a50e8bf3f8250398) Thanks [@vicb](https://github.com/vicb)! - Use more workerd native modules
+
+  Node modules `punycode`, `trace_events`, `cluster`, `wasi`, and `domains` will be used when enabled
+  via a compatibility flag or by default when the compatibility date is greater or equal to 2025-12-04.
+
+- [#11452](https://github.com/cloudflare/workers-sdk/pull/11452) [`76f0540`](https://github.com/cloudflare/workers-sdk/commit/76f05405f990b207f90669fa4046db8806de1267) Thanks [@penalosa](https://github.com/penalosa)! - Remove uses of `eval()` from the Wrangler bundle
+
+- [#11284](https://github.com/cloudflare/workers-sdk/pull/11284) [`695fa25`](https://github.com/cloudflare/workers-sdk/commit/695fa25ae7eb5c66db1b8be7bd59a53a5ee72c1c) Thanks [@dom96](https://github.com/dom96)! - Removes duplicate module warnings when vendoring Python packages
+
+- [#11249](https://github.com/cloudflare/workers-sdk/pull/11249) [`504e258`](https://github.com/cloudflare/workers-sdk/commit/504e25840cc34bedffcdf3a0f0fcd6fe3dea7f3f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: Generalize autoconfig wording
+
+  Generalize the autoconfig wording so that when it doesn't specifically mention "deployment" (since it can be run via `wrangler setup` or the autoconfig programmatic API)
+
+- [#11455](https://github.com/cloudflare/workers-sdk/pull/11455) [`d25f7e2`](https://github.com/cloudflare/workers-sdk/commit/d25f7e277f6228c50b7a6c780153474c6a58f236) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix autoconfig using absolute paths for static projects
+
+  Running the experimental autoconfig logic through `wrangler setup` and `wrangler deploy --x-autoconfig` on a static project results in absolute paths being used. This is incorrect, especially when such paths are being included in the generated wrangler.jsonc. The changes here fix the autoconfig logic to use paths relative to the project's root instead.
+
+  For example given a project located in `/Users/usr/projects/sites/my-static-site`, before:
+
+  ```ts
+  // wrangler.jsonc at /Users/usr/projects/sites/my-static-site
+    {
+      "$schema": "node_modules/wrangler/config-schema.json",
+      "name": "static",
+      "compatibility_date": "2025-11-27",
+      "observability": {
+        "enabled": true
+      },
+      "assets": {
+        "directory": "/Users/usr/projects/sites/my-static-site/public"
+      }
+    }
+  ```
+
+  and after:
+
+  ```ts
+  // wrangler.jsonc at /Users/usr/projects/sites/my-static-site
+    {
+      "$schema": "node_modules/wrangler/config-schema.json",
+      "name": "static",
+      "compatibility_date": "2025-11-27",
+      "observability": {
+        "enabled": true
+      },
+      "assets": {
+        "directory": "public"
+      }
+    }
+  ```
+
+- [#11484](https://github.com/cloudflare/workers-sdk/pull/11484) [`1cfae2d`](https://github.com/cloudflare/workers-sdk/commit/1cfae2d079dd50163545ba914296da1d8ae36d83) Thanks [@edmundhung](https://github.com/edmundhung)! - Explicitly close FileHandle in `wrangler d1 execute` to support Node 25
+
+- [#11383](https://github.com/cloudflare/workers-sdk/pull/11383) [`1d685cb`](https://github.com/cloudflare/workers-sdk/commit/1d685cbae8d37e6b06149563a89868e6a0ca2481) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix: ensure that when a remote proxy session creation fails a hard error is surfaced to the user (both in `wrangler dev` and in the programmatic API).
+
+  When using remote bindings, either with `wrangler dev` or via `startRemoteProxySession`/`maybeStartOrUpdateRemoteProxySession` the remote proxy session necessary to connect to the remote resources can fail to be created, this might happen if for example you try to set a binding with some invalid values such as:
+
+  ```js
+  MY_R2: {
+  	type: "r2_bucket",
+  	bucket_name: "non-existent", // No bucket called "non-existent" exists
+  	remote: true,
+  },
+  ```
+
+  Before this could go undetected and cause unwanted behaviors such as requests handling hanging indefinitely, now wrangler will instead crash (or throw a hard error ion the programmatic API), clearly indicating that something went wrong during the remote session's creation.
+
+- [#11366](https://github.com/cloudflare/workers-sdk/pull/11366) [`edf896d`](https://github.com/cloudflare/workers-sdk/commit/edf896d3bdf4f1a4a085216ee0f06750a5a3d0b8) Thanks [@ascorbic](https://github.com/ascorbic)! - Use correctly-formatted names when displaying detected framework details
+
+- [#11461](https://github.com/cloudflare/workers-sdk/pull/11461) [`9eaa9e2`](https://github.com/cloudflare/workers-sdk/commit/9eaa9e2350893f145ce405f35b04dd8919db6699) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update the structure of the `configure` method of autoconfig frameworks
+
+  Update the signature of the `configure` function of autoconfig frameworks (`AutoconfigDetails#Framework`), before they would return a `RawConfig` object to use to update the project's wrangler config file, now they return an object that includes the `RawConfig` and that can potentially also hold additional data relevant to the configuration.
+
+- Updated dependencies [[`2b4813b`](https://github.com/cloudflare/workers-sdk/commit/2b4813b18076817bb739491246313c32b403651f), [`b154de2`](https://github.com/cloudflare/workers-sdk/commit/b154de2ffa93bf8eb448ae83a50e8bf3f8250398), [`5ee3780`](https://github.com/cloudflare/workers-sdk/commit/5ee3780448935a24974e29a3b3837b639157e959), [`6e63b57`](https://github.com/cloudflare/workers-sdk/commit/6e63b57c699d56f29c2acf810b2c81baf88c0330), [`71ab562`](https://github.com/cloudflare/workers-sdk/commit/71ab562f4ba9f8ddc443dc33c486a48fc694e74e), [`5e937c1`](https://github.com/cloudflare/workers-sdk/commit/5e937c181d3189216b6e9fb47ba0776828236c91)]:
+  - miniflare@4.20251128.0
+  - @cloudflare/unenv-preset@2.7.12
+
+## 4.51.0
+
+### Minor Changes
+
+- [#11345](https://github.com/cloudflare/workers-sdk/pull/11345) [`d524e55`](https://github.com/cloudflare/workers-sdk/commit/d524e5524cf701e33b367d33616db5430a126fa9) Thanks [@penalosa](https://github.com/penalosa)! - Enable experimental support for autoconfig-powered Astro projects
+
+- [#11228](https://github.com/cloudflare/workers-sdk/pull/11228) [`43903a3`](https://github.com/cloudflare/workers-sdk/commit/43903a38f00d2a0da1d19a9be1fc90a4e38454cf) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Support `CLOUDFLARE_ENV` environment variable for selecting the active environment
+
+  This change enables users to select the environment for commands such as `CLOUDFLARE_ENV=prod wrangler versions upload`. The `--env` command line argument takes precedence.
+
+  The `CLOUDFLARE_ENV` environment variable is mostly used with the `@cloudflare/vite-plugin` to select the environment for building the Worker to be deployed. This build also generates a "redirected deploy config" that is flattened to only contain the active environment.
+  To avoid accidentally deploying a version that is built for one environment to a different environment, there is an additional check to ensure that if the user specifies an environment in Wrangler it matches the original selected environment from the build.
+
+### Patch Changes
+
+- [#11367](https://github.com/cloudflare/workers-sdk/pull/11367) [`e496280`](https://github.com/cloudflare/workers-sdk/commit/e4962809487e618d4bd99c56b0628b078fab7402) Thanks [@vicb](https://github.com/vicb)! - Rate limit r2 bulk put
+
+- Updated dependencies [[`4d61fae`](https://github.com/cloudflare/workers-sdk/commit/4d61faed1c0c5cb0f7a7f085d31c3dca9a83c802), [`69f4dc3`](https://github.com/cloudflare/workers-sdk/commit/69f4dc30496406b0c40f946ee8ace28d94667097), [`1133c4d`](https://github.com/cloudflare/workers-sdk/commit/1133c4db5fc4703a2ad416fdcb3a086f498cbbc6), [`4d61fae`](https://github.com/cloudflare/workers-sdk/commit/4d61faed1c0c5cb0f7a7f085d31c3dca9a83c802)]:
+  - @cloudflare/kv-asset-handler@0.4.1
+  - miniflare@4.20251125.0
+
+## 4.50.0
+
+### Minor Changes
+
+- [#11219](https://github.com/cloudflare/workers-sdk/pull/11219) [`524a6e5`](https://github.com/cloudflare/workers-sdk/commit/524a6e52dd5e6740bc36ee1135ba350a2d5b9e44) Thanks [@Ltadrian](https://github.com/Ltadrian)! - Implement Hyperdrive binding TLS miniflare proxy. This will allow for wrangler dev hyperdrive bindings to connect to external
+  databases that require TLS.
+
+- [#11233](https://github.com/cloudflare/workers-sdk/pull/11233) [`c922a81`](https://github.com/cloudflare/workers-sdk/commit/c922a810808f640b82fcad08a96363323029de83) Thanks [@emily-shen](https://github.com/emily-shen)! - Add `containers.unsafe` to allow internal users to use additional container features
+
+### Patch Changes
+
+- [#11353](https://github.com/cloudflare/workers-sdk/pull/11353) [`0cf696d`](https://github.com/cloudflare/workers-sdk/commit/0cf696dfde285eac0eca3f86e6c407f2bcc43899) Thanks [@vicb](https://github.com/vicb)! - Use the native `node:domain` module when available
+
+  It is enabled when the `enable_nodejs_domain_module` compatibility flag is set.
+
+- [#11328](https://github.com/cloudflare/workers-sdk/pull/11328) [`bb44120`](https://github.com/cloudflare/workers-sdk/commit/bb4412042f86deb747259bbb353103e5d0322447) Thanks [@ascorbic](https://github.com/ascorbic)! - Fixes a bug that caused `wrangler deploy` to hang when deploying SvelteKit sites with experimental autoconfig
+
+- [#11025](https://github.com/cloudflare/workers-sdk/pull/11025) [`4a158e9`](https://github.com/cloudflare/workers-sdk/commit/4a158e9f4815778145969287d38720e61d956eee) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Use the native `node:wasi` module when available
+
+  It is enabled when the `enable_nodejs_wasi_module` compatibility flag is set.
+
+- Updated dependencies [[`0cf696d`](https://github.com/cloudflare/workers-sdk/commit/0cf696dfde285eac0eca3f86e6c407f2bcc43899), [`524a6e5`](https://github.com/cloudflare/workers-sdk/commit/524a6e52dd5e6740bc36ee1135ba350a2d5b9e44), [`4a158e9`](https://github.com/cloudflare/workers-sdk/commit/4a158e9f4815778145969287d38720e61d956eee)]:
+  - @cloudflare/unenv-preset@2.7.11
+  - miniflare@4.20251118.1
+
+## 4.49.1
+
+### Patch Changes
+
+- [#11344](https://github.com/cloudflare/workers-sdk/pull/11344) [`c758809`](https://github.com/cloudflare/workers-sdk/commit/c7588091b425d353cb25625d4efa2b42e0478b86) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix: mark the `r2 bulk` command as hidden and experimental
+
+- [#11339](https://github.com/cloudflare/workers-sdk/pull/11339) [`dfba912`](https://github.com/cloudflare/workers-sdk/commit/dfba9126615993b7bbb6d8bf7d1e31b5eebab9f6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix `wrangler deploy` erroring when it pulls down remote configs of workers containing an assets binding
+
+- Updated dependencies [[`e5ec8cf`](https://github.com/cloudflare/workers-sdk/commit/e5ec8cf5ac23df57734a3fc819beaa5b7a0af9ca)]:
+  - miniflare@4.20251118.0
+
+## 4.49.0
+
+### Minor Changes
+
+- [#10703](https://github.com/cloudflare/workers-sdk/pull/10703) [`c5c4ee5`](https://github.com/cloudflare/workers-sdk/commit/c5c4ee5219091951aef2a0cce1584010bf1775d9) Thanks [@danlapid](https://github.com/danlapid)! - Add support for streaming tail consumers in local dev. This is an experimental new feature that allows you to register a `tailStream()` handler (compared to the existing `tail()` handler), which will receive streamed tail events from your Worker (compared to the `tail()` handler, which only receives batched events after your Worker has finished processing).
+
+- [#11251](https://github.com/cloudflare/workers-sdk/pull/11251) [`7035804`](https://github.com/cloudflare/workers-sdk/commit/7035804a859b90fcaaebe8d774cd98fcf57def5b) Thanks [@penalosa](https://github.com/penalosa)! - When the `WRANGLER_HIDE_BANNER` environment variable is provided, Wrangler will no longer display a version banner. This applies to all commands.
+
+  For instance, previously running `wrangler docs` would give the following output:
+
+  ```
+  > wrangler docs
+   ⛅️ wrangler 4.47.0
+  ───────────────────
+  Opening a link in your default browser: https://developers.cloudflare.com/workers/wrangler/commands/
+  ```
+
+  With `WRANGLER_HIDE_BANNER`, this is now:
+
+  ```
+  > WRANGLER_HIDE_BANNER=true wrangler docs
+  Opening a link in your default browser: https://developers.cloudflare.com/workers/wrangler/commands/
+  ```
+
+- [#11285](https://github.com/cloudflare/workers-sdk/pull/11285) [`d014fa7`](https://github.com/cloudflare/workers-sdk/commit/d014fa72ef8ced30330e159e107da244e39b431c) Thanks [@vicb](https://github.com/vicb)! - Implement the `wrangler r2 bulk put bucket-name --filename list.json` command.
+
+  The command uploads multiple objects to an R2 bucket.
+
+  The list of object is provided as a JSON encoded file via `--filename`. It is a list of key and file (respectively the name and the content for the object).
+
+  ```
+  [
+    { "key": "/path/to/obj", "file": "/path/to/file_1"},
+    { "key": "/path/to/other/obj", "file": "/path/to/file_2"},
+    // ...
+  ]
+  ```
+
+  Uploads are executed concurrently and the level of concurrency can be set via `--concurrency`.
+
+  The command supports the same options as `wrangler r2 object put`, minus `--file`, and `--pipe` and plus `--concurrency`
+
+- [#11268](https://github.com/cloudflare/workers-sdk/pull/11268) [`15b8460`](https://github.com/cloudflare/workers-sdk/commit/15b846037dc9853e0fef1cf0bc576b8c460be188) Thanks [@penalosa](https://github.com/penalosa)! - Support SvelteKit projects in autoconfig
+
+- [#11258](https://github.com/cloudflare/workers-sdk/pull/11258) [`2011b6a`](https://github.com/cloudflare/workers-sdk/commit/2011b6ae8a42cc72f506d1edd255960c99647a14) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `--dry-run` flag to `wrangler setup` and also a `dryRun` option to `runAutoConfig`
+
+### Patch Changes
+
+- [#11261](https://github.com/cloudflare/workers-sdk/pull/11261) [`a352c7f`](https://github.com/cloudflare/workers-sdk/commit/a352c7f9e19d4bfbe27c77988ec6c5bb18f991c3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Avoid using object lookup for OAuth Error classes
+
+- [#11286](https://github.com/cloudflare/workers-sdk/pull/11286) [`8e99766`](https://github.com/cloudflare/workers-sdk/commit/8e99766700b03c17bdaf9153112c466acea74f9b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: make sure that `experimental_patchConfig` doesn't throw if it encounters a `null` value
+
+- [#11279](https://github.com/cloudflare/workers-sdk/pull/11279) [`d0d3fe6`](https://github.com/cloudflare/workers-sdk/commit/d0d3fe682c7a5564de685c7014c91287f949f156) Thanks [@vicb](https://github.com/vicb)! - bump p-queue to ^9.0.0
+
+- [#11278](https://github.com/cloudflare/workers-sdk/pull/11278) [`92afbba`](https://github.com/cloudflare/workers-sdk/commit/92afbbae22de80e40f9d3c1f96935d73ee6dec17) Thanks [@ascorbic](https://github.com/ascorbic)! - Fixes a bug that caused `.dev.vars` to be ignored in OpenNext
+
+- [#11244](https://github.com/cloudflare/workers-sdk/pull/11244) [`65b4afe`](https://github.com/cloudflare/workers-sdk/commit/65b4afe8686efab6ac50fa686ef00efacd9d6e7e) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Internal refactoring to improve error traceability in wrangler dev
+
+- [#11238](https://github.com/cloudflare/workers-sdk/pull/11238) [`da8442f`](https://github.com/cloudflare/workers-sdk/commit/da8442ff4ccd70118738bd05f6ac06a79ff951e5) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add `unstable_getDurableObjectClassNameToUseSQLiteMap` export. This is an internal function for use in the Vite plugin.
+
+- [#11266](https://github.com/cloudflare/workers-sdk/pull/11266) [`09cb720`](https://github.com/cloudflare/workers-sdk/commit/09cb720182dbdd5e403af2c9eae75461c4058682) Thanks [@penalosa](https://github.com/penalosa)! - Use the smol-toml library for parsing TOML instead of @iarna/toml
+
+- [#11236](https://github.com/cloudflare/workers-sdk/pull/11236) [`793e2b4`](https://github.com/cloudflare/workers-sdk/commit/793e2b40cf1a2da5498e71a405538e2f9776e3dc) Thanks [@ascorbic](https://github.com/ascorbic)! - Refresh expired preview tokens when running in remote dev mode
+
+- [#11286](https://github.com/cloudflare/workers-sdk/pull/11286) [`8e99766`](https://github.com/cloudflare/workers-sdk/commit/8e99766700b03c17bdaf9153112c466acea74f9b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: `wrangler deploy` failing to patch local `wrangler.jsonc` files if the remote `tail_consumers` value is `null`
+
+- [#11275](https://github.com/cloudflare/workers-sdk/pull/11275) [`9cbf126`](https://github.com/cloudflare/workers-sdk/commit/9cbf126164ef2a5c7a1047245121c988fb7ae984) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Ensure that `wrangler deploy` run with a positional argument or with `--assets` does not trigger the autoconfig process (even with `--experimental-autoconfig`)
+
+- [#11242](https://github.com/cloudflare/workers-sdk/pull/11242) [`dd1e560`](https://github.com/cloudflare/workers-sdk/commit/dd1e560e49da008c98b766e91ada7be865f68e8c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix: make sure that remote proxy sessions's debug logs are enabled when the wrangler log level is set to "debug"
+
+- Updated dependencies [[`c5c4ee5`](https://github.com/cloudflare/workers-sdk/commit/c5c4ee5219091951aef2a0cce1584010bf1775d9), [`d0041e2`](https://github.com/cloudflare/workers-sdk/commit/d0041e20cb352a053526364f98c3ae38f3504f4d), [`827d017`](https://github.com/cloudflare/workers-sdk/commit/827d017d8a856aad9564ecea9b49538918131feb)]:
+  - miniflare@4.20251113.0
+
+## 4.48.0
+
+### Minor Changes
+
+- [#11212](https://github.com/cloudflare/workers-sdk/pull/11212) [`3908162`](https://github.com/cloudflare/workers-sdk/commit/3908162d8adf3d970e4c07bc0d722b85b5a7e11f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add autoconfig changes summary for `wrangler deploy --x-autoconfig` with the option for users to cancel the operation
+
+- [#11229](https://github.com/cloudflare/workers-sdk/pull/11229) [`14d79f2`](https://github.com/cloudflare/workers-sdk/commit/14d79f2fe87289a83637bc5402479c5129a1cbb5) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Enables `experimental-deploy-remote-diff-check` flag by default (the flag is still present for now so that users can turn it off if needed) and improves the remote config diffing logic (to include less noise in the diff presented to the user)
+
+- [#11245](https://github.com/cloudflare/workers-sdk/pull/11245) [`dfc6513`](https://github.com/cloudflare/workers-sdk/commit/dfc6513f2be1236770f0dda7a8b9d79a5fee438f) Thanks [@vicb](https://github.com/vicb)! - Change how Wrangler selects default ports for dev sessions.
+
+  If no port is specified, Wrangler now probes the default port and the 10 consecutive ports after it before falling back to a random port.
+  This will help getting a stable port number across dev sessions.
+  Both the http server and inspector ports are affected.
+
+### Patch Changes
+
+- [#11177](https://github.com/cloudflare/workers-sdk/pull/11177) [`43fe9f3`](https://github.com/cloudflare/workers-sdk/commit/43fe9f31092d2b5e540fbc5f33ef8a494515b837) Thanks [@MattieTK](https://github.com/MattieTK)! - Added bun detection to package manager analytics
+
+- Updated dependencies [[`305ffb3`](https://github.com/cloudflare/workers-sdk/commit/305ffb304d44e44a8045a08d43c655d1e1f17c88), [`46ccf0e`](https://github.com/cloudflare/workers-sdk/commit/46ccf0e9f79c909cd678af6dcb2e72ec2a12fc90)]:
+  - miniflare@4.20251109.1
+
+## 4.47.0
+
+### Minor Changes
+
+- [#11201](https://github.com/cloudflare/workers-sdk/pull/11201) [`5286309`](https://github.com/cloudflare/workers-sdk/commit/52863090c3cb97d3cee10ede84420018305b6354) Thanks [@avenceslau](https://github.com/avenceslau)! - Add wrangler workflows instances restart command
+
+- [#11214](https://github.com/cloudflare/workers-sdk/pull/11214) [`5cf8a39`](https://github.com/cloudflare/workers-sdk/commit/5cf8a39ac2c2f806828b5e563a6e3b7d336c7794) Thanks [@penalosa](https://github.com/penalosa)! - Add the experimental `wrangler setup` command to run autoconfig outside of the deploy flow.
+
+- [#11187](https://github.com/cloudflare/workers-sdk/pull/11187) [`8abc789`](https://github.com/cloudflare/workers-sdk/commit/8abc7899bb1adb7a1315bf752b07cb8e6564ff56) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add possibility for users to edit their project settings during autoconfig
+
+  When running `wrangler deploy --experimental-autoconfig`, after the automatic project settings detection Wrangler will now present users the opportunity to customize the auto-detected project's settings
+
+### Patch Changes
+
+- [#11143](https://github.com/cloudflare/workers-sdk/pull/11143) [`2d16610`](https://github.com/cloudflare/workers-sdk/commit/2d16610e159e32b01b12d749c40505899ff324c6) Thanks [@FlorentCollin](https://github.com/FlorentCollin)! - Improve the formatting of the D1 execute command to always show the duration in milliseconds with two decimal places.
+
+- [#11178](https://github.com/cloudflare/workers-sdk/pull/11178) [`63defa2`](https://github.com/cloudflare/workers-sdk/commit/63defa28c825e77ab6c04d0d431ebaf1bd985069) Thanks [@ascorbic](https://github.com/ascorbic)! - Log a more helpful error when attempting to "r2 object put" a non-existent file
+
+- [#11199](https://github.com/cloudflare/workers-sdk/pull/11199) [`70d3d4a`](https://github.com/cloudflare/workers-sdk/commit/70d3d4a2f41df24785273f55bd4fb09904724e6b) Thanks [@penalosa](https://github.com/penalosa)! - Add telemetry to autoconfig
+
+- [#11186](https://github.com/cloudflare/workers-sdk/pull/11186) [`38396ed`](https://github.com/cloudflare/workers-sdk/commit/38396edc4754b8d86b07c7198d0478d73b86ef51) Thanks [@hoodmane](https://github.com/hoodmane)! - Removed warning when deploying a Python worker
+
+- [#11024](https://github.com/cloudflare/workers-sdk/pull/11024) [`cdcecfc`](https://github.com/cloudflare/workers-sdk/commit/cdcecfc3a9c8135c50d4f17ff73991f179036f6b) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Use the native `node:trace_events` module when available
+
+  It is enabled when the `enable_nodejs_trace_events_module` compatibility flag is set.
+
+- [#11195](https://github.com/cloudflare/workers-sdk/pull/11195) [`e85f965`](https://github.com/cloudflare/workers-sdk/commit/e85f965106eee43577fa05f18ea3cb55d538cbd4) Thanks [@ascorbic](https://github.com/ascorbic)! - Ignores `.dev.vars` if `--env-file` has been explicitly passed
+
+  Previously, `.dev.vars` would always be read first, and then any file passed with `--env-file` would override variables in `.dev.vars`. This meant there was no way to ignore `.dev.vars` if you wanted to use a different env file. Now, if `--env-file` is passed, `.dev.vars` will be ignored entirely.
+
+- [#11181](https://github.com/cloudflare/workers-sdk/pull/11181) [`88aa707`](https://github.com/cloudflare/workers-sdk/commit/88aa7071f888a9ccc84b8f2030b961c21769f0e3) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add more logging around Wrangler authentication to help diagnose issues
+
+- Updated dependencies [[`dd7d584`](https://github.com/cloudflare/workers-sdk/commit/dd7d584cc9656896c3673b51f2589be967edee9b), [`4259256`](https://github.com/cloudflare/workers-sdk/commit/4259256e33445b5f2ae290a68795be9c1852d860), [`cdcecfc`](https://github.com/cloudflare/workers-sdk/commit/cdcecfc3a9c8135c50d4f17ff73991f179036f6b)]:
+  - miniflare@4.20251109.0
+  - @cloudflare/unenv-preset@2.7.10
+
 ## 4.46.0
 
 ### Minor Changes

@@ -256,6 +256,7 @@ export interface CfService {
 	entrypoint?: string;
 	props?: Record<string, unknown>;
 	remote?: boolean;
+	cross_account_grant?: string;
 }
 
 export interface CfVpcService {
@@ -364,10 +365,11 @@ export interface CfDurableObjectMigrations {
 	}[];
 }
 
-export interface CfPlacement {
-	mode: "smart";
-	hint?: string;
-}
+export type CfPlacement =
+	| { mode: "smart"; hint?: string }
+	| { mode?: "targeted"; region: string }
+	| { mode?: "targeted"; host: string }
+	| { mode?: "targeted"; hostname: string };
 
 export interface CfTailConsumer {
 	service: string;
@@ -453,6 +455,7 @@ export interface CfWorkerInit {
 	logpush: boolean | undefined;
 	placement: CfPlacement | undefined;
 	tail_consumers: CfTailConsumer[] | undefined;
+	streaming_tail_consumers?: CfTailConsumer[] | undefined;
 	limits: CfUserLimits | undefined;
 	annotations?: Record<string, string | undefined>;
 	keep_assets?: boolean | undefined;

@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { experimental_patchConfig } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
+import { describe, expect, it } from "vitest";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { RawConfig } from "@cloudflare/workers-utils";
@@ -37,7 +38,6 @@ const testCases: TestCase[] = [
 
 				[[kv_namespaces]]
 				binding = "KV"
-
 				`,
 		expectedJson: dedent`
 				{
@@ -86,7 +86,6 @@ const testCases: TestCase[] = [
 
 				[[kv_namespaces]]
 				binding = "KV2"
-
 			`,
 		expectedJson: dedent`
 				{
@@ -135,7 +134,6 @@ const testCases: TestCase[] = [
 
 				[[d1_databases]]
 				binding = "DB"
-
 			`,
 		expectedJson: dedent`
 				{
@@ -176,7 +174,6 @@ const testCases: TestCase[] = [
 
 				[[kv_namespaces]]
 				binding = "KV"
-
 			`,
 		expectedJson: dedent`
 				{
@@ -261,7 +258,6 @@ const testCases: TestCase[] = [
 
 				[[d1_databases]]
 				binding = "DB2"
-
 			`,
 		expectedJson: dedent`
 				{
@@ -308,7 +304,6 @@ const replacingOnlyTestCases: Omit<TestCase, "additivePatch">[] = [
 
 				[[kv_namespaces]]
 				binding = "KV2"
-
 				`,
 		expectedJson: dedent`
 				{
@@ -346,7 +341,6 @@ const replacingOnlyTestCases: Omit<TestCase, "additivePatch">[] = [
 				[[kv_namespaces]]
 				binding = "KV"
 				id = "1234"
-
 				`,
 		expectedJson: dedent`
 				{
@@ -372,7 +366,6 @@ const replacingOnlyTestCases: Omit<TestCase, "additivePatch">[] = [
 		expectedToml: dedent`
 				compatibility_date = "2022-01-12"
 				name = "test-name"
-
 				`,
 		expectedJson: dedent`
 				{
@@ -434,7 +427,6 @@ const replacingOnlyTestCases: Omit<TestCase, "additivePatch">[] = [
 				compatibility_date = "2022-01-12"
 				name = "test-name"
 				compatibility_flags = [ "no_nodejs_compat" ]
-
 			`,
 		expectedJson: dedent`
 				{
@@ -456,7 +448,6 @@ const replacingOnlyTestCases: Omit<TestCase, "additivePatch">[] = [
 				compatibility_date = "2022-01-12"
 				name = "test-name"
 				compatibility_flags = [ "nodejs_compat", "flag" ]
-
 			`,
 		expectedJson: dedent`
 				{
@@ -478,7 +469,6 @@ const replacingOnlyTestCases: Omit<TestCase, "additivePatch">[] = [
 		expectedToml: dedent`
 				compatibility_date = "2022-01-12"
 				name = "test-name"
-
 			`,
 		expectedJson: dedent`
 				{
@@ -512,8 +502,8 @@ describe("experimental_patchConfig()", () => {
 						isArrayInsertion
 					);
 					expect(result).not.toBeFalsy();
-					expect(result).toEqual(
-						`${configType === "json" ? expectedJson : expectedToml}`
+					expect(result.trim()).toEqual(
+						`${configType === "json" ? expectedJson.trim() : expectedToml.trim()}`
 					);
 				});
 			}
@@ -534,8 +524,8 @@ describe("experimental_patchConfig()", () => {
 						false
 					);
 					expect(result).not.toBeFalsy();
-					expect(result).toEqual(
-						`${configType === "json" ? expectedJson : expectedToml}`
+					expect(result.trim()).toEqual(
+						`${configType === "json" ? expectedJson.trim() : expectedToml.trim()}`
 					);
 				});
 			}
@@ -697,6 +687,35 @@ describe("experimental_patchConfig()", () => {
 				`);
 			});
 		});
+
+		it("should not error if a `null` is passed in", () => {
+			const jsonc = `
+				{
+					"compatibility_date": "2022-01-12",
+					"name": "test-name",
+				}
+				`;
+			writeFileSync("./wrangler.jsonc", jsonc);
+			const patch = {
+				// Note: `null` is not a valid value here, but we are just making sure that the function
+				//       doesn't unexpectedly error when it encounters a `null` value
+				tail_consumers: null,
+			};
+			const result = experimental_patchConfig(
+				"./wrangler.jsonc",
+				patch as unknown as RawConfig,
+				false
+			);
+			expect(result).not.toBeFalsy();
+			expect(result).toMatchInlineSnapshot(`
+				"{
+					\\"compatibility_date\\": \\"2022-01-12\\",
+					\\"name\\": \\"test-name\\",
+					\\"tail_consumers\\": null,
+				}"
+			`);
+		});
+
 		describe("edit existing bindings", () => {
 			it("isArrayInsertion = false", () => {
 				const jsonc = `

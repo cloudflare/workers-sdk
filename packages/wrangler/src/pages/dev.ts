@@ -2,6 +2,7 @@ import { execSync, spawn } from "node:child_process";
 import events from "node:events";
 import { existsSync, lstatSync, readFileSync } from "node:fs";
 import path, { dirname, join, normalize, resolve } from "node:path";
+import { setTimeout } from "node:timers/promises";
 import {
 	configFileName,
 	FatalError,
@@ -876,7 +877,6 @@ export const pagesDevCommand = createCommand({
 			{
 				MULTIWORKER: Array.isArray(args.config),
 				RESOURCES_PROVISION: false,
-				DEPLOY_REMOTE_DIFF_CHECK: false,
 				AUTOCREATE_RESOURCES: false,
 			},
 			() =>
@@ -951,7 +951,7 @@ export const pagesDevCommand = createCommand({
 					siteInclude: undefined,
 					siteExclude: undefined,
 					enableContainers: false,
-					experimentalTailLogs: false,
+					experimentalTailLogs: true,
 				})
 		);
 
@@ -973,10 +973,6 @@ export const pagesDevCommand = createCommand({
 
 function isWindows() {
 	return process.platform === "win32";
-}
-
-async function sleep(ms: number) {
-	await new Promise((promiseResolve) => setTimeout(promiseResolve, ms));
 }
 
 function getPids(pid: number) {
@@ -1102,7 +1098,7 @@ async function spawnProxyProcess({
 			`Sleeping ${SECONDS_TO_WAIT_FOR_PROXY} seconds to allow proxy process to start before attempting to automatically determine port...`
 		);
 		logger.log("To skip, specify the proxy port with --proxy.");
-		await sleep(SECONDS_TO_WAIT_FOR_PROXY * 1000);
+		await setTimeout(SECONDS_TO_WAIT_FOR_PROXY * 1000);
 
 		port = getPids(proxy.pid)
 			.map(getPort)

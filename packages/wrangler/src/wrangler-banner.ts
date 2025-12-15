@@ -1,3 +1,4 @@
+import { getWranglerHideBanner } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import semiver from "semiver";
 import stripAnsi from "strip-ansi";
@@ -13,6 +14,10 @@ const MIN_NODE_VERSION = "20.0.0";
 declare const WRANGLER_PRERELEASE_LABEL: string;
 
 export async function printWranglerBanner(performUpdateCheck = true) {
+	if (getWranglerHideBanner()) {
+		return;
+	}
+
 	let text =
 		typeof WRANGLER_PRERELEASE_LABEL === "undefined"
 			? ` ⛅️ wrangler ${wranglerVersion}`

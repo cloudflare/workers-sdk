@@ -1,6 +1,6 @@
-import assert from "assert";
-import fs from "fs/promises";
-import path from "path";
+import assert from "node:assert";
+import fs from "node:fs/promises";
+import path from "node:path";
 import test from "ava";
 import { Miniflare, MiniflareCoreError, stripAnsi } from "miniflare";
 import { useCwd, useTmp, utf8Encode } from "../../test-shared";
