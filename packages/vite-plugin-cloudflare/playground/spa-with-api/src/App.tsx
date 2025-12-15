@@ -32,8 +32,7 @@ function App() {
 			<div className="card">
 				<button
 					onClick={() => {
-						// eslint-disable-next-line @typescript-eslint/no-floating-promises
-						fetch("/api/")
+						void fetch("/api/")
 							.then((res) => res.json() as Promise<{ name: string }>)
 							.then((data) => setName(data.name));
 					}}
