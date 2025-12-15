@@ -38,8 +38,7 @@ export default {
 		if (url.pathname === "/") {
 			const { readable, writable } = new TransformStream();
 
-			// eslint-disable-next-line @typescript-eslint/no-floating-promises
-			streamResponse(writable);
+			void streamResponse(writable);
 
 			return new Response(readable, {
 				headers: { "Content-Type": "text/html; charset=UTF-8" },
