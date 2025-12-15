@@ -88,8 +88,16 @@ export const workflowsInstancesListCommand = createCommand({
 		const prettierInstances = instances
 			.sort((a, b) =>
 				args.reverse
-					? a.created_on.localeCompare(b.created_on)
-					: b.created_on.localeCompare(a.created_on)
+					? a.created_on > b.created_on
+						? 1
+						: a.created_on < b.created_on
+							? -1
+							: 0
+					: b.created_on > a.created_on
+						? 1
+						: b.created_on < a.created_on
+							? -1
+							: 0
 			)
 			.map((instance) => ({
 				"Instance ID": instance.id,

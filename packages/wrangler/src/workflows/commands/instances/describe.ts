@@ -15,9 +15,9 @@ import {
 	emojifyInstanceStatus,
 	emojifyInstanceTriggerName,
 	emojifyStepType,
+	getInstanceIdFromArgs,
 } from "../../utils";
 import type {
-	Instance,
 	InstanceSleepLog,
 	InstanceStatusAndLogs,
 	InstanceStepLog,
@@ -63,26 +63,7 @@ export const workflowsInstancesDescribeCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		let id = args.id;
-
-		if (id == "latest") {
-			const instances = (
-				await fetchResult<Instance[]>(
-					config,
-					`/accounts/${accountId}/workflows/${args.name}/instances`
-				)
-			).sort((a, b) => b.created_on.localeCompare(a.created_on));
-
-			if (instances.length == 0) {
-				logger.error(
-					`There are no deployed instances in workflow "${args.name}"`
-				);
-				return;
-			}
-
-			logRaw("Describing latest instance:");
-			id = instances[0].id;
-		}
+		const id = await getInstanceIdFromArgs(accountId, args, config);
 
 		const instance = await fetchResult<InstanceStatusAndLogs>(
 			config,
@@ -136,6 +117,7 @@ export const workflowsInstancesDescribeCommand = createCommand({
 			);
 		}
 
+		logRaw("Describing latest instance:");
 		logRaw(formatLabelledValues(formattedInstance));
 		logRaw(white("Steps:"));
 

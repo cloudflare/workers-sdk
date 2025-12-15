@@ -1,8 +1,9 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../../cfetch";
 import { createCommand } from "../../../core/create-command";
 import { logger } from "../../../logger";
 import { requireAuth } from "../../../user";
-import type { Instance } from "../../types";
+import { getInstanceIdFromArgs } from "../../utils";
 
 export const workflowsInstancesSendEventCommand = createCommand({
 	metadata: {
@@ -41,34 +42,15 @@ export const workflowsInstancesSendEventCommand = createCommand({
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
 
-		let id = args.id;
-
-		if (id == "latest") {
-			const instances = (
-				await fetchResult<Instance[]>(
-					config,
-					`/accounts/${accountId}/workflows/${args.name}/instances/`
-				)
-			).sort((a, b) => b.created_on.localeCompare(a.created_on));
-
-			if (instances.length == 0) {
-				logger.error(
-					`There are no deployed instances in workflow "${args.name}"`
-				);
-				return;
-			}
-
-			id = instances[0].id;
-		}
+		const id = await getInstanceIdFromArgs(accountId, args, config);
 
 		let payload;
 		try {
 			payload = JSON.parse(args.payload);
 		} catch (e) {
-			logger.error(
+			throw new UserError(
 				`Error while parsing event payload: "${args.payload}" with ${e}' `
 			);
-			return;
 		}
 
 		await fetchResult(
