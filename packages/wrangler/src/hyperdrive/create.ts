@@ -44,7 +44,7 @@ export const hyperdriveCreateCommand = createCommand({
 			name: args.name,
 			origin,
 			caching: getCacheOptionsFromArgs(args),
-			mtls: getMtlsFromArgs(args),
+			mtls: getMtlsFromArgs(args, origin.scheme),
 			origin_connection_limit: getOriginConnectionLimitFromArgs(args),
 		});
 		logger.log(
