@@ -45,7 +45,7 @@ async function waitForClosedConnection(ws: WebSocket): Promise<void> {
 		return;
 	}
 	// local dev browser rendering relies on a ping message to check browser process status
-	const timeoutId = setInterval(() => ws.send("ping"), 1000);
+	const timeoutId = setInterval(() => ws.send("ping"), 500);
 	await new Promise((resolve) => ws.addEventListener("close", resolve));
 	// clear the interval, no longer need to ping
 	if (timeoutId) clearInterval(timeoutId);
@@ -73,6 +73,8 @@ test.afterEach(() => {
 
 // we need to run browser rendering tests in a serial manner to avoid a race condition installing the browser
 test.serial("it creates a browser session", async (t) => {
+	// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+	t.timeout(20_000);
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -109,6 +111,8 @@ export default {
 `;
 
 test.serial("it closes a browser session", async (t) => {
+	// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+	t.timeout(20_000);
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -152,6 +156,8 @@ export default {
 `;
 
 test.serial("it reuses a browser session", async (t) => {
+	// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+	t.timeout(20_000);
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -196,6 +202,8 @@ const isWindows = process.platform === "win32";
 (isWindows ? test.skip : test.serial)(
 	"fails if browser session already in use",
 	async (t) => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		t.timeout(20_000);
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -241,6 +249,8 @@ export default {
 `;
 
 test.serial("gets sessions while acquiring and closing session", async (t) => {
+	// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+	t.timeout(20_000);
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -291,6 +301,8 @@ export default {
 test.serial(
 	"gets sessions while connecting and disconnecting session",
 	async (t) => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		t.timeout(20_000);
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
