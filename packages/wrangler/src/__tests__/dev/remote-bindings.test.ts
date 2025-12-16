@@ -481,6 +481,38 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 				}),
 			],
 		},
+		{
+			name: "queue producer",
+			config: {
+				queues: {
+					producers: [
+						{
+							binding: "QUEUE",
+							queue: "mock-queue-name",
+							remote: true,
+						},
+					],
+				},
+			},
+			expectedProxyWorkerBindings: {
+				QUEUE: {
+					queue_name: "mock-queue-name",
+					remote: true,
+					type: "queue",
+				},
+			},
+			expectedWorkerOptions: [
+				expect.objectContaining({
+					queueProducers: {
+						QUEUE: {
+							queueName: "mock-queue-name",
+							deliveryDelay: undefined,
+							remoteProxyConnectionString,
+						},
+					},
+				}),
+			],
+		},
 	];
 
 	it.each(testCases)(
@@ -767,6 +799,74 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 
 		await stopWrangler();
 
+		await wranglerStopped;
+	});
+
+	it("should allow both remote D1 and remote queue bindings in a single dev session", async () => {
+		await seed({
+			"wrangler.jsonc": JSON.stringify(
+				{
+					name: "worker",
+					main: "index.js",
+					compatibility_date: "2025-01-01",
+					d1_databases: [
+						{
+							binding: "DB",
+							database_id: "mock-d1-database-id",
+							database_name: "mock-d1-database-name",
+							remote: true,
+						},
+					],
+					queues: {
+						producers: [
+							{
+								binding: "QUEUE",
+								queue: "mock-queue-name",
+								remote: true,
+							},
+						],
+					},
+				},
+				null,
+				2
+			),
+			"index.js": `export default { fetch() { return new Response("hello") } }`,
+		});
+		const wranglerStopped = runWrangler("dev --port=0 --inspector-port=0");
+		await vi.waitFor(() => expect(std.out).toMatch(/Ready/), {
+			timeout: 5_000,
+		});
+		expect(proxyWorkerBindings).toEqual({
+			DB: {
+				database_id: "mock-d1-database-id",
+				database_name: "mock-d1-database-name",
+				remote: true,
+				type: "d1",
+			},
+			QUEUE: {
+				queue_name: "mock-queue-name",
+				remote: true,
+				type: "queue",
+			},
+		});
+		expect(workerOptions).toEqual([
+			expect.objectContaining({
+				d1Databases: {
+					DB: {
+						id: "mock-d1-database-id",
+						remoteProxyConnectionString,
+					},
+				},
+				queueProducers: {
+					QUEUE: {
+						queueName: "mock-queue-name",
+						deliveryDelay: undefined,
+						remoteProxyConnectionString,
+					},
+				},
+			}),
+		]);
+		await stopWrangler();
 		await wranglerStopped;
 	});
 });

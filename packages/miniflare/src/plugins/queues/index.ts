@@ -15,9 +15,11 @@ import {
 import { getUserServiceName } from "../core";
 import {
 	getMiniflareObjectBindings,
+	getUserBindingServiceName,
 	objectEntryWorker,
 	Plugin,
 	ProxyNodeBinding,
+	remoteProxyClientWorker,
 	RemoteProxyConnectionString,
 	SERVICE_LOOPBACK,
 } from "../shared";
@@ -55,10 +57,18 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 	options: QueuesOptionsSchema,
 	getBindings(options) {
 		const queues = bindingEntries(options.queueProducers);
-		return queues.map<Worker_Binding>(([name, id]) => ({
-			name,
-			queue: { name: `${SERVICE_QUEUE_PREFIX}:${id}` },
-		}));
+		return queues.map<Worker_Binding>(
+			([name, { id, remoteProxyConnectionString }]) => ({
+				name,
+				queue: {
+					name: getUserBindingServiceName(
+						SERVICE_QUEUE_PREFIX,
+						id,
+						remoteProxyConnectionString
+					),
+				},
+			})
+		);
 	},
 	getNodeBindings(options) {
 		const queues = bindingKeys(options.queueProducers);
@@ -76,10 +86,18 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 		const queues = bindingEntries(options.queueProducers);
 		if (queues.length === 0) return [];
 
-		const services = queues.map<Service>(([_, id]) => ({
-			name: `${SERVICE_QUEUE_PREFIX}:${id}`,
-			worker: objectEntryWorker(QUEUE_BROKER_OBJECT, id),
-		}));
+		const services = queues.map<Service>(
+			([name, { id, remoteProxyConnectionString }]) => ({
+				name: getUserBindingServiceName(
+					SERVICE_QUEUE_PREFIX,
+					id,
+					remoteProxyConnectionString
+				),
+				worker: remoteProxyConnectionString
+					? remoteProxyClientWorker(remoteProxyConnectionString, name)
+					: objectEntryWorker(QUEUE_BROKER_OBJECT, id),
+			})
+		);
 
 		const uniqueKey = `miniflare-${QUEUE_BROKER_OBJECT_CLASS_NAME}`;
 		const objectService: Service = {
@@ -138,17 +156,35 @@ export const QUEUES_PLUGIN: Plugin<typeof QueuesOptionsSchema> = {
 
 function bindingEntries(
 	namespaces?:
-		| Record<string, { queueName: string; deliveryDelay?: number }>
+		| Record<
+				string,
+				{
+					queueName: string;
+					deliveryDelay?: number;
+					remoteProxyConnectionString?: RemoteProxyConnectionString;
+				}
+		  >
 		| string[]
 		| Record<string, string>
-): [bindingName: string, id: string][] {
+): [
+	bindingName: string,
+	{ id: string; remoteProxyConnectionString?: RemoteProxyConnectionString },
+][] {
 	if (Array.isArray(namespaces)) {
-		return namespaces.map((bindingName) => [bindingName, bindingName]);
+		return namespaces.map((bindingName) => [bindingName, { id: bindingName }]);
 	} else if (namespaces !== undefined) {
-		return Object.entries(namespaces).map(([name, opts]) => [
-			name,
-			typeof opts === "string" ? opts : opts.queueName,
-		]);
+		return Object.entries(namespaces).map(([name, opts]) => {
+			if (typeof opts === "string") {
+				return [name, { id: opts }];
+			}
+			return [
+				name,
+				{
+					id: opts.queueName,
+					remoteProxyConnectionString: opts.remoteProxyConnectionString,
+				},
+			];
+		});
 	} else {
 		return [];
 	}
