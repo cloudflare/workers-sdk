@@ -3655,27 +3655,18 @@ describe("r2", () => {
 					`);
 				});
 				it("it should fail to add lock rule using command-line arguments without condition", async () => {
-					setIsTTY(true);
+					setIsTTY(false);
 					const bucketName = "my-bucket";
 
 					mockBucketLockGetExistingRules(bucketName, []);
 
-					mockConfirm({
-						text:
-							`Are you sure you want to add lock rule 'rule-not-indefinite' to bucket '${bucketName}' without retention? ` +
-							`The lock rule will apply to all matching objects indefinitely.`,
-						result: false,
-					});
-
-					await runWrangler(
-						`r2 bucket lock add ${bucketName} --name 'rule-not-indefinite' --prefix prefix-not-indefinite`
+					await expect(() =>
+						runWrangler(
+							`r2 bucket lock add ${bucketName} --name 'rule-not-indefinite' --prefix prefix-not-indefinite`
+						)
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Cannot add a lock rule without specifying a retention period.]`
 					);
-					expect(std.out).toMatchInlineSnapshot(`
-						"
-						 ⛅️ wrangler x.x.x
-						──────────────────
-						Add cancelled."
-					`);
 				});
 				it("it should add an age lock rule using command-line arguments and id alias", async () => {
 					setIsTTY(true);
