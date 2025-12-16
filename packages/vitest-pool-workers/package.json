@@ -82,7 +82,8 @@
 	"peerDependencies": {
 		"@vitest/runner": "2.0.x - 3.2.x",
 		"@vitest/snapshot": "2.0.x - 3.2.x",
-		"vitest": "2.0.x - 3.2.x"
+		"vitest": "2.0.x - 3.2.x",
+		"zod": "^3.25.0 || ^4.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"
