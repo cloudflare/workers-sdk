@@ -200,6 +200,89 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 		expect(auxWorker?.config.name).toBe("aux-worker");
 	});
 
+	test("should pass entryWorkerConfig as second parameter to auxiliary worker config function", () => {
+		const entryConfigPath = createEntryWorkerConfig(tempDir);
+		fs.writeFileSync(path.join(tempDir, "src/aux.ts"), "export default {}");
+
+		const pluginConfig: PluginConfig = {
+			configPath: entryConfigPath,
+			auxiliaryWorkers: [
+				{
+					config: (userConfig, entryConfig) => {
+						// Verify we receive both parameters
+						expect(userConfig).toBeDefined();
+						expect(entryConfig).toBeDefined();
+						expect(entryConfig.name).toBe("entry-worker");
+						expect(entryConfig.compatibility_date).toBe("2024-01-01");
+
+						return {
+							name: "aux-worker",
+							main: "./src/aux.ts",
+							// Use entry worker's compatibility_date
+							compatibility_date: entryConfig.compatibility_date,
+						};
+					},
+				},
+			],
+		};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		) as WorkersResolvedConfig;
+		expect(result.type).toBe("workers");
+		const auxWorker = result.environmentNameToWorkerMap.get("aux_worker");
+		expect(auxWorker).toBeDefined();
+		expect(auxWorker?.config.name).toBe("aux-worker");
+		// Should have inherited entry worker's compatibility_date
+		expect(auxWorker?.config.compatibility_date).toBe("2024-01-01");
+	});
+
+	test("should allow auxiliary worker to inherit entry worker compatibility_flags", () => {
+		// Create entry worker with compatibility_flags
+		const configPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({
+				name: "entry-worker",
+				main: "./src/index.ts",
+				compatibility_date: "2025-01-01",
+				compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
+			})
+		);
+		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
+		fs.writeFileSync(path.join(tempDir, "src/aux.ts"), "export default {}");
+
+		const pluginConfig: PluginConfig = {
+			configPath,
+			auxiliaryWorkers: [
+				{
+					config: (_, entryConfig) => ({
+						name: "aux-worker",
+						main: "./src/aux.ts",
+						// Inherit all compatibility settings from entry worker
+						compatibility_date: entryConfig.compatibility_date,
+						compatibility_flags: entryConfig.compatibility_flags,
+					}),
+				},
+			],
+		};
+
+		const result = resolvePluginConfig(
+			pluginConfig,
+			{ root: tempDir },
+			viteEnv
+		) as WorkersResolvedConfig;
+		expect(result.type).toBe("workers");
+		const auxWorker = result.environmentNameToWorkerMap.get("aux_worker");
+		expect(auxWorker).toBeDefined();
+		expect(auxWorker?.config.compatibility_flags).toEqual(
+			expect.arrayContaining(["nodejs_compat", "global_fetch_strictly_public"])
+		);
+	});
+
 	test("should throw if inline auxiliary worker is missing required fields", () => {
 		const entryConfigPath = createEntryWorkerConfig(tempDir);
 
