@@ -14,7 +14,7 @@ import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
 import type { Binding, RemoteProxySession } from "wrangler";
-import type { ParseParams, ZodError } from "zod";
+import type { ZodError } from "zod";
 
 export interface WorkersConfigPluginAPI {
 	setMain(newMain?: string): void;
@@ -83,7 +83,10 @@ const WorkersPoolOptionsSchema = z.object({
 		.passthrough()
 		.optional(),
 	wrangler: z
-		.object({ configPath: z.string().optional(), environment: z.string().optional() })
+		.object({
+			configPath: z.string().optional(),
+			environment: z.string().optional(),
+		})
 		.optional(),
 });
 export type SourcelessWorkerOptions = Omit<
@@ -104,7 +107,8 @@ export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 	defines?: Record<string, string>;
 };
 
-type PathParseParams = Pick<ParseParams, "path">;
+/** Base path for error reporting in nested parsing */
+type BasePath = PropertyKey[];
 
 function isZodErrorLike(value: unknown): value is ZodError {
 	return (
@@ -131,7 +135,7 @@ function parseWorkerOptions(
 	rootPath: string,
 	value: Record<string, unknown>,
 	withoutScript: boolean,
-	opts: PathParseParams
+	basePath: BasePath
 ): WorkerOptions {
 	// If this worker shouldn't have a configurable script, remove all script data
 	// and replace it with an empty `script` that will pass validation
@@ -147,7 +151,12 @@ function parseWorkerOptions(
 	for (const plugin of PLUGIN_VALUES) {
 		try {
 			// This `parse()` may throw a different `ZodError` than what we `import`
-			const parsed = parseWithRootPath(rootPath, plugin.options, value, opts);
+			const parsed = parseWithRootPath(
+				rootPath,
+				plugin.options,
+				value,
+				basePath
+			);
 			Object.assign(result, parsed);
 		} catch (e) {
 			coalesceZodErrors(errorRef, e);
@@ -210,12 +219,11 @@ const remoteProxySessionsDataMap = new Map<
 async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
-	opts: PathParseParams
+	basePath: BasePath
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Try to parse pool specific options
 	const options = WorkersPoolOptionsSchema.parse(
-		value,
-		opts
+		value
 	) as WorkersPoolOptionsWithDefines;
 	options.miniflare ??= {};
 
@@ -229,7 +237,7 @@ async function parseCustomPoolOptions(
 			rootPath,
 			options.miniflare,
 			/* withoutScript */ true, // (script provided by runner)
-			{ path: [...opts.path, "miniflare"] }
+			[...basePath, "miniflare"]
 		);
 	} catch (e) {
 		coalesceZodErrors(errorRef, e);
@@ -246,9 +254,7 @@ async function parseCustomPoolOptions(
 					workerRootPath,
 					worker,
 					/* withoutScript */ false,
-					{
-						path: [...opts.path, "miniflare", "workers", i],
-					}
+					[...basePath, "miniflare", "workers", i]
 				);
 			} catch (e) {
 				coalesceZodErrors(errorRef, e);
@@ -401,9 +407,11 @@ export async function parseProjectOptions(
 			};
 			workersPoolOptions = await workersPoolOptions({ inject });
 		}
-		return await parseCustomPoolOptions(rootPath, workersPoolOptions, {
-			path: OPTIONS_PATH_ARRAY,
-		});
+		return await parseCustomPoolOptions(
+			rootPath,
+			workersPoolOptions,
+			OPTIONS_PATH_ARRAY
+		);
 	} catch (e) {
 		if (!isZodErrorLike(e)) {
 			throw e;
