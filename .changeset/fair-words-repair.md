@@ -1,5 +1,5 @@
 ---
-"create-cloudflare": patch
+"create-cloudflare": minor
 ---
 
 Support Next.js (via OpenNext) in `--experimental` mode
