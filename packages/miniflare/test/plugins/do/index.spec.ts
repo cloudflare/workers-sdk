@@ -610,11 +610,10 @@ import { DurableObject } from 'cloudflare:workers';
 export class BlockingDO extends DurableObject {
 	locks = new Map();
 
-	async blockedOp(n, lock) {
-		await new Promise((resolve) => {
+	blockedOp(n, lock) {
+		return new Promise((resolve) => {
 			this.locks.set(lock, () => resolve(lock));
-		});
-		return n + 2;
+		}).then(() =>  n + 2);
 	}
 
 	async release(lock) {
