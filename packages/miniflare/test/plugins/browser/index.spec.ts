@@ -62,6 +62,15 @@ export default {
 };
 `;
 
+// The CLI spinner outputs to stdout, so we mute it during tests
+const originalStdoutWrite = process.stdout.write;
+test.beforeEach(() => {
+	process.stdout.write = () => true;
+});
+test.afterEach(() => {
+	process.stdout.write = originalStdoutWrite;
+});
+
 // we need to run browser rendering tests in a serial manner to avoid a race condition installing the browser
 test.serial("it creates a browser session", async (t) => {
 	const opts: MiniflareOptions = {
