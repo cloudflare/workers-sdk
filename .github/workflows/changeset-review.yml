@@ -53,6 +53,21 @@ jobs:
 
             Output a one-line summary (✅ good / ⚠️ issues found) followed by any issues.
 
-            If there are blocking issues (wrong version type, forbidden major, poor quality), run `exit 1` to fail the check.
+            Return your structured output indicating whether there are blocking issues.
           claude_args: |
-            --allowedTools "Read,Glob,Grep,Bash(exit:*)"
+            --allowedTools "Read,Glob,Grep"
+            --output-format json
+            --json-schema '{"type":"object","properties":{"has_blocking_issues":{"type":"boolean","description":"True if any changeset has blocking issues that should fail the check"},"summary":{"type":"string","description":"One-line summary of the review"},"issues":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"issue":{"type":"string"},"severity":{"type":"string","enum":["blocking","warning"]}}}}},"required":["has_blocking_issues","summary"]}'
+
+      - name: Fail if blocking issues found
+        if: always() && steps.claude-review.outputs.structured_output != ''
+        run: |
+          echo "Claude review output:"
+          echo '${{ steps.claude-review.outputs.structured_output }}'
+
+          HAS_ISSUES=$(echo '${{ steps.claude-review.outputs.structured_output }}' | jq -r '.has_blocking_issues')
+          if [ "$HAS_ISSUES" = "true" ]; then
+            echo "::error::Blocking changeset issues found. Please fix the issues above."
+            exit 1
+          fi
+          echo "✅ All changesets passed validation"
