@@ -591,3 +591,82 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 		});
 	});
 });
+
+const BLOCKING_DO_SCRIPT = `
+import { DurableObject } from 'cloudflare:workers';
+
+export class BlockingDO extends DurableObject {
+	locks = new Map();
+
+	async blockedOp(n, lock) {
+		await new Promise((resolve) => {
+			this.locks.set(lock, () => resolve(lock));
+		});
+		return n + 2;
+	}
+
+	async release(lock) {
+		const releaseFn = this.locks.get(lock);
+		if (releaseFn) {
+			releaseFn();
+			this.locks.delete(lock);
+		}
+	}
+}
+
+export default {
+	fetch() { return new Response("OK"); }
+}
+`;
+
+test("Durable Object RPC calls do not block Node.js event loop", async (t) => {
+	const mf = new Miniflare({
+		durableObjects: { BLOCKING_DO: "BlockingDO" },
+		modules: true,
+		script: BLOCKING_DO_SCRIPT,
+	});
+
+	t.teardown(() => mf.dispose());
+
+	const namespace = await mf.getDurableObjectNamespace("BLOCKING_DO");
+	const stubId = namespace.idFromName("test");
+	const stub = namespace.get(stubId) as unknown as {
+		blockedOp: (n: number, lock: string) => Promise<number>;
+		release: (lock: string) => Promise<void>;
+	};
+
+	const blockedPromise = stub.blockedOp(5, "lock-1");
+
+	const raced = await Promise.race([
+		blockedPromise.then((result) => ({ type: "resolved", result })),
+		setTimeout(100).then(() => ({ type: "timeout" })),
+	]);
+
+	// If the event loop wasn't blocked, the timeout should win
+	t.deepEqual(raced, { type: "timeout" });
+});
+
+test("Durable Object RPC calls complete when unblocked", async (t) => {
+	const mf = new Miniflare({
+		durableObjects: { BLOCKING_DO: "BlockingDO" },
+		modules: true,
+		script: BLOCKING_DO_SCRIPT,
+	});
+
+	t.teardown(() => mf.dispose());
+
+	const namespace = await mf.getDurableObjectNamespace("BLOCKING_DO");
+	const stubId = namespace.idFromName("test");
+	const stub = namespace.get(stubId) as unknown as {
+		blockedOp: (n: number, lock: string) => Promise<number>;
+		release: (lock: string) => Promise<void>;
+	};
+
+	const blockedPromise = stub.blockedOp(10, "lock-2");
+
+	// Release the lock after 50ms - this should unblock the operation
+	setTimeout(50).then(() => stub.release("lock-2"));
+
+	const result = await blockedPromise;
+	t.is(result, 12);
+});
