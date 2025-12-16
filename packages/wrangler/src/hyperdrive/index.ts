@@ -8,6 +8,7 @@ import type {
 	OriginWithSecrets,
 	OriginWithSecretsPartial,
 } from "./client";
+import { MySqlSslmode, PostgresSslmode } from "./client";
 import type { hyperdriveCreateCommand } from "./create";
 import type { hyperdriveUpdateCommand } from "./update";
 
@@ -130,14 +131,7 @@ export const upsertOptions = (
 		},
 		sslmode: {
 			type: "string",
-			choices: [
-				"require",
-				"verify-ca",
-				"verify-full",
-				"REQUIRED",
-				"VERIFY_CA",
-				"VERIFY_IDENTITY",
-			],
+			choices: [...PostgresSslmode, ...MySqlSslmode],
 			description:
 				"Sets sslmode for connecting to database. For PostgreSQL: 'require', 'verify-ca', 'verify-full'. For MySQL: 'REQUIRED', 'VERIFY_CA', 'VERIFY_IDENTITY'.",
 		},
@@ -315,9 +309,6 @@ export function getCacheOptionsFromArgs(
 	}
 }
 
-const POSTGRES_SSLMODES = ["require", "verify-ca", "verify-full"] as const;
-const MYSQL_SSLMODES = ["REQUIRED", "VERIFY_CA", "VERIFY_IDENTITY"] as const;
-
 function isPostgresScheme(scheme: string | undefined): boolean {
 	return (
 		scheme === "postgres" || scheme === "postgresql" || scheme === undefined
@@ -342,24 +333,16 @@ export function getMtlsFromArgs(
 		// Validate sslmode based on scheme
 		if (mtls.sslmode) {
 			if (isPostgresScheme(scheme)) {
-				if (
-					!POSTGRES_SSLMODES.includes(
-						mtls.sslmode as (typeof POSTGRES_SSLMODES)[number]
-					)
-				) {
+				if (!PostgresSslmode.includes(mtls.sslmode)) {
 					throw new UserError(
-						`Invalid sslmode '${mtls.sslmode}' for PostgreSQL. Valid options are: ${POSTGRES_SSLMODES.join(", ")}`
+						`Invalid sslmode '${mtls.sslmode}' for PostgreSQL. Valid options are: ${PostgresSslmode.join(", ")}`
 					);
 				}
 			} else {
 				// MySQL
-				if (
-					!MYSQL_SSLMODES.includes(
-						mtls.sslmode as (typeof MYSQL_SSLMODES)[number]
-					)
-				) {
+				if (!MySqlSslmode.includes(mtls.sslmode)) {
 					throw new UserError(
-						`Invalid sslmode '${mtls.sslmode}' for MySQL. Valid options are: ${MYSQL_SSLMODES.join(", ")}`
+						`Invalid sslmode '${mtls.sslmode}' for MySQL. Valid options are: ${MySqlSslmode.join(", ")}`
 					);
 				}
 			}
