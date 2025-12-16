@@ -11,14 +11,14 @@ import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	disableR2Catalog,
 	disableR2CatalogCompaction,
-	disableR2CatalogTableCompaction,
 	disableR2CatalogSnapshotExpiration,
+	disableR2CatalogTableCompaction,
 	disableR2CatalogTableSnapshotExpiration,
-	enableR2CatalogSnapshotExpiration,
-	enableR2CatalogTableSnapshotExpiration,
 	enableR2Catalog,
 	enableR2CatalogCompaction,
+	enableR2CatalogSnapshotExpiration,
 	enableR2CatalogTableCompaction,
+	enableR2CatalogTableSnapshotExpiration,
 	getR2Catalog,
 	upsertR2CatalogCredential,
 } from "./helpers/catalog";
@@ -350,12 +350,11 @@ export const r2BucketCatalogCompactionDisableCommand = createCommand({
 	},
 });
 
-
 export const r2BucketCatalogSnapshotExpirationNamespace = createNamespace({
 	metadata: {
 		description:
 			"Control settings for automatic snapshot expiration maintenance jobs for your R2 data catalog",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: R2 Data Catalog",
 	},
 });
@@ -364,7 +363,7 @@ export const r2BucketCatalogSnapshotExpirationEnableCommand = createCommand({
 	metadata: {
 		description:
 			"Enable automatic snapshot expiration for your R2 data catalog or a specific table",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: R2 Data Catalog",
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
@@ -381,20 +380,19 @@ export const r2BucketCatalogSnapshotExpirationEnableCommand = createCommand({
 			demandOption: false,
 		},
 		table: {
-			describe: "The name of the table (optional, for table-level snapshot expiration)",
+			describe:
+				"The name of the table (optional, for table-level snapshot expiration)",
 			type: "string",
 			demandOption: false,
 		},
 		"older-than-days": {
-			describe:
-				"Delete snapshots older than this many days",
+			describe: "Delete snapshots older than this many days",
 			type: "number",
 			demandOption: false,
 			default: 30,
 		},
 		"retain-last": {
-			describe:
-				"The minimum number of snapshots to retain",
+			describe: "The minimum number of snapshots to retain",
 			type: "number",
 			demandOption: false,
 			default: 5,
@@ -469,7 +467,7 @@ export const r2BucketCatalogSnapshotExpirationDisableCommand = createCommand({
 	metadata: {
 		description:
 			"Disable automatic snapshot expiration for your R2 data catalog or a specific table",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: R2 Data Catalog",
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
@@ -486,7 +484,8 @@ export const r2BucketCatalogSnapshotExpirationDisableCommand = createCommand({
 			demandOption: false,
 		},
 		table: {
-			describe: "The name of the table (optional, for table-level snapshot expiration)",
+			describe:
+				"The name of the table (optional, for table-level snapshot expiration)",
 			type: "string",
 			demandOption: false,
 		},

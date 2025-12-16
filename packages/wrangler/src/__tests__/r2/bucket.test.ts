@@ -1783,7 +1783,7 @@ describe("r2", () => {
 
 				describe("disable", () => {
 					const { setIsTTY } = useMockIsTTY();
-					
+
 					it("should error if no bucket name is given", async () => {
 						await expect(
 							runWrangler("r2 bucket catalog snapshot-expiration disable")
