@@ -178,7 +178,7 @@ export async function disableR2CatalogSnapshotExpiration(
 	accountId: string,
 	bucketName: string
 ): Promise<R2CatalogSnapshotExpirationResponse> {
-	const config: R2CatalogCompactionConfig = {
+	const config: R2CatalogSnapshotExpirationConfig = {
 		state: "disabled",
 	};
 
