@@ -1,4 +1,3 @@
-import * as vite from "vite";
 import { assertWranglerVersion } from "./assert-wrangler-version";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
@@ -23,6 +22,7 @@ import { wasmHelperPlugin } from "./plugins/wasm";
 import { debuglog } from "./utils";
 import type { SharedContext } from "./context";
 import type { PluginConfig } from "./plugin-config";
+import type * as vite from "vite";
 
 export type { PluginConfig } from "./plugin-config";
 export type { WorkerConfig } from "./workers-configs";

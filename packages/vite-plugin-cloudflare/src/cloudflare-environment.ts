@@ -220,6 +220,7 @@ export function createCloudflareEnvironmentOptions({
 				// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
 				preserveEntrySignatures: "strict",
 				// rolldown-only option
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				...("rolldownVersion" in vite ? ({ platform: "neutral" } as any) : {}),
 			},
 		},
@@ -265,6 +266,7 @@ function getProcessEnvReplacements(
 	hasNodeJsCompat: boolean,
 	mode: vite.ConfigEnv["mode"]
 ): Record<string, string> {
+	// eslint-disable-next-line turbo/no-undeclared-env-vars
 	const nodeEnv = process.env.NODE_ENV || mode;
 	const nodeEnvReplacements = {
 		"process.env.NODE_ENV": JSON.stringify(nodeEnv),

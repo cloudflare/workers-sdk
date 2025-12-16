@@ -6,7 +6,7 @@ interface Env {
 
 export class Counter extends DurableObject {
 	async getCounterValue() {
-		let value = ((await this.ctx.storage.get("value")) as number) || 0;
+		const value = ((await this.ctx.storage.get("value")) as number) || 0;
 
 		return value;
 	}
@@ -30,8 +30,8 @@ export class Counter extends DurableObject {
 
 export default {
 	async fetch(request, env) {
-		let url = new URL(request.url);
-		let name = url.searchParams.get("name");
+		const url = new URL(request.url);
+		const name = url.searchParams.get("name");
 
 		if (!name) {
 			return new Response(

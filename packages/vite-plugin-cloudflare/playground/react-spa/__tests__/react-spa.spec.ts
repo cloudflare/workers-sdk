@@ -25,12 +25,12 @@ describe("react-spa", () => {
 	// All these _headers tests will fail without experimental support turned on in dev mode
 	// But they will pass in build/preview mode.
 	describe("_headers", () => {
-		failsIf(!isBuild)("applies _headers to HTML responses", async ({}) => {
+		failsIf(!isBuild)("applies _headers to HTML responses", async () => {
 			const response = await fetch(viteTestUrl);
 			expect(response.headers.get("X-Header")).toBe("Custom-Value!!!");
 		});
 
-		failsIf(!isBuild)("applies _headers to static assets", async ({}) => {
+		failsIf(!isBuild)("applies _headers to static assets", async () => {
 			const response = await fetch(`${viteTestUrl}/vite.svg`);
 			expect(response.headers.get("X-Header")).toBe("Custom-Value!!!");
 		});
@@ -39,7 +39,7 @@ describe("react-spa", () => {
 	// All these _redirects tests will fail without experimental support turned on in dev mode
 	// But they will pass in build/preview mode.
 	describe("_redirects", () => {
-		failsIf(!isBuild)("applies _redirects to HTML responses", async ({}) => {
+		failsIf(!isBuild)("applies _redirects to HTML responses", async () => {
 			const response = await fetch(`${viteTestUrl}/foo`, {
 				redirect: "manual",
 			});
@@ -47,7 +47,7 @@ describe("react-spa", () => {
 			expect(response.headers.get("Location")).toBe("/bar");
 		});
 
-		failsIf(!isBuild)("applies _redirects to static assets", async ({}) => {
+		failsIf(!isBuild)("applies _redirects to static assets", async () => {
 			const response = await fetch(`${viteTestUrl}/redirect.svg`, {
 				redirect: "manual",
 			});
@@ -57,7 +57,7 @@ describe("react-spa", () => {
 
 		failsIf(!isBuild)(
 			"supports proxying static assets to rewritten contents with _redirects",
-			async ({}) => {
+			async () => {
 				const response = await fetch(`${viteTestUrl}/rewrite.svg`);
 				expect(response.status).toBe(200);
 				expect(await response.text()).toContain("target.svg");
