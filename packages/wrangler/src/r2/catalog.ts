@@ -487,6 +487,11 @@ export const r2BucketCatalogSnapshotExpirationDisableCommand = createCommand({
 			type: "string",
 			demandOption: false,
 		},
+		force: {
+			describe: "Skip confirmation prompt",
+			type: "boolean",
+			default: false,
+		},
 	},
 	async handler(args, { config }) {
 		const accountId = await requireAuth(config);
@@ -501,12 +506,14 @@ export const r2BucketCatalogSnapshotExpirationDisableCommand = createCommand({
 
 		if (args.namespace && args.table) {
 			// Table-level snapshot expiration
-			const confirmedDisable = await confirm(
-				`Are you sure you want to disable snapshot expiration for table '${args.namespace}.${args.table}' in bucket '${args.bucket}'?`
-			);
-			if (!confirmedDisable) {
-				logger.log("Disable cancelled.");
-				return;
+			if (!args.force) {
+				const confirmedDisable = await confirm(
+					`Are you sure you want to disable snapshot expiration for table '${args.namespace}.${args.table}' in bucket '${args.bucket}'?`
+				);
+				if (!confirmedDisable) {
+					logger.log("Disable cancelled.");
+					return;
+				}
 			}
 
 			await disableR2CatalogTableSnapshotExpiration(
@@ -522,12 +529,14 @@ export const r2BucketCatalogSnapshotExpirationDisableCommand = createCommand({
 			);
 		} else {
 			// Catalog-level snapshot expiration
-			const confirmedDisable = await confirm(
-				`Are you sure you want to disable snapshot expiration for the data catalog for bucket '${args.bucket}'?`
-			);
-			if (!confirmedDisable) {
-				logger.log("Disable cancelled.");
-				return;
+			if (!args.force) {
+				const confirmedDisable = await confirm(
+					`Are you sure you want to disable snapshot expiration for the data catalog for bucket '${args.bucket}'?`
+				);
+				if (!confirmedDisable) {
+					logger.log("Disable cancelled.");
+					return;
+				}
 			}
 
 			await disableR2CatalogSnapshotExpiration(config, accountId, args.bucket);
