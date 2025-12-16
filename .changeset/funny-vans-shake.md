@@ -15,7 +15,7 @@ export default defineConfig({
 					config: (_, entryWorkerConfig) => ({
 						name: "auxiliary-worker",
 						main: "./src/auxiliary-worker.ts",
-						// Inherit compatibility settings from entry worker
+						// Inherit compatibility settings from entry Worker
 						compatibility_date: entryWorkerConfig.compatibility_date,
 						compatibility_flags: entryWorkerConfig.compatibility_flags,
 					}),
