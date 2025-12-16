@@ -9,7 +9,7 @@
 	},
 	"workflows": [
 		{
-			"name": "workflows-hello-world",
+			"name": "<WORKFLOW_NAME>",
 			"binding": "MY_WORKFLOW",
 			"class_name": "MyWorkflow",
 		},
