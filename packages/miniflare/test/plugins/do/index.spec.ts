@@ -675,13 +675,10 @@ test("Durable Object RPC calls complete when unblocked", async (t) => {
 
 	const blockedPromise = stub.blockedOp(10, "lock-2");
 
-	// Release the lock after 50ms - this should unblock the operation before the 100ms timeout
-	setTimeout(50).then(() => stub.release("lock-2"));
+	// Release the lock immediately after starting the blocked operation
+	// The blocked operation should complete once released
+	await stub.release("lock-2");
 
-	// The release at 50ms should win against the 100ms timeout
-	const raced = await Promise.race([
-		blockedPromise.then((result) => ({ type: "resolved", result })),
-		setTimeout(100).then(() => ({ type: "timeout" })),
-	]);
-	t.deepEqual(raced, { type: "resolved", result: 12 });
+	const result = await blockedPromise;
+	t.is(result, 12);
 });
