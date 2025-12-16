@@ -1308,7 +1308,6 @@ describe("r2", () => {
 											targetSizeMb: 512,
 										},
 									});
-								});
 									return HttpResponse.json(
 										createFetchResult({ success: true }, true)
 									);
@@ -1608,6 +1607,7 @@ describe("r2", () => {
 					});
 				});
 			});
+		});
 
 		describe("notification", () => {
 			describe("list", () => {
@@ -3354,6 +3354,7 @@ describe("r2", () => {
 						`r2 bucket lock add ${bucketName} --name 'rule-not-indefinite' --prefix prefix-not-indefinite`
 					);
 					expect(std.out).toMatchInlineSnapshot(`
+						"
 						 ⛅️ wrangler x.x.x
 						──────────────────
 						Add cancelled."
