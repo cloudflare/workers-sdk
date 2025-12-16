@@ -1,5 +1,5 @@
 {
 	"$schema": "https://opencode.ai/config.json",
 	// Include project style guide for consistent Wrangler CLI output formatting
-	"instructions": ["STYLEGUIDE.md"],
+	"instructions": ["STYLEGUIDE.md", ".changeset/README.md"],
 }
