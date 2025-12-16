@@ -356,7 +356,7 @@ test("prevent Durable Object eviction", async (t) => {
 	// this test requires testing over a 10 second timeout
 	t.timeout(20_000);
 
-	// first set unsafePreventEviction to undefined
+	// first set unsafePreventEviction to true
 	const mf = new Miniflare({
 		modules: true,
 		script: STATEFUL_SCRIPT(),
