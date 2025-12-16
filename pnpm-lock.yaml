@@ -1862,7 +1862,7 @@ importers:
         specifier: workspace:*
         version: link:../wrangler
       zod:
-        specifier: ^4.2.0
+        specifier: ^3.25.0 || ^4.0.0
         version: 4.2.0
 
   packages/kv-asset-handler:
@@ -1932,7 +1932,7 @@ importers:
         specifier: 4.1.0-beta.10
         version: 4.1.0-beta.10(patch_hash=flgmw54jmjdxqmelxigtxg6kum)
       zod:
-        specifier: ^4.2.0
+        specifier: ^3.25.0 || ^4.0.0
         version: 4.2.0
     devDependencies:
       '@ava/typescript':
@@ -2156,7 +2156,7 @@ importers:
         specifier: ^4.7.0
         version: 4.7.1
       zod:
-        specifier: ^4.2.0
+        specifier: ^3.25.0 || ^4.0.0
         version: 4.2.0
     devDependencies:
       '@cloudflare/eslint-config-shared':
@@ -2256,7 +2256,7 @@ importers:
         specifier: ^4.7.0
         version: 4.7.1
       zod:
-        specifier: ^4.2.0
+        specifier: ^3.25.0 || ^4.0.0
         version: 4.2.0
     devDependencies:
       '@cloudflare/eslint-config-shared':
@@ -3433,7 +3433,7 @@ importers:
         specifier: workspace:*
         version: link:../wrangler
       zod:
-        specifier: ^4.2.0
+        specifier: ^3.25.0 || ^4.0.0
         version: 4.2.0
     devDependencies:
       '@cloudflare/eslint-config-shared':
@@ -3703,7 +3703,7 @@ importers:
         specifier: ~2.1.0
         version: 2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))
       zod:
-        specifier: ^4.2.0
+        specifier: ^3.25.0 || ^4.0.0
         version: 4.2.0
 
   packages/workers-tsconfig: {}
@@ -3780,7 +3780,7 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
       zod:
-        specifier: ^4.2.0
+        specifier: ^3.25.0 || ^4.0.0
         version: 4.2.0
     devDependencies:
       '@cloudflare/eslint-config-shared':
@@ -15917,7 +15917,7 @@ snapshots:
       semver: 7.7.3
       vitest: 2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.9.3))
       wrangler: 3.114.1(@cloudflare/workers-types@4.20251213.0)
-      zod: 3.22.3
+      zod: 3.25.76
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
       - bufferutil
@@ -15934,7 +15934,7 @@ snapshots:
       semver: 7.7.3
       vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
       wrangler: 4.12.1(@cloudflare/workers-types@4.20251213.0)
-      zod: 3.22.3
+      zod: 3.25.76
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
       - bufferutil

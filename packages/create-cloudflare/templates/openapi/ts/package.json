@@ -11,12 +11,15 @@
 	"dependencies": {
 		"chanfana": "^2.6.3",
 		"hono": "^4.6.20",
-		"zod": "^4.2.0"
+		"zod": "^3.25.0 || ^4.0.0"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250129.0",
 		"@types/node": "22.13.0",
 		"@types/service-worker-mock": "^2.0.4",
 		"wrangler": "^3.107.2"
+	},
+	"peerDependencies": {
+		"zod": "^3.25.0 || ^4.0.0"
 	}
 }

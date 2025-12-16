@@ -20,13 +20,16 @@
 	"dependencies": {
 		"@hono/zod-validator": "^0.7.5",
 		"hono": "^4.7.0",
-		"zod": "^4.2.0"
+		"zod": "^3.25.0 || ^4.0.0"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"eslint": "catalog:default",
 		"wrangler": "workspace:*"
+	},
+	"peerDependencies": {
+		"zod": "^3.25.0 || ^4.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

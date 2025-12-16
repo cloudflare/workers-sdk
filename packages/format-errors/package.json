@@ -18,7 +18,10 @@
 		"toucan-js": "4.0.0",
 		"tsconfig": "*",
 		"wrangler": "workspace:*",
-		"zod": "^4.2.0"
+		"zod": "^3.25.0 || ^4.0.0"
+	},
+	"peerDependencies": {
+		"zod": "^3.25.0 || ^4.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

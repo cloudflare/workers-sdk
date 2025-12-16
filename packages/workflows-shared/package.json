@@ -37,7 +37,7 @@
 		"heap-js": "^2.5.0",
 		"itty-time": "^2.0.2",
 		"mime": "^3.0.0",
-		"zod": "^4.2.0"
+		"zod": "^3.25.0 || ^4.0.0"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
@@ -50,6 +50,9 @@
 		"rimraf": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
+	},
+	"peerDependencies": {
+		"zod": "^3.25.0 || ^4.0.0"
 	},
 	"engines": {
 		"node": ">=18.0.0"
