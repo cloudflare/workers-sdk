@@ -616,7 +616,7 @@ export class BlockingDO extends DurableObject {
 		}).then(() =>  n + 2);
 	}
 
-	async release(lock) {
+	release(lock) {
 		const releaseFn = this.locks.get(lock);
 		if (releaseFn) {
 			releaseFn();
