@@ -675,10 +675,16 @@ test("Durable Object RPC calls complete when unblocked", async (t) => {
 
 	const blockedPromise = stub.blockedOp(10, "lock-2");
 
-	// Release the lock immediately after starting the blocked operation
-	// The blocked operation should complete once released
-	await stub.release("lock-2");
+	// Race the blocked operation against a timeout, releasing the lock as part of the race.
+	// The release should cause `blockedPromise` to resolve before the timeout.
+	// Use a generous timeout (5s) to avoid flakiness in CI environments.
+	const raced = await Promise.race([
+		blockedPromise.then((result) => ({ type: "resolved", result })),
+		stub
+			.release("lock-2")
+			.then(() => setTimeout(5_000))
+			.then(() => ({ type: "timeout" })),
+	]);
 
-	const result = await blockedPromise;
-	t.is(result, 12);
+	t.deepEqual(raced, { type: "resolved", result: 12 });
 });
