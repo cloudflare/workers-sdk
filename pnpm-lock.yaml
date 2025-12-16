@@ -75,6 +75,9 @@ patchedDependencies:
   '@netlify/build-info':
     hash: m4wvy4p7g3z4a5zv6jw4gevqr4
     path: patches/@netlify__build-info.patch
+  concordance@5.0.4:
+    hash: setxp4u2qixglfnin7wyv2rr24
+    path: patches/concordance@5.0.4.patch
   postal-mime:
     hash: ngwql2fj2dlex3jjynq4iizhk4
     path: patches/postal-mime.patch
@@ -1215,7 +1218,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.7
-        version: 3.0.9(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3(vitest@3.2.3))(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.2))(yaml@2.8.1)
+        version: 3.0.9(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.2))(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -19681,7 +19684,7 @@ snapshots:
       cli-truncate: 4.0.0
       code-excerpt: 4.0.0
       common-path-prefix: 3.0.0
-      concordance: 5.0.4
+      concordance: 5.0.4(patch_hash=setxp4u2qixglfnin7wyv2rr24)
       currently-unhandled: 0.4.1
       debug: 4.4.1(supports-color@9.2.2)
       emittery: 1.2.0
@@ -20166,7 +20169,7 @@ snapshots:
 
   concat-map@0.0.1: {}
 
-  concordance@5.0.4:
+  concordance@5.0.4(patch_hash=setxp4u2qixglfnin7wyv2rr24):
     dependencies:
       date-time: 3.1.0
       esutils: 2.0.3
@@ -26108,7 +26111,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@3.0.9(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3(vitest@3.2.3))(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.2))(yaml@2.8.1):
+  vitest@3.0.9(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.2))(yaml@2.8.1):
     dependencies:
       '@vitest/expect': 3.0.9
       '@vitest/mocker': 3.0.9(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.2))(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
