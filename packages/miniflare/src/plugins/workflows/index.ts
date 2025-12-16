@@ -16,6 +16,7 @@ import {
 export const WorkflowsOptionsSchema = z.object({
 	workflows: z
 		.record(
+			z.any(),
 			z.object({
 				name: z.string(),
 				className: z.string(),

@@ -60,7 +60,7 @@
 		"miniflare": "workspace:*",
 		"semver": "^7.7.1",
 		"wrangler": "workspace:*",
-		"zod": "^3.22.3"
+		"zod": "^3.25.0 || ^4.0.0"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
@@ -82,7 +82,8 @@
 	"peerDependencies": {
 		"@vitest/runner": "2.0.x - 3.2.x",
 		"@vitest/snapshot": "2.0.x - 3.2.x",
-		"vitest": "2.0.x - 3.2.x"
+		"vitest": "2.0.x - 3.2.x",
+		"zod": "^3.25.0 || ^4.0.0"
 	},
 	"volta": {
 		"extends": "../../package.json"

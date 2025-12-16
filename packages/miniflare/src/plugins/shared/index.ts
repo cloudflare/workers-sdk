@@ -131,7 +131,7 @@ export type Plugin<
  */
 export async function loadExternalPlugins(
 	packageName: string
-): Promise<Record<string, Plugin<z.AnyZodObject>>> {
+): Promise<Record<string, Plugin<z.ZodObject>>> {
 	let pluginModule;
 	try {
 		const pluginPath = require.resolve(packageName);

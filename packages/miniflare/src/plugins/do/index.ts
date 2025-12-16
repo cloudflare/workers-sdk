@@ -4,11 +4,11 @@ import { Worker_Binding } from "../../runtime";
 import { getUserServiceName } from "../core";
 import {
 	getPersistPath,
-	kUnsafeEphemeralUniqueKey,
 	PersistenceSchema,
 	Plugin,
 	ProxyNodeBinding,
 	RemoteProxyConnectionString,
+	UnsafeEphemeralUniqueKeySchema,
 	UnsafeUniqueKey,
 } from "../shared";
 
@@ -27,7 +27,7 @@ const DurableObject = z.object({
 	// another `workerd` process, to ensure the IDs created by the stub
 	// object can be used by the real object too.
 	unsafeUniqueKey: z
-		.union([z.string(), z.literal(kUnsafeEphemeralUniqueKey)])
+		.union([z.string(), UnsafeEphemeralUniqueKeySchema])
 		.optional(),
 	// Prevents the Durable Object being evicted.
 	unsafePreventEviction: z.boolean().optional(),
@@ -38,7 +38,9 @@ const DurableObject = z.object({
 });
 
 export const DurableObjectsOptionsSchema = z.object({
-	durableObjects: z.record(z.union([z.string(), DurableObject])).optional(),
+	durableObjects: z
+		.record(z.any(), z.union([z.string(), DurableObject]))
+		.optional(),
 	// Not all DOs are configured as bindings! Include these in a different key
 	// These might just be configured via migrations, but should still be allocated storage for e.g. ctx.exports support
 	additionalUnboundDurableObjects: z.array(DurableObject).optional(),

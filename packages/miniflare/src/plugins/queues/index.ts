@@ -26,6 +26,7 @@ export const QueuesOptionsSchema = z.object({
 	queueProducers: z
 		.union([
 			z.record(
+				z.any(),
 				QueueProducerOptionsSchema.merge(
 					z.object({
 						remoteProxyConnectionString: z
@@ -35,11 +36,11 @@ export const QueuesOptionsSchema = z.object({
 				)
 			),
 			z.string().array(),
-			z.record(z.string()),
+			z.record(z.any(), z.string()),
 		])
 		.optional(),
 	queueConsumers: z
-		.union([z.record(QueueConsumerOptionsSchema), z.string().array()])
+		.union([z.record(z.any(), QueueConsumerOptionsSchema), z.string().array()])
 		.optional(),
 });
 

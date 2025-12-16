@@ -1,5 +1,6 @@
 import SCRIPT_OBJECT_ENTRY from "worker:shared/object-entry";
 import SCRIPT_REMOTE_PROXY_CLIENT from "worker:shared/remote-proxy-client";
+import { z } from "zod";
 import {
 	Worker,
 	Worker_Binding,
@@ -111,4 +112,9 @@ export function remoteProxyClientWorker(
 export const kUnsafeEphemeralUniqueKey = Symbol.for(
 	"miniflare.kUnsafeEphemeralUniqueKey"
 );
+
+export const UnsafeEphemeralUniqueKeySchema = z.custom<
+	typeof kUnsafeEphemeralUniqueKey
+>((val) => val === kUnsafeEphemeralUniqueKey);
+
 export type UnsafeUniqueKey = string | typeof kUnsafeEphemeralUniqueKey;

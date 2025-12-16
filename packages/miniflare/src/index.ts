@@ -244,7 +244,7 @@ function validateOptions(
 					workerRootPaths[i],
 					plugin.options,
 					workerOpts[i],
-					{ path: optionsPath }
+					optionsPath
 				);
 			}
 		}
@@ -1633,6 +1633,7 @@ export class Miniflare {
 
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginBindings = await plugin.getBindings(
+					// @ts-expect-error Plugin options type mismatch
 					this.#getWorkerOptsForPlugin(key, workerOpts),
 					i
 				);
@@ -2500,6 +2501,7 @@ export class Miniflare {
 		// Populate bindings from each plugin
 		for (const [key, plugin] of this.#mergedPluginEntries) {
 			const pluginBindings = await plugin.getNodeBindings(
+				// @ts-expect-error Plugin options type mismatch
 				this.#getWorkerOptsForPlugin(key, workerOpts)
 			);
 			for (const [name, binding] of Object.entries(pluginBindings)) {

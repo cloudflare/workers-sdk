@@ -17,6 +17,7 @@ import {
 } from "../shared";
 
 const SecretsStoreSecretsSchema = z.record(
+	z.any(),
 	z.object({
 		store_id: z.string(),
 		secret_name: z.string(),

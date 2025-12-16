@@ -27,8 +27,9 @@ import {
 export const D1OptionsSchema = z.object({
 	d1Databases: z
 		.union([
-			z.record(z.string()),
+			z.record(z.any(), z.string()),
 			z.record(
+				z.any(),
 				z.object({
 					id: z.string(),
 					remoteProxyConnectionString: z
