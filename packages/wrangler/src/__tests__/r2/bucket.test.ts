@@ -1308,6 +1308,7 @@ describe("r2", () => {
 											targetSizeMb: 512,
 										},
 									});
+								});
 									return HttpResponse.json(
 										createFetchResult({ success: true }, true)
 									);
@@ -3350,15 +3351,14 @@ describe("r2", () => {
 					});
 
 					await runWrangler(
-						`r2 bucket lock add ${bucketName} --name 'rule-not-indefinite' --prefix prefix-not-indefinite`);
-				});
-				expect(std.out).toMatchInlineSnapshot(`
-						"
+						`r2 bucket lock add ${bucketName} --name 'rule-not-indefinite' --prefix prefix-not-indefinite`
+					);
+					expect(std.out).toMatchInlineSnapshot(`
 						 ⛅️ wrangler x.x.x
 						──────────────────
 						Add cancelled."
 					`);
-
+				});
 				it("it should add an age lock rule using command-line arguments and id alias", async () => {
 					setIsTTY(true);
 					const bucketName = "my-bucket";
