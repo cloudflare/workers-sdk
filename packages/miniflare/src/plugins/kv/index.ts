@@ -1,13 +1,35 @@
 import fs from "node:fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import { z } from "zod";
-import { Service, Worker_Binding, Worker_Binding_DurableObjectNamespaceDesignator } from "../../runtime";
+import {
+	Service,
+	Worker_Binding,
+	Worker_Binding_DurableObjectNamespaceDesignator,
+} from "../../runtime";
 import { PathSchema } from "../../shared";
 import { SharedBindings } from "../../workers";
-import { getMiniflareObjectBindings, getPersistPath, getUserBindingServiceName, migrateDatabase, namespaceEntries, namespaceKeys, objectEntryWorker, PersistenceSchema, Plugin, ProxyNodeBinding, remoteProxyClientWorker, RemoteProxyConnectionString, SERVICE_LOOPBACK } from "../shared";
+import {
+	getMiniflareObjectBindings,
+	getPersistPath,
+	getUserBindingServiceName,
+	migrateDatabase,
+	namespaceEntries,
+	namespaceKeys,
+	objectEntryWorker,
+	PersistenceSchema,
+	Plugin,
+	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	RemoteProxyConnectionString,
+	SERVICE_LOOPBACK,
+} from "../shared";
 import { KV_PLUGIN_NAME } from "./constants";
-import { getSitesBindings, getSitesNodeBindings, getSitesServices, SitesOptions } from "./sites";
-
+import {
+	getSitesBindings,
+	getSitesNodeBindings,
+	getSitesServices,
+	SitesOptions,
+} from "./sites";
 
 export const KVOptionsSchema = z.object({
 	kvNamespaces: z

@@ -27,7 +27,8 @@ export const R2OptionsSchema = z.object({
 	r2Buckets: z
 		.union([
 			z.record(z.any(), z.string()),
-			z.record(z.any(),
+			z.record(
+				z.any(),
 				z.object({
 					id: z.string(),
 					remoteProxyConnectionString: z

@@ -344,9 +344,9 @@ function annotate(
 			}
 
 			for (const unionIssue of unionIssues) {
-				const unionPath = unionIssue.path.slice(issue.path.length).filter(
-					(key): key is string | number => typeof key !== "symbol"
-				);
+				const unionPath = unionIssue.path
+					.slice(issue.path.length)
+					.filter((key): key is string | number => typeof key !== "symbol");
 				// If we have multiple distinct messages at deeper levels, and this
 				// issue is for the current path, skip it, so we don't end up annotating
 				// the current path and sub-paths

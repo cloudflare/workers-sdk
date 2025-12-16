@@ -11,19 +11,66 @@ import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
 import { z } from "zod";
 import { fetch } from "../../http";
-import { Extension, kVoid, Service, ServiceDesignator, supportedCompatibilityDate, Worker_Binding, Worker_ContainerEngine, Worker_DurableObjectNamespace, Worker_Module } from "../../runtime";
-import { Json, JsonSchema, Log, MiniflareCoreError, PathSchema } from "../../shared";
-import { Awaitable, CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
+import {
+	Extension,
+	kVoid,
+	Service,
+	ServiceDesignator,
+	supportedCompatibilityDate,
+	Worker_Binding,
+	Worker_ContainerEngine,
+	Worker_DurableObjectNamespace,
+	Worker_Module,
+} from "../../runtime";
+import {
+	Json,
+	JsonSchema,
+	Log,
+	MiniflareCoreError,
+	PathSchema,
+} from "../../shared";
+import {
+	Awaitable,
+	CoreBindings,
+	CoreHeaders,
+	viewToBuffer,
+} from "../../workers";
 import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
-import { kUnsafeEphemeralUniqueKey, parseRoutes, Plugin, ProxyNodeBinding, remoteProxyClientWorker, SERVICE_LOOPBACK, WORKER_BINDING_SERVICE_LOOPBACK } from "../shared";
-import { CUSTOM_SERVICE_KNOWN_OUTBOUND, CustomServiceKind, getBuiltinServiceName, getCustomFetchServiceName, getCustomNodeServiceName, getUserServiceName, SERVICE_ENTRY } from "./constants";
-import { buildStringScriptPath, convertModuleDefinition, ModuleLocator, SourceOptions, SourceOptionsSchema, withSourceURL } from "./modules";
+import {
+	kUnsafeEphemeralUniqueKey,
+	parseRoutes,
+	Plugin,
+	ProxyNodeBinding,
+	remoteProxyClientWorker,
+	SERVICE_LOOPBACK,
+	WORKER_BINDING_SERVICE_LOOPBACK,
+} from "../shared";
+import {
+	CUSTOM_SERVICE_KNOWN_OUTBOUND,
+	CustomServiceKind,
+	getBuiltinServiceName,
+	getCustomFetchServiceName,
+	getCustomNodeServiceName,
+	getUserServiceName,
+	SERVICE_ENTRY,
+} from "./constants";
+import {
+	buildStringScriptPath,
+	convertModuleDefinition,
+	ModuleLocator,
+	SourceOptions,
+	SourceOptionsSchema,
+	withSourceURL,
+} from "./modules";
 import { PROXY_SECRET } from "./proxy";
-import { CustomFetchServiceSchema, kCurrentWorker, ServiceDesignatorSchema } from "./services";
+import {
+	CustomFetchServiceSchema,
+	kCurrentWorker,
+	ServiceDesignatorSchema,
+} from "./services";
 import type { WorkerRegistry } from "../../shared/dev-registry";
-
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
 // Rather than using a bundled CA store like Node, it uses

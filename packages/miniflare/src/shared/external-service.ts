@@ -29,7 +29,11 @@ export function normaliseServiceDesignator(
 
 	if (typeof service === "string") {
 		serviceName = service;
-	} else if (typeof service === "object" && service != null && "name" in service) {
+	} else if (
+		typeof service === "object" &&
+		service != null &&
+		"name" in service
+	) {
 		serviceName = service.name !== kCurrentWorker ? service.name : undefined;
 		entrypoint = service.entrypoint;
 		remoteProxyConnectionString = service.remoteProxyConnectionString;

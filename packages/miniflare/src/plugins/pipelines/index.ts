@@ -14,7 +14,8 @@ export const PipelineOptionsSchema = z.object({
 		.union([
 			z.record(z.any(), z.string()),
 			z.string().array(),
-			z.record(z.any(),
+			z.record(
+				z.any(),
 				z.object({
 					pipeline: z.string(),
 					remoteProxyConnectionString: z

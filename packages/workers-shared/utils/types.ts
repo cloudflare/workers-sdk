@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-
 const InternalConfigSchema = z.object({
 	account_id: z.number().optional(),
 	script_id: z.number().optional(),

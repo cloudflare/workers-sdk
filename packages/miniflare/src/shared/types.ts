@@ -2,7 +2,6 @@ import assert from "node:assert";
 import path from "node:path";
 import { z } from "zod";
 
-
 export function zAwaitable<T extends z.ZodTypeAny>(
 	type: T
 ): z.ZodUnion<[T, z.ZodPromise<T>]> {
