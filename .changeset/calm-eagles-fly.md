@@ -1,0 +1,5 @@
+---
+"wrangler": patch
+---
+
+fix bug
