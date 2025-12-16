@@ -962,10 +962,11 @@ describe("r2", () => {
 					Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open beta]
 
 					COMMANDS
-					  wrangler r2 bucket catalog enable <bucket>   Enable the data catalog on an R2 bucket [open beta]
-					  wrangler r2 bucket catalog disable <bucket>  Disable the data catalog for an R2 bucket [open beta]
-					  wrangler r2 bucket catalog get <bucket>      Get the status of the data catalog for an R2 bucket [open beta]
-					  wrangler r2 bucket catalog compaction        Control settings for automatic file compaction maintenance jobs for your R2 data catalog [open beta]
+					  wrangler r2 bucket catalog enable <bucket>      Enable the data catalog on an R2 bucket [open beta]
+					  wrangler r2 bucket catalog disable <bucket>     Disable the data catalog for an R2 bucket [open beta]
+					  wrangler r2 bucket catalog get <bucket>         Get the status of the data catalog for an R2 bucket [open beta]
+					  wrangler r2 bucket catalog compaction           Control settings for automatic file compaction maintenance jobs for your R2 data catalog [open beta]
+					  wrangler r2 bucket catalog snapshot-expiration  Control settings for automatic snapshot expiration maintenance jobs for your R2 data catalog [open beta]
 
 					GLOBAL FLAGS
 					  -c, --config    Path to Wrangler configuration file  [string]
