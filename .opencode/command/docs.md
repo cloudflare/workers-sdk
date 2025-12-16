@@ -1,5 +1,5 @@
 ---
-description: "creates and updates docs for changes in this repo in the cloudflare-docs repo"
+description: "update associated cloudflare-docs based on your changes in this repo"
 ---
 
 Create or update documentation in the cloudflare-docs repo based on changes in this branch.

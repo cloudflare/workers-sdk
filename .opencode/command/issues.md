@@ -1,5 +1,5 @@
 ---
-description: "find issue(s) on github"
+description: "find issue(s) on GitHub for the given query or product"
 model: anthropic/claude-haiku-4-5
 ---
 
