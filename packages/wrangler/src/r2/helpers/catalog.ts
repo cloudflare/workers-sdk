@@ -127,8 +127,8 @@ export async function enableR2CatalogSnapshotExpiration(
 ): Promise<R2CatalogSnapshotExpirationResponse> {
 	const config: R2CatalogSnapshotExpirationConfig = {
 		state: "enabled",
-		olderThanDays,
-		retainLast,
+		olderThanDays: olderThanDays ?? 30,
+		retainLast: retainLast ?? 5,
 	};
 
 	return await fetchResult(
@@ -304,22 +304,16 @@ export async function enableR2CatalogTableSnapshotExpiration(
 	const body: {
 		snapshot_expiration: {
 			state: string;
-			older_than_days?: number;
-			retain_last?: number;
+			older_than_days: number;
+			retain_last: number;
 		};
 	} = {
 		snapshot_expiration: {
 			state: "enabled",
+			older_than_days: olderThanDays ?? 30,
+			retain_last: retainLast ?? 5,
 		},
 	};
-
-	if (olderThanDays !== undefined) {
-		body.snapshot_expiration.older_than_days = olderThanDays;
-	}
-
-	if (retainLast !== undefined) {
-		body.snapshot_expiration.retain_last = retainLast;
-	}
 
 	return await fetchResult(
 		complianceConfig,

@@ -386,16 +386,14 @@ export const r2BucketCatalogSnapshotExpirationEnableCommand = createCommand({
 			demandOption: false,
 		},
 		"older-than-days": {
-			describe: "Delete snapshots older than this many days",
+			describe: "Delete snapshots older than this many days, defaults to 30",
 			type: "number",
 			demandOption: false,
-			default: 30,
 		},
 		"retain-last": {
-			describe: "The minimum number of snapshots to retain",
+			describe: "The minimum number of snapshots to retain, defaults to 5",
 			type: "number",
 			demandOption: false,
-			default: 5,
 		},
 		token: {
 			describe:
@@ -423,8 +421,8 @@ export const r2BucketCatalogSnapshotExpirationEnableCommand = createCommand({
 				args.bucket,
 				args.namespace,
 				args.table,
-				args.olderThanDays !== 30 ? args.olderThanDays : undefined,
-				args.retainLast !== 5 ? args.retainLast : undefined
+				args.olderThanDays,
+				args.retainLast
 			);
 
 			logger.log(
