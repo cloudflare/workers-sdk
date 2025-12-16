@@ -37,7 +37,7 @@ interface AuxiliaryWorkerFileConfig extends BaseWorkerConfig {
 
 interface AuxiliaryWorkerInlineConfig extends BaseWorkerConfig {
 	configPath?: string;
-	config: WorkerConfigCustomizer;
+	config: WorkerConfigCustomizer<false>;
 }
 
 type AuxiliaryWorkerConfig =
@@ -49,9 +49,13 @@ interface Experimental {
 	headersAndRedirectsDevModeSupport?: boolean;
 }
 
-type WorkerConfigCustomizer =
+type WorkerConfigCustomizer<TIsEntryWorker extends boolean> =
 	| Partial<WorkerConfig>
-	| ((config: WorkerConfig) => Partial<WorkerConfig> | void);
+	| ((
+			...args: TIsEntryWorker extends true
+				? [config: WorkerConfig]
+				: [config: WorkerConfig, entryWorkerConfig: ResolvedAssetsOnlyConfig]
+	  ) => Partial<WorkerConfig> | void);
 
 export interface PluginConfig extends EntryWorkerConfig {
 	auxiliaryWorkers?: AuxiliaryWorkerConfig[];
@@ -59,7 +63,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
 	experimental?: Experimental;
-	config?: WorkerConfigCustomizer;
+	config?: WorkerConfigCustomizer<true>;
 }
 
 export interface ResolvedAssetsOnlyConfig extends WorkerConfig {
@@ -117,52 +121,77 @@ export type ResolvedPluginConfig =
 	| WorkersResolvedConfig
 	| PreviewResolvedConfig;
 
-export function customizeWorkerConfig<T extends WorkerConfig>(
-	resolvedConfig: T,
-	config: WorkerConfigCustomizer | undefined
-): T {
+export function customizeWorkerConfig(options: {
+	workerConfig: WorkerConfig;
+	configCustomizer: WorkerConfigCustomizer<false> | undefined;
+	entryWorkerConfig: ResolvedAssetsOnlyConfig;
+}): WorkerConfig;
+export function customizeWorkerConfig(options: {
+	workerConfig: WorkerConfig;
+	configCustomizer: WorkerConfigCustomizer<true> | undefined;
+}): WorkerConfig;
+export function customizeWorkerConfig(
+	options:
+		| {
+				workerConfig: WorkerConfig;
+				configCustomizer: WorkerConfigCustomizer<false> | undefined;
+				entryWorkerConfig: ResolvedAssetsOnlyConfig;
+		  }
+		| {
+				workerConfig: WorkerConfig;
+				configCustomizer: WorkerConfigCustomizer<true> | undefined;
+		  }
+): WorkerConfig {
 	// The `config` option can either be an object to merge into the worker config,
 	// a function that returns such an object, or a function that mutates the worker config in place.
 	const configResult =
-		typeof config === "function" ? config(resolvedConfig) : config;
+		typeof options.configCustomizer === "function"
+			? "entryWorkerConfig" in options
+				? options.configCustomizer(
+						options.workerConfig,
+						options.entryWorkerConfig
+					)
+				: options.configCustomizer(options.workerConfig)
+			: options.configCustomizer;
 
 	// If the configResult is defined, merge it into the existing config.
 	if (configResult) {
-		return defu(configResult, resolvedConfig) as T;
+		return defu(configResult, options.workerConfig) as WorkerConfig;
 	}
-	return resolvedConfig;
+
+	return options.workerConfig;
 }
 
 /**
  * Resolves the config for a single worker, applying defaults, file config, and config().
  */
-function resolveWorkerConfig({
-	configPath,
-	env,
-	config,
-	visitedConfigPaths,
-	isEntryWorker,
-	root,
-}: {
-	configPath: string | undefined;
-	env: string | undefined;
-	config: WorkerConfigCustomizer | undefined;
-	visitedConfigPaths: Set<string>;
-	isEntryWorker: boolean;
-	root: string;
-}): WorkerResolvedConfig {
+function resolveWorkerConfig(
+	options: {
+		root: string;
+		configPath: string | undefined;
+		env: string | undefined;
+		visitedConfigPaths: Set<string>;
+	} & (
+		| {
+				configCustomizer: WorkerConfigCustomizer<false> | undefined;
+				entryWorkerConfig: ResolvedAssetsOnlyConfig;
+		  }
+		| { configCustomizer: WorkerConfigCustomizer<true> | undefined }
+	)
+): WorkerResolvedConfig {
+	const isEntryWorker = !("entryWorkerConfig" in options);
 	let workerConfig: WorkerConfig;
 	let raw: Unstable_Config;
 	let nonApplicable: NonApplicableConfigMap;
 
-	if (configPath) {
+	if (options.configPath) {
 		// File config already has defaults applied
 		({
 			raw,
 			config: workerConfig,
 			nonApplicable,
-		} = readWorkerConfigFromFile(configPath, env, {
-			visitedConfigPaths,
+		} = readWorkerConfigFromFile(options.configPath, options.env, {
+			visitedConfigPaths: options.visitedConfigPaths,
 		}));
 	} else {
 		// No file: start with defaults
@@ -175,22 +204,34 @@ function resolveWorkerConfig({
 	}
 
 	// Apply config()
-	workerConfig = customizeWorkerConfig(workerConfig, config);
+	workerConfig =
+		"entryWorkerConfig" in options
+			? customizeWorkerConfig({
+					workerConfig,
+					configCustomizer: options.configCustomizer,
+					entryWorkerConfig: options.entryWorkerConfig,
+				})
+			: customizeWorkerConfig({
+					workerConfig,
+					configCustomizer: options.configCustomizer,
+				});
 
 	workerConfig.compatibility_date ??=
 		wrangler.unstable_getDevCompatibilityDate(undefined);
 
 	if (isEntryWorker) {
-		workerConfig.name ??= wrangler.unstable_getWorkerNameFromProject(root);
+		workerConfig.name ??= wrangler.unstable_getWorkerNameFromProject(
+			options.root
+		);
 	}
 	// Auto-populate topLevelName from name
 	workerConfig.topLevelName ??= workerConfig.name;
 
 	return resolveWorkerType(workerConfig, raw, nonApplicable, {
 		isEntryWorker,
-		configPath,
-		root,
-		env,
+		configPath: options.configPath,
+		root: options.root,
+		env: options.env,
 	});
 }
 
@@ -236,9 +277,8 @@ export function resolvePluginConfig(
 		root,
 		configPath,
 		env: prefixedEnv.CLOUDFLARE_ENV,
-		config: pluginConfig.config,
+		configCustomizer: pluginConfig.config,
 		visitedConfigPaths: configPaths,
-		isEntryWorker: true,
 	});
 
 	if (entryWorkerResolvedConfig.type === "assets-only") {
@@ -287,9 +327,10 @@ export function resolvePluginConfig(
 			root,
 			configPath: workerConfigPath,
 			env: cloudflareEnv,
-			config: "config" in auxiliaryWorker ? auxiliaryWorker.config : undefined,
+			configCustomizer:
+				"config" in auxiliaryWorker ? auxiliaryWorker.config : undefined,
+			entryWorkerConfig,
 			visitedConfigPaths: configPaths,
-			isEntryWorker: false,
 		});
 
 		auxiliaryWorkersResolvedConfigs.push(workerResolvedConfig);
