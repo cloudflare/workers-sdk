@@ -11,66 +11,19 @@ import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
 import { z } from "zod";
 import { fetch } from "../../http";
-import {
-	Extension,
-	kVoid,
-	Service,
-	ServiceDesignator,
-	supportedCompatibilityDate,
-	Worker_Binding,
-	Worker_ContainerEngine,
-	Worker_DurableObjectNamespace,
-	Worker_Module,
-} from "../../runtime";
-import {
-	Json,
-	JsonSchema,
-	Log,
-	MiniflareCoreError,
-	PathSchema,
-} from "../../shared";
-import {
-	Awaitable,
-	CoreBindings,
-	CoreHeaders,
-	viewToBuffer,
-} from "../../workers";
+import { Extension, kVoid, Service, ServiceDesignator, supportedCompatibilityDate, Worker_Binding, Worker_ContainerEngine, Worker_DurableObjectNamespace, Worker_Module } from "../../runtime";
+import { Json, JsonSchema, Log, MiniflareCoreError, PathSchema } from "../../shared";
+import { Awaitable, CoreBindings, CoreHeaders, viewToBuffer } from "../../workers";
 import { RPC_PROXY_SERVICE_NAME } from "../assets/constants";
 import { getCacheServiceName } from "../cache";
 import { DURABLE_OBJECTS_STORAGE_SERVICE_NAME } from "../do";
-import {
-	kUnsafeEphemeralUniqueKey,
-	parseRoutes,
-	Plugin,
-	ProxyNodeBinding,
-	remoteProxyClientWorker,
-	SERVICE_LOOPBACK,
-	WORKER_BINDING_SERVICE_LOOPBACK,
-} from "../shared";
-import {
-	CUSTOM_SERVICE_KNOWN_OUTBOUND,
-	CustomServiceKind,
-	getBuiltinServiceName,
-	getCustomFetchServiceName,
-	getCustomNodeServiceName,
-	getUserServiceName,
-	SERVICE_ENTRY,
-} from "./constants";
-import {
-	buildStringScriptPath,
-	convertModuleDefinition,
-	ModuleLocator,
-	SourceOptions,
-	SourceOptionsSchema,
-	withSourceURL,
-} from "./modules";
+import { kUnsafeEphemeralUniqueKey, parseRoutes, Plugin, ProxyNodeBinding, remoteProxyClientWorker, SERVICE_LOOPBACK, WORKER_BINDING_SERVICE_LOOPBACK } from "../shared";
+import { CUSTOM_SERVICE_KNOWN_OUTBOUND, CustomServiceKind, getBuiltinServiceName, getCustomFetchServiceName, getCustomNodeServiceName, getUserServiceName, SERVICE_ENTRY } from "./constants";
+import { buildStringScriptPath, convertModuleDefinition, ModuleLocator, SourceOptions, SourceOptionsSchema, withSourceURL } from "./modules";
 import { PROXY_SECRET } from "./proxy";
-import {
-	CustomFetchServiceSchema,
-	kCurrentWorker,
-	ServiceDesignatorSchema,
-} from "./services";
+import { CustomFetchServiceSchema, kCurrentWorker, ServiceDesignatorSchema } from "./services";
 import type { WorkerRegistry } from "../../shared/dev-registry";
+
 
 // `workerd`'s `trustBrowserCas` should probably be named `trustSystemCas`.
 // Rather than using a bundled CA store like Node, it uses
@@ -109,18 +62,18 @@ export function createFetchMock() {
 const WrappedBindingSchema = z.object({
 	scriptName: z.string(),
 	entrypoint: z.string().optional(),
-	bindings: z.record(JsonSchema).optional(),
+	bindings: z.record(z.any(), JsonSchema).optional(),
 });
 
 // Validate as string, but don't include in parsed output
 const UnusableStringSchema = z.string().transform(() => undefined);
 
 export const UnsafeDirectSocketSchema = z.object({
-	host: z.ostring(),
-	port: z.onumber(),
-	serviceName: z.ostring(),
-	entrypoint: z.ostring(),
-	proxy: z.oboolean(),
+	host: z.string().optional(),
+	port: z.number().optional(),
+	serviceName: z.string().optional(),
+	entrypoint: z.string().optional(),
+	proxy: z.boolean().optional(),
 });
 
 export const ExternalPluginSpecifier = z.object({
@@ -141,17 +94,17 @@ const CoreOptionsSchemaInput = z.intersection(
 
 		routes: z.string().array().optional(),
 
-		bindings: z.record(JsonSchema).optional(),
+		bindings: z.record(z.any(), JsonSchema).optional(),
 		wasmBindings: z
-			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
+			.record(z.any(), z.union([PathSchema, z.instanceof(Uint8Array)]))
 			.optional(),
-		textBlobBindings: z.record(PathSchema).optional(),
+		textBlobBindings: z.record(z.any(), PathSchema).optional(),
 		dataBlobBindings: z
-			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
+			.record(z.any(), z.union([PathSchema, z.instanceof(Uint8Array)]))
 			.optional(),
-		serviceBindings: z.record(ServiceDesignatorSchema).optional(),
+		serviceBindings: z.record(z.any(), ServiceDesignatorSchema).optional(),
 		wrappedBindings: z
-			.record(z.union([z.string(), WrappedBindingSchema]))
+			.record(z.any(), z.union([z.string(), WrappedBindingSchema]))
 			.optional(),
 
 		outboundService: ServiceDesignatorSchema.optional(),
@@ -192,7 +145,7 @@ const CoreOptionsSchemaInput = z.intersection(
 					name: z.string(),
 					type: z.string(),
 					plugin: ExternalPluginSpecifier,
-					options: z.record(JsonSchema),
+					options: z.record(z.any(), JsonSchema),
 				})
 			)
 			.optional(),
@@ -244,17 +197,22 @@ export const CoreSharedOptionsSchema = z
 
 		log: z.instanceof(Log).optional(),
 		handleRuntimeStdio: z
-			.function(z.tuple([z.instanceof(Readable), z.instanceof(Readable)]))
+			.custom<
+				(stdout: Readable, stderr: Readable) => void
+			>((val) => typeof val === "function")
 			.optional(),
 
 		handleStructuredLogs: z
-			.function(z.tuple([WorkerdStructuredLogSchema]))
-			.returns(z.void())
+			.custom<
+				(log: WorkerdStructuredLog) => void
+			>((val) => typeof val === "function")
 			.optional(),
 
 		upstream: z.string().optional(),
 		// TODO: add back validation of cf object
-		cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
+		cf: z
+			.union([z.boolean(), z.string(), z.record(z.any(), z.any())])
+			.optional(),
 
 		liveReload: z.boolean().optional(),
 
@@ -264,7 +222,9 @@ export const CoreSharedOptionsSchema = z
 		unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
 		// Called when external workers this instance depends on are updated in the dev registry
 		unsafeHandleDevRegistryUpdate: z
-			.function(z.tuple([z.custom<WorkerRegistry>()]))
+			.custom<
+				(registry: WorkerRegistry) => void
+			>((val) => typeof val === "function")
 			.optional(),
 		// This is a shared secret between a proxy server and miniflare that can be
 		// passed in a header to prove that the request came from the proxy and not

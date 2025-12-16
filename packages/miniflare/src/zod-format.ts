@@ -318,7 +318,7 @@ function annotate(
 	groupCounts: GroupCountsMap,
 	annotated: Annotated,
 	input: unknown,
-	issue: z.ZodIssue,
+	issue: z.core.$ZodIssue,
 	path: (string | number)[],
 	groupId?: number
 ): Annotated {
@@ -327,7 +327,7 @@ function annotate(
 
 		// If this is an `invalid_union` error, make sure we include all sub-issues
 		if (issue.code === "invalid_union") {
-			const unionIssues = issue.unionErrors.flatMap(({ issues }) => issues);
+			const unionIssues = issue.errors.flat();
 
 			// If the `input` is an object/array with multiple distinct messages,
 			// annotate it as a group
@@ -344,7 +344,9 @@ function annotate(
 			}
 
 			for (const unionIssue of unionIssues) {
-				const unionPath = unionIssue.path.slice(issue.path.length);
+				const unionPath = unionIssue.path.slice(issue.path.length).filter(
+					(key): key is string | number => typeof key !== "symbol"
+				);
 				// If we have multiple distinct messages at deeper levels, and this
 				// issue is for the current path, skip it, so we don't end up annotating
 				// the current path and sub-paths
@@ -524,7 +526,10 @@ export function formatZodError(error: z.ZodError, input: unknown): string {
 	let annotated: Annotated;
 	const groupCounts = new GroupCountsMap();
 	for (const issue of sortedIssues) {
-		annotated = annotate(groupCounts, annotated, input, issue, issue.path);
+		const path = issue.path.filter(
+			(key): key is string | number => typeof key !== "symbol"
+		);
+		annotated = annotate(groupCounts, annotated, input, issue, path);
 	}
 
 	// Print to pretty string

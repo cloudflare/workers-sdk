@@ -1,31 +1,16 @@
 import SCRIPT_QUEUE_BROKER_OBJECT from "worker:queues/broker";
 import { z } from "zod";
-import {
-	kVoid,
-	Service,
-	Worker_Binding,
-	Worker_Binding_DurableObjectNamespaceDesignator,
-} from "../../runtime";
-import {
-	QueueBindings,
-	QueueConsumerOptionsSchema,
-	QueueProducerOptionsSchema,
-	SharedBindings,
-} from "../../workers";
+import { kVoid, Service, Worker_Binding, Worker_Binding_DurableObjectNamespaceDesignator } from "../../runtime";
+import { QueueBindings, QueueConsumerOptionsSchema, QueueProducerOptionsSchema, SharedBindings } from "../../workers";
 import { getUserServiceName } from "../core";
-import {
-	getMiniflareObjectBindings,
-	objectEntryWorker,
-	Plugin,
-	ProxyNodeBinding,
-	RemoteProxyConnectionString,
-	SERVICE_LOOPBACK,
-} from "../shared";
+import { getMiniflareObjectBindings, objectEntryWorker, Plugin, ProxyNodeBinding, RemoteProxyConnectionString, SERVICE_LOOPBACK } from "../shared";
+
 
 export const QueuesOptionsSchema = z.object({
 	queueProducers: z
 		.union([
 			z.record(
+				z.any(),
 				QueueProducerOptionsSchema.merge(
 					z.object({
 						remoteProxyConnectionString: z
@@ -35,11 +20,11 @@ export const QueuesOptionsSchema = z.object({
 				)
 			),
 			z.string().array(),
-			z.record(z.string()),
+			z.record(z.any(), z.string()),
 		])
 		.optional(),
 	queueConsumers: z
-		.union([z.record(QueueConsumerOptionsSchema), z.string().array()])
+		.union([z.record(z.any(), QueueConsumerOptionsSchema), z.string().array()])
 		.optional(),
 });
 

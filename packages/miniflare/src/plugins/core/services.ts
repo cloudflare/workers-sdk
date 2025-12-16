@@ -1,17 +1,10 @@
 import { z } from "zod";
 import { Request, Response } from "../../http";
-import {
-	HOST_CAPNP_CONNECT,
-	Miniflare,
-	RemoteProxyConnectionString,
-} from "../../index";
-import {
-	ExternalServer,
-	HttpOptions_Style,
-	TlsOptions_Version,
-} from "../../runtime";
+import { HOST_CAPNP_CONNECT, Miniflare, RemoteProxyConnectionString } from "../../index";
+import { ExternalServer, HttpOptions_Style, TlsOptions_Version } from "../../runtime";
 import type { Awaitable } from "../../workers";
 import type * as http from "node:http";
+
 
 // Zod validators for types in runtime/config/workerd.ts.
 // All options should be optional except where specifically stated.
@@ -22,15 +15,19 @@ import type * as http from "node:http";
 // `miniflare` are loaded (e.g. when configuring Vitest and when running pool)
 export const kCurrentWorker = Symbol.for("miniflare.kCurrentWorker");
 
+const CurrentWorkerSchema = z.custom<typeof kCurrentWorker>(
+	(val) => val === kCurrentWorker
+);
+
 export const HttpOptionsHeaderSchema = z.object({
 	name: z.string(), // name should be required
-	value: z.ostring(), // If omitted, the header will be removed
+	value: z.string().optional(), // If omitted, the header will be removed
 });
 const HttpOptionsSchema = z
 	.object({
-		style: z.nativeEnum(HttpOptions_Style).optional(),
-		forwardedProtoHeader: z.ostring(),
-		cfBlobHeader: z.ostring(),
+		style: z.enum(HttpOptions_Style).optional(),
+		forwardedProtoHeader: z.string().optional(),
+		cfBlobHeader: z.string().optional(),
 		injectRequestHeaders: HttpOptionsHeaderSchema.array().optional(),
 		injectResponseHeaders: HttpOptionsHeaderSchema.array().optional(),
 	})
@@ -40,17 +37,17 @@ const HttpOptionsSchema = z
 	}));
 
 const TlsOptionsKeypairSchema = z.object({
-	privateKey: z.ostring(),
-	certificateChain: z.ostring(),
+	privateKey: z.string().optional(),
+	certificateChain: z.string().optional(),
 });
 
 const TlsOptionsSchema = z.object({
 	keypair: TlsOptionsKeypairSchema.optional(),
-	requireClientCerts: z.oboolean(),
-	trustBrowserCas: z.oboolean(),
+	requireClientCerts: z.boolean().optional(),
+	trustBrowserCas: z.boolean().optional(),
 	trustedCertificates: z.string().array().optional(),
-	minVersion: z.nativeEnum(TlsOptions_Version).optional(),
-	cipherList: z.ostring(),
+	minVersion: z.enum(TlsOptions_Version).optional(),
+	cipherList: z.string().optional(),
 });
 
 const NetworkSchema = z.object({
@@ -68,7 +65,7 @@ export const ExternalServerSchema = z.intersection(
 				z.object({
 					options: HttpOptionsSchema.optional(),
 					tlsOptions: TlsOptionsSchema.optional(),
-					certificateHost: z.ostring(),
+					certificateHost: z.string().optional(),
 				})
 			),
 		}),
@@ -82,7 +79,7 @@ export const ExternalServerSchema = z.intersection(
 
 const DiskDirectorySchema = z.object({
 	path: z.string(), // path should be required
-	writable: z.oboolean(),
+	writable: z.boolean().optional(),
 });
 
 const CustomNodeServiceSchema = z.custom<
@@ -99,11 +96,11 @@ export const CustomFetchServiceSchema = z.custom<
 
 export const ServiceDesignatorSchema = z.union([
 	z.string(),
-	z.literal(kCurrentWorker),
+	CurrentWorkerSchema,
 	z.object({
-		name: z.union([z.string(), z.literal(kCurrentWorker)]),
-		entrypoint: z.ostring(),
-		props: z.record(z.unknown()).optional(),
+		name: z.union([z.string(), CurrentWorkerSchema]),
+		entrypoint: z.string().optional(),
+		props: z.record(z.any(), z.unknown()).optional(),
 		remoteProxyConnectionString: z
 			.custom<RemoteProxyConnectionString>()
 			.optional(),

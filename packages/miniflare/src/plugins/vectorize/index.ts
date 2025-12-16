@@ -15,7 +15,7 @@ const VectorizeSchema = z.object({
 });
 
 export const VectorizeOptionsSchema = z.object({
-	vectorize: z.record(VectorizeSchema).optional(),
+	vectorize: z.record(z.any(), VectorizeSchema).optional(),
 });
 
 export const VECTORIZE_PLUGIN_NAME = "vectorize";

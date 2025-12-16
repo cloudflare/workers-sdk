@@ -15,136 +15,30 @@ import { checkMacOSVersion } from "@cloudflare/cli";
 import exitHook from "exit-hook";
 import { $ as colors$, green } from "kleur/colors";
 import stoppable from "stoppable";
-import {
-	Dispatcher,
-	getGlobalDispatcher,
-	Pool,
-	Response as UndiciResponse,
-} from "undici";
+import { Dispatcher, getGlobalDispatcher, Pool, Response as UndiciResponse } from "undici";
 import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
 import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
 import { z } from "zod";
 import { fallbackCf, setupCf } from "./cf";
-import {
-	coupleWebSocket,
-	DispatchFetch,
-	DispatchFetchDispatcher,
-	fetch,
-	getAccessibleHosts,
-	getEntrySocketHttpOptions,
-	Headers,
-	Request,
-	RequestInit,
-	Response,
-} from "./http";
-import {
-	D1_PLUGIN_NAME,
-	DURABLE_OBJECTS_PLUGIN_NAME,
-	DurableObjectClassNames,
-	getDirectSocketName,
-	getGlobalServices,
-	HELLO_WORLD_PLUGIN_NAME,
-	HOST_CAPNP_CONNECT,
-	KV_PLUGIN_NAME,
-	launchBrowser,
-	loadExternalPlugins,
-	normaliseDurableObject,
-	Plugin,
-	PLUGIN_ENTRIES,
-	Plugins,
-	PluginServicesOptions,
-	ProxyClient,
-	ProxyNodeBinding,
-	QueueConsumers,
-	QueueProducers,
-	QUEUES_PLUGIN_NAME,
-	QueuesError,
-	R2_PLUGIN_NAME,
-	ReplaceWorkersTypes,
-	SECRET_STORE_PLUGIN_NAME,
-	SERVICE_ENTRY,
-	SharedOptions,
-	SOCKET_ENTRY,
-	SOCKET_ENTRY_LOCAL,
-	WorkerOptions,
-	WrappedBindingNames,
-} from "./plugins";
+import { coupleWebSocket, DispatchFetch, DispatchFetchDispatcher, fetch, getAccessibleHosts, getEntrySocketHttpOptions, Headers, Request, RequestInit, Response } from "./http";
+import { D1_PLUGIN_NAME, DURABLE_OBJECTS_PLUGIN_NAME, DurableObjectClassNames, getDirectSocketName, getGlobalServices, HELLO_WORLD_PLUGIN_NAME, HOST_CAPNP_CONNECT, KV_PLUGIN_NAME, launchBrowser, loadExternalPlugins, normaliseDurableObject, Plugin, PLUGIN_ENTRIES, Plugins, PluginServicesOptions, ProxyClient, ProxyNodeBinding, QueueConsumers, QueueProducers, QUEUES_PLUGIN_NAME, QueuesError, R2_PLUGIN_NAME, ReplaceWorkersTypes, SECRET_STORE_PLUGIN_NAME, SERVICE_ENTRY, SharedOptions, SOCKET_ENTRY, SOCKET_ENTRY_LOCAL, WorkerOptions, WrappedBindingNames } from "./plugins";
 import { RPC_PROXY_SERVICE_NAME } from "./plugins/assets/constants";
-import {
-	CUSTOM_SERVICE_KNOWN_OUTBOUND,
-	CustomServiceKind,
-	getUserServiceName,
-	handlePrettyErrorRequest,
-	JsonErrorSchema,
-	maybeWrappedModuleToWorkerName,
-	NameSourceOptions,
-	reviveError,
-	ServiceDesignatorSchema,
-} from "./plugins/core";
+import { CUSTOM_SERVICE_KNOWN_OUTBOUND, CustomServiceKind, getUserServiceName, handlePrettyErrorRequest, JsonErrorSchema, maybeWrappedModuleToWorkerName, NameSourceOptions, reviveError, ServiceDesignatorSchema } from "./plugins/core";
 import { InspectorProxyController } from "./plugins/core/inspector-proxy";
 import { HyperdriveProxyController } from "./plugins/hyperdrive/hyperdrive-proxy";
 import { imagesLocalFetcher } from "./plugins/images/fetcher";
-import {
-	Config,
-	Extension,
-	HttpOptions_Style,
-	kInspectorSocket,
-	Runtime,
-	RuntimeOptions,
-	serializeConfig,
-	Service,
-	Socket,
-	SocketIdentifier,
-	SocketPorts,
-	Worker_Binding,
-	Worker_Module,
-} from "./runtime";
-import {
-	_isCyclic,
-	Log,
-	MiniflareCoreError,
-	NoOpLog,
-	OptionalZodTypeOf,
-	parseWithRootPath,
-	stripAnsi,
-} from "./shared";
+import { Config, Extension, HttpOptions_Style, kInspectorSocket, Runtime, RuntimeOptions, serializeConfig, Service, Socket, SocketIdentifier, SocketPorts, Worker_Binding, Worker_Module } from "./runtime";
+import { _isCyclic, Log, MiniflareCoreError, NoOpLog, OptionalZodTypeOf, parseWithRootPath, stripAnsi } from "./shared";
 import { DevRegistry, WorkerDefinition } from "./shared/dev-registry";
-import {
-	createInboundDoProxyService,
-	createOutboundDoProxyService,
-	createProxyFallbackService,
-	getHttpProxyOptions,
-	getOutboundDoProxyClassName,
-	getProtocol,
-	getProxyFallbackServiceSocketName,
-	INBOUND_DO_PROXY_SERVICE_NAME,
-	INBOUND_DO_PROXY_SERVICE_PATH,
-	normaliseServiceDesignator,
-	OUTBOUND_DO_PROXY_SERVICE_NAME,
-} from "./shared/external-service";
+import { createInboundDoProxyService, createOutboundDoProxyService, createProxyFallbackService, getHttpProxyOptions, getOutboundDoProxyClassName, getProtocol, getProxyFallbackServiceSocketName, INBOUND_DO_PROXY_SERVICE_NAME, INBOUND_DO_PROXY_SERVICE_PATH, normaliseServiceDesignator, OUTBOUND_DO_PROXY_SERVICE_NAME } from "./shared/external-service";
 import { isCompressedByCloudflareFL } from "./shared/mime-types";
-import {
-	CoreBindings,
-	CoreHeaders,
-	LogLevel,
-	Mutex,
-	SharedHeaders,
-	SiteBindings,
-} from "./workers";
+import { CoreBindings, CoreHeaders, LogLevel, Mutex, SharedHeaders, SiteBindings } from "./workers";
 import { ADMIN_API } from "./workers/secrets-store/constants";
 import { formatZodError } from "./zod-format";
-import type {
-	CacheStorage,
-	D1Database,
-	DurableObjectNamespace,
-	Fetcher,
-	KVNamespace,
-	KVNamespaceListKey,
-	Queue,
-	R2Bucket,
-} from "@cloudflare/workers-types/experimental";
+import type { CacheStorage, D1Database, DurableObjectNamespace, Fetcher, KVNamespace, KVNamespaceListKey, Queue, R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { Process } from "@puppeteer/browsers";
+
 
 const DEFAULT_HOST = "127.0.0.1";
 function getURLSafeHost(host: string) {
@@ -244,7 +138,7 @@ function validateOptions(
 					workerRootPaths[i],
 					plugin.options,
 					workerOpts[i],
-					{ path: optionsPath }
+					optionsPath
 				);
 			}
 		}
@@ -1633,6 +1527,7 @@ export class Miniflare {
 
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginBindings = await plugin.getBindings(
+					// @ts-expect-error Plugin options type mismatch
 					this.#getWorkerOptsForPlugin(key, workerOpts),
 					i
 				);
@@ -2500,6 +2395,7 @@ export class Miniflare {
 		// Populate bindings from each plugin
 		for (const [key, plugin] of this.#mergedPluginEntries) {
 			const pluginBindings = await plugin.getNodeBindings(
+				// @ts-expect-error Plugin options type mismatch
 				this.#getWorkerOptsForPlugin(key, workerOpts)
 			);
 			for (const [name, binding] of Object.entries(pluginBindings)) {

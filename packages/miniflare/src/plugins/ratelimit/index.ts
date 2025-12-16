@@ -17,7 +17,7 @@ export const RatelimitConfigSchema = z.object({
 	}),
 });
 export const RatelimitOptionsSchema = z.object({
-	ratelimits: z.record(RatelimitConfigSchema).optional(),
+	ratelimits: z.record(z.any(), RatelimitConfigSchema).optional(),
 });
 
 export const RATELIMIT_PLUGIN_NAME = "ratelimit";

@@ -9,7 +9,7 @@ import {
 
 export const DispatchNamespaceOptionsSchema = z.object({
 	dispatchNamespaces: z
-		.record(
+		.record(z.any(),
 			z.object({
 				namespace: z.string(),
 				remoteProxyConnectionString: z

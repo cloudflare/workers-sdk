@@ -60,7 +60,7 @@
 		"miniflare": "workspace:*",
 		"semver": "^7.7.1",
 		"wrangler": "workspace:*",
-		"zod": "^3.22.3"
+		"zod": "^4.2.0"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",

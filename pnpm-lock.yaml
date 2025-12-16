@@ -1862,8 +1862,8 @@ importers:
         specifier: workspace:*
         version: link:../wrangler
       zod:
-        specifier: ^3.22.3
-        version: 3.22.3
+        specifier: ^4.2.0
+        version: 4.2.0
 
   packages/kv-asset-handler:
     dependencies:
@@ -1932,8 +1932,8 @@ importers:
         specifier: 4.1.0-beta.10
         version: 4.1.0-beta.10(patch_hash=flgmw54jmjdxqmelxigtxg6kum)
       zod:
-        specifier: 3.22.3
-        version: 3.22.3
+        specifier: ^4.2.0
+        version: 4.2.0
     devDependencies:
       '@ava/typescript':
         specifier: ^4.1.0
@@ -2156,8 +2156,8 @@ importers:
         specifier: ^4.7.0
         version: 4.7.1
       zod:
-        specifier: ^3.22.3
-        version: 3.22.3
+        specifier: ^4.2.0
+        version: 4.2.0
     devDependencies:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
@@ -2250,14 +2250,14 @@ importers:
   packages/turbo-r2-archive:
     dependencies:
       '@hono/zod-validator':
-        specifier: ^0.4.2
-        version: 0.4.2(hono@4.7.1)(zod@3.22.3)
+        specifier: ^0.7.5
+        version: 0.7.5(hono@4.7.1)(zod@4.2.0)
       hono:
         specifier: ^4.7.0
         version: 4.7.1
       zod:
-        specifier: ^3.22.3
-        version: 3.22.3
+        specifier: ^4.2.0
+        version: 4.2.0
     devDependencies:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
@@ -3433,8 +3433,8 @@ importers:
         specifier: workspace:*
         version: link:../wrangler
       zod:
-        specifier: ^3.22.3
-        version: 3.22.3
+        specifier: ^4.2.0
+        version: 4.2.0
     devDependencies:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
@@ -3703,8 +3703,8 @@ importers:
         specifier: ~2.1.0
         version: 2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))
       zod:
-        specifier: ^3.22.3
-        version: 3.22.3
+        specifier: ^4.2.0
+        version: 4.2.0
 
   packages/workers-tsconfig: {}
 
@@ -3780,8 +3780,8 @@ importers:
         specifier: ^3.0.0
         version: 3.0.0
       zod:
-        specifier: ^3.22.3
-        version: 3.22.3
+        specifier: ^4.2.0
+        version: 4.2.0
     devDependencies:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
@@ -6203,11 +6203,11 @@ packages:
     peerDependencies:
       hono: ^4
 
-  '@hono/zod-validator@0.4.2':
-    resolution: {integrity: sha512-1rrlBg+EpDPhzOV4hT9pxr5+xDVmKuz6YJl+la7VCwK6ass5ldyKm5fD+umJdV2zhHD6jROoCCv8NbTwyfhT0g==}
+  '@hono/zod-validator@0.7.5':
+    resolution: {integrity: sha512-n4l4hutkfYU07PzRUHBOVzUEn38VSfrh+UVE5d0w4lyfWDOEhzxIupqo5iakRiJL44c3vTuFJBvcmUl8b9agIA==}
     peerDependencies:
       hono: '>=3.9.0'
-      zod: ^3.19.1
+      zod: ^3.25.0 || ^4.0.0
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -14688,6 +14688,9 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
+  zod@4.2.0:
+    resolution: {integrity: sha512-Bd5fw9wlIhtqCCxotZgdTOMwGm1a0u75wARVEY9HMs1X17trvA/lMi4+MGK5EUfYkXVTbX8UDiDKW4OgzHVUZw==}
+
 snapshots:
 
   '@actions/core@1.11.1':
@@ -16720,10 +16723,10 @@ snapshots:
     dependencies:
       hono: 4.7.10
 
-  '@hono/zod-validator@0.4.2(hono@4.7.1)(zod@3.22.3)':
+  '@hono/zod-validator@0.7.5(hono@4.7.1)(zod@4.2.0)':
     dependencies:
       hono: 4.7.1
-      zod: 3.22.3
+      zod: 4.2.0
 
   '@humanfs/core@0.19.1': {}
 
@@ -26581,3 +26584,5 @@ snapshots:
   zod@3.22.3: {}
 
   zod@3.25.76: {}
+
+  zod@4.2.0: {}

@@ -33,7 +33,7 @@ export const JsonErrorSchema: z.ZodType<JsonError> = z.lazy(() =>
 export const PayloadSchema = z.object({
 	url: z.string().optional(),
 	method: z.string().optional(),
-	headers: z.record(z.string()),
+	headers: z.record(z.any(), z.string()),
 	error: JsonErrorSchema.optional(),
 });
 

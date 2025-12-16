@@ -18,9 +18,9 @@
 		"type:check": "tsc"
 	},
 	"dependencies": {
-		"@hono/zod-validator": "^0.4.2",
+		"@hono/zod-validator": "^0.7.5",
 		"hono": "^4.7.0",
-		"zod": "^3.22.3"
+		"zod": "^4.2.0"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",

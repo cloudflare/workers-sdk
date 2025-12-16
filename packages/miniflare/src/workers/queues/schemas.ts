@@ -19,7 +19,7 @@ export const QueueProducerSchema = /* @__PURE__ */ z.intersection(
 );
 export type QueueProducer = z.infer<typeof QueueProducerSchema>;
 export const QueueProducersSchema =
-	/* @__PURE__ */ z.record(QueueProducerSchema);
+	/* @__PURE__ */ z.record(z.any(), QueueProducerSchema);
 
 export const QueueConsumerOptionsSchema = /* @__PURE__ */ z
 	.object({
@@ -29,7 +29,7 @@ export const QueueConsumerOptionsSchema = /* @__PURE__ */ z
 		maxBatchTimeout: z.number().min(0).max(60).optional(), // seconds
 		maxRetires: z.number().min(0).max(100).optional(), // deprecated
 		maxRetries: z.number().min(0).max(100).optional(),
-		deadLetterQueue: z.ostring(),
+		deadLetterQueue: z.string().optional(),
 		retryDelay: QueueMessageDelaySchema,
 	})
 	.transform((queue) => {
@@ -49,7 +49,7 @@ export type QueueConsumer = z.infer<typeof QueueConsumerSchema>;
 // queues. Support for multiple consumers of a single queue is not planned
 // anytime soon.
 export const QueueConsumersSchema =
-	/* @__PURE__ */ z.record(QueueConsumerSchema);
+	/* @__PURE__ */ z.record(z.any(), QueueConsumerSchema);
 
 export const QueueContentTypeSchema = /* @__PURE__ */ z
 	.enum(["text", "json", "bytes", "v8"])
@@ -64,8 +64,8 @@ export const QueueIncomingMessageSchema = /* @__PURE__ */ z.object({
 	body: Base64DataSchema,
 	// When enqueuing messages on dead-letter queues, we want to reuse the same ID
 	// and timestamp
-	id: z.ostring(),
-	timestamp: z.onumber(),
+	id: z.string().optional(),
+	timestamp: z.number().optional(),
 });
 export type QueueIncomingMessage = z.infer<typeof QueueIncomingMessageSchema>;
 export type QueueOutgoingMessage = z.input<typeof QueueIncomingMessageSchema>;

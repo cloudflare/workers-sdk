@@ -17,7 +17,7 @@ export const HELLO_WORLD_PLUGIN_NAME = "hello-world";
 
 export const HelloWorldOptionsSchema = z.object({
 	helloWorld: z
-		.record(
+		.record(z.any(),
 			z.object({
 				enable_timer: z.boolean().optional(),
 			})

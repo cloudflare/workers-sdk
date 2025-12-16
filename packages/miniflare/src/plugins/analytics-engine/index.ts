@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Worker_Binding } from "../../runtime";
 import { PersistenceSchema, Plugin, ProxyNodeBinding } from "../shared";
 
-const AnalyticsEngineSchema = z.record(
+const AnalyticsEngineSchema = z.record(z.any(),
 	z.object({
 		dataset: z.string(),
 	})
