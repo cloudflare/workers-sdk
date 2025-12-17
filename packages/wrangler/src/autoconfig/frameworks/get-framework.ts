@@ -1,6 +1,7 @@
 import { Analog } from "./analog";
 import { Angular } from "./angular";
 import { Astro } from "./astro";
+import { Hono } from "./hono";
 import { NextJs } from "./next";
 import { Nuxt } from "./nuxt";
 import { Qwik } from "./qwik";
@@ -39,6 +40,8 @@ export function getFramework(detectedFramework?: {
 			return new Analog(detectedFramework.name);
 		case "next":
 			return new NextJs(detectedFramework.name);
+		case "hono":
+			return new Hono(detectedFramework.name);
 		default:
 			return new Static(detectedFramework?.name);
 	}
