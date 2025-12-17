@@ -197,6 +197,9 @@ import {
 	r2BucketCatalogEnableCommand,
 	r2BucketCatalogGetCommand,
 	r2BucketCatalogNamespace,
+	r2BucketCatalogSnapshotExpirationDisableCommand,
+	r2BucketCatalogSnapshotExpirationEnableCommand,
+	r2BucketCatalogSnapshotExpirationNamespace,
 } from "./r2/catalog";
 import {
 	r2BucketCORSDeleteCommand,
@@ -868,6 +871,18 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 bucket catalog compaction disable",
 			definition: r2BucketCatalogCompactionDisableCommand,
+		},
+		{
+			command: "wrangler r2 bucket catalog snapshot-expiration",
+			definition: r2BucketCatalogSnapshotExpirationNamespace,
+		},
+		{
+			command: "wrangler r2 bucket catalog snapshot-expiration enable",
+			definition: r2BucketCatalogSnapshotExpirationEnableCommand,
+		},
+		{
+			command: "wrangler r2 bucket catalog snapshot-expiration disable",
+			definition: r2BucketCatalogSnapshotExpirationDisableCommand,
 		},
 		{
 			command: "wrangler r2 bucket notification",

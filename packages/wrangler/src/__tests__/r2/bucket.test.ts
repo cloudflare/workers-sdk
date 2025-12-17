@@ -962,10 +962,11 @@ describe("r2", () => {
 					Manage the data catalog for your R2 buckets - provides an Iceberg REST interface for query engines like Spark and PyIceberg [open beta]
 
 					COMMANDS
-					  wrangler r2 bucket catalog enable <bucket>   Enable the data catalog on an R2 bucket [open beta]
-					  wrangler r2 bucket catalog disable <bucket>  Disable the data catalog for an R2 bucket [open beta]
-					  wrangler r2 bucket catalog get <bucket>      Get the status of the data catalog for an R2 bucket [open beta]
-					  wrangler r2 bucket catalog compaction        Control settings for automatic file compaction maintenance jobs for your R2 data catalog [open beta]
+					  wrangler r2 bucket catalog enable <bucket>      Enable the data catalog on an R2 bucket [open beta]
+					  wrangler r2 bucket catalog disable <bucket>     Disable the data catalog for an R2 bucket [open beta]
+					  wrangler r2 bucket catalog get <bucket>         Get the status of the data catalog for an R2 bucket [open beta]
+					  wrangler r2 bucket catalog compaction           Control settings for automatic file compaction maintenance jobs for your R2 data catalog [open beta]
+					  wrangler r2 bucket catalog snapshot-expiration  Control settings for automatic snapshot expiration maintenance jobs for your R2 data catalog [open beta]
 
 					GLOBAL FLAGS
 					  -c, --config    Path to Wrangler configuration file  [string]
@@ -1604,6 +1605,435 @@ describe("r2", () => {
 							──────────────────
 							Disable cancelled."
 						`);
+					});
+				});
+			});
+
+			describe("snapshot-expiration", () => {
+				it("should show the correct help when an invalid command is passed", async () => {
+					await expect(() =>
+						runWrangler("r2 bucket catalog snapshot-expiration foo")
+					).rejects.toThrowErrorMatchingInlineSnapshot(
+						`[Error: Unknown argument: foo]`
+					);
+					expect(std.err).toMatchInlineSnapshot(`
+						"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: foo[0m
+
+						"
+					`);
+					expect(std.out).toMatchInlineSnapshot(`
+						"
+						wrangler r2 bucket catalog snapshot-expiration
+
+						Control settings for automatic snapshot expiration maintenance jobs for your R2 data catalog [open beta]
+
+						COMMANDS
+						  wrangler r2 bucket catalog snapshot-expiration enable <bucket> [namespace] [table]   Enable automatic snapshot expiration for your R2 data catalog or a specific table [open beta]
+						  wrangler r2 bucket catalog snapshot-expiration disable <bucket> [namespace] [table]  Disable automatic snapshot expiration for your R2 data catalog or a specific table [open beta]
+
+						GLOBAL FLAGS
+						  -c, --config    Path to Wrangler configuration file  [string]
+						      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+						  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+						      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+						  -h, --help      Show help  [boolean]
+						  -v, --version   Show version number  [boolean]"
+					`);
+				});
+
+				describe("enable", () => {
+					it("should enable snapshot expiration for the catalog", async () => {
+						msw.use(
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/credential",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										token: "fakecloudflaretoken",
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							),
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/maintenance-configs",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										snapshot_expiration: {
+											state: "enabled",
+											olderThanDays: 30,
+											retainLast: 5,
+										},
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							)
+						);
+						await runWrangler(
+							"r2 bucket catalog snapshot-expiration enable testBucket --token fakecloudflaretoken"
+						);
+						expect(std.out).toMatchInlineSnapshot(
+							`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							✨ Successfully enabled snapshot expiration for the data catalog for bucket 'testBucket'.
+
+							Snapshot expiration will automatically delete old table snapshots to save storage costs.
+							For more details, refer to: https://developers.cloudflare.com/r2/data-catalog/"
+						`
+						);
+					});
+
+					it("should enable snapshot expiration with custom values", async () => {
+						msw.use(
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/credential",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										token: "fakecloudflaretoken",
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							),
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/maintenance-configs",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										snapshot_expiration: {
+											state: "enabled",
+											olderThanDays: 60,
+											retainLast: 10,
+										},
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							)
+						);
+						await runWrangler(
+							"r2 bucket catalog snapshot-expiration enable testBucket --token fakecloudflaretoken --older-than-days 60 --retain-last 10"
+						);
+						expect(std.out).toMatchInlineSnapshot(
+							`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							✨ Successfully enabled snapshot expiration for the data catalog for bucket 'testBucket'.
+
+							Snapshot expiration will automatically delete old table snapshots to save storage costs.
+							For more details, refer to: https://developers.cloudflare.com/r2/data-catalog/"
+						`
+						);
+					});
+
+					it("should error if no bucket name is given", async () => {
+						await expect(
+							runWrangler("r2 bucket catalog snapshot-expiration enable")
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Not enough non-option arguments: got 0, need at least 1]`
+						);
+						expect(std.out).toMatchInlineSnapshot(`
+							"
+							wrangler r2 bucket catalog snapshot-expiration enable <bucket> [namespace] [table]
+
+							Enable automatic snapshot expiration for your R2 data catalog or a specific table [open beta]
+
+							POSITIONALS
+							  bucket     The name of the bucket which contains the catalog  [string] [required]
+							  namespace  The namespace containing the table (optional, for table-level snapshot expiration)  [string]
+							  table      The name of the table (optional, for table-level snapshot expiration)  [string]
+
+							GLOBAL FLAGS
+							  -c, --config    Path to Wrangler configuration file  [string]
+							      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+							  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+							      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+							  -h, --help      Show help  [boolean]
+							  -v, --version   Show version number  [boolean]
+
+							OPTIONS
+							      --older-than-days  Delete snapshots older than this many days, defaults to 30  [number]
+							      --retain-last      The minimum number of snapshots to retain, defaults to 5  [number]
+							      --token            A cloudflare api token with access to R2 and R2 Data Catalog (required for catalog-level snapshot expiration settings only)  [string]"
+						`);
+						expect(std.err).toMatchInlineSnapshot(`
+							"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+							"
+						`);
+					});
+
+					it("should enable table snapshot expiration", async () => {
+						msw.use(
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/namespaces/testNamespace/tables/testTable/maintenance-configs",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										snapshot_expiration: {
+											state: "enabled",
+											older_than_days: 30,
+											retain_last: 5,
+										},
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							)
+						);
+						await runWrangler(
+							"r2 bucket catalog snapshot-expiration enable testBucket testNamespace testTable"
+						);
+						expect(std.out).toMatchInlineSnapshot(
+							`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							✨ Successfully enabled snapshot expiration for table 'testNamespace.testTable' in bucket 'testBucket'."
+						`
+						);
+					});
+
+					it("should enable table snapshot expiration with custom values", async () => {
+						msw.use(
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/namespaces/testNamespace/tables/testTable/maintenance-configs",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										snapshot_expiration: {
+											state: "enabled",
+											older_than_days: 7,
+											retain_last: 3,
+										},
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							)
+						);
+						await runWrangler(
+							"r2 bucket catalog snapshot-expiration enable testBucket testNamespace testTable --older-than-days 7 --retain-last 3"
+						);
+						expect(std.out).toMatchInlineSnapshot(
+							`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							✨ Successfully enabled snapshot expiration for table 'testNamespace.testTable' in bucket 'testBucket'."
+						`
+						);
+					});
+
+					it("should error if token is missing for catalog-level operation", async () => {
+						await expect(
+							runWrangler(
+								"r2 bucket catalog snapshot-expiration enable testBucket"
+							)
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Token is required for catalog-level snapshot expiration. Use --token flag to provide a Cloudflare API token.]`
+						);
+					});
+				});
+
+				describe("disable", () => {
+					const { setIsTTY } = useMockIsTTY();
+
+					it("should error if no bucket name is given", async () => {
+						await expect(
+							runWrangler("r2 bucket catalog snapshot-expiration disable")
+						).rejects.toThrowErrorMatchingInlineSnapshot(
+							`[Error: Not enough non-option arguments: got 0, need at least 1]`
+						);
+						expect(std.out).toMatchInlineSnapshot(`
+							"
+							wrangler r2 bucket catalog snapshot-expiration disable <bucket> [namespace] [table]
+
+							Disable automatic snapshot expiration for your R2 data catalog or a specific table [open beta]
+
+							POSITIONALS
+							  bucket     The name of the bucket which contains the catalog  [string] [required]
+							  namespace  The namespace containing the table (optional, for table-level snapshot expiration)  [string]
+							  table      The name of the table (optional, for table-level snapshot expiration)  [string]
+
+							GLOBAL FLAGS
+							  -c, --config    Path to Wrangler configuration file  [string]
+							      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+							  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+							      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+							  -h, --help      Show help  [boolean]
+							  -v, --version   Show version number  [boolean]
+
+							OPTIONS
+							      --force  Skip confirmation prompt  [boolean] [default: false]"
+						`);
+						expect(std.err).toMatchInlineSnapshot(`
+							"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
+
+							"
+						`);
+					});
+
+					it("should disable snapshot expiration with confirmation", async () => {
+						setIsTTY(true);
+						mockConfirm({
+							text: "Are you sure you want to disable snapshot expiration for the data catalog for bucket 'testBucket'?",
+							result: true,
+						});
+						msw.use(
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/maintenance-configs",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(body).toEqual({
+										snapshot_expiration: {
+											state: "disabled",
+										},
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							)
+						);
+						await runWrangler(
+							"r2 bucket catalog snapshot-expiration disable testBucket"
+						);
+						expect(std.out).toMatchInlineSnapshot(
+							`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Successfully disabled snapshot expiration for the data catalog for bucket 'testBucket'."
+						`
+						);
+					});
+
+					it("should cancel disable when confirmation is rejected", async () => {
+						setIsTTY(true);
+						mockConfirm({
+							text: "Are you sure you want to disable snapshot expiration for the data catalog for bucket 'testBucket'?",
+							result: false,
+						});
+						await runWrangler(
+							"r2 bucket catalog snapshot-expiration disable testBucket"
+						);
+						expect(std.out).toMatchInlineSnapshot(`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Disable cancelled."
+						`);
+					});
+
+					it("should disable table snapshot expiration when confirmed", async () => {
+						setIsTTY(true);
+						mockConfirm({
+							text: "Are you sure you want to disable snapshot expiration for table 'testNamespace.testTable' in bucket 'testBucket'?",
+							result: true,
+						});
+						msw.use(
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/namespaces/testNamespace/tables/testTable/maintenance-configs",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(request.method).toEqual("POST");
+									expect(body).toEqual({
+										snapshot_expiration: {
+											state: "disabled",
+										},
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							)
+						);
+						await runWrangler(
+							"r2 bucket catalog snapshot-expiration disable testBucket testNamespace testTable"
+						);
+						expect(std.out).toMatchInlineSnapshot(
+							`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Successfully disabled snapshot expiration for table 'testNamespace.testTable' in bucket 'testBucket'."
+						`
+						);
+					});
+
+					it("should cancel table snapshot expiration disable when rejected", async () => {
+						setIsTTY(true);
+						mockConfirm({
+							text: "Are you sure you want to disable snapshot expiration for table 'testNamespace.testTable' in bucket 'testBucket'?",
+							result: false,
+						});
+						await runWrangler(
+							"r2 bucket catalog snapshot-expiration disable testBucket testNamespace testTable"
+						);
+						expect(std.out).toMatchInlineSnapshot(`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Disable cancelled."
+						`);
+					});
+
+					it("should disable with --force flag without confirmation", async () => {
+						msw.use(
+							http.post(
+								"*/accounts/some-account-id/r2-catalog/testBucket/maintenance-configs",
+								async ({ request }) => {
+									const body = await request.json();
+									expect(body).toEqual({
+										snapshot_expiration: {
+											state: "disabled",
+										},
+									});
+									return HttpResponse.json(
+										createFetchResult({ success: true }, true)
+									);
+								},
+								{ once: true }
+							)
+						);
+						await runWrangler(
+							"r2 bucket catalog snapshot-expiration disable testBucket --force"
+						);
+						expect(std.out).toMatchInlineSnapshot(
+							`
+							"
+							 ⛅️ wrangler x.x.x
+							──────────────────
+							Successfully disabled snapshot expiration for the data catalog for bucket 'testBucket'."
+						`
+						);
 					});
 				});
 			});
