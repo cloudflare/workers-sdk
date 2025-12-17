@@ -33,6 +33,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 	const substitutions: Record<string, string> = {
 		"<WORKER_NAME>": ctx.project.name,
 		"<COMPATIBILITY_DATE>": await getWorkerdCompatibilityDate(),
+		"<WORKFLOW_NAME>": `workflow-${ctx.project.name}`,
 	};
 
 	if (wranglerJsonOrJsoncExists(ctx)) {
