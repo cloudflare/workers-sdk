@@ -10,7 +10,7 @@ import { satisfiesViteVersion } from "../../../src/utils";
 const normalize = (logs: string[]) =>
 	stripAnsi(logs.join("\n"))
 		.split("\n")
-		.map((line) => line.trim())
+		.map((line: string) => line.trim())
 		.join("\n");
 
 describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
@@ -80,6 +80,7 @@ test("prints bindings with a single Worker", () => {
 	const printBindingShortcut = customShortcuts?.find((s) => s.key === "b");
 
 	resetServerLogs();
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-floating-promises
 	printBindingShortcut?.action?.(viteServer as any);
 
 	expect(normalize(serverLogs.info)).toMatchInlineSnapshot(`
@@ -140,6 +141,7 @@ test("prints bindings with multi Workers", () => {
 	const printBindingShortcut = customShortcuts?.find((s) => s.key === "b");
 
 	resetServerLogs();
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-floating-promises
 	printBindingShortcut?.action?.(viteServer as any);
 
 	expect(normalize(serverLogs.info)).toMatchInlineSnapshot(`

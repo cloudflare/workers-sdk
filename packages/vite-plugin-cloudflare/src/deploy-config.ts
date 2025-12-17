@@ -1,12 +1,12 @@
 import assert from "node:assert";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import * as vite from "vite";
 import * as wrangler from "wrangler";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
+import type * as vite from "vite";
 
 interface DeployConfig {
 	configPath: string;

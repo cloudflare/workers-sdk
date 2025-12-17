@@ -433,6 +433,7 @@ export function createDurableObjectWrapper(
 				);
 			}
 
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			return (maybeFn as (...args: unknown[]) => any).apply(instance, args);
 		};
 	}
@@ -474,6 +475,7 @@ export function createWorkflowEntrypointWrapper(
 				);
 			}
 
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			return (maybeFn as (...args: unknown[]) => any).apply(instance, args);
 		};
 	}

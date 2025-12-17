@@ -35,14 +35,14 @@ describe(
 
 		// All these tests will fail without experimental support turned on
 		describe("_headers", () => {
-			test("applies _headers to HTML responses", async ({}) => {
+			test("applies _headers to HTML responses", async () => {
 				const response = await fetch(viteTestUrl);
 				expect(response.headers.get("X-Header")).toBe("Custom-Value!!!");
 			});
 
 			// Since Vite will return static assets immediately without invoking the Worker at all
 			// such requests will not have _headers applied.
-			failsIf(!isBuild)("applies _headers to static assets", async ({}) => {
+			failsIf(!isBuild)("applies _headers to static assets", async () => {
 				const response = await fetch(`${viteTestUrl}/vite.svg`);
 				expect(response.headers.get("X-Header")).toBe("Custom-Value!!!");
 			});
@@ -50,7 +50,7 @@ describe(
 
 		// All these tests will fail without experimental support turned on
 		describe("_redirects", () => {
-			test("applies _redirects to HTML responses", async ({}) => {
+			test("applies _redirects to HTML responses", async () => {
 				const response = await fetch(`${viteTestUrl}/foo`, {
 					redirect: "manual",
 				});
@@ -60,7 +60,7 @@ describe(
 
 			// Since Vite will return static assets immediately without invoking the Worker at all
 			// such requests will not have _redirects applied.
-			failsIf(!isBuild)("applies _redirects to static assets", async ({}) => {
+			failsIf(!isBuild)("applies _redirects to static assets", async () => {
 				const response = await fetch(`${viteTestUrl}/redirect.svg`, {
 					redirect: "manual",
 				});
@@ -72,7 +72,7 @@ describe(
 			// such requests will not have _redirects applied.
 			failsIf(!isBuild)(
 				"supports proxying static assets to rewritten contents with _redirects",
-				async ({}) => {
+				async () => {
 					const response = await fetch(`${viteTestUrl}/rewrite.svg`);
 					expect(response.status).toBe(200);
 					expect(await response.text()).toContain("target.svg");
