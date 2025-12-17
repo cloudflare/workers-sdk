@@ -432,8 +432,8 @@ describe("update wrangler config", () => {
 	});
 
 	test("placeholder replacement <WORKFLOW_NAME> (json)", async () => {
-		vi.mocked(existsSync).mockImplementationOnce((f) =>
-			(f as string).endsWith(".json"),
+		vi.mocked(existsSync).mockImplementationOnce((f: string) =>
+			f.endsWith(".json"),
 		);
 		const json = JSON.stringify({
 			name: "<TBD>",
