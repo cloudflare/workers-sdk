@@ -26,10 +26,17 @@ import {
 } from "./cert/cert";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
+import {
+	completeCommand,
+	completionsBashCommand,
+	completionsFishCommand,
+	completionsNamespace,
+	completionsZshCommand,
+	setDefinitionTree,
+} from "./completions";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
-import { globalFlags } from "./global-flags";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { handleError } from "./core/handle-errors";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
@@ -60,6 +67,7 @@ import {
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
 import { docs } from "./docs";
+import { globalFlags } from "./global-flags";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
@@ -98,14 +106,6 @@ import {
 	telemetryNamespace,
 	telemetryStatusCommand,
 } from "./metrics/commands";
-import {
-	completeCommand,
-	completionsBashCommand,
-	completionsFishCommand,
-	completionsNamespace,
-	completionsZshCommand,
-	setDefinitionTree,
-} from "./completions";
 import {
 	mTlsCertificateDeleteCommand,
 	mTlsCertificateListCommand,
@@ -206,6 +206,9 @@ import {
 	r2BucketCatalogEnableCommand,
 	r2BucketCatalogGetCommand,
 	r2BucketCatalogNamespace,
+	r2BucketCatalogSnapshotExpirationDisableCommand,
+	r2BucketCatalogSnapshotExpirationEnableCommand,
+	r2BucketCatalogSnapshotExpirationNamespace,
 } from "./r2/catalog";
 import {
 	r2BucketCORSDeleteCommand,
@@ -830,6 +833,18 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 bucket catalog compaction disable",
 			definition: r2BucketCatalogCompactionDisableCommand,
+		},
+		{
+			command: "wrangler r2 bucket catalog snapshot-expiration",
+			definition: r2BucketCatalogSnapshotExpirationNamespace,
+		},
+		{
+			command: "wrangler r2 bucket catalog snapshot-expiration enable",
+			definition: r2BucketCatalogSnapshotExpirationEnableCommand,
+		},
+		{
+			command: "wrangler r2 bucket catalog snapshot-expiration disable",
+			definition: r2BucketCatalogSnapshotExpirationDisableCommand,
 		},
 		{
 			command: "wrangler r2 bucket notification",

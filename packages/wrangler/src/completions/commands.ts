@@ -1,6 +1,6 @@
 import { createCommand, createNamespace } from "../core/create-command";
-import { handleComplete } from "./complete-handler";
 import { logger } from "../logger";
+import { handleComplete } from "./complete-handler";
 import { getBashScript, getFishScript, getZshScript } from "./scripts";
 
 export const completionsNamespace = createNamespace({
@@ -85,7 +85,7 @@ export const completeCommand = createCommand({
 		let completionArgs =
 			args.args && args.args.length > 0
 				? args.args
-				: ((args as unknown as { _: string[] })._ ?? []);
+				: (args as unknown as { _: string[] })._ ?? [];
 		// Filter out __complete if it's the first arg (happens with --)
 		if (completionArgs[0] === "__complete") {
 			completionArgs = completionArgs.slice(1);

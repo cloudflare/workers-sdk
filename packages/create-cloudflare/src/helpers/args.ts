@@ -142,6 +142,12 @@ export const cliDefinition: ArgumentsDefinition = {
 			requiresArg: true,
 		},
 		{
+			name: "variant",
+			type: "string",
+			description: `The variant of the framework to use. This is only applicable for certain frameworks that support multiple variants (e.g. React with TypeScript, TypeScript + SWC, JavaScript, JavaScript + SWC).`,
+			requiresArg: true,
+		},
+		{
 			name: "lang",
 			type: "string",
 			description: `The programming language of the template`,

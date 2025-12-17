@@ -73,7 +73,7 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20251213.0"
+		"workerd": "1.20251217.0"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
@@ -88,7 +88,7 @@
 		"@cloudflare/workers-utils": "workspace:*",
 		"@cloudflare/workflows-shared": "workspace:*",
 		"@cspotcode/source-map-support": "0.8.1",
-		"@netlify/build-info": "^10.0.9",
+		"@netlify/build-info": "^10.2.0",
 		"@sentry/node": "^7.86.0",
 		"@sentry/types": "^7.86.0",
 		"@sentry/utils": "^7.86.0",

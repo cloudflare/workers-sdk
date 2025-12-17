@@ -2,7 +2,7 @@
 "@cloudflare/vite-plugin": minor
 ---
 
-Provide the resolved entry Worker config as the second parameter to the auxiliary Worker `config` function. This makes it straightforward to inherit configuration from the entry Worker in auxiliary Workers.
+Provide the resolved entry Worker config in the second parameter to the auxiliary Worker `config` function. This makes it straightforward to inherit configuration from the entry Worker in auxiliary Workers.
 
 Example:
 
@@ -12,7 +12,7 @@ export default defineConfig({
 		cloudflare({
 			auxiliaryWorkers: [
 				{
-					config: (_, entryWorkerConfig) => ({
+					config: (_, { entryWorkerConfig }) => ({
 						name: "auxiliary-worker",
 						main: "./src/auxiliary-worker.ts",
 						// Inherit compatibility settings from entry Worker

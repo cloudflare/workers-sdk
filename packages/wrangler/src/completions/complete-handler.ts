@@ -1,4 +1,5 @@
 import { globalFlags } from "../global-flags";
+import { logger } from "../logger";
 import { getDefinitionTree } from "./registry-store";
 import type { DefinitionTree, NamedArgDefinitions } from "../core/types";
 
@@ -40,7 +41,7 @@ export function handleComplete(args: string[]): void {
 	for (const c of completions) {
 		// Tab-separated format: "value\tdescription"
 		// Shell parses this natively - no escaping needed
-		console.log(`${c.value}\t${c.description}`);
+		logger.log(`${c.value}\t${c.description}`);
 	}
 }
 

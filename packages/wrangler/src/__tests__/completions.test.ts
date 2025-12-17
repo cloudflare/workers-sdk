@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execSync } from "node:child_process";
 import { describe, test } from "vitest";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -95,7 +95,9 @@ describe("wrangler", () => {
 				expect(std.out).toContain("--config\t");
 			});
 
-			test("should skip flags when building command path", async ({ expect }) => {
+			test("should skip flags when building command path", async ({
+				expect,
+			}) => {
 				// --binding should be skipped, so we're completing flags for "d1 create"
 				// Use -- to prevent yargs from parsing --binding as a flag for __complete
 				await runWrangler('__complete -- wrangler d1 create --binding foo ""');
@@ -106,10 +108,14 @@ describe("wrangler", () => {
 				expect(std.out).not.toMatch(/^create\t/m);
 			});
 
-			test("should skip flag values when building command path", async ({ expect }) => {
+			test("should skip flag values when building command path", async ({
+				expect,
+			}) => {
 				// Both --config and its value should be skipped
 				// Use -- to prevent yargs from parsing --config as a flag for __complete
-				await runWrangler('__complete -- wrangler --config wrangler.toml kv ""');
+				await runWrangler(
+					'__complete -- wrangler --config wrangler.toml kv ""'
+				);
 
 				expect(std.out).toContain("namespace\t");
 				expect(std.out).toContain("key\t");
