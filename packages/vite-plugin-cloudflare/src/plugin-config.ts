@@ -54,7 +54,10 @@ type WorkerConfigCustomizer<TIsEntryWorker extends boolean> =
 	| ((
 			...args: TIsEntryWorker extends true
 				? [config: WorkerConfig]
-				: [config: WorkerConfig, entryWorkerConfig: ResolvedAssetsOnlyConfig]
+				: [
+						config: WorkerConfig,
+						{ entryWorkerConfig: ResolvedAssetsOnlyConfig },
+					]
 	  ) => Partial<WorkerConfig> | void);
 
 export interface PluginConfig extends EntryWorkerConfig {
@@ -147,10 +150,9 @@ export function customizeWorkerConfig(
 	const configResult =
 		typeof options.configCustomizer === "function"
 			? "entryWorkerConfig" in options
-				? options.configCustomizer(
-						options.workerConfig,
-						options.entryWorkerConfig
-					)
+				? options.configCustomizer(options.workerConfig, {
+						entryWorkerConfig: options.entryWorkerConfig,
+					})
 				: options.configCustomizer(options.workerConfig)
 			: options.configCustomizer;
 
