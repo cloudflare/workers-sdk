@@ -70,30 +70,35 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 		existingRuntimeHeader && existingRuntimeHeader !== newRuntimeHeader;
 
 	const changed = envOutOfDate || runtimeOutOfDate;
-	if (changed && config.dev.generate_types) {
-		const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
-			config,
-			outFile: DEFAULT_WORKERS_TYPES_FILE_PATH,
-		});
-		const newTypesFile = [
-			newEnvHeader,
-			runtimeHeader,
-			newEnvTypes,
-			runtimeTypes,
-		].join("\n");
-		try {
-			writeFileSync(DEFAULT_WORKERS_TYPES_FILE_PATH, newTypesFile);
-			logger.log(
-				`❓ Your types looked out of date. We've re-run \`wrangler types\` for you and updated ${DEFAULT_WORKERS_TYPES_FILE_PATH}`
-			);
-		} catch (e) {
-			logger.error(e);
-		}
-	} else if (changed) {
+	if (!changed) {
+		return false;
+	}
+
+	if (!config.dev.generate_types) {
 		logger.log(
 			"❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
 		);
+		return true;
 	}
 
-	return changed;
+	const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
+		config,
+		outFile: DEFAULT_WORKERS_TYPES_FILE_PATH,
+	});
+	const newTypesFile = [
+		newEnvHeader,
+		runtimeHeader,
+		newEnvTypes,
+		runtimeTypes,
+	].join("\n");
+	try {
+		writeFileSync(DEFAULT_WORKERS_TYPES_FILE_PATH, newTypesFile);
+		logger.log(
+			`❓ Your types looked out of date. We've re-run \`wrangler types\` for you and updated ${DEFAULT_WORKERS_TYPES_FILE_PATH}`
+		);
+	} catch (e) {
+		logger.error(e);
+	}
+
+	return true;
 };
