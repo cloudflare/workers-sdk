@@ -11,7 +11,8 @@ import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 export async function whoami(
 	complianceConfig: ComplianceConfig,
-	accountFilter?: string
+	accountFilter?: string,
+	configAccountId?: string
 ) {
 	logger.log("Getting User settings...");
 	const user = await getUserInfo(complianceConfig);
@@ -30,6 +31,7 @@ export async function whoami(
 	}
 	printComplianceRegion(complianceConfig);
 	printAccountList(user);
+	printAccountIdMismatchWarning(user, accountFilter, configAccountId);
 	printTokenPermissions(user);
 	await printMembershipInfo(complianceConfig, user, accountFilter);
 }
@@ -71,6 +73,45 @@ function printAccountList(user: UserInfo) {
 			"Account ID": account.id,
 		}))
 	);
+}
+
+function printAccountIdMismatchWarning(
+	user: UserInfo,
+	accountFilter?: string,
+	configAccountId?: string
+) {
+	// Only show warning if:
+	// 1. We have an accountFilter (the account ID from the failed request)
+	// 2. We have a configAccountId (the account_id from the wrangler config)
+	// 3. The accountFilter matches the configAccountId (meaning the config account_id was used)
+	// 4. The accountFilter is NOT in the user's accounts list
+	if (!accountFilter || !configAccountId) {
+		return;
+	}
+
+	// Check if the account ID from the failed request matches the configured account_id
+	if (accountFilter !== configAccountId) {
+		return;
+	}
+
+	// Check if the configured account_id is in the user's accounts
+	const accountInUserAccounts = user.accounts.some(
+		(account) => account.id === accountFilter
+	);
+
+	if (!accountInUserAccounts) {
+		logger.log(
+			formatMessage({
+				text: `The \`account_id\` in your Wrangler configuration (${chalk.blue(configAccountId)}) does not match any of your authenticated accounts.`,
+				kind: "warning",
+				notes: [
+					{
+						text: "This may be causing the authentication error. Check your Wrangler configuration file and ensure the `account_id` is correct for your account.",
+					},
+				],
+			})
+		);
+	}
 }
 
 function printTokenPermissions(user: UserInfo) {

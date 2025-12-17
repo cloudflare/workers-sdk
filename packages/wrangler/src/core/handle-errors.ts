@@ -114,14 +114,17 @@ export async function handleError(
 		}
 		const accountTag = (e as APIError)?.accountTag;
 		let complianceConfig: ComplianceConfig;
+		let configAccountId: string | undefined;
 		try {
-			complianceConfig = await readConfig(args, {
+			const config = await readConfig(args, {
 				hideWarnings: true,
 			});
+			complianceConfig = config;
+			configAccountId = config.account_id;
 		} catch {
 			complianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN;
 		}
-		await whoami(complianceConfig, accountTag);
+		await whoami(complianceConfig, accountTag, configAccountId);
 	} else if (e instanceof ParseError) {
 		e.notes.push({
 			text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",
