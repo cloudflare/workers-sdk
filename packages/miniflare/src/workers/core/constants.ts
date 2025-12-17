@@ -83,3 +83,11 @@ export function isR2ObjectWriteHttpMetadata(targetName: string, key: string) {
 		key === "writeHttpMetadata"
 	);
 }
+
+// Durable Object stub RPC calls should always be async to avoid blocking the
+// Node.js event loop. The internal names are "DurableObject" and "WorkerRpc".
+// https://github.com/cloudflare/workerd/blob/62b9ceee4c94d2b238692397dc4f604fef84f474/src/workerd/api/actor.h#L86
+// https://github.com/cloudflare/workerd/blob/62b9ceee4c94d2b238692397dc4f604fef84f474/src/workerd/api/worker-rpc.h#L30
+export function isDurableObjectStub(targetName: string) {
+	return targetName === "DurableObject" || targetName === "WorkerRpc";
+}
