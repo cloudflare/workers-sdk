@@ -486,8 +486,10 @@ async function buildProjectWorkerOptions(
 		)
 	) {
 		try {
+			// Use resolved path to ensure correct resolution regardless of cwd
+			const resolvedMain = maybeGetResolvedMainPath(project);
 			const guessedExports = await guessWorkerExports(
-				project.options.main,
+				resolvedMain,
 				project.options.additionalExports
 			);
 			for (const [exportName, exportType] of guessedExports) {
@@ -813,7 +815,9 @@ async function getProjectMiniflare(
 	return project.mf;
 }
 
-function maybeGetResolvedMainPath(project: Project): string | undefined {
+function maybeGetResolvedMainPath(
+	project: Omit<Project, "testFiles">
+): string | undefined {
 	const projectPath = getProjectPath(project.project);
 	const main = project.options.main;
 	if (main === undefined) {
