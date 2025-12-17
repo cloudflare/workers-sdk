@@ -563,6 +563,8 @@ describe("Create Cloudflare CLI", () => {
 					        Create a web application that can be deployed to Workers.
 					      pages
 					        Create a web application that can be deployed to Pages.
+					  --variant=<value>
+					    The variant of the framework to use. This is only applicable for certain frameworks that support multiple variants (e.g. React with TypeScript, TypeScript + SWC, JavaScript, JavaScript + SWC).
 					  --lang=<value>
 					    The programming language of the template
 					    Allowed Values:
@@ -665,6 +667,8 @@ describe("Create Cloudflare CLI", () => {
 					        Create a web application that can be deployed to Workers.
 					      pages
 					        Create a web application that can be deployed to Pages.
+					  --variant=<value>
+					    The variant of the framework to use. This is only applicable for certain frameworks that support multiple variants (e.g. React with TypeScript, TypeScript + SWC, JavaScript, JavaScript + SWC).
 					  --lang=<value>
 					    The programming language of the template
 					    Allowed Values:
