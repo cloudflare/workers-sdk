@@ -51,7 +51,9 @@ jobs:
             2. **Changelog Quality**: Meaningful descriptions with examples for features
             3. **Markdown Headers**: No h1/h2/h3 headers (breaks changelog formatting)
 
-            Output a one-line summary (✅ good / ⚠️ issues found) followed by any issues.
+            If all changesets pass, just output "✅ All changesets look good" - no need for a detailed checklist.
+
+            If there are issues, output "⚠️ Issues found" followed by the specific problems.
 
             Return your structured output indicating whether there are blocking issues.
           claude_args: |
@@ -60,14 +62,7 @@ jobs:
             --json-schema '{"type":"object","properties":{"has_blocking_issues":{"type":"boolean","description":"True if any changeset has blocking issues that should fail the check"},"summary":{"type":"string","description":"One-line summary of the review"},"issues":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"issue":{"type":"string"},"severity":{"type":"string","enum":["blocking","warning"]}}}}},"required":["has_blocking_issues","summary"]}'
 
       - name: Fail if blocking issues found
-        if: always() && steps.claude-review.outputs.structured_output != ''
+        if: always() && steps.claude-review.outputs.structured_output != '' && fromJSON(steps.claude-review.outputs.structured_output).has_blocking_issues == true
         run: |
-          echo "Claude review output:"
-          echo '${{ steps.claude-review.outputs.structured_output }}'
-
-          HAS_ISSUES=$(echo '${{ steps.claude-review.outputs.structured_output }}' | jq -r '.has_blocking_issues')
-          if [ "$HAS_ISSUES" = "true" ]; then
-            echo "::error::Blocking changeset issues found. Please fix the issues above."
-            exit 1
-          fi
-          echo "✅ All changesets passed validation"
+          echo "::error::Blocking changeset issues found. Please fix the issues identified in the Claude review comment."
+          exit 1
