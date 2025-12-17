@@ -5,6 +5,7 @@ import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	FatalError,
 } from "@cloudflare/workers-utils";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import getPort from "get-port";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
@@ -26,7 +27,6 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type {
 	Binding,
 	StartDevWorkerInput,
@@ -1497,6 +1497,9 @@ describe.sequential("wrangler dev", () => {
 				env.NAME_2 (CLASS_2, defined in SCRIPT_A)      Durable Object      local [not connected]
 				env.NAME_3 (CLASS_3)                           Durable Object      local
 				env.NAME_4 (CLASS_4, defined in SCRIPT_B)      Durable Object      local [not connected]
+
+
+				Service bindings, Durable Object bindings, and Tail consumers connect to other Wrangler or Vite dev processes running locally, with their connection status indicated by [connected] or [not connected]. For more details, refer to https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/#local-development
 
 				"
 			`);

@@ -14,7 +14,7 @@ const TEAM_ASSIGNMENTS: { [label: string]: { [jobRole: string]: string } } = {
 	"auto-provisioning": { em: "lrapoport-cf", pm: "mattietk" },
 	c3: { em: "lrapoport-cf", pm: "mattietk" },
 	constellation: {},
-	containers: { em: "southpolesteve", pm: "mikenomitch" },
+	containers: { em: "th0m", pm: "mikenomitch" },
 	d1: { em: "joshthoward", pm: "vy-ton" },
 	documentation: {},
 	"durable objects": { em: "joshthoward", pm: "vy-ton" },
@@ -42,6 +42,7 @@ const TEAM_ASSIGNMENTS: { [label: string]: { [jobRole: string]: string } } = {
 	vectorize: { em: "sejoker", pm: "jonesphillip" },
 	"vite-plugin": { em: "lrapoport-cf", pm: "mattietk" },
 	vitest: { em: "lrapoport-cf", pm: "mattietk" },
+	"workers vpc": { em: "efalcao", pm: "thomasgauvin" },
 	"Workers + Assets": { em: "dcartertwo", pm: "irvinebroque" },
 	"workers ai": {},
 	"workers-builds": {

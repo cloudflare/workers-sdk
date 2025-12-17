@@ -1,4 +1,9 @@
 {
 	"extends": "@cloudflare/workers-tsconfig/base.json",
-	"include": ["vitest-global-setup.ts", "vitest-setup.ts", "__test-utils__"]
+	"include": [
+		"vitest-global-setup.ts",
+		"vitest-setup.ts",
+		"vitest.config*.ts",
+		"__test-utils__"
+	]
 }

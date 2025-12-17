@@ -78,11 +78,9 @@
 		},
 		"patchedDependencies": {
 			"@cloudflare/component-listbox@1.10.6": "patches/@cloudflare__component-listbox@1.10.6.patch",
-			"pg@8.11.3": "patches/pg@8.11.3.patch",
 			"toucan-js@4.0.0": "patches/toucan-js@4.0.0.patch",
 			"postal-mime": "patches/postal-mime.patch",
 			"youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch",
-			"comment-json": "patches/comment-json.patch",
 			"@netlify/build-info": "patches/@netlify__build-info.patch"
 		}
 	}

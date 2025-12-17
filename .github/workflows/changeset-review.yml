@@ -1,0 +1,70 @@
+name: Changeset Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - ".changeset/*.md"
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to review"
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  review-changesets:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed changeset files
+        id: changed-changesets
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            .changeset/*.md
+          files_ignore: |
+            .changeset/README.md
+
+      - name: Review Changesets with Claude
+        id: claude-review
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          allowed_bots: "devin-ai-integration[bot]"
+          track_progress: true
+          use_sticky_comment: true
+          prompt: |
+            Review the changeset files in this PR: ${{ steps.changed-changesets.outputs.all_changed_files }}
+
+            Read `.changeset/README.md` for guidelines, then validate:
+            1. **Version Type**: Correct patch/minor/major (major forbidden for wrangler)
+            2. **Changelog Quality**: Meaningful descriptions with examples for features
+            3. **Markdown Headers**: No h1/h2/h3 headers (breaks changelog formatting)
+
+            If all changesets pass, just output "✅ All changesets look good" - no need for a detailed checklist.
+
+            If there are issues, output "⚠️ Issues found" followed by the specific problems.
+
+            Return your structured output indicating whether there are blocking issues.
+          claude_args: |
+            --allowedTools "Read,Glob,Grep"
+            --output-format json
+            --json-schema '{"type":"object","properties":{"has_blocking_issues":{"type":"boolean","description":"True if any changeset has blocking issues that should fail the check"},"summary":{"type":"string","description":"One-line summary of the review"},"issues":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"issue":{"type":"string"},"severity":{"type":"string","enum":["blocking","warning"]}}}}},"required":["has_blocking_issues","summary"]}'
+
+      - name: Fail if blocking issues found
+        if: always() && steps.claude-review.outputs.structured_output != '' && fromJSON(steps.claude-review.outputs.structured_output).has_blocking_issues == true
+        run: |
+          echo "::error::Blocking changeset issues found. Please fix the issues identified in the Claude review comment."
+          exit 1

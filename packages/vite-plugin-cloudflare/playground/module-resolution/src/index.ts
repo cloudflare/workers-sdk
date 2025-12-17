@@ -11,7 +11,7 @@ export default {
 
 		if (pathname === "/optimize-deps/exclude") {
 			const { virtualExport } = await import(
-				//@ts-ignore
+				// @ts-expect-error virtual module
 				"@playground/module-resolution-excludes"
 			);
 

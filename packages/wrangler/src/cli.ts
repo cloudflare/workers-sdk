@@ -34,7 +34,7 @@ if (typeof vitest === "undefined" && require.main === module) {
  */
 export { unstable_dev, unstable_pages, unstable_DevEnv, unstable_startWorker };
 export type { Unstable_DevWorker, Unstable_DevOptions };
-
+export { printBindings as unstable_printBindings } from "./utils/print-bindings";
 export * from "./api/integrations";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
@@ -64,6 +64,10 @@ export {
 	experimental_readRawConfig,
 	type ConfigBindingOptions as Experimental_ConfigBindingOptions,
 } from "@cloudflare/workers-utils";
+
+// TODO: consider if we want to keep exporting `experimental_patchConfig` from wrangler.
+//       wouldn't it be better for consumers to depend and use it directly from
+//       @cloudflare/workers-utils instead?
 export { experimental_patchConfig } from "@cloudflare/workers-utils";
 
 export {

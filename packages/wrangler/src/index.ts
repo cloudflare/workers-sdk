@@ -197,6 +197,9 @@ import {
 	r2BucketCatalogEnableCommand,
 	r2BucketCatalogGetCommand,
 	r2BucketCatalogNamespace,
+	r2BucketCatalogSnapshotExpirationDisableCommand,
+	r2BucketCatalogSnapshotExpirationEnableCommand,
+	r2BucketCatalogSnapshotExpirationNamespace,
 } from "./r2/catalog";
 import {
 	r2BucketCORSDeleteCommand,
@@ -329,6 +332,7 @@ import { workflowsInstancesListCommand } from "./workflows/commands/instances/li
 import { workflowsInstancesPauseCommand } from "./workflows/commands/instances/pause";
 import { workflowsInstancesRestartCommand } from "./workflows/commands/instances/restart";
 import { workflowsInstancesResumeCommand } from "./workflows/commands/instances/resume";
+import { workflowsInstancesSendEventCommand } from "./workflows/commands/instances/send-event";
 import { workflowsInstancesTerminateCommand } from "./workflows/commands/instances/terminate";
 import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/instances/terminate-all";
 import { workflowsListCommand } from "./workflows/commands/list";
@@ -869,6 +873,18 @@ export function createCLIParser(argv: string[]) {
 			definition: r2BucketCatalogCompactionDisableCommand,
 		},
 		{
+			command: "wrangler r2 bucket catalog snapshot-expiration",
+			definition: r2BucketCatalogSnapshotExpirationNamespace,
+		},
+		{
+			command: "wrangler r2 bucket catalog snapshot-expiration enable",
+			definition: r2BucketCatalogSnapshotExpirationEnableCommand,
+		},
+		{
+			command: "wrangler r2 bucket catalog snapshot-expiration disable",
+			definition: r2BucketCatalogSnapshotExpirationDisableCommand,
+		},
+		{
 			command: "wrangler r2 bucket notification",
 			definition: r2BucketNotificationNamespace,
 		},
@@ -1235,7 +1251,7 @@ export function createCLIParser(argv: string[]) {
 	// containers
 	wrangler.command(
 		"containers",
-		"📦 Manage Containers [open-beta]",
+		`📦 Manage Containers ${chalk.hex(betaCmdColor)("[open beta]")}`,
 		(containersArgs) => {
 			return containers(containersArgs.command(subHelp), subHelp);
 		}
@@ -1374,6 +1390,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler workflows instances describe",
 			definition: workflowsInstancesDescribeCommand,
+		},
+		{
+			command: "wrangler workflows instances send-event",
+			definition: workflowsInstancesSendEventCommand,
 		},
 		{
 			command: "wrangler workflows instances terminate",

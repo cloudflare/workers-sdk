@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { unstable_readConfig } from "wrangler";
+import * as wrangler from "wrangler";
 import type {
 	ResolvedAssetsOnlyConfig,
 	ResolvedWorkerConfig,
@@ -122,7 +122,7 @@ function readWorkerConfig(
 		notRelevant: new Set(),
 	};
 	const config: Optional<RawWorkerConfig, "build" | "define"> =
-		unstable_readConfig(
+		wrangler.unstable_readConfig(
 			{ config: configPath, env },
 			// Preserve the original `main` value so that Vite can resolve it
 			{ preserveOriginalMain: true }
@@ -247,10 +247,11 @@ function getWorkerNonApplicableWarnLines(
 		);
 	}
 
-	if (notRelevant.size > 0)
+	if (notRelevant.size > 0) {
 		lines.push(
 			`${linePrefix}${[...notRelevant].map((config) => `\`${config}\``).join(", ")} which ${notRelevant.size > 1 ? "are" : "is"} not relevant in the context of a Vite project`
 		);
+	}
 
 	return lines;
 }
@@ -264,6 +265,7 @@ function isReplacedByVite(
 function isNotRelevant(
 	configName: string
 ): configName is NonApplicableConfigNotRelevant {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	return nonApplicableWorkerConfigs.notRelevant.includes(configName as any);
 }
 

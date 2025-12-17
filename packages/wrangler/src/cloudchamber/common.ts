@@ -111,7 +111,7 @@ export function handleFailure<
 			await printWranglerBanner();
 			const commandStatus = command.includes("cloudchamber")
 				? "alpha"
-				: "open-beta";
+				: "open beta";
 			logger.warn(constructStatusMessage(command, commandStatus));
 		}
 		const config = readConfig(args);

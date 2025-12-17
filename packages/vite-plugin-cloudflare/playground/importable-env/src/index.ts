@@ -22,6 +22,6 @@ export default {
 	},
 } satisfies ExportedHandler<Env>;
 
-function getEntriesOf(obj: Object) {
-	return Object.entries(obj).map(([key, value]) => ({ key, value }));
+function getEntriesOf(obj: object) {
+	return Object.entries(obj).map(([k, value]) => ({ key: k, value }));
 }

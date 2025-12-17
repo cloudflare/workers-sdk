@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { createWriteStream, mkdirSync, rmSync } from "node:fs";
-import path from "node:path";
+import nodePath from "node:path";
 import { isExperimental, testPackageManager } from "./constants";
 import type { RunnerTask, RunnerTestSuite } from "vitest";
 
@@ -8,7 +8,7 @@ export function createTestLogStream(task: RunnerTask) {
 	// The .ansi extension allows for editor extensions that format ansi terminal codes
 	const fileName = `${normalizeTestName(task)}.ansi`;
 	assert(task.suite, "Expected task.suite to be defined");
-	const logPath = path.join(getLogPath(task.suite), fileName);
+	const logPath = nodePath.join(getLogPath(task.suite), fileName);
 	const logStream = createWriteStream(logPath, {
 		flags: "a",
 	});
@@ -44,12 +44,18 @@ function getLogPath(suite: RunnerTestSuite) {
 	const { file } = suite;
 
 	const suiteFilename = file
-		? path.basename(file.name).replace(".test.ts", "")
+		? nodePath.basename(file.name).replace(".test.ts", "")
 		: "unknown";
 
-	return path.join(
-		"./.e2e-logs" + (isExperimental ? "-experimental" : ""),
-		testPackageManager,
+	return nodePath.join(
+		getLogFolder(isExperimental, testPackageManager),
 		suiteFilename,
+	);
+}
+
+export function getLogFolder(experimental: boolean, packageManager: string) {
+	return nodePath.join(
+		"./.e2e-logs" + (experimental ? "-experimental" : ""),
+		packageManager,
 	);
 }

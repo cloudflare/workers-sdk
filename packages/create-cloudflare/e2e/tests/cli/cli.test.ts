@@ -552,10 +552,10 @@ describe("Create Cloudflare CLI", () => {
 					    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
 					    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (e.g. "create-astro" is used for Astro).
 					    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
-					    npm create cloudflare -- --framework next -- --ts
-					    pnpm create cloudflare --framework next -- --ts
+					    npm create cloudflare -- --framework svelte -- --types=ts
+					    pnpm create cloudflare --framework svelte -- --types=ts
 					    Allowed Values:
-					      angular, astro, docusaurus, gatsby, nuxt, qwik, react, react-router, solid, svelte, tanstack-start, vue
+					      analog, angular, astro, docusaurus, gatsby, next, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vue
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:
@@ -563,6 +563,8 @@ describe("Create Cloudflare CLI", () => {
 					        Create a web application that can be deployed to Workers.
 					      pages
 					        Create a web application that can be deployed to Pages.
+					  --variant=<value>
+					    The variant of the framework to use. This is only applicable for certain frameworks that support multiple variants (e.g. React with TypeScript, TypeScript + SWC, JavaScript, JavaScript + SWC).
 					  --lang=<value>
 					    The programming language of the template
 					    Allowed Values:
@@ -654,8 +656,8 @@ describe("Create Cloudflare CLI", () => {
 					    The type of framework to use to create a web application (when using this option "--category" is coerced to "web-framework")
 					    When using the --framework option, C3 will dispatch to the official creation tool used by the framework (e.g. "create-astro" is used for Astro).
 					    You may specify additional arguments to be passed directly to these underlying tools by adding them after a "--" argument, like so:
-					    npm create cloudflare -- --framework next -- --ts
-					    pnpm create cloudflare --framework next -- --ts
+					    npm create cloudflare -- --framework svelte -- --types=ts
+					    pnpm create cloudflare --framework svelte -- --types=ts
 					    Allowed Values:
 					      analog, angular, astro, docusaurus, gatsby, hono, next, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vike, vue, waku
 					  --platform=<value>
@@ -665,6 +667,8 @@ describe("Create Cloudflare CLI", () => {
 					        Create a web application that can be deployed to Workers.
 					      pages
 					        Create a web application that can be deployed to Pages.
+					  --variant=<value>
+					    The variant of the framework to use. This is only applicable for certain frameworks that support multiple variants (e.g. React with TypeScript, TypeScript + SWC, JavaScript, JavaScript + SWC).
 					  --lang=<value>
 					    The programming language of the template
 					    Allowed Values:
@@ -723,6 +727,26 @@ describe("Create Cloudflare CLI", () => {
 				);
 			}),
 		);
+
+		test("error when using invalid --variant for React framework", async ({
+			logStream,
+		}) => {
+			const { errors } = await runC3(
+				[
+					"my-app",
+					"--framework=react",
+					"--platform=workers",
+					"--variant=invalid-variant",
+					"--no-deploy",
+					"--git=false",
+				],
+				[],
+				logStream,
+			);
+			expect(errors).toContain(
+				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc',
+			);
+		});
 	});
 });
 

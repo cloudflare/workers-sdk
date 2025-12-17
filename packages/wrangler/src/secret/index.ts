@@ -21,6 +21,7 @@ import { fetchSecrets } from "../utils/fetch-secrets";
 import { getLegacyScriptName } from "../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
+import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import type { Config, WorkerMetadataBinding } from "@cloudflare/workers-utils";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
@@ -37,14 +38,6 @@ type InheritBindingUpload = {
 };
 
 type SecretBindingRedacted = Omit<SecretBindingUpload, "text">;
-
-function isMissingWorkerError(e: unknown): e is { code: 10007 } {
-	return (
-		typeof e === "object" &&
-		e !== null &&
-		(e as { code: number }).code === 10007
-	);
-}
 
 async function createDraftWorker({
 	config,
@@ -239,7 +232,7 @@ export const secretPutCommand = createCommand({
 				sendMetrics: config.send_metrics,
 			});
 		} catch (e) {
-			if (isMissingWorkerError(e)) {
+			if (isWorkerNotFoundError(e)) {
 				// create a draft worker and try again
 				const result = await createDraftWorker({
 					config,
@@ -486,7 +479,7 @@ export const secretBulkCommand = createCommand({
 			const settings = await getSettings();
 			existingBindings = settings.bindings;
 		} catch (e) {
-			if (isMissingWorkerError(e)) {
+			if (isWorkerNotFoundError(e)) {
 				// create a draft worker before patching
 				const result = await createDraftWorker({
 					config,

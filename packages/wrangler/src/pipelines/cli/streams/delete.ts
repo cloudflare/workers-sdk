@@ -8,7 +8,7 @@ export const pipelinesStreamsDeleteCommand = createCommand({
 	metadata: {
 		description: "Delete a stream",
 		owner: "Product: Pipelines",
-		status: "open-beta",
+		status: "open beta",
 	},
 	positionalArgs: ["stream"],
 	args: {

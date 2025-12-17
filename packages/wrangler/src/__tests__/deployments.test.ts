@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { thrownIsDoesNotExistError } from "@cloudflare/workers-shared";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -15,7 +16,6 @@ import {
 } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 
 // This is testing the old deployments behaviour, which is now deprecated
 // and replaced by the versions one - see the new tests in versions/deployments/...

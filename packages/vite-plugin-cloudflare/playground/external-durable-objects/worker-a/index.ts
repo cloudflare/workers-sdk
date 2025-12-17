@@ -6,8 +6,8 @@ interface Env {
 
 export default {
 	async fetch(request, env) {
-		let url = new URL(request.url);
-		let name = url.searchParams.get("name");
+		const url = new URL(request.url);
+		const name = url.searchParams.get("name");
 
 		if (!name) {
 			throw new Error(

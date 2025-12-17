@@ -102,7 +102,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				workerName: "my-astro-site",
 				buildCommand: "astro build",
 				framework: {
-					configured: false,
+					isConfigured: () => false,
 					configure: () => ({ wranglerConfig: {} }),
 					name: "astro",
 				},
@@ -116,7 +116,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "configured": false,
 				  "framework": Object {
 				    "configure": [Function],
-				    "configured": false,
+				    "isConfigured": [Function],
 				    "name": "astro",
 				  },
 				  "outputDir": "",

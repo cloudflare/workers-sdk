@@ -422,7 +422,8 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 			};
 		} else if (api_token) {
 			logger.warn(
-				"It looks like you have used Wrangler v1's `config` command to login with an API token.\n" +
+				"It looks like you have used Wrangler v1's `config` command to login with an API token\n" +
+					`from ${config === undefined ? getAuthConfigFilePath() : "in-memory config"}.\n` +
 					"This is no longer supported in the current version of Wrangler.\n" +
 					"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
 			);
@@ -1381,8 +1382,7 @@ async function fetchAuthToken(body: URLSearchParams) {
 			logger.error(
 				"Failed to fetch auth token:",
 				response.status,
-				response.statusText,
-				await response.text()
+				response.statusText
 			);
 		}
 		return response;

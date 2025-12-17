@@ -1,5 +1,7 @@
 import fs from "node:fs";
 import { join } from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -9,7 +11,6 @@ import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("execute", () => {
 	const std = mockConsoleMethods();
@@ -159,6 +160,31 @@ describe("execute", () => {
 			  }
 			}]
 		`);
+	});
+
+	it("should treat SQLite constraint errors as UserErrors", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
+		// First create a table with a foreign key constraint
+		const setupSQL = `
+			CREATE TABLE users (id INTEGER PRIMARY KEY);
+			CREATE TABLE posts (id INTEGER PRIMARY KEY, user_id INTEGER, FOREIGN KEY(user_id) REFERENCES users(id));
+		`;
+		fs.writeFileSync("setup.sql", setupSQL);
+		await runWrangler("d1 execute db --file setup.sql --local");
+
+		// Now try to violate the foreign key constraint
+		const violationSQL = `INSERT INTO posts (id, user_id) VALUES (1, 999);`;
+		fs.writeFileSync("violation.sql", violationSQL);
+
+		await expect(
+			runWrangler("d1 execute db --file violation.sql --local")
+		).rejects.toThrow(UserError);
 	});
 
 	it("should show banner by default", async () => {

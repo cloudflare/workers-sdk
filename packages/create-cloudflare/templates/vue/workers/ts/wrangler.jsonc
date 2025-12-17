@@ -1,6 +1,6 @@
 {
-	"name": "<TBD>",
-	"compatibility_date": "<TBD>",
+	"name": "<WORKER_NAME>",
+	"compatibility_date": "<COMPATIBILITY_DATE>",
 	"main": "server/index.ts",
 	"assets": {
 		"not_found_handling": "single-page-application",

@@ -3,10 +3,11 @@ import {
 	getJsonResponse,
 	getTextResponse,
 	isBuild,
+	isVite8,
 	serverLogs,
 } from "../../__test-utils__";
 
-describe("module resolution", async () => {
+describe.skipIf(isVite8)("module resolution", async () => {
 	afterAll(() => {
 		expect(serverLogs.errors).toEqual([]);
 	});

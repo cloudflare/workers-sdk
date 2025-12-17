@@ -28,12 +28,12 @@ describe("containers info", () => {
 		await runWrangler("containers info --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers info [ID]
+			"wrangler containers info ID
 
 			Get information about a specific container
 
 			POSITIONALS
-			  ID  id of the containers to view  [string]
+			  ID  id of the containers to view  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -82,10 +82,10 @@ describe("containers info", () => {
 		await expect(
 			runWrangler("containers info")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: You must provide an ID. Use 'wrangler containers list\` to view your containers.]`
+			`[Error: Not enough non-option arguments: got 0, need at least 1]`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou must provide an ID. Use 'wrangler containers list\` to view your containers.[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
 			"
 		`);

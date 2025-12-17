@@ -37,7 +37,7 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			workerName: "my-astro-app",
 			framework: {
 				name: "Astro",
-				configured: false,
+				isConfigured: () => false,
 				configure: () => ({ wranglerConfig: {} }),
 			},
 			buildCommand: "astro build",

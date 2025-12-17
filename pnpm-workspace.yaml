@@ -24,7 +24,7 @@ catalog:
   "@vitest/ui": ~3.2.0
   # rimraf@6 requires node 20 or >=22
   rimraf: "^6.0.1"
-  typescript: "^5.8.3"
+  typescript: "~5.8.3"
   undici: "7.14.0"
   # Override undici-types from @types/node so that the Cloudflare SDK typings match our installed
   # version of Undici
@@ -34,12 +34,14 @@ catalog:
   "ws": "8.18.0"
   esbuild: "0.27.0"
   playwright-chromium: "^1.56.1"
-  "@cloudflare/workers-types": "^4.20251202.0"
-  workerd: "1.20251202.0"
+  "@cloudflare/workers-types": "^4.20251217.0"
+  workerd: "1.20251217.0"
   eslint: "^9.39.1"
   smol-toml: "^1.5.2"
 
 catalogs:
   vite-plugin:
-    "vite": "7.0.0"
+    # This the latest version of Vite that can be used when building the plugin in order to remain compatible with earlier versions of Vite
+    # This is because a breaking change to the module runner was introduced in https://github.com/vitejs/vite/pull/20924 and released in v7.2.0
+    "vite": "7.1.12"
     "@types/node": "^22.10.1"

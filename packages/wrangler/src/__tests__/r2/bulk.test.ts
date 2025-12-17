@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 import { MAX_UPLOAD_SIZE_BYTES } from "../../r2/constants";
@@ -8,7 +9,6 @@ import { mockConsoleMethods } from "../helpers/mock-console";
 import { createFetchResult, msw, mswR2handlers } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import { createBigFile } from "./helper";
 
 describe("r2", () => {

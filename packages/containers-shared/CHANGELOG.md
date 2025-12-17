@@ -1,5 +1,11 @@
 # @cloudflare/containers-shared
 
+## 0.5.0
+
+### Minor Changes
+
+- [#10582](https://github.com/cloudflare/workers-sdk/pull/10582) [`991760d`](https://github.com/cloudflare/workers-sdk/commit/991760d13168f613a99a4b6e70a43887934cddfb) Thanks [@flakey5](https://github.com/flakey5)! - Add `containers ssh` command
+
 ## 0.4.0
 
 ### Minor Changes
