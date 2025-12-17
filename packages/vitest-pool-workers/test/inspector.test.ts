@@ -2,10 +2,47 @@ import net from "node:net";
 import dedent from "ts-dedent";
 import { test, waitFor } from "./helpers";
 
-function createBlockingServer(port: number): Promise<net.Server> {
-	return new Promise((resolve, reject) => {
+/**
+ * Try to create a server that blocks a specific port.
+ * Returns the server if successful, or null if the port is already in use.
+ * This is useful for tests where we want to ensure a port is unavailable -
+ * if the port is already in use by another process, that's also fine.
+ */
+function tryBlockPort(port: number): Promise<net.Server | null> {
+	return new Promise((resolve) => {
 		const server = net.createServer();
 		server.listen(port, () => resolve(server));
+		server.on("error", (err: NodeJS.ErrnoException) => {
+			if (err.code === "EADDRINUSE") {
+				// Port is already in use - that's fine for our test purposes
+				resolve(null);
+			} else {
+				// Unexpected error - still resolve null but log it
+				console.error("Unexpected error blocking port:", err);
+				resolve(null);
+			}
+		});
+	});
+}
+
+/**
+ * Create a server on an ephemeral port (OS-assigned).
+ * Returns the server and the port it's listening on.
+ */
+function createEphemeralServer(): Promise<{
+	server: net.Server;
+	port: number;
+}> {
+	return new Promise((resolve, reject) => {
+		const server = net.createServer();
+		server.listen(0, () => {
+			const address = server.address();
+			if (address && typeof address === "object") {
+				resolve({ server, port: address.port });
+			} else {
+				reject(new Error("Failed to get server address"));
+			}
+		});
 		server.on("error", reject);
 	});
 }
@@ -126,7 +163,9 @@ test("uses next available port when default port 9229 is in use", async ({
 	seed,
 	vitestDev,
 }) => {
-	const blockingServer = await createBlockingServer(9229);
+	// Try to block port 9229. If it's already in use (e.g., by another process in CI),
+	// that's fine - the test condition is still satisfied.
+	const blockingServer = await tryBlockPort(9229);
 	try {
 		await seed({
 			"vitest.config.mts": dedent`
@@ -177,7 +216,7 @@ test("uses next available port when default port 9229 is in use", async ({
 			expect(result.stdout).not.toMatch("inspector on port 9229");
 		});
 	} finally {
-		blockingServer.close();
+		blockingServer?.close();
 	}
 });
 
@@ -186,7 +225,10 @@ test("throws error when user-specified inspector port is not available", async (
 	seed,
 	vitestRun,
 }) => {
-	const blockingServer = await createBlockingServer(3456);
+	// Create a server on an ephemeral port to guarantee we have a port that's in use.
+	// This avoids hardcoding a port that might already be in use by another process.
+	const { server: blockingServer, port: blockedPort } =
+		await createEphemeralServer();
 	try {
 		await seed({
 			"vitest.config.mts": dedent`
@@ -194,7 +236,7 @@ test("throws error when user-specified inspector port is not available", async (
 				export default defineWorkersConfig({
 					test: {
 						inspector: {
-							port: 3456,
+							port: ${blockedPort},
 						},
 						poolOptions: {
 							workers: {
@@ -234,7 +276,9 @@ test("throws error when user-specified inspector port is not available", async (
 		});
 
 		expect(result.exitCode).not.toBe(0);
-		expect(result.stderr).toMatch("Inspector port 3456 is not available");
+		expect(result.stderr).toMatch(
+			`Inspector port ${blockedPort} is not available`
+		);
 	} finally {
 		blockingServer.close();
 	}
