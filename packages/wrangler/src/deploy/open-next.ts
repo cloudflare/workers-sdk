@@ -1,3 +1,4 @@
+import { bgYellow } from "@cloudflare/cli/colors";
 import { getOpenNextDeployFromEnv } from "@cloudflare/workers-utils";
 import { runCommand } from "../autoconfig/c3-vendor/command";
 import { getInstalledPackageVersion } from "../autoconfig/frameworks";
@@ -19,6 +20,8 @@ export async function maybeDelegateToOpenNextDeployCommand(
 		getInstalledPackageVersion("@opennextjs/cloudflare", projectRoot);
 
 	const isOpenNextProject = openNextVersion !== undefined;
+
+	console.log(bgYellow(`### isOpenNextProject === ${isOpenNextProject}`));
 
 	if (isOpenNextProject) {
 		const openNextDeploy = getOpenNextDeployFromEnv();

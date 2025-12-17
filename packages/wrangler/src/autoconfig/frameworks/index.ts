@@ -1,3 +1,4 @@
+import { bgYellow } from "@cloudflare/cli/colors";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
 import { findUpSync } from "find-up";
 import type { RawConfig } from "@cloudflare/workers-utils";
@@ -41,15 +42,33 @@ export function getInstalledPackageVersion(
 	packageName: string,
 	projectPath: string
 ): string | undefined {
+	console.log(
+		bgYellow(
+			`### getInstalledPackageVersion(${JSON.stringify(packageName)}, ${JSON.stringify(projectPath)})`
+		)
+	);
+
 	try {
 		const packagePath = require.resolve(packageName, {
 			paths: [projectPath],
 		});
+		console.log(
+			bgYellow(`###   resolved packagePath === ${JSON.stringify(packagePath)}`)
+		);
+
 		const packageJsonPath = findUpSync("package.json", { cwd: packagePath });
+
+		console.log(
+			bgYellow(`###   packageJsonPath === ${JSON.stringify(packageJsonPath)}`)
+		);
+
 		if (packageJsonPath) {
 			const packageJson = parsePackageJSON(
 				readFileSync(packageJsonPath),
 				packageJsonPath
+			);
+			console.log(
+				bgYellow(`###   parsed packageJson === ${JSON.stringify(packageJson)}`)
 			);
 			return packageJson.version;
 		}
