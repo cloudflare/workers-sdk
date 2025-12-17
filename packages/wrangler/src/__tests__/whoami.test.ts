@@ -190,9 +190,7 @@ describe("whoami", () => {
 		expect(std.out).toContain(
 			"The `account_id` in your Wrangler configuration (unknownaccountid) does not match any of your authenticated accounts."
 		);
-		expect(std.out).toContain(
-			"This may be causing the authentication error."
-		);
+		expect(std.out).toContain("This may be causing the authentication error.");
 	});
 
 	it("should not display a warning when account_id matches an authenticated account", async () => {

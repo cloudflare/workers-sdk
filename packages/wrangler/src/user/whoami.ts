@@ -7,10 +7,7 @@ import { fetchMembershipRoles } from "./membership";
 import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
 import type { ApiCredentials, Scope } from ".";
 
-export async function whoami(
-	accountFilter?: string,
-	configAccountId?: string
-) {
+export async function whoami(accountFilter?: string, configAccountId?: string) {
 	logger.log("Getting User settings...");
 	const user = await getUserInfo();
 	if (!user) {
