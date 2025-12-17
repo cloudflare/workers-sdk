@@ -13,6 +13,13 @@ import {
 import { z } from "miniflare:zod";
 import { dumpSql } from "./dumpSql";
 
+// D1 Platform Limits
+// See: https://developers.cloudflare.com/d1/platform/limits/
+// Free tier limit is 50 queries per batch (kept for reference)
+const D1_MAX_QUERIES_PER_BATCH_PAID = 1000;
+const D1_MAX_STATEMENT_SIZE_BYTES = 100_000; // 100 KB
+const D1_MAX_PARAMS_PER_STATEMENT = 100;
+
 const D1ValueSchema = z.union([
 	z.number(),
 	z.string(),
@@ -128,10 +135,16 @@ function sqlStmts(db: TypedSqlStorage) {
 
 export class D1DatabaseObject extends MiniflareDurableObject {
 	readonly #stmts: ReturnType<typeof sqlStmts>;
+	readonly #queryLimit: number;
 
 	constructor(state: DurableObjectState, env: MiniflareDurableObjectEnv) {
 		super(state, env);
 		this.#stmts = sqlStmts(this.db);
+		// Read query limit from environment, default to paid tier limit (1000)
+		this.#queryLimit =
+			typeof env.D1_QUERY_LIMIT === "string"
+				? parseInt(env.D1_QUERY_LIMIT, 10)
+				: D1_MAX_QUERIES_PER_BATCH_PAID;
 	}
 
 	#changes() {
@@ -140,7 +153,32 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		return changes;
 	}
 
+	#validateQueryLimits(query: D1Query) {
+		// Check SQL statement length (100 KB limit)
+		const statementBytes = new TextEncoder().encode(query.sql).length;
+		if (statementBytes > D1_MAX_STATEMENT_SIZE_BYTES) {
+			throw new D1Error(
+				new Error(
+					`SQL statement exceeds maximum size of ${D1_MAX_STATEMENT_SIZE_BYTES} bytes (${statementBytes} bytes)`
+				)
+			);
+		}
+
+		// Check bound parameters limit (100 params per query)
+		const paramCount = query.params?.length ?? 0;
+		if (paramCount > D1_MAX_PARAMS_PER_STATEMENT) {
+			throw new D1Error(
+				new Error(
+					`Query has ${paramCount} bound parameters, exceeding the limit of ${D1_MAX_PARAMS_PER_STATEMENT}`
+				)
+			);
+		}
+	}
+
 	#query = (format: D1ResultsFormat, query: D1Query): D1SuccessResponse => {
+		// Validate query limits before execution
+		this.#validateQueryLimits(query);
+
 		const beforeTime = performance.now();
 
 		const beforeSize = this.state.storage.sql.databaseSize;
@@ -193,6 +231,15 @@ export class D1DatabaseObject extends MiniflareDurableObject {
 		if (queries.length === 0) {
 			const error = new Error("No SQL statements detected.");
 			throw new D1Error(error);
+		}
+
+		// Check batch size limit
+		if (queries.length > this.#queryLimit) {
+			throw new D1Error(
+				new Error(
+					`Your query batch has ${queries.length} queries, exceeding the limit of ${this.#queryLimit} queries per batch`
+				)
+			);
 		}
 
 		try {
