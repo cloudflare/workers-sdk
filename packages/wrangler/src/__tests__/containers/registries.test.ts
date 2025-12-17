@@ -72,7 +72,9 @@ describe("containers registries configure", () => {
 			runWrangler(
 				`containers registries configure ${domain} --public-credential=test-id --disableSecretsStore`
 			)
-		).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Secrets Store can only be disabled in FedRAMP compliance regions.]`);
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Secrets Store can only be disabled in FedRAMP compliance regions.]`
+		);
 
 		// Set compliance region to FedRAMP High
 		vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
@@ -80,19 +82,25 @@ describe("containers registries configure", () => {
 			runWrangler(
 				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-store-id=storeid`
 			)
-		).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Secrets Store is not supported in FedRAMP compliance regions. You must set --disableSecretsStore.]`);
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Secrets Store is not supported in FedRAMP compliance regions. You must set --disableSecretsStore.]`
+		);
 
 		await expect(
 			runWrangler(
 				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-store-id=storeid --disableSecretsStore`
 			)
-		).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Arguments secret-store-id and disableSecretsStore are mutually exclusive]`);
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Arguments secret-store-id and disableSecretsStore are mutually exclusive]`
+		);
 
 		await expect(
 			runWrangler(
 				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-name=secret-name --disableSecretsStore`
 			)
-		).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Arguments secret-name and disableSecretsStore are mutually exclusive]`);
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Arguments secret-name and disableSecretsStore are mutually exclusive]`
+		);
 	});
 
 	it("should no-op on cloudflare registry (default)", async () => {

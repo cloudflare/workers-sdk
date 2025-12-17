@@ -10,7 +10,11 @@ import {
 	getAndValidateRegistryType,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
-import { APIError, UserError, getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
+import {
+	APIError,
+	getCloudflareComplianceRegion,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { handleFailure, promiseSpinner } from "../cloudchamber/common";
 import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -97,7 +101,8 @@ function registryConfigureYargs(args: CommonYargsArgv) {
 			})
 			.option("disableSecretsStore", {
 				type: "boolean",
-				description: "Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
+				description:
+					"Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
 				demandOption: false,
 				conflicts: ["secret-store-id", "secret-name"],
 			})
@@ -126,11 +131,15 @@ async function registryConfigureCommand(
 		getCloudflareComplianceRegion(config) === "fedramp_high";
 	if (isFedRAMPHigh) {
 		if (!configureArgs.disableSecretsStore) {
-			throw new UserError("Secrets Store is not supported in FedRAMP compliance regions. You must set --disableSecretsStore.");
+			throw new UserError(
+				"Secrets Store is not supported in FedRAMP compliance regions. You must set --disableSecretsStore."
+			);
 		}
 	} else {
 		if (configureArgs.disableSecretsStore) {
-			throw new UserError("Secrets Store can only be disabled in FedRAMP compliance regions.");
+			throw new UserError(
+				"Secrets Store can only be disabled in FedRAMP compliance regions."
+			);
 		}
 	}
 
