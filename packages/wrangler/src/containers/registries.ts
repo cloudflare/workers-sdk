@@ -10,10 +10,9 @@ import {
 	getAndValidateRegistryType,
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
-import { APIError, UserError } from "@cloudflare/workers-utils";
+import { APIError, UserError, getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
 import { handleFailure, promiseSpinner } from "../cloudchamber/common";
 import { confirm, prompt } from "../dialogs";
-import { getCloudflareComplianceRegion } from "../environment-variables/misc-variables";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { createSecret, createStore, listStores } from "../secrets-store/client";
@@ -85,6 +84,7 @@ function registryConfigureYargs(args: CommonYargsArgv) {
 				description:
 					"The ID of the secret store to use to store the registry credentials.",
 				demandOption: false,
+				conflicts: ["disableSecretsStore"],
 			})
 			// TODO: allow users to provide an existing secret name
 			// but then we can't get secrets by name, only id, so we would need to list all secrets and find the right one
@@ -93,12 +93,13 @@ function registryConfigureYargs(args: CommonYargsArgv) {
 				description:
 					"The name for the secret the private registry credentials should be stored under.",
 				demandOption: false,
+				conflicts: ["disableSecretsStore"],
 			})
-			.option("useSecretStore", {
+			.option("disableSecretsStore", {
 				type: "boolean",
-				description:
-					"Whether to store the registry credentials in Secret Store. This cannot be set to true in FedRAMP High compliance regions.",
-				default: true,
+				description: "Whether to disable secrets store integration. This should be set iff the compliance region is FedRAMP High.",
+				demandOption: false,
+				conflicts: ["secret-store-id", "secret-name"],
 			})
 	);
 }
@@ -124,20 +125,12 @@ async function registryConfigureCommand(
 	const isFedRAMPHigh =
 		getCloudflareComplianceRegion(config) === "fedramp_high";
 	if (isFedRAMPHigh) {
-		const error: string[] = [];
-		if (configureArgs.useSecretStore) {
-			error.push("You must set --useSecretStore=false.");
+		if (!configureArgs.disableSecretsStore) {
+			throw new UserError("Secrets Store is not supported in FedRAMP compliance regions. You must set --disableSecretsStore.");
 		}
-		if (configureArgs.secretStoreId || configureArgs.secretName) {
-			error.push("Please omit --secret-name and/or --secret-store-id flags.");
-		}
-		if (error.length > 0) {
-			throw new UserError(
-				[
-					"Secret Store is not supported in FedRAMP compliance regions.",
-					...error,
-				].join("\n")
-			);
+	} else {
+		if (configureArgs.disableSecretsStore) {
+			throw new UserError("Secrets Store can only be disabled in FedRAMP compliance regions.");
 		}
 	}
 
