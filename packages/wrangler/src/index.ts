@@ -1028,6 +1028,7 @@ export async function main(argv: string[]): Promise<void> {
 	let command: string | undefined;
 	let metricsArgs: Record<string, unknown> | undefined;
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
+	let configAccountId: string | undefined;
 	// Register Yargs middleware to record command as Sentry breadcrumb
 	let recordedCommand = false;
 	const wranglerWithMiddleware = wrangler.middleware((args) => {
@@ -1045,6 +1046,7 @@ export async function main(argv: string[]): Promise<void> {
 
 		try {
 			const { rawConfig, configPath } = experimental_readRawConfig(args);
+			configAccountId = rawConfig.account_id;
 			dispatcher = getMetricsDispatcher({
 				sendMetrics: rawConfig.send_metrics,
 				hasAssets: !!rawConfig.assets?.directory,
@@ -1112,13 +1114,6 @@ export async function main(argv: string[]): Promise<void> {
 				logger.log(chalk.yellow(message));
 			}
 			const accountTag = (e as APIError)?.accountTag;
-			let configAccountId: string | undefined;
-			try {
-				const { rawConfig } = experimental_readRawConfig(args);
-				configAccountId = rawConfig.account_id;
-			} catch {
-				// Ignore errors reading config
-			}
 			await whoami(accountTag, configAccountId);
 		} else if (e instanceof ParseError) {
 			e.notes.push({
