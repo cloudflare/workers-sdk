@@ -1,5 +1,15 @@
 # create-cloudflare
 
+## 2.60.0
+
+### Minor Changes
+
+- [#11301](https://github.com/cloudflare/workers-sdk/pull/11301) [`6c590a0`](https://github.com/cloudflare/workers-sdk/commit/6c590a0c3392bb2b32ff5b7388114066d39e03da) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Next.js (via OpenNext) in `--experimental` mode
+
+### Patch Changes
+
+- [#11597](https://github.com/cloudflare/workers-sdk/pull/11597) [`3122607`](https://github.com/cloudflare/workers-sdk/commit/312260751a27f6be75c67a1b345edf1e431438ee) Thanks [@vicb](https://github.com/vicb)! - make sure comments are always added to the end of `wrangler.jsonc`
+
 ## 2.59.0
 
 ### Minor Changes
