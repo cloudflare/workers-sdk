@@ -188,6 +188,13 @@ describe("execute", () => {
 	});
 
 	it("should treat SQLite constraint errors as UserErrors", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [
+				{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
+			],
+		});
+
 		// First create a table with a foreign key constraint
 		const setupSQL = `
 			CREATE TABLE users (id INTEGER PRIMARY KEY);
