@@ -1,6 +1,6 @@
 import net from "node:net";
 import dedent from "ts-dedent";
-import { test, waitFor } from "./helpers";
+import { test } from "./helpers";
 
 /**
  * Try to create a server that blocks a specific port.
@@ -50,7 +50,7 @@ function createEphemeralServer(): Promise<{
 test("opens an inspector with the `--inspect` argument", async ({
 	expect,
 	seed,
-	vitestDev,
+	vitestRun,
 }) => {
 	await seed({
 		"vitest.config.mts": dedent`
@@ -90,29 +90,25 @@ test("opens an inspector with the `--inspect` argument", async ({
 			});
 		`,
 	});
-	const result = vitestDev({
+	const result = await vitestRun({
 		flags: ["--inspect", "--no-file-parallelism"],
 	});
 
-	await waitFor(() => {
-		expect(result.stdout).toMatch("inspector on port 9229");
-	});
+	expect(result.stdout).toMatch("inspector on port 9229");
 });
 
-test("customize inspector config", async ({ expect, seed, vitestDev }) => {
+test("customize inspector config", async ({ expect, seed, vitestRun }) => {
 	await seed({
 		"vitest.config.mts": dedent`
 			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 			export default defineWorkersConfig({
 				test: {
 					inspector: {
-						// Test if this overrides the inspector port
 						port: 3456,
 					},
 					poolOptions: {
 						workers: {
 							main: "./index.ts",
-							// Test if we warn and override the singleWorker option when the inspector is open
 							singleWorker: false,
 							miniflare: {
 								compatibilityDate: "2024-01-01",
@@ -143,28 +139,23 @@ test("customize inspector config", async ({ expect, seed, vitestDev }) => {
 			});
 		`,
 	});
-	const result = vitestDev({
-		// Test if we warn and ignore the `waitForDebugger` option
+	const result = await vitestRun({
 		flags: ["--inspect-brk", "--no-file-parallelism"],
 	});
 
-	await waitFor(() => {
-		expect(result.stdout).toMatch(
-			"Tests run in singleWorker mode when the inspector is open."
-		);
-		expect(result.stdout).toMatch(`The "--inspect-brk" flag is not supported.`);
-		expect(result.stdout).toMatch("Starting single runtime");
-		expect(result.stdout).toMatch("inspector on port 3456");
-	});
+	expect(result.stdout).toMatch(
+		"Tests run in singleWorker mode when the inspector is open."
+	);
+	expect(result.stdout).toMatch(`The "--inspect-brk" flag is not supported.`);
+	expect(result.stdout).toMatch("Starting single runtime");
+	expect(result.stdout).toMatch("inspector on port 3456");
 });
 
 test("uses next available port when default port 9229 is in use", async ({
 	expect,
 	seed,
-	vitestDev,
+	vitestRun,
 }) => {
-	// Try to block port 9229. If it's already in use (e.g., by another process in CI),
-	// that's fine - the test condition is still satisfied.
 	const blockingServer = await tryBlockPort(9229);
 	try {
 		await seed({
@@ -205,16 +196,14 @@ test("uses next available port when default port 9229 is in use", async ({
 				});
 			`,
 		});
-		const result = vitestDev({
+		const result = await vitestRun({
 			flags: ["--inspect", "--no-file-parallelism"],
 		});
 
-		await waitFor(() => {
-			expect(result.stdout).toMatch(
-				"Default inspector port 9229 not available, using"
-			);
-			expect(result.stdout).not.toMatch("inspector on port 9229");
-		});
+		expect(result.stdout).toMatch(
+			"Default inspector port 9229 not available, using"
+		);
+		expect(result.stdout).not.toMatch("inspector on port 9229");
 	} finally {
 		blockingServer?.close();
 	}
