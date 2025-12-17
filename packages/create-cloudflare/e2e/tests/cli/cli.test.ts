@@ -723,6 +723,26 @@ describe("Create Cloudflare CLI", () => {
 				);
 			}),
 		);
+
+		test("error when using invalid --variant for React framework", async ({
+			logStream,
+		}) => {
+			const { errors } = await runC3(
+				[
+					"my-app",
+					"--framework=react",
+					"--platform=workers",
+					"--variant=invalid-variant",
+					"--no-deploy",
+					"--git=false",
+				],
+				[],
+				logStream,
+			);
+			expect(errors).toContain(
+				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc',
+			);
+		});
 	});
 });
 
