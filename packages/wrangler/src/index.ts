@@ -1112,7 +1112,14 @@ export async function main(argv: string[]): Promise<void> {
 				logger.log(chalk.yellow(message));
 			}
 			const accountTag = (e as APIError)?.accountTag;
-			await whoami(accountTag);
+			let configAccountId: string | undefined;
+			try {
+				const { rawConfig } = experimental_readRawConfig(args);
+				configAccountId = rawConfig.account_id;
+			} catch {
+				// Ignore errors reading config
+			}
+			await whoami(accountTag, configAccountId);
 		} else if (e instanceof ParseError) {
 			e.notes.push({
 				text: "\nIf you think this is a bug, please open an issue at: https://github.com/cloudflare/workers-sdk/issues/new/choose",

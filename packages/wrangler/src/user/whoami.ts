@@ -7,7 +7,10 @@ import { fetchMembershipRoles } from "./membership";
 import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
 import type { ApiCredentials, Scope } from ".";
 
-export async function whoami(accountFilter?: string) {
+export async function whoami(
+	accountFilter?: string,
+	configAccountId?: string
+) {
 	logger.log("Getting User settings...");
 	const user = await getUserInfo();
 	if (!user) {
@@ -25,6 +28,7 @@ export async function whoami(accountFilter?: string) {
 	}
 	await printUserEmail(user);
 	await printAccountList(user);
+	printAccountIdMismatchWarning(user, accountFilter, configAccountId);
 	await printTokenPermissions(user);
 	await printMembershipInfo(user, accountFilter);
 }
@@ -54,6 +58,38 @@ function printAccountList(user: UserInfo) {
 			"Account ID": account.id,
 		}))
 	);
+}
+
+function printAccountIdMismatchWarning(
+	user: UserInfo,
+	accountFilter?: string,
+	configAccountId?: string
+) {
+	if (!accountFilter || !configAccountId) {
+		return;
+	}
+
+	if (accountFilter !== configAccountId) {
+		return;
+	}
+
+	const accountInUserAccounts = user.accounts.some(
+		(account) => account.id === accountFilter
+	);
+
+	if (!accountInUserAccounts) {
+		logger.log(
+			formatMessage({
+				text: `The \`account_id\` in your Wrangler configuration (${chalk.blue(configAccountId)}) does not match any of your authenticated accounts.`,
+				kind: "warning",
+				notes: [
+					{
+						text: "This may be causing the authentication error. Check your Wrangler configuration file and ensure the `account_id` is correct for your account.",
+					},
+				],
+			})
+		);
+	}
 }
 
 function printTokenPermissions(user: UserInfo) {
