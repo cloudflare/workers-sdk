@@ -486,7 +486,6 @@ async function buildProjectWorkerOptions(
 		)
 	) {
 		try {
-			// Use resolved path to ensure correct resolution regardless of cwd
 			const resolvedMain = maybeGetResolvedMainPath(project);
 			const guessedExports = await guessWorkerExports(
 				resolvedMain,
