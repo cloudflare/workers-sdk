@@ -33,15 +33,19 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 	const substitutions: Record<string, string> = {
 		"<WORKER_NAME>": ctx.project.name,
 		"<COMPATIBILITY_DATE>": await getWorkerdCompatibilityDate(),
-		"<WORKFLOW_NAME>": `workflow-${ctx.project.name}`,
 	};
 
 	if (wranglerJsonOrJsoncExists(ctx)) {
-		let wranglerJson = readWranglerJsonOrJsonc(ctx, (_key, value) =>
-			typeof value === "string" && value in substitutions
-				? substitutions[value]
-				: value,
-		);
+		let wranglerJson = readWranglerJsonOrJsonc(ctx, (_key, value) => {
+			if (typeof value !== "string") {
+				return value;
+			}
+			let result = value;
+			for (const [placeholder, substitution] of Object.entries(substitutions)) {
+				result = result.replaceAll(placeholder, substitution);
+			}
+			return result;
+		});
 
 		// Put the schema at the top of the file
 		wranglerJson = insertJSONProperty(

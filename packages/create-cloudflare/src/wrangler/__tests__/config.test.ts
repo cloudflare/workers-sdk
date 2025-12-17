@@ -431,7 +431,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("placeholder replacement <WORKFLOW_NAME> (json)", async () => {
+	test("placeholder replacement with Workflows (json)", async () => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
 			(f as string).endsWith(".json"),
 		);
@@ -441,7 +441,7 @@ describe("update wrangler config", () => {
 			compatibility_date: "<COMPATIBILITY_DATE>",
 			workflows: [
 				{
-					name: "<WORKFLOW_NAME>",
+					name: "workflow-<WORKER_NAME>",
 				},
 			],
 		});
