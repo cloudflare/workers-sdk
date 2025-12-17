@@ -236,6 +236,7 @@ export class ProxyServer implements DurableObject {
 		let status = 200;
 		let result: unknown;
 		let unbufferedRest: ReadableStream | undefined;
+		let rpcAwaited = false;
 		if (opHeader === ProxyOps.GET) {
 			// If no key header is specified, just return the target
 			result = keyHeader === null ? target : target[keyHeader];
@@ -317,6 +318,8 @@ export class ProxyServer implements DurableObject {
 				} else if (["RpcProperty", "RpcStub"].includes(func.constructor.name)) {
 					// let's resolve RpcPromise instances right away (to support serialization)
 					result = await func(...args);
+					// Mark that we've awaited this RPC call, so we set the Promise header below
+					rpcAwaited = true;
 				} else {
 					result = func.apply(target, args);
 				}
@@ -334,7 +337,7 @@ export class ProxyServer implements DurableObject {
 		}
 
 		const headers = new Headers();
-		if (allowAsync && result instanceof Promise) {
+		if (allowAsync && (result instanceof Promise || rpcAwaited)) {
 			// Note we only resolve `Promise`s if we're allowing async operations.
 			// Otherwise, we'll treat the `Promise` as a native target. This allows
 			// us to use regular HTTP status/headers to indicate whether the `Promise`

@@ -1,5 +1,13 @@
 # @cloudflare/workers-utils
 
+## 0.5.0
+
+### Minor Changes
+
+- [#11661](https://github.com/cloudflare/workers-sdk/pull/11661) [`4b3fba2`](https://github.com/cloudflare/workers-sdk/commit/4b3fba29795797c50bee2b18e21a299727e295f7) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `getOpenNextDeployFromEnv()` environment variable helper which will be used to signal the current process is being run by the open-next deploy command.
+
+- [#11621](https://github.com/cloudflare/workers-sdk/pull/11621) [`90c0676`](https://github.com/cloudflare/workers-sdk/commit/90c067631419d2590dc4338342e622dbc782f201) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Expose `writeWranglerConfig`, `writeDeployRedirectConfig`, `writeRedirectedWranglerConfig` and `readWranglerConfig` from `/test-helpers`
+
 ## 0.4.0
 
 ### Minor Changes
