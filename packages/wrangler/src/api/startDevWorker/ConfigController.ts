@@ -161,6 +161,7 @@ async function resolveDevConfig(
 				resolveDockerHost(input.dev?.dockerPath ?? getDockerPath())
 			: undefined,
 		containerBuildId: input.dev?.containerBuildId,
+		generateTypes: input.dev?.generateTypes ?? config.dev.generate_types,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 

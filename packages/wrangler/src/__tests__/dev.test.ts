@@ -2236,7 +2236,7 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev");
-			expect(config.input.dev?.generateTypes).toBe(false);
+			expect(config.dev.generateTypes).toBe(false);
 		});
 
 		it("should set `generate_types` to `true` when `--types` flag is passed", async () => {
@@ -2275,7 +2275,7 @@ describe.sequential("wrangler dev", () => {
 			});
 			fs.writeFileSync("index.js", `export default {};`);
 			const config = await runWranglerUntilConfig("dev");
-			expect(config.dev.generateTypes).toBe(undefined);
+			expect(config.dev.generateTypes).toBe(true);
 		});
 
 		it("should allow `--types` flag to override `dev.generate_types` from config", async () => {

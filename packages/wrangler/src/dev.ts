@@ -264,7 +264,6 @@ export const dev = createCommand({
 			hidden: true,
 		},
 		types: {
-			default: false,
 			describe: "Generate types from your Worker configuration",
 			type: "boolean",
 		},
