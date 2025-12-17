@@ -1,7 +1,15 @@
-import { CommandLineArgsError } from "@cloudflare/workers-utils";
-import { createCommand } from "../core/create-command";
+import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
+import { createCommand, createNamespace } from "../core/create-command";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { listScopes, login, logout, validateScopeKeys } from "./user";
+import {
+	getAuthFromEnv,
+	getAuthToken,
+	listScopes,
+	login,
+	logout,
+	validateScopeKeys,
+} from "./user";
 import { whoami } from "./whoami";
 
 export const loginCommand = createCommand({
@@ -117,6 +125,50 @@ export const whoamiCommand = createCommand({
 	async handler(args, { config }) {
 		await whoami(config, args.account);
 		metrics.sendMetricsEvent("view accounts", {
+			sendMetrics: config.send_metrics,
+		});
+	},
+});
+
+export const authNamespace = createNamespace({
+	metadata: {
+		description: "🔐 Manage authentication",
+		owner: "Workers: Authoring and Testing",
+		status: "stable",
+	},
+});
+
+export const authTokenCommand = createCommand({
+	metadata: {
+		description:
+			"🔑 Retrieve the current OAuth token, refreshing it if necessary",
+		owner: "Workers: Authoring and Testing",
+		status: "stable",
+	},
+	behaviour: {
+		printConfigWarnings: false,
+	},
+	async handler(_, { config }) {
+		// Check if using global auth key/email (not supported for token retrieval)
+		const authFromEnv = getAuthFromEnv();
+		if (authFromEnv && !("apiToken" in authFromEnv)) {
+			throw new UserError(
+				"Cannot retrieve a single token when using CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL. " +
+					"Please use CLOUDFLARE_API_TOKEN instead."
+			);
+		}
+
+		const token = await getAuthToken();
+		if (!token) {
+			throw new UserError(
+				"Not logged in. Please run `wrangler login` to authenticate."
+			);
+		}
+
+		// Output just the token to stdout for easy scripting
+		logger.log(token);
+
+		metrics.sendMetricsEvent("retrieve auth token", {
 			sendMetrics: config.send_metrics,
 		});
 	},

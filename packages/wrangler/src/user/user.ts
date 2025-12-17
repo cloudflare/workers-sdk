@@ -965,6 +965,37 @@ export async function loginOrRefreshIfRequired(
 	}
 }
 
+/**
+ * Get the current auth token, refreshing it if necessary.
+ * Returns the token string if available, or undefined if not logged in.
+ */
+export async function getAuthToken(): Promise<string | undefined> {
+	// Check for API token from environment first
+	const authFromEnv = getAuthFromEnv();
+	if (authFromEnv) {
+		if ("apiToken" in authFromEnv) {
+			return authFromEnv.apiToken;
+		}
+		// For global auth key/email, we don't have a single token to return
+		return undefined;
+	}
+
+	// Check if we have an OAuth token
+	if (!LocalState.accessToken) {
+		return undefined;
+	}
+
+	// If the token is expired, try to refresh it
+	if (isAccessTokenExpired()) {
+		const didRefresh = await refreshToken();
+		if (!didRefresh) {
+			return undefined;
+		}
+	}
+
+	return LocalState.accessToken?.value;
+}
+
 export async function getOauthToken(options: {
 	browser: boolean;
 	scopes: string[];
