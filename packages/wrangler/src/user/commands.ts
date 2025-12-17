@@ -1,6 +1,5 @@
 import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
-import { logger } from "../logger";
 import * as metrics from "../metrics";
 import {
 	getAuthFromEnv,
@@ -165,8 +164,9 @@ export const authTokenCommand = createCommand({
 			);
 		}
 
-		// Output just the token to stdout for easy scripting
-		logger.log(token);
+		// Output just the token to stdout for easy scripting (no preamble)
+		// eslint-disable-next-line no-console
+		console.log(token);
 
 		metrics.sendMetricsEvent("retrieve auth token", {
 			sendMetrics: config.send_metrics,
