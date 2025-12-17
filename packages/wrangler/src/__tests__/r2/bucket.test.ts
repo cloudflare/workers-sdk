@@ -978,7 +978,6 @@ describe("r2", () => {
 				`);
 			});
 
-
 			describe("enable", () => {
 				it("should enable R2 catalog for the given bucket", async () => {
 					msw.use(
