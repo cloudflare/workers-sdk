@@ -2230,7 +2230,7 @@ describe.sequential("wrangler dev", () => {
 	});
 
 	describe("generate types", () => {
-		it("should default `generate_types` to false", async () => {
+		it("should default `generate_types` to `false`", async () => {
 			writeWranglerConfig({
 				main: "index.js",
 			});
@@ -2345,6 +2345,7 @@ describe.sequential("wrangler dev", () => {
 
 				await runWranglerUntilConfig("dev");
 
+				expect(generateRuntimeTypesSpy).not.toHaveBeenCalled();
 				expect(std.out).toContain(
 					"Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
 				);
@@ -2370,6 +2371,7 @@ describe.sequential("wrangler dev", () => {
 
 				await runWranglerUntilConfig("dev");
 
+				expect(generateRuntimeTypesSpy).not.toHaveBeenCalled();
 				expect(std.out).toContain(
 					"Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
 				);
@@ -2391,6 +2393,7 @@ describe.sequential("wrangler dev", () => {
 
 				await runWranglerUntilConfig("dev --types");
 
+				expect(generateRuntimeTypesSpy).toHaveBeenCalled();
 				expect(std.out).toContain(
 					"Your types looked out of date. We've re-run `wrangler types` for you and updated ./worker-configuration.d.ts"
 				);
@@ -2417,6 +2420,7 @@ describe.sequential("wrangler dev", () => {
 
 				await runWranglerUntilConfig("dev");
 
+				expect(generateRuntimeTypesSpy).toHaveBeenCalled();
 				expect(std.out).toContain(
 					"Your types looked out of date. We've re-run `wrangler types` for you and updated ./worker-configuration.d.ts"
 				);
@@ -2440,6 +2444,7 @@ describe.sequential("wrangler dev", () => {
 
 				await runWranglerUntilConfig("dev");
 
+				expect(generateRuntimeTypesSpy).not.toHaveBeenCalled();
 				expect(std.out).not.toContain("types might be out of date");
 				expect(std.out).not.toContain("types looked out of date");
 			});
@@ -2458,6 +2463,7 @@ describe.sequential("wrangler dev", () => {
 
 				await runWranglerUntilConfig("dev --types");
 
+				expect(generateRuntimeTypesSpy).not.toHaveBeenCalled();
 				expect(std.out).not.toContain("types might be out of date");
 				expect(std.out).not.toContain("types looked out of date");
 			});
