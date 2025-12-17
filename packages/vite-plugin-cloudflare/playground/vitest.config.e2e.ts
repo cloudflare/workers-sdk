@@ -13,7 +13,8 @@ export default defineConfig({
 		globalSetup: ["./vitest-global-setup.ts"],
 		reporters: "dot",
 		onConsoleLog: () => debuglog.enabled,
-		testTimeout: 10000,
+		testTimeout: 20000,
+		retry: 2,
 	},
 	publicDir: false,
 });

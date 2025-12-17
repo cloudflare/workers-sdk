@@ -68,7 +68,7 @@ jobs:
         # We use `--only` to prevent TurboRepo from rebuilding dependencies
         # This ensures the Vite plugin is not rebuilt using a different Vite version
         run: |
-          pnpm turbo test:ci:serve --filter @vite-plugin-cloudflare/playground --only
+          pnpm turbo test:ci:serve --filter @vite-plugin-cloudflare/playground --only -- --reporter=verbose
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
@@ -80,7 +80,7 @@ jobs:
         # We use `--only` to prevent TurboRepo from rebuilding dependencies
         # This ensures the Vite plugin is not rebuilt using a different Vite version
         run: |
-          pnpm turbo test:ci:build --filter @vite-plugin-cloudflare/playground --only
+          pnpm turbo test:ci:build --filter @vite-plugin-cloudflare/playground --only -- --reporter=verbose
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
