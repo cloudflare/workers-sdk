@@ -436,7 +436,7 @@ describe("update wrangler config", () => {
 			f.endsWith(".json"),
 		);
 		const json = JSON.stringify({
-			name: "<TBD>",
+			name: "<WORKER_NAME>",
 			main: "src/index.ts",
 			compatibility_date: "<TBD>",
 			workflows: [
