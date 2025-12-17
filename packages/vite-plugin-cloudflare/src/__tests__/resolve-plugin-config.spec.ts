@@ -208,18 +208,18 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 			configPath: entryConfigPath,
 			auxiliaryWorkers: [
 				{
-					config: (userConfig, entryConfig) => {
+					config: (userConfig, { entryWorkerConfig }) => {
 						// Verify we receive both parameters
 						expect(userConfig).toBeDefined();
-						expect(entryConfig).toBeDefined();
-						expect(entryConfig.name).toBe("entry-worker");
-						expect(entryConfig.compatibility_date).toBe("2024-01-01");
+						expect(entryWorkerConfig).toBeDefined();
+						expect(entryWorkerConfig.name).toBe("entry-worker");
+						expect(entryWorkerConfig.compatibility_date).toBe("2024-01-01");
 
 						return {
 							name: "aux-worker",
 							main: "./src/aux.ts",
 							// Use entry worker's compatibility_date
-							compatibility_date: entryConfig.compatibility_date,
+							compatibility_date: entryWorkerConfig.compatibility_date,
 						};
 					},
 				},
@@ -259,12 +259,12 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 			configPath,
 			auxiliaryWorkers: [
 				{
-					config: (_, entryConfig) => ({
+					config: (_, { entryWorkerConfig }) => ({
 						name: "aux-worker",
 						main: "./src/aux.ts",
 						// Inherit all compatibility settings from entry worker
-						compatibility_date: entryConfig.compatibility_date,
-						compatibility_flags: entryConfig.compatibility_flags,
+						compatibility_date: entryWorkerConfig.compatibility_date,
+						compatibility_flags: entryWorkerConfig.compatibility_flags,
 					}),
 				},
 			],
