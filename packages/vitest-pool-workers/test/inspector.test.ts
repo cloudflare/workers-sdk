@@ -104,11 +104,13 @@ test("customize inspector config", async ({ expect, seed, vitestRun }) => {
 			export default defineWorkersConfig({
 				test: {
 					inspector: {
+						// Test if this overrides the inspector port
 						port: 3456,
 					},
 					poolOptions: {
 						workers: {
 							main: "./index.ts",
+							// Test if we warn and override the singleWorker option when the inspector is open
 							singleWorker: false,
 							miniflare: {
 								compatibilityDate: "2024-01-01",
