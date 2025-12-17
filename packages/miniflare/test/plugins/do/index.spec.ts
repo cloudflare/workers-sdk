@@ -603,3 +603,88 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 		});
 	});
 });
+
+const BLOCKING_DO_SCRIPT = `
+import { DurableObject } from 'cloudflare:workers';
+
+export class BlockingDO extends DurableObject {
+	locks = new Map();
+
+	blockedOp(n, lock) {
+		return new Promise((resolve) => {
+			this.locks.set(lock, () => resolve(lock));
+		}).then(() =>  n + 2);
+	}
+
+	release(lock) {
+		const releaseFn = this.locks.get(lock);
+		if (releaseFn) {
+			releaseFn();
+			this.locks.delete(lock);
+		}
+	}
+}
+
+export default {
+	fetch() { return new Response("OK"); }
+}
+`;
+
+test("Durable Object RPC calls do not block Node.js event loop", async (t) => {
+	const mf = new Miniflare({
+		durableObjects: { BLOCKING_DO: "BlockingDO" },
+		modules: true,
+		script: BLOCKING_DO_SCRIPT,
+	});
+
+	t.teardown(() => mf.dispose());
+
+	const namespace = await mf.getDurableObjectNamespace("BLOCKING_DO");
+	const stubId = namespace.idFromName("test");
+	const stub = namespace.get(stubId) as unknown as {
+		blockedOp: (n: number, lock: string) => Promise<number>;
+		release: (lock: string) => Promise<void>;
+	};
+
+	const blockedPromise = stub.blockedOp(5, "lock-1");
+
+	const raced = await Promise.race([
+		blockedPromise.then((result) => ({ type: "resolved", result })),
+		setTimeout(100).then(() => ({ type: "timeout" })),
+	]);
+
+	// If the event loop wasn't blocked, the timeout should win
+	t.deepEqual(raced, { type: "timeout" });
+});
+
+test("Durable Object RPC calls complete when unblocked", async (t) => {
+	const mf = new Miniflare({
+		durableObjects: { BLOCKING_DO: "BlockingDO" },
+		modules: true,
+		script: BLOCKING_DO_SCRIPT,
+	});
+
+	t.teardown(() => mf.dispose());
+
+	const namespace = await mf.getDurableObjectNamespace("BLOCKING_DO");
+	const stubId = namespace.idFromName("test");
+	const stub = namespace.get(stubId) as unknown as {
+		blockedOp: (n: number, lock: string) => Promise<number>;
+		release: (lock: string) => Promise<void>;
+	};
+
+	const blockedPromise = stub.blockedOp(10, "lock-2");
+
+	// Race the blocked operation against a timeout, releasing the lock as part of the race.
+	// The release should cause `blockedPromise` to resolve before the timeout.
+	// Use a generous timeout (5s) to avoid flakiness in CI environments.
+	const raced = await Promise.race([
+		blockedPromise.then((result) => ({ type: "resolved", result })),
+		stub
+			.release("lock-2")
+			.then(() => setTimeout(5_000))
+			.then(() => ({ type: "timeout" })),
+	]);
+
+	t.deepEqual(raced, { type: "resolved", result: 12 });
+});

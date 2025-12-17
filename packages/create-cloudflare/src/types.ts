@@ -12,6 +12,7 @@ export type C3Args = {
 	framework?: string;
 	experimental?: boolean;
 	platform?: "pages" | "workers";
+	variant?: string;
 	// workers specific
 	ts?: boolean;
 	lang?: string;
