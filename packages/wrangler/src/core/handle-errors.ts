@@ -113,7 +113,7 @@ export async function handleError(
 			logger.log(chalk.yellow(message));
 		}
 		const accountTag = (e as APIError)?.accountTag;
-		let complianceConfig: ComplianceConfig;
+		let complianceConfig: ComplianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN;
 		let configAccountId: string | undefined;
 		try {
 			const config = await readConfig(args, {
@@ -122,7 +122,7 @@ export async function handleError(
 			complianceConfig = config;
 			configAccountId = config.account_id;
 		} catch {
-			complianceConfig = COMPLIANCE_REGION_CONFIG_UNKNOWN;
+			// Ignore errors reading config
 		}
 		await whoami(complianceConfig, accountTag, configAccountId);
 	} else if (e instanceof ParseError) {
