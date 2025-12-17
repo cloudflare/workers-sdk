@@ -22,6 +22,7 @@ import { getBasePath } from "./paths";
 import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import * as shellquote from "./utils/shell-quote";
+import { isWorkerNotFoundError } from "./utils/worker-not-found-error";
 import { printWranglerBanner } from "./wrangler-banner";
 import type { RawConfig } from "./config";
 import type {
@@ -226,7 +227,7 @@ export async function initHandler(args: InitArgs) {
 					`/accounts/${accountId}/workers/services/${fromDashWorkerName}`
 				);
 			} catch (err) {
-				if ((err as { code?: number }).code === 10090) {
+				if (isWorkerNotFoundError(err)) {
 					throw new UserError(
 						"wrangler couldn't find a Worker script with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account."
 					);
