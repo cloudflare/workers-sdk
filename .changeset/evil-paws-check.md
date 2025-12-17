@@ -1,6 +1,6 @@
 ---
 "wrangler": minor
-"@cloudflare/containers-shared": patch
+"@cloudflare/containers-shared": minor
 ---
 
 For containers being created in a FedRAMP high environment, registry credentials are encrypted by the container platform.
