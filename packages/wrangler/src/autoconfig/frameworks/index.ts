@@ -34,6 +34,8 @@ export abstract class Framework {
 	): Promise<ConfigurationResults> | ConfigurationResults;
 
 	configurationDescription?: string;
+
+	autoConfigSupported = true;
 }
 
 // Make a best-effort attempt to find the exact version of the installed package

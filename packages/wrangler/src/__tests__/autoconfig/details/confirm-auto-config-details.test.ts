@@ -105,6 +105,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 					isConfigured: () => false,
 					configure: () => ({ wranglerConfig: {} }),
 					name: "astro",
+					autoConfigSupported: true,
 				},
 				outputDir: "<OUTPUT_DIR>",
 				projectPath: "<PROJECT_PATH>",
@@ -115,6 +116,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "buildCommand": "npm run build",
 				  "configured": false,
 				  "framework": Object {
+				    "autoConfigSupported": true,
 				    "configure": [Function],
 				    "isConfigured": [Function],
 				    "name": "astro",

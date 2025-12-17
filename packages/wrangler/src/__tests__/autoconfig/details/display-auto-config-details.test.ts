@@ -39,6 +39,7 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 				name: "Astro",
 				isConfigured: () => false,
 				configure: () => ({ wranglerConfig: {} }),
+				autoConfigSupported: true,
 			},
 			buildCommand: "astro build",
 			outputDir: "dist",
