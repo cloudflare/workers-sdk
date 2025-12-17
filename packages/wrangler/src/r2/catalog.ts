@@ -11,10 +11,14 @@ import formatLabelledValues from "../utils/render-labelled-values";
 import {
 	disableR2Catalog,
 	disableR2CatalogCompaction,
+	disableR2CatalogSnapshotExpiration,
 	disableR2CatalogTableCompaction,
+	disableR2CatalogTableSnapshotExpiration,
 	enableR2Catalog,
 	enableR2CatalogCompaction,
+	enableR2CatalogSnapshotExpiration,
 	enableR2CatalogTableCompaction,
+	enableR2CatalogTableSnapshotExpiration,
 	getR2Catalog,
 	upsertR2CatalogCredential,
 } from "./helpers/catalog";
@@ -341,6 +345,204 @@ export const r2BucketCatalogCompactionDisableCommand = createCommand({
 
 			logger.log(
 				`Successfully disabled file compaction for the data catalog for bucket '${args.bucket}'.`
+			);
+		}
+	},
+});
+
+export const r2BucketCatalogSnapshotExpirationNamespace = createNamespace({
+	metadata: {
+		description:
+			"Control settings for automatic snapshot expiration maintenance jobs for your R2 data catalog",
+		status: "open beta",
+		owner: "Product: R2 Data Catalog",
+	},
+});
+
+export const r2BucketCatalogSnapshotExpirationEnableCommand = createCommand({
+	metadata: {
+		description:
+			"Enable automatic snapshot expiration for your R2 data catalog or a specific table",
+		status: "open beta",
+		owner: "Product: R2 Data Catalog",
+	},
+	positionalArgs: ["bucket", "namespace", "table"],
+	args: {
+		bucket: {
+			describe: "The name of the bucket which contains the catalog",
+			type: "string",
+			demandOption: true,
+		},
+		namespace: {
+			describe:
+				"The namespace containing the table (optional, for table-level snapshot expiration)",
+			type: "string",
+			demandOption: false,
+		},
+		table: {
+			describe:
+				"The name of the table (optional, for table-level snapshot expiration)",
+			type: "string",
+			demandOption: false,
+		},
+		"older-than-days": {
+			describe: "Delete snapshots older than this many days, defaults to 30",
+			type: "number",
+			demandOption: false,
+		},
+		"retain-last": {
+			describe: "The minimum number of snapshots to retain, defaults to 5",
+			type: "number",
+			demandOption: false,
+		},
+		token: {
+			describe:
+				"A cloudflare api token with access to R2 and R2 Data Catalog (required for catalog-level snapshot expiration settings only)",
+			demandOption: false,
+			type: "string",
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
+
+		// Validate namespace and table are provided together
+		if (args.namespace && !args.table) {
+			throw new UserError("Table name is required when namespace is specified");
+		}
+		if (!args.namespace && args.table) {
+			throw new UserError("Namespace is required when table is specified");
+		}
+
+		if (args.namespace && args.table) {
+			// Table-level snapshot expiration
+			await enableR2CatalogTableSnapshotExpiration(
+				config,
+				accountId,
+				args.bucket,
+				args.namespace,
+				args.table,
+				args.olderThanDays,
+				args.retainLast
+			);
+
+			logger.log(
+				`✨ Successfully enabled snapshot expiration for table '${args.namespace}.${args.table}' in bucket '${args.bucket}'.`
+			);
+		} else {
+			// Catalog-level snapshot expiration - token is required
+			if (!args.token) {
+				throw new UserError(
+					"Token is required for catalog-level snapshot expiration. Use --token flag to provide a Cloudflare API token."
+				);
+			}
+
+			await upsertR2CatalogCredential(
+				config,
+				accountId,
+				args.bucket,
+				args.token
+			);
+
+			await enableR2CatalogSnapshotExpiration(
+				config,
+				accountId,
+				args.bucket,
+				args.olderThanDays,
+				args.retainLast
+			);
+
+			logger.log(
+				`✨ Successfully enabled snapshot expiration for the data catalog for bucket '${args.bucket}'.
+
+Snapshot expiration will automatically delete old table snapshots to save storage costs.
+For more details, refer to: https://developers.cloudflare.com/r2/data-catalog/`
+			);
+		}
+	},
+});
+
+export const r2BucketCatalogSnapshotExpirationDisableCommand = createCommand({
+	metadata: {
+		description:
+			"Disable automatic snapshot expiration for your R2 data catalog or a specific table",
+		status: "open beta",
+		owner: "Product: R2 Data Catalog",
+	},
+	positionalArgs: ["bucket", "namespace", "table"],
+	args: {
+		bucket: {
+			describe: "The name of the bucket which contains the catalog",
+			type: "string",
+			demandOption: true,
+		},
+		namespace: {
+			describe:
+				"The namespace containing the table (optional, for table-level snapshot expiration)",
+			type: "string",
+			demandOption: false,
+		},
+		table: {
+			describe:
+				"The name of the table (optional, for table-level snapshot expiration)",
+			type: "string",
+			demandOption: false,
+		},
+		force: {
+			describe: "Skip confirmation prompt",
+			type: "boolean",
+			default: false,
+		},
+	},
+	async handler(args, { config }) {
+		const accountId = await requireAuth(config);
+
+		// Validate namespace and table are provided together
+		if (args.namespace && !args.table) {
+			throw new UserError("Table name is required when namespace is specified");
+		}
+		if (!args.namespace && args.table) {
+			throw new UserError("Namespace is required when table is specified");
+		}
+
+		if (args.namespace && args.table) {
+			// Table-level snapshot expiration
+			if (!args.force) {
+				const confirmedDisable = await confirm(
+					`Are you sure you want to disable snapshot expiration for table '${args.namespace}.${args.table}' in bucket '${args.bucket}'?`
+				);
+				if (!confirmedDisable) {
+					logger.log("Disable cancelled.");
+					return;
+				}
+			}
+
+			await disableR2CatalogTableSnapshotExpiration(
+				config,
+				accountId,
+				args.bucket,
+				args.namespace,
+				args.table
+			);
+
+			logger.log(
+				`Successfully disabled snapshot expiration for table '${args.namespace}.${args.table}' in bucket '${args.bucket}'.`
+			);
+		} else {
+			// Catalog-level snapshot expiration
+			if (!args.force) {
+				const confirmedDisable = await confirm(
+					`Are you sure you want to disable snapshot expiration for the data catalog for bucket '${args.bucket}'?`
+				);
+				if (!confirmedDisable) {
+					logger.log("Disable cancelled.");
+					return;
+				}
+			}
+
+			await disableR2CatalogSnapshotExpiration(config, accountId, args.bucket);
+
+			logger.log(
+				`Successfully disabled snapshot expiration for the data catalog for bucket '${args.bucket}'.`
 			);
 		}
 	},
