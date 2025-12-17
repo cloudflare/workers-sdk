@@ -1,3 +1,4 @@
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach, describe, expect, it, test } from "vitest";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
@@ -28,7 +29,6 @@ import { mswListNewDeploymentsLatestFiftyFifty } from "../helpers/msw/handlers/v
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("versions deploy", () => {
 	mockAccountId();

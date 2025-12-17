@@ -1,4 +1,4 @@
-import * as path from "node:path";
+import * as nodePath from "node:path";
 import * as util from "node:util";
 import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
 import {
@@ -39,7 +39,7 @@ export function getOutputDirectory(
 
 	return (
 		userConfig.environments?.[environmentName]?.build?.outDir ??
-		path.join(rootOutputDirectory, environmentName)
+		nodePath.join(rootOutputDirectory, environmentName)
 	);
 }
 

@@ -10,6 +10,7 @@ export class Container extends DurableObject<Env> {
 
 	constructor(ctx: DurableObjectState, env: Env) {
 		super(ctx, env);
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		this.container = ctx.container!;
 	}
 
@@ -35,14 +36,15 @@ export class Container extends DurableObject<Env> {
 				// this doesn't instantly start, so we will need to poll /fetch
 				return new Response("Container create request sent...");
 
-			case "/fetch":
+			case "/fetch": {
 				const res = await this.container
 					.getTcpPort(8080)
 					// actual request doesn't matter
 					.fetch("http://foo/bar/baz", { method: "POST", body: "hello" });
 				return new Response(await res.text());
+			}
 
-			case "/destroy-with-monitor":
+			case "/destroy-with-monitor": {
 				// if (!this.container.running) {
 				// 	throw new Error("Container is not running.");
 				// }
@@ -50,6 +52,7 @@ export class Container extends DurableObject<Env> {
 				await this.container.destroy();
 				await monitor;
 				return new Response("Container destroyed with monitor.");
+			}
 
 			default:
 				return new Response("Hi from Container DO");

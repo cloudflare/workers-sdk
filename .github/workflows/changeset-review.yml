@@ -1,14 +1,10 @@
 name: Changeset Review
 
 on:
-  # Note: This won't run for PRs from forks (no access to secrets)
-  # but will work for internal PRs from branches on the main repo
   pull_request:
     types: [opened, synchronize, reopened]
     paths:
       - ".changeset/*.md"
-      - "packages/**"
-  # Manual trigger for testing
   workflow_dispatch:
     inputs:
       pr_number:
@@ -31,18 +27,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Get changed package files
-        id: changed-packages
-        uses: tj-actions/changed-files@v45
-        with:
-          files: |
-            packages/**
-          files_ignore: |
-            **/*.test.ts
-            **/*.spec.ts
-            **/__tests__/**
-            **/fixtures/**
-
       - name: Get changed changeset files
         id: changed-changesets
         uses: tj-actions/changed-files@v45
@@ -57,58 +41,18 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          track_progress: true
           use_sticky_comment: true
           prompt: |
-            You are a changeset reviewer for the Cloudflare Workers SDK monorepo. Your job is to ensure changesets are correct, complete, and provide good changelog entries.
+            Review the changeset files in this PR: ${{ steps.changed-changesets.outputs.all_changed_files }}
 
-            ## Guidelines
+            Read `.changeset/README.md` for guidelines, then validate:
+            1. **Version Type**: Correct patch/minor/major (major forbidden for wrangler)
+            2. **Changelog Quality**: Meaningful descriptions with examples for features
+            3. **Markdown Headers**: No h1/h2/h3 headers (breaks changelog formatting)
 
-            Read `.changeset/README.md` for the complete changeset guidelines. Use those rules to validate the changesets in this PR.
+            Output a one-line summary (✅ good / ⚠️ issues found) followed by any issues.
 
-            ## Changed Files
-
-            Package files changed: ${{ steps.changed-packages.outputs.all_changed_files }}
-            Changeset files changed: ${{ steps.changed-changesets.outputs.all_changed_files }}
-
-            ## Your Task
-
-            1. Review the changed package files listed above to understand what was modified
-            2. Read the changeset files listed above (if any) to review their contents
-            3. Cross-reference to ensure all affected packages are covered
-
-            Then validate:
-
-            1. **Missing Changeset**: If packages were modified with user-facing changes, a changeset is required
-            2. **Package Coverage**: All affected packages should be referenced in changesets
-            3. **Version Type**: Correct use of patch/minor/major (noting major forbidden constraints in the changeset README)
-            4. **Changelog Quality**: Descriptions should be meaningful with examples for features
-            5. **Multiple Changesets**: Separate changesets for unrelated changes
-            6. **Markdown Headers**: No h1/h2/h3 headers (breaks changelog formatting)
-
-            ## Output Format
-
-            1. **Summary**: One-line assessment (✅ Changesets look good / ⚠️ Issues found / ❌ Missing changeset)
-
-            2. **Issues** (if any): List each issue with:
-               - What's wrong
-               - Which file/package it affects
-               - Suggested fix
-
-            3. **Suggestions** (if any): Optional improvements that aren't blocking
-
-            If there are no changesets and no package changes, confirm no changeset is needed.
-
-            ## IMPORTANT: Failing the check
-
-            If there are blocking issues (missing changeset, wrong version type, forbidden major version, or very poor changelog quality), you MUST fail this check by running:
-            ```
-            exit 1
-            ```
-            This will block the PR from being merged until the issues are fixed.
-
-            Only pass (don't exit 1) if:
-            - Changesets look good, OR
-            - No changeset is required for this PR, OR
-            - Issues are minor suggestions only (not blocking)
-
-            Begin your review now.
+            If there are blocking issues (wrong version type, forbidden major, poor quality), run `exit 1` to fail the check.
+          claude_args: |
+            --allowedTools "Read,Glob,Grep,Bash(exit:*)"

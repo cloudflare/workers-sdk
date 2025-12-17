@@ -11,6 +11,7 @@ describe("valid cases", () => {
 	test("should return the value of a found wrangler config", () => {
 		const result = getValidatedWranglerConfigPath(fixturesPath, undefined);
 		expect(result).toBeDefined();
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		expect(normalize(result!)).toMatch(
 			isWindows
 				? /\\__tests__\\fixtures\\wrangler\.jsonc/
@@ -24,6 +25,7 @@ describe("valid cases", () => {
 			join(fixturesPath, "simple-wrangler.jsonc")
 		);
 		expect(result).toBeDefined();
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		expect(normalize(result!)).toMatch(
 			isWindows
 				? /\\__tests__\\fixtures\\simple-wrangler\.jsonc/
@@ -70,8 +72,8 @@ describe("invalid cases", () => {
 				);
 			}).toThrowError(
 				forAuxiliaryWorker
-					? /The provided configPath \(.*?simple-wrangler\.txt\) requested for one of your auxiliary workers doesn't point to a file with the correct file extension. It should point to a jsonc, json or toml file \(\"txt\" found instead\)/
-					: /The provided configPath \(.*?simple-wrangler\.txt\) doesn't point to a file with the correct file extension. It should point to a jsonc, json or toml file \(\"txt\" found instead\)/
+					? /The provided configPath \(.*?simple-wrangler\.txt\) requested for one of your auxiliary workers doesn't point to a file with the correct file extension. It should point to a jsonc, json or toml file \("txt" found instead\)/
+					: /The provided configPath \(.*?simple-wrangler\.txt\) doesn't point to a file with the correct file extension. It should point to a jsonc, json or toml file \("txt" found instead\)/
 			);
 		});
 

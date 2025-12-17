@@ -67,7 +67,10 @@ export function addDebugToVitePrintUrls(
 			const colorDebugUrl = (url: string) =>
 				colors.dim(
 					colors.yellow(
-						url.replace(/:(\d+)\//, (_, port) => `:${colors.bold(port)}/`)
+						url.replace(
+							/:(\d+)\//,
+							(_, portNumber) => `:${colors.bold(portNumber)}/`
+						)
 					)
 				);
 			server.config.logger.info(

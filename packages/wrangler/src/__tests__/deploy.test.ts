@@ -10,7 +10,11 @@ import {
 	findWranglerConfig,
 	ParseError,
 } from "@cloudflare/workers-utils";
-import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
+import {
+	normalizeString,
+	writeRedirectedWranglerConfig,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
@@ -80,10 +84,6 @@ import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import {
-	writeRedirectedWranglerConfig,
-	writeWranglerConfig,
-} from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type { OutputEntry } from "../output";
@@ -11882,6 +11882,39 @@ addEventListener('fetch', event => {});`
 				  "warn": "",
 				}
 			`);
+		});
+
+		it("should use compilerOptions.paths to resolve non-js modules with module rules", async () => {
+			writeWranglerConfig({
+				main: "index.ts",
+				rules: [{ type: "Text", globs: ["**/*.graphql"], fallthrough: true }],
+			});
+			fs.writeFileSync(
+				"index.ts",
+				`import schema from '~lib/schema.graphql'; export default { fetch() { return new Response(schema)} }`
+			);
+			fs.mkdirSync("lib", { recursive: true });
+			fs.writeFileSync("lib/schema.graphql", `type Query { hello: String }`);
+			fs.writeFileSync(
+				"tsconfig.json",
+				JSON.stringify({
+					compilerOptions: {
+						baseUrl: ".",
+						paths: {
+							"~lib/*": ["lib/*"],
+						},
+					},
+				})
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./bc4a21e10be4cae586632dfe5c3f049299c06466-schema.graphql":
+						"type Query { hello: String }",
+				},
+			});
+			await runWrangler("deploy index.ts");
+			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should output to target es2022 even if tsconfig says otherwise", async () => {

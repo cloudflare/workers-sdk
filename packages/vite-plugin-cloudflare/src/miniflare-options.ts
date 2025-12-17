@@ -15,7 +15,6 @@ import {
 	Response as MiniflareResponse,
 } from "miniflare";
 import { globSync } from "tinyglobby";
-import * as vite from "vite";
 import * as wrangler from "wrangler";
 import { getAssetsConfig } from "./asset-config";
 import {
@@ -41,6 +40,7 @@ import type {
 	WorkerdStructuredLog,
 	WorkerOptions,
 } from "miniflare";
+import type * as vite from "vite";
 import type {
 	Binding,
 	RemoteProxySession,
@@ -179,7 +179,7 @@ export async function getDevMiniflareOptions(
 											: pathname
 									);
 								}
-							} catch (error) {}
+							} catch {}
 						}
 					}
 
@@ -204,7 +204,7 @@ export async function getDevMiniflareOptions(
 						return new MiniflareResponse(html, {
 							headers: { "Content-Type": "text/html" },
 						});
-					} catch (error) {
+					} catch {
 						throw new Error(`Unexpected error. Failed to load "${pathname}".`);
 					}
 				},
@@ -455,7 +455,7 @@ export async function getDevMiniflareOptions(
 
 				try {
 					contents = await fsp.readFile(modulePath);
-				} catch (error) {
+				} catch {
 					throw new Error(
 						`Import "${modulePath}" not found. Does the file exist?`
 					);
@@ -497,10 +497,12 @@ function getPreviewModules(
 				path: entryPath,
 			} as const,
 			...modulesRules.flatMap(({ type, include }) =>
-				globSync(include, { cwd: rootPath, ignore: entryPath }).map((path) => ({
-					type,
-					path,
-				}))
+				globSync(include, { cwd: rootPath, ignore: entryPath }).map(
+					(globPath) => ({
+						type,
+						path: globPath,
+					})
+				)
 			),
 		],
 	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;

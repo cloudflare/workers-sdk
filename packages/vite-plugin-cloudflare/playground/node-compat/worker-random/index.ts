@@ -1,5 +1,5 @@
-import nodeCrypto, { getRandomValues, webcrypto } from "crypto";
 import assert from "node:assert";
+import nodeCrypto, { getRandomValues, webcrypto } from "node:crypto";
 
 export default {
 	async fetch() {
