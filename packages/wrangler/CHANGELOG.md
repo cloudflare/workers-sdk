@@ -1,5 +1,47 @@
 # wrangler
 
+## 4.56.0
+
+### Minor Changes
+
+- [#11196](https://github.com/cloudflare/workers-sdk/pull/11196) [`171cfd9`](https://github.com/cloudflare/workers-sdk/commit/171cfd96e07394ccd00025770d18657c6c297c87) Thanks [@emily-shen](https://github.com/emily-shen)! - For containers being created in a FedRAMP high environment, registry credentials are encrypted by the container platform.
+  Update wrangler to correctly send a request to configure a registry for FedRAMP containers.
+
+- [#11646](https://github.com/cloudflare/workers-sdk/pull/11646) [`472cf72`](https://github.com/cloudflare/workers-sdk/commit/472cf72a6f340e30499daa1d04bf5f17621044bf) Thanks [@vovacf201](https://github.com/vovacf201)! - feat: add R2 Data Catalog snapshot expiration commands
+
+  Adds new commands to manage automatic snapshot expiration for R2 Data Catalog tables:
+
+  - `wrangler r2 bucket catalog snapshot-expiration enable` - Enable automatic snapshot expiration
+  - `wrangler r2 bucket catalog snapshot-expiration disable` - Disable automatic snapshot expiration
+
+  Snapshot expiration helps manage storage costs by automatically removing old table snapshots while keeping a minimum number of recent snapshots for recovery purposes.
+
+  Example usage:
+
+  ```sh
+  # Enable snapshot expiration for entire catalog (keep 10 snapshots, expire after 5 days)
+  wrangler r2 bucket catalog snapshot-expiration enable my-bucket --token $R2_CATALOG_TOKEN --max-age 7200 --min-count 10
+
+  # Enable for specific table
+  wrangler r2 bucket catalog snapshot-expiration enable my-bucket my-namespace my-table --token $R2_CATALOG_TOKEN --max-age 2880 --min-count 5
+
+  # Disable snapshot expiration
+  wrangler r2 bucket catalog snapshot-expiration disable my-bucket
+  ```
+
+### Patch Changes
+
+- [#11649](https://github.com/cloudflare/workers-sdk/pull/11649) [`428ae9e`](https://github.com/cloudflare/workers-sdk/commit/428ae9e83c9c193da3bf3894db13b1b520cc7c47) Thanks [@ascorbic](https://github.com/ascorbic)! - fix: respect TypeScript path aliases when resolving non-JS modules with module rules
+
+  When importing non-JavaScript files (like `.graphql`, `.txt`, etc.) using TypeScript path aliases defined in `tsconfig.json`, Wrangler's module-collection plugin now correctly resolves these imports. Previously, path aliases were only respected for JavaScript/TypeScript files, causing imports like `import schema from '~lib/schema.graphql'` to fail when using module rules.
+
+- [#11647](https://github.com/cloudflare/workers-sdk/pull/11647) [`c0e249e`](https://github.com/cloudflare/workers-sdk/commit/c0e249e3d662444720548acee70ac33a078c408f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - The auto-configuration logic present in `wrangler setup` and `wrangler deploy --x-autoconfig` cannot reliably handle Hono projects, so in these cases make sure to properly error saying that automatically configuring such projects is not supported.
+
+- [#11694](https://github.com/cloudflare/workers-sdk/pull/11694) [`3853200`](https://github.com/cloudflare/workers-sdk/commit/3853200d4ebf70a0c71cd4480b007efb93216fcc) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: improve the open-next detection that `wrangler deploy` performs to eliminate false positives for non open-next projects
+
+- Updated dependencies [[`ae1ad22`](https://github.com/cloudflare/workers-sdk/commit/ae1ad22b24216c466bbbbb5966c82ed2b9bc8ac7), [`737c0f4`](https://github.com/cloudflare/workers-sdk/commit/737c0f4e1212d3a2ec59bedac125fe07ed0fb0ed)]:
+  - miniflare@4.20251217.0
+
 ## 4.55.0
 
 ### Minor Changes

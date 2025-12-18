@@ -1,5 +1,39 @@
 # @cloudflare/vite-plugin
 
+## 1.19.0
+
+### Minor Changes
+
+- [#11670](https://github.com/cloudflare/workers-sdk/pull/11670) [`3483b84`](https://github.com/cloudflare/workers-sdk/commit/3483b841bedb78d67048cc8b9846e0598ec5fa6c) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Provide the resolved entry Worker config in the second parameter to the auxiliary Worker `config` function. This makes it straightforward to inherit configuration from the entry Worker in auxiliary Workers.
+
+  Example:
+
+  ```ts
+  export default defineConfig({
+  	plugins: [
+  		cloudflare({
+  			auxiliaryWorkers: [
+  				{
+  					config: (_, { entryWorkerConfig }) => ({
+  						name: "auxiliary-worker",
+  						main: "./src/auxiliary-worker.ts",
+  						// Inherit compatibility settings from entry Worker
+  						compatibility_date: entryWorkerConfig.compatibility_date,
+  						compatibility_flags: entryWorkerConfig.compatibility_flags,
+  					}),
+  				},
+  			],
+  		}),
+  	],
+  });
+  ```
+
+### Patch Changes
+
+- Updated dependencies [[`ae1ad22`](https://github.com/cloudflare/workers-sdk/commit/ae1ad22b24216c466bbbbb5966c82ed2b9bc8ac7), [`171cfd9`](https://github.com/cloudflare/workers-sdk/commit/171cfd96e07394ccd00025770d18657c6c297c87), [`428ae9e`](https://github.com/cloudflare/workers-sdk/commit/428ae9e83c9c193da3bf3894db13b1b520cc7c47), [`737c0f4`](https://github.com/cloudflare/workers-sdk/commit/737c0f4e1212d3a2ec59bedac125fe07ed0fb0ed), [`c0e249e`](https://github.com/cloudflare/workers-sdk/commit/c0e249e3d662444720548acee70ac33a078c408f), [`472cf72`](https://github.com/cloudflare/workers-sdk/commit/472cf72a6f340e30499daa1d04bf5f17621044bf), [`3853200`](https://github.com/cloudflare/workers-sdk/commit/3853200d4ebf70a0c71cd4480b007efb93216fcc)]:
+  - miniflare@4.20251217.0
+  - wrangler@4.56.0
+
 ## 1.18.0
 
 ### Minor Changes
