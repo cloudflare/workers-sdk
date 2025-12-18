@@ -202,10 +202,22 @@ test("uses next available port when default port 9229 is in use", async ({
 			flags: ["--inspect", "--no-file-parallelism"],
 		});
 
-		expect(result.stdout).toMatch(
-			"Default inspector port 9229 not available, using"
+		// Parse the fallback port from the warning message
+		const warningMatch = result.stdout.match(
+			/Default inspector port 9229 not available, using (\d+) instead/
 		);
-		expect(result.stdout).not.toMatch("inspector on port 9229");
+		expect(warningMatch).toBeTruthy();
+		const fallbackPort = warningMatch ? parseInt(warningMatch[1], 10) : 0;
+
+		// Parse the port from the "inspector on port X" message
+		const inspectorMatch = result.stdout.match(/inspector on port (\d+)/);
+		expect(inspectorMatch).toBeTruthy();
+		const inspectorPort = inspectorMatch ? parseInt(inspectorMatch[1], 10) : 0;
+
+		// Verify the fallback port is consistent and not the default port
+		expect(fallbackPort).toBe(inspectorPort);
+		expect(fallbackPort).not.toBe(9229);
+		expect(fallbackPort).toBeGreaterThan(0);
 	} finally {
 		blockingServer?.close();
 	}
