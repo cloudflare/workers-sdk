@@ -211,7 +211,7 @@ export interface StartDevWorkerInput {
 		/** Options for the container engine */
 		containerEngine?: ContainerEngine;
 
-		/** Generate types from your Worker configuration when you start your local development server. */
+		/** Re-generate your worker types when your Wrangler configuration file changes */
 		generateTypes?: boolean;
 	};
 	legacy?: {
