@@ -21,21 +21,11 @@ export class Waku extends Framework {
 		projectPath,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
-			await installPackages(
-				[
-					"hono",
-					// Let's make sure to have the latest version of waku which is what
-					// the node-loader-cloudflare package expects (if we don't do this the plugin
-					// and waku can use a different version of vite and have type conflicts)
-					"waku@latest",
-					"@hiogawa/node-loader-cloudflare",
-				],
-				{
-					dev: true,
-					startText: "Installing additional dependencies",
-					doneText: `${brandColor("installed")}`,
-				}
-			);
+			await installPackages(["hono", "@hiogawa/node-loader-cloudflare"], {
+				dev: true,
+				startText: "Installing additional dependencies",
+				doneText: `${brandColor("installed")}`,
+			});
 
 			await createCloudflareMiddleware(projectPath);
 			await createServerEntryFile(projectPath);
