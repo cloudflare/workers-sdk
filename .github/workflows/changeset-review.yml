@@ -2,7 +2,7 @@ name: Changeset Review
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
       - ".changeset/*.md"
   workflow_dispatch:
@@ -11,6 +11,10 @@ on:
         description: "PR number to review"
         required: true
         type: number
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -21,7 +25,7 @@ permissions:
 jobs:
   review-changesets:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event.pull_request.head.repo.full_name == github.repository && !contains(github.event.pull_request.labels.*.name, 'skip-changeset-review') && !contains(github.event.pull_request.labels.*.name, 'no-changeset-required')
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -56,6 +60,8 @@ jobs:
             If all changesets pass, just output "✅ All changesets look good" - no need for a detailed checklist.
 
             If there are issues, output "⚠️ Issues found" followed by the specific problems.
+
+            If the user has attached an image, use the Read tool to view it. If it's a cute animal, include in your comment a short cuteness report in the style of WeRateDogs (e.g., "This is Barkley. He's wearing a tiny hat and doesn't know why. 13/10").
 
             Return your structured output indicating whether there are blocking issues.
           claude_args: |
