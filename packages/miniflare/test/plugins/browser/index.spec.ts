@@ -97,7 +97,7 @@ test("it creates a browser session", async () => {
 	onTestFinished(() => mf.dispose());
 
 	const res = await mf.dispatchFetch("https://localhost/session");
-	expect((await res.text()).includes("sessionId")).toBe(true);
+	expect(await res.text()).toContain("sessionId");
 });
 
 const BROWSER_WORKER_CLOSE_SCRIPT = `
@@ -122,6 +122,8 @@ export default {
 `;
 
 test("it closes a browser session", async () => {
+	// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+	// Vitest handles timeouts via test options
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -165,6 +167,8 @@ export default {
 `;
 
 test("it reuses a browser session", async () => {
+	// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+	// Vitest handles timeouts via test options
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -209,6 +213,8 @@ const isWindows = process.platform === "win32";
 (isWindows ? test.skip : test)(
 	"fails if browser session already in use",
 	async () => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		// Vitest handles timeouts via test options
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -254,6 +260,8 @@ export default {
 `;
 
 test("gets sessions while acquiring and closing session", async () => {
+	// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+	// Vitest handles timeouts via test options
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -302,6 +310,8 @@ export default {
 `;
 
 test("gets sessions while connecting and disconnecting session", async () => {
+	// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+	// Vitest handles timeouts via test options
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",

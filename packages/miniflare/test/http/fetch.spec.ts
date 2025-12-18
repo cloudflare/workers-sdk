@@ -53,7 +53,7 @@ test("fetch: performs web socket upgrade", async () => {
 		headers: { upgrade: "websocket", "user-agent": "Test" },
 	});
 	const webSocket = res.webSocket;
-	expect(webSocket).not.toBe(undefined);
+	expect(webSocket).toBeDefined();
 	assert(webSocket);
 
 	const eventPromise = new DeferredPromise<void>();
@@ -79,7 +79,7 @@ test("fetch: performs web socket upgrade with Sec-WebSocket-Protocol header", as
 		},
 	});
 	const webSocket = res.webSocket;
-	expect(webSocket).not.toBe(undefined);
+	expect(webSocket).toBeDefined();
 	assert(webSocket);
 	const eventPromise = new DeferredPromise<MessageEvent>();
 	webSocket.addEventListener("message", eventPromise.resolve);
@@ -109,7 +109,7 @@ test("fetch: includes headers from web socket upgrade response", async () => {
 	const res = await fetch(`http://localhost:${port}`, {
 		headers: { upgrade: "websocket" },
 	});
-	expect(res.webSocket).not.toBe(undefined);
+	expect(res.webSocket).toBeDefined();
 	expect(res.headers.getSetCookie()[0]).toBe("key=value");
 });
 const fetchDispatchCloseFlakyTest = flaky(async () => {

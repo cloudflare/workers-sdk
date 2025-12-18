@@ -1222,7 +1222,7 @@ test("DevRegistry: handleDevRegistryUpdate callback", async () => {
 	await waitUntil(async () => {
 		const latestInvocation = firstCallbackInvocations.at(-1);
 		// Registry should contain remote-worker
-		expect(latestInvocation?.registry["remote-worker"]).not.toBe(undefined);
+		expect(latestInvocation?.registry["remote-worker"]).toBeDefined();
 	});
 
 	// Update unsafeHandleDevRegistryUpdate callback to push to a different array

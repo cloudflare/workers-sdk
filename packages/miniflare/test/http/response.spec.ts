@@ -4,17 +4,17 @@ import { expect, test } from "vitest";
 test("Response: static methods return correctly typed values", async () => {
 	const error = Response.error();
 	// noinspection SuspiciousTypeOfGuard
-	expect(error instanceof Response).toBe(true);
+	expect(error).toBeInstanceOf(Response);
 
 	const redirect = Response.redirect("http://localhost/", 302);
 	// noinspection SuspiciousTypeOfGuard
-	expect(redirect instanceof Response).toBe(true);
+	expect(redirect).toBeInstanceOf(Response);
 	expect(redirect.status).toBe(302);
 	expect(redirect.headers.get("Location")).toBe("http://localhost/");
 
 	const json = Response.json({ testing: true }, { status: 404 });
 	// noinspection SuspiciousTypeOfGuard
-	expect(json instanceof Response).toBe(true);
+	expect(json).toBeInstanceOf(Response);
 	expect(json.status).toBe(404);
 	expect(json.headers.get("Content-Type")).toBe("application/json");
 	expect(await json.json()).toEqual({ testing: true });
@@ -38,9 +38,9 @@ test("Response: clone: returns correctly typed value", async () => {
 	const clone2 = clone1.clone(); // Test cloning a clone
 
 	// noinspection SuspiciousTypeOfGuard
-	expect(clone1 instanceof Response).toBe(true);
+	expect(clone1).toBeInstanceOf(Response);
 	// noinspection SuspiciousTypeOfGuard
-	expect(clone2 instanceof Response).toBe(true);
+	expect(clone2).toBeInstanceOf(Response);
 	expect(await response.text()).toBe("text");
 	expect(await clone1.text()).toBe("text");
 	expect(await clone2.text()).toBe("text");

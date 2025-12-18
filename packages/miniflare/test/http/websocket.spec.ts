@@ -287,7 +287,7 @@ test("coupleWebSocket: forwards binary messages from client to worker", async ()
 	await coupleWebSocket(ws, client);
 
 	const event = await eventPromise;
-	expect(event.data instanceof ArrayBuffer).toBe(true);
+	expect(event.data).toBeInstanceOf(ArrayBuffer);
 	assert(event.data instanceof ArrayBuffer);
 	expect(utf8Decode(new Uint8Array(event.data))).toBe("test");
 });
