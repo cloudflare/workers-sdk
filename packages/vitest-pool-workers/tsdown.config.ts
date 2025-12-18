@@ -27,11 +27,12 @@ const commonOptions: UserConfig = {
 	platform: "node",
 	target: "esnext",
 	format: "esm",
-	bundle: true,
+	unbundle: false,
+	noExternal: ["devalue"],
 	external: [
 		// Cloudflare/workerd built-ins
-		/cloudflare:.*/,
-		/workerd:.*/,
+		/^cloudflare:.*$/,
+		/^workerd:.*$/,
 		// Virtual/runtime modules
 		"__VITEST_POOL_WORKERS_DEFINES",
 		"__VITEST_POOL_WORKERS_USER_OBJECT",

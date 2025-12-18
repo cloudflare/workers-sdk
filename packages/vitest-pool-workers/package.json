@@ -46,7 +46,7 @@
 		"capnp:rtti": "capnp-es scripts/rtti/rtti.capnp -ojs",
 		"check:lint": "eslint .  --max-warnings=0",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
-		"dev": "node scripts/bundle.mjs watch",
+		"dev": "tsdown --watch",
 		"test": "vitest run",
 		"test:ci": "vitest run"
 	},
