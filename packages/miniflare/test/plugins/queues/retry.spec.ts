@@ -1,5 +1,5 @@
-import test from "ava";
 import { Miniflare, QUEUES_PLUGIN_NAME, Response } from "miniflare";
+import { afterEach, beforeEach, expect, test } from "vitest";
 import { z } from "zod";
 import { MiniflareDurableObjectControlStub, TestLog } from "../../test-shared";
 
@@ -25,11 +25,11 @@ let batches: string[][] = [];
 let mf: Miniflare;
 let object: MiniflareDurableObjectControlStub;
 
-test.beforeEach(async (t) => {
+beforeEach(async () => {
 	batches = [];
 
 	mf = new Miniflare({
-		log: new TestLog(t),
+		log: new TestLog(),
 		verbose: true,
 		queueProducers: { QUEUE: { queueName: "QUEUE" } },
 		queueConsumers: {
@@ -64,9 +64,9 @@ test.beforeEach(async (t) => {
 	object = await getControlStub(mf, "QUEUE");
 });
 
-test.afterEach.always(() => mf.dispose());
+afterEach(() => mf.dispose());
 
-test.serial("respects retry delays", async (t) => {
+test("respects retry delays", async () => {
 	await mf.dispatchFetch("http://localhost/send", {
 		method: "POST",
 		body: "some-message",
@@ -75,25 +75,25 @@ test.serial("respects retry delays", async (t) => {
 	// Message should be delivered once
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
+	expect(batches.length).toBe(1);
 
 	// Message should not be re-delivered one second later
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
+	expect(batches.length).toBe(1);
 
 	// Message should be re-delivered once 5 seconds later
 	await object.advanceFakeTime(5000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 2);
+	expect(batches.length).toBe(2);
 
 	// Message should be re-delivered once 5 seconds later
 	await object.advanceFakeTime(5000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 3);
+	expect(batches.length).toBe(3);
 });
 
-test.serial("respects max retries", async (t) => {
+test("respects max retries", async () => {
 	await mf.dispatchFetch("http://localhost/send", {
 		method: "POST",
 		body: "some-message",
@@ -114,5 +114,5 @@ test.serial("respects max retries", async (t) => {
 	// Message should not be delivered again 5 seconds later (max retries is 2)
 	await object.advanceFakeTime(5000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 3);
+	expect(batches.length).toBe(3);
 });

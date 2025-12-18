@@ -1,7 +1,7 @@
-import test from "ava";
 import { Miniflare } from "miniflare";
+import { expect, onTestFinished, test } from "vitest";
 
-test("supports declaring pipelines", async (t) => {
+test("supports declaring pipelines", async () => {
 	const mf = new Miniflare({
 		verbose: true,
 		compatibilityDate: "2024-12-30",
@@ -14,8 +14,8 @@ test("supports declaring pipelines", async (t) => {
         },
     }`,
 	});
-	t.teardown(() => mf.dispose());
+	onTestFinished(() => mf.dispose());
 
 	await mf.dispatchFetch("http://localhost");
-	t.assert(true);
+	expect(true).toBeTruthy();
 });

@@ -1,22 +1,28 @@
 import assert from "node:assert";
 import { setTimeout } from "node:timers/promises";
-import { ExecutionContext } from "ava";
 import { Awaitable } from "miniflare";
+import { expect } from "vitest";
+
+/**
+ * Type for error expectations in tests (similar to Ava's ThrowsExpectation)
+ */
+export interface ThrowsExpectation<T extends Error = Error> {
+	instanceOf?: new (...args: any[]) => T;
+	message?: string | RegExp;
+	name?: string;
+	code?: string;
+}
 
 export function isWithin(
-	t: ExecutionContext,
 	epsilon: number,
 	actual?: number,
 	expected?: number
 ): void {
-	t.not(actual, undefined);
-	t.not(expected, undefined);
+	expect(actual).not.toBeUndefined();
+	expect(expected).not.toBeUndefined();
 	assert(actual !== undefined && expected !== undefined);
 	const difference = Math.abs(actual - expected);
-	t.true(
-		difference <= epsilon,
-		`${actual} is not within ${epsilon} of ${expected}, difference is ${difference}`
-	);
+	expect(difference).toBeLessThanOrEqual(epsilon);
 }
 
 export function escapeRegexpComponent(value: string): string {
@@ -24,23 +30,26 @@ export function escapeRegexpComponent(value: string): string {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-export function flaky(
-	impl: (t: ExecutionContext) => Awaitable<void>
-): (t: ExecutionContext) => Promise<void> {
-	const maxAttempts = 3;
-	return async (t) => {
-		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-			const result = await t.try(impl);
-			if (result.passed || attempt === maxAttempts) {
-				result.commit();
-				return;
-			} else {
-				result.discard();
-				t.log(`Attempt #${attempt} failed!`);
-				t.log(...result.errors);
+export async function flaky(
+	impl: () => Awaitable<void>,
+	maxAttempts: number = 3
+): Promise<void> {
+	let lastError: unknown;
+	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+		try {
+			await impl();
+			return;
+		} catch (e) {
+			lastError = e;
+			if (attempt < maxAttempts) {
+				// eslint-disable-next-line no-console
+				console.log(`Attempt #${attempt} failed!`);
+				// eslint-disable-next-line no-console
+				console.log(e);
 			}
 		}
-	};
+	}
+	throw lastError;
 }
 
 /**
@@ -64,21 +73,22 @@ export async function waitFor<T>(
 }
 
 export async function waitUntil(
-	t: ExecutionContext,
-	impl: (t: ExecutionContext) => Awaitable<void>,
+	impl: () => Awaitable<void>,
 	timeout: number = 10000
 ): Promise<void> {
 	const start = Date.now();
+	let lastError: unknown;
 
 	while (true) {
-		const result = await t.try(impl);
-
-		if (result.passed || Date.now() - start > timeout) {
-			result.commit();
+		try {
+			await impl();
 			return;
+		} catch (e) {
+			lastError = e;
+			if (Date.now() - start > timeout) {
+				throw lastError;
+			}
 		}
-
-		result.discard();
 		await setTimeout(100);
 	}
 }
