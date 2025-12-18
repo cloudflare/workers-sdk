@@ -78,7 +78,7 @@
 		"@types/ws": "^8.5.7",
 		"@typescript-eslint/eslint-plugin": "catalog:default",
 		"@typescript-eslint/parser": "catalog:default",
-		"ava": "^6.0.1",
+		"ava": "^6.4.1",
 		"capnp-es": "^0.0.11",
 		"capnweb": "^0.1.0",
 		"chokidar": "^4.0.1",

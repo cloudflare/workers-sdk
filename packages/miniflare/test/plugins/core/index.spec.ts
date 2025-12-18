@@ -65,7 +65,6 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async (t) => {
 			`
       const { Miniflare } = require(${JSON.stringify(miniflarePath)});
       const mf = new Miniflare({
-        verbose: true,
         modules: true,
         script: \`export default {
           fetch() {

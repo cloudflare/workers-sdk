@@ -21,13 +21,12 @@ interface ProxyAddress {
 	path?: string;
 }
 
-const log = new Log();
-
 /**
  * A HTTP proxy server for the dev registry.
  * This runs in a separate thread to prevent a deadlock when using a node binding
  */
 class ProxyServer {
+	private log = new Log();
 	private registry: Record<string, WorkerDefinition> = {};
 	private runtimeEntryURL: string | null = null;
 	private fallbackServicePorts: Record<string, Record<string, number>> = {};
@@ -46,6 +45,7 @@ class ProxyServer {
 				case "setup":
 					this.runtimeEntryURL = message.runtimeEntryURL;
 					this.fallbackServicePorts = message.fallbackServicePorts;
+					this.log = new Log(message.logLevel);
 					break;
 				default:
 					// Ignore unknown message types
@@ -54,48 +54,41 @@ class ProxyServer {
 		});
 	}
 
-	public async start() {
-		try {
-			// Listen on a random port
-			await new Promise<void>((resolve, reject) => {
-				const server = http.createServer({
-					// There might be no HOST header when proxying a fetch request made over service binding
-					//  e.g. env.MY_WORKER.fetch("https://example.com")
-					requireHostHeader: false,
-					// Disable request and headers timeout for long-lived WebSocket connections
-					// Node.js's headersTimeout (default: min(60s, requestTimeout)) is checked periodically
-					// by connectionsCheckingInterval (default: 30s), causing timeouts around 60-90s.
-					// Setting both to 0 disables timeout enforcement for WebSocket proxying.
-					requestTimeout: 0,
-					headersTimeout: 0,
+	public start() {
+		// Listen on a random port
+		return new Promise<void>((resolve, reject) => {
+			const server = http.createServer({
+				// There might be no HOST header when proxying a fetch request made over service binding
+				//  e.g. env.MY_WORKER.fetch("https://example.com")
+				requireHostHeader: false,
+				// Disable request and headers timeout for long-lived WebSocket connections
+				// Node.js's headersTimeout (default: min(60s, requestTimeout)) is checked periodically
+				// by connectionsCheckingInterval (default: 30s), causing timeouts around 60-90s.
+				// Setting both to 0 disables timeout enforcement for WebSocket proxying.
+				requestTimeout: 0,
+				headersTimeout: 0,
+			});
+
+			server.on("request", this.handleRequest.bind(this));
+			server.on("connect", this.handleConnect.bind(this));
+			server.listen(0, "127.0.0.1", () => {
+				const address = server.address();
+
+				if (!address || typeof address === "string") {
+					reject(new Error("Failed to get server address"));
+					return;
+				}
+
+				// Notify parent that server is ready with the port
+				this.messagePort.postMessage({
+					type: "ready",
+					address: `${address.address}:${address.port}`,
 				});
 
-				server.on("request", this.handleRequest.bind(this));
-				server.on("connect", this.handleConnect.bind(this));
-				server.listen(0, "127.0.0.1", () => {
-					const address = server.address();
-
-					if (!address || typeof address === "string") {
-						reject(new Error("Failed to get server address"));
-						return;
-					}
-
-					// Notify parent that server is ready with the port
-					this.messagePort.postMessage({
-						type: "ready",
-						address: `${address.address}:${address.port}`,
-					});
-
-					resolve();
-				});
-				server.on("error", reject);
+				resolve();
 			});
-		} catch (error) {
-			this.messagePort.postMessage({
-				type: "error",
-				error: error instanceof Error ? error.message : String(error),
-			});
-		}
+			server.on("error", reject);
+		});
 	}
 
 	private handleRequest(
@@ -162,19 +155,21 @@ class ProxyServer {
 
 			// Errors on either side
 			serverSocket.on("error", (error) => {
-				log.error(error);
+				this.log.error(error);
 				clientSocket.destroy();
 			});
 			clientSocket.on("error", () => serverSocket.destroy());
 			// Close the tunnel if the service is updated
 			// This makes sure workerd will re-connect to the latest address
 			this.subscribe(serviceName, () => {
-				log.debug(`Closing tunnel as service "${serviceName}" was updated`);
+				this.log.debug(
+					`Closing tunnel as service "${serviceName}" was updated`
+				);
 				serverSocket.end();
 				clientSocket.end();
 			});
 		} catch (e) {
-			log.error(e instanceof Error ? e : new Error(`${e}`));
+			this.log.error(e instanceof Error ? e : new Error(`${e}`));
 			clientSocket.end();
 		}
 	}
@@ -308,7 +303,7 @@ class ProxyServer {
 		});
 
 		upstream.on("error", (error) => {
-			log.error(
+			this.log.error(
 				new Error(
 					`Failed to proxy request to ${target.protocol}://${target.host}:${target.port}${target.path ?? ""}`,
 					{
@@ -428,15 +423,15 @@ function runProxyServer() {
 		throw new Error("This script must be run in a worker thread");
 	}
 
-	const server = new ProxyServer(parentPort);
+	const messagePort = parentPort;
+	const server = new ProxyServer(messagePort);
 
 	// Start the server
 	server.start().catch((error) => {
-		log.error(
-			new Error("ProxyServer: Failed to start proxy server:", {
-				cause: error,
-			})
-		);
+		messagePort.postMessage({
+			type: "error",
+			error: error instanceof Error ? error.message : String(error),
+		});
 	});
 }
 
