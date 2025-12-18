@@ -2456,10 +2456,11 @@ describe.sequential("wrangler dev", () => {
 				});
 				fs.writeFileSync("index.ts", `export default {};`);
 
-				// Write a types file that matches the current config (hash will match)
-				// Note: We need to first generate types to get the correct hash. For
-				// this test, we'll just verify no message appears when the file doesn't
-				// exist since the hash comparison is complex.
+				generateRuntimeTypesSpy.mockRestore();
+
+				await runWrangler("types");
+
+				expect(fs.existsSync(DEFAULT_WORKERS_TYPES_FILE_PATH)).toBe(true);
 
 				await runWranglerUntilConfig("dev --types");
 
