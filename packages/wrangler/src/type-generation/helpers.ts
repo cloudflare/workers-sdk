@@ -69,6 +69,9 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 	const runtimeOutOfDate =
 		existingRuntimeHeader && existingRuntimeHeader !== newRuntimeHeader;
 
+	// Check if the users types have changed since last generation, and if so either prompt them to
+	// re-run `wrangler types` or automatically do so for them by enabling `dev.generate_types` or
+	// using `wrangler dev --types`.
 	const changed = envOutOfDate || runtimeOutOfDate;
 	if (!changed) {
 		return false;
