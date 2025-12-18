@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import { scheduler } from "node:timers/promises";
-import test from "ava";
 import { Miniflare, MiniflareOptions } from "miniflare";
+import { expect, onTestFinished, test } from "vitest";
 import { useTmp } from "../../test-shared";
 
 const WORKFLOW_SCRIPT = () => `
@@ -21,8 +21,8 @@ export class MyWorkflow extends WorkflowEntrypoint {
 	},
   };`;
 
-test("persists Workflow data on file-system between runs", async (t) => {
-	const tmp = await useTmp(t);
+test("persists Workflow data on file-system between runs", async () => {
+	const tmp = await useTmp();
 	const opts: MiniflareOptions = {
 		name: "worker",
 		compatibilityDate: "2024-11-20",
@@ -37,11 +37,10 @@ test("persists Workflow data on file-system between runs", async (t) => {
 		workflowsPersist: tmp,
 	};
 	let mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+	onTestFinished(() => mf.dispose());
 
 	let res = await mf.dispatchFetch("http://localhost");
-	t.is(
-		await res.text(),
+	expect(await res.text()).toBe(
 		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
 	);
 
@@ -61,11 +60,13 @@ test("persists Workflow data on file-system between runs", async (t) => {
 		}
 		await scheduler.wait(50);
 	}
-	t.true(success, `Condition was not met in 2000ms - output is ${test}`);
+	expect(success, `Condition was not met in 2000ms - output is ${test}`).toBe(
+		true
+	);
 
 	// check if files were committed
 	const names = await fs.readdir(tmp);
-	t.deepEqual(names, ["miniflare-workflows-MY_WORKFLOW"]);
+	expect(names).toEqual(["miniflare-workflows-MY_WORKFLOW"]);
 
 	// restart miniflare
 	await mf.dispose();
@@ -73,8 +74,7 @@ test("persists Workflow data on file-system between runs", async (t) => {
 
 	// state should be persisted now
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(
-		await res.text(),
+	expect(await res.text()).toBe(
 		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
 	);
 });

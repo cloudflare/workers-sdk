@@ -1,7 +1,7 @@
-import test from "ava";
 import { Miniflare } from "miniflare";
+import { expect, onTestFinished, test } from "vitest";
 
-test("ratelimit", async (t) => {
+test("ratelimit", async () => {
 	const mf = new Miniflare({
 		ratelimits: {
 			TESTRATE: {
@@ -27,21 +27,21 @@ test("ratelimit", async (t) => {
 		}
 		`,
 	});
-	t.teardown(() => mf.dispose());
+	onTestFinished(() => mf.dispose());
 
 	let res = await mf.dispatchFetch("http://localhost");
-	t.is(res.status, 200);
-	t.is(await res.text(), "success");
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("success");
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(res.status, 200);
-	t.is(await res.text(), "success");
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("success");
 
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(res.status, 429);
-	t.is(await res.text(), "rate limited");
+	expect(res.status).toBe(429);
+	expect(await res.text()).toBe("rate limited");
 });
 
-test("ratelimit validation", async (t) => {
+test("ratelimit validation", async () => {
 	const mf = new Miniflare({
 		ratelimits: {
 			TESTRATE: {
@@ -67,7 +67,7 @@ test("ratelimit validation", async (t) => {
 		}
 		`,
 	});
-	t.teardown(() => mf.dispose());
+	onTestFinished(() => mf.dispose());
 
 	const TESTS = [
 		{
@@ -98,7 +98,9 @@ test("ratelimit validation", async (t) => {
 			method: "POST",
 			body,
 		});
-		t.is(res.status, 200, `Bad status for [${body}]`);
-		t.is(await res.text(), error, `Mismatched error for [${body}]`);
+		// Bad status for [${body}]
+		expect(res.status).toBe(200);
+		// Mismatched error for [${body}]
+		expect(await res.text()).toBe(error);
 	}
 });

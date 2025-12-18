@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import { GET, POST, RouteHandler, Router } from "miniflare:shared";
 import { createTestHandler } from "../worker-test";
+import { test } from "vitest";
 
 class TestRouter extends Router {
 	@GET("/params/:foo/:bar")
