@@ -8,8 +8,9 @@ import dedent from "ts-dedent";
 import { logger } from "../../logger";
 import { transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
+import { getInstalledPackageVersion } from "./utils/packages";
 import { transformViteConfig } from "./utils/vite-config";
-import { Framework, getInstalledPackageVersion } from ".";
+import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
 const b = recast.types.builders;
