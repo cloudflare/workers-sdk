@@ -33,6 +33,10 @@ export type AutoConfigOptions = {
 	 * Note: When `dryRun` is `true` the the confirmation prompts are always skipped.
 	 */
 	skipConfirmations?: boolean;
+	/**
+	 * Whether to install Wrangler during autoconfig
+	 */
+	enableWranglerInstallation?: boolean;
 };
 
 export type AutoConfigSummary = {

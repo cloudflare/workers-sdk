@@ -31,13 +31,13 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-					Object {
-					  "buildCommand": "npm run build",
-					  "configured": false,
-					  "projectPath": "<PROJECT_PATH>",
-					  "workerName": "worker-name",
-					}
-				`);
+				Object {
+				  "buildCommand": "npm run build",
+				  "configured": false,
+				  "projectPath": "<PROJECT_PATH>",
+				  "workerName": "worker-name",
+				}
+			`);
 		});
 
 		test("settings can be updated in a plain static site without a framework nor a build script", async () => {

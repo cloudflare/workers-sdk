@@ -264,7 +264,15 @@ export type ApiCredentials =
 	  };
 
 /**
- * Try to read an API token or Global Auth from the environment.
+ * Try to read API credentials from environment variables.
+ *
+ * Authentication priority (highest to lowest):
+ * 1. Global API Key + Email (CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL)
+ * 2. API Token (CLOUDFLARE_API_TOKEN)
+ * 3. OAuth token from local state (via `wrangler login`) - not handled here
+ *
+ * Note: Global API Key + Email requires two headers (X-Auth-Key + X-Auth-Email),
+ * while API Token and OAuth token are both used as Bearer tokens.
  */
 export function getAuthFromEnv(): ApiCredentials | undefined {
 	const globalApiKey = getCloudflareGlobalAuthKeyFromEnv();
@@ -391,7 +399,7 @@ function getCallbackUrl(host = "localhost", port = 8976) {
 	return `http://${host}:${port}/oauth/callback`;
 }
 
-let LocalState: State = {
+let localState: State = {
 	...getAuthTokens(),
 };
 
@@ -449,14 +457,14 @@ export function reinitialiseAuthTokens(): void;
 export function reinitialiseAuthTokens(config: UserAuthConfig): void;
 
 export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
-	LocalState = {
+	localState = {
 		...getAuthTokens(config),
 	};
 }
 
 export function getAPIToken(): ApiCredentials | undefined {
-	if (LocalState.apiToken) {
-		return { apiToken: LocalState.apiToken };
+	if (localState.apiToken) {
+		return { apiToken: localState.apiToken };
 	}
 
 	const localAPIToken = getAuthFromEnv();
@@ -464,7 +472,7 @@ export function getAPIToken(): ApiCredentials | undefined {
 		return localAPIToken;
 	}
 
-	const storedAccessToken = LocalState.accessToken?.value;
+	const storedAccessToken = localState.accessToken?.value;
 	if (storedAccessToken) {
 		return { apiToken: storedAccessToken };
 	}
@@ -664,7 +672,7 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 		return false;
 	}
 
-	const state = LocalState;
+	const state = localState;
 
 	const stateQueryParam = query.state;
 	if (stateQueryParam !== state.stateQueryParam) {
@@ -688,7 +696,7 @@ async function getAuthURL(
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
 	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
 
-	Object.assign(LocalState, {
+	Object.assign(localState, {
 		codeChallenge,
 		codeVerifier,
 		stateQueryParam,
@@ -719,13 +727,13 @@ type TokenResponse =
  * Refresh an access token from the remote service.
  */
 async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
-	if (!LocalState.refreshToken) {
+	if (!localState.refreshToken) {
 		logger.warn("No refresh token is present.");
 	}
 
 	const params = new URLSearchParams({
 		grant_type: "refresh_token",
-		refresh_token: LocalState.refreshToken?.value ?? "",
+		refresh_token: localState.refreshToken?.value ?? "",
 		client_id: getClientIdFromEnv(),
 	});
 
@@ -765,10 +773,10 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 				value: access_token,
 				expiry: new Date(Date.now() + expires_in * 1000).toISOString(),
 			};
-			LocalState.accessToken = accessToken;
+			localState.accessToken = accessToken;
 
 			if (refresh_token) {
-				LocalState.refreshToken = {
+				localState.refreshToken = {
 					value: refresh_token,
 				};
 			}
@@ -777,13 +785,13 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 				// Multiple scopes are passed and delimited by spaces,
 				// despite using the singular name "scope".
 				scopes = scope.split(" ") as Scope[];
-				LocalState.scopes = scopes;
+				localState.scopes = scopes;
 			}
 
 			const accessContext: AccessContext = {
 				token: accessToken,
 				scopes,
-				refreshToken: LocalState.refreshToken,
+				refreshToken: localState.refreshToken,
 			};
 			return accessContext;
 		} catch (error) {
@@ -800,7 +808,7 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
  * Fetch an access token from the remote service.
  */
 async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
-	const { authorizationCode, codeVerifier = "" } = LocalState;
+	const { authorizationCode, codeVerifier = "" } = localState;
 
 	if (!codeVerifier) {
 		logger.warn("No code verifier is being sent.");
@@ -835,17 +843,17 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 	}
 	const { access_token, expires_in, refresh_token, scope } = json;
 	let scopes: Scope[] = [];
-	LocalState.hasAuthCodeBeenExchangedForAccessToken = true;
+	localState.hasAuthCodeBeenExchangedForAccessToken = true;
 
 	const expiryDate = new Date(Date.now() + expires_in * 1000);
 	const accessToken: AccessToken = {
 		value: access_token,
 		expiry: expiryDate.toISOString(),
 	};
-	LocalState.accessToken = accessToken;
+	localState.accessToken = accessToken;
 
 	if (refresh_token) {
-		LocalState.refreshToken = {
+		localState.refreshToken = {
 			value: refresh_token,
 		};
 	}
@@ -854,13 +862,13 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 		// Multiple scopes are passed and delimited by spaces,
 		// despite using the singular name "scope".
 		scopes = scope.split(" ") as Scope[];
-		LocalState.scopes = scopes;
+		localState.scopes = scopes;
 	}
 
 	const accessContext: AccessContext = {
 		token: accessToken,
 		scopes,
-		refreshToken: LocalState.refreshToken,
+		refreshToken: localState.refreshToken,
 	};
 	return accessContext;
 }
@@ -928,8 +936,7 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 }
 
 export function readAuthConfigFile(): UserAuthConfig {
-	const toml = parseTOML<UserAuthConfig>(readFileSync(getAuthConfigFilePath()));
-	return toml;
+	return parseTOML(readFileSync(getAuthConfigFilePath())) as UserAuthConfig;
 }
 
 type LoginProps = {
@@ -963,6 +970,32 @@ export async function loginOrRefreshIfRequired(
 	} else {
 		return true;
 	}
+}
+
+/**
+ * Get the OAuth token from local state, refreshing it if necessary.
+ * This only handles OAuth tokens stored locally (from `wrangler login`),
+ * not API tokens or API key/email from environment variables.
+ *
+ * Returns the token string if available, or undefined if not logged in.
+ */
+export async function getOAuthTokenFromLocalState(): Promise<
+	string | undefined
+> {
+	// Check if we have an OAuth token
+	if (!localState.accessToken) {
+		return undefined;
+	}
+
+	// If the token is expired, try to refresh it
+	if (isAccessTokenExpired()) {
+		const didRefresh = await refreshToken();
+		if (!didRefresh) {
+			return undefined;
+		}
+	}
+
+	return localState.accessToken?.value;
 }
 
 export async function getOauthToken(options: {
@@ -1142,7 +1175,7 @@ export async function login(
  * Checks to see if the access token has expired.
  */
 function isAccessTokenExpired(): boolean {
-	const { accessToken } = LocalState;
+	const { accessToken } = localState;
 	return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 }
 
@@ -1180,8 +1213,8 @@ export async function logout(): Promise<void> {
 		return;
 	}
 
-	if (!LocalState.accessToken) {
-		if (!LocalState.refreshToken) {
+	if (!localState.accessToken) {
+		if (!localState.refreshToken) {
 			logger.log("Not logged in, exiting...");
 			return;
 		}
@@ -1189,7 +1222,7 @@ export async function logout(): Promise<void> {
 		const body =
 			`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
 			`token_type_hint=refresh_token&` +
-			`token=${encodeURIComponent(LocalState.refreshToken?.value || "")}`;
+			`token=${encodeURIComponent(localState.refreshToken?.value || "")}`;
 
 		const response = await fetch(getRevokeUrlFromEnv(), {
 			method: "POST",
@@ -1206,7 +1239,7 @@ export async function logout(): Promise<void> {
 	const body =
 		`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
 		`token_type_hint=refresh_token&` +
-		`token=${encodeURIComponent(LocalState.refreshToken?.value || "")}`;
+		`token=${encodeURIComponent(localState.refreshToken?.value || "")}`;
 
 	const response = await fetch(getRevokeUrlFromEnv(), {
 		method: "POST",
@@ -1341,7 +1374,7 @@ export function getAccountFromCache():
  * if the token is an OAuth token.
  */
 export function getScopes(): Scope[] | undefined {
-	return LocalState.scopes;
+	return localState.scopes;
 }
 
 export function printScopes(scopes: Scope[]) {
