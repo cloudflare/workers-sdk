@@ -37,7 +37,6 @@ import { runAutoConfig } from "../autoconfig/run";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
 import { getSubdomainValues } from "../triggers/deploy";
-import { writeAuthConfigFile } from "../user";
 import { fetchSecrets } from "../utils/fetch-secrets";
 import { diagnoseScriptSizeError } from "../utils/friendly-validator-errors";
 import { captureRequestsFrom } from "./helpers/capture-requests-from";
@@ -714,46 +713,6 @@ describe("deploy", () => {
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
-		});
-
-		it("warns a user when they're authenticated with an API token in wrangler config file", async () => {
-			writeWranglerConfig();
-			writeWorkerSource();
-			mockSubDomainRequest();
-			mockUploadWorkerRequest();
-			writeAuthConfigFile({
-				api_token: "some-api-token",
-			});
-
-			await expect(runWrangler("deploy index.js")).resolves.toBeUndefined();
-
-			expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				Total Upload: xx KiB / gzip: xx KiB
-				Worker Startup Time: 100 ms
-				Uploaded test-name (TIMINGS)
-				Deployed test-name triggers (TIMINGS)
-				  https://test-name.test-sub-domain.workers.dev
-				Current Version ID: Galaxy-Class"
-			`);
-
-			// The current working directory is replaced with `<cwd>` to make the snapshot consistent across environments
-			// But since the actual working directory could be a long string on some operating systems it is possible that the string gets wrapped to a new line.
-			// To avoid failures across different environments, we remove any newline before `<cwd>` in the snapshot.
-			expect(std.warn.replaceAll(/from[ \r\n]+<cwd>/g, "from <cwd>"))
-				.toMatchInlineSnapshot(`
-					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token[0m
-
-					  from <cwd>/home/.config/.wrangler/config/default.toml.
-					  This is no longer supported in the current version of Wrangler.
-					  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
-					  environment variable.
-
-					"
-				`);
-			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
 		describe("non-TTY", () => {

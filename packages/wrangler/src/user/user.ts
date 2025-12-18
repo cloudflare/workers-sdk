@@ -304,7 +304,6 @@ interface State extends AuthTokens {
 	codeVerifier?: string;
 	hasAuthCodeBeenExchangedForAccessToken?: boolean;
 	stateQueryParam?: string;
-	scopes?: Scope[];
 }
 
 /**
@@ -314,13 +313,11 @@ interface AuthTokens {
 	accessToken?: AccessToken;
 	refreshToken?: RefreshToken;
 	scopes?: Scope[];
-	/** @deprecated - this field was only provided by the deprecated v1 `wrangler config` command. */
-	apiToken?: string;
 }
 
 /**
  * The path to the config file that holds user authentication data,
- * relative to the user's home directory.
+ * relative to global wrangler config directory.
  */
 const USER_AUTH_CONFIG_PATH = "config";
 
@@ -332,8 +329,6 @@ export interface UserAuthConfig {
 	refresh_token?: string;
 	expiration_time?: string;
 	scopes?: string[];
-	/** @deprecated - this field was only provided by the deprecated v1 `wrangler config` command. */
-	api_token?: string;
 }
 
 interface RefreshToken {
@@ -376,22 +371,13 @@ const DefaultScopes = {
 		" See, change, and bind to Connectivity Directory services, including creating services targeting Cloudflare Tunnel.",
 } as const;
 
-/**
- * The possible keys for a Scope.
- *
- * "offline_access" is automatically included.
- */
 export type Scope = keyof typeof DefaultScopes;
 
-export let DefaultScopeKeys = Object.keys(DefaultScopes) as Scope[];
+export const defaultScopeKeys = Object.freeze(
+	Object.keys(DefaultScopes)
+) as Scope[];
 
-export function setLoginScopeKeys(scopes: Scope[]) {
-	DefaultScopeKeys = scopes;
-}
-
-export function validateScopeKeys(
-	scopes: string[]
-): scopes is typeof DefaultScopeKeys {
+export function validateScopeKeys(scopes: string[]): scopes is Scope[] {
 	return scopes.every((scope) => scope in DefaultScopes);
 }
 
@@ -415,7 +401,7 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 		}
 
 		// otherwise try loading from the user auth config file.
-		const { oauth_token, refresh_token, expiration_time, scopes, api_token } =
+		const { oauth_token, refresh_token, expiration_time, scopes } =
 			config || readAuthConfigFile();
 
 		if (oauth_token) {
@@ -428,14 +414,6 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 				refreshToken: { value: refresh_token ?? "" },
 				scopes: scopes as Scope[],
 			};
-		} else if (api_token) {
-			logger.warn(
-				"It looks like you have used Wrangler v1's `config` command to login with an API token\n" +
-					`from ${config === undefined ? getAuthConfigFilePath() : "in-memory config"}.\n` +
-					"This is no longer supported in the current version of Wrangler.\n" +
-					"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
-			);
-			return { apiToken: api_token };
 		}
 	} catch {
 		return undefined;
@@ -447,15 +425,9 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
  *
  * This runs automatically whenever `writeAuthConfigFile` is run, so generally
  * you won't need to call it yourself.
+ *
+ * @param config Optional user auth config to use instead of reading from file.
  */
-export function reinitialiseAuthTokens(): void;
-
-/**
- * Reinitialise auth state from an in-memory config, skipping
- * over the part where we write a file and then read it back into memory
- */
-export function reinitialiseAuthTokens(config: UserAuthConfig): void;
-
 export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
 	localState = {
 		...getAuthTokens(config),
@@ -463,10 +435,6 @@ export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
 }
 
 export function getAPIToken(): ApiCredentials | undefined {
-	if (localState.apiToken) {
-		return { apiToken: localState.apiToken };
-	}
-
 	const localAPIToken = getAuthFromEnv();
 	if (localAPIToken) {
 		return localAPIToken;
@@ -1142,7 +1110,7 @@ export async function login(
 
 	const oauth = await getOauthToken({
 		browser: !!props.browser,
-		scopes: props.scopes ?? DefaultScopeKeys,
+		scopes: props.scopes ?? defaultScopeKeys,
 		clientId: getClientIdFromEnv(),
 		denied: {
 			url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
@@ -1255,7 +1223,7 @@ export async function logout(): Promise<void> {
 
 export function listScopes(message = "💁 Available scopes:"): void {
 	logger.log(message);
-	printScopes(DefaultScopeKeys);
+	printScopes(defaultScopeKeys);
 	// TODO: maybe a good idea to show usage here
 }
 

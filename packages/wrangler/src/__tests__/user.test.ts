@@ -81,7 +81,6 @@ describe("User", () => {
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
-				api_token: undefined,
 				oauth_token: "test-access-token",
 				refresh_token: "test-refresh-token",
 				expiration_time: expect.any(String),
@@ -123,7 +122,6 @@ describe("User", () => {
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
-				api_token: undefined,
 				oauth_token: "test-access-token",
 				refresh_token: "test-refresh-token",
 				expiration_time: expect.any(String),
@@ -165,7 +163,6 @@ describe("User", () => {
 				Successfully logged in."
 			`);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
-				api_token: undefined,
 				oauth_token: "test-access-token",
 				refresh_token: "test-refresh-token",
 				expiration_time: expect.any(String),
@@ -211,7 +208,6 @@ describe("User", () => {
 				normalizeString(`${getGlobalWranglerConfigPath()}/config/staging.toml`)
 			);
 			expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
-				api_token: undefined,
 				oauth_token: "test-access-token",
 				refresh_token: "test-refresh-token",
 				expiration_time: expect.any(String),
@@ -328,7 +324,6 @@ describe("User", () => {
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(readAuthConfigFile()).toEqual<UserAuthConfig>({
-			api_token: undefined,
 			oauth_token: "test-access-token",
 			refresh_token: "test-refresh-token",
 			expiration_time: expect.any(String),
