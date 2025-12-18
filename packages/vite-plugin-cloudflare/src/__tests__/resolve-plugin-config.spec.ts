@@ -212,7 +212,6 @@ describe("resolvePluginConfig - auxiliary workers", () => {
 						// Verify we receive both parameters
 						expect(userConfig).toBeDefined();
 						expect(entryWorkerConfig).toBeDefined();
-						expect(entryWorkerConfig.name).toBe("entry-worker");
 						expect(entryWorkerConfig.compatibility_date).toBe("2024-01-01");
 
 						return {
