@@ -11,7 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CI } from "../is-ci";
 import {
 	getAuthConfigFilePath,
-	getAuthToken,
+	getOAuthTokenFromLocalState,
 	loginOrRefreshIfRequired,
 	readAuthConfigFile,
 	requireAuth,
@@ -384,13 +384,57 @@ describe("User", () => {
 			expect(std.out).toContain("env-api-token");
 		});
 
-		it("should error when using global auth key/email", async () => {
+		it("should error when using global auth key/email without --json", async () => {
 			vi.stubEnv("CLOUDFLARE_API_KEY", "test-api-key");
 			vi.stubEnv("CLOUDFLARE_EMAIL", "test@example.com");
 
 			await expect(runWrangler("auth token")).rejects.toThrowError(
-				"Cannot retrieve a single token when using CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL"
+				"Cannot output a single token when using CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL"
 			);
+		});
+
+		it("should output JSON with key and email when using global auth key/email with --json", async () => {
+			vi.stubEnv("CLOUDFLARE_API_KEY", "test-api-key");
+			vi.stubEnv("CLOUDFLARE_EMAIL", "test@example.com");
+
+			await runWrangler("auth token --json");
+
+			const output = JSON.parse(std.out);
+			expect(output).toEqual({
+				type: "api_key",
+				key: "test-api-key",
+				email: "test@example.com",
+			});
+		});
+
+		it("should output JSON with oauth type when logged in with --json", async () => {
+			const futureDate = new Date(Date.now() + 100000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "test-access-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: futureDate,
+				scopes: ["account:read"],
+			});
+
+			await runWrangler("auth token --json");
+
+			const output = JSON.parse(std.out);
+			expect(output).toEqual({
+				type: "oauth",
+				token: "test-access-token",
+			});
+		});
+
+		it("should output JSON with api_token type when using CLOUDFLARE_API_TOKEN with --json", async () => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-api-token");
+
+			await runWrangler("auth token --json");
+
+			const output = JSON.parse(std.out);
+			expect(output).toEqual({
+				type: "api_token",
+				token: "env-api-token",
+			});
 		});
 
 		it("should error when token refresh fails and user is not logged in", async () => {
@@ -411,9 +455,9 @@ describe("User", () => {
 		});
 	});
 
-	describe("getAuthToken", () => {
+	describe("getOAuthTokenFromLocalState", () => {
 		it("should return undefined when not logged in", async () => {
-			const token = await getAuthToken();
+			const token = await getOAuthTokenFromLocalState();
 			expect(token).toBeUndefined();
 		});
 
@@ -426,23 +470,8 @@ describe("User", () => {
 				scopes: ["account:read"],
 			});
 
-			const token = await getAuthToken();
+			const token = await getOAuthTokenFromLocalState();
 			expect(token).toBe("test-oauth-token");
-		});
-
-		it("should return the API token from environment variable", async () => {
-			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-api-token");
-
-			const token = await getAuthToken();
-			expect(token).toBe("env-api-token");
-		});
-
-		it("should return undefined when using global auth key/email", async () => {
-			vi.stubEnv("CLOUDFLARE_API_KEY", "test-api-key");
-			vi.stubEnv("CLOUDFLARE_EMAIL", "test@example.com");
-
-			const token = await getAuthToken();
-			expect(token).toBeUndefined();
 		});
 
 		it("should refresh and return the token when expired", async () => {
@@ -456,7 +485,7 @@ describe("User", () => {
 
 			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshSuccess" });
 
-			const token = await getAuthToken();
+			const token = await getOAuthTokenFromLocalState();
 			// Mock returns "access_token_success_mock" for refreshSuccess
 			expect(token).toBe("access_token_success_mock");
 		});
@@ -472,7 +501,7 @@ describe("User", () => {
 
 			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshError" });
 
-			const token = await getAuthToken();
+			const token = await getOAuthTokenFromLocalState();
 			expect(token).toBeUndefined();
 		});
 	});
