@@ -1,7 +1,6 @@
 import assert from "node:assert";
 import { parseHttpResponse } from "../../../src/workers/cache/cache.worker";
 import { createTestHandler } from "../worker-test";
-import { test } from "vitest";
 
 const ENCODER = new TextEncoder();
 
