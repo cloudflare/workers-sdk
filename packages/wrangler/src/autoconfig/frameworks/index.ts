@@ -41,13 +41,19 @@ export abstract class Framework {
 // Make a best-effort attempt to find the exact version of the installed package
 export function getInstalledPackageVersion(
 	packageName: string,
-	projectPath: string
+	projectPath: string,
+	opts: {
+		stopAtProjectPath?: boolean;
+	} = {}
 ): string | undefined {
 	try {
 		const packagePath = require.resolve(packageName, {
 			paths: [projectPath],
 		});
-		const packageJsonPath = findUpSync("package.json", { cwd: packagePath });
+		const packageJsonPath = findUpSync("package.json", {
+			cwd: packagePath,
+			stopAt: opts.stopAtProjectPath === true ? projectPath : undefined,
+		});
 		if (packageJsonPath) {
 			const packageJson = parsePackageJSON(
 				readFileSync(packageJsonPath),
