@@ -117,11 +117,11 @@ test("ProxyClient: supports serialising multiple ReadableStreams, Blobs and File
 		})
 	);
 	expect(allResult[0] instanceof File).toBe(false);
-	expect(allResult[0] instanceof Blob).toBe(true);
+	expect(allResult[0]).toBeInstanceOf(Blob);
 	expect(await allResult[0].text()).toBe("no type");
-	expect(allResult[1] instanceof ReadableStream).toBe(true);
+	expect(allResult[1]).toBeInstanceOf(ReadableStream);
 	expect(await text(allResult[1])).toBe("stream");
-	expect(allResult[2] instanceof File).toBe(true);
+	expect(allResult[2]).toBeInstanceOf(File);
 	expect(allResult[2].type).toBe("text/plain");
 	expect(allResult[2].lastModified).toBe(1000);
 	expect(await allResult[2].text()).toBe("text file");

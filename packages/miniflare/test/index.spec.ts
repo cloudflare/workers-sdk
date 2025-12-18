@@ -153,8 +153,8 @@ test("Miniflare: setOptions: can update host/port", async () => {
 	expect(state1.inspectorUrl.port).toBe(state2.inspectorUrl.port);
 
 	// Make sure updating the host restarted the loopback server
-	expect(state1.loopbackPort).not.toBe(undefined);
-	expect(state2.loopbackPort).not.toBe(undefined);
+	expect(state1.loopbackPort).toBeDefined();
+	expect(state2.loopbackPort).toBeDefined();
 	expect(state1.loopbackPort).not.toBe(state2.loopbackPort);
 
 	// Make sure setting port to `undefined` always gives a new port, but keeps
@@ -2225,31 +2225,31 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 
 	// Check `getD1Database()`
 	let binding: unknown = await mf.getD1Database("DB");
-	expect(binding).not.toBe(undefined);
+	expect(binding).toBeDefined();
 	void unboundExpectations("DB");
 	await expect(() => mf.getD1Database("DB", "c")).rejects.toThrow();
 
 	// Check `getDurableObjectNamespace()`
 	binding = await mf.getDurableObjectNamespace("DO");
-	expect(binding).not.toBe(undefined);
+	expect(binding).toBeDefined();
 	void unboundExpectations("DO");
 	await expect(() => mf.getDurableObjectNamespace("DO", "c")).rejects.toThrow();
 
 	// Check `getKVNamespace()`
 	binding = await mf.getKVNamespace("KV", "");
-	expect(binding).not.toBe(undefined);
+	expect(binding).toBeDefined();
 	void unboundExpectations("KV");
 	await expect(() => mf.getKVNamespace("KV", "c")).rejects.toThrow();
 
 	// Check `getQueueProducer()`
 	binding = await mf.getQueueProducer("QUEUE", "");
-	expect(binding).not.toBe(undefined);
+	expect(binding).toBeDefined();
 	void unboundExpectations("QUEUE");
 	await expect(() => mf.getQueueProducer("QUEUE", "c")).rejects.toThrow();
 
 	// Check `getR2Bucket()`
 	binding = await mf.getR2Bucket("BUCKET", "b");
-	expect(binding).not.toBe(undefined);
+	expect(binding).toBeDefined();
 	void unboundExpectations("BUCKET");
 	await expect(() => mf.getQueueProducer("BUCKET", "c")).rejects.toThrow();
 });

@@ -30,26 +30,28 @@ export function escapeRegexpComponent(value: string): string {
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-export async function flaky(
+export function flaky(
 	impl: () => Awaitable<void>,
 	maxAttempts: number = 3
-): Promise<void> {
-	let lastError: unknown;
-	for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-		try {
-			await impl();
-			return;
-		} catch (e) {
-			lastError = e;
-			if (attempt < maxAttempts) {
-				// eslint-disable-next-line no-console
-				console.log(`Attempt #${attempt} failed!`);
-				// eslint-disable-next-line no-console
-				console.log(e);
+): () => Promise<void> {
+	return async () => {
+		let lastError: unknown;
+		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+			try {
+				await impl();
+				return;
+			} catch (e) {
+				lastError = e;
+				if (attempt < maxAttempts) {
+					// eslint-disable-next-line no-console
+					console.log(`Attempt #${attempt} failed!`);
+					// eslint-disable-next-line no-console
+					console.log(e);
+				}
 			}
 		}
-	}
-	throw lastError;
+		throw lastError;
+	};
 }
 
 /**

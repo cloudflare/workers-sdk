@@ -3,10 +3,10 @@ import { expect, test } from "vitest";
 
 test('_parseRanges: case-insensitive unit must be "bytes"', () => {
 	// Check case-insensitive and ignores whitespace
-	expect(parseRanges("bytes=0-1", 2)).not.toBe(undefined);
-	expect(parseRanges("BYTES    =0-1", 2)).not.toBe(undefined);
-	expect(parseRanges("     bYtEs=0-1", 4)).not.toBe(undefined);
-	expect(parseRanges("    Bytes        =0-1", 2)).not.toBe(undefined);
+	expect(parseRanges("bytes=0-1", 2)).toBeDefined();
+	expect(parseRanges("BYTES    =0-1", 2)).toBeDefined();
+	expect(parseRanges("     bYtEs=0-1", 4)).toBeDefined();
+	expect(parseRanges("    Bytes        =0-1", 2)).toBeDefined();
 	// Check fails with other units
 	expect(parseRanges("nibbles=0-1", 2)).toBe(undefined);
 });

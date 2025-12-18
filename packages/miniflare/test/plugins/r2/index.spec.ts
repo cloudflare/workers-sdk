@@ -650,7 +650,7 @@ async function testList(opts: {
 			expect(cursor).toBe(undefined);
 		} else {
 			expect(truncated).toBe(true);
-			expect(cursor).not.toBe(undefined);
+			expect(cursor).toBeDefined();
 		}
 		lastCursor = cursor;
 	}

@@ -1,5 +1,5 @@
 import { Miniflare, MiniflareOptions } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
+import { afterEach, beforeEach, expect, onTestFinished, test } from "vitest";
 import { flaky } from "../../test-shared";
 import type { WebSocket } from "undici";
 
@@ -63,33 +63,21 @@ export default {
 };
 `;
 
-// we need to run browser rendering tests in a serial manner to avoid a race condition installing the browser
-test("it creates a browser session", async () => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: BROWSER_WORKER_SCRIPT(),
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	onTestFinished(() => mf.dispose());
-
-	const res = await mf.dispatchFetch("https://localhost/session");
-	const text = await res.text();
-	expect(text).toBeTruthy();
-	expect(text.includes("sessionId")).toBe(true);
+// The CLI spinner outputs to stdout, so we mute it during tests
+const originalStdoutWrite = process.stdout.write;
+beforeEach(() => {
+	process.stdout.write = () => true;
 });
-test.afterEach(() => {
+afterEach(() => {
 	process.stdout.write = originalStdoutWrite;
 });
 
 // we need to run browser rendering tests in a serial manner to avoid a race condition installing the browser
-test.serial(
+test(
 	"it creates a browser session",
-	flaky(async (t) => {
+	flaky(async () => {
 		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
-		t.timeout(20_000);
+		// Vitest handles timeouts via test options
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -98,10 +86,11 @@ test.serial(
 			browserRendering: { binding: "MYBROWSER" },
 		};
 		const mf = new Miniflare(opts);
-		t.teardown(() => mf.dispose());
+		onTestFinished(() => mf.dispose());
 
 		const res = await mf.dispatchFetch("https://localhost/session");
-		t.assert((await res.text()).includes("sessionId"));
+		const text = await res.text();
+		expect(text.includes("sessionId")).toBe(true);
 	})
 );
 
@@ -126,20 +115,25 @@ export default {
 };
 `;
 
-test("it closes a browser session", async () => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: BROWSER_WORKER_CLOSE_SCRIPT,
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	onTestFinished(() => mf.dispose());
+test(
+	"it closes a browser session",
+	flaky(async () => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		// Vitest handles timeouts via test options
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: BROWSER_WORKER_CLOSE_SCRIPT,
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		onTestFinished(() => mf.dispose());
 
-	const res = await mf.dispatchFetch("https://localhost/close");
-	expect(await res.text()).toBe("Browser closed");
-});
+		const res = await mf.dispatchFetch("https://localhost/close");
+		expect(await res.text()).toBe("Browser closed");
+	})
+);
 
 const BROWSER_WORKER_REUSE_SCRIPT = `
 ${sendMessage.toString()}
@@ -169,20 +163,25 @@ export default {
 };
 `;
 
-test("it reuses a browser session", async () => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: BROWSER_WORKER_REUSE_SCRIPT,
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	onTestFinished(() => mf.dispose());
+test(
+	"it reuses a browser session",
+	flaky(async () => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		// Vitest handles timeouts via test options
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: BROWSER_WORKER_REUSE_SCRIPT,
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		onTestFinished(() => mf.dispose());
 
-	const res = await mf.dispatchFetch("https://localhost");
-	expect(await res.text()).toBe("Browser session reused");
-});
+		const res = await mf.dispatchFetch("https://localhost");
+		expect(await res.text()).toBe("Browser session reused");
+	})
+);
 
 const BROWSER_WORKER_ALREADY_USED_SCRIPT = `
 export default {
@@ -214,6 +213,8 @@ const isWindows = process.platform === "win32";
 (isWindows ? test.skip : test)(
 	"fails if browser session already in use",
 	async () => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		// Vitest handles timeouts via test options
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -258,30 +259,35 @@ export default {
 };
 `;
 
-test("gets sessions while acquiring and closing session", async () => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: GET_SESSIONS_SCRIPT,
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	onTestFinished(() => mf.dispose());
+test(
+	"gets sessions while acquiring and closing session",
+	flaky(async () => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		// Vitest handles timeouts via test options
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: GET_SESSIONS_SCRIPT,
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		onTestFinished(() => mf.dispose());
 
-	const { emptySessions, acquiredSessions, afterClosedSessions } = (await mf
-		.dispatchFetch("https://localhost")
-		.then((res) => res.json())) as any;
-	expect(emptySessions.length).toBe(0);
-	expect(acquiredSessions.length).toBe(1);
-	expect(
-		typeof acquiredSessions[0].sessionId === "string" &&
-			typeof acquiredSessions[0].startTime === "number" &&
-			!acquiredSessions[0].connectionId &&
-			!acquiredSessions[0].connectionId
-	).toBe(true);
-	expect(afterClosedSessions.length).toBe(0);
-});
+		const { emptySessions, acquiredSessions, afterClosedSessions } = (await mf
+			.dispatchFetch("https://localhost")
+			.then((res) => res.json())) as any;
+		expect(emptySessions.length).toBe(0);
+		expect(acquiredSessions.length).toBe(1);
+		expect(
+			typeof acquiredSessions[0].sessionId === "string" &&
+				typeof acquiredSessions[0].startTime === "number" &&
+				!acquiredSessions[0].connectionId &&
+				!acquiredSessions[0].connectionId
+		).toBe(true);
+		expect(afterClosedSessions.length).toBe(0);
+	})
+);
 
 const GET_SESSIONS_AFTER_DISCONNECT_SCRIPT = `
 ${waitForClosedConnection.toString()}
@@ -306,27 +312,32 @@ export default {
 };
 `;
 
-test("gets sessions while connecting and disconnecting session", async () => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: GET_SESSIONS_AFTER_DISCONNECT_SCRIPT,
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	onTestFinished(() => mf.dispose());
+test(
+	"gets sessions while connecting and disconnecting session",
+	flaky(async () => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		// Vitest handles timeouts via test options
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: GET_SESSIONS_AFTER_DISCONNECT_SCRIPT,
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		onTestFinished(() => mf.dispose());
 
-	const { connectedSession, disconnectedSession } = (await mf
-		.dispatchFetch("https://localhost")
-		.then((res) => res.json())) as any;
-	expect(connectedSession.sessionId).toBe(disconnectedSession.sessionId);
-	expect(
-		typeof connectedSession.connectionId === "string" &&
-			typeof connectedSession.connectionStartTime === "number"
-	).toBe(true);
-	expect(
-		!disconnectedSession.connectionId &&
-			!disconnectedSession.connectionStartTime
-	).toBe(true);
-});
+		const { connectedSession, disconnectedSession } = (await mf
+			.dispatchFetch("https://localhost")
+			.then((res) => res.json())) as any;
+		expect(connectedSession.sessionId).toBe(disconnectedSession.sessionId);
+		expect(
+			typeof connectedSession.connectionId === "string" &&
+				typeof connectedSession.connectionStartTime === "number"
+		).toBe(true);
+		expect(
+			!disconnectedSession.connectionId &&
+				!disconnectedSession.connectionStartTime
+		).toBe(true);
+	})
+);

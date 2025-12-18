@@ -274,8 +274,8 @@ test("get: validates but ignores cache ttl", async () => {
 	await expect(kv.get("key", { cacheTtl: 10 })).rejects.toThrow(
 		"KV GET failed: 400 Invalid cache_ttl of 10. Cache TTL must be at least 30."
 	);
-	expect(await kv.get("key", { cacheTtl: 30 })).not.toBe(undefined);
-	expect(await kv.get("key", { cacheTtl: 60 })).not.toBe(undefined);
+	expect(await kv.get("key", { cacheTtl: 30 })).toBeDefined();
+	expect(await kv.get("key", { cacheTtl: 60 })).toBeDefined();
 });
 
 test("put: validates key", async () => {
@@ -636,7 +636,7 @@ test("list: paginates with variable limit", async () => {
 	let page = await kv.list({ prefix: ns, limit: 1 });
 	expect(page.keys).toEqual([{ name: `${ns}key1` }]);
 	assert(!page.list_complete);
-	expect(page.cursor).not.toBe(undefined);
+	expect(page.cursor).toBeDefined();
 
 	// Get second page with different limit
 	page = await kv.list({ prefix: ns, limit: 2, cursor: page.cursor });
@@ -653,7 +653,7 @@ test("list: returns keys inserted whilst paginating", async () => {
 	let page = await kv.list({ prefix: ns, limit: 2 });
 	expect(page.keys).toEqual([{ name: `${ns}key1` }, { name: `${ns}key3` }]);
 	assert(!page.list_complete);
-	expect(page.cursor).not.toBe(undefined);
+	expect(page.cursor).toBeDefined();
 
 	// Insert key2 and key4
 	await kv.put("key2", "value2");

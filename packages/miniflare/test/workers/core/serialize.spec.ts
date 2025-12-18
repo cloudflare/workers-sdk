@@ -42,7 +42,7 @@ test("serialize Headers object consisting of multiple Set-Cookie headers", () =>
 
 	const serialized = stringify(headers, createHTTPReducers(impl));
 	const deserialized = parse(serialized, createHTTPRevivers(impl));
-	expect(deserialized instanceof impl.Headers).toBe(true);
+	expect(deserialized).toBeInstanceOf(impl.Headers);
 	expect(deserialized.get("content-type")).toBe("application/json");
 	expect(deserialized.get("authorization")).toBe("Bearer token");
 	expect(deserialized.getSetCookie()).toEqual([
