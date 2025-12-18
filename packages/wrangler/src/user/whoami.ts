@@ -9,6 +9,13 @@ import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
 import type { ApiCredentials, Scope } from ".";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
+/**
+ * Displays information about the currently authenticated user, including their
+ * email, accounts, token permissions, and membership roles.
+ *
+ * When called with accountFilter and configAccountId, also checks for potential
+ * account_id mismatches that could cause authentication errors.
+ */
 export async function whoami(
 	complianceConfig: ComplianceConfig,
 	accountFilter?: string,
