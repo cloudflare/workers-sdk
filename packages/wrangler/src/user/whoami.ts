@@ -7,6 +7,13 @@ import { fetchMembershipRoles } from "./membership";
 import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
 import type { ApiCredentials, Scope } from ".";
 
+/**
+ * Displays information about the currently authenticated user, including their
+ * email, accounts, token permissions, and membership roles.
+ *
+ * When called with accountFilter and configAccountId, also checks for potential
+ * account_id mismatches that could cause authentication errors.
+ */
 export async function whoami(accountFilter?: string, configAccountId?: string) {
 	logger.log("Getting User settings...");
 	const user = await getUserInfo();
@@ -57,6 +64,16 @@ function printAccountList(user: UserInfo) {
 	);
 }
 
+/**
+ * Prints a warning if the account_id in the Wrangler configuration does not match
+ * any of the user's authenticated accounts.
+ *
+ * Only shows warning if:
+ * 1. We have an accountFilter (the account ID from the failed request)
+ * 2. We have a configAccountId (the account_id from the wrangler config)
+ * 3. The accountFilter matches the configAccountId (meaning the config account_id was used)
+ * 4. The accountFilter is NOT in the user's accounts list
+ */
 function printAccountIdMismatchWarning(
 	user: UserInfo,
 	accountFilter?: string,
