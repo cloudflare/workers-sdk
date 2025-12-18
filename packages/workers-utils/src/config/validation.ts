@@ -1576,7 +1576,12 @@ function normalizeAndValidateEnvironment(
 			rawEnv,
 			envName,
 			"services",
-			validateBindingArray(envName, validateServiceBinding),
+			validateBindingArray(
+				envName,
+				createValidateServiceBinding(
+					topLevelEnv?.name ?? rawEnv.name ?? rawConfig?.name
+				)
+			),
 			[]
 		),
 		analytics_engine_datasets: notInheritable(
@@ -3784,14 +3789,24 @@ const validateBindingsHaveUniqueNames = (
 	return !hasDuplicates;
 };
 
-const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
-	if (typeof value !== "object" || value === null) {
-		diagnostics.errors.push(
-			`"services" bindings should be objects, but got ${JSON.stringify(value)}`
-		);
-		return false;
-	}
-	let isValid = true;
+const createValidateServiceBinding = (
+	workerName: string | undefined
+): ValidatorFn => {
+	return (diagnostics, field, value, topLevelEnv) => {
+		if (typeof value !== "object" || value === null) {
+			diagnostics.errors.push(
+				`"services" bindings should be objects, but got ${JSON.stringify(value)}`
+			);
+			return false;
+		}
+		// Default service field to worker name if not provided
+		if (!("service" in value)) {
+			const name = topLevelEnv?.name ?? workerName;
+			if (name) {
+				value.service = name;
+			}
+		}
+		let isValid = true;
 	// Service bindings must have a binding, a service, optionally an environment, and, optionally an entrypoint.
 	if (!isRequiredProperty(value, "binding", "string")) {
 		diagnostics.errors.push(
@@ -3825,11 +3840,14 @@ const validateServiceBinding: ValidatorFn = (diagnostics, field, value) => {
 		);
 		isValid = false;
 	}
-	if (!isRemoteValid(value, field, diagnostics)) {
-		isValid = false;
-	}
-	return isValid;
+		if (!isRemoteValid(value, field, diagnostics)) {
+			isValid = false;
+		}
+		return isValid;
+	};
 };
+
+const validateServiceBinding: ValidatorFn = createValidateServiceBinding(undefined);
 
 const validateAnalyticsEngineBinding: ValidatorFn = (
 	diagnostics,
