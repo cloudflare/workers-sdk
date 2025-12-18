@@ -33,7 +33,6 @@ const UNSAFE_BINDINGS: (
 ];
 const PLUGIN_SCRIPT = /* javascript */ `export default {
 	async fetch(req, env, ctx) {
-		console.log(env)
 		const writeRes = await env.UNSAFE_BINDING.performUnsafeWrite("some-key", "some-value");
 		if (!writeRes.ok) {
 			return Response.json(writeRes, { status: 500 })
@@ -52,7 +51,7 @@ test("A plugin that does not expose `plugins` will cause an error to be thrown",
 	];
 	const opts: MiniflareOptions = {
 		name: "unsafe-plugin-worker",
-		// Use a compatability date that supports RPCs
+		// Use a compatibility date that supports RPCs
 		compatibilityDate: "2025-08-04",
 		modules: true,
 		script: PLUGIN_SCRIPT,
@@ -72,7 +71,7 @@ test("A plugin that exposes a non-object `plugins` export will cause an error to
 	];
 	const opts: MiniflareOptions = {
 		name: "unsafe-plugin-worker",
-		// Use a compatability date that supports RPCs
+		// Use a compatibility date that supports RPCs
 		compatibilityDate: "2025-08-04",
 		modules: true,
 		script: PLUGIN_SCRIPT,
@@ -88,7 +87,7 @@ test("Supports specifying an unsafe plugin will be loaded into Miniflare and wil
 	const [packageName, pluginName] = [pluginEntrypoint, "unsafe-plugin"];
 	const opts: MiniflareOptions = {
 		name: "unsafe-plugin-worker",
-		// Use a compatability date that supports RPCs
+		// Use a compatibility date that supports RPCs
 		compatibilityDate: "2025-08-04",
 		modules: true,
 		script: PLUGIN_SCRIPT,

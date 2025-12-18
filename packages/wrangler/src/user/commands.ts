@@ -1,8 +1,24 @@
-import { CommandLineArgsError } from "@cloudflare/workers-utils";
-import { createCommand } from "../core/create-command";
+import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
+import { createCommand, createNamespace } from "../core/create-command";
+import { logger } from "../logger";
 import * as metrics from "../metrics";
-import { listScopes, login, logout, validateScopeKeys } from "./user";
+import {
+	getAuthFromEnv,
+	getOAuthTokenFromLocalState,
+	listScopes,
+	login,
+	logout,
+	validateScopeKeys,
+} from "./user";
 import { whoami } from "./whoami";
+
+/**
+ * Represents the authentication information returned by `wrangler auth token --json`.
+ */
+export type AuthTokenInfo =
+	| { type: "oauth"; token: string }
+	| { type: "api_token"; token: string }
+	| { type: "api_key"; key: string; email: string };
 
 export const loginCommand = createCommand({
 	metadata: {
@@ -117,6 +133,78 @@ export const whoamiCommand = createCommand({
 	async handler(args, { config }) {
 		await whoami(config, args.account);
 		metrics.sendMetricsEvent("view accounts", {
+			sendMetrics: config.send_metrics,
+		});
+	},
+});
+
+export const authNamespace = createNamespace({
+	metadata: {
+		description: "🔐 Manage authentication",
+		owner: "Workers: Authoring and Testing",
+		status: "stable",
+	},
+});
+
+export const authTokenCommand = createCommand({
+	metadata: {
+		description: "🔑 Retrieve the current authentication token or credentials",
+		owner: "Workers: Authoring and Testing",
+		status: "stable",
+	},
+	behaviour: {
+		printBanner: (args) => !args.json,
+		printConfigWarnings: false,
+	},
+	args: {
+		json: {
+			type: "boolean",
+			description: "Return output as JSON with token type information",
+			default: false,
+		},
+	},
+	async handler({ json }, { config }) {
+		const authFromEnv = getAuthFromEnv();
+
+		let result: AuthTokenInfo;
+
+		if (authFromEnv) {
+			if ("apiToken" in authFromEnv) {
+				// API token from CLOUDFLARE_API_TOKEN
+				result = { type: "api_token", token: authFromEnv.apiToken };
+			} else {
+				// Global API key + email from CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL
+				result = {
+					type: "api_key",
+					key: authFromEnv.authKey,
+					email: authFromEnv.authEmail,
+				};
+			}
+		} else {
+			// OAuth token from local state (wrangler login)
+			const token = await getOAuthTokenFromLocalState();
+			if (!token) {
+				throw new UserError(
+					"Not logged in. Please run `wrangler login` to authenticate."
+				);
+			}
+			result = { type: "oauth", token };
+		}
+
+		if (json) {
+			logger.log(JSON.stringify(result, null, 2));
+		} else {
+			// For non-JSON output, only output a single token for scripting
+			if (result.type === "api_key") {
+				throw new UserError(
+					"Cannot output a single token when using CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL.\n" +
+						"Use --json to get both key and email, or use CLOUDFLARE_API_TOKEN instead."
+				);
+			}
+			logger.log(result.token);
+		}
+
+		metrics.sendMetricsEvent("retrieve auth token", {
 			sendMetrics: config.send_metrics,
 		});
 	},

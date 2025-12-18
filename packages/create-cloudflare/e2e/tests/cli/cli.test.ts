@@ -555,7 +555,7 @@ describe("Create Cloudflare CLI", () => {
 					    npm create cloudflare -- --framework svelte -- --types=ts
 					    pnpm create cloudflare --framework svelte -- --types=ts
 					    Allowed Values:
-					      analog, angular, astro, docusaurus, gatsby, next, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vue
+					      analog, angular, astro, docusaurus, gatsby, next, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vike, vue
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:

@@ -41,7 +41,6 @@ async function getControlStub(
 
 test("maxBatchTimeout validation", async () => {
 	const mf = new Miniflare({
-		verbose: true,
 		queueConsumers: {
 			QUEUE: { maxBatchTimeout: 60 },
 		},
@@ -51,7 +50,6 @@ test("maxBatchTimeout validation", async () => {
 	expect(
 		() =>
 			new Miniflare({
-				verbose: true,
 				queueConsumers: {
 					QUEUE: { maxBatchTimeout: 61 },
 				},
@@ -66,8 +64,6 @@ test("flushes partial and full batches", async () => {
 	let batches: string[][] = [];
 
 	const mf = new Miniflare({
-		verbose: true,
-
 		workers: [
 			// Check with producer and consumer as separate Workers
 			{
@@ -203,7 +199,6 @@ test("flushes partial and full batches", async () => {
 test("supports declaring queue producers as a key-value pair -> queueProducers: { 'MY_QUEUE_BINDING': 'my-queue_name' }", async () => {
 	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
 	const mf = new Miniflare({
-		verbose: true,
 		queueProducers: { MY_QUEUE_PRODUCER: "MY_QUEUE" },
 		queueConsumers: ["MY_QUEUE"],
 		serviceBindings: {
@@ -243,7 +238,6 @@ test("supports declaring queue producers as a key-value pair -> queueProducers: 
 test("supports declaring queue producers as an array -> queueProducers: ['MY_QUEUE_BINDING']", async () => {
 	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
 	const mf = new Miniflare({
-		verbose: true,
 		queueProducers: ["MY_QUEUE"],
 		queueConsumers: ["MY_QUEUE"],
 		serviceBindings: {
@@ -283,7 +277,6 @@ test("supports declaring queue producers as an array -> queueProducers: ['MY_QUE
 test("supports declaring queue producers as {MY_QUEUE_BINDING: {queueName: 'my-queue-name'}}", async () => {
 	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
 	const mf = new Miniflare({
-		verbose: true,
 		queueProducers: { MY_QUEUE_PRODUCER: { queueName: "MY_QUEUE" } },
 		queueConsumers: ["MY_QUEUE"],
 		serviceBindings: {
@@ -324,8 +317,6 @@ test("sends all structured cloneable types", async () => {
 	const errorPromise = new DeferredPromise<string>();
 
 	const mf = new Miniflare({
-		verbose: true,
-
 		queueProducers: ["QUEUE"],
 		queueConsumers: {
 			QUEUE: { maxBatchSize: 100, maxBatchTimeout: 0, maxRetries: 0 },
@@ -699,7 +690,6 @@ test("moves to dead letter queue", async () => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
-		verbose: true,
 
 		queueProducers: { BAD_QUEUE: { queueName: "bad" } },
 		queueConsumers: {
@@ -824,7 +814,6 @@ test("operations permit strange queue names", async () => {
 	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
 	const id = "my/ Queue";
 	const mf = new Miniflare({
-		verbose: true,
 		queueProducers: { QUEUE: { queueName: id } },
 		queueConsumers: [id],
 		serviceBindings: {
@@ -872,7 +861,6 @@ test("supports message contentTypes", async () => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
-		verbose: true,
 		queueProducers: { QUEUE: { queueName: id } },
 		queueConsumers: [id],
 		serviceBindings: {
@@ -945,7 +933,6 @@ test("supports message contentTypes", async () => {
 
 test("validates message size", async () => {
 	const mf = new Miniflare({
-		verbose: true,
 		queueProducers: { QUEUE: "MY_QUEUE" },
 		queueConsumers: {
 			MY_QUEUE: {

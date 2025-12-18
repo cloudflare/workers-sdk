@@ -285,7 +285,13 @@ import { setupCommand } from "./setup";
 import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
 import { typesCommand } from "./type-generation";
-import { loginCommand, logoutCommand, whoamiCommand } from "./user/commands";
+import {
+	authNamespace,
+	authTokenCommand,
+	loginCommand,
+	logoutCommand,
+	whoamiCommand,
+} from "./user/commands";
 import { betaCmdColor, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
@@ -1554,6 +1560,18 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("whoami");
+
+	registry.define([
+		{
+			command: "wrangler auth",
+			definition: authNamespace,
+		},
+		{
+			command: "wrangler auth token",
+			definition: authTokenCommand,
+		},
+	]);
+	registry.registerNamespace("auth");
 
 	registry.define([
 		{

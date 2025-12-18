@@ -1,6 +1,6 @@
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { describe, expect, test } from "vitest";
-import { getInstalledPackageVersion } from "../../autoconfig/frameworks";
+import { getInstalledPackageVersion } from "../../autoconfig/frameworks/utils/packages";
 import { runInTempDir } from "../helpers/run-in-tmp";
 
 describe("getInstalledPackageVersion()", () => {

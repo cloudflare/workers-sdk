@@ -92,11 +92,26 @@ describe("metrics", () => {
 				await Promise.all(dispatcher.requests);
 				expect(requests.count).toBe(1);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
+					`"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should include parsed wrangler version components in events", async () => {
+				const requests = mockMetricRequest();
+
+				const dispatcher = getMetricsDispatcher({
+					sendMetrics: true,
+				});
+				dispatcher.sendAdhocEvent("version-test");
+				await Promise.all(dispatcher.requests);
+				expect(requests.count).toBe(1);
+				expect(std.debug).toContain('"wranglerVersion":"1.2.3"');
+				expect(std.debug).toContain('"wranglerMajorVersion":1');
+				expect(std.debug).toContain('"wranglerMinorVersion":2');
+				expect(std.debug).toContain('"wranglerPatchVersion":3');
 			});
 
 			it("should write a debug log if the dispatcher is disabled", async () => {
@@ -108,7 +123,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(0);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Dispatching disabled - would have sent {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}."`
+					`"Metrics dispatcher: Dispatching disabled - would have sent {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}."`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -128,7 +143,7 @@ describe("metrics", () => {
 				await Promise.all(dispatcher.requests);
 
 				expect(std.debug).toMatchInlineSnapshot(`
-					"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}
+					"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}
 					Metrics dispatcher: Failed to send request: Failed to fetch"
 				`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
@@ -147,7 +162,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(0);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
+					`"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);

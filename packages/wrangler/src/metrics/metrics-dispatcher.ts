@@ -59,6 +59,8 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	const SPARROW_SOURCE_KEY = process.env.SPARROW_SOURCE_KEY ?? "";
 	const requests: Array<Promise<void>> = [];
 	const wranglerVersion = getWranglerVersion();
+	const [wranglerMajorVersion, wranglerMinorVersion, wranglerPatchVersion] =
+		wranglerVersion.split(".").map((v) => parseInt(v, 10));
 	const amplitude_session_id = Date.now();
 	let amplitude_event_id = 0;
 
@@ -76,6 +78,9 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				properties: {
 					category: "Workers",
 					wranglerVersion,
+					wranglerMajorVersion,
+					wranglerMinorVersion,
+					wranglerPatchVersion,
 					os: getOS(),
 					...properties,
 				},

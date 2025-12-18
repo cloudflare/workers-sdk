@@ -3,7 +3,6 @@ import { expect, onTestFinished, test } from "vitest";
 
 test("single secret-store", async () => {
 	const mf = new Miniflare({
-		verbose: true,
 		compatibilityDate: "2025-01-01",
 		secretsStoreSecrets: {
 			SECRET: {
@@ -45,7 +44,6 @@ test("single secret-store", async () => {
 
 test("multiple secret-store", async () => {
 	const mf = new Miniflare({
-		verbose: true,
 		compatibilityDate: "2025-01-01",
 		secretsStoreSecrets: {
 			SECRET1: {

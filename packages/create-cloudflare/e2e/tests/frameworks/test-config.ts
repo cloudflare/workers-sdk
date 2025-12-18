@@ -992,6 +992,28 @@ function getExperimentalFrameworkTestConfig(
 			nodeCompat: true,
 			verifyTypes: false,
 		},
+		{
+			name: "vike",
+			testCommitMessage: true,
+			timeout: LONG_TIMEOUT,
+			unsupportedOSs: ["win32"],
+			verifyDeploy: {
+				route: "/",
+				expectedText: "Vike",
+			},
+			verifyPreview: {
+				route: "/",
+				expectedText: "Vike",
+			},
+			nodeCompat: false,
+			promptHandlers: [
+				{
+					matcher: /Select a UI framework:/,
+					input: [keys.enter],
+				},
+			],
+			verifyTypes: false,
+		},
 	];
 }
 

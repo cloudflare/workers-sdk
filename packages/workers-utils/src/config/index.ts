@@ -103,7 +103,7 @@ export type ConfigBindingOptions = Pick<
 
 const parseRawConfigFile = (configPath: string): RawConfig => {
 	if (configPath.endsWith(".toml")) {
-		return parseTOML(readFileSync(configPath), configPath);
+		return parseTOML(readFileSync(configPath), configPath) as RawConfig;
 	}
 
 	if (configPath.endsWith(".json") || configPath.endsWith(".jsonc")) {

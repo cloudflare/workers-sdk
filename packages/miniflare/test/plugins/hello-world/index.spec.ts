@@ -3,7 +3,6 @@ import { expect, onTestFinished, test } from "vitest";
 
 test("hello-world", async () => {
 	const mf = new Miniflare({
-		verbose: true,
 		compatibilityDate: "2025-01-01",
 		helloWorld: {
 			BINDING: {

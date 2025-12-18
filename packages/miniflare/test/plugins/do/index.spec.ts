@@ -269,7 +269,6 @@ test("can use Durable Object ID from one object in another", async () => {
 
 test("proxies Durable Object methods", async () => {
 	const mf = new Miniflare({
-		verbose: true,
 		modules: true,
 		script: COUNTER_SCRIPT(""),
 		durableObjects: { COUNTER: "Counter" },
@@ -298,7 +297,6 @@ test("proxies Durable Object methods", async () => {
 
 	// Check with WebSocket
 	await mf.setOptions({
-		verbose: true,
 		modules: true,
 		script: `
     export class WebSocketObject {
@@ -337,7 +335,6 @@ test("Durable Object eviction", async () => {
 	// Vitest handles timeouts via test options
 	// first set unsafePreventEviction to undefined
 	const mf = new Miniflare({
-		verbose: true,
 		modules: true,
 		script: STATEFUL_SCRIPT(),
 		durableObjects: {
@@ -356,12 +353,10 @@ test("Durable Object eviction", async () => {
 	expect(await res.text()).not.toBe(original);
 });
 
-test("prevent Durable Object eviction", async () => {
+test("prevent Durable Object eviction", { timeout: 20_000 }, async () => {
 	// this test requires testing over a 10 second timeout
-	// Vitest handles timeouts via test options
-	// first set unsafePreventEviction to undefined
+	// first set unsafePreventEviction to true
 	const mf = new Miniflare({
-		verbose: true,
 		modules: true,
 		script: STATEFUL_SCRIPT(),
 		durableObjects: {
@@ -385,7 +380,6 @@ test("prevent Durable Object eviction", async () => {
 
 const MINIFLARE_WITH_SQLITE = (useSQLite: boolean) =>
 	new Miniflare({
-		verbose: true,
 		modules: true,
 		script: `export class SQLiteDurableObject {
 			constructor(ctx) { this.ctx = ctx; }
@@ -403,7 +397,6 @@ const MINIFLARE_WITH_SQLITE = (useSQLite: boolean) =>
 		export default {
 			fetch(req, env, ctx) {
 				const id = env.SQLITE_DURABLE_OBJECT.idFromName("foo");
-				console.log({id})
 				const stub = env.SQLITE_DURABLE_OBJECT.get(id);
 				return stub.fetch(req);
 			}

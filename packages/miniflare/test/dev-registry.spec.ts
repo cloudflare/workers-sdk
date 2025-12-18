@@ -366,10 +366,9 @@ test("DevRegistry: fetch to module worker with node bindings", async () => {
 			SERVICE: {
 				name: "remote-worker",
 			},
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
 			export default {
 				async fetch(request, env, ctx) {
 					return new Response("Not implemented", { status: 501 });
@@ -379,7 +378,7 @@ test("DevRegistry: fetch to module worker with node bindings", async () => {
 	});
 	onTestFinished(() => local.dispose());
 
-	const bindings = await local.getBindings<Record<string, any>>();
+		const bindings = await local.getBindings<Record<string, any>>();
 
 	await waitUntil(async () => {
 		const res = await bindings.SERVICE.fetch("http://example.com?name=World");
@@ -389,12 +388,12 @@ test("DevRegistry: fetch to module worker with node bindings", async () => {
 		expect(res.status).toBe(503);
 	});
 
-	const remote = new Miniflare({
-		name: "remote-worker",
-		unsafeDevRegistryPath,
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
 			export default {
 				async fetch(request, env, ctx) {
                     const url = new URL(request.url);
@@ -404,10 +403,45 @@ test("DevRegistry: fetch to module worker with node bindings", async () => {
 				}
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: undefined,
-				proxy: true,
+			unsafeDirectSockets: [
+				{
+					entrypoint: undefined,
+					proxy: true,
+				},
+			],
+		});
+
+		await remote.ready;
+		await waitUntil(t, async (t) => {
+			const res = await bindings.SERVICE.fetch("http://example.com?name=World");
+			const result = await res.text();
+			t.is(result, "Hello World");
+			t.is(res.status, 200);
+		});
+
+		await remote.dispose();
+		await waitUntil(t, async (t) => {
+			const res = await bindings.SERVICE.fetch("http://example.com?name=World");
+			t.is(
+				await res.text(),
+				`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+			);
+			t.is(res.status, 503);
+		});
+	}
+);
+
+test.serial(
+	"DevRegistry: RPC to default entrypoint with node bindings",
+	async (t) => {
+		const unsafeDevRegistryPath = await useTmp(t);
+		const local = new Miniflare({
+			name: "local-worker",
+			unsafeDevRegistryPath,
+			serviceBindings: {
+				SERVICE: {
+					name: "remote-worker",
+				},
 			},
 		],
 	});
@@ -452,7 +486,7 @@ test("DevRegistry: RPC to default entrypoint with node bindings", async () => {
 	});
 	onTestFinished(() => local.dispose());
 
-	const env = await local.getBindings<Record<string, any>>();
+		const env = await local.getBindings<Record<string, any>>();
 
 	await waitUntil(async () => {
 		try {
@@ -465,24 +499,24 @@ test("DevRegistry: RPC to default entrypoint with node bindings", async () => {
 		}
 	});
 
-	const remote = new Miniflare({
-		name: "remote-worker",
-		unsafeDevRegistryPath,
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
 			import { WorkerEntrypoint } from "cloudflare:workers";
 			export default class TestEntrypoint extends WorkerEntrypoint {
 				ping() { return "pong"; }
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: undefined,
-				proxy: true,
-			},
-		],
-	});
+			unsafeDirectSockets: [
+				{
+					entrypoint: undefined,
+					proxy: true,
+				},
+			],
+		});
 
 	await remote.ready;
 	await waitUntil(async () => {
@@ -515,9 +549,8 @@ test("DevRegistry: fetch to durable object with do proxy disabled", async () => 
 			DO: {
 				className: "MyDurableObject",
 			},
-		},
-		modules: true,
-		script: `
+			modules: true,
+			script: `
 			import { DurableObject } from "cloudflare:workers";
 			export class MyDurableObject extends DurableObject {
 				fetch() {
@@ -534,21 +567,21 @@ test("DevRegistry: fetch to durable object with do proxy disabled", async () => 
 	});
 	onTestFinished(() => remote.dispose());
 
-	await remote.ready;
+		await remote.ready;
 
-	const local = new Miniflare({
-		name: "local-worker",
-		unsafeDevRegistryPath,
-		unsafeDevRegistryDurableObjectProxy: false,
-		durableObjects: {
-			DO: {
-				className: "MyDurableObject",
-				scriptName: "remote-worker",
+		const local = new Miniflare({
+			name: "local-worker",
+			unsafeDevRegistryPath,
+			unsafeDevRegistryDurableObjectProxy: false,
+			durableObjects: {
+				DO: {
+					className: "MyDurableObject",
+					scriptName: "remote-worker",
+				},
 			},
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
 			export default {
 				async fetch(request, env, ctx) {
 	                const ns = env.DO;
@@ -578,9 +611,8 @@ test("DevRegistry: RPC to durable object with do proxy disabled", async () => {
 			DO: {
 				className: "MyDurableObject",
 			},
-		},
-		modules: true,
-		script: `
+			modules: true,
+			script: `
 			import { DurableObject } from "cloudflare:workers";
 			export class MyDurableObject extends DurableObject {
 				ping() {
@@ -591,21 +623,21 @@ test("DevRegistry: RPC to durable object with do proxy disabled", async () => {
 	});
 	onTestFinished(() => remote.dispose());
 
-	await remote.ready;
+		await remote.ready;
 
-	const local = new Miniflare({
-		name: "local-worker",
-		unsafeDevRegistryPath,
-		unsafeDevRegistryDurableObjectProxy: false,
-		durableObjects: {
-			DO: {
-				className: "MyDurableObject",
-				scriptName: "remote-worker",
+		const local = new Miniflare({
+			name: "local-worker",
+			unsafeDevRegistryPath,
+			unsafeDevRegistryDurableObjectProxy: false,
+			durableObjects: {
+				DO: {
+					className: "MyDurableObject",
+					scriptName: "remote-worker",
+				},
 			},
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
 			export default {
 				async fetch(request, env, ctx) {
 					try {
@@ -894,10 +926,9 @@ test("DevRegistry: miniflare with different registry path", async () => {
 			SERVICE: {
 				name: "remote-worker",
 			},
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
 			export default {
 				async fetch(request, env, ctx) {
 					try {
@@ -909,24 +940,24 @@ test("DevRegistry: miniflare with different registry path", async () => {
 				}
 			}
 		`,
-	};
-	const remoteOptions: MiniflareOptions = {
-		name: "remote-worker",
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
+		};
+		const remoteOptions: MiniflareOptions = {
+			name: "remote-worker",
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
 			import { WorkerEntrypoint } from "cloudflare:workers";
 			export default class TestEntrypoint extends WorkerEntrypoint {
 				ping() { return "pong"; }
 			}
 		`,
-		unsafeDirectSockets: [
-			{
-				entrypoint: undefined,
-				proxy: true,
-			},
-		],
-	};
+			unsafeDirectSockets: [
+				{
+					entrypoint: undefined,
+					proxy: true,
+				},
+			],
+		};
 
 	const local = new Miniflare({
 		...localOptions,
@@ -987,10 +1018,9 @@ test("DevRegistry: fetch to module worker with https enabled", async () => {
 			SERVICE: {
 				name: "remote-worker",
 			},
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
 			export default {
 				async fetch(request, env, ctx) {
 					const response = await env.SERVICE.fetch(request.url);
@@ -1005,20 +1035,20 @@ test("DevRegistry: fetch to module worker with https enabled", async () => {
 	});
 	onTestFinished(() => local.dispose());
 
-	const res = await local.dispatchFetch("https://example.com?name=World");
+		const res = await local.dispatchFetch("https://example.com?name=World");
 
 	expect(await res.text()).toBe(
 		`Response from remote worker: Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
 	);
 	expect(res.status).toBe(503);
 
-	const remote = new Miniflare({
-		name: "remote-worker",
-		unsafeDevRegistryPath,
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		https: true,
-		script: `
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			https: true,
+			script: `
 			export default {
 				async fetch(request, env, ctx) {
 	                const url = new URL(request.url);
@@ -1052,10 +1082,9 @@ test("DevRegistry: fetch to durable object with https enabled", async () => {
 				className: "MyDurableObject",
 				scriptName: "remote-worker",
 			},
-		},
-		compatibilityFlags: ["experimental"],
-		modules: true,
-		script: `
+			compatibilityFlags: ["experimental"],
+			modules: true,
+			script: `
 			export default {
 				async fetch(request, env, ctx) {
 	                const ns = env.DO;
@@ -1074,19 +1103,19 @@ test("DevRegistry: fetch to durable object with https enabled", async () => {
 	expect(await res.text()).toBe("Service Unavailable");
 	expect(res.status).toBe(503);
 
-	const remote = new Miniflare({
-		name: "remote-worker",
-		unsafeDevRegistryPath,
-		unsafeDevRegistryDurableObjectProxy: true,
-		https: true,
-		compatibilityFlags: ["experimental"],
-		durableObjects: {
-			DO: {
-				className: "MyDurableObject",
+		const remote = new Miniflare({
+			name: "remote-worker",
+			unsafeDevRegistryPath,
+			unsafeDevRegistryDurableObjectProxy: true,
+			https: true,
+			compatibilityFlags: ["experimental"],
+			durableObjects: {
+				DO: {
+					className: "MyDurableObject",
+				},
 			},
-		},
-		modules: true,
-		script: `
+			modules: true,
+			script: `
 			import { DurableObject } from "cloudflare:workers";
 			export class MyDurableObject extends DurableObject {
 				fetch() {

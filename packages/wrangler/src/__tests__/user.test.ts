@@ -11,6 +11,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CI } from "../is-ci";
 import {
 	getAuthConfigFilePath,
+	getOAuthTokenFromLocalState,
 	loginOrRefreshIfRequired,
 	readAuthConfigFile,
 	requireAuth,
@@ -332,6 +333,176 @@ describe("User", () => {
 			refresh_token: "test-refresh-token",
 			expiration_time: expect.any(String),
 			scopes: ["account:read"],
+		});
+	});
+
+	describe("auth token", () => {
+		it("should output the OAuth token when logged in with a valid token", async () => {
+			// Set up a valid, non-expired token
+			const futureDate = new Date(Date.now() + 100000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "test-access-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: futureDate,
+				scopes: ["account:read"],
+			});
+
+			await runWrangler("auth token");
+
+			expect(std.out).toContain("test-access-token");
+		});
+
+		it("should refresh and output the token when the token is expired", async () => {
+			// Set up an expired token
+			const pastDate = new Date(Date.now() - 100000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+
+			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshSuccess" });
+
+			await runWrangler("auth token");
+
+			// The token should have been refreshed (mock returns "access_token_success_mock")
+			expect(std.out).toContain("access_token_success_mock");
+		});
+
+		it("should error when not logged in", async () => {
+			await expect(runWrangler("auth token")).rejects.toThrowError(
+				"Not logged in. Please run `wrangler login` to authenticate."
+			);
+		});
+
+		it("should output the API token from environment variable", async () => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-api-token");
+
+			await runWrangler("auth token");
+
+			expect(std.out).toContain("env-api-token");
+		});
+
+		it("should error when using global auth key/email without --json", async () => {
+			vi.stubEnv("CLOUDFLARE_API_KEY", "test-api-key");
+			vi.stubEnv("CLOUDFLARE_EMAIL", "test@example.com");
+
+			await expect(runWrangler("auth token")).rejects.toThrowError(
+				"Cannot output a single token when using CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL"
+			);
+		});
+
+		it("should output JSON with key and email when using global auth key/email with --json", async () => {
+			vi.stubEnv("CLOUDFLARE_API_KEY", "test-api-key");
+			vi.stubEnv("CLOUDFLARE_EMAIL", "test@example.com");
+
+			await runWrangler("auth token --json");
+
+			const output = JSON.parse(std.out);
+			expect(output).toEqual({
+				type: "api_key",
+				key: "test-api-key",
+				email: "test@example.com",
+			});
+		});
+
+		it("should output JSON with oauth type when logged in with --json", async () => {
+			const futureDate = new Date(Date.now() + 100000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "test-access-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: futureDate,
+				scopes: ["account:read"],
+			});
+
+			await runWrangler("auth token --json");
+
+			const output = JSON.parse(std.out);
+			expect(output).toEqual({
+				type: "oauth",
+				token: "test-access-token",
+			});
+		});
+
+		it("should output JSON with api_token type when using CLOUDFLARE_API_TOKEN with --json", async () => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-api-token");
+
+			await runWrangler("auth token --json");
+
+			const output = JSON.parse(std.out);
+			expect(output).toEqual({
+				type: "api_token",
+				token: "env-api-token",
+			});
+		});
+
+		it("should error when token refresh fails and user is not logged in", async () => {
+			// Set up an expired token with a refresh token that will fail
+			const pastDate = new Date(Date.now() - 100000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-token",
+				refresh_token: "invalid-refresh-token",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+
+			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshError" });
+
+			await expect(runWrangler("auth token")).rejects.toThrowError(
+				"Not logged in. Please run `wrangler login` to authenticate."
+			);
+		});
+	});
+
+	describe("getOAuthTokenFromLocalState", () => {
+		it("should return undefined when not logged in", async () => {
+			const token = await getOAuthTokenFromLocalState();
+			expect(token).toBeUndefined();
+		});
+
+		it("should return the OAuth token when logged in with a valid token", async () => {
+			const futureDate = new Date(Date.now() + 100000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "test-oauth-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: futureDate,
+				scopes: ["account:read"],
+			});
+
+			const token = await getOAuthTokenFromLocalState();
+			expect(token).toBe("test-oauth-token");
+		});
+
+		it("should refresh and return the token when expired", async () => {
+			const pastDate = new Date(Date.now() - 100000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-token",
+				refresh_token: "test-refresh-token",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+
+			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshSuccess" });
+
+			const token = await getOAuthTokenFromLocalState();
+			// Mock returns "access_token_success_mock" for refreshSuccess
+			expect(token).toBe("access_token_success_mock");
+		});
+
+		it("should return undefined when token refresh fails", async () => {
+			const pastDate = new Date(Date.now() - 100000 * 1000).toISOString();
+			writeAuthConfigFile({
+				oauth_token: "expired-token",
+				refresh_token: "invalid-refresh-token",
+				expiration_time: pastDate,
+				scopes: ["account:read"],
+			});
+
+			mockExchangeRefreshTokenForAccessToken({ respondWith: "refreshError" });
+
+			const token = await getOAuthTokenFromLocalState();
+			expect(token).toBeUndefined();
 		});
 	});
 });

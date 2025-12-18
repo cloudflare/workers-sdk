@@ -82,22 +82,28 @@ export class APIError extends ParseError {
 }
 
 /**
- * A wrapper around `TOML.parse` that throws a `ParseError`.
+ * Parses a TOML string to an object.
+ *
+ * Note: throws a `ParseError` if parsing fails.
+ *
+ * @param tomlContent The TOML content to parse.
+ * @param filePath Optional file path for error reporting.
+ * @returns The parsed TOML object.
  */
-export function parseTOML<T>(input: string, file?: string): T | never {
+export function parseTOML(tomlContent: string, filePath?: string): unknown {
 	try {
-		return TOML.parse(input) as T;
+		return TOML.parse(tomlContent);
 	} catch (err) {
 		if (!(err instanceof TomlError)) {
 			throw err;
 		}
 
 		const location = {
-			lineText: input.split("\n")[err.line - 1],
+			lineText: tomlContent.split("\n")[err.line - 1],
 			line: err.line,
 			column: err.column - 1,
-			file,
-			fileText: input,
+			file: filePath,
+			fileText: tomlContent,
 		};
 		throw new ParseError({
 			text: err.message.substring(0, err.message.indexOf("\n")),

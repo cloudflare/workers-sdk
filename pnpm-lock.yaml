@@ -1222,7 +1222,7 @@ importers:
         version: 5.8.2
       vitest:
         specifier: ~3.0.7
-        version: 3.0.9(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3(vitest@3.2.3))(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.2))(yaml@2.8.1)
+        version: 3.0.9(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.2))(yaml@2.8.1)
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -15153,14 +15153,14 @@ snapshots:
     dependencies:
       '@ampproject/remapping': 2.2.0
       '@babel/code-frame': 7.26.2
-      '@babel/generator': 7.28.5
+      '@babel/generator': 7.26.3
       '@babel/helper-compilation-targets': 7.25.9
       '@babel/helper-module-transforms': 7.26.0(@babel/core@7.26.0)
       '@babel/helpers': 7.26.0
-      '@babel/parser': 7.28.5
+      '@babel/parser': 7.26.3
       '@babel/template': 7.25.9
       '@babel/traverse': 7.25.9
-      '@babel/types': 7.28.5
+      '@babel/types': 7.26.3
       convert-source-map: 2.0.0
       debug: 4.4.1(supports-color@9.2.2)
       gensync: 1.0.0-beta.2
@@ -15171,7 +15171,7 @@ snapshots:
 
   '@babel/generator@7.26.3':
     dependencies:
-      '@babel/parser': 7.28.5
+      '@babel/parser': 7.26.3
       '@babel/types': 7.26.3
       '@jridgewell/gen-mapping': 0.3.5
       '@jridgewell/trace-mapping': 0.3.31
@@ -15180,7 +15180,7 @@ snapshots:
   '@babel/generator@7.28.3':
     dependencies:
       '@babel/parser': 7.28.5
-      '@babel/types': 7.28.5
+      '@babel/types': 7.28.4
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
       jsesc: 3.0.2
@@ -15230,7 +15230,7 @@ snapshots:
   '@babel/helper-module-imports@7.25.9':
     dependencies:
       '@babel/traverse': 7.25.9
-      '@babel/types': 7.28.5
+      '@babel/types': 7.28.4
     transitivePeerDependencies:
       - supports-color
 
@@ -15245,7 +15245,7 @@ snapshots:
     dependencies:
       '@babel/core': 7.26.0
       '@babel/helper-module-imports': 7.25.9
-      '@babel/helper-validator-identifier': 7.28.5
+      '@babel/helper-validator-identifier': 7.25.9
       '@babel/traverse': 7.25.9
     transitivePeerDependencies:
       - supports-color
@@ -15300,7 +15300,7 @@ snapshots:
   '@babel/helpers@7.26.0':
     dependencies:
       '@babel/template': 7.25.9
-      '@babel/types': 7.28.5
+      '@babel/types': 7.28.4
 
   '@babel/parser@7.26.3':
     dependencies:
@@ -15438,8 +15438,8 @@ snapshots:
   '@babel/template@7.25.9':
     dependencies:
       '@babel/code-frame': 7.26.2
-      '@babel/parser': 7.28.5
-      '@babel/types': 7.28.5
+      '@babel/parser': 7.28.4
+      '@babel/types': 7.28.4
 
   '@babel/template@7.27.2':
     dependencies:
@@ -15451,7 +15451,7 @@ snapshots:
     dependencies:
       '@babel/code-frame': 7.26.2
       '@babel/generator': 7.26.3
-      '@babel/parser': 7.28.5
+      '@babel/parser': 7.26.3
       '@babel/template': 7.25.9
       '@babel/types': 7.26.3
       debug: 4.4.1(supports-color@9.2.2)
@@ -18512,7 +18512,7 @@ snapshots:
 
   '@types/babel__core@7.20.5':
     dependencies:
-      '@babel/parser': 7.28.5
+      '@babel/parser': 7.26.3
       '@babel/types': 7.26.3
       '@types/babel__generator': 7.6.8
       '@types/babel__template': 7.4.4
@@ -18520,16 +18520,16 @@ snapshots:
 
   '@types/babel__generator@7.6.8':
     dependencies:
-      '@babel/types': 7.28.5
+      '@babel/types': 7.28.4
 
   '@types/babel__template@7.4.4':
     dependencies:
-      '@babel/parser': 7.28.5
-      '@babel/types': 7.28.5
+      '@babel/parser': 7.28.4
+      '@babel/types': 7.28.4
 
   '@types/babel__traverse@7.20.6':
     dependencies:
-      '@babel/types': 7.28.5
+      '@babel/types': 7.28.4
 
   '@types/body-parser@1.19.5':
     dependencies:
@@ -19367,7 +19367,7 @@ snapshots:
 
   '@vue/compiler-core@3.3.4':
     dependencies:
-      '@babel/parser': 7.28.5
+      '@babel/parser': 7.26.3
       '@vue/shared': 3.3.4
       estree-walker: 2.0.2
       source-map-js: 1.2.1
@@ -19428,7 +19428,7 @@ snapshots:
 
   '@vue/reactivity-transform@3.3.4':
     dependencies:
-      '@babel/parser': 7.28.5
+      '@babel/parser': 7.26.3
       '@vue/compiler-core': 3.3.4
       '@vue/shared': 3.3.4
       estree-walker: 2.0.2
@@ -21685,7 +21685,7 @@ snapshots:
 
   fs-extra@7.0.1:
     dependencies:
-      graceful-fs: 4.2.11
+      graceful-fs: 4.2.10
       jsonfile: 4.0.0
       universalify: 0.1.2
 
@@ -24298,7 +24298,7 @@ snapshots:
   rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44)(typescript@5.8.3):
     dependencies:
       '@babel/generator': 7.28.3
-      '@babel/parser': 7.28.5
+      '@babel/parser': 7.28.4
       '@babel/types': 7.28.4
       ast-kit: 2.1.3
       birpc: 2.6.1
@@ -25999,7 +25999,7 @@ snapshots:
       - supports-color
       - terser
 
-  vitest@3.0.9(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3(vitest@3.2.3))(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.2))(yaml@2.8.1):
+  vitest@3.0.9(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.2))(yaml@2.8.1):
     dependencies:
       '@vitest/expect': 3.0.9
       '@vitest/mocker': 3.0.9(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.2))(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))

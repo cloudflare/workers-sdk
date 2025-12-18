@@ -28,6 +28,19 @@ export const setupCommand = createCommand({
 				"Runs the command without applying any filesystem modifications",
 			type: "boolean",
 		},
+		"completion-message": {
+			describe:
+				"Display a message with deployment details after `wrangler setup` is complete",
+			type: "boolean",
+			default: true,
+			hidden: true,
+		},
+		"install-wrangler": {
+			describe: "Install Wrangler during project setup",
+			type: "boolean",
+			default: true,
+			hidden: true,
+		},
 	},
 
 	async handler(args, { config }) {
@@ -35,22 +48,33 @@ export const setupCommand = createCommand({
 			wranglerConfig: config,
 		});
 
+		function logCompletionMessage(message: string) {
+			if (args.completionMessage) {
+				logger.log(message);
+			}
+		}
+
 		// Only run auto config if the project is not already configured
 		if (!details.configured) {
 			await runAutoConfig(details, {
 				runBuild: args.build,
 				skipConfirmations: args.yes,
 				dryRun: args.dryRun,
+				enableWranglerInstallation: args.installWrangler,
 			});
 			if (!args.dryRun) {
-				logger.log("🎉 Your project is now setup to deploy to Cloudflare");
+				logCompletionMessage(
+					"🎉 Your project is now setup to deploy to Cloudflare"
+				);
 			}
 		} else {
-			logger.log("🎉 Your project is already setup to deploy to Cloudflare");
+			logCompletionMessage(
+				"🎉 Your project is already setup to deploy to Cloudflare"
+			);
 		}
 		if (!args.dryRun) {
 			const { type } = await getPackageManager();
-			logger.log(
+			logCompletionMessage(
 				`You can now deploy with ${brandColor(details.packageJson ? `${type} run deploy` : "wrangler deploy")}`
 			);
 		}

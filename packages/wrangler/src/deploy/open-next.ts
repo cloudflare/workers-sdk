@@ -1,7 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { getOpenNextDeployFromEnv } from "@cloudflare/workers-utils";
 import { runCommand } from "../autoconfig/c3-vendor/command";
-import { getInstalledPackageVersion } from "../autoconfig/frameworks";
+import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packages";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 

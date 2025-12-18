@@ -31,8 +31,8 @@ import {
 	vi,
 } from "vitest";
 import { getDetailsForAutoConfig } from "../autoconfig/details";
-import { getInstalledPackageVersion } from "../autoconfig/frameworks";
 import { Static } from "../autoconfig/frameworks/static";
+import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packages";
 import { runAutoConfig } from "../autoconfig/run";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
@@ -121,8 +121,8 @@ vi.mock("../package-manager", async (importOriginal) => ({
 
 vi.mock("../autoconfig/details");
 vi.mock("../autoconfig/run");
-
 vi.mock("../autoconfig/frameworks");
+vi.mock("../autoconfig/frameworks/utils/packages");
 vi.mock("../autoconfig/c3-vendor/command");
 
 describe("deploy", () => {

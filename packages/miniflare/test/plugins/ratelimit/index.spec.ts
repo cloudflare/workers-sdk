@@ -3,8 +3,6 @@ import { expect, onTestFinished, test } from "vitest";
 
 test("ratelimit", async () => {
 	const mf = new Miniflare({
-		verbose: true,
-
 		ratelimits: {
 			TESTRATE: {
 				simple: {
@@ -45,8 +43,6 @@ test("ratelimit", async () => {
 
 test("ratelimit validation", async () => {
 	const mf = new Miniflare({
-		verbose: true,
-
 		ratelimits: {
 			TESTRATE: {
 				simple: {
