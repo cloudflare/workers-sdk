@@ -1,5 +1,5 @@
 import dedent from "ts-dedent";
-import { minimalVitestConfig, test } from "./helpers";
+import { test, vitestConfig } from "./helpers";
 
 test("filter test suite by pattern includes non-ascii string", async ({
 	expect,
@@ -7,7 +7,7 @@ test("filter test suite by pattern includes non-ascii string", async ({
 	vitestRun,
 }) => {
 	await seed({
-		"vitest.config.mts": minimalVitestConfig,
+		"vitest.config.mts": vitestConfig(),
 		"index.test.ts": dedent`
             import { it, expect } from "vitest";
 

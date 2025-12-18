@@ -181,6 +181,7 @@ describe("writeChangeSet()", () => {
 
 describe("commitAndPush()", () => {
 	it("should call spawnSync with appropriate git commands", ({ expect }) => {
+		(spawnSync as Mock).mockClear();
 		(spawnSync as Mock).mockReturnValue({ output: [] });
 		const commitMessage = dedent`
 			chore: update dependencies of "@namespace/package" package

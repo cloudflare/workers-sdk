@@ -28,10 +28,21 @@ export function setEnv(newEnv: Record<string, unknown> & Env) {
 
 export function getSerializedOptions(): SerializedOptions {
 	assert(typeof __vitest_worker__ === "object", "Expected global Vitest state");
-	const options = __vitest_worker__.config?.poolOptions?.workers;
+	const options = __vitest_worker__.providedContext.cloudflarePoolOptions;
 	// `options` should always be defined when running tests
-	assert(options !== undefined, "Expected serialised options");
-	return options;
+
+	assert(
+		options !== undefined,
+		"Expected serialised options" +
+			Object.keys(__vitest_worker__.providedContext)
+	);
+	const parsedOptions = JSON.parse(options);
+	return {
+		...parsedOptions,
+		durableObjectBindingDesignators: new Map(
+			parsedOptions.durableObjectBindingDesignators
+		),
+	};
 }
 
 export function getResolvedMainPath(
@@ -40,7 +51,7 @@ export function getResolvedMainPath(
 	const options = getSerializedOptions();
 	if (options.main === undefined) {
 		throw new Error(
-			`Using ${forBindingType} bindings to the current worker requires \`poolOptions.workers.main\` to be set to your worker's entrypoint`
+			`Using ${forBindingType} bindings to the current worker requires \`poolOptions.workers.main\` to be set to your worker's entrypoint: ${JSON.stringify(options)}`
 		);
 	}
 	return options.main;

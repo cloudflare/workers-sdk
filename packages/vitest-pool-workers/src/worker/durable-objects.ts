@@ -103,10 +103,12 @@ async function runInStub<O extends DurableObject, R>(
 	const response = await stub.fetch("http://x", {
 		cf: { [CF_KEY_ACTION]: id },
 	});
+
 	// `result` may be `undefined`
 	assert(actionResults.has(id), `Expected action result for ${id}`);
 	const result = actionResults.get(id);
 	actionResults.delete(id);
+
 	if (result === kUseResponse) {
 		return response as R;
 	} else if (response.ok) {
@@ -177,7 +179,7 @@ export function runInRunnerObject<R>(
 		instance: __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__
 	) => R | Promise<R>
 ): Promise<R> {
-	const stub = env.__VITEST_POOL_WORKERS_RUNNER_OBJECT.get("singleton");
+	const stub = env.__VITEST_POOL_WORKERS_RUNNER_OBJECT.getByName("singleton");
 	return runInStub(stub, callback);
 }
 
@@ -190,6 +192,7 @@ export async function maybeHandleRunRequest(
 	if (actionId === undefined) {
 		return;
 	}
+
 	assert(typeof actionId === "number", `Expected numeric ${CF_KEY_ACTION}`);
 	try {
 		const callback = actionResults.get(actionId);

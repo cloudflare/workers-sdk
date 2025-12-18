@@ -22,14 +22,16 @@ function importModule(
 	specifier: string
 ): Promise<Record<string, unknown>> {
 	return runInRunnerObject(env, (instance) => {
-		if (instance.executor === undefined) {
+		if (!instance.executor) {
 			const message =
 				"Expected Vitest to start running before importing modules.\n" +
 				"This usually means you have multiple `vitest` versions installed.\n" +
 				"Use your package manager's `why` command to list versions and why each is installed (e.g. `npm why vitest`).";
 			throw new Error(message);
 		}
-		return instance.executor.executeId(specifier);
+
+		// @ts-expect-error the type for the Module runner is not exposed
+		return instance.executor.import(specifier);
 	});
 }
 
@@ -310,7 +312,9 @@ export function createWorkerEntrypointWrapper(
 				this.env,
 				entrypoint
 			);
+
 			const userEnv = stripInternalEnv(this.env);
+
 			return patchAndRunWithHandlerContext(this.ctx, () => {
 				if (typeof entrypointValue === "object" && entrypointValue !== null) {
 					// Assuming the user has defined an `ExportedHandler`
@@ -345,7 +349,6 @@ export function createWorkerEntrypointWrapper(
 			});
 		};
 	}
-
 	return Wrapper;
 }
 
@@ -408,6 +411,8 @@ export function createDurableObjectWrapper(
 		const property = getDurableObjectRPCProperty(this, className, key);
 		return getRPCPropertyCallableThenable(key, property);
 	});
+
+	// Wrapper[Symbol.hasInstance] = () => true
 
 	Wrapper.prototype[kEnsureInstance] = async function (
 		this: DurableObjectWrapper

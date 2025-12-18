@@ -41,7 +41,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
-		"@cloudflare/vitest-pool-workers": "^0.8.19",
+		"@cloudflare/vitest-pool-workers": "catalog:vitest-3",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/mime": "^3.0.4",
@@ -49,7 +49,7 @@
 		"eslint": "catalog:default",
 		"rimraf": "catalog:default",
 		"typescript": "catalog:default",
-		"vitest": "catalog:default"
+		"vitest": "catalog:vitest-3"
 	},
 	"engines": {
 		"node": ">=18.0.0"
