@@ -248,7 +248,6 @@ import {
 } from "./auth-variables";
 import { getAccountChoices } from "./choose-account";
 import { generateAuthUrl } from "./generate-auth-url";
-import { generateRandomState } from "./generate-random-state";
 import type { ChooseAccountItem } from "./choose-account";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { ParsedUrlQuery } from "node:querystring";
@@ -277,18 +276,15 @@ export type ApiCredentials =
 export function getAuthFromEnv(): ApiCredentials | undefined {
 	const globalApiKey = getCloudflareGlobalAuthKeyFromEnv();
 	const globalApiEmail = getCloudflareGlobalAuthEmailFromEnv();
-	const apiToken = getCloudflareAPITokenFromEnv();
 
 	if (globalApiKey && globalApiEmail) {
 		return { authKey: globalApiKey, authEmail: globalApiEmail };
-	} else if (apiToken) {
-		return { apiToken };
 	}
-}
 
-/**
- * An implementation of rfc6749#section-4.1 and rfc7636.
- */
+	const apiToken = getCloudflareAPITokenFromEnv();
+
+	return apiToken ? { apiToken } : undefined;
+}
 
 interface PKCECodes {
 	codeChallenge: string;
@@ -565,9 +561,9 @@ class ErrorUnsupportedGrantType extends ErrorAccessTokenResponse {
 }
 
 /**
- * Translate the raw error strings returned from the server into error classes.
+ * Instantiate the error class corresponding to the raw error string.
  */
-function toErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
+function newErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
 	switch (rawError) {
 		case "invalid_request":
 			return new ErrorInvalidRequest(rawError);
@@ -599,26 +595,6 @@ function toErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
 }
 
 /**
- * The maximum length for a code verifier for the best security we can offer.
- * Please note the NOTE section of RFC 7636 § 4.1 - the length must be >= 43,
- * but <= 128, **after** base64 url encoding. This means 32 code verifier bytes
- * encoded will be 43 bytes, or 96 bytes encoded will be 128 bytes. So 96 bytes
- * is the highest valid value that can be used.
- */
-const RECOMMENDED_CODE_VERIFIER_LENGTH = 96;
-
-/**
- * A sensible length for the state's length, for anti-csrf.
- */
-const RECOMMENDED_STATE_LENGTH = 32;
-
-/**
- * Character set to generate code verifier defined in rfc7636.
- */
-export const PKCE_CHARSET =
-	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
-
-/**
  * OAuth 2.0 client that ONLY supports authorization code flow, with PKCE.
  */
 
@@ -630,9 +606,9 @@ export const PKCE_CHARSET =
 function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 	if (query.error) {
 		if (Array.isArray(query.error)) {
-			throw toErrorClass(query.error[0]);
+			throw newErrorClass(query.error[0]);
 		}
-		throw toErrorClass(query.error);
+		throw newErrorClass(query.error);
 	}
 
 	const code = query.code;
@@ -662,7 +638,9 @@ async function getAuthURL(
 	callbackPort: number
 ): Promise<string> {
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
-	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
+
+	// 32 is a sensible length for the state's length, for anti-csrf.
+	const stateQueryParam = generatePKCERandomState(32);
 
 	Object.assign(localState, {
 		codeChallenge,
@@ -764,7 +742,7 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 			return accessContext;
 		} catch (error) {
 			if (typeof error === "string") {
-				throw toErrorClass(error);
+				throw newErrorClass(error);
 			} else {
 				throw error;
 			}
@@ -803,7 +781,7 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 			// alert("Redirecting to auth server to obtain a new auth grant code.");
 			// TODO: return refreshAuthCodeOrRefreshToken();
 		}
-		throw toErrorClass(error);
+		throw newErrorClass(error);
 	}
 	const json = (await getJSONFromResponse(response)) as TokenResponse;
 	if ("error" in json) {
@@ -854,17 +832,34 @@ function base64urlEncode(value: string): string {
 }
 
 /**
+ * Generates a random state string for PKCE OAuth flows.
+ *
+ * @param lengthOfState The length of the random state string to generate.
+ * @returns A random state string.
+ */
+export function generatePKCERandomState(lengthOfState: number): string {
+	const PKCE_CHARSET =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+
+	const output = new Uint32Array(lengthOfState);
+	crypto.getRandomValues(output);
+	return Array.from(output)
+		.map((num: number) => PKCE_CHARSET[num % PKCE_CHARSET.length])
+		.join("");
+}
+
+/**
  * Generates a code_verifier and code_challenge, as specified in rfc7636.
  */
-
 async function generatePKCECodes(): Promise<PKCECodes> {
-	const output = new Uint32Array(RECOMMENDED_CODE_VERIFIER_LENGTH);
-	crypto.getRandomValues(output);
-	const codeVerifier = base64urlEncode(
-		Array.from(output)
-			.map((num: number) => PKCE_CHARSET[num % PKCE_CHARSET.length])
-			.join("")
-	);
+	/**
+	 * The maximum length for a code verifier for the best security we can offer.
+	 * Please note the NOTE section of RFC 7636 § 4.1 - the length must be >= 43,
+	 * but <= 128, **after** base64 url encoding. This means 32 code verifier bytes
+	 * encoded will be 43 bytes, or 96 bytes encoded will be 128 bytes. So 96 bytes
+	 * is the highest valid value that can be used.
+	 */
+	const codeVerifier = base64urlEncode(generatePKCERandomState(96));
 	const buffer = await crypto.subtle.digest(
 		"SHA-256",
 		new TextEncoder().encode(codeVerifier)
@@ -896,7 +891,7 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 	mkdirSync(path.dirname(configPath), {
 		recursive: true,
 	});
-	writeFileSync(path.join(configPath), TOML.stringify(config), {
+	writeFileSync(configPath, TOML.stringify(config), {
 		encoding: "utf-8",
 	});
 
