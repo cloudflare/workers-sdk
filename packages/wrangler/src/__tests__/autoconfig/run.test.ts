@@ -163,7 +163,8 @@ describe("autoconfig (deploy)", () => {
 					name: "Fake",
 					configure: configureSpy,
 					isConfigured: () => false,
-				} as unknown as Framework,
+					autoConfigSupported: true,
+				} as Framework,
 				outputDir: "dist",
 				packageJson: {
 					dependencies: {
