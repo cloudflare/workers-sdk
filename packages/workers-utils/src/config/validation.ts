@@ -1578,9 +1578,11 @@ function normalizeAndValidateEnvironment(
 			"services",
 			validateBindingArray(
 				envName,
-				createValidateServiceBinding(
-					topLevelEnv?.name ?? rawEnv.name ?? rawConfig?.name
-				)
+				((workerName) => (diag, field, value, config) => {
+					// Use topLevelEnv name if available, otherwise fall back to rawEnv or rawConfig name
+					const name = config?.name ?? workerName;
+					return validateServiceBinding(diag, field, value, config, name);
+				})(rawEnv.name ?? rawConfig?.name)
 			),
 			[]
 		),
@@ -3789,62 +3791,64 @@ const validateBindingsHaveUniqueNames = (
 	return !hasDuplicates;
 };
 
-const createValidateServiceBinding = (
+const validateServiceBinding = (
+	diagnostics: Diagnostics,
+	field: string,
+	value: unknown,
+	topLevelEnv: Environment | undefined,
 	workerName: string | undefined
-): ValidatorFn => {
-	return (diagnostics, field, value, topLevelEnv) => {
-		if (typeof value !== "object" || value === null) {
-			diagnostics.errors.push(
-				`"services" bindings should be objects, but got ${JSON.stringify(value)}`
-			);
-			return false;
+): boolean => {
+	if (typeof value !== "object" || value === null) {
+		diagnostics.errors.push(
+			`"services" bindings should be objects, but got ${JSON.stringify(value)}`
+		);
+		return false;
+	}
+	// Default service field to worker name if not provided
+	if (!("service" in value)) {
+		const name = topLevelEnv?.name ?? workerName;
+		if (name) {
+			(value as Record<string, unknown>).service = name;
 		}
-		// Default service field to worker name if not provided
-		if (!("service" in value)) {
-			const name = topLevelEnv?.name ?? workerName;
-			if (name) {
-				(value as Record<string, unknown>).service = name;
-			}
-		}
-		let isValid = true;
-		// Service bindings must have a binding, a service, optionally an environment, and, optionally an entrypoint.
-		if (!isRequiredProperty(value, "binding", "string")) {
-			diagnostics.errors.push(
-				`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			isValid = false;
-		}
-		if (!isRequiredProperty(value, "service", "string")) {
-			diagnostics.errors.push(
-				`"${field}" bindings should have a string "service" field but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			isValid = false;
-		}
-		if (!isOptionalProperty(value, "environment", "string")) {
-			diagnostics.errors.push(
-				`"${field}" bindings should have a string "environment" field but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			isValid = false;
-		}
-		if (!isOptionalProperty(value, "entrypoint", "string")) {
-			diagnostics.errors.push(
-				`"${field}" bindings should have a string "entrypoint" field but got ${JSON.stringify(
-					value
-				)}.`
-			);
-			isValid = false;
-		}
-		if (!isRemoteValid(value, field, diagnostics)) {
-			isValid = false;
-		}
-		return isValid;
-	};
+	}
+	let isValid = true;
+	// Service bindings must have a binding, a service, optionally an environment, and, optionally an entrypoint.
+	if (!isRequiredProperty(value, "binding", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "binding" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRequiredProperty(value, "service", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "service" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isOptionalProperty(value, "environment", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "environment" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isOptionalProperty(value, "entrypoint", "string")) {
+		diagnostics.errors.push(
+			`"${field}" bindings should have a string "entrypoint" field but got ${JSON.stringify(
+				value
+			)}.`
+		);
+		isValid = false;
+	}
+	if (!isRemoteValid(value, field, diagnostics)) {
+		isValid = false;
+	}
+	return isValid;
 };
 
 const validateAnalyticsEngineBinding: ValidatorFn = (
