@@ -67,11 +67,11 @@ function addVikePhotonToConfigFile(projectPath: string) {
 
 	transformFile(filePath, {
 		visitProgram(n) {
-			AddVikePhotonImportToConfigFile(n);
+			addVikePhotonImportToConfigFile(n);
 			return this.traverse(n);
 		},
 		visitExportDefaultDeclaration(n) {
-			AddVikePhotonToVikeConfigExportObject(n);
+			addVikePhotonToVikeConfigExportObject(n);
 			return this.traverse(n);
 		},
 	});
@@ -85,7 +85,7 @@ const vikeConfigExtendsPropName = "extends";
  *
  * @param n node path for the vike config file's default export
  */
-function AddVikePhotonToVikeConfigExportObject(
+function addVikePhotonToVikeConfigExportObject(
 	n: Parameters<NonNullable<types.Visitor["visitExportDefaultDeclaration"]>>[0]
 ) {
 	const configObject = getVikeConfigObjectExpression(n);
@@ -149,7 +149,7 @@ function getVikeConfigObjectExpression(
  * ```
  * @param n node path for the vike config file
  */
-function AddVikePhotonImportToConfigFile(
+function addVikePhotonImportToConfigFile(
 	n: Parameters<NonNullable<types.Visitor["visitProgram"]>>[0]
 ): void {
 	const lastImportIndex = n.node.body.findLastIndex(
