@@ -1,6 +1,7 @@
 {
 	"name": "@fixture/worker-with-unsafe-external-plugin",
 	"private": true,
+	"type": "module",
 	"scripts": {
 		"dev": "wrangler dev",
 		"test:ci": "vitest run",
