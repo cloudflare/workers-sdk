@@ -248,6 +248,7 @@ import {
 } from "./auth-variables";
 import { getAccountChoices } from "./choose-account";
 import { generateAuthUrl } from "./generate-auth-url";
+import { generatePKCERandomState } from "./generate-random-state";
 import type { ChooseAccountItem } from "./choose-account";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { ParsedUrlQuery } from "node:querystring";
@@ -829,23 +830,6 @@ function base64urlEncode(value: string): string {
 	base64 = base64.replace(/\//g, "_");
 	base64 = base64.replace(/=/g, "");
 	return base64;
-}
-
-/**
- * Generates a random state string for PKCE OAuth flows.
- *
- * @param lengthOfState The length of the random state string to generate.
- * @returns A random state string.
- */
-export function generatePKCERandomState(lengthOfState: number): string {
-	const PKCE_CHARSET =
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
-
-	const output = new Uint32Array(lengthOfState);
-	crypto.getRandomValues(output);
-	return Array.from(output)
-		.map((num: number) => PKCE_CHARSET[num % PKCE_CHARSET.length])
-		.join("");
 }
 
 /**
