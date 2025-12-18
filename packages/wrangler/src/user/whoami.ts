@@ -75,16 +75,21 @@ function printAccountList(user: UserInfo) {
 	);
 }
 
+/**
+ * Prints a warning if the account_id in the Wrangler configuration does not match
+ * any of the user's authenticated accounts.
+ *
+ * Only shows warning if:
+ * 1. We have an accountFilter (the account ID from the failed request)
+ * 2. We have a configAccountId (the account_id from the wrangler config)
+ * 3. The accountFilter matches the configAccountId (meaning the config account_id was used)
+ * 4. The accountFilter is NOT in the user's accounts list
+ */
 function printAccountIdMismatchWarning(
 	user: UserInfo,
 	accountFilter?: string,
 	configAccountId?: string
 ) {
-	// Only show warning if:
-	// 1. We have an accountFilter (the account ID from the failed request)
-	// 2. We have a configAccountId (the account_id from the wrangler config)
-	// 3. The accountFilter matches the configAccountId (meaning the config account_id was used)
-	// 4. The accountFilter is NOT in the user's accounts list
 	if (!accountFilter || !configAccountId) {
 		return;
 	}
