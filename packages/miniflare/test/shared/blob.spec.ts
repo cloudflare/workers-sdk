@@ -62,7 +62,6 @@ test.before(async (t) => {
 		serviceBindings: { BLOBS: { disk: { path: tmp, writable: true } } },
 		compatibilityDate: "2023-08-01",
 		compatibilityFlags: ["nodejs_compat"],
-		verbose: true,
 		modules: [
 			{
 				type: "ESModule",

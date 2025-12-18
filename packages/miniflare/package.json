@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "4.20251213.0",
+	"version": "4.20251217.0",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -78,7 +78,7 @@
 		"@types/ws": "^8.5.7",
 		"@typescript-eslint/eslint-plugin": "catalog:default",
 		"@typescript-eslint/parser": "catalog:default",
-		"ava": "^6.0.1",
+		"ava": "^6.4.1",
 		"capnp-es": "^0.0.11",
 		"capnweb": "^0.1.0",
 		"chokidar": "^4.0.1",

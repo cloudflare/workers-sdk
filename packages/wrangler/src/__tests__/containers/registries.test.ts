@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockAccount } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-cli-output";
@@ -66,6 +66,43 @@ describe("containers registries configure", () => {
 		`);
 	});
 
+	it("should validate command line arguments for Secrets Store", async () => {
+		const domain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
+		await expect(
+			runWrangler(
+				`containers registries configure ${domain} --public-credential=test-id --disableSecretsStore`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Secrets Store can only be disabled in FedRAMP compliance regions.]`
+		);
+
+		// Set compliance region to FedRAMP High
+		vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
+		await expect(
+			runWrangler(
+				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-store-id=storeid`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Secrets Store is not supported in FedRAMP compliance regions. You must set --disableSecretsStore.]`
+		);
+
+		await expect(
+			runWrangler(
+				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-store-id=storeid --disableSecretsStore`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Arguments secret-store-id and disableSecretsStore are mutually exclusive]`
+		);
+
+		await expect(
+			runWrangler(
+				`containers registries configure ${domain} --aws-access-key-id=test-access-key-id --secret-name=secret-name --disableSecretsStore`
+			)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Arguments secret-name and disableSecretsStore are mutually exclusive]`
+		);
+	});
+
 	it("should no-op on cloudflare registry (default)", async () => {
 		await runWrangler(
 			`containers registries configure registry.cloudflare.com --public-credential=test-id`
@@ -81,6 +118,75 @@ describe("containers registries configure", () => {
 
 			"
 		`);
+	});
+
+	describe("FedRAMP compliance region", () => {
+		beforeEach(() => {
+			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
+		});
+
+		it("should configure AWS ECR registry with interactive prompts", async () => {
+			setIsTTY(true);
+			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
+			mockPrompt({
+				text: "Enter AWS Secret Access Key:",
+				options: { isSecret: true },
+				result: "test-secret-access-key",
+			});
+
+			mockPutRegistry({
+				domain: "123456789012.dkr.ecr.us-west-2.amazonaws.com",
+				is_public: false,
+				auth: {
+					public_credential: "test-access-key-id",
+					private_credential: "test-secret-access-key",
+				},
+				kind: "ECR",
+			});
+
+			await runWrangler(
+				`containers registries configure ${awsEcrDomain} --aws-access-key-id=test-access-key-id --disableSecretsStore`
+			);
+
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Configure a container registry
+				│
+				│ Configuring AWS ECR registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
+				│
+				│ Getting AWS Secret Access Key...
+				│
+				╰ Registry configuration completed
+
+				"
+			`);
+		});
+
+		describe("non-interactive", () => {
+			beforeEach(() => {
+				setIsTTY(false);
+			});
+			const awsEcrDomain = "123456789012.dkr.ecr.us-west-2.amazonaws.com";
+			const mockStdIn = useMockStdin({ isTTY: false });
+
+			it("should accept the secret from piped input", async () => {
+				const secret = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
+
+				mockStdIn.send(secret);
+				mockPutRegistry({
+					domain: awsEcrDomain,
+					is_public: false,
+					auth: {
+						public_credential: "test-access-key-id",
+						private_credential: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+					},
+					kind: "ECR",
+				});
+
+				await runWrangler(
+					`containers registries configure ${awsEcrDomain} --public-credential=test-access-key-id --disableSecretsStore`
+				);
+			});
+		});
 	});
 
 	describe("AWS ECR registry configuration", () => {
@@ -217,7 +323,6 @@ describe("containers registries configure", () => {
 				│ Configuring AWS ECR registry: 123456789012.dkr.ecr.us-west-2.amazonaws.com
 				│
 				│ Getting AWS Secret Access Key...
-				│
 				│
 				│
 				│ Setting up integration with Secrets Store...
