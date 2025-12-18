@@ -2066,12 +2066,13 @@ const validateVars =
 				isValid = false;
 			} else {
 				// Check each var value for invalid types (e.g., Date objects)
-				// and convert them to strings automatically
 				for (const [varName, varValue] of Object.entries(value)) {
 					if (varValue instanceof Date) {
-						// Convert Date to ISO date string (YYYY-MM-DD format)
-						const dateString = varValue.toISOString().split("T")[0];
-						(value as Record<string, unknown>)[varName] = dateString;
+						diagnostics.errors.push(
+							`The field "${fieldPath}.${varName}" is a TOML date, which is not supported. ` +
+								`Please use a string instead, e.g. ${varName} = "${varValue.toISOString().split("T")[0]}".`
+						);
+						isValid = false;
 					}
 				}
 			}

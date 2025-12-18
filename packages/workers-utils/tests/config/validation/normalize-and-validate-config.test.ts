@@ -5467,7 +5467,7 @@ describe("normalizeAndValidateConfig()", () => {
 			`);
 		});
 
-		it("should convert Date values in vars to strings (parsed by TOML)", () => {
+		it("should error on Date values in vars (parsed by TOML)", () => {
 			const rawConfig = {
 				vars: {
 					VALID_VAR: "some string",
@@ -5475,24 +5475,21 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 			} as unknown as RawConfig;
 
-			const { config, diagnostics } = normalizeAndValidateConfig(
+			const { diagnostics } = normalizeAndValidateConfig(
 				rawConfig,
 				undefined,
 				undefined,
 				{ env: undefined }
 			);
 
-			expect(diagnostics.hasErrors()).toBe(false);
-			expect(diagnostics.hasWarnings()).toBe(false);
-
-			// Verify the Date was converted to a string
-			expect(config.vars).toEqual({
-				VALID_VAR: "some string",
-				DATE_VAR: "2024-01-01",
-			});
+			expect(diagnostics.hasErrors()).toBe(true);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - The field \\"vars.DATE_VAR\\" is a TOML date, which is not supported. Please use a string instead, e.g. DATE_VAR = \\"2024-01-01\\"."
+			`);
 		});
 
-		it("should convert Date values in env vars to strings (parsed by TOML)", () => {
+		it("should error on Date values in env vars (parsed by TOML)", () => {
 			const rawConfig = {
 				env: {
 					production: {
@@ -5504,21 +5501,20 @@ describe("normalizeAndValidateConfig()", () => {
 				},
 			} as unknown as RawConfig;
 
-			const { config, diagnostics } = normalizeAndValidateConfig(
+			const { diagnostics } = normalizeAndValidateConfig(
 				rawConfig,
 				undefined,
 				undefined,
 				{ env: "production" }
 			);
 
-			expect(diagnostics.hasErrors()).toBe(false);
-			expect(diagnostics.hasWarnings()).toBe(false);
+			expect(diagnostics.hasErrors()).toBe(true);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
 
-			// Verify the Date was converted to a string
-			expect(config.vars).toEqual({
-				VALID_VAR: "some string",
-				RELEASE_DATE: "2025-06-15",
-			});
+				  - \\"env.production\\" environment configuration
+				    - The field \\"env.production.vars.RELEASE_DATE\\" is a TOML date, which is not supported. Please use a string instead, e.g. RELEASE_DATE = \\"2025-06-15\\"."
+			`);
 		});
 
 		it("should error on node_compat", () => {
