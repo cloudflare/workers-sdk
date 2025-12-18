@@ -928,8 +928,7 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 }
 
 export function readAuthConfigFile(): UserAuthConfig {
-	const toml = parseTOML<UserAuthConfig>(readFileSync(getAuthConfigFilePath()));
-	return toml;
+	return parseTOML(readFileSync(getAuthConfigFilePath())) as UserAuthConfig;
 }
 
 type LoginProps = {
