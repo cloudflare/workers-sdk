@@ -22,7 +22,7 @@ export class NextJs extends Framework {
 		const nextConfigPath = findNextConfigPath(usesTs);
 		if (!nextConfigPath) {
 			throw new AutoConfigFrameworkConfigurationError(
-				"No Next.js configuration file could be detected. Note: only next.config.ts and next.config.mjs files are supported."
+				"No Next.js configuration file could be detected."
 			);
 		}
 
@@ -30,6 +30,10 @@ export class NextJs extends Framework {
 			await installPackages(["@opennextjs/cloudflare@^1.12.0"], {
 				startText: "Installing @opennextjs/cloudflare adapter",
 				doneText: `${brandColor("installed")}`,
+				// Note: we force install open-next so that even if an incompatible version of
+				//       Next.js is used this installation still succeeds, moving users to
+				//       (hopefully) the right direction (instead of failing at this step)
+				force: true,
 			});
 
 			await updateNextConfig(nextConfigPath);
@@ -81,7 +85,9 @@ function findNextConfigPath(usesTs: boolean): string | undefined {
 	const pathsToCheck = [
 		...(usesTs ? ["next.config.ts"] : []),
 		"next.config.mjs",
-	];
+		"next.config.js",
+		"next.config.cjs",
+	] as const;
 
 	for (const path of pathsToCheck) {
 		const stats = statSync(path, {
@@ -102,10 +108,7 @@ async function updateNextConfig(nextConfigPath: string) {
 
 	const updatedConfigFile =
 		configContent +
-		`
-		import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
-		initOpenNextCloudflareForDev();
-		`.replace(/\n\t*/g, "\n");
+		"\n\nimport('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());\n";
 
 	await writeFile(nextConfigPath, updatedConfigFile);
 
