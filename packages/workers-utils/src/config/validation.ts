@@ -3059,6 +3059,7 @@ function validateContainerApp(
 					"instance_type",
 					"wrangler_ssh",
 					"authorized_keys",
+					"trusted_user_ca_keys",
 					"configuration",
 					"constraints",
 					"affinities",
@@ -3104,15 +3105,6 @@ function validateContainerApp(
 						`${field}.wrangler_ssh.port must be a number between 1 and 65535 inclusive`
 					);
 				}
-
-				if (
-					!("authorized_keys" in containerAppOptional) &&
-					containerAppOptional.wrangler_ssh.enabled
-				) {
-					diagnostics.errors.push(
-						`${field}.authorized_keys must be provided if wrangler ssh is enabled`
-					);
-				}
 			}
 
 			if ("authorized_keys" in containerAppOptional) {
@@ -3124,6 +3116,35 @@ function validateContainerApp(
 						const key = containerAppOptional.authorized_keys[index];
 
 						if (!isRequiredProperty(key, "name", "string")) {
+							diagnostics.errors.push(`${fieldPath}.name must be a string`);
+						}
+
+						if (!isRequiredProperty(key, "public_key", "string")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key must be a string`
+							);
+						}
+
+						if (!key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key is a unsupported key type. Please provide a ED25519 public key.`
+							);
+						}
+					}
+				}
+			}
+
+			if ("trusted_user_ca_keys" in containerAppOptional) {
+				if (!Array.isArray(containerAppOptional.trusted_user_ca_keys)) {
+					diagnostics.errors.push(
+						`${field}.trusted_user_ca_keys must be an array`
+					);
+				} else {
+					for (const index in containerAppOptional.trusted_user_ca_keys) {
+						const fieldPath = `${field}.trusted_user_ca_keys[${index}]`;
+						const key = containerAppOptional.trusted_user_ca_keys[index];
+
+						if (!isOptionalProperty(key, "name", "string")) {
 							diagnostics.errors.push(`${fieldPath}.name must be a string`);
 						}
 

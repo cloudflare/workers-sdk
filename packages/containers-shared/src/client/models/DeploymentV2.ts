@@ -27,7 +27,7 @@ import type { Observability } from "./Observability";
 import type { Placement } from "./Placement";
 import type { Ref } from "./Ref";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
-import type { SSHPublicKeyItemV3 } from "./SSHPublicKeyItemV3";
+import type { UserSSHPublicKey } from "./UserSSHPublicKey";
 import type { WranglerSSHConfig } from "./WranglerSSHConfig";
 
 /**
@@ -44,7 +44,7 @@ export type DeploymentV2 = {
 	image: Image;
 	location: DeploymentLocation;
 	wrangler_ssh?: WranglerSSHConfig;
-	authorized_keys?: Array<SSHPublicKeyItemV3>;
+	authorized_keys?: Array<UserSSHPublicKey>;
 	/**
 	 * A list of SSH public key IDs from the account
 	 */

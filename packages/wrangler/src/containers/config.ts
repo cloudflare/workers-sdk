@@ -126,6 +126,7 @@ export const getNormalizedContainerOptions = async (
 			},
 			wrangler_ssh: container.wrangler_ssh,
 			authorized_keys: container.authorized_keys,
+			trusted_user_ca_keys: container.trusted_user_ca_keys,
 		};
 
 		let instanceTypeOrLimits: InstanceTypeOrLimits;
