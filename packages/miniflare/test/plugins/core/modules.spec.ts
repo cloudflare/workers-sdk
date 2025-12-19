@@ -5,7 +5,7 @@ import { Miniflare, stripAnsi } from "miniflare";
 import { expect, onTestFinished, test } from "vitest";
 import { useCwd, useTmp, utf8Encode } from "../../test-shared";
 
-const ROOT = path.resolve(__dirname, "..", "..", "fixtures", "modules");
+const ROOT = path.resolve(__dirname, "../../fixtures/modules");
 
 test("Miniflare: accepts manually defined modules", async () => {
 	// Check with just `path`
