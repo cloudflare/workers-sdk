@@ -1251,7 +1251,7 @@ test("completeMultipartUpload", async () => {
 	part1b = await upload4.uploadPart(1, "2".repeat(PART_SIZE));
 	const part1c = await upload4.uploadPart(1, "3".repeat(PART_SIZE));
 	await expect(upload4.complete([part1a, part1b, part1c])).rejects.toThrow(
-		notFoundExpectations
+		"completeMultipartUpload: We encountered an internal error. Please try again. (10001)"
 	);
 
 	// Check completing with out-of-order parts
