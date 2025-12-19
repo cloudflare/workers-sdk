@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { readdir } from "node:fs/promises";
 import { getOpenNextDeployFromEnv } from "@cloudflare/workers-utils";
 import { runCommand } from "../autoconfig/c3-vendor/command";
@@ -22,14 +23,21 @@ export async function maybeDelegateToOpenNextDeployCommand(
 				"OpenNext project detected, calling `opennextjs-cloudflare deploy`"
 			);
 
+			const deployArgIdx = process.argv.findIndex((arg) => arg === "deploy");
+			assert(deployArgIdx !== -1, "Could not find `deploy` argument");
+			const deployArguments = process.argv.slice(deployArgIdx + 1);
+
 			const { npx } = await getPackageManager();
 
-			await runCommand([npx, "opennextjs-cloudflare", "deploy"], {
-				env: {
-					// We set `OPEN_NEXT_DEPLOY` here so that it's passed through to the `wrangler deploy` command that OpenNext delegates to in order to prevent an infinite loop
-					OPEN_NEXT_DEPLOY: "true",
-				},
-			});
+			await runCommand(
+				[npx, "opennextjs-cloudflare", "deploy", ...deployArguments],
+				{
+					env: {
+						// We set `OPEN_NEXT_DEPLOY` here so that it's passed through to the `wrangler deploy` command that OpenNext delegates to in order to prevent an infinite loop
+						OPEN_NEXT_DEPLOY: "true",
+					},
+				}
+			);
 
 			return true;
 		}
