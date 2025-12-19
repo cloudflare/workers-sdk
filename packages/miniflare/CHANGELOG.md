@@ -1,5 +1,15 @@
 # miniflare
 
+## 3.20250718.3
+
+### Patch Changes
+
+- [#11664](https://github.com/cloudflare/workers-sdk/pull/11664) [`d006fae`](https://github.com/cloudflare/workers-sdk/commit/d006faedaaf2ea64a613f6011d2346d9243ebf27) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix Durable Object RPC calls from Node.js blocking the event loop, preventing `Promise.race()` and timeouts from working correctly.
+
+  Previously, RPC calls from Node.js to Durable Objects would block the Node.js event loop, causing `Promise.race()` with timeouts to never resolve. This fix ensures that RPC calls properly yield control back to the event loop, allowing concurrent operations and timeouts to work as expected.
+
+- [#10890](https://github.com/cloudflare/workers-sdk/pull/10890) [`4ae9ead`](https://github.com/cloudflare/workers-sdk/commit/4ae9eaded24a76c3ac1e1c1e00c9620e1b86fda2) Thanks [@alsuren](https://github.com/alsuren)! - Document that dumpSql is shared with d1-worker, and incorporate some D1 internal stats gathering machinery (which is currently unused by miniflare)
+
 ## 3.20250718.2
 
 ### Patch Changes

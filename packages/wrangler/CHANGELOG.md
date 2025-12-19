@@ -1,5 +1,59 @@
 # wrangler
 
+## 3.114.16
+
+### Patch Changes
+
+- [#11689](https://github.com/cloudflare/workers-sdk/pull/11689) [`9bab0a0`](https://github.com/cloudflare/workers-sdk/commit/9bab0a08cb208ec338ff4971f767ef47ccf5be71) Thanks [@ascorbic](https://github.com/ascorbic)! - Display a warning when authentication errors occur and the `account_id` in your Wrangler configuration does not match any of your authenticated accounts. This helps identify configuration issues where you may have the wrong account ID set in your `wrangler.toml` or `wrangler.jsonc` file.
+
+- [#10737](https://github.com/cloudflare/workers-sdk/pull/10737) [`c41a078`](https://github.com/cloudflare/workers-sdk/commit/c41a0788c69e590eb0e6bc1145be61983675aede) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Allow WRANGLER_SEND_ERROR_REPORTS env var to override whether to report Wrangler crashes to Sentry
+
+- [#11134](https://github.com/cloudflare/workers-sdk/pull/11134) [`bd39455`](https://github.com/cloudflare/workers-sdk/commit/bd3945513419418fe5ef69d7f187a8ed70143328) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Reduce the amount of arguments being passed in metrics capture.
+
+  Now the argument values that are captured come from an allow list,
+  and can be marked as ALLOW (capture the real value) or REDACT (capture as "<REDACTED>").
+
+- [#11020](https://github.com/cloudflare/workers-sdk/pull/11020) [`9cb702e`](https://github.com/cloudflare/workers-sdk/commit/9cb702e95b38bede6ffde6efb47b81d290e01190) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix `observability.logs.persist` being flagged as an unexpected field during the wrangler config file validation
+
+- [#11147](https://github.com/cloudflare/workers-sdk/pull/11147) [`cf4993b`](https://github.com/cloudflare/workers-sdk/commit/cf4993b2e2236d776b0cf4fa400a942c70b7f1f9) Thanks [@FlorentCollin](https://github.com/FlorentCollin)! - Improve the formatting of the D1 execute command to always show the duration in milliseconds with two decimal places.
+
+- [#11650](https://github.com/cloudflare/workers-sdk/pull/11650) [`cc29ead`](https://github.com/cloudflare/workers-sdk/commit/cc29ead7c2ae1f83dbe4875ceaeb4e27ad6ae42e) Thanks [@ascorbic](https://github.com/ascorbic)! - fix: respect TypeScript path aliases when resolving non-JS modules with module rules
+
+  When importing non-JavaScript files (like `.graphql`, `.txt`, etc.) using TypeScript path aliases defined in `tsconfig.json`, Wrangler's module-collection plugin now correctly resolves these imports. Previously, path aliases were only respected for JavaScript/TypeScript files, causing imports like `import schema from '~lib/schema.graphql'` to fail when using module rules.
+
+- [#11179](https://github.com/cloudflare/workers-sdk/pull/11179) [`7f779e9`](https://github.com/cloudflare/workers-sdk/commit/7f779e98151348f3d60dc19e341ed735ba2ce712) Thanks [@ascorbic](https://github.com/ascorbic)! - Log a more helpful error when attempting to "r2 object put" a non-existent file
+
+- [#11501](https://github.com/cloudflare/workers-sdk/pull/11501) [`c78d942`](https://github.com/cloudflare/workers-sdk/commit/c78d942d8465ebf6f7f461c75e4df3c89f8112e2) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: prevent reporting SQLite error from `wrangler d1 execute` to Sentry
+
+- [#11262](https://github.com/cloudflare/workers-sdk/pull/11262) [`b2683f7`](https://github.com/cloudflare/workers-sdk/commit/b2683f7be7b13c3f10ae6ab3732e92a2f2d2c1dd) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Avoid using object lookup for OAuth Error classes
+
+- [#11107](https://github.com/cloudflare/workers-sdk/pull/11107) [`d8037d3`](https://github.com/cloudflare/workers-sdk/commit/d8037d37980201d9b2ca271f7a34982e2c42537b) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Fixed conflict between `--env` and `--expires` flags in `wrangler r2 object put`.
+
+  `--e` now aliases `--env` only, and NOT `--expires`.
+
+- [#10961](https://github.com/cloudflare/workers-sdk/pull/10961) [`02d2ea9`](https://github.com/cloudflare/workers-sdk/commit/02d2ea9baa8c44bce2e63b6812348c6c1ab08e47) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Acquire Cloudflare Access tokens for additional requests made during a `wrangler dev --remote` session
+
+- [#11108](https://github.com/cloudflare/workers-sdk/pull/11108) [`892ec4f`](https://github.com/cloudflare/workers-sdk/commit/892ec4fbd31e299d2e7fdd8d4c7b07bea70b4c56) Thanks [@emily-shen](https://github.com/emily-shen)! - Fixed self-bindings (service bindings to the same worker) showing as [not connected] in wrangler dev. Self-bindings now correctly show as [connected] since a worker is always available to itself.
+
+- [#11138](https://github.com/cloudflare/workers-sdk/pull/11138) [`3db872a`](https://github.com/cloudflare/workers-sdk/commit/3db872a862a54157272c532700f96fd08cc94e70) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Implement tail-based logging for `wrangler dev` remote mode, behind the `--x-tail-tags` flag. This will become the default in the future.
+
+- [#10889](https://github.com/cloudflare/workers-sdk/pull/10889) [`204616c`](https://github.com/cloudflare/workers-sdk/commit/204616c0fc4ab47a18c58af06a427634eb5897fa) Thanks [@workers-devprod](https://github.com/workers-devprod)! - Clarify that `wrangler check startup` generates a local CPU profile
+
+- [#11491](https://github.com/cloudflare/workers-sdk/pull/11491) [`ed8aaef`](https://github.com/cloudflare/workers-sdk/commit/ed8aaef96099bf10bc9d2ba666cc02d4f9a8ad87) Thanks [@edmundhung](https://github.com/edmundhung)! - Explicitly close FileHandle in `wrangler d1 execute` to support Node 25
+
+- [#10962](https://github.com/cloudflare/workers-sdk/pull/10962) [`203e599`](https://github.com/cloudflare/workers-sdk/commit/203e599c2f6675e773e76ff296902de5afb50235) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - Fixed duplicate warning messages appearing during wrangler dev when configuration changes or state transitions occur
+
+- [#11601](https://github.com/cloudflare/workers-sdk/pull/11601) [`62754f8`](https://github.com/cloudflare/workers-sdk/commit/62754f8f99d7a7237b0df577994f8298930fa1dd) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix "TypeError: Body is unusable: Body has already been read" when failing to exchange oauth code because of double `response.text()`.
+
+- [#11138](https://github.com/cloudflare/workers-sdk/pull/11138) [`3db872a`](https://github.com/cloudflare/workers-sdk/commit/3db872a862a54157272c532700f96fd08cc94e70) Thanks [@devin-ai-integration](https://github.com/apps/devin-ai-integration)! - We're soon going to make backend changes that mean that `wrangler dev --remote` sessions will no longer have an associated inspector connection. In advance of these backend changes, we've enabled a new `wrangler tail`-based logging strategy for `wrangler dev --remote`. For now, you can revert to the previous logging strategy with `wrangler dev --remote --no-x-tail-logs`, but in future it will not be possible to revert.
+
+  The impact of this will be that logs that were previously available via devtools will now be provided directly to the Wrangler console and it will no longer be possible to interact with the remote Worker via the devtools console.
+
+- [#11194](https://github.com/cloudflare/workers-sdk/pull/11194) [`71758e9`](https://github.com/cloudflare/workers-sdk/commit/71758e94d9d6d2852e174402a03b0f533c0d52e0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - add more logging around Wrangler authentication to help diagnose issues
+
+- Updated dependencies [[`d006fae`](https://github.com/cloudflare/workers-sdk/commit/d006faedaaf2ea64a613f6011d2346d9243ebf27), [`4ae9ead`](https://github.com/cloudflare/workers-sdk/commit/4ae9eaded24a76c3ac1e1c1e00c9620e1b86fda2)]:
+  - miniflare@3.20250718.3
+
 ## 3.114.15
 
 ### Patch Changes
