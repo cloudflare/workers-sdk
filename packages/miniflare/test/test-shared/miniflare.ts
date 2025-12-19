@@ -1,5 +1,5 @@
 import { Awaitable, Miniflare, MiniflareOptions } from "miniflare";
-import { afterAll, beforeAll } from "vitest";
+import { afterAll, beforeAll, onTestFinished } from "vitest";
 import { TestLog } from "./log";
 import type {
 	ExecutionContext,
@@ -7,6 +7,51 @@ import type {
 	Request as WorkerRequest,
 	Response as WorkerResponse,
 } from "@cloudflare/workers-types/experimental";
+
+const isWindows = process.platform === "win32";
+
+/**
+ * Dispose a Miniflare instance with retry logic for Windows EPERM errors.
+ * On Windows, browser profile directories may not be fully released when
+ * Chrome exits, causing EPERM/EBUSY errors during cleanup.
+ */
+export async function disposeWithRetry(
+	mf: Miniflare,
+	maxRetries = 5,
+	initialDelayMs = 100
+): Promise<void> {
+	let lastError: unknown;
+	for (let attempt = 0; attempt <= maxRetries; attempt++) {
+		try {
+			await mf.dispose();
+			return;
+		} catch (e) {
+			lastError = e;
+			// Only retry on Windows-specific file locking errors
+			const code = (e as NodeJS.ErrnoException).code;
+			if (
+				isWindows &&
+				(code === "EPERM" || code === "EBUSY" || code === "ENOTEMPTY")
+			) {
+				const delay = initialDelayMs * Math.pow(2, attempt);
+				await new Promise((resolve) => setTimeout(resolve, delay));
+				continue;
+			}
+			// For non-Windows or non-retryable errors, throw immediately
+			throw e;
+		}
+	}
+	// If we exhausted all retries, throw the last error
+	throw lastError;
+}
+
+/**
+ * Register cleanup for a Miniflare instance with retry logic for Windows.
+ * Use this instead of `onTestFinished(() => mf.dispose())` for browser tests.
+ */
+export function useDispose(mf: Miniflare): void {
+	onTestFinished(() => disposeWithRetry(mf));
+}
 
 export type TestMiniflareHandler<Env> = (
 	global: ServiceWorkerGlobalScope,

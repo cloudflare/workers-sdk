@@ -1,13 +1,6 @@
 import { Miniflare, MiniflareOptions } from "miniflare";
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	onTestFinished,
-	test,
-	vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { useDispose } from "../../test-shared";
 import type { WebSocket } from "undici";
 
 async function sendMessage(ws: WebSocket, message: any) {
@@ -90,7 +83,7 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 			browserRendering: { binding: "MYBROWSER" },
 		};
 		const mf = new Miniflare(opts);
-		onTestFinished(() => mf.dispose());
+		useDispose(mf);
 
 		const res = await mf.dispatchFetch("https://localhost/session");
 		const text = await res.text();
@@ -127,7 +120,7 @@ export default {
 			browserRendering: { binding: "MYBROWSER" },
 		};
 		const mf = new Miniflare(opts);
-		onTestFinished(() => mf.dispose());
+		useDispose(mf);
 
 		const res = await mf.dispatchFetch("https://localhost/close");
 		expect(await res.text()).toBe("Browser closed");
@@ -170,7 +163,7 @@ export default {
 			browserRendering: { binding: "MYBROWSER" },
 		};
 		const mf = new Miniflare(opts);
-		onTestFinished(() => mf.dispose());
+		useDispose(mf);
 
 		const res = await mf.dispatchFetch("https://localhost");
 		expect(await res.text()).toBe("Browser session reused");
@@ -213,7 +206,7 @@ export default {
 				browserRendering: { binding: "MYBROWSER" },
 			};
 			const mf = new Miniflare(opts);
-			onTestFinished(() => mf.dispose());
+			useDispose(mf);
 
 			const res = await mf.dispatchFetch("https://localhost");
 			expect(await res.text()).toBe("Failed to connect to browser session");
@@ -258,7 +251,7 @@ export default {
 			browserRendering: { binding: "MYBROWSER" },
 		};
 		const mf = new Miniflare(opts);
-		onTestFinished(() => mf.dispose());
+		useDispose(mf);
 
 		const { emptySessions, acquiredSessions, afterClosedSessions } = (await mf
 			.dispatchFetch("https://localhost")
@@ -306,7 +299,7 @@ export default {
 			browserRendering: { binding: "MYBROWSER" },
 		};
 		const mf = new Miniflare(opts);
-		onTestFinished(() => mf.dispose());
+		useDispose(mf);
 
 		const { connectedSession, disconnectedSession } = (await mf
 			.dispatchFetch("https://localhost")
