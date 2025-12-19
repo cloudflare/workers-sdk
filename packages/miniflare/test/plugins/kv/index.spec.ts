@@ -10,7 +10,7 @@ import {
 	MiniflareOptions,
 	ReplaceWorkersTypes,
 } from "miniflare";
-import { beforeEach, expect, onTestFinished, test } from "vitest";
+import { beforeEach, expect, test } from "vitest";
 import {
 	createJunkStream,
 	FIXTURES_PATH,
@@ -707,7 +707,7 @@ test("persists in-memory between options reloads", async () => {
 		kvNamespaces: { NAMESPACE: "namespace" },
 	} satisfies MiniflareOptions;
 	const mf1 = new Miniflare(opts);
-	onTestFinished(() => mf1.dispose());
+	useDispose(mf1);
 
 	const kv1 = await mf1.getKVNamespace("NAMESPACE");
 	await kv1.put("key", "value1");
@@ -722,7 +722,7 @@ test("persists in-memory between options reloads", async () => {
 	// Check a `new Miniflare()` instance has its own in-memory storage
 	opts.bindings.VERSION = 3;
 	const mf2 = new Miniflare(opts);
-	onTestFinished(() => mf2.dispose());
+	useDispose(mf2);
 	const kv2 = await mf2.getKVNamespace("NAMESPACE");
 	await kv2.put("key", "value2");
 
