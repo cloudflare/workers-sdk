@@ -10,16 +10,7 @@ import NodeWebSocket from "ws";
 import { escapeRegexpComponent, useTmp } from "../../../test-shared";
 import type { RawSourceMap } from "source-map";
 
-const FIXTURES_PATH = path.resolve(
-	__dirname,
-	"..",
-	"..",
-	"..",
-	"..",
-	"test",
-	"fixtures",
-	"source-maps"
-);
+const FIXTURES_PATH = path.resolve(__dirname, "../../../fixtures/source-maps");
 const SERVICE_WORKER_ENTRY_PATH = path.join(FIXTURES_PATH, "service-worker.ts");
 const MODULES_ENTRY_PATH = path.join(FIXTURES_PATH, "modules.ts");
 const DEP_ENTRY_PATH = path.join(FIXTURES_PATH, "nested/dep.ts");
