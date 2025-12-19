@@ -41,6 +41,6 @@ describe("getLocalWorkerdCompatibilityDate", () => {
 		const { date, source } = getLocalWorkerdCompatibilityDate();
 		const fallbackCompatDate = "2025-01-09";
 		expect(date).toEqual(fallbackCompatDate);
-		expect(source).toEqual("today");
+		expect(source).toEqual("workerd");
 	});
 });
