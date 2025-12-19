@@ -48,9 +48,17 @@ export async function disposeWithRetry(
 /**
  * Register cleanup for a Miniflare instance with retry logic for Windows.
  * Use this instead of `onTestFinished(() => mf.dispose())` for all tests.
+ *
+ * For tests that reassign `mf` (e.g., persistence tests that dispose and recreate),
+ * pass a getter function instead: `useDispose(() => mf)`. This ensures the
+ * current instance at teardown time is disposed, matching the original
+ * `onTestFinished(() => mf.dispose())` semantics.
  */
-export function useDispose(mf: Miniflare): void {
-	onTestFinished(() => disposeWithRetry(mf));
+export function useDispose(mf: Miniflare | (() => Miniflare)): void {
+	onTestFinished(() => {
+		const instance = typeof mf === "function" ? mf() : mf;
+		return disposeWithRetry(instance);
+	});
 }
 
 export type TestMiniflareHandler<Env> = (

@@ -444,7 +444,7 @@ test("operations persist cached data", async () => {
 		cachePersist: tmp,
 	};
 	let mf = new Miniflare(opts);
-	useDispose(mf);
+	useDispose(() => mf);
 
 	let cache = (await mf.getCaches()).default;
 	const key = "http://localhost/cache-persist";

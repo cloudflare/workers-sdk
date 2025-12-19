@@ -976,7 +976,7 @@ test("operations persist stored data", async () => {
 		r2Persist: tmp,
 	};
 	let mf = new Miniflare(persistOpts);
-	useDispose(mf);
+	useDispose(() => mf);
 	let r2 = await mf.getR2Bucket("BUCKET");
 
 	// Check put respects persist
