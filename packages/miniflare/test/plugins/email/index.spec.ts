@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { LogLevel, Miniflare } from "miniflare";
 import dedent from "ts-dedent";
-import { expect, onTestFinished, test } from "vitest";
-import { TestLog, waitFor } from "../../test-shared";
+import { expect, onTestFinished, test, vi } from "vitest";
+import { TestLog } from "../../test-shared";
 
 const SEND_EMAIL_WORKER = dedent/* javascript */ `
 	import { EmailMessage } from "cloudflare:email";
@@ -75,21 +75,26 @@ test("Unbound send_email binding works", async () => {
 	);
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
-	await waitFor(async () => {
-		const entry = log.logs.find(
-			([type, message]) =>
-				type === LogLevel.INFO &&
-				message.match(/send_email binding called with the following message:\n/)
-		);
-		if (!entry) {
-			throw new Error(
-				"send_email binding log not found in " +
-					JSON.stringify(log.logs, null, 2)
+	await vi.waitFor(
+		async () => {
+			const entry = log.logs.find(
+				([type, message]) =>
+					type === LogLevel.INFO &&
+					message.match(
+						/send_email binding called with the following message:\n/
+					)
 			);
-		}
-		const file = entry[/* message */ 1].split("\n")[1].trim();
-		expect(await readFile(file, "utf-8")).toBe(email);
-	});
+			if (!entry) {
+				throw new Error(
+					"send_email binding log not found in " +
+						JSON.stringify(log.logs, null, 2)
+				);
+			}
+			const file = entry[/* message */ 1].split("\n")[1].trim();
+			expect(await readFile(file, "utf-8")).toBe(email);
+		},
+		{ timeout: 5_000, interval: 100 }
+	);
 });
 
 test("Invalid email throws", async () => {
@@ -162,21 +167,26 @@ test("Single allowed destination send_email binding works", async () => {
 	expect(await res.text()).toBe("ok");
 	expect(res.status).toBe(200);
 
-	await waitFor(async () => {
-		const entry = log.logs.find(
-			([type, message]) =>
-				type === LogLevel.INFO &&
-				message.match(/send_email binding called with the following message:\n/)
-		);
-		if (!entry) {
-			throw new Error(
-				"send_email binding log not found in " +
-					JSON.stringify(log.logs, null, 2)
+	await vi.waitFor(
+		async () => {
+			const entry = log.logs.find(
+				([type, message]) =>
+					type === LogLevel.INFO &&
+					message.match(
+						/send_email binding called with the following message:\n/
+					)
 			);
-		}
-		const file = entry[/* message */ 1].split("\n")[1].trim();
-		expect(await readFile(file, "utf-8")).toBe(email);
-	});
+			if (!entry) {
+				throw new Error(
+					"send_email binding log not found in " +
+						JSON.stringify(log.logs, null, 2)
+				);
+			}
+			const file = entry[/* message */ 1].split("\n")[1].trim();
+			expect(await readFile(file, "utf-8")).toBe(email);
+		},
+		{ timeout: 5_000, interval: 100 }
+	);
 });
 
 test("Single allowed destination send_email binding throws if destination is not equal", async () => {
