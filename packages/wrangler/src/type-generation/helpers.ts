@@ -1,9 +1,13 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { version } from "workerd";
 import { logger } from "../logger";
+import { generateRuntimeTypes } from "./runtime";
 import { generateEnvTypes } from ".";
 import type { Entry } from "../deployment-bundle/entry";
 import type { Config } from "@cloudflare/workers-utils";
+
+export const DEFAULT_WORKERS_TYPES_FILE_NAME = "worker-configuration.d.ts";
+export const DEFAULT_WORKERS_TYPES_FILE_PATH = `./${DEFAULT_WORKERS_TYPES_FILE_NAME}`;
 
 // Checks the default location for a generated types file and compares if the
 // recorded Env hash, workerd version or compat date and flags have changed
@@ -17,7 +21,7 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 	try {
 		// Checking the default location only
 		maybeExistingTypesFileLines = readFileSync(
-			"./worker-configuration.d.ts",
+			DEFAULT_WORKERS_TYPES_FILE_PATH,
 			"utf-8"
 		).split("\n");
 	} catch {
@@ -36,18 +40,20 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 	)?.groups?.result;
 
 	let newEnvHeader: string | undefined;
+	let newEnvTypes: string | undefined;
 	try {
-		const { envHeader } = await generateEnvTypes(
+		const { envHeader, envTypes } = await generateEnvTypes(
 			config,
 			{ strictVars: previousStrictVars === "false" ? false : true },
 			previousEnvInterface ?? "Env",
-			"worker-configuration.d.ts",
+			DEFAULT_WORKERS_TYPES_FILE_NAME,
 			entry,
 			new Map(),
 			// don't log anything
 			false
 		);
 		newEnvHeader = envHeader;
+		newEnvTypes = envTypes;
 	} catch (e) {
 		logger.error(e);
 	}
@@ -63,5 +69,39 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
 	const runtimeOutOfDate =
 		existingRuntimeHeader && existingRuntimeHeader !== newRuntimeHeader;
 
-	return envOutOfDate || runtimeOutOfDate;
+	// Check if the users types have changed since last generation, and if so either prompt them to
+	// re-run `wrangler types` or automatically do so for them by enabling `dev.generate_types` or
+	// using `wrangler dev --types`.
+	const changed = envOutOfDate || runtimeOutOfDate;
+	if (!changed) {
+		return false;
+	}
+
+	if (!config.dev.generate_types) {
+		logger.log(
+			"❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
+		);
+		return true;
+	}
+
+	const { runtimeHeader, runtimeTypes } = await generateRuntimeTypes({
+		config,
+		outFile: DEFAULT_WORKERS_TYPES_FILE_PATH,
+	});
+	const newTypesFile = [
+		newEnvHeader,
+		runtimeHeader,
+		newEnvTypes,
+		runtimeTypes,
+	].join("\n");
+	try {
+		writeFileSync(DEFAULT_WORKERS_TYPES_FILE_PATH, newTypesFile);
+		logger.log(
+			`❓ Your types looked out of date. We've re-run \`wrangler types\` for you and updated ${DEFAULT_WORKERS_TYPES_FILE_PATH}`
+		);
+	} catch (e) {
+		logger.error(e);
+	}
+
+	return true;
 };

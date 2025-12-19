@@ -10,6 +10,7 @@ type InstallConfig = {
 	startText?: string;
 	doneText?: string;
 	dev?: boolean;
+	force?: boolean;
 };
 
 /**
@@ -19,11 +20,14 @@ type InstallConfig = {
  * @param config.dev - Add packages as `devDependencies`
  * @param config.startText - Spinner start text
  * @param config.doneText - Spinner done text
+ * @param config.force - Whether to install with `--force` or not
  */
 export const installPackages = async (
 	packages: string[],
 	config: InstallConfig = {}
 ) => {
+	const { force, dev, startText, doneText } = config;
+
 	if (packages.length === 0) {
 		const { type } = await getPackageManager();
 
@@ -44,9 +48,11 @@ export const installPackages = async (
 				...(cmd ? [cmd] : []),
 				...packages,
 				...(type === "pnpm" ? ["--no-frozen-lockfile"] : []),
+				...(force === true ? ["--force"] : []),
 			],
 			{
-				...config,
+				startText,
+				doneText,
 				silent: true,
 			}
 		);
@@ -60,20 +66,30 @@ export const installPackages = async (
 	switch (type) {
 		case "yarn":
 			cmd = "add";
-			saveFlag = config.dev ? "-D" : "";
+			saveFlag = dev ? "-D" : "";
 			break;
 		case "npm":
 		case "pnpm":
 		default:
 			cmd = "install";
-			saveFlag = config.dev ? "--save-dev" : "";
+			saveFlag = dev ? "--save-dev" : "";
 			break;
 	}
 
-	await runCommand([type, cmd, ...(saveFlag ? [saveFlag] : []), ...packages], {
-		...config,
-		silent: true,
-	});
+	await runCommand(
+		[
+			type,
+			cmd,
+			...(saveFlag ? [saveFlag] : []),
+			...packages,
+			...(force === true ? ["--force"] : []),
+		],
+		{
+			startText,
+			doneText,
+			silent: true,
+		}
+	);
 
 	if (type === "npm") {
 		// Npm install will update the package.json with a caret-range rather than the exact version/range we asked for.

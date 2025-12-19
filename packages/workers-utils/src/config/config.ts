@@ -252,6 +252,13 @@ export interface DevConfig {
 	 * Note that windows is only supported via WSL at the moment
 	 */
 	container_engine: ContainerEngine | undefined;
+
+	/**
+	 * Re-generate your worker types when your Wrangler configuration file changes.
+	 *
+	 * @default false
+	 */
+	generate_types: boolean;
 }
 
 export type RawDevConfig = Partial<DevConfig>;
@@ -298,6 +305,7 @@ export const defaultWranglerConfig: Config = {
 		// Note this one is also workers only
 		enable_containers: true,
 		container_engine: undefined,
+		generate_types: false,
 	},
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/
