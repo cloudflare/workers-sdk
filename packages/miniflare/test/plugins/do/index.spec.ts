@@ -60,7 +60,7 @@ test("persists Durable Object data in-memory between options reloads", async () 
 		durableObjects: { COUNTER: "Counter" },
 	};
 	let mf = new Miniflare(opts);
-	useDispose(mf);
+	useDispose(() => mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #1: 1");
@@ -113,7 +113,7 @@ test("persists Durable Object data on file-system", async () => {
 		durableObjectsPersist: tmp,
 	};
 	let mf = new Miniflare(opts);
-	useDispose(mf);
+	useDispose(() => mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("1");

@@ -507,7 +507,7 @@ test("operations persist D1 data", async () => {
 	const tmp = await useTmp();
 	const persistOpts: MiniflareOptions = { ...opts, d1Persist: tmp };
 	let mf = new Miniflare(persistOpts);
-	useDispose(mf);
+	useDispose(() => mf);
 	let db = await getDatabase(mf);
 
 	// Check execute respects persist

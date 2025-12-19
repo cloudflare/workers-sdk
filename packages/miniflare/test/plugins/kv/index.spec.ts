@@ -740,7 +740,7 @@ test("persists on file-system", async () => {
 		kvPersist: tmp,
 	};
 	let mf = new Miniflare(opts);
-	useDispose(mf);
+	useDispose(() => mf);
 
 	let kv = await mf.getKVNamespace("NAMESPACE");
 	await kv.put("key", "value");
