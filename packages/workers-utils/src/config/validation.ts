@@ -2070,7 +2070,7 @@ const validateVars =
 					if (varValue instanceof Date) {
 						diagnostics.errors.push(
 							`The field "${fieldPath}.${varName}" is a TOML date, which is not supported. ` +
-								`Please use a string instead, e.g. ${varName} = "${varValue.toISOString().split("T")[0]}".`
+								`Please use a string instead, e.g. ${varName} = "2025-12-19".`
 						);
 						isValid = false;
 					}

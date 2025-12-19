@@ -5485,7 +5485,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasErrors()).toBe(true);
 			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - The field \\"vars.DATE_VAR\\" is a TOML date, which is not supported. Please use a string instead, e.g. DATE_VAR = \\"2024-01-01\\"."
+				  - The field \\"vars.DATE_VAR\\" is a TOML date, which is not supported. Please use a string instead, e.g. DATE_VAR = \\"2025-12-19\\"."
 			`);
 		});
 
@@ -5513,7 +5513,7 @@ describe("normalizeAndValidateConfig()", () => {
 				"Processing wrangler configuration:
 
 				  - \\"env.production\\" environment configuration
-				    - The field \\"env.production.vars.RELEASE_DATE\\" is a TOML date, which is not supported. Please use a string instead, e.g. RELEASE_DATE = \\"2025-06-15\\"."
+				    - The field \\"env.production.vars.RELEASE_DATE\\" is a TOML date, which is not supported. Please use a string instead, e.g. RELEASE_DATE = \\"2025-12-19\\"."
 			`);
 		});
 
