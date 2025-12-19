@@ -314,7 +314,8 @@ function containerConfigToCreateRequest(
 				prevApp?.configuration.observability
 			),
 			wrangler_ssh: containerApp.wrangler_ssh,
-			authorized_keys: containerApp.authorized_keys ?? undefined,
+			authorized_keys: containerApp.authorized_keys,
+			trusted_user_ca_keys: containerApp.trusted_user_ca_keys,
 		},
 		// deprecated in favour of max_instances
 		instances: 0,
