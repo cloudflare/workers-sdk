@@ -21,6 +21,14 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			miniflare: path.resolve(__dirname, "dist/src/index.js"),
+			"miniflare:shared": path.resolve(
+				__dirname,
+				"src/workers/shared/index.ts"
+			),
+			"miniflare:zod": path.resolve(
+				__dirname,
+				"src/workers/shared/zod.worker.ts"
+			),
 		},
 	},
 });
