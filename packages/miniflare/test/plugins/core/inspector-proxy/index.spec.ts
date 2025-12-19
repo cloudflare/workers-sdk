@@ -2,9 +2,8 @@ import events from "node:events";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import { fetch, Miniflare, MiniflareOptions } from "miniflare";
-import { beforeAll, expect, onTestFinished, test } from "vitest";
+import { beforeAll, expect, onTestFinished, test, vi } from "vitest";
 import WebSocket from "ws";
-import { waitUntil } from "../../../test-shared";
 
 const nullScript =
 	'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));';
@@ -195,22 +194,25 @@ test("InspectorProxy: should allow inspector port updating via miniflare#setOpti
 	res = await fetch(`http://localhost:${newInspectorPort}/json/version`);
 	expect(res.status).toBe(200);
 
-	await waitUntil(async () => {
-		try {
-			await fetch(`http://localhost:${initialInspectorPort}/json/version`);
-			// Old inspector port still responding
-			throw new Error("Old inspector port still responding");
-		} catch (e) {
-			// If it's our error, rethrow it
-			if (
-				e instanceof Error &&
-				e.message === "Old inspector port still responding"
-			) {
-				throw e;
+	await vi.waitFor(
+		async () => {
+			try {
+				await fetch(`http://localhost:${initialInspectorPort}/json/version`);
+				// Old inspector port still responding
+				throw new Error("Old inspector port still responding");
+			} catch (e) {
+				// If it's our error, rethrow it
+				if (
+					e instanceof Error &&
+					e.message === "Old inspector port still responding"
+				) {
+					throw e;
+				}
+				// Otherwise, the port is no longer responding (which is what we want)
 			}
-			// Otherwise, the port is no longer responding (which is what we want)
-		}
-	});
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
 test("InspectorProxy: should keep the same inspector port on miniflare#setOptions calls with inspectorPort set to 0", async () => {

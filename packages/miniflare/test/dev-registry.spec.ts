@@ -1,6 +1,6 @@
 import { Miniflare, MiniflareOptions, WorkerRegistry } from "miniflare";
 import { expect, onTestFinished, test, vi } from "vitest";
-import { useTmp, waitUntil } from "./test-shared";
+import { useTmp } from "./test-shared";
 
 test("DevRegistry: fetch to service worker", async () => {
 	const unsafeDevRegistryPath = await useTmp();
@@ -48,14 +48,17 @@ test("DevRegistry: fetch to service worker", async () => {
 
 	// Kill the remote worker to see if it fails gracefully
 	await remote.dispose();
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("http://placeholder");
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("http://placeholder");
 
-		expect(await res.text()).toBe(
-			`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
-		);
-		expect(res.status).toBe(503);
-	});
+			expect(await res.text()).toBe(
+				`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+			);
+			expect(res.status).toBe(503);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
 test("DevRegistry: fetch to module worker", async () => {
@@ -116,12 +119,15 @@ test("DevRegistry: fetch to module worker", async () => {
 	onTestFinished(() => remote.dispose());
 
 	await remote.ready;
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("http://example.com?name=World");
-		const result = await res.text();
-		expect(result).toBe("Response from remote worker: Hello World");
-		expect(res.status).toBe(200);
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("http://example.com?name=World");
+			const result = await res.text();
+			expect(result).toBe("Response from remote worker: Hello World");
+			expect(res.status).toBe(200);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
 test("DevRegistry: WebSocket upgrade to module worker", async () => {
@@ -209,12 +215,15 @@ test("DevRegistry: WebSocket upgrade to module worker", async () => {
 	onTestFinished(() => remote.dispose());
 
 	await remote.ready;
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("http://example.com");
-		const result = await res.text();
-		expect(result).toBe("WebSocket communication successful: pong");
-		expect(res.status).toBe(200);
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("http://example.com");
+			const result = await res.text();
+			expect(result).toBe("WebSocket communication successful: pong");
+			expect(res.status).toBe(200);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
 test("DevRegistry: RPC to default entrypoint", async () => {
@@ -270,21 +279,27 @@ test("DevRegistry: RPC to default entrypoint", async () => {
 	});
 
 	await remote.ready;
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("http://placeholder");
-		const result = await res.text();
-		expect(result).toBe("Response from remote worker: pong");
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("http://placeholder");
+			const result = await res.text();
+			expect(result).toBe("Response from remote worker: pong");
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 
 	// Kill the remote worker to see if it fails gracefully
 	await remote.dispose();
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("http://placeholder");
-		expect(await res.text()).toBe(
-			`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
-		);
-		expect(res.status).toBe(500);
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("http://placeholder");
+			expect(await res.text()).toBe(
+				`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+			);
+			expect(res.status).toBe(500);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
 test("DevRegistry: RPC to custom entrypoint", async () => {
@@ -341,20 +356,26 @@ test("DevRegistry: RPC to custom entrypoint", async () => {
 	});
 
 	await remote.ready;
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("http://placeholder");
-		const result = await res.text();
-		expect(result).toBe("Response from remote worker: pong");
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("http://placeholder");
+			const result = await res.text();
+			expect(result).toBe("Response from remote worker: pong");
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 
 	await remote.dispose();
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("http://placeholder");
-		expect(await res.text()).toBe(
-			`Cannot access "ping" as we couldn\'t find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
-		);
-		expect(res.status).toBe(500);
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("http://placeholder");
+			expect(await res.text()).toBe(
+				`Cannot access "ping" as we couldn\'t find a local dev session for the "TestEntrypoint" entrypoint of service "remote-worker" to proxy to.`
+			);
+			expect(res.status).toBe(500);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
 test("DevRegistry: fetch to module worker with node bindings", async () => {
@@ -381,13 +402,16 @@ test("DevRegistry: fetch to module worker with node bindings", async () => {
 
 	const bindings = await local.getBindings<Record<string, any>>();
 
-	await waitUntil(async () => {
-		const res = await bindings.SERVICE.fetch("http://example.com?name=World");
-		expect(await res.text()).toBe(
-			`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
-		);
-		expect(res.status).toBe(503);
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await bindings.SERVICE.fetch("http://example.com?name=World");
+			expect(await res.text()).toBe(
+				`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+			);
+			expect(res.status).toBe(503);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 
 	const remote = new Miniflare({
 		name: "remote-worker",
@@ -413,21 +437,27 @@ test("DevRegistry: fetch to module worker with node bindings", async () => {
 	});
 
 	await remote.ready;
-	await vi.waitUntil(async () => {
-		const res = await bindings.SERVICE.fetch("http://example.com?name=World");
-		const result = await res.text();
-		expect(result).toBe("Hello World");
-		expect(res.status).toBe(200);
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await bindings.SERVICE.fetch("http://example.com?name=World");
+			const result = await res.text();
+			expect(result).toBe("Hello World");
+			expect(res.status).toBe(200);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 
 	await remote.dispose();
-	await vi.waitUntil(async () => {
-		const res = await bindings.SERVICE.fetch("http://example.com?name=World");
-		expect(await res.text()).toBe(
-			`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
-		);
-		expect(res.status).toBe(503);
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await bindings.SERVICE.fetch("http://example.com?name=World");
+			expect(await res.text()).toBe(
+				`Couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to`
+			);
+			expect(res.status).toBe(503);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
 test("DevRegistry: RPC to default entrypoint with node bindings", async () => {
@@ -454,16 +484,19 @@ test("DevRegistry: RPC to default entrypoint with node bindings", async () => {
 
 	const env = await local.getBindings<Record<string, any>>();
 
-	await waitUntil(async () => {
-		try {
-			const result = await env.SERVICE.ping();
-			throw new Error(`Expected error, got result: ${result}`);
-		} catch (e) {
-			expect(e instanceof Error ? e.message : `${e}`).toBe(
-				`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
-			);
-		}
-	});
+	await vi.waitFor(
+		async () => {
+			try {
+				const result = await env.SERVICE.ping();
+				throw new Error(`Expected error, got result: ${result}`);
+			} catch (e) {
+				expect(e instanceof Error ? e.message : `${e}`).toBe(
+					`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+				);
+			}
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 
 	const remote = new Miniflare({
 		name: "remote-worker",
@@ -485,23 +518,29 @@ test("DevRegistry: RPC to default entrypoint with node bindings", async () => {
 	});
 
 	await remote.ready;
-	await waitUntil(async () => {
-		const result = await env.SERVICE.ping();
-		expect(result).toBe("pong");
-	});
+	await vi.waitFor(
+		async () => {
+			const result = await env.SERVICE.ping();
+			expect(result).toBe("pong");
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 
 	// Kill the remote worker to see if it fails gracefully
 	await remote.dispose();
-	await waitUntil(async () => {
-		try {
-			const result = await env.SERVICE.ping();
-			throw new Error(`Expected error, got result: ${result}`);
-		} catch (e) {
-			expect(e instanceof Error ? e.message : `${e}`).toBe(
-				`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
-			);
-		}
-	});
+	await vi.waitFor(
+		async () => {
+			try {
+				const result = await env.SERVICE.ping();
+				throw new Error(`Expected error, got result: ${result}`);
+			} catch (e) {
+				expect(e instanceof Error ? e.message : `${e}`).toBe(
+					`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+				);
+			}
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
 test("DevRegistry: fetch to durable object with do proxy disabled", async () => {
@@ -694,11 +733,14 @@ test("DevRegistry: fetch to durable object", async () => {
 	onTestFinished(() => remote.dispose());
 
 	await remote.ready;
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("http://placeholder");
-		expect(await res.text()).toBe("Hello from Durable Object!");
-		expect(res.status).toBe(200);
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("http://placeholder");
+			expect(await res.text()).toBe("Hello from Durable Object!");
+			expect(res.status).toBe(200);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
 test("DevRegistry: RPC to durable object", async () => {
@@ -763,13 +805,16 @@ test("DevRegistry: RPC to durable object", async () => {
 	onTestFinished(() => remote.dispose());
 
 	await remote.ready;
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("http://placeholder");
-		expect(await res.text()).toBe(
-			`Cannot access "MyDurableObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.`
-		);
-		expect(res.status).toBe(500);
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("http://placeholder");
+			expect(await res.text()).toBe(
+				`Cannot access "MyDurableObject#ping" as Durable Object RPC is not yet supported between multiple dev sessions.`
+			);
+			expect(res.status).toBe(500);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
 test("DevRegistry: tail to default entrypoint", async () => {
@@ -947,35 +992,44 @@ test("DevRegistry: miniflare with different registry path", async () => {
 	onTestFinished(() => remote.dispose());
 
 	await remote.ready;
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("http://placeholder");
-		const result = await res.text();
-		expect(result).toBe("Response from remote worker: pong");
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("http://placeholder");
+			const result = await res.text();
+			expect(result).toBe("Response from remote worker: pong");
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 
 	// Change remote's registry path to a different value
 	await remote.setOptions({
 		...remoteOptions,
 		unsafeDevRegistryPath: unsafeDevRegistryPath2,
 	});
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("http://placeholder");
-		expect(await res.text()).toBe(
-			`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
-		);
-		expect(res.status).toBe(500);
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("http://placeholder");
+			expect(await res.text()).toBe(
+				`Cannot access "ping" as we couldn\'t find a local dev session for the "default" entrypoint of service "remote-worker" to proxy to.`
+			);
+			expect(res.status).toBe(500);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 
 	// Change local's registry path to the same path as remote's
 	await local.setOptions({
 		...localOptions,
 		unsafeDevRegistryPath: unsafeDevRegistryPath2,
 	});
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("http://placeholder");
-		const result = await res.text();
-		expect(result).toBe("Response from remote worker: pong");
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("http://placeholder");
+			const result = await res.text();
+			expect(result).toBe("Response from remote worker: pong");
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
 test("DevRegistry: fetch to module worker with https enabled", async () => {
@@ -1033,12 +1087,15 @@ test("DevRegistry: fetch to module worker with https enabled", async () => {
 	onTestFinished(() => remote.dispose());
 
 	await remote.ready;
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("https://example.com?name=World");
-		const result = await res.text();
-		expect(result).toBe("Response from remote worker: Hello World");
-		expect(res.status).toBe(200);
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("https://example.com?name=World");
+			const result = await res.text();
+			expect(result).toBe("Response from remote worker: Hello World");
+			expect(res.status).toBe(200);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
 test("DevRegistry: fetch to durable object with https enabled", async () => {
@@ -1104,11 +1161,14 @@ test("DevRegistry: fetch to durable object with https enabled", async () => {
 	onTestFinished(() => remote.dispose());
 
 	await remote.ready;
-	await waitUntil(async () => {
-		const res = await local.dispatchFetch("http://placeholder");
-		expect(await res.text()).toBe("Hello from Durable Object!");
-		expect(res.status).toBe(200);
-	});
+	await vi.waitFor(
+		async () => {
+			const res = await local.dispatchFetch("http://placeholder");
+			expect(await res.text()).toBe("Hello from Durable Object!");
+			expect(res.status).toBe(200);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
 test("DevRegistry: handleDevRegistryUpdate callback", async () => {
@@ -1211,19 +1271,25 @@ test("DevRegistry: handleDevRegistryUpdate callback", async () => {
 	await remote.ready;
 
 	// Wait for the callback to be triggered
-	await waitUntil(async () => {
-		// Callback should be triggered when bound Worker starts
-		expect(firstCallbackInvocations.length).toBe(1);
-		// Second callback should not be triggered yet
-		expect(secondCallbackInvocations.length).toBe(0);
-	});
+	await vi.waitFor(
+		async () => {
+			// Callback should be triggered when bound Worker starts
+			expect(firstCallbackInvocations.length).toBe(1);
+			// Second callback should not be triggered yet
+			expect(secondCallbackInvocations.length).toBe(0);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 
 	// Verify the callback was called with the correct registry data
-	await waitUntil(async () => {
-		const latestInvocation = firstCallbackInvocations.at(-1);
-		// Registry should contain remote-worker
-		expect(latestInvocation?.registry["remote-worker"]).toBeDefined();
-	});
+	await vi.waitFor(
+		async () => {
+			const latestInvocation = firstCallbackInvocations.at(-1);
+			// Registry should contain remote-worker
+			expect(latestInvocation?.registry["remote-worker"]).toBeDefined();
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 
 	// Update unsafeHandleDevRegistryUpdate callback to push to a different array
 	await local.setOptions({
@@ -1259,17 +1325,23 @@ test("DevRegistry: handleDevRegistryUpdate callback", async () => {
 	await remote.dispose();
 
 	// Wait for callback to be triggered by the update
-	await waitUntil(async () => {
-		// First callback should not be triggered again after update
-		expect(firstCallbackInvocations.length).toBe(1);
-		// Second callback should be triggered after update
-		expect(secondCallbackInvocations.length).toBe(1);
-	});
+	await vi.waitFor(
+		async () => {
+			// First callback should not be triggered again after update
+			expect(firstCallbackInvocations.length).toBe(1);
+			// Second callback should be triggered after update
+			expect(secondCallbackInvocations.length).toBe(1);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 
 	// Verify if the remote worker is no longer in the registry
-	await waitUntil(async () => {
-		const latestInvocation = secondCallbackInvocations.at(-1);
-		// Registry should not contain remote-worker
-		expect(latestInvocation?.registry["remote-worker"]).toBe(undefined);
-	});
+	await vi.waitFor(
+		async () => {
+			const latestInvocation = secondCallbackInvocations.at(-1);
+			// Registry should not contain remote-worker
+			expect(latestInvocation?.registry["remote-worker"]).toBe(undefined);
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });

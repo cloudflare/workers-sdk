@@ -12,7 +12,7 @@ import {
 } from "miniflare";
 import { expect, onTestFinished, test } from "vitest";
 import { WebSocketServer } from "ws";
-import { flaky, useServer } from "../test-shared";
+import { useServer } from "../test-shared";
 
 const noop = () => {};
 
@@ -112,85 +112,86 @@ test("fetch: includes headers from web socket upgrade response", async () => {
 	expect(res.webSocket).toBeDefined();
 	expect(res.headers.getSetCookie()[0]).toBe("key=value");
 });
-const fetchDispatchCloseFlakyTest = flaky(async () => {
-	let clientCloses = 0;
-	let serverCloses = 0;
-	const clientClosePromise = new DeferredPromise<void>();
-	const serverClosePromise = new DeferredPromise<void>();
+test(
+	"fetch: dispatches close events on client and server close",
+	{ retry: 3 },
+	async () => {
+		let clientCloses = 0;
+		let serverCloses = 0;
+		const clientClosePromise = new DeferredPromise<void>();
+		const serverClosePromise = new DeferredPromise<void>();
 
-	const server = await useServer(noop, (ws, req) => {
-		if (req.url?.startsWith("/client")) {
-			ws.on("close", (code, reason) => {
-				expect(code).toBe(3001);
-				expect(reason.toString()).toBe("Client Close");
-				if (req.url === "/client/event-listener") {
-					ws.close(3002, "Server Event Listener Close");
-				}
+		const server = await useServer(noop, (ws, req) => {
+			if (req.url?.startsWith("/client")) {
+				ws.on("close", (code, reason) => {
+					expect(code).toBe(3001);
+					expect(reason.toString()).toBe("Client Close");
+					if (req.url === "/client/event-listener") {
+						ws.close(3002, "Server Event Listener Close");
+					}
 
-				clientCloses++;
-				if (clientCloses === 2) clientClosePromise.resolve();
-			});
-		} else if (req.url === "/server") {
-			ws.on("message", (data) => {
-				if (data.toString() === "close") ws.close(3003, "Server Close");
-			});
-			ws.on("close", (code, reason) => {
-				expect(code).toBe(3003);
-				expect(reason.toString()).toBe("Server Close");
+					clientCloses++;
+					if (clientCloses === 2) clientClosePromise.resolve();
+				});
+			} else if (req.url === "/server") {
+				ws.on("message", (data) => {
+					if (data.toString() === "close") ws.close(3003, "Server Close");
+				});
+				ws.on("close", (code, reason) => {
+					expect(code).toBe(3003);
+					expect(reason.toString()).toBe("Server Close");
 
-				serverCloses++;
-				if (serverCloses === 2) serverClosePromise.resolve();
-			});
-		}
-	});
-
-	// Check client-side close
-	async function clientSideClose(closeInEventListener: boolean) {
-		const path = closeInEventListener ? "/client/event-listener" : "/client";
-		const res = await fetch(new URL(path, server.http), {
-			headers: { upgrade: "websocket" },
-		});
-		const webSocket = res.webSocket;
-		assert(webSocket);
-		const closeEventPromise = new DeferredPromise<CloseEvent>();
-		webSocket.addEventListener("close", closeEventPromise.resolve);
-		webSocket.accept();
-		webSocket.close(3001, "Client Close");
-		const closeEvent = await closeEventPromise;
-		expect(closeEvent.code).toBe(3001);
-		expect(closeEvent.reason).toBe("Client Close");
-	}
-	await clientSideClose(false);
-	await clientSideClose(true);
-	await clientClosePromise;
-
-	// Check server-side close
-	async function serverSideClose(closeInEventListener: boolean) {
-		const res = await fetch(new URL("/server", server.http), {
-			headers: { upgrade: "websocket" },
-		});
-		const webSocket = res.webSocket;
-		assert(webSocket);
-		const closeEventPromise = new DeferredPromise<CloseEvent>();
-		webSocket.addEventListener("close", (event) => {
-			if (closeInEventListener) {
-				webSocket.close(3004, "Client Event Listener Close");
+					serverCloses++;
+					if (serverCloses === 2) serverClosePromise.resolve();
+				});
 			}
-			closeEventPromise.resolve(event);
 		});
-		webSocket.accept();
-		webSocket.send("close");
-		const closeEvent = await closeEventPromise;
-		expect(closeEvent.code).toBe(3003);
-		expect(closeEvent.reason).toBe("Server Close");
+
+		// Check client-side close
+		async function clientSideClose(closeInEventListener: boolean) {
+			const path = closeInEventListener ? "/client/event-listener" : "/client";
+			const res = await fetch(new URL(path, server.http), {
+				headers: { upgrade: "websocket" },
+			});
+			const webSocket = res.webSocket;
+			assert(webSocket);
+			const closeEventPromise = new DeferredPromise<CloseEvent>();
+			webSocket.addEventListener("close", closeEventPromise.resolve);
+			webSocket.accept();
+			webSocket.close(3001, "Client Close");
+			const closeEvent = await closeEventPromise;
+			expect(closeEvent.code).toBe(3001);
+			expect(closeEvent.reason).toBe("Client Close");
+		}
+		await clientSideClose(false);
+		await clientSideClose(true);
+		await clientClosePromise;
+
+		// Check server-side close
+		async function serverSideClose(closeInEventListener: boolean) {
+			const res = await fetch(new URL("/server", server.http), {
+				headers: { upgrade: "websocket" },
+			});
+			const webSocket = res.webSocket;
+			assert(webSocket);
+			const closeEventPromise = new DeferredPromise<CloseEvent>();
+			webSocket.addEventListener("close", (event) => {
+				if (closeInEventListener) {
+					webSocket.close(3004, "Client Event Listener Close");
+				}
+				closeEventPromise.resolve(event);
+			});
+			webSocket.accept();
+			webSocket.send("close");
+			const closeEvent = await closeEventPromise;
+			expect(closeEvent.code).toBe(3003);
+			expect(closeEvent.reason).toBe("Server Close");
+		}
+		await serverSideClose(false);
+		await serverSideClose(true);
+		await serverClosePromise;
 	}
-	await serverSideClose(false);
-	await serverSideClose(true);
-	await serverClosePromise;
-});
-test("fetch: dispatches close events on client and server close", async () => {
-	await fetchDispatchCloseFlakyTest;
-});
+);
 test("fetch: throws on ws(s) protocols", async () => {
 	await expect(
 		fetch("ws://localhost/", {

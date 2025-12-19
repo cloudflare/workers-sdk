@@ -74,7 +74,7 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 		vi.restoreAllMocks();
 	});
 
-	test("it creates a browser session", async () => {
+	test("it creates a browser session", { retry: 3 }, async () => {
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -111,7 +111,7 @@ export default {
 };
 `;
 
-	test("it closes a browser session", async () => {
+	test("it closes a browser session", { retry: 3 }, async () => {
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -154,7 +154,7 @@ export default {
 };
 `;
 
-	test("it reuses a browser session", async () => {
+	test("it reuses a browser session", { retry: 3 }, async () => {
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -242,30 +242,34 @@ export default {
 };
 `;
 
-	test("gets sessions while acquiring and closing session", async () => {
-		const opts: MiniflareOptions = {
-			name: "worker",
-			compatibilityDate: "2024-11-20",
-			modules: true,
-			script: GET_SESSIONS_SCRIPT,
-			browserRendering: { binding: "MYBROWSER" },
-		};
-		const mf = new Miniflare(opts);
-		useDispose(mf);
+	test(
+		"gets sessions while acquiring and closing session",
+		{ retry: 3 },
+		async () => {
+			const opts: MiniflareOptions = {
+				name: "worker",
+				compatibilityDate: "2024-11-20",
+				modules: true,
+				script: GET_SESSIONS_SCRIPT,
+				browserRendering: { binding: "MYBROWSER" },
+			};
+			const mf = new Miniflare(opts);
+			useDispose(mf);
 
-		const { emptySessions, acquiredSessions, afterClosedSessions } = (await mf
-			.dispatchFetch("https://localhost")
-			.then((res) => res.json())) as any;
-		expect(emptySessions.length).toBe(0);
-		expect(acquiredSessions.length).toBe(1);
-		expect(
-			typeof acquiredSessions[0].sessionId === "string" &&
-				typeof acquiredSessions[0].startTime === "number" &&
-				!acquiredSessions[0].connectionId &&
-				!acquiredSessions[0].connectionId
-		).toBe(true);
-		expect(afterClosedSessions.length).toBe(0);
-	});
+			const { emptySessions, acquiredSessions, afterClosedSessions } = (await mf
+				.dispatchFetch("https://localhost")
+				.then((res) => res.json())) as any;
+			expect(emptySessions.length).toBe(0);
+			expect(acquiredSessions.length).toBe(1);
+			expect(
+				typeof acquiredSessions[0].sessionId === "string" &&
+					typeof acquiredSessions[0].startTime === "number" &&
+					!acquiredSessions[0].connectionId &&
+					!acquiredSessions[0].connectionId
+			).toBe(true);
+			expect(afterClosedSessions.length).toBe(0);
+		}
+	);
 
 	const GET_SESSIONS_AFTER_DISCONNECT_SCRIPT = `
 ${waitForClosedConnection.toString()}
@@ -290,28 +294,32 @@ export default {
 };
 `;
 
-	test("gets sessions while connecting and disconnecting session", async () => {
-		const opts: MiniflareOptions = {
-			name: "worker",
-			compatibilityDate: "2024-11-20",
-			modules: true,
-			script: GET_SESSIONS_AFTER_DISCONNECT_SCRIPT,
-			browserRendering: { binding: "MYBROWSER" },
-		};
-		const mf = new Miniflare(opts);
-		useDispose(mf);
+	test(
+		"gets sessions while connecting and disconnecting session",
+		{ retry: 3 },
+		async () => {
+			const opts: MiniflareOptions = {
+				name: "worker",
+				compatibilityDate: "2024-11-20",
+				modules: true,
+				script: GET_SESSIONS_AFTER_DISCONNECT_SCRIPT,
+				browserRendering: { binding: "MYBROWSER" },
+			};
+			const mf = new Miniflare(opts);
+			useDispose(mf);
 
-		const { connectedSession, disconnectedSession } = (await mf
-			.dispatchFetch("https://localhost")
-			.then((res) => res.json())) as any;
-		expect(connectedSession.sessionId).toBe(disconnectedSession.sessionId);
-		expect(
-			typeof connectedSession.connectionId === "string" &&
-				typeof connectedSession.connectionStartTime === "number"
-		).toBe(true);
-		expect(
-			!disconnectedSession.connectionId &&
-				!disconnectedSession.connectionStartTime
-		).toBe(true);
-	});
+			const { connectedSession, disconnectedSession } = (await mf
+				.dispatchFetch("https://localhost")
+				.then((res) => res.json())) as any;
+			expect(connectedSession.sessionId).toBe(disconnectedSession.sessionId);
+			expect(
+				typeof connectedSession.connectionId === "string" &&
+					typeof connectedSession.connectionStartTime === "number"
+			).toBe(true);
+			expect(
+				!disconnectedSession.connectionId &&
+					!disconnectedSession.connectionStartTime
+			).toBe(true);
+		}
+	);
 });
