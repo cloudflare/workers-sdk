@@ -206,7 +206,7 @@ export async function createPreviewSession(
 		return {
 			id: crypto.randomUUID(),
 			value: token,
-			host: ctx.host ?? inspectorUrl?.host ?? switchedExchangeUrl,
+			host: ctx.host ?? inspectorUrl?.host ?? switchedExchangeUrl.host,
 			prewarmUrl: switchHost(prewarm, ctx.host, !!ctx.zone),
 			inspectorUrl,
 		};
