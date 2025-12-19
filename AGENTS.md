@@ -98,6 +98,11 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 - Never commit without changesets for user-facing changes
 - PR template requirements: Remove "Fixes #..." line when no relevant issue exists, keep all checkboxes (don't delete unchecked ones)
 
+**Creating Pull Requests:**
+
+- Always use the PR template from `.github/pull_request_template.md`
+- PR title format: `[package name] description` (e.g. `[wrangler] Fix bug in dev command`)
+
 ## Key Locations
 
 - `/fixtures` - Test fixtures and example applications
