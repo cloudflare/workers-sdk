@@ -9,7 +9,6 @@ import { Static } from "../../autoconfig/frameworks/static";
 import * as run from "../../autoconfig/run";
 import * as format from "../../deployment-bundle/guess-worker-format";
 import { clearOutputFilePath } from "../../output";
-import * as compatDate from "../../utils/compatibility-date";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -19,6 +18,19 @@ import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
 import type { Framework } from "../../autoconfig/frameworks";
 import type { MockInstance } from "vitest";
+
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
+	const originalModule =
+		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+		await importOriginal<Awaited<typeof import("@cloudflare/workers-utils")>>();
+	return {
+		...originalModule,
+		getLocalWorkerdCompatibilityDate: vi.fn(() => ({
+			date: "2000-01-01",
+			source: "workerd",
+		})),
+	};
+});
 
 vi.mock("../../package-manager", () => ({
 	getPackageManager() {
@@ -127,10 +139,6 @@ describe("autoconfig (deploy)", () => {
 			installSpy = vi
 				.spyOn(c3, "installWrangler")
 				.mockImplementation(async () => {});
-
-			vi.spyOn(compatDate, "getDevCompatibilityDate").mockImplementation(
-				() => "2000-01-01"
-			);
 		});
 
 		it("happy path", async () => {
