@@ -619,7 +619,7 @@ test("Miniflare: custom service binding to another Miniflare instance", async ()
 			}
 		}`,
 	});
-	onTestFinished(() => mfOther.dispose());
+	useDispose(mfOther);
 
 	const mf = new Miniflare({
 		script: `addEventListener("fetch", (event) => {
@@ -2342,7 +2342,7 @@ test("Miniflare: allows RPC between multiple instances", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => mf1.dispose());
+	useDispose(mf1);
 
 	const testEntrypointUrl = await mf1.unsafeGetDirectURL("", "TestEntrypoint");
 
@@ -2361,7 +2361,7 @@ test("Miniflare: allows RPC between multiple instances", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => mf2.dispose());
+	useDispose(mf2);
 
 	const res = await mf2.dispatchFetch("http://placeholder");
 	expect(await res.text()).toBe("pong");
@@ -2994,8 +2994,8 @@ test("Miniflare: strips CF-Connecting-IP", async () => {
 		script: `export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
 		modules: true,
 	});
-	onTestFinished(() => client.dispose());
-	onTestFinished(() => server.dispose());
+	useDispose(client);
+	useDispose(server);
 
 	const landingPage = await client.dispatchFetch("http://example.com/");
 	// The CF-Connecting-IP header value of "fake-value" should be stripped by Miniflare, and should be replaced with a generic 127.0.0.1
@@ -3015,8 +3015,8 @@ test("Miniflare: does not strip CF-Connecting-IP when configured", async () => {
 		modules: true,
 		stripCfConnectingIp: false,
 	});
-	onTestFinished(() => client.dispose());
-	onTestFinished(() => server.dispose());
+	useDispose(client);
+	useDispose(server);
 
 	const landingPage = await client.dispatchFetch("http://example.com/");
 	expect(await landingPage.text()).toEqual("fake-value");

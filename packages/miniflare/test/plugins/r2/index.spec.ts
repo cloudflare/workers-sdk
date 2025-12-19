@@ -247,13 +247,17 @@ test("get: range using object", async () => {
 	expect(await body.text()).toBe("value");
 
 	// Check unsatisfiable ranges
-	const _expectations: ThrowsExpectation<Error> = {
-		instanceOf: Error,
-		message: "get: The requested range is not satisfiable (10039)",
-	};
-	await expect(r2.get("key", { range: { offset: 42 } })).rejects.toThrow();
-	await expect(r2.get("key", { range: { length: 0 } })).rejects.toThrow();
-	await expect(r2.get("key", { range: { suffix: 0 } })).rejects.toThrow();
+	const rangeExpectations =
+		"get: The requested range is not satisfiable (10039)";
+	await expect(r2.get("key", { range: { offset: 42 } })).rejects.toThrow(
+		rangeExpectations
+	);
+	await expect(r2.get("key", { range: { length: 0 } })).rejects.toThrow(
+		rangeExpectations
+	);
+	await expect(r2.get("key", { range: { suffix: 0 } })).rejects.toThrow(
+		rangeExpectations
+	);
 	// `workerd` will validate all numbers are positive, and suffix not mixed with
 	// offset or length:
 	// https://github.com/cloudflare/workerd/blob/4290f9717bc94647d9c8afd29602cdac97fdff1b/src/workerd/api/r2-bucket.c%2B%2B#L239-L265
@@ -405,18 +409,16 @@ test("put: validates key", async () => {
 });
 test("put: validates checksums", async () => {
 	const { r2 } = ctx;
-	const _expectations = (
+	const checksumExpectations = (
 		name: string,
 		provided: string,
 		expected: string
-	): ThrowsExpectation<Error> => ({
-		instanceOf: Error,
-		message: [
+	) =>
+		[
 			`put: The ${name} checksum you specified did not match what we received.`,
 			`You provided a ${name} checksum with value: ${provided}`,
 			`Actual ${name} was: ${expected} (10037)`,
-		].join("\n"),
-	});
+		].join("\n");
 
 	// `workerd` validates types, hex strings, hash lengths and that we're only
 	// specifying one hash:
@@ -426,14 +428,18 @@ test("put: validates checksums", async () => {
 	const md5 = hash("value", "md5");
 	await r2.put("key", "value", { md5 });
 	const badMd5 = md5.replace("0", "1");
-	await expect(r2.put("key", "value", { md5: badMd5 })).rejects.toThrow();
+	await expect(r2.put("key", "value", { md5: badMd5 })).rejects.toThrow(
+		checksumExpectations("MD5", badMd5, md5)
+	);
 	let checksums = (await r2.head("key"))?.checksums.toJSON();
 	expect(checksums).toEqual({ md5 });
 
 	const sha1 = hash("value", "sha1");
 	await r2.put("key", "value", { sha1 });
 	const badSha1 = sha1.replace("0", "1");
-	await expect(r2.put("key", "value", { sha1: badSha1 })).rejects.toThrow();
+	await expect(r2.put("key", "value", { sha1: badSha1 })).rejects.toThrow(
+		checksumExpectations("SHA-1", badSha1, sha1)
+	);
 	// Check `get()` returns checksums
 	checksums = (await r2.get("key"))?.checksums.toJSON();
 	expect(checksums).toEqual({ md5, sha1 });
@@ -442,21 +448,27 @@ test("put: validates checksums", async () => {
 	// Check always stores lowercase hash
 	await r2.put("key", "value", { sha256: sha256.toUpperCase() });
 	const badSha256 = sha256.replace("0", "1");
-	await expect(r2.put("key", "value", { sha256: badSha256 })).rejects.toThrow();
+	await expect(r2.put("key", "value", { sha256: badSha256 })).rejects.toThrow(
+		checksumExpectations("SHA-256", badSha256, sha256)
+	);
 	checksums = (await r2.head("key"))?.checksums.toJSON();
 	expect(checksums).toEqual({ md5, sha256 });
 
 	const sha384 = hash("value", "sha384");
 	await r2.put("key", "value", { sha384 });
 	const badSha384 = sha384.replace("0", "1");
-	await expect(r2.put("key", "value", { sha384: badSha384 })).rejects.toThrow();
+	await expect(r2.put("key", "value", { sha384: badSha384 })).rejects.toThrow(
+		checksumExpectations("SHA-384", badSha384, sha384)
+	);
 	checksums = (await r2.head("key"))?.checksums.toJSON();
 	expect(checksums).toEqual({ md5, sha384 });
 
 	const sha512 = hash("value", "sha512");
 	await r2.put("key", "value", { sha512 });
 	const badSha512 = sha512.replace("0", "1");
-	await expect(r2.put("key", "value", { sha512: badSha512 })).rejects.toThrow();
+	await expect(r2.put("key", "value", { sha512: badSha512 })).rejects.toThrow(
+		checksumExpectations("SHA-512", badSha512, sha512)
+	);
 	checksums = (await r2.head("key"))?.checksums.toJSON();
 	expect(checksums).toEqual({ md5, sha512 });
 });
@@ -506,17 +518,14 @@ test("put: stores only if passes onlyIf", async () => {
 test("put: validates metadata size", async () => {
 	const { r2 } = ctx;
 
-	const _expectations: ThrowsExpectation<Error> = {
-		instanceOf: Error,
-		message:
-			"put: Your metadata headers exceed the maximum allowed metadata size. (10012)",
-	};
+	const metadataExpectations =
+		"put: Your metadata headers exceed the maximum allowed metadata size. (10012)";
 
 	// Check with ASCII characters
 	await r2.put("key", "value", { customMetadata: { key: "x".repeat(2045) } });
 	await expect(
 		r2.put("key", "value", { customMetadata: { key: "x".repeat(2046) } })
-	).rejects.toThrow();
+	).rejects.toThrow(metadataExpectations);
 	await r2.put("key", "value", { customMetadata: { hi: "x".repeat(2046) } });
 
 	// Check with extended characters: note "🙂" is 2 UTF-16 code units, so
@@ -525,10 +534,10 @@ test("put: validates metadata size", async () => {
 	await r2.put("key", "value", { customMetadata: { key1: "🙂".repeat(511) } }); // 4 + 4*511 = 2048
 	await expect(
 		r2.put("key", "value", { customMetadata: { key12: "🙂".repeat(511) } })
-	).rejects.toThrow();
+	).rejects.toThrow(metadataExpectations);
 	await expect(
 		r2.put("key", "value", { customMetadata: { key: "🙂".repeat(512) } })
-	).rejects.toThrow();
+	).rejects.toThrow(metadataExpectations);
 });
 test("put: can copy values", async () => {
 	const mf = new Miniflare({
@@ -1200,13 +1209,14 @@ test("completeMultipartUpload", async () => {
 	part1 = await upload2.uploadPart(1, "1");
 	part2 = await upload2.uploadPart(2, "2");
 	part3 = await upload2.uploadPart(3, "3");
-	const _sizeExpectations: ThrowsExpectation<Error> = {
-		instanceOf: Error,
-		message:
-			"completeMultipartUpload: Your proposed upload is smaller than the minimum allowed object size. (10011)",
-	};
-	await expect(upload2.complete([part1, part2, part3])).rejects.toThrow();
-	await expect(upload2.complete([part1, part2])).rejects.toThrow();
+	const sizeExpectations =
+		"completeMultipartUpload: Your proposed upload is smaller than the minimum allowed object size. (10011)";
+	await expect(upload2.complete([part1, part2, part3])).rejects.toThrow(
+		sizeExpectations
+	);
+	await expect(upload2.complete([part1, part2])).rejects.toThrow(
+		sizeExpectations
+	);
 	object = await upload2.complete([part1]);
 	expect(object.size).toBe(1);
 	expect(object.etag).toBe("46d1741e8075da4ac72c71d8130fcb71-1");
@@ -1227,12 +1237,11 @@ test("completeMultipartUpload", async () => {
 	let part1b = await upload3.uploadPart(1, "value");
 	expect(part1a.partNumber).toBe(part1b.partNumber);
 	expect(part1a.etag).not.toBe(part1b.etag);
-	const _notFoundExpectations: ThrowsExpectation<Error> = {
-		instanceOf: Error,
-		message:
-			"completeMultipartUpload: One or more of the specified parts could not be found. (10025)",
-	};
-	await expect(upload3.complete([part1a])).rejects.toThrow();
+	const notFoundExpectations =
+		"completeMultipartUpload: One or more of the specified parts could not be found. (10025)";
+	await expect(upload3.complete([part1a])).rejects.toThrow(
+		notFoundExpectations
+	);
 	object = await upload3.complete([part1b]);
 	expect(object.size).toBe(5);
 
@@ -1241,7 +1250,9 @@ test("completeMultipartUpload", async () => {
 	part1a = await upload4.uploadPart(1, "1".repeat(PART_SIZE));
 	part1b = await upload4.uploadPart(1, "2".repeat(PART_SIZE));
 	const part1c = await upload4.uploadPart(1, "3".repeat(PART_SIZE));
-	await expect(upload4.complete([part1a, part1b, part1c])).rejects.toThrow();
+	await expect(upload4.complete([part1a, part1b, part1c])).rejects.toThrow(
+		notFoundExpectations
+	);
 
 	// Check completing with out-of-order parts
 	const upload5a = await r2.createMultipartUpload("key");
@@ -1269,7 +1280,9 @@ test("completeMultipartUpload", async () => {
 	part2 = await upload5c.uploadPart(2, "2".repeat(PART_SIZE));
 	part3 = await upload5c.uploadPart(3, "3");
 	// (...but here, part3 isn't the last argument, so get a regular size error)
-	await expect(upload5c.complete([part2, part3, part1])).rejects.toThrow();
+	await expect(upload5c.complete([part2, part3, part1])).rejects.toThrow(
+		sizeExpectations
+	);
 
 	// Check completing with missing parts
 	const upload6 = await r2.createMultipartUpload("key");
@@ -1296,7 +1309,9 @@ test("completeMultipartUpload", async () => {
 	const upload8a = await r2.createMultipartUpload("key");
 	const upload8b = await r2.createMultipartUpload("key");
 	part1 = await upload8b.uploadPart(1, "value");
-	await expect(upload8a.complete([part1])).rejects.toThrow();
+	await expect(upload8a.complete([part1])).rejects.toThrow(
+		notFoundExpectations
+	);
 
 	// Check cannot complete already completed upload
 	const upload9 = await r2.createMultipartUpload("key");
@@ -1327,16 +1342,17 @@ test("completeMultipartUpload", async () => {
 	part1 = await upload13.uploadPart(1, "1".repeat(PART_SIZE));
 	part2 = await upload13.uploadPart(2, "2".repeat(PART_SIZE + 1));
 	part3 = await upload13.uploadPart(3, "3".repeat(PART_SIZE));
-	const _multipartExpectations: ThrowsExpectation<Error> = {
-		instanceOf: Error,
-		message:
-			"completeMultipartUpload: There was a problem with the multipart upload. (10048)",
-	};
-	await expect(upload13.complete([part1, part2, part3])).rejects.toThrow();
+	const multipartExpectations =
+		"completeMultipartUpload: There was a problem with the multipart upload. (10048)";
+	await expect(upload13.complete([part1, part2, part3])).rejects.toThrow(
+		multipartExpectations
+	);
 	part2 = await upload13.uploadPart(2, "2".repeat(PART_SIZE));
 	// Check allows last part to have different size, only if <= others
 	part3 = await upload13.uploadPart(3, "3".repeat(PART_SIZE + 1));
-	await expect(upload13.complete([part1, part2, part3])).rejects.toThrow();
+	await expect(upload13.complete([part1, part2, part3])).rejects.toThrow(
+		multipartExpectations
+	);
 	part3 = await upload13.uploadPart(3, "3".repeat(PART_SIZE - 1));
 	object = await upload13.complete([part1, part2, part3]);
 	expect(object.size).toBe(3 * PART_SIZE - 1);
@@ -1347,13 +1363,13 @@ test("completeMultipartUpload", async () => {
 	part2 = await upload14.uploadPart(2, "2");
 	await expect(
 		upload14.complete([part1, { partNumber: 3, etag: part2.etag }])
-	).rejects.toThrow();
+	).rejects.toThrow(notFoundExpectations);
 	await expect(
 		upload14.complete([part1, { partNumber: 2, etag: "bad" }])
-	).rejects.toThrow();
+	).rejects.toThrow(notFoundExpectations);
 	await expect(
 		upload14.complete([part1, { partNumber: 4, etag: "very bad" }])
-	).rejects.toThrow();
+	).rejects.toThrow(notFoundExpectations);
 });
 // Check regular operations on buckets with existing multipart keys
 test("head: is multipart aware", async () => {

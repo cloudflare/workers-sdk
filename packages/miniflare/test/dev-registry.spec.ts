@@ -39,7 +39,7 @@ test("DevRegistry: fetch to service worker", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const res = await local.dispatchFetch("http://placeholder");
 
@@ -86,7 +86,7 @@ test("DevRegistry: fetch to module worker", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const res = await local.dispatchFetch("http://example.com?name=World");
 	expect(await res.text()).toBe(
@@ -116,7 +116,7 @@ test("DevRegistry: fetch to module worker", async () => {
 			},
 		],
 	});
-	onTestFinished(() => remote.dispose());
+	useDispose(remote);
 
 	await remote.ready;
 	await vi.waitFor(
@@ -175,7 +175,7 @@ test("DevRegistry: WebSocket upgrade to module worker", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const remote = new Miniflare({
 		name: "remote-worker",
@@ -212,7 +212,7 @@ test("DevRegistry: WebSocket upgrade to module worker", async () => {
 			},
 		],
 	});
-	onTestFinished(() => remote.dispose());
+	useDispose(remote);
 
 	await remote.ready;
 	await vi.waitFor(
@@ -251,7 +251,7 @@ test("DevRegistry: RPC to default entrypoint", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const res = await local.dispatchFetch("http://placeholder");
 	expect(await res.text()).toBe(
@@ -328,7 +328,7 @@ test("DevRegistry: RPC to custom entrypoint", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const res = await local.dispatchFetch("http://placeholder");
 	expect(await res.text()).toBe(
@@ -398,7 +398,7 @@ test("DevRegistry: fetch to module worker with node bindings", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const bindings = await local.getBindings<Record<string, any>>();
 
@@ -480,7 +480,7 @@ test("DevRegistry: RPC to default entrypoint with node bindings", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const env = await local.getBindings<Record<string, any>>();
 
@@ -571,7 +571,7 @@ test("DevRegistry: fetch to durable object with do proxy disabled", async () => 
 			}
 		`,
 	});
-	onTestFinished(() => remote.dispose());
+	useDispose(remote);
 
 	await remote.ready;
 
@@ -598,7 +598,7 @@ test("DevRegistry: fetch to durable object with do proxy disabled", async () => 
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const res = await local.dispatchFetch("http://placeholder");
 	const result = await res.text();
@@ -628,7 +628,7 @@ test("DevRegistry: RPC to durable object with do proxy disabled", async () => {
 			};
 		`,
 	});
-	onTestFinished(() => remote.dispose());
+	useDispose(remote);
 
 	await remote.ready;
 
@@ -661,7 +661,7 @@ test("DevRegistry: RPC to durable object with do proxy disabled", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const res = await local.dispatchFetch("http://placeholder");
 	const result = await res.text();
@@ -698,7 +698,7 @@ test("DevRegistry: fetch to durable object", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const res = await local.dispatchFetch("http://placeholder");
 	expect(await res.text()).toBe("Service Unavailable");
@@ -730,7 +730,7 @@ test("DevRegistry: fetch to durable object", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => remote.dispose());
+	useDispose(remote);
 
 	await remote.ready;
 	await vi.waitFor(
@@ -774,7 +774,7 @@ test("DevRegistry: RPC to durable object", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const res = await local.dispatchFetch("http://placeholder");
 	expect(await res.text()).toBe(
@@ -802,7 +802,7 @@ test("DevRegistry: RPC to durable object", async () => {
 			};
 		`,
 	});
-	onTestFinished(() => remote.dispose());
+	useDispose(remote);
 
 	await remote.ready;
 	await vi.waitFor(
@@ -854,7 +854,7 @@ test("DevRegistry: tail to default entrypoint", async () => {
 			},
 		],
 	});
-	onTestFinished(() => remote.dispose());
+	useDispose(remote);
 
 	await remote.ready;
 
@@ -880,7 +880,7 @@ test("DevRegistry: tail to default entrypoint", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const res = await local.dispatchFetch("http://example.com");
 	const result = await res.text();
@@ -977,7 +977,7 @@ test("DevRegistry: miniflare with different registry path", async () => {
 		...localOptions,
 		unsafeDevRegistryPath,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const res = await local.dispatchFetch("http://placeholder");
 	expect(await res.text()).toBe(
@@ -989,7 +989,7 @@ test("DevRegistry: miniflare with different registry path", async () => {
 		...remoteOptions,
 		unsafeDevRegistryPath,
 	});
-	onTestFinished(() => remote.dispose());
+	useDispose(remote);
 
 	await remote.ready;
 	await vi.waitFor(
@@ -1057,7 +1057,7 @@ test("DevRegistry: fetch to module worker with https enabled", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const res = await local.dispatchFetch("https://example.com?name=World");
 
@@ -1084,7 +1084,7 @@ test("DevRegistry: fetch to module worker with https enabled", async () => {
 		`,
 		// No direct sockets so that local will connect to the entry worker instead
 	});
-	onTestFinished(() => remote.dispose());
+	useDispose(remote);
 
 	await remote.ready;
 	await vi.waitFor(
@@ -1125,7 +1125,7 @@ test("DevRegistry: fetch to durable object with https enabled", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	const res = await local.dispatchFetch("http://placeholder");
 	expect(await res.text()).toBe("Service Unavailable");
@@ -1158,7 +1158,7 @@ test("DevRegistry: fetch to durable object with https enabled", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => remote.dispose());
+	useDispose(remote);
 
 	await remote.ready;
 	await vi.waitFor(
@@ -1207,7 +1207,7 @@ test("DevRegistry: handleDevRegistryUpdate callback", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => local.dispose());
+	useDispose(local);
 
 	// Callback should not be triggered initially since no external services exist
 	expect(firstCallbackInvocations.length).toBe(0);
@@ -1233,7 +1233,7 @@ test("DevRegistry: handleDevRegistryUpdate callback", async () => {
 			},
 		],
 	});
-	onTestFinished(() => unrelated.dispose());
+	useDispose(unrelated);
 
 	await unrelated.ready;
 
