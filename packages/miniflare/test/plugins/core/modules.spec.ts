@@ -2,8 +2,8 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Miniflare, stripAnsi } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
-import { useCwd, useTmp, utf8Encode } from "../../test-shared";
+import { expect, test } from "vitest";
+import { useCwd, useDispose, useTmp, utf8Encode } from "../../test-shared";
 
 const ROOT = path.resolve(__dirname, "../../fixtures/modules");
 
@@ -27,7 +27,7 @@ test("Miniflare: accepts manually defined modules", async () => {
 			{ type: "CompiledWasm", path: path.join(ROOT, "add.wasm") },
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.json()).toEqual({
 		text: "Hello! 👋\n",
@@ -113,7 +113,7 @@ test("Miniflare: automatically collects modules", async () => {
 		compatibilityFlags: ["nodejs_compat_v2"],
 		scriptPath: path.join(ROOT, "index.mjs"),
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
 	expect(await res.json()).toEqual({
 		text: "Hello! 👋\n",
@@ -137,7 +137,7 @@ test("Miniflare: automatically collects modules with cycles", async () => {
 		compatibilityDate: "2023-08-01",
 		scriptPath: path.join(ROOT, "cyclic", "index.mjs"),
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("pong");
 });
@@ -167,7 +167,7 @@ test("Miniflare: cannot automatically collect modules without script path", asyn
 		compatibilityDate: "2023-08-01",
 		script,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("body");
 
@@ -277,7 +277,7 @@ test("Miniflare: collects modules outside of working directory", async () => {
 		modulesRoot: "..",
 		scriptPath: "../worker.mjs",
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("body");

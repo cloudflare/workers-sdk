@@ -14,7 +14,7 @@ import {
 	WebSocketPair,
 } from "miniflare";
 import { expect, onTestFinished, test } from "vitest";
-import { ThrowsExpectation } from "../../../test-shared";
+import { ThrowsExpectation, useDispose } from "../../../test-shared";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 
 // This file tests API proxy edge cases. Cache, D1, Durable Object and R2 tests
@@ -37,7 +37,7 @@ test("ProxyClient: supports service bindings with WebSockets", async () => {
 			},
 		},
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const { CUSTOM } = await mf.getBindings<{
 		CUSTOM: ReplaceWorkersTypes<Fetcher>;
@@ -84,7 +84,7 @@ test("ProxyClient: supports serialising multiple ReadableStreams, Blobs and File
 			},
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const client = await mf._getProxyClient();
 	const IDENTITY = client.env["MINIFLARE_PROXY:core:entry:IDENTITY"] as {
@@ -163,7 +163,7 @@ test("ProxyClient: poisons dependent proxies after setOptions()/dispose()", asyn
 });
 test("ProxyClient: logging proxies provides useful information", async () => {
 	const mf = new Miniflare({ script: nullScript });
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const caches = await mf.getCaches();
 	const inspectOpts: util.InspectOptions = { colors: false };
@@ -196,7 +196,7 @@ test("ProxyClient: stack traces don't include internal implementation", async ()
 		// https://developers.cloudflare.com/workers/configuration/compatibility-dates/#do-not-throw-from-async-functions
 		compatibilityFlags: ["capture_async_api_throws"],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const ns = await mf.getDurableObjectNamespace("OBJECT");
 	const caches = await mf.getCaches();
@@ -226,7 +226,7 @@ test("ProxyClient: stack traces don't include internal implementation", async ()
 });
 test("ProxyClient: can access ReadableStream property multiple times", async () => {
 	const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const bucket = await mf.getR2Bucket("BUCKET");
 	await bucket.put("key", "value");
@@ -237,7 +237,7 @@ test("ProxyClient: can access ReadableStream property multiple times", async () 
 });
 test("ProxyClient: returns empty ReadableStream synchronously", async () => {
 	const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const bucket = await mf.getR2Bucket("BUCKET");
 	await bucket.put("key", "");
@@ -247,7 +247,7 @@ test("ProxyClient: returns empty ReadableStream synchronously", async () => {
 });
 test("ProxyClient: returns multiple ReadableStreams in parallel", async () => {
 	const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const logs: string[] = [];
 
@@ -296,7 +296,7 @@ test("ProxyClient: returns multiple ReadableStreams in parallel", async () => {
 
 test("ProxyClient: can `JSON.stringify()` proxies", async () => {
 	const mf = new Miniflare({ script: nullScript, r2Buckets: ["BUCKET"] });
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const bucket = await mf.getR2Bucket("BUCKET");
 	const object = await bucket.put("key", "value");
@@ -321,7 +321,7 @@ test("ProxyClient: can `JSON.stringify()` proxies", async () => {
 
 test("ProxyServer: prevents unauthorised access", async () => {
 	const mf = new Miniflare({ script: nullScript });
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const url = await mf.ready;
 
 	// Check validates `Host` header

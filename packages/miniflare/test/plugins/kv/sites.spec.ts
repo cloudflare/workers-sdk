@@ -3,8 +3,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import esbuild from "esbuild";
 import { Miniflare } from "miniflare";
-import { beforeAll, expect, onTestFinished, test } from "vitest";
-import { useTmp } from "../../test-shared";
+import { beforeAll, expect, test } from "vitest";
+import { useDispose, useTmp } from "../../test-shared";
 
 const FIXTURES_PATH = path.resolve(__dirname, "../../fixtures/sites");
 const SERVICE_WORKER_ENTRY_PATH = path.join(FIXTURES_PATH, "service-worker.ts");
@@ -58,7 +58,7 @@ async function testGet(opts: {
 		scriptPath: ctx.serviceWorkerPath,
 		sitePath: tmp,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	for (const [route, expectedContents] of Object.entries(routeContents)) {
 		const res = await mf.dispatchFetch(`http://localhost:8787${route}`);
@@ -105,7 +105,7 @@ async function testMatch(include: string) {
 		scriptPath: ctx.serviceWorkerPath,
 		sitePath: tmp,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost:8787/a/b/c/test.txt");
 	expect(res.status).toBe(200);
 	await res.arrayBuffer();
@@ -136,7 +136,7 @@ test("doesn't cache assets", async () => {
 		scriptPath: ctx.serviceWorkerPath,
 		sitePath: tmp,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const res1 = await mf.dispatchFetch("http://localhost:8787/test.txt");
 	expect(res1.headers.get("CF-Cache-Status")).toBe("MISS");
@@ -159,7 +159,7 @@ test("gets assets with module worker", async () => {
 		modules: [{ type: "ESModule", path: ctx.modulesPath }],
 		sitePath: tmp,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost:8787/test.txt");
 	expect(await res.text()).toBe("test");
 });
@@ -173,7 +173,7 @@ test("gets assets with percent-encoded paths", async () => {
 		scriptPath: ctx.serviceWorkerPath,
 		sitePath: tmp,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost:8787/ń.txt");
 	expect(await res.text()).toBe("test");
 });
@@ -195,7 +195,7 @@ test.skipIf(process.platform === "win32")(
 			sitePath: tmp,
 			siteExclude: ["**/5.txt"],
 		});
-		onTestFinished(() => mf.dispose());
+		useDispose(mf);
 
 		const kv = await mf.getKVNamespace("__STATIC_CONTENT");
 		let result = await kv.list();

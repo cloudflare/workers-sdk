@@ -1,6 +1,6 @@
 import { Miniflare, MiniflareOptions, WorkerRegistry } from "miniflare";
 import { expect, onTestFinished, test, vi } from "vitest";
-import { useTmp } from "./test-shared";
+import { useDispose, useTmp } from "./test-shared";
 
 test("DevRegistry: fetch to service worker", async () => {
 	const unsafeDevRegistryPath = await useTmp();
@@ -916,7 +916,7 @@ test("DevRegistry: tail to unknown worker", async () => {
 			}
 		`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://example.com");
 	const result = await res.text();

@@ -47,7 +47,7 @@ export async function disposeWithRetry(
 
 /**
  * Register cleanup for a Miniflare instance with retry logic for Windows.
- * Use this instead of `onTestFinished(() => mf.dispose())` for browser tests.
+ * Use this instead of `onTestFinished(() => mf.dispose())` for all tests.
  */
 export function useDispose(mf: Miniflare): void {
 	onTestFinished(() => disposeWithRetry(mf));

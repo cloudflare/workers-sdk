@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Miniflare } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
-import { FIXTURES_PATH, useTmp } from "../../test-shared";
+import { expect, test } from "vitest";
+import { FIXTURES_PATH, useDispose, useTmp } from "../../test-shared";
 // Import suite tests - this registers the tests with vitest
 import "./suite";
 import { setupTest } from "./test";
@@ -25,7 +25,7 @@ test("migrates database to new location", async () => {
 		d1Databases: ["DATABASE"],
 		d1Persist,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const database = await mf.getD1Database("DATABASE");
 	const { results } = await database.prepare("SELECT * FROM entries").all();

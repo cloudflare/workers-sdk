@@ -19,6 +19,7 @@ import {
 	MiniflareTestContext,
 	namespace,
 	Namespaced,
+	useDispose,
 	useTmp,
 } from "../../test-shared";
 import type {
@@ -739,7 +740,7 @@ test("persists on file-system", async () => {
 		kvPersist: tmp,
 	};
 	let mf = new Miniflare(opts);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	let kv = await mf.getKVNamespace("NAMESPACE");
 	await kv.put("key", "value");
@@ -770,7 +771,7 @@ test("migrates database to new location", async () => {
 		kvNamespaces: ["NAMESPACE"],
 		kvPersist,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const namespace = await mf.getKVNamespace("NAMESPACE");
 	expect(await namespace.get("key")).toBe("value");
@@ -788,7 +789,7 @@ test("sticky blobs never deleted", async () => {
 		kvNamespaces: ["NAMESPACE"],
 		unsafeStickyBlobs: true,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	// Create control stub for newly created instance's namespace
 	const objectNamespace = await mf._getInternalDurableObjectNamespace(

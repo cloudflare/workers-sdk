@@ -17,6 +17,7 @@ import {
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
 	MiniflareTestContext,
+	useDispose,
 	useTmp,
 } from "../../test-shared";
 import type { CacheStorage } from "@cloudflare/workers-types/experimental";
@@ -443,7 +444,7 @@ test("operations persist cached data", async () => {
 		cachePersist: tmp,
 	};
 	let mf = new Miniflare(opts);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	let cache = (await mf.getCaches()).default;
 	const key = "http://localhost/cache-persist";

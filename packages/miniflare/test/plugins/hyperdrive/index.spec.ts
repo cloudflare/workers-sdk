@@ -1,5 +1,6 @@
 import { Miniflare, MiniflareOptions } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
+import { expect, test } from "vitest";
+import { useDispose } from "../../test-shared";
 import type { Hyperdrive } from "@cloudflare/workers-types/experimental";
 
 test("fields match expected", async () => {
@@ -22,7 +23,7 @@ test("fields match expected", async () => {
 			HYPERDRIVE: connectionString,
 		},
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost/");
 	const hyperdrive = (await res.json()) as Record<string, unknown>;
 	// Since the host is random, this connectionString should be different
@@ -44,7 +45,7 @@ test("fields in binding proxy match expected", async () => {
 			HYPERDRIVE: connectionString,
 		},
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const { HYPERDRIVE } = await mf.getBindings<{ HYPERDRIVE: Hyperdrive }>();
 	expect(HYPERDRIVE.user).toBe("user");
 	expect(HYPERDRIVE.password).toBe("password");
@@ -62,7 +63,7 @@ test("fields in binding proxy match expected", async () => {
 test("validates config", async () => {
 	const opts: MiniflareOptions = { modules: true, script: "" };
 	const mf = new Miniflare(opts);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	// Check requires Postgres protocol
 	await expect(
@@ -127,7 +128,7 @@ test("sets default port based on protocol", async () => {
 		},
 	} satisfies MiniflareOptions;
 	const mf = new Miniflare(opts);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost/");
 	expect(await res.text()).toBe("5432");

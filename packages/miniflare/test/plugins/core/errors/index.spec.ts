@@ -5,9 +5,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import Protocol from "devtools-protocol";
 import esbuild from "esbuild";
 import { DeferredPromise, fetch, Log, LogLevel, Miniflare } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
+import { expect, test } from "vitest";
 import NodeWebSocket from "ws";
-import { escapeRegexpComponent, useTmp } from "../../../test-shared";
+import {
+	escapeRegexpComponent,
+	useDispose,
+	useTmp,
+} from "../../../test-shared";
 import type { RawSourceMap } from "source-map";
 
 const FIXTURES_PATH = path.resolve(__dirname, "../../../fixtures/source-maps");
@@ -126,7 +130,7 @@ addEventListener("fetch", (event) => {
 			},
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	// Check service-workers source mapped
 	const serviceWorkerEntryRegexp = new RegExp(
@@ -438,7 +442,7 @@ test("responds with pretty error page", async () => {
 			},
 		}`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const url = new URL("/some-unusual-path", await mf.ready);
 
 	// Check `fetch()` returns pretty-error page...
