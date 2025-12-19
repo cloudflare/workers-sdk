@@ -16,7 +16,6 @@ const FIXTURES_PATH = path.resolve(
 	"..",
 	"..",
 	"..",
-	"..",
 	"test",
 	"fixtures",
 	"source-maps"
