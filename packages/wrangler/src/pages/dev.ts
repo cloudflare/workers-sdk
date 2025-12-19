@@ -960,6 +960,7 @@ export const Handler = async (args: PagesDevArguments) => {
 				siteExclude: undefined,
 				inspect: undefined,
 				experimentalAssetsRpc: false,
+				experimentalTailLogs: true,
 			})
 	);
 

@@ -6,7 +6,11 @@ import type { DevEnv } from "../api";
 
 export default function registerDevHotKeys(
 	devEnv: DevEnv,
-	args: { forceLocal?: boolean }
+	args: {
+		forceLocal?: boolean;
+		experimentalTailLogs: boolean;
+		remote: boolean;
+	}
 ) {
 	const unregisterHotKeys = registerHotKeys([
 		{
@@ -20,14 +24,19 @@ export default function registerDevHotKeys(
 		{
 			keys: ["d"],
 			label: "open devtools",
+			disabled: args.remote && args.experimentalTailLogs,
 			handler: async () => {
 				const { inspectorUrl } = await devEnv.proxy.ready.promise;
 
-				// TODO: refactor this function to accept a whole URL (not just .port and assuming .hostname)
-				await openInspector(
-					parseInt(inspectorUrl.port),
-					devEnv.config.latestConfig?.name
-				);
+				if (!inspectorUrl) {
+					logger.warn("DevTools is not available in remote mode");
+				} else {
+					// TODO: refactor this function to accept a whole URL (not just .port and assuming .hostname)
+					await openInspector(
+						parseInt(inspectorUrl.port),
+						devEnv.config.latestConfig?.name
+					);
+				}
 			},
 		},
 		{

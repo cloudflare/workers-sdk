@@ -46,7 +46,7 @@ type MiniflareWorker = Awaited<ReturnType<Miniflare["getWorker"]>>;
 export interface Worker {
 	ready: Promise<void>;
 	url: Promise<URL>;
-	inspectorUrl: Promise<URL>;
+	inspectorUrl: Promise<URL | undefined>;
 	config: StartDevWorkerOptions;
 	setConfig: ConfigController["set"];
 	patchConfig: ConfigController["patch"];
@@ -177,6 +177,10 @@ export interface StartDevWorkerInput {
 	};
 	unsafe?: Omit<CfUnsafe, "bindings">;
 	assets?: string;
+
+	experimental?: {
+		tailLogs: boolean;
+	};
 }
 
 export type StartDevWorkerOptions = Omit<StartDevWorkerInput, "assets"> & {

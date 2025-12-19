@@ -335,6 +335,14 @@ export const dev = createCommand({
 			default: false,
 			hidden: true,
 		},
+		"experimental-tail-logs": {
+			type: "boolean",
+			alias: ["x-tail-logs"],
+			describe:
+				"Experimental: Get runtime logs for the remote worker via Workers Tails rather than the Devtools inspector",
+			default: true,
+			hidden: true,
+		},
 	},
 	async validateArgs(args) {
 		if (args.liveReload && args.remote) {
@@ -638,6 +646,9 @@ async function setupDevEnv(
 				enableServiceEnvironments: !(args.legacyEnv ?? true),
 			},
 			assets: args.assets,
+			experimental: {
+				tailLogs: !!args.experimentalTailLogs,
+			},
 		} satisfies StartDevWorkerInput,
 		true
 	);

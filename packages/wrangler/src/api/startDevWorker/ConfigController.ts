@@ -317,6 +317,9 @@ async function resolveConfig(
 			metadata: input.unsafe?.metadata ?? unsafe?.metadata,
 		},
 		assets: assetsOptions,
+		experimental: {
+			tailLogs: !!input.experimental?.tailLogs,
+		},
 	} satisfies StartDevWorkerOptions;
 
 	if (resolved.legacy.legacyAssets && resolved.legacy.site) {
