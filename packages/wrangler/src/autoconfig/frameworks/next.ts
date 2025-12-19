@@ -2,12 +2,14 @@ import { statSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import semiver from "semiver";
 import { getPackageManager } from "../../package-manager";
 import { dedent } from "../../utils/dedent";
 import { installPackages } from "../c3-vendor/packages";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { appendToGitIgnore } from "../git";
 import { usesTypescript } from "../uses-typescript";
+import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
@@ -22,7 +24,22 @@ export class NextJs extends Framework {
 		const nextConfigPath = findNextConfigPath(usesTs);
 		if (!nextConfigPath) {
 			throw new AutoConfigFrameworkConfigurationError(
-				"No Next.js configuration file could be detected. Note: only next.config.ts and next.config.mjs files are supported."
+				"No Next.js configuration file could be detected."
+			);
+		}
+
+		const firstNextVersionSupportedByOpenNext = "14.2.35";
+		const installedNextVersion = getInstalledPackageVersion(
+			"next",
+			projectPath
+		);
+
+		if (
+			installedNextVersion &&
+			semiver(installedNextVersion, firstNextVersionSupportedByOpenNext) < 0
+		) {
+			throw new AutoConfigFrameworkConfigurationError(
+				`The detected Next.js version (${installedNextVersion}) is too old, please update the \`next\` dependency to at least ${firstNextVersionSupportedByOpenNext} and try again.`
 			);
 		}
 
@@ -30,6 +47,10 @@ export class NextJs extends Framework {
 			await installPackages(["@opennextjs/cloudflare@^1.12.0"], {
 				startText: "Installing @opennextjs/cloudflare adapter",
 				doneText: `${brandColor("installed")}`,
+				// Note: we force install open-next so that even if an incompatible version of
+				//       Next.js is used this installation still succeeds, moving users to
+				//       (hopefully) the right direction (instead of failing at this step)
+				force: true,
 			});
 
 			await updateNextConfig(nextConfigPath);
@@ -81,7 +102,9 @@ function findNextConfigPath(usesTs: boolean): string | undefined {
 	const pathsToCheck = [
 		...(usesTs ? ["next.config.ts"] : []),
 		"next.config.mjs",
-	];
+		"next.config.js",
+		"next.config.cjs",
+	] as const;
 
 	for (const path of pathsToCheck) {
 		const stats = statSync(path, {
@@ -102,10 +125,7 @@ async function updateNextConfig(nextConfigPath: string) {
 
 	const updatedConfigFile =
 		configContent +
-		`
-		import { initOpenNextCloudflareForDev } from '@opennextjs/cloudflare';
-		initOpenNextCloudflareForDev();
-		`.replace(/\n\t*/g, "\n");
+		"\n\nimport('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());\n";
 
 	await writeFile(nextConfigPath, updatedConfigFile);
 
