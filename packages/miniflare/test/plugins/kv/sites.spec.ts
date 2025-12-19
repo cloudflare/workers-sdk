@@ -186,73 +186,74 @@ test("gets assets with percent-encoded paths", async () => {
 	expect(await res.text()).toBe("test");
 });
 
-const isWindows = process.platform === "win32";
-const unixTest = isWindows ? test.skip : test;
-unixTest("static content namespace supports listing keys", async () => {
-	const tmp = await useTmp();
-	await fs.mkdir(path.join(tmp, "a", "b", "c"), { recursive: true });
-	await fs.writeFile(path.join(tmp, "1.txt"), "one");
-	await fs.writeFile(path.join(tmp, "2.txt"), "two");
-	await fs.writeFile(path.join(tmp, "a", "3.txt"), "three");
-	await fs.writeFile(path.join(tmp, "a", "b", "4.txt"), "four");
-	await fs.writeFile(path.join(tmp, "a", "b", "c", "5.txt"), "five");
-	await fs.writeFile(path.join(tmp, "a", "b", "c", "6.txt"), "six");
-	await fs.writeFile(path.join(tmp, "a", "b", "c", "7.txt"), "seven");
-	const mf = new Miniflare({
-		scriptPath: ctx.serviceWorkerPath,
-		sitePath: tmp,
-		siteExclude: ["**/5.txt"],
-	});
-	onTestFinished(() => mf.dispose());
+test.skipIf(process.platform === "win32")(
+	"static content namespace supports listing keys",
+	async () => {
+		const tmp = await useTmp();
+		await fs.mkdir(path.join(tmp, "a", "b", "c"), { recursive: true });
+		await fs.writeFile(path.join(tmp, "1.txt"), "one");
+		await fs.writeFile(path.join(tmp, "2.txt"), "two");
+		await fs.writeFile(path.join(tmp, "a", "3.txt"), "three");
+		await fs.writeFile(path.join(tmp, "a", "b", "4.txt"), "four");
+		await fs.writeFile(path.join(tmp, "a", "b", "c", "5.txt"), "five");
+		await fs.writeFile(path.join(tmp, "a", "b", "c", "6.txt"), "six");
+		await fs.writeFile(path.join(tmp, "a", "b", "c", "7.txt"), "seven");
+		const mf = new Miniflare({
+			scriptPath: ctx.serviceWorkerPath,
+			sitePath: tmp,
+			siteExclude: ["**/5.txt"],
+		});
+		onTestFinished(() => mf.dispose());
 
-	const kv = await mf.getKVNamespace("__STATIC_CONTENT");
-	let result = await kv.list();
-	expect(result).toEqual({
-		keys: [
-			{ name: "$__MINIFLARE_SITES__$/1.txt" },
-			{ name: "$__MINIFLARE_SITES__$/2.txt" },
-			{ name: "$__MINIFLARE_SITES__$/a%2F3.txt" },
-			{ name: "$__MINIFLARE_SITES__$/a%2Fb%2F4.txt" },
-			{ name: "$__MINIFLARE_SITES__$/a%2Fb%2Fc%2F6.txt" },
-			{ name: "$__MINIFLARE_SITES__$/a%2Fb%2Fc%2F7.txt" },
-		],
-		list_complete: true,
-		cacheStatus: null,
-	});
+		const kv = await mf.getKVNamespace("__STATIC_CONTENT");
+		let result = await kv.list();
+		expect(result).toEqual({
+			keys: [
+				{ name: "$__MINIFLARE_SITES__$/1.txt" },
+				{ name: "$__MINIFLARE_SITES__$/2.txt" },
+				{ name: "$__MINIFLARE_SITES__$/a%2F3.txt" },
+				{ name: "$__MINIFLARE_SITES__$/a%2Fb%2F4.txt" },
+				{ name: "$__MINIFLARE_SITES__$/a%2Fb%2Fc%2F6.txt" },
+				{ name: "$__MINIFLARE_SITES__$/a%2Fb%2Fc%2F7.txt" },
+			],
+			list_complete: true,
+			cacheStatus: null,
+		});
 
-	// Check with prefix, cursor and limit
-	result = await kv.list({ prefix: "$__MINIFLARE_SITES__$/a%2F", limit: 1 });
-	assert(!result.list_complete);
-	expect(result).toEqual({
-		keys: [{ name: "$__MINIFLARE_SITES__$/a%2F3.txt" }],
-		list_complete: false,
-		cursor: "JF9fTUlOSUZMQVJFX1NJVEVTX18kL2ElMkYzLnR4dA==",
-		cacheStatus: null,
-	});
+		// Check with prefix, cursor and limit
+		result = await kv.list({ prefix: "$__MINIFLARE_SITES__$/a%2F", limit: 1 });
+		assert(!result.list_complete);
+		expect(result).toEqual({
+			keys: [{ name: "$__MINIFLARE_SITES__$/a%2F3.txt" }],
+			list_complete: false,
+			cursor: "JF9fTUlOSUZMQVJFX1NJVEVTX18kL2ElMkYzLnR4dA==",
+			cacheStatus: null,
+		});
 
-	result = await kv.list({
-		prefix: "$__MINIFLARE_SITES__$/a%2F",
-		limit: 2,
-		cursor: result.cursor,
-	});
-	assert(!result.list_complete);
-	expect(result).toEqual({
-		keys: [
-			{ name: "$__MINIFLARE_SITES__$/a%2Fb%2F4.txt" },
-			{ name: "$__MINIFLARE_SITES__$/a%2Fb%2Fc%2F6.txt" },
-		],
-		list_complete: false,
-		cursor: "JF9fTUlOSUZMQVJFX1NJVEVTX18kL2ElMkZiJTJGYyUyRjYudHh0",
-		cacheStatus: null,
-	});
+		result = await kv.list({
+			prefix: "$__MINIFLARE_SITES__$/a%2F",
+			limit: 2,
+			cursor: result.cursor,
+		});
+		assert(!result.list_complete);
+		expect(result).toEqual({
+			keys: [
+				{ name: "$__MINIFLARE_SITES__$/a%2Fb%2F4.txt" },
+				{ name: "$__MINIFLARE_SITES__$/a%2Fb%2Fc%2F6.txt" },
+			],
+			list_complete: false,
+			cursor: "JF9fTUlOSUZMQVJFX1NJVEVTX18kL2ElMkZiJTJGYyUyRjYudHh0",
+			cacheStatus: null,
+		});
 
-	result = await kv.list({
-		prefix: "$__MINIFLARE_SITES__$/a%2F",
-		cursor: result.cursor,
-	});
-	expect(result).toEqual({
-		keys: [{ name: "$__MINIFLARE_SITES__$/a%2Fb%2Fc%2F7.txt" }],
-		list_complete: true,
-		cacheStatus: null,
-	});
-});
+		result = await kv.list({
+			prefix: "$__MINIFLARE_SITES__$/a%2F",
+			cursor: result.cursor,
+		});
+		expect(result).toEqual({
+			keys: [{ name: "$__MINIFLARE_SITES__$/a%2Fb%2Fc%2F7.txt" }],
+			list_complete: true,
+			cacheStatus: null,
+		});
+	}
+);
