@@ -2,12 +2,14 @@ import { statSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
+import semiver from "semiver";
 import { getPackageManager } from "../../package-manager";
 import { dedent } from "../../utils/dedent";
 import { installPackages } from "../c3-vendor/packages";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
 import { appendToGitIgnore } from "../git";
 import { usesTypescript } from "../uses-typescript";
+import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
@@ -23,6 +25,21 @@ export class NextJs extends Framework {
 		if (!nextConfigPath) {
 			throw new AutoConfigFrameworkConfigurationError(
 				"No Next.js configuration file could be detected."
+			);
+		}
+
+		const firstNextVersionSupportedByOpenNext = "14.2.35";
+		const installedNextVersion = getInstalledPackageVersion(
+			"next",
+			projectPath
+		);
+
+		if (
+			installedNextVersion &&
+			semiver(installedNextVersion, firstNextVersionSupportedByOpenNext) < 0
+		) {
+			throw new AutoConfigFrameworkConfigurationError(
+				`The detected Next.js version (${installedNextVersion}) is too old, please update the \`next\` dependency to at least ${firstNextVersionSupportedByOpenNext} and try again.`
 			);
 		}
 
