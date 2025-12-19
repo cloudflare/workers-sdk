@@ -2365,7 +2365,8 @@ test("Miniflare: allows RPC between multiple instances", async () => {
 // Only test `MINIFLARE_WORKERD_PATH` on Unix. The test uses a Node.js script
 // with a shebang, directly as the replacement `workerd` binary, which won't
 // work on Windows.
-test.skipIf(process.platform === "win32")(
+const isWindows = process.platform === "win32";
+test.skipIf(isWindows)(
 	"Miniflare: MINIFLARE_WORKERD_PATH overrides workerd path",
 	async () => {
 		const workerdPath = path.join(FIXTURES_PATH, "little-workerd.mjs");
