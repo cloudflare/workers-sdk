@@ -1,5 +1,6 @@
 import { Miniflare } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
+import { expect, test } from "vitest";
+import { useDispose } from "../../test-shared";
 
 test("single secret-store", async () => {
 	const mf = new Miniflare({
@@ -25,7 +26,7 @@ test("single secret-store", async () => {
 		}
 		`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const response1 = await mf.dispatchFetch("http://localhost");
 
@@ -80,7 +81,7 @@ test("multiple secret-store", async () => {
 		}
 		`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const response1 = await mf.dispatchFetch("http://localhost");
 

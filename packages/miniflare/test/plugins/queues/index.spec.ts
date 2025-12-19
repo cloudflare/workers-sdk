@@ -5,12 +5,13 @@ import {
 	QUEUES_PLUGIN_NAME,
 	Response,
 } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
+import { expect, test } from "vitest";
 import { z } from "zod";
 import {
 	LogEntry,
 	MiniflareDurableObjectControlStub,
 	TestLog,
+	useDispose,
 } from "../../test-shared";
 
 const StringArraySchema = z.string().array();
@@ -47,7 +48,7 @@ test("maxBatchTimeout validation", async () => {
 		modules: true,
 		script: "",
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	expect(
 		() =>
 			new Miniflare({
@@ -104,7 +105,7 @@ test("flushes partial and full batches", async () => {
 			},
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	async function send(message: unknown) {
 		await mf.dispatchFetch("http://localhost/send", {
@@ -222,7 +223,7 @@ test("supports declaring queue producers as a key-value pair -> queueProducers: 
       }
     }`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const object = await getControlStub(mf, "MY_QUEUE");
 
 	await mf.dispatchFetch("http://localhost");
@@ -261,7 +262,7 @@ test("supports declaring queue producers as an array -> queueProducers: ['MY_QUE
       }
     }`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const object = await getControlStub(mf, "MY_QUEUE");
 
 	await mf.dispatchFetch("http://localhost");
@@ -300,7 +301,7 @@ test("supports declaring queue producers as {MY_QUEUE_BINDING: {queueName: 'my-q
       }
     }`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const object = await getControlStub(mf, "MY_QUEUE");
 
 	await mf.dispatchFetch("http://localhost");
@@ -409,7 +410,7 @@ test("sends all structured cloneable types", async () => {
 			},
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const object = await getControlStub(mf, "QUEUE");
 
 	await mf.dispatchFetch("http://localhost");
@@ -482,7 +483,7 @@ test("retries messages", async () => {
       }
     }`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	async function sendBatch(...messages: string[]) {
 		await mf.dispatchFetch("http://localhost", {
@@ -734,7 +735,7 @@ test("moves to dead letter queue", async () => {
       }
     }`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	async function sendBatch(...messages: string[]) {
 		await mf.dispatchFetch("http://localhost", {
@@ -837,7 +838,7 @@ test("operations permit strange queue names", async () => {
       }
     }`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const object = await getControlStub(mf, id);
 
 	await mf.dispatchFetch("http://localhost");
@@ -907,7 +908,7 @@ test("supports message contentTypes", async () => {
       },
     };`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const object = await getControlStub(mf, id);
 
 	const res = await mf.dispatchFetch("http://localhost");
@@ -961,7 +962,7 @@ test("validates message size", async () => {
       },
     }`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	await expect(mf.dispatchFetch("http://localhost")).rejects.toThrow(
 		"Queue send failed: message length of 128001 bytes exceeds limit of 128000"

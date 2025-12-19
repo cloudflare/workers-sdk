@@ -1,5 +1,6 @@
 import { Miniflare, WorkerdStructuredLog } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
+import { expect, test } from "vitest";
+import { useDispose } from "./test-shared";
 
 test("logs are treated as standard stdout/stderr chunks by default", async () => {
 	const collected = {
@@ -28,7 +29,7 @@ test("logs are treated as standard stdout/stderr chunks by default", async () =>
 			}
 		}`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();
@@ -65,7 +66,7 @@ test("logs are structured and all sent to stdout when `structuredWorkerdLogs` is
 			}
 		}`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();
@@ -113,7 +114,7 @@ test("logs are structured and handled via `handleStructuredLogs` when such optio
 			}
 		}`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();
@@ -175,7 +176,7 @@ test("even when `handleStructuredLogs` is provided, `handleRuntimeStdio` can sti
 			}
 		}`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();
@@ -193,7 +194,7 @@ test("even when `handleStructuredLogs` is provided, `handleRuntimeStdio` can sti
 
 test("setting `handleStructuredLogs` when `structuredWorkerdLogs` is `false` triggers an error", async () => {
 	const mf = new Miniflare({ modules: true, script: "" });
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	expect(
 		() =>
@@ -228,7 +229,7 @@ test("when using `handleStructuredLogs` some known unhelpful logs are filtered o
 			}
 		}`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();

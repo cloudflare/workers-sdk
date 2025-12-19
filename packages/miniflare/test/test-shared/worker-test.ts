@@ -2,7 +2,8 @@ import assert from "node:assert";
 import path from "node:path";
 import esbuild from "esbuild";
 import { Miniflare } from "miniflare";
-import { expect, onTestFinished } from "vitest";
+import { expect } from "vitest";
+import { useDispose } from "./miniflare";
 import { useTmp } from "./storage";
 
 export const FIXTURES_PATH = path.resolve(
@@ -51,7 +52,7 @@ export async function runWorkerTest(
 		compatibilityDate: "2023-08-01",
 		compatibilityFlags: ["nodejs_compat", "experimental"],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
 	expect(response.ok, await response.text()).toBe(true);

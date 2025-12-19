@@ -1,5 +1,6 @@
 import { Miniflare } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
+import { expect, test } from "vitest";
+import { useDispose } from "../../test-shared";
 
 test("hello-world", async () => {
 	const mf = new Miniflare({
@@ -26,7 +27,7 @@ test("hello-world", async () => {
             }
 		`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const response1 = await mf.dispatchFetch("http://placeholder");
 

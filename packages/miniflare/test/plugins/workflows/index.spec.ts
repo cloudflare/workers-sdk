@@ -1,8 +1,8 @@
 import * as fs from "node:fs/promises";
 import { scheduler } from "node:timers/promises";
 import { Miniflare, MiniflareOptions } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
-import { useTmp } from "../../test-shared";
+import { expect, test } from "vitest";
+import { useDispose, useTmp } from "../../test-shared";
 
 const WORKFLOW_SCRIPT = () => `
 import { WorkflowEntrypoint } from "cloudflare:workers";
@@ -37,7 +37,7 @@ test("persists Workflow data on file-system between runs", async () => {
 		workflowsPersist: tmp,
 	};
 	let mf = new Miniflare(opts);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe(

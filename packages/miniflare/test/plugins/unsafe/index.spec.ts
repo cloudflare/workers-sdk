@@ -1,7 +1,11 @@
 import path from "node:path";
 import { Miniflare, MiniflareOptions, WorkerOptions } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
-import { EXPORTED_FIXTURES, FIXTURES_PATH } from "../../test-shared";
+import { expect, test } from "vitest";
+import {
+	EXPORTED_FIXTURES,
+	FIXTURES_PATH,
+	useDispose,
+} from "../../test-shared";
 
 /**
  * Use the plugin located in `test/fixtures/unsafe-plugin`
@@ -58,7 +62,7 @@ test("A plugin that does not expose `plugins` will cause an error to be thrown",
 		unsafeBindings: UNSAFE_BINDINGS(packageName, pluginName),
 	};
 	const mf = new Miniflare({ modules: true, script: "" });
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	await expect(mf.setOptions(opts)).rejects.toThrow();
 });
@@ -78,7 +82,7 @@ test("A plugin that exposes a non-object `plugins` export will cause an error to
 		unsafeBindings: UNSAFE_BINDINGS(packageName, pluginName),
 	};
 	const mf = new Miniflare({ modules: true, script: "" });
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	await expect(mf.setOptions(opts)).rejects.toThrow();
 });
@@ -94,7 +98,7 @@ test("Supports specifying an unsafe plugin will be loaded into Miniflare and wil
 		unsafeBindings: UNSAFE_BINDINGS(packageName, pluginName),
 	};
 	const mf = new Miniflare(opts);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe(

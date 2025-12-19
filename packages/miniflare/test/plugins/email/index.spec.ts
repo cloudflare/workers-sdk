@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { LogLevel, Miniflare } from "miniflare";
 import dedent from "ts-dedent";
-import { expect, onTestFinished, test, vi } from "vitest";
-import { TestLog } from "../../test-shared";
+import { expect, test, vi } from "vitest";
+import { TestLog, useDispose } from "../../test-shared";
 
 const SEND_EMAIL_WORKER = dedent/* javascript */ `
 	import { EmailMessage } from "cloudflare:email";
@@ -51,7 +51,7 @@ test("Unbound send_email binding works", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -107,7 +107,7 @@ test("Invalid email throws", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
@@ -140,7 +140,7 @@ test("Single allowed destination send_email binding works", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -201,7 +201,7 @@ test("Single allowed destination send_email binding throws if destination is not
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
@@ -248,7 +248,7 @@ test("Multiple allowed destination send_email binding works", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
@@ -291,7 +291,7 @@ test("Multiple allowed senders send_email binding works", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
@@ -334,7 +334,7 @@ test("Sending email from a sender not in the allowed list does not work", async 
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
@@ -381,7 +381,7 @@ test("Multiple allowed send_email binding throws if destination is not equal", a
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
@@ -421,7 +421,7 @@ test("reply validation: x-auto-response-suppress", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -458,7 +458,7 @@ test("reply validation: Auto-Submitted", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -495,7 +495,7 @@ test("reply validation: only In-Reply-To", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -532,7 +532,7 @@ test("reply validation: only References", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -569,7 +569,7 @@ test("reply validation: >100 References", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -611,7 +611,7 @@ test("reply: mismatched From: header", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -648,7 +648,7 @@ test("reply: unparseable", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -693,7 +693,7 @@ test("reply: no message id", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -740,7 +740,7 @@ test("reply: disallowed header", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -786,7 +786,7 @@ test("reply: missing In-Reply-To", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -835,7 +835,7 @@ test("reply: wrong In-Reply-To", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -887,7 +887,7 @@ test("reply: invalid references", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -933,7 +933,7 @@ test("reply: references generated correctly", async () => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>

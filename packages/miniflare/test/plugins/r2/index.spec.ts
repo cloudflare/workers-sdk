@@ -22,6 +22,7 @@ import {
 	namespace,
 	Namespaced,
 	ThrowsExpectation,
+	useDispose,
 	useTmp,
 } from "../../test-shared";
 import type {
@@ -563,7 +564,7 @@ test("put: can copy values", async () => {
       }
     }`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
 	expect(await res.json()).toEqual({
 		copy: "0123456789",
@@ -975,7 +976,7 @@ test("operations persist stored data", async () => {
 		r2Persist: tmp,
 	};
 	let mf = new Miniflare(persistOpts);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	let r2 = await mf.getR2Bucket("BUCKET");
 
 	// Check put respects persist
@@ -1564,7 +1565,7 @@ test("migrates database to new location", async () => {
 		r2Buckets: ["BUCKET"],
 		r2Persist,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const bucket = await mf.getR2Bucket("BUCKET");
 	const object = await bucket.get("key");

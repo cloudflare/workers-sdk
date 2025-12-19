@@ -1,5 +1,6 @@
 import { Miniflare } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
+import { expect, test } from "vitest";
+import { useDispose } from "../../test-shared";
 
 test("ratelimit", async () => {
 	const mf = new Miniflare({
@@ -27,7 +28,7 @@ test("ratelimit", async () => {
 		}
 		`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(res.status).toBe(200);
@@ -67,7 +68,7 @@ test("ratelimit validation", async () => {
 		}
 		`,
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const TESTS = [
 		{

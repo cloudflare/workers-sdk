@@ -2,8 +2,9 @@ import events from "node:events";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import { fetch, Miniflare, MiniflareOptions } from "miniflare";
-import { beforeAll, expect, onTestFinished, test, vi } from "vitest";
+import { beforeAll, expect, test, vi } from "vitest";
 import WebSocket from "ws";
+import { useDispose } from "../../../test-shared";
 
 const nullScript =
 	'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));';
@@ -25,7 +26,7 @@ test("InspectorProxy: /json/version should provide details about the inspector v
 			},
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 
@@ -48,7 +49,7 @@ test("InspectorProxy: /json should provide a list of a single worker inspector",
 			},
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 
@@ -98,7 +99,7 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 			},
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 
@@ -143,7 +144,7 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 			},
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 
@@ -175,7 +176,7 @@ test("InspectorProxy: should allow inspector port updating via miniflare#setOpti
 		],
 	};
 	const mf = new Miniflare({ ...options, inspectorPort: initialInspectorPort });
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	expect(await getInspectorPortReady(mf)).toBe(initialInspectorPort);
 
@@ -226,7 +227,7 @@ test("InspectorProxy: should keep the same inspector port on miniflare#setOption
 		],
 	};
 	const mf = new Miniflare(options);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const oldPort = await getInspectorPortReady(mf);
 
@@ -249,7 +250,7 @@ test("InspectorProxy: should not keep the same inspector port on miniflare#setOp
 		],
 	};
 	const mf = new Miniflare(options);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	expect(await getInspectorPortReady(mf)).toBe(initialInspectorPort);
 
@@ -284,7 +285,7 @@ test("InspectorProxy: should allow debugging a single worker", async () => {
 			},
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 
@@ -339,7 +340,7 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 		],
 	};
 	const mf = new Miniflare({ ...options, inspectorPort: await getPort() });
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const testDebuggingWorkerOn = async (port: number) => {
 		// Connect inspector WebSocket
@@ -427,7 +428,7 @@ test("InspectorProxy: should allow debugging multiple workers", async () => {
 			},
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 
@@ -536,7 +537,7 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 			},
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	await mf.ready;
 
@@ -698,7 +699,7 @@ test("InspectorProxy: can proxy messages > 1MB", async () => {
 			},
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 

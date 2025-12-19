@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import { type D1Database } from "@cloudflare/workers-types/experimental";
 import { Miniflare, MiniflareOptions } from "miniflare";
 import { beforeEach, expect, onTestFinished, test } from "vitest";
-import { useTmp, utf8Encode } from "../../test-shared";
+import { useDispose, useTmp, utf8Encode } from "../../test-shared";
 import { binding, ctx, getDatabase, opts } from "./test";
 
 export const SCHEMA = (
@@ -507,7 +507,7 @@ test("operations persist D1 data", async () => {
 	const tmp = await useTmp();
 	const persistOpts: MiniflareOptions = { ...opts, d1Persist: tmp };
 	let mf = new Miniflare(persistOpts);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	let db = await getDatabase(mf);
 
 	// Check execute respects persist
@@ -598,8 +598,8 @@ test("dumpSql exports and imports complete database structure and content correc
 		d1Databases: { test: "test" },
 	});
 
-	onTestFinished(() => originalMF.dispose());
-	onTestFinished(() => mirrorMF.dispose());
+	useDispose(originalMF);
+	useDispose(mirrorMF);
 
 	const originalDb = await originalMF.getD1Database("test");
 	const mirrorDb = await mirrorMF.getD1Database("test");

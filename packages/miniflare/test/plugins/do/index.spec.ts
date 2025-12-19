@@ -11,7 +11,7 @@ import {
 	RequestInit,
 } from "miniflare";
 import { expect, onTestFinished, test } from "vitest";
-import { useTmp } from "../../test-shared";
+import { useDispose, useTmp } from "../../test-shared";
 
 const COUNTER_SCRIPT = (responsePrefix = "") => `export class Counter {
   instanceId = crypto.randomUUID();
@@ -60,7 +60,7 @@ test("persists Durable Object data in-memory between options reloads", async () 
 		durableObjects: { COUNTER: "Counter" },
 	};
 	let mf = new Miniflare(opts);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #1: 1");
@@ -113,7 +113,7 @@ test("persists Durable Object data on file-system", async () => {
 		durableObjectsPersist: tmp,
 	};
 	let mf = new Miniflare(opts);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("1");
@@ -184,7 +184,7 @@ test("multiple Workers access same Durable Object data", async () => {
 			},
 		],
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost", {
 		headers: { "MF-Test-Service": "A", "MF-Test-Object": "COUNTER_A" },
@@ -273,7 +273,7 @@ test("proxies Durable Object methods", async () => {
 		script: COUNTER_SCRIPT(""),
 		durableObjects: { COUNTER: "Counter" },
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	// Check can call synchronous ID creation methods
 	let ns = await mf.getDurableObjectNamespace("COUNTER");
@@ -341,7 +341,7 @@ test("Durable Object eviction", async () => {
 			DURABLE_OBJECT: "DurableObject",
 		},
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	// get uuid generated at durable object startup
 	let res = await mf.dispatchFetch("http://localhost");
@@ -366,7 +366,7 @@ test("prevent Durable Object eviction", async () => {
 			},
 		},
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	// get uuid generated at durable object startup
 	let res = await mf.dispatchFetch("http://localhost");
@@ -411,7 +411,7 @@ const MINIFLARE_WITH_SQLITE = (useSQLite: boolean) =>
 
 test("SQLite is available in SQLite backed Durable Objects", async () => {
 	const mf = MINIFLARE_WITH_SQLITE(true);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("4096");
@@ -425,7 +425,7 @@ test("SQLite is available in SQLite backed Durable Objects", async () => {
 
 test("SQLite is not available in default Durable Objects", async () => {
 	const mf = MINIFLARE_WITH_SQLITE(false);
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
 	let text = await res.text();
@@ -465,7 +465,7 @@ test("colo-local actors", async () => {
 			},
 		},
 	});
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("body:thing1");
 
@@ -487,7 +487,7 @@ test("multiple workers with DO conflicting useSQLite booleans cause options erro
 		],
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	await expect(async () => {
 		await mf.setOptions({
@@ -552,7 +552,7 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 		],
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	await expect(
 		mf.setOptions({
@@ -625,7 +625,7 @@ test("Durable Object RPC calls do not block Node.js event loop", async () => {
 		script: BLOCKING_DO_SCRIPT,
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const namespace = await mf.getDurableObjectNamespace("BLOCKING_DO");
 	const stubId = namespace.idFromName("test");
@@ -652,7 +652,7 @@ test("Durable Object RPC calls complete when unblocked", async () => {
 		script: BLOCKING_DO_SCRIPT,
 	});
 
-	onTestFinished(() => mf.dispose());
+	useDispose(mf);
 
 	const namespace = await mf.getDurableObjectNamespace("BLOCKING_DO");
 	const stubId = namespace.idFromName("test");
