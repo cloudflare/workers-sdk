@@ -5,7 +5,7 @@ import {
 	configFileName,
 	getDisableConfigWatching,
 	getDockerPath,
-	getLatestWorkerdCompatibilityDate,
+	getLocalWorkerdCompatibilityDate,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
@@ -493,7 +493,7 @@ function getDevCompatibilityDate(
 	config: Config | undefined,
 	compatibilityDate = config?.compatibility_date
 ): string {
-	const { date: workerdDate } = getLatestWorkerdCompatibilityDate({
+	const { date: workerdDate } = getLocalWorkerdCompatibilityDate({
 		projectPath,
 	});
 

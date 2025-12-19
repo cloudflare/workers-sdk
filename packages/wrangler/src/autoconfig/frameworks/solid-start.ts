@@ -1,6 +1,6 @@
 import { updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
-import { getLatestWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
+import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
 import { usesTypescript } from "../uses-typescript";
@@ -15,7 +15,7 @@ export class SolidStart extends Framework {
 		if (!dryRun) {
 			const filePath = `app.config.${usesTypescript(projectPath) ? "ts" : "js"}`;
 
-			const { date: compatDate } = getLatestWorkerdCompatibilityDate({
+			const { date: compatDate } = getLocalWorkerdCompatibilityDate({
 				projectPath,
 			});
 

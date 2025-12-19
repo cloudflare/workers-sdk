@@ -1,15 +1,15 @@
 import module from "node:module";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getLatestWorkerdCompatibilityDate } from "../src/compatibility-date";
+import { getLocalWorkerdCompatibilityDate } from "../src/compatibility-date";
 
-describe("getLatestWorkerdCompatibilityDate", () => {
+describe("getLocalWorkerdCompatibilityDate", () => {
 	beforeEach(() => {
 		vi.setSystemTime(vi.getRealSystemTime());
 	});
 
 	it("should successfully get the local latest compatibility date from the local workerd instance", () => {
 		// Note: this works because the function gets the monorepo's miniflare/workerd instance
-		const { date, source } = getLatestWorkerdCompatibilityDate();
+		const { date, source } = getLocalWorkerdCompatibilityDate();
 		expect(date).toMatch(/\d{4}-\d{2}-\d{2}/);
 		expect(source).toEqual("workerd");
 	});
@@ -20,7 +20,7 @@ describe("getLatestWorkerdCompatibilityDate", () => {
 			// the local miniflare/workerd instance
 			() => ({}) as NodeJS.Require
 		);
-		const { date, source } = getLatestWorkerdCompatibilityDate();
+		const { date, source } = getLocalWorkerdCompatibilityDate();
 		const fallbackCompatDate = "2025-09-27";
 		expect(date).toEqual(fallbackCompatDate);
 		expect(source).toEqual("fallback");
@@ -38,7 +38,7 @@ describe("getLatestWorkerdCompatibilityDate", () => {
 			mockedRequire.resolve = (() => "") as unknown as NodeJS.RequireResolve;
 			return mockedRequire;
 		});
-		const { date, source } = getLatestWorkerdCompatibilityDate();
+		const { date, source } = getLocalWorkerdCompatibilityDate();
 		const fallbackCompatDate = "2025-01-09";
 		expect(date).toEqual(fallbackCompatDate);
 		expect(source).toEqual("today");

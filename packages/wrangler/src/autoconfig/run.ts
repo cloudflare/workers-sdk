@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
 	FatalError,
-	getLatestWorkerdCompatibilityDate,
+	getLocalWorkerdCompatibilityDate,
 } from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
@@ -82,7 +82,7 @@ export async function runAutoConfig(
 		);
 	}
 
-	const { date: compatibilityDate } = getLatestWorkerdCompatibilityDate({
+	const { date: compatibilityDate } = getLocalWorkerdCompatibilityDate({
 		projectPath: autoConfigDetails.projectPath,
 	});
 

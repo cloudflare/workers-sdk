@@ -82,4 +82,4 @@ export * from "./environment-variables/misc-variables";
 
 export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 
-export { getLatestWorkerdCompatibilityDate } from "./compatibility-date";
+export { getLocalWorkerdCompatibilityDate } from "./compatibility-date";

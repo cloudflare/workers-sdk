@@ -20,13 +20,16 @@ type GetCompatDateResult = {
 };
 
 /**
- * Gets the latest workerd compatibility date either from the local workerd instance or
- * by checking in the npm registry the latest release of the workerd package
+ * Gets compatibility date either of the locally installed workerd package.
+ *
+ * If the package is not found the fallback date of 2025-09-27 is returned instead.
+ *
+ * Additionally, if the workerd date is set to the future then the current date is returned instead.
  *
  * @param options.projectPath the path to the project
  * @returns an object including the compatibility date and its source
  */
-export function getLatestWorkerdCompatibilityDate({
+export function getLocalWorkerdCompatibilityDate({
 	projectPath = process.cwd(),
 }: GetCompatDateOptions = {}): GetCompatDateResult {
 	try {

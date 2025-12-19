@@ -25,7 +25,7 @@ vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
 		await importOriginal<Awaited<typeof import("@cloudflare/workers-utils")>>();
 	return {
 		...originalModule,
-		getLatestWorkerdCompatibilityDate: vi.fn(() => ({
+		getLocalWorkerdCompatibilityDate: vi.fn(() => ({
 			date: "2000-01-01",
 			source: "workerd",
 		})),

@@ -1,4 +1,4 @@
-import { getLatestWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
+import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import {
 	getLatestTypesEntrypoint,
 	getWorkerdCompatibilityDate,
@@ -25,7 +25,7 @@ describe("Compatibility Date Helpers", () => {
 
 	describe("getWorkerdCompatibilityDate()", () => {
 		test("normal flow", async () => {
-			vi.mocked(getLatestWorkerdCompatibilityDate).mockReturnValue({
+			vi.mocked(getLocalWorkerdCompatibilityDate).mockReturnValue({
 				date: "2025-01-10",
 				source: "workerd",
 			});
@@ -41,7 +41,7 @@ describe("Compatibility Date Helpers", () => {
 		});
 
 		test("fallback result", async () => {
-			vi.mocked(getLatestWorkerdCompatibilityDate).mockReturnValue({
+			vi.mocked(getLocalWorkerdCompatibilityDate).mockReturnValue({
 				date: "2025-09-27",
 				source: "fallback",
 			});

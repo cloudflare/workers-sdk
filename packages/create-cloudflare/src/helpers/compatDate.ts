@@ -2,7 +2,7 @@ import { readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { getLatestWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
+import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import type { C3Context } from "types";
 
 /**
@@ -14,7 +14,7 @@ export function getWorkerdCompatibilityDate(projectPath: string) {
 	const s = spinner();
 	s.start("Retrieving current workerd compatibility date");
 
-	const { date, source } = getLatestWorkerdCompatibilityDate({ projectPath });
+	const { date, source } = getLocalWorkerdCompatibilityDate({ projectPath });
 
 	if (source === "fallback") {
 		s.stop(
