@@ -1772,8 +1772,12 @@ test("Miniflare: listens on ipv6", async () => {
 test("Miniflare: dispose() immediately after construction", async () => {
 	const mf = new Miniflare({ script: "", modules: true });
 	const readyPromise = mf.ready;
+	// Attach rejection handler BEFORE dispose() to prevent unhandled rejection
+	const readyAssertion = expect(readyPromise).rejects.toThrow(
+		"Cannot use disposed instance"
+	);
 	await mf.dispose();
-	await expect(readyPromise).rejects.toThrow("Cannot use disposed instance");
+	await readyAssertion;
 });
 
 test("Miniflare: getBindings() returns all bindings", async () => {
