@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import * as devalue from "devalue";
+import getPort, { portNumbers } from "get-port";
 import {
 	getNodeCompat,
 	kCurrentWorker,
@@ -544,6 +545,12 @@ const SHARED_MINIFLARE_OPTIONS: SharedOptions = {
 	unsafeStickyBlobs: true,
 } satisfies Partial<MiniflareOptions>;
 
+const DEFAULT_INSPECTOR_PORT = 9229;
+
+function getFirstAvailablePort(start: number): Promise<number> {
+	return getPort({ port: portNumbers(start, 65535) });
+}
+
 type ModuleFallbackService = NonNullable<
 	MiniflareOptions["unsafeModuleFallbackService"]
 >;
@@ -580,9 +587,27 @@ async function buildProjectMiniflareOptions(
 	assert(runnerWorker.name !== undefined);
 	assert(runnerWorker.name.startsWith(WORKER_NAME_PREFIX));
 
-	const inspectorPort = ctx.config.inspector.enabled
-		? ctx.config.inspector.port ?? 9229
-		: undefined;
+	let inspectorPort: number | undefined;
+	if (ctx.config.inspector.enabled) {
+		const userSpecifiedPort = ctx.config.inspector.port;
+		if (userSpecifiedPort !== undefined) {
+			const availablePort = await getFirstAvailablePort(userSpecifiedPort);
+			if (availablePort !== userSpecifiedPort) {
+				throw new Error(
+					`Inspector port ${userSpecifiedPort} is not available. ` +
+						`Either free up the port or remove the inspector port configuration to use an automatically assigned port.`
+				);
+			}
+			inspectorPort = userSpecifiedPort;
+		} else {
+			inspectorPort = await getFirstAvailablePort(DEFAULT_INSPECTOR_PORT);
+			if (inspectorPort !== DEFAULT_INSPECTOR_PORT) {
+				log.warn(
+					`Default inspector port ${DEFAULT_INSPECTOR_PORT} not available, using ${inspectorPort} instead.`
+				);
+			}
+		}
+	}
 
 	return {
 		...SHARED_MINIFLARE_OPTIONS,

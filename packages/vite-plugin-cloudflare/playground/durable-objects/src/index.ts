@@ -2,6 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 
 interface Env {
 	COUNTERS: DurableObjectNamespace<Counter>;
+	LEGACY: DurableObjectNamespace;
 }
 
 export class Counter extends DurableObject {
@@ -28,9 +29,24 @@ export class Counter extends DurableObject {
 	}
 }
 
+// Included to ensure that classes that don't extent `DurableObject` are also supported
+export class Legacy {
+	fetch() {
+		return new Response("Legacy Durable Object");
+	}
+}
+
 export default {
 	async fetch(request, env) {
 		const url = new URL(request.url);
+
+		if (url.pathname === "/legacy") {
+			const id = env.LEGACY.idFromName("test");
+			const stub = env.LEGACY.get(id);
+
+			return stub.fetch(request);
+		}
+
 		const name = url.searchParams.get("name");
 
 		if (!name) {

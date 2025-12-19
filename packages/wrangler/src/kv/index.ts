@@ -45,7 +45,7 @@ import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 
 export const kvNamespace = createNamespace({
 	metadata: {
-		description: "🗂️  Manage Workers KV Namespaces",
+		description: "🗂️ Manage Workers KV Namespaces",
 		status: "stable",
 		owner: "Product: KV",
 	},

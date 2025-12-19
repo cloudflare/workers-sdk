@@ -113,6 +113,7 @@ export type NormalizeAndValidateConfigArgs = {
 	upstreamProtocol?: string;
 	script?: string;
 	enableContainers?: boolean;
+	generateTypes?: boolean;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -566,6 +567,7 @@ function normalizeAndValidateDev(
 		upstreamProtocol: upstreamProtocolArg,
 		remote: remoteArg,
 		enableContainers: enableContainersArg,
+		generateTypes: generateTypesArg,
 	} = args;
 	assert(
 		localProtocolArg === undefined ||
@@ -581,6 +583,9 @@ function normalizeAndValidateDev(
 	assert(
 		enableContainersArg === undefined ||
 			typeof enableContainersArg === "boolean"
+	);
+	assert(
+		generateTypesArg === undefined || typeof generateTypesArg === "boolean"
 	);
 	const {
 		// On Windows, when specifying `localhost` as the socket hostname, `workerd`
@@ -601,6 +606,7 @@ function normalizeAndValidateDev(
 		host,
 		enable_containers = enableContainersArg ?? true,
 		container_engine,
+		generate_types = generateTypesArg ?? false,
 		...rest
 	} = rawDev;
 	validateAdditionalProperties(diagnostics, "dev", Object.keys(rest), []);
@@ -647,6 +653,14 @@ function normalizeAndValidateDev(
 		"string"
 	);
 
+	validateOptionalProperty(
+		diagnostics,
+		"dev",
+		"generate_types",
+		generate_types,
+		"boolean"
+	);
+
 	return {
 		ip,
 		port,
@@ -656,6 +670,7 @@ function normalizeAndValidateDev(
 		host,
 		enable_containers,
 		container_engine,
+		generate_types,
 	};
 }
 
@@ -3044,6 +3059,7 @@ function validateContainerApp(
 					"instance_type",
 					"wrangler_ssh",
 					"authorized_keys",
+					"trusted_user_ca_keys",
 					"configuration",
 					"constraints",
 					"affinities",
@@ -3089,15 +3105,6 @@ function validateContainerApp(
 						`${field}.wrangler_ssh.port must be a number between 1 and 65535 inclusive`
 					);
 				}
-
-				if (
-					!("authorized_keys" in containerAppOptional) &&
-					containerAppOptional.wrangler_ssh.enabled
-				) {
-					diagnostics.errors.push(
-						`${field}.authorized_keys must be provided if wrangler ssh is enabled`
-					);
-				}
 			}
 
 			if ("authorized_keys" in containerAppOptional) {
@@ -3109,6 +3116,35 @@ function validateContainerApp(
 						const key = containerAppOptional.authorized_keys[index];
 
 						if (!isRequiredProperty(key, "name", "string")) {
+							diagnostics.errors.push(`${fieldPath}.name must be a string`);
+						}
+
+						if (!isRequiredProperty(key, "public_key", "string")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key must be a string`
+							);
+						}
+
+						if (!key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key is a unsupported key type. Please provide a ED25519 public key.`
+							);
+						}
+					}
+				}
+			}
+
+			if ("trusted_user_ca_keys" in containerAppOptional) {
+				if (!Array.isArray(containerAppOptional.trusted_user_ca_keys)) {
+					diagnostics.errors.push(
+						`${field}.trusted_user_ca_keys must be an array`
+					);
+				} else {
+					for (const index in containerAppOptional.trusted_user_ca_keys) {
+						const fieldPath = `${field}.trusted_user_ca_keys[${index}]`;
+						const key = containerAppOptional.trusted_user_ca_keys[index];
+
+						if (!isOptionalProperty(key, "name", "string")) {
 							diagnostics.errors.push(`${fieldPath}.name must be a string`);
 						}
 

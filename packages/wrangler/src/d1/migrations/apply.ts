@@ -68,16 +68,18 @@ export const d1MigrationsApplyCommand = createCommand({
 	},
 	positionalArgs: ["database"],
 	async handler({ database, local, remote, persistTo, preview }, { config }) {
+		if (!config.configPath) {
+			throw new UserError(
+				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
+			);
+		}
+
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 
 		if (!databaseInfo && remote) {
 			throw new UserError(
 				`Couldn't find a D1 DB with the name or binding '${database}' in your ${configFileName(config.configPath)} file.`
 			);
-		}
-
-		if (!config.configPath) {
-			return;
 		}
 
 		const migrationsPath = await getMigrationsPath({

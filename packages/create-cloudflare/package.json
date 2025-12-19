@@ -38,6 +38,7 @@
 		"test:ci": "vitest run --config ./vitest.config.mts"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-utils": "workspace:*",
 		"@babel/parser": "^7.21.3",
 		"@babel/types": "^7.21.4",
 		"@clack/prompts": "^0.6.3",
