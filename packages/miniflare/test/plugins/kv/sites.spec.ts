@@ -6,15 +6,7 @@ import { Miniflare } from "miniflare";
 import { beforeAll, expect, onTestFinished, test } from "vitest";
 import { useTmp } from "../../test-shared";
 
-const FIXTURES_PATH = path.resolve(
-	__dirname,
-	"..",
-	"..",
-	"..",
-	"test",
-	"fixtures",
-	"sites"
-);
+const FIXTURES_PATH = path.resolve(__dirname, "../../fixtures/sites");
 const SERVICE_WORKER_ENTRY_PATH = path.join(FIXTURES_PATH, "service-worker.ts");
 const MODULES_ENTRY_PATH = path.join(FIXTURES_PATH, "modules.ts");
 

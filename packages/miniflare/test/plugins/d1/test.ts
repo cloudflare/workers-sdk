@@ -3,14 +3,7 @@ import { miniflareTest, MiniflareTestContext } from "../../test-shared";
 import type { D1Database } from "@cloudflare/workers-types/experimental";
 import type { Miniflare, MiniflareOptions } from "miniflare";
 
-const FIXTURES_PATH = path.resolve(
-	__dirname,
-	"..",
-	"..",
-	"..",
-	"test",
-	"fixtures"
-);
+const FIXTURES_PATH = path.resolve(__dirname, "../../fixtures");
 
 export interface Context extends MiniflareTestContext {
 	db: D1Database;
