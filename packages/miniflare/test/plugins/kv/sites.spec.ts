@@ -191,7 +191,6 @@ unixTest("static content namespace supports listing keys", async (t) => {
 	await fs.writeFile(path.join(tmp, "a", "b", "c", "6.txt"), "six");
 	await fs.writeFile(path.join(tmp, "a", "b", "c", "7.txt"), "seven");
 	const mf = new Miniflare({
-		verbose: true,
 		scriptPath: t.context.serviceWorkerPath,
 		sitePath: tmp,
 		siteExclude: ["**/5.txt"],

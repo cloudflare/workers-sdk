@@ -35,6 +35,8 @@ export async function runAutoConfig(
 	const runBuild = !dryRun && (autoConfigOptions.runBuild ?? true);
 	const skipConfirmations =
 		dryRun || autoConfigOptions.skipConfirmations === true;
+	const enableWranglerInstallation =
+		autoConfigOptions.enableWranglerInstallation ?? true;
 
 	const detected: AutoConfigMetrics = {
 		buildCommand: autoConfigDetails.buildCommand,
@@ -120,7 +122,7 @@ export async function runAutoConfig(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (autoConfigSummary.wranglerInstall) {
+	if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
 		await installWrangler();
 	}
 

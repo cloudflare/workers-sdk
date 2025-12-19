@@ -7,7 +7,8 @@ import * as recast from "recast";
 import semiver from "semiver";
 import { getDevCompatibilityDate } from "../../utils/compatibility-date";
 import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
-import { Framework, getInstalledPackageVersion } from ".";
+import { getInstalledPackageVersion } from "./utils/packages";
+import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
 
 export class Analog extends Framework {

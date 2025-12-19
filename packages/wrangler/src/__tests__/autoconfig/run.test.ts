@@ -154,24 +154,27 @@ describe("autoconfig (deploy)", () => {
 					assets: { directory: outputDir },
 				},
 			}));
-			await run.runAutoConfig({
-				projectPath: process.cwd(),
-				buildCommand: "echo 'built' > build.txt",
-				configured: false,
-				workerName: "my-worker",
-				framework: {
-					name: "Fake",
-					configure: configureSpy,
-					isConfigured: () => false,
-					autoConfigSupported: true,
-				} as Framework,
-				outputDir: "dist",
-				packageJson: {
-					dependencies: {
-						astro: "5",
+			await run.runAutoConfig(
+				{
+					projectPath: process.cwd(),
+					buildCommand: "echo 'built' > build.txt",
+					configured: false,
+					workerName: "my-worker",
+					framework: {
+						name: "Fake",
+						configure: configureSpy,
+						isConfigured: () => false,
+						autoConfigSupported: true,
+					} as Framework,
+					outputDir: "dist",
+					packageJson: {
+						dependencies: {
+							astro: "5",
+						},
 					},
 				},
-			});
+				{ enableWranglerInstallation: true }
+			);
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
