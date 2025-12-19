@@ -195,7 +195,8 @@ export const addVscodeConfig = (ctx: C3Context) => {
  * If the tentative date is valid, it is returned. Otherwise the latest workerd date is used.
  *
  * @param tentativeDate A tentative compatibility date, usually from wrangler config.
- * @returns The compatibility date to use in the form "YYYY-MM-DD"
+ * @param projectPath The path to the target project.
+ * @returns The compatibility date to use in the form "YYYY-MM-DD".
  */
 async function getCompatibilityDate(
 	tentativeDate: unknown,
