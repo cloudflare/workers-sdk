@@ -46,9 +46,8 @@ export function getLocalWorkerdCompatibilityDate({
 		});
 	} catch {}
 
-	const fallbackDate = new Date("2025-09-27");
 	return toSafeCompatDateObject({
-		date: formatCompatibilityDate(fallbackDate),
+		date: "2025-09-27",
 		source: "fallback",
 	});
 }
