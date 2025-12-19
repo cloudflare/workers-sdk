@@ -137,7 +137,7 @@ test("uses next available port when default port 9229 is in use", async ({
 			"vitest.config.mts": vitestConfig({
 				main: "./index.ts",
 				miniflare: {
-					compatibilityDate: "2024-01-01",
+					compatibilityDate: "2025-12-02",
 					compatibilityFlags: ["nodejs_compat"],
 				},
 			}),
@@ -197,26 +197,21 @@ test("throws error when user-specified inspector port is not available", async (
 		await createEphemeralServer();
 	try {
 		await seed({
-			"vitest.config.mts": dedent`
-				import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
-				export default defineWorkersConfig({
-					test: {
-						inspector: {
-							port: ${blockedPort},
-						},
-						poolOptions: {
-							workers: {
-								main: "./index.ts",
-								singleWorker: true,
-								miniflare: {
-									compatibilityDate: "2024-01-01",
-									compatibilityFlags: ["nodejs_compat"],
-								},
-							},
-						},
-					}
-				});
-			`,
+			"vitest.config.mts": vitestConfig(
+				{
+					main: "./index.ts",
+					singleWorker: true,
+					miniflare: {
+						compatibilityDate: "2025-12-02",
+						compatibilityFlags: ["nodejs_compat"],
+					},
+				},
+				{
+					inspector: {
+						port: blockedPort,
+					},
+				}
+			),
 			"index.ts": dedent`
 				export default {
 					async fetch(request, env, ctx) {
