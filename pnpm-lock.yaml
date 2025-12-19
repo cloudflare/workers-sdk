@@ -2431,6 +2431,9 @@ importers:
       typescript:
         specifier: catalog:default
         version: 5.8.3
+      vitest:
+        specifier: catalog:vitest-3
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.4)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.4(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
 
   packages/vite-plugin-cloudflare/playground/additional-modules:
     devDependencies:
@@ -13223,8 +13226,8 @@ packages:
     resolution: {integrity: sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==}
     engines: {node: '>=8'}
 
-  strip-literal@3.0.0:
-    resolution: {integrity: sha512-TcccoMhJOM3OebGhSBEmp3UZ2SfDMZUEBdRA/9ynfLi8yYajyWX3JiXArcJt4Umh4vISpspkQIY8ZZoCqjbviA==}
+  strip-literal@3.1.0:
+    resolution: {integrity: sha512-8r3mkIM/2+PpjHoOtiAW8Rg3jJLHaV7xPwG+YRGrv6FP0wwk/toTpATxWYOW0BKdWwl82VT2tFYi5DlROa0Mxg==}
 
   stripe@20.1.0:
     resolution: {integrity: sha512-o1VNRuMkY76ZCq92U3EH3/XHm/WHp7AerpzDs4Zyo8uE5mFL4QUcv/2SudWsSnhBSp4moO2+ZoGCZ7mT8crPmQ==}
@@ -18660,7 +18663,7 @@ snapshots:
     dependencies:
       '@vitest/utils': 3.2.4
       pathe: 2.0.3
-      strip-literal: 3.0.0
+      strip-literal: 3.1.0
 
   '@vitest/runner@4.0.16':
     dependencies:
@@ -24444,7 +24447,7 @@ snapshots:
 
   strip-json-comments@3.1.1: {}
 
-  strip-literal@3.0.0:
+  strip-literal@3.1.0:
     dependencies:
       js-tokens: 9.0.1
 
