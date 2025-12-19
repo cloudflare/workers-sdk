@@ -47,6 +47,7 @@ test("maxBatchTimeout validation", async () => {
 		modules: true,
 		script: "",
 	});
+	onTestFinished(() => mf.dispose());
 	expect(
 		() =>
 			new Miniflare({
@@ -57,7 +58,6 @@ test("maxBatchTimeout validation", async () => {
 				script: "",
 			})
 	).toThrow(/Number must be less than or equal to 60/);
-	onTestFinished(() => mf.dispose());
 });
 
 test("flushes partial and full batches", async () => {
