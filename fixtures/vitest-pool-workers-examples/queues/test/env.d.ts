@@ -1,4 +1,10 @@
-declare module "cloudflare:test" {
-	// Controls the type of `import("cloudflare:test").env`
-	interface ProvidedEnv extends Env {}
+interface QueueJob {
+	key: string;
+	value: string;
+}
+declare namespace Cloudflare {
+	interface Env {
+		QUEUE_PRODUCER: Queue<QueueJob>;
+		QUEUE_RESULTS: KVNamespace;
+	}
 }

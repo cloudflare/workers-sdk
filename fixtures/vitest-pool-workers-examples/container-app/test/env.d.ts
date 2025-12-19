@@ -1,6 +1,5 @@
-declare module "cloudflare:test" {
-	// Controls the type of `import("cloudflare:test").env`
-	interface ProvidedEnv extends Env {
+declare namespace Cloudflare {
+	interface Env {
 		MY_CONTAINER: DurableObjectNamespace<MyContainer>;
 	}
 }

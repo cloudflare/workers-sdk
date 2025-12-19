@@ -6,11 +6,9 @@ import * as vm from "node:vm";
 import defines from "__VITEST_POOL_WORKERS_DEFINES";
 import {
 	createWorkerEntrypointWrapper,
-	internalEnv,
 	maybeHandleRunRequest,
 	registerHandlerAndGlobalWaitUntil,
 	runInRunnerObject,
-	setEnv,
 } from "cloudflare:test-internal";
 import { DurableObject } from "cloudflare:workers";
 import * as devalue from "devalue";
@@ -174,8 +172,7 @@ function applyDefines() {
 	}
 }
 
-// `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__` is a singleton and "colo local" ephemeral object. Refer to:
-// https://github.com/cloudflare/workerd/blob/v1.20231206.0/src/workerd/server/workerd.capnp#L529-L543
+// `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__` is a singleton
 export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject {
 	#getExecutor: (() => unknown) | undefined;
 
@@ -183,11 +180,10 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		return this.#getExecutor?.();
 	}
 
-	constructor(_state: DurableObjectState, env: Record<string, unknown> & Env) {
-		super(_state, env);
-		vm._setUnsafeEval(env.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
-		ensurePatchedFunction(env.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
-		setEnv(env);
+	constructor(_state: DurableObjectState, doEnv: Cloudflare.Env) {
+		super(_state, doEnv);
+		vm._setUnsafeEval(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
+		ensurePatchedFunction(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
 		applyDefines();
 	}
 
@@ -244,7 +240,6 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 				try {
 					poolSocket.send(structuredSerializableStringify(response));
 				} catch (error) {
-					__console.error("pool error");
 					// If the user tried to perform a dynamic `import()` or `console.log()`
 					// from inside a `export default { fetch() { ... } }` handler using `SELF`
 					// or from inside their own Durable Object, Vitest will try to send an
@@ -254,7 +249,7 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 					// the RPC message though, so if we detect this, we try resend the message
 					// from the runner object.
 					if (isDifferentIOContextError(error)) {
-						const promise = runInRunnerObject(internalEnv, () => {
+						const promise = runInRunnerObject(() => {
 							poolSocket.send(structuredSerializableStringify(response));
 						}).catch((e) => {
 							__console.error(

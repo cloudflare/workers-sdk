@@ -6,14 +6,17 @@ interface UnsafeEval {
 	newAsyncFunction(script: string, name?: string, ...args: string[]): Function;
 }
 
-interface Env {
-	__VITEST_POOL_WORKERS_SELF_NAME: string;
-	__VITEST_POOL_WORKERS_SELF_SERVICE: Fetcher;
-	__VITEST_POOL_WORKERS_LOOPBACK_SERVICE: Fetcher;
-	__VITEST_POOL_WORKERS_RUNNER_OBJECT: DurableObjectNamespace;
-	__VITEST_POOL_WORKERS_UNSAFE_EVAL: UnsafeEval;
+namespace Cloudflare {
+	interface Env extends Record<string, unknown> {
+		__VITEST_POOL_WORKERS_LOOPBACK_SERVICE: Fetcher;
+		__VITEST_POOL_WORKERS_UNSAFE_EVAL: UnsafeEval;
+	}
+	interface GlobalProps {
+		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+		mainModule: typeof import("./index");
+		durableNamespaces: "__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__";
+	}
 }
-type InternalUserEnv = Env & Record<string, unknown>;
 
 interface DurableObjectDesignator {
 	className: string;
@@ -28,6 +31,7 @@ interface SerializedOptions {
 		string /* bound name */,
 		DurableObjectDesignator
 	>;
+	selfName?: string;
 }
 
 declare module "__VITEST_POOL_WORKERS_USER_OBJECT" {}

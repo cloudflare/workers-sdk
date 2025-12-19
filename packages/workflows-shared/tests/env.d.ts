@@ -1,10 +1,8 @@
-import { type WorkflowEntrypoint } from "cloudflare:workers";
-import { type Engine } from "../src/index";
+/* eslint-disable */
 
-declare module "cloudflare:test" {
-	// Controls the type of `import("cloudflare:test").env`
-	interface ProvidedEnv extends Env {
-		ENGINE: DurableObjectNamespace<Engine>;
-		USER_WORKFLOW: WorkflowEntrypoint;
+declare namespace Cloudflare {
+	interface Env {
+		ENGINE: DurableObjectNamespace<import("../src/index").Engine>;
+		USER_WORKFLOW: import("cloudflare:workers").WorkflowEntrypoint;
 	}
 }

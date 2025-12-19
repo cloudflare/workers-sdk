@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { dirname } from "node:path";
-import { internalEnv } from "cloudflare:test-internal";
+import { env } from "cloudflare:workers";
 import { VitestSnapshotEnvironment } from "vitest/snapshot";
 
 // Define a custom `SnapshotEnvironment` that uses a service binding for file
@@ -9,7 +9,7 @@ class WorkersSnapshotEnvironment extends VitestSnapshotEnvironment {
 	#fetch(method: string, path: string, body?: BodyInit): Promise<Response> {
 		const encodedPath = encodeURIComponent(path);
 		const url = `http://placeholder/snapshot?path=${encodedPath}`;
-		return internalEnv.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE.fetch(url, {
+		return env.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE.fetch(url, {
 			method,
 			body,
 		});

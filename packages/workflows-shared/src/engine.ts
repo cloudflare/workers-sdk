@@ -23,6 +23,7 @@ import type { WorkflowEntrypoint, WorkflowEvent } from "cloudflare:workers";
 
 interface Env {
 	USER_WORKFLOW: WorkflowEntrypoint;
+	ENGINE: DurableObjectNamespace<Engine>;
 }
 
 export type DatabaseWorkflow = {

@@ -128,6 +128,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 				durableObjectBindingDesignators: [
 					...getDurableObjectDesignators(this.parsedPoolOptions).entries(),
 				],
+				selfName: getRunnerName(this.options.project),
 			});
 		}
 		this.socket.send(structuredSerializableStringify(message));

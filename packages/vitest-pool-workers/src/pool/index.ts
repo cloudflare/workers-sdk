@@ -264,7 +264,6 @@ type ProjectWorkers = [
 	...auxiliaryWorkers: WorkerOptions[],
 ];
 
-const SELF_NAME_BINDING = "__VITEST_POOL_WORKERS_SELF_NAME";
 const SELF_SERVICE_BINDING = "__VITEST_POOL_WORKERS_SELF_SERVICE";
 const LOOPBACK_SERVICE_BINDING = "__VITEST_POOL_WORKERS_LOOPBACK_SERVICE";
 const RUNNER_OBJECT_BINDING = "__VITEST_POOL_WORKERS_RUNNER_OBJECT";
@@ -280,10 +279,7 @@ async function buildProjectWorkerOptions(
 	);
 	const runnerWorker = customOptions.miniflare ?? {};
 
-	// Make sure the worker has a well-known name, and share it with the runner
 	runnerWorker.name = getRunnerName(project);
-	runnerWorker.bindings ??= {};
-	runnerWorker.bindings[SELF_NAME_BINDING] = runnerWorker.name;
 
 	// Make sure the worker has the `nodejs_compat` and `export_commonjs_default`
 	// compatibility flags enabled. Vitest makes heavy use of Node APIs, and many
@@ -437,18 +433,8 @@ async function buildProjectWorkerOptions(
 	// which is the singleton host for running tests.
 	runnerWorker.durableObjects[RUNNER_OBJECT_BINDING] = {
 		className: "__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__",
-		// Make the runner object ephemeral, so it doesn't write any `.sqlite` files
-		// that would disrupt stacked storage because we prevent eviction
-		// unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
 		unsafePreventEviction: true,
 	};
-	// runnerWorker.durableObjects["MY"] = {
-	// 	className: "MyDO",
-	// 	// Make the runner object ephemeral, so it doesn't write any `.sqlite` files
-	// 	// that would disrupt stacked storage because we prevent eviction
-	// 	// unsafeUniqueKey: kUnsafeEphemeralUniqueKey,
-	// 	unsafePreventEviction: true,
-	// };
 
 	// Vite has its own define mechanism, but we can't control it from custom
 	// pools. Our defines come from `wrangler.toml` files which are only parsed

@@ -1,30 +1,21 @@
 import assert from "node:assert";
+import { exports } from "cloudflare:workers";
 
-// See public facing `cloudflare:test` types for docs
-export let env: Record<string, unknown>;
-export let SELF: Fetcher;
+export { env } from "cloudflare:workers";
 
-export function stripInternalEnv(
-	internalEnv: Record<string, unknown> & Env
-): Record<string, unknown> {
-	const result: Record<string, unknown> & Partial<Env> = { ...internalEnv };
-	delete result.__VITEST_POOL_WORKERS_SELF_NAME;
-	delete result.__VITEST_POOL_WORKERS_SELF_SERVICE;
-	delete result.__VITEST_POOL_WORKERS_LOOPBACK_SERVICE;
-	delete result.__VITEST_POOL_WORKERS_RUNNER_OBJECT;
-	delete result.__VITEST_POOL_WORKERS_UNSAFE_EVAL;
-	return result;
-}
-
-export let internalEnv: Record<string, unknown> & Env;
-export function setEnv(newEnv: Record<string, unknown> & Env) {
-	// Store full env for `WorkersSnapshotEnvironment`
-	internalEnv = newEnv;
-	SELF = newEnv.__VITEST_POOL_WORKERS_SELF_SERVICE;
-
-	// Strip internal bindings from user facing `env`
-	env = stripInternalEnv(newEnv);
-}
+/**
+ * For reasons that aren't clear to me, just `SELF = exports.default` ends up with SELF being
+ * undefined in a test. This Proxy solution works.
+ */
+export const SELF = new Proxy(
+	{},
+	{
+		get(_, p) {
+			// @ts-expect-error This works at runtime
+			return exports.default[p].bind(exports.default);
+		},
+	}
+);
 
 export function getSerializedOptions(): SerializedOptions {
 	assert(typeof __vitest_worker__ === "object", "Expected global Vitest state");
