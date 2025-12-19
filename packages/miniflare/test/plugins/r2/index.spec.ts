@@ -15,7 +15,6 @@ import {
 import { beforeEach, expect, onTestFinished, test } from "vitest";
 import {
 	FIXTURES_PATH,
-	isWithin,
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
 	MiniflareTestContext,
@@ -147,7 +146,8 @@ test("head: returns metadata for existing keys", async () => {
 	});
 	expect(object.customMetadata).toEqual({ key: "value" });
 	expect(object.range).toEqual({ offset: 0, length: 5 });
-	isWithin(WITHIN_EPSILON, object.uploaded.getTime(), start);
+	expect(object.uploaded.getTime()).toBeGreaterThanOrEqual(start);
+	expect(object.uploaded.getTime()).toBeLessThanOrEqual(start + WITHIN_EPSILON);
 
 	// Test proxying of `writeHttpMetadata()`
 	const headers = new Headers({ "X-Key": "value" });
@@ -197,7 +197,8 @@ test("get: returns metadata and body for existing keys", async () => {
 	});
 	expect(body.customMetadata).toEqual({ key: "value" });
 	expect(body.range).toEqual({ offset: 0, length: 5 });
-	isWithin(WITHIN_EPSILON, body.uploaded.getTime(), start);
+	expect(body.uploaded.getTime()).toBeGreaterThanOrEqual(start);
+	expect(body.uploaded.getTime()).toBeLessThanOrEqual(start + WITHIN_EPSILON);
 
 	// Test proxying of `writeHttpMetadata()`
 	const headers = new Headers({ "X-Key": "value" });
@@ -375,7 +376,8 @@ test("put: returns metadata for created object", async () => {
 	});
 	expect(object.customMetadata).toEqual({ key: "value" });
 	expect(object.range).toBe(undefined);
-	isWithin(WITHIN_EPSILON, object.uploaded.getTime(), start);
+	expect(object.uploaded.getTime()).toBeGreaterThanOrEqual(start);
+	expect(object.uploaded.getTime()).toBeLessThanOrEqual(start + WITHIN_EPSILON);
 });
 test("put: puts empty value", async () => {
 	const { r2 } = ctx;
@@ -763,7 +765,8 @@ test("list: returns metadata with objects", async () => {
 	expect(object.httpMetadata).toEqual({});
 	expect(object.customMetadata).toEqual({});
 	expect(object.range).toBe(undefined);
-	isWithin(WITHIN_EPSILON, object.uploaded.getTime(), start);
+	expect(object.uploaded.getTime()).toBeGreaterThanOrEqual(start);
+	expect(object.uploaded.getTime()).toBeLessThanOrEqual(start + WITHIN_EPSILON);
 });
 test("list: paginates with variable limit", async () => {
 	const { r2, ns } = ctx;
