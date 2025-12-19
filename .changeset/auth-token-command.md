@@ -11,6 +11,7 @@ wrangler auth token
 ```
 
 The command returns whichever authentication method is currently configured:
+
 - OAuth token from `wrangler login` (automatically refreshed if expired)
 - API token from `CLOUDFLARE_API_TOKEN` environment variable
 
