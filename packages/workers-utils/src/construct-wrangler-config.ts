@@ -1,5 +1,5 @@
+import { formatCompatibilityDate } from "./compatibility-date";
 import { ENVIRONMENT_TAG_PREFIX, SERVICE_TAG_PREFIX } from "./constants";
-import { formatCompatibilityDate } from "./format-compatibility-date";
 import { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 import type { RawConfig } from "./config";
 import type {
