@@ -16,7 +16,7 @@ type GetCompatDateOptions = {
 
 type GetCompatDateResult = {
 	date: CompatDate;
-	source: "workerd" | "fallback" | "today";
+	source: "workerd" | "fallback";
 };
 
 /**
@@ -40,43 +40,37 @@ export function getLocalWorkerdCompatibilityDate({
 			compatibilityDate: string;
 		};
 		const workerdDate = miniflareWorkerd.compatibilityDate;
-		return toSafeCompatDateObject({
-			date: formatCompatibilityDate(new Date(workerdDate)),
+		return {
+			date: toSafeCompatibilityDate(new Date(workerdDate)),
 			source: "workerd",
-		});
+		};
 	} catch {}
 
-	return toSafeCompatDateObject({
+	return {
 		date: "2025-09-27",
 		source: "fallback",
-	});
+	};
 }
 
-function toSafeCompatDateObject({
-	date: dateStr,
-	source,
-}: GetCompatDateResult): GetCompatDateResult {
-	const date = new Date(dateStr);
-	// workerd releases often have a date for the following day.
-	// Unfortunately, Workers deployments will fail if they specify
-	// a compatibility date in the future. This means that most
-	// who create a new project on the same day as a workerd
-	// release will have their deployments fail until they
-	// manually adjust the compatibility date.
-	//
-	// To work around this, we must manually ensure that the compat date
-	// is not on a future UTC day when there was a recent workerd release.
+/**
+ * Workerd releases often have a date for the following day.
+ * Unfortunately, Workers deployments will fail if they specify a compatibility date in the future. This means that most
+ * who create a new project on the same day as a workerd release will have their deployments fail until they
+ * manually adjust the compatibility date.
+ *
+ * To work around this, we must manually ensure that the compat date is not on a future UTC day when there was a recent workerd release.
+ *
+ * This function is the used to convert potential future dates to safe compatibility dates.
+ *
+ * @param date The local workerd date to check and convert
+ * @returns A compat date created using today's date if the local workerd date is in the future, one using the local workerd date otherwise
+ */
+function toSafeCompatibilityDate(date: Date): CompatDate {
 	if (date.getTime() > Date.now()) {
-		return {
-			date: formatCompatibilityDate(new Date(Date.now())),
-			source: "today",
-		};
+		return formatCompatibilityDate(new Date());
 	}
 
-	return {
-		date: formatCompatibilityDate(date),
-		source,
-	};
+	return formatCompatibilityDate(date);
 }
 
 /**
