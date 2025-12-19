@@ -1,5 +1,6 @@
 {
   "name": "<WORKER_NAME>",
+  "upload_source_maps": true,
   "compatibility_date": "<COMPATIBILITY_DATE>",
   "assets": {
     "directory": "./public"
