@@ -8,7 +8,6 @@ const FIXTURES_PATH = path.resolve(
 	"..",
 	"..",
 	"..",
-	"..",
 	"test",
 	"fixtures"
 );

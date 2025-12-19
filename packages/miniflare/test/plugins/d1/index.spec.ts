@@ -3,13 +3,13 @@ import path from "node:path";
 import { Miniflare } from "miniflare";
 import { expect, onTestFinished, test } from "vitest";
 import { FIXTURES_PATH, useTmp } from "../../test-shared";
+// Import suite tests - this registers the tests with vitest
+import "./suite";
 import { setupTest } from "./test";
 
 // Post-wrangler 3.3, D1 bindings work directly, so use the input file
 // from the fixture, and no prefix on the binding name
 setupTest("DB", "worker.mjs", (mf) => mf.getD1Database("DB"));
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-require("./suite");
 
 test("migrates database to new location", async () => {
 	// Copy legacy data to temporary directory
