@@ -28,11 +28,15 @@ export default function registerDevHotKeys(
 			handler: async () => {
 				const { inspectorUrl } = await devEnv.proxy.ready.promise;
 
-				// TODO: refactor this function to accept a whole URL (not just .port and assuming .hostname)
-				await openInspector(
-					parseInt(inspectorUrl.port),
-					devEnv.config.latestConfig?.name
-				);
+				if (!inspectorUrl) {
+					logger.warn("DevTools is not available in remote mode");
+				} else {
+					// TODO: refactor this function to accept a whole URL (not just .port and assuming .hostname)
+					await openInspector(
+						parseInt(inspectorUrl.port),
+						devEnv.config.latestConfig?.name
+					);
+				}
 			},
 		},
 		{

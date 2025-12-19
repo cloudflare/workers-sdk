@@ -217,6 +217,7 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 					]);
 				})
 				.then(([url, inspectorUrl]) => {
+					assert(url);
 					this.emitReadyEvent(proxyWorker, url, inspectorUrl);
 				})
 				.catch((error) => {
@@ -379,21 +380,11 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 	}
 
 	get inspectorEnabled() {
-		// If we're in a JavaScript Debug terminal, Miniflare will send the inspector ports directly to VSCode for registration
-		// As such, we don't need our inspector proxy and in fact including it causes issue with multiple clients connected to the
-		// inspector endpoint.
-		const inVscodeJsDebugTerminal = !!process.env.VSCODE_INSPECTOR_OPTIONS;
-
-		const shouldEnableInspector =
-			this.latestConfig?.dev.inspector !== false && !inVscodeJsDebugTerminal;
-
 		if (this.latestConfig?.dev.remote) {
 			// In `wrangler dev --remote`, only enable the inspector if the `--x-tail-logs` flag is disabled
-			return (
-				shouldEnableInspector && !this.latestConfig?.experimental?.tailLogs
-			);
+			return !this.latestConfig?.experimental?.tailLogs;
 		}
-		return shouldEnableInspector;
+		return true;
 	}
 
 	// ******************
@@ -555,7 +546,11 @@ export class ProxyController extends Controller<ProxyControllerEventMap> {
 	//   Event Dispatchers
 	// *********************
 
-	emitReadyEvent(proxyWorker: Miniflare, url: URL, inspectorUrl: URL) {
+	emitReadyEvent(
+		proxyWorker: Miniflare,
+		url: URL,
+		inspectorUrl: URL | undefined
+	) {
 		const data: ReadyEvent = {
 			type: "ready",
 			proxyWorker,

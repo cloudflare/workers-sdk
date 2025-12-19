@@ -75,7 +75,6 @@ export class RemoteRuntimeController extends RuntimeController {
 			Partial<Pick<CreateRemoteWorkerInitProps, "name">> &
 			Parameters<typeof getWorkerAccountAndContext>[0] & {
 				bundleId: number;
-				minimal_mode?: boolean;
 				tail_logs: boolean;
 			}
 	): Promise<CfPreviewToken | undefined> {

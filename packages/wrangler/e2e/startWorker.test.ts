@@ -108,6 +108,8 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 		});
 
 		const inspectorUrl = await worker.inspectorUrl;
+		assert(inspectorUrl, "missing inspectorUrl");
+
 		const res = await undici.fetch(`http://${inspectorUrl.host}/json`);
 
 		await expect(res.json()).resolves.toBeInstanceOf(Array);
@@ -177,6 +179,7 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 		});
 
 		const inspectorUrl = await worker.inspectorUrl;
+		assert(inspectorUrl, "missing inspectorUrl");
 
 		let ws = new WebSocket(inspectorUrl.href, {
 			setHost: false,
@@ -236,6 +239,8 @@ describe.each(OPTIONS)("DevEnv (remote: $remote)", ({ remote }) => {
 		});
 
 		const inspectorUrl = await worker.inspectorUrl;
+		assert(inspectorUrl, "missing inspectorUrl");
+
 		const ws = new WebSocket(inspectorUrl.href);
 
 		const consoleApiMessages: DevToolsEvent<"Runtime.consoleAPICalled">[] =
