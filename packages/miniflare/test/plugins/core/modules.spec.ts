@@ -206,7 +206,6 @@ test("Miniflare: cannot automatically collect modules from dynamic import expres
 	} catch (e) {
 		error = e as Error;
 	}
-	expect(error).toBeDefined();
 	assert(error !== undefined);
 	// Check message includes currently collected modules
 	let referencingPath = path.relative("", scriptPath);
@@ -245,7 +244,6 @@ You must manually define your modules when constructing Miniflare:
 	} catch (e) {
 		error = e as Error;
 	}
-	expect(error).toBeDefined();
 	assert(error !== undefined);
 	// Check message includes currently collected modules
 	const depPath = path.join(ROOT, "dynamic-require.cjs");
