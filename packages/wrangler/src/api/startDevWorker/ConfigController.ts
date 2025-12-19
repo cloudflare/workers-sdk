@@ -497,11 +497,7 @@ function getDevCompatibilityDate(
 		projectPath,
 	});
 
-	if (
-		config &&
-		config.configPath !== undefined &&
-		compatibilityDate === undefined
-	) {
+	if (config?.configPath && compatibilityDate === undefined) {
 		logger.warn(
 			`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${workerdDate}.\n` +
 				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${workerdDate}", or\n` +
