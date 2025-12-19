@@ -957,8 +957,10 @@ test("operations permit empty key", async () => {
 	expect(await objectBody?.text()).toBe("empty");
 
 	const { objects } = await r2.list();
-	expect(objects.length).toBe(1);
-	expect(objects[0].key).toBe("");
+	// Filter by empty key since other tests may have objects in the shared bucket
+	const emptyKeyObjects = objects.filter((o) => o.key === "");
+	expect(emptyKeyObjects.length).toBe(1);
+	expect(emptyKeyObjects[0].key).toBe("");
 
 	await r2.delete("");
 	expect(await r2.head("")).toBe(null);

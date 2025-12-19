@@ -11,9 +11,7 @@ test("Request: clone: returns correctly typed value", async () => {
 	const clone1 = request.clone();
 	const clone2 = clone1.clone(); // Test cloning a clone
 
-	// noinspection SuspiciousTypeOfGuard
 	expect(clone1).toBeInstanceOf(Request);
-	// noinspection SuspiciousTypeOfGuard
 	expect(clone2).toBeInstanceOf(Request);
 	expect(request.method).toBe("POST");
 	expect(clone1.method).toBe("POST");

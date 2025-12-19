@@ -124,6 +124,7 @@ test("source maps workers", async () => {
 			},
 			{
 				name: "i",
+				routes: ["*/i"],
 				// Generated with `esbuild --sourcemap=inline --sources-content=false worker.ts`
 				script: `"use strict";
 addEventListener("fetch", (event) => {
@@ -257,6 +258,9 @@ addEventListener("fetch", (event) => {
 	]);
 
 	// Check does nothing with URL source mapping URLs
+	// Dispatch to worker i first to ensure it's activated/parsed
+	const iRes = await mf.dispatchFetch("http://localhost/i");
+	expect(await iRes.text()).toBe("body");
 	const sourceMapURL = await getSourceMapURL(inspectorBaseURL, "core:user:i");
 	expect(sourceMapURL).toMatch(/^data:application\/json;base64/);
 });
@@ -266,9 +270,38 @@ function getSourceMapURL(
 	serviceName: string
 ): Promise<string> {
 	let sourceMapURL: string | undefined;
+	let settled = false;
 	const promise = new DeferredPromise<string>();
 	const inspectorURL = new URL(`/${serviceName}`, inspectorBaseURL);
 	const ws = new NodeWebSocket(inspectorURL);
+
+	const finish = (error?: Error) => {
+		if (settled) return;
+		settled = true;
+		clearTimeout(timeout);
+		if (error) {
+			promise.reject(error);
+		} else if (sourceMapURL !== undefined) {
+			promise.resolve(sourceMapURL);
+		} else {
+			promise.reject(new Error("Expected `sourceMapURL` but WebSocket closed"));
+		}
+		try {
+			ws.close();
+		} catch {
+			// Ignore close errors
+		}
+	};
+
+	// Add timeout to prevent hanging forever
+	const timeout = setTimeout(() => {
+		finish(
+			new Error(
+				`Timed out waiting for sourceMapURL from inspector for ${serviceName}`
+			)
+		);
+	}, 10_000);
+
 	ws.on("message", async (raw) => {
 		try {
 			const message = JSON.parse(raw.toString("utf8"));
@@ -282,18 +315,20 @@ function getSourceMapURL(
 					params.sourceMapURL,
 					!params.url.startsWith("script-") ? params.url : undefined
 				).toString();
-				ws.close();
+				finish();
 			}
 		} catch (e) {
-			promise.reject(e);
+			finish(e instanceof Error ? e : new Error(String(e)));
 		}
 	});
 	ws.on("open", () => {
 		ws.send(JSON.stringify({ id: 0, method: "Debugger.enable", params: {} }));
 	});
 	ws.on("close", () => {
-		assert(sourceMapURL !== undefined, "Expected `sourceMapURL`");
-		promise.resolve(sourceMapURL);
+		finish();
+	});
+	ws.on("error", (err) => {
+		finish(err instanceof Error ? err : new Error(String(err)));
 	});
 	return promise;
 }
