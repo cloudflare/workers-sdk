@@ -70,8 +70,9 @@ export default {
 };
 `;
 
-// we need to run browser rendering tests in a serial manner to avoid a race condition installing the browser
-describe.sequential("browser rendering", () => {
+// We need to run browser rendering tests in a serial manner to avoid a race condition installing the browser.
+// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser.
+describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 	// The CLI spinner outputs to stdout, so we mute it during tests
 	beforeEach(() => {
 		vi.spyOn(process.stdout, "write").mockImplementation(() => true);
@@ -81,8 +82,6 @@ describe.sequential("browser rendering", () => {
 	});
 
 	test("it creates a browser session", async () => {
-		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
-		// Vitest handles timeouts via test options
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -120,8 +119,6 @@ export default {
 `;
 
 	test("it closes a browser session", async () => {
-		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
-		// Vitest handles timeouts via test options
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -165,8 +162,6 @@ export default {
 `;
 
 	test("it reuses a browser session", async () => {
-		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
-		// Vitest handles timeouts via test options
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -207,12 +202,9 @@ export default {
 };
 `;
 
-	const isWindows = process.platform === "win32";
-	(isWindows ? test.skip : test)(
+	test.skipIf(process.platform === "win32")(
 		"fails if browser session already in use",
 		async () => {
-			// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
-			// Vitest handles timeouts via test options
 			const opts: MiniflareOptions = {
 				name: "worker",
 				compatibilityDate: "2024-11-20",
@@ -258,8 +250,6 @@ export default {
 `;
 
 	test("gets sessions while acquiring and closing session", async () => {
-		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
-		// Vitest handles timeouts via test options
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -308,8 +298,6 @@ export default {
 `;
 
 	test("gets sessions while connecting and disconnecting session", async () => {
-		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
-		// Vitest handles timeouts via test options
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
