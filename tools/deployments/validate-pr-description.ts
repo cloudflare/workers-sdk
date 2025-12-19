@@ -75,17 +75,5 @@ export function validateDescription(
 		);
 	}
 
-	if (
-		!(
-			/- \[x\] Wrangler PR: https:\/\/github\.com\/cloudflare\/workers-sdk\/(pull)\/\d+/i.test(
-				body
-			) || /- \[x\] Not necessary because: .+/i.test(body)
-		)
-	) {
-		errors.push(
-			"Your PR must include a v3 back-port (in the form of a link to a workers-sdk PR), or provide justification for why this is not required. A PR should automatically be opened up for you if this is required - this is only needed for patch changes to Wrangler (excluding experimental features labelled as `patch`)."
-		);
-	}
-
 	return errors;
 }

@@ -210,6 +210,9 @@ export interface StartDevWorkerInput {
 
 		/** Options for the container engine */
 		containerEngine?: ContainerEngine;
+
+		/** Re-generate your worker types when your Wrangler configuration file changes */
+		generateTypes?: boolean;
 	};
 	legacy?: {
 		site?: Hook<Config["site"], [Config]>;

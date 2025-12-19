@@ -43,6 +43,7 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 						upstream_protocol: "https",
 						host: "127.0.0.0",
 						enable_containers: true,
+						generate_types: false,
 					},
 					send_metrics: true,
 
@@ -145,6 +146,7 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 						upstream_protocol: "https",
 						host: "127.0.0.0",
 						enable_containers: true,
+						generate_types: false,
 					},
 					send_metrics: true,
 
@@ -247,6 +249,7 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 						upstream_protocol: "https",
 						host: "127.0.0.0",
 						enable_containers: true,
+						generate_types: false,
 					},
 					send_metrics: true,
 
@@ -366,6 +369,7 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 						upstream_protocol: "https",
 						host: "127.0.0.0",
 						enable_containers: true,
+						generate_types: false,
 					},
 					send_metrics: true,
 
@@ -476,6 +480,7 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 						upstream_protocol: "https",
 						host: "127.0.0.0",
 						enable_containers: true,
+						generate_types: false,
 					},
 					send_metrics: true,
 
@@ -586,6 +591,7 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 						upstream_protocol: "https",
 						host: "127.0.0.0",
 						enable_containers: true,
+						generate_types: false,
 					},
 					send_metrics: true,
 
@@ -694,6 +700,7 @@ describe("normalizeAndValidateConfig() - Pages configuration", () => {
 						upstream_protocol: "https",
 						host: "127.0.0.0",
 						enable_containers: true,
+						generate_types: false,
 					},
 					send_metrics: true,
 
@@ -842,6 +849,7 @@ function generateRawConfigForPages(
 			local_protocol: "https",
 			upstream_protocol: "https",
 			host: "127.0.0.0",
+			generate_types: false,
 		},
 		send_metrics: true,
 

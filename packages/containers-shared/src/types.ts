@@ -2,7 +2,7 @@ import type {
 	ApplicationAffinityColocation,
 	InstanceType,
 	SchedulingPolicy,
-	SSHPublicKeyItemV3,
+	UserSSHPublicKey,
 	WranglerSSHConfig,
 } from "./client";
 import type { ApplicationAffinityHardwareGeneration } from "./client/models/ApplicationAffinityHardwareGeneration";
@@ -79,7 +79,8 @@ export type SharedContainerConfig = {
 	rollout_kind: "full_auto" | "full_manual" | "none";
 	rollout_active_grace_period: number;
 	wrangler_ssh?: WranglerSSHConfig;
-	authorized_keys?: Array<SSHPublicKeyItemV3>;
+	authorized_keys?: Array<UserSSHPublicKey>;
+	trusted_user_ca_keys?: Array<UserSSHPublicKey>;
 	constraints: {
 		regions?: string[];
 		cities?: string[];

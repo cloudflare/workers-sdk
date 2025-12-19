@@ -116,7 +116,7 @@ export const logoutCommand = createCommand({
 
 export const whoamiCommand = createCommand({
 	metadata: {
-		description: "🕵️  Retrieve your user information",
+		description: "🕵️ Retrieve your user information",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},

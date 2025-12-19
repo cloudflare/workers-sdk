@@ -5,9 +5,9 @@
 import type { SSHPublicKey } from "./SSHPublicKey";
 
 /**
- * An SSH public key attached to a specific application or account.
+ * SSH public key provided by the user
  */
-export type SSHPublicKeyItemV3 = {
-	name: string;
+export type UserSSHPublicKey = {
+	name?: string;
 	public_key: SSHPublicKey;
 };

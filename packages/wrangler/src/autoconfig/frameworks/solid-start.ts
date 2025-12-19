@@ -1,7 +1,7 @@
 import { updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
+import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import * as recast from "recast";
-import { getDevCompatibilityDate } from "../../utils/compatibility-date";
 import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
 import { usesTypescript } from "../uses-typescript";
 import { Framework } from ".";
@@ -15,7 +15,9 @@ export class SolidStart extends Framework {
 		if (!dryRun) {
 			const filePath = `app.config.${usesTypescript(projectPath) ? "ts" : "js"}`;
 
-			const compatDate = getDevCompatibilityDate(undefined);
+			const { date: compatDate } = getLocalWorkerdCompatibilityDate({
+				projectPath,
+			});
 
 			updateStatus(`Updating configuration in ${blue(filePath)}`);
 

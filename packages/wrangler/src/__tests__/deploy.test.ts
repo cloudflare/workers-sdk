@@ -16004,6 +16004,11 @@ export default{
 		}
 
 		it("should delegate to open-next when run in an open-next project and set OPEN_NEXT_DEPLOY", async () => {
+			vi.spyOn(process, "argv", "get").mockReturnValue([
+				"npx",
+				"wrangler",
+				"deploy",
+			]);
 			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
 				.runCommand;
 
@@ -16015,6 +16020,53 @@ export default{
 			const call = (runCommandSpy as unknown as MockInstance).mock.calls[0];
 			const [command, options] = call;
 			expect(command).toEqual(["npx", "opennextjs-cloudflare", "deploy"]);
+			expect(options).toMatchObject({
+				env: {
+					// Note: we want to ensure that OPEN_NEXT_DEPLOY has been set, this is not strictly necessary but it helps us
+					//       ensure that we can't end up in an infinite wrangler<>open-next invokation loop
+					OPEN_NEXT_DEPLOY: "true",
+				},
+			});
+
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				OpenNext project detected, calling \`opennextjs-cloudflare deploy\`",
+				  "warn": "",
+				}
+			`);
+		});
+
+		it("should delegate to open-next when run in an open-next project and set OPEN_NEXT_DEPLOY and pass the various CLI arguments", async () => {
+			vi.spyOn(process, "argv", "get").mockReturnValue([
+				"npx",
+				"wrangler",
+				"deploy",
+				"--keep-vars",
+			]);
+			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
+				.runCommand;
+
+			await mockOpenNextLikeProject();
+
+			await runWrangler("deploy");
+
+			expect(runCommandSpy).toHaveBeenCalledOnce();
+			const call = (runCommandSpy as unknown as MockInstance).mock.calls[0];
+			const [command, options] = call;
+			expect(command).toEqual([
+				"npx",
+				"opennextjs-cloudflare",
+				"deploy",
+				// `opennextjs-cloudflare deploy` accepts all the same arguments `wrangler deploy` does (since it then forwards them
+				// to wrangler), so we do want to make sure that arguments are indeed forwarded to `opennextjs-cloudflare deploy`
+				"--keep-vars",
+			]);
 			expect(options).toMatchObject({
 				env: {
 					// Note: we want to ensure that OPEN_NEXT_DEPLOY has been set, this is not strictly necessary but it helps us

@@ -123,7 +123,7 @@ async function renameWorkerNamespace(
 
 export const dispatchNamespaceNamespace = createNamespace({
 	metadata: {
-		description: "🏗️  Manage dispatch namespaces",
+		description: "🏗️ Manage dispatch namespaces",
 		owner: "Workers: Deploy and Config",
 		status: "stable",
 	},
