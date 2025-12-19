@@ -3,7 +3,6 @@ import { Miniflare } from "miniflare";
 
 test("hello-world", async (t) => {
 	const mf = new Miniflare({
-		verbose: true,
 		compatibilityDate: "2025-01-01",
 		helloWorld: {
 			BINDING: {

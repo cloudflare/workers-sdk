@@ -12,4 +12,5 @@ export default {
 	environmentVariables: {
 		MINIFLARE_ASSERT_BODIES_CONSUMED: "true",
 	},
+	concurrency: 1,
 };

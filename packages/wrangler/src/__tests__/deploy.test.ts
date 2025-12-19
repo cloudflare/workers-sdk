@@ -31,8 +31,8 @@ import {
 	vi,
 } from "vitest";
 import { getDetailsForAutoConfig } from "../autoconfig/details";
-import { getInstalledPackageVersion } from "../autoconfig/frameworks";
 import { Static } from "../autoconfig/frameworks/static";
+import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packages";
 import { runAutoConfig } from "../autoconfig/run";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
@@ -121,8 +121,8 @@ vi.mock("../package-manager", async (importOriginal) => ({
 
 vi.mock("../autoconfig/details");
 vi.mock("../autoconfig/run");
-
 vi.mock("../autoconfig/frameworks");
+vi.mock("../autoconfig/frameworks/utils/packages");
 vi.mock("../autoconfig/c3-vendor/command");
 
 describe("deploy", () => {
@@ -15953,6 +15953,14 @@ export default{
 				"./.open-next/worker.js",
 				"export default { fetch() { return new Response(''); } };"
 			);
+			fs.writeFileSync("./next.config.js", "export default {};");
+			fs.writeFileSync(
+				"./open-next.config.ts",
+				dedent`
+					import { defineCloudflareConfig } from "@opennextjs/cloudflare";
+					export default defineCloudflareConfig();
+				`
+			);
 
 			await mockAUSRequest([]);
 
@@ -15996,6 +16004,11 @@ export default{
 		}
 
 		it("should delegate to open-next when run in an open-next project and set OPEN_NEXT_DEPLOY", async () => {
+			vi.spyOn(process, "argv", "get").mockReturnValue([
+				"npx",
+				"wrangler",
+				"deploy",
+			]);
 			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
 				.runCommand;
 
@@ -16029,6 +16042,53 @@ export default{
 			`);
 		});
 
+		it("should delegate to open-next when run in an open-next project and set OPEN_NEXT_DEPLOY and pass the various CLI arguments", async () => {
+			vi.spyOn(process, "argv", "get").mockReturnValue([
+				"npx",
+				"wrangler",
+				"deploy",
+				"--keep-vars",
+			]);
+			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
+				.runCommand;
+
+			await mockOpenNextLikeProject();
+
+			await runWrangler("deploy");
+
+			expect(runCommandSpy).toHaveBeenCalledOnce();
+			const call = (runCommandSpy as unknown as MockInstance).mock.calls[0];
+			const [command, options] = call;
+			expect(command).toEqual([
+				"npx",
+				"opennextjs-cloudflare",
+				"deploy",
+				// `opennextjs-cloudflare deploy` accepts all the same arguments `wrangler deploy` does (since it then forwards them
+				// to wrangler), so we do want to make sure that arguments are indeed forwarded to `opennextjs-cloudflare deploy`
+				"--keep-vars",
+			]);
+			expect(options).toMatchObject({
+				env: {
+					// Note: we want to ensure that OPEN_NEXT_DEPLOY has been set, this is not strictly necessary but it helps us
+					//       ensure that we can't end up in an infinite wrangler<>open-next invokation loop
+					OPEN_NEXT_DEPLOY: "true",
+				},
+			});
+
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				OpenNext project detected, calling \`opennextjs-cloudflare deploy\`",
+				  "warn": "",
+				}
+			`);
+		});
+
 		it("should not delegate to open-next deploy when run in an open-next project and OPEN_NEXT_DEPLOY is set", async () => {
 			vi.stubEnv("OPEN_NEXT_DEPLOY", "1");
 
@@ -16036,6 +16096,70 @@ export default{
 				.runCommand;
 
 			await mockOpenNextLikeProject();
+
+			await runWrangler("deploy");
+
+			expect(runCommandSpy).not.toHaveBeenCalledOnce();
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding            Resource
+				env.ASSETS         Assets
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not delegate to open-next deploy when the Next.js config file is missing (to avoid false positives)", async () => {
+			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
+				.runCommand;
+
+			await mockOpenNextLikeProject();
+
+			// Let's delete the next.config.js file
+			fs.rmSync("./next.config.js");
+
+			await runWrangler("deploy");
+
+			expect(runCommandSpy).not.toHaveBeenCalledOnce();
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding            Resource
+				env.ASSETS         Assets
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not delegate to open-next deploy when the open-next config file is missing (to avoid false positives)", async () => {
+			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
+				.runCommand;
+
+			await mockOpenNextLikeProject();
+
+			// Let's delete the open-next.config.ts file
+			fs.rmSync("./open-next.config.ts");
 
 			await runWrangler("deploy");
 

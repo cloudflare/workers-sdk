@@ -1,5 +1,20 @@
 # create-cloudflare
 
+## 2.61.0
+
+### Minor Changes
+
+- [#11684](https://github.com/cloudflare/workers-sdk/pull/11684) [`f1f036c`](https://github.com/cloudflare/workers-sdk/commit/f1f036cf2191c1b043495e195c9cc4ac7be98529) Thanks [@ascorbic](https://github.com/ascorbic)! - Add `--variant` CLI argument to select framework variants non-interactively. This allows users to skip the variant selection prompt when creating React projects by specifying the variant directly, for example: `npm create cloudflare my-app -- --framework=react --platform=workers --variant=react-ts`.
+
+### Patch Changes
+
+- [#11662](https://github.com/cloudflare/workers-sdk/pull/11662) [`1be6bfe`](https://github.com/cloudflare/workers-sdk/commit/1be6bfea48b8ab7bc0860dc77e929e0019a937ac) Thanks [@pombosilva](https://github.com/pombosilva)! - Generate Workflow name based on worker name in hello-world-workflows template.
+
+  Previously, the hello-world-workflows template defaulted to the workflow name
+  `workflows-hello-world`. This caused deployments to overwrite existing workflows when
+  users forgot to change the name, since workflow names must be unique. The workflow
+  name is now generated from the worker name.
+
 ## 2.60.0
 
 ### Minor Changes

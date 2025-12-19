@@ -223,6 +223,7 @@ export async function unstable_dev(
 		dockerPath,
 		containerEngine: options?.experimental?.containerEngine,
 		experimentalTailLogs: true,
+		types: false,
 	};
 
 	//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time
