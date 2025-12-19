@@ -17,18 +17,16 @@ import { patchAndRunWithHandlerContext } from "./patch-ctx";
  * execution pipeline. Can be called from any I/O context, and will ensure the
  * request is run from within the `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__`.
  */
-function importModule(specifier: string): Promise<Record<string, unknown>> {
-	return runInRunnerObject((instance) => {
-		if (!instance.executor) {
-			const message =
-				"Expected Vitest to start running before importing modules.\n" +
-				"This usually means you have multiple `vitest` versions installed.\n" +
-				"Use your package manager's `why` command to list versions and why each is installed (e.g. `npm why vitest`).";
-			throw new Error(message);
-		}
-
-		// @ts-expect-error the type for the Module runner is not exposed
-		return instance.executor.import(specifier);
+async function importModule(
+	specifier: string
+): Promise<Record<string, unknown>> {
+	/**
+	 * We need to run this import inside the Runner Object, or we get errors like:
+	 *  - The Workers runtime canceled this request because it detected that your Worker's code had hung and would never generate a response. Refer to: https://developers.cloudflare.com/workers/observability/errors/
+	 *  - Cannot perform I/O on behalf of a different Durable Object. I/O objects (such as streams, request/response bodies, and others) created in the context of one Durable Object cannot be accessed from a different Durable Object in the same isolate. This is a limitation of Cloudflare Workers which allows us to improve overall performance.
+	 */
+	return runInRunnerObject(() => {
+		return __vitest_mocker__.moduleRunner.import(specifier);
 	});
 }
 

@@ -174,12 +174,6 @@ function applyDefines() {
 
 // `__VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__` is a singleton
 export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject {
-	#getExecutor: (() => unknown) | undefined;
-
-	get executor() {
-		return this.#getExecutor?.();
-	}
-
 	constructor(_state: DurableObjectState, doEnv: Cloudflare.Env) {
 		super(_state, doEnv);
 		vm._setUnsafeEval(doEnv.__VITEST_POOL_WORKERS_UNSAFE_EVAL);
@@ -206,34 +200,6 @@ export class __VITEST_POOL_WORKERS_RUNNER_DURABLE_OBJECT__ extends DurableObject
 		);
 
 		poolSocket.accept();
-
-		// Internally, `runBaseTests()` calls `startModuleRunner()`, which
-		// constructs a singleton `VitestModuleRunner`. We'd like access to this singleton
-		// so we can transform and import code with Vite ourselves (e.g. for user worker's default exports
-		// and Durable Objects). Vitest exposes a `startVitestModuleRunner()`
-		// function that we can use to get a new instance of the module runner,
-		// but we need the _exact_ instance Vitest is using to run tests so
-		// that e.g. instanceof checks on DurableObjects during a test run works
-		// as expected.
-		// Now, we can't just call startModuleRunner _ourselves_ at this point.
-		// Since `runBaseTests()` hasn't run yet, we'd end up constructing the
-		// singleton rather than getting an existing instance (and well, we don't know which arguments to pass!)
-		// Instead, store the `startModuleRunner()` function and call it when it's
-		// actually needed (see `get executor()` above). At that point the singleton
-		// is guaranteed to exist, since we're within the context of a test. As such, at _that_
-		// point calling `startModuleRunner()` will return the existing singleton.
-		// TODO: Replace with `this.#getExecutor = startModuleRunner;` once https://github.com/vitest-dev/vitest/pull/9234 lands
-		const { VitestModuleRunner } = await import(
-			// @ts-expect-error the types don't seem to be working for this module
-			"vitest/internal/module-runner"
-		);
-		const originalResolveUrl = VitestModuleRunner.prototype.import;
-		// eslint-disable-next-line @typescript-eslint/no-this-alias
-		const that = this;
-		VitestModuleRunner.prototype.import = function (...args: unknown[]) {
-			that.#getExecutor = () => this;
-			return originalResolveUrl.apply(this, args);
-		};
 
 		init({
 			post: (response) => {

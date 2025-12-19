@@ -287,6 +287,10 @@ async function buildProjectWorkerOptions(
 	// `module.exports` directly, rather than `{ default: module.exports }`.
 	runnerWorker.compatibilityFlags ??= [];
 
+	runnerWorker.compatibilityFlags.push(
+		"no_handle_cross_request_promise_resolution"
+	);
+
 	if (runnerWorker.compatibilityDate === undefined) {
 		// No compatibility date was provided, so infer the latest supported date
 		runnerWorker.compatibilityDate ??= supportedCompatibilityDate;

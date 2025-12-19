@@ -55,6 +55,7 @@ const commonOptions: UserConfig = {
 	],
 	sourcemap: true,
 	outDir: path.join(pkgRoot, "dist"),
+	ignoreWatch: ["dist"],
 };
 export default defineConfig(async () => {
 	const builtinModules = await getBuiltinModules();
