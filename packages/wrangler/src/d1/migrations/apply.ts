@@ -70,7 +70,7 @@ export const d1MigrationsApplyCommand = createCommand({
 	async handler({ database, local, remote, persistTo, preview }, { config }) {
 		if (!config.configPath) {
 			throw new UserError(
-				"No configuration file found. Create a wrangler.toml or wrangler.json file to define your D1 database."
+				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
 			);
 		}
 

@@ -38,7 +38,7 @@ describe("migrate", () => {
 			await expect(
 				runWrangler("d1 migrations create DATABASE test-migration")
 			).rejects.toThrowError(
-				"No configuration file found. Create a wrangler.toml or wrangler.json file to define your D1 database."
+				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
 			);
 		});
 	});
@@ -83,7 +83,7 @@ describe("migrate", () => {
 			await expect(
 				runWrangler("d1 migrations apply DATABASE")
 			).rejects.toThrowError(
-				"No configuration file found. Create a wrangler.toml or wrangler.json file to define your D1 database."
+				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
 			);
 		});
 
@@ -232,7 +232,7 @@ Your database may not be available to serve requests during the migration, conti
 			await expect(
 				runWrangler("d1 migrations list DATABASE")
 			).rejects.toThrowError(
-				"No configuration file found. Create a wrangler.toml or wrangler.json file to define your D1 database."
+				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
 			);
 		});
 
