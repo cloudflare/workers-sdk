@@ -102,6 +102,7 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 
 - Always use the PR template from `.github/pull_request_template.md`
 - PR title format: `[package name] description` (e.g. `[wrangler] Fix bug in dev command`)
+- If the change doesn't require a changeset, add the `no-changeset-required` label
 
 ## Key Locations
 
