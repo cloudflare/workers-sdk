@@ -1,4 +1,5 @@
 import path from "node:path";
+import TOML from "smol-toml";
 import { describe, expect, it, test, vi } from "vitest";
 import { normalizeAndValidateConfig } from "../../../src/config/validation";
 import { normalizeString } from "../../../src/test-helpers";
@@ -5468,12 +5469,11 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		it("should error on Date values in vars (parsed by TOML)", () => {
-			const rawConfig = {
-				vars: {
-					VALID_VAR: "some string",
-					DATE_VAR: new Date("2024-01-01"),
-				},
-			} as unknown as RawConfig;
+			const rawConfig = TOML.parse(`
+				[vars]
+				VALID_VAR = "some string"
+				DATE_VAR = 2024-01-01
+			`) as unknown as RawConfig;
 
 			const { diagnostics } = normalizeAndValidateConfig(
 				rawConfig,
@@ -5490,16 +5490,11 @@ describe("normalizeAndValidateConfig()", () => {
 		});
 
 		it("should error on Date values in env vars (parsed by TOML)", () => {
-			const rawConfig = {
-				env: {
-					production: {
-						vars: {
-							VALID_VAR: "some string",
-							RELEASE_DATE: new Date("2025-06-15"),
-						},
-					},
-				},
-			} as unknown as RawConfig;
+			const rawConfig = TOML.parse(`
+				[env.production.vars]
+				VALID_VAR = "some string"
+				RELEASE_DATE = 2025-06-15
+			`) as unknown as RawConfig;
 
 			const { diagnostics } = normalizeAndValidateConfig(
 				rawConfig,
