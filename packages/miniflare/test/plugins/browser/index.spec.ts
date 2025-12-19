@@ -1,6 +1,6 @@
 import { Miniflare, MiniflareOptions } from "miniflare";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { flaky, useDispose } from "../../test-shared";
+import { useDispose } from "../../test-shared";
 import type { WebSocket } from "undici";
 
 async function sendMessage(ws: WebSocket, message: any) {
@@ -74,24 +74,21 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 		vi.restoreAllMocks();
 	});
 
-	test(
-		"it creates a browser session",
-		flaky(async () => {
-			const opts: MiniflareOptions = {
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: BROWSER_WORKER_SCRIPT(),
-				browserRendering: { binding: "MYBROWSER" },
-			};
-			const mf = new Miniflare(opts);
-			useDispose(mf);
+	test("it creates a browser session", { retry: 3 }, async () => {
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: BROWSER_WORKER_SCRIPT(),
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		useDispose(mf);
 
-			const res = await mf.dispatchFetch("https://localhost/session");
-			const text = await res.text();
-			expect(text.includes("sessionId")).toBe(true);
-		})
-	);
+		const res = await mf.dispatchFetch("https://localhost/session");
+		const text = await res.text();
+		expect(text.includes("sessionId")).toBe(true);
+	});
 
 	const BROWSER_WORKER_CLOSE_SCRIPT = `
 ${sendMessage.toString()}
@@ -114,23 +111,20 @@ export default {
 };
 `;
 
-	test(
-		"it closes a browser session",
-		flaky(async () => {
-			const opts: MiniflareOptions = {
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: BROWSER_WORKER_CLOSE_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
-			};
-			const mf = new Miniflare(opts);
-			useDispose(mf);
+	test("it closes a browser session", { retry: 3 }, async () => {
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: BROWSER_WORKER_CLOSE_SCRIPT,
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		useDispose(mf);
 
-			const res = await mf.dispatchFetch("https://localhost/close");
-			expect(await res.text()).toBe("Browser closed");
-		})
-	);
+		const res = await mf.dispatchFetch("https://localhost/close");
+		expect(await res.text()).toBe("Browser closed");
+	});
 
 	const BROWSER_WORKER_REUSE_SCRIPT = `
 ${sendMessage.toString()}
@@ -160,23 +154,20 @@ export default {
 };
 `;
 
-	test(
-		"it reuses a browser session",
-		flaky(async () => {
-			const opts: MiniflareOptions = {
-				name: "worker",
-				compatibilityDate: "2024-11-20",
-				modules: true,
-				script: BROWSER_WORKER_REUSE_SCRIPT,
-				browserRendering: { binding: "MYBROWSER" },
-			};
-			const mf = new Miniflare(opts);
-			useDispose(mf);
+	test("it reuses a browser session", { retry: 3 }, async () => {
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: BROWSER_WORKER_REUSE_SCRIPT,
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		useDispose(mf);
 
-			const res = await mf.dispatchFetch("https://localhost");
-			expect(await res.text()).toBe("Browser session reused");
-		})
-	);
+		const res = await mf.dispatchFetch("https://localhost");
+		expect(await res.text()).toBe("Browser session reused");
+	});
 
 	const BROWSER_WORKER_ALREADY_USED_SCRIPT = `
 export default {
@@ -253,7 +244,8 @@ export default {
 
 	test(
 		"gets sessions while acquiring and closing session",
-		flaky(async () => {
+		{ retry: 3 },
+		async () => {
 			const opts: MiniflareOptions = {
 				name: "worker",
 				compatibilityDate: "2024-11-20",
@@ -276,7 +268,7 @@ export default {
 					!acquiredSessions[0].connectionId
 			).toBe(true);
 			expect(afterClosedSessions.length).toBe(0);
-		})
+		}
 	);
 
 	const GET_SESSIONS_AFTER_DISCONNECT_SCRIPT = `
@@ -304,7 +296,8 @@ export default {
 
 	test(
 		"gets sessions while connecting and disconnecting session",
-		flaky(async () => {
+		{ retry: 3 },
+		async () => {
 			const opts: MiniflareOptions = {
 				name: "worker",
 				compatibilityDate: "2024-11-20",
@@ -327,6 +320,6 @@ export default {
 				!disconnectedSession.connectionId &&
 					!disconnectedSession.connectionStartTime
 			).toBe(true);
-		})
+		}
 	);
 });

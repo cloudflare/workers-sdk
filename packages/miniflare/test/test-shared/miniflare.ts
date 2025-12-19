@@ -177,7 +177,7 @@ export function miniflareTest<Env, Context extends MiniflareTestContext>(
 		context.url = await context.mf.ready;
 	});
 
-	afterAll(() => context.mf.dispose());
+	afterAll(() => disposeWithRetry(context.mf));
 
 	return context;
 }
