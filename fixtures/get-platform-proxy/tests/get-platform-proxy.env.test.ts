@@ -47,6 +47,7 @@ describe("getPlatformProxy - env", () => {
 		vi.spyOn(console, "log").mockImplementation(() => {});
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		warn.mockReset();
 	});
 
 	describe("var bindings", () => {

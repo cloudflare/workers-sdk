@@ -4,11 +4,9 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
 	test: {
 		testTimeout: 90_000,
-		poolOptions: {
-			threads: {
-				singleThread: true,
-			},
-		},
+		pool: "threads",
+		maxWorkers: 1,
+		isolate: false,
 		include: [process.env.WRANGLER_E2E_TEST_FILE || "e2e/**/*.test.ts"],
 		outputFile: process.env.TEST_REPORT_PATH ?? ".e2e-test-report/index.html",
 		globalSetup: path.resolve(__dirname, "./validate-environment.ts"),

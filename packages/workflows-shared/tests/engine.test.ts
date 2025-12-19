@@ -1,8 +1,5 @@
-import {
-	createExecutionContext,
-	env,
-	runInDurableObject,
-} from "cloudflare:test";
+import { createExecutionContext, runInDurableObject } from "cloudflare:test";
+import { env } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 import { describe, expect, it, vi } from "vitest";
 import { InstanceEvent, InstanceStatus } from "../src";
@@ -13,7 +10,6 @@ import type {
 	Engine,
 	EngineLogs,
 } from "../src/engine";
-import type { ProvidedEnv } from "cloudflare:test";
 import type { WorkflowEvent, WorkflowStep } from "cloudflare:workers";
 
 async function setWorkflowEntrypoint(
@@ -28,7 +24,7 @@ async function setWorkflowEntrypoint(
 				// eslint-disable-next-line @typescript-eslint/no-shadow
 				protected ctx: ExecutionContext,
 				// eslint-disable-next-line @typescript-eslint/no-shadow
-				protected env: ProvidedEnv
+				protected env: Cloudflare.Env
 			) {}
 			public async run(
 				event: Readonly<WorkflowEvent<unknown>>,
@@ -188,14 +184,17 @@ describe("Engine", () => {
 			// supposed to error out
 		}
 
-		await engineStub.receiveEvent({
+		// Get a new stub since we've just aborted the durable object
+		const newStub = env.ENGINE.get(env.ENGINE.idFromName("MOCK-INSTANCE-ID"));
+
+		await newStub.receiveEvent({
 			type: "event-type-1",
 			timestamp: new Date(),
 			payload: {},
 		});
 
 		await vi.waitUntil(async () => {
-			const logs = (await engineStub.readLogs()) as EngineLogs;
+			const logs = (await newStub.readLogs()) as EngineLogs;
 			return logs.logs.filter(
 				(val) => val.event == InstanceEvent.WORKFLOW_SUCCESS
 			);

@@ -1,6 +1,5 @@
-declare module "cloudflare:test" {
-	// Controls the type of `import("cloudflare:test").env`
-	interface ProvidedEnv {
+declare namespace Cloudflare {
+	interface Env {
 		WORKER: Fetcher;
 	}
 }
