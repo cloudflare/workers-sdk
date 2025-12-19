@@ -5,6 +5,10 @@ on:
     branches:
       - v3-maintenance
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   release:
     if: ${{ github.repository_owner == 'cloudflare' }}
@@ -47,7 +51,6 @@ jobs:
           title: "v3 Maintenance Release"
         env:
           GITHUB_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PUBLISH_TOKEN }}
           ALGOLIA_APP_ID: ${{ secrets.ALGOLIA_APP_ID }}
           ALGOLIA_PUBLIC_KEY: ${{ secrets.ALGOLIA_PUBLIC_KEY }}
           SENTRY_DSN: "https://9edbb8417b284aa2bbead9b4c318918b@sentry10.cfdata.org/583"
