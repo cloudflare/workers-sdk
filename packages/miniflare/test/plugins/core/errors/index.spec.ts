@@ -258,19 +258,31 @@ addEventListener("fetch", (event) => {
 	]);
 
 	// Check does nothing with URL source mapping URLs
-	// Dispatch to worker i first to ensure it's activated/parsed
-	const iRes = await mf.dispatchFetch("http://localhost/i");
-	expect(await iRes.text()).toBe("body");
-	const sourceMapURL = await getSourceMapURL(inspectorBaseURL, "core:user:i");
-	expect(sourceMapURL).toMatch(/^data:application\/json;base64/);
+	// Skip this assertion on Node < 24 because the inspector doesn't populate
+	// params.sourceMapURL for inline data URL source maps on those versions
+	const nodeMajor = parseInt(process.versions.node.split(".")[0], 10);
+	if (nodeMajor >= 24) {
+		// Connect to inspector FIRST, then dispatch to worker i to ensure we catch the scriptParsed event
+		const sourceMapURL = await getSourceMapURL(
+			inspectorBaseURL,
+			"core:user:i",
+			async () => {
+				const iRes = await mf.dispatchFetch("http://localhost/i");
+				expect(await iRes.text()).toBe("body");
+			}
+		);
+		expect(sourceMapURL).toMatch(/^data:application\/json;base64/);
+	}
 });
 
 function getSourceMapURL(
 	inspectorBaseURL: URL,
-	serviceName: string
+	serviceName: string,
+	activateWorker?: () => Promise<void>
 ): Promise<string> {
 	let sourceMapURL: string | undefined;
 	let settled = false;
+	let activateWorkerCalled = false;
 	const promise = new DeferredPromise<string>();
 	const inspectorURL = new URL(`/${serviceName}`, inspectorBaseURL);
 	const ws = new NodeWebSocket(inspectorURL);
@@ -303,8 +315,20 @@ function getSourceMapURL(
 	}, 10_000);
 
 	ws.on("message", async (raw) => {
+		if (settled) return;
 		try {
 			const message = JSON.parse(raw.toString("utf8"));
+
+			// Handle Debugger.enable response (id: 0), then activate the worker
+			// This ensures the inspector is listening before the script is parsed
+			if (message.id === 0 && activateWorker && !activateWorkerCalled) {
+				activateWorkerCalled = true;
+				activateWorker().catch((e) => {
+					finish(e instanceof Error ? e : new Error(String(e)));
+				});
+			}
+
+			// Handle scriptParsed event
 			if (message.method === "Debugger.scriptParsed") {
 				const params: Protocol.Debugger.ScriptParsedEvent = message.params;
 				if (params.sourceMapURL === undefined || params.sourceMapURL === "") {
