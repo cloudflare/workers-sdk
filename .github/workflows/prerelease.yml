@@ -8,7 +8,6 @@ on:
       - d1
       - workflows
       - next
-      - v3-maintenance
 
 permissions:
   contents: read
