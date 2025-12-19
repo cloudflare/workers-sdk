@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { isCompatDate } from "@cloudflare/workers-utils";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile, writeJSON } from "helpers/files";
 import {
@@ -200,11 +201,7 @@ async function getCompatibilityDate(
 	tentativeDate: unknown,
 	projectPath: string,
 ): Promise<string> {
-	const validCompatDateRe = /^\d{4}-\d{2}-\d{2}$/m;
-	if (
-		typeof tentativeDate === "string" &&
-		tentativeDate.match(validCompatDateRe)
-	) {
+	if (typeof tentativeDate === "string" && isCompatDate(tentativeDate)) {
 		// Use the tentative date when it is valid.
 		// It may be there for a specific compat reason
 		return tentativeDate;

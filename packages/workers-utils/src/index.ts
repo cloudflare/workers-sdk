@@ -84,5 +84,6 @@ export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 export {
 	getLocalWorkerdCompatibilityDate,
 	formatCompatibilityDate,
+	isCompatDate,
 } from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";

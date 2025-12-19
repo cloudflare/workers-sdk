@@ -80,7 +80,13 @@ function toSafeCompatDateObject({
 	};
 }
 
-function isCompatDate(str: string): str is CompatDate {
+/**
+ * Discern whether a string represents a compatibility date (`YYYY-MM-DD`)
+ *
+ * @param str The target string
+ * @returns true if the string represents a compatibility date, false otherwise
+ */
+export function isCompatDate(str: string): str is CompatDate {
 	return /^\d{4}-\d{2}-\d{2}$/.test(str);
 }
 
