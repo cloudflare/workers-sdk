@@ -20,7 +20,7 @@ type GetCompatDateResult = {
 };
 
 /**
- * Gets compatibility date either of the locally installed workerd package.
+ * Gets the compatibility date of the locally installed workerd package.
  *
  * If the package is not found the fallback date of 2025-09-27 is returned instead.
  *
