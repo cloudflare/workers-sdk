@@ -41,6 +41,31 @@ export type QueryResult = {
 	query?: string;
 };
 
+// Common SQLite Codes
+// See https://www.sqlite.org/rescode.html
+const SQLITE_RESULT_CODES = [
+	"SQLITE_ERROR",
+	"SQLITE_CONSTRAINT",
+	"SQLITE_MISMATCH",
+	"SQLITE_AUTH",
+];
+
+function isSqliteUserError(error: unknown): error is Error {
+	if (!(error instanceof Error)) {
+		return false;
+	}
+
+	const message = error.message.toUpperCase();
+
+	for (const code of SQLITE_RESULT_CODES) {
+		if (message.includes(code)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
 export function Options(yargs: CommonYargsArgv) {
 	return options
 		.Database(yargs)
@@ -305,7 +330,13 @@ async function executeLocally({
 	try {
 		results = await db.batch(queries.map((query) => db.prepare(query)));
 	} catch (e: unknown) {
-		throw (e as { cause?: unknown })?.cause ?? e;
+		const cause = (e as { cause?: unknown })?.cause ?? e;
+
+		if (isSqliteUserError(cause)) {
+			throw new UserError(cause.message);
+		}
+
+		throw cause;
 	} finally {
 		await mf.dispose();
 	}
@@ -596,14 +627,17 @@ function shorten(query: string | undefined, length: number) {
 
 async function checkForSQLiteBinary(filename: string) {
 	const buffer = Buffer.alloc(15);
+	let fd: fs.FileHandle | undefined;
 
 	try {
-		const fd = await fs.open(filename, "r");
+		fd = await fs.open(filename, "r");
 		await fd.read(buffer, 0, 15);
 	} catch (e) {
 		throw new UserError(
 			`Unable to read SQL text file "${filename}". Please check the file path and try again.`
 		);
+	} finally {
+		await fd?.close();
 	}
 
 	if (buffer.toString("utf8") === "SQLite format 3") {
