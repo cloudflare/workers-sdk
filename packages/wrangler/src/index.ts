@@ -494,17 +494,13 @@ export function createCLIParser(argv: string[]) {
 	const registry = new CommandRegistry(registerCommand);
 
 	// Helper to show help with command categories
-	const showHelpWithCategories = async () => {
-		// If no categories are defined, use standard help
+	const showHelpWithCategories = async (): Promise<void> => {
 		if (registry.orderedCategories.size === 0) {
 			wrangler.showHelp("log");
 			return;
 		}
 
-		// Get help output as a string
 		const helpOutput = await wrangler.getHelp();
-
-		// Split help into sections
 		const lines = helpOutput.split("\n");
 		const commandsHeaderIndex = lines.findIndex((line: string) =>
 			line.includes("COMMANDS")
@@ -513,21 +509,20 @@ export function createCLIParser(argv: string[]) {
 			line.includes("GLOBAL FLAGS")
 		);
 
+		// Fallback to standard help if we can't parse
 		if (commandsHeaderIndex === -1 || globalFlagsIndex === -1) {
-			// Fallback to standard help if we can't parse
 			logger.log(helpOutput);
 			return;
 		}
 
-		// Extract command lines (between COMMANDS header and GLOBAL FLAGS)
+		// Extract command lines (between `COMMANDS` header and `GLOBAL FLAGS`)
 		const beforeCommands = lines.slice(0, commandsHeaderIndex + 1);
 		const commandLines = lines.slice(commandsHeaderIndex + 1, globalFlagsIndex);
 		const afterCommands = lines.slice(globalFlagsIndex);
 
 		// Separate regular commands from categorized commands
-		const regularCommandLines: string[] = [];
-		const categoryCommandLines = new Map<string, string[]>();
-
+		const regularCommandLines = new Array<string>();
+		const categoryCommandLines = new Map<string, Array<string>>();
 		for (const line of commandLines) {
 			// Extract command name from line (e.g., "  wrangler r2  " -> "r2")
 			const match = line.match(/^\s*wrangler\s+(\S+)/);
@@ -567,18 +562,18 @@ export function createCLIParser(argv: string[]) {
 			lastNonEmptyIndex + 1
 		);
 
-		// Build output with categories
-		const output: string[] = [...beforeCommands, ...trimmedRegularCommandLines];
-
-		// Add category sections in the order specified by `getCategories()`
+		const outputLines = [
+			...beforeCommands,
+			...trimmedRegularCommandLines,
+		] satisfies Array<string>;
 		for (const [category] of registry.orderedCategories.entries()) {
 			const cmdLines = categoryCommandLines.get(category);
 			if (!cmdLines || cmdLines.length <= 0) {
 				continue;
 			}
 
-			output.push(""); // Empty line before category
-			output.push(chalk.bold(category.toUpperCase()));
+			outputLines.push(""); // Empty line before category
+			outputLines.push(chalk.bold(category.toUpperCase()));
 
 			// Sort command lines alphabetically by command name
 			const sortedCmdLines = Array.from(cmdLines).sort((a, b) => {
@@ -588,17 +583,17 @@ export function createCLIParser(argv: string[]) {
 				const cmdB = matchB ? matchB[1] : "";
 				return cmdA.localeCompare(cmdB);
 			});
-			output.push(...sortedCmdLines);
+			outputLines.push(...sortedCmdLines);
 		}
 
-		// Ensure empty line before GLOBAL FLAGS if we added categories
+		// Ensure empty line before `GLOBAL FLAGS` if we added categories
 		if (categoryCommandLines.size > 0) {
-			output.push("");
+			outputLines.push("");
 		}
 
-		output.push(...afterCommands);
+		outputLines.push(...afterCommands);
 
-		logger.log(output.join("\n"));
+		logger.log(outputLines.join("\n"));
 	};
 
 	wrangler.command(
