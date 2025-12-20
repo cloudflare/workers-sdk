@@ -1855,11 +1855,9 @@ test("Miniflare: getBindings() returns all bindings", async () => {
 	// Check bindings poisoned after dispose
 	await mf.dispose();
 	disposed = true;
-	const _expectations: ThrowsExpectation<Error> = {
-		message:
-			"Attempted to use poisoned stub. Stubs to runtime objects must be re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`.",
-	};
-	expect(() => bindings.KV.get("key")).toThrow();
+	expect(() => bindings.KV.get("key")).toThrow(
+		"Attempted to use poisoned stub. Stubs to runtime objects must be re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`."
+	);
 });
 test("Miniflare: getBindings() returns wrapped bindings", async () => {
 	const mf = new Miniflare({
