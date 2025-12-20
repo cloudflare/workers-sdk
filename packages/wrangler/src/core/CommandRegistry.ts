@@ -200,7 +200,7 @@ export class CommandRegistry {
 
 		if (isCommandDefinition(definition)) {
 			this.#upsertDefinition({ type: "command", command, ...definition });
-			// Cast is safe here because createCommand returns the CommandDefinition at runtime
+			// Cast is safe here because `createCommand` returns the CommandDefinition at runtime
 			this.#trackCategory(
 				command,
 				(definition as unknown as CommandDefinition).metadata.category
@@ -214,7 +214,7 @@ export class CommandRegistry {
 	/**
 	 * Tracks the category for a top-level command if specified.
 	 */
-	#trackCategory(command: Command, category: string | undefined) {
+	#trackCategory(command: Command, category: MetadataCategory | undefined) {
 		const segments = command.split(" ").slice(1);
 		// Only track categories for top-level commands (e.g., "wrangler r2", not "wrangler r2 bucket")
 		if (segments.length !== 1) {
