@@ -9,6 +9,7 @@ import type { CreateCommandResult } from "./create-command";
 import type {
 	AliasDefinition,
 	Command,
+	CommandDefinition,
 	DefinitionTree,
 	DefinitionTreeNode,
 	InternalDefinition,
@@ -18,6 +19,12 @@ import type {
 } from "./types";
 
 const BETA_CMD_COLOR = "#BD5B08";
+
+/**
+ * Map of category names to the top-level command segments that belong to them.
+ * Used for grouping commands in the help output.
+ */
+export type CategoryMap = Map<string, string[]>;
 
 /**
  * Class responsible for registering and managing commands within a command registry.
@@ -44,6 +51,12 @@ export class CommandRegistry {
 	#tree: DefinitionTree;
 
 	/**
+	 * Map of category names to command segments.
+	 * Used for grouping commands in the help output.
+	 */
+	#categories: CategoryMap;
+
+	/**
 	 * Initializes the command registry with the given command registration function.
 	 */
 	constructor(registerCommand: RegisterCommand) {
@@ -51,6 +64,7 @@ export class CommandRegistry {
 		this.#registeredNamespaces = new Set<string>();
 		this.#registerCommand = registerCommand;
 		this.#tree = this.#DefinitionTreeRoot.subtree;
+		this.#categories = new Map();
 	}
 
 	/**
@@ -110,6 +124,14 @@ export class CommandRegistry {
 	}
 
 	/**
+	 * Returns the map of categories to command segments.
+	 * Used for grouping commands in the help output.
+	 */
+	getCategories(): CategoryMap {
+		return this.#categories;
+	}
+
+	/**
 	 * Defines a single command and its corresponding definition.
 	 */
 	#defineOne({
@@ -128,8 +150,36 @@ export class CommandRegistry {
 
 		if (isCommandDefinition(definition)) {
 			this.#upsertDefinition({ type: "command", command, ...definition });
+			// Cast is safe here because createCommand returns the CommandDefinition at runtime
+			this.#trackCategory(
+				command,
+				(definition as unknown as CommandDefinition).metadata.category
+			);
 		} else if (isNamespaceDefinition(definition)) {
 			this.#upsertDefinition({ type: "namespace", command, ...definition });
+			this.#trackCategory(command, definition.metadata.category);
+		}
+	}
+
+	/**
+	 * Tracks the category for a top-level command if specified.
+	 */
+	#trackCategory(command: Command, category: string | undefined) {
+		const segments = command.split(" ").slice(1);
+		// Only track categories for top-level commands (e.g., "wrangler r2", not "wrangler r2 bucket")
+		if (segments.length !== 1) {
+			return;
+		}
+
+		if (!category) {
+			return;
+		}
+
+		const segment = segments[0];
+		const existing = this.#categories.get(category) ?? [];
+		if (!existing.includes(segment)) {
+			existing.push(segment);
+			this.#categories.set(category, existing);
 		}
 	}
 

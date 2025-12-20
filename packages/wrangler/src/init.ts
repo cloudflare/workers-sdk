@@ -27,6 +27,7 @@ export const init = createCommand({
 		description: "📥 Initialize a basic Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		category: "Compute & AI",
 	},
 	args: {
 		name: {

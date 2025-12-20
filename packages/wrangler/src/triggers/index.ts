@@ -11,6 +11,7 @@ export const triggersNamespace = createNamespace({
 		description: "🎯 Updates the triggers of your current deployment",
 		status: "experimental",
 		owner: "Workers: Authoring and Testing",
+		category: "Compute & AI",
 	},
 });
 export const triggersDeployCommand = createCommand({
