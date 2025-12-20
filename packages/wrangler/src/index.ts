@@ -495,10 +495,8 @@ export function createCLIParser(argv: string[]) {
 
 	// Helper to show help with command categories
 	const showHelpWithCategories = async () => {
-		const categories = registry.getCategories();
-
 		// If no categories are defined, use standard help
-		if (categories.size === 0) {
+		if (registry.orderedCategories.size === 0) {
 			wrangler.showHelp("log");
 			return;
 		}
@@ -537,7 +535,10 @@ export function createCLIParser(argv: string[]) {
 				const cmdName = match[1];
 				let foundCategory: string | undefined;
 
-				for (const [category, commands] of categories.entries()) {
+				for (const [
+					category,
+					commands,
+				] of registry.orderedCategories.entries()) {
 					if (commands.includes(cmdName)) {
 						foundCategory = category;
 						break;
@@ -560,11 +561,25 @@ export function createCLIParser(argv: string[]) {
 		// Build output with categories
 		const output: string[] = [...beforeCommands, ...regularCommandLines];
 
-		// Add category sections
-		for (const [category, cmdLines] of categoryCommandLines.entries()) {
+		// Add category sections in the order specified by `getCategories()`
+		for (const [category] of registry.orderedCategories.entries()) {
+			const cmdLines = categoryCommandLines.get(category);
+			if (!cmdLines || cmdLines.length <= 0) {
+				continue;
+			}
+
 			output.push(""); // Empty line before category
 			output.push(chalk.bold(category.toUpperCase()));
-			output.push(...cmdLines);
+
+			// Sort command lines alphabetically by command name
+			const sortedCmdLines = Array.from(cmdLines).sort((a, b) => {
+				const matchA = a.match(/^\s*wrangler\s+(\S+)/);
+				const matchB = b.match(/^\s*wrangler\s+(\S+)/);
+				const cmdA = matchA ? matchA[1] : "";
+				const cmdB = matchB ? matchB[1] : "";
+				return cmdA.localeCompare(cmdB);
+			});
+			output.push(...sortedCmdLines);
 		}
 
 		// Ensure empty line before GLOBAL FLAGS if we added categories
@@ -1705,6 +1720,9 @@ export function createCLIParser(argv: string[]) {
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
+
+	registry.registerLegacyCommandCategory("containers", "Compute & AI");
+	registry.registerLegacyCommandCategory("pubsub", "Compute & AI");
 
 	registry.registerAll();
 

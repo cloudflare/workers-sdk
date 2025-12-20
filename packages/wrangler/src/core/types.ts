@@ -48,7 +48,7 @@ export type DeepFlatten<T> = T extends object
 	? { [K in keyof T]: DeepFlatten<T[K]> }
 	: T;
 
-type MetadataCategory =
+export type MetadataCategory =
 	| "Account"
 	| "Compute & AI"
 	| "Storage & databases"

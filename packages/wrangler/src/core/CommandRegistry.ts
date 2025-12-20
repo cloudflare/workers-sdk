@@ -14,6 +14,7 @@ import type {
 	DefinitionTreeNode,
 	InternalDefinition,
 	Metadata,
+	MetadataCategory,
 	NamedArgDefinitions,
 	NamespaceDefinition,
 } from "./types";
@@ -24,7 +25,18 @@ const BETA_CMD_COLOR = "#BD5B08";
  * Map of category names to the top-level command segments that belong to them.
  * Used for grouping commands in the help output.
  */
-export type CategoryMap = Map<string, string[]>;
+export type CategoryMap = Map<string, Array<string>>;
+
+/**
+ * The default order for categories in the help output.
+ * Categories not in this list will appear after these in alphabetical order.
+ */
+const COMMAND_CATEGORY_ORDER = [
+	"Account",
+	"Compute & AI",
+	"Storage & databases",
+	"Networking & security",
+] satisfies Array<MetadataCategory>;
 
 /**
  * Class responsible for registering and managing commands within a command registry.
@@ -64,7 +76,7 @@ export class CommandRegistry {
 		this.#registeredNamespaces = new Set<string>();
 		this.#registerCommand = registerCommand;
 		this.#tree = this.#DefinitionTreeRoot.subtree;
-		this.#categories = new Map();
+		this.#categories = new Map<string, Array<string>>();
 	}
 
 	/**
@@ -124,11 +136,49 @@ export class CommandRegistry {
 	}
 
 	/**
-	 * Returns the map of categories to command segments.
+	 * Returns the map of categories to command segments, ordered according to
+	 * the category order. Commands within each category are sorted alphabetically.
 	 * Used for grouping commands in the help output.
 	 */
-	getCategories(): CategoryMap {
-		return this.#categories;
+	get orderedCategories(): CategoryMap {
+		const orderedCategories: CategoryMap = new Map<string, Array<string>>();
+		for (const category of COMMAND_CATEGORY_ORDER) {
+			if (!this.#categories.has(category)) {
+				continue;
+			}
+
+			const commands = this.#categories.get(category) ?? [];
+			orderedCategories.set(category, [...commands].sort());
+		}
+
+		const remainingCategories = Array.from(this.#categories.keys())
+			.filter(
+				(cat) => !COMMAND_CATEGORY_ORDER.includes(cat as MetadataCategory)
+			)
+			.sort();
+		for (const category of remainingCategories) {
+			const commands = this.#categories.get(category) ?? [];
+			orderedCategories.set(category, [...commands].sort());
+		}
+
+		return orderedCategories;
+	}
+
+	/**
+	 * Registers a category for a legacy command that doesn't use the CommandRegistry.
+	 * This is used for commands like `containers`, `pubsub`, etc, that use the old yargs pattern.
+	 */
+	registerLegacyCommandCategory(
+		command: string,
+		category: MetadataCategory
+	): void {
+		const existing = this.#categories.get(category) ?? [];
+		if (existing.includes(command)) {
+			return;
+		}
+
+		existing.push(command);
+		this.#categories.set(category, existing);
 	}
 
 	/**
