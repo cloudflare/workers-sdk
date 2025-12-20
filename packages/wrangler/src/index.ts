@@ -558,8 +558,17 @@ export function createCLIParser(argv: string[]) {
 			}
 		}
 
+		// Remove trailing empty lines from regular commands section
+		const lastNonEmptyIndex = regularCommandLines.findLastIndex(
+			(line) => line.trim() !== ""
+		);
+		const trimmedRegularCommandLines = regularCommandLines.slice(
+			0,
+			lastNonEmptyIndex + 1
+		);
+
 		// Build output with categories
-		const output: string[] = [...beforeCommands, ...regularCommandLines];
+		const output: string[] = [...beforeCommands, ...trimmedRegularCommandLines];
 
 		// Add category sections in the order specified by `getCategories()`
 		for (const [category] of registry.orderedCategories.entries()) {

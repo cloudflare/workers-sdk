@@ -38,9 +38,6 @@ describe("wrangler", () => {
 				COMMANDS
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
 
-
-
-
 				ACCOUNT
 				  wrangler auth                   🔐 Manage authentication
 				  wrangler login                  🔓 Login to Cloudflare
@@ -111,9 +108,6 @@ describe("wrangler", () => {
 
 				COMMANDS
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
-
-
-
 
 				ACCOUNT
 				  wrangler auth                   🔐 Manage authentication
