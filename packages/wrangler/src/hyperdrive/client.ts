@@ -93,7 +93,8 @@ export type Mtls = {
 	sslmode?: string;
 };
 
-export const Sslmode = ["require", "verify-ca", "verify-full"];
+export const PostgresSslmode = ["require", "verify-ca", "verify-full"];
+export const MySqlSslmode = ["REQUIRED", "VERIFY_CA", "VERIFY_IDENTITY"];
 
 export async function createConfig(
 	config: Config,
