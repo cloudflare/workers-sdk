@@ -5,7 +5,7 @@ import { getBashScript, getFishScript, getZshScript } from "./scripts";
 
 export const completionsNamespace = createNamespace({
 	metadata: {
-		description: "⌨️  Generate shell completion scripts",
+		description: "⌨️ Generate shell completion scripts",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		epilogue: `Installation:
