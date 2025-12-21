@@ -129,7 +129,6 @@ vi.mock("../open-in-browser");
 // Mock the functions involved in getAuthURL so we don't take snapshots of the constantly changing URL.
 vi.mock("../user/generate-auth-url", () => {
 	return {
-		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
 		generateAuthUrl: vi
 			.fn()
 			.mockImplementation(({ authUrl, clientId, callbackUrl, scopes }) => {
@@ -157,7 +156,9 @@ vi.mock("../is-ci", async (importOriginal) => {
 
 vi.mock("../user/generate-random-state", () => {
 	return {
-		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
+		generatePKCERandomState: vi
+			.fn()
+			.mockImplementation(() => "MOCK_STATE_PARAM"),
 	};
 });
 

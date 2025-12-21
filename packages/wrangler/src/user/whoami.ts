@@ -5,7 +5,7 @@ import { isAuthenticationError } from "../deploy/deploy";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
 import { fetchMembershipRoles } from "./membership";
-import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
+import { defaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
 import type { ApiCredentials, Scope } from ".";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
@@ -138,7 +138,7 @@ function printTokenPermissions(user: UserInfo) {
 	logger.log(`Scope (Access)`);
 
 	// This Set contains all the scopes we expect to see (that Wrangler requests by default)
-	const expectedScopes = new Set(DefaultScopeKeys);
+	const expectedScopes = new Set(defaultScopeKeys);
 	for (const [scope, access] of permissions) {
 		// We'll remove scopes from the set of scopes that we expect to see when we see them in the API response
 		expectedScopes.delete(`${scope}:${access}` as Scope);
