@@ -39,6 +39,14 @@ export const D1OptionsSchema = z.object({
 			z.string().array(),
 		])
 		.optional(),
+	d1QueryLimit: z
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.describe(
+			"Maximum number of queries per batch (default: 1000 for paid tier, 50 for free tier)"
+		),
 });
 export const D1SharedOptionsSchema = z.object({
 	d1Persist: PersistenceSchema,
@@ -171,6 +179,10 @@ export const D1_PLUGIN: Plugin<
 						{
 							name: SharedBindings.MAYBE_SERVICE_LOOPBACK,
 							service: { name: SERVICE_LOOPBACK },
+						},
+						{
+							name: "D1_QUERY_LIMIT",
+							text: String(options.d1QueryLimit ?? 1000),
 						},
 						...getMiniflareObjectBindings(unsafeStickyBlobs),
 					],
