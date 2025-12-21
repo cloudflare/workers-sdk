@@ -1,7 +1,15 @@
 /* eslint-disable turbo/no-undeclared-env-vars */
 if (require.main === module) {
 	const status = [];
+
 	if (process.env.PUBLISH_STATUS === "failure") {
+		if (process.env.HAS_CHANGESETS === "true") {
+			console.log(
+				"Version PR creation failed. Please retry the job if needed."
+			);
+			process.exit(1);
+		}
+
 		status.push({
 			label: "NPM publish",
 			details: "Packages failed to publish",
