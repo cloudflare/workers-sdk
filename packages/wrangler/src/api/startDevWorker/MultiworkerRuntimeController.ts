@@ -224,6 +224,24 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 					return;
 				}
 
+				// Warn about scheduled workers not being automatically triggered
+				const hasCrons = data.config.triggers?.some(
+					(trigger) => trigger.type === "cron"
+				);
+				if (hasCrons && !data.config.dev?.testScheduled) {
+					const host =
+						userWorkerUrl.hostname === "0.0.0.0" ||
+						userWorkerUrl.hostname === "[::]"
+							? "localhost"
+							: userWorkerUrl.hostname;
+					logger.once.warn(
+						`Scheduled Workers are not automatically triggered during local development.\n` +
+							`To manually trigger a scheduled event, run:\n` +
+							`  curl "http://${host}:${userWorkerUrl.port}/cdn-cgi/handler/scheduled"\n` +
+							`For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally`
+					);
+				}
+
 				this.emitReloadCompleteEvent({
 					type: "reloadComplete",
 					config: data.config,
