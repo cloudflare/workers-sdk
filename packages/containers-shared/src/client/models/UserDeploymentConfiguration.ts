@@ -18,7 +18,7 @@ import type { Observability } from "./Observability";
 import type { Port } from "./Port";
 import type { ProvisionerConfiguration } from "./ProvisionerConfiguration";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
-import type { SSHPublicKeyItemV3 } from "./SSHPublicKeyItemV3";
+import type { UserSSHPublicKey } from "./UserSSHPublicKey";
 import type { WranglerSSHConfig } from "./WranglerSSHConfig";
 
 /**
@@ -27,7 +27,8 @@ import type { WranglerSSHConfig } from "./WranglerSSHConfig";
 export type UserDeploymentConfiguration = {
 	image: Image;
 	wrangler_ssh?: WranglerSSHConfig;
-	authorized_keys?: Array<SSHPublicKeyItemV3>;
+	authorized_keys?: Array<UserSSHPublicKey>;
+	trusted_user_ca_keys?: Array<UserSSHPublicKey>;
 	/**
 	 * A list of SSH public key IDs from the account
 	 */

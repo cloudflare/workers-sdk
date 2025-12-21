@@ -24,6 +24,8 @@ import type { SharedContext } from "./context";
 import type { PluginConfig } from "./plugin-config";
 import type * as vite from "vite";
 
+export { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
+
 export type { PluginConfig } from "./plugin-config";
 export type { WorkerConfig } from "./workers-configs";
 

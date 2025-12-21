@@ -1,11 +1,13 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { FatalError } from "@cloudflare/workers-utils";
+import {
+	FatalError,
+	getLocalWorkerdCompatibilityDate,
+} from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
-import { getDevCompatibilityDate } from "../utils/compatibility-date";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
@@ -80,10 +82,14 @@ export async function runAutoConfig(
 		);
 	}
 
+	const { date: compatibilityDate } = getLocalWorkerdCompatibilityDate({
+		projectPath: autoConfigDetails.projectPath,
+	});
+
 	const wranglerConfig: RawConfig = {
 		$schema: "node_modules/wrangler/config-schema.json",
 		name: autoConfigDetails.workerName,
-		compatibility_date: getDevCompatibilityDate(undefined),
+		compatibility_date: compatibilityDate,
 		observability: {
 			enabled: true,
 		},

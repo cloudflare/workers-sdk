@@ -69,7 +69,6 @@ export { assertNever } from "./assert-never";
 
 export * from "./constants";
 
-export { formatCompatibilityDate } from "./format-compatibility-date";
 export { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 export { constructWranglerConfig } from "./construct-wrangler-config";
 
@@ -81,3 +80,10 @@ export {
 export * from "./environment-variables/misc-variables";
 
 export { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
+
+export {
+	getLocalWorkerdCompatibilityDate,
+	formatCompatibilityDate,
+	isCompatDate,
+} from "./compatibility-date";
+export type { CompatDate } from "./compatibility-date";
