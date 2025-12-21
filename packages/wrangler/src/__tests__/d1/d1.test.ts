@@ -15,7 +15,7 @@ describe("d1", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler d1
 
-			🗄 Manage Workers D1 databases
+			🗄️ Manage Workers D1 databases
 
 			COMMANDS
 			  wrangler d1 create <name>       Creates a new D1 database, and provides the binding and UUID that you will put in your config file
@@ -52,7 +52,7 @@ describe("d1", () => {
 			"
 			wrangler d1
 
-			🗄 Manage Workers D1 databases
+			🗄️ Manage Workers D1 databases
 
 			COMMANDS
 			  wrangler d1 create <name>       Creates a new D1 database, and provides the binding and UUID that you will put in your config file
