@@ -14,7 +14,7 @@ import {
 } from "miniflare";
 import { beforeEach, expect, onTestFinished, test } from "vitest";
 import {
-	expectThrowsAsync,
+	errorLike,
 	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
@@ -1321,37 +1321,32 @@ test("completeMultipartUpload", async () => {
 	const upload9 = await r2.createMultipartUpload("key");
 	part1 = await upload9.uploadPart(1, "value");
 	await upload9.complete([part1]);
-	await expectThrowsAsync(
-		() => upload9.complete([part1]),
-		doesNotExistExpectations("completeMultipartUpload")
+	await expect(upload9.complete([part1])).rejects.toThrow(
+		errorLike(doesNotExistExpectations("completeMultipartUpload"))
 	);
 
 	// Check cannot complete aborted upload
 	const upload10 = await r2.createMultipartUpload("key");
 	part1 = await upload10.uploadPart(1, "value");
 	await upload10.abort();
-	await expectThrowsAsync(
-		() => upload10.complete([part1]),
-		doesNotExistExpectations("completeMultipartUpload")
+	await expect(upload10.complete([part1])).rejects.toThrow(
+		errorLike(doesNotExistExpectations("completeMultipartUpload"))
 	);
 
 	// Check validates key and uploadId
 	const upload11 = await r2.createMultipartUpload("key");
 	// Note this is internalErrorExpectations, not doesNotExistExpectations
 	let nonExistentUpload = r2.resumeMultipartUpload("key", "bad");
-	await expectThrowsAsync(
-		() => nonExistentUpload.complete([]),
-		internalErrorExpectations("completeMultipartUpload")
+	await expect(nonExistentUpload.complete([])).rejects.toThrow(
+		errorLike(internalErrorExpectations("completeMultipartUpload"))
 	);
 	nonExistentUpload = r2.resumeMultipartUpload("badkey", upload11.uploadId);
-	await expectThrowsAsync(
-		() => nonExistentUpload.complete([]),
-		internalErrorExpectations("completeMultipartUpload")
+	await expect(nonExistentUpload.complete([])).rejects.toThrow(
+		errorLike(internalErrorExpectations("completeMultipartUpload"))
 	);
 	nonExistentUpload = r2.resumeMultipartUpload("x".repeat(1025), "bad");
-	await expectThrowsAsync(
-		() => nonExistentUpload.complete([]),
-		objectNameNotValidExpectations("completeMultipartUpload")
+	await expect(nonExistentUpload.complete([])).rejects.toThrow(
+		errorLike(objectNameNotValidExpectations("completeMultipartUpload"))
 	);
 
 	// Check requires all but last part to have same size

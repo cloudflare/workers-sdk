@@ -47,8 +47,7 @@ import {
 	WebSocketServer,
 } from "ws";
 import {
-	expectThrows,
-	expectThrowsAsync,
+	errorLike,
 	FIXTURES_PATH,
 	TestLog,
 	ThrowsExpectation,
@@ -67,25 +66,28 @@ const ADD_WASM_MODULE = Buffer.from(
 
 test("Miniflare: validates options", async () => {
 	// Check empty workers array rejected
-	expectThrows(() => new Miniflare({ workers: [] }), {
-		instanceOf: MiniflareCoreError,
-		code: "ERR_NO_WORKERS",
-		message: "No workers defined",
-	});
+	expect(() => new Miniflare({ workers: [] })).toThrow(
+		errorLike({
+			instanceOf: MiniflareCoreError,
+			code: "ERR_NO_WORKERS",
+			message: "No workers defined",
+		})
+	);
 
 	// Check workers with the same name rejected
-	expectThrows(
+	expect(
 		() =>
 			new Miniflare({
 				workers: [{ script: "" }, { script: "" }],
-			}),
-		{
+			})
+	).toThrow(
+		errorLike({
 			instanceOf: MiniflareCoreError,
 			code: "ERR_DUPLICATE_NAME",
 			message: "Multiple workers defined without a `name`",
-		}
+		})
 	);
-	expectThrows(
+	expect(
 		() =>
 			new Miniflare({
 				workers: [
@@ -94,12 +96,13 @@ test("Miniflare: validates options", async () => {
 					{ script: "", name: "b" },
 					{ script: "", name: "a" },
 				],
-			}),
-		{
+			})
+	).toThrow(
+		errorLike({
 			instanceOf: MiniflareCoreError,
 			code: "ERR_DUPLICATE_NAME",
 			message: 'Multiple workers defined with the same `name`: "a"',
-		}
+		})
 	);
 
 	// Disable colours for easier to read expectations
@@ -108,19 +111,23 @@ test("Miniflare: validates options", async () => {
 
 	// Check throws validation error with incorrect options
 	// @ts-expect-error intentionally testing incorrect types
-	expectThrows(() => new Miniflare({ name: 42, script: "" }), {
-		instanceOf: MiniflareCoreError,
-		code: "ERR_VALIDATION",
-		message: /Unexpected options passed to `new Miniflare\(\)` constructor/,
-	});
+	expect(() => new Miniflare({ name: 42, script: "" })).toThrow(
+		errorLike({
+			instanceOf: MiniflareCoreError,
+			code: "ERR_VALIDATION",
+			message: /Unexpected options passed to `new Miniflare\(\)` constructor/,
+		})
+	);
 
 	// Check throws validation error with primitive option
 	// @ts-expect-error intentionally testing incorrect types
-	expectThrows(() => new Miniflare("addEventListener(...)"), {
-		instanceOf: MiniflareCoreError,
-		code: "ERR_VALIDATION",
-		message: /Unexpected options passed to `new Miniflare\(\)` constructor/,
-	});
+	expect(() => new Miniflare("addEventListener(...)")).toThrow(
+		errorLike({
+			instanceOf: MiniflareCoreError,
+			code: "ERR_VALIDATION",
+			message: /Unexpected options passed to `new Miniflare\(\)` constructor/,
+		})
+	);
 });
 
 test("Miniflare: ready returns copy of entry URL", async () => {
@@ -1183,19 +1190,19 @@ test("Miniflare: fetch mocking", async () => {
 	expect(await res.text()).toBe("Mocked response!");
 
 	// Check `outboundService`and `fetchMock` mutually exclusive
-	await expectThrowsAsync(
-		() =>
-			mf.setOptions({
-				script: "",
-				fetchMock,
-				outboundService: "",
-			}),
-		{
+	await expect(
+		mf.setOptions({
+			script: "",
+			fetchMock,
+			outboundService: "",
+		})
+	).rejects.toThrow(
+		errorLike({
 			instanceOf: MiniflareCoreError,
 			code: "ERR_MULTIPLE_OUTBOUNDS",
 			message:
 				"Only one of `outboundService` or `fetchMock` may be specified per worker",
-		}
+		})
 	);
 });
 test("Miniflare: custom upstream as origin (with colons)", async () => {
@@ -2238,10 +2245,12 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	expect(Object.keys(bindings)).toEqual(["KV", "QUEUE"]);
 	bindings = await mf.getBindings("b");
 	expect(Object.keys(bindings)).toEqual(["BUCKET"]);
-	await expectThrowsAsync(() => mf.getBindings("c"), {
-		instanceOf: TypeError,
-		message: '"c" worker not found',
-	});
+	await expect(mf.getBindings("c")).rejects.toThrow(
+		errorLike({
+			instanceOf: TypeError,
+			message: '"c" worker not found',
+		})
+	);
 
 	// Check `getWorker()`
 	let fetcher = await mf.getWorker();
@@ -2252,10 +2261,12 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	);
 	fetcher = await mf.getWorker("b");
 	expect(await (await fetcher.fetch("http://localhost")).text()).toBe("b");
-	await expectThrowsAsync(() => mf.getWorker("c"), {
-		instanceOf: TypeError,
-		message: '"c" worker not found',
-	});
+	await expect(mf.getWorker("c")).rejects.toThrow(
+		errorLike({
+			instanceOf: TypeError,
+			message: '"c" worker not found',
+		})
+	);
 
 	const unboundExpectations = (name: string): ThrowsExpectation<TypeError> => ({
 		instanceOf: TypeError,
@@ -2265,41 +2276,36 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	// Check `getD1Database()`
 	let binding: unknown = await mf.getD1Database("DB");
 	expect(binding).toBeDefined();
-	await expectThrowsAsync(
-		() => mf.getD1Database("DB", "c"),
-		unboundExpectations("DB")
+	await expect(mf.getD1Database("DB", "c")).rejects.toThrow(
+		errorLike(unboundExpectations("DB"))
 	);
 
 	// Check `getDurableObjectNamespace()`
 	binding = await mf.getDurableObjectNamespace("DO");
 	expect(binding).toBeDefined();
-	await expectThrowsAsync(
-		() => mf.getDurableObjectNamespace("DO", "c"),
-		unboundExpectations("DO")
+	await expect(mf.getDurableObjectNamespace("DO", "c")).rejects.toThrow(
+		errorLike(unboundExpectations("DO"))
 	);
 
 	// Check `getKVNamespace()`
 	binding = await mf.getKVNamespace("KV", "");
 	expect(binding).toBeDefined();
-	await expectThrowsAsync(
-		() => mf.getKVNamespace("KV", "c"),
-		unboundExpectations("KV")
+	await expect(mf.getKVNamespace("KV", "c")).rejects.toThrow(
+		errorLike(unboundExpectations("KV"))
 	);
 
 	// Check `getQueueProducer()`
 	binding = await mf.getQueueProducer("QUEUE", "");
 	expect(binding).toBeDefined();
-	await expectThrowsAsync(
-		() => mf.getQueueProducer("QUEUE", "c"),
-		unboundExpectations("QUEUE")
+	await expect(mf.getQueueProducer("QUEUE", "c")).rejects.toThrow(
+		errorLike(unboundExpectations("QUEUE"))
 	);
 
 	// Check `getR2Bucket()`
 	binding = await mf.getR2Bucket("BUCKET", "b");
 	expect(binding).toBeDefined();
-	await expectThrowsAsync(
-		() => mf.getR2Bucket("BUCKET", "c"),
-		unboundExpectations("BUCKET")
+	await expect(mf.getR2Bucket("BUCKET", "c")).rejects.toThrow(
+		errorLike(unboundExpectations("BUCKET"))
 	);
 });
 
@@ -2364,18 +2370,24 @@ test("Miniflare: allows direct access to workers", async () => {
 	expect(await res.text()).toBe("d:2");
 
 	// Can can only access configured for direct access
-	await expectThrowsAsync(() => mf.unsafeGetDirectURL("z"), {
-		instanceOf: TypeError,
-		message: '"z" worker not found',
-	});
-	await expectThrowsAsync(() => mf.unsafeGetDirectURL(""), {
-		instanceOf: TypeError,
-		message: 'Direct access disabled in "" worker for default entrypoint',
-	});
-	await expectThrowsAsync(() => mf.unsafeGetDirectURL("d", "three"), {
-		instanceOf: TypeError,
-		message: 'Direct access disabled in "d" worker for "three" entrypoint',
-	});
+	await expect(mf.unsafeGetDirectURL("z")).rejects.toThrow(
+		errorLike({
+			instanceOf: TypeError,
+			message: '"z" worker not found',
+		})
+	);
+	await expect(mf.unsafeGetDirectURL("")).rejects.toThrow(
+		errorLike({
+			instanceOf: TypeError,
+			message: 'Direct access disabled in "" worker for default entrypoint',
+		})
+	);
+	await expect(mf.unsafeGetDirectURL("d", "three")).rejects.toThrow(
+		errorLike({
+			instanceOf: TypeError,
+			message: 'Direct access disabled in "d" worker for "three" entrypoint',
+		})
+	);
 });
 test("Miniflare: allows RPC between multiple instances", async () => {
 	const mf1 = new Miniflare({

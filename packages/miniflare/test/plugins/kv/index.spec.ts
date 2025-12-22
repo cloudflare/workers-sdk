@@ -13,7 +13,7 @@ import {
 import { beforeEach, expect, test } from "vitest";
 import {
 	createJunkStream,
-	expectThrowsAsync,
+	errorLike,
 	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
@@ -90,22 +90,30 @@ async function testValidatesKey(opts: {
 }) {
 	const { kv } = ctx;
 	kv.ns = "";
-	await expectThrowsAsync(() => opts.f(kv, ""), {
-		instanceOf: TypeError,
-		message: "Key name cannot be empty.",
-	});
-	await expectThrowsAsync(() => opts.f(kv, "."), {
-		instanceOf: TypeError,
-		message: '"." is not allowed as a key name.',
-	});
-	await expectThrowsAsync(() => opts.f(kv, ".."), {
-		instanceOf: TypeError,
-		message: '".." is not allowed as a key name.',
-	});
-	await expectThrowsAsync(() => opts.f(kv, "".padStart(513, "x")), {
-		instanceOf: Error,
-		message: `KV ${opts.method.toUpperCase()} failed: 414 UTF-8 encoded length of 513 exceeds key length limit of 512.`,
-	});
+	await expect(opts.f(kv, "")).rejects.toThrow(
+		errorLike({
+			instanceOf: TypeError,
+			message: "Key name cannot be empty.",
+		})
+	);
+	await expect(opts.f(kv, ".")).rejects.toThrow(
+		errorLike({
+			instanceOf: TypeError,
+			message: '"." is not allowed as a key name.',
+		})
+	);
+	await expect(opts.f(kv, "..")).rejects.toThrow(
+		errorLike({
+			instanceOf: TypeError,
+			message: '".." is not allowed as a key name.',
+		})
+	);
+	await expect(opts.f(kv, "".padStart(513, "x"))).rejects.toThrow(
+		errorLike({
+			instanceOf: Error,
+			message: `KV ${opts.method.toUpperCase()} failed: 414 UTF-8 encoded length of 513 exceeds key length limit of 512.`,
+		})
+	);
 }
 
 test("get: validates key", async () => {
