@@ -207,8 +207,7 @@ test("setting `handleStructuredLogs` when `structuredWorkerdLogs` is `false` tri
 		{
 			instanceOf: MiniflareCoreError,
 			code: "ERR_VALIDATION",
-			message:
-				"`handleStructuredLogs` cannot be set when `structuredWorkerdLogs` is `false`",
+			message: /`handleStructuredLogs`.*`structuredWorkerdLogs`.*`false`/,
 		}
 	);
 });

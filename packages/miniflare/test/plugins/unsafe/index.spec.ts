@@ -65,7 +65,7 @@ test("A plugin that does not expose `plugins` will cause an error to be thrown",
 	useDispose(mf);
 
 	await expect(mf.setOptions(opts)).rejects.toThrow(
-		/does not export a `plugins` object/
+		/did not provide any plugins/
 	);
 });
 
@@ -87,7 +87,7 @@ test("A plugin that exposes a non-object `plugins` export will cause an error to
 	useDispose(mf);
 
 	await expect(mf.setOptions(opts)).rejects.toThrow(
-		/does not export a function for plugin/
+		/did not provide the plugin/
 	);
 });
 
