@@ -207,7 +207,7 @@ export class CommandRegistry {
 			);
 		} else if (isNamespaceDefinition(definition)) {
 			this.#upsertDefinition({ type: "namespace", command, ...definition });
-			this.#trackCategory(command, definition.metadata.category);
+			this.#trackCategory(command, definition.metadata?.category);
 		}
 	}
 
