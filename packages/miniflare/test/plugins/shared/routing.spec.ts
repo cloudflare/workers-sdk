@@ -1,21 +1,28 @@
 // noinspection HttpUrlsUsage
 
 import { URL } from "node:url";
-import { matchRoutes, parseRoutes } from "miniflare";
+import { matchRoutes, parseRoutes, RouterError } from "miniflare";
 import { expect, test } from "vitest";
+import { expectThrows } from "../../test-shared";
 
 // See https://developers.cloudflare.com/workers/platform/routes#matching-behavior and
 // https://developers.cloudflare.com/workers/platform/known-issues#route-specificity
 
 test("throws if route contains query string", () => {
-	expect(() => parseRoutes(new Map([["a", ["example.com/?foo=*"]]]))).toThrow(
-		'Route "example.com/?foo=*" for "a" contains a query string. This is not allowed.'
-	);
+	expectThrows(() => parseRoutes(new Map([["a", ["example.com/?foo=*"]]])), {
+		instanceOf: RouterError,
+		code: "ERR_QUERY_STRING",
+		message:
+			'Route "example.com/?foo=*" for "a" contains a query string. This is not allowed.',
+	});
 });
 test("throws if route contains infix wildcards", () => {
-	expect(() => parseRoutes(new Map([["a", ["example.com/*.jpg"]]]))).toThrow(
-		'Route "example.com/*.jpg" for "a" contains an infix wildcard. This is not allowed.'
-	);
+	expectThrows(() => parseRoutes(new Map([["a", ["example.com/*.jpg"]]])), {
+		instanceOf: RouterError,
+		code: "ERR_INFIX_WILDCARD",
+		message:
+			'Route "example.com/*.jpg" for "a" contains an infix wildcard. This is not allowed.',
+	});
 });
 test("routes may begin with http:// or https://", () => {
 	let routes = parseRoutes(new Map([["a", ["example.com/*"]]]));

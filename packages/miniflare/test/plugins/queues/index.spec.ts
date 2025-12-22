@@ -2,12 +2,15 @@ import {
 	DeferredPromise,
 	LogLevel,
 	Miniflare,
+	MiniflareCoreError,
 	QUEUES_PLUGIN_NAME,
 	Response,
 } from "miniflare";
 import { expect, test } from "vitest";
 import { z } from "zod";
 import {
+	expectThrows,
+	expectThrowsAsync,
 	LogEntry,
 	MiniflareDurableObjectControlStub,
 	TestLog,
@@ -49,7 +52,7 @@ test("maxBatchTimeout validation", async () => {
 		script: "",
 	});
 	useDispose(mf);
-	expect(
+	expectThrows(
 		() =>
 			new Miniflare({
 				queueConsumers: {
@@ -57,8 +60,13 @@ test("maxBatchTimeout validation", async () => {
 				},
 				modules: true,
 				script: "",
-			})
-	).toThrow(/Number must be less than or equal to 60/);
+			}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_VALIDATION",
+			message: /Number must be less than or equal to 60/,
+		}
+	);
 });
 
 test("flushes partial and full batches", async () => {
@@ -801,13 +809,17 @@ test("moves to dead letter queue", async () => {
 	]);
 
 	// Check rejects queue as own dead letter queue
-	const promise = mf.setOptions({
-		log,
-		queueConsumers: { bad: { deadLetterQueue: "bad" } },
-		script: "",
-	});
-	await expect(promise).rejects.toThrow(
-		'Dead letter queue for queue "bad" cannot be itself'
+	await expectThrowsAsync(
+		() =>
+			mf.setOptions({
+				log,
+				queueConsumers: { bad: { deadLetterQueue: "bad" } },
+				script: "",
+			}),
+		{
+			instanceOf: TypeError,
+			message: 'Dead letter queue for queue "bad" cannot be itself',
+		}
 	);
 });
 
@@ -964,7 +976,9 @@ test("validates message size", async () => {
 	});
 	useDispose(mf);
 
-	await expect(mf.dispatchFetch("http://localhost")).rejects.toThrow(
-		"Queue send failed: message length of 128001 bytes exceeds limit of 128000"
-	);
+	await expectThrowsAsync(() => mf.dispatchFetch("http://localhost"), {
+		instanceOf: Error,
+		message:
+			"Queue send failed: message length of 128001 bytes exceeds limit of 128000",
+	});
 });

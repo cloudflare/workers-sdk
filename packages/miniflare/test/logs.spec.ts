@@ -1,6 +1,6 @@
-import { Miniflare, WorkerdStructuredLog } from "miniflare";
+import { Miniflare, MiniflareCoreError, WorkerdStructuredLog } from "miniflare";
 import { expect, test } from "vitest";
-import { useDispose } from "./test-shared";
+import { expectThrows, useDispose } from "./test-shared";
 
 test("logs are treated as standard stdout/stderr chunks by default", async () => {
 	const collected = {
@@ -196,15 +196,21 @@ test("setting `handleStructuredLogs` when `structuredWorkerdLogs` is `false` tri
 	const mf = new Miniflare({ modules: true, script: "" });
 	useDispose(mf);
 
-	expect(
+	expectThrows(
 		() =>
 			new Miniflare({
 				modules: true,
 				script: "",
 				structuredWorkerdLogs: false,
 				handleStructuredLogs() {},
-			})
-	).toThrow();
+			}),
+		{
+			instanceOf: MiniflareCoreError,
+			code: "ERR_VALIDATION",
+			message:
+				"`handleStructuredLogs` cannot be set when `structuredWorkerdLogs` is `false`",
+		}
+	);
 });
 
 test("when using `handleStructuredLogs` some known unhelpful logs are filtered out (e.g. CODE_MOVED warnings)", async () => {

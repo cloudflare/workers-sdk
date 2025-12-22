@@ -1,9 +1,15 @@
 import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { Miniflare, stripAnsi } from "miniflare";
+import { Miniflare, MiniflareCoreError, stripAnsi } from "miniflare";
 import { expect, test } from "vitest";
-import { useCwd, useDispose, useTmp, utf8Encode } from "../../test-shared";
+import {
+	expectThrowsAsync,
+	useCwd,
+	useDispose,
+	useTmp,
+	utf8Encode,
+} from "../../test-shared";
 
 const ROOT = path.resolve(__dirname, "../../fixtures/modules");
 
@@ -200,13 +206,15 @@ test("Miniflare: cannot automatically collect modules from dynamic import expres
 		scriptPath,
 	});
 
-	let error: Error | undefined;
+	let error: MiniflareCoreError | undefined;
 	try {
 		await mf.ready;
 	} catch (e) {
-		error = e as Error;
+		error = e as MiniflareCoreError;
 	}
 	assert(error !== undefined);
+	expect(error).toBeInstanceOf(MiniflareCoreError);
+	expect(error.code).toBe("ERR_MODULE_DYNAMIC_SPEC");
 	// Check message includes currently collected modules
 	let referencingPath = path.relative("", scriptPath);
 	expect(stripAnsi(error.message))
@@ -242,9 +250,11 @@ You must manually define your modules when constructing Miniflare:
 	try {
 		await mf.ready;
 	} catch (e) {
-		error = e as Error;
+		error = e as MiniflareCoreError;
 	}
 	assert(error !== undefined);
+	expect(error).toBeInstanceOf(MiniflareCoreError);
+	expect(error.code).toBe("ERR_MODULE_DYNAMIC_SPEC");
 	// Check message includes currently collected modules
 	const depPath = path.join(ROOT, "dynamic-require.cjs");
 	referencingPath = path.relative("", depPath);
@@ -290,9 +300,12 @@ test("Miniflare: suggests bundling on unknown module", async () => {
 		scriptPath: "index.mjs",
 		script: `import { Miniflare } from "miniflare";`,
 	});
-	await expect(mf.ready).rejects.toThrow(
-		/Unable to resolve "index\.mjs" dependency "miniflare": no matching module rules/
-	);
+	await expectThrowsAsync(() => mf.ready, {
+		instanceOf: MiniflareCoreError,
+		code: "ERR_MODULE_RULE",
+		message:
+			/Unable to resolve "index\.mjs" dependency "miniflare": no matching module rules/,
+	});
 
 	// Try with Node built-in module and `nodejs_compat` disabled
 	mf = new Miniflare({
@@ -301,7 +314,10 @@ test("Miniflare: suggests bundling on unknown module", async () => {
 		scriptPath: "index.mjs",
 		script: `import assert from "node:assert";`,
 	});
-	await expect(mf.ready).rejects.toThrow(
-		/Unable to resolve "index\.mjs" dependency "node:assert": no matching module rules/
-	);
+	await expectThrowsAsync(() => mf.ready, {
+		instanceOf: MiniflareCoreError,
+		code: "ERR_MODULE_RULE",
+		message:
+			/Unable to resolve "index\.mjs" dependency "node:assert": no matching module rules/,
+	});
 });

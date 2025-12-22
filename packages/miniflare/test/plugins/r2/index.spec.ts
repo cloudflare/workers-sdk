@@ -1320,25 +1320,38 @@ test("completeMultipartUpload", async () => {
 	const upload9 = await r2.createMultipartUpload("key");
 	part1 = await upload9.uploadPart(1, "value");
 	await upload9.complete([part1]);
-	await expect(upload9.complete([part1])).rejects.toThrow();
+	await expectThrowsAsync(
+		() => upload9.complete([part1]),
+		doesNotExistExpectations("completeMultipartUpload")
+	);
 
 	// Check cannot complete aborted upload
 	const upload10 = await r2.createMultipartUpload("key");
 	part1 = await upload10.uploadPart(1, "value");
 	await upload10.abort();
-	await expect(upload10.complete([part1])).rejects.toThrow();
+	await expectThrowsAsync(
+		() => upload10.complete([part1]),
+		doesNotExistExpectations("completeMultipartUpload")
+	);
 
 	// Check validates key and uploadId
 	const upload11 = await r2.createMultipartUpload("key");
 	// Note this is internalErrorExpectations, not doesNotExistExpectations
-	void internalErrorExpectations("completeMultipartUpload");
 	let nonExistentUpload = r2.resumeMultipartUpload("key", "bad");
-	await expect(nonExistentUpload.complete([])).rejects.toThrow();
+	await expectThrowsAsync(
+		() => nonExistentUpload.complete([]),
+		internalErrorExpectations("completeMultipartUpload")
+	);
 	nonExistentUpload = r2.resumeMultipartUpload("badkey", upload11.uploadId);
-	await expect(nonExistentUpload.complete([])).rejects.toThrow();
-	void objectNameNotValidExpectations("completeMultipartUpload");
+	await expectThrowsAsync(
+		() => nonExistentUpload.complete([]),
+		internalErrorExpectations("completeMultipartUpload")
+	);
 	nonExistentUpload = r2.resumeMultipartUpload("x".repeat(1025), "bad");
-	await expect(nonExistentUpload.complete([])).rejects.toThrow();
+	await expectThrowsAsync(
+		() => nonExistentUpload.complete([]),
+		objectNameNotValidExpectations("completeMultipartUpload")
+	);
 
 	// Check requires all but last part to have same size
 	const upload13 = await r2.createMultipartUpload("key");

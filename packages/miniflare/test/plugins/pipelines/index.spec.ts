@@ -16,6 +16,7 @@ test("supports declaring pipelines", async () => {
 	});
 	useDispose(mf);
 
-	await mf.dispatchFetch("http://localhost");
-	expect(true).toBeTruthy();
+	// Test that the pipeline send doesn't throw
+	const response = await mf.dispatchFetch("http://localhost");
+	expect(response.status).toBe(204);
 });
