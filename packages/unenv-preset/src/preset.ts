@@ -618,9 +618,9 @@ function getInspectorOverrides({
 		"disable_nodejs_inspector_module"
 	);
 
-	const enabledByFlag = compatibilityFlags.includes(
-		"enable_nodejs_inspector_module"
-	);
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_inspector_module") &&
+		compatibilityFlags.includes("experimental");
 
 	const enabled = enabledByFlag && !disabledByFlag;
 
