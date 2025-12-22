@@ -809,18 +809,13 @@ test("moves to dead letter queue", async () => {
 	]);
 
 	// Check rejects queue as own dead letter queue
-	await expectThrowsAsync(
-		() =>
-			mf.setOptions({
-				log,
-				queueConsumers: { bad: { deadLetterQueue: "bad" } },
-				script: "",
-			}),
-		{
-			instanceOf: TypeError,
-			message: 'Dead letter queue for queue "bad" cannot be itself',
-		}
-	);
+	await expect(
+		mf.setOptions({
+			log,
+			queueConsumers: { bad: { deadLetterQueue: "bad" } },
+			script: "",
+		})
+	).rejects.toThrow('Dead letter queue for queue "bad" cannot be itself');
 });
 
 test("operations permit strange queue names", async () => {

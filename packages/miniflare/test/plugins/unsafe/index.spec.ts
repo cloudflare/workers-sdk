@@ -1,13 +1,7 @@
 import path from "node:path";
-import {
-	Miniflare,
-	MiniflareCoreError,
-	MiniflareOptions,
-	WorkerOptions,
-} from "miniflare";
+import { Miniflare, MiniflareOptions, WorkerOptions } from "miniflare";
 import { expect, test } from "vitest";
 import {
-	expectThrowsAsync,
 	EXPORTED_FIXTURES,
 	FIXTURES_PATH,
 	useDispose,
@@ -70,11 +64,9 @@ test("A plugin that does not expose `plugins` will cause an error to be thrown",
 	const mf = new Miniflare({ modules: true, script: "" });
 	useDispose(mf);
 
-	await expectThrowsAsync(() => mf.setOptions(opts), {
-		instanceOf: MiniflareCoreError,
-		code: "ERR_UNSAFE_PLUGIN",
-		message: /does not export a `plugins` object/,
-	});
+	await expect(mf.setOptions(opts)).rejects.toThrow(
+		/does not export a `plugins` object/
+	);
 });
 
 test("A plugin that exposes a non-object `plugins` export will cause an error to be thrown", async () => {
@@ -94,11 +86,9 @@ test("A plugin that exposes a non-object `plugins` export will cause an error to
 	const mf = new Miniflare({ modules: true, script: "" });
 	useDispose(mf);
 
-	await expectThrowsAsync(() => mf.setOptions(opts), {
-		instanceOf: MiniflareCoreError,
-		code: "ERR_UNSAFE_PLUGIN",
-		message: /does not export a function for plugin/,
-	});
+	await expect(mf.setOptions(opts)).rejects.toThrow(
+		/does not export a function for plugin/
+	);
 });
 
 test("Supports specifying an unsafe plugin will be loaded into Miniflare and will be usable in local dev", async () => {

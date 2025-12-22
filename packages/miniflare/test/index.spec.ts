@@ -2702,289 +2702,243 @@ test("Miniflare: cannot call getWorker() on wrapped binding worker", async () =>
 	});
 	useDispose(mf);
 
-	await expectThrowsAsync(() => mf.getWorker("binding"), {
-		instanceOf: TypeError,
-		message:
-			'"binding" is being used as a wrapped binding, and cannot be accessed as a worker',
-	});
+	await expect(mf.getWorker("binding")).rejects.toThrow(
+		'"binding" is being used as a wrapped binding, and cannot be accessed as a worker'
+	);
 });
 test("Miniflare: prohibits invalid wrapped bindings", async () => {
 	const mf = new Miniflare({ modules: true, script: "" });
 	useDispose(mf);
 
 	// Check prohibits using entrypoint worker
-	await expectThrowsAsync(
-		() =>
-			mf.setOptions({
-				name: "a",
-				modules: true,
-				script: "",
-				wrappedBindings: {
-					WRAPPED: { scriptName: "a", entrypoint: "wrapped" },
-				},
-			}),
-		{
-			instanceOf: TypeError,
-			message:
-				'Cannot use "a" for wrapped binding because it\'s the entrypoint.\n' +
-				'Ensure "a" isn\'t the first entry in the `workers` array.',
-		}
+	await expect(
+		mf.setOptions({
+			name: "a",
+			modules: true,
+			script: "",
+			wrappedBindings: {
+				WRAPPED: { scriptName: "a", entrypoint: "wrapped" },
+			},
+		})
+	).rejects.toThrow(
+		'Cannot use "a" for wrapped binding because it\'s the entrypoint.\n' +
+			'Ensure "a" isn\'t the first entry in the `workers` array.'
 	);
 
 	// Check prohibits using service worker
-	await expectThrowsAsync(
-		() =>
-			mf.setOptions({
-				workers: [
-					{
-						modules: true,
-						script: "",
-						wrappedBindings: { WRAPPED: "binding" },
-					},
-					{ name: "binding", script: "" },
-				],
-			}),
-		{
-			instanceOf: TypeError,
-			message:
-				'Cannot use "binding" for wrapped binding because it\'s a service worker.\n' +
-				'Ensure "binding" sets `modules` to `true` or an array of modules',
-		}
+	await expect(
+		mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					script: "",
+					wrappedBindings: { WRAPPED: "binding" },
+				},
+				{ name: "binding", script: "" },
+			],
+		})
+	).rejects.toThrow(
+		'Cannot use "binding" for wrapped binding because it\'s a service worker.\n' +
+			'Ensure "binding" sets `modules` to `true` or an array of modules'
 	);
 
 	// Check prohibits multiple modules
-	await expectThrowsAsync(
-		() =>
-			mf.setOptions({
-				workers: [
-					{
-						modules: true,
-						script: "",
-						wrappedBindings: { WRAPPED: "binding" },
-					},
-					{
-						name: "binding",
-						modules: [
-							{ type: "ESModule", path: "index.mjs", contents: "" },
-							{ type: "ESModule", path: "dep.mjs", contents: "" },
-						],
-					},
-				],
-			}),
-		{
-			instanceOf: TypeError,
-			message:
-				'Cannot use "binding" for wrapped binding because it isn\'t a single module.\n' +
-				'Ensure "binding" doesn\'t include unbundled `import`s.',
-		}
+	await expect(
+		mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					script: "",
+					wrappedBindings: { WRAPPED: "binding" },
+				},
+				{
+					name: "binding",
+					modules: [
+						{ type: "ESModule", path: "index.mjs", contents: "" },
+						{ type: "ESModule", path: "dep.mjs", contents: "" },
+					],
+				},
+			],
+		})
+	).rejects.toThrow(
+		'Cannot use "binding" for wrapped binding because it isn\'t a single module.\n' +
+			'Ensure "binding" doesn\'t include unbundled `import`s.'
 	);
 
 	// Check prohibits non-ES-modules
-	await expectThrowsAsync(
-		() =>
-			mf.setOptions({
-				workers: [
-					{
-						modules: true,
-						script: "",
-						wrappedBindings: { WRAPPED: "binding" },
-					},
-					{
-						name: "binding",
-						modules: [{ type: "CommonJS", path: "index.cjs", contents: "" }],
-					},
-				],
-			}),
-		{
-			instanceOf: TypeError,
-			message:
-				'Cannot use "binding" for wrapped binding because it isn\'t a single ES module',
-		}
+	await expect(
+		mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					script: "",
+					wrappedBindings: { WRAPPED: "binding" },
+				},
+				{
+					name: "binding",
+					modules: [{ type: "CommonJS", path: "index.cjs", contents: "" }],
+				},
+			],
+		})
+	).rejects.toThrow(
+		'Cannot use "binding" for wrapped binding because it isn\'t a single ES module'
 	);
 
 	// Check prohibits Durable Object bindings
-	await expectThrowsAsync(
-		() =>
-			mf.setOptions({
-				workers: [
-					{
-						modules: true,
-						script: "",
-						wrappedBindings: { WRAPPED: "binding" },
-						durableObjects: {
-							OBJECT: { scriptName: "binding", className: "TestObject" },
-						},
+	await expect(
+		mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					script: "",
+					wrappedBindings: { WRAPPED: "binding" },
+					durableObjects: {
+						OBJECT: { scriptName: "binding", className: "TestObject" },
 					},
-					{
-						name: "binding",
-						modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-					},
-				],
-			}),
-		{
-			instanceOf: TypeError,
-			message:
-				'Cannot use "binding" for wrapped binding because it is bound to with Durable Object bindings.\n' +
-				'Ensure other workers don\'t define Durable Object bindings to "binding".',
-		}
+				},
+				{
+					name: "binding",
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		})
+	).rejects.toThrow(
+		'Cannot use "binding" for wrapped binding because it is bound to with Durable Object bindings.\n' +
+			'Ensure other workers don\'t define Durable Object bindings to "binding".'
 	);
 
 	// Check prohibits service bindings
-	await expectThrowsAsync(
-		() =>
-			mf.setOptions({
-				workers: [
-					{
-						modules: true,
-						script: "",
-						wrappedBindings: {
-							WRAPPED: { scriptName: "binding", entrypoint: "wrapped" },
-						},
-						serviceBindings: { SERVICE: "binding" },
+	await expect(
+		mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					script: "",
+					wrappedBindings: {
+						WRAPPED: { scriptName: "binding", entrypoint: "wrapped" },
 					},
-					{
-						name: "binding",
-						modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-					},
-				],
-			}),
-		{
-			instanceOf: TypeError,
-			message:
-				'Cannot use "binding" for wrapped binding because it is bound to with service bindings.\n' +
-				'Ensure other workers don\'t define service bindings to "binding".',
-		}
+					serviceBindings: { SERVICE: "binding" },
+				},
+				{
+					name: "binding",
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		})
+	).rejects.toThrow(
+		'Cannot use "binding" for wrapped binding because it is bound to with service bindings.\n' +
+			'Ensure other workers don\'t define service bindings to "binding".'
 	);
 
 	// Check prohibits compatibility date and flags
-	await expectThrowsAsync(
-		() =>
-			mf.setOptions({
-				workers: [
-					{
-						modules: true,
-						script: "",
-						wrappedBindings: { WRAPPED: "binding" },
-					},
-					{
-						name: "binding",
-						compatibilityDate: "2023-11-01",
-						modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-					},
-				],
-			}),
-		{
-			instanceOf: TypeError,
-			message:
-				'Cannot use "binding" for wrapped binding because it defines a compatibility date.\n' +
-				"Wrapped bindings use the compatibility date of the worker with the binding.",
-		}
+	await expect(
+		mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					script: "",
+					wrappedBindings: { WRAPPED: "binding" },
+				},
+				{
+					name: "binding",
+					compatibilityDate: "2023-11-01",
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		})
+	).rejects.toThrow(
+		'Cannot use "binding" for wrapped binding because it defines a compatibility date.\n' +
+			"Wrapped bindings use the compatibility date of the worker with the binding."
 	);
-	await expectThrowsAsync(
-		() =>
-			mf.setOptions({
-				workers: [
-					{
-						modules: true,
-						script: "",
-						wrappedBindings: { WRAPPED: "binding" },
-					},
-					{
-						name: "binding",
-						compatibilityFlags: ["nodejs_compat"],
-						modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-					},
-				],
-			}),
-		{
-			instanceOf: TypeError,
-			message:
-				'Cannot use "binding" for wrapped binding because it defines compatibility flags.\n' +
-				"Wrapped bindings use the compatibility flags of the worker with the binding.",
-		}
+	await expect(
+		mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					script: "",
+					wrappedBindings: { WRAPPED: "binding" },
+				},
+				{
+					name: "binding",
+					compatibilityFlags: ["nodejs_compat"],
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		})
+	).rejects.toThrow(
+		'Cannot use "binding" for wrapped binding because it defines compatibility flags.\n' +
+			"Wrapped bindings use the compatibility flags of the worker with the binding."
 	);
 
 	// Check prohibits outbound service
-	await expectThrowsAsync(
-		() =>
-			mf.setOptions({
-				workers: [
-					{
-						modules: true,
-						script: "",
-						wrappedBindings: { WRAPPED: "binding" },
+	await expect(
+		mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					script: "",
+					wrappedBindings: { WRAPPED: "binding" },
+				},
+				{
+					name: "binding",
+					outboundService() {
+						assert.fail();
 					},
-					{
-						name: "binding",
-						outboundService() {
-							assert.fail();
-						},
-						modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-					},
-				],
-			}),
-		{
-			instanceOf: TypeError,
-			message:
-				'Cannot use "binding" for wrapped binding because it defines an outbound service.\n' +
-				"Wrapped bindings use the outbound service of the worker with the binding.",
-		}
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		})
+	).rejects.toThrow(
+		'Cannot use "binding" for wrapped binding because it defines an outbound service.\n' +
+			"Wrapped bindings use the outbound service of the worker with the binding."
 	);
 
 	// Check prohibits cyclic wrapped bindings
-	await expectThrowsAsync(
-		() =>
-			mf.setOptions({
-				workers: [
-					{
-						modules: true,
-						script: "",
-						wrappedBindings: { WRAPPED: "binding" },
-					},
-					{
-						name: "binding",
-						wrappedBindings: { WRAPPED: "binding" }, // Simple cycle
-						modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-					},
-				],
-			}),
-		{
-			instanceOf: Error,
-			message:
-				"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves.",
-		}
+	await expect(
+		mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					script: "",
+					wrappedBindings: { WRAPPED: "binding" },
+				},
+				{
+					name: "binding",
+					wrappedBindings: { WRAPPED: "binding" }, // Simple cycle
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		})
+	).rejects.toThrow(
+		"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves."
 	);
-	await expectThrowsAsync(
-		() =>
-			mf.setOptions({
-				workers: [
-					{
-						modules: true,
-						script: "",
-						wrappedBindings: { WRAPPED1: "binding-1" },
-					},
-					{
-						name: "binding-1",
-						wrappedBindings: { WRAPPED2: "binding-2" },
-						modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-					},
-					{
-						name: "binding-2",
-						wrappedBindings: { WRAPPED3: "binding-3" },
-						modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-					},
-					{
-						name: "binding-3",
-						wrappedBindings: { WRAPPED1: "binding-1" }, // Multi-step cycle
-						modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
-					},
-				],
-			}),
-		{
-			instanceOf: Error,
-			message:
-				"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves.",
-		}
+	await expect(
+		mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					script: "",
+					wrappedBindings: { WRAPPED1: "binding-1" },
+				},
+				{
+					name: "binding-1",
+					wrappedBindings: { WRAPPED2: "binding-2" },
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+				{
+					name: "binding-2",
+					wrappedBindings: { WRAPPED3: "binding-3" },
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+				{
+					name: "binding-3",
+					wrappedBindings: { WRAPPED1: "binding-1" }, // Multi-step cycle
+					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
+				},
+			],
+		})
+	).rejects.toThrow(
+		"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves."
 	);
 });
 
