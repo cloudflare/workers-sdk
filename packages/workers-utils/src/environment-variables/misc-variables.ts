@@ -94,7 +94,7 @@ const getCloudflareComplianceRegionFromEnv = getEnvironmentVariableFactory({
  * to tell Wrangler to run in FedRAMP High compliance region mode, rather than "public" mode.
  */
 export const getCloudflareComplianceRegion = (
-	complianceConfig?: ComplianceConfig
+	complianceConfig: ComplianceConfig
 ) => {
 	const complianceRegionFromEnv = getCloudflareComplianceRegionFromEnv();
 	if (

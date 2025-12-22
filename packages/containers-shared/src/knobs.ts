@@ -1,4 +1,3 @@
-import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
 import { MF_DEV_CONTAINER_PREFIX } from "./registry";
 
 // Will return the default cloudflare managed registry for the environment being used.
@@ -7,8 +6,9 @@ import { MF_DEV_CONTAINER_PREFIX } from "./registry";
 // If nothing is set, it will return the public production registry.
 // Override the default registry by setting the env var CLOUDFLARE_CONTAINER_REGISTRY.
 export const getCloudflareContainerRegistry = () => {
-	// previously defaulted to registry.cloudchamber.cfdata.org
-	const fed = getCloudflareComplianceRegion() === "fedramp_high" ? ".fed" : "";
+	// Check env var directly to avoid circular dependency with workers-utils
+	const fed =
+		process.env.CLOUDFLARE_COMPLIANCE_REGION === "fedramp_high" ? ".fed" : "";
 	const env =
 		process.env.WRANGLER_API_ENVIRONMENT === "staging" ? "staging." : "";
 
