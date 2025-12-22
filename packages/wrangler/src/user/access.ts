@@ -65,6 +65,14 @@ export async function getAccessToken(
 		);
 	}
 	const stringOutput = output.stdout.toString();
+	const stringErrorOutput = output.stderr.toString();
+	// Print cloudflared output so users can see the authentication URL
+	if (stringOutput) {
+		logger.log(stringOutput);
+	}
+	if (stringErrorOutput) {
+		logger.error(stringErrorOutput);
+	}
 	logger.debug("cloudflared output:", stringOutput);
 	const matches = stringOutput.match(/fetched your token:\n\n(.*)/m);
 	if (matches && matches.length >= 2) {
