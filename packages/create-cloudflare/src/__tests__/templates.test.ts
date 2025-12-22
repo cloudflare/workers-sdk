@@ -13,6 +13,7 @@ import {
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import {
 	addWranglerToGitIgnore,
+	defaultSelectVariant,
 	deriveCorrelatedArgs,
 	downloadRemoteTemplate,
 	updatePackageName,
@@ -541,5 +542,77 @@ version = "0.1.0"`;
 			expect.stringContaining("pyproject.toml"),
 			expect.stringContaining(`name = "my-project"`),
 		);
+	});
+});
+
+describe("defaultSelectVariant", () => {
+	beforeEach(() => {
+		vi.resetAllMocks();
+	});
+
+	test("should return the explicitly specified language if provided", async () => {
+		const ctx = {
+			project: { path: "/some/path" },
+			args: { lang: "ts" },
+		} as unknown as C3Context;
+
+		const result = await defaultSelectVariant(ctx);
+
+		expect(result).toBe("ts");
+	});
+
+	test("should return 'js' if explicitly specified", async () => {
+		const ctx = {
+			project: { path: "/some/path" },
+			args: { lang: "js" },
+		} as unknown as C3Context;
+
+		const result = await defaultSelectVariant(ctx);
+
+		expect(result).toBe("js");
+	});
+
+	test("should return 'ts' if tsconfig.json exists and no lang specified", async () => {
+		vi.mocked(existsSync).mockImplementation(
+			(path) => path === "/some/path/tsconfig.json",
+		);
+
+		const ctx = {
+			project: { path: "/some/path" },
+			args: {},
+		} as unknown as C3Context;
+
+		const result = await defaultSelectVariant(ctx);
+
+		expect(result).toBe("ts");
+	});
+
+	test("should return 'js' if tsconfig.json does not exist and no lang specified", async () => {
+		vi.mocked(existsSync).mockImplementation(() => false);
+
+		const ctx = {
+			project: { path: "/some/path" },
+			args: {},
+		} as unknown as C3Context;
+
+		const result = await defaultSelectVariant(ctx);
+
+		expect(result).toBe("js");
+	});
+
+	test("should use explicit lang even if tsconfig.json exists", async () => {
+		vi.mocked(existsSync).mockImplementation(
+			(path) => path === "/some/path/tsconfig.json",
+		);
+
+		const ctx = {
+			project: { path: "/some/path" },
+			args: { lang: "js" },
+		} as unknown as C3Context;
+
+		const result = await defaultSelectVariant(ctx);
+
+		// Explicit lang takes precedence over tsconfig.json detection
+		expect(result).toBe("js");
 	});
 });
