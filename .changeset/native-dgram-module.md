@@ -8,7 +8,7 @@ To enable the native dgram module, add the following to your `wrangler.jsonc`:
 
 ```jsonc
 {
-  "compatibility_flags": ["experimental", "enable_nodejs_dgram_module"]
+	"compatibility_flags": ["experimental", "enable_nodejs_dgram_module"],
 }
 ```
 
