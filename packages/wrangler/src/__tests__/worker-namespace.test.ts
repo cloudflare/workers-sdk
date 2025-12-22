@@ -35,7 +35,7 @@ describe("dispatch-namespace", () => {
 			  "info": "",
 			  "out": "wrangler dispatch-namespace
 
-			🏗️  Manage dispatch namespaces
+			🏗️ Manage dispatch namespaces
 
 			COMMANDS
 			  wrangler dispatch-namespace list                        List all dispatch namespaces

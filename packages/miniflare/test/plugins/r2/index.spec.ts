@@ -556,29 +556,29 @@ test("put: can copy values", async (t) => {
 		script: `export default {
       async fetch(request, env, ctx) {
         await env.BUCKET.put("key", "0123456789");
-        
+
         let object = await env.BUCKET.get("key");
         await env.BUCKET.put("key-copy", object.body);
         const copy = await (await env.BUCKET.get("key-copy"))?.text();
-        
+
         object = await env.BUCKET.get("key", { range: { offset: 1, length: 4 } });
         await env.BUCKET.put("key-copy-range-1", object.body);
         const copyRange1 = await (await env.BUCKET.get("key-copy-range-1"))?.text();
-        
+
         object = await env.BUCKET.get("key", { range: { length: 3 } });
         await env.BUCKET.put("key-copy-range-2", object.body);
         const copyRange2 = await (await env.BUCKET.get("key-copy-range-2"))?.text();
-        
+
         object = await env.BUCKET.get("key", { range: { suffix: 5 } });
         await env.BUCKET.put("key-copy-range-3", object.body);
         const copyRange3 = await (await env.BUCKET.get("key-copy-range-3"))?.text();
-        
+
         const range = new Headers();
         range.set("Range", "bytes=0-5");
         object = await env.BUCKET.get("key", { range });
         await env.BUCKET.put("key-copy-range-4", object.body);
         const copyRange4 = await (await env.BUCKET.get("key-copy-range-4"))?.text();
-        
+
         return Response.json({ copy, copyRange1, copyRange2, copyRange3, copyRange4 });
       }
     }`,
@@ -980,7 +980,6 @@ test.serial("operations permit empty key", async (t) => {
 test("operations persist stored data", async (t) => {
 	const tmp = await useTmp(t);
 	const persistOpts: MiniflareOptions = {
-		verbose: true,
 		modules: true,
 		script: "",
 		r2Buckets: { BUCKET: "bucket" },

@@ -75,7 +75,7 @@ export function getExportTypes(module) {
 			continue;
 		}
 
-		let exportType
+		let exportType;
 
 		if (typeof value === "function") {
 			for (const [type, baseClass] of baseClasses) {
@@ -84,6 +84,12 @@ export function getExportTypes(module) {
 					break;
 				}
 			}
+
+			if (!exportType) {
+				exportType = "DurableObject";
+			}
+		} else if (typeof value === "object" && value !== null) {
+			exportType = "WorkerEntrypoint";
 		}
 
 		exportTypes[key] = exportType;

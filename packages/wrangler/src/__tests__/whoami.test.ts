@@ -225,6 +225,42 @@ describe("whoami", () => {
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
 	});
 
+	it("should display a warning when account_id in config does not match authenticated accounts", async () => {
+		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		const { whoami } = await import("../user/whoami");
+		await whoami(
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			"unknownaccountid",
+			"unknownaccountid"
+		);
+		expect(std.out).toContain(
+			"The `account_id` in your Wrangler configuration (unknownaccountid) does not match any of your authenticated accounts."
+		);
+		expect(std.out).toContain("This may be causing the authentication error.");
+	});
+
+	it("should not display a warning when account_id matches an authenticated account", async () => {
+		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		const { whoami } = await import("../user/whoami");
+		await whoami(COMPLIANCE_REGION_CONFIG_UNKNOWN, "account-1", "account-1");
+		expect(std.out).not.toContain(
+			"does not match any of your authenticated accounts"
+		);
+	});
+
+	it("should not display a warning when accountFilter and configAccountId don't match", async () => {
+		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		const { whoami } = await import("../user/whoami");
+		await whoami(
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			"differentaccountid",
+			"unknownaccountid"
+		);
+		expect(std.out).not.toContain(
+			"does not match any of your authenticated accounts"
+		);
+	});
+
 	it("should display membership roles if --account flag is given", async () => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		msw.use(

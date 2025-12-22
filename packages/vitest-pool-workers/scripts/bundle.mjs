@@ -102,6 +102,7 @@ const commonOptions = {
 		"cjs-module-lexer",
 		"devalue",
 		"esbuild",
+		"get-port",
 		"miniflare",
 		"semver",
 		"semver/*",

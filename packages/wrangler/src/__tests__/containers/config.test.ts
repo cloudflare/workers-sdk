@@ -788,6 +788,12 @@ describe("getNormalizedContainerOptions", () => {
 								"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
 						},
 					],
+					trusted_user_ca_keys: [
+						{
+							public_key:
+								"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+						},
+					],
 				},
 			],
 			durable_objects: {

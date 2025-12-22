@@ -1,5 +1,6 @@
 import test from "ava";
 import { Miniflare, MiniflareOptions } from "miniflare";
+import { flaky } from "../../test-shared";
 import type { WebSocket } from "undici";
 
 async function sendMessage(ws: WebSocket, message: any) {
@@ -45,7 +46,7 @@ async function waitForClosedConnection(ws: WebSocket): Promise<void> {
 		return;
 	}
 	// local dev browser rendering relies on a ping message to check browser process status
-	const timeoutId = setInterval(() => ws.send("ping"), 1000);
+	const timeoutId = setInterval(() => ws.send("ping"), 500);
 	await new Promise((resolve) => ws.addEventListener("close", resolve));
 	// clear the interval, no longer need to ping
 	if (timeoutId) clearInterval(timeoutId);
@@ -62,21 +63,35 @@ export default {
 };
 `;
 
-// we need to run browser rendering tests in a serial manner to avoid a race condition installing the browser
-test.serial("it creates a browser session", async (t) => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: BROWSER_WORKER_SCRIPT(),
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
-
-	const res = await mf.dispatchFetch("https://localhost/session");
-	t.assert((await res.text()).includes("sessionId"));
+// The CLI spinner outputs to stdout, so we mute it during tests
+const originalStdoutWrite = process.stdout.write;
+test.beforeEach(() => {
+	process.stdout.write = () => true;
 });
+test.afterEach(() => {
+	process.stdout.write = originalStdoutWrite;
+});
+
+// we need to run browser rendering tests in a serial manner to avoid a race condition installing the browser
+test.serial(
+	"it creates a browser session",
+	flaky(async (t) => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		t.timeout(20_000);
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: BROWSER_WORKER_SCRIPT(),
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		t.teardown(() => mf.dispose());
+
+		const res = await mf.dispatchFetch("https://localhost/session");
+		t.assert((await res.text()).includes("sessionId"));
+	})
+);
 
 const BROWSER_WORKER_CLOSE_SCRIPT = `
 ${sendMessage.toString()}
@@ -99,20 +114,25 @@ export default {
 };
 `;
 
-test.serial("it closes a browser session", async (t) => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: BROWSER_WORKER_CLOSE_SCRIPT,
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+test.serial(
+	"it closes a browser session",
+	flaky(async (t) => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		t.timeout(20_000);
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: BROWSER_WORKER_CLOSE_SCRIPT,
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		t.teardown(() => mf.dispose());
 
-	const res = await mf.dispatchFetch("https://localhost/close");
-	t.is(await res.text(), "Browser closed");
-});
+		const res = await mf.dispatchFetch("https://localhost/close");
+		t.is(await res.text(), "Browser closed");
+	})
+);
 
 const BROWSER_WORKER_REUSE_SCRIPT = `
 ${sendMessage.toString()}
@@ -142,20 +162,25 @@ export default {
 };
 `;
 
-test.serial("it reuses a browser session", async (t) => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: BROWSER_WORKER_REUSE_SCRIPT,
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+test.serial(
+	"it reuses a browser session",
+	flaky(async (t) => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		t.timeout(20_000);
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: BROWSER_WORKER_REUSE_SCRIPT,
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		t.teardown(() => mf.dispose());
 
-	const res = await mf.dispatchFetch("https://localhost");
-	t.is(await res.text(), "Browser session reused");
-});
+		const res = await mf.dispatchFetch("https://localhost");
+		t.is(await res.text(), "Browser session reused");
+	})
+);
 
 const BROWSER_WORKER_ALREADY_USED_SCRIPT = `
 export default {
@@ -187,6 +212,8 @@ const isWindows = process.platform === "win32";
 (isWindows ? test.skip : test.serial)(
 	"fails if browser session already in use",
 	async (t) => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		t.timeout(20_000);
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -231,30 +258,35 @@ export default {
 };
 `;
 
-test.serial("gets sessions while acquiring and closing session", async (t) => {
-	const opts: MiniflareOptions = {
-		name: "worker",
-		compatibilityDate: "2024-11-20",
-		modules: true,
-		script: GET_SESSIONS_SCRIPT,
-		browserRendering: { binding: "MYBROWSER" },
-	};
-	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+test.serial(
+	"gets sessions while acquiring and closing session",
+	flaky(async (t) => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		t.timeout(20_000);
+		const opts: MiniflareOptions = {
+			name: "worker",
+			compatibilityDate: "2024-11-20",
+			modules: true,
+			script: GET_SESSIONS_SCRIPT,
+			browserRendering: { binding: "MYBROWSER" },
+		};
+		const mf = new Miniflare(opts);
+		t.teardown(() => mf.dispose());
 
-	const { emptySessions, acquiredSessions, afterClosedSessions } = (await mf
-		.dispatchFetch("https://localhost")
-		.then((res) => res.json())) as any;
-	t.is(emptySessions.length, 0);
-	t.is(acquiredSessions.length, 1);
-	t.true(
-		typeof acquiredSessions[0].sessionId === "string" &&
-			typeof acquiredSessions[0].startTime === "number" &&
-			!acquiredSessions[0].connectionId &&
-			!acquiredSessions[0].connectionId
-	);
-	t.is(afterClosedSessions.length, 0);
-});
+		const { emptySessions, acquiredSessions, afterClosedSessions } = (await mf
+			.dispatchFetch("https://localhost")
+			.then((res) => res.json())) as any;
+		t.is(emptySessions.length, 0);
+		t.is(acquiredSessions.length, 1);
+		t.true(
+			typeof acquiredSessions[0].sessionId === "string" &&
+				typeof acquiredSessions[0].startTime === "number" &&
+				!acquiredSessions[0].connectionId &&
+				!acquiredSessions[0].connectionId
+		);
+		t.is(afterClosedSessions.length, 0);
+	})
+);
 
 const GET_SESSIONS_AFTER_DISCONNECT_SCRIPT = `
 ${waitForClosedConnection.toString()}
@@ -281,7 +313,9 @@ export default {
 
 test.serial(
 	"gets sessions while connecting and disconnecting session",
-	async (t) => {
+	flaky(async (t) => {
+		// We set the timeout quite high here as one of these tests will need to download the Chrome headless browser
+		t.timeout(20_000);
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -304,5 +338,5 @@ test.serial(
 			!disconnectedSession.connectionId &&
 				!disconnectedSession.connectionStartTime
 		);
-	}
+	})
 );

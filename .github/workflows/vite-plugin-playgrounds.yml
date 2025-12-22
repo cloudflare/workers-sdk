@@ -17,6 +17,7 @@ env:
 jobs:
   test:
     timeout-minutes: 30
+    name: ${{ format('Vite Plugin Playground ({0}, {1})', matrix.os, matrix.vite) }}
     strategy:
       fail-fast: false
       matrix:

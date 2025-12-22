@@ -13,7 +13,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}${{ matrix.experimental && '-experimental' || '' }}-${{ matrix.filter }}
       cancel-in-progress: true
-    name: ${{ format('C3 ({0}, {1}{2}) - {3}', matrix.pm.name, matrix.os.description, matrix.experimental && ', experimental' || '', matrix.filter) }}
+    name: ${{ format('C3 E2E ({0}, {1}{2}) - {3}', matrix.pm.name, matrix.os.description, matrix.experimental && ', experimental' || '', matrix.filter) }}
     strategy:
       fail-fast: false
       matrix:

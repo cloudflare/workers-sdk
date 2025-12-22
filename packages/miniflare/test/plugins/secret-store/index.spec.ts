@@ -3,7 +3,6 @@ import { Miniflare } from "miniflare";
 
 test("single secret-store", async (t) => {
 	const mf = new Miniflare({
-		verbose: true,
 		compatibilityDate: "2025-01-01",
 		secretsStoreSecrets: {
 			SECRET: {
@@ -45,7 +44,6 @@ test("single secret-store", async (t) => {
 
 test("multiple secret-store", async (t) => {
 	const mf = new Miniflare({
-		verbose: true,
 		compatibilityDate: "2025-01-01",
 		secretsStoreSecrets: {
 			SECRET1: {

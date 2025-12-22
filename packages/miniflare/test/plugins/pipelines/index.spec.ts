@@ -3,7 +3,6 @@ import { Miniflare } from "miniflare";
 
 test("supports declaring pipelines", async (t) => {
 	const mf = new Miniflare({
-		verbose: true,
 		compatibilityDate: "2024-12-30",
 		pipelines: ["PIPELINE"],
 		modules: true,

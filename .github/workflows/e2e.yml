@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   e2e-wrangler-test:
-    name: ${{ format('Wrangler ({0})', matrix.description) }}
+    name: ${{ format('Wrangler E2E ({0})', matrix.description) }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}-wrangler
       cancel-in-progress: true
@@ -83,7 +83,7 @@ jobs:
           path: .turbo/runs
 
   e2e-vite-plugin-test:
-    name: ${{ format('Vite plugin ({0})', matrix.description) }}
+    name: ${{ format('Vite Plugin E2E ({0})', matrix.description) }}
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}-vite
       cancel-in-progress: true

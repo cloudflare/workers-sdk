@@ -3,8 +3,6 @@ import { Miniflare } from "miniflare";
 
 test("ratelimit", async (t) => {
 	const mf = new Miniflare({
-		verbose: true,
-
 		ratelimits: {
 			TESTRATE: {
 				simple: {
@@ -45,8 +43,6 @@ test("ratelimit", async (t) => {
 
 test("ratelimit validation", async (t) => {
 	const mf = new Miniflare({
-		verbose: true,
-
 		ratelimits: {
 			TESTRATE: {
 				simple: {
