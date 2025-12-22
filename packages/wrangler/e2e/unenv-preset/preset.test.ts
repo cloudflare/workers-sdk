@@ -410,6 +410,25 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:inspector (experimental, no default enable date)
+	[
+		{
+			name: "inspector enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_inspector_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_inspector_module: true,
+			},
+		},
+		{
+			name: "inspector disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_inspector_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_inspector_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(localTestConfigs)(

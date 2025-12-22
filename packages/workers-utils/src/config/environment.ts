@@ -471,7 +471,7 @@ interface EnvironmentInheritable {
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
 	 *
-	 * @default {crons: undefined}
+	 * @default {crons:[]}
 	 * @inheritable
 	 */
 	triggers: { crons: string[] | undefined };
