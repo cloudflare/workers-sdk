@@ -23,17 +23,6 @@ export function createBuildApp(
 			clientEnvironment.config.build.rollupOptions.input ||
 			fs.existsSync(defaultHtmlPath);
 
-		if (resolvedPluginConfig.type === "assets-only") {
-			if (hasClientEntry) {
-				await builder.build(clientEnvironment);
-			} else if (getHasPublicAssets(builder.config)) {
-				await fallbackBuild(builder, clientEnvironment);
-			}
-
-			// Return early as there are no Workers to build
-			return;
-		}
-
 		const workerEnvironments = [
 			...resolvedPluginConfig.environmentNameToWorkerMap.keys(),
 		].map((environmentName) => {
@@ -46,6 +35,18 @@ export function createBuildApp(
 		await Promise.all(
 			workerEnvironments.map((environment) => builder.build(environment))
 		);
+
+		if (resolvedPluginConfig.type === "assets-only") {
+			if (hasClientEntry) {
+				await builder.build(clientEnvironment);
+			} else if (getHasPublicAssets(builder.config)) {
+				await fallbackBuild(builder, clientEnvironment);
+			}
+
+			return;
+		}
+
+		// TODO: move static assets from the prerender environment to the client environment
 
 		const { entryWorkerEnvironmentName } = resolvedPluginConfig;
 		const entryWorkerEnvironment =
@@ -63,7 +64,11 @@ export function createBuildApp(
 
 		if (hasClientEntry) {
 			await builder.build(clientEnvironment);
-		} else if (importedAssetPaths.size || getHasPublicAssets(builder.config)) {
+		} else if (
+			importedAssetPaths.size ||
+			getHasPublicAssets(builder.config) ||
+			resolvedPluginConfig.prerenderWorkerEnvironmentName
+		) {
 			await fallbackBuild(builder, clientEnvironment);
 		} else {
 			const entryWorkerConfigPath = path.join(

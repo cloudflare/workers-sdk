@@ -2393,6 +2393,9 @@ importers:
       playwright-chromium:
         specifier: catalog:default
         version: 1.56.1
+      semver:
+        specifier: ^7.7.1
+        version: 7.7.3
       strip-ansi:
         specifier: ^7.1.0
         version: 7.1.0
@@ -3109,6 +3112,27 @@ importers:
       tailwindcss:
         specifier: ^4.0.15
         version: 4.0.15
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vite:
+        specifier: catalog:vite-plugin
+        version: 7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1)
+      wrangler:
+        specifier: workspace:*
+        version: link:../../../wrangler
+
+  packages/vite-plugin-cloudflare/playground/prerendering:
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: workspace:*
+        version: link:../..
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../../../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20251217.0
       typescript:
         specifier: catalog:default
         version: 5.8.3

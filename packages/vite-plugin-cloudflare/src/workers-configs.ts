@@ -166,6 +166,7 @@ function readWorkerConfig(
 	};
 }
 
+// TODO: separate prerender Worker warnings from auxiliary Worker warnings
 export function getWarningForWorkersConfigs(
 	configs:
 		| {

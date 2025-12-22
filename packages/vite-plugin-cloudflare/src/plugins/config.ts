@@ -45,7 +45,8 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					},
 				},
 				environments:
-					ctx.resolvedPluginConfig.type === "workers"
+					ctx.resolvedPluginConfig.type === "workers" ||
+					ctx.resolvedPluginConfig.prerenderWorkerEnvironmentName
 						? {
 								...Object.fromEntries(
 									[...ctx.resolvedPluginConfig.environmentNameToWorkerMap].map(
@@ -91,7 +92,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		configResolved(resolvedViteConfig) {
 			ctx.setResolvedViteConfig(resolvedViteConfig);
 
-			if (ctx.resolvedPluginConfig.type === "workers") {
+			if (ctx.resolvedPluginConfig.type !== "preview") {
 				validateWorkerEnvironmentOptions(
 					ctx.resolvedPluginConfig,
 					ctx.resolvedViteConfig

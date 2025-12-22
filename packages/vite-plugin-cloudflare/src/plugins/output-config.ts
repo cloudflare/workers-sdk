@@ -18,13 +18,9 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 
 			let outputConfig: Unstable_RawConfig | undefined;
 
-			if (ctx.resolvedPluginConfig.type === "workers") {
-				const inputConfig = ctx.getWorkerConfig(this.environment.name);
+			const inputWorkerConfig = ctx.getWorkerConfig(this.environment.name);
 
-				if (!inputConfig) {
-					return;
-				}
-
+			if (inputWorkerConfig) {
 				const entryChunk = Object.values(bundle).find(
 					(chunk) =>
 						chunk.type === "chunk" &&
@@ -38,28 +34,33 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 				);
 
 				const isEntryWorker =
+					ctx.resolvedPluginConfig.type === "workers" &&
 					this.environment.name ===
-					ctx.resolvedPluginConfig.entryWorkerEnvironmentName;
+						ctx.resolvedPluginConfig.entryWorkerEnvironmentName;
+				const isPrerenderWorker =
+					this.environment.name ===
+					ctx.resolvedPluginConfig.prerenderWorkerEnvironmentName;
 
 				outputConfig = {
-					...inputConfig,
+					...inputWorkerConfig,
 					main: entryChunk.fileName,
 					no_bundle: true,
 					rules: [{ type: "ESModule", globs: ["**/*.js", "**/*.mjs"] }],
-					assets: isEntryWorker
-						? {
-								...inputConfig.assets,
-								directory: getAssetsDirectory(
-									this.environment.config.build.outDir,
-									ctx.resolvedViteConfig
-								),
-							}
-						: undefined,
+					assets:
+						isEntryWorker || isPrerenderWorker
+							? {
+									...inputWorkerConfig.assets,
+									directory: getAssetsDirectory(
+										this.environment.config.build.outDir,
+										ctx.resolvedViteConfig
+									),
+								}
+							: undefined,
 				};
 
-				if (inputConfig.configPath) {
+				if (inputWorkerConfig.configPath) {
 					const localDevVars = getLocalDevVarsForPreview(
-						inputConfig.configPath,
+						inputWorkerConfig.configPath,
 						ctx.resolvedPluginConfig.cloudflareEnv
 					);
 					// Save a .dev.vars file to the worker's build output directory if there are local dev vars, so that it will be then detected by `vite preview`.
@@ -71,13 +72,16 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 						});
 					}
 				}
-			} else if (this.environment.name === "client") {
-				const inputConfig = ctx.resolvedPluginConfig.config;
+			} else if (
+				ctx.resolvedPluginConfig.type === "assets-only" &&
+				this.environment.name === "client"
+			) {
+				const inputAssetsOnlyConfig = ctx.resolvedPluginConfig.config;
 
 				outputConfig = {
-					...inputConfig,
+					...inputAssetsOnlyConfig,
 					assets: {
-						...inputConfig.assets,
+						...inputAssetsOnlyConfig.assets,
 						directory: ".",
 					},
 				};

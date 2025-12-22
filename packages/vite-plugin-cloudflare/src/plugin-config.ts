@@ -30,6 +30,7 @@ interface BaseWorkerConfig {
 
 interface EntryWorkerConfig extends BaseWorkerConfig {
 	configPath?: string;
+	config?: WorkerConfigCustomizer<true>;
 }
 
 interface AuxiliaryWorkerFileConfig extends BaseWorkerConfig {
@@ -48,7 +49,14 @@ type AuxiliaryWorkerConfig =
 interface Experimental {
 	/** Experimental support for handling the _headers and _redirects files during Vite dev mode. */
 	headersAndRedirectsDevModeSupport?: boolean;
+	/** Experimental support for a dedicated prerender Worker */
+	prerenderWorker?: AuxiliaryWorkerConfig;
 }
+
+type FilteredEntryWorkerConfig = Omit<
+	ResolvedAssetsOnlyConfig,
+	"topLevelName" | "name"
+>;
 
 type WorkerConfigCustomizer<TIsEntryWorker extends boolean> =
 	| Partial<WorkerConfig>
@@ -57,7 +65,9 @@ type WorkerConfigCustomizer<TIsEntryWorker extends boolean> =
 				? [config: WorkerConfig]
 				: [
 						config: WorkerConfig,
-						{ entryWorkerConfig: ResolvedAssetsOnlyConfig },
+						{
+							entryWorkerConfig: FilteredEntryWorkerConfig;
+						},
 					]
 	  ) => Partial<WorkerConfig> | void);
 
@@ -67,7 +77,6 @@ export interface PluginConfig extends EntryWorkerConfig {
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
 	experimental?: Experimental;
-	config?: WorkerConfigCustomizer<true>;
 }
 
 export interface ResolvedAssetsOnlyConfig extends WorkerConfig {
@@ -83,33 +92,38 @@ export interface ResolvedWorkerConfig extends ResolvedAssetsOnlyConfig {
 export interface Worker {
 	config: ResolvedWorkerConfig;
 	nodeJsCompat: NodeJsCompat | undefined;
+	isPrerender: boolean;
 }
 
 interface BaseResolvedConfig {
 	persistState: PersistState;
 	inspectorPort: number | false | undefined;
-	experimental: Experimental;
+	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport">;
 	remoteBindings: boolean;
 }
 
-export interface AssetsOnlyResolvedConfig extends BaseResolvedConfig {
-	type: "assets-only";
+interface NonPreviewResolvedConfig extends BaseResolvedConfig {
 	configPaths: Set<string>;
 	cloudflareEnv: string | undefined;
+	environmentNameToWorkerMap: Map<string, Worker>;
+	prerenderWorkerEnvironmentName: string | undefined;
+}
+
+export interface AssetsOnlyResolvedConfig extends NonPreviewResolvedConfig {
+	type: "assets-only";
 	config: ResolvedAssetsOnlyConfig;
 	rawConfigs: {
+		// TODO: add warnings for `prerenderWorker`
 		entryWorker: AssetsOnlyWorkerResolvedConfig;
 	};
 }
 
-export interface WorkersResolvedConfig extends BaseResolvedConfig {
+export interface WorkersResolvedConfig extends NonPreviewResolvedConfig {
 	type: "workers";
-	configPaths: Set<string>;
-	cloudflareEnv: string | undefined;
-	environmentNameToWorkerMap: Map<string, Worker>;
 	entryWorkerEnvironmentName: string;
 	staticRouting: StaticRouting | undefined;
 	rawConfigs: {
+		// TODO: add warnings for `prerenderWorker`
 		entryWorker: WorkerWithServerLogicResolvedConfig;
 		auxiliaryWorkers: WorkerResolvedConfig[];
 	};
@@ -124,6 +138,15 @@ export type ResolvedPluginConfig =
 	| AssetsOnlyResolvedConfig
 	| WorkersResolvedConfig
 	| PreviewResolvedConfig;
+
+function filterEntryWorkerConfig(
+	config: ResolvedAssetsOnlyConfig
+): FilteredEntryWorkerConfig {
+	// eslint-disable-next-line unused-imports/no-unused-vars
+	const { topLevelName, name, ...filteredConfig } = config;
+
+	return filteredConfig;
+}
 
 export function customizeWorkerConfig(options: {
 	workerConfig: WorkerConfig;
@@ -152,7 +175,9 @@ export function customizeWorkerConfig(
 		typeof options.configCustomizer === "function"
 			? "entryWorkerConfig" in options
 				? options.configCustomizer(options.workerConfig, {
-						entryWorkerConfig: options.entryWorkerConfig,
+						entryWorkerConfig: filterEntryWorkerConfig(
+							options.entryWorkerConfig
+						),
 					})
 				: options.configCustomizer(options.workerConfig)
 			: options.configCustomizer;
@@ -249,7 +274,10 @@ export function resolvePluginConfig(
 	const shared = {
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
-		experimental: pluginConfig.experimental ?? {},
+		experimental: {
+			headersAndRedirectsDevModeSupport:
+				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,
+		},
 	};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 	const prefixedEnv = vite.loadEnv(viteEnv.mode, root, [
@@ -267,7 +295,7 @@ export function resolvePluginConfig(
 			...shared,
 			remoteBindings: pluginConfig.remoteBindings ?? true,
 			type: "preview",
-			workers: getWorkerConfigs(root),
+			workers: getWorkerConfigs(root, !!process.env.CLOUDFLARE_VITE_BUILD),
 		};
 	}
 
@@ -282,10 +310,44 @@ export function resolvePluginConfig(
 	const entryWorkerResolvedConfig = resolveWorkerConfig({
 		root,
 		configPath,
-		env: prefixedEnv.CLOUDFLARE_ENV,
+		env: cloudflareEnv,
 		configCustomizer: pluginConfig.config,
 		visitedConfigPaths: configPaths,
 	});
+
+	const environmentNameToWorkerMap = new Map<string, Worker>();
+
+	const prerenderWorkerConfig = pluginConfig.experimental?.prerenderWorker;
+	let prerenderWorkerEnvironmentName: string | undefined;
+
+	if (prerenderWorkerConfig && viteEnv.command === "build") {
+		const workerConfigPath = getValidatedWranglerConfigPath(
+			root,
+			prerenderWorkerConfig.configPath,
+			true
+		);
+
+		const workerResolvedConfig = resolveWorkerConfig({
+			root,
+			configPath: workerConfigPath,
+			env: cloudflareEnv,
+			configCustomizer:
+				"config" in prerenderWorkerConfig
+					? prerenderWorkerConfig.config
+					: undefined,
+			entryWorkerConfig: entryWorkerResolvedConfig.config,
+			visitedConfigPaths: configPaths,
+		});
+
+		prerenderWorkerEnvironmentName =
+			prerenderWorkerConfig.viteEnvironment?.name ??
+			workerNameToEnvironmentName(workerResolvedConfig.config.topLevelName);
+
+		environmentNameToWorkerMap.set(
+			prerenderWorkerEnvironmentName,
+			resolveWorker(workerResolvedConfig.config as ResolvedWorkerConfig, true)
+		);
+	}
 
 	if (entryWorkerResolvedConfig.type === "assets-only") {
 		return {
@@ -293,6 +355,8 @@ export function resolvePluginConfig(
 			type: "assets-only",
 			cloudflareEnv,
 			config: entryWorkerResolvedConfig.config,
+			environmentNameToWorkerMap,
+			prerenderWorkerEnvironmentName,
 			configPaths,
 			remoteBindings: pluginConfig.remoteBindings ?? true,
 			rawConfigs: {
@@ -301,23 +365,30 @@ export function resolvePluginConfig(
 		};
 	}
 
-	const entryWorkerConfig = entryWorkerResolvedConfig.config;
-
 	const entryWorkerEnvironmentName =
 		pluginConfig.viteEnvironment?.name ??
-		workerNameToEnvironmentName(entryWorkerConfig.topLevelName);
+		workerNameToEnvironmentName(entryWorkerResolvedConfig.config.topLevelName);
 
-	let staticRouting: StaticRouting | undefined;
-
-	if (Array.isArray(entryWorkerConfig.assets?.run_worker_first)) {
-		staticRouting = parseStaticRouting(
-			entryWorkerConfig.assets.run_worker_first
+	if (environmentNameToWorkerMap.has(entryWorkerEnvironmentName)) {
+		throw new Error(
+			`Duplicate Vite environment name found: ${entryWorkerEnvironmentName}`
 		);
 	}
 
-	const environmentNameToWorkerMap: Map<string, Worker> = new Map([
-		[entryWorkerEnvironmentName, resolveWorker(entryWorkerConfig)],
-	]);
+	environmentNameToWorkerMap.set(
+		entryWorkerEnvironmentName,
+		resolveWorker(entryWorkerResolvedConfig.config)
+	);
+
+	let staticRouting: StaticRouting | undefined;
+
+	if (
+		Array.isArray(entryWorkerResolvedConfig.config.assets?.run_worker_first)
+	) {
+		staticRouting = parseStaticRouting(
+			entryWorkerResolvedConfig.config.assets.run_worker_first
+		);
+	}
 
 	const auxiliaryWorkersResolvedConfigs: WorkerResolvedConfig[] = [];
 
@@ -335,7 +406,7 @@ export function resolvePluginConfig(
 			env: cloudflareEnv,
 			configCustomizer:
 				"config" in auxiliaryWorker ? auxiliaryWorker.config : undefined,
-			entryWorkerConfig,
+			entryWorkerConfig: entryWorkerResolvedConfig.config,
 			visitedConfigPaths: configPaths,
 		});
 
@@ -363,6 +434,7 @@ export function resolvePluginConfig(
 		cloudflareEnv,
 		configPaths,
 		environmentNameToWorkerMap,
+		prerenderWorkerEnvironmentName,
 		entryWorkerEnvironmentName,
 		staticRouting,
 		remoteBindings: pluginConfig.remoteBindings ?? true,
@@ -378,11 +450,15 @@ function workerNameToEnvironmentName(workerName: string) {
 	return workerName.replaceAll("-", "_");
 }
 
-function resolveWorker(workerConfig: ResolvedWorkerConfig) {
+function resolveWorker(
+	workerConfig: ResolvedWorkerConfig,
+	isPrerender = false
+) {
 	return {
 		config: workerConfig,
 		nodeJsCompat: hasNodeJsCompat(workerConfig)
 			? new NodeJsCompat(workerConfig)
 			: undefined,
+		isPrerender,
 	};
 }
