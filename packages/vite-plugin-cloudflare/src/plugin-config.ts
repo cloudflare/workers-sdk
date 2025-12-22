@@ -133,8 +133,11 @@ export type ResolvedPluginConfig =
 function filterEntryWorkerConfig(
 	config: ResolvedAssetsOnlyConfig
 ): FilteredEntryWorkerConfig {
-	// eslint-disable-next-line unused-imports/no-unused-vars
-	const { topLevelName, name, ...filteredConfig } = config;
+	const {
+		topLevelName: _topLevelName,
+		name: _name,
+		...filteredConfig
+	} = config;
 
 	return filteredConfig;
 }
