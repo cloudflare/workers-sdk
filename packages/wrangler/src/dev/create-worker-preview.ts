@@ -5,7 +5,7 @@ import { fetch } from "undici";
 import { fetchResult } from "../cfetch";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { logger } from "../logger";
-import { getAccessToken } from "../user/access";
+import { getAccessHeaders } from "../user/access";
 import { isAbortError } from "../utils/isAbortError";
 import type { ApiCredentials } from "../user";
 import type { CfWorkerInitWithName } from "./remote";
@@ -182,12 +182,10 @@ export async function createPreviewSession(
 
 	const switchedExchangeUrl = switchHost(exchange_url, ctx.host, !!ctx.zone);
 
-	const headers: HeadersInit = {};
-	const accessToken = await getAccessToken(switchedExchangeUrl.hostname);
-
-	if (accessToken) {
-		headers.cookie = `CF_Authorization=${accessToken}`;
-	}
+	const accessHeaders = await getAccessHeaders(switchedExchangeUrl.hostname);
+	const headers: HeadersInit = {
+		...accessHeaders,
+	};
 
 	logger.debugWithSanitization(
 		"-- START EXCHANGE API REQUEST:",
@@ -347,12 +345,12 @@ export async function createWorkerPreview(
 		abortSignal,
 		minimal_mode
 	);
-	const accessToken = await getAccessToken(token.prewarmUrl.hostname);
+	const accessHeaders = await getAccessHeaders(token.prewarmUrl.hostname);
 
-	const headers: HeadersInit = { "cf-workers-preview-token": token.value };
-	if (accessToken) {
-		headers.cookie = `CF_Authorization=${accessToken}`;
-	}
+	const headers: HeadersInit = {
+		"cf-workers-preview-token": token.value,
+		...accessHeaders,
+	};
 
 	// fire and forget the prewarm call
 	fetch(token.prewarmUrl.href, {

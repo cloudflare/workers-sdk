@@ -19,6 +19,10 @@ type VariableNames =
 	| "CLOUDFLARE_API_BASE_URL"
 	/** Set to "fedramp_high" for FedRAMP High compliance region. This will update the API/AUTH URLs used to make requests to Cloudflare. */
 	| "CLOUDFLARE_COMPLIANCE_REGION"
+	/** Cloudflare Access service token Client ID for machine-to-machine authentication. Use with CLOUDFLARE_ACCESS_CLIENT_SECRET. */
+	| "CLOUDFLARE_ACCESS_CLIENT_ID"
+	/** Cloudflare Access service token Client Secret for machine-to-machine authentication. Use with CLOUDFLARE_ACCESS_CLIENT_ID. */
+	| "CLOUDFLARE_ACCESS_CLIENT_SECRET"
 	/** API token for R2 SQL service. */
 	| "WRANGLER_R2_SQL_AUTH_TOKEN"
 

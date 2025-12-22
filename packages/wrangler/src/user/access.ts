@@ -1,7 +1,34 @@
 import { spawnSync } from "node:child_process";
-import { UserError } from "@cloudflare/workers-utils";
+import {
+	getEnvironmentVariableFactory,
+	UserError,
+} from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { logger } from "../logger";
+
+/**
+ * Headers to authenticate with Cloudflare Access.
+ * Either a CF_Authorization cookie (from cloudflared) or service token headers.
+ */
+export type AccessHeaders = Record<string, string>;
+
+/**
+ * `CLOUDFLARE_ACCESS_CLIENT_ID` is the Client ID for a Cloudflare Access Service Token.
+ * Use this with `CLOUDFLARE_ACCESS_CLIENT_SECRET` for machine-to-machine authentication
+ * in CI/CD environments where interactive browser authentication is not possible.
+ */
+const getAccessClientIdFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_ACCESS_CLIENT_ID",
+});
+
+/**
+ * `CLOUDFLARE_ACCESS_CLIENT_SECRET` is the Client Secret for a Cloudflare Access Service Token.
+ * Use this with `CLOUDFLARE_ACCESS_CLIENT_ID` for machine-to-machine authentication
+ * in CI/CD environments where interactive browser authentication is not possible.
+ */
+const getAccessClientSecretFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_ACCESS_CLIENT_SECRET",
+});
 
 const cache: Record<string, string> = {};
 
@@ -81,4 +108,48 @@ export async function getAccessToken(
 		return matches[1];
 	}
 	throw new Error("Failed to authenticate with Cloudflare Access");
+}
+
+/**
+ * Get headers for authenticating with Cloudflare Access.
+ *
+ *
+ * @param domain - The domain to authenticate against
+ * @returns Headers object to include in requests, or undefined if domain doesn't use Access
+ */
+export async function getAccessHeaders(
+	domain: string
+): Promise<AccessHeaders | undefined> {
+	if (!(await domainUsesAccess(domain))) {
+		return undefined;
+	}
+
+	// Check for service token credentials first (preferred for CI/CD)
+	const clientId = getAccessClientIdFromEnv();
+	const clientSecret = getAccessClientSecretFromEnv();
+
+	if (clientId && clientSecret) {
+		logger.debug(
+			"Using Cloudflare Access service token from environment variables"
+		);
+		return {
+			"CF-Access-Client-Id": clientId,
+			"CF-Access-Client-Secret": clientSecret,
+		};
+	}
+
+	if (clientId || clientSecret) {
+		logger.warn(
+			"Both CLOUDFLARE_ACCESS_CLIENT_ID and CLOUDFLARE_ACCESS_CLIENT_SECRET must be set to use service tokens. Falling back to cloudflared."
+		);
+	}
+
+	const token = await getAccessToken(domain);
+	if (token) {
+		return {
+			Cookie: `CF_Authorization=${token}`,
+		};
+	}
+
+	return undefined;
 }

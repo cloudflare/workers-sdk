@@ -16,7 +16,7 @@ import {
 import { logger } from "../../logger";
 import { TRACE_VERSION } from "../../tail/createTail";
 import { realishPrintLogs } from "../../tail/printing";
-import { getAccessToken } from "../../user/access";
+import { getAccessHeaders } from "../../user/access";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
 import { convertBindingsToCfWorkerInitBindings, unwrapHook } from "./utils";
@@ -305,7 +305,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			return;
 		}
 
-		const accessToken = await getAccessToken(token.host);
+		const accessHeaders = await getAccessHeaders(token.host);
 
 		this.emitReloadCompleteEvent({
 			type: "reloadComplete",
@@ -329,7 +329,7 @@ export class RemoteRuntimeController extends RuntimeController {
 					: {}),
 				headers: {
 					"cf-workers-preview-token": token.value,
-					...(accessToken ? { Cookie: `CF_Authorization=${accessToken}` } : {}),
+					...accessHeaders,
 					"cf-connecting-ip": "",
 				},
 				liveReload: config.dev.liveReload,
