@@ -19,12 +19,11 @@ export interface ThrowsExpectation<T extends Error = Error> {
  */
 export function errorLike<T extends Error = Error>(
 	expectations: ThrowsExpectation<T>
-): {
-	asymmetricMatch: (actual: unknown) => boolean;
-	toString: () => string;
-	toAsymmetricMatcher: () => string;
-} {
-	return {
+): Error {
+	// Return an asymmetric matcher object that Vitest will use at runtime.
+	// Cast to Error to satisfy TypeScript's toThrow() parameter type.
+	// This is safe because Vitest's toThrow() accepts asymmetric matchers at runtime.
+	const matcher = {
 		asymmetricMatch(actual: unknown): boolean {
 			if (!(actual instanceof Error)) {
 				return false;
@@ -92,6 +91,7 @@ export function errorLike<T extends Error = Error>(
 			return `errorLike({ ${parts.join(", ")} })`;
 		},
 	};
+	return matcher as unknown as Error;
 }
 
 export function escapeRegexpComponent(value: string): string {
