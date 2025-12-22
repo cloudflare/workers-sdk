@@ -728,6 +728,30 @@ export const WorkerdTests: Record<string, () => void> = {
 			createScript: "function",
 		});
 	},
+
+	async testInspector() {
+		const inspector = await import("node:inspector");
+
+		assertTypeOfProperties(inspector, {
+			Session: "function",
+			close: "function",
+			console: "object",
+			open: "function",
+			url: "function",
+			waitForDebugger: "function",
+			Network: "object",
+		});
+
+		assertTypeOfProperties(inspector.default, {
+			Session: "function",
+			close: "function",
+			console: "object",
+			open: "function",
+			url: "function",
+			waitForDebugger: "function",
+			Network: "object",
+		});
+	},
 };
 
 /**
