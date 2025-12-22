@@ -11471,7 +11471,7 @@ addEventListener('fetch', event => {});`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe module rule {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]} does not have a fallback, the following rules will be ignored:[0m
 
 			   {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}
-			   {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} (DEFAULT)
+			   {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\",\\"**/*.sql\\"]} (DEFAULT)
 
 			  Add \`fallthrough = true\` to rule to allow next rule to be used or \`fallthrough = false\` to silence
 			  this warning

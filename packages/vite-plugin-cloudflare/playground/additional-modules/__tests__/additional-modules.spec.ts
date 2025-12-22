@@ -22,6 +22,11 @@ test("supports Text modules with a '.txt' extension", async () => {
 	expect(result).toBe("Example text content.\n");
 });
 
+test("supports Text modules with a '.sql' extension", async () => {
+	const result = await getTextResponse("/sql");
+	expect(result).toBe("SELECT * FROM users;\n");
+});
+
 test("supports modules with `__`s in the filename", async () => {
 	const result = await getTextResponse("/text2");
 	expect(result).toBe("Example text content 2");
