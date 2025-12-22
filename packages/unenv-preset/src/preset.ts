@@ -696,9 +696,9 @@ function getDgramOverrides({
 		"disable_nodejs_dgram_module"
 	);
 
-	const enabledByFlag = compatibilityFlags.includes(
-		"enable_nodejs_dgram_module"
-	);
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_dgram_module") &&
+		compatibilityFlags.includes("experimental");
 
 	const enabled = enabledByFlag && !disabledByFlag;
 
