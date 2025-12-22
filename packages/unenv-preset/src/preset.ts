@@ -611,7 +611,6 @@ function getVmOverrides({
 				hybridModules: [],
 			};
 }
-<<<<<<< HEAD
 
 /**
  * Returns the overrides for `node:inspector` and `node:inspector/promises` (unenv or workerd)
