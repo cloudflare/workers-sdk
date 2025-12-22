@@ -14,6 +14,7 @@ import {
 } from "miniflare";
 import { beforeEach, expect, onTestFinished, test } from "vitest";
 import {
+	expectThrowsAsync,
 	FIXTURES_PATH,
 	MiniflareDurableObjectControlStub,
 	miniflareTest,
