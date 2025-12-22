@@ -5,6 +5,7 @@ import { mockSpinner } from "helpers/__tests__/mocks";
 import {
 	appendFile,
 	directoryExists,
+	hasTsConfig,
 	readFile,
 	readJSON,
 	writeFile,
@@ -573,9 +574,7 @@ describe("defaultSelectVariant", () => {
 	});
 
 	test("should return 'ts' if tsconfig.json exists and no lang specified", async () => {
-		vi.mocked(existsSync).mockImplementation(
-			(path) => path === "/some/path/tsconfig.json",
-		);
+		vi.mocked(hasTsConfig).mockReturnValue(true);
 
 		const ctx = {
 			project: { path: "/some/path" },
@@ -588,7 +587,7 @@ describe("defaultSelectVariant", () => {
 	});
 
 	test("should return 'js' if tsconfig.json does not exist and no lang specified", async () => {
-		vi.mocked(existsSync).mockImplementation(() => false);
+		vi.mocked(hasTsConfig).mockReturnValue(false);
 
 		const ctx = {
 			project: { path: "/some/path" },
@@ -601,9 +600,7 @@ describe("defaultSelectVariant", () => {
 	});
 
 	test("should use explicit lang even if tsconfig.json exists", async () => {
-		vi.mocked(existsSync).mockImplementation(
-			(path) => path === "/some/path/tsconfig.json",
-		);
+		vi.mocked(hasTsConfig).mockReturnValue(true);
 
 		const ctx = {
 			project: { path: "/some/path" },
