@@ -55,7 +55,9 @@ export async function getAccessToken(
 		return cache[domain];
 	}
 	logger.debug("Spawning cloudflared to get Access token for domain:");
-	const output = spawnSync("cloudflared", ["access", "login", domain]);
+	const output = spawnSync("cloudflared", ["access", "login", domain], {
+		stdio: ["inherit", "pipe", "inherit"],
+	});
 	if (output.error) {
 		// The cloudflared binary is not installed
 		throw new UserError(
