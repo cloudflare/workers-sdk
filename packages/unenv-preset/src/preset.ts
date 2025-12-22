@@ -79,6 +79,7 @@ export function getCloudflarePreset({
 	const wasiOverrides = getWasiOverrides(compat);
 	const consoleOverrides = getConsoleOverrides(compat);
 	const vmOverrides = getVmOverrides(compat);
+	const inspectorOverrides = getInspectorOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -94,6 +95,7 @@ export function getCloudflarePreset({
 		...wasiOverrides.nativeModules,
 		...consoleOverrides.nativeModules,
 		...vmOverrides.nativeModules,
+		...inspectorOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -110,6 +112,7 @@ export function getCloudflarePreset({
 		...wasiOverrides.hybridModules,
 		...consoleOverrides.hybridModules,
 		...vmOverrides.hybridModules,
+		...inspectorOverrides.hybridModules,
 	];
 
 	return {
@@ -589,6 +592,42 @@ function getVmOverrides({
 	return enabled
 		? {
 				nativeModules: ["vm"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:inspector` (unenv or workerd)
+ *
+ * The native inspector implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_inspector_module" flag
+ * - can be disabled with the "disable_nodejs_inspector_module" flag
+ */
+function getInspectorOverrides({
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_inspector_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_inspector_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `inspector` module from workerd
+	return enabled
+		? {
+				nativeModules: ["inspector"],
 				hybridModules: [],
 			}
 		: {
