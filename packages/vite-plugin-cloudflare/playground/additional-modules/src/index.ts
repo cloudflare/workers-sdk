@@ -1,5 +1,6 @@
 import bin from "./modules/bin-example.bin";
 import html from "./modules/html-example.html";
+import sql from "./modules/sql-example.sql";
 import text2 from "./modules/text__example__2.txt";
 import text from "./modules/text-example.txt";
 import wasm from "./modules/wasm-example.wasm";
@@ -24,14 +25,13 @@ export default {
 				return new Response(html, { headers: { "Content-Type": "text/html" } });
 			}
 			case "/text": {
-				return new Response(text, {
-					headers: { "Content-Type": "text/plain" },
-				});
+				return new Response(text);
 			}
 			case "/text2": {
-				return new Response(text2, {
-					headers: { "Content-Type": "text/plain" },
-				});
+				return new Response(text2);
+			}
+			case "/sql": {
+				return new Response(sql);
 			}
 			case "/wasm": {
 				const instance = (await WebAssembly.instantiate(wasm)) as Instance;

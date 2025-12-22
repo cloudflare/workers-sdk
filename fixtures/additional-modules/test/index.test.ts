@@ -69,6 +69,10 @@ describe("find_additional_modules dev", () => {
 		const res = await get(worker, "/text");
 		expect(await res.text()).toBe("test\n");
 	});
+	test("supports SQL modules", async () => {
+		const res = await get(worker, "/sql");
+		expect(await res.text()).toBe("SELECT * FROM users;\n");
+	});
 	test("supports dynamic imports", async () => {
 		const res = await get(worker, "/dynamic");
 		expect(await res.text()).toBe("dynamic");
@@ -160,6 +164,7 @@ describe("find_additional_modules deploy", () => {
 			var dep_default = "bundled";
 
 			// src/index.ts
+			import sql from "./example.sql";
 			import text from "./text.txt";
 			var index_default = {
 			  async fetch(request) {
@@ -169,6 +174,9 @@ describe("find_additional_modules deploy", () => {
 			    }
 			    if (url.pathname === "/text") {
 			      return new Response(text);
+			    }
+			    if (url.pathname === "/sql") {
+			      return new Response(sql);
 			    }
 			    if (url.pathname === "/common") {
 			      return new Response(common);
