@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { logger } from "../logger";
@@ -55,16 +55,36 @@ export async function getAccessToken(
 		return cache[domain];
 	}
 	logger.debug("Spawning cloudflared to get Access token for domain:");
-	const output = spawnSync("cloudflared", ["access", "login", domain]);
-	if (output.error) {
-		// The cloudflared binary is not installed
-		throw new UserError(
-			"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
-		);
-	}
-	const stringOutput = output.stdout.toString();
-	logger.debug("cloudflared output:", stringOutput);
-	const matches = stringOutput.match(/fetched your token:\n\n(.*)/m);
+	const output = await new Promise<string>((resolve, reject) => {
+		const cp = spawn("cloudflared", ["access", "login", domain], {
+			stdio: "pipe",
+		});
+		let stdout = "";
+		let stderr = "";
+		cp.stdout.on("data", (data) => {
+			logger.debug("OUT:", data.toString());
+			stdout += data.toString();
+		});
+		cp.stderr.on("data", (data) => {
+			logger.debug("ERR:", data.toString());
+			stderr += data.toString();
+		});
+		cp.on("close", (code) => {
+			if (code !== 0) {
+				logger.debug("cloudflared stderr:", stderr);
+				// The cloudflared binary is not installed
+				reject(
+					new UserError(
+						"To use Wrangler with Cloudflare Access, please install `cloudflared` from https://developers.cloudflare.com/cloudflare-one/connections/connect-apps/install-and-setup/installation"
+					)
+				);
+			} else {
+				resolve(stdout);
+			}
+		});
+	});
+	logger.debug("cloudflared output:", output);
+	const matches = output.match(/fetched your token:\n\n(.*)/m);
 	if (matches && matches.length >= 2) {
 		cache[domain] = matches[1];
 		logger.debug("Caching Access token for domain:", matches[1]);
