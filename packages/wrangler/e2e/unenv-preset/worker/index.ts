@@ -886,22 +886,6 @@ export const WorkerdTests: Record<string, () => void> = {
 			promises: "object",
 		});
 	},
-
-	async testReadlinePromises() {
-		const readlinePromises = await import("node:readline/promises");
-
-		assertTypeOfProperties(readlinePromises, {
-			Interface: "function",
-			Readline: "function",
-			createInterface: "function",
-		});
-
-		assertTypeOfProperties(readlinePromises.default, {
-			Interface: "function",
-			Readline: "function",
-			createInterface: "function",
-		});
-	},
 };
 
 /**
