@@ -291,7 +291,7 @@ async function testExpire(opts: { headers: HeadersInit; expectedTtl: number }) {
 test("expires after Expires", async () => {
 	await testExpire({
 		headers: {
-			Expires: new Date(1000000 + 2000).toUTCString(),
+			Expires: new Date(1_000_000 + 2000).toUTCString(),
 		},
 		expectedTtl: 2000,
 	});

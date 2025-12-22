@@ -94,6 +94,16 @@ export function errorLike<T extends Error = Error>(
 	return matcher as unknown as Error;
 }
 
+/**
+ * Escapes special characters in a string for use in a regular expression.
+ * This ensures the string is treated as a literal match rather than a pattern.
+ *
+ * @example
+ * const escaped = escapeRegexpComponent("file.txt");
+ * // Returns "file\\.txt"
+ * new RegExp(escaped).test("file.txt"); // true
+ * new RegExp(escaped).test("filextxt"); // false
+ */
 export function escapeRegexpComponent(value: string): string {
 	// From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#escaping
 	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

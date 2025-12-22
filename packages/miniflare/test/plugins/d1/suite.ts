@@ -213,12 +213,10 @@ test("D1PreparedStatement: first", async () => {
 			rgb: 16711680,
 		});
 	} catch (e) {
-		expect(e instanceof Error).toBeTruthy();
-		expect(
-			/A prepared SQL statement must contain only one statement/.test(
-				(e as Error).message
-			)
-		).toBeTruthy();
+		expect(e).toBeInstanceOf(Error);
+		expect((e as Error).message).toMatch(
+			/A prepared SQL statement must contain only one statement/
+		);
 	}
 
 	// Check with write statement (should actually execute statement)
@@ -310,12 +308,10 @@ test("D1PreparedStatement: run", async () => {
 			success: true,
 		});
 	} catch (e) {
-		expect(e instanceof Error).toBeTruthy();
-		expect(
-			/A prepared SQL statement must contain only one statement/.test(
-				(e as Error).message
-			)
-		).toBeTruthy();
+		expect(e).toBeInstanceOf(Error);
+		expect((e as Error).message).toMatch(
+			/A prepared SQL statement must contain only one statement/
+		);
 	}
 
 	// Check with write statement
@@ -401,12 +397,10 @@ test("D1PreparedStatement: all", async () => {
 			success: true,
 		});
 	} catch (e) {
-		expect(e instanceof Error).toBeTruthy();
-		expect(
-			/A prepared SQL statement must contain only one statement/.test(
-				(e as Error).message
-			)
-		).toBeTruthy();
+		expect(e).toBeInstanceOf(Error);
+		expect((e as Error).message).toMatch(
+			/A prepared SQL statement must contain only one statement/
+		);
 	}
 
 	// Check with write statement (should actually execute, but return nothing)
@@ -460,12 +454,10 @@ test("D1PreparedStatement: raw", async () => {
 		const result = await resultPromise;
 		expect(result).toEqual([[3, "blue", 0x0000ff]]);
 	} catch (e) {
-		expect(e instanceof Error).toBeTruthy();
-		expect(
-			/A prepared SQL statement must contain only one statement/.test(
-				(e as Error).message
-			)
-		).toBeTruthy();
+		expect(e).toBeInstanceOf(Error);
+		expect((e as Error).message).toMatch(
+			/A prepared SQL statement must contain only one statement/
+		);
 	}
 
 	// Check with write statement (should actually execute, but return nothing)

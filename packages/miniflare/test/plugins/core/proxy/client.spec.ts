@@ -14,7 +14,7 @@ import {
 	WebSocketPair,
 } from "miniflare";
 import { expect, onTestFinished, test } from "vitest";
-import { ThrowsExpectation, useDispose } from "../../../test-shared";
+import { useDispose } from "../../../test-shared";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 
 // This file tests API proxy edge cases. Cache, D1, Durable Object and R2 tests
@@ -141,10 +141,6 @@ test("ProxyClient: poisons dependent proxies after setOptions()/dispose()", asyn
 
 	await mf.setOptions({ script: nullScript });
 
-	const _expectations: ThrowsExpectation<Error> = {
-		message:
-			"Attempted to use poisoned stub. Stubs to runtime objects must be re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`.",
-	};
 	expect(() => caches.default).toThrow();
 	expect(() => defaultCache.match(key)).toThrow();
 	expect(() => namedCache.match(key)).toThrow();
@@ -167,11 +163,9 @@ test("ProxyClient: logging proxies provides useful information", async () => {
 
 	const caches = await mf.getCaches();
 	const inspectOpts: util.InspectOptions = { colors: false };
-	// ProxyStub { name: 'CacheStorage', poisoned: false }
 	expect(util.inspect(caches, inspectOpts)).toBe(
 		"ProxyStub { name: 'CacheStorage', poisoned: false }"
 	);
-	// [Function: open]
 	expect(util.inspect(caches.open, inspectOpts)).toBe("[Function: open]");
 });
 
