@@ -1573,6 +1573,9 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
+      '@cloudflare/workers-utils':
+        specifier: workspace:*
+        version: link:../workers-utils
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
