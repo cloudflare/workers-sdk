@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/consistent-type-imports */
-import { PassThrough } from "node:stream";
+import { EventEmitter, PassThrough } from "node:stream";
 import chalk from "chalk";
 import { passthrough } from "msw";
 import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest";
 import { msw } from "./helpers/msw";
+import type { ChildProcess } from "node:child_process";
 
 //turn off chalk for tests due to inconsistencies between operating systems
 chalk.level = 0;
@@ -47,11 +48,17 @@ vi.mock("child_process", async (importOriginal) => {
 	return {
 		...cp,
 		default: cp,
-		spawnSync: vi.fn().mockImplementation((binary, ...args) => {
+		spawn: vi.fn<typeof cp.spawn>().mockImplementation((binary, ...args) => {
 			if (binary === "cloudflared") {
-				return { error: true };
+				const fakeProcess = new EventEmitter() as unknown as ChildProcess;
+				fakeProcess.stdout = new PassThrough();
+				fakeProcess.stderr = new PassThrough();
+				process.nextTick(() => {
+					fakeProcess.emit("close", 1);
+				});
+				return fakeProcess;
 			}
-			return cp.spawnSync(binary, ...args);
+			return cp.spawn(binary, ...args);
 		}),
 	};
 });
