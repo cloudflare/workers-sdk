@@ -1,5 +1,22 @@
 # create-cloudflare
 
+## 2.62.0
+
+### Minor Changes
+
+- [#11549](https://github.com/cloudflare/workers-sdk/pull/11549) [`d059f69`](https://github.com/cloudflare/workers-sdk/commit/d059f69706bcb6c2fc4c3e65bad4f8effeffcb6a) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Vike in `--experimental` mode
+
+- [#11692](https://github.com/cloudflare/workers-sdk/pull/11692) [`df1f9c9`](https://github.com/cloudflare/workers-sdk/commit/df1f9c914524b7a20396aaa4476200501ea05fc1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Waku in `--experimental` mode
+
+- [#11524](https://github.com/cloudflare/workers-sdk/pull/11524) [`b0dbf1a`](https://github.com/cloudflare/workers-sdk/commit/b0dbf1ac5c998365bb14e9a25f9a28773ba299d5) Thanks [@penalosa](https://github.com/penalosa)! - Add hidden CLI flags to `wrangler setup` for suppressing output
+
+  Two new hidden flags have been added to `wrangler setup`:
+
+  - `--no-completion-message`: Suppresses the deployment details message after setup completes
+  - `--no-install-wrangler`: Skips Wrangler installation during project setup
+
+  These flags allow `create-cloudflare` to call `wrangler setup` without redundant output.
+
 ## 2.61.0
 
 ### Minor Changes
