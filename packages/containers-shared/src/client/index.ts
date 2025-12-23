@@ -160,7 +160,6 @@ export { NetworkMode } from "./models/NetworkMode";
 export type { NetworkParameters } from "./models/NetworkParameters";
 export { NodeGroup } from "./models/NodeGroup";
 export type { Observability } from "./models/Observability";
-export type { ObservabilityLogging } from "./models/ObservabilityLogging";
 export type { ObservabilityLogs } from "./models/ObservabilityLogs";
 export type { Placement } from "./models/Placement";
 export type { PlacementEvent } from "./models/PlacementEvent";
