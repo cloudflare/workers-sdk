@@ -5,9 +5,9 @@ import { getCloudflarePreset } from "@cloudflare/unenv-preset";
 import { getNodeCompat } from "miniflare";
 import { resolvePathSync } from "mlly";
 import { defineEnv } from "unenv";
-import * as vite from "vite";
-import type { WorkerConfig } from "./plugin-config";
+import type { ResolvedWorkerConfig } from "./plugin-config";
 import type { ResolvedEnvironment } from "unenv";
+import type * as vite from "vite";
 
 type InjectsByModule = Map<
 	string,
@@ -32,7 +32,7 @@ export class NodeJsCompat {
 	 */
 	#virtualModulePathToSpecifier: VirtualModulePathToSpecifier;
 
-	constructor(workerConfig: WorkerConfig) {
+	constructor(workerConfig: ResolvedWorkerConfig) {
 		const { env } = defineEnv({
 			presets: [
 				getCloudflarePreset({
@@ -196,7 +196,7 @@ export class NodeJsCompat {
 /**
  * Returns `true` if the given combination of compat dates and flags enables Node.js compatibility.
  */
-export function hasNodeJsCompat(workerConfig: WorkerConfig) {
+export function hasNodeJsCompat(workerConfig: ResolvedWorkerConfig) {
 	const nodeCompatMode = getNodeCompat(
 		workerConfig.compatibility_date,
 		workerConfig.compatibility_flags ?? []
@@ -218,7 +218,7 @@ export function hasNodeJsCompat(workerConfig: WorkerConfig) {
 /**
  * Returns true if Node.js async local storage (ALS) is enabled (and not full Node.js compatibility mode).
  */
-export function hasNodeJsAls(workerConfig: WorkerConfig | undefined) {
+export function hasNodeJsAls(workerConfig: ResolvedWorkerConfig | undefined) {
 	return (
 		workerConfig !== undefined &&
 		getNodeCompat(
@@ -240,8 +240,8 @@ export const NODEJS_MODULES_RE = new RegExp(
 	`^(node:)?(${builtinModules.join("|")})$`
 );
 
-export function isNodeAlsModule(path: string) {
-	return /^(node:)?async_hooks$/.test(path);
+export function isNodeAlsModule(modulePath: string) {
+	return /^(?:node:)?async_hooks$/.test(modulePath);
 }
 
 export function assertHasNodeJsCompat(

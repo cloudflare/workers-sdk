@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createdResourceConfig } from "../utils/add-created-resource-config";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -6,7 +7,6 @@ import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { runInTempDir } from "./helpers/run-in-tmp";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 
 describe("createdResourceConfig()", () => {
 	mockAccountId();

@@ -57,6 +57,18 @@ export class CompatibilityFlagAssertions {
 		return `\`${this.#optionsPath}.${camelCaseSetting}\``;
 	}
 
+	isEnabled(
+		enableFlag: string,
+		disableFlag: string,
+		defaultOnDate?: string
+	): boolean {
+		return (
+			!this.#flagExists(disableFlag) ||
+			this.#flagExists(enableFlag) ||
+			isDateSufficient(this.#compatibilityDate, defaultOnDate)
+		);
+	}
+
 	/**
 	 * Ensures that a specific enable flag is present or that the compatibility date meets the required date.
 	 */

@@ -18,6 +18,7 @@ import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqli
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
 import { isProcessEnvPopulated } from "../process-env";
+import { DEFAULT_WORKERS_TYPES_FILE_NAME } from "./helpers";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Entry } from "../deployment-bundle/entry";
@@ -39,7 +40,7 @@ export const typesCommand = createCommand({
 		path: {
 			describe: "The path to the declaration file for the generated types",
 			type: "string",
-			default: "worker-configuration.d.ts",
+			default: DEFAULT_WORKERS_TYPES_FILE_NAME,
 			demandOption: false,
 		},
 		"env-interface": {

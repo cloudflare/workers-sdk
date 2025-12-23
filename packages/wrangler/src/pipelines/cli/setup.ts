@@ -49,7 +49,7 @@ export const pipelinesSetupCommand = createCommand({
 	metadata: {
 		description: "Interactive setup for a complete pipeline",
 		owner: "Product: Pipelines",
-		status: "open-beta",
+		status: "open beta",
 	},
 	args: {
 		name: {

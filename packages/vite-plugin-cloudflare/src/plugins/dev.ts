@@ -122,12 +122,12 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 								oldExportTypes,
 								`Expected export types for Worker "${workerConfig.name}" to be defined`
 							);
-							const hasChanged = compareExportTypes(
+							const exportTypeHasChanged = compareExportTypes(
 								oldExportTypes,
 								newExportTypes
 							);
 
-							if (hasChanged) {
+							if (exportTypeHasChanged) {
 								viteDevServer.config.logger.info(
 									colors.dim(
 										colors.yellow(
@@ -185,7 +185,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 							req[kRequestType] = "asset";
 							next();
 						} else if (includeRulesMatcher({ request })) {
-							userWorkerHandler(req, res, next);
+							void userWorkerHandler(req, res, next);
 						} else {
 							next();
 						}

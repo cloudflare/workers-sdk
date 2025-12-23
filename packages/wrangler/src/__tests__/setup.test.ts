@@ -61,10 +61,13 @@ describe("wrangler setup", () => {
 	test("should run autoconfig when project is not configured", async () => {
 		await seed({
 			"public/index.html": `<h1>Hello World</h1>`,
+			"package.json": JSON.stringify({}),
 		});
 
 		// Let's not actually install Wrangler, to speed up tests
-		vi.spyOn(c3, "installWrangler").mockImplementation(async () => {});
+		const installSpy = vi
+			.spyOn(c3, "installWrangler")
+			.mockImplementation(async () => {});
 
 		const runSpy = vi.spyOn(run, "runAutoConfig");
 
@@ -73,9 +76,49 @@ describe("wrangler setup", () => {
 		// autoconfig should have been run
 		expect(runSpy).toHaveBeenCalled();
 
+		expect(installSpy).toHaveBeenCalled();
+
 		expect(std.out).toContain(
 			"🎉 Your project is now setup to deploy to Cloudflare"
 		);
+	});
+
+	test("should not display completion message when disabled", async () => {
+		await seed({
+			"public/index.html": `<h1>Hello World</h1>`,
+		});
+
+		// Let's not actually install Wrangler, to speed up tests
+		vi.spyOn(c3, "installWrangler").mockImplementation(async () => {});
+
+		const runSpy = vi.spyOn(run, "runAutoConfig");
+
+		await runWrangler("setup --no-completion-message");
+
+		// autoconfig should have been run
+		expect(runSpy).toHaveBeenCalled();
+
+		expect(std.out).not.toContain("🎉 Your project");
+	});
+
+	test("should not install Wrangler when skipped", async () => {
+		await seed({
+			"public/index.html": `<h1>Hello World</h1>`,
+			"package.json": JSON.stringify({}),
+		});
+
+		const installSpy = vi
+			.spyOn(c3, "installWrangler")
+			.mockImplementation(async () => {});
+
+		const runSpy = vi.spyOn(run, "runAutoConfig");
+
+		await runWrangler("setup --no-install-wrangler");
+
+		// autoconfig should have been run
+		expect(runSpy).toHaveBeenCalled();
+
+		expect(installSpy).not.toHaveBeenCalled();
 	});
 
 	describe("--dry-run", () => {

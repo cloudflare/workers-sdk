@@ -1,5 +1,17 @@
 # @cloudflare/cli
 
+## 1.2.0
+
+### Minor Changes
+
+- [#11578](https://github.com/cloudflare/workers-sdk/pull/11578) [`4201472`](https://github.com/cloudflare/workers-sdk/commit/4201472291fa1c864dbcca40c173a76e5b571a04) Thanks [@gpanders](https://github.com/gpanders)! - Add showCursor helper function to show or hide the cursor in the terminal
+
+## 1.1.4
+
+### Patch Changes
+
+- [#11448](https://github.com/cloudflare/workers-sdk/pull/11448) [`2b4813b`](https://github.com/cloudflare/workers-sdk/commit/2b4813b18076817bb739491246313c32b403651f) Thanks [@edmundhung](https://github.com/edmundhung)! - Builds package with esbuild `v0.27.0`
+
 ## 1.1.3
 
 ### Patch Changes

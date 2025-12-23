@@ -8,6 +8,11 @@ declare module '*.html' {
   export default html
 }
 
+declare module '*.sql' {
+	const sql: string
+  export default sql
+}
+
 declare module '*.wasm' {
 	const wasm: WebAssembly.Module
 	export default wasm

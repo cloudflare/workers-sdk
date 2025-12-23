@@ -61,18 +61,16 @@ import { collectKeyValues } from "../utils/collectKeyValues";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
+import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
+import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import { patchNonVersionedScriptSettings } from "./api";
 import type { AssetsOptions } from "../assets";
 import type { Entry } from "../deployment-bundle/entry";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
-import type {
-	CfPlacement,
-	CfWorkerInit,
-	Config,
-} from "@cloudflare/workers-utils";
+import type { CfWorkerInit, Config } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
 
 type Props = {
@@ -463,9 +461,7 @@ export default async function versionsUpload(props: Props): Promise<{
 				}
 			}
 		} catch (e) {
-			// code: 10090, message: workers.api.error.service_not_found
-			// is thrown from the above fetchResult on the first deploy of a Worker
-			if ((e as { code?: number }).code !== 10090) {
+			if (!isWorkerNotFoundError(e)) {
 				throw e;
 			}
 		}
@@ -685,11 +681,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			vars: { ...config.vars, ...props.vars },
 		});
 
-		// The upload API only accepts an empty string or no specified placement for the "off" mode.
-		const placement: CfPlacement | undefined =
-			config.placement?.mode === "smart"
-				? { mode: "smart", hint: config.placement.hint }
-				: undefined;
+		const placement = parseConfigPlacement(config);
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
 		const main = {

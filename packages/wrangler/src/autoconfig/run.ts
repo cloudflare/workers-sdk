@@ -1,19 +1,26 @@
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { FatalError } from "@cloudflare/workers-utils";
+import {
+	FatalError,
+	getLocalWorkerdCompatibilityDate,
+} from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
-import { getDevCompatibilityDate } from "../utils/compatibility-date";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
 import { confirmAutoConfigDetails, displayAutoConfigDetails } from "./details";
 import { Static } from "./frameworks/static";
 import { usesTypescript } from "./uses-typescript";
-import type { AutoConfigDetails, AutoConfigOptions } from "./types";
-import type { RawConfig } from "@cloudflare/workers-utils";
+import type { PackageJsonScriptsOverrides } from "./frameworks";
+import type {
+	AutoConfigDetails,
+	AutoConfigOptions,
+	AutoConfigSummary,
+} from "./types";
+import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
 type AutoConfigMetrics = Pick<
 	AutoConfigDetails,
@@ -25,11 +32,13 @@ type AutoConfigMetrics = Pick<
 export async function runAutoConfig(
 	autoConfigDetails: AutoConfigDetails,
 	autoConfigOptions: AutoConfigOptions = {}
-): Promise<void> {
+): Promise<AutoConfigSummary> {
 	const dryRun = autoConfigOptions.dryRun === true;
 	const runBuild = !dryRun && (autoConfigOptions.runBuild ?? true);
 	const skipConfirmations =
 		dryRun || autoConfigOptions.skipConfirmations === true;
+	const enableWranglerInstallation =
+		autoConfigOptions.enableWranglerInstallation ?? true;
 
 	const detected: AutoConfigMetrics = {
 		buildCommand: autoConfigDetails.buildCommand,
@@ -64,10 +73,23 @@ export async function runAutoConfig(
 		);
 	}
 
+	if (
+		autoConfigDetails.framework &&
+		!autoConfigDetails.framework?.autoConfigSupported
+	) {
+		throw new FatalError(
+			`The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+		);
+	}
+
+	const { date: compatibilityDate } = getLocalWorkerdCompatibilityDate({
+		projectPath: autoConfigDetails.projectPath,
+	});
+
 	const wranglerConfig: RawConfig = {
 		$schema: "node_modules/wrangler/config-schema.json",
 		name: autoConfigDetails.workerName,
-		compatibility_date: getDevCompatibilityDate(undefined),
+		compatibility_date: compatibilityDate,
 		observability: {
 			enabled: true,
 		},
@@ -81,10 +103,14 @@ export async function runAutoConfig(
 			dryRun: true,
 		});
 
-	const modifications = await buildOperationsSummary(autoConfigDetails, {
-		...wranglerConfig,
-		...dryRunConfigurationResults?.wranglerConfig,
-	});
+	const autoConfigSummary = await buildOperationsSummary(
+		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
+		{
+			...wranglerConfig,
+			...dryRunConfigurationResults?.wranglerConfig,
+		},
+		dryRunConfigurationResults?.packageJsonScriptsOverrides
+	);
 
 	if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
 		throw new FatalError("Setup cancelled");
@@ -95,39 +121,58 @@ export async function runAutoConfig(
 			`✋  ${"Autoconfig process run in dry-run mode, existing now."}`
 		);
 		logger.log("");
-		return;
+		return autoConfigSummary;
 	}
 
 	logger.debug(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (autoConfigDetails.packageJson) {
-		await writeFile(
-			resolve(autoConfigDetails.projectPath, "package.json"),
-			JSON.stringify(
-				{
-					...autoConfigDetails.packageJson,
-					scripts: {
-						...autoConfigDetails.packageJson.scripts,
-						...modifications.scripts,
-					},
-				},
-				null,
-				2
-			)
-		);
-	}
-
-	if (modifications.wranglerInstall) {
+	if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
 		await installWrangler();
 	}
+
 	const configurationResults = await autoConfigDetails.framework?.configure({
 		outputDir: autoConfigDetails.outputDir,
 		projectPath: autoConfigDetails.projectPath,
 		workerName: autoConfigDetails.workerName,
 		dryRun: false,
 	});
+
+	if (autoConfigDetails.packageJson) {
+		const packageJsonPath = resolve(
+			autoConfigDetails.projectPath,
+			"package.json"
+		);
+		const existingPackageJson = JSON.parse(
+			await readFile(packageJsonPath, "utf8")
+		) as PackageJSON;
+
+		await writeFile(
+			packageJsonPath,
+			JSON.stringify(
+				{
+					...existingPackageJson,
+					name: autoConfigDetails.packageJson.name ?? existingPackageJson.name,
+					dependencies: {
+						...existingPackageJson.dependencies,
+						...autoConfigDetails.packageJson.dependencies,
+					},
+					devDependencies: {
+						...existingPackageJson.devDependencies,
+						...autoConfigDetails.packageJson.devDependencies,
+					},
+					scripts: {
+						...existingPackageJson.scripts,
+						...autoConfigDetails.packageJson.scripts,
+						...autoConfigSummary.scripts,
+					},
+				} satisfies PackageJSON,
+				null,
+				2
+			)
+		);
+	}
 
 	await writeFile(
 		resolve(autoConfigDetails.projectPath, "wrangler.jsonc"),
@@ -145,16 +190,15 @@ export async function runAutoConfig(
 		addWranglerToAssetsIgnore(autoConfigDetails.projectPath);
 	}
 
-	if (autoConfigDetails.buildCommand && runBuild) {
-		await runCommand(
-			autoConfigDetails.buildCommand,
-			autoConfigDetails.projectPath,
-			"[build]"
-		);
+	const buildCommand =
+		configurationResults?.buildCommand ?? autoConfigDetails.buildCommand;
+
+	if (buildCommand && runBuild) {
+		await runCommand(buildCommand, autoConfigDetails.projectPath, "[build]");
 	}
 
 	const used: AutoConfigMetrics = {
-		buildCommand: autoConfigDetails.buildCommand,
+		buildCommand,
 		outputDir: autoConfigDetails.outputDir,
 		framework: autoConfigDetails.framework?.name,
 	};
@@ -168,40 +212,41 @@ export async function runAutoConfig(
 		{}
 	);
 
-	return;
+	return autoConfigSummary;
 }
 
-type Modifications = {
-	wranglerInstall: boolean;
-	scripts: Record<string, string>;
-};
-
 export async function buildOperationsSummary(
-	autoConfigDetails: AutoConfigDetails,
-	wranglerConfigToWrite: RawConfig
-): Promise<Modifications> {
+	autoConfigDetails: Omit<AutoConfigDetails, "outputDir"> & {
+		outputDir: NonNullable<AutoConfigDetails["outputDir"]>;
+	},
+	wranglerConfigToWrite: RawConfig,
+	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
+): Promise<AutoConfigSummary> {
 	logger.log("");
 
-	const modifications: Modifications = {
+	const summary: AutoConfigSummary = {
 		wranglerInstall: false,
 		scripts: {},
+		wranglerConfig: wranglerConfigToWrite,
+		outputDir: autoConfigDetails.outputDir,
 	};
+
 	if (autoConfigDetails.packageJson) {
 		// If there is a package.json file we will want to install wrangler
-		modifications.wranglerInstall = true;
+		summary.wranglerInstall = true;
 
 		logger.log("📦 Install packages:");
 		logger.log(` - wrangler (devDependency)`);
 		logger.log("");
 
-		modifications.scripts = {
+		summary.scripts = {
 			deploy:
-				autoConfigDetails.framework?.deploy ??
+				packageJsonScriptsOverrides?.deploy ??
 				(autoConfigDetails.buildCommand
 					? `${autoConfigDetails.buildCommand} && wrangler deploy`
 					: `wrangler deploy`),
 			preview:
-				autoConfigDetails.framework?.preview ??
+				packageJsonScriptsOverrides?.preview ??
 				(autoConfigDetails.buildCommand
 					? `${autoConfigDetails.buildCommand} && wrangler dev`
 					: `wrangler dev`),
@@ -215,12 +260,12 @@ export async function buildOperationsSummary(
 			usesTypescript(autoConfigDetails.projectPath) &&
 			!("cf-typegen" in (autoConfigDetails.packageJson.scripts ?? {}))
 		) {
-			modifications.scripts["cf-typegen"] =
-				autoConfigDetails.framework?.typegen ?? "wrangler types";
+			summary.scripts["cf-typegen"] =
+				packageJsonScriptsOverrides?.typegen ?? "wrangler types";
 		}
 
 		logger.log("📝 Update package.json scripts:");
-		for (const [name, script] of Object.entries(modifications.scripts)) {
+		for (const [name, script] of Object.entries(summary.scripts)) {
 			logger.log(` - "${name}": "${script}"`);
 		}
 		logger.log("");
@@ -235,16 +280,15 @@ export async function buildOperationsSummary(
 	if (
 		autoConfigDetails.framework &&
 		!(autoConfigDetails.framework instanceof Static) &&
-		!autoConfigDetails.framework.configured
+		!autoConfigDetails.framework.isConfigured(autoConfigDetails.projectPath)
 	) {
-		logger.log(
-			`🛠️  ${
-				autoConfigDetails.framework.configurationDescription ??
-				`Configuring project for ${autoConfigDetails.framework.name}`
-			}`
-		);
+		summary.frameworkConfiguration =
+			autoConfigDetails.framework.configurationDescription ??
+			`Configuring project for ${autoConfigDetails.framework.name}`;
+
+		logger.log(`🛠️  ${summary.frameworkConfiguration}`);
 		logger.log("");
 	}
 
-	return modifications;
+	return summary;
 }

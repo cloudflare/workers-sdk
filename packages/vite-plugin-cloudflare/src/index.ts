@@ -1,4 +1,4 @@
-import * as vite from "vite";
+import { assertWranglerVersion } from "./assert-wrangler-version";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
 import { additionalModulesPlugin } from "./plugins/additional-modules";
@@ -12,6 +12,7 @@ import {
 } from "./plugins/nodejs-compat";
 import { outputConfigPlugin } from "./plugins/output-config";
 import { previewPlugin } from "./plugins/preview";
+import { shortcutsPlugin } from "./plugins/shortcuts";
 import { triggerHandlersPlugin } from "./plugins/trigger-handlers";
 import {
 	virtualClientFallbackPlugin,
@@ -21,13 +22,19 @@ import { wasmHelperPlugin } from "./plugins/wasm";
 import { debuglog } from "./utils";
 import type { SharedContext } from "./context";
 import type { PluginConfig } from "./plugin-config";
+import type * as vite from "vite";
+
+export { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 
 export type { PluginConfig } from "./plugin-config";
+export type { WorkerConfig } from "./workers-configs";
 
 const sharedContext: SharedContext = {
 	hasShownWorkerConfigWarnings: false,
 	isRestartingDevServer: false,
 };
+
+await assertWranglerVersion();
 
 /**
  * Vite plugin that enables a full-featured integration between Vite and the Cloudflare Workers runtime.
@@ -66,6 +73,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		configPlugin(ctx),
 		devPlugin(ctx),
 		previewPlugin(ctx),
+		shortcutsPlugin(ctx),
 		debugPlugin(ctx),
 		triggerHandlersPlugin(ctx),
 		virtualModulesPlugin(ctx),

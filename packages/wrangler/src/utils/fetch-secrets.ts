@@ -1,3 +1,4 @@
+import { APIError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { requireAuth } from "../user";
 import { useServiceEnvironments } from "./useServiceEnvironments";
@@ -20,7 +21,15 @@ export async function fetchSecrets(
 	const secrets = await fetchResult<{ name: string; type: string }[]>(
 		config,
 		url
-	);
+	).catch((e) => {
+		if (e instanceof APIError && e.code === 10007) {
+			// The worker was not found this means that this is the workers' first deployment
+			// so there are obviously no secrets
+			return [];
+		}
+
+		throw e;
+	});
 
 	return secrets;
 }

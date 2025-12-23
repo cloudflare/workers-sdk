@@ -5,6 +5,7 @@ import {
 import { describe, expect, it } from "vitest";
 import type { Config } from "@cloudflare/workers-utils";
 
+// TODO: Move these tests to the workers-utils package
 describe("validatePagesConfig()", () => {
 	describe("`main` field validation", () => {
 		it("should error if configuration contains both `pages_build_output_dir` and `main` config fields", () => {
@@ -185,6 +186,7 @@ describe("validatePagesConfig()", () => {
 						host: "test-host",
 						enable_containers: false,
 						container_engine: undefined,
+						generate_types: false,
 					},
 				},
 			};

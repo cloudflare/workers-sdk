@@ -13,7 +13,7 @@ import {
 
 export const d1MigrationsListCommand = createCommand({
 	metadata: {
-		description: "List your D1 migrations",
+		description: "View a list of unapplied migration files",
 		status: "stable",
 		owner: "Product: D1",
 	},
@@ -29,16 +29,16 @@ export const d1MigrationsListCommand = createCommand({
 		local: {
 			type: "boolean",
 			description:
-				"Execute commands/files against a local DB for use with wrangler dev",
+				"Check migrations against a local DB for use with wrangler dev",
 		},
 		remote: {
 			type: "boolean",
 			description:
-				"Execute commands/files against a remote DB for use with wrangler dev --remote",
+				"Check migrations against a remote DB for use with wrangler dev --remote",
 		},
 		preview: {
 			type: "boolean",
-			description: "Execute commands/files against a preview D1 DB",
+			description: "Check migrations against a preview D1 DB",
 			default: false,
 		},
 		"persist-to": {
@@ -54,15 +54,17 @@ export const d1MigrationsListCommand = createCommand({
 			await requireAuth({});
 		}
 
+		if (!config.configPath) {
+			throw new UserError(
+				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
+			);
+		}
+
 		const databaseInfo = getDatabaseInfoFromConfig(config, database);
 		if (!databaseInfo && remote) {
 			throw new UserError(
 				`Couldn't find a D1 DB with the name or binding '${database}' in your ${configFileName(config.configPath)} file.`
 			);
-		}
-
-		if (!config.configPath) {
-			return;
 		}
 
 		const migrationsPath = await getMigrationsPath({

@@ -31,13 +31,13 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-					Object {
-					  "buildCommand": "npm run build",
-					  "configured": false,
-					  "projectPath": "<PROJECT_PATH>",
-					  "workerName": "worker-name",
-					}
-				`);
+				Object {
+				  "buildCommand": "npm run build",
+				  "configured": false,
+				  "projectPath": "<PROJECT_PATH>",
+				  "workerName": "worker-name",
+				}
+			`);
 		});
 
 		test("settings can be updated in a plain static site without a framework nor a build script", async () => {
@@ -102,9 +102,10 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				workerName: "my-astro-site",
 				buildCommand: "astro build",
 				framework: {
-					configured: false,
+					isConfigured: () => false,
 					configure: () => ({ wranglerConfig: {} }),
 					name: "astro",
+					autoConfigSupported: true,
 				},
 				outputDir: "<OUTPUT_DIR>",
 				projectPath: "<PROJECT_PATH>",
@@ -115,8 +116,9 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "buildCommand": "npm run build",
 				  "configured": false,
 				  "framework": Object {
+				    "autoConfigSupported": true,
 				    "configure": [Function],
-				    "configured": false,
+				    "isConfigured": [Function],
 				    "name": "astro",
 				  },
 				  "outputDir": "",

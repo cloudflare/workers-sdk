@@ -1,12 +1,12 @@
 import { writeFile } from "node:fs/promises";
 import readline from "node:readline";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, describe, expect, it, test, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs } from "../../helpers/mock-dialogs";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import { writeWranglerConfig } from "../../helpers/write-wrangler-config";
 import { mockPostVersion, mockSetupApiCalls } from "./utils";
 import type { Interface } from "node:readline";
 

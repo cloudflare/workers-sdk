@@ -1,8 +1,24 @@
 import fs from "node:fs";
+import semverGte from "semver/functions/gte";
+import { version as viteVersion } from "vite";
 import { onTestFinished, test } from "vitest";
+import { isWindows } from "../vitest-setup";
 
 export * from "../vitest-setup";
 export * from "./responses";
+
+export function satisfiesViteVersion(minVersion: string): boolean {
+	return semverGte(viteVersion, minVersion);
+}
+
+// TODO: remove when all tests are passing with Vite 8
+export const isVite8 = viteVersion.split(".")[0] === "8";
+
+/** Common options to use with `vi.waitFor()` */
+export const WAIT_FOR_OPTIONS = {
+	timeout: isWindows ? 10_000 : 5_000,
+	interval: 500,
+};
 
 export function failsIf(condition: boolean) {
 	return condition ? test.fails : test;

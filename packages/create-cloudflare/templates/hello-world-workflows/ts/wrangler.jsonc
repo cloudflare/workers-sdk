@@ -1,7 +1,7 @@
 {
-	"name": "<TBD>",
+	"name": "<WORKER_NAME>",
 	"main": "src/index.ts",
-	"compatibility_date": "<TBD>",
+	"compatibility_date": "<COMPATIBILITY_DATE>",
 
 	"observability": {
 		"enabled": true,
@@ -9,7 +9,7 @@
 	},
 	"workflows": [
 		{
-			"name": "workflows-hello-world",
+			"name": "workflow-<WORKER_NAME>",
 			"binding": "MY_WORKFLOW",
 			"class_name": "MyWorkflow",
 		},

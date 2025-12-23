@@ -13,7 +13,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os.name }}-${{ matrix.pm.name }}-${{ matrix.pm.version }}${{ matrix.experimental && '-experimental' || '' }}-${{ matrix.filter }}
       cancel-in-progress: true
-    name: ${{ format('C3 ({0}, {1}{2}) - {3}', matrix.pm.name, matrix.os.description, matrix.experimental && ', experimental' || '', matrix.filter) }}
+    name: ${{ format('C3 E2E ({0}, {1}{2}) - {3}', matrix.pm.name, matrix.os.description, matrix.experimental && ', experimental' || '', matrix.filter) }}
     strategy:
       fail-fast: false
       matrix:
@@ -90,14 +90,14 @@ jobs:
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
-          name: ${{ format('e2e-logs-{0}-{1}-{2}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}
-          path: packages/create-cloudflare/.e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}-${{ matrix.filter }}
+          name: ${{ format('e2e-logs-{0}-{1}-{2}-{3}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.filter) }}
+          path: packages/create-cloudflare/.e2e-logs${{matrix.experimental == 'true' && '-experimental' || ''}}/${{ matrix.pm.name }}/${{ matrix.filter }}
           include-hidden-files: true
 
       - name: Upload Turbo Summary
         uses: actions/upload-artifact@v4
         if: ${{ !cancelled() && steps.changes.outputs.everything_but_markdown == 'true' }}
         with:
-          name: ${{ format('turbo-runs-{0}-{1}-{2}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal') }}${{ matrix.filter }}
+          name: ${{ format('turbo-runs-{0}-{1}-{2}-{3}', matrix.pm.name, matrix.os.description, matrix.experimental && 'experimental' || 'normal', matrix.filter) }}
           path: .turbo/runs
           include-hidden-files: true

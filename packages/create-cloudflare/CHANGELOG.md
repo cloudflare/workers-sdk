@@ -1,5 +1,158 @@
 # create-cloudflare
 
+## 2.61.0
+
+### Minor Changes
+
+- [#11684](https://github.com/cloudflare/workers-sdk/pull/11684) [`f1f036c`](https://github.com/cloudflare/workers-sdk/commit/f1f036cf2191c1b043495e195c9cc4ac7be98529) Thanks [@ascorbic](https://github.com/ascorbic)! - Add `--variant` CLI argument to select framework variants non-interactively. This allows users to skip the variant selection prompt when creating React projects by specifying the variant directly, for example: `npm create cloudflare my-app -- --framework=react --platform=workers --variant=react-ts`.
+
+### Patch Changes
+
+- [#11662](https://github.com/cloudflare/workers-sdk/pull/11662) [`1be6bfe`](https://github.com/cloudflare/workers-sdk/commit/1be6bfea48b8ab7bc0860dc77e929e0019a937ac) Thanks [@pombosilva](https://github.com/pombosilva)! - Generate Workflow name based on worker name in hello-world-workflows template.
+
+  Previously, the hello-world-workflows template defaulted to the workflow name
+  `workflows-hello-world`. This caused deployments to overwrite existing workflows when
+  users forgot to change the name, since workflow names must be unique. The workflow
+  name is now generated from the worker name.
+
+## 2.60.0
+
+### Minor Changes
+
+- [#11301](https://github.com/cloudflare/workers-sdk/pull/11301) [`6c590a0`](https://github.com/cloudflare/workers-sdk/commit/6c590a0c3392bb2b32ff5b7388114066d39e03da) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Next.js (via OpenNext) in `--experimental` mode
+
+### Patch Changes
+
+- [#11597](https://github.com/cloudflare/workers-sdk/pull/11597) [`3122607`](https://github.com/cloudflare/workers-sdk/commit/312260751a27f6be75c67a1b345edf1e431438ee) Thanks [@vicb](https://github.com/vicb)! - make sure comments are always added to the end of `wrangler.jsonc`
+
+## 2.59.0
+
+### Minor Changes
+
+- [#11560](https://github.com/cloudflare/workers-sdk/pull/11560) [`2d9a30c`](https://github.com/cloudflare/workers-sdk/commit/2d9a30c843a0a73d572974b3aa6ff50ccafb7721) Thanks [@vicb](https://github.com/vicb)! - Support `<PACKAGE_NAME>` as a placeholder for the package name in `package.json`
+
+  `"name": "<PACKAGE_NAME>"` is replaced with the project name when c3 updates a `package.json` using `updatePackageName`.
+  Previously only `"<TBD>"`, `"TBD"`, and `""` were supported placeholder names.
+
+- [#11551](https://github.com/cloudflare/workers-sdk/pull/11551) [`f261472`](https://github.com/cloudflare/workers-sdk/commit/f26147263b2ed5763a0e771b2693d2d223a9863f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support RedwoodSDK in `--experimental` mode
+
+- [#11520](https://github.com/cloudflare/workers-sdk/pull/11520) [`85ec269`](https://github.com/cloudflare/workers-sdk/commit/85ec26985a05b2cc5e0dd3c4904f5b96b9e2de80) Thanks [@vicb](https://github.com/vicb)! - Add placeholder substitution in wrangler config files.
+
+  When c3 updates the config file:
+
+  - The value `"<WORKER_NAME>"` is replaced with the worker name.
+  - The value `"<COMPATIBILITY_DATE>"` is replaced with the latest worked compatibility date.
+
+- [#11576](https://github.com/cloudflare/workers-sdk/pull/11576) [`bb47e20`](https://github.com/cloudflare/workers-sdk/commit/bb47e2090cd4c0c4c56abe97fffb35f3101414bf) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Analog in `--experimental` mode
+
+### Patch Changes
+
+- [#11557](https://github.com/cloudflare/workers-sdk/pull/11557) [`632fb6d`](https://github.com/cloudflare/workers-sdk/commit/632fb6dd7753daf1d771f15144baf8f1a451d9fa) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-rwsdk | 3.1.0 | 3.1.2 |
+
+- [#11577](https://github.com/cloudflare/workers-sdk/pull/11577) [`85d70c8`](https://github.com/cloudflare/workers-sdk/commit/85d70c8b143579aab236d647f0e4ded1a487fe3b) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update help message not to recommend non-applicable `--ts` create-next-app argument
+
+  C3 uses it's own template when running create-next-app, so providing a `--ts` argument to it doesn't have any effect, the C3 help message however shows that as an example on how to pass arguments to underlying framework CLIs. The changes here update the error message to instead use svelte's `--types=ts` as the example
+
+- [#11563](https://github.com/cloudflare/workers-sdk/pull/11563) [`df7cd47`](https://github.com/cloudflare/workers-sdk/commit/df7cd47b38f4f86a1da5065e20867c1040d09c01) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix analog template and tests - bumping to 2.1.3
+
+- [#11558](https://github.com/cloudflare/workers-sdk/pull/11558) [`d53462c`](https://github.com/cloudflare/workers-sdk/commit/d53462c9ff9a44761207f75041a0c854bea36029) Thanks [@vicb](https://github.com/vicb)! - fix: make sure c3 does not add duplicated types
+
+## 2.58.0
+
+### Minor Changes
+
+- [#11477](https://github.com/cloudflare/workers-sdk/pull/11477) [`9988cc9`](https://github.com/cloudflare/workers-sdk/commit/9988cc9b9b157e453bb5eade439a8e69bfa0c7bd) Thanks [@ascorbic](https://github.com/ascorbic)! - Support Nuxt in autoconfig `--experimental` flow
+
+- [#11472](https://github.com/cloudflare/workers-sdk/pull/11472) [`ce295bf`](https://github.com/cloudflare/workers-sdk/commit/ce295bffdc7a45494b6683ee5fef04dbfca54345) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Qwik in `--experimental` mode
+
+- [#11485](https://github.com/cloudflare/workers-sdk/pull/11485) [`f1b76f7`](https://github.com/cloudflare/workers-sdk/commit/f1b76f70fa6f4a25dd607333fef104f0392332e7) Thanks [@penalosa](https://github.com/penalosa)! - Add React & Vue to C3's experimental mode
+
+- [#11442](https://github.com/cloudflare/workers-sdk/pull/11442) [`a75352b`](https://github.com/cloudflare/workers-sdk/commit/a75352bb717663a902a0c156fbe424e7b558ca97) Thanks [@brillout](https://github.com/brillout)! - add Vike framework template
+
+- [#11498](https://github.com/cloudflare/workers-sdk/pull/11498) [`ac861f8`](https://github.com/cloudflare/workers-sdk/commit/ac861f8ec24357c0238fa939b33da71236df7095) Thanks [@penalosa](https://github.com/penalosa)! - Add React Router support in autoconfig
+
+- [#11506](https://github.com/cloudflare/workers-sdk/pull/11506) [`79d30d4`](https://github.com/cloudflare/workers-sdk/commit/79d30d4321b057f3cb4451ab43fa67653f1a8ee5) Thanks [@vicb](https://github.com/vicb)! - Set the target JS version to ES2024
+
+### Patch Changes
+
+- [#11472](https://github.com/cloudflare/workers-sdk/pull/11472) [`ce295bf`](https://github.com/cloudflare/workers-sdk/commit/ce295bffdc7a45494b6683ee5fef04dbfca54345) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: remove unnecessary step in qwik templates
+
+  The step that modifies the `src/entry.cloudflare-pages.tsx` file doesn't seem to change the file in any way anymore, so it's been removed
+
+- [#11483](https://github.com/cloudflare/workers-sdk/pull/11483) [`f550b62`](https://github.com/cloudflare/workers-sdk/commit/f550b62fd4fdd60c2600390754631d713140afd3) Thanks [@edmundhung](https://github.com/edmundhung)! - stop running `npm install` with `--legacy-peer-deps` flag when setting up a project
+
+## 2.57.1
+
+### Patch Changes
+
+- [#11507](https://github.com/cloudflare/workers-sdk/pull/11507) [`7b24eb0`](https://github.com/cloudflare/workers-sdk/commit/7b24eb0bfbc0adb5c56d634dac9156fa5b2d3701) Thanks [@jamesopstad](https://github.com/jamesopstad)! - fix: React Router configuration mismatch with v7.10.0
+
+## 2.57.0
+
+### Minor Changes
+
+- [#11478](https://github.com/cloudflare/workers-sdk/pull/11478) [`2aec2b4`](https://github.com/cloudflare/workers-sdk/commit/2aec2b4e0ef710ec7e3897f823eca38d22991662) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support SolidStart in autoconfig `--experimental` flow
+
+- [#11375](https://github.com/cloudflare/workers-sdk/pull/11375) [`9a1de61`](https://github.com/cloudflare/workers-sdk/commit/9a1de617412f610a332f2516f4d61bec12556919) Thanks [@penalosa](https://github.com/penalosa)! - Support TanStack Start in autoconfig `--experimental` flow
+
+- [#11330](https://github.com/cloudflare/workers-sdk/pull/11330) [`5a873bb`](https://github.com/cloudflare/workers-sdk/commit/5a873bbb0f018b02cf26a48da59c5389ef306589) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Angular in autoconfig `--experimental` flow
+
+### Patch Changes
+
+- [#11448](https://github.com/cloudflare/workers-sdk/pull/11448) [`2b4813b`](https://github.com/cloudflare/workers-sdk/commit/2b4813b18076817bb739491246313c32b403651f) Thanks [@edmundhung](https://github.com/edmundhung)! - Builds package with esbuild `v0.27.0`
+
+- [#11385](https://github.com/cloudflare/workers-sdk/pull/11385) [`e51aa7a`](https://github.com/cloudflare/workers-sdk/commit/e51aa7a5573d602c43762331fae8b4f1e75cfb20) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To     |
+  | ---------------------- | ------ | ------ |
+  | @tanstack/create-start | 0.36.2 | 0.37.2 |
+
+- [#11386](https://github.com/cloudflare/workers-sdk/pull/11386) [`8e8ab6f`](https://github.com/cloudflare/workers-sdk/commit/8e8ab6f2ce0cb3acf0545d72d86b3a5280b033a3) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.9.14 | 0.10.5 |
+
+- [#11473](https://github.com/cloudflare/workers-sdk/pull/11473) [`efac6c5`](https://github.com/cloudflare/workers-sdk/commit/efac6c58f9fadba777d584f20dfbea56ea9e772d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.18.2 | 3.18.3 |
+
+- [#11474](https://github.com/cloudflare/workers-sdk/pull/11474) [`b4dc50b`](https://github.com/cloudflare/workers-sdk/commit/b4dc50b1f761982dfcbbd4ec3432f114d7f84978) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.0.0 | 21.0.1 |
+
+- [#11475](https://github.com/cloudflare/workers-sdk/pull/11475) [`452a300`](https://github.com/cloudflare/workers-sdk/commit/452a3009c16d2838a15b784c31d749018987ca4f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency             | From   | To     |
+  | ---------------------- | ------ | ------ |
+  | @tanstack/create-start | 0.37.2 | 0.40.0 |
+
+- [#11478](https://github.com/cloudflare/workers-sdk/pull/11478) [`2aec2b4`](https://github.com/cloudflare/workers-sdk/commit/2aec2b4e0ef710ec7e3897f823eca38d22991662) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Remove unnecessary nitropack installation
+
+- [#11480](https://github.com/cloudflare/workers-sdk/pull/11480) [`86d1e25`](https://github.com/cloudflare/workers-sdk/commit/86d1e257a58a1c9d98879c2deafa90a23f989d81) Thanks [@Hypercookie](https://github.com/Hypercookie)! - fix typos in `hello-world-durable-object` templates
+
+- [#11330](https://github.com/cloudflare/workers-sdk/pull/11330) [`5a873bb`](https://github.com/cloudflare/workers-sdk/commit/5a873bbb0f018b02cf26a48da59c5389ef306589) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update the Angular starter to set a `preview` script instead of a `start` one
+
 ## 2.56.0
 
 ### Minor Changes

@@ -12,7 +12,10 @@ import {
 } from "./shared";
 import { debuglog, getOutputDirectory } from "./utils";
 import type { ExportTypes } from "./export-types";
-import type { WorkerConfig, WorkersResolvedConfig } from "./plugin-config";
+import type {
+	ResolvedWorkerConfig,
+	WorkersResolvedConfig,
+} from "./plugin-config";
 import type { MessageEvent, Miniflare, WebSocket } from "miniflare";
 import type { FetchFunctionOptions } from "vite/module-runner";
 
@@ -93,7 +96,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 
 	async initRunner(
 		miniflare: Miniflare,
-		workerConfig: WorkerConfig,
+		workerConfig: ResolvedWorkerConfig,
 		isEntryWorker: boolean
 	): Promise<void> {
 		const response = await miniflare.dispatchFetch(
@@ -119,7 +122,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 
 	async fetchWorkerExportTypes(
 		miniflare: Miniflare,
-		workerConfig: WorkerConfig
+		workerConfig: ResolvedWorkerConfig
 	): Promise<ExportTypes> {
 		// Wait for dependencies to be optimized before making the request
 		await this.depsOptimizer?.init();
@@ -162,7 +165,10 @@ export const cloudflareBuiltInModules = [
 ];
 
 const defaultConditions = ["workerd", "worker", "module", "browser"];
-const target = "es2022";
+
+// v8 supports es2024 features as of 11.9
+// workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
+const target = "es2024";
 
 export function createCloudflareEnvironmentOptions({
 	workerConfig,
@@ -172,7 +178,7 @@ export function createCloudflareEnvironmentOptions({
 	isEntryWorker,
 	hasNodeJsCompat,
 }: {
-	workerConfig: WorkerConfig;
+	workerConfig: ResolvedWorkerConfig;
 	userConfig: vite.UserConfig;
 	mode: vite.ConfigEnv["mode"];
 	environmentName: string;
@@ -214,6 +220,7 @@ export function createCloudflareEnvironmentOptions({
 				// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
 				preserveEntrySignatures: "strict",
 				// rolldown-only option
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				...("rolldownVersion" in vite ? ({ platform: "neutral" } as any) : {}),
 			},
 		},
@@ -259,6 +266,7 @@ function getProcessEnvReplacements(
 	hasNodeJsCompat: boolean,
 	mode: vite.ConfigEnv["mode"]
 ): Record<string, string> {
+	// eslint-disable-next-line turbo/no-undeclared-env-vars
 	const nodeEnv = process.env.NODE_ENV || mode;
 	const nodeEnvReplacements = {
 		"process.env.NODE_ENV": JSON.stringify(nodeEnv),

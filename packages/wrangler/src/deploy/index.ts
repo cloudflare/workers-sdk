@@ -27,6 +27,8 @@ import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import deploy from "./deploy";
+import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
+import type { AutoConfigSummary } from "../autoconfig/types";
 
 export const deployCommand = createCommand({
 	metadata: {
@@ -277,6 +279,8 @@ export const deployCommand = createCommand({
 			!args.script &&
 			!args.assets;
 
+		let autoConfigSummary: AutoConfigSummary | undefined;
+
 		if (shouldRunAutoConfig) {
 			const details = await getDetailsForAutoConfig({
 				wranglerConfig: config,
@@ -284,7 +288,7 @@ export const deployCommand = createCommand({
 
 			// Only run auto config if the project is not already configured
 			if (!details.configured) {
-				await runAutoConfig(details);
+				autoConfigSummary = await runAutoConfig(details);
 
 				// If autoconfig worked, there should now be a new config file, and so we need to read config again
 				config = readConfig(args, {
@@ -292,6 +296,18 @@ export const deployCommand = createCommand({
 					useRedirectIfAvailable: true,
 				});
 			}
+		}
+
+		// Note: the open-next delegation should happen after we run the auto-config logic so that we
+		//       make sure that the deployment of brand newly auto-configured Next.js apps is correctly
+		//       delegated here
+		const deploymentDelegatedToOpenNext =
+			!args.dryRun &&
+			(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
+
+		if (deploymentDelegatedToOpenNext) {
+			// We've delegated the deployment to open-next so we must not run any actual deployment logic now
+			return;
 		}
 
 		if (!config.configPath) {
@@ -425,6 +441,7 @@ export const deployCommand = createCommand({
 			targets,
 			wrangler_environment: args.env,
 			worker_name_overridden: workerNameOverridden,
+			autoconfig_summary: autoConfigSummary,
 		});
 
 		metrics.sendMetricsEvent(

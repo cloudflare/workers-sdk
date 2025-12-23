@@ -198,9 +198,14 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 		writeAuthConfigFile({ api_token: "API_TOKEN" });
 		await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 
-		expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token.[0m
+		// The current working directory is replaced with `<cwd>` to make the snapshot consistent across environments
+		// But since the actual working directory could be a long string on some operating systems it is possible that the string gets wrapped to a new line.
+		// To avoid failures across different environments, we remove any newline before `<cwd>` in the snapshot.
+		expect(std.warn.replaceAll(/from[ \r\n]+<cwd>/g, "from <cwd>"))
+			.toMatchInlineSnapshot(`
+			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token[0m
 
+			  from <cwd>/home/.config/.wrangler/config/default.toml.
 			  This is no longer supported in the current version of Wrangler.
 			  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
 			  environment variable.
@@ -218,6 +223,42 @@ describe("whoami", () => {
 	beforeEach(() => {
 		setIsTTY(true);
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
+	});
+
+	it("should display a warning when account_id in config does not match authenticated accounts", async () => {
+		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		const { whoami } = await import("../user/whoami");
+		await whoami(
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			"unknownaccountid",
+			"unknownaccountid"
+		);
+		expect(std.out).toContain(
+			"The `account_id` in your Wrangler configuration (unknownaccountid) does not match any of your authenticated accounts."
+		);
+		expect(std.out).toContain("This may be causing the authentication error.");
+	});
+
+	it("should not display a warning when account_id matches an authenticated account", async () => {
+		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		const { whoami } = await import("../user/whoami");
+		await whoami(COMPLIANCE_REGION_CONFIG_UNKNOWN, "account-1", "account-1");
+		expect(std.out).not.toContain(
+			"does not match any of your authenticated accounts"
+		);
+	});
+
+	it("should not display a warning when accountFilter and configAccountId don't match", async () => {
+		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		const { whoami } = await import("../user/whoami");
+		await whoami(
+			COMPLIANCE_REGION_CONFIG_UNKNOWN,
+			"differentaccountid",
+			"unknownaccountid"
+		);
+		expect(std.out).not.toContain(
+			"does not match any of your authenticated accounts"
+		);
 	});
 
 	it("should display membership roles if --account flag is given", async () => {

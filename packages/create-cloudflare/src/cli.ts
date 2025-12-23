@@ -147,7 +147,7 @@ const create = async (ctx: C3Context) => {
 	if (!ctx.args.experimental) {
 		await copyTemplateFiles(ctx);
 	}
-	await updatePackageName(ctx);
+	updatePackageName(ctx);
 
 	chdir(ctx.project.path);
 	await npmInstall(ctx);
@@ -169,7 +169,14 @@ const configure = async (ctx: C3Context) => {
 	if (ctx.args.experimental) {
 		const { npx } = detectPackageManager();
 
-		await runCommand([npx, "wrangler", "setup", "--yes"]);
+		await runCommand([
+			npx,
+			"wrangler",
+			"setup",
+			"--yes",
+			"--no-completion-message",
+			"--no-install-wrangler",
+		]);
 	} else {
 		// Note: This _must_ be called before the configure phase since
 		//       pre-existing workers assume its presence in their configure phase

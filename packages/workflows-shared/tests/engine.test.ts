@@ -188,14 +188,17 @@ describe("Engine", () => {
 			// supposed to error out
 		}
 
-		await engineStub.receiveEvent({
+		// Get a new stub since we've just aborted the durable object
+		const newStub = env.ENGINE.get(env.ENGINE.idFromName("MOCK-INSTANCE-ID"));
+
+		await newStub.receiveEvent({
 			type: "event-type-1",
 			timestamp: new Date(),
 			payload: {},
 		});
 
 		await vi.waitUntil(async () => {
-			const logs = (await engineStub.readLogs()) as EngineLogs;
+			const logs = (await newStub.readLogs()) as EngineLogs;
 			return logs.logs.filter(
 				(val) => val.event == InstanceEvent.WORKFLOW_SUCCESS
 			);
@@ -252,7 +255,7 @@ describe("Engine", () => {
 		const restartedStub = env.ENGINE.get(engineId);
 
 		const status = await runInDurableObject(restartedStub, (engine) => {
-			return engine.getStatus(accountId, instanceId);
+			return engine.getStatus();
 		});
 
 		expect(status).toBe(InstanceStatus.Running);

@@ -27,6 +27,8 @@ import type { Observability } from "./Observability";
 import type { Placement } from "./Placement";
 import type { Ref } from "./Ref";
 import type { SSHPublicKeyID } from "./SSHPublicKeyID";
+import type { UserSSHPublicKey } from "./UserSSHPublicKey";
+import type { WranglerSSHConfig } from "./WranglerSSHConfig";
 
 /**
  * A Deployment represents an intent to run one or many containers, with the same image, in a particular location or region.
@@ -41,6 +43,8 @@ export type DeploymentV2 = {
 	type: DeploymentType;
 	image: Image;
 	location: DeploymentLocation;
+	wrangler_ssh?: WranglerSSHConfig;
+	authorized_keys?: Array<UserSSHPublicKey>;
 	/**
 	 * A list of SSH public key IDs from the account
 	 */

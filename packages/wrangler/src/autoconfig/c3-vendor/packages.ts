@@ -10,6 +10,7 @@ type InstallConfig = {
 	startText?: string;
 	doneText?: string;
 	dev?: boolean;
+	force?: boolean;
 };
 
 /**
@@ -19,11 +20,14 @@ type InstallConfig = {
  * @param config.dev - Add packages as `devDependencies`
  * @param config.startText - Spinner start text
  * @param config.doneText - Spinner done text
+ * @param config.force - Whether to install with `--force` or not
  */
 export const installPackages = async (
 	packages: string[],
 	config: InstallConfig = {}
 ) => {
+	const { force, dev, startText, doneText } = config;
+
 	if (packages.length === 0) {
 		const { type } = await getPackageManager();
 
@@ -44,9 +48,11 @@ export const installPackages = async (
 				...(cmd ? [cmd] : []),
 				...packages,
 				...(type === "pnpm" ? ["--no-frozen-lockfile"] : []),
+				...(force === true ? ["--force"] : []),
 			],
 			{
-				...config,
+				startText,
+				doneText,
 				silent: true,
 			}
 		);
@@ -60,13 +66,13 @@ export const installPackages = async (
 	switch (type) {
 		case "yarn":
 			cmd = "add";
-			saveFlag = config.dev ? "-D" : "";
+			saveFlag = dev ? "-D" : "";
 			break;
 		case "npm":
 		case "pnpm":
 		default:
 			cmd = "install";
-			saveFlag = config.dev ? "--save-dev" : "";
+			saveFlag = dev ? "--save-dev" : "";
 			break;
 	}
 
@@ -76,13 +82,11 @@ export const installPackages = async (
 			cmd,
 			...(saveFlag ? [saveFlag] : []),
 			...packages,
-			// Add --legacy-peer-deps so that installing Wrangler v4 doesn't case issues with
-			// frameworks that haven't updated their peer dependency for Wrangler v4
-			// TODO: Remove this once Wrangler v4 has been released and framework templates are updated
-			...(type === "npm" ? ["--legacy-peer-deps"] : []),
+			...(force === true ? ["--force"] : []),
 		],
 		{
-			...config,
+			startText,
+			doneText,
 			silent: true,
 		}
 	);

@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as c3 from "../../autoconfig/c3-vendor/packages";
 import * as details from "../../autoconfig/details";
@@ -8,7 +9,6 @@ import { Static } from "../../autoconfig/frameworks/static";
 import * as run from "../../autoconfig/run";
 import * as format from "../../deployment-bundle/guess-worker-format";
 import { clearOutputFilePath } from "../../output";
-import * as compatDate from "../../utils/compatibility-date";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -16,9 +16,21 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type { Framework } from "../../autoconfig/frameworks";
 import type { MockInstance } from "vitest";
+
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
+	const originalModule =
+		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+		await importOriginal<Awaited<typeof import("@cloudflare/workers-utils")>>();
+	return {
+		...originalModule,
+		getLocalWorkerdCompatibilityDate: vi.fn(() => ({
+			date: "2000-01-01",
+			source: "workerd",
+		})),
+	};
+});
 
 vi.mock("../../package-manager", () => ({
 	getPackageManager() {
@@ -127,10 +139,6 @@ describe("autoconfig (deploy)", () => {
 			installSpy = vi
 				.spyOn(c3, "installWrangler")
 				.mockImplementation(async () => {});
-
-			vi.spyOn(compatDate, "getDevCompatibilityDate").mockImplementation(
-				() => "2000-01-01"
-			);
 		});
 
 		it("happy path", async () => {
@@ -154,22 +162,27 @@ describe("autoconfig (deploy)", () => {
 					assets: { directory: outputDir },
 				},
 			}));
-			await run.runAutoConfig({
-				projectPath: process.cwd(),
-				buildCommand: "echo 'built' > build.txt",
-				configured: false,
-				workerName: "my-worker",
-				framework: {
-					name: "Fake",
-					configure: configureSpy,
-				} as unknown as Framework,
-				outputDir: "dist",
-				packageJson: {
-					dependencies: {
-						astro: "5",
+			await run.runAutoConfig(
+				{
+					projectPath: process.cwd(),
+					buildCommand: "echo 'built' > build.txt",
+					configured: false,
+					workerName: "my-worker",
+					framework: {
+						name: "Fake",
+						configure: configureSpy,
+						isConfigured: () => false,
+						autoConfigSupported: true,
+					} as Framework,
+					outputDir: "dist",
+					packageJson: {
+						dependencies: {
+							astro: "5",
+						},
 					},
 				},
-			});
+				{ enableWranglerInstallation: true }
+			);
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"

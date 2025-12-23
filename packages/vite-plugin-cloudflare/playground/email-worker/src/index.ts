@@ -25,11 +25,7 @@ export default {
 				msg.asRaw()
 			);
 
-			try {
-				await env.EMAIL.send(message);
-			} catch (error) {
-				throw error;
-			}
+			await env.EMAIL.send(message);
 
 			return new Response("Email message sent successfully!");
 		}

@@ -113,6 +113,7 @@ export type NormalizeAndValidateConfigArgs = {
 	upstreamProtocol?: string;
 	script?: string;
 	enableContainers?: boolean;
+	generateTypes?: boolean;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -566,6 +567,7 @@ function normalizeAndValidateDev(
 		upstreamProtocol: upstreamProtocolArg,
 		remote: remoteArg,
 		enableContainers: enableContainersArg,
+		generateTypes: generateTypesArg,
 	} = args;
 	assert(
 		localProtocolArg === undefined ||
@@ -581,6 +583,9 @@ function normalizeAndValidateDev(
 	assert(
 		enableContainersArg === undefined ||
 			typeof enableContainersArg === "boolean"
+	);
+	assert(
+		generateTypesArg === undefined || typeof generateTypesArg === "boolean"
 	);
 	const {
 		// On Windows, when specifying `localhost` as the socket hostname, `workerd`
@@ -601,6 +606,7 @@ function normalizeAndValidateDev(
 		host,
 		enable_containers = enableContainersArg ?? true,
 		container_engine,
+		generate_types = generateTypesArg ?? false,
 		...rest
 	} = rawDev;
 	validateAdditionalProperties(diagnostics, "dev", Object.keys(rest), []);
@@ -647,6 +653,14 @@ function normalizeAndValidateDev(
 		"string"
 	);
 
+	validateOptionalProperty(
+		diagnostics,
+		"dev",
+		"generate_types",
+		generate_types,
+		"boolean"
+	);
+
 	return {
 		ip,
 		port,
@@ -656,6 +670,7 @@ function normalizeAndValidateDev(
 		host,
 		enable_containers,
 		container_engine,
+		generate_types,
 	};
 }
 
@@ -981,24 +996,124 @@ function normalizeAndValidatePlacement(
 	rawEnv: RawEnvironment
 ): Config["placement"] {
 	if (rawEnv.placement) {
-		validateRequiredProperty(
-			diagnostics,
-			"placement",
-			"mode",
-			rawEnv.placement.mode,
-			"string",
-			["off", "smart"]
-		);
-		validateOptionalProperty(
-			diagnostics,
-			"placement",
-			"hint",
-			rawEnv.placement.hint,
-			"string"
-		);
-		if (rawEnv.placement.hint && rawEnv.placement.mode !== "smart") {
+		const placement = rawEnv.placement as Record<string, unknown>;
+
+		// Detect which format is being used
+		const hasHint = "hint" in placement;
+		const hasRegion = "region" in placement;
+		const hasHost = "host" in placement;
+		const hasHostname = "hostname" in placement;
+		const hasTargetedFields = hasRegion || hasHost || hasHostname;
+
+		// Validate that formats aren't mixed
+		if (hasHint && hasTargetedFields) {
 			diagnostics.errors.push(
-				`"placement.hint" cannot be set if "placement.mode" is not "smart"`
+				`"placement" cannot have both "hint" (smart format) and "region"/"host"/"hostname" (targeted format) fields`
+			);
+			return inheritable(
+				diagnostics,
+				topLevelEnv,
+				rawEnv,
+				"placement",
+				() => true,
+				undefined
+			);
+		}
+
+		// Validate old format (with hint)
+		if (hasHint) {
+			validateRequiredProperty(
+				diagnostics,
+				"placement",
+				"mode",
+				placement.mode,
+				"string",
+				["off", "smart"]
+			);
+
+			const mode = placement.mode as string;
+			const hint = placement.hint;
+
+			// Hint must be a string (if provided)
+			if (hint !== undefined && typeof hint !== "string") {
+				diagnostics.errors.push(
+					`"placement.hint" must be a string when "placement.mode" is "${mode}"`
+				);
+			}
+			if (hint && mode !== "smart") {
+				diagnostics.errors.push(
+					`"placement.hint" can only be set when "placement.mode" is "smart"`
+				);
+			}
+		}
+		// Validate new format (with region/host/hostname)
+		else if (hasTargetedFields) {
+			// Mode is optional for new format, but if present must be "off" or "targeted"
+			validateOptionalProperty(
+				diagnostics,
+				"placement",
+				"mode",
+				placement.mode,
+				"string",
+				["off", "targeted"]
+			);
+
+			// Validate that region/host/hostname are strings if present
+			if (hasRegion) {
+				validateOptionalProperty(
+					diagnostics,
+					"placement",
+					"region",
+					placement.region,
+					"string"
+				);
+			}
+			if (hasHost) {
+				validateOptionalProperty(
+					diagnostics,
+					"placement",
+					"host",
+					placement.host,
+					"string"
+				);
+			}
+			if (hasHostname) {
+				validateOptionalProperty(
+					diagnostics,
+					"placement",
+					"hostname",
+					placement.hostname,
+					"string"
+				);
+			}
+
+			// Validate that region/host/hostname are mutually exclusive
+			const fieldsPresent = [hasRegion, hasHost, hasHostname].filter(Boolean);
+			if (fieldsPresent.length > 1) {
+				const presentFields = [];
+				if (hasRegion) {
+					presentFields.push("region");
+				}
+				if (hasHost) {
+					presentFields.push("host");
+				}
+				if (hasHostname) {
+					presentFields.push("hostname");
+				}
+				diagnostics.errors.push(
+					`"placement" fields ${presentFields.map((f) => `"${f}"`).join(", ")} are mutually exclusive. Only one can be specified.`
+				);
+			}
+		}
+		// Just mode, no hint or new format fields
+		else {
+			validateRequiredProperty(
+				diagnostics,
+				"placement",
+				"mode",
+				placement.mode,
+				"string",
+				["off", "smart", "targeted"]
 			);
 		}
 	}
@@ -1954,9 +2069,9 @@ const validateVars =
 		let isValid = true;
 		const fieldPath =
 			config === undefined ? `${field}` : `env.${envName}.${field}`;
-		const configVars = Object.keys(config?.vars ?? {});
-		// If there are no top level vars then there is nothing to do here.
-		if (configVars.length > 0) {
+
+		// Validate var values if vars is defined
+		if (value !== undefined) {
 			if (typeof value !== "object" || value === null) {
 				diagnostics.errors.push(
 					`The field "${fieldPath}" should be an object but got ${JSON.stringify(
@@ -1965,6 +2080,23 @@ const validateVars =
 				);
 				isValid = false;
 			} else {
+				// Check each var value for invalid types (e.g., Date objects)
+				for (const [varName, varValue] of Object.entries(value)) {
+					if (varValue instanceof Date) {
+						diagnostics.errors.push(
+							`The field "${fieldPath}.${varName}" is a TOML date, which is not supported. ` +
+								`Please use a string instead, e.g. ${varName} = "2025-12-19".`
+						);
+						isValid = false;
+					}
+				}
+			}
+		}
+
+		// Check for vars that exist at top level but not in the current environment
+		const configVars = Object.keys(config?.vars ?? {});
+		if (configVars.length > 0) {
+			if (typeof value === "object" && value !== null) {
 				for (const varName of configVars) {
 					if (!(varName in value)) {
 						diagnostics.warnings.push(
@@ -2942,6 +3074,9 @@ function validateContainerApp(
 					"class_name",
 					"scheduling_policy",
 					"instance_type",
+					"wrangler_ssh",
+					"authorized_keys",
+					"trusted_user_ca_keys",
 					"configuration",
 					"constraints",
 					"affinities",
@@ -2959,6 +3094,90 @@ function validateContainerApp(
 					Object.keys(containerAppOptional.configuration),
 					["image", "secrets", "labels", "disk", "vcpu", "memory_mib"]
 				);
+			}
+
+			if ("wrangler_ssh" in containerAppOptional) {
+				if (
+					!isRequiredProperty(
+						containerAppOptional.wrangler_ssh,
+						"enabled",
+						"boolean"
+					)
+				) {
+					diagnostics.errors.push(
+						`${field}.wrangler_ssh.enabled must be a boolean`
+					);
+				}
+
+				if (
+					!isOptionalProperty(
+						containerAppOptional.wrangler_ssh,
+						"port",
+						"number"
+					) ||
+					containerAppOptional.wrangler_ssh.port < 1 ||
+					containerAppOptional.wrangler_ssh.port > 65535
+				) {
+					diagnostics.errors.push(
+						`${field}.wrangler_ssh.port must be a number between 1 and 65535 inclusive`
+					);
+				}
+			}
+
+			if ("authorized_keys" in containerAppOptional) {
+				if (!Array.isArray(containerAppOptional.authorized_keys)) {
+					diagnostics.errors.push(`${field}.authorized_keys must be an array`);
+				} else {
+					for (const index in containerAppOptional.authorized_keys) {
+						const fieldPath = `${field}.authorized_keys[${index}]`;
+						const key = containerAppOptional.authorized_keys[index];
+
+						if (!isRequiredProperty(key, "name", "string")) {
+							diagnostics.errors.push(`${fieldPath}.name must be a string`);
+						}
+
+						if (!isRequiredProperty(key, "public_key", "string")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key must be a string`
+							);
+						}
+
+						if (!key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key is a unsupported key type. Please provide a ED25519 public key.`
+							);
+						}
+					}
+				}
+			}
+
+			if ("trusted_user_ca_keys" in containerAppOptional) {
+				if (!Array.isArray(containerAppOptional.trusted_user_ca_keys)) {
+					diagnostics.errors.push(
+						`${field}.trusted_user_ca_keys must be an array`
+					);
+				} else {
+					for (const index in containerAppOptional.trusted_user_ca_keys) {
+						const fieldPath = `${field}.trusted_user_ca_keys[${index}]`;
+						const key = containerAppOptional.trusted_user_ca_keys[index];
+
+						if (!isOptionalProperty(key, "name", "string")) {
+							diagnostics.errors.push(`${fieldPath}.name must be a string`);
+						}
+
+						if (!isRequiredProperty(key, "public_key", "string")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key must be a string`
+							);
+						}
+
+						if (!key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key is a unsupported key type. Please provide a ED25519 public key.`
+							);
+						}
+					}
+				}
 			}
 
 			// Instance Type validation: When present, the instance type should be either (1) a string

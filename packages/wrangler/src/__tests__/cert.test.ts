@@ -477,10 +477,10 @@ describe("wrangler", () => {
 					expect(std.out).toMatchInlineSnapshot(`
 						"wrangler cert
 
-						🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open-beta]
+						🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
 
 						COMMANDS
-						  wrangler cert upload  Upload a new cert [open-beta]
+						  wrangler cert upload  Upload a new cert [open beta]
 						  wrangler cert list    List uploaded mTLS certificates
 						  wrangler cert delete  Delete an mTLS certificate
 

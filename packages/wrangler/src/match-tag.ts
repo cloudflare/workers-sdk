@@ -8,6 +8,7 @@ import {
 import { fetchResult } from "./cfetch";
 import { logger } from "./logger";
 import { getCloudflareAccountIdFromEnv } from "./user/auth-variables";
+import { isWorkerNotFoundError } from "./utils/worker-not-found-error";
 import type {
 	ComplianceConfig,
 	ServiceMetadataRes,
@@ -52,8 +53,7 @@ export async function verifyWorkerMatchesCITag(
 		logger.debug(`API returned with tag: ${tag} for worker: ${workerName}`);
 	} catch (e) {
 		logger.debug(e);
-		// code: 10090, message: workers.api.error.service_not_found
-		if ((e as { code?: number }).code === 10090) {
+		if (isWorkerNotFoundError(e)) {
 			throw new FatalError(
 				`The name in your ${configFileName(configPath)} file (${workerName}) must match the name of your Worker. Please update the name field in your ${configFileName(configPath)} file.`
 			);

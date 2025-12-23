@@ -8,11 +8,12 @@ import type {
 	AssetsOnlyResolvedConfig,
 	PreviewResolvedConfig,
 	ResolvedPluginConfig,
-	WorkerConfig,
+	ResolvedWorkerConfig,
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
+import type { Unstable_Config } from "wrangler";
 
 /**
  * Used to store state that should persist across server restarts.
@@ -140,7 +141,7 @@ export class PluginContext {
 		return this.#resolvedViteConfig;
 	}
 
-	getWorkerConfig(environmentName: string): WorkerConfig | undefined {
+	getWorkerConfig(environmentName: string): ResolvedWorkerConfig | undefined {
 		return this.resolvedPluginConfig.type === "workers"
 			? this.resolvedPluginConfig.environmentNameToWorkerMap.get(
 					environmentName
@@ -148,7 +149,20 @@ export class PluginContext {
 			: undefined;
 	}
 
-	get entryWorkerConfig(): WorkerConfig | undefined {
+	get allWorkerConfigs(): Unstable_Config[] {
+		switch (this.resolvedPluginConfig.type) {
+			case "workers":
+				return Array.from(
+					this.resolvedPluginConfig.environmentNameToWorkerMap.values()
+				).map((worker) => worker.config);
+			case "preview":
+				return this.resolvedPluginConfig.workers;
+			default:
+				return [];
+		}
+	}
+
+	get entryWorkerConfig(): ResolvedWorkerConfig | undefined {
 		if (this.resolvedPluginConfig.type !== "workers") {
 			return;
 		}

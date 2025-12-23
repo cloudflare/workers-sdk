@@ -32,6 +32,7 @@ import workflowsTemplate from "templates/hello-world-workflows/c3";
 import helloWorldWorkerTemplate from "templates/hello-world/c3";
 import honoTemplate from "templates/hono/c3";
 import nextTemplate from "templates/next/c3";
+import nextExperimentalTemplate from "templates/next/experimental_c3";
 import nuxtTemplate from "templates/nuxt/c3";
 import openapiTemplate from "templates/openapi/c3";
 import preExistingTemplate from "templates/pre-existing/c3";
@@ -44,8 +45,11 @@ import scheduledTemplate from "templates/scheduled/c3";
 import solidTemplate from "templates/solid/c3";
 import svelteTemplate from "templates/svelte/c3";
 import tanStackStartTemplate from "templates/tanstack-start/c3";
+import vikeTemplate from "templates/vike/c3";
+import vikeExperimentalTemplate from "templates/vike/experimental-c3";
 import vueTemplate from "templates/vue/c3";
 import wakuTemplate from "templates/waku/c3";
+import wakuExperimentalTemplate from "templates/waku/experimental-c3";
 import { isInsideGitRepo } from "./git";
 import { validateProjectDirectory, validateTemplateUrl } from "./validators";
 import type { Option } from "@cloudflare/cli/interactive";
@@ -236,13 +240,23 @@ export type TemplateMap = Record<
 export function getFrameworkMap({ experimental = false }): TemplateMap {
 	if (experimental) {
 		return {
-			gatsby: gatsbyTemplate,
-			svelte: svelteTemplate,
-			docusaurus: docusaurusTemplate,
-			astro: astroTemplate,
-			"tanstack-start": tanStackStartTemplate,
+			analog: analogTemplate,
 			angular: angularTemplate,
+			astro: astroTemplate,
+			docusaurus: docusaurusTemplate,
+			gatsby: gatsbyTemplate,
+			next: nextExperimentalTemplate,
+			nuxt: nuxtTemplate,
+			qwik: qwikTemplate,
+			react: reactTemplate,
+			"react-router": reactRouterTemplate,
+			redwood: redwoodTemplate,
 			solid: solidTemplate,
+			svelte: svelteTemplate,
+			"tanstack-start": tanStackStartTemplate,
+			vike: vikeExperimentalTemplate,
+			vue: vueTemplate,
+			waku: wakuExperimentalTemplate,
 		};
 	} else {
 		return {
@@ -261,6 +275,7 @@ export function getFrameworkMap({ experimental = false }): TemplateMap {
 			solid: solidTemplate,
 			svelte: svelteTemplate,
 			"tanstack-start": tanStackStartTemplate,
+			vike: vikeTemplate,
 			vue: vueTemplate,
 			waku: wakuTemplate,
 		};
@@ -772,19 +787,9 @@ export const processRemoteTemplate = async (args: Partial<C3Args>) => {
 		defaultValue: C3_DEFAULTS.template,
 	});
 
-	let src = templateUrl;
-
-	// GitHub URL with subdirectory is not supported by degit and has to be transformed.
-	// This only addresses input template URLs on the main branch as a branch name
-	// might includes slashes that span multiple segments in the URL and cannot be
-	// reliably differentiated from the subdirectory path.
-	if (src.startsWith("https://github.com/") && src.includes("/tree/main/")) {
-		src = src
-			.replace("https://github.com/", "github:")
-			.replace("/tree/main/", "/");
-	}
-
-	const path = await downloadRemoteTemplate(src, args.templateMode);
+	const path = await downloadRemoteTemplate(templateUrl, {
+		mode: args.templateMode,
+	});
 	const config = inferTemplateConfig(path);
 
 	validateTemplate(path, config);
@@ -865,30 +870,46 @@ const inferCopyFilesDefinition = (path: string): CopyFiles => {
 };
 
 /**
- * Downloads an external template from a git repo using `degit`.
+ * Downloads an external template from a git repo.
  *
  * @param src The url of the git repository to download the template from.
  *            For convenience, `owner/repo` is also accepted.
- * @returns A path to a temporary directory containing the downloaded template
+ * @param options Options for downloading the template:
+ * 					- mode: The mode to use for downloading the template. Defaults to 'git'.
+ * 					- intoFolder: The folder to download the template into. Defaults to a temporary directory.
+ * @returns The path to the directory containing the downloaded template
  */
-export const downloadRemoteTemplate = async (
+export async function downloadRemoteTemplate(
 	src: string,
-	mode?: "git" | "tar",
-) => {
-	// degit runs `git clone` internally which may prompt for credentials if required
-	// Avoid using a `spinner()` during this operation -- use updateStatus instead.
-
+	options: {
+		mode?: "git" | "tar";
+		intoFolder?: string;
+	} = {},
+) {
 	try {
+		// degit runs `git clone` internally which may prompt for credentials if required
+		// Avoid using a `spinner()` during this operation -- use updateStatus instead.
 		updateStatus(`Cloning template from: ${blue(src)}`);
+
+		// GitHub URL with subdirectory is not supported by degit and has to be transformed.
+		// This only addresses input template URLs on the main branch as a branch name
+		// might includes slashes that span multiple segments in the URL and cannot be
+		// reliably differentiated from the subdirectory path.
+		if (src.startsWith("https://github.com/") && src.includes("/tree/main/")) {
+			src = src
+				.replace("https://github.com/", "github:")
+				.replace("/tree/main/", "/");
+		}
 
 		const emitter = degit(src, {
 			cache: false,
 			verbose: false,
 			force: true,
-			mode,
+			mode: options.mode,
 		});
 
-		const tmpDir = await mkdtemp(join(tmpdir(), "c3-template"));
+		const tmpDir =
+			options.intoFolder ?? (await mkdtemp(join(tmpdir(), "c3-template")));
 		await emitter.clone(tmpDir);
 
 		return tmpDir;
@@ -896,28 +917,40 @@ export const downloadRemoteTemplate = async (
 		updateStatus(`${brandColor("template")} ${dim("failed")}`);
 		throw new Error(`Failed to clone remote template: ${src}`);
 	}
-};
+}
 
 function updatePythonPackageName(path: string, projectName: string) {
-	const pyprojectTomlPath = resolve(path, "pyproject.toml");
-	if (!existsSync(pyprojectTomlPath)) {
+	const pyProjectFile = resolve(path, "pyproject.toml");
+	if (!existsSync(pyProjectFile)) {
 		// Not a python template
 		return;
 	}
 	const s = spinner();
 	s.start("Updating name in `pyproject.toml`");
-	let pyprojectTomlContents = readFile(pyprojectTomlPath);
-	pyprojectTomlContents = pyprojectTomlContents.replace(
-		'"TBD"',
-		`"${projectName}"`,
-	);
-	writeFile(pyprojectTomlPath, pyprojectTomlContents);
+	let pyProject = readFile(pyProjectFile);
+	pyProject = pyProject
+		.replace('"TBD"', `"${projectName}"`)
+		.replace('"<PROJECT_NAME>"', `"${projectName}"`);
+	writeFile(pyProjectFile, pyProject);
 	s.stop(`${brandColor("updated")} ${dim("`pyproject.toml`")}`);
 }
 
-export const updatePackageName = async (ctx: C3Context) => {
-	// Update package.json with project name
-	const placeholderNames = ["<TBD>", "TBD", ""];
+/**
+ * Updates `package.json` and `pyproject.toml` with project name.
+ *
+ * This function replaces any of the following placeholder names in the `package.json`
+ * file with the actual project name:
+ * - `<PACKAGE_NAME>`
+ * - `<TBD>`
+ * - `TBD`
+ * - `""`
+ *
+ * It also replaces `<PROJECT_NAME>` in `pyproject.toml` if it exists.
+ *
+ * @param ctx The project configuration
+ */
+export const updatePackageName = (ctx: C3Context): void => {
+	const placeholderNames = ["<PACKAGE_NAME>", "<TBD>", "TBD", ""];
 	const pkgJsonPath = resolve(ctx.project.path, "package.json");
 	const pkgJson = readJSON(pkgJsonPath) as PackageJson;
 
@@ -927,11 +960,10 @@ export const updatePackageName = async (ctx: C3Context) => {
 
 	const s = spinner();
 	s.start("Updating name in `package.json`");
-
 	pkgJson.name = ctx.project.name;
-
 	writeJSON(pkgJsonPath, pkgJson);
 	s.stop(`${brandColor("updated")} ${dim("`package.json`")}`);
+
 	updatePythonPackageName(ctx.project.path, ctx.project.name);
 };
 

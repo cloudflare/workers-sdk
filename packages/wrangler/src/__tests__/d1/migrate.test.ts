@@ -1,3 +1,4 @@
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { reinitialiseAuthTokens } from "../../user";
@@ -10,7 +11,6 @@ import { mockSetTimeout } from "../helpers/mock-set-timeout";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 
 describe("migrate", () => {
 	runInTempDir();
@@ -31,6 +31,15 @@ describe("migrate", () => {
 			await expect(
 				runWrangler("d1 migrations create test some-message --local DATABASE")
 			).rejects.toThrowError(`Unknown argument: local`);
+		});
+
+		it("should error when no config file is present", async () => {
+			setIsTTY(false);
+			await expect(
+				runWrangler("d1 migrations create DATABASE test-migration")
+			).rejects.toThrowError(
+				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
+			);
 		});
 	});
 
@@ -67,6 +76,15 @@ describe("migrate", () => {
 			await expect(
 				runWrangler("d1 migrations apply DATABASE")
 			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
+		});
+
+		it("should error when no config file is present", async () => {
+			setIsTTY(false);
+			await expect(
+				runWrangler("d1 migrations apply DATABASE")
+			).rejects.toThrowError(
+				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
+			);
 		});
 
 		it("should reject the use of --preview with --local", async () => {
@@ -207,6 +225,15 @@ Your database may not be available to serve requests during the migration, conti
 			await expect(
 				runWrangler("d1 migrations list --local DATABASE")
 			).rejects.toThrowError(`No migrations present at <cwd>/migrations.`);
+		});
+
+		it("should error when no config file is present", async () => {
+			setIsTTY(false);
+			await expect(
+				runWrangler("d1 migrations list DATABASE")
+			).rejects.toThrowError(
+				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
+			);
 		});
 
 		it("should use the custom migrations folder when provided", async () => {
