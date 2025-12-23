@@ -3,7 +3,6 @@ import {
 	getEnvironmentVariableFactory,
 } from "@cloudflare/workers-utils";
 import { logger } from "../logger";
-import { getAccessToken } from "./access";
 
 /**
  * `CLOUDFLARE_ACCOUNT_ID` overrides the account inferred from the current user.
@@ -106,7 +105,7 @@ export const getWranglerR2SqlAuthToken = getEnvironmentVariableFactory({
  * Set the `WRANGLER_CF_AUTHORIZATION_TOKEN` to the CF_Authorization token found at https://dash.staging.cloudflare.com/bypass-limits
  * if you want to access the staging environment, triggered by `WRANGLER_API_ENVIRONMENT=staging`.
  */
-export const getCloudflareAccessToken = async () => {
+export const getCloudflareAccessTokenFromEnv = () => {
 	const env = getEnvironmentVariableFactory({
 		variableName: "WRANGLER_CF_AUTHORIZATION_TOKEN",
 	})();
@@ -116,6 +115,4 @@ export const getCloudflareAccessToken = async () => {
 		logger.debug("Using WRANGLER_CF_AUTHORIZATION_TOKEN from environment", env);
 		return env;
 	}
-
-	return getAccessToken(getAuthDomainFromEnv());
 };

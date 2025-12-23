@@ -233,12 +233,11 @@ import { NoDefaultValueProvided, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
-import { domainUsesAccess } from "./access";
+import { getAccessToken } from "./access";
 import {
 	getAuthDomainFromEnv,
 	getAuthUrlFromEnv,
 	getClientIdFromEnv,
-	getCloudflareAccessToken,
 	getCloudflareAccountIdFromEnv,
 	getCloudflareAPITokenFromEnv,
 	getCloudflareGlobalAuthEmailFromEnv,
@@ -1397,12 +1396,13 @@ async function fetchAuthToken(body: URLSearchParams) {
 		"Content-Type": "application/x-www-form-urlencoded",
 	};
 	logger.debug("fetching auth token", body.toString());
-	if (await domainUsesAccess(getAuthDomainFromEnv())) {
+	const accessToken = await getAccessToken(getAuthDomainFromEnv());
+	if (!accessToken) {
 		logger.debug(
 			"Using Cloudflare Access to get an access token for the auth request"
 		);
-		// We are trying to access the staging API so we need an "access token".
-		headers["Cookie"] = `CF_Authorization=${await getCloudflareAccessToken()}`;
+		// We are trying to access an API that is protected by Cloudflare Access so we need an "access token".
+		headers["Cookie"] = `CF_Authorization=${accessToken}`;
 	}
 	logger.debug("Fetching auth token from", getTokenUrlFromEnv());
 	try {

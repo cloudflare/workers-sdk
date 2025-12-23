@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { UserError } from "@cloudflare/workers-utils";
 import { fetch } from "undici";
 import { logger } from "../logger";
+import { getCloudflareAccessTokenFromEnv } from "./auth-variables";
 
 const cache: Record<string, string> = {};
 
@@ -49,6 +50,12 @@ export async function getAccessToken(
 	if (!(await domainUsesAccess(domain))) {
 		return undefined;
 	}
+
+	const fromEnv = getCloudflareAccessTokenFromEnv();
+	if (fromEnv) {
+		return fromEnv;
+	}
+
 	logger.debug("Fetching Access token for domain:", domain);
 	if (cache[domain]) {
 		logger.debug("Using cached Access token for domain:", cache[domain]);
