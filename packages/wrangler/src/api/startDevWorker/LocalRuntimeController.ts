@@ -306,6 +306,8 @@ export class LocalRuntimeController extends RuntimeController {
 				logger.log(chalk.dim("⎔ Reloading local server..."));
 
 				await this.#mf.setOptions(options);
+
+				logger.log(chalk.dim("⎔ Local server updated and ready"));
 			}
 			// All asynchronous `Miniflare` methods will wait for all `setOptions()`
 			// calls to complete before resolving. To ensure we get the `url` and
