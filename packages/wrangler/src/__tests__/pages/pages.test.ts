@@ -118,11 +118,12 @@ describe("pages", () => {
 			Interact with the deployments of a project
 
 			COMMANDS
-			  wrangler pages deployment list                List deployments in your Cloudflare Pages project
-			  wrangler pages deployment create [directory]  Deploy a directory of static assets as a Pages deployment
+			  wrangler pages deployment list                 List deployments in your Cloudflare Pages project
+			  wrangler pages deployment create [directory]   Deploy a directory of static assets as a Pages deployment
 
-			                                                Alias for \\"wrangler pages deploy\\".
-			  wrangler pages deployment tail [deployment]   Start a tailing session for a project's deployment and livestream logs from your Functions
+			                                                 Alias for \\"wrangler pages deploy\\".
+			  wrangler pages deployment delete [deployment]  Delete a Pages deployment
+			  wrangler pages deployment tail [deployment]    Start a tailing session for a project's deployment and livestream logs from your Functions
 
 			GLOBAL FLAGS
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
