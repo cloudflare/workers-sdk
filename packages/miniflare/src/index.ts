@@ -1266,11 +1266,6 @@ export class Miniflare {
 				});
 				this.#browserProcesses.set(sessionId, browserProcess);
 				response = Response.json({ wsEndpoint, sessionId, startTime });
-			} else if (url.pathname === "/browser/status") {
-				const sessionId = url.searchParams.get("sessionId");
-				assert(sessionId !== null, "Missing sessionId query parameter");
-				const process = this.#browserProcesses.get(sessionId);
-				response = new Response(null, { status: process ? 200 : 410 });
 			} else if (url.pathname === "/browser/sessionIds") {
 				const sessionIds = this.#browserProcesses.keys();
 				response = Response.json(Array.from(sessionIds));
