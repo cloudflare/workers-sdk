@@ -10,8 +10,8 @@ describe.runIf(isBuild)("output directories", () => {
 		expect(fs.existsSync(path.join(rootDir, "dist", "worker_b"))).toBe(true);
 	});
 
-	test("does include unwanted files in deployment bundle", async () => {
-		const output = execSync("pnpm deploy-a --dry-run", {
+	test("does not include unwanted files in deployment bundle", async () => {
+		const output = execSync("pnpm wrangler deploy --dry-run", {
 			cwd: rootDir,
 			encoding: "utf8",
 		});
