@@ -31,6 +31,7 @@ import type {
 	Route,
 	Rule,
 } from "@cloudflare/workers-utils";
+import type { EventName } from "chokidar/handler.js";
 import type { Json } from "miniflare";
 
 export const dev = createCommand({
@@ -684,7 +685,7 @@ export function getBindings(
 }
 
 export function getAssetChangeMessage(
-	eventName: "add" | "addDir" | "change" | "unlink" | "unlinkDir",
+	eventName: EventName,
 	assetPath: string
 ): string {
 	let message = `${assetPath} changed`;
