@@ -130,7 +130,7 @@ function configDefaults(
 }
 
 describe("LocalRuntimeController", () => {
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 	runInTempDir();
 	// Make sure teardown is declared after runInTempDir so it runs before we delete the temp directory
 	const teardown = useTeardown();
@@ -570,6 +570,82 @@ describe("LocalRuntimeController", () => {
 			expect(await nextMessage()).toMatchObject({ id: 1 });
 			const res = await resPromise;
 			expect(await res.text()).toBe("body");
+		});
+		it("should warn about scheduled workers with the correct port", async () => {
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const config = {
+				name: "worker",
+				entrypoint: "NOT_REAL",
+				triggers: [{ type: "cron", cron: "* * * * *" }],
+			} satisfies Partial<StartDevWorkerOptions>;
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					fetch: () => new Response("Hello World!"),
+					scheduled() {
+						console.log("Scheduled event triggered");
+					}
+				}
+			`);
+			controller.onBundleStart({
+				config: configDefaults(config),
+				type: "bundleStart",
+			});
+			controller.onBundleComplete({
+				bundle,
+				config: configDefaults(config),
+				type: "bundleComplete",
+			});
+
+			const event = await bus.waitFor("reloadComplete");
+			const port = event.proxyData.userWorkerUrl.port;
+
+			// The warning should contain the actual port, not "undefined"
+			expect(std.warn).toContain(
+				"Scheduled Workers are not automatically triggered"
+			);
+			expect(std.warn).toContain(
+				`curl "http://127.0.0.1:${port}/cdn-cgi/handler/scheduled"`
+			);
+			expect(std.warn).not.toContain("undefined");
+		});
+		it("should not warn about scheduled workers when `testScheduled` is enabled", async () => {
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const config = {
+				name: "worker",
+				entrypoint: "NOT_REAL",
+				triggers: [{ type: "cron", cron: "* * * * *" }],
+				dev: { persist: "./persist", remote: false, testScheduled: true },
+			} satisfies Partial<StartDevWorkerOptions>;
+			const bundle = makeEsbuildBundle(dedent/*javascript*/ `
+				export default {
+					fetch: () => new Response("Hello World!"),
+					scheduled() {
+						console.log("Scheduled event triggered");
+					}
+				}
+			`);
+			controller.onBundleStart({
+				config: configDefaults(config),
+				type: "bundleStart",
+			});
+			controller.onBundleComplete({
+				bundle,
+				config: configDefaults(config),
+				type: "bundleComplete",
+			});
+
+			await bus.waitFor("reloadComplete");
+
+			// The warning should NOT appear when testScheduled is enabled
+			expect(std.warn).not.toContain(
+				"Scheduled Workers are not automatically triggered"
+			);
 		});
 	});
 
