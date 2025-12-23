@@ -26,6 +26,9 @@ it("workflow should be able to reach the end and be successful", async () => {
 	);
 	await expect(instance.waitForStatus(STATUS_COMPLETE)).resolves.not.toThrow();
 
+	const output = await instance.getOutput();
+	expect(output).toEqual({ status: "auto_approved" });
+
 	// DISPOSE: ensured by `await using`
 });
 
@@ -52,6 +55,9 @@ it("workflow batch should be able to reach the end and be successful", async () 
 			await expect(
 				instance.waitForStatus(STATUS_COMPLETE)
 			).resolves.not.toThrow();
+
+			const output = await instance.getOutput();
+			expect(output).toEqual({ status: "auto_approved" });
 		}
 	} finally {
 		// DISPOSE:

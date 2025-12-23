@@ -2069,9 +2069,9 @@ const validateVars =
 		let isValid = true;
 		const fieldPath =
 			config === undefined ? `${field}` : `env.${envName}.${field}`;
-		const configVars = Object.keys(config?.vars ?? {});
-		// If there are no top level vars then there is nothing to do here.
-		if (configVars.length > 0) {
+
+		// Validate var values if vars is defined
+		if (value !== undefined) {
 			if (typeof value !== "object" || value === null) {
 				diagnostics.errors.push(
 					`The field "${fieldPath}" should be an object but got ${JSON.stringify(
@@ -2080,6 +2080,23 @@ const validateVars =
 				);
 				isValid = false;
 			} else {
+				// Check each var value for invalid types (e.g., Date objects)
+				for (const [varName, varValue] of Object.entries(value)) {
+					if (varValue instanceof Date) {
+						diagnostics.errors.push(
+							`The field "${fieldPath}.${varName}" is a TOML date, which is not supported. ` +
+								`Please use a string instead, e.g. ${varName} = "2025-12-19".`
+						);
+						isValid = false;
+					}
+				}
+			}
+		}
+
+		// Check for vars that exist at top level but not in the current environment
+		const configVars = Object.keys(config?.vars ?? {});
+		if (configVars.length > 0) {
+			if (typeof value === "object" && value !== null) {
 				for (const varName of configVars) {
 					if (!(varName in value)) {
 						diagnostics.warnings.push(

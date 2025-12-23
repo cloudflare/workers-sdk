@@ -58,7 +58,6 @@
 		"extends": "../../package.json"
 	},
 	"workers-sdk": {
-		"prerelease": true,
-		"deploy": true
+		"prerelease": true
 	}
 }
