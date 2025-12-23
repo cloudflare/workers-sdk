@@ -1,5 +1,7 @@
+import assert from "node:assert";
+import * as path from "node:path";
 import { hasAssetsConfigChanged } from "../asset-config";
-import { createBuildApp } from "../build";
+import { createBuildApp, removeAssetsField } from "../build";
 import {
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
@@ -125,6 +127,47 @@ export const configPlugin = createPlugin("config", (ctx) => {
 			};
 
 			viteDevServer.watcher.on("change", configChangedHandler);
+		},
+		// This hook is not supported in Vite 6
+		buildApp: {
+			order: "post",
+			async handler(builder) {
+				if (ctx.resolvedPluginConfig.type !== "workers") {
+					return;
+				}
+
+				const workerEnvironments = [
+					...ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys(),
+				].map((environmentName) => {
+					const environment = builder.environments[environmentName];
+					assert(environment, `"${environmentName}" environment not found`);
+
+					return environment;
+				});
+
+				// Build any Worker environments that haven't already been built
+				await Promise.all(
+					workerEnvironments
+						.filter((environment) => !environment.isBuilt)
+						.map((environment) => builder.build(environment))
+				);
+
+				const { entryWorkerEnvironmentName } = ctx.resolvedPluginConfig;
+				const entryWorkerEnvironment =
+					builder.environments[entryWorkerEnvironmentName];
+				assert(
+					entryWorkerEnvironment,
+					`No "${entryWorkerEnvironmentName}" environment`
+				);
+				const entryWorkerBuildDirectory = path.resolve(
+					builder.config.root,
+					entryWorkerEnvironment.config.build.outDir
+				);
+
+				if (!builder.environments.client?.isBuilt) {
+					removeAssetsField(entryWorkerBuildDirectory);
+				}
+			},
 		},
 	};
 });
