@@ -219,7 +219,11 @@ export type ContainerApp = {
 	constraints?: {
 		regions?: string[];
 		cities?: string[];
+		/**
+		 * @deprecated Use `tiers` instead
+		 */
 		tier?: number;
+		tiers?: number[];
 	};
 
 	/**
