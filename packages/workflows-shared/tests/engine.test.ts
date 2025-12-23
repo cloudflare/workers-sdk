@@ -252,7 +252,7 @@ describe("Engine", () => {
 		const restartedStub = env.ENGINE.get(engineId);
 
 		const status = await runInDurableObject(restartedStub, (engine) => {
-			return engine.getStatus(accountId, instanceId);
+			return engine.getStatus();
 		});
 
 		expect(status).toBe(InstanceStatus.Running);
