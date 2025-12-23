@@ -3,7 +3,7 @@ import { _forceColour, formatZodError } from "miniflare";
 import { expect, test } from "vitest";
 import { z } from "zod";
 
-function testFormatZodError(
+function formatZodErrorForTest(
 	schema: z.ZodTypeAny,
 	input: unknown,
 	colour?: boolean
@@ -12,25 +12,36 @@ function testFormatZodError(
 	assert(!result.success);
 	// Disable colours by default for easier-to-read snapshots
 	_forceColour(colour ?? false);
-	const formatted = formatZodError(result.error, input);
-	expect(formatted).toMatchSnapshot();
+	return formatZodError(result.error, input);
 }
 
 test("formatZodError: formats primitive schema with primitive input", () => {
-	testFormatZodError(z.number(), false);
+	const formatted = formatZodErrorForTest(z.number(), false);
+	expect(formatted).toMatchInlineSnapshot(`
+		"false
+		^ Expected number, received boolean"
+	`);
 });
 test("formatZodError: formats primitive schema with object input", () => {
-	testFormatZodError(z.string(), {
+	const formatted = formatZodErrorForTest(z.string(), {
 		a: 1,
 		b: { c: 1 },
 	});
+	expect(formatted).toMatchInlineSnapshot(`
+		"{ a: 1, b: [Object] }
+		^ Expected string, received object"
+	`);
 });
 
 test("formatZodError: formats object schema with primitive input", () => {
-	testFormatZodError(z.object({ a: z.number() }), true);
+	const formatted = formatZodErrorForTest(z.object({ a: z.number() }), true);
+	expect(formatted).toMatchInlineSnapshot(`
+		"true
+		^ Expected object, received boolean"
+	`);
 });
 test("formatZodError: formats object schema with object input", () => {
-	testFormatZodError(
+	const formatted = formatZodErrorForTest(
 		z.object({
 			a: z.string(),
 			b: z.number(),
@@ -50,16 +61,39 @@ test("formatZodError: formats object schema with object input", () => {
 			g: "7",
 		}
 	);
+	expect(formatted).toMatchInlineSnapshot(`
+		"{
+		  ...,
+		  b: '2',
+		     ^ Expected number, received string
+		  ...,
+		  g: '7',
+		     ^ Expected boolean, received string
+		  f: undefined,
+		     ^ Required
+		}"
+	`);
 });
 test("formatZodError: formats object schema with additional options", () => {
-	testFormatZodError(z.object({ a: z.number() }).strict(), { a: 1, b: 2 });
+	const formatted = formatZodErrorForTest(
+		z.object({ a: z.number() }).strict(),
+		{ a: 1, b: 2 }
+	);
+	expect(formatted).toMatchInlineSnapshot(`
+		"{ a: 1, b: 2 }
+		^ Unrecognized key(s) in object: 'b'"
+	`);
 });
 
 test("formatZodError: formats array schema with primitive input", () => {
-	testFormatZodError(z.array(z.boolean()), 1);
+	const formatted = formatZodErrorForTest(z.array(z.boolean()), 1);
+	expect(formatted).toMatchInlineSnapshot(`
+		"1
+		^ Expected array, received number"
+	`);
 });
 test("formatZodError: formats array schema with array input", () => {
-	testFormatZodError(z.array(z.number()), [
+	const formatted = formatZodErrorForTest(z.array(z.number()), [
 		1, // Check skips valid
 		2, // Check doesn't duplicate `...` when skipping valid
 		"3",
@@ -67,13 +101,30 @@ test("formatZodError: formats array schema with array input", () => {
 		5,
 		false,
 	]);
+	expect(formatted).toMatchInlineSnapshot(`
+		"[
+		  ...,
+		  /* [2] */ '3',
+		            ^ Expected number, received string
+		  ...,
+		  /* [5] */ false,
+		            ^ Expected number, received boolean
+		]"
+	`);
 });
 test("formatZodError: formats array schema with additional options", () => {
-	testFormatZodError(z.array(z.number()).max(3), [1, 2, 3, 4, 5]);
+	const formatted = formatZodErrorForTest(
+		z.array(z.number()).max(3),
+		[1, 2, 3, 4, 5]
+	);
+	expect(formatted).toMatchInlineSnapshot(`
+		"[ 1, 2, 3, 4, 5 ]
+		^ Array must contain at most 3 element(s)"
+	`);
 });
 
 test("formatZodError: formats deeply nested schema", () => {
-	testFormatZodError(
+	const formatted = formatZodErrorForTest(
 		z.object({
 			a: z.number(),
 			b: z.object({
@@ -92,10 +143,37 @@ test("formatZodError: formats deeply nested schema", () => {
 			},
 		}
 	);
+	expect(formatted).toMatchInlineSnapshot(`
+		"{
+		  a: '1',
+		     ^ Expected number, received string
+		  b: {
+		    c: 2,
+		       ^ Expected string, received number
+		    d: [
+		      ...,
+		      /* [1] */ {
+		        e: 42,
+		           ^ Expected boolean, received number
+		      },
+		      /* [2] */ false,
+		                ^ Expected object, received boolean
+		      /* [3] */ {
+		        e: undefined,
+		           ^ Required
+		      },
+		    ],
+		    f: [Function: f],
+		       ^ Expected array, received function
+		  },
+		  g: undefined,
+		     ^ Required
+		}"
+	`);
 });
 
 test("formatZodError: formats large actual values", () => {
-	testFormatZodError(
+	const formatted = formatZodErrorForTest(
 		z.object({
 			a: z.object({
 				b: z.string(),
@@ -108,10 +186,32 @@ test("formatZodError: formats large actual values", () => {
 			},
 		}
 	);
+	expect(formatted).toMatchInlineSnapshot(`
+		"{
+		  a: {
+		    b: [
+		          0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10,
+		         11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+		         22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+		         33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43,
+		         44, 45, 46, 47, 48, 49
+		       ],
+		       ^ Expected string, received array
+		  },
+		}"
+	`);
 });
 
 test("formatZodError: formats union schema", () => {
-	testFormatZodError(z.union([z.boolean(), z.literal(1)]), "a");
+	const formatted = formatZodErrorForTest(
+		z.union([z.boolean(), z.literal(1)]),
+		"a"
+	);
+	expect(formatted).toMatchInlineSnapshot(`
+		"'a'
+		^ Expected boolean, received string
+		  Invalid literal value, expected 1"
+	`);
 });
 
 const discriminatedUnionSchema = z.discriminatedUnion("type", [
@@ -125,17 +225,40 @@ const discriminatedUnionSchema = z.discriminatedUnion("type", [
 	}),
 ]);
 test("formatZodError: formats discriminated union schema", () => {
-	testFormatZodError(discriminatedUnionSchema, {
+	const formatted = formatZodErrorForTest(discriminatedUnionSchema, {
 		type: "a",
 		a: false,
 	});
+	expect(formatted).toMatchInlineSnapshot(`
+		"{
+		  ...,
+		  a: false,
+		     ^ Expected number, received boolean
+		}"
+	`);
 });
 test("formatZodError: formats discriminated union schema with invalid discriminator", () => {
-	testFormatZodError(discriminatedUnionSchema, { type: "c" });
+	const formatted = formatZodErrorForTest(discriminatedUnionSchema, {
+		type: "c",
+	});
+	expect(formatted).toMatchInlineSnapshot(`
+		"{
+		  type: 'c',
+		        ^ Invalid discriminator value. Expected 'a' | 'b'
+		}"
+	`);
 });
 
 test("formatZodError: formats intersection schema", () => {
-	testFormatZodError(z.intersection(z.number(), z.literal(2)), false);
+	const formatted = formatZodErrorForTest(
+		z.intersection(z.number(), z.literal(2)),
+		false
+	);
+	expect(formatted).toMatchInlineSnapshot(`
+		"false
+		^ Expected number, received boolean
+		  Invalid literal value, expected 2"
+	`);
 });
 
 const objectUnionSchema = z.object({
@@ -149,13 +272,43 @@ const objectUnionSchema = z.object({
 	),
 });
 test("formatZodError: formats object union schema", () => {
-	testFormatZodError(objectUnionSchema, {
+	const formatted = formatZodErrorForTest(objectUnionSchema, {
 		key: false,
 		objects: [false, { a: 1 }, {}, [], { d: "" }],
 	});
+	expect(formatted).toMatchInlineSnapshot(`
+		"{
+		  key: false,
+		       ^ Expected string, received boolean
+		  objects: [
+		    /* [0] */ false,
+		              ^ Expected object, received boolean
+		    ...,
+		    /* [2] */ {
+		      a: undefined,
+		         ^1 Required *or*
+		      b: undefined,
+		         ^1 Required *or*
+		      c: undefined,
+		         ^1 Required
+		    },
+		    /* [3] */ [],
+		              ^ Expected object, received array
+		    /* [4] */ {
+		      ...,
+		      a: undefined,
+		         ^2 Required *or*
+		      b: undefined,
+		         ^2 Required *or*
+		      c: undefined,
+		         ^2 Required
+		    },
+		  ],
+		}"
+	`);
 });
 test("formatZodError: formats object union schema in colour", () => {
-	testFormatZodError(
+	const formatted = formatZodErrorForTest(
 		objectUnionSchema,
 		{
 			key: false,
@@ -163,10 +316,76 @@ test("formatZodError: formats object union schema in colour", () => {
 		},
 		/* colour */ true
 	);
+	expect(formatted).toMatchInlineSnapshot(`
+		"[2m{[22m
+		  [2mkey: [22m[33mfalse[39m[2m,[22m
+		[31m       ^ Expected string, received boolean[39m
+		  [2mobjects: [[22m
+		    [2m/* [0] */ [22m[33mfalse[39m[2m,[22m
+		[31m              ^ Expected object, received boolean[39m
+		    [2m/* [1] */ {[22m
+		      [2ma: [22m[90mundefined[39m[2m,[22m
+		[33m         ^1 Required *or*[39m
+		      [2mb: [22m[90mundefined[39m[2m,[22m
+		[33m         ^1 Required *or*[39m
+		      [2mc: [22m[90mundefined[39m[2m,[22m
+		[33m         ^1 Required[39m
+		    [2m},[22m
+		    [2m/* [2] */ {[22m
+		      [2ma: [22m[90mundefined[39m[2m,[22m
+		[36m         ^2 Required *or*[39m
+		      [2mb: [22m[90mundefined[39m[2m,[22m
+		[36m         ^2 Required *or*[39m
+		      [2mc: [22m[90mundefined[39m[2m,[22m
+		[36m         ^2 Required[39m
+		    [2m},[22m
+		    [2m/* [3] */ {[22m
+		      [2ma: [22m[90mundefined[39m[2m,[22m
+		[34m         ^3 Required *or*[39m
+		      [2mb: [22m[90mundefined[39m[2m,[22m
+		[34m         ^3 Required *or*[39m
+		      [2mc: [22m[90mundefined[39m[2m,[22m
+		[34m         ^3 Required[39m
+		    [2m},[22m
+		    [2m/* [4] */ {[22m
+		      [2ma: [22m[90mundefined[39m[2m,[22m
+		[35m         ^4 Required *or*[39m
+		      [2mb: [22m[90mundefined[39m[2m,[22m
+		[35m         ^4 Required *or*[39m
+		      [2mc: [22m[90mundefined[39m[2m,[22m
+		[35m         ^4 Required[39m
+		    [2m},[22m
+		    [2m/* [5] */ {[22m
+		      [2ma: [22m[90mundefined[39m[2m,[22m
+		[32m         ^5 Required *or*[39m
+		      [2mb: [22m[90mundefined[39m[2m,[22m
+		[32m         ^5 Required *or*[39m
+		      [2mc: [22m[90mundefined[39m[2m,[22m
+		[32m         ^5 Required[39m
+		    [2m},[22m
+		    [2m/* [6] */ {[22m
+		      [2ma: [22m[90mundefined[39m[2m,[22m
+		[33m         ^6 Required *or*[39m
+		      [2mb: [22m[90mundefined[39m[2m,[22m
+		[33m         ^6 Required *or*[39m
+		      [2mc: [22m[90mundefined[39m[2m,[22m
+		[33m         ^6 Required[39m
+		    [2m},[22m
+		    [2m/* [7] */ {[22m
+		      [2ma: [22m[90mundefined[39m[2m,[22m
+		[36m         ^7 Required *or*[39m
+		      [2mb: [22m[90mundefined[39m[2m,[22m
+		[36m         ^7 Required *or*[39m
+		      [2mc: [22m[90mundefined[39m[2m,[22m
+		[36m         ^7 Required[39m
+		    [2m},[22m
+		  [2m],[22m
+		[2m}[22m"
+	`);
 });
 
 test("formatZodError: formats tuple union schema", () => {
-	testFormatZodError(
+	const formatted = formatZodErrorForTest(
 		z.object({
 			tuples: z.array(
 				z.union([
@@ -179,10 +398,44 @@ test("formatZodError: formats tuple union schema", () => {
 			tuples: [false, { a: 1 }, [], ["2", "3"], [4, 5, 6], [true, 7, false]],
 		}
 	);
+	expect(formatted).toMatchInlineSnapshot(`
+		"{
+		  tuples: [
+		    /* [0] */ false,
+		              ^ Expected array, received boolean
+		    /* [1] */ { a: 1 },
+		              ^ Expected array, received object
+		    /* [2] */ [],
+		              ^ Array must contain at least 2 element(s)
+		                Array must contain at least 3 element(s)
+		    /* [3] */ [
+		      ...,
+		      /* [1] */ '3',
+		                ^ Expected number, received string
+		    ],
+		    /* [4] */ [
+		      /* [0] */ 4,
+		                ^1 Expected string, received number
+		                   Expected boolean, received number *or*
+		      /* [1] */ 5,
+		                ^1 Expected boolean, received number *or*
+		      /* [2] */ 6,
+		                ^1 Expected boolean, received number
+		    ],
+		    /* [5] */ [
+		      /* [0] */ true,
+		                ^2 Expected string, received boolean *or*
+		      /* [1] */ 7,
+		                ^2 Expected boolean, received number
+		      ...,
+		    ],
+		  ],
+		}"
+	`);
 });
 
 test("formatZodError: formats custom message schema", () => {
-	testFormatZodError(
+	const formatted = formatZodErrorForTest(
 		z.object({
 			a: z.custom<never>(() => false, {
 				message: "Custom message\nwith multiple\nlines",
@@ -190,4 +443,12 @@ test("formatZodError: formats custom message schema", () => {
 		}),
 		{ a: Symbol("kOoh") }
 	);
+	expect(formatted).toMatchInlineSnapshot(`
+		"{
+		  a: Symbol(kOoh),
+		     ^ Custom message
+		       with multiple
+		       lines
+		}"
+	`);
 });
