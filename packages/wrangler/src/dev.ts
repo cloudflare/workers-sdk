@@ -47,6 +47,7 @@ export const dev = createCommand({
 		description: "👂 Start a local server for developing your Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		category: "Compute & AI",
 	},
 	positionalArgs: ["script"],
 	args: {

@@ -38,40 +38,46 @@ describe("wrangler", () => {
 				COMMANDS
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
 
-				  wrangler init [name]            📥 Initialize a basic Worker
-				  wrangler dev [script]           👂 Start a local server for developing your Worker
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
-				  wrangler setup                  🪄 Setup a project to work on Cloudflare [experimental]
-				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
-				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
-				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
-				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
-				  wrangler delete [script]        🗑 Delete a Worker from Cloudflare
-				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
-				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
-				  wrangler types [path]           📝 Generate types from your Worker configuration
-
-				  wrangler kv                     🗂️ Manage Workers KV Namespaces
-				  wrangler queues                 📬 Manage Workers Queues
-				  wrangler r2                     📦 Manage R2 buckets & objects
-				  wrangler d1                     🗄 Manage Workers D1 databases
-				  wrangler vectorize              🧮 Manage Vectorize indexes
-				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
-				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
-				  wrangler pages                  ⚡️ Configure Cloudflare Pages
-				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
-				  wrangler containers             📦 Manage Containers [open beta]
-				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
-				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
-				  wrangler ai                     🤖 Manage AI models
-				  wrangler secrets-store          🔐 Manage the Secrets Store [open beta]
-				  wrangler workflows              🔁 Manage Workflows
-				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
-				  wrangler vpc                    🌐 Manage VPC [open beta]
+				ACCOUNT
+				  wrangler auth                   🔐 Manage authentication
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️ Retrieve your user information
-				  wrangler auth                   🔐 Manage authentication
+
+				COMPUTE & AI
+				  wrangler ai                     🤖 Manage AI models
+				  wrangler containers             📦 Manage Containers [open beta]
+				  wrangler delete [script]        🗑️ Delete a Worker from Cloudflare
+				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
+				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
+				  wrangler dev [script]           👂 Start a local server for developing your Worker
+				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
+				  wrangler init [name]            📥 Initialize a basic Worker
+				  wrangler pages                  ⚡️ Configure Cloudflare Pages
+				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
+				  wrangler queues                 📬 Manage Workers Queues
+				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
+				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
+				  wrangler setup                  🪄 Setup a project to work on Cloudflare [experimental]
+				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
+				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
+				  wrangler types [path]           📝 Generate types from your Worker configuration
+				  wrangler vectorize              🧮 Manage Vectorize indexes
+				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
+				  wrangler vpc                    🌐 Manage VPC [open beta]
+				  wrangler workflows              🔁 Manage Workflows
+
+				STORAGE & DATABASES
+				  wrangler d1                     🗄️ Manage Workers D1 databases
+				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
+				  wrangler kv                     🗂️ Manage Workers KV Namespaces
+				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
+				  wrangler r2                     📦 Manage R2 buckets & objects
+				  wrangler secrets-store          🔐 Manage the Secrets Store [open beta]
+
+				NETWORKING & SECURITY
+				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
+				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]
@@ -103,40 +109,46 @@ describe("wrangler", () => {
 				COMMANDS
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
 
-				  wrangler init [name]            📥 Initialize a basic Worker
-				  wrangler dev [script]           👂 Start a local server for developing your Worker
-				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
-				  wrangler setup                  🪄 Setup a project to work on Cloudflare [experimental]
-				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
-				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
-				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
-				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
-				  wrangler delete [script]        🗑 Delete a Worker from Cloudflare
-				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
-				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
-				  wrangler types [path]           📝 Generate types from your Worker configuration
-
-				  wrangler kv                     🗂️ Manage Workers KV Namespaces
-				  wrangler queues                 📬 Manage Workers Queues
-				  wrangler r2                     📦 Manage R2 buckets & objects
-				  wrangler d1                     🗄 Manage Workers D1 databases
-				  wrangler vectorize              🧮 Manage Vectorize indexes
-				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
-				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
-				  wrangler pages                  ⚡️ Configure Cloudflare Pages
-				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
-				  wrangler containers             📦 Manage Containers [open beta]
-				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
-				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
-				  wrangler ai                     🤖 Manage AI models
-				  wrangler secrets-store          🔐 Manage the Secrets Store [open beta]
-				  wrangler workflows              🔁 Manage Workflows
-				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
-				  wrangler vpc                    🌐 Manage VPC [open beta]
+				ACCOUNT
+				  wrangler auth                   🔐 Manage authentication
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️ Retrieve your user information
-				  wrangler auth                   🔐 Manage authentication
+
+				COMPUTE & AI
+				  wrangler ai                     🤖 Manage AI models
+				  wrangler containers             📦 Manage Containers [open beta]
+				  wrangler delete [script]        🗑️ Delete a Worker from Cloudflare
+				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
+				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
+				  wrangler dev [script]           👂 Start a local server for developing your Worker
+				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
+				  wrangler init [name]            📥 Initialize a basic Worker
+				  wrangler pages                  ⚡️ Configure Cloudflare Pages
+				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
+				  wrangler queues                 📬 Manage Workers Queues
+				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
+				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
+				  wrangler setup                  🪄 Setup a project to work on Cloudflare [experimental]
+				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
+				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
+				  wrangler types [path]           📝 Generate types from your Worker configuration
+				  wrangler vectorize              🧮 Manage Vectorize indexes
+				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
+				  wrangler vpc                    🌐 Manage VPC [open beta]
+				  wrangler workflows              🔁 Manage Workflows
+
+				STORAGE & DATABASES
+				  wrangler d1                     🗄️ Manage Workers D1 databases
+				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
+				  wrangler kv                     🗂️ Manage Workers KV Namespaces
+				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
+				  wrangler r2                     📦 Manage R2 buckets & objects
+				  wrangler secrets-store          🔐 Manage the Secrets Store [open beta]
+
+				NETWORKING & SECURITY
+				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
+				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]

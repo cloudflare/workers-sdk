@@ -48,6 +48,7 @@ export const kvNamespace = createNamespace({
 		description: "🗂️ Manage Workers KV Namespaces",
 		status: "stable",
 		owner: "Product: KV",
+		category: "Storage & databases",
 	},
 });
 

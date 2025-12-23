@@ -126,6 +126,7 @@ export const dispatchNamespaceNamespace = createNamespace({
 		description: "🏗️ Manage dispatch namespaces",
 		owner: "Workers: Deploy and Config",
 		status: "stable",
+		category: "Compute & AI",
 	},
 });
 

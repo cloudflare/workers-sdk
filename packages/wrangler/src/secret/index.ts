@@ -135,6 +135,7 @@ export const secretNamespace = createNamespace({
 		description: "🤫 Generate a secret that can be referenced in a Worker",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
+		category: "Compute & AI",
 	},
 });
 export const secretPutCommand = createCommand({
