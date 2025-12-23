@@ -46,7 +46,6 @@
 		"@cloudflare/unenv-preset": "workspace:*",
 		"miniflare": "workspace:*",
 		"unenv": "2.0.0-rc.24",
-		"wrangler": "workspace:*",
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
@@ -71,7 +70,8 @@
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
 		"vite": "catalog:vite-plugin",
-		"vitest": "catalog:default"
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
 	},
 	"peerDependencies": {
 		"vite": "^6.1.0 || ^7.0.0",
