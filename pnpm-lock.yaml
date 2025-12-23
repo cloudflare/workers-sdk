@@ -174,11 +174,11 @@ importers:
   fixtures/browser-rendering:
     devDependencies:
       '@cloudflare/playwright':
-        specifier: ^0.0.10
-        version: 0.0.10
+        specifier: ^1.0.0
+        version: 1.0.0
       '@cloudflare/puppeteer':
-        specifier: ^1.0.2
-        version: 1.0.3
+        specifier: ^1.0.4
+        version: 1.0.4
       '@cloudflare/vitest-pool-workers':
         specifier: workspace:*
         version: link:../../packages/vitest-pool-workers
@@ -4815,11 +4815,11 @@ packages:
     resolution: {integrity: sha512-Nu8ahitGFFJztxUml9oD/DLb7Z28C8cd8F46IVQ7y5Btz575pvMY8AqZsXkX7Gds29eCKdMgIHjIvzskHgPSFg==}
     engines: {node: '>=18.0.0'}
 
-  '@cloudflare/playwright@0.0.10':
-    resolution: {integrity: sha512-phlOzpO5FLgXFbx20C2GyQonffpe+qdL/MSMOf7ryc3+WjEsRrr6zqVLVJJq9ZW4CEypee1e/wcUQ473srC2dA==}
+  '@cloudflare/playwright@1.0.0':
+    resolution: {integrity: sha512-Z5LFFPJl1HxiI5+qJr+C3eoP8Lt5cv1xFesAWQG4ywL/Szx3b6S6ovJgOrPPZuZ6K9P5AFyqYEqFT3GjfVm/yA==}
 
-  '@cloudflare/puppeteer@1.0.3':
-    resolution: {integrity: sha512-55LDVaxSv9hl99QkoLftJWvemKqfxK2+frKx2ylErV50pswGU7ILpEG0VzpN5pPqKqPXl/ajsIxuaJyp+A4kDw==}
+  '@cloudflare/puppeteer@1.0.4':
+    resolution: {integrity: sha512-I7vh9Er1hQ/7OnOL/NEPaiR0alRQ62wEWstyizilmr69AcRqvu+ufNlTc3A2uXREEvFBZ6TFajdcrBbh78/mtA==}
     engines: {node: '>=18'}
 
   '@cloudflare/style-const@5.7.3':
@@ -6556,8 +6556,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@puppeteer/browsers@2.2.3':
-    resolution: {integrity: sha512-bJ0UBsk0ESOs6RFcLXOt99a3yTDcOKlzfjad+rhFwdaG1Lu/Wzq58GHYCDTlZ9z6mldf4g+NTb+TXEfe0PpnsQ==}
+  '@puppeteer/browsers@2.2.4':
+    resolution: {integrity: sha512-BdG2qiI1dn89OTUUsx2GZSpUzW+DRffR1wlMJyKxVHYrhnKoELSDxDd+2XImUkuWPEKk76H5FcM/gPFrEK1Tfw==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -8463,9 +8463,6 @@ packages:
   bare-events@2.5.4:
     resolution: {integrity: sha512-+gFfDkR8pj4/TrWCGUGWmJIkBwuxPS5F+a5yWjOHQt2hHvNZd5YLzadjmDUtFmMM4y429bnKLa8bYBMHcYdnQA==}
 
-  bare-fs@2.3.5:
-    resolution: {integrity: sha512-SlE9eTxifPDJrT6YgemQ1WGFleevzwY+XAP1Xqgl56HtcrisC2CHCZ2tq6dBpcH2TnNxwUEUGhweo+lrQtYuiw==}
-
   bare-fs@4.1.6:
     resolution: {integrity: sha512-25RsLF33BqooOEFNdMcEhMpJy8EoR88zSMrnOQOaM3USnOK2VmaJ1uaQEwPA6AQjrv1lXChScosN6CzbwbO9OQ==}
     engines: {bare: '>=1.16.0'}
@@ -8475,15 +8472,9 @@ packages:
       bare-buffer:
         optional: true
 
-  bare-os@2.4.4:
-    resolution: {integrity: sha512-z3UiI2yi1mK0sXeRdc4O1Kk8aOa/e+FNWZcTiPB/dfTWyLypuE99LibgRaQki914Jq//yAWylcAt+mknKdixRQ==}
-
   bare-os@3.6.1:
     resolution: {integrity: sha512-uaIjxokhFidJP+bmmvKSgiMzj2sV5GPHaZVAIktcxcpCyBFFWO+YlikVAdhmUo2vYFvFhOXIAlldqV29L8126g==}
     engines: {bare: '>=1.14.0'}
-
-  bare-path@2.1.3:
-    resolution: {integrity: sha512-lh/eITfU8hrj9Ru5quUp0Io1kJWIk1bTjzo7JH1P5dWmQ2EL4hFUlfI8FonAhSlgIfhn63p84CDY/x+PisgcXA==}
 
   bare-path@3.0.0:
     resolution: {integrity: sha512-tyfW2cQcB5NN8Saijrhqn0Zh7AnFNsnczRcuWODH0eYAXBsJ5gVxAUuNr7tsHSC6IZ77cA0SitzT+s47kot8Mw==}
@@ -9253,8 +9244,8 @@ packages:
   devtools-protocol@0.0.1182435:
     resolution: {integrity: sha512-EmlkWb62wSbQNE1gRZZsi4KZYRaF5Skpp183LhRU7+sadKR06O1dHCjZmFSEG6Kv7P6S/UYLxcY3NlYwqKM99w==}
 
-  devtools-protocol@0.0.1273771:
-    resolution: {integrity: sha512-QDbb27xcTVReQQW/GHJsdQqGKwYBE7re7gxehj467kKP2DKuYBUj6i2k5LRiAC66J1yZG/9gsxooz/s9pcm0Og==}
+  devtools-protocol@0.0.1299070:
+    resolution: {integrity: sha512-+qtL3eX50qsJ7c+qVyagqi7AWMoQCBGNfoyJZMwm/NSXVqLYbuitrWEEIzxfUmTNy7//Xe8yhMmQ+elj3uAqSg==}
 
   diff-sequences@29.6.3:
     resolution: {integrity: sha512-EjePK1srD3P08o2j4f0ExnylqRs5B9tJjcp9t1krH2qRi8CCdsYfwe9JgSLurFBWwq4uOlipzfk5fHNvwFKr8Q==}
@@ -12326,10 +12317,6 @@ packages:
     resolution: {integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==}
     engines: {node: '>= 0.10'}
 
-  proxy-agent@6.4.0:
-    resolution: {integrity: sha512-u0piLU+nCOHMgGjRbimiXmA9kM/L9EHh3zL81xCdp7m+Y2pHIsnmbdDoEDoAz5geaonNR6q6+yOPQs6n4T6sBQ==}
-    engines: {node: '>= 14'}
-
   proxy-agent@6.5.0:
     resolution: {integrity: sha512-TmatMXdr2KlRiA2CyDu8GqR8EjahTG3aY3nXjdzFyoZbmB8hrBsTyMezhULIXKnC0jpfjlmiZ3+EaCzoInSu/A==}
     engines: {node: '>= 14'}
@@ -12786,11 +12773,6 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
-  semver@7.6.0:
-    resolution: {integrity: sha512-EnwXhrlwXMk9gKu5/flx5sv/an57AkRplG3hTK68W7FRDN+k+OWBj65M7719OkA82XLBxrcX0KSHj+X5COhOVg==}
-    engines: {node: '>=10'}
-    hasBin: true
-
   semver@7.6.3:
     resolution: {integrity: sha512-oVekP1cKtI+CTDvHWYFUcMtsK/00wmAEfyqKfNdARm8u1wNVhSgaX7A8d4UuIlUI5e84iEwOhs7ZPYRmzU9U6A==}
     engines: {node: '>=10'}
@@ -13221,9 +13203,6 @@ packages:
 
   tar-fs@2.1.3:
     resolution: {integrity: sha512-090nwYJDmlhwFwEW3QQl+vaNnxsO2yVsd45eTKRBzSzu+hlb1w2K9inVq5b0ngXuLVqQ4ApvsUHHnu/zQNkWAg==}
-
-  tar-fs@3.0.5:
-    resolution: {integrity: sha512-JOgGAmZyMgbqpLwct7ZV8VzkEB6pxXFBVErLtb+XCOqzc6w1xiWKI9GVd6bwk68EX7eJ4DWmfXVmq8K2ziZTGg==}
 
   tar-fs@3.1.0:
     resolution: {integrity: sha512-5Mty5y/sOF1YWj1J6GiBodjlDc05CUR8PKXrsnFAiSG0xA+GHeWLovaZPYUDXkH/1iKRf2+M5+OrRgzC7O9b7w==}
@@ -14112,18 +14091,6 @@ packages:
   write-file-atomic@6.0.0:
     resolution: {integrity: sha512-GmqrO8WJ1NuzJ2DrziEI2o57jKAVIQNf8a18W3nCYU3H7PNWqCCVTeH6/NQE93CIllIgQS98rrmVkYgTX9fFJQ==}
     engines: {node: ^18.17.0 || >=20.5.0}
-
-  ws@8.17.0:
-    resolution: {integrity: sha512-uJq6108EgZMAl20KagGkzCKfMEjxmKvZHG7Tlq0Z6nOky7YF7aq4mOx6xK8TJ/i1LeK4Qus7INktacctDgY8Ow==}
-    engines: {node: '>=10.0.0'}
-    peerDependencies:
-      bufferutil: ^4.0.1
-      utf-8-validate: '>=5.0.2'
-    peerDependenciesMeta:
-      bufferutil:
-        optional: true
-      utf-8-validate:
-        optional: true
 
   ws@8.18.0:
     resolution: {integrity: sha512-8VbfWfHLbbwu3+N6OKsOMpBdT4kXPDDB9cJk2bJ6mh9ucxdlnNvH1e+roYkKmN9Nxw2yjz7VzeO9oOz2zJ04Pw==}
@@ -15431,14 +15398,14 @@ snapshots:
     dependencies:
       mime: 3.0.0
 
-  '@cloudflare/playwright@0.0.10': {}
+  '@cloudflare/playwright@1.0.0': {}
 
-  '@cloudflare/puppeteer@1.0.3':
+  '@cloudflare/puppeteer@1.0.4':
     dependencies:
-      '@puppeteer/browsers': 2.2.3
-      debug: 4.3.4
-      devtools-protocol: 0.0.1273771
-      ws: 8.17.0
+      '@puppeteer/browsers': 2.2.4
+      debug: 4.4.1(supports-color@9.2.2)
+      devtools-protocol: 0.0.1299070
+      ws: 8.18.0
     transitivePeerDependencies:
       - bare-buffer
       - bufferutil
@@ -16889,14 +16856,14 @@ snapshots:
       - bare-buffer
       - supports-color
 
-  '@puppeteer/browsers@2.2.3':
+  '@puppeteer/browsers@2.2.4':
     dependencies:
-      debug: 4.3.4
+      debug: 4.4.1(supports-color@9.2.2)
       extract-zip: 2.0.1
       progress: 2.0.3
-      proxy-agent: 6.4.0
-      semver: 7.6.0
-      tar-fs: 3.0.5
+      proxy-agent: 6.5.0
+      semver: 7.7.3
+      tar-fs: 3.1.0
       unbzip2-stream: 1.4.3
       yargs: 17.7.2
     transitivePeerDependencies:
@@ -19163,15 +19130,6 @@ snapshots:
   bare-events@2.5.4:
     optional: true
 
-  bare-fs@2.3.5:
-    dependencies:
-      bare-events: 2.5.4
-      bare-path: 2.1.3
-      bare-stream: 2.6.5(bare-events@2.5.4)
-    transitivePeerDependencies:
-      - bare-buffer
-    optional: true
-
   bare-fs@4.1.6:
     dependencies:
       bare-events: 2.5.4
@@ -19179,15 +19137,7 @@ snapshots:
       bare-stream: 2.6.5(bare-events@2.5.4)
     optional: true
 
-  bare-os@2.4.4:
-    optional: true
-
   bare-os@3.6.1:
-    optional: true
-
-  bare-path@2.1.3:
-    dependencies:
-      bare-os: 2.4.4
     optional: true
 
   bare-path@3.0.0:
@@ -19951,7 +19901,7 @@ snapshots:
 
   devtools-protocol@0.0.1182435: {}
 
-  devtools-protocol@0.0.1273771: {}
+  devtools-protocol@0.0.1299070: {}
 
   diff-sequences@29.6.3: {}
 
@@ -23354,19 +23304,6 @@ snapshots:
       forwarded: 0.2.0
       ipaddr.js: 1.9.1
 
-  proxy-agent@6.4.0:
-    dependencies:
-      agent-base: 7.1.3
-      debug: 4.4.1(supports-color@9.2.2)
-      http-proxy-agent: 7.0.2
-      https-proxy-agent: 7.0.6
-      lru-cache: 7.18.3
-      pac-proxy-agent: 7.2.0
-      proxy-from-env: 1.1.0
-      socks-proxy-agent: 8.0.5
-    transitivePeerDependencies:
-      - supports-color
-
   proxy-agent@6.5.0:
     dependencies:
       agent-base: 7.1.3
@@ -23952,10 +23889,6 @@ snapshots:
     dependencies:
       lru-cache: 6.0.0
 
-  semver@7.6.0:
-    dependencies:
-      lru-cache: 6.0.0
-
   semver@7.6.3: {}
 
   semver@7.7.1: {}
@@ -24496,16 +24429,6 @@ snapshots:
       pump: 3.0.0
       tar-stream: 2.2.0
     optional: true
-
-  tar-fs@3.0.5:
-    dependencies:
-      pump: 3.0.0
-      tar-stream: 3.1.7
-    optionalDependencies:
-      bare-fs: 2.3.5
-      bare-path: 2.1.3
-    transitivePeerDependencies:
-      - bare-buffer
 
   tar-fs@3.1.0:
     dependencies:
@@ -25690,8 +25613,6 @@ snapshots:
     dependencies:
       imurmurhash: 0.1.4
       signal-exit: 4.1.0
-
-  ws@8.17.0: {}
 
   ws@8.18.0: {}
 

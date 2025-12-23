@@ -1251,13 +1251,13 @@ export class Miniflare {
 			} else if (url.pathname === "/browser/launch") {
 				const { sessionId, browserProcess, startTime, wsEndpoint } =
 					await launchBrowser({
-						// Puppeteer v22.8.2 supported chrome version:
+						// Puppeteer v22.13.1 supported chrome version:
 						// https://pptr.dev/supported-browsers#supported-browser-version-list
 						//
 						// It should match the supported chrome version for the upstream puppeteer
 						// version from which @cloudflare/puppeteer branched off, which is specified in:
 						// https://github.com/cloudflare/puppeteer/tree/v1.0.2?tab=readme-ov-file#workers-version-of-puppeteer-core
-						browserVersion: "124.0.6367.207",
+						browserVersion: "126.0.6478.182",
 						log: this.#log,
 						tmpPath: this.#tmpPath,
 					});

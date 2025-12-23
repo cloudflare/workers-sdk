@@ -6,7 +6,7 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "browser-rendering",
 	"main": "src/index.ts",
-	"compatibility_date": "2025-02-24",
+	"compatibility_date": "2025-12-01",
 	"observability": {
 		"enabled": true,
 	},
