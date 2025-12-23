@@ -72,6 +72,7 @@ describe("wrangler", () => {
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️ Retrieve your user information
 				  wrangler auth                   🔐 Manage authentication
+				  wrangler completions            ⌨️ Generate shell completion scripts
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]
@@ -137,6 +138,7 @@ describe("wrangler", () => {
 				  wrangler logout                 🚪 Logout from Cloudflare
 				  wrangler whoami                 🕵️ Retrieve your user information
 				  wrangler auth                   🔐 Manage authentication
+				  wrangler completions            ⌨️ Generate shell completion scripts
 
 				GLOBAL FLAGS
 				  -c, --config    Path to Wrangler configuration file  [string]
