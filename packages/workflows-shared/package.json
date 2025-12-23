@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workflows-shared",
-	"version": "0.3.9",
+	"version": "0.4.0",
 	"private": true,
 	"description": "Package that is used at Cloudflare to power some internal features of Cloudflare Workflows.",
 	"keywords": [

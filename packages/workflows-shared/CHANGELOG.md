@@ -1,5 +1,32 @@
 # @cloudflare/workflows-shared
 
+## 0.4.0
+
+### Minor Changes
+
+- [#11648](https://github.com/cloudflare/workers-sdk/pull/11648) [`eac5cf7`](https://github.com/cloudflare/workers-sdk/commit/eac5cf74db6d1b0865f5dc3a744ff28e695d53ca) Thanks [@pombosilva](https://github.com/pombosilva)! - Add Workflows test handlers in vitest-pool-workers to get the Workflow instance output and error:
+
+  - `getOutput()`: Returns the output of the successfully completed Workflow instance.
+  - `getError()`: Returns the error information of the errored Workflow instance.
+
+  Example:
+
+  ```ts
+  // First wait for the workflow instance to complete:
+  await expect(
+  	instance.waitForStatus({ status: "complete" })
+  ).resolves.not.toThrow();
+
+  // Then, get its output
+  const output = await instance.getOutput();
+
+  // Or for errored workflow instances, get their error:
+  await expect(
+  	instance.waitForStatus({ status: "errored" })
+  ).resolves.not.toThrow();
+  const error = await instance.getError();
+  ```
+
 ## 0.3.9
 
 ### Patch Changes
