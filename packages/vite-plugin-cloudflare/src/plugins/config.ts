@@ -136,8 +136,6 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					return;
 				}
 
-				const clientEnvironment = builder.environments.client;
-				assert(clientEnvironment, `No "client" environment`);
 				const workerEnvironments = [
 					...ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys(),
 				].map((environmentName) => {
@@ -166,7 +164,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 					entryWorkerEnvironment.config.build.outDir
 				);
 
-				if (!clientEnvironment.isBuilt) {
+				if (!builder.environments.client?.isBuilt) {
 					removeAssetsField(entryWorkerBuildDirectory);
 				}
 			},
