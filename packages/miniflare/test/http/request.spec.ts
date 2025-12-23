@@ -1,7 +1,7 @@
-import test from "ava";
 import { Request } from "miniflare";
+import { expect, test } from "vitest";
 
-test("Request: clone: returns correctly typed value", async (t) => {
+test("Request: clone: returns correctly typed value", async () => {
 	const request = new Request("http://localhost/", {
 		method: "POST",
 		body: "text",
@@ -11,14 +11,12 @@ test("Request: clone: returns correctly typed value", async (t) => {
 	const clone1 = request.clone();
 	const clone2 = clone1.clone(); // Test cloning a clone
 
-	// noinspection SuspiciousTypeOfGuard
-	t.true(clone1 instanceof Request);
-	// noinspection SuspiciousTypeOfGuard
-	t.true(clone2 instanceof Request);
-	t.is(request.method, "POST");
-	t.is(clone1.method, "POST");
-	t.is(clone2.method, "POST");
-	t.is(await request.text(), "text");
-	t.is(await clone1.text(), "text");
-	t.is(await clone2.text(), "text");
+	expect(clone1).toBeInstanceOf(Request);
+	expect(clone2).toBeInstanceOf(Request);
+	expect(request.method).toBe("POST");
+	expect(clone1.method).toBe("POST");
+	expect(clone2.method).toBe("POST");
+	expect(await request.text()).toBe("text");
+	expect(await clone1.text()).toBe("text");
+	expect(await clone2.text()).toBe("text");
 });

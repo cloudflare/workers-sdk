@@ -1,84 +1,110 @@
-import assert from "node:assert";
-import { setTimeout } from "node:timers/promises";
-import { ExecutionContext } from "ava";
-import { Awaitable } from "miniflare";
-
-export function isWithin(
-	t: ExecutionContext,
-	epsilon: number,
-	actual?: number,
-	expected?: number
-): void {
-	t.not(actual, undefined);
-	t.not(expected, undefined);
-	assert(actual !== undefined && expected !== undefined);
-	const difference = Math.abs(actual - expected);
-	t.true(
-		difference <= epsilon,
-		`${actual} is not within ${epsilon} of ${expected}, difference is ${difference}`
-	);
-}
-
-export function escapeRegexpComponent(value: string): string {
-	// From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#escaping
-	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-export function flaky(
-	impl: (t: ExecutionContext) => Awaitable<void>
-): (t: ExecutionContext) => Promise<void> {
-	const maxAttempts = 3;
-	return async (t) => {
-		for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-			const result = await t.try(impl);
-			if (result.passed || attempt === maxAttempts) {
-				result.commit();
-				return;
-			} else {
-				result.discard();
-				t.log(`Attempt #${attempt} failed!`);
-				t.log(...result.errors);
-			}
-		}
-	};
+/**
+ * Type for error expectations in tests (similar to Ava's ThrowsExpectation)
+ */
+export interface ThrowsExpectation<T extends Error = Error> {
+	instanceOf?: new (...args: any[]) => T;
+	message?: string | RegExp | ((message: string) => boolean);
+	name?: string;
+	code?: string;
 }
 
 /**
- * Wait for the callback to execute successfully. If the callback throws an error or returns a rejected promise it will continue to wait until it succeeds or times out.
+ * Asymmetric matcher for error assertions.
+ * Can be used with expect().toThrow() or expect().rejects.toThrow()
+ * to check error properties like instanceOf, code, and message.
+ *
+ * @example
+ * expect(() => throwError()).toThrow(errorLike({ code: "ERR_VALIDATION" }));
+ * await expect(asyncFn()).rejects.toThrow(errorLike({ message: /invalid/ }));
  */
-export async function waitFor<T>(
-	callback: () => T | Promise<T>,
-	timeout = 5000
-): Promise<T> {
-	const start = Date.now();
-	while (true) {
-		try {
-			return callback();
-		} catch (error) {
-			if (Date.now() < start + timeout) {
-				throw error;
+export function errorLike<T extends Error = Error>(
+	expectations: ThrowsExpectation<T>
+): Error {
+	// Return an asymmetric matcher object that Vitest will use at runtime.
+	// Cast to Error to satisfy TypeScript's toThrow() parameter type.
+	// This is safe because Vitest's toThrow() accepts asymmetric matchers at runtime.
+	const matcher = {
+		asymmetricMatch(actual: unknown): boolean {
+			if (!(actual instanceof Error)) {
+				return false;
 			}
-		}
-		await setTimeout(100);
-	}
+			if (
+				expectations.instanceOf &&
+				!(actual instanceof expectations.instanceOf)
+			) {
+				return false;
+			}
+			if (expectations.code !== undefined) {
+				const errorWithCode = actual as { code?: unknown };
+				if (
+					typeof errorWithCode.code !== "string" ||
+					errorWithCode.code !== expectations.code
+				) {
+					return false;
+				}
+			}
+			if (expectations.message !== undefined) {
+				if (typeof expectations.message === "string") {
+					if (actual.message !== expectations.message) {
+						return false;
+					}
+				} else if (expectations.message instanceof RegExp) {
+					if (!expectations.message.test(actual.message)) {
+						return false;
+					}
+				} else if (typeof expectations.message === "function") {
+					if (!expectations.message(actual.message)) {
+						return false;
+					}
+				}
+			}
+			if (expectations.name !== undefined) {
+				if (actual.name !== expectations.name) {
+					return false;
+				}
+			}
+			return true;
+		},
+		toString(): string {
+			return this.toAsymmetricMatcher();
+		},
+		toAsymmetricMatcher(): string {
+			const parts: string[] = [];
+			if (expectations.instanceOf) {
+				parts.push(`instanceOf: ${expectations.instanceOf.name}`);
+			}
+			if (expectations.code !== undefined) {
+				parts.push(`code: "${expectations.code}"`);
+			}
+			if (expectations.message !== undefined) {
+				if (expectations.message instanceof RegExp) {
+					parts.push(`message: ${String(expectations.message)}`);
+				} else if (typeof expectations.message === "function") {
+					parts.push(`message: [Function]`);
+				} else {
+					parts.push(`message: "${expectations.message}"`);
+				}
+			}
+			if (expectations.name !== undefined) {
+				parts.push(`name: "${expectations.name}"`);
+			}
+			return `errorLike({ ${parts.join(", ")} })`;
+		},
+	};
+	return matcher as unknown as Error;
 }
 
-export async function waitUntil(
-	t: ExecutionContext,
-	impl: (t: ExecutionContext) => Awaitable<void>,
-	timeout: number = 10000
-): Promise<void> {
-	const start = Date.now();
-
-	while (true) {
-		const result = await t.try(impl);
-
-		if (result.passed || Date.now() - start > timeout) {
-			result.commit();
-			return;
-		}
-
-		result.discard();
-		await setTimeout(100);
-	}
+/**
+ * Escapes special characters in a string for use in a regular expression.
+ * This ensures the string is treated as a literal match rather than a pattern.
+ *
+ * @example
+ * const escaped = escapeRegexpComponent("file.txt");
+ * // Returns "file\\.txt"
+ * new RegExp(escaped).test("file.txt"); // true
+ * new RegExp(escaped).test("filextxt"); // false
+ */
+export function escapeRegexpComponent(value: string): string {
+	// From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#escaping
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

@@ -1,19 +1,19 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import test from "ava";
 import { Miniflare } from "miniflare";
-import { FIXTURES_PATH, useTmp } from "../../test-shared";
+import { expect, test } from "vitest";
+import { FIXTURES_PATH, useDispose, useTmp } from "../../test-shared";
+// Import suite tests - this registers the tests with vitest
+import "./suite";
 import { setupTest } from "./test";
 
 // Post-wrangler 3.3, D1 bindings work directly, so use the input file
 // from the fixture, and no prefix on the binding name
 setupTest("DB", "worker.mjs", (mf) => mf.getD1Database("DB"));
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-require("./suite");
 
-test("migrates database to new location", async (t) => {
+test("migrates database to new location", async () => {
 	// Copy legacy data to temporary directory
-	const tmp = await useTmp(t);
+	const tmp = await useTmp();
 	const persistFixture = path.join(FIXTURES_PATH, "migrations", "3.20230821.0");
 	const d1Persist = path.join(tmp, "d1");
 	await fs.cp(path.join(persistFixture, "d1"), d1Persist, { recursive: true });
@@ -25,9 +25,9 @@ test("migrates database to new location", async (t) => {
 		d1Databases: ["DATABASE"],
 		d1Persist,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const database = await mf.getD1Database("DATABASE");
 	const { results } = await database.prepare("SELECT * FROM entries").all();
-	t.deepEqual(results, [{ key: "a", value: "1" }]);
+	expect(results).toEqual([{ key: "a", value: "1" }]);
 });

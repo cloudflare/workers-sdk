@@ -4,8 +4,8 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { ReadableStream } from "node:stream/web";
-import anyTest, { TestFn } from "ava";
 import { InclusiveRange, Miniflare, Response } from "miniflare";
+import { afterAll, beforeAll, expect, test } from "vitest";
 import { useTmp } from "../test-shared";
 
 class BlobStoreStub {
@@ -47,17 +47,17 @@ interface Context {
 	store: BlobStoreStub;
 }
 
-const test = anyTest as TestFn<Context>;
+const ctx: Context = {} as Context;
 
 // Can't use `miniflareTest` here as we want to import from "miniflare:shared".
 // Can't use dynamic import as `esbuild` will still try to bundle it/apply
 // format conversion to CJS.
 // Can't use proxy client here as the blob store isn't accessible as a binding.
 // Could do with wrapped bindings support though once implemented :eyes: .
-test.before(async (t) => {
-	const tmp = await useTmp(t);
-	t.context.tmp = tmp;
-	t.context.mf = new Miniflare({
+beforeAll(async () => {
+	const tmp = await useTmp();
+	ctx.tmp = tmp;
+	ctx.mf = new Miniflare({
 		bindings: { NAMESPACE },
 		serviceBindings: { BLOBS: { disk: { path: tmp, writable: true } } },
 		compatibilityDate: "2023-08-01",
@@ -98,39 +98,41 @@ test.before(async (t) => {
 			},
 		],
 	});
-	t.context.store = new BlobStoreStub(t.context.mf);
+	ctx.store = new BlobStoreStub(ctx.mf);
 });
-test.after((t) => t.context.mf.dispose());
+afterAll(() => ctx.mf.dispose());
 
-test("BlobStore: put/get", async (t) => {
-	const { tmp, store } = t.context;
+test("BlobStore: put/get", async () => {
+	const { tmp, store } = ctx;
 
 	// Check put writes file to correct location
 	const id = await store.put(new Blob(["0123456789"]).stream());
 	const namespacePath = path.join(tmp, "_strange%_namespace _");
 	const blobsPath = path.join(namespacePath, "blobs");
-	t.is(await fs.readFile(path.join(blobsPath, id), "utf8"), "0123456789");
+	expect(await fs.readFile(path.join(blobsPath, id), "utf8")).toBe(
+		"0123456789"
+	);
 
 	// Check full range
 	let res = await store.get(id);
-	t.true(res.ok);
-	t.is(await res.text(), "0123456789");
+	expect(res.ok).toBe(true);
+	expect(await res.text()).toBe("0123456789");
 
 	// Check single range
 	res = await store.get(id, { start: 3, end: 7 });
-	t.true(res.ok);
-	t.is(await res.text(), "34567");
+	expect(res.ok).toBe(true);
+	expect(await res.text()).toBe("34567");
 
 	// Check multiple ranges with no content type
 	res = await store.get(id, [
 		{ start: 5, end: 7 },
 		{ start: 8, end: 8 },
 	]);
-	t.true(res.ok);
+	expect(res.ok).toBe(true);
 	let contentTypeHeader = res.headers.get("Content-Type");
 	assert(contentTypeHeader !== null);
 	let [contentType, boundary] = contentTypeHeader.split("=");
-	t.is(contentType, "multipart/byteranges; boundary");
+	expect(contentType).toBe("multipart/byteranges; boundary");
 	let actualText = await res.text();
 	let expectedText = [
 		`--${boundary}`,
@@ -143,7 +145,7 @@ test("BlobStore: put/get", async (t) => {
 		"8",
 		`--${boundary}--`,
 	].join("\r\n");
-	t.is(actualText, expectedText);
+	expect(actualText).toBe(expectedText);
 
 	// Check multiple ranges with content type
 	res = await store.get(
@@ -156,11 +158,11 @@ test("BlobStore: put/get", async (t) => {
 		],
 		{ contentType: "text/plain" }
 	);
-	t.true(res.ok);
+	expect(res.ok).toBe(true);
 	contentTypeHeader = res.headers.get("Content-Type");
 	assert(contentTypeHeader !== null);
 	[contentType, boundary] = contentTypeHeader.split("=");
-	t.is(contentType, "multipart/byteranges; boundary");
+	expect(contentType).toBe("multipart/byteranges; boundary");
 	actualText = await res.text();
 	expectedText = [
 		`--${boundary}`,
@@ -185,22 +187,22 @@ test("BlobStore: put/get", async (t) => {
 		"9",
 		`--${boundary}--`,
 	].join("\r\n");
-	t.is(actualText, expectedText);
+	expect(actualText).toBe(expectedText);
 
 	// Check multiple ranges with no ranges
 	res = await store.get(id, []);
-	t.true(res.ok);
+	expect(res.ok).toBe(true);
 	contentTypeHeader = res.headers.get("Content-Type");
 	assert(contentTypeHeader !== null);
 	[contentType, boundary] = contentTypeHeader.split("=");
-	t.is(contentType, "multipart/byteranges; boundary");
+	expect(contentType).toBe("multipart/byteranges; boundary");
 	actualText = await res.text();
 	expectedText = `--${boundary}--`;
-	t.is(actualText, expectedText);
+	expect(actualText).toBe(expectedText);
 
 	// Check getting invalid ID returns null
 	res = await store.get("bad");
-	t.is(res.status, 404);
+	expect(res.status).toBe(404);
 	await res.arrayBuffer(); // (drain)
 
 	// Check getting invalid ID with multiple ranges returns null
@@ -208,27 +210,27 @@ test("BlobStore: put/get", async (t) => {
 		{ start: 1, end: 2 },
 		{ start: 3, end: 4 },
 	]);
-	t.is(res.status, 404);
+	expect(res.status).toBe(404);
 	await res.arrayBuffer(); // (drain)
 
 	// Check getting ID outside root returns null
 	await fs.writeFile(path.join(namespacePath, "secrets.txt"), "password123");
 	res = await store.get("../secrets.txt");
-	t.is(res.status, 404);
+	expect(res.status).toBe(404);
 	await res.arrayBuffer(); // (drain)
 });
 
-test("BlobStore: delete", async (t) => {
-	const { tmp, store } = t.context;
+test("BlobStore: delete", async () => {
+	const { tmp, store } = ctx;
 
 	// Check delete removes blob
 	let id = await store.put(new Blob(["value"]).stream());
 	let res = await store.get(id);
-	t.true(res.ok);
+	expect(res.ok).toBe(true);
 	await res.arrayBuffer(); // (drain)
 	await store.delete(id);
 	res = await store.get(id);
-	t.is(res.status, 404);
+	expect(res.status).toBe(404);
 	await res.arrayBuffer(); // (drain)
 
 	// Check delete whilst getting still returns value
@@ -238,9 +240,9 @@ test("BlobStore: delete", async (t) => {
 	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
 	res = await store.get(id);
 	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = originalAssertConsumed;
-	t.true(res.ok);
+	expect(res.ok).toBe(true);
 	await store.delete(id);
-	t.is(await res.text(), "value");
+	expect(await res.text()).toBe("value");
 
 	// Check deleting invalid ID does nothing
 	await store.delete("whoops");
@@ -250,5 +252,5 @@ test("BlobStore: delete", async (t) => {
 	await fs.writeFile(importantPath, "❤️🦄");
 	await store.delete("../../unicorn.txt");
 	await store.delete("dir/../../../unicorn.txt");
-	t.true(existsSync(importantPath));
+	expect(existsSync(importantPath)).toBe(true);
 });

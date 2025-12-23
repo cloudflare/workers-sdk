@@ -3,6 +3,7 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
+			"inputs": ["$TURBO_DEFAULT$", "!test/**"],
 			"outputs": ["dist/**", "bootstrap.js", "worker-metafiles/**"],
 			"env": ["CI_OS"]
 		},
