@@ -181,8 +181,15 @@ type StaticFileMap = {
 	variants: Record<string, VariantInfo>;
 };
 
-const defaultSelectVariant = async (ctx: C3Context) => {
-	return ctx.args.lang;
+export const defaultSelectVariant = async (ctx: C3Context) => {
+	// If the user explicitly specified a language, use it
+	if (ctx.args.lang) {
+		return ctx.args.lang;
+	}
+	// Otherwise, infer from the project's tsconfig.json
+	// This is important for web frameworks where the generate function
+	// creates the project files (including tsconfig.json) before copyTemplateFiles runs
+	return hasTsConfig(ctx.project.path) ? "ts" : "js";
 };
 
 /**
@@ -686,9 +693,10 @@ export const createContext = async (
 			// If we can infer from the directory that it uses typescript, use that
 			args.lang = "ts";
 		} else if (template.generate) {
-			// If there is a generate process then we assume that a potential typescript
-			// setup must have been part of it, so we should not offer it here
-			args.lang = "js";
+			// If there is a generate process, the language will be determined after
+			// the generate function runs (when copyTemplateFiles calls defaultSelectVariant
+			// which checks for tsconfig.json). We don't prompt the user here because
+			// the framework's generate process typically handles language selection.
 		} else {
 			// Otherwise, prompt the user for their language preference
 			const languageOptions = [
