@@ -1,5 +1,6 @@
 {
   "name": "<WORKER_NAME>",
+  "upload_source_maps": true,
   "main": "./dist/_worker.js",
   "compatibility_date": "<COMPATIBILITY_DATE>",
   "compatibility_flags": [

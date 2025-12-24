@@ -1,5 +1,6 @@
 {
   "name": "<WORKER_NAME>",
+  "upload_source_maps": true,
   "main": "src/index.js",
   "compatibility_date": "<COMPATIBILITY_DATE>",
   "observability": {
