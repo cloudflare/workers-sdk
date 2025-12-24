@@ -410,7 +410,7 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
-	// node:inspector (experimental, no default enable date)
+	// node:inspector and node:inspector/promises (experimental, no default enable date)
 	[
 		{
 			name: "inspector enabled by flag",
