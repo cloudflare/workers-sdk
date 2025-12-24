@@ -1251,13 +1251,13 @@ export class Miniflare {
 			} else if (url.pathname === "/browser/launch") {
 				const { sessionId, browserProcess, startTime, wsEndpoint } =
 					await launchBrowser({
-						// Puppeteer v22.8.2 supported chrome version:
+						// Puppeteer v22.13.1 supported chrome version:
 						// https://pptr.dev/supported-browsers#supported-browser-version-list
 						//
 						// It should match the supported chrome version for the upstream puppeteer
 						// version from which @cloudflare/puppeteer branched off, which is specified in:
 						// https://github.com/cloudflare/puppeteer/tree/v1.0.2?tab=readme-ov-file#workers-version-of-puppeteer-core
-						browserVersion: "124.0.6367.207",
+						browserVersion: "126.0.6478.182",
 						log: this.#log,
 						tmpPath: this.#tmpPath,
 					});
@@ -1266,11 +1266,6 @@ export class Miniflare {
 				});
 				this.#browserProcesses.set(sessionId, browserProcess);
 				response = Response.json({ wsEndpoint, sessionId, startTime });
-			} else if (url.pathname === "/browser/status") {
-				const sessionId = url.searchParams.get("sessionId");
-				assert(sessionId !== null, "Missing sessionId query parameter");
-				const process = this.#browserProcesses.get(sessionId);
-				response = new Response(null, { status: process ? 200 : 410 });
 			} else if (url.pathname === "/browser/sessionIds") {
 				const sessionIds = this.#browserProcesses.keys();
 				response = Response.json(Array.from(sessionIds));
