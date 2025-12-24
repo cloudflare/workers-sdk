@@ -1,6 +1,7 @@
-declare namespace Cloudflare {
-	interface Env {
-		MODERATOR: Workflow;
-	}
+interface BaseEnv {
+	MODERATOR: Workflow;
 }
-interface Env extends Cloudflare.Env {}
+declare namespace Cloudflare {
+	interface Env extends BaseEnv {}
+}
+interface Env extends BaseEnv {}

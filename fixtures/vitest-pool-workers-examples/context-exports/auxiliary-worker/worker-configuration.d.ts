@@ -1,9 +1,10 @@
+interface BaseEnv {
+	NAME: string;
+}
 declare namespace Cloudflare {
 	interface GlobalProps {
 		mainModule: typeof import("./index");
 	}
-	interface Env {
-		NAME: string;
-	}
+	interface Env extends BaseEnv {}
 }
-interface Env extends Cloudflare.Env {}
+interface Env extends BaseEnv {}
