@@ -133,6 +133,46 @@ export function mockSelect<Values>(
 	}
 }
 
+/**
+ * The expected values for an autocomplete select request.
+ */
+export interface AutoCompleteSelectExpectation<Values> {
+	/** The text expected to be seen in the autocomplete select dialog. */
+	text: string;
+
+	options?: SelectOptions<Values>;
+	/** The mock response send back from the autocomplete select dialog. */
+	result: string;
+}
+
+/**
+ * Mock the implementation of `autoCompleteSelect()` that will respond with configured results
+ * for configured autocomplete select text messages.
+ *
+ * If there is a call to `autoCompleteSelect()` that does not match any of the expectations
+ * then an error is thrown.
+ */
+export function mockAutoCompleteSelect<Values>(
+	...expectations: AutoCompleteSelectExpectation<Values>[]
+) {
+	for (const expectation of expectations) {
+		(prompts as unknown as Mock).mockImplementationOnce(
+			({ type, name, message, choices, initial }) => {
+				expect({ type, name, message }).toStrictEqual({
+					type: "autocomplete",
+					name: "value",
+					message: expectation.text,
+				});
+				if (expectation.options) {
+					expect(choices).toStrictEqual(expectation.options?.choices);
+					expect(initial).toStrictEqual(expectation.options?.defaultOption);
+				}
+				return Promise.resolve({ value: expectation.result });
+			}
+		);
+	}
+}
+
 export function clearDialogs() {
 	// No dialog mocks should be left after each test, and so calling the dialog methods should throw
 	expect(() => prompts({ type: "select", name: "unknown" })).toThrow(

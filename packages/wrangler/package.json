@@ -129,6 +129,7 @@
 		"esprima": "4.0.1",
 		"execa": "^6.1.0",
 		"find-up": "^6.3.0",
+		"fuse.js": "^7.1.0",
 		"get-port": "^7.0.0",
 		"glob-to-regexp": "^0.4.1",
 		"https-proxy-agent": "7.0.2",

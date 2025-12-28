@@ -181,7 +181,7 @@ vi.mock("prompts", () => {
 			throw new Error(
 				`Unexpected call to \`prompts("${JSON.stringify(
 					args
-				)}")\`.\nYou should use \`mockConfirm()/mockSelect()/mockPrompt()\` to mock calls to \`confirm()\` with expectations.`
+				)}")\`.\nYou should use \`mockConfirm()/mockSelect()/mockAutoCompleteSelect()/mockPrompt()\` to mock calls to \`confirm()\` with expectations.`
 			);
 		}),
 	};

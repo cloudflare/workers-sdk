@@ -1,5 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
+import Fuse from "fuse.js";
 import prompts from "prompts";
 import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
@@ -125,6 +126,68 @@ export async function select<Values extends string>(
 		message: text,
 		choices: options.choices,
 		initial: options.defaultOption,
+		onState: (state) => {
+			if (state.aborted) {
+				process.nextTick(() => {
+					process.exit(1);
+				});
+			}
+		},
+	});
+	return value;
+}
+
+/**
+ * An interactive select prompt with fuzzy search/filtering.
+ * Users can type to filter the list of options using fuzzy matching.
+ * Use this for selects where the list of options may be long (e.g., accounts, projects).
+ */
+export async function autoCompleteSelect<Values extends string>(
+	text: string,
+	options: SelectOptions<Values>
+): Promise<Values> {
+	if (isNonInteractiveOrCI()) {
+		if (options.fallbackOption === undefined) {
+			throw new NoDefaultValueProvided();
+		}
+		logger.log(`? ${text}`);
+		logger.log(
+			`🤖 ${chalk.dim(
+				"Using fallback value in non-interactive context:"
+			)} ${chalk.white.bold(options.choices[options.fallbackOption].title)}`
+		);
+		return options.choices[options.fallbackOption].value;
+	}
+
+	// Fuse.js threshold of 0.4 provides a balance between tolerating typos
+	// and avoiding false matches. Lower values are stricter (0 = exact match),
+	// higher values are more lenient (1 = match anything).
+	// This can be tuned based on user feedback.
+	const fuse = new Fuse(options.choices, {
+		keys: ["title"],
+		threshold: 0.4,
+	});
+
+	const suggest = (
+		input: string,
+		choices: prompts.Choice[]
+	): Promise<prompts.Choice[]> => {
+		if (!input) {
+			return Promise.resolve(choices);
+		}
+		const results = fuse.search(input);
+		return Promise.resolve(results.map((result) => result.item));
+	};
+
+	const { value } = await prompts({
+		type: "autocomplete",
+		name: "value",
+		message: text,
+		choices: options.choices,
+		initial: options.defaultOption,
+		limit: 10,
+		hint: "Start typing to filter",
+		suggest,
 		onState: (state) => {
 			if (state.aborted) {
 				process.nextTick(() => {

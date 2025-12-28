@@ -229,7 +229,7 @@ import {
 	purgeConfigCaches,
 	saveToConfigCache,
 } from "../config-cache";
-import { NoDefaultValueProvided, select } from "../dialogs";
+import { autoCompleteSelect, NoDefaultValueProvided } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
@@ -1283,7 +1283,7 @@ export async function getAccountId(
 	}
 
 	try {
-		const accountID = await select("Select an account", {
+		const accountID = await autoCompleteSelect("Select an account", {
 			choices: accounts.map((account) => ({
 				title: account.name,
 				value: account.id,
