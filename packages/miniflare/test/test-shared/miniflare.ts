@@ -14,6 +14,9 @@ const isWindows = process.platform === "win32";
  * Dispose a Miniflare instance with retry logic for Windows EPERM errors.
  * On Windows, browser profile directories may not be fully released when
  * Chrome exits, causing EPERM/EBUSY errors during cleanup.
+ *
+ * This function is idempotent - calling it on an already-disposed instance
+ * is treated as success (no error thrown).
  */
 export async function disposeWithRetry(
 	mf: Miniflare,
@@ -27,6 +30,11 @@ export async function disposeWithRetry(
 			return;
 		} catch (e) {
 			lastError = e;
+			// Treat "already disposed" as success (idempotent disposal)
+			const message = (e as Error).message;
+			if (message === "Server is not running.") {
+				return;
+			}
 			// Only retry on Windows-specific file locking errors
 			const code = (e as NodeJS.ErrnoException).code;
 			if (
