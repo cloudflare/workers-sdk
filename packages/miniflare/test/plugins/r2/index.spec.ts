@@ -150,7 +150,7 @@ test("head: returns metadata for existing keys", async () => {
 
 	// Test proxying of `writeHttpMetadata()`
 	const headers = new Headers({ "X-Key": "value" });
-	expect(object.writeHttpMetadata(headers)).toBe(undefined);
+	expect(object.writeHttpMetadata(headers)).toBeUndefined();
 	expect(headers.get("Content-Type")).toBe("text/plain");
 	expect(headers.get("X-Key")).toBe("value");
 });
@@ -201,7 +201,7 @@ test("get: returns metadata and body for existing keys", async () => {
 
 	// Test proxying of `writeHttpMetadata()`
 	const headers = new Headers({ "X-Key": "value" });
-	expect(body.writeHttpMetadata(headers)).toBe(undefined);
+	expect(body.writeHttpMetadata(headers)).toBeUndefined();
 	expect(headers.get("Content-Type")).toBe("text/plain");
 	expect(headers.get("X-Key")).toBe("value");
 });
@@ -372,7 +372,7 @@ test("put: returns metadata for created object", async () => {
 		cacheExpiry: new Date("Fri, 24 Feb 2023 00:00:00 GMT"),
 	});
 	expect(object.customMetadata).toEqual({ key: "value" });
-	expect(object.range).toBe(undefined);
+	expect(object.range).toBeUndefined();
 	expect(object.uploaded.getTime()).toBeGreaterThanOrEqual(start);
 	expect(object.uploaded.getTime()).toBeLessThanOrEqual(start + WITHIN_EPSILON);
 });
@@ -655,7 +655,7 @@ async function testList(opts: {
 		if (pageIndex === opts.pages.length - 1) {
 			// Last Page
 			expect(truncated).toBe(false);
-			expect(cursor).toBe(undefined);
+			expect(cursor).toBeUndefined();
 		} else {
 			expect(truncated).toBe(true);
 			expect(cursor).toBeDefined();
@@ -760,7 +760,7 @@ test("list: returns metadata with objects", async () => {
 	});
 	expect(object.httpMetadata).toEqual({});
 	expect(object.customMetadata).toEqual({});
-	expect(object.range).toBe(undefined);
+	expect(object.range).toBeUndefined();
 	expect(object.uploaded.getTime()).toBeGreaterThanOrEqual(start);
 	expect(object.uploaded.getTime()).toBeLessThanOrEqual(start + WITHIN_EPSILON);
 });
@@ -983,7 +983,7 @@ test("operations persist stored data", async () => {
 		r2Buckets: { BUCKET: "bucket" },
 		r2Persist: tmp,
 	};
-	let mf = new Miniflare(persistOpts);
+	const mf = new Miniflare(persistOpts);
 	useDispose(mf);
 	let r2 = await mf.getR2Bucket("BUCKET");
 
@@ -1000,9 +1000,10 @@ test("operations persist stored data", async () => {
 
 	// Check "restarting" keeps persisted data
 	await mf.dispose();
-	mf = new Miniflare(persistOpts);
-	await mf.ready;
-	r2 = await mf.getR2Bucket("BUCKET");
+	const mf2 = new Miniflare(persistOpts);
+	useDispose(mf2);
+	await mf2.ready;
+	r2 = await mf2.getR2Bucket("BUCKET");
 
 	// Check get respects persist
 	const objectBody = await r2.get("key");
@@ -1198,7 +1199,7 @@ test("completeMultipartUpload", async () => {
 	expect(object.size).toBe(2 * PART_SIZE + 1);
 	expect(object.etag).toBe("3b676245e58d988dc75f80c0c27a9645-3");
 	expect(object.httpEtag).toBe('"3b676245e58d988dc75f80c0c27a9645-3"');
-	expect(object.range).toBe(undefined);
+	expect(object.range).toBeUndefined();
 	expect(object.checksums.toJSON()).toEqual({});
 	expect(object.customMetadata).toEqual({ key: "value" });
 	expect(object.httpMetadata).toEqual({ contentType: "text/plain" });
@@ -1581,7 +1582,7 @@ test("list: is multipart aware", async () => {
 	expect(object?.size).toBe(3 * PART_SIZE);
 	expect(object?.etag).toBe("9f4271a2af6d83c1d3fef1cc6d170f9f-3");
 	expect(object?.httpEtag).toBe('"9f4271a2af6d83c1d3fef1cc6d170f9f-3"');
-	expect(object?.range).toBe(undefined);
+	expect(object?.range).toBeUndefined();
 	expect(object?.checksums.toJSON()).toEqual({});
 	expect(object?.customMetadata).toEqual({ key: "value" });
 	expect(object?.httpMetadata).toEqual({ contentType: "text/plain" });

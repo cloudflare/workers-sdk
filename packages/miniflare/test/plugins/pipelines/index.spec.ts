@@ -1,5 +1,5 @@
 import { Miniflare } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { useDispose } from "../../test-shared";
 
 test("supports declaring pipelines", async () => {
@@ -17,5 +17,4 @@ test("supports declaring pipelines", async () => {
 	useDispose(mf);
 
 	await mf.dispatchFetch("http://localhost");
-	expect(true).toBeTruthy();
 });

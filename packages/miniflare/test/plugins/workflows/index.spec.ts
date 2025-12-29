@@ -36,7 +36,7 @@ test("persists Workflow data on file-system between runs", async () => {
 		},
 		workflowsPersist: tmp,
 	};
-	let mf = new Miniflare(opts);
+	const mf = new Miniflare(opts);
 	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
@@ -70,11 +70,11 @@ test("persists Workflow data on file-system between runs", async () => {
 
 	// restart miniflare
 	await mf.dispose();
-	mf = new Miniflare(opts);
-	useDispose(mf);
+	const mf2 = new Miniflare(opts);
+	useDispose(mf2);
 
 	// state should be persisted now
-	res = await mf.dispatchFetch("http://localhost");
+	res = await mf2.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe(
 		'{"status":"complete","__LOCAL_DEV_STEP_OUTPUTS":["yes you are"],"output":"I\'m a output string"}'
 	);

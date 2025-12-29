@@ -1347,7 +1347,7 @@ describe.sequential("DevRegistry", () => {
 			async () => {
 				const latestInvocation = secondCallbackInvocations.at(-1);
 				// Registry should not contain remote-worker
-				expect(latestInvocation?.registry["remote-worker"]).toBe(undefined);
+				expect(latestInvocation?.registry["remote-worker"]).toBeUndefined();
 			},
 			{ timeout: 10_000, interval: 100 }
 		);

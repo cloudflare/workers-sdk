@@ -213,7 +213,7 @@ test("D1PreparedStatement: first", async () => {
 			rgb: 16711680,
 		});
 	} catch (e) {
-		expect(e instanceof Error).toBeTruthy();
+		expect(e).toBeInstanceOf(Error);
 		expect(
 			/A prepared SQL statement must contain only one statement/.test(
 				(e as Error).message
@@ -310,7 +310,7 @@ test("D1PreparedStatement: run", async () => {
 			success: true,
 		});
 	} catch (e) {
-		expect(e instanceof Error).toBeTruthy();
+		expect(e).toBeInstanceOf(Error);
 		expect(
 			/A prepared SQL statement must contain only one statement/.test(
 				(e as Error).message
@@ -401,7 +401,7 @@ test("D1PreparedStatement: all", async () => {
 			success: true,
 		});
 	} catch (e) {
-		expect(e instanceof Error).toBeTruthy();
+		expect(e).toBeInstanceOf(Error);
 		expect(
 			/A prepared SQL statement must contain only one statement/.test(
 				(e as Error).message
@@ -460,7 +460,7 @@ test("D1PreparedStatement: raw", async () => {
 		const result = await resultPromise;
 		expect(result).toEqual([[3, "blue", 0x0000ff]]);
 	} catch (e) {
-		expect(e instanceof Error).toBeTruthy();
+		expect(e).toBeInstanceOf(Error);
 		expect(
 			/A prepared SQL statement must contain only one statement/.test(
 				(e as Error).message
@@ -506,7 +506,7 @@ test("operations persist D1 data", async () => {
 	// Create new temporary file-system persistence directory
 	const tmp = await useTmp();
 	const persistOpts: MiniflareOptions = { ...opts, d1Persist: tmp };
-	let mf = new Miniflare(persistOpts);
+	const mf = new Miniflare(persistOpts);
 	useDispose(mf);
 	let db = await getDatabase(mf);
 
@@ -528,8 +528,9 @@ test("operations persist D1 data", async () => {
 
 	// Check "restarting" keeps persisted data
 	await mf.dispose();
-	mf = new Miniflare(persistOpts);
-	db = await getDatabase(mf);
+	const mf2 = new Miniflare(persistOpts);
+	useDispose(mf2);
+	db = await getDatabase(mf2);
 	result = await db
 		.prepare(`SELECT name FROM ${tableColours} WHERE id = 4`)
 		.first();

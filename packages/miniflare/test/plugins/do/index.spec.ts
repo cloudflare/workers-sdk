@@ -59,7 +59,7 @@ test("persists Durable Object data in-memory between options reloads", async () 
 		script: COUNTER_SCRIPT("Options #1: "),
 		durableObjects: { COUNTER: "Counter" },
 	};
-	let mf = new Miniflare(opts);
+	const mf = new Miniflare(opts);
 	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
@@ -86,20 +86,21 @@ test("persists Durable Object data in-memory between options reloads", async () 
 	delete opts.durableObjectsPersist;
 	opts.script = COUNTER_SCRIPT("Options #5: ");
 	await mf.dispose();
-	mf = new Miniflare(opts);
-	res = await mf.dispatchFetch("http://localhost");
+	const mf2 = new Miniflare(opts);
+	useDispose(mf2);
+	res = await mf2.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #5: 1");
 
 	// Check doesn't persist with `unsafeEphemeralDurableObjects` enabled
 	opts.script = COUNTER_SCRIPT("Options #6: ");
 	opts.unsafeEphemeralDurableObjects = true;
-	await mf.setOptions(opts);
-	res = await mf.dispatchFetch("http://localhost");
+	await mf2.setOptions(opts);
+	res = await mf2.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #6: 1");
-	res = await mf.dispatchFetch("http://localhost");
+	res = await mf2.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #6: 2");
-	await mf.setOptions(opts);
-	res = await mf.dispatchFetch("http://localhost");
+	await mf2.setOptions(opts);
+	res = await mf2.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("Options #6: 1");
 });
 
@@ -112,7 +113,7 @@ test("persists Durable Object data on file-system", async () => {
 		durableObjects: { COUNTER: "Counter" },
 		durableObjectsPersist: tmp,
 	};
-	let mf = new Miniflare(opts);
+	const mf = new Miniflare(opts);
 	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
@@ -133,14 +134,17 @@ test("persists Durable Object data on file-system", async () => {
 	await mf.dispose();
 	await fs.rm(path.join(tmp, names[0]), { force: true, recursive: true });
 
-	mf = new Miniflare(opts);
-	res = await mf.dispatchFetch("http://localhost");
+	const mf2 = new Miniflare(opts);
+	useDispose(mf2);
+
+	res = await mf2.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("1");
 
 	// Check "restarting" keeps persisted data
-	await mf.dispose();
-	mf = new Miniflare(opts);
-	res = await mf.dispatchFetch("http://localhost");
+	await mf2.dispose();
+	const mf3 = new Miniflare(opts);
+	useDispose(mf3);
+	res = await mf3.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("2");
 });
 

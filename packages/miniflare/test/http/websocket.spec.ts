@@ -98,8 +98,8 @@ test("WebSocket: queues closes if pair not accepted", async () => {
 	webSocket1.accept();
 	webSocket1.close(3001, "from1");
 	await setImmediate();
-	expect(closeEvent1).toBe(undefined);
-	expect(closeEvent2).toBe(undefined);
+	expect(closeEvent1).toBeUndefined();
+	expect(closeEvent2).toBeUndefined();
 
 	webSocket2.accept();
 	expect(closeEvent2?.code).toBe(3001);

@@ -129,7 +129,7 @@ test("match returns nothing on cache miss", async () => {
 	const cache = ctx.caches.default;
 	const key = "http://localhost/cache-miss";
 	const res = await cache.match(key);
-	expect(res).toBe(undefined);
+	expect(res).toBeUndefined();
 });
 test("match respects If-None-Match header", async () => {
 	const cache = ctx.caches.default;
@@ -286,12 +286,12 @@ async function testExpire(opts: { headers: HeadersInit; expectedTtl: number }) {
 
 	await defaultObject.advanceFakeTime(opts.expectedTtl / 2);
 	res = await cache.match(key);
-	expect(res).toBe(undefined);
+	expect(res).toBeUndefined();
 }
 test("expires after Expires", async () => {
 	await testExpire({
 		headers: {
-			Expires: new Date(1000000 + 2000).toUTCString(),
+			Expires: new Date(1_000_000 + 2_000).toUTCString(),
 		},
 		expectedTtl: 2000,
 	});
@@ -489,7 +489,7 @@ test("operations are no-ops when caching disabled", async () => {
 	});
 	await cache.put(key, resToCache.clone());
 	const res = await cache.match(key);
-	expect(res).toBe(undefined);
+	expect(res).toBeUndefined();
 
 	// Check delete never deletes
 	await cache.put(key, resToCache);

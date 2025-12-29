@@ -8,7 +8,7 @@ test('_parseRanges: case-insensitive unit must be "bytes"', () => {
 	expect(parseRanges("     bYtEs=0-1", 4)).toBeDefined();
 	expect(parseRanges("    Bytes        =0-1", 2)).toBeDefined();
 	// Check fails with other units
-	expect(parseRanges("nibbles=0-1", 2)).toBe(undefined);
+	expect(parseRanges("nibbles=0-1", 2)).toBeUndefined();
 });
 
 test("_parseRanges: matches range with start and end", () => {
@@ -71,11 +71,11 @@ test("_parseRanges: matches range with just end", () => {
 
 test("_parseRanges: range requires at least start or end", () => {
 	// Check range with no start or end rejected
-	expect(parseRanges("bytes=-", 2)).toBe(undefined);
+	expect(parseRanges("bytes=-", 2)).toBeUndefined();
 	// Check range with no dash rejected
-	expect(parseRanges("bytes=0", 2)).toBe(undefined);
+	expect(parseRanges("bytes=0", 2)).toBeUndefined();
 	// Check empty range rejected
-	expect(parseRanges("bytes=0-1,", 2)).toBe(undefined);
+	expect(parseRanges("bytes=0-1,", 2)).toBeUndefined();
 	// Check no ranges accepted
 	expect(parseRanges("bytes=", 2)).toEqual([]);
 });
