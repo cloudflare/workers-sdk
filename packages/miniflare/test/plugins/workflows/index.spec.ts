@@ -37,7 +37,7 @@ test("persists Workflow data on file-system between runs", async () => {
 		workflowsPersist: tmp,
 	};
 	let mf = new Miniflare(opts);
-	useDispose(() => mf);
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe(

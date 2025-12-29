@@ -54,11 +54,8 @@ export async function disposeWithRetry(
  * current instance at teardown time is disposed, matching the original
  * `onTestFinished(() => mf.dispose())` semantics.
  */
-export function useDispose(mf: Miniflare | (() => Miniflare)): void {
-	onTestFinished(() => {
-		const instance = typeof mf === "function" ? mf() : mf;
-		return disposeWithRetry(instance);
-	});
+export function useDispose(mf: Miniflare): void {
+	onTestFinished(() => disposeWithRetry(mf));
 }
 
 export type TestMiniflareHandler<Env> = (
