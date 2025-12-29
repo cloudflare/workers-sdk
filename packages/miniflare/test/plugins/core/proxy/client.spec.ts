@@ -166,11 +166,9 @@ test("ProxyClient: logging proxies provides useful information", async () => {
 
 	const caches = await mf.getCaches();
 	const inspectOpts: util.InspectOptions = { colors: false };
-	// ProxyStub { name: 'CacheStorage', poisoned: false }
 	expect(util.inspect(caches, inspectOpts)).toBe(
 		"ProxyStub { name: 'CacheStorage', poisoned: false }"
 	);
-	// [Function: open]
 	expect(util.inspect(caches.open, inspectOpts)).toBe("[Function: open]");
 });
 
