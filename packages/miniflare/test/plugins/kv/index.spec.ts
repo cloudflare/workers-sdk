@@ -766,7 +766,7 @@ test("persists on file-system", async () => {
 		kvPersist: tmp,
 	};
 	let mf = new Miniflare(opts);
-	useDispose(() => mf);
+	useDispose(mf);
 
 	let kv = await mf.getKVNamespace("NAMESPACE");
 	await kv.put("key", "value");
@@ -779,6 +779,7 @@ test("persists on file-system", async () => {
 	// Check "restarting" keeps persisted data
 	await mf.dispose();
 	mf = new Miniflare(opts);
+	useDispose(mf);
 	kv = await mf.getKVNamespace("NAMESPACE");
 	expect(await kv.get("key")).toBe("value");
 });
