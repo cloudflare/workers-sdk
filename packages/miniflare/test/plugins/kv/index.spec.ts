@@ -89,15 +89,19 @@ async function testValidatesKey(opts: {
 }) {
 	const { kv } = ctx;
 	kv.ns = "";
-	await expect(opts.f(kv, "")).rejects.toThrow("Key name cannot be empty.");
+	await expect(opts.f(kv, "")).rejects.toThrow(
+		new TypeError("Key name cannot be empty.")
+	);
 	await expect(opts.f(kv, ".")).rejects.toThrow(
-		'"." is not allowed as a key name.'
+		new TypeError('"." is not allowed as a key name.')
 	);
 	await expect(opts.f(kv, "..")).rejects.toThrow(
-		'".." is not allowed as a key name.'
+		new TypeError('".." is not allowed as a key name.')
 	);
 	await expect(opts.f(kv, "".padStart(513, "x"))).rejects.toThrow(
-		`KV ${opts.method.toUpperCase()} failed: 414 UTF-8 encoded length of 513 exceeds key length limit of 512.`
+		new Error(
+			`KV ${opts.method.toUpperCase()} failed: 414 UTF-8 encoded length of 513 exceeds key length limit of 512.`
+		)
 	);
 }
 
@@ -270,10 +274,14 @@ test("get: validates but ignores cache ttl", async () => {
 	await expect(
 		kv.get("key", { cacheTtl: "not a number" as any })
 	).rejects.toThrow(
-		"KV GET failed: 400 Invalid cache_ttl of 0. Cache TTL must be at least 30."
+		new Error(
+			"KV GET failed: 400 Invalid cache_ttl of 0. Cache TTL must be at least 30."
+		)
 	);
 	await expect(kv.get("key", { cacheTtl: 10 })).rejects.toThrow(
-		"KV GET failed: 400 Invalid cache_ttl of 10. Cache TTL must be at least 30."
+		new Error(
+			"KV GET failed: 400 Invalid cache_ttl of 10. Cache TTL must be at least 30."
+		)
 	);
 	expect(await kv.get("key", { cacheTtl: 30 })).toBeDefined();
 	expect(await kv.get("key", { cacheTtl: 60 })).toBeDefined();
@@ -344,13 +352,19 @@ test("put: validates expiration ttl", async () => {
 	await expect(
 		kv.put("key", "value", { expirationTtl: "nan" as unknown as number })
 	).rejects.toThrow(
-		"KV PUT failed: 400 Invalid expiration_ttl of 0. Please specify integer greater than 0."
+		new Error(
+			"KV PUT failed: 400 Invalid expiration_ttl of 0. Please specify integer greater than 0."
+		)
 	);
 	await expect(kv.put("key", "value", { expirationTtl: 0 })).rejects.toThrow(
-		"KV PUT failed: 400 Invalid expiration_ttl of 0. Please specify integer greater than 0."
+		new Error(
+			"KV PUT failed: 400 Invalid expiration_ttl of 0. Please specify integer greater than 0."
+		)
 	);
 	await expect(kv.put("key", "value", { expirationTtl: 30 })).rejects.toThrow(
-		"KV PUT failed: 400 Invalid expiration_ttl of 30. Expiration TTL must be at least 60."
+		new Error(
+			"KV PUT failed: 400 Invalid expiration_ttl of 30. Expiration TTL must be at least 60."
+		)
 	);
 });
 test("put: validates expiration", async () => {
@@ -358,17 +372,23 @@ test("put: validates expiration", async () => {
 	await expect(
 		kv.put("key", "value", { expiration: "nan" as unknown as number })
 	).rejects.toThrow(
-		"KV PUT failed: 400 Invalid expiration of 0. Please specify integer greater than the current number of seconds since the UNIX epoch."
+		new Error(
+			"KV PUT failed: 400 Invalid expiration of 0. Please specify integer greater than the current number of seconds since the UNIX epoch."
+		)
 	);
 	await expect(
 		kv.put("key", "value", { expiration: TIME_NOW })
 	).rejects.toThrow(
-		`KV PUT failed: 400 Invalid expiration of ${TIME_NOW}. Please specify integer greater than the current number of seconds since the UNIX epoch.`
+		new Error(
+			`KV PUT failed: 400 Invalid expiration of ${TIME_NOW}. Please specify integer greater than the current number of seconds since the UNIX epoch.`
+		)
 	);
 	await expect(
 		kv.put("key", "value", { expiration: TIME_NOW + 30 })
 	).rejects.toThrow(
-		`KV PUT failed: 400 Invalid expiration of ${TIME_NOW + 30}. Expiration times must be at least 60 seconds in the future.`
+		new Error(
+			`KV PUT failed: 400 Invalid expiration of ${TIME_NOW + 30}. Expiration times must be at least 60 seconds in the future.`
+		)
 	);
 });
 test("put: validates value size", async () => {
@@ -377,7 +397,9 @@ test("put: validates value size", async () => {
 	const byteLength = maxValueSize + 1;
 	// Check with and without `valueLengthHint`
 	await expect(kv.put("key", createJunkStream(byteLength))).rejects.toThrow(
-		`KV PUT failed: 413 Value length of ${byteLength} exceeds limit of ${maxValueSize}.`
+		new Error(
+			`KV PUT failed: 413 Value length of ${byteLength} exceeds limit of ${maxValueSize}.`
+		)
 	);
 	// Check 1 less byte is accepted
 	await kv.put("key", createJunkStream(byteLength - 1));
@@ -392,7 +414,9 @@ test("put: validates metadata size", async () => {
 			},
 		})
 	).rejects.toThrow(
-		`KV PUT failed: 413 Metadata length of ${maxMetadataSize + 1} exceeds limit of ${maxMetadataSize}.`
+		new Error(
+			`KV PUT failed: 413 Metadata length of ${maxMetadataSize + 1} exceeds limit of ${maxMetadataSize}.`
+		)
 	);
 });
 
@@ -691,7 +715,9 @@ test("list: validates limit", async () => {
 	const { kv } = ctx;
 	// The runtime will only send the limit if it's > 0
 	await expect(kv.list({ limit: 1001 })).rejects.toThrow(
-		"KV GET failed: 400 Invalid key_count_limit of 1001. Please specify an integer less than 1000."
+		new Error(
+			"KV GET failed: 400 Invalid key_count_limit of 1001. Please specify an integer less than 1000."
+		)
 	);
 });
 

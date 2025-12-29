@@ -20,7 +20,6 @@ import {
 	MiniflareTestContext,
 	namespace,
 	Namespaced,
-	ThrowsExpectation,
 	useDispose,
 	useTmp,
 } from "../../test-shared";
@@ -104,7 +103,7 @@ async function testValidatesKey(opts: {
 }) {
 	const { r2, ns } = ctx;
 	await expect(opts.f(r2, "x".repeat(1025 - ns.length))).rejects.toThrow(
-		`${opts.method}: The specified object name is not valid. (10020)`
+		new Error(`${opts.method}: The specified object name is not valid. (10020)`)
 	);
 }
 
@@ -248,16 +247,14 @@ test("get: range using object", async () => {
 	expect(await body.text()).toBe("value");
 
 	// Check unsatisfiable ranges
-	const rangeExpectations =
-		"get: The requested range is not satisfiable (10039)";
 	await expect(r2.get("key", { range: { offset: 42 } })).rejects.toThrow(
-		rangeExpectations
+		new Error("get: The requested range is not satisfiable (10039)")
 	);
 	await expect(r2.get("key", { range: { length: 0 } })).rejects.toThrow(
-		rangeExpectations
+		new Error("get: The requested range is not satisfiable (10039)")
 	);
 	await expect(r2.get("key", { range: { suffix: 0 } })).rejects.toThrow(
-		rangeExpectations
+		new Error("get: The requested range is not satisfiable (10039)")
 	);
 	// `workerd` will validate all numbers are positive, and suffix not mixed with
 	// offset or length:
@@ -411,16 +408,14 @@ test("put: validates key", async () => {
 });
 test("put: validates checksums", async () => {
 	const { r2 } = ctx;
-	const checksumExpectations = (
-		name: string,
-		provided: string,
-		expected: string
-	) =>
-		[
-			`put: The ${name} checksum you specified did not match what we received.`,
-			`You provided a ${name} checksum with value: ${provided}`,
-			`Actual ${name} was: ${expected} (10037)`,
-		].join("\n");
+	const checksumError = (name: string, provided: string, expected: string) =>
+		new Error(
+			[
+				`put: The ${name} checksum you specified did not match what we received.`,
+				`You provided a ${name} checksum with value: ${provided}`,
+				`Actual ${name} was: ${expected} (10037)`,
+			].join("\n")
+		);
 
 	// `workerd` validates types, hex strings, hash lengths and that we're only
 	// specifying one hash:
@@ -431,7 +426,7 @@ test("put: validates checksums", async () => {
 	await r2.put("key", "value", { md5 });
 	const badMd5 = md5.replace("0", "1");
 	await expect(r2.put("key", "value", { md5: badMd5 })).rejects.toThrow(
-		checksumExpectations("MD5", badMd5, md5)
+		checksumError("MD5", badMd5, md5)
 	);
 	let checksums = (await r2.head("key"))?.checksums.toJSON();
 	expect(checksums).toEqual({ md5 });
@@ -440,7 +435,7 @@ test("put: validates checksums", async () => {
 	await r2.put("key", "value", { sha1 });
 	const badSha1 = sha1.replace("0", "1");
 	await expect(r2.put("key", "value", { sha1: badSha1 })).rejects.toThrow(
-		checksumExpectations("SHA-1", badSha1, sha1)
+		checksumError("SHA-1", badSha1, sha1)
 	);
 	// Check `get()` returns checksums
 	checksums = (await r2.get("key"))?.checksums.toJSON();
@@ -451,7 +446,7 @@ test("put: validates checksums", async () => {
 	await r2.put("key", "value", { sha256: sha256.toUpperCase() });
 	const badSha256 = sha256.replace("0", "1");
 	await expect(r2.put("key", "value", { sha256: badSha256 })).rejects.toThrow(
-		checksumExpectations("SHA-256", badSha256, sha256)
+		checksumError("SHA-256", badSha256, sha256)
 	);
 	checksums = (await r2.head("key"))?.checksums.toJSON();
 	expect(checksums).toEqual({ md5, sha256 });
@@ -460,7 +455,7 @@ test("put: validates checksums", async () => {
 	await r2.put("key", "value", { sha384 });
 	const badSha384 = sha384.replace("0", "1");
 	await expect(r2.put("key", "value", { sha384: badSha384 })).rejects.toThrow(
-		checksumExpectations("SHA-384", badSha384, sha384)
+		checksumError("SHA-384", badSha384, sha384)
 	);
 	checksums = (await r2.head("key"))?.checksums.toJSON();
 	expect(checksums).toEqual({ md5, sha384 });
@@ -469,7 +464,7 @@ test("put: validates checksums", async () => {
 	await r2.put("key", "value", { sha512 });
 	const badSha512 = sha512.replace("0", "1");
 	await expect(r2.put("key", "value", { sha512: badSha512 })).rejects.toThrow(
-		checksumExpectations("SHA-512", badSha512, sha512)
+		checksumError("SHA-512", badSha512, sha512)
 	);
 	checksums = (await r2.head("key"))?.checksums.toJSON();
 	expect(checksums).toEqual({ md5, sha512 });
@@ -520,14 +515,15 @@ test("put: stores only if passes onlyIf", async () => {
 test("put: validates metadata size", async () => {
 	const { r2 } = ctx;
 
-	const metadataExpectations =
-		"put: Your metadata headers exceed the maximum allowed metadata size. (10012)";
+	const metadataError = new Error(
+		"put: Your metadata headers exceed the maximum allowed metadata size. (10012)"
+	);
 
 	// Check with ASCII characters
 	await r2.put("key", "value", { customMetadata: { key: "x".repeat(2045) } });
 	await expect(
 		r2.put("key", "value", { customMetadata: { key: "x".repeat(2046) } })
-	).rejects.toThrow(metadataExpectations);
+	).rejects.toThrow(metadataError);
 	await r2.put("key", "value", { customMetadata: { hi: "x".repeat(2046) } });
 
 	// Check with extended characters: note "🙂" is 2 UTF-16 code units, so
@@ -536,10 +532,10 @@ test("put: validates metadata size", async () => {
 	await r2.put("key", "value", { customMetadata: { key1: "🙂".repeat(511) } }); // 4 + 4*511 = 2048
 	await expect(
 		r2.put("key", "value", { customMetadata: { key12: "🙂".repeat(511) } })
-	).rejects.toThrow(metadataExpectations);
+	).rejects.toThrow(metadataError);
 	await expect(
 		r2.put("key", "value", { customMetadata: { key: "🙂".repeat(512) } })
-	).rejects.toThrow(metadataExpectations);
+	).rejects.toThrow(metadataError);
 });
 test("put: can copy values", async () => {
 	const mf = new Miniflare({
@@ -815,10 +811,10 @@ test("list: validates limit", async () => {
 	const { r2 } = ctx;
 	// R2 actually accepts 0 and -1 as valid limits, but this is probably a bug
 	await expect(r2.list({ limit: 0 })).rejects.toThrow(
-		"list: MaxKeys params must be positive integer <= 1000. (10022)"
+		new Error("list: MaxKeys params must be positive integer <= 1000. (10022)")
 	);
 	await expect(r2.list({ limit: 1_001 })).rejects.toThrow(
-		"list: MaxKeys params must be positive integer <= 1000. (10022)"
+		new Error("list: MaxKeys params must be positive integer <= 1000. (10022)")
 	);
 });
 test("list: includes httpMetadata and customMetadata if specified", async () => {
@@ -1049,24 +1045,6 @@ test("operations permit strange bucket names", async () => {
 // Multipart tests
 const PART_SIZE = 50;
 
-function objectNameNotValidExpectations(method: string) {
-	return <ThrowsExpectation<Error>>{
-		instanceOf: Error,
-		message: `${method}: The specified object name is not valid. (10020)`,
-	};
-}
-function doesNotExistExpectations(method: string) {
-	return <ThrowsExpectation<Error>>{
-		instanceOf: Error,
-		message: `${method}: The specified multipart upload does not exist. (10024)`,
-	};
-}
-function internalErrorExpectations(method: string) {
-	return <ThrowsExpectation<Error>>{
-		instanceOf: Error,
-		message: `${method}: We encountered an internal error. Please try again. (10001)`,
-	};
-}
 test("createMultipartUpload", async () => {
 	const { r2, ns } = ctx;
 
@@ -1085,7 +1063,11 @@ test("createMultipartUpload", async () => {
 	expect(upload2.uploadId).not.toBe(upload1.uploadId);
 
 	// Check validates key
-	await expect(r2.createMultipartUpload("x".repeat(1025))).rejects.toThrow();
+	await expect(r2.createMultipartUpload("x".repeat(1025))).rejects.toThrow(
+		new Error(
+			`createMultipartUpload: The specified object name is not valid. (10020)`
+		)
+	);
 });
 test("uploadPart", async () => {
 	const { r2, object } = ctx;
@@ -1124,14 +1106,22 @@ test("uploadPart", async () => {
 	expect(part100.etag).not.toBe(part1.etag);
 
 	// Check validates key and uploadId
-	void doesNotExistExpectations("uploadPart");
 	let nonExistentUpload = r2.resumeMultipartUpload("key", "bad");
-	await expect(nonExistentUpload.uploadPart(1, "value")).rejects.toThrow();
+	await expect(nonExistentUpload.uploadPart(1, "value")).rejects.toThrow(
+		new Error(
+			`uploadPart: The specified multipart upload does not exist. (10024)`
+		)
+	);
 	nonExistentUpload = r2.resumeMultipartUpload("badkey", upload.uploadId);
-	await expect(nonExistentUpload.uploadPart(1, "value")).rejects.toThrow();
-	void objectNameNotValidExpectations("uploadPart");
+	await expect(nonExistentUpload.uploadPart(1, "value")).rejects.toThrow(
+		new Error(
+			`uploadPart: The specified multipart upload does not exist. (10024)`
+		)
+	);
 	nonExistentUpload = r2.resumeMultipartUpload("x".repeat(1025), "bad");
-	await expect(nonExistentUpload.uploadPart(1, "value")).rejects.toThrow();
+	await expect(nonExistentUpload.uploadPart(1, "value")).rejects.toThrow(
+		new Error(`uploadPart: The specified object name is not valid. (10020)`)
+	);
 });
 test("abortMultipartUpload", async () => {
 	const { r2, object } = ctx;
@@ -1153,8 +1143,11 @@ test("abortMultipartUpload", async () => {
 		expect(await object.getBlob(part.blob_id)).toBe(null);
 
 	// Check cannot upload after abort
-	void doesNotExistExpectations("uploadPart");
-	await expect(upload1.uploadPart(4, "value4")).rejects.toThrow();
+	await expect(upload1.uploadPart(4, "value4")).rejects.toThrow(
+		new Error(
+			`uploadPart: The specified multipart upload does not exist. (10024)`
+		)
+	);
 
 	// Check can abort already aborted upload
 	await upload1.abort();
@@ -1168,14 +1161,24 @@ test("abortMultipartUpload", async () => {
 	// Check validates key and uploadId
 	const upload3 = await r2.createMultipartUpload("key");
 	// Note this is internalErrorExpectations, not doesNotExistExpectations
-	void internalErrorExpectations("abortMultipartUpload");
 	let nonExistentUpload = r2.resumeMultipartUpload("key", "bad");
-	await expect(nonExistentUpload.abort()).rejects.toThrow();
+	await expect(nonExistentUpload.abort()).rejects.toThrow(
+		new Error(
+			`abortMultipartUpload: We encountered an internal error. Please try again. (10001)`
+		)
+	);
 	nonExistentUpload = r2.resumeMultipartUpload("bad", upload3.uploadId);
-	await expect(nonExistentUpload.abort()).rejects.toThrow();
-	void objectNameNotValidExpectations("abortMultipartUpload");
+	await expect(nonExistentUpload.abort()).rejects.toThrow(
+		new Error(
+			"abortMultipartUpload: We encountered an internal error. Please try again. (10001)"
+		)
+	);
 	nonExistentUpload = r2.resumeMultipartUpload("x".repeat(1025), "bad");
-	await expect(nonExistentUpload.abort()).rejects.toThrow();
+	await expect(nonExistentUpload.abort()).rejects.toThrow(
+		new Error(
+			"abortMultipartUpload: The specified object name is not valid. (10020)"
+		)
+	);
 });
 test("completeMultipartUpload", async () => {
 	const { r2, ns, object: objectStub } = ctx;
@@ -1212,14 +1215,13 @@ test("completeMultipartUpload", async () => {
 	part1 = await upload2.uploadPart(1, "1");
 	part2 = await upload2.uploadPart(2, "2");
 	part3 = await upload2.uploadPart(3, "3");
-	const sizeExpectations =
-		"completeMultipartUpload: Your proposed upload is smaller than the minimum allowed object size. (10011)";
+	const sizeError = new Error(
+		"completeMultipartUpload: Your proposed upload is smaller than the minimum allowed object size. (10011)"
+	);
 	await expect(upload2.complete([part1, part2, part3])).rejects.toThrow(
-		sizeExpectations
+		sizeError
 	);
-	await expect(upload2.complete([part1, part2])).rejects.toThrow(
-		sizeExpectations
-	);
+	await expect(upload2.complete([part1, part2])).rejects.toThrow(sizeError);
 	object = await upload2.complete([part1]);
 	expect(object.size).toBe(1);
 	expect(object.etag).toBe("46d1741e8075da4ac72c71d8130fcb71-1");
@@ -1240,11 +1242,10 @@ test("completeMultipartUpload", async () => {
 	let part1b = await upload3.uploadPart(1, "value");
 	expect(part1a.partNumber).toBe(part1b.partNumber);
 	expect(part1a.etag).not.toBe(part1b.etag);
-	const notFoundExpectations =
-		"completeMultipartUpload: One or more of the specified parts could not be found. (10025)";
-	await expect(upload3.complete([part1a])).rejects.toThrow(
-		notFoundExpectations
+	const notFoundError = new Error(
+		"completeMultipartUpload: One or more of the specified parts could not be found. (10025)"
 	);
+	await expect(upload3.complete([part1a])).rejects.toThrow(notFoundError);
 	object = await upload3.complete([part1b]);
 	expect(object.size).toBe(5);
 
@@ -1254,7 +1255,9 @@ test("completeMultipartUpload", async () => {
 	part1b = await upload4.uploadPart(1, "2".repeat(PART_SIZE));
 	const part1c = await upload4.uploadPart(1, "3".repeat(PART_SIZE));
 	await expect(upload4.complete([part1a, part1b, part1c])).rejects.toThrow(
-		"completeMultipartUpload: We encountered an internal error. Please try again. (10001)"
+		new Error(
+			"completeMultipartUpload: We encountered an internal error. Please try again. (10001)"
+		)
 	);
 
 	// Check completing with out-of-order parts
@@ -1276,7 +1279,9 @@ test("completeMultipartUpload", async () => {
 	// Check part size checking happens in argument order (part1's size isn't
 	// checked until too late, as it's the last argument so ignored...)
 	await expect(upload5b.complete([part2, part3, part1])).rejects.toThrow(
-		"completeMultipartUpload: There was a problem with the multipart upload. (10048)"
+		new Error(
+			"completeMultipartUpload: There was a problem with the multipart upload. (10048)"
+		)
 	);
 	const upload5c = await r2.createMultipartUpload("key");
 	part1 = await upload5c.uploadPart(1, "1".repeat(PART_SIZE));
@@ -1284,7 +1289,7 @@ test("completeMultipartUpload", async () => {
 	part3 = await upload5c.uploadPart(3, "3");
 	// (...but here, part3 isn't the last argument, so get a regular size error)
 	await expect(upload5c.complete([part2, part3, part1])).rejects.toThrow(
-		sizeExpectations
+		sizeError
 	);
 
 	// Check completing with missing parts
@@ -1312,49 +1317,61 @@ test("completeMultipartUpload", async () => {
 	const upload8a = await r2.createMultipartUpload("key");
 	const upload8b = await r2.createMultipartUpload("key");
 	part1 = await upload8b.uploadPart(1, "value");
-	await expect(upload8a.complete([part1])).rejects.toThrow(
-		notFoundExpectations
-	);
+	await expect(upload8a.complete([part1])).rejects.toThrow(notFoundError);
 
+	const doesNotExistError = new Error(
+		"completeMultipartUpload: The specified multipart upload does not exist. (10024)"
+	);
 	// Check cannot complete already completed upload
 	const upload9 = await r2.createMultipartUpload("key");
 	part1 = await upload9.uploadPart(1, "value");
 	await upload9.complete([part1]);
-	await expect(upload9.complete([part1])).rejects.toThrow();
+	await expect(upload9.complete([part1])).rejects.toThrow(doesNotExistError);
 
 	// Check cannot complete aborted upload
 	const upload10 = await r2.createMultipartUpload("key");
 	part1 = await upload10.uploadPart(1, "value");
 	await upload10.abort();
-	await expect(upload10.complete([part1])).rejects.toThrow();
+	await expect(upload10.complete([part1])).rejects.toThrow(doesNotExistError);
 
 	// Check validates key and uploadId
 	const upload11 = await r2.createMultipartUpload("key");
 	// Note this is internalErrorExpectations, not doesNotExistExpectations
-	void internalErrorExpectations("completeMultipartUpload");
 	let nonExistentUpload = r2.resumeMultipartUpload("key", "bad");
-	await expect(nonExistentUpload.complete([])).rejects.toThrow();
+	await expect(nonExistentUpload.complete([])).rejects.toThrow(
+		new Error(
+			`completeMultipartUpload: We encountered an internal error. Please try again. (10001)`
+		)
+	);
 	nonExistentUpload = r2.resumeMultipartUpload("badkey", upload11.uploadId);
-	await expect(nonExistentUpload.complete([])).rejects.toThrow();
-	void objectNameNotValidExpectations("completeMultipartUpload");
+	await expect(nonExistentUpload.complete([])).rejects.toThrow(
+		new Error(
+			`completeMultipartUpload: We encountered an internal error. Please try again. (10001)`
+		)
+	);
 	nonExistentUpload = r2.resumeMultipartUpload("x".repeat(1025), "bad");
-	await expect(nonExistentUpload.complete([])).rejects.toThrow();
+	await expect(nonExistentUpload.complete([])).rejects.toThrow(
+		new Error(
+			`completeMultipartUpload: The specified object name is not valid. (10020)`
+		)
+	);
 
 	// Check requires all but last part to have same size
 	const upload13 = await r2.createMultipartUpload("key");
 	part1 = await upload13.uploadPart(1, "1".repeat(PART_SIZE));
 	part2 = await upload13.uploadPart(2, "2".repeat(PART_SIZE + 1));
 	part3 = await upload13.uploadPart(3, "3".repeat(PART_SIZE));
-	const multipartExpectations =
-		"completeMultipartUpload: There was a problem with the multipart upload. (10048)";
+	const multipartError = new Error(
+		"completeMultipartUpload: There was a problem with the multipart upload. (10048)"
+	);
 	await expect(upload13.complete([part1, part2, part3])).rejects.toThrow(
-		multipartExpectations
+		multipartError
 	);
 	part2 = await upload13.uploadPart(2, "2".repeat(PART_SIZE));
 	// Check allows last part to have different size, only if <= others
 	part3 = await upload13.uploadPart(3, "3".repeat(PART_SIZE + 1));
 	await expect(upload13.complete([part1, part2, part3])).rejects.toThrow(
-		multipartExpectations
+		multipartError
 	);
 	part3 = await upload13.uploadPart(3, "3".repeat(PART_SIZE - 1));
 	object = await upload13.complete([part1, part2, part3]);
@@ -1366,13 +1383,13 @@ test("completeMultipartUpload", async () => {
 	part2 = await upload14.uploadPart(2, "2");
 	await expect(
 		upload14.complete([part1, { partNumber: 3, etag: part2.etag }])
-	).rejects.toThrow(notFoundExpectations);
+	).rejects.toThrow(notFoundError);
 	await expect(
 		upload14.complete([part1, { partNumber: 2, etag: "bad" }])
-	).rejects.toThrow(notFoundExpectations);
+	).rejects.toThrow(notFoundError);
 	await expect(
 		upload14.complete([part1, { partNumber: 4, etag: "very bad" }])
-	).rejects.toThrow(notFoundExpectations);
+	).rejects.toThrow(notFoundError);
 });
 // Check regular operations on buckets with existing multipart keys
 test("head: is multipart aware", async () => {

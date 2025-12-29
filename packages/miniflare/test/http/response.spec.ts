@@ -20,12 +20,14 @@ test("Response: static methods return correctly typed values", async () => {
 test("Response: requires status 101 for WebSocket handshakes response", () => {
 	const pair = new WebSocketPair();
 	expect(() => new Response(null, { webSocket: pair["0"] })).toThrow(
-		"Responses with a WebSocket must have status code 101."
+		new RangeError("Responses with a WebSocket must have status code 101.")
 	);
 });
 test("Response: only allows status 101 for WebSocket response", () => {
 	expect(() => new Response(null, { status: 101 })).toThrow(
-		'init["status"] must be in the range of 200 to 599, inclusive.'
+		new RangeError(
+			'init["status"] must be in the range of 200 to 599, inclusive.'
+		)
 	);
 });
 
@@ -47,6 +49,6 @@ test("Response: clone: fails on WebSocket handshake response", () => {
 		webSocket: pair["0"],
 	});
 	expect(() => res.clone()).toThrow(
-		"Cannot clone a response to a WebSocket handshake."
+		new TypeError("Cannot clone a response to a WebSocket handshake.")
 	);
 });

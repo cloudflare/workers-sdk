@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { Miniflare, stripAnsi } from "miniflare";
+import { Miniflare, MiniflareCoreError, stripAnsi } from "miniflare";
 import { expect, test } from "vitest";
 import { useCwd, useDispose, useTmp, utf8Encode } from "../../test-shared";
 
@@ -122,14 +122,19 @@ test("Miniflare: automatically collects modules", async () => {
 	});
 
 	// Check validates module rules
-	await expect(
-		mf.setOptions({
+	let error: MiniflareCoreError | undefined = undefined;
+	try {
+		await mf.setOptions({
 			modules: true,
 			// @ts-expect-error intentionally testing incorrect types
 			modulesRules: [{ type: "PNG", include: ["**/*.png"] }],
 			script: "",
-		})
-	).rejects.toThrow();
+		});
+	} catch (e) {
+		error = e as MiniflareCoreError;
+	}
+	expect(error).toBeInstanceOf(MiniflareCoreError);
+	expect(error?.code).toBe("ERR_VALIDATION");
 });
 test("Miniflare: automatically collects modules with cycles", async () => {
 	const mf = new Miniflare({
@@ -151,7 +156,11 @@ test("Miniflare: includes location in parse errors when automatically collecting
 		script: `export default {\n  new Response("body")\n}`,
 	});
 	await expect(mf.ready).rejects.toThrow(
-		/Unable to parse "syntax-error\/index\.mjs": Unexpected keyword 'new'/
+		new MiniflareCoreError(
+			"ERR_MODULE_PARSE",
+			`Unable to parse "syntax-error/index.mjs": Unexpected keyword 'new' (2:2)
+    at ${scriptPath}:2:2`
+		)
 	);
 });
 test("Miniflare: cannot automatically collect modules without script path", async () => {
@@ -179,7 +188,10 @@ test("Miniflare: cannot automatically collect modules without script path", asyn
 			script: `import dep from "./dep.mjs"; ${script}`,
 		})
 	).rejects.toThrow(
-		'Unable to resolve "script-0" dependency: imports are unsupported in string `script` without defined `scriptPath`'
+		new MiniflareCoreError(
+			"ERR_MODULE_STRING_SCRIPT",
+			'Unable to resolve "script-0" dependency: imports are unsupported in string `script` without defined `scriptPath`'
+		)
 	);
 });
 test("Miniflare: cannot automatically collect modules from dynamic import expressions", async () => {
@@ -291,8 +303,13 @@ test("Miniflare: suggests bundling on unknown module", async () => {
 		script: `import { Miniflare } from "miniflare";`,
 	});
 	await expect(mf.ready).rejects.toThrow(
-		/Unable to resolve "index\.mjs" dependency "miniflare": no matching module rules/
+		new MiniflareCoreError(
+			"ERR_MODULE_RULE",
+			`Unable to resolve "index.mjs" dependency "miniflare": no matching module rules.
+If you're trying to import an npm package, you'll need to bundle your Worker first.`
+		)
 	);
+	// (please don't try bundle `miniflare` into a Worker script, you'll hurt its feelings)
 
 	// Try with Node built-in module and `nodejs_compat` disabled
 	mf = new Miniflare({
@@ -301,7 +318,14 @@ test("Miniflare: suggests bundling on unknown module", async () => {
 		scriptPath: "index.mjs",
 		script: `import assert from "node:assert";`,
 	});
-	await expect(mf.ready).rejects.toThrow(
-		/Unable to resolve "index\.mjs" dependency "node:assert": no matching module rules/
+	let error: MiniflareCoreError | undefined = undefined;
+	try {
+		await mf.ready;
+	} catch (e) {
+		error = e as MiniflareCoreError;
+	}
+	expect(error?.code).toBe("ERR_MODULE_RULE");
+	expect(error?.message).toMatch(
+		/^Unable to resolve "index\.mjs" dependency "node:assert": no matching module rules\.\nIf you're trying to import a Node\.js built-in module, or an npm package that uses Node\.js built-ins, you'll either need to:/
 	);
 });

@@ -1,5 +1,10 @@
 import path from "node:path";
-import { Miniflare, MiniflareOptions, WorkerOptions } from "miniflare";
+import {
+	Miniflare,
+	MiniflareCoreError,
+	MiniflareOptions,
+	WorkerOptions,
+} from "miniflare";
 import { expect, test } from "vitest";
 import {
 	EXPORTED_FIXTURES,
@@ -64,7 +69,16 @@ test("A plugin that does not expose `plugins` will cause an error to be thrown",
 	const mf = new Miniflare({ modules: true, script: "" });
 	useDispose(mf);
 
-	await expect(mf.setOptions(opts)).rejects.toThrow();
+	let error: MiniflareCoreError | undefined = undefined;
+	try {
+		await mf.setOptions(opts);
+	} catch (err) {
+		error = err as MiniflareCoreError;
+	}
+
+	expect(error).toBeInstanceOf(MiniflareCoreError);
+	expect(error?.code).toEqual("ERR_PLUGIN_LOADING_FAILED");
+	expect(error?.message).toMatch(/did not provide any plugins/);
 });
 
 test("A plugin that exposes a non-object `plugins` export will cause an error to be thrown", async () => {
@@ -84,7 +98,16 @@ test("A plugin that exposes a non-object `plugins` export will cause an error to
 	const mf = new Miniflare({ modules: true, script: "" });
 	useDispose(mf);
 
-	await expect(mf.setOptions(opts)).rejects.toThrow();
+	let error: MiniflareCoreError | undefined = undefined;
+	try {
+		await mf.setOptions(opts);
+	} catch (err) {
+		error = err as MiniflareCoreError;
+	}
+
+	expect(error).toBeInstanceOf(MiniflareCoreError);
+	expect(error?.code).toEqual("ERR_PLUGIN_LOADING_FAILED");
+	expect(error?.message).toMatch(/did not provide the plugin 'unsafe-plugin'/);
 });
 
 test("Supports specifying an unsafe plugin will be loaded into Miniflare and will be usable in local dev", async () => {

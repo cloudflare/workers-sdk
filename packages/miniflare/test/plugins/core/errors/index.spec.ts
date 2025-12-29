@@ -7,11 +7,7 @@ import esbuild from "esbuild";
 import { DeferredPromise, fetch, Log, LogLevel, Miniflare } from "miniflare";
 import { expect, test } from "vitest";
 import NodeWebSocket from "ws";
-import {
-	escapeRegexpComponent,
-	useDispose,
-	useTmp,
-} from "../../../test-shared";
+import { useDispose, useTmp } from "../../../test-shared";
 import type { RawSourceMap } from "source-map";
 
 const FIXTURES_PATH = path.resolve(__dirname, "../../../fixtures/source-maps");
@@ -19,6 +15,11 @@ const SERVICE_WORKER_ENTRY_PATH = path.join(FIXTURES_PATH, "service-worker.ts");
 const MODULES_ENTRY_PATH = path.join(FIXTURES_PATH, "modules.ts");
 const DEP_ENTRY_PATH = path.join(FIXTURES_PATH, "nested/dep.ts");
 const REDUCE_PATH = path.join(FIXTURES_PATH, "reduce.ts");
+
+export function escapeRegexpComponent(value: string): string {
+	// From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#escaping
+	return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 function pathOrUrlRegexp(filePath: string): `(${string}|${string})` {
 	return `(${escapeRegexpComponent(filePath)}|${escapeRegexpComponent(

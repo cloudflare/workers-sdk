@@ -29,7 +29,9 @@ test("WebSocket: cannot accept if already coupled", async () => {
 	const [webSocket1] = Object.values(new WebSocketPair());
 	await coupleWebSocket(ws, webSocket1);
 	expect(() => webSocket1.accept()).toThrow(
-		"Can't accept() WebSocket that was already used in a response."
+		new TypeError(
+			"Can't accept() WebSocket that was already used in a response."
+		)
 	);
 });
 test("WebSocket: sends message to pair", async () => {
@@ -54,7 +56,9 @@ test("WebSocket: sends message to pair", async () => {
 test("WebSocket: must accept before sending", () => {
 	const [webSocket1] = Object.values(new WebSocketPair());
 	expect(() => webSocket1.send("test")).toThrow(
-		"You must call accept() on this WebSocket before sending messages."
+		new TypeError(
+			"You must call accept() on this WebSocket before sending messages."
+		)
 	);
 });
 test("WebSocket: queues messages if pair not accepted", async () => {
@@ -117,7 +121,7 @@ test("WebSocket: discards sent message to pair if other side closed", async () =
 	webSocket2.accept();
 	webSocket1.close();
 	expect(() => webSocket1.send("from1")).toThrow(
-		"Can't call WebSocket send() after close()."
+		new TypeError("Can't call WebSocket send() after close().")
 	);
 	await setImmediate();
 	expect(messages1).toEqual([]);
@@ -182,31 +186,41 @@ test("WebSocket: has correct readyStates", async () => {
 test("WebSocket: must accept before closing", () => {
 	const [webSocket1] = Object.values(new WebSocketPair());
 	expect(() => webSocket1.close()).toThrow(
-		"You must call accept() on this WebSocket before sending messages."
+		new TypeError(
+			"You must call accept() on this WebSocket before sending messages."
+		)
 	);
 });
 test("WebSocket: can only call close once", () => {
 	const [webSocket1] = Object.values(new WebSocketPair());
 	webSocket1.accept();
 	webSocket1.close(1000);
-	expect(() => webSocket1.close(1000)).toThrow("WebSocket already closed");
+	expect(() => webSocket1.close(1000)).toThrow(
+		new TypeError("WebSocket already closed")
+	);
 });
 test("WebSocket: validates close code", () => {
 	const [webSocket1] = Object.values(new WebSocketPair());
 	webSocket1.accept();
 	// Try close with invalid code
 	expect(() => webSocket1.close(1005 /*No Status Received*/)).toThrow(
-		"Invalid WebSocket close code."
+		new TypeError("Invalid WebSocket close code.")
 	);
 	// Try close with reason without code
 	expect(() => webSocket1.close(undefined, "Test Closure")).toThrow(
-		"If you specify a WebSocket close reason, you must also specify a code."
+		new TypeError(
+			"If you specify a WebSocket close reason, you must also specify a code."
+		)
 	);
 });
 
 test("WebSocketPair: requires 'new' operator to construct", () => {
 	// @ts-expect-error this shouldn't type check
-	expect(() => WebSocketPair()).toThrow(/^Failed to construct 'WebSocketPair'/);
+	expect(() => WebSocketPair()).toThrow(
+		new TypeError(
+			"Failed to construct 'WebSocketPair': Please use the 'new' operator, this object constructor cannot be called as a function."
+		)
+	);
 });
 function _testWebSocketPairTypes() {
 	const pair = new WebSocketPair();
@@ -232,14 +246,16 @@ test("coupleWebSocket: throws if already coupled", async () => {
 	const [client] = Object.values(new WebSocketPair());
 	await coupleWebSocket(ws, client);
 	await expect(coupleWebSocket({} as any, client)).rejects.toThrow(
-		"Can't return WebSocket that was already used in a response."
+		new TypeError("Can't return WebSocket that was already used in a response.")
 	);
 });
 test("coupleWebSocket: throws if already accepted", async () => {
 	const [client] = Object.values(new WebSocketPair());
 	client.accept();
 	await expect(coupleWebSocket({} as any, client)).rejects.toThrow(
-		"Can't return WebSocket in a Response after calling accept()."
+		new TypeError(
+			"Can't return WebSocket in a Response after calling accept()."
+		)
 	);
 });
 test("coupleWebSocket: forwards messages from client to worker before coupling", async () => {

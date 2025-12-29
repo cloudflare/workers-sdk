@@ -198,14 +198,18 @@ test("fetch: throws on ws(s) protocols", async () => {
 			headers: { upgrade: "websocket" },
 		})
 	).rejects.toThrow(
-		"Fetch API cannot load: ws://localhost/.\nMake sure you're using http(s):// URLs for WebSocket requests via fetch."
+		new TypeError(
+			"Fetch API cannot load: ws://localhost/.\nMake sure you're using http(s):// URLs for WebSocket requests via fetch."
+		)
 	);
 	await expect(
 		fetch("wss://localhost/", {
 			headers: { upgrade: "websocket" },
 		})
 	).rejects.toThrow(
-		"Fetch API cannot load: wss://localhost/.\nMake sure you're using http(s):// URLs for WebSocket requests via fetch."
+		new TypeError(
+			"Fetch API cannot load: wss://localhost/.\nMake sure you're using http(s):// URLs for WebSocket requests via fetch."
+		)
 	);
 });
 test("fetch: requires GET for web socket upgrade", async () => {
@@ -223,7 +227,7 @@ test("fetch: requires GET for web socket upgrade", async () => {
 			method: "POST",
 			headers: { upgrade: "websocket" },
 		})
-	).rejects.toThrow("fetch failed");
+	).rejects.toThrow(new TypeError("fetch failed"));
 });
 test("fetch: returns regular response if no WebSocket response returned", async () => {
 	const server = await useServer((req, res) => {

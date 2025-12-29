@@ -14,7 +14,7 @@ import {
 	WebSocketPair,
 } from "miniflare";
 import { expect, onTestFinished, test } from "vitest";
-import { ThrowsExpectation, useDispose } from "../../../test-shared";
+import { useDispose } from "../../../test-shared";
 import type { Fetcher } from "@cloudflare/workers-types/experimental";
 
 // This file tests API proxy edge cases. Cache, D1, Durable Object and R2 tests
@@ -116,7 +116,7 @@ test("ProxyClient: supports serialising multiple ReadableStreams, Blobs and File
 			lastModified: 1000,
 		})
 	);
-	expect(allResult[0] instanceof File).toBe(false);
+	expect(allResult[0]).not.toBeInstanceOf(File);
 	expect(allResult[0]).toBeInstanceOf(Blob);
 	expect(await allResult[0].text()).toBe("no type");
 	expect(allResult[1]).toBeInstanceOf(ReadableStream);
@@ -141,13 +141,12 @@ test("ProxyClient: poisons dependent proxies after setOptions()/dispose()", asyn
 
 	await mf.setOptions({ script: nullScript });
 
-	const _expectations: ThrowsExpectation<Error> = {
-		message:
-			"Attempted to use poisoned stub. Stubs to runtime objects must be re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`.",
-	};
-	expect(() => caches.default).toThrow();
-	expect(() => defaultCache.match(key)).toThrow();
-	expect(() => namedCache.match(key)).toThrow();
+	const error = new Error(
+		"Attempted to use poisoned stub. Stubs to runtime objects must be re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`."
+	);
+	expect(() => caches.default).toThrow(error);
+	expect(() => defaultCache.match(key)).toThrow(error);
+	expect(() => namedCache.match(key)).toThrow(error);
 
 	caches = await mf.getCaches();
 	defaultCache = caches.default;
@@ -157,9 +156,9 @@ test("ProxyClient: poisons dependent proxies after setOptions()/dispose()", asyn
 
 	await mf.dispose();
 	disposed = true;
-	expect(() => caches.default).toThrow();
-	expect(() => defaultCache.match(key)).toThrow();
-	expect(() => namedCache.match(key)).toThrow();
+	expect(() => caches.default).toThrow(error);
+	expect(() => defaultCache.match(key)).toThrow(error);
+	expect(() => namedCache.match(key)).toThrow(error);
 });
 test("ProxyClient: logging proxies provides useful information", async () => {
 	const mf = new Miniflare({ script: nullScript });

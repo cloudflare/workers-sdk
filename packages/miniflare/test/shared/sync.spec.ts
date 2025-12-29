@@ -16,7 +16,7 @@ test("DeferredPromise: waits for resolve/reject callbacks", async () => {
 	// Check rejects with error
 	promise = new DeferredPromise<number>();
 	promise.reject(new Error("🤯"));
-	await expect(promise).rejects.toThrow("🤯");
+	await expect(promise).rejects.toThrow(new Error("🤯"));
 });
 
 test("Mutex: runs closures exclusively", async () => {

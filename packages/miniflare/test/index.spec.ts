@@ -30,6 +30,7 @@ import {
 	kCurrentWorker,
 	MessageEvent,
 	Miniflare,
+	MiniflareCoreError,
 	MiniflareOptions,
 	parseWithRootPath,
 	PLUGINS,
@@ -48,7 +49,6 @@ import {
 import {
 	FIXTURES_PATH,
 	TestLog,
-	ThrowsExpectation,
 	useCwd,
 	useDispose,
 	useServer,
@@ -64,7 +64,9 @@ const ADD_WASM_MODULE = Buffer.from(
 
 test("Miniflare: validates options", async () => {
 	// Check empty workers array rejected
-	expect(() => new Miniflare({ workers: [] })).toThrow("No workers defined");
+	expect(() => new Miniflare({ workers: [] })).toThrow(
+		new MiniflareCoreError("ERR_NO_WORKERS", "No workers defined")
+	);
 
 	// Check workers with the same name rejected
 	expect(
@@ -72,7 +74,12 @@ test("Miniflare: validates options", async () => {
 			new Miniflare({
 				workers: [{ script: "" }, { script: "" }],
 			})
-	).toThrow("Multiple workers defined without a `name`");
+	).toThrow(
+		new MiniflareCoreError(
+			"ERR_DUPLICATE_NAME",
+			"Multiple workers defined without a `name`"
+		)
+	);
 	expect(
 		() =>
 			new Miniflare({
@@ -83,22 +90,50 @@ test("Miniflare: validates options", async () => {
 					{ script: "", name: "a" },
 				],
 			})
-	).toThrow('Multiple workers defined with the same `name`: "a"');
+	).toThrow(
+		new MiniflareCoreError(
+			"ERR_DUPLICATE_NAME",
+			'Multiple workers defined with the same `name`: "a"'
+		)
+	);
 
 	// Disable colours for easier to read expectations
 	_forceColour(false);
 	onTestFinished(() => _forceColour());
 
 	// Check throws validation error with incorrect options
-	// @ts-expect-error intentionally testing incorrect types
-	expect(() => new Miniflare({ name: 42, script: "" })).toThrow(
-		/Unexpected options passed to `new Miniflare\(\)` constructor/
+	let error: MiniflareCoreError | undefined = undefined;
+	try {
+		// @ts-expect-error intentionally testing incorrect types
+		new Miniflare({ name: 42, script: "" });
+	} catch (e) {
+		error = e as MiniflareCoreError;
+	}
+	expect(error).toBeInstanceOf(MiniflareCoreError);
+	expect(error?.code).toEqual("ERR_VALIDATION");
+	expect(error?.message).toEqual(
+		`Unexpected options passed to \`new Miniflare()\` constructor:
+{
+  name: 42,
+        ^ Expected string, received number
+  ...,
+}`
 	);
 
 	// Check throws validation error with primitive option
-	// @ts-expect-error intentionally testing incorrect types
-	expect(() => new Miniflare("addEventListener(...)")).toThrow(
-		/Unexpected options passed to `new Miniflare\(\)` constructor/
+	error = undefined;
+	try {
+		// @ts-expect-error intentionally testing incorrect types
+		new Miniflare("addEventListener(...)");
+	} catch (e) {
+		error = e as MiniflareCoreError;
+	}
+	expect(error).toBeInstanceOf(MiniflareCoreError);
+	expect(error?.code).toEqual("ERR_VALIDATION");
+	expect(error?.message).toEqual(
+		`Unexpected options passed to \`new Miniflare()\` constructor:
+'addEventListener(...)'
+^ Expected object, received string`
 	);
 });
 
@@ -1169,7 +1204,10 @@ test("Miniflare: fetch mocking", async () => {
 			outboundService: "",
 		})
 	).rejects.toThrow(
-		"Only one of `outboundService` or `fetchMock` may be specified per worker"
+		new MiniflareCoreError(
+			"ERR_MULTIPLE_OUTBOUNDS",
+			"Only one of `outboundService` or `fetchMock` may be specified per worker"
+		)
 	);
 });
 test("Miniflare: custom upstream as origin (with colons)", async () => {
@@ -1775,7 +1813,7 @@ test("Miniflare: dispose() immediately after construction", async () => {
 	const readyPromise = mf.ready;
 	// Attach rejection handler BEFORE dispose() to prevent unhandled rejection
 	const readyAssertion = expect(readyPromise).rejects.toThrow(
-		"Cannot use disposed instance"
+		new MiniflareCoreError("ERR_DISPOSED", "Cannot use disposed instance")
 	);
 	await mf.dispose();
 	await readyAssertion;
@@ -1856,7 +1894,9 @@ test("Miniflare: getBindings() returns all bindings", async () => {
 	await mf.dispose();
 	disposed = true;
 	expect(() => bindings.KV.get("key")).toThrow(
-		"Attempted to use poisoned stub. Stubs to runtime objects must be re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`."
+		new Error(
+			"Attempted to use poisoned stub. Stubs to runtime objects must be re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`."
+		)
 	);
 });
 test("Miniflare: getBindings() returns wrapped bindings", async () => {
@@ -2207,7 +2247,7 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	bindings = await mf.getBindings("b");
 	expect(Object.keys(bindings)).toEqual(["BUCKET"]);
 	await expect(() => mf.getBindings("c")).rejects.toThrow(
-		'"c" worker not found'
+		new TypeError('"c" worker not found')
 	);
 
 	// Check `getWorker()`
@@ -2219,42 +2259,44 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 	);
 	fetcher = await mf.getWorker("b");
 	expect(await (await fetcher.fetch("http://localhost")).text()).toBe("b");
-	await expect(() => mf.getWorker("c")).rejects.toThrow('"c" worker not found');
-
-	const unboundExpectations = (name: string): ThrowsExpectation<TypeError> => ({
-		instanceOf: TypeError,
-		message: `"${name}" unbound in "c" worker`,
-	});
+	await expect(() => mf.getWorker("c")).rejects.toThrow(
+		new TypeError('"c" worker not found')
+	);
 
 	// Check `getD1Database()`
 	let binding: unknown = await mf.getD1Database("DB");
 	expect(binding).toBeDefined();
-	void unboundExpectations("DB");
-	await expect(() => mf.getD1Database("DB", "c")).rejects.toThrow();
+	await expect(() => mf.getD1Database("DB", "c")).rejects.toThrow(
+		new TypeError(`"DB" unbound in "c" worker`)
+	);
 
 	// Check `getDurableObjectNamespace()`
 	binding = await mf.getDurableObjectNamespace("DO");
 	expect(binding).toBeDefined();
-	void unboundExpectations("DO");
-	await expect(() => mf.getDurableObjectNamespace("DO", "c")).rejects.toThrow();
+	await expect(() => mf.getDurableObjectNamespace("DO", "c")).rejects.toThrow(
+		new TypeError(`"DO" unbound in "c" worker`)
+	);
 
 	// Check `getKVNamespace()`
 	binding = await mf.getKVNamespace("KV", "");
 	expect(binding).toBeDefined();
-	void unboundExpectations("KV");
-	await expect(() => mf.getKVNamespace("KV", "c")).rejects.toThrow();
+	await expect(() => mf.getKVNamespace("KV", "c")).rejects.toThrow(
+		new TypeError(`"KV" unbound in "c" worker`)
+	);
 
 	// Check `getQueueProducer()`
 	binding = await mf.getQueueProducer("QUEUE", "");
 	expect(binding).toBeDefined();
-	void unboundExpectations("QUEUE");
-	await expect(() => mf.getQueueProducer("QUEUE", "c")).rejects.toThrow();
+	await expect(() => mf.getQueueProducer("QUEUE", "c")).rejects.toThrow(
+		new TypeError(`"QUEUE" unbound in "c" worker`)
+	);
 
 	// Check `getR2Bucket()`
 	binding = await mf.getR2Bucket("BUCKET", "b");
 	expect(binding).toBeDefined();
-	void unboundExpectations("BUCKET");
-	await expect(() => mf.getQueueProducer("BUCKET", "c")).rejects.toThrow();
+	await expect(() => mf.getR2Bucket("BUCKET", "c")).rejects.toThrow(
+		new TypeError(`"BUCKET" unbound in "c" worker`)
+	);
 });
 
 test("Miniflare: allows direct access to workers", async () => {
@@ -2319,13 +2361,13 @@ test("Miniflare: allows direct access to workers", async () => {
 
 	// Can can only access configured for direct access
 	await expect(mf.unsafeGetDirectURL("z")).rejects.toThrow(
-		'"z" worker not found'
+		new TypeError('"z" worker not found')
 	);
 	await expect(mf.unsafeGetDirectURL("")).rejects.toThrow(
-		'Direct access disabled in "" worker for default entrypoint'
+		new TypeError('Direct access disabled in "" worker for default entrypoint')
 	);
 	await expect(mf.unsafeGetDirectURL("d", "three")).rejects.toThrow(
-		'Direct access disabled in "d" worker for "three" entrypoint'
+		new TypeError('Direct access disabled in "d" worker for "three" entrypoint')
 	);
 });
 test("Miniflare: allows RPC between multiple instances", async () => {
@@ -2660,7 +2702,9 @@ test("Miniflare: cannot call getWorker() on wrapped binding worker", async () =>
 	useDispose(mf);
 
 	await expect(mf.getWorker("binding")).rejects.toThrow(
-		'"binding" is being used as a wrapped binding, and cannot be accessed as a worker'
+		new TypeError(
+			'"binding" is being used as a wrapped binding, and cannot be accessed as a worker'
+		)
 	);
 });
 test("Miniflare: prohibits invalid wrapped bindings", async () => {
@@ -2678,8 +2722,11 @@ test("Miniflare: prohibits invalid wrapped bindings", async () => {
 			},
 		})
 	).rejects.toThrow(
-		'Cannot use "a" for wrapped binding because it\'s the entrypoint.\n' +
-			'Ensure "a" isn\'t the first entry in the `workers` array.'
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "a" for wrapped binding because it\'s the entrypoint.\n' +
+				'Ensure "a" isn\'t the first entry in the `workers` array.'
+		)
 	);
 
 	// Check prohibits using service worker
@@ -2691,8 +2738,11 @@ test("Miniflare: prohibits invalid wrapped bindings", async () => {
 			],
 		})
 	).rejects.toThrow(
-		'Cannot use "binding" for wrapped binding because it\'s a service worker.\n' +
-			'Ensure "binding" sets `modules` to `true` or an array of modules'
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it\'s a service worker.\n' +
+				'Ensure "binding" sets `modules` to `true` or an array of modules'
+		)
 	);
 
 	// Check prohibits multiple modules
@@ -2710,8 +2760,11 @@ test("Miniflare: prohibits invalid wrapped bindings", async () => {
 			],
 		})
 	).rejects.toThrow(
-		'Cannot use "binding" for wrapped binding because it isn\'t a single module.\n' +
-			'Ensure "binding" doesn\'t include unbundled `import`s.'
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it isn\'t a single module.\n' +
+				'Ensure "binding" doesn\'t include unbundled `import`s.'
+		)
 	);
 
 	// Check prohibits non-ES-modules
@@ -2726,7 +2779,10 @@ test("Miniflare: prohibits invalid wrapped bindings", async () => {
 			],
 		})
 	).rejects.toThrow(
-		'Cannot use "binding" for wrapped binding because it isn\'t a single ES module'
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it isn\'t a single ES module'
+		)
 	);
 
 	// Check prohibits Durable Object bindings
@@ -2748,8 +2804,11 @@ test("Miniflare: prohibits invalid wrapped bindings", async () => {
 			],
 		})
 	).rejects.toThrow(
-		'Cannot use "binding" for wrapped binding because it is bound to with Durable Object bindings.\n' +
-			'Ensure other workers don\'t define Durable Object bindings to "binding".'
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it is bound to with Durable Object bindings.\n' +
+				'Ensure other workers don\'t define Durable Object bindings to "binding".'
+		)
 	);
 
 	// Check prohibits service bindings
@@ -2771,8 +2830,11 @@ test("Miniflare: prohibits invalid wrapped bindings", async () => {
 			],
 		})
 	).rejects.toThrow(
-		'Cannot use "binding" for wrapped binding because it is bound to with service bindings.\n' +
-			'Ensure other workers don\'t define service bindings to "binding".'
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it is bound to with service bindings.\n' +
+				'Ensure other workers don\'t define service bindings to "binding".'
+		)
 	);
 
 	// Check prohibits compatibility date and flags
@@ -2788,8 +2850,11 @@ test("Miniflare: prohibits invalid wrapped bindings", async () => {
 			],
 		})
 	).rejects.toThrow(
-		'Cannot use "binding" for wrapped binding because it defines a compatibility date.\n' +
-			"Wrapped bindings use the compatibility date of the worker with the binding."
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it defines a compatibility date.\n' +
+				"Wrapped bindings use the compatibility date of the worker with the binding."
+		)
 	);
 	await expect(
 		mf.setOptions({
@@ -2803,8 +2868,11 @@ test("Miniflare: prohibits invalid wrapped bindings", async () => {
 			],
 		})
 	).rejects.toThrow(
-		'Cannot use "binding" for wrapped binding because it defines compatibility flags.\n' +
-			"Wrapped bindings use the compatibility flags of the worker with the binding."
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it defines compatibility flags.\n' +
+				"Wrapped bindings use the compatibility flags of the worker with the binding."
+		)
 	);
 
 	// Check prohibits outbound service
@@ -2822,8 +2890,11 @@ test("Miniflare: prohibits invalid wrapped bindings", async () => {
 			],
 		})
 	).rejects.toThrow(
-		'Cannot use "binding" for wrapped binding because it defines an outbound service.\n' +
-			"Wrapped bindings use the outbound service of the worker with the binding."
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it defines an outbound service.\n' +
+				"Wrapped bindings use the outbound service of the worker with the binding."
+		)
 	);
 
 	// Check prohibits cyclic wrapped bindings
@@ -2839,7 +2910,10 @@ test("Miniflare: prohibits invalid wrapped bindings", async () => {
 			],
 		})
 	).rejects.toThrow(
-		"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves."
+		new MiniflareCoreError(
+			"ERR_CYCLIC",
+			"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves."
+		)
 	);
 	await expect(
 		mf.setOptions({
@@ -2867,7 +2941,10 @@ test("Miniflare: prohibits invalid wrapped bindings", async () => {
 			],
 		})
 	).rejects.toThrow(
-		"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves."
+		new MiniflareCoreError(
+			"ERR_CYCLIC",
+			"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves."
+		)
 	);
 });
 

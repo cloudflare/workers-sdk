@@ -1,7 +1,7 @@
 // noinspection HttpUrlsUsage
 
 import { URL } from "node:url";
-import { matchRoutes, parseRoutes } from "miniflare";
+import { matchRoutes, parseRoutes, RouterError } from "miniflare";
 import { expect, test } from "vitest";
 
 // See https://developers.cloudflare.com/workers/platform/routes#matching-behavior and
@@ -9,12 +9,18 @@ import { expect, test } from "vitest";
 
 test("throws if route contains query string", () => {
 	expect(() => parseRoutes(new Map([["a", ["example.com/?foo=*"]]]))).toThrow(
-		'Route "example.com/?foo=*" for "a" contains a query string. This is not allowed.'
+		new RouterError(
+			"ERR_QUERY_STRING",
+			'Route "example.com/?foo=*" for "a" contains a query string. This is not allowed.'
+		)
 	);
 });
 test("throws if route contains infix wildcards", () => {
 	expect(() => parseRoutes(new Map([["a", ["example.com/*.jpg"]]]))).toThrow(
-		'Route "example.com/*.jpg" for "a" contains an infix wildcard. This is not allowed.'
+		new RouterError(
+			"ERR_INFIX_WILDCARD",
+			'Route "example.com/*.jpg" for "a" contains an infix wildcard. This is not allowed.'
+		)
 	);
 });
 test("routes may begin with http:// or https://", () => {

@@ -2,7 +2,9 @@ import {
 	DeferredPromise,
 	LogLevel,
 	Miniflare,
+	MiniflareCoreError,
 	QUEUES_PLUGIN_NAME,
+	QueuesError,
 	Response,
 } from "miniflare";
 import { expect, test } from "vitest";
@@ -49,16 +51,20 @@ test("maxBatchTimeout validation", async () => {
 		script: "",
 	});
 	useDispose(mf);
-	expect(
-		() =>
-			new Miniflare({
-				queueConsumers: {
-					QUEUE: { maxBatchTimeout: 61 },
-				},
-				modules: true,
-				script: "",
-			})
-	).toThrow(/Number must be less than or equal to 60/);
+	let error: MiniflareCoreError | undefined = undefined;
+	try {
+		new Miniflare({
+			queueConsumers: {
+				QUEUE: { maxBatchTimeout: 61 },
+			},
+			modules: true,
+			script: "",
+		});
+	} catch (e) {
+		error = e as MiniflareCoreError;
+	}
+	expect(error?.code).toEqual("ERR_VALIDATION");
+	expect(error?.message).toMatch(/Number must be less than or equal to 60/);
 });
 
 test("flushes partial and full batches", async () => {
@@ -807,7 +813,10 @@ test("moves to dead letter queue", async () => {
 		script: "",
 	});
 	await expect(promise).rejects.toThrow(
-		'Dead letter queue for queue "bad" cannot be itself'
+		new QueuesError(
+			"ERR_DEAD_LETTER_QUEUE_CYCLE",
+			`Dead letter queue for queue "bad" cannot be itself`
+		)
 	);
 });
 

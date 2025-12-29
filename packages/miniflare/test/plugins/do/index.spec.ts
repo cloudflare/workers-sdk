@@ -10,7 +10,7 @@ import {
 	MiniflareOptions,
 	RequestInit,
 } from "miniflare";
-import { expect, onTestFinished, test } from "vitest";
+import { describe, expect, onTestFinished, test } from "vitest";
 import { useDispose, useTmp } from "../../test-shared";
 
 const COUNTER_SCRIPT = (responsePrefix = "") => `export class Counter {
@@ -330,52 +330,54 @@ test("proxies Durable Object methods", async () => {
 	expect(event.data).toBe("echo:hello");
 });
 
-test("Durable Object eviction", async () => {
-	// this test requires testing over a 10 second timeout
-	// Vitest handles timeouts via test options
-	// first set unsafePreventEviction to undefined
-	const mf = new Miniflare({
-		modules: true,
-		script: STATEFUL_SCRIPT(),
-		durableObjects: {
-			DURABLE_OBJECT: "DurableObject",
-		},
-	});
-	useDispose(mf);
-
-	// get uuid generated at durable object startup
-	let res = await mf.dispatchFetch("http://localhost");
-	const original = await res.text();
-
-	// after 10+ seconds, durable object should be evicted, so new uuid generated
-	await setTimeout(10_000);
-	res = await mf.dispatchFetch("http://localhost");
-	expect(await res.text()).not.toBe(original);
-});
-
-test("prevent Durable Object eviction", async () => {
-	// this test requires testing over a 10 second timeout
-	// first set unsafePreventEviction to undefined
-	const mf = new Miniflare({
-		modules: true,
-		script: STATEFUL_SCRIPT(),
-		durableObjects: {
-			DURABLE_OBJECT: {
-				className: "DurableObject",
-				unsafePreventEviction: true,
+describe("evictions", { concurrent: true }, () => {
+	test("Durable Object eviction", async () => {
+		// this test requires testing over a 10 second timeout
+		// Vitest handles timeouts via test options
+		// first set unsafePreventEviction to undefined
+		const mf = new Miniflare({
+			modules: true,
+			script: STATEFUL_SCRIPT(),
+			durableObjects: {
+				DURABLE_OBJECT: "DurableObject",
 			},
-		},
+		});
+		useDispose(mf);
+
+		// get uuid generated at durable object startup
+		let res = await mf.dispatchFetch("http://localhost");
+		const original = await res.text();
+
+		// after 10+ seconds, durable object should be evicted, so new uuid generated
+		await setTimeout(10_000);
+		res = await mf.dispatchFetch("http://localhost");
+		expect(await res.text()).not.toBe(original);
 	});
-	useDispose(mf);
 
-	// get uuid generated at durable object startup
-	let res = await mf.dispatchFetch("http://localhost");
-	const original = await res.text();
+	test("prevent Durable Object eviction", { timeout: 20_000 }, async () => {
+		// this test requires testing over a 10 second timeout
+		// first set unsafePreventEviction to true
+		const mf = new Miniflare({
+			modules: true,
+			script: STATEFUL_SCRIPT(),
+			durableObjects: {
+				DURABLE_OBJECT: {
+					className: "DurableObject",
+					unsafePreventEviction: true,
+				},
+			},
+		});
+		useDispose(mf);
 
-	// after 10+ seconds, durable object should NOT be evicted, so same uuid
-	await setTimeout(10_000);
-	res = await mf.dispatchFetch("http://localhost");
-	expect(await res.text()).toBe(original);
+		// get uuid generated at durable object startup
+		let res = await mf.dispatchFetch("http://localhost");
+		const original = await res.text();
+
+		// after 10+ seconds, durable object should NOT be evicted, so same uuid
+		await setTimeout(10_000);
+		res = await mf.dispatchFetch("http://localhost");
+		expect(await res.text()).toBe(original);
+	});
 });
 
 const MINIFLARE_WITH_SQLITE = (useSQLite: boolean) =>

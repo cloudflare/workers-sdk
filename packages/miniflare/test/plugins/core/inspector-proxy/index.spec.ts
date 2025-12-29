@@ -1,7 +1,12 @@
 import events from "node:events";
 import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
-import { fetch, Miniflare, MiniflareOptions } from "miniflare";
+import {
+	fetch,
+	Miniflare,
+	MiniflareCoreError,
+	MiniflareOptions,
+} from "miniflare";
 import { beforeAll, expect, test, vi } from "vitest";
 import WebSocket from "ws";
 import { useDispose } from "../../../test-shared";
@@ -76,7 +81,12 @@ test("InspectorProxy: proxy port validation", async () => {
 					},
 				],
 			})
-	).toThrow("inspector proxy requested but without an inspectorPort specified");
+	).toThrow(
+		new MiniflareCoreError(
+			"ERR_MISSING_INSPECTOR_PROXY_PORT",
+			"inspector proxy requested but without an inspectorPort specified"
+		)
+	);
 });
 
 test("InspectorProxy: /json should provide a list of a multiple worker inspector", async () => {
