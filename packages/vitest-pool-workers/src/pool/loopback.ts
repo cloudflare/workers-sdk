@@ -62,24 +62,31 @@ async function handleSnapshotRequest(
 }
 
 async function emptyDir(dirPath: string) {
-	let names: string[];
+	let entries: { name: string; isDirectory: boolean }[];
 	try {
-		names = await fs.readdir(dirPath);
+		const dirents = await fs.readdir(dirPath, { withFileTypes: true });
+		entries = dirents.map((d) => ({
+			name: d.name,
+			isDirectory: d.isDirectory(),
+		}));
 	} catch (e) {
 		if (isFileNotFoundError(e)) {
 			return;
 		}
 		throw e;
 	}
-	for (const name of names) {
-		try {
-			await fs.rm(path.join(dirPath, name), { recursive: true, force: true });
-		} catch (e) {
-			if (isEbusyError(e)) {
-				// Sometimes workerd holds on to file handles in Windows, preventing us from cleaning up these.
-				console.warn(
-					`vitest-pool-worker: Unable to remove temporary directory: ${e}`
-				);
+	for (const entry of entries) {
+		const fullPath = path.join(dirPath, entry.name);
+
+		if (entry.isDirectory) {
+			await emptyDir(fullPath);
+		} else {
+			try {
+				await fs.rm(fullPath, { force: true });
+			} catch (e) {
+				if (isEbusyError(e)) {
+					console.warn(`vitest-pool-worker: Unable to remove file: ${e}`);
+				}
 			}
 		}
 	}
