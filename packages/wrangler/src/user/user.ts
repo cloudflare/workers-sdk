@@ -248,7 +248,7 @@ import {
 } from "./auth-variables";
 import { getAccountChoices } from "./choose-account";
 import { generateAuthUrl } from "./generate-auth-url";
-import { generateRandomState } from "./generate-random-state";
+import { generatePKCERandomState } from "./generate-random-state";
 import type { ChooseAccountItem } from "./choose-account";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { ParsedUrlQuery } from "node:querystring";
@@ -277,18 +277,15 @@ export type ApiCredentials =
 export function getAuthFromEnv(): ApiCredentials | undefined {
 	const globalApiKey = getCloudflareGlobalAuthKeyFromEnv();
 	const globalApiEmail = getCloudflareGlobalAuthEmailFromEnv();
-	const apiToken = getCloudflareAPITokenFromEnv();
 
 	if (globalApiKey && globalApiEmail) {
 		return { authKey: globalApiKey, authEmail: globalApiEmail };
-	} else if (apiToken) {
-		return { apiToken };
 	}
-}
 
-/**
- * An implementation of rfc6749#section-4.1 and rfc7636.
- */
+	const apiToken = getCloudflareAPITokenFromEnv();
+
+	return apiToken ? { apiToken } : undefined;
+}
 
 interface PKCECodes {
 	codeChallenge: string;
@@ -304,7 +301,6 @@ interface State extends AuthTokens {
 	codeVerifier?: string;
 	hasAuthCodeBeenExchangedForAccessToken?: boolean;
 	stateQueryParam?: string;
-	scopes?: Scope[];
 }
 
 /**
@@ -314,13 +310,11 @@ interface AuthTokens {
 	accessToken?: AccessToken;
 	refreshToken?: RefreshToken;
 	scopes?: Scope[];
-	/** @deprecated - this field was only provided by the deprecated v1 `wrangler config` command. */
-	apiToken?: string;
 }
 
 /**
  * The path to the config file that holds user authentication data,
- * relative to the user's home directory.
+ * relative to global wrangler config directory.
  */
 const USER_AUTH_CONFIG_PATH = "config";
 
@@ -332,8 +326,6 @@ export interface UserAuthConfig {
 	refresh_token?: string;
 	expiration_time?: string;
 	scopes?: string[];
-	/** @deprecated - this field was only provided by the deprecated v1 `wrangler config` command. */
-	api_token?: string;
 }
 
 interface RefreshToken {
@@ -376,22 +368,13 @@ const DefaultScopes = {
 		" See, change, and bind to Connectivity Directory services, including creating services targeting Cloudflare Tunnel.",
 } as const;
 
-/**
- * The possible keys for a Scope.
- *
- * "offline_access" is automatically included.
- */
 export type Scope = keyof typeof DefaultScopes;
 
-export let DefaultScopeKeys = Object.keys(DefaultScopes) as Scope[];
+export const defaultScopeKeys = Object.freeze(
+	Object.keys(DefaultScopes)
+) as Scope[];
 
-export function setLoginScopeKeys(scopes: Scope[]) {
-	DefaultScopeKeys = scopes;
-}
-
-export function validateScopeKeys(
-	scopes: string[]
-): scopes is typeof DefaultScopeKeys {
+export function validateScopeKeys(scopes: string[]): scopes is Scope[] {
 	return scopes.every((scope) => scope in DefaultScopes);
 }
 
@@ -415,7 +398,7 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 		}
 
 		// otherwise try loading from the user auth config file.
-		const { oauth_token, refresh_token, expiration_time, scopes, api_token } =
+		const { oauth_token, refresh_token, expiration_time, scopes } =
 			config || readAuthConfigFile();
 
 		if (oauth_token) {
@@ -428,14 +411,6 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 				refreshToken: { value: refresh_token ?? "" },
 				scopes: scopes as Scope[],
 			};
-		} else if (api_token) {
-			logger.warn(
-				"It looks like you have used Wrangler v1's `config` command to login with an API token\n" +
-					`from ${config === undefined ? getAuthConfigFilePath() : "in-memory config"}.\n` +
-					"This is no longer supported in the current version of Wrangler.\n" +
-					"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
-			);
-			return { apiToken: api_token };
 		}
 	} catch {
 		return undefined;
@@ -447,15 +422,9 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
  *
  * This runs automatically whenever `writeAuthConfigFile` is run, so generally
  * you won't need to call it yourself.
+ *
+ * @param config Optional user auth config to use instead of reading from file.
  */
-export function reinitialiseAuthTokens(): void;
-
-/**
- * Reinitialise auth state from an in-memory config, skipping
- * over the part where we write a file and then read it back into memory
- */
-export function reinitialiseAuthTokens(config: UserAuthConfig): void;
-
 export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
 	localState = {
 		...getAuthTokens(config),
@@ -463,10 +432,6 @@ export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
 }
 
 export function getAPIToken(): ApiCredentials | undefined {
-	if (localState.apiToken) {
-		return { apiToken: localState.apiToken };
-	}
-
 	const localAPIToken = getAuthFromEnv();
 	if (localAPIToken) {
 		return localAPIToken;
@@ -597,9 +562,9 @@ class ErrorUnsupportedGrantType extends ErrorAccessTokenResponse {
 }
 
 /**
- * Translate the raw error strings returned from the server into error classes.
+ * Instantiate the error class corresponding to the raw error string.
  */
-function toErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
+function newErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
 	switch (rawError) {
 		case "invalid_request":
 			return new ErrorInvalidRequest(rawError);
@@ -631,26 +596,6 @@ function toErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
 }
 
 /**
- * The maximum length for a code verifier for the best security we can offer.
- * Please note the NOTE section of RFC 7636 § 4.1 - the length must be >= 43,
- * but <= 128, **after** base64 url encoding. This means 32 code verifier bytes
- * encoded will be 43 bytes, or 96 bytes encoded will be 128 bytes. So 96 bytes
- * is the highest valid value that can be used.
- */
-const RECOMMENDED_CODE_VERIFIER_LENGTH = 96;
-
-/**
- * A sensible length for the state's length, for anti-csrf.
- */
-const RECOMMENDED_STATE_LENGTH = 32;
-
-/**
- * Character set to generate code verifier defined in rfc7636.
- */
-export const PKCE_CHARSET =
-	"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
-
-/**
  * OAuth 2.0 client that ONLY supports authorization code flow, with PKCE.
  */
 
@@ -662,9 +607,9 @@ export const PKCE_CHARSET =
 function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 	if (query.error) {
 		if (Array.isArray(query.error)) {
-			throw toErrorClass(query.error[0]);
+			throw newErrorClass(query.error[0]);
 		}
-		throw toErrorClass(query.error);
+		throw newErrorClass(query.error);
 	}
 
 	const code = query.code;
@@ -694,7 +639,9 @@ async function getAuthURL(
 	callbackPort: number
 ): Promise<string> {
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
-	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
+
+	// 32 is a sensible length for the state's length, for anti-csrf.
+	const stateQueryParam = generatePKCERandomState(32);
 
 	Object.assign(localState, {
 		codeChallenge,
@@ -796,7 +743,7 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 			return accessContext;
 		} catch (error) {
 			if (typeof error === "string") {
-				throw toErrorClass(error);
+				throw newErrorClass(error);
 			} else {
 				throw error;
 			}
@@ -835,7 +782,7 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 			// alert("Redirecting to auth server to obtain a new auth grant code.");
 			// TODO: return refreshAuthCodeOrRefreshToken();
 		}
-		throw toErrorClass(error);
+		throw newErrorClass(error);
 	}
 	const json = (await getJSONFromResponse(response)) as TokenResponse;
 	if ("error" in json) {
@@ -888,15 +835,15 @@ function base64urlEncode(value: string): string {
 /**
  * Generates a code_verifier and code_challenge, as specified in rfc7636.
  */
-
 async function generatePKCECodes(): Promise<PKCECodes> {
-	const output = new Uint32Array(RECOMMENDED_CODE_VERIFIER_LENGTH);
-	crypto.getRandomValues(output);
-	const codeVerifier = base64urlEncode(
-		Array.from(output)
-			.map((num: number) => PKCE_CHARSET[num % PKCE_CHARSET.length])
-			.join("")
-	);
+	/**
+	 * The maximum length for a code verifier for the best security we can offer.
+	 * Please note the NOTE section of RFC 7636 § 4.1 - the length must be >= 43,
+	 * but <= 128, **after** base64 url encoding. This means 32 code verifier bytes
+	 * encoded will be 43 bytes, or 96 bytes encoded will be 128 bytes. So 96 bytes
+	 * is the highest valid value that can be used.
+	 */
+	const codeVerifier = base64urlEncode(generatePKCERandomState(96));
 	const buffer = await crypto.subtle.digest(
 		"SHA-256",
 		new TextEncoder().encode(codeVerifier)
@@ -928,7 +875,7 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 	mkdirSync(path.dirname(configPath), {
 		recursive: true,
 	});
-	writeFileSync(path.join(configPath), TOML.stringify(config), {
+	writeFileSync(configPath, TOML.stringify(config), {
 		encoding: "utf-8",
 	});
 
@@ -1142,7 +1089,7 @@ export async function login(
 
 	const oauth = await getOauthToken({
 		browser: !!props.browser,
-		scopes: props.scopes ?? DefaultScopeKeys,
+		scopes: props.scopes ?? defaultScopeKeys,
 		clientId: getClientIdFromEnv(),
 		denied: {
 			url: "https://welcome.developers.workers.dev/wrangler-oauth-consent-denied",
@@ -1255,7 +1202,7 @@ export async function logout(): Promise<void> {
 
 export function listScopes(message = "💁 Available scopes:"): void {
 	logger.log(message);
-	printScopes(DefaultScopeKeys);
+	printScopes(defaultScopeKeys);
 	// TODO: maybe a good idea to show usage here
 }
 

@@ -1,14 +1,17 @@
-import { webcrypto as crypto } from "node:crypto";
-import { PKCE_CHARSET } from "../user";
+import { webcrypto } from "node:crypto";
 
 /**
- * Generates random state to be passed for anti-csrf.
- * extracted from  user.tsx to make it possible to
- * mock the generated URL
+ * Generates a random state string for PKCE OAuth flows.
+ *
+ * @param lengthOfState The length of the random state string to generate.
+ * @returns A random state string.
  */
-export function generateRandomState(lengthOfState: number): string {
+export function generatePKCERandomState(lengthOfState: number): string {
+	const PKCE_CHARSET =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+
 	const output = new Uint32Array(lengthOfState);
-	crypto.getRandomValues(output);
+	webcrypto.getRandomValues(output);
 	return Array.from(output)
 		.map((num: number) => PKCE_CHARSET[num % PKCE_CHARSET.length])
 		.join("");
