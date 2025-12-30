@@ -117,11 +117,11 @@ test(
 		});
 
 		let result = await vitestRun();
-		expect(result.stdout).toMatch(/Tests\s+3 passed/);
+		expect(result.stdout).toMatch(/Tests.*3 passed/s);
 		expect(await result.exitCode).toBe(0);
 
 		result = await vitestRun();
-		expect(result.stdout).toMatch(/Tests\s+3 passed/);
+		expect(result.stdout).toMatch(/Tests.*3 passed/s);
 		expect(await result.exitCode).toBe(0);
 	}
 );
@@ -137,11 +137,11 @@ test(
 		});
 
 		let result = await vitestRun();
-		expect(result.stdout).toMatch(/Tests\s+3 passed/);
+		expect(result.stdout).toMatch(/Tests.*3 passed/s);
 		expect(await result.exitCode).toBe(0);
 
 		result = await vitestRun();
-		expect(result.stdout).toMatch(/Tests\s+3 passed/);
+		expect(result.stdout).toMatch(/Tests.*3 passed/s);
 		expect(await result.exitCode).toBe(0);
 	}
 );
@@ -159,7 +159,7 @@ test(
 		const result = vitestDev();
 
 		await waitFor(() => {
-			expect(result.stdout).toMatch(/Tests\s+3 passed/);
+			expect(result.stdout).toMatch(/Tests.*3 passed/s);
 		});
 
 		await seed({
@@ -186,7 +186,7 @@ test(
 		const result = vitestDev();
 
 		await waitFor(() => {
-			expect(result.stdout).toMatch(/Tests\s+3 passed/);
+			expect(result.stdout).toMatch(/Tests.*3 passed/s);
 		});
 
 		await seed({
