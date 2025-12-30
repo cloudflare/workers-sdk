@@ -214,7 +214,7 @@ For example:
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 No content found in file or piped input.[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 No content found in file or piped input.[0m
 
 			"
 		`);
