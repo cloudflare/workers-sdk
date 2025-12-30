@@ -57,6 +57,7 @@ describe("wrangler", () => {
 				  wrangler d1                     🗄 Manage Workers D1 databases
 				  wrangler vectorize              🧮 Manage Vectorize indexes
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
+				  wrangler analytics-engine       📊 Query Workers Analytics Engine datasets
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
@@ -122,6 +123,7 @@ describe("wrangler", () => {
 				  wrangler d1                     🗄 Manage Workers D1 databases
 				  wrangler vectorize              🧮 Manage Vectorize indexes
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
+				  wrangler analytics-engine       📊 Query Workers Analytics Engine datasets
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
 				  wrangler mtls-certificate       🪪 Manage certificates used for mTLS connections
@@ -149,10 +151,10 @@ describe("wrangler", () => {
 				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
-			        "[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mUnknown argument: invalid-command[0m
 
-			        "
-		      `);
+				"
+			`);
 		});
 	});
 

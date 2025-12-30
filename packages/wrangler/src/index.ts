@@ -15,6 +15,11 @@ import { aiFineTuneNamespace, aiNamespace } from "./ai";
 import { aiFineTuneCreateCommand } from "./ai/createFinetune";
 import { aiModelsCommand } from "./ai/listCatalog";
 import { aiFineTuneListCommand } from "./ai/listFinetune";
+import {
+	analyticsEngineAlias,
+	analyticsEngineNamespace,
+	analyticsEngineRunCommand,
+} from "./analytics-engine";
 import { buildCommand } from "./build";
 import {
 	certDeleteCommand,
@@ -1129,6 +1134,20 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("hyperdrive");
+
+	// analytics-engine
+	registry.define([
+		{
+			command: "wrangler analytics-engine",
+			definition: analyticsEngineNamespace,
+		},
+		{
+			command: "wrangler analytics-engine run",
+			definition: analyticsEngineRunCommand,
+		},
+		{ command: "wrangler ae", definition: analyticsEngineAlias },
+	]);
+	registry.registerNamespace("analytics-engine");
 
 	// cert - includes mtls-certificates and CA cert management
 	registry.define([
