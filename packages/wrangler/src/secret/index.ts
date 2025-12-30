@@ -26,6 +26,18 @@ import type { Config, WorkerMetadataBinding } from "@cloudflare/workers-utils";
 
 export const VERSION_NOT_DEPLOYED_ERR_CODE = 10215;
 
+/**
+ * Error thrown when parseBulkInputToObject is called without a file
+ * and stdin is a TTY (interactive terminal). Callers should catch this
+ * and re-throw with context-specific messaging.
+ */
+export class NoInputError extends Error {
+	constructor() {
+		super("No input provided and stdin is a TTY");
+		Object.setPrototypeOf(this, new.target.prototype);
+	}
+}
+
 type SecretBindingUpload = {
 	type: "secret_text";
 	name: string;
@@ -437,17 +449,30 @@ export const secretBulkCommand = createCommand({
 
 		const accountId = await requireAuth(config);
 
+		let content: Record<string, string> | undefined;
+		try {
+			content = await parseBulkInputToObject(args.file);
+		} catch (e) {
+			if (e instanceof NoInputError) {
+				throw new UserError(
+					"No file provided. Please provide a JSON file or .dev.vars file as an argument, or pipe input to stdin.\n" +
+						"For example:\n" +
+						"  wrangler secret bulk ./secrets.json\n" +
+						'  echo \'{"SECRET":"value"}\' | wrangler secret bulk'
+				);
+			}
+			throw e;
+		}
+
+		if (!content) {
+			return logger.error(`🚨 No content found in file or piped input.`);
+		}
+
 		logger.log(
 			`🌀 Creating the secrets for the Worker "${scriptName}" ${
 				isServiceEnv ? `(${args.env})` : ""
 			}`
 		);
-
-		const content = await parseBulkInputToObject(args.file);
-
-		if (!content) {
-			return logger.error(`🚨 No content found in file, or piped input.`);
-		}
 
 		function getSettings() {
 			const url = isServiceEnv
@@ -577,6 +602,9 @@ export async function parseBulkInputToObject(input?: string) {
 		}
 		validateFileSecrets(content, input);
 	} else {
+		if (process.stdin.isTTY) {
+			throw new NoInputError();
+		}
 		try {
 			const rl = readline.createInterface({ input: process.stdin });
 			let pipedInput = "";

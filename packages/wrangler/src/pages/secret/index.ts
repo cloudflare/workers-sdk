@@ -13,7 +13,7 @@ import { confirm, prompt } from "../../dialogs";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
 import * as metrics from "../../metrics";
-import { parseBulkInputToObject } from "../../secret";
+import { NoInputError, parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../constants";
@@ -211,14 +211,28 @@ export const pagesSecretBulkCommand = createCommand({
 			args.projectName
 		);
 
-		logger.log(
-			`🌀 Creating the secrets for the Pages project "${project.name}" (${env})`
-		);
-		const content = await parseBulkInputToObject(args.file);
+		let content: Record<string, string> | undefined;
+		try {
+			content = await parseBulkInputToObject(args.file);
+		} catch (e) {
+			if (e instanceof NoInputError) {
+				throw new FatalError(
+					"No file provided. Please provide a JSON file or .dev.vars file as an argument, or pipe input to stdin.\n" +
+						"For example:\n" +
+						"  wrangler pages secret bulk ./secrets.json\n" +
+						'  echo \'{"SECRET":"value"}\' | wrangler pages secret bulk'
+				);
+			}
+			throw e;
+		}
 
 		if (!content) {
 			throw new FatalError(`🚨 No content found in file or piped input.`);
 		}
+
+		logger.log(
+			`🌀 Creating the secrets for the Pages project "${project.name}" (${env})`
+		);
 
 		const upsertBindings = Object.fromEntries(
 			Object.entries(content).map(([key, value]) => {
