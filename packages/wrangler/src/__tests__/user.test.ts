@@ -422,6 +422,7 @@ describe("User", () => {
 			expect(output).toEqual({
 				type: "oauth",
 				token: "test-access-token",
+				profile: "default",
 			});
 		});
 
@@ -431,6 +432,7 @@ describe("User", () => {
 			await runWrangler("auth token --json");
 
 			const output = JSON.parse(std.out);
+			// API token from env var doesn't include profile info
 			expect(output).toEqual({
 				type: "api_token",
 				token: "env-api-token",

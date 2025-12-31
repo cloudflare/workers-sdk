@@ -249,10 +249,53 @@ import {
 import { getAccountChoices } from "./choose-account";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
+import {
+	DEFAULT_PROFILE_NAME,
+	getLegacyAuthConfigFilePath,
+	getProfile,
+	migrateLegacyAuthConfig,
+	profileToAuthConfig,
+	resolveActiveProfile,
+	saveProfile,
+	warnIfCredentialsInsecure,
+} from "./profile";
 import type { ChooseAccountItem } from "./choose-account";
+import type { Profile } from "./profile";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
+
+/**
+ * Module-level state for the currently active profile.
+ * This is set by the CLI via setActiveProfile() before commands run.
+ */
+let activeProfileName: string | undefined;
+
+/**
+ * Set the active profile for the current session.
+ * Called by the CLI when --profile flag is used.
+ */
+export function setActiveProfile(profileName: string): void {
+	activeProfileName = profileName;
+}
+
+/**
+ * Get the currently active profile name.
+ * Uses the precedence chain: CLI flag > env var > project > global > default
+ */
+export function getActiveProfileName(projectRoot?: string): string {
+	const { name } = resolveActiveProfile(activeProfileName, projectRoot);
+	return name;
+}
+
+/**
+ * Get the currently active profile.
+ * Returns undefined if the profile doesn't exist.
+ */
+export function getActiveProfile(projectRoot?: string): Profile | undefined {
+	const profileName = getActiveProfileName(projectRoot);
+	return getProfile(profileName);
+}
 
 export type ApiCredentials =
 	| {
@@ -429,12 +472,7 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 				scopes: scopes as Scope[],
 			};
 		} else if (api_token) {
-			logger.warn(
-				"It looks like you have used Wrangler v1's `config` command to login with an API token\n" +
-					`from ${config === undefined ? getAuthConfigFilePath() : "in-memory config"}.\n` +
-					"This is no longer supported in the current version of Wrangler.\n" +
-					"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
-			);
+			// API token from profile - this is a valid authentication method
 			return { apiToken: api_token };
 		}
 	} catch {
@@ -911,6 +949,11 @@ async function generatePKCECodes(): Promise<PKCECodes> {
 	return { codeChallenge, codeVerifier };
 }
 
+/**
+ * Get the path to the legacy auth config file.
+ * This is kept for backwards compatibility and migration.
+ * @deprecated Use profile system instead
+ */
 export function getAuthConfigFilePath() {
 	const environment = getCloudflareApiEnvironmentFromEnv();
 	const filePath = `${USER_AUTH_CONFIG_PATH}/${environment === "production" ? "default.toml" : `${environment}.toml`}`;
@@ -919,24 +962,74 @@ export function getAuthConfigFilePath() {
 }
 
 /**
- * Writes a a wrangler config file (auth credentials) to disk,
- * and updates the user auth state with the new credentials.
+ * Writes auth credentials to the active profile.
+ * Also writes to the legacy location for backwards compatibility.
  */
-export function writeAuthConfigFile(config: UserAuthConfig) {
-	const configPath = getAuthConfigFilePath();
+export function writeAuthConfigFile(
+	config: UserAuthConfig,
+	profileName?: string
+) {
+	const targetProfile = profileName ?? getActiveProfileName();
 
-	mkdirSync(path.dirname(configPath), {
-		recursive: true,
-	});
-	writeFileSync(path.join(configPath), TOML.stringify(config), {
-		encoding: "utf-8",
-	});
+	// Save to profile system
+	const profile: Profile = {
+		oauth_token: config.oauth_token,
+		refresh_token: config.refresh_token,
+		expiration_time: config.expiration_time,
+		scopes: config.scopes,
+		api_token: config.api_token,
+	};
+	saveProfile(targetProfile, profile);
+
+	// Also write to legacy location for backwards compatibility with older wrangler versions
+	// Only do this for the default profile to avoid confusion
+	if (targetProfile === DEFAULT_PROFILE_NAME) {
+		const configPath = getAuthConfigFilePath();
+		mkdirSync(path.dirname(configPath), {
+			recursive: true,
+		});
+		writeFileSync(path.join(configPath), TOML.stringify(config), {
+			encoding: "utf-8",
+		});
+	}
 
 	reinitialiseAuthTokens();
 }
 
+// Track if we've already done one-time initialization
+let hasInitializedProfiles = false;
+
+/**
+ * Read auth config from the active profile.
+ * Falls back to legacy config file if profile doesn't exist.
+ */
 export function readAuthConfigFile(): UserAuthConfig {
-	return parseTOML(readFileSync(getAuthConfigFilePath())) as UserAuthConfig;
+	// Only run migration and permission check once per process
+	if (!hasInitializedProfiles) {
+		hasInitializedProfiles = true;
+		// Try to migrate legacy config first
+		migrateLegacyAuthConfig();
+		// Warn if credentials file has insecure permissions
+		warnIfCredentialsInsecure();
+	}
+
+	// Try to read from profile
+	const profileName = getActiveProfileName();
+	const profile = getProfile(profileName);
+
+	if (profile) {
+		return profileToAuthConfig(profile);
+	}
+
+	// Fall back to legacy config file
+	try {
+		return parseTOML(
+			readFileSync(getLegacyAuthConfigFilePath())
+		) as UserAuthConfig;
+	} catch {
+		// No credentials found
+		return {};
+	}
 }
 
 type LoginProps = {
@@ -944,6 +1037,8 @@ type LoginProps = {
 	browser: boolean;
 	callbackHost: string;
 	callbackPort: number;
+	/** Profile name to save credentials to. Defaults to active profile or 'default'. */
+	profile?: string;
 };
 
 export async function loginOrRefreshIfRequired(
@@ -1157,14 +1252,25 @@ export async function login(
 		callbackPort: props.callbackPort,
 	});
 
-	writeAuthConfigFile({
-		oauth_token: oauth.token?.value ?? "",
-		expiration_time: oauth.token?.expiry,
-		refresh_token: oauth.refreshToken?.value,
-		scopes: oauth.scopes,
-	});
+	// Determine which profile to save to
+	// If --profile was specified, use that; otherwise use 'default' for wrangler login
+	const targetProfile = props.profile ?? DEFAULT_PROFILE_NAME;
 
-	logger.log(`Successfully logged in.`);
+	writeAuthConfigFile(
+		{
+			oauth_token: oauth.token?.value ?? "",
+			expiration_time: oauth.token?.expiry,
+			refresh_token: oauth.refreshToken?.value,
+			scopes: oauth.scopes,
+		},
+		targetProfile
+	);
+
+	if (targetProfile === DEFAULT_PROFILE_NAME) {
+		logger.log(`Successfully logged in.`);
+	} else {
+		logger.log(`Successfully logged in to profile '${targetProfile}'.`);
+	}
 
 	purgeConfigCaches();
 
@@ -1260,22 +1366,41 @@ export function listScopes(message = "💁 Available scopes:"): void {
 }
 
 /**
- *
- * Returns account_id preferentially from config.account_id > CLOUDFLARE_ACCOUNT_ID env var > cache > or user selection.
+ * Returns account_id with the following precedence:
+ * 1. config.account_id (from wrangler.toml)
+ * 2. CLOUDFLARE_ACCOUNT_ID env var
+ * 3. account_id from active profile
+ * 4. Cached account selection
+ * 5. Interactive user selection
  */
 export async function getAccountId(
 	config: ComplianceConfig & { account_id?: string }
 ): Promise<string> {
+	// 1. config.account_id (from wrangler.toml)
 	// TODO: v5 we should prioritise the env var instead of the config value here, for consistency
 	if (config.account_id) {
 		return config.account_id;
 	}
-	// check if we have a cached value
+
+	// 2. CLOUDFLARE_ACCOUNT_ID env var
+	const envAccountId = getCloudflareAccountIdFromEnv();
+	if (envAccountId) {
+		return envAccountId;
+	}
+
+	// 3. account_id from active profile
+	const activeProfile = getActiveProfile();
+	if (activeProfile?.account_id) {
+		return activeProfile.account_id;
+	}
+
+	// 4. Check if we have a cached value
 	const cachedAccount = getAccountFromCache();
-	if (cachedAccount && !getCloudflareAccountIdFromEnv()) {
+	if (cachedAccount) {
 		return cachedAccount.id;
 	}
 
+	// 5. Interactive selection
 	const accounts = await getAccountChoices(config);
 	if (accounts.length === 1) {
 		saveAccountToCache({ id: accounts[0].id, name: accounts[0].name });

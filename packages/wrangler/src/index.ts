@@ -292,6 +292,13 @@ import {
 	logoutCommand,
 	whoamiCommand,
 } from "./user/commands";
+import {
+	profileCurrentCommand,
+	profileDeleteCommand,
+	profileListCommand,
+	profileNamespace,
+	profileUseCommand,
+} from "./user/profile-commands";
 import { betaCmdColor, proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
@@ -1572,6 +1579,30 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("auth");
+
+	registry.define([
+		{
+			command: "wrangler profile",
+			definition: profileNamespace,
+		},
+		{
+			command: "wrangler profile list",
+			definition: profileListCommand,
+		},
+		{
+			command: "wrangler profile current",
+			definition: profileCurrentCommand,
+		},
+		{
+			command: "wrangler profile use",
+			definition: profileUseCommand,
+		},
+		{
+			command: "wrangler profile delete",
+			definition: profileDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("profile");
 
 	registry.define([
 		{

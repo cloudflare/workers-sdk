@@ -5,6 +5,7 @@ import { isAuthenticationError } from "../deploy/deploy";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
 import { fetchMembershipRoles } from "./membership";
+import { resolveActiveProfile } from "./profile";
 import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
 import type { ApiCredentials, Scope } from ".";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
@@ -35,12 +36,38 @@ export async function whoami(
 		logger.log(
 			"ℹ️  The API Token is read from the CLOUDFLARE_API_TOKEN environment variable."
 		);
+	} else {
+		// Show active profile for OAuth tokens
+		printActiveProfile();
 	}
 	printComplianceRegion(complianceConfig);
 	printAccountList(user);
 	printAccountIdMismatchWarning(user, accountFilter, configAccountId);
 	printTokenPermissions(user);
 	await printMembershipInfo(complianceConfig, user, accountFilter);
+}
+
+function printActiveProfile() {
+	const { name: profileName, source } = resolveActiveProfile();
+	let sourceDescription: string;
+	switch (source) {
+		case "cli":
+			sourceDescription = "--profile flag";
+			break;
+		case "env":
+			sourceDescription = "WRANGLER_PROFILE env var";
+			break;
+		case "project":
+			sourceDescription = ".wrangler/profile";
+			break;
+		case "global":
+			sourceDescription = "~/.wrangler/current-profile";
+			break;
+		case "default":
+			sourceDescription = "default";
+			break;
+	}
+	logger.log(`📋 Profile: ${chalk.blue(profileName)} (${sourceDescription})`);
 }
 
 function printComplianceRegion(complianceConfig: ComplianceConfig) {
