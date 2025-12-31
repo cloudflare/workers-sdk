@@ -1941,8 +1941,8 @@ importers:
         specifier: 4.1.0-beta.10
         version: 4.1.0-beta.10(patch_hash=flgmw54jmjdxqmelxigtxg6kum)
       zod:
-        specifier: 3.22.3
-        version: 3.22.3
+        specifier: ^3.25.76
+        version: 3.25.76
     devDependencies:
       '@ava/typescript':
         specifier: ^4.1.0
@@ -3451,8 +3451,8 @@ importers:
         specifier: workspace:*
         version: link:../wrangler
       zod:
-        specifier: ^3.22.3
-        version: 3.22.3
+        specifier: ^3.25.76
+        version: 3.25.76
     devDependencies:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
@@ -3721,8 +3721,8 @@ importers:
         specifier: ~2.1.0
         version: 2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))
       zod:
-        specifier: ^3.22.3
-        version: 3.22.3
+        specifier: ^3.25.76
+        version: 3.25.76
 
   packages/workers-tsconfig: {}
 
