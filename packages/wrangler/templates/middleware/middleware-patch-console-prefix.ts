@@ -3,15 +3,13 @@
 import { prefix } from "config:middleware/patch-console-prefix";
 import type { Middleware } from "./common";
 
-// @ts-expect-error globalThis.console _does_ exist
-globalThis.console = new Proxy(globalThis.console, {
-	get(target, p, receiver) {
-		if (p === "log" || p === "debug" || p === "info") {
-			return (...args: unknown[]) =>
-				Reflect.get(target, p, receiver)(prefix, ...args);
-		}
-		return Reflect.get(target, p, receiver);
-	},
+// Directly patch console methods to add worker prefix.
+// We capture the original method once and replace with a wrapper.
+// This approach allows third-party code to wrap console methods
+(["log", "debug", "info"] as const).forEach((method) => {
+	const original = globalThis.console[method].bind(globalThis.console);
+	globalThis.console[method] = (...args: unknown[]) =>
+		original(prefix, ...args);
 });
 
 const passthrough: Middleware = (request, env, _ctx, middlewareCtx) => {
