@@ -1,6 +1,7 @@
 {
   "name": "<WORKER_NAME>",
   "compatibility_date": "<COMPATIBILITY_DATE>",
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./public"
   },
