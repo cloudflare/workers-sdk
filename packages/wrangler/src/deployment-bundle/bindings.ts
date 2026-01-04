@@ -17,6 +17,10 @@ import { createKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import {
+	createQueueForProvisioning,
+	listQueuesForProvisioning,
+} from "../queues/client";
+import {
 	createR2Bucket,
 	getR2Bucket,
 	listR2Buckets,
@@ -26,6 +30,7 @@ import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import type {
 	CfD1Database,
 	CfKvNamespace,
+	CfQueue,
 	CfR2Bucket,
 	CfWorkerInit,
 	ComplianceConfig,
@@ -54,7 +59,11 @@ export function getBindings(
 		durable_objects: config?.durable_objects,
 		workflows: config?.workflows,
 		queues: config?.queues.producers?.map((producer) => {
-			return { binding: producer.binding, queue_name: producer.queue };
+			return {
+				binding: producer.binding,
+				queue_name: producer.queue,
+				delivery_delay: producer.delivery_delay,
+			};
 		}),
 		r2_buckets: config?.r2_buckets,
 		d1_databases: config?.d1_databases,
@@ -95,7 +104,7 @@ export type Settings = {
 
 abstract class ProvisionResourceHandler<
 	T extends WorkerMetadataBinding["type"],
-	B extends CfD1Database | CfR2Bucket | CfKvNamespace,
+	B extends CfD1Database | CfR2Bucket | CfKvNamespace | CfQueue,
 > {
 	constructor(
 		public type: T,
@@ -347,6 +356,88 @@ class D1Handler extends ProvisionResourceHandler<"d1", CfD1Database> {
 	}
 }
 
+class QueueHandler extends ProvisionResourceHandler<"queue", CfQueue> {
+	get name(): string | undefined {
+		return this.binding.queue_name;
+	}
+
+	async create(name: string) {
+		await createQueueForProvisioning(
+			this.complianceConfig,
+			this.accountId,
+			name
+		);
+		return name;
+	}
+
+	constructor(
+		binding: CfQueue,
+		complianceConfig: ComplianceConfig,
+		accountId: string
+	) {
+		super("queue", binding, "queue_name", complianceConfig, accountId);
+	}
+
+	/**
+	 * Queue bindings don't need to use INHERIT_SYMBOL because the queue_name
+	 * is always required in config. When inheriting, we simply use the
+	 * queue_name from config as-is.
+	 */
+	override inherit(): void {
+		// No-op: queue_name is already set in config
+		// Unlike KV/D1 which have IDs that need to be inherited,
+		// queues are identified by name which is already in the config
+	}
+
+	/**
+	 * Queue bindings can be inherited if the binding name and queue name match.
+	 */
+	canInherit(settings: Settings | undefined): boolean {
+		return !!settings?.bindings.find(
+			(existing) =>
+				existing.type === this.type &&
+				existing.name === this.binding.binding &&
+				(this.binding.queue_name
+					? this.binding.queue_name ===
+						(existing as Extract<WorkerMetadataBinding, { type: "queue" }>)
+							.queue_name
+					: true)
+		);
+	}
+
+	/**
+	 * Check if the queue exists remotely.
+	 */
+	async isConnectedToExistingResource(): Promise<boolean> {
+		// Queue name is required
+		if (!this.binding.queue_name) {
+			return false;
+		}
+
+		// Use listQueues with name filter to check existence
+		// Note: Unlike R2/D1, the queues API returns an empty array if queue doesn't exist
+		// rather than throwing an error, so we don't need try/catch here.
+		// Any API errors (auth, network) should propagate up.
+		const queues = await listQueuesForProvisioning(
+			this.complianceConfig,
+			this.accountId,
+			1,
+			this.binding.queue_name
+		);
+
+		// Queue exists if we found one with the same name
+		return queues.some((q) => q.queue_name === this.binding.queue_name);
+	}
+
+	/**
+	 * Queues are never "fully specified" by ID (like R2).
+	 * They use name-based lookups.
+	 */
+	isFullySpecified(): boolean {
+		return false;
+	}
+}
+
 const HANDLERS = {
 	kv_namespaces: {
 		Handler: KVHandler,
@@ -365,6 +456,12 @@ const HANDLERS = {
 		Handler: R2Handler,
 		sort: 2,
 		name: "R2 Bucket",
+		keyDescription: "name",
+	},
+	queues: {
+		Handler: QueueHandler,
+		sort: 3,
+		name: "Queue",
 		keyDescription: "name",
 	},
 };
@@ -400,20 +497,65 @@ const LOADERS = {
 			value: bucket.name,
 		}));
 	},
+	queues: async (complianceConfig: ComplianceConfig, accountId: string) => {
+		const preExisting = await listQueuesForProvisioning(
+			complianceConfig,
+			accountId
+		);
+		return preExisting.map((queue) => ({
+			title: queue.queue_name,
+			value: queue.queue_name,
+		}));
+	},
 };
 
 type PendingResource = {
 	binding: string;
-	resourceType: "kv_namespaces" | "d1_databases" | "r2_buckets";
-	handler: KVHandler | D1Handler | R2Handler;
+	resourceType: "kv_namespaces" | "d1_databases" | "r2_buckets" | "queues";
+	handler: KVHandler | D1Handler | R2Handler | QueueHandler;
 };
+
+/**
+ * Collect all unique queue bindings from both producers and consumers.
+ * This ensures we provision queues for both even though only producers
+ * create actual bindings. De-duplicates by queue_name.
+ */
+function collectUniqueQueueBindings(config: Config): CfQueue[] {
+	const uniqueQueues = new Map<string, CfQueue>();
+
+	// Add producers
+	for (const producer of config.queues.producers ?? []) {
+		if (!uniqueQueues.has(producer.queue)) {
+			uniqueQueues.set(producer.queue, {
+				binding: producer.binding,
+				queue_name: producer.queue,
+				delivery_delay: producer.delivery_delay,
+				remote: producer.remote,
+			});
+		}
+	}
+
+	// Add consumers (if not already in map from producers)
+	for (const consumer of config.queues.consumers ?? []) {
+		if (!uniqueQueues.has(consumer.queue)) {
+			// Create a synthetic binding for consumer-only queues
+			uniqueQueues.set(consumer.queue, {
+				binding: `__queue_consumer_${consumer.queue}__`,
+				queue_name: consumer.queue,
+			});
+		}
+	}
+
+	return Array.from(uniqueQueues.values());
+}
 
 async function collectPendingResources(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string,
 	bindings: CfWorkerInit["bindings"],
-	requireRemote: boolean
+	requireRemote: boolean,
+	config?: Config
 ): Promise<PendingResource[]> {
 	let settings: Settings | undefined;
 
@@ -428,12 +570,20 @@ async function collectPendingResources(
 	for (const resourceType of Object.keys(
 		HANDLERS
 	) as (keyof typeof HANDLERS)[]) {
-		for (const resource of bindings[resourceType] ?? []) {
+		// For queues, use our special collection function to include consumers
+		const resources =
+			resourceType === "queues" && config
+				? collectUniqueQueueBindings(config)
+				: bindings[resourceType] ?? [];
+
+		for (const resource of resources) {
 			if (requireRemote && !resource.remote) {
 				continue;
 			}
+			// Type assertion needed because TypeScript can't narrow the handler constructor
+			// to match the specific resource type when iterating over HANDLERS keys
 			const h = new HANDLERS[resourceType].Handler(
-				resource,
+				resource as CfR2Bucket & CfKvNamespace & CfD1Database & CfQueue,
 				complianceConfig,
 				accountId
 			);
@@ -467,7 +617,8 @@ export async function provisionBindings(
 		accountId,
 		scriptName,
 		bindings,
-		requireRemote
+		requireRemote,
+		config
 	);
 
 	if (pendingResources.length > 0) {
@@ -515,8 +666,10 @@ export async function provisionBindings(
 
 		const patch: RawConfig = {};
 
-		const allChanges: Map<string, CfKvNamespace | CfR2Bucket | CfD1Database> =
-			new Map();
+		const allChanges: Map<
+			string,
+			CfKvNamespace | CfR2Bucket | CfD1Database | CfQueue
+		> = new Map();
 
 		for (const resource of pendingResources) {
 			allChanges.set(resource.binding, resource.handler.binding);
@@ -539,6 +692,10 @@ export async function provisionBindings(
 			for (const resourceType of Object.keys(
 				HANDLERS
 			) as (keyof typeof HANDLERS)[]) {
+				// Skip queues - they use queue name from config, no ID write-back needed
+				if (resourceType === "queues") {
+					continue;
+				}
 				for (const binding of unredirectedConfig[resourceType] ?? []) {
 					existingBindingNames.add(binding.binding);
 				}
@@ -547,6 +704,10 @@ export async function provisionBindings(
 		for (const resourceType of Object.keys(
 			HANDLERS
 		) as (keyof typeof HANDLERS)[]) {
+			// Skip queues - they use queue name from config, no ID write-back needed (like R2)
+			if (resourceType === "queues") {
+				continue;
+			}
 			for (const binding of bindings[resourceType] ?? []) {
 				// See above for why we skip writing back some bindings to the config file
 				if (
