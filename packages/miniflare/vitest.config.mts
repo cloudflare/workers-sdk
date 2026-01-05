@@ -11,7 +11,6 @@ export default defineConfig({
 				singleFork: true,
 			},
 		},
-		retry: 0,
 		include: ["test/**/*.spec.ts"],
 		setupFiles: [path.resolve(__dirname, "test/setup.mjs")],
 		globals: true,
