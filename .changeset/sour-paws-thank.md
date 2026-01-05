@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-fix(wrangler): Bind the console methods instead of using a proxy
+fix(wrangler): Bind the console methods directly instead of using a global proxy
