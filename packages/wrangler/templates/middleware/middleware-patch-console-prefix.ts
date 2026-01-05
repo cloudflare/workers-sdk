@@ -7,9 +7,11 @@ import type { Middleware } from "./common";
 // We capture the original method once and replace with a wrapper.
 // This approach allows third-party code to wrap console methods
 (["log", "debug", "info"] as const).forEach((method) => {
-	const original = globalThis.console[method].bind(globalThis.console);
-	globalThis.console[method] = (...args: unknown[]) =>
-		original(prefix, ...args);
+	globalThis.console[method] = new Proxy(globalThis.console[method], {
+		apply(target, thisArg, argumentsList) {
+			return target.apply(thisArg, [prefix, ...argumentsList]);
+		},
+	});
 });
 
 const passthrough: Middleware = (request, env, _ctx, middlewareCtx) => {
