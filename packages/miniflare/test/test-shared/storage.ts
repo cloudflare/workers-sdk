@@ -23,7 +23,7 @@ export function utf8Decode(encoded?: Uint8Array): string {
 
 const tmpRoot = path.resolve(".tmp");
 export async function useTmp(testName?: string): Promise<string> {
-	// If no test name provided, use a random name
+	// If no test name is provided, use a random name
 	const name = testName ?? crypto.randomBytes(4).toString("hex");
 	const filePath = path.join(
 		tmpRoot,
