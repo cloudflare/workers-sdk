@@ -1301,80 +1301,6 @@ describe("cloudchamber apply", () => {
 		expect(app.instances).toEqual(1);
 	});
 
-	test("ignores deprecated observability.logging", async () => {
-		setIsTTY(false);
-		writeWranglerConfig({
-			name: "my-container",
-			containers: [
-				{
-					name: "my-container-app",
-					class_name: "DurableObjectClass",
-					instances: 1,
-					image: "registry.cloudflare.com/beep:boop",
-				},
-			],
-		});
-		mockGetApplications([
-			{
-				id: "abc",
-				name: "my-container-app",
-				instances: 1,
-				created_at: new Date().toString(),
-				version: 1,
-				account_id: "1",
-				scheduling_policy: SchedulingPolicy.REGIONAL,
-				configuration: {
-					image: "registry.cloudflare.com/beep:boop",
-					observability: {
-						logs: {
-							enabled: true,
-						},
-						logging: {
-							enabled: true,
-						},
-					},
-					disk: {
-						size: "2GB",
-						size_mb: 2000,
-					},
-					vcpu: 0.0625,
-					memory: "256MB",
-					memory_mib: 256,
-				},
-				constraints: {
-					tier: 1,
-				},
-			},
-		]);
-		const applicationReqBodyPromise = mockModifyApplication();
-		await runWrangler("cloudchamber apply");
-		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
-			│
-			│ Container application changes
-			│
-			├ EDIT my-container-app
-			│
-			│   instance_type = \\"lite\\"
-			│   [containers.configuration.observability.logs]
-			│ - enabled = true
-			│ + enabled = false
-			│   [containers.constraints]
-			│   tier = 1
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
-
-			"
-		`);
-		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		const app = await applicationReqBodyPromise;
-		expect(app.constraints?.tier).toEqual(1);
-		expect(app.instances).toEqual(1);
-	});
-
 	test("keeps observability logs enabled", async () => {
 		setIsTTY(false);
 		writeWranglerConfig({
@@ -1402,9 +1328,6 @@ describe("cloudchamber apply", () => {
 					image: "registry.cloudflare.com/beep:boop",
 					observability: {
 						logs: {
-							enabled: true,
-						},
-						logging: {
 							enabled: true,
 						},
 					},
@@ -1514,9 +1437,6 @@ describe("cloudchamber apply", () => {
 					image: "registry.cloudflare.com/beep:boop",
 					observability: {
 						logs: {
-							enabled: false,
-						},
-						logging: {
 							enabled: false,
 						},
 					},
