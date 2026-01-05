@@ -69,25 +69,13 @@ export class BrowserSession extends DurableObject<Env> {
 		});
 
 		server.addEventListener("message", (m) => {
-			// both @cloudflare/puppeteer and @cloudflare/playwright send ping messges each second,
-			// so we use them to check the status of the browser
-			if (m.data === "ping") {
-				this.#checkStatus().catch((err) => {
-					console.error("Error checking browser status:", err);
-				});
-				return;
-			}
+			if (m.data === "ping") return;
+
 			// HACK: TODO: Figure out what the chunking mechanism is in @cloudflare/puppeteer and unchunk the messages here, rather than just naively slicing off the header. This Worker should probably have the increase_websocket_message_size compat flag added
 			ws.send(new TextDecoder().decode((m.data as ArrayBuffer).slice(4)));
 		});
-		server.addEventListener("close", ({ code, reason }) => {
-			ws.close(code, reason);
-			this.ws = undefined;
-		});
-		ws.addEventListener("close", ({ code, reason }) => {
-			server.close(code, reason);
-			this.server = undefined;
-		});
+		server.addEventListener("close", this.closeWebSockets.bind(this));
+		ws.addEventListener("close", this.closeWebSockets.bind(this));
 		this.ws = ws;
 		this.server = server;
 		this.sessionInfo.connectionId = crypto.randomUUID();
@@ -108,21 +96,6 @@ export class BrowserSession extends DurableObject<Env> {
 			this.closeWebSockets();
 		}
 		return this.sessionInfo;
-	}
-
-	async #checkStatus() {
-		if (this.sessionInfo) {
-			const url = new URL("http://example.com/browser/status");
-			url.searchParams.set("sessionId", this.sessionInfo.sessionId);
-			const resp = await this.env[CoreBindings.SERVICE_LOOPBACK].fetch(url);
-
-			if (!resp.ok) {
-				// Browser process has exited, we should close the WebSocket
-				// TODO should we send a error code?
-				this.closeWebSockets();
-				return;
-			}
-		}
 	}
 
 	closeWebSockets() {
