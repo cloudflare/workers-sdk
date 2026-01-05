@@ -296,6 +296,7 @@ test("Miniflare: collects modules outside of working directory", async () => {
 });
 test("Miniflare: suggests bundling on unknown module", async () => {
 	// Try with npm-package-like import
+	// (please don't try bundle `miniflare` into a Worker script, you'll hurt its feelings)
 	let mf = new Miniflare({
 		modules: true,
 		compatibilityDate: "2023-08-01",
@@ -309,7 +310,6 @@ test("Miniflare: suggests bundling on unknown module", async () => {
 If you're trying to import an npm package, you'll need to bundle your Worker first.`
 		)
 	);
-	// (please don't try bundle `miniflare` into a Worker script, you'll hurt its feelings)
 
 	// Try with Node built-in module and `nodejs_compat` disabled
 	mf = new Miniflare({
