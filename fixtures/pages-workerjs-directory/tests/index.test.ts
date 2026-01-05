@@ -3,11 +3,11 @@ import { existsSync, mkdtempSync, readFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path, { join, resolve } from "node:path";
 import { fetch } from "undici";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages _worker.js/ directory", () => {
-	it("should support non-bundling with 'dev'", async ({ expect }) => {
+	it("should support non-bundling with 'dev'", async () => {
 		const tmpDir = realpathSync(
 			mkdtempSync(join(tmpdir(), "worker-directory-tests"))
 		);
@@ -68,7 +68,7 @@ describe("Pages _worker.js/ directory", () => {
 		expect(existsSync(join(tmpDir, "./v3/r2"))).toBeTruthy();
 	});
 
-	it("should bundle", async ({ expect }) => {
+	it("should bundle", async () => {
 		const tempDir = realpathSync(
 			mkdtempSync(join(tmpdir(), "worker-bundle-tests"))
 		);

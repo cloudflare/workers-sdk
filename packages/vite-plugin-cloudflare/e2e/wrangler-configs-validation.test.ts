@@ -1,4 +1,4 @@
-import { describe, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import { runLongLived, seed } from "./helpers";
 
 // Note: the tests here just make sure that the validation does take place, for more fine grained
@@ -9,7 +9,7 @@ describe("during development wrangler config files are validated", () => {
 		"no-wrangler-config-for-auxiliary-worker",
 		{ pm: "pnpm" }
 	);
-	test("for auxiliary workers", async ({ expect }) => {
+	test("for auxiliary workers", async () => {
 		const proc = await runLongLived(
 			"pnpm",
 			"dev",
