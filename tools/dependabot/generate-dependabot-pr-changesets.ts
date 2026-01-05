@@ -23,9 +23,13 @@ if (require.main === module) {
 }
 
 type Args = {
+	// PR number
 	prNumber: string;
-	packageName: string;
+	// Comma-separated package names
+	packageNames: string;
+	// Path to package.json
 	packageJSONPath: string;
+	// Changeset file prefix
 	changesetPrefix: string;
 };
 
@@ -48,7 +52,7 @@ function processArgs(): Args {
 	}
 	return {
 		prNumber: args[0],
-		packageName: args[1],
+		packageNames: args[1],
 		packageJSONPath: args[2],
 		changesetPrefix: args[3],
 	};
