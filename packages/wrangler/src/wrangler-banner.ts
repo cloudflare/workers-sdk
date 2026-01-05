@@ -4,6 +4,7 @@ import semiver from "semiver";
 import stripAnsi from "strip-ansi";
 import supportsColor from "supports-color";
 import { version as wranglerVersion } from "../package.json";
+import { checkAgenticVersionWarning } from "./agentic-version-warning";
 import { logger } from "./logger";
 import { updateCheck } from "./update-check";
 
@@ -13,9 +14,17 @@ const MIN_NODE_VERSION = "20.0.0";
 // Otherwise it is left undefined, which signals that this isn't a prerelease
 declare const WRANGLER_PRERELEASE_LABEL: string;
 
-export async function printWranglerBanner(performUpdateCheck = true) {
+/**
+ * Print the Wrangler banner and perform version checks.
+ *
+ * @param performUpdateCheck - Whether to check for updates (default: true)
+ * @returns true if the command should continue, false if it should abort
+ */
+export async function printWranglerBanner(
+	performUpdateCheck = true
+): Promise<boolean> {
 	if (getWranglerHideBanner()) {
-		return;
+		return true;
 	}
 
 	let text =
@@ -58,4 +67,14 @@ After installation, run Wrangler with \`npx wrangler\`.`
 			);
 		}
 	}
+
+	// Check for agentic environments and show warning if outdated
+	if (performUpdateCheck) {
+		const shouldContinue = await checkAgenticVersionWarning();
+		if (!shouldContinue) {
+			return false;
+		}
+	}
+
+	return true;
 }
