@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { Browser, chromium } from "playwright-chromium";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("[Workers + Assets] static routing", () => {
@@ -18,7 +18,7 @@ describe("[Workers + Assets] static routing", () => {
 			await stop?.();
 		});
 
-		it("should serve assets when they exist for a path", async ({ expect }) => {
+		it("should serve assets when they exist for a path", async () => {
 			let response = await fetch(`http://${ip}:${port}/static/page`);
 			expect(response.status).toBe(200);
 			expect(await response.text()).toContain(`<h1>A normal asset</h1>`);
@@ -86,7 +86,7 @@ describe("[Workers + Assets] static routing", () => {
 				});
 			}, 40_000);
 
-			it("renders the root with index.html", async ({ expect }) => {
+			it("renders the root with index.html", async () => {
 				if (!browser) {
 					throw new Error("Browser couldn't be initialized");
 				}
@@ -100,7 +100,7 @@ describe("[Workers + Assets] static routing", () => {
 				);
 			});
 
-			it("renders another path with index.html", async ({ expect }) => {
+			it("renders another path with index.html", async () => {
 				if (!browser) {
 					throw new Error("Browser couldn't be initialized");
 				}
@@ -114,7 +114,7 @@ describe("[Workers + Assets] static routing", () => {
 				);
 			});
 
-			it("renders an include path with the User worker", async ({ expect }) => {
+			it("renders an include path with the User worker", async () => {
 				if (!browser) {
 					throw new Error("Browser couldn't be initialized");
 				}
@@ -130,7 +130,7 @@ describe("[Workers + Assets] static routing", () => {
 				expect(await page.content()).toContain(`{"some":["json","response"]}`);
 			});
 
-			it("renders an exclude path with index.html", async ({ expect }) => {
+			it("renders an exclude path with index.html", async () => {
 				if (!browser) {
 					throw new Error("Browser couldn't be initialized");
 				}
@@ -146,19 +146,19 @@ describe("[Workers + Assets] static routing", () => {
 		});
 
 		describe("non-browser navigation", () => {
-			it("renders the root with index.html", async ({ expect }) => {
+			it("renders the root with index.html", async () => {
 				let response = await fetch(`http://${ip}:${port}`);
 				expect(response.status).toBe(200);
 				expect(await response.text()).toContain(`I'm an index.html for a SPA`);
 			});
 
-			it("renders another path with index.html", async ({ expect }) => {
+			it("renders another path with index.html", async () => {
 				let response = await fetch(`http://${ip}:${port}/some/page`);
 				expect(response.status).toBe(200);
 				expect(await response.text()).toContain(`I'm an index.html for a SPA`);
 			});
 
-			it("renders an include path with the User worker", async ({ expect }) => {
+			it("renders an include path with the User worker", async () => {
 				let response = await fetch(`http://${ip}:${port}/api/route`);
 				expect(response.status).toBe(200);
 				expect(response.headers.get("content-type")).toEqual(
@@ -167,7 +167,7 @@ describe("[Workers + Assets] static routing", () => {
 				expect(await response.text()).toContain(`{"some":["json","response"]}`);
 			});
 
-			it("renders an exclude path with index.html", async ({ expect }) => {
+			it("renders an exclude path with index.html", async () => {
 				let response = await fetch(`http://${ip}:${port}/api/asset`);
 				expect(response.status).toBe(200);
 				expect(await response.text()).toContain(`I'm an index.html for a SPA`);

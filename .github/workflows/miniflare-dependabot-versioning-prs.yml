@@ -32,4 +32,14 @@ jobs:
           git config --global user.name 'Wrangler automated PR updater'
 
       - name: Generate Miniflare changesets
-        run: node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts ${{ github.event.number }} miniflare packages/miniflare/package.json dependabot-update
+        # The paremeters to the script are:
+        # - PR: The number of the current Dependabot PR
+        # - Packages: Coma-separated names of the workers-sdk packages whose dependencies are being updated
+        # - PackageJSON: The path to the package JSON being updated by Dependabot
+        # - Changeset prefix: The prefix to go on the front of the filename of the generated changeset
+        run: >-
+          node -r esbuild-register tools/dependabot/generate-dependabot-pr-changesets.ts
+          ${{ github.event.number }}
+          miniflare,wrangler
+          packages/miniflare/package.json
+          dependabot-update

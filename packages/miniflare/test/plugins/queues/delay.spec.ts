@@ -1,5 +1,5 @@
-import test from "ava";
 import { Miniflare, QUEUES_PLUGIN_NAME, Response } from "miniflare";
+import { afterEach, beforeEach, expect, test } from "vitest";
 import { z } from "zod";
 import { MiniflareDurableObjectControlStub, TestLog } from "../../test-shared";
 
@@ -25,11 +25,11 @@ let batches: string[][] = [];
 let mf: Miniflare;
 let object: MiniflareDurableObjectControlStub;
 
-test.beforeEach(async (t) => {
+beforeEach(async () => {
 	batches = [];
 
 	mf = new Miniflare({
-		log: new TestLog(t),
+		log: new TestLog(),
 		verbose: true,
 		queueProducers: { QUEUE: { queueName: "QUEUE", deliveryDelay: 2 } },
 		queueConsumers: {
@@ -83,9 +83,9 @@ test.beforeEach(async (t) => {
 	object = await getControlStub(mf, "QUEUE");
 });
 
-test.afterEach.always(() => mf.dispose());
+afterEach(() => mf.dispose());
 
-test.serial(".send() respects default delay", async (t) => {
+test(".send() respects default delay", async () => {
 	await mf.dispatchFetch("http://localhost/send", {
 		method: "POST",
 		body: JSON.stringify("default"),
@@ -94,15 +94,15 @@ test.serial(".send() respects default delay", async (t) => {
 	// Nothing should happen one second later
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 0);
+	expect(batches.length).toBe(0);
 
 	// A batch should be delivered 2 seconds later
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
+	expect(batches.length).toBe(1);
 });
 
-test.serial(".send() respects per-message delay", async (t) => {
+test(".send() respects per-message delay", async () => {
 	// Send 10 messages.
 	for (let i = 1; i <= 10; i++) {
 		await mf.dispatchFetch("http://localhost/send", {
@@ -113,16 +113,16 @@ test.serial(".send() respects per-message delay", async (t) => {
 	}
 
 	// Verify messages are received at the right times.
-	t.is(batches.length, 0);
+	expect(batches.length).toBe(0);
 
 	for (let i = 1; i <= 10; i++) {
 		await object.advanceFakeTime(1000);
 		await object.waitForFakeTasks();
-		t.is(batches.length, i);
+		expect(batches.length).toBe(i);
 	}
 });
 
-test.serial(".sendBatch() respects default delay", async (t) => {
+test(".sendBatch() respects default delay", async () => {
 	await mf.dispatchFetch("http://localhost/batch", {
 		method: "POST",
 		body: JSON.stringify([{ body: "msg1" }, { body: "msg2" }]),
@@ -131,15 +131,15 @@ test.serial(".sendBatch() respects default delay", async (t) => {
 	// Nothing should happen one second later
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 0);
+	expect(batches.length).toBe(0);
 
 	// Batch should be delivered 2 seconds later
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 2);
+	expect(batches.length).toBe(2);
 });
 
-test.serial(".sendBatch() respects per-batch delay", async (t) => {
+test(".sendBatch() respects per-batch delay", async () => {
 	await mf.dispatchFetch("http://localhost/batch", {
 		method: "POST",
 		headers: { "X-Msg-Delay-Secs": "3" },
@@ -147,22 +147,22 @@ test.serial(".sendBatch() respects per-batch delay", async (t) => {
 	});
 
 	// Verify messages are received at the right times.
-	t.is(batches.length, 0);
+	expect(batches.length).toBe(0);
 
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 0);
+	expect(batches.length).toBe(0);
 
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 0);
+	expect(batches.length).toBe(0);
 
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 2);
+	expect(batches.length).toBe(2);
 });
 
-test.serial(".sendBatch() respects per-message delay", async (t) => {
+test(".sendBatch() respects per-message delay", async () => {
 	await mf.dispatchFetch("http://localhost/batch", {
 		method: "POST",
 		headers: { "X-Msg-Delay-Secs": "1" },
@@ -176,11 +176,11 @@ test.serial(".sendBatch() respects per-message delay", async (t) => {
 	// Verify messages are received at the right times.
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 0);
+	expect(batches.length).toBe(0);
 
 	for (let i = 1; i <= 3; i++) {
 		await object.advanceFakeTime(1000);
 		await object.waitForFakeTasks();
-		t.is(batches.length, i);
+		expect(batches.length).toBe(i);
 	}
 });
