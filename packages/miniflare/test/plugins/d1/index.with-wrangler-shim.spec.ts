@@ -1,4 +1,3 @@
-import { setupTest } from "./test";
 import type {
 	D1Database,
 	D1DatabaseSession,
@@ -9,6 +8,9 @@ import type {
 	D1SessionConstraint,
 } from "@cloudflare/workers-types/experimental";
 import type { Miniflare } from "miniflare";
+// Import suite tests - this registers the tests with vitest
+import "./suite";
+import { setupTest } from "./test";
 
 const kSend = Symbol("kSend");
 
@@ -92,6 +94,3 @@ setupTest(
 	"worker.dist.mjs",
 	async (mf) => new TestD1Database(mf)
 );
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-require("./suite");
