@@ -1,5 +1,5 @@
 import { rm, writeFile } from "node:fs/promises";
-import { describe, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
 	fetchJson,
 	isBuildAndPreviewOnWindows,
@@ -18,7 +18,7 @@ describe("basic e2e tests", () => {
 		describe.each(commands)('with "%s" command', (command) => {
 			test.skipIf(isBuildAndPreviewOnWindows(command))(
 				"can serve a Worker that uses a Node.js API (crypto)",
-				async ({ expect }) => {
+				async () => {
 					const proc = await runLongLived(pm, command, projectPath);
 					const url = await waitForReady(proc);
 					expect(await fetchJson(url + "/api/")).toEqual({
@@ -31,7 +31,7 @@ describe("basic e2e tests", () => {
 			// See https://github.com/cloudflare/workerd/pull/5062
 			test.skipIf(process.platform === "win32")(
 				"can listen to abort signals on the request",
-				async ({ expect }) => {
+				async () => {
 					const proc = await runLongLived(pm, command, projectPath);
 					const url = await waitForReady(proc);
 

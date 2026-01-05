@@ -1,7 +1,8 @@
-import test from "ava";
 import { Miniflare } from "miniflare";
+import { expect, test } from "vitest";
+import { useDispose } from "../../test-shared";
 
-test("single secret-store", async (t) => {
+test("single secret-store", async () => {
 	const mf = new Miniflare({
 		compatibilityDate: "2025-01-01",
 		secretsStoreSecrets: {
@@ -25,12 +26,12 @@ test("single secret-store", async (t) => {
 		}
 		`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const response1 = await mf.dispatchFetch("http://localhost");
 
-	t.is(await response1.text(), 'Secret "secret_name" not found');
-	t.is(response1.status, 404);
+	expect(await response1.text()).toBe('Secret "secret_name" not found');
+	expect(response1.status).toBe(404);
 
 	const api = await mf.getSecretsStoreSecretAPI("SECRET");
 
@@ -38,11 +39,11 @@ test("single secret-store", async (t) => {
 
 	const response2 = await mf.dispatchFetch("http://localhost");
 
-	t.is(await response2.text(), "example");
-	t.is(response2.status, 200);
+	expect(await response2.text()).toBe("example");
+	expect(response2.status).toBe(200);
 });
 
-test("multiple secret-store", async (t) => {
+test("multiple secret-store", async () => {
 	const mf = new Miniflare({
 		compatibilityDate: "2025-01-01",
 		secretsStoreSecrets: {
@@ -80,11 +81,11 @@ test("multiple secret-store", async (t) => {
 		}
 		`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const response1 = await mf.dispatchFetch("http://localhost");
 
-	t.deepEqual(await response1.json(), {
+	expect(await response1.json()).toEqual({
 		secret1: null,
 		secret2: null,
 		secret3: null,
@@ -98,7 +99,7 @@ test("multiple secret-store", async (t) => {
 
 	const response2 = await mf.dispatchFetch("http://localhost");
 
-	t.deepEqual(await response2.json(), {
+	expect(await response2.json()).toEqual({
 		secret1: "example_a",
 		secret2: "example_b",
 		secret3: null,
@@ -110,7 +111,7 @@ test("multiple secret-store", async (t) => {
 
 	const response3 = await mf.dispatchFetch("http://localhost");
 
-	t.deepEqual(await response3.json(), {
+	expect(await response3.json()).toEqual({
 		secret1: "example_a",
 		secret2: "example_b",
 		secret3: "example_c",

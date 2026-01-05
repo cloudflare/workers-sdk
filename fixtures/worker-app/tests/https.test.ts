@@ -1,6 +1,6 @@
 import { resolve } from "path";
 import { Agent, fetch } from "undici";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("'wrangler dev' starts HTTPS server", () => {
@@ -18,7 +18,7 @@ describe("'wrangler dev' starts HTTPS server", () => {
 		await stop?.();
 	});
 
-	it("allows access over HTTPS", async ({ expect }) => {
+	it("allows access over HTTPS", async () => {
 		const dispatcher = new Agent({
 			// `wrangler dev` will generate a self-signed certificate. By default,
 			// Node will reject these. Therefore, we need to use a custom
