@@ -497,13 +497,13 @@ export const secretBulkCommand = createCommand({
 		} catch (e) {
 			if (isWorkerNotFoundError(e)) {
 				// create a draft worker before patching
-				const result = await createDraftWorker({
+				const draftWorkerResult = await createDraftWorker({
 					config,
 					args: args,
 					accountId,
 					scriptName,
 				});
-				if (result === null) {
+				if (draftWorkerResult === null) {
 					return;
 				}
 				existingBindings = [];
