@@ -1,7 +1,14 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it, onTestFinished } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	describe,
+	expect,
+	it,
+	onTestFinished,
+} from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("[Workers + Assets] dynamic site", () => {
@@ -18,7 +25,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		await stop?.();
 	});
 
-	it("should respond with static asset content", async ({ expect }) => {
+	it("should respond with static asset content", async () => {
 		let response = await fetch(`http://${ip}:${port}/index.html`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -42,7 +49,7 @@ describe("[Workers + Assets] dynamic site", () => {
 	});
 
 	// html_handling defaults to 'auto-trailing-slash'
-	it("should `/` resolve to `/index.html` ", async ({ expect }) => {
+	it("should `/` resolve to `/index.html` ", async () => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
 		expect(text).toContain("<h1>Hello Workers + Assets World 🚀!</h1>");
@@ -123,7 +130,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(response.statusText).toBe("Method Not Allowed");
 	});
 
-	it("should work with encoded path names", async ({ expect }) => {
+	it("should work with encoded path names", async () => {
 		let response = await fetch(`http://${ip}:${port}/about/[fünky].txt`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -193,7 +200,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(response.status).toBe(200);
 	});
 
-	it("should be able to use an ASSETS binding", async ({ expect }) => {
+	it("should be able to use an ASSETS binding", async () => {
 		let response = await fetch(`http://${ip}:${port}/assets-binding`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -212,7 +219,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(text).toContain("hello from a named entrypoint");
 	});
 
-	it("should apply custom redirects", async ({ expect }) => {
+	it("should apply custom redirects", async () => {
 		let response = await fetch(`http://${ip}:${port}/foo`, {
 			redirect: "manual",
 		});
@@ -226,13 +233,13 @@ describe("[Workers + Assets] dynamic site", () => {
 		);
 	});
 
-	it("should apply custom headers", async ({ expect }) => {
+	it("should apply custom headers", async () => {
 		let response = await fetch(`http://${ip}:${port}/`);
 		expect(response.status).toBe(200);
 		expect(response.headers.get("X-Header")).toBe("Custom-Value");
 	});
 
-	it("should apply .assetsignore", async ({ expect }) => {
+	it("should apply .assetsignore", async () => {
 		let response = await fetch(`http://${ip}:${port}/.assetsignore`);
 		expect(await response.text()).not.toContain("ignore-me.txt");
 
@@ -243,12 +250,12 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(await response.text()).not.toContain("X-Header");
 	});
 
-	it.todo("should warn of _worker.js", async ({ expect }) => {
+	it.todo("should warn of _worker.js", async () => {
 		// let response = await fetch(`http://${ip}:${port}/_worker.js`);
 		// expect(await response.text()).not.toContain("bang");
 	});
 
-	it("should work with files which start with .", async ({ expect }) => {
+	it("should work with files which start with .", async () => {
 		let response = await fetch(`http://${ip}:${port}/.dot`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -268,7 +275,7 @@ describe("[Workers + Assets] dynamic site", () => {
 });
 
 describe("[Workers + Assets] logging", () => {
-	it("should log _headers and _redirects parsing", async ({ expect }) => {
+	it("should log _headers and _redirects parsing", async () => {
 		const { ip, port, stop, getOutput } = await runWranglerDev(
 			resolve(__dirname, ".."),
 			["--port=0", "--inspector-port=0"]
