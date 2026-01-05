@@ -8,14 +8,24 @@ Wrangler can now automatically create Cloudflare Queues during deployment when u
 
 Example configuration:
 
-```toml
-[[queues.producers]]
-binding = "MY_QUEUE"
-queue = "my-queue-name"
-
-[[queues.consumers]]
-queue = "my-queue-name"
-max_batch_size = 10
+```jsonc
+// wrangler.jsonc
+{
+	"queues": {
+		"producers": [
+			{
+				"binding": "MY_QUEUE",
+				"queue": "my-queue-name",
+			},
+		],
+		"consumers": [
+			{
+				"queue": "my-queue-name",
+				"max_batch_size": 10,
+			},
+		],
+	},
+}
 ```
 
 When you run `wrangler deploy`, if "my-queue-name" doesn't exist, it will be created automatically. This provides a seamless "just works" experience similar to KV, D1, and R2 provisioning.
