@@ -39,9 +39,9 @@ function processArgs(): Args {
 	}
 	if (args.length !== 4) {
 		throw new Error(dedent`
-			Incorrect arguments, please provide three arguments:
+			Incorrect arguments, please provide:
 			- PR: The number of the current Dependabot PR
-			- Package: The name of the workers-sdk package whose dependencies are being updated
+			- Packages: Coma-separated names of the workers-sdk packages whose dependencies are being updated
 			- PackageJSON: The path to the package JSON being updated by Dependabot
 			- Changeset prefix: The prefix to go on the front of the filename of the generated changeset.
 		`);
@@ -56,7 +56,7 @@ function processArgs(): Args {
 
 function main({
 	prNumber,
-	packageName,
+	packageNames,
 	packageJSONPath,
 	changesetPrefix,
 }: Args): void {
@@ -64,12 +64,13 @@ function main({
 	const changes = parseDiffForChanges(diffLines);
 	if (changes.size === 0) {
 		console.warn(dedent`
-			WARN: No dependency changes detected for "${packageName}".
+			WARN: No dependency changes detected for "${packageNames}".
 			`);
 		return;
 	}
-	const changesetHeader = generateChangesetHeader(packageName);
-	const commitMessage = generateCommitMessage(packageName, changes);
+	const packages = packageNames.split(",").map((name: string) => name.trim());
+	const changesetHeader = generateChangesetHeader(packages);
+	const commitMessage = generateCommitMessage(packages, changes);
 	console.log(dedent`
 		INFO: Writing changeset with the following commit message
 		${commitMessage}`);
@@ -104,16 +105,17 @@ export function parseDiffForChanges(
 	return changes;
 }
 
-export function generateChangesetHeader(packageName: string): string {
-	return dedent`
-		---
-		"${packageName}": patch
-		---
-		`;
+export function generateChangesetHeader(packages: string[]): string {
+	const lines = ["---"];
+	for (const packageName of packages) {
+		lines.push(`"${packageName}": patch`);
+	}
+	lines.push("---");
+	return lines.join("\n");
 }
 
 export function generateCommitMessage(
-	packageName: string,
+	packages: string[],
 	changes: Map<string, Change>
 ): string {
 	const widths = [10, 4, 2];
@@ -150,7 +152,7 @@ export function generateCommitMessage(
 		}
 	}
 	return dedent`
-		chore: update dependencies of "${packageName}" package
+		chore: update dependencies of ${packages.map((p: string) => `"${p}"`).join(", ")}
 
 		The following dependency versions have been updated:
 		${table}
@@ -182,9 +184,7 @@ function executeCommand(command: string, args: string[]): string[] {
 	if (status || error) {
 		throw error ?? new Error(stderr);
 	}
-	return output.flatMap((chunk) => chunk?.split("\n")).filter(isDefined);
-}
-
-function isDefined<T>(value: T | undefined): value is T {
-	return value !== undefined;
+	return output
+		.flatMap((chunk) => chunk?.split("\n"))
+		.filter((line) => line !== undefined);
 }
