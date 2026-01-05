@@ -298,17 +298,15 @@ export const deployCommand = createCommand({
 			}
 		}
 
-		// Currently the delegation to open-next is gated behind the autoconfig experimental flag, this is because
-		// this behavior is currently only necessary in the autoconfig flow and having it un-gated/stable in wrangler
-		// releases caused different issues. All the issues should have been fixed but as a precaution we're gating
-		// the feature under the autoconfig flag for the time being.
-		const canDelegateToOpenNext = args.experimentalAutoconfig;
-
 		// Note: the open-next delegation should happen after we run the auto-config logic so that we
 		//       make sure that the deployment of brand newly auto-configured Next.js apps is correctly
 		//       delegated here
 		const deploymentDelegatedToOpenNext =
-			canDelegateToOpenNext &&
+			// Currently the delegation to open-next is gated behind the autoconfig experimental flag, this is because
+			// this behavior is currently only necessary in the autoconfig flow and having it un-gated/stable in wrangler
+			// releases caused different issues. All the issues should have been fixed but as a precaution we're gating
+			// the feature under the autoconfig flag for the time being
+			args.experimentalAutoconfig &&
 			!args.dryRun &&
 			(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
 
