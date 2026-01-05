@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, test, vi } from "vitest";
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs } from "../../helpers/mock-dialogs";
+import { useMockIsTTY } from "../../helpers/mock-istty";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
 import { mockPostVersion, mockSetupApiCalls } from "./utils";
@@ -12,11 +13,24 @@ import type { Interface } from "node:readline";
 
 describe("versions secret bulk", () => {
 	const std = mockConsoleMethods();
+	const { setIsTTY } = useMockIsTTY();
 	runInTempDir();
 	mockAccountId();
 	mockApiToken();
 	afterEach(() => {
 		clearDialogs();
+	});
+
+	test("should error when no file is provided and stdin is a TTY", async () => {
+		setIsTTY({ stdin: true, stdout: true });
+		await expect(
+			runWrangler(`versions secret bulk --name script-name`)
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: No file provided. Please provide a JSON file or .dev.vars file as an argument, or pipe input to stdin.
+For example:
+  wrangler versions secret bulk ./secrets.json
+  echo '{"SECRET":"value"}' | wrangler versions secret bulk]`
+		);
 	});
 
 	test("should fail secret bulk w/ no pipe or JSON input", async () => {
@@ -28,12 +42,11 @@ describe("versions secret bulk", () => {
 			`
 			"
 			 ⛅️ wrangler x.x.x
-			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\" "
+			──────────────────"
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo content found in file or piped input.[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 No content found in file or piped input.[0m
 
 			"
 		`);
@@ -197,12 +210,11 @@ describe("versions secret bulk", () => {
 			`
 			"
 			 ⛅️ wrangler x.x.x
-			──────────────────
-			🌀 Creating the secrets for the Worker \\"script-name\\" "
+			──────────────────"
 		`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNo content found in file or piped input.[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1m🚨 No content found in file or piped input.[0m
 
 			"
 		`);

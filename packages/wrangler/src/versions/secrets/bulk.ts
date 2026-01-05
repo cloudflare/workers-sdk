@@ -2,7 +2,7 @@ import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
-import { parseBulkInputToObject } from "../../secret";
+import { NoInputError, parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
 import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
 import { copyWorkerVersionWithNewSecrets } from "./index";
@@ -50,15 +50,28 @@ export const versionsSecretBulkCommand = createCommand({
 
 		const accountId = await requireAuth(config);
 
+		let content: Record<string, string> | undefined;
+		try {
+			content = await parseBulkInputToObject(args.file);
+		} catch (e) {
+			if (e instanceof NoInputError) {
+				throw new UserError(
+					"No file provided. Please provide a JSON file or .dev.vars file as an argument, or pipe input to stdin.\n" +
+						"For example:\n" +
+						"  wrangler versions secret bulk ./secrets.json\n" +
+						'  echo \'{"SECRET":"value"}\' | wrangler versions secret bulk'
+				);
+			}
+			throw e;
+		}
+
+		if (!content) {
+			return logger.error(`🚨 No content found in file or piped input.`);
+		}
+
 		logger.log(
 			`🌀 Creating the secrets for the Worker "${scriptName}" ${args.env ? `(${args.env})` : ""}`
 		);
-
-		const content = await parseBulkInputToObject(args.file);
-
-		if (!content) {
-			return logger.error(`No content found in file or piped input.`);
-		}
 
 		const secrets = Object.entries(content).map(([key, value]) => ({
 			name: key,

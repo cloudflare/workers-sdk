@@ -538,6 +538,18 @@ describe("wrangler pages secret", () => {
 			);
 		});
 
+		it("should error when no file is provided and stdin is a TTY", async () => {
+			setIsTTY({ stdin: true, stdout: true });
+			await expect(
+				runWrangler(`pages secret bulk --project some-project-name`)
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: No file provided. Please provide a JSON file or .dev.vars file as an argument, or pipe input to stdin.
+For example:
+  wrangler pages secret bulk ./secrets.json
+  echo '{"SECRET":"value"}' | wrangler pages secret bulk]`
+			);
+		});
+
 		it("should use secret bulk w/ pipe input", async () => {
 			vi.spyOn(readline, "createInterface").mockImplementation(
 				() =>
