@@ -1533,27 +1533,19 @@ type MockQueueInfo = {
  * @returns An object with `calls` array tracking create requests
  */
 function mockQueueOperations(initialQueues: MockQueueInfo[] = []) {
-	// Shared state for queues
+	// Shared state for queues - mockListQueues uses this by reference
 	const queues = [...initialQueues];
 
 	const mock = {
 		calls: [] as Array<{ queue_name: string }>,
 	};
 
+	// Reuse mockListQueues - since queues is passed by reference,
+	// any mutations made below will be visible to list calls
+	mockListQueues(queues);
+
+	// Create queue - adds to shared state
 	msw.use(
-		// List queues - returns queues including any that were created
-		http.get("*/accounts/:accountId/queues", ({ request }) => {
-			const url = new URL(request.url);
-			const nameFilter = url.searchParams.get("name");
-
-			const filteredQueues = nameFilter
-				? queues.filter((q) => q.queue_name === nameFilter)
-				: queues;
-
-			return HttpResponse.json(createFetchResult(filteredQueues));
-		}),
-
-		// Create queue - adds to shared state
 		http.post("*/accounts/:accountId/queues", async ({ request }) => {
 			const body = (await request.json()) as { queue_name: string };
 			mock.calls.push(body);
