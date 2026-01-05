@@ -1,5 +1,5 @@
 import { join, resolve } from "path";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unstable_startWorker } from "wrangler";
 
 const basePath = resolve(__dirname, "..");
@@ -17,7 +17,7 @@ describe("Unbound DO is available through `ctx.exports`", () => {
 		await worker.dispose();
 	});
 
-	it("can execute storage operations", async ({ expect }) => {
+	it("can execute storage operations", async () => {
 		const doName = crypto.randomUUID();
 		let response = await worker.fetch(`http://example.com?name=${doName}`);
 		let content = await response.text();

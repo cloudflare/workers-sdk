@@ -16,7 +16,7 @@ import type {
 
 /**
  * Custom `ModuleRunner`.
- * The `cachedModule` method is overriden to ensure compatibility with the Workers runtime.
+ * The `cachedModule` method is overridden to ensure compatibility with the Workers runtime.
  */
 // @ts-expect-error: `cachedModule` is private
 class CustomModuleRunner extends ModuleRunner {
@@ -177,6 +177,7 @@ async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 					);
 					const result = await response.json();
 
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					return result as { result: any } | { error: any };
 				},
 			},

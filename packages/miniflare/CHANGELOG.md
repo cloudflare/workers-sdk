@@ -1,5 +1,49 @@
 # miniflare
 
+## 4.20251217.0
+
+### Patch Changes
+
+- [#11679](https://github.com/cloudflare/workers-sdk/pull/11679) [`ae1ad22`](https://github.com/cloudflare/workers-sdk/commit/ae1ad22b24216c466bbbbb5966c82ed2b9bc8ac7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251213.0 | 1.20251217.0 |
+
+- [#11663](https://github.com/cloudflare/workers-sdk/pull/11663) [`737c0f4`](https://github.com/cloudflare/workers-sdk/commit/737c0f4e1212d3a2ec59bedac125fe07ed0fb0ed) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix Durable Object RPC calls from Node.js blocking the event loop, preventing `Promise.race()` and timeouts from working correctly.
+
+  Previously, RPC calls from Node.js to Durable Objects would block the Node.js event loop, causing `Promise.race()` with timeouts to never resolve. This fix ensures that RPC calls properly yield control back to the event loop, allowing concurrent operations and timeouts to work as expected.
+
+## 4.20251213.0
+
+### Patch Changes
+
+- [#11596](https://github.com/cloudflare/workers-sdk/pull/11596) [`5d085fb`](https://github.com/cloudflare/workers-sdk/commit/5d085fbf385ca3f3a034ee47004229a87a044823) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251210.0 | 1.20251211.0 |
+
+- [#11622](https://github.com/cloudflare/workers-sdk/pull/11622) [`b75b710`](https://github.com/cloudflare/workers-sdk/commit/b75b710734c8382a9a929b1db2bb34fcb3e96468) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251211.0 | 1.20251212.0 |
+
+- [#11640](https://github.com/cloudflare/workers-sdk/pull/11640) [`1e9be12`](https://github.com/cloudflare/workers-sdk/commit/1e9be123a3a9097593c701319ea69dfeb5086107) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251212.0 | 1.20251213.0 |
+
 ## 4.20251210.0
 
 ### Patch Changes

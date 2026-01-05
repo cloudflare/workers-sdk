@@ -45,8 +45,8 @@ export function addBindingsShortcut(
 	const printBindingsShortcut = {
 		key: "b",
 		description: "list configured Cloudflare bindings",
-		action: (server) => {
-			server.config.logger.info("");
+		action: (viteServer) => {
+			viteServer.config.logger.info("");
 
 			for (const workerConfig of workerConfigs) {
 				wrangler.unstable_printBindings(
@@ -78,7 +78,7 @@ export function addBindingsShortcut(
 						isMultiWorker: workerConfigs.length > 1,
 						name: workerConfig.name ?? "Your Worker",
 						registry: getWorkerRegistry(registryPath),
-						log: (message) => server.config.logger.info(message),
+						log: (message: string) => viteServer.config.logger.info(message),
 					}
 				);
 			}

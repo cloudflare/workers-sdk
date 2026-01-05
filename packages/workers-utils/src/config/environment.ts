@@ -191,6 +191,11 @@ export type ContainerApp = {
 	authorized_keys?: { name: string; public_key: string }[];
 
 	/**
+	 * Trusted user CA keys to put in the container's trusted_user_ca_keys file.
+	 */
+	trusted_user_ca_keys?: { name?: string; public_key: string }[];
+
+	/**
 	 * @deprecated Use top level `containers` fields instead.
 	 * `configuration.image` should be `image`
 	 * limits should be set via `instance_type`
@@ -466,7 +471,7 @@ interface EnvironmentInheritable {
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
 	 *
-	 * @default {crons: undefined}
+	 * @default {crons:[]}
 	 * @inheritable
 	 */
 	triggers: { crons: string[] | undefined };

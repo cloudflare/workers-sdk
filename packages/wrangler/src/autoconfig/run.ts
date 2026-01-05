@@ -1,11 +1,13 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { FatalError } from "@cloudflare/workers-utils";
+import {
+	FatalError,
+	getLocalWorkerdCompatibilityDate,
+} from "@cloudflare/workers-utils";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
-import { getDevCompatibilityDate } from "../utils/compatibility-date";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
@@ -35,6 +37,8 @@ export async function runAutoConfig(
 	const runBuild = !dryRun && (autoConfigOptions.runBuild ?? true);
 	const skipConfirmations =
 		dryRun || autoConfigOptions.skipConfirmations === true;
+	const enableWranglerInstallation =
+		autoConfigOptions.enableWranglerInstallation ?? true;
 
 	const detected: AutoConfigMetrics = {
 		buildCommand: autoConfigDetails.buildCommand,
@@ -69,10 +73,23 @@ export async function runAutoConfig(
 		);
 	}
 
+	if (
+		autoConfigDetails.framework &&
+		!autoConfigDetails.framework?.autoConfigSupported
+	) {
+		throw new FatalError(
+			`The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+		);
+	}
+
+	const { date: compatibilityDate } = getLocalWorkerdCompatibilityDate({
+		projectPath: autoConfigDetails.projectPath,
+	});
+
 	const wranglerConfig: RawConfig = {
 		$schema: "node_modules/wrangler/config-schema.json",
 		name: autoConfigDetails.workerName,
-		compatibility_date: getDevCompatibilityDate(undefined),
+		compatibility_date: compatibilityDate,
 		observability: {
 			enabled: true,
 		},
@@ -91,7 +108,8 @@ export async function runAutoConfig(
 		{
 			...wranglerConfig,
 			...dryRunConfigurationResults?.wranglerConfig,
-		}
+		},
+		dryRunConfigurationResults?.packageJsonScriptsOverrides
 	);
 
 	if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
@@ -110,7 +128,7 @@ export async function runAutoConfig(
 		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 	);
 
-	if (autoConfigSummary.wranglerInstall) {
+	if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
 		await installWrangler();
 	}
 
@@ -172,16 +190,15 @@ export async function runAutoConfig(
 		addWranglerToAssetsIgnore(autoConfigDetails.projectPath);
 	}
 
-	if (autoConfigDetails.buildCommand && runBuild) {
-		await runCommand(
-			autoConfigDetails.buildCommand,
-			autoConfigDetails.projectPath,
-			"[build]"
-		);
+	const buildCommand =
+		configurationResults?.buildCommand ?? autoConfigDetails.buildCommand;
+
+	if (buildCommand && runBuild) {
+		await runCommand(buildCommand, autoConfigDetails.projectPath, "[build]");
 	}
 
 	const used: AutoConfigMetrics = {
-		buildCommand: autoConfigDetails.buildCommand,
+		buildCommand,
 		outputDir: autoConfigDetails.outputDir,
 		framework: autoConfigDetails.framework?.name,
 	};

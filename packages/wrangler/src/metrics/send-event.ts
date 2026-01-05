@@ -38,6 +38,7 @@ export type EventNames =
 	| "delete r2 bucket"
 	| "login user"
 	| "logout user"
+	| "retrieve auth token"
 	| "create pubsub namespace"
 	| "list pubsub namespaces"
 	| "delete pubsub namespace"

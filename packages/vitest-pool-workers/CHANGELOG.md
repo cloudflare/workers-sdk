@@ -1,5 +1,32 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.11.1
+
+### Patch Changes
+
+- Updated dependencies [[`ae1ad22`](https://github.com/cloudflare/workers-sdk/commit/ae1ad22b24216c466bbbbb5966c82ed2b9bc8ac7), [`171cfd9`](https://github.com/cloudflare/workers-sdk/commit/171cfd96e07394ccd00025770d18657c6c297c87), [`428ae9e`](https://github.com/cloudflare/workers-sdk/commit/428ae9e83c9c193da3bf3894db13b1b520cc7c47), [`737c0f4`](https://github.com/cloudflare/workers-sdk/commit/737c0f4e1212d3a2ec59bedac125fe07ed0fb0ed), [`c0e249e`](https://github.com/cloudflare/workers-sdk/commit/c0e249e3d662444720548acee70ac33a078c408f), [`472cf72`](https://github.com/cloudflare/workers-sdk/commit/472cf72a6f340e30499daa1d04bf5f17621044bf), [`3853200`](https://github.com/cloudflare/workers-sdk/commit/3853200d4ebf70a0c71cd4480b007efb93216fcc)]:
+  - miniflare@4.20251217.0
+  - wrangler@4.56.0
+
+## 0.11.0
+
+### Minor Changes
+
+- [#11533](https://github.com/cloudflare/workers-sdk/pull/11533) [`8d9003e`](https://github.com/cloudflare/workers-sdk/commit/8d9003e144156f32aef03aba71b18c7e5c5b202d) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for ctx.exports
+
+  It is now possible to access `ctx.exports` properties for the `main` (`SELF`) worker.
+
+  - Integration tests: in the `SELF` worker the `ctx.exports` object now contains the expected stubs to the exported entry-points.
+  - Unit tests: the object returned from `createExecutionContext()` has `exports` property that exposes the exports of the `SELF` worker.
+
+  Due to the dynamic nature of Vitest the integration relies upon guessing what the exports of the `main` Worker are by statically analyzing the Worker source using esbuild. In cases where it is not possible to infer the exports (for example, a wildcard re-export of a virtual module) it is possible to declare these in the vitest-pool-workers config via the `additionalExports` setting.
+
+### Patch Changes
+
+- Updated dependencies [[`ed42010`](https://github.com/cloudflare/workers-sdk/commit/ed42010436cd2a04df9a47c4e1fed3dff45aed90), [`5d085fb`](https://github.com/cloudflare/workers-sdk/commit/5d085fbf385ca3f3a034ee47004229a87a044823), [`b75b710`](https://github.com/cloudflare/workers-sdk/commit/b75b710734c8382a9a929b1db2bb34fcb3e96468), [`1e9be12`](https://github.com/cloudflare/workers-sdk/commit/1e9be123a3a9097593c701319ea69dfeb5086107), [`6b28de1`](https://github.com/cloudflare/workers-sdk/commit/6b28de117170b7086e6f6580b558048ce878a6b8), [`6c590a0`](https://github.com/cloudflare/workers-sdk/commit/6c590a0c3392bb2b32ff5b7388114066d39e03da), [`12a63ef`](https://github.com/cloudflare/workers-sdk/commit/12a63ef6df4f5741320b34b8bddd4e2a0f891f0e), [`4201472`](https://github.com/cloudflare/workers-sdk/commit/4201472291fa1c864dbcca40c173a76e5b571a04), [`7d8d4a6`](https://github.com/cloudflare/workers-sdk/commit/7d8d4a6a440740c105bb5de869c3555f9ed2568d), [`95d81e1`](https://github.com/cloudflare/workers-sdk/commit/95d81e1b6371a1293f58da281adc3fd37bd0ea0b), [`6c590a0`](https://github.com/cloudflare/workers-sdk/commit/6c590a0c3392bb2b32ff5b7388114066d39e03da)]:
+  - wrangler@4.55.0
+  - miniflare@4.20251213.0
+
 ## 0.10.15
 
 ### Patch Changes

@@ -8,6 +8,7 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearCachedAccount } from "../../cloudchamber/locations";
@@ -26,7 +27,6 @@ import {
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type {
 	AccountRegistryToken,
 	Application,
@@ -1368,63 +1368,6 @@ describe("wrangler deploy with containers", () => {
 				"
 			`);
 		});
-		it("should ignore deprecated observability.logging field from the api", async () => {
-			mockGetVersion("Galaxy-Class");
-			writeWranglerConfig({
-				...DEFAULT_DURABLE_OBJECTS,
-				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
-			});
-
-			mockGetApplications([
-				{
-					...sharedGetApplicationResult,
-					configuration: {
-						...sharedGetApplicationResult.configuration,
-						observability: {
-							logging: {
-								enabled: false,
-							},
-							logs: {
-								enabled: true,
-							},
-						},
-					},
-				},
-			]);
-
-			mockModifyApplication({
-				configuration: {
-					image: "registry.cloudflare.com/some-account-id/hello:world",
-					observability: { logs: { enabled: false } },
-				},
-			});
-
-			mockCreateApplicationRollout();
-
-			await runWrangler("deploy index.js");
-
-			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
-				│
-				│ Container application changes
-				│
-				├ EDIT my-container
-				│
-				│   instance_type = \\"lite\\"
-				│   [containers.configuration.observability.logs]
-				│ - enabled = true
-				│ + enabled = false
-				│   [containers.constraints]
-				│   tier = 1
-				│
-				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
-				│
-				╰ Applied changes
-
-				"
-			`);
-		});
 		it("should keep observability logs enabled", async () => {
 			mockGetVersion("Galaxy-Class");
 			writeWranglerConfig({
@@ -1484,9 +1427,6 @@ describe("wrangler deploy with containers", () => {
 						...sharedGetApplicationResult.configuration,
 						observability: {
 							logs: {
-								enabled: false,
-							},
-							logging: {
 								enabled: false,
 							},
 						},

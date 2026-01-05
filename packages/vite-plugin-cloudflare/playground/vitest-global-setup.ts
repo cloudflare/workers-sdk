@@ -8,11 +8,13 @@ import type { TestProject } from "vitest/node";
 let browserServer: BrowserServer | undefined;
 
 export async function setup({ provide }: TestProject): Promise<void> {
+	// eslint-disable-next-line turbo/no-undeclared-env-vars
 	process.env.NODE_ENV = process.env.VITE_TEST_BUILD
 		? "production"
 		: "development";
 
 	browserServer = await chromium.launchServer({
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		headless: !process.env.VITE_DEBUG_SERVE,
 		args: process.env.CI
 			? ["--no-sandbox", "--disable-setuid-sandbox"]

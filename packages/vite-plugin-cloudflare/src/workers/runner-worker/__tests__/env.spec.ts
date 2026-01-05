@@ -3,6 +3,7 @@ import { stripInternalEnv } from "../env";
 
 const internalEnv = {
 	__VITE_RUNNER_OBJECT__: {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		get: () => ({}) as any,
 	},
 	__VITE_INVOKE_MODULE__: {

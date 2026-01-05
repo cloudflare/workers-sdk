@@ -1,2 +1,2 @@
-declare var performance: Performance;
-declare var Performance: typeof Performance;
+declare let performance: Performance;
+declare let Performance: typeof Performance;

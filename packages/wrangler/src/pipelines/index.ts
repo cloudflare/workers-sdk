@@ -121,7 +121,7 @@ export const pipelinesNamespace = createNamespace({
 	metadata: {
 		description: "🚰 Manage Cloudflare Pipelines",
 		owner: "Product: Pipelines",
-		status: "open-beta",
+		status: "open beta",
 	},
 });
 

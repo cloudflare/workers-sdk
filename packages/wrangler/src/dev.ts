@@ -31,6 +31,7 @@ import type {
 	Route,
 	Rule,
 } from "@cloudflare/workers-utils";
+import type { EventName } from "chokidar/handler.js";
 import type { Json } from "miniflare";
 
 export const dev = createCommand({
@@ -262,6 +263,10 @@ export const dev = createCommand({
 				"Experimental: Get runtime logs for the remote worker via Workers Tails rather than the Devtools inspector",
 			default: true,
 			hidden: true,
+		},
+		types: {
+			describe: "Generate types from your Worker configuration",
+			type: "boolean",
 		},
 	},
 	async validateArgs(args) {
@@ -680,7 +685,7 @@ export function getBindings(
 }
 
 export function getAssetChangeMessage(
-	eventName: "add" | "addDir" | "change" | "unlink" | "unlinkDir",
+	eventName: EventName,
 	assetPath: string
 ): string {
 	let message = `${assetPath} changed`;

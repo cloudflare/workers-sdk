@@ -1,5 +1,72 @@
 # wrangler
 
+## 4.56.0
+
+### Minor Changes
+
+- [#11196](https://github.com/cloudflare/workers-sdk/pull/11196) [`171cfd9`](https://github.com/cloudflare/workers-sdk/commit/171cfd96e07394ccd00025770d18657c6c297c87) Thanks [@emily-shen](https://github.com/emily-shen)! - For containers being created in a FedRAMP high environment, registry credentials are encrypted by the container platform.
+  Update wrangler to correctly send a request to configure a registry for FedRAMP containers.
+
+- [#11646](https://github.com/cloudflare/workers-sdk/pull/11646) [`472cf72`](https://github.com/cloudflare/workers-sdk/commit/472cf72a6f340e30499daa1d04bf5f17621044bf) Thanks [@vovacf201](https://github.com/vovacf201)! - feat: add R2 Data Catalog snapshot expiration commands
+
+  Adds new commands to manage automatic snapshot expiration for R2 Data Catalog tables:
+
+  - `wrangler r2 bucket catalog snapshot-expiration enable` - Enable automatic snapshot expiration
+  - `wrangler r2 bucket catalog snapshot-expiration disable` - Disable automatic snapshot expiration
+
+  Snapshot expiration helps manage storage costs by automatically removing old table snapshots while keeping a minimum number of recent snapshots for recovery purposes.
+
+  Example usage:
+
+  ```sh
+  # Enable snapshot expiration for entire catalog (keep 10 snapshots, expire after 5 days)
+  wrangler r2 bucket catalog snapshot-expiration enable my-bucket --token $R2_CATALOG_TOKEN --max-age 7200 --min-count 10
+
+  # Enable for specific table
+  wrangler r2 bucket catalog snapshot-expiration enable my-bucket my-namespace my-table --token $R2_CATALOG_TOKEN --max-age 2880 --min-count 5
+
+  # Disable snapshot expiration
+  wrangler r2 bucket catalog snapshot-expiration disable my-bucket
+  ```
+
+### Patch Changes
+
+- [#11649](https://github.com/cloudflare/workers-sdk/pull/11649) [`428ae9e`](https://github.com/cloudflare/workers-sdk/commit/428ae9e83c9c193da3bf3894db13b1b520cc7c47) Thanks [@ascorbic](https://github.com/ascorbic)! - fix: respect TypeScript path aliases when resolving non-JS modules with module rules
+
+  When importing non-JavaScript files (like `.graphql`, `.txt`, etc.) using TypeScript path aliases defined in `tsconfig.json`, Wrangler's module-collection plugin now correctly resolves these imports. Previously, path aliases were only respected for JavaScript/TypeScript files, causing imports like `import schema from '~lib/schema.graphql'` to fail when using module rules.
+
+- [#11647](https://github.com/cloudflare/workers-sdk/pull/11647) [`c0e249e`](https://github.com/cloudflare/workers-sdk/commit/c0e249e3d662444720548acee70ac33a078c408f) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - The auto-configuration logic present in `wrangler setup` and `wrangler deploy --x-autoconfig` cannot reliably handle Hono projects, so in these cases make sure to properly error saying that automatically configuring such projects is not supported.
+
+- [#11694](https://github.com/cloudflare/workers-sdk/pull/11694) [`3853200`](https://github.com/cloudflare/workers-sdk/commit/3853200d4ebf70a0c71cd4480b007efb93216fcc) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: improve the open-next detection that `wrangler deploy` performs to eliminate false positives for non open-next projects
+
+- Updated dependencies [[`ae1ad22`](https://github.com/cloudflare/workers-sdk/commit/ae1ad22b24216c466bbbbb5966c82ed2b9bc8ac7), [`737c0f4`](https://github.com/cloudflare/workers-sdk/commit/737c0f4e1212d3a2ec59bedac125fe07ed0fb0ed)]:
+  - miniflare@4.20251217.0
+
+## 4.55.0
+
+### Minor Changes
+
+- [#11301](https://github.com/cloudflare/workers-sdk/pull/11301) [`6c590a0`](https://github.com/cloudflare/workers-sdk/commit/6c590a0c3392bb2b32ff5b7388114066d39e03da) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Make `wrangler deploy` run `opennextjs-cloudflare deploy` when executed in an open-next project
+
+- [#11045](https://github.com/cloudflare/workers-sdk/pull/11045) [`12a63ef`](https://github.com/cloudflare/workers-sdk/commit/12a63ef6df4f5741320b34b8bddd4e2a0f891f0e) Thanks [@edmundhung](https://github.com/edmundhung)! - Add an internal `unstable_printBindings` API for vite plugin integration
+
+- [#11590](https://github.com/cloudflare/workers-sdk/pull/11590) [`7d8d4a6`](https://github.com/cloudflare/workers-sdk/commit/7d8d4a6a440740c105bb5de869c3555f9ed2568d) Thanks [@pombosilva](https://github.com/pombosilva)! - Add Workflows send-event to wrangler commands.
+
+- [#11301](https://github.com/cloudflare/workers-sdk/pull/11301) [`6c590a0`](https://github.com/cloudflare/workers-sdk/commit/6c590a0c3392bb2b32ff5b7388114066d39e03da) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Next.js (via OpenNext) projects in autoconfig
+
+### Patch Changes
+
+- [#11615](https://github.com/cloudflare/workers-sdk/pull/11615) [`ed42010`](https://github.com/cloudflare/workers-sdk/commit/ed42010436cd2a04df9a47c4e1fed3dff45aed90) Thanks [@elithrar](https://github.com/elithrar)! - Add helpful warning when SSL certificate errors occur due to corporate proxies or VPNs intercepting HTTPS traffic. When errors like "self-signed certificate in certificate chain" are detected, wrangler now displays guidance about installing missing system roots from your corporate proxy vendor.
+
+- [#11641](https://github.com/cloudflare/workers-sdk/pull/11641) [`6b28de1`](https://github.com/cloudflare/workers-sdk/commit/6b28de117170b7086e6f6580b558048ce878a6b8) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - update command status text and formatting
+
+- [#11578](https://github.com/cloudflare/workers-sdk/pull/11578) [`4201472`](https://github.com/cloudflare/workers-sdk/commit/4201472291fa1c864dbcca40c173a76e5b571a04) Thanks [@gpanders](https://github.com/gpanders)! - Fixup UX papercuts in containers SSH
+
+- [#11550](https://github.com/cloudflare/workers-sdk/pull/11550) [`95d81e1`](https://github.com/cloudflare/workers-sdk/commit/95d81e1b6371a1293f58da281adc3fd37bd0ea0b) Thanks [@hiendv](https://github.com/hiendv)! - Fix "TypeError: Body is unusable: Body has already been read" when failing to exchange oauth code because of double `response.text()`.
+
+- Updated dependencies [[`5d085fb`](https://github.com/cloudflare/workers-sdk/commit/5d085fbf385ca3f3a034ee47004229a87a044823), [`b75b710`](https://github.com/cloudflare/workers-sdk/commit/b75b710734c8382a9a929b1db2bb34fcb3e96468), [`1e9be12`](https://github.com/cloudflare/workers-sdk/commit/1e9be123a3a9097593c701319ea69dfeb5086107)]:
+  - miniflare@4.20251213.0
+
 ## 4.54.0
 
 ### Minor Changes

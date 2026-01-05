@@ -45,7 +45,7 @@ import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 
 export const kvNamespace = createNamespace({
 	metadata: {
-		description: "🗂️  Manage Workers KV Namespaces",
+		description: "🗂️ Manage Workers KV Namespaces",
 		status: "stable",
 		owner: "Product: KV",
 	},
@@ -751,7 +751,7 @@ export const kvKeyDeleteCommand = createCommand({
 export const kvBulkGetCommand = createCommand({
 	metadata: {
 		description: "Gets multiple key-value pairs from a namespace",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: KV",
 	},
 	behaviour: {

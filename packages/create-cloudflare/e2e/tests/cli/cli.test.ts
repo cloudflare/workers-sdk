@@ -555,7 +555,7 @@ describe("Create Cloudflare CLI", () => {
 					    npm create cloudflare -- --framework svelte -- --types=ts
 					    pnpm create cloudflare --framework svelte -- --types=ts
 					    Allowed Values:
-					      analog, angular, astro, docusaurus, gatsby, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vue
+					      analog, angular, astro, docusaurus, gatsby, next, nuxt, qwik, react, react-router, redwood, solid, svelte, tanstack-start, vike, vue, waku
 					  --platform=<value>
 					    Whether the application should be deployed to Pages or Workers. This is only applicable for Frameworks templates that support both Pages and Workers.
 					    Allowed Values:
@@ -563,6 +563,8 @@ describe("Create Cloudflare CLI", () => {
 					        Create a web application that can be deployed to Workers.
 					      pages
 					        Create a web application that can be deployed to Pages.
+					  --variant=<value>
+					    The variant of the framework to use. This is only applicable for certain frameworks that support multiple variants (e.g. React with TypeScript, TypeScript + SWC, JavaScript, JavaScript + SWC).
 					  --lang=<value>
 					    The programming language of the template
 					    Allowed Values:
@@ -665,6 +667,8 @@ describe("Create Cloudflare CLI", () => {
 					        Create a web application that can be deployed to Workers.
 					      pages
 					        Create a web application that can be deployed to Pages.
+					  --variant=<value>
+					    The variant of the framework to use. This is only applicable for certain frameworks that support multiple variants (e.g. React with TypeScript, TypeScript + SWC, JavaScript, JavaScript + SWC).
 					  --lang=<value>
 					    The programming language of the template
 					    Allowed Values:
@@ -723,6 +727,26 @@ describe("Create Cloudflare CLI", () => {
 				);
 			}),
 		);
+
+		test("error when using invalid --variant for React framework", async ({
+			logStream,
+		}) => {
+			const { errors } = await runC3(
+				[
+					"my-app",
+					"--framework=react",
+					"--platform=workers",
+					"--variant=invalid-variant",
+					"--no-deploy",
+					"--git=false",
+				],
+				[],
+				logStream,
+			);
+			expect(errors).toContain(
+				'Unknown variant "invalid-variant". Valid variants are: react-ts, react-swc-ts, react, react-swc',
+			);
+		});
 	});
 });
 

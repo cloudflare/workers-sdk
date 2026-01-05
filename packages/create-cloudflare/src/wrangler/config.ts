@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
+import { isCompatDate } from "@cloudflare/workers-utils";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile, writeJSON } from "helpers/files";
 import {
@@ -32,15 +33,20 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 	// Placeholders to replace in the wrangler config files
 	const substitutions: Record<string, string> = {
 		"<WORKER_NAME>": ctx.project.name,
-		"<COMPATIBILITY_DATE>": await getWorkerdCompatibilityDate(),
+		"<COMPATIBILITY_DATE>": getWorkerdCompatibilityDate(ctx.project.path),
 	};
 
 	if (wranglerJsonOrJsoncExists(ctx)) {
-		let wranglerJson = readWranglerJsonOrJsonc(ctx, (_key, value) =>
-			typeof value === "string" && value in substitutions
-				? substitutions[value]
-				: value,
-		);
+		let wranglerJson = readWranglerJsonOrJsonc(ctx, (_key, value) => {
+			if (typeof value !== "string") {
+				return value;
+			}
+			let result = value;
+			for (const [placeholder, substitution] of Object.entries(substitutions)) {
+				result = result.replaceAll(placeholder, substitution);
+			}
+			return result;
+		});
 
 		// Put the schema at the top of the file
 		wranglerJson = insertJSONProperty(
@@ -53,7 +59,10 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		wranglerJson = appendJSONProperty(
 			wranglerJson,
 			"compatibility_date",
-			await getCompatibilityDate(wranglerJson.compatibility_date),
+			await getCompatibilityDate(
+				wranglerJson.compatibility_date,
+				ctx.project.path,
+			),
 		);
 		wranglerJson = appendJSONProperty(wranglerJson, "observability", {
 			enabled: true,
@@ -74,6 +83,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		wranglerToml.name = ctx.project.name;
 		wranglerToml.compatibility_date = await getCompatibilityDate(
 			wranglerToml.compatibility_date,
+			ctx.project.path,
 		);
 		wranglerToml.observability ??= { enabled: true };
 
@@ -185,20 +195,20 @@ export const addVscodeConfig = (ctx: C3Context) => {
  * If the tentative date is valid, it is returned. Otherwise the latest workerd date is used.
  *
  * @param tentativeDate A tentative compatibility date, usually from wrangler config.
- * @returns The compatibility date to use in the form "YYYY-MM-DD"
+ * @param projectPath The path to the target project.
+ * @returns The compatibility date to use in the form "YYYY-MM-DD".
  */
-async function getCompatibilityDate(tentativeDate: unknown): Promise<string> {
-	const validCompatDateRe = /^\d{4}-\d{2}-\d{2}$/m;
-	if (
-		typeof tentativeDate === "string" &&
-		tentativeDate.match(validCompatDateRe)
-	) {
+async function getCompatibilityDate(
+	tentativeDate: unknown,
+	projectPath: string,
+): Promise<string> {
+	if (typeof tentativeDate === "string" && isCompatDate(tentativeDate)) {
 		// Use the tentative date when it is valid.
 		// It may be there for a specific compat reason
 		return tentativeDate;
 	}
 	// Fallback to the latest workerd date
-	return await getWorkerdCompatibilityDate();
+	return getWorkerdCompatibilityDate(projectPath);
 }
 
 /**

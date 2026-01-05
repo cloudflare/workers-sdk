@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.17.1",
+	"version": "1.19.0",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -34,6 +34,7 @@
 	],
 	"scripts": {
 		"build": "tsdown",
+		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc --build",
 		"dev": "tsdown --watch",
 		"test": "vitest run",
@@ -59,6 +60,7 @@
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:vite-plugin",
 		"@types/semver": "^7.5.1",
 		"@types/ws": "^8.5.13",

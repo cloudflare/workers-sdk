@@ -49,7 +49,7 @@ export function handleWebSocket(
 				socket,
 				head,
 				async (clientWebSocket) => {
-					coupleWebSocket(clientWebSocket, workerWebSocket);
+					void coupleWebSocket(clientWebSocket, workerWebSocket);
 					nodeWebSocket.emit("connection", clientWebSocket, request);
 				}
 			);

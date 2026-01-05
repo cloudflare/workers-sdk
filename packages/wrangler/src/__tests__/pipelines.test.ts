@@ -510,7 +510,7 @@ describe("wrangler pipelines", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines list\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines list\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
 
 				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️  You have legacy pipelines. Consider creating new pipelines by running 'wrangler pipelines setup'.[0m
@@ -709,7 +709,7 @@ describe("wrangler pipelines", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines get\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines get\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
 
 				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️  This is a legacy pipeline. Consider creating a new pipeline by running 'wrangler pipelines setup'.[0m
@@ -1034,7 +1034,7 @@ describe("wrangler pipelines", () => {
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
 			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines update\` is an open-beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
+				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m🚧 \`wrangler pipelines update\` is an open beta command. Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
 
 
 				[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️  Updating legacy pipeline. Consider recreating with 'wrangler pipelines setup'.[0m

@@ -1,7 +1,8 @@
-import test from "ava";
 import { Miniflare, MiniflareCoreError, WorkerdStructuredLog } from "miniflare";
+import { expect, test } from "vitest";
+import { useDispose } from "./test-shared";
 
-test("logs are treated as standard stdout/stderr chunks by default", async (t) => {
+test("logs are treated as standard stdout/stderr chunks by default", async () => {
 	const collected = {
 		stdout: "",
 		stderr: "",
@@ -28,16 +29,16 @@ test("logs are treated as standard stdout/stderr chunks by default", async (t) =
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();
 
-	t.is(collected.stdout, "__LOG__\n__INFO__\n__DEBUG__\n");
-	t.is(collected.stderr, "__WARN__\n__ERROR__\n");
+	expect(collected.stdout).toBe("__LOG__\n__INFO__\n__DEBUG__\n");
+	expect(collected.stderr).toBe("__WARN__\n__ERROR__\n");
 });
 
-test("logs are structured and all sent to stdout when `structuredWorkerdLogs` is `true`", async (t) => {
+test("logs are structured and all sent to stdout when `structuredWorkerdLogs` is `true`", async () => {
 	const collected = {
 		stdout: "",
 		stderr: "",
@@ -65,36 +66,31 @@ test("logs are structured and all sent to stdout when `structuredWorkerdLogs` is
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();
 
-	t.regex(
-		collected.stdout,
+	expect(collected.stdout).toMatch(
 		/{"timestamp":\d+,"level":"log","message":"__LOG__"}/
 	);
-	t.regex(
-		collected.stdout,
+	expect(collected.stdout).toMatch(
 		/{"timestamp":\d+,"level":"warn","message":"__WARN__"}/
 	);
-	t.regex(
-		collected.stdout,
+	expect(collected.stdout).toMatch(
 		/{"timestamp":\d+,"level":"error","message":"__ERROR__"}/
 	);
-	t.regex(
-		collected.stdout,
+	expect(collected.stdout).toMatch(
 		/{"timestamp":\d+,"level":"info","message":"__INFO__"}/
 	);
-	t.regex(
-		collected.stdout,
+	expect(collected.stdout).toMatch(
 		/{"timestamp":\d+,"level":"debug","message":"__DEBUG__"}/
 	);
 
-	t.is(collected.stderr, "");
+	expect(collected.stderr).toBe("");
 });
 
-test("logs are structured and handled via `handleStructuredLogs` when such option is provided (no `structuredWorkerdLogs: true` needed)", async (t) => {
+test("logs are structured and handled via `handleStructuredLogs` when such option is provided (no `structuredWorkerdLogs: true` needed)", async () => {
 	const collectedLogs: (Pick<WorkerdStructuredLog, "level" | "message"> & {
 		timestamp: string;
 	})[] = [];
@@ -118,12 +114,12 @@ test("logs are structured and handled via `handleStructuredLogs` when such optio
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();
 
-	t.deepEqual(collectedLogs, [
+	expect(collectedLogs).toEqual([
 		{
 			level: "log",
 			message: "__LOG__",
@@ -152,7 +148,7 @@ test("logs are structured and handled via `handleStructuredLogs` when such optio
 	]);
 });
 
-test("even when `handleStructuredLogs` is provided, `handleRuntimeStdio` can still be used to read the raw stream values", async (t) => {
+test("even when `handleStructuredLogs` is provided, `handleRuntimeStdio` can still be used to read the raw stream values", async () => {
 	let numOfCollectedStructuredLogs = 0;
 	const collectedRaw = {
 		stdout: "",
@@ -180,49 +176,46 @@ test("even when `handleStructuredLogs` is provided, `handleRuntimeStdio` can sti
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();
 
-	t.is(numOfCollectedStructuredLogs, 2);
+	expect(numOfCollectedStructuredLogs).toBe(2);
 
-	t.regex(
-		collectedRaw.stdout,
+	expect(collectedRaw.stdout).toMatch(
 		/{"timestamp":\d+,"level":"log","message":"__LOG__"}/
 	);
-	t.regex(
-		collectedRaw.stdout,
+	expect(collectedRaw.stdout).toMatch(
 		/{"timestamp":\d+,"level":"error","message":"__ERROR__"}/
 	);
-	t.is(collectedRaw.stderr, "");
+	expect(collectedRaw.stderr).toBe("");
 });
 
-test("setting `handleStructuredLogs` when `structuredWorkerdLogs` is `false` triggers an error", async (t) => {
+test("setting `handleStructuredLogs` when `structuredWorkerdLogs` is `false` triggers an error", async () => {
 	const mf = new Miniflare({ modules: true, script: "" });
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
-	t.throws(
-		() =>
-			new Miniflare({
-				modules: true,
-				script: "",
-				structuredWorkerdLogs: false,
-				handleStructuredLogs() {},
-			}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_VALIDATION",
-			message(message) {
-				return message.includes(
-					"A `handleStructuredLogs` has been provided but `structuredWorkerdLogs` is set to `false`"
-				);
-			},
-		}
+	let error: MiniflareCoreError | undefined = undefined;
+	try {
+		new Miniflare({
+			modules: true,
+			script: "",
+			structuredWorkerdLogs: false,
+			handleStructuredLogs() {},
+		});
+	} catch (e) {
+		error = e as MiniflareCoreError;
+	}
+
+	expect(error).toBeInstanceOf(MiniflareCoreError);
+	expect(error?.code).toBe("ERR_VALIDATION");
+	expect(error?.message).toContain(
+		"A `handleStructuredLogs` has been provided but `structuredWorkerdLogs` is set to `false`"
 	);
 });
 
-test("when using `handleStructuredLogs` some known unhelpful logs are filtered out (e.g. CODE_MOVED warnings)", async (t) => {
+test("when using `handleStructuredLogs` some known unhelpful logs are filtered out (e.g. CODE_MOVED warnings)", async () => {
 	const collectedLogs: (Pick<WorkerdStructuredLog, "level" | "message"> & {
 		timestamp: string;
 	})[] = [];
@@ -244,12 +237,12 @@ test("when using `handleStructuredLogs` some known unhelpful logs are filtered o
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
 	await response.text();
 
-	t.deepEqual(collectedLogs, [
+	expect(collectedLogs).toEqual([
 		{
 			level: "log",
 			message: "__LOG__",

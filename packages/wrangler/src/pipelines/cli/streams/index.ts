@@ -4,6 +4,6 @@ export const pipelinesStreamsNamespace = createNamespace({
 	metadata: {
 		description: "Manage streams for pipelines",
 		owner: "Product: Pipelines",
-		status: "open-beta",
+		status: "open beta",
 	},
 });
