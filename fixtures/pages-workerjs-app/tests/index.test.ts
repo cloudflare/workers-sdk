@@ -3,7 +3,7 @@ import { rename } from "node:fs/promises";
 import path, { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
-import { describe, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages _worker.js", () => {
@@ -73,9 +73,7 @@ describe("Pages _worker.js", () => {
 		}
 	});
 
-	it("should not error if the worker.js file is removed while watching", async ({
-		expect,
-	}) => {
+	it("should not error if the worker.js file is removed while watching", async () => {
 		const basePath = resolve(__dirname, "..");
 		const { ip, port, getOutput, clearOutput, stop } =
 			await runWranglerPagesDev(resolve(__dirname, ".."), "./workerjs-test", [
@@ -120,9 +118,7 @@ describe("Pages _worker.js", () => {
 		}
 	});
 
-	it("should not error if the _routes.json file is removed while watching", async ({
-		expect,
-	}) => {
+	it("should not error if the _routes.json file is removed while watching", async () => {
 		const basePath = resolve(__dirname, "..");
 		const { ip, port, getOutput, clearOutput, stop } =
 			await runWranglerPagesDev(resolve(__dirname, ".."), "./workerjs-test", [
@@ -169,7 +165,7 @@ describe("Pages _worker.js", () => {
 	});
 
 	// Serendipitously, this .env reading also works for `wrangler pages dev`.
-	it("should read local dev vars from the .env file", async ({ expect }) => {
+	it("should read local dev vars from the .env file", async () => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"./workerjs-test",

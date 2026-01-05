@@ -1,7 +1,8 @@
-import test from "ava";
 import { Miniflare } from "miniflare";
+import { expect, test } from "vitest";
+import { useDispose } from "../../test-shared";
 
-test("hello-world", async (t) => {
+test("hello-world", async () => {
 	const mf = new Miniflare({
 		compatibilityDate: "2025-01-01",
 		helloWorld: {
@@ -26,31 +27,31 @@ test("hello-world", async (t) => {
             }
 		`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const response1 = await mf.dispatchFetch("http://placeholder");
 
-	t.is(await response1.text(), "Not found");
-	t.is(response1.status, 404);
+	expect(await response1.text()).toBe("Not found");
+	expect(response1.status).toBe(404);
 
 	const response2 = await mf.dispatchFetch("http://placeholder", {
 		method: "POST",
 		body: "hello world",
 	});
 
-	t.deepEqual(await response2.json(), { value: "hello world", ms: 100 });
-	t.is(response2.status, 200);
+	expect(await response2.json()).toEqual({ value: "hello world", ms: 100 });
+	expect(response2.status).toBe(200);
 
 	const response3 = await mf.dispatchFetch("http://placeholder");
 
-	t.deepEqual(await response3.json(), { value: "hello world", ms: 100 });
-	t.is(response3.status, 200);
+	expect(await response3.json()).toEqual({ value: "hello world", ms: 100 });
+	expect(response3.status).toBe(200);
 
 	const response4 = await mf.dispatchFetch("http://placeholder", {
 		method: "POST",
 		body: "",
 	});
 
-	t.is(await response4.text(), "Not found");
-	t.is(response4.status, 404);
+	expect(await response4.text()).toBe("Not found");
+	expect(response4.status).toBe(404);
 });

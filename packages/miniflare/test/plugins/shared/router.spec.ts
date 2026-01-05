@@ -1,4 +1,6 @@
-import test from "ava";
-import { workerTestMacro } from "../../test-shared";
+import { test } from "vitest";
+import { runWorkerTest } from "../../test-shared";
 
-test("Router: routes requests", workerTestMacro, "shared", "router.ts");
+test("Router: routes requests", async () => {
+	await runWorkerTest("shared", "shared", "router.ts");
+});

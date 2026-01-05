@@ -752,6 +752,37 @@ export const WorkerdTests: Record<string, () => void> = {
 			Network: "object",
 		});
 	},
+
+	async testInspectorPromises() {
+		const inspectorPromises = await import("node:inspector/promises");
+		assertTypeOfProperties(inspectorPromises, {
+			Session: "function",
+			close: "function",
+			console: "object",
+			open: "function",
+			url: "function",
+			waitForDebugger: "function",
+		});
+
+		if (getRuntimeFlagValue("enable_nodejs_inspector_module")) {
+			// In unenv this object is polyfilled by a "notImplementedClass" which has type function.
+			assertTypeOf(inspectorPromises, "Network", "object");
+		}
+
+		assertTypeOfProperties(inspectorPromises.default, {
+			Session: "function",
+			close: "function",
+			console: "object",
+			open: "function",
+			url: "function",
+			waitForDebugger: "function",
+		});
+
+		if (getRuntimeFlagValue("enable_nodejs_inspector_module")) {
+			// In unenv this object is polyfilled by a "notImplementedClass" which has type function.
+			assertTypeOf(inspectorPromises.default, "Network", "object");
+		}
+	},
 };
 
 /**

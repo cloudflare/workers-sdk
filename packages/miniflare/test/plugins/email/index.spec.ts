@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
-import test from "ava";
 import { LogLevel, Miniflare } from "miniflare";
 import dedent from "ts-dedent";
-import { TestLog, waitFor } from "../../test-shared";
+import { expect, test, vi } from "vitest";
+import { TestLog, useDispose } from "../../test-shared";
 
 const SEND_EMAIL_WORKER = dedent/* javascript */ `
 	import { EmailMessage } from "cloudflare:email";
@@ -39,8 +39,8 @@ const REPLY_EMAIL_WORKER = (email = "message.raw") => dedent/* javascript */ `
 	};
 `;
 
-test("Unbound send_email binding works", async (t) => {
-	const log = new TestLog(t);
+test("Unbound send_email binding works", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -51,7 +51,7 @@ test("Unbound send_email binding works", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -73,26 +73,31 @@ test("Unbound send_email binding works", async (t) => {
 			method: "POST",
 		}
 	);
-	t.is(await res.text(), "ok");
-	t.is(res.status, 200);
-	await waitFor(async () => {
-		const entry = log.logs.find(
-			([type, message]) =>
-				type === LogLevel.INFO &&
-				message.match(/send_email binding called with the following message:\n/)
-		);
-		if (!entry) {
-			throw new Error(
-				"send_email binding log not found in " +
-					JSON.stringify(log.logs, null, 2)
+	expect(await res.text()).toBe("ok");
+	expect(res.status).toBe(200);
+	await vi.waitFor(
+		async () => {
+			const entry = log.logs.find(
+				([type, message]) =>
+					type === LogLevel.INFO &&
+					message.match(
+						/send_email binding called with the following message:\n/
+					)
 			);
-		}
-		const file = entry[/* message */ 1].split("\n")[1].trim();
-		t.is(await readFile(file, "utf-8"), email);
-	});
+			if (!entry) {
+				throw new Error(
+					"send_email binding log not found in " +
+						JSON.stringify(log.logs, null, 2)
+				);
+			}
+			const file = entry[/* message */ 1].split("\n")[1].trim();
+			expect(await readFile(file, "utf-8")).toBe(email);
+		},
+		{ timeout: 5_000, interval: 100 }
+	);
 });
 
-test("Invalid email throws", async (t) => {
+test("Invalid email throws", async () => {
 	const mf = new Miniflare({
 		modules: true,
 		script: SEND_EMAIL_WORKER,
@@ -102,7 +107,7 @@ test("Invalid email throws", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
@@ -116,12 +121,12 @@ test("Invalid email throws", async (t) => {
 		}
 	);
 
-	t.true((await res.text()).startsWith("Error: invalid message-id"));
-	t.is(res.status, 500);
+	expect((await res.text()).startsWith("Error: invalid message-id"));
+	expect(res.status).toBe(500);
 });
 
-test("Single allowed destination send_email binding works", async (t) => {
-	const log = new TestLog(t);
+test("Single allowed destination send_email binding works", async () => {
+	const log = new TestLog();
 
 	const mf = new Miniflare({
 		log,
@@ -135,7 +140,7 @@ test("Single allowed destination send_email binding works", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -159,27 +164,32 @@ test("Single allowed destination send_email binding works", async (t) => {
 		}
 	);
 
-	t.is(await res.text(), "ok");
-	t.is(res.status, 200);
+	expect(await res.text()).toBe("ok");
+	expect(res.status).toBe(200);
 
-	await waitFor(async () => {
-		const entry = log.logs.find(
-			([type, message]) =>
-				type === LogLevel.INFO &&
-				message.match(/send_email binding called with the following message:\n/)
-		);
-		if (!entry) {
-			throw new Error(
-				"send_email binding log not found in " +
-					JSON.stringify(log.logs, null, 2)
+	await vi.waitFor(
+		async () => {
+			const entry = log.logs.find(
+				([type, message]) =>
+					type === LogLevel.INFO &&
+					message.match(
+						/send_email binding called with the following message:\n/
+					)
 			);
-		}
-		const file = entry[/* message */ 1].split("\n")[1].trim();
-		t.is(await readFile(file, "utf-8"), email);
-	});
+			if (!entry) {
+				throw new Error(
+					"send_email binding log not found in " +
+						JSON.stringify(log.logs, null, 2)
+				);
+			}
+			const file = entry[/* message */ 1].split("\n")[1].trim();
+			expect(await readFile(file, "utf-8")).toBe(email);
+		},
+		{ timeout: 5_000, interval: 100 }
+	);
 });
 
-test("Single allowed destination send_email binding throws if destination is not equal", async (t) => {
+test("Single allowed destination send_email binding throws if destination is not equal", async () => {
 	const mf = new Miniflare({
 		modules: true,
 		script: SEND_EMAIL_WORKER,
@@ -191,7 +201,7 @@ test("Single allowed destination send_email binding throws if destination is not
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
@@ -212,15 +222,15 @@ This is a random email body.
 		}
 	);
 
-	t.true(
+	expect(
 		(await res.text()).startsWith(
 			"Error: email to someone-else@example.com not allowed"
 		)
 	);
-	t.is(res.status, 500);
+	expect(res.status).toBe(500);
 });
 
-test("Multiple allowed destination send_email binding works", async (t) => {
+test("Multiple allowed destination send_email binding works", async () => {
 	const mf = new Miniflare({
 		modules: true,
 		script: SEND_EMAIL_WORKER,
@@ -238,7 +248,7 @@ test("Multiple allowed destination send_email binding works", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
@@ -259,11 +269,11 @@ This is a random email body.
 		}
 	);
 
-	t.is(await res.text(), "ok");
-	t.is(res.status, 200);
+	expect(await res.text()).toBe("ok");
+	expect(res.status).toBe(200);
 });
 
-test("Multiple allowed senders send_email binding works", async (t) => {
+test("Multiple allowed senders send_email binding works", async () => {
 	const mf = new Miniflare({
 		modules: true,
 		script: SEND_EMAIL_WORKER,
@@ -281,7 +291,7 @@ test("Multiple allowed senders send_email binding works", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
@@ -302,11 +312,11 @@ This is a random email body.
 		}
 	);
 
-	t.is(await res.text(), "ok");
-	t.is(res.status, 200);
+	expect(await res.text()).toBe("ok");
+	expect(res.status).toBe(200);
 });
 
-test("Sending email from a sender not in the allowed list does not work", async (t) => {
+test("Sending email from a sender not in the allowed list does not work", async () => {
 	const mf = new Miniflare({
 		modules: true,
 		script: SEND_EMAIL_WORKER,
@@ -324,7 +334,7 @@ test("Sending email from a sender not in the allowed list does not work", async 
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
@@ -345,15 +355,15 @@ This is a random email body.
 		}
 	);
 
-	t.true(
+	expect(
 		(await res.text()).startsWith(
 			"Error: email from notallowed@example.com not allowed"
 		)
 	);
-	t.is(res.status, 500);
+	expect(res.status).toBe(500);
 });
 
-test("Multiple allowed send_email binding throws if destination is not equal", async (t) => {
+test("Multiple allowed send_email binding throws if destination is not equal", async () => {
 	const mf = new Miniflare({
 		modules: true,
 		script: SEND_EMAIL_WORKER,
@@ -371,7 +381,7 @@ test("Multiple allowed send_email binding throws if destination is not equal", a
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch(
 		"http://localhost/?" +
@@ -392,16 +402,16 @@ This is a random email body.
 		}
 	);
 
-	t.true(
+	expect(
 		(await res.text()).startsWith(
 			"Error: email to helly.r@example.com not allowed"
 		)
 	);
-	t.is(res.status, 500);
+	expect(res.status).toBe(500);
 });
 
-test("reply validation: x-auto-response-suppress", async (t) => {
-	const log = new TestLog(t);
+test("reply validation: x-auto-response-suppress", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -411,7 +421,7 @@ test("reply validation: x-auto-response-suppress", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -434,11 +444,11 @@ test("reply validation: x-auto-response-suppress", async (t) => {
 			method: "POST",
 		}
 	);
-	t.assert((await res.text()).includes("Original email is not replyable"));
+	expect((await res.text()).includes("Original email is not replyable"));
 });
 
-test("reply validation: Auto-Submitted", async (t) => {
-	const log = new TestLog(t);
+test("reply validation: Auto-Submitted", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -448,7 +458,7 @@ test("reply validation: Auto-Submitted", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -471,11 +481,11 @@ test("reply validation: Auto-Submitted", async (t) => {
 			method: "POST",
 		}
 	);
-	t.assert((await res.text()).includes("Original email is not replyable"));
+	expect((await res.text()).includes("Original email is not replyable"));
 });
 
-test("reply validation: only In-Reply-To", async (t) => {
-	const log = new TestLog(t);
+test("reply validation: only In-Reply-To", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -485,7 +495,7 @@ test("reply validation: only In-Reply-To", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -508,11 +518,11 @@ test("reply validation: only In-Reply-To", async (t) => {
 			method: "POST",
 		}
 	);
-	t.assert((await res.text()).includes("Original email is not replyable"));
+	expect((await res.text()).includes("Original email is not replyable"));
 });
 
-test("reply validation: only References", async (t) => {
-	const log = new TestLog(t);
+test("reply validation: only References", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -522,7 +532,7 @@ test("reply validation: only References", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -545,11 +555,11 @@ test("reply validation: only References", async (t) => {
 			method: "POST",
 		}
 	);
-	t.assert((await res.text()).includes("Original email is not replyable"));
+	expect((await res.text()).includes("Original email is not replyable"));
 });
 
-test("reply validation: >100 References", async (t) => {
-	const log = new TestLog(t);
+test("reply validation: >100 References", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -559,7 +569,7 @@ test("reply validation: >100 References", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -583,16 +593,15 @@ test("reply validation: >100 References", async (t) => {
 			method: "POST",
 		}
 	);
-	t.assert((await res.text()).includes("Original email is not replyable"));
-	t.is(log.logs[1][0], LogLevel.ERROR);
-	t.is(
-		log.logs[1][1].split("\n")[0],
+	expect((await res.text()).includes("Original email is not replyable"));
+	expect(log.logs[1][0]).toBe(LogLevel.ERROR);
+	expect(log.logs[1][1].split("\n")[0]).toBe(
 		'The incoming email\'s "References" header has more than 100 entries. As such, your Worker cannot respond to this email. Refer to https://developers.cloudflare.com/email-routing/email-workers/reply-email-workers/.'
 	);
 });
 
-test("reply: mismatched From: header", async (t) => {
-	const log = new TestLog(t);
+test("reply: mismatched From: header", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -602,7 +611,7 @@ test("reply: mismatched From: header", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -625,13 +634,11 @@ test("reply: mismatched From: header", async (t) => {
 		}
 	);
 
-	t.assert(
-		(await res.text()).includes("From: header does not match mail from")
-	);
+	expect((await res.text()).includes("From: header does not match mail from"));
 });
 
-test("reply: unparseable", async (t) => {
-	const log = new TestLog(t);
+test("reply: unparseable", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -641,7 +648,7 @@ test("reply: unparseable", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -664,11 +671,11 @@ test("reply: unparseable", async (t) => {
 		}
 	);
 
-	t.assert((await res.text()).includes("could not parse email"));
+	expect((await res.text()).includes("could not parse email"));
 });
 
-test("reply: no message id", async (t) => {
-	const log = new TestLog(t);
+test("reply: no message id", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -686,7 +693,7 @@ test("reply: no message id", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -709,11 +716,11 @@ test("reply: no message id", async (t) => {
 		}
 	);
 
-	t.assert((await res.text()).includes("invalid message-id"));
+	expect((await res.text()).includes("invalid message-id"));
 });
 
-test("reply: disallowed header", async (t) => {
-	const log = new TestLog(t);
+test("reply: disallowed header", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -733,7 +740,7 @@ test("reply: disallowed header", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -756,11 +763,11 @@ test("reply: disallowed header", async (t) => {
 		}
 	);
 
-	t.assert((await res.text()).includes("invalid headers set"));
+	expect((await res.text()).includes("invalid headers set"));
 });
 
-test("reply: missing In-Reply-To", async (t) => {
-	const log = new TestLog(t);
+test("reply: missing In-Reply-To", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -779,7 +786,7 @@ test("reply: missing In-Reply-To", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -802,13 +809,13 @@ test("reply: missing In-Reply-To", async (t) => {
 		}
 	);
 
-	t.assert(
+	expect(
 		(await res.text()).includes("no In-Reply-To header found in reply message")
 	);
 });
 
-test("reply: wrong In-Reply-To", async (t) => {
-	const log = new TestLog(t);
+test("reply: wrong In-Reply-To", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -828,7 +835,7 @@ test("reply: wrong In-Reply-To", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -851,15 +858,15 @@ test("reply: wrong In-Reply-To", async (t) => {
 		}
 	);
 
-	t.assert(
+	expect(
 		(await res.text()).includes(
 			"In-Reply-To does not match original Message-ID"
 		)
 	);
 });
 
-test("reply: invalid references", async (t) => {
-	const log = new TestLog(t);
+test("reply: invalid references", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -880,7 +887,7 @@ test("reply: invalid references", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -902,13 +909,11 @@ test("reply: invalid references", async (t) => {
 			method: "POST",
 		}
 	);
-	t.assert(
-		(await res.text()).includes("provided References header is invalid")
-	);
+	expect((await res.text()).includes("provided References header is invalid"));
 });
 
-test("reply: references generated correctly", async (t) => {
-	const log = new TestLog(t);
+test("reply: references generated correctly", async () => {
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		modules: true,
@@ -928,7 +933,7 @@ test("reply: references generated correctly", async (t) => {
 		compatibilityDate: "2025-03-17",
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const email = dedent`
 		From: someone <someone@example.com>
@@ -950,18 +955,19 @@ test("reply: references generated correctly", async (t) => {
 			method: "POST",
 		}
 	);
-	t.is(await res.text(), "Worker successfully processed email");
-	t.is(res.status, 200);
-	t.is(log.logs[1][0], LogLevel.INFO);
-	t.is(
-		log.logs[1][1].split("\n")[0],
+	expect(await res.text()).toBe("Worker successfully processed email");
+	expect(res.status).toBe(200);
+	expect(log.logs[1][0]).toBe(LogLevel.INFO);
+	expect(log.logs[1][1].split("\n")[0]).toBe(
 		"Email handler replied to sender with the following message:"
 	);
 
 	const file = log.logs[1][1].split("\n")[1].trim();
-	t.assert(
-		(await readFile(file, "utf-8")).includes(
+	const fileContent = await readFile(file, "utf-8");
+	expect(fileContent).toBeTruthy();
+	expect(
+		fileContent.includes(
 			`References: <im-a-random-parent-message-id@example.com>`
 		)
-	);
+	).toBe(true);
 });

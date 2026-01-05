@@ -1,5 +1,5 @@
-import test from "ava";
 import { Miniflare, QUEUES_PLUGIN_NAME, Response } from "miniflare";
+import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { z } from "zod";
 import { MiniflareDurableObjectControlStub, TestLog } from "../../test-shared";
 
@@ -21,31 +21,32 @@ async function getControlStub(
 	return stub;
 }
 
-let batches: string[][] = [];
-let mf: Miniflare;
-let object: MiniflareDurableObjectControlStub;
+describe.sequential("Queues: retry", () => {
+	let batches: string[][] = [];
+	let mf: Miniflare;
+	let object: MiniflareDurableObjectControlStub;
 
-test.beforeEach(async (t) => {
-	batches = [];
+	beforeEach(async () => {
+		batches = [];
 
-	mf = new Miniflare({
-		log: new TestLog(t),
-		verbose: true,
-		queueProducers: { QUEUE: { queueName: "QUEUE" } },
-		queueConsumers: {
-			QUEUE: { retryDelay: 5, maxRetries: 2, maxBatchTimeout: 0 },
-		},
-		serviceBindings: {
-			async REPORTER(request) {
-				const batch = StringArraySchema.parse(await request.json());
-				if (batch.length > 0) {
-					batches.push(batch);
-				}
-				return new Response();
+		mf = new Miniflare({
+			log: new TestLog(),
+			verbose: true,
+			queueProducers: { QUEUE: { queueName: "QUEUE" } },
+			queueConsumers: {
+				QUEUE: { retryDelay: 5, maxRetries: 2, maxBatchTimeout: 0 },
 			},
-		},
-		modules: true,
-		script: `export default {
+			serviceBindings: {
+				async REPORTER(request) {
+					const batch = StringArraySchema.parse(await request.json());
+					if (batch.length > 0) {
+						batches.push(batch);
+					}
+					return new Response();
+				},
+			},
+			modules: true,
+			script: `export default {
       async fetch(request, env, ctx) {
 				await env.QUEUE.send(await request.text());
         return new Response(null, { status: 204 });
@@ -59,60 +60,61 @@ test.beforeEach(async (t) => {
 				batch.retryAll()
       },
     };`,
+		});
+
+		object = await getControlStub(mf, "QUEUE");
 	});
 
-	object = await getControlStub(mf, "QUEUE");
-});
+	afterEach(() => mf.dispose());
 
-test.afterEach.always(() => mf.dispose());
+	test("respects retry delays", async () => {
+		await mf.dispatchFetch("http://localhost/send", {
+			method: "POST",
+			body: "some-message",
+		});
 
-test.serial("respects retry delays", async (t) => {
-	await mf.dispatchFetch("http://localhost/send", {
-		method: "POST",
-		body: "some-message",
+		// Message should be delivered once
+		await object.advanceFakeTime(1000);
+		await object.waitForFakeTasks();
+		expect(batches.length).toBe(1);
+
+		// Message should not be re-delivered one second later
+		await object.advanceFakeTime(1000);
+		await object.waitForFakeTasks();
+		expect(batches.length).toBe(1);
+
+		// Message should be re-delivered once 5 seconds later
+		await object.advanceFakeTime(5000);
+		await object.waitForFakeTasks();
+		expect(batches.length).toBe(2);
+
+		// Message should be re-delivered once 5 seconds later
+		await object.advanceFakeTime(5000);
+		await object.waitForFakeTasks();
+		expect(batches.length).toBe(3);
 	});
 
-	// Message should be delivered once
-	await object.advanceFakeTime(1000);
-	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
+	test("respects max retries", async () => {
+		await mf.dispatchFetch("http://localhost/send", {
+			method: "POST",
+			body: "some-message",
+		});
 
-	// Message should not be re-delivered one second later
-	await object.advanceFakeTime(1000);
-	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
+		// Message should be delivered once
+		await object.advanceFakeTime(1000);
+		await object.waitForFakeTasks();
 
-	// Message should be re-delivered once 5 seconds later
-	await object.advanceFakeTime(5000);
-	await object.waitForFakeTasks();
-	t.is(batches.length, 2);
+		// Message should not be re-delivered one second later
+		await object.advanceFakeTime(1000);
+		await object.waitForFakeTasks();
 
-	// Message should be re-delivered once 5 seconds later
-	await object.advanceFakeTime(5000);
-	await object.waitForFakeTasks();
-	t.is(batches.length, 3);
-});
+		// Message should be re-delivered once 5 seconds later
+		await object.advanceFakeTime(5000);
+		await object.waitForFakeTasks();
 
-test.serial("respects max retries", async (t) => {
-	await mf.dispatchFetch("http://localhost/send", {
-		method: "POST",
-		body: "some-message",
+		// Message should not be delivered again 5 seconds later (max retries is 2)
+		await object.advanceFakeTime(5000);
+		await object.waitForFakeTasks();
+		expect(batches.length).toBe(3);
 	});
-
-	// Message should be delivered once
-	await object.advanceFakeTime(1000);
-	await object.waitForFakeTasks();
-
-	// Message should not be re-delivered one second later
-	await object.advanceFakeTime(1000);
-	await object.waitForFakeTasks();
-
-	// Message should be re-delivered once 5 seconds later
-	await object.advanceFakeTime(5000);
-	await object.waitForFakeTasks();
-
-	// Message should not be delivered again 5 seconds later (max retries is 2)
-	await object.advanceFakeTime(5000);
-	await object.waitForFakeTasks();
-	t.is(batches.length, 3);
 });

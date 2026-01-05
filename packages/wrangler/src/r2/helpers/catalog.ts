@@ -108,10 +108,10 @@ type R2CatalogSnapshotExpirationConfig = {
 	state: "enabled" | "disabled";
 
 	// If undefined, the service will set the default value
-	olderThanDays?: number;
+	max_snapshot_age?: string;
 
 	// If undefined, the service will set the default value
-	retainLast?: number;
+	min_snapshots_to_keep?: number;
 };
 
 type R2CatalogSnapshotExpirationResponse = {
@@ -127,8 +127,8 @@ export async function enableR2CatalogSnapshotExpiration(
 ): Promise<R2CatalogSnapshotExpirationResponse> {
 	const config: R2CatalogSnapshotExpirationConfig = {
 		state: "enabled",
-		olderThanDays: olderThanDays ?? 30,
-		retainLast: retainLast ?? 5,
+		max_snapshot_age: `${olderThanDays ?? 30}d`,
+		min_snapshots_to_keep: retainLast ?? 5,
 	};
 
 	return await fetchResult(

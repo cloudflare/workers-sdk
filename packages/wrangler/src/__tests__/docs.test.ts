@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 import openInBrowser from "../open-in-browser";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { msw } from "./helpers/msw";
@@ -33,7 +33,7 @@ describe("wrangler docs", () => {
 		);
 	});
 
-	test("--help", async ({ expect }) => {
+	test("--help", async () => {
 		const result = runWrangler("docs --help");
 
 		await expect(result).resolves.toBeUndefined();
@@ -59,9 +59,7 @@ describe("wrangler docs", () => {
 		`);
 	});
 
-	test("opens a browser to Cloudflare docs when given no search term", async ({
-		expect,
-	}) => {
+	test("opens a browser to Cloudflare docs when given no search term", async () => {
 		await runWrangler("docs");
 		expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -80,9 +78,7 @@ describe("wrangler docs", () => {
 		);
 	});
 
-	test("opens a browser to Cloudflare docs when given a single search term", async ({
-		expect,
-	}) => {
+	test("opens a browser to Cloudflare docs when given a single search term", async () => {
 		await runWrangler("docs dev");
 		expect(std).toMatchInlineSnapshot(`
 			Object {
@@ -101,9 +97,7 @@ describe("wrangler docs", () => {
 		);
 	});
 
-	test("opens a browser to Cloudflare docs when given multiple search terms", async ({
-		expect,
-	}) => {
+	test("opens a browser to Cloudflare docs when given multiple search terms", async () => {
 		await runWrangler("docs foo bar");
 		expect(std).toMatchInlineSnapshot(`
 			Object {
