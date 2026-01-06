@@ -785,19 +785,37 @@ export const WorkerdTests: Record<string, () => void> = {
 	},
 
 	async testSqlite() {
-		if (!getRuntimeFlagValue("enable_nodejs_sqlite_module")) {
-			return;
-		}
-
 		// @ts-expect-error TS2307 - node:sqlite is experimental and may not have type declarations
 		const sqlite = await import("node:sqlite");
 
+		// Common exports (both unenv stub and native workerd)
 		assertTypeOf(sqlite, "DatabaseSync", "function");
 		assertTypeOf(sqlite, "StatementSync", "function");
 		assertTypeOf(sqlite, "constants", "object");
+		assertTypeOf(sqlite, "default", "object");
 		assertTypeOf(sqlite.default, "DatabaseSync", "function");
 		assertTypeOf(sqlite.default, "StatementSync", "function");
 		assertTypeOf(sqlite.default, "constants", "object");
+
+		if (getRuntimeFlagValue("enable_nodejs_sqlite_module")) {
+			// Native workerd exports `backup` function and non-empty constants
+			assertTypeOf(sqlite, "backup", "function");
+			assertTypeOf(sqlite.default, "backup", "function");
+			assert.strictEqual(
+				"SQLITE_CHANGESET_OMIT" in sqlite.constants,
+				true,
+				"constants should contain SQLITE_CHANGESET_OMIT"
+			);
+		} else {
+			// unenv stub: no backup function and empty constants
+			assertTypeOf(sqlite, "backup", "undefined");
+			assertTypeOf(sqlite.default, "backup", "undefined");
+			assert.deepStrictEqual(
+				Object.keys(sqlite.constants),
+				[],
+				"constants should be empty in unenv stub"
+			);
+		}
 	},
 };
 
