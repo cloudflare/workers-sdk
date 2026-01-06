@@ -41,7 +41,7 @@ jobs:
           files_ignore: |
             .changeset/README.md
           # Recover deleted files so Claude can read them (needed for Version Packages PRs)
-          recover_deleted_files: true
+          recover_deleted_files: ${{ github.event.pull_request.title == 'Version Packages' }}
 
       - name: Review Changesets with Claude
         id: claude-review
