@@ -62,18 +62,18 @@ describe("wrangler", () => {
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
 				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler types [path]           📝 Generate types from your Worker configuration
-				  wrangler vectorize              🧮 Manage Vectorize indexes
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
 				  wrangler workflows              🔁 Manage Workflows
 
-				STORAGE & DATABASES
+				  STORAGE & DATABASES
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces
 				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
 				  wrangler r2                     📦 Manage R2 buckets & objects
 				  wrangler secrets-store          🔐 Manage the Secrets Store [open beta]
+				  wrangler vectorize              🧮 Manage Vectorize indexes
 
 				NETWORKING & SECURITY
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
@@ -133,18 +133,18 @@ describe("wrangler", () => {
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
 				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler types [path]           📝 Generate types from your Worker configuration
-				  wrangler vectorize              🧮 Manage Vectorize indexes
 				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
 				  wrangler workflows              🔁 Manage Workflows
 
-				STORAGE & DATABASES
+				  STORAGE & DATABASES
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces
 				  wrangler pipelines              🚰 Manage Cloudflare Pipelines [open beta]
 				  wrangler r2                     📦 Manage R2 buckets & objects
 				  wrangler secrets-store          🔐 Manage the Secrets Store [open beta]
+				  wrangler vectorize              🧮 Manage Vectorize indexes
 
 				NETWORKING & SECURITY
 				  wrangler cert                   🪪 Manage client mTLS certificates and CA certificate chains used for secured connections [open beta]
