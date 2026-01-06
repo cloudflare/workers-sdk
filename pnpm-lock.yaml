@@ -2313,6 +2313,9 @@ importers:
       unenv:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
+      wrangler:
+        specifier: workspace:*
+        version: link:../wrangler
       ws:
         specifier: catalog:default
         version: 8.18.0
@@ -2383,9 +2386,6 @@ importers:
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
-      wrangler:
-        specifier: workspace:*
-        version: link:../wrangler
 
   packages/vite-plugin-cloudflare/playground:
     devDependencies:
