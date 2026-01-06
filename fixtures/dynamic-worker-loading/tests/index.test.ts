@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it, onTestFinished } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("dynamic worker loading", () => {
@@ -18,7 +18,7 @@ describe("dynamic worker loading", () => {
 		await stop?.();
 	});
 
-	it("should respond with response from dynamic worker", async ({ expect }) => {
+	it("should respond with response from dynamic worker", async () => {
 		let response = await fetch(`http://${ip}:${port}/my-worker`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -27,7 +27,7 @@ describe("dynamic worker loading", () => {
 		);
 	});
 
-	it("should load different worker if ID changes", async ({ expect }) => {
+	it("should load different worker if ID changes", async () => {
 		let response = await fetch(`http://${ip}:${port}/my-other-worker`);
 		let text = await response.text();
 		expect(response.status).toBe(200);

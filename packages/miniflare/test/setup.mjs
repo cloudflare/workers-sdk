@@ -1,7 +1,7 @@
 import Module from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { registerCompletionHandler } from "ava";
+import { afterAll } from "vitest";
 import {
 	_enableControlEndpoints,
 	_initialiseInstanceRegistry,
@@ -26,11 +26,7 @@ const separator = "-".repeat(80);
 
 _enableControlEndpoints();
 
-// `process.on("exit")` is more like `worker_thread.on(`exit`)` here. It will
-// be called once AVA's finished running tests and `after` hooks. Note we can't
-// use an `after` hook here, as that would run before `miniflareTest`'s
-// `after` hooks to dispose their `Miniflare` instances.
-process.on("exit", () => {
+afterAll(() => {
 	if (registry.size === 0) return;
 
 	// If there are Miniflare instances that weren't disposed, throw
@@ -38,16 +34,9 @@ process.on("exit", () => {
 	const was = registry.size === 1 ? "was" : "were";
 	const message = `Found ${registry.size} Miniflare instance${s} that ${was} not dispose()d`;
 	const stacks = Array.from(registry.values()).join(`\n${separator}\n`);
+	// eslint-disable-next-line no-console
 	console.log(
 		[bigSeparator, message, separator, stacks, bigSeparator].join("\n")
 	);
 	throw new Error(message);
-});
-
-// https://github.com/avajs/ava/discussions/3259
-// https://github.com/avajs/ava/blob/main/docs/08-common-pitfalls.md#timeouts-because-a-file-failed-to-exit
-
-// tl;dr - ava 6 doesn't automatically exit on tests completing, so we give it a nudge
-registerCompletionHandler(() => {
-	process.exit();
 });

@@ -15,7 +15,8 @@ export const triggersNamespace = createNamespace({
 });
 export const triggersDeployCommand = createCommand({
 	metadata: {
-		description: "Updates the triggers of your current deployment",
+		description:
+			"Apply changes to triggers (Routes or domains and Cron Triggers) when using `wrangler versions upload`",
 		status: "experimental",
 		owner: "Workers: Authoring and Testing",
 	},

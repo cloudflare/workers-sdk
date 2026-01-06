@@ -126,7 +126,7 @@ type ModuleRules = Array<{
 const moduleRules: ModuleRules = [
 	{ type: "CompiledWasm", extensions: [".wasm", ".wasm?module"] },
 	{ type: "Data", extensions: [".bin"] },
-	{ type: "Text", extensions: [".txt", ".html"] },
+	{ type: "Text", extensions: [".txt", ".html", ".sql"] },
 ];
 
 function matchAdditionalModule(source: string) {

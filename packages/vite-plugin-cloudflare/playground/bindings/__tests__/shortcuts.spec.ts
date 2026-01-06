@@ -1,11 +1,15 @@
 import path from "node:path";
 import stripAnsi from "strip-ansi";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
-import { resetServerLogs, serverLogs, viteServer } from "../../__test-utils__";
+import {
+	resetServerLogs,
+	satisfiesViteVersion,
+	serverLogs,
+	viteServer,
+} from "../../__test-utils__";
 import { PluginContext } from "../../../src/context";
 import { resolvePluginConfig } from "../../../src/plugin-config";
 import { addBindingsShortcut } from "../../../src/plugins/shortcuts";
-import { satisfiesViteVersion } from "../../../src/utils";
 
 const normalize = (logs: string[]) =>
 	stripAnsi(logs.join("\n"))

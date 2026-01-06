@@ -1,7 +1,7 @@
 import { resolve } from "path";
 import { setTimeout } from "timers/promises";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("'wrangler dev' correctly renders pages", () => {
@@ -26,7 +26,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		await stop?.();
 	});
 
-	it("renders ", async ({ expect }) => {
+	it("renders ", async () => {
 		await vi.waitFor(
 			async () => {
 				// Note that the local protocol defaults to http
@@ -79,7 +79,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(output).toContain("more text with    at in the middle");
 	});
 
-	it("renders pretty error after logging", async ({ expect }) => {
+	it("renders pretty error after logging", async () => {
 		// Regression test for https://github.com/cloudflare/workers-sdk/issues/4715
 		const response = await fetch(`http://${ip}:${port}/error`);
 		const text = await response.text();
@@ -89,13 +89,13 @@ describe("'wrangler dev' correctly renders pages", () => {
 		);
 	});
 
-	it("uses `workerd` condition when bundling", async ({ expect }) => {
+	it("uses `workerd` condition when bundling", async () => {
 		const response = await fetch(`http://${ip}:${port}/random`);
 		const text = await response.text();
 		expect(text).toMatch(/[0-9a-f]{16}/); // 8 hex bytes
 	});
 
-	it("passes through URL unchanged", async ({ expect }) => {
+	it("passes through URL unchanged", async () => {
 		const response = await fetch(`http://${ip}:${port}//thing?a=1`, {
 			headers: { "X-Test-URL": "true" },
 		});
@@ -161,7 +161,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		]);
 	});
 
-	it("has access to version_metadata binding", async ({ expect }) => {
+	it("has access to version_metadata binding", async () => {
 		const response = await fetch(`http://${ip}:${port}/version_metadata`);
 
 		await expect(response.json()).resolves.toMatchObject({
@@ -170,7 +170,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		});
 	});
 
-	it("passes through client content encoding", async ({ expect }) => {
+	it("passes through client content encoding", async () => {
 		// https://github.com/cloudflare/workers-sdk/issues/5246
 		const response = await fetch(`http://${ip}:${port}/content-encoding`, {
 			headers: { "Accept-Encoding": "hello" },
@@ -181,14 +181,14 @@ describe("'wrangler dev' correctly renders pages", () => {
 		});
 	});
 
-	it("supports encoded responses", async ({ expect }) => {
+	it("supports encoded responses", async () => {
 		const response = await fetch(`http://${ip}:${port}/content-encoding/gzip`, {
 			headers: { "Accept-Encoding": "gzip" },
 		});
 		expect(await response.text()).toEqual("x".repeat(100));
 	});
 
-	it("uses explicit resource management", async ({ expect }) => {
+	it("uses explicit resource management", async () => {
 		const response = await fetch(
 			`http://${ip}:${port}/explicit-resource-management`
 		);
@@ -204,7 +204,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		`);
 	});
 
-	it("reads local dev vars from the .env file", async ({ expect }) => {
+	it("reads local dev vars from the .env file", async () => {
 		const response = await fetch(`http://${ip}:${port}/env`);
 		const env = await response.text();
 		expect(env).toBe(`"bar"`);

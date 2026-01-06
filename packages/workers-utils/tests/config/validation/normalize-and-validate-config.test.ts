@@ -1,4 +1,5 @@
 import path from "node:path";
+import TOML from "smol-toml";
 import { describe, expect, it, test, vi } from "vitest";
 import { normalizeAndValidateConfig } from "../../../src/config/validation";
 import { normalizeString } from "../../../src/test-helpers";
@@ -5469,6 +5470,51 @@ describe("normalizeAndValidateConfig()", () => {
 				      Please add \\"unsafe\\" to \\"env.ENV1\\"."
 			`);
 		});
+
+		it("should error on Date values in vars (parsed by TOML)", () => {
+			const rawConfig = TOML.parse(`
+				[vars]
+				VALID_VAR = "some string"
+				DATE_VAR = 2024-01-01
+			`) as unknown as RawConfig;
+
+			const { diagnostics } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(true);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - The field \\"vars.DATE_VAR\\" is a TOML date, which is not supported. Please use a string instead, e.g. DATE_VAR = \\"2025-12-19\\"."
+			`);
+		});
+
+		it("should error on Date values in env vars (parsed by TOML)", () => {
+			const rawConfig = TOML.parse(`
+				[env.production.vars]
+				VALID_VAR = "some string"
+				RELEASE_DATE = 2025-06-15
+			`) as unknown as RawConfig;
+
+			const { diagnostics } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{ env: "production" }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(true);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+
+				  - \\"env.production\\" environment configuration
+				    - The field \\"env.production.vars.RELEASE_DATE\\" is a TOML date, which is not supported. Please use a string instead, e.g. RELEASE_DATE = \\"2025-12-19\\"."
+			`);
+		});
+
 		it("should error on node_compat", () => {
 			const { diagnostics } = normalizeAndValidateConfig(
 				// @ts-expect-error node_compat has been removed
