@@ -207,7 +207,8 @@ export class CommandRegistry {
 	}
 
 	/**
-	 * Tracks the category for a top-level command if specified.
+	 * Adds a top-level command (e.g., "wrangler r2") to the `#categories` map for help output grouping.
+	 * Subcommands (e.g., "wrangler r2 bucket") are ignored since the parent already represents them.
 	 */
 	#trackCategory(
 		command: Command,
