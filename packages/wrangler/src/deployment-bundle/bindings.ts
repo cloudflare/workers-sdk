@@ -445,6 +445,10 @@ const HANDLERS = {
 		sort: 0,
 		name: "KV Namespace",
 		keyDescription: "title or id",
+		getResourcesFromConfig: (
+			_config: Config,
+			bindings: CfKvNamespace[]
+		): CfKvNamespace[] => bindings,
 	},
 
 	d1_databases: {
@@ -452,18 +456,28 @@ const HANDLERS = {
 		sort: 1,
 		name: "D1 Database",
 		keyDescription: "name or id",
+		getResourcesFromConfig: (
+			_config: Config,
+			bindings: CfD1Database[]
+		): CfD1Database[] => bindings,
 	},
 	r2_buckets: {
 		Handler: R2Handler,
 		sort: 2,
 		name: "R2 Bucket",
 		keyDescription: "name",
+		getResourcesFromConfig: (
+			_config: Config,
+			bindings: CfR2Bucket[]
+		): CfR2Bucket[] => bindings,
 	},
 	queues: {
 		Handler: QueueHandler,
 		sort: 3,
 		name: "Queue",
 		keyDescription: "name",
+		getResourcesFromConfig: (config: Config, _bindings: CfQueue[]): CfQueue[] =>
+			collectUniqueQueueBindings(config),
 	},
 };
 
@@ -551,17 +565,16 @@ function collectUniqueQueueBindings(config: Config): CfQueue[] {
 }
 
 async function collectPendingResources(
-	complianceConfig: ComplianceConfig,
+	config: Config,
 	accountId: string,
 	scriptName: string,
 	bindings: CfWorkerInit["bindings"],
-	requireRemote: boolean,
-	config?: Config
+	requireRemote: boolean
 ): Promise<PendingResource[]> {
 	let settings: Settings | undefined;
 
 	try {
-		settings = await getSettings(complianceConfig, accountId, scriptName);
+		settings = await getSettings(config, accountId, scriptName);
 	} catch {
 		logger.debug("No settings found");
 	}
@@ -571,11 +584,18 @@ async function collectPendingResources(
 	for (const resourceType of Object.keys(
 		HANDLERS
 	) as (keyof typeof HANDLERS)[]) {
-		// For queues, use our special collection function to include consumers
-		const resources =
-			resourceType === "queues" && config
-				? collectUniqueQueueBindings(config)
-				: bindings[resourceType] ?? [];
+		const handler = HANDLERS[resourceType];
+		// Use polymorphic method to get resources - most handlers return bindings directly,
+		// but QueueHandler collects from both producers and consumers
+		const resources = handler.getResourcesFromConfig(
+			config,
+			// Type assertion needed because TypeScript can't narrow bindings[resourceType]
+			// to match the specific handler's expected binding type
+			(bindings[resourceType] ?? []) as CfR2Bucket[] &
+				CfKvNamespace[] &
+				CfD1Database[] &
+				CfQueue[]
+		);
 
 		for (const resource of resources) {
 			if (requireRemote && !resource.remote) {
@@ -583,9 +603,9 @@ async function collectPendingResources(
 			}
 			// Type assertion needed because TypeScript can't narrow the handler constructor
 			// to match the specific resource type when iterating over HANDLERS keys
-			const h = new HANDLERS[resourceType].Handler(
+			const h = new handler.Handler(
 				resource as CfR2Bucket & CfKvNamespace & CfD1Database & CfQueue,
-				complianceConfig,
+				config,
 				accountId
 			);
 
@@ -618,8 +638,7 @@ export async function provisionBindings(
 		accountId,
 		scriptName,
 		bindings,
-		requireRemote,
-		config
+		requireRemote
 	);
 
 	if (pendingResources.length > 0) {
