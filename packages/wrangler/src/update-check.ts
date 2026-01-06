@@ -25,6 +25,24 @@ async function doUpdateCheck(): Promise<string | undefined> {
 // without having to prop drill the result. It's unlikely to change through the
 // process lifetime.
 let updateCheckPromise: Promise<string | undefined>;
+let cachedLatestVersion: string | undefined;
+
 export function updateCheck(): Promise<string | undefined> {
-	return (updateCheckPromise ??= doUpdateCheck());
+	if (!updateCheckPromise) {
+		updateCheckPromise = doUpdateCheck().then((version) => {
+			cachedLatestVersion = version;
+			return version;
+		});
+	}
+	return updateCheckPromise;
+}
+
+/**
+ * Returns the latest version if the update check has already completed.
+ * Returns undefined if the check is still in progress or hasn't started.
+ * This is useful for synchronous code that wants to show version info
+ * without blocking.
+ */
+export function getLatestVersionIfAvailable(): string | undefined {
+	return cachedLatestVersion;
 }
