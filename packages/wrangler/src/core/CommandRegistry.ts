@@ -209,7 +209,10 @@ export class CommandRegistry {
 	/**
 	 * Tracks the category for a top-level command if specified.
 	 */
-	#trackCategory(command: Command, category: MetadataCategory | undefined) {
+	#trackCategory(
+		command: Command,
+		category: MetadataCategory | undefined
+	): void {
 		const segments = command.split(" ").slice(1);
 
 		// Only track categories for top-level commands (e.g., "wrangler r2", not "wrangler r2 bucket")
