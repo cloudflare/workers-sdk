@@ -63,6 +63,7 @@ export function getBindings(
 				binding: producer.binding,
 				queue_name: producer.queue,
 				delivery_delay: producer.delivery_delay,
+				remote: producer.remote,
 			};
 		}),
 		r2_buckets: config?.r2_buckets,
