@@ -1571,7 +1571,6 @@ function mockQueueOperations(initialQueues: MockQueueInfo[] = []) {
 	return mock;
 }
 
-// Legacy helpers for backwards compatibility
 function mockListQueues(queues: MockQueueInfo[]) {
 	msw.use(
 		http.get("*/accounts/:accountId/queues", ({ request }) => {
