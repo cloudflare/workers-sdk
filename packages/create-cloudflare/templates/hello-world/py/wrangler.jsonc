@@ -1,6 +1,5 @@
 {
 	"name": "<WORKER_NAME>",
-	"upload_source_maps": true,
 	"main": "src/entry.py",
 	"compatibility_date": "<COMPATIBILITY_DATE>",
 	"compatibility_flags": ["python_workers"],
