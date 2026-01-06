@@ -789,13 +789,17 @@ export const WorkerdTests: Record<string, () => void> = {
 		const sqlite = await import("node:sqlite");
 
 		// Common exports (both unenv stub and native workerd)
-		assertTypeOf(sqlite, "DatabaseSync", "function");
-		assertTypeOf(sqlite, "StatementSync", "function");
-		assertTypeOf(sqlite, "constants", "object");
-		assertTypeOf(sqlite, "default", "object");
-		assertTypeOf(sqlite.default, "DatabaseSync", "function");
-		assertTypeOf(sqlite.default, "StatementSync", "function");
-		assertTypeOf(sqlite.default, "constants", "object");
+		assertTypeOfProperties(sqlite, {
+			DatabaseSync: "function",
+			StatementSync: "function",
+			constants: "object",
+			default: "object",
+		});
+		assertTypeOfProperties(sqlite.default, {
+			DatabaseSync: "function",
+			StatementSync: "function",
+			constants: "object",
+		});
 
 		if (getRuntimeFlagValue("enable_nodejs_sqlite_module")) {
 			// Native workerd exports `backup` function and non-empty constants
