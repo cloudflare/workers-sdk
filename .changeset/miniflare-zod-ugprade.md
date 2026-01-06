@@ -1,5 +1,5 @@
 ---
-"miniflare": minor
+"miniflare": patch
 ---
 
 Update `zod` from 3.22.3 to 3.25.76
