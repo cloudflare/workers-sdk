@@ -783,6 +783,22 @@ export const WorkerdTests: Record<string, () => void> = {
 			assertTypeOf(inspectorPromises.default, "Network", "object");
 		}
 	},
+
+	async testSqlite() {
+		if (!getRuntimeFlagValue("enable_nodejs_sqlite_module")) {
+			return;
+		}
+
+		// @ts-expect-error TS2307 - node:sqlite is experimental and may not have type declarations
+		const sqlite = await import("node:sqlite");
+
+		assertTypeOf(sqlite, "DatabaseSync", "function");
+		assertTypeOf(sqlite, "StatementSync", "function");
+		assertTypeOf(sqlite, "constants", "object");
+		assertTypeOf(sqlite.default, "DatabaseSync", "function");
+		assertTypeOf(sqlite.default, "StatementSync", "function");
+		assertTypeOf(sqlite.default, "constants", "object");
+	},
 };
 
 /**
