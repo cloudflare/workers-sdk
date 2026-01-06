@@ -47,16 +47,35 @@ jobs:
           PR_TITLE: ${{ github.event.pull_request.title }}
           ALL_CHANGED_FILES: ${{ steps.changed-changesets.outputs.all_changed_files }}
           ADDED_FILES: ${{ steps.changed-changesets.outputs.added_files }}
+          DELETED_FILES: ${{ steps.changed-changesets.outputs.deleted_files }}
         run: |
-          # For "Version Packages" release PRs, review all changed changesets
+          # For "Version Packages" release PRs, review deleted changesets (they get consumed by the release)
           # For regular PRs, only review newly added changesets (skip minor edits to pre-existing ones)
           if [[ "$PR_TITLE" == "Version Packages" ]]; then
-            echo "Release PR detected - reviewing all changesets"
-            echo "files=$ALL_CHANGED_FILES" >> $GITHUB_OUTPUT
+            echo "Release PR detected - reviewing deleted changesets"
+            echo "files=$DELETED_FILES" >> $GITHUB_OUTPUT
+            echo "is_release_pr=true" >> $GITHUB_OUTPUT
           else
             echo "Regular PR - reviewing only newly added changesets"
             echo "files=$ADDED_FILES" >> $GITHUB_OUTPUT
+            echo "is_release_pr=false" >> $GITHUB_OUTPUT
           fi
+
+      # For Version Packages PRs, the changeset files are deleted in the PR branch.
+      # We need to recover them from the base branch so Claude can read them.
+      - name: Recover deleted changesets for review
+        if: steps.changesets-to-review.outputs.is_release_pr == 'true' && steps.changesets-to-review.outputs.files != ''
+        env:
+          DELETED_FILES: ${{ steps.changesets-to-review.outputs.files }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          echo "Recovering deleted changeset files from base branch ($BASE_SHA)..."
+          for file in $DELETED_FILES; do
+            echo "Recovering: $file"
+            git show "$BASE_SHA:$file" > "$file"
+          done
+          echo "Recovery complete. Files recovered:"
+          ls -la .changeset/*.md | grep -v README.md || true
 
       - name: Review Changesets with Claude
         id: claude-review
