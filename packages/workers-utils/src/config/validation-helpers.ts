@@ -630,8 +630,7 @@ export const validateAdditionalProperties = (
 	if (restPropSet.size > 0) {
 		const fields = Array.from(restPropSet.keys()).map((field) => `"${field}"`);
 		diagnostics.warnings.push(
-			`Unexpected fields found in ${fieldPath} field: ${fields}\n` +
-				`If this is a new configuration option, please update your Wrangler version.`
+			`Unexpected fields found in ${fieldPath} field: ${fields}`
 		);
 		return false;
 	}

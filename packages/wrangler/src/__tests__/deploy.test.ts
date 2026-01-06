@@ -934,7 +934,6 @@ describe("deploy", () => {
 				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mProcessing wrangler.toml configuration:[0m
 
 				    - Unexpected fields found in d1_databases[0] field: \\"tail_consumers\\"
-				    If this is a new configuration option, please update your Wrangler version.
 
 				"
 			`);

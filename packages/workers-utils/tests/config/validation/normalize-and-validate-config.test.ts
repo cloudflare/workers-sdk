@@ -221,8 +221,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - Unexpected fields found in top-level field: \\"unexpected\\"
-				    If this is a new configuration option, please update your Wrangler version."
+				  - Unexpected fields found in top-level field: \\"unexpected\\""
 			`);
 		});
 
@@ -245,8 +244,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(diagnostics.hasErrors()).toBe(false);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 				"Processing wrangler configuration:
-				  - Unexpected fields found in top-level field: \\"miniflare\\"
-				    If this is a new configuration option, please update your Wrangler version."
+				  - Unexpected fields found in top-level field: \\"miniflare\\""
 			`);
 		});
 
@@ -690,8 +688,7 @@ describe("normalizeAndValidateConfig()", () => {
 			expect(normalizePath(diagnostics.renderWarnings()))
 				.toMatchInlineSnapshot(`
 					"Processing project/wrangler.toml configuration:
-					  - Unexpected fields found in triggers field: \\"someOtherfield\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in triggers field: \\"someOtherfield\\""
 				`);
 		});
 
@@ -1770,8 +1767,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in migrations field: \\"unrecognized_field\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in migrations field: \\"unrecognized_field\\""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -1821,8 +1817,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in assets field: \\"notAField\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in assets field: \\"notAField\\""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -1899,8 +1894,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(config).toEqual(expect.objectContaining(expectedConfig));
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in assets field: \\"invalid_field_1\\",\\"invalid_field_2\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in assets field: \\"invalid_field_1\\",\\"invalid_field_2\\""
 				`);
 				expect(diagnostics.hasErrors()).toBeFalsy();
 			});
@@ -2544,8 +2538,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in containers field: \\"unknown_field\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in containers field: \\"unknown_field\\""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -2648,8 +2641,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - \\"containers.configuration\\" is deprecated. Use top level \\"containers\\" fields instead. \\"configuration.image\\" should be \\"image\\", limits should be set via \\"instance_type\\".
-					  - Unexpected fields found in containers.configuration field: \\"memory\\",\\"invalid_field\\",\\"another_invalid\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in containers.configuration field: \\"memory\\",\\"invalid_field\\",\\"another_invalid\\""
 				`);
 			});
 
@@ -3023,11 +3015,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - Unexpected fields found in d1_databases[2] field: \\"id\\"
-					    If this is a new configuration option, please update your Wrangler version.
 					  - Unexpected fields found in d1_databases[3] field: \\"id\\",\\"preview_id\\"
-					    If this is a new configuration option, please update your Wrangler version.
-					  - Unexpected fields found in d1_databases[4] field: \\"id\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in d1_databases[4] field: \\"id\\""
 				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -3143,8 +3132,7 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in hyperdrive[2] field: \\"project\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in hyperdrive[2] field: \\"project\\""
 				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -3202,8 +3190,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in queues field: \\"invalidField\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in queues field: \\"invalidField\\""
 				`);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -3251,9 +3238,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - Unexpected fields found in queues field: \\"invalidField\\"
-					    If this is a new configuration option, please update your Wrangler version.
-					  - Unexpected fields found in queues.consumers[2] field: \\"invalidField\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in queues.consumers[2] field: \\"invalidField\\""
 				`);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -3854,11 +3839,8 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - Unexpected fields found in mtls_certificates[3] field: \\"namespace\\"
-					    If this is a new configuration option, please update your Wrangler version.
 					  - Unexpected fields found in mtls_certificates[4] field: \\"id\\"
-					    If this is a new configuration option, please update your Wrangler version.
-					  - Unexpected fields found in mtls_certificates[7] field: \\"service\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in mtls_certificates[7] field: \\"service\\""
 				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -3978,8 +3960,7 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in pipelines[2] field: \\"project\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in pipelines[2] field: \\"project\\""
 				`);
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -4070,8 +4051,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in secrets_store_secrets[2] field: \\"invalid\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in secrets_store_secrets[2] field: \\"invalid\\""
 				`);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -4160,8 +4140,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in worker_loaders[2] field: \\"invalid\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in worker_loaders[2] field: \\"invalid\\""
 				`);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -4250,8 +4229,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in unsafe_hello_world[2] field: \\"invalid\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in unsafe_hello_world[2] field: \\"invalid\\""
 				`);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -4360,8 +4338,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in ratelimits[2] field: \\"invalid\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in ratelimits[2] field: \\"invalid\\""
 				`);
 				expect(diagnostics.hasErrors()).toBe(true);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
@@ -4548,8 +4525,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
 					  - \\"unsafe\\" fields are experimental and may change or break at any time.
-					  - Unexpected fields found in unsafe field: \\"invalid\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in unsafe field: \\"invalid\\""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -6171,8 +6147,7 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 
 					  - \\"env.ENV1\\" environment configuration
-					    - Unexpected fields found in migrations field: \\"unrecognized_field\\"
-					      If this is a new configuration option, please update your Wrangler version."
+					    - Unexpected fields found in migrations field: \\"unrecognized_field\\""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -6650,8 +6625,7 @@ describe("normalizeAndValidateConfig()", () => {
 
 					  - \\"env.ENV1\\" environment configuration
 					    - \\"unsafe\\" fields are experimental and may change or break at any time.
-					    - Unexpected fields found in unsafe field: \\"invalid\\"
-					      If this is a new configuration option, please update your Wrangler version."
+					    - Unexpected fields found in unsafe field: \\"invalid\\""
 				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
@@ -7031,8 +7005,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasWarnings()).toBe(true);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in observability field: \\"notEnabled\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in observability field: \\"notEnabled\\""
 				`);
 
 				expect(diagnostics.hasErrors()).toBe(true);
@@ -7210,8 +7183,7 @@ describe("normalizeAndValidateConfig()", () => {
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
 					"Processing wrangler configuration:
-					  - Unexpected fields found in observability field: \\"invalid_key_1\\",\\"invalid_key_2\\"
-					    If this is a new configuration option, please update your Wrangler version."
+					  - Unexpected fields found in observability field: \\"invalid_key_1\\",\\"invalid_key_2\\""
 				`);
 			});
 		});
