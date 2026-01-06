@@ -66,7 +66,7 @@ describe("wrangler", () => {
 				  wrangler vpc                    🌐 Manage VPC [open beta]
 				  wrangler workflows              🔁 Manage Workflows
 
-				  STORAGE & DATABASES
+				STORAGE & DATABASES
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces
@@ -137,7 +137,7 @@ describe("wrangler", () => {
 				  wrangler vpc                    🌐 Manage VPC [open beta]
 				  wrangler workflows              🔁 Manage Workflows
 
-				  STORAGE & DATABASES
+				STORAGE & DATABASES
 				  wrangler d1                     🗄️ Manage Workers D1 databases
 				  wrangler hyperdrive             🚀 Manage Hyperdrive databases
 				  wrangler kv                     🗂️ Manage Workers KV Namespaces
