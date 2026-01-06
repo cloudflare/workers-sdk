@@ -49,7 +49,7 @@ jobs:
           ADDED_FILES: ${{ steps.changed-changesets.outputs.added_files }}
           DELETED_FILES: ${{ steps.changed-changesets.outputs.deleted_files }}
         run: |
-          # For "Version Packages" release PRs, review deleted changesets (they get consumed by the release)
+          # For "Version Packages" release PRs, review the changesets being deleted (their content moves to changelogs)
           # For regular PRs, only review newly added changesets (skip minor edits to pre-existing ones)
           if [[ "$PR_TITLE" == "Version Packages" ]]; then
             echo "Release PR detected - reviewing deleted changesets"
