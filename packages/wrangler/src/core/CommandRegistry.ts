@@ -9,7 +9,6 @@ import type { CreateCommandResult } from "./create-command";
 import type {
 	AliasDefinition,
 	Command,
-	CommandDefinition,
 	DefinitionTree,
 	DefinitionTreeNode,
 	InternalDefinition,
@@ -25,7 +24,7 @@ const BETA_CMD_COLOR = "#BD5B08";
  * Map of category names to the top-level command segments that belong to them.
  * Used for grouping commands in the help output.
  */
-export type CategoryMap = Map<MetadataCategory, Array<string>>;
+type CategoryMap = Map<MetadataCategory, Array<string>>;
 
 /**
  * The default order for categories in the help output.
@@ -200,10 +199,7 @@ export class CommandRegistry {
 
 		if (isCommandDefinition(definition)) {
 			this.#upsertDefinition({ type: "command", command, ...definition });
-			this.#trackCategory(
-				command,
-				definition.metadata.category
-			);
+			this.#trackCategory(command, definition.metadata.category);
 		} else if (isNamespaceDefinition(definition)) {
 			this.#upsertDefinition({ type: "namespace", command, ...definition });
 			this.#trackCategory(command, definition.metadata.category);
