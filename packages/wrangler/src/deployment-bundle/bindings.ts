@@ -712,7 +712,8 @@ export async function provisionBindings(
 			for (const resourceType of Object.keys(
 				HANDLERS
 			) as (keyof typeof HANDLERS)[]) {
-				// Skip queues - they use queue name from config, no ID write-back needed
+				// Skip queues - config.queues has a different shape (producers/consumers)
+				// and doesn't need ID write-back since queues use name-based identification
 				if (resourceType === "queues") {
 					continue;
 				}
@@ -724,7 +725,8 @@ export async function provisionBindings(
 		for (const resourceType of Object.keys(
 			HANDLERS
 		) as (keyof typeof HANDLERS)[]) {
-			// Skip queues - they use queue name from config, no ID write-back needed (like R2)
+			// Skip queues - config.queues has a different shape (producers/consumers)
+			// and doesn't need ID write-back since queues use name-based identification
 			if (resourceType === "queues") {
 				continue;
 			}
