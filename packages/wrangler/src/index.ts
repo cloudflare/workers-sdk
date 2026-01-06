@@ -503,10 +503,10 @@ export function createCLIParser(argv: string[]) {
 
 		const helpOutput = await wrangler.getHelp();
 		const lines = helpOutput.split("\n");
-		const commandsHeaderIndex = lines.findIndex((line: string) =>
+		const commandsHeaderIndex = lines.findIndex((line) =>
 			line.includes("COMMANDS")
 		);
-		const globalFlagsIndex = lines.findIndex((line: string) =>
+		const globalFlagsIndex = lines.findIndex((line) =>
 			line.includes("GLOBAL FLAGS")
 		);
 
