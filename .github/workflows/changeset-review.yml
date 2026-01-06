@@ -40,46 +40,13 @@ jobs:
             .changeset/*.md
           files_ignore: |
             .changeset/README.md
-
-      - name: Determine changesets to review
-        id: changesets-to-review
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          ALL_CHANGED_FILES: ${{ steps.changed-changesets.outputs.all_changed_files }}
-          ADDED_FILES: ${{ steps.changed-changesets.outputs.added_files }}
-          DELETED_FILES: ${{ steps.changed-changesets.outputs.deleted_files }}
-        run: |
-          # For "Version Packages" release PRs, review the changesets being deleted (their content moves to changelogs)
-          # For regular PRs, only review newly added changesets (skip minor edits to pre-existing ones)
-          if [[ "$PR_TITLE" == "Version Packages" ]]; then
-            echo "Release PR detected - reviewing deleted changesets"
-            echo "files=$DELETED_FILES" >> $GITHUB_OUTPUT
-            echo "is_release_pr=true" >> $GITHUB_OUTPUT
-          else
-            echo "Regular PR - reviewing only newly added changesets"
-            echo "files=$ADDED_FILES" >> $GITHUB_OUTPUT
-            echo "is_release_pr=false" >> $GITHUB_OUTPUT
-          fi
-
-      # For Version Packages PRs, the changeset files are deleted in the PR branch.
-      # We need to recover them from the base branch so Claude can read them.
-      - name: Recover deleted changesets for review
-        if: steps.changesets-to-review.outputs.is_release_pr == 'true' && steps.changesets-to-review.outputs.files != ''
-        env:
-          DELETED_FILES: ${{ steps.changesets-to-review.outputs.files }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: |
-          echo "Recovering deleted changeset files from base branch ($BASE_SHA)..."
-          for file in $DELETED_FILES; do
-            echo "Recovering: $file"
-            git show "$BASE_SHA:$file" > "$file"
-          done
-          echo "Recovery complete. Files recovered:"
-          ls -la .changeset/*.md | grep -v README.md || true
+          # Recover deleted files so Claude can read them (needed for Version Packages PRs)
+          recover_deleted_files: true
 
       - name: Review Changesets with Claude
         id: claude-review
-        if: steps.changesets-to-review.outputs.files != ''
+        # Run for Version Packages PRs (which delete changesets) or regular PRs with new changesets
+        if: github.event.pull_request.title == 'Version Packages' || steps.changed-changesets.outputs.added_files_count > 0
         uses: anthropics/claude-code-action@v1.0.22
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -87,7 +54,10 @@ jobs:
           track_progress: true
           use_sticky_comment: true
           prompt: |
-            Review the changeset files in this PR: ${{ steps.changesets-to-review.outputs.files }}
+            Review the changeset files in this PR.
+
+            For "Version Packages" PRs, review: ${{ steps.changed-changesets.outputs.deleted_files }}
+            For regular PRs, review: ${{ steps.changed-changesets.outputs.added_files }}
 
             Read `.changeset/README.md` for guidelines, then validate:
             1. **Version Type**: Correct patch/minor/major (major forbidden for wrangler)
@@ -109,7 +79,7 @@ jobs:
             --json-schema '{"type":"object","properties":{"has_blocking_issues":{"type":"boolean","description":"True if any changeset has blocking issues that should fail the check"},"summary":{"type":"string","description":"One-line summary of the review"},"issues":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"issue":{"type":"string"},"severity":{"type":"string","enum":["blocking","warning"]}}}}},"required":["has_blocking_issues","summary"]}'
 
       - name: Skip notice
-        if: steps.changesets-to-review.outputs.files == ''
+        if: github.event.pull_request.title != 'Version Packages' && steps.changed-changesets.outputs.added_files_count == 0
         run: |
           echo "No new changesets to review (only minor edits to pre-existing changesets detected)"
 
