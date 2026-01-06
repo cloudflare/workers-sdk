@@ -529,17 +529,9 @@ export function createCLIParser(argv: string[]) {
 			const match = line.match(/^\s*wrangler\s+(\S+)/);
 			if (match) {
 				const cmdName = match[1];
-				let foundCategory: string | undefined;
-
-				for (const [
-					category,
-					commands,
-				] of registry.orderedCategories.entries()) {
-					if (commands.includes(cmdName)) {
-						foundCategory = category;
-						break;
-					}
-				}
+				const [foundCategory] = registry.orderedCategories
+					.entries()
+					.find(([_, commands]) => commands.includes(cmdName)) ?? [null];
 
 				if (foundCategory) {
 					const existing = categoryCommandLines.get(foundCategory) ?? [];
@@ -614,9 +606,6 @@ export function createCLIParser(argv: string[]) {
 					} else {
 						logger.log(wranglerVersion);
 					}
-				} else if (args.help || args.h) {
-					// Handle --help at root level with categories
-					await showHelpWithCategories();
 				} else {
 					await showHelpWithCategories();
 				}
