@@ -601,7 +601,7 @@ function getVmOverrides({
 }
 
 /**
- * Returns the overrides for `node:inspector` (unenv or workerd)
+ * Returns the overrides for `node:inspector` and `node:inspector/promises` (unenv or workerd)
  *
  * The native inspector implementation:
  * - is experimental and has no default enable date
@@ -627,7 +627,7 @@ function getInspectorOverrides({
 	// When enabled, use the native `inspector` module from workerd
 	return enabled
 		? {
-				nativeModules: ["inspector"],
+				nativeModules: ["inspector/promises", "inspector"],
 				hybridModules: [],
 			}
 		: {
