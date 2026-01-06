@@ -25,7 +25,7 @@ const BETA_CMD_COLOR = "#BD5B08";
  * Map of category names to the top-level command segments that belong to them.
  * Used for grouping commands in the help output.
  */
-export type CategoryMap = Map<string, Array<string>>;
+export type CategoryMap = Map<MetadataCategory, Array<string>>;
 
 /**
  * The default order for categories in the help output.
@@ -76,7 +76,7 @@ export class CommandRegistry {
 		this.#registeredNamespaces = new Set<string>();
 		this.#registerCommand = registerCommand;
 		this.#tree = this.#DefinitionTreeRoot.subtree;
-		this.#categories = new Map<string, Array<string>>();
+		this.#categories = new Map();
 	}
 
 	/**
@@ -141,7 +141,7 @@ export class CommandRegistry {
 	 * Used for grouping commands in the help output.
 	 */
 	get orderedCategories(): CategoryMap {
-		const orderedCategories: CategoryMap = new Map<string, Array<string>>();
+		const orderedCategories: CategoryMap = new Map();
 		for (const category of COMMAND_CATEGORY_ORDER) {
 			if (!this.#categories.has(category)) {
 				continue;
@@ -200,14 +200,13 @@ export class CommandRegistry {
 
 		if (isCommandDefinition(definition)) {
 			this.#upsertDefinition({ type: "command", command, ...definition });
-			// Cast is safe here because `createCommand` returns the CommandDefinition at runtime
 			this.#trackCategory(
 				command,
-				(definition as unknown as CommandDefinition).metadata.category
+				definition.metadata.category
 			);
 		} else if (isNamespaceDefinition(definition)) {
 			this.#upsertDefinition({ type: "namespace", command, ...definition });
-			this.#trackCategory(command, definition.metadata?.category);
+			this.#trackCategory(command, definition.metadata.category);
 		}
 	}
 
@@ -216,6 +215,7 @@ export class CommandRegistry {
 	 */
 	#trackCategory(command: Command, category: MetadataCategory | undefined) {
 		const segments = command.split(" ").slice(1);
+
 		// Only track categories for top-level commands (e.g., "wrangler r2", not "wrangler r2 bucket")
 		if (segments.length !== 1) {
 			return;

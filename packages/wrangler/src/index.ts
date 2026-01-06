@@ -490,6 +490,7 @@ export function createCLIParser(argv: string[]) {
 			);
 		},
 	};
+
 	const registerCommand = createRegisterYargsCommand(wrangler, subHelp);
 	const registry = new CommandRegistry(registerCommand);
 
@@ -566,7 +567,7 @@ export function createCLIParser(argv: string[]) {
 			...beforeCommands,
 			...trimmedRegularCommandLines,
 		] satisfies Array<string>;
-		for (const [category] of registry.orderedCategories.entries()) {
+		for (const category of registry.orderedCategories.keys()) {
 			const cmdLines = categoryCommandLines.get(category);
 			if (!cmdLines || cmdLines.length <= 0) {
 				continue;
@@ -1730,10 +1731,6 @@ export function createCLIParser(argv: string[]) {
 
 	registry.registerAll();
 
-	// Configure help handling
-	// We use yargs' built-in help for subcommands, but the root-level help
-	// is handled by the "*" command handler which calls showHelpWithCategories()
-	// to display commands grouped by category.
 	wrangler.help("help", "Show help").alias("h", "help");
 
 	wrangler.exitProcess(false);
