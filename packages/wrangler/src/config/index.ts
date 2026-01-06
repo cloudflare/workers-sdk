@@ -10,10 +10,8 @@ import {
 	validatePagesConfig,
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-import { version as wranglerVersion } from "../../package.json";
 import { logger } from "../logger";
 import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
-import { getLatestVersionIfAvailable } from "../update-check";
 import type {
 	Config,
 	NormalizeAndValidateConfigArgs,
@@ -70,28 +68,13 @@ export function readConfig(
 	);
 
 	if (diagnostics.hasWarnings() && !options?.hideWarnings) {
-		const warnings = diagnostics.renderWarnings();
-		logger.warn(warnings);
-
-		// If there are unexpected field warnings, log version info to help the user
-		if (warnings.includes("Unexpected fields found")) {
-			logVersionInfoForUnexpectedFields();
-		}
+		logger.warn(diagnostics.renderWarnings());
 	}
 	if (diagnostics.hasErrors()) {
 		throw new UserError(diagnostics.renderErrors());
 	}
 
 	return config;
-}
-
-function logVersionInfoForUnexpectedFields() {
-	const latestVersion = getLatestVersionIfAvailable();
-	if (latestVersion) {
-		logger.log(
-			`You are using wrangler ${wranglerVersion}. The latest version is ${latestVersion}.`
-		);
-	}
 }
 
 export function readPagesConfig(
@@ -142,13 +125,7 @@ export function readPagesConfig(
 	);
 
 	if (diagnostics.hasWarnings() && !options.hideWarnings) {
-		const warnings = diagnostics.renderWarnings();
-		logger.warn(warnings);
-
-		// If there are unexpected field warnings, log version info to help the user
-		if (warnings.includes("Unexpected fields found")) {
-			logVersionInfoForUnexpectedFields();
-		}
+		logger.warn(diagnostics.renderWarnings());
 	}
 	if (diagnostics.hasErrors()) {
 		throw new UserError(diagnostics.renderErrors());
