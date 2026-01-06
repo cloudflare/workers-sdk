@@ -2314,7 +2314,7 @@ importers:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
       wrangler:
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../wrangler
       ws:
         specifier: catalog:default
