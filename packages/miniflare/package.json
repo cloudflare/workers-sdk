@@ -37,7 +37,7 @@
 		"clean": "rimraf ./dist ./dist-types",
 		"dev": "concurrently -n esbuild,typechk,typewrk -c yellow,blue,blue.dim \"node scripts/build.mjs watch\" \"node scripts/types.mjs tsconfig.json watch\" \"node scripts/types.mjs src/workers/tsconfig.json watch\"",
 		"lint:fix": "pnpm run check:lint --fix",
-		"test": "ava",
+		"test": "vitest run",
 		"posttest": "rimraf ./.tmp",
 		"test:ci": "pnpm run test",
 		"types:build": "node scripts/types.mjs tsconfig.json && node scripts/types.mjs src/workers/tsconfig.json"
@@ -51,13 +51,12 @@
 		"sharp": "^0.33.5",
 		"stoppable": "1.1.0",
 		"undici": "catalog:default",
-		"workerd": "1.20251223.0",
+		"workerd": "1.20260103.0",
 		"ws": "catalog:default",
 		"youch": "4.1.0-beta.10",
 		"zod": "^3.25.76"
 	},
 	"devDependencies": {
-		"@ava/typescript": "^4.1.0",
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/eslint-config-shared": "workspace:*",
@@ -78,7 +77,6 @@
 		"@types/ws": "^8.5.7",
 		"@typescript-eslint/eslint-plugin": "catalog:default",
 		"@typescript-eslint/parser": "catalog:default",
-		"ava": "^6.4.1",
 		"capnp-es": "^0.0.11",
 		"capnweb": "^0.1.0",
 		"chokidar": "^4.0.1",
@@ -102,6 +100,7 @@
 		"source-map": "^0.6.1",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
+		"vitest": "catalog:default",
 		"which": "^2.0.2",
 		"xdg-app-paths": "^8.3.0"
 	},

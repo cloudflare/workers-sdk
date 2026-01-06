@@ -1,25 +1,25 @@
 import { setTimeout } from "node:timers/promises";
-import test from "ava";
 import { DeferredPromise, Mutex, WaitGroup } from "miniflare";
+import { expect, test } from "vitest";
 
-test("DeferredPromise: waits for resolve/reject callbacks", async (t) => {
+test("DeferredPromise: waits for resolve/reject callbacks", async () => {
 	// Check resolves with regular value
 	let promise = new DeferredPromise<number>();
 	promise.resolve(42);
-	t.is(await promise, 42);
+	expect(await promise).toBe(42);
 
 	// Check resolves with another Promise
 	promise = new DeferredPromise<number>();
 	promise.resolve(Promise.resolve(0));
-	t.is(await promise, 0);
+	expect(await promise).toBe(0);
 
 	// Check rejects with error
 	promise = new DeferredPromise<number>();
 	promise.reject(new Error("🤯"));
-	await t.throwsAsync(promise, { message: "🤯" });
+	await expect(promise).rejects.toThrow(new Error("🤯"));
 });
 
-test("Mutex: runs closures exclusively", async (t) => {
+test("Mutex: runs closures exclusively", async () => {
 	const mutex = new Mutex();
 	const events: number[] = [];
 	await Promise.all([
@@ -32,50 +32,50 @@ test("Mutex: runs closures exclusively", async (t) => {
 			events.push(3);
 		}),
 	]);
-	t.deepEqual(events, events[0] === 1 ? [1, 2, 3] : [3, 1, 2]);
+	expect(events).toEqual(events[0] === 1 ? [1, 2, 3] : [3, 1, 2]);
 });
-test("Mutex: lock can be acquired synchronously", (t) => {
+test("Mutex: lock can be acquired synchronously", () => {
 	const mutex = new Mutex();
 	let acquired = false;
 	mutex.runWith(() => (acquired = true));
-	t.true(acquired);
+	expect(acquired).toBe(true);
 });
-test("Mutex: maintains separate drain queue", async (t) => {
+test("Mutex: maintains separate drain queue", async () => {
 	const mutex = new Mutex();
 	const deferred1 = new DeferredPromise<void>();
 	void mutex.runWith(() => deferred1);
 	let drained = false;
 	mutex.drained().then(() => (drained = true));
 	await setTimeout();
-	t.false(drained);
+	expect(drained).toBe(false);
 	deferred1.resolve();
 	await setTimeout();
-	t.true(drained);
+	expect(drained).toBe(true);
 
 	// Check drains don't count as waiters
 	const deferred2 = new DeferredPromise<void>();
 	const deferred3 = new DeferredPromise<void>();
 	void mutex.runWith(async () => {
 		await deferred2;
-		t.true(mutex.hasWaiting); // next `runWith()` is a waiter
+		expect(mutex.hasWaiting).toBe(true); // next `runWith()` is a waiter
 	});
 	void mutex.runWith(async () => {
 		await deferred3;
-		t.false(mutex.hasWaiting); // but `drain()` isn't
+		expect(mutex.hasWaiting).toBe(false); // but `drain()` isn't
 	});
 	drained = false;
 	mutex.drained().then(() => (drained = true));
 	await setTimeout();
-	t.false(drained);
+	expect(drained).toBe(false);
 	deferred2.resolve();
 	await setTimeout();
-	t.false(drained);
+	expect(drained).toBe(false);
 	deferred3.resolve();
 	await setTimeout();
-	t.true(drained);
+	expect(drained).toBe(true);
 });
 
-test("WaitGroup: waits for all tasks to complete", async (t) => {
+test("WaitGroup: waits for all tasks to complete", async () => {
 	const group = new WaitGroup();
 
 	// Check doesn't wait if no tasks added
@@ -86,11 +86,11 @@ test("WaitGroup: waits for all tasks to complete", async (t) => {
 	group.add(); // count -> 1
 	group.wait().then(() => (resolved = true));
 	await Promise.resolve();
-	t.false(resolved);
+	expect(resolved).toBe(false);
 
 	group.done(); // count -> 0 (complete)
 	await Promise.resolve();
-	t.true(resolved);
+	expect(resolved).toBe(true);
 
 	// Check waits for multiple tasks, including those added whilst waiting
 	resolved = false;
@@ -99,27 +99,27 @@ test("WaitGroup: waits for all tasks to complete", async (t) => {
 	group.wait().then(() => (resolved = true));
 	group.add(); // count -> 3
 	await Promise.resolve();
-	t.false(resolved);
+	expect(resolved).toBe(false);
 
 	group.done(); // count -> 2
 	await Promise.resolve();
-	t.false(resolved);
+	expect(resolved).toBe(false);
 
 	group.done(); // count -> 1
 	await Promise.resolve();
-	t.false(resolved);
+	expect(resolved).toBe(false);
 
 	group.add(); // count -> 2
 	await Promise.resolve();
-	t.false(resolved);
+	expect(resolved).toBe(false);
 
 	group.done(); // count -> 1
 	await Promise.resolve();
-	t.false(resolved);
+	expect(resolved).toBe(false);
 
 	group.done(); // count -> 0 (complete)
 	await Promise.resolve();
-	t.true(resolved);
+	expect(resolved).toBe(true);
 
 	// Check allows multiple waiters
 	resolved = false;
@@ -128,11 +128,11 @@ test("WaitGroup: waits for all tasks to complete", async (t) => {
 	group.wait().then(() => (resolved = true));
 	group.wait().then(() => (resolved2 = true));
 	await Promise.resolve();
-	t.false(resolved);
-	t.false(resolved2);
+	expect(resolved).toBe(false);
+	expect(resolved2).toBe(false);
 
 	group.done(); // count -> 0 (complete)
 	await Promise.resolve();
-	t.true(resolved);
-	t.true(resolved2);
+	expect(resolved).toBe(true);
+	expect(resolved2).toBe(true);
 });

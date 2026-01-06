@@ -1,7 +1,7 @@
 import { fork } from "node:child_process";
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 import type { ChildProcess } from "node:child_process";
 
@@ -26,7 +26,7 @@ describe("pages-proxy-app", async () => {
 		devServer.kill();
 	});
 
-	it("receives the correct Host header", async ({ expect }) => {
+	it("receives the correct Host header", async () => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
 		expect(text).toContain(`Host:${ip}:${port}`);

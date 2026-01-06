@@ -10,8 +10,8 @@ catalogs:
       specifier: ^0.10.11
       version: 0.10.15
     '@cloudflare/workers-types':
-      specifier: ^4.20251223.0
-      version: 4.20251223.0
+      specifier: ^4.20260103.0
+      version: 4.20260103.0
     '@typescript-eslint/eslint-plugin':
       specifier: ^8.35.1
       version: 8.46.3
@@ -78,9 +78,6 @@ patchedDependencies:
   '@netlify/build-info':
     hash: m4wvy4p7g3z4a5zv6jw4gevqr4
     path: patches/@netlify__build-info.patch
-  concordance@5.0.4:
-    hash: c3utx6zbsihhgmgyftee3iwqa4
-    path: patches/concordance@5.0.4.patch
   postal-mime:
     hash: ngwql2fj2dlex3jjynq4iizhk4
     path: patches/postal-mime.patch
@@ -138,8 +135,8 @@ importers:
         specifier: ^1.2.2
         version: 1.2.2
       turbo:
-        specifier: ^2.2.3
-        version: 2.2.3
+        specifier: ^2.7.2
+        version: 2.7.2
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -157,7 +154,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -202,7 +199,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
@@ -220,7 +217,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -241,7 +238,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -265,7 +262,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -301,7 +298,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -316,7 +313,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/mimetext':
         specifier: ^2.0.4
         version: 2.0.4
@@ -355,7 +352,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/jest-image-snapshot':
         specifier: ^6.4.0
         version: 6.4.0
@@ -382,7 +379,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       miniflare:
         specifier: workspace:*
         version: link:../../packages/miniflare
@@ -452,7 +449,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
@@ -476,7 +473,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/is-even':
         specifier: ^1.0.2
         version: 1.0.2
@@ -513,7 +510,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -541,7 +538,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
@@ -571,7 +568,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -589,7 +586,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/debug':
         specifier: 4.1.12
         version: 4.1.12
@@ -622,7 +619,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -643,7 +640,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -668,7 +665,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@fixture/pages-plugin':
         specifier: workspace:*
         version: link:../pages-plugin-example
@@ -692,7 +689,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -731,7 +728,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -752,7 +749,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -773,7 +770,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -791,7 +788,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       is-odd:
         specifier: ^3.0.1
         version: 3.0.1
@@ -810,7 +807,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@fixture/pages-plugin':
         specifier: workspace:*
         version: link:../pages-plugin-example
@@ -870,7 +867,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -891,7 +888,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1068,19 +1065,19 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
 
   fixtures/rules-app:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
 
   fixtures/secrets-store:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1104,7 +1101,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/is-even':
         specifier: ^1.0.2
         version: 1.0.2
@@ -1128,7 +1125,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.9.3))(yaml@2.8.1)
@@ -1143,7 +1140,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       esbuild:
         specifier: catalog:default
         version: 0.27.0
@@ -1173,7 +1170,7 @@ importers:
         version: link:../../packages/vitest-pool-workers
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@microlabs/otel-cf-workers':
         specifier: 1.0.0-rc.45
         version: 1.0.0-rc.45(@opentelemetry/api@1.7.0)
@@ -1235,7 +1232,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1290,7 +1287,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
@@ -1329,7 +1326,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       run-script-os:
         specifier: ^1.1.6
         version: 1.1.6
@@ -1353,7 +1350,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1374,7 +1371,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1395,7 +1392,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1416,7 +1413,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1437,7 +1434,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/jest-image-snapshot':
         specifier: ^6.4.0
         version: 6.4.0
@@ -1470,7 +1467,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       playwright-chromium:
         specifier: catalog:default
         version: 1.56.1
@@ -1494,7 +1491,7 @@ importers:
         version: link:../../packages/workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1512,7 +1509,7 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1617,7 +1614,7 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
@@ -1761,7 +1758,7 @@ importers:
         version: link:../eslint-config-shared
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@octokit/types':
         specifier: ^13.8.0
         version: 13.8.0
@@ -1785,7 +1782,7 @@ importers:
         version: link:../eslint-config-shared
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -1824,7 +1821,7 @@ importers:
         version: 9.39.1(jiti@2.6.0)
       eslint-config-turbo:
         specifier: ^2.4.4
-        version: 2.4.4(eslint@9.39.1(jiti@2.6.0))(turbo@2.2.3)
+        version: 2.4.4(eslint@9.39.1(jiti@2.6.0))(turbo@2.7.2)
       eslint-plugin-import:
         specifier: ^2.32.0
         version: 2.32.0(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3))(eslint@9.39.1(jiti@2.6.0))
@@ -1851,7 +1848,7 @@ importers:
         version: link:../eslint-config-shared
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.0)
@@ -1885,10 +1882,10 @@ importers:
         version: link:../eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: catalog:default
-        version: 0.10.15(@cloudflare/workers-types@4.20251223.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)
+        version: 0.10.15(@cloudflare/workers-types@4.20260103.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/mime':
         specifier: ^3.0.4
         version: 3.0.4
@@ -1932,8 +1929,8 @@ importers:
         specifier: catalog:default
         version: 7.14.0
       workerd:
-        specifier: 1.20251223.0
-        version: 1.20251223.0
+        specifier: 1.20260103.0
+        version: 1.20260103.0
       ws:
         specifier: catalog:default
         version: 8.18.0
@@ -1944,9 +1941,6 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
-      '@ava/typescript':
-        specifier: ^4.1.0
-        version: 4.1.0
       '@cloudflare/cli':
         specifier: workspace:*
         version: link:../cli
@@ -1964,7 +1958,7 @@ importers:
         version: link:../workers-shared
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
@@ -2007,9 +2001,6 @@ importers:
       '@typescript-eslint/parser':
         specifier: catalog:default
         version: 8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.8.3)
-      ava:
-        specifier: ^6.4.1
-        version: 6.4.1(@ava/typescript@4.1.0)(encoding@0.1.13)(rollup@4.44.1)
       capnp-es:
         specifier: ^0.0.11
         version: 0.0.11(typescript@5.8.3)
@@ -2079,6 +2070,9 @@ importers:
       typescript:
         specifier: catalog:default
         version: 5.8.3
+      vitest:
+        specifier: catalog:default
+        version: 3.2.3(@types/debug@4.1.7)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(yaml@2.8.1)
       which:
         specifier: ^2.0.2
         version: 2.0.2
@@ -2124,7 +2118,7 @@ importers:
         version: link:../eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: catalog:default
-        version: 0.10.15(@cloudflare/workers-types@4.20251223.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
+        version: 0.10.15(@cloudflare/workers-types@4.20260103.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared
@@ -2133,7 +2127,7 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       concurrently:
         specifier: ^8.2.2
         version: 8.2.2
@@ -2173,7 +2167,7 @@ importers:
         version: link:../eslint-config-shared
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/cookie':
         specifier: ^0.6.0
         version: 0.6.0
@@ -2213,7 +2207,7 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
@@ -2243,7 +2237,7 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       esbuild:
         specifier: catalog:default
         version: 0.27.0
@@ -2347,7 +2341,7 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
@@ -2419,7 +2413,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2440,7 +2434,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2461,7 +2455,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2482,7 +2476,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2503,7 +2497,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2524,7 +2518,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2545,7 +2539,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2566,7 +2560,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2587,7 +2581,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2608,7 +2602,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2629,7 +2623,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2650,7 +2644,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2671,7 +2665,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2692,7 +2686,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2713,7 +2707,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2734,7 +2728,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/mimetext':
         specifier: ^2.0.4
         version: 2.0.4
@@ -2767,7 +2761,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2788,7 +2782,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2809,7 +2803,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2830,7 +2824,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2851,7 +2845,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2872,7 +2866,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2893,7 +2887,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@playground/main-resolution-package':
         specifier: file:./package
         version: file:packages/vite-plugin-cloudflare/playground/main-resolution/package
@@ -2917,7 +2911,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/express':
         specifier: ^5.0.1
         version: 5.0.1
@@ -2944,7 +2938,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@playground/module-resolution-excludes':
         specifier: file:./packages/excludes
         version: file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/excludes
@@ -2956,7 +2950,7 @@ importers:
         version: file:packages/vite-plugin-cloudflare/playground/module-resolution/packages/requires
       '@remix-run/cloudflare':
         specifier: 2.12.0
-        version: 2.12.0(@cloudflare/workers-types@4.20251223.0)(typescript@5.8.3)
+        version: 2.12.0(@cloudflare/workers-types@4.20260103.0)(typescript@5.8.3)
       '@types/react':
         specifier: ^18.3.11
         version: 18.3.18
@@ -2989,7 +2983,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3010,7 +3004,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12
@@ -3059,7 +3053,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/react':
         specifier: 19.1.0
         version: 19.1.0
@@ -3080,7 +3074,7 @@ importers:
     dependencies:
       partyserver:
         specifier: ^0.0.64
-        version: 0.0.64(@cloudflare/workers-types@4.20251223.0)
+        version: 0.0.64(@cloudflare/workers-types@4.20260103.0)
       partysocket:
         specifier: ^1.0.3
         version: 1.0.3
@@ -3099,7 +3093,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@tailwindcss/vite':
         specifier: ^4.0.15
         version: 4.0.15(vite@7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1))
@@ -3135,7 +3129,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@prisma/adapter-d1':
         specifier: ^7.0.0
         version: 7.0.1
@@ -3172,7 +3166,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/react':
         specifier: 19.1.0
         version: 19.1.0
@@ -3202,7 +3196,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3223,7 +3217,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3251,7 +3245,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/react':
         specifier: 19.1.0
         version: 19.1.0
@@ -3284,7 +3278,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3305,7 +3299,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3326,7 +3320,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@vitejs/plugin-basic-ssl':
         specifier: ^2.0.0
         version: 2.0.0(vite@7.1.12(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(yaml@2.8.1))
@@ -3350,7 +3344,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3371,7 +3365,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3392,7 +3386,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3413,7 +3407,7 @@ importers:
         version: link:../../../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3465,7 +3459,7 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@cloudflare/workflows-shared':
         specifier: workspace:*
         version: link:../workflows-shared
@@ -3683,13 +3677,13 @@ importers:
         version: link:../eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: catalog:default
-        version: 0.10.15(@cloudflare/workers-types@4.20251223.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)
+        version: 0.10.15(@cloudflare/workers-types@4.20260103.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@sentry/cli':
         specifier: ^2.37.0
         version: 2.41.1(encoding@0.1.13)
@@ -3806,13 +3800,13 @@ importers:
         version: link:../eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: catalog:default
-        version: 0.10.15(@cloudflare/workers-types@4.20251223.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
+        version: 0.10.15(@cloudflare/workers-types@4.20260103.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@types/mime':
         specifier: ^3.0.4
         version: 3.0.4
@@ -3856,8 +3850,8 @@ importers:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
       workerd:
-        specifier: 1.20251223.0
-        version: 1.20251223.0
+        specifier: 1.20260103.0
+        version: 1.20260103.0
     optionalDependencies:
       fsevents:
         specifier: ~2.3.2
@@ -3889,7 +3883,7 @@ importers:
         version: link:../workers-tsconfig
       '@cloudflare/workers-types':
         specifier: catalog:default
-        version: 4.20251223.0
+        version: 4.20260103.0
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
@@ -4217,10 +4211,6 @@ packages:
   '@ampproject/remapping@2.2.0':
     resolution: {integrity: sha512-qRmjj8nj9qmLTQXXmaR1cck3UXSRMPrbsLJAasZpF+t3riI71BXed5ebIOYwQntykeZuhjsdweEc9BxH5Jc26w==}
     engines: {node: '>=6.0.0'}
-
-  '@ava/typescript@4.1.0':
-    resolution: {integrity: sha512-1iWZQ/nr9iflhLK9VN8H+1oDZqe93qxNnyYUz+jTzkYPAHc5fdZXBrqmNIgIfFhWYXK5OaQ5YtC7OmLeTNhVEg==}
-    engines: {node: ^14.19 || ^16.15 || ^18 || ^20}
 
   '@aws-crypto/crc32@5.2.0':
     resolution: {integrity: sha512-nLbCWqQNgUiwwtFsen1AdzAtvuLRsQS8rYgMuxCrdKf9kOssamGLuPwyTY9wyYblNr9+1XM8v6zoDTPPSIeANg==}
@@ -4889,8 +4879,8 @@ packages:
     cpu: [x64]
     os: [darwin]
 
-  '@cloudflare/workerd-darwin-64@1.20251223.0':
-    resolution: {integrity: sha512-Mw2jNgqR7Jk5s/nVRQklFi+SjPA0peupOGASr4K3+ehc2WImbQtb+xhT+gVh/UppR1eDQtfd1euJFsiBXH0YpQ==}
+  '@cloudflare/workerd-darwin-64@1.20260103.0':
+    resolution: {integrity: sha512-jhpwADN14T+plfDt3ljYAJL2+nTdTJQ3I/OpedweOz1l2jYZITRD+EI0zUpOzGJRqCE1k5SCkHUXINsWaE6aKg==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
@@ -4907,8 +4897,8 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
-  '@cloudflare/workerd-darwin-arm64@1.20251223.0':
-    resolution: {integrity: sha512-ogRZJacxIFCHObsYe5foxMNE+KhCtAjQPDdfH7qAw1MKYKH1CRzsva6y1wJVj0pFFXCJFsNeAF6z537piJRZkA==}
+  '@cloudflare/workerd-darwin-arm64@1.20260103.0':
+    resolution: {integrity: sha512-RoVMzq+TMoKTPr0aewwRasJumMqNYlBJuTC7ZwPAjfjuqedkLfvLx8GsXkW5zpyUMEsUciRh4DPJfDPKVgAy9g==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
@@ -4925,8 +4915,8 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@cloudflare/workerd-linux-64@1.20251223.0':
-    resolution: {integrity: sha512-hfIhH/Of2gvPW+9dNLoycv25U8pxyL49GwOPtYrd7yewWihKZhiUmBL+wTfkwRHudJyNiQGwUaFTC9Sh6WN8xw==}
+  '@cloudflare/workerd-linux-64@1.20260103.0':
+    resolution: {integrity: sha512-JQN4FnsTiBgtLF/9ABcgJjew+QxonE3ZxnqCT355x45mksJuArjD2iZ4kLZQ16OSEAkno8fmVw0VvljdGd41kg==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
@@ -4943,8 +4933,8 @@ packages:
     cpu: [arm64]
     os: [linux]
 
-  '@cloudflare/workerd-linux-arm64@1.20251223.0':
-    resolution: {integrity: sha512-XACBfsD8ua4CUYrW/kA4kwHQdCz/5RGSYQiXNmNj9YWJ6vBxEjDXqrX7I2B1I2AVljPFAOHP15MxbqhwymKoTQ==}
+  '@cloudflare/workerd-linux-arm64@1.20260103.0':
+    resolution: {integrity: sha512-kjMHGrnnZrOyQnXuJ8YpblKtjkv45o+utIYk4AZUoaUBbEltwn7CXucDa0MG0jsDDvCCwRabdaJSAXHV6JB/ZQ==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
@@ -4961,14 +4951,14 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@cloudflare/workerd-windows-64@1.20251223.0':
-    resolution: {integrity: sha512-k3vBFOvBlQoXZPpoYxHuww/6vvgGOD/7OVTTHT1WvZ6FC/JdDRagr6k+IP+2OxMRdwW6LTvSPcH3N4PO0k9gQA==}
+  '@cloudflare/workerd-windows-64@1.20260103.0':
+    resolution: {integrity: sha512-M7mZHV6uWVE+Mf8r/nT6/21N1+Z4JmZTPJjek3rB4n7netOJGZIUQwyuY+5gwOnq+qJsqHoU/RP7b4lFSoMZuQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
 
-  '@cloudflare/workers-types@4.20251223.0':
-    resolution: {integrity: sha512-r7oxkFjbMcmzhIrzjXaiJlGFDmmeu3+GlwkLlZbUxVWrXHTCkvqu+DrWnNmF6xZEf9j+2/PpuKIS21J522xhJA==}
+  '@cloudflare/workers-types@4.20260103.0':
+    resolution: {integrity: sha512-jANmoGpJcXARnwlkvrQOeWyjYD1quTfHcs+++Z544XRHOSfLc4XSlts7snIhbiIGgA5bo66zDhraF+9lKUr2hw==}
 
   '@colors/colors@1.5.0':
     resolution: {integrity: sha512-ooWCrlZP11i8GImSjTHYHLkvFDP48nS4+204nGb1RiX/WXYHmJA2III9/e2DWVabCESdW7hBAEzHRqUn9OUVvQ==}
@@ -6136,10 +6126,6 @@ packages:
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
     engines: {node: '>=12'}
 
-  '@isaacs/fs-minipass@4.0.1':
-    resolution: {integrity: sha512-wgm9Ehl2jpeqP3zw/7mo3kRHFp5MEDhqAdwy1fTGkHAwnkGOVsgpvQhL8B5n1qlb01jV3n/bI0ZfZp5lWA1k4w==}
-    engines: {node: '>=18.0.0'}
-
   '@jest/expect-utils@29.7.0':
     resolution: {integrity: sha512-GlsNBWiFQFCVi9QVSx7f5AgMeLxe9YCCs5PuP2O2LdjDAA8Jh9eX7lA1Jq/xdXw3Wb3hyvlFNfZIfcRetSzYcA==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
@@ -6208,11 +6194,6 @@ packages:
   '@manypkg/tools@1.1.0':
     resolution: {integrity: sha512-SkAyKAByB9l93Slyg8AUHGuM2kjvWioUTCckT/03J09jYnfEzMO/wSXmEhnKGYs6qx9De8TH4yJCl0Y9lRgnyQ==}
     engines: {node: '>=14.18.0'}
-
-  '@mapbox/node-pre-gyp@2.0.3':
-    resolution: {integrity: sha512-uwPAhccfFJlsfCxMYTwOdVfOz3xqyj8xYL3zJj8f0pb30tLohnnFPhLuqp4/qoEz8sNxe4SESZedcBojRefIzg==}
-    engines: {node: '>=18'}
-    hasBin: true
 
   '@microlabs/otel-cf-workers@1.0.0-rc.45':
     resolution: {integrity: sha512-PDHHTlgH1rwDGKe77DoNYjMvUlqE4uu2536/s2CqVBZFjSeKV5WK3/aeg6J6bd6h7ENJ6tndDprreiBHlimUsw==}
@@ -6927,15 +6908,6 @@ packages:
       rollup:
         optional: true
 
-  '@rollup/pluginutils@5.3.0':
-    resolution: {integrity: sha512-5EdhGZtnu3V88ces7s53hhfK5KSASnJZv8Lulpc04cWO3REESroJXg73DFsOmgbU2BhwV0E20bu2IDZb3VKW4Q==}
-    engines: {node: '>=14.0.0'}
-    peerDependencies:
-      rollup: ^1.20.0||^2.0.0||^3.0.0||^4.0.0
-    peerDependenciesMeta:
-      rollup:
-        optional: true
-
   '@rollup/rollup-android-arm-eabi@4.30.1':
     resolution: {integrity: sha512-pSWY+EVt3rJ9fQ3IqlrEUtXh3cGqGtPDH1FQlNZehO2yYxCHEX1SPsz1M//NXwYfbTlcKr9WObLnJX9FsS9K1Q==}
     cpu: [arm]
@@ -7258,10 +7230,6 @@ packages:
 
   '@sindresorhus/is@7.0.2':
     resolution: {integrity: sha512-d9xRovfKNz1SKieM0qJdO+PQonjnnIfSNWfHYnBSJ9hkjm0ZPw6HlxscDXYstp3z+7V2GOFHc+J0CYrYTjqCJw==}
-    engines: {node: '>=18'}
-
-  '@sindresorhus/merge-streams@2.3.0':
-    resolution: {integrity: sha512-LtoMMhxAlorcGhmFYI+LhPgbPZCkgP6ra1YL604EeF6U98pLlQ3iWIGMdWSC+vWmPBWBNgmDBAhnAobLROJmwg==}
     engines: {node: '>=18'}
 
   '@smithy/abort-controller@3.1.9':
@@ -7925,11 +7893,6 @@ packages:
     resolution: {integrity: sha512-uk574k8IU0rOF/AjniX8qbLSGURJVUCeM5e4MIMKBFFi8weeiLrG1fyQejyLXQpRZbU/1BuQasleV/RfHC3hHg==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@vercel/nft@0.29.4':
-    resolution: {integrity: sha512-6lLqMNX3TuycBPABycx7A9F1bHQR7kiQln6abjFbPrf5C/05qHM9M5E4PeTE59c7z8g6vHnx1Ioihb2AQl7BTA==}
-    engines: {node: '>=18'}
-    hasBin: true
-
   '@verdaccio/auth@8.0.0-next-8.7':
     resolution: {integrity: sha512-CSLBAsCJT1oOpJ4OWnVGmN6o/ZilDNa7Aa5+AU1LI2lbRblqgr4BVRn07GFqimJ//6+tPzl8BHgyiCbBhh1ZiA==}
     engines: {node: '>=18'}
@@ -8174,10 +8137,6 @@ packages:
     resolution: {integrity: sha512-E+iruNOY8VV9s4JEbe1aNEm6MiszPRr/UfcHMz0TQh1BXSxHK+ASV1R6W4HpjBhSeS+54PIsAMCBmwD06LLsqQ==}
     hasBin: true
 
-  abbrev@3.0.1:
-    resolution: {integrity: sha512-AO2ac6pjRB3SJmGJo+v5/aK6Omggp6fsLrs6wN9bd35ulu4cCwaAU9+7ZhXjeqHVkaHThLuzH0nZr0YpCDhygg==}
-    engines: {node: ^18.17.0 || >=20.5.0}
-
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
     engines: {node: '>=6.5'}
@@ -8190,11 +8149,6 @@ packages:
     resolution: {integrity: sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng==}
     engines: {node: '>= 0.6'}
 
-  acorn-import-attributes@1.9.5:
-    resolution: {integrity: sha512-n02Vykv5uA3eHGM/Z2dQrcD56kL8TyDb2p1+0P83PClMnC/nc+anbQRhIOWnSq4Ke/KvDPrY3C9hDtC/A3eHnQ==}
-    peerDependencies:
-      acorn: ^8
-
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
     peerDependencies:
@@ -8202,10 +8156,6 @@ packages:
 
   acorn-walk@8.3.2:
     resolution: {integrity: sha512-cjkyv4OtNCIeqhHrfS81QWXoCBPExR/J62oyEqepVw8WaQeSqpW2uhuLPh1m9eWhDuOo/jUXVTlifvesOWp/4A==}
-    engines: {node: '>=0.4.0'}
-
-  acorn-walk@8.3.4:
-    resolution: {integrity: sha512-ueEepnujpqee2o5aIYnvHU6C0A42MNdsIDeqy5BydrkuC5R1ZuUFnm27EeFJGoEHJQgn3uleRvmTXaJgfXbt4g==}
     engines: {node: '>=0.4.0'}
 
   acorn@8.14.0:
@@ -8315,10 +8265,6 @@ packages:
     resolution: {integrity: sha512-LHE+8BuR7RYGDKvnrmcuSq3tDcKv9OFEXQt/HpbZhY7V6h0zlUXutnAD82GiFx9rdieCMjkvtcsPqBwgUl1Iiw==}
     engines: {node: '>= 0.4'}
 
-  array-find-index@1.0.2:
-    resolution: {integrity: sha512-M1HQyIXcBGtVywBt8WVdim+lrNaK7VHp99Qt5pSNziXznKHViIBbXWtfRTpEFpF/c4FdfxNAsCCwPp5phBYJtw==}
-    engines: {node: '>=0.10.0'}
-
   array-flatten@1.1.1:
     resolution: {integrity: sha512-PCVAQswWemu6UdxsDFFX/+gVeYqKAod3D3UVm91jHwynguOwAvYPhx8nNlM++NqRcK6CxxpUafjmhIdKiHibqg==}
 
@@ -8365,14 +8311,6 @@ packages:
     resolution: {integrity: sha512-BNoCY6SXXPQ7gF2opIP4GBE+Xw7U+pHMYKuzjgCN3GwiaIR09UUeKfheyIry77QtrCBlC0KK0q5/TER/tYh3PQ==}
     engines: {node: '>= 0.4'}
 
-  arrgv@1.0.2:
-    resolution: {integrity: sha512-a4eg4yhp7mmruZDQFqVMlxNRFGi/i1r87pt8SDHy0/I8PqSXoUTlWZRdAZo0VXgvEARcujbtTk8kiZRi1uDGRw==}
-    engines: {node: '>=8.0.0'}
-
-  arrify@3.0.0:
-    resolution: {integrity: sha512-tLkvA81vQG/XqE2mjDkGQHoOINtMHtysSnemrmoGe6PydDPMRbVugqyk4A6V/WDWEfm3l+0d8anA9r8cv/5Jaw==}
-    engines: {node: '>=12'}
-
   asn1@0.2.6:
     resolution: {integrity: sha512-ix/FxPn0MDjeyJ7i/yoHGFt/EX6LyNbxSEhPPXODPL+KB0VPk86UYfL0lMdy+KCnv+fmvIzySwaK5COwqVbWTQ==}
 
@@ -8407,9 +8345,6 @@ packages:
     resolution: {integrity: sha512-6t10qk83GOG8p0vKmaCr8eiilZwO171AvbROMtvvNiwrTly62t+7XkA8RdIIVbpMhCASAsxgAzdRSwh6nw/5Dg==}
     engines: {node: '>=4'}
 
-  async-sema@3.1.1:
-    resolution: {integrity: sha512-tLRNUXati5MFePdAk8dw7Qt7DpxPB60ofAgn8WRhW6a2rcimZnYBP9oxHiv0OHy+Wz7kPMG+t4LGdt31+4EmGg==}
-
   async@3.2.4:
     resolution: {integrity: sha512-iAB+JbDEGXhyIUavoDl9WP/Jj106Kz9DEn1DPgYw5ruDn0e3Wgi3sKFm55sASdGBNOQB8F59d9qQ7deqrHA8wQ==}
 
@@ -8429,16 +8364,6 @@ packages:
     hasBin: true
     peerDependencies:
       postcss: ^8.1.0
-
-  ava@6.4.1:
-    resolution: {integrity: sha512-vxmPbi1gZx9zhAjHBgw81w/iEDKcrokeRk/fqDTyA2DQygZ0o+dUGRHFOtX8RA5N0heGJTTsIk7+xYxitDb61Q==}
-    engines: {node: ^18.18 || ^20.8 || ^22 || ^23 || >=24}
-    hasBin: true
-    peerDependencies:
-      '@ava/typescript': '*'
-    peerDependenciesMeta:
-      '@ava/typescript':
-        optional: true
 
   available-typed-arrays@1.0.7:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
@@ -8527,9 +8452,6 @@ packages:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
 
-  bindings@1.5.0:
-    resolution: {integrity: sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==}
-
   birpc@0.2.14:
     resolution: {integrity: sha512-37FHE8rqsYM5JEKCnXFyHpBCzvgHEExwVVTq+nUmloInU7l8ezD1TpOhKpS8oe1DTYFqEK27rFZVKG43oTqXRA==}
 
@@ -8544,9 +8466,6 @@ packages:
 
   blake3-wasm@2.1.5:
     resolution: {integrity: sha512-F1+K8EbfOZE49dtoPtmxUQrpXaBIl3ICvasLh+nJta0xkz+9kF/7uet9fLnwKqhDrmj6g+6K3Tw9yQPUg2ka5g==}
-
-  blueimp-md5@2.19.0:
-    resolution: {integrity: sha512-DRQrD6gJyy8FbiE4s+bDoXS9hiW3Vbx5uCdwvcCf3zLHL+Iv7LtGHLpr+GZV8rHG8tK766FGYBwRbu8pELTt+w==}
 
   body-parser@1.20.3:
     resolution: {integrity: sha512-7rAxByjUMqQ3/bHJy7D6OGXvx/MMc4IqBn/X0fcM1QUcAItpZrBEYhWGem+tzXH90c+G01ypMcYJBO9Y30203g==}
@@ -8649,10 +8568,6 @@ packages:
     resolution: {integrity: sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==}
     engines: {node: '>=6'}
 
-  callsites@4.2.0:
-    resolution: {integrity: sha512-kfzR4zzQtAE9PC7CzZsjl3aBNbXWuXiSeOCdLcPpBfGW8YuCqQHcRPFDbr/BPVmd3EEPVpuFzLyuT/cUhPr4OQ==}
-    engines: {node: '>=12.20'}
-
   caniuse-api@3.0.0:
     resolution: {integrity: sha512-bsTwuIg/BZZK/vreVTYYbSWoe2F+71P7K5QGEX+pT250DZbfU1MQ5prOKpPR+LL6uWKK3KMwMCAS74QB3Um1uw==}
 
@@ -8674,10 +8589,6 @@ packages:
   caseless@0.12.0:
     resolution: {integrity: sha512-4tYFyifaFfGacoiObjJegolkwSU4xQNGbVgUiNYVUxbQ2x2lUsFvY4hVgVzGiIe6WLOPqycWXA40l+PWsxthUw==}
 
-  cbor@10.0.11:
-    resolution: {integrity: sha512-vIwORDd/WyB8Nc23o2zNN5RrtFGlR6Fca61TtjkUXueI3Jf2DOZDl1zsshvBntZ3wZHBM9ztjnkXSmzQDaq3WA==}
-    engines: {node: '>=20'}
-
   chai@5.1.2:
     resolution: {integrity: sha512-aGtmf24DW6MLHHG5gCx4zaI3uBq3KRtxeVs0DjFH6Z0rDNbsvTxFASFvdj79pxjxZ8/5u3PIiN3IwEIQkiiuPw==}
     engines: {node: '>=12'}
@@ -8692,10 +8603,6 @@ packages:
 
   chalk@5.3.0:
     resolution: {integrity: sha512-dLitG79d+GV1Nb/VYcCDFivJeK1hiukt9QjRNVOsUtTy1rR1YJsmpGGTZ3qJos+uw7WmWF4wUwBd9jxjocFC2w==}
-    engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
-
-  chalk@5.6.2:
-    resolution: {integrity: sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA==}
     engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
 
   chardet@2.1.1:
@@ -8727,23 +8634,9 @@ packages:
     resolution: {integrity: sha512-bIomtDF5KGpdogkLd9VspvFzk9KfpyyGlS8YFVZl7TGPBHL5snIOnxeshwVgPteQ9b4Eydl+pVbIyE1DcvCWgQ==}
     engines: {node: '>=10'}
 
-  chownr@3.0.0:
-    resolution: {integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g==}
-    engines: {node: '>=18'}
-
-  chunkd@2.0.1:
-    resolution: {integrity: sha512-7d58XsFmOq0j6el67Ug9mHf9ELUXsQXYJBkyxhH/k+6Ke0qXRnv0kbemx+Twc6fRJ07C49lcbdgm9FL1Ei/6SQ==}
-
   ci-info@3.9.0:
     resolution: {integrity: sha512-NIxF55hv4nSqQswkAeiOi1r83xy8JldOFDTWiug55KBu9Jnblncd2U6ViHmYgHf01TPZS77NJBhBMKdWj9HQMQ==}
     engines: {node: '>=8'}
-
-  ci-info@4.3.1:
-    resolution: {integrity: sha512-Wdy2Igu8OcBpI2pZePZ5oWjPC38tmDVx5WKUXKwlLYkA0ozo85sLsLvkBbBn/sZaSCMFOGZJ14fvW9t5/d7kdA==}
-    engines: {node: '>=8'}
-
-  ci-parallel-vars@1.0.1:
-    resolution: {integrity: sha512-uvzpYrpmidaoxvIQHM+rKSrigjOe9feHYbw4uOI2gdfe1C3xIlxO+kVXq83WQWNniTf8bAxVpy+cQeFQsMERKg==}
 
   citty@0.1.6:
     resolution: {integrity: sha512-tskPPKEs8D2KPafUypv2gxwJP8h/OaJmC82QQGGDQcHvXX43xF2VDACcJVmZ0EuSxkpO9Kc4MlrA3q0+FG58AQ==}
@@ -8758,10 +8651,6 @@ packages:
   cli-table3@0.6.3:
     resolution: {integrity: sha512-w5Jac5SykAeZJKntOxJCrm63Eg5/4dhMWIcuTbo9rpE+brgaSZo0RuNJZeOyMgsUdhDeojvgyQLmjI+K50ZGyg==}
     engines: {node: 10.* || >= 12.*}
-
-  cli-truncate@4.0.0:
-    resolution: {integrity: sha512-nPdaFdQ0h/GEigbPClz11D0v/ZJEwxmeVZGeMo3Z5StPtUTkA9o1lD6QwoirYiSDzbcwn2XcjwmCp68W1IS4TA==}
-    engines: {node: '>=18'}
 
   cli-width@4.1.0:
     resolution: {integrity: sha512-ouuZd4/dm2Sw5Gmqy6bGyNNNe1qt9RpmxveLSO7KcgsTnU7RXfsw+/bukWGo1abgBiMAic068rclZsO4IWmmxQ==}
@@ -8793,10 +8682,6 @@ packages:
   cmd-shim@4.1.0:
     resolution: {integrity: sha512-lb9L7EM4I/ZRVuljLPEtUJOP+xiQVknZ4ZMpMgEp4JzNldPb27HU03hi6K1/6CoIuit/Zm/LQXySErFeXxDprw==}
     engines: {node: '>=10'}
-
-  code-excerpt@4.0.0:
-    resolution: {integrity: sha512-xxodCmBen3iy2i0WtAK8FlFNrRzjUqjRsMfho58xT/wvZU1YTM3fCnRjcy1gJPMepaRlgm/0e6w8SpWHpn3/cA==}
-    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
@@ -8845,9 +8730,6 @@ packages:
     resolution: {integrity: sha512-aKl8CwoMKxVTfAK4dFN4v54AEvuUh9pzmgVIBeK6gBomLwMgceQUKKWHzJdW1u1VQXQuwnJ7nJGWYYMTl5U4yg==}
     engines: {node: '>= 6'}
 
-  common-path-prefix@3.0.0:
-    resolution: {integrity: sha512-QE33hToZseCH3jS0qN96O/bSh3kaw/h+Tq7ngyY9eWDUnTlTNUyqfqvCXioLe5Na5jFsL78ra/wuBU4iuEgd4w==}
-
   commondir@1.0.1:
     resolution: {integrity: sha512-W9pAhw0ja1Edb5GVdIF1mjZw/ASI0AlShXM83UUGe2DVr5TdAPEA1OA8m/g8zWp9x6On7gqufY+FatDbC3MDQg==}
 
@@ -8870,10 +8752,6 @@ packages:
 
   concat-map@0.0.1:
     resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
-
-  concordance@5.0.4:
-    resolution: {integrity: sha512-OAcsnTEYu1ARJqWVGwf4zh4JDfHZEaSNlNccFmt8YjB2l/n19/PF2viLINHc57vO4FKIAFl2FWASIGZZWZ2Kxw==}
-    engines: {node: '>=10.18.0 <11 || >=12.14.0 <13 || >=14'}
 
   concurrently@8.2.2:
     resolution: {integrity: sha512-1dP4gpXFhei8IOtlXRE/T/4H88ElHgTiUzh71YUmtjTEHMSRS2Z/fgOxHSxxusGHogsRfxNq1vyAwxSC+EVyDg==}
@@ -8911,10 +8789,6 @@ packages:
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
-
-  convert-to-spaces@2.0.1:
-    resolution: {integrity: sha512-rcQ1bsQO9799wq24uE5AM2tAILy4gXGIK/njFWcVQkGNZ96edlpY+A7bjwvzjYvLDyzmG1MmMLZhpcsb+klNMQ==}
-    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   cookie-signature@1.0.6:
     resolution: {integrity: sha512-QADzlaHc8icV8I7vbaJXJwod9HWYp8uCqf1xa4OfNu1T7JVxQIrUgOWtHdNDtPiywmFbiS12VjotIXLrKM3orQ==}
@@ -9033,10 +8907,6 @@ packages:
   csstype@3.1.2:
     resolution: {integrity: sha512-I7K1Uu0MBPzaFKg4nI5Q7Vs2t+3gWWW648spaF+Rg7pI9ds18Ugn+lvg4SHczUdKlHI5LWBXyqfS8+DufyBsgQ==}
 
-  currently-unhandled@0.4.1:
-    resolution: {integrity: sha512-/fITjgjGU50vjQ4FH6eUoYu+iUoUKIXws2hL15JJpIR+BbTxaXQsMuuyjtNh2WqsSBS5nsaZHFsFecyw5CCAng==}
-    engines: {node: '>=0.10.0'}
-
   dashdash@1.14.1:
     resolution: {integrity: sha512-jRFi8UDGo6j+odZiEpjazZaWqEal3w/basFjQHQEwVtZJGDpxbH1MeYluwCS8Xq5wmLJooDlMgvVarmWfGM44g==}
     engines: {node: '>=0.10'}
@@ -9078,10 +8948,6 @@ packages:
 
   date-fns@4.1.0:
     resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
-
-  date-time@3.1.0:
-    resolution: {integrity: sha512-uqCUKXE5q1PNBXjPqvwhwJf9SwMoAHBgWJ6DcrnS5o+W2JOiIILl0JEdVD8SGujrNS02GGxgwAg2PN2zONgtjg==}
-    engines: {node: '>=6'}
 
   dayjs@1.11.13:
     resolution: {integrity: sha512-oaMBel6gjolK862uaPQOVTA7q3TZhuSvuMQAAglQDOWYO9A91IrAOUJEyKVlqJlHE0vq5p5UXxzdPfMH/x6xNg==}
@@ -9378,10 +9244,6 @@ packages:
   electron-to-chromium@1.5.45:
     resolution: {integrity: sha512-vOzZS6uZwhhbkZbcRyiy99Wg+pYFV5hk+5YaECvx0+Z31NR3Tt5zS6dze2OepT6PCTzVzT0dIJItti+uAW5zmw==}
 
-  emittery@1.2.0:
-    resolution: {integrity: sha512-KxdRyyFcS85pH3dnU8Y5yFUm2YJdaHwcBZWrfG8o89ZY9a13/f9itbN+YG3ELbBo9Pg5zvIozstmuV8bX13q6g==}
-    engines: {node: '>=14.16'}
-
   emoji-regex@10.3.0:
     resolution: {integrity: sha512-QpLs9D9v9kArv4lfDEgg1X/gN5XLnf/A6l9cs8SPZLRZR3ZkY9+kwIQTxm+fsSej5UMYGE8fdoaZVIBlqG0XTw==}
 
@@ -9539,10 +9401,6 @@ packages:
   escape-string-regexp@4.0.0:
     resolution: {integrity: sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==}
     engines: {node: '>=10'}
-
-  escape-string-regexp@5.0.0:
-    resolution: {integrity: sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw==}
-    engines: {node: '>=12'}
 
   escodegen@2.1.0:
     resolution: {integrity: sha512-2NlIDTwUWJN0mRPQOdtQBzbUHvdGY2P1VXSyU83Q3xKxM7WHX2Ql8dKq782Q9TgQUNOLEzEYu9bzLNj1q88I5w==}
@@ -9810,10 +9668,6 @@ packages:
     resolution: {integrity: sha512-oX2ruAFQwf/Orj8m737Y5adxDQO0LAB7/S5MnxCdTNDd4p6BsyIVsv9JQsATbTSq8KHRpLwIHbVlUNatxd+1Ow==}
     engines: {node: '>=8.6.0'}
 
-  fast-glob@3.3.3:
-    resolution: {integrity: sha512-7MptL8U0cqcFdzIzwOTHoilX9x5BrNqye7Z/LuC7kCMRio1EMSyqRK3BEAUD7sXRq4iT4AzTVuZdhgQ2TCvYLg==}
-    engines: {node: '>=8.6.0'}
-
   fast-json-stable-stringify@2.1.0:
     resolution: {integrity: sha512-lhd/wF+Lk98HZoTCtlVraHtfh5XYijIjalXck7saUtuanSDyLMxnHhSXEDJqHxD7msR8D0uCmqlkwjCV8xvwHw==}
 
@@ -9900,16 +9754,9 @@ packages:
   fflate@0.8.2:
     resolution: {integrity: sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==}
 
-  figures@6.1.0:
-    resolution: {integrity: sha512-d+l3qxjSesT4V7v2fh+QnmFnUWv9lSpjarhShNTgBOfA0ttejbQUAlHLitbjkoRiDulW0OPoQPYIGhIC8ohejg==}
-    engines: {node: '>=18'}
-
   file-entry-cache@8.0.0:
     resolution: {integrity: sha512-XXTUwCvisa5oacNGRP9SfNtYBNAMi+RPwBFmblZEF7N7swHYQS6/Zfk7SRwx4D5j3CH211YNRco1DEMNVfZCnQ==}
     engines: {node: '>=16.0.0'}
-
-  file-uri-to-path@1.0.0:
-    resolution: {integrity: sha512-0Zt+s3L7Vf1biwWZ29aARiVYLx7iMGnEUl9x33fbB/j3jR81u/O2LbqK+Bm1CDSNDKVtJ/YjwY7TUd5SkeLQLw==}
 
   fill-range@7.1.1:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
@@ -9922,10 +9769,6 @@ packages:
   finalhandler@2.1.0:
     resolution: {integrity: sha512-/t88Ty3d5JWQbWYgaOGCCYfXRwV1+be02WqYYlL6h0lEiUAMPM8o8qKGO01YIkOHzka2up08wvgYD0mDiI+q3Q==}
     engines: {node: '>= 0.8'}
-
-  find-up-simple@1.0.0:
-    resolution: {integrity: sha512-q7Us7kcjj2VMePAa02hDAF6d+MzsdsAWEwYyOpwUtlerRBkOEPBCRZrAV4XfcSN8fHAgaD0hP7miwoay6DCprw==}
-    engines: {node: '>=18'}
 
   find-up@4.1.0:
     resolution: {integrity: sha512-PpOwAdQ/YlXQ2vj8a3h8IipDuYRi3wceVQQGYWxNINccq40Anw7BlsEXCMbt1Zt+OLA6Fq9suIpIWD0OsnISlw==}
@@ -10123,10 +9966,6 @@ packages:
     resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
     hasBin: true
 
-  glob@10.5.0:
-    resolution: {integrity: sha512-DfXN8DfhJ7NH3Oe7cFmu3NCu1wKbkReJ8TorzSAFbSKrlNaQSKfIzqYqVY8zlbs2NLBbWpRiU52GX2PbaBVNkg==}
-    hasBin: true
-
   glob@11.0.3:
     resolution: {integrity: sha512-2Nim7dha1KVkaiF4q6Dj+ngPPMdfvLJEOpZk/jKiUAkqKebpGAWQXAq9z1xu9HKu5lWfqw/FASuccEjyznjPaA==}
     engines: {node: 20 || >=22}
@@ -10160,10 +9999,6 @@ packages:
   globby@11.1.0:
     resolution: {integrity: sha512-jhIXaOzy1sb8IyocaruWSn1TjmnBVs8Ayhcy83rmxNJ8q2uWKCAj3CnJY+KpGSXCueAPc0i05kVvVKtP1t9S3g==}
     engines: {node: '>=10'}
-
-  globby@14.1.0:
-    resolution: {integrity: sha512-0Ia46fDOaT7k4og1PDW4YbodWWr3scS2vAr2lTbsplOt2WkKp0vQbkI9wKis/T5LV/dqPjO3bpS/z6GTJB82LA==}
-    engines: {node: '>=18'}
 
   globrex@0.1.2:
     resolution: {integrity: sha512-uHJgbwAMwNFf5mLst7IWLNg14x1CkeqglJb/K3doi4dw6q2IvAAmM/Y81kevy83wP+Sst+nutFTYOGg3d1lsxg==}
@@ -10341,10 +10176,6 @@ packages:
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
 
-  ignore-by-default@2.1.0:
-    resolution: {integrity: sha512-yiWd4GVmJp0Q6ghmM2B/V3oZGRmjrKLXvHR3TE1nfoXsmoggllfZUQe74EN0fJdPFZu2NIvNdrMMLm3OsV7Ohw==}
-    engines: {node: '>=10 <11 || >=12 <13 || >=14'}
-
   ignore@5.3.1:
     resolution: {integrity: sha512-5Fytz/IraMjqpwfd34ke28PTVMjZjJG2MPn5t7OE4eUCUNf8BAa7b5WUS9/Qvr6mwOQS7Mk6vdsMno5he+T8Xw==}
     engines: {node: '>= 4'}
@@ -10409,10 +10240,6 @@ packages:
   ipaddr.js@1.9.1:
     resolution: {integrity: sha512-0KI/607xoxSToH7GjN1FfSbLoU0+btTicjsQSWQlh/hZykN8KpmMf7uYwPW3R+akZ6R/w18ZlXSHBYXiYUPO3g==}
     engines: {node: '>= 0.10'}
-
-  irregular-plurals@3.5.0:
-    resolution: {integrity: sha512-1ANGLZ+Nkv1ptFb2pa8oG8Lem4krflKuX/gINiHJHjJUKaJHk/SXk5x6K3J+39/p0h1RQ2saROclJJ+QLvETCQ==}
-    engines: {node: '>=8'}
 
   is-arguments@1.2.0:
     resolution: {integrity: sha512-7bVbi0huj/wrIAOzb8U1aszg9kdi3KN/CyU19CTI7tAoZYEZoL9yCDXpbXN+uPsuWnP02cyug1gleqq+TU+YCA==}
@@ -10586,10 +10413,6 @@ packages:
     resolution: {integrity: sha512-YWnfyRwxL/+SsrWYfOpUtz5b3YD+nyfkHvjbcanzk8zgyO4ASD67uVMRt8k5bM4lLMDnXfriRhOpemw+NfT1eA==}
     engines: {node: '>=8'}
 
-  is-plain-object@5.0.0:
-    resolution: {integrity: sha512-VRSzKkbMm5jMDoKLbltAkFQ5Qr7VDiTFGXxYFXXowVj387GeGNOCsOH6Msy00SGZ3Fp84b1Naa1psqgcCIEP5Q==}
-    engines: {node: '>=0.10.0'}
-
   is-promise@2.2.2:
     resolution: {integrity: sha512-+lP4/6lKUBfQjZ2pdxThZvLUAafmZb8OAxFb8XXtiQmS35INgr85hdOGoEs124ez1FCnZJt6jau/T+alh58QFQ==}
 
@@ -10656,10 +10479,6 @@ packages:
 
   is-typedarray@1.0.0:
     resolution: {integrity: sha512-cyA56iCMHAh5CdzjJIa4aohJyeO1YbwLi3Jc35MmRU6poroFjIGZzUzupGiRPOjgHg9TLu43xbpwXk523fMxKA==}
-
-  is-unicode-supported@2.1.0:
-    resolution: {integrity: sha512-mE00Gnza5EEB3Ds0HfMyllZzbBrmLOX3vfWoj9A9PEnTfratQ/BcaJOuMhnkhjXvb2+FkY3VuHqtAGpTPmglFQ==}
-    engines: {node: '>=18'}
 
   is-weakmap@2.0.2:
     resolution: {integrity: sha512-K5pXYOm9wqY1RgjpL3YTkF39tni1XajUIkawTLUo9EZEVUFga5gSQJF8nNS7ZwJQ02y+1YCNYcMh+HIf1ZqE+w==}
@@ -10779,10 +10598,6 @@ packages:
 
   js-base64@3.7.7:
     resolution: {integrity: sha512-7rCnleh0z2CkXhH67J8K1Ytz0b2Y+yxTPL+/KOJoa20hfnVQ/3/T6W/KflYI4bRHRagNeXeU2bkNGI3v1oS/lw==}
-
-  js-string-escape@1.0.1:
-    resolution: {integrity: sha512-Smw4xcfIQ5LVjAOuJCvN/zIodzA/BBSsluuoSykP+lUvScIi4U6RJLfwHet5cxFnCswUjISV8oAXaqaJDY3chg==}
-    engines: {node: '>= 0.8'}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -11045,10 +10860,6 @@ packages:
   lines-and-columns@1.2.4:
     resolution: {integrity: sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg==}
 
-  load-json-file@7.0.1:
-    resolution: {integrity: sha512-Gnxj3ev3mB5TkVBGad0JM6dmLiQL+o0t23JPBZ9sd+yvSLk05mFoqKBw5N8gbbkU4TNXyqCgIrl/VM17OgUIgQ==}
-    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
-
   load-tsconfig@0.2.5:
     resolution: {integrity: sha512-IXO6OCs9yg8tMKzfPZ1YmheJbZCiEsnBdcB03l0OcfK9prKnJb96siuHCr5Fl37/yo9DnKU+TLpxzTUspw9shg==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
@@ -11189,10 +11000,6 @@ packages:
   match-sorter@6.3.1:
     resolution: {integrity: sha512-mxybbo3pPNuA+ZuCUhm5bwNkXrJTbsk5VWbR5wiwz/GC6LIiegBGn2w3O08UG/jdbYLinw51fSQ5xNU1U3MgBw==}
 
-  matcher@5.0.0:
-    resolution: {integrity: sha512-s2EMBOWtXFc8dgqvoAzKJXxNHibcdJMV0gwqKUaw9E2JBJuGUK7DrNKrA6g/i+v72TT16+6sVm5mS3thaMLQUw==}
-    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
-
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
     engines: {node: '>= 0.4'}
@@ -11201,10 +11008,6 @@ packages:
     resolution: {integrity: sha512-xbEFXCYVWrSx/gEKS1VPlg84h/4L20znVIulKw6kMfmBUAZNAnF00eczz9ICMl+/hjQGo5KSXRxbL/47X3rmMw==}
     engines: {node: '>=10.13.0'}
     hasBin: true
-
-  md5-hex@3.0.1:
-    resolution: {integrity: sha512-BUiRtTtV39LIJwinWBjqVsU9xhdnz7/i889V859IBFpuqGAj6LuOvHv5XLbgZ2R7ptJoJaEcxkv88/h25T7Ciw==}
-    engines: {node: '>=8'}
 
   mdn-data@2.0.28:
     resolution: {integrity: sha512-aylIc7Z9y4yzHYAJNuESG3hfhC+0Ibp/MAMiaOZgNv4pmEdFyfZhhhny4MNiAfWdBQ1RQ2mfDWmM1x8SvGyp8g==}
@@ -11219,10 +11022,6 @@ packages:
   media-typer@1.1.0:
     resolution: {integrity: sha512-aisnrDP4GNe06UcKFnV5bfMNPBUw4jsLGaWwWfnH3v02GnBuXX2MCVn5RbrWo0j3pczUilYblq7fQ7Nw2t5XKw==}
     engines: {node: '>= 0.8'}
-
-  memoize@10.2.0:
-    resolution: {integrity: sha512-DeC6b7QBrZsRs3Y02A6A7lQyzFbsQbqgjI6UW0GigGWV+u1s25TycMr0XHZE4cJce7rY/vyw2ctMQqfDkIhUEA==}
-    engines: {node: '>=18'}
 
   merge-descriptors@1.0.3:
     resolution: {integrity: sha512-gaNvAS7TZ897/rVaZ0nMtAyxNyi/pdbjbAwUpFQpN70GqnVfOiXpeUUMKRBmzXaSQ8DdTX4/0ms62r2K+hE6mQ==}
@@ -11293,10 +11092,6 @@ packages:
     resolution: {integrity: sha512-vqiC06CuhBTUdZH+RYl8sFrL096vA45Ok5ISO6sE/Mr1jRbGH4Csnhi8f3wKVl7x8mO4Au7Ir9D3Oyv1VYMFJw==}
     engines: {node: '>=12'}
 
-  mimic-function@5.0.1:
-    resolution: {integrity: sha512-VP79XUPxV2CigYP3jWwAUFSku2aKqBH7uTAapFWCBqutsbmDo96KY5o8uh6U+/YSIn5OxJnXp73beVkpqMIGhA==}
-    engines: {node: '>=18'}
-
   mimic-response@3.1.0:
     resolution: {integrity: sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ==}
     engines: {node: '>=10'}
@@ -11334,10 +11129,6 @@ packages:
   minipass@7.1.2:
     resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
     engines: {node: '>=16 || 14 >=14.17'}
-
-  minizlib@3.1.0:
-    resolution: {integrity: sha512-KZxYo1BUkWD2TVFLr0MQoM8vUUigWD3LlD83a/75BqC+4qE0Hb1Vo5v1FgcfaNXvfXzr+5EhQ6ing/CaBijTlw==}
-    engines: {node: '>= 18'}
 
   mkdirp-classic@0.5.3:
     resolution: {integrity: sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==}
@@ -11497,24 +11288,11 @@ packages:
     resolution: {integrity: sha512-dPEtOeMvF9VMcYV/1Wb8CPoVAXtp6MKMlcbAt4ddqmGqUJ6fQZFXkNZNkNlfevtNkGtaSoXf/vNNNSvgrdXwtA==}
     engines: {node: '>= 6.13.0'}
 
-  node-gyp-build@4.8.4:
-    resolution: {integrity: sha512-LA4ZjwlnUblHVgq0oBF3Jl/6h/Nvs5fzBLwdEF4nuxnFdsfajde4WfxtJr3CaiH+F6ewcIB/q4jQ4UzPyid+CQ==}
-    hasBin: true
-
   node-polyglot@2.5.0:
     resolution: {integrity: sha512-zXVwHNhFsG3mls+LKHxoHF70GQOL3FTDT3jH7ldkb95kG76RdU7F/NbvxV7D2hNIL9VpWXW6y78Fz+3KZkatRg==}
 
   node-releases@2.0.18:
     resolution: {integrity: sha512-d9VeXT4SJ7ZeOqGX6R5EM022wpL+eWPooLI+5UpWn2jCT1aosUQEhQP214x33Wkwx3JQMvIm+tIoVOdodFS40g==}
-
-  nofilter@3.1.0:
-    resolution: {integrity: sha512-l2NNj07e9afPnhAhvgVrCD/oy2Ai1yfLpuo3EpiO1jFTsB4sFz6oIfAfSZyQzVpkZQ9xS8ZS5g1jCBgq4Hwo0g==}
-    engines: {node: '>=12.19'}
-
-  nopt@8.1.0:
-    resolution: {integrity: sha512-ieGu42u/Qsa4TFktmaKEwM6MQH0pOWnaB3htzh0JRtx84+Mebc0cbZYN5bC+6WTZ4+77xrL9Pn5m7CV6VIkV7A==}
-    engines: {node: ^18.17.0 || >=20.5.0}
-    hasBin: true
 
   normalize-package-data@6.0.2:
     resolution: {integrity: sha512-V6gygoYb/5EmNI+MEGrWkC+e6+Rr7mTmfHrxDbLzxQogBkgzo76rkok0Am6thgSF7Mv2nLOajAJj5vDJZEFn7g==}
@@ -11683,10 +11461,6 @@ packages:
     resolution: {integrity: sha512-y3b8Kpd8OAN444hxfBbFfj1FY/RjtTd8tzYwhUqNYXx0fXx2iX4maP4Qr6qhIKbQXI02wTLAda4fYUbDagTUFw==}
     engines: {node: '>=6'}
 
-  p-map@7.0.4:
-    resolution: {integrity: sha512-tkAQEw8ysMzmkhgw8k+1U/iPhWNhykKnSk4Rd5zLoPJCuJaGRPo6YposrZgaxHKzDHdDWWZvE/Sk7hsL2X/CpQ==}
-    engines: {node: '>=18'}
-
   p-queue@9.0.0:
     resolution: {integrity: sha512-KO1RyxstL9g1mK76530TExamZC/S2Glm080Nx8PE5sTd7nlduDQsAfEl4uXX+qZjLiwvDauvzXavufy3+rJ9zQ==}
     engines: {node: '>=20'}
@@ -11706,10 +11480,6 @@ packages:
   pac-resolver@7.0.1:
     resolution: {integrity: sha512-5NPgf87AT2STgwa2ntRMr45jTKrYBGkVU36yT0ig/n/GMAa3oPqhZfIQ2kMEimReg0+t9kZViDVZ83qfVUlckg==}
     engines: {node: '>= 14'}
-
-  package-config@5.0.0:
-    resolution: {integrity: sha512-GYTTew2slBcYdvRHqjhwaaydVMvn/qrGC323+nKclYioNSLTDUM/lGgtGTgyHVtYcozb+XkE8CNhwcraOmZ9Mg==}
-    engines: {node: '>=18'}
 
   package-json-from-dist@1.0.0:
     resolution: {integrity: sha512-dATvCeZN/8wQsGywez1mzHtTlP22H8OEfPrVMLNr4/eGa+ijtLn/6M5f0dY8UKNrC2O9UCU6SSoG3qRKnt7STw==}
@@ -11738,10 +11508,6 @@ packages:
 
   parse-json@8.3.0:
     resolution: {integrity: sha512-ybiGyvspI+fAoRQbIPRddCcSTV9/LsJbf0e/S85VLowVGzRmokfneg2kwVW/KU5rOXrPSbF1qAKPMgNTqqROQQ==}
-    engines: {node: '>=18'}
-
-  parse-ms@4.0.0:
-    resolution: {integrity: sha512-TXfryirbmq34y8QBwgqCVLi+8oA3oWx2eAnSn62ITyEhEYaWRlVZ2DvMM9eZbMs/RfxPu/PK/aBLyGj4IrqMHw==}
     engines: {node: '>=18'}
 
   parserlib@1.1.1:
@@ -11810,10 +11576,6 @@ packages:
   path-type@4.0.0:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}
     engines: {node: '>=8'}
-
-  path-type@6.0.0:
-    resolution: {integrity: sha512-Vj7sf++t5pBD637NSfkxpHSMfWaeig5+DKWLhcqIYx6mWQz5hdJTGDVMQiJcw1ZYkhs7AazKDGpRVji1LJCZUQ==}
-    engines: {node: '>=18'}
 
   pathe@1.1.2:
     resolution: {integrity: sha512-whLdWMYL2TwI08hn8/ZqAbrVemu0LNaNNJZX73O6qaIdCTfXutsLhMkjdENX0qhsQ9uIimo4/aQOmXkoon2nDQ==}
@@ -11951,10 +11713,6 @@ packages:
     resolution: {integrity: sha512-hutraynyn31F+Bifme+Ps9Vq59hKuUCz7H1kDOcBs+2oGguKkWTU50bBWrtz34OUWmIwpBTWDxaRPXrIXkgvmQ==}
     engines: {node: '>=18'}
     hasBin: true
-
-  plur@5.1.0:
-    resolution: {integrity: sha512-VP/72JeXqak2KiOzjgKtQen5y3IZHn+9GOuLDafPv0eXa47xq0At93XahYBs26MsifCQ4enGKwbjBTKgb9QJXg==}
-    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   pngjs@3.4.0:
     resolution: {integrity: sha512-NCrCHhWmnQklfH4MtJMRjZ2a8c80qXeMlQMv2uVp9ISJMTt562SbGd6n2oq0PaPgKm7Z6pL9E2UlLIhC+SHL3w==}
@@ -12262,10 +12020,6 @@ packages:
   pretty-format@29.7.0:
     resolution: {integrity: sha512-Pdlw/oPxN+aXdmM9R00JVC9WVFoCLTKJvDVLgmJ+qAffBMxsV85l/Lu7sNx4zSzPyoL2euImuEwHhOXdEgNFZQ==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
-
-  pretty-ms@9.3.0:
-    resolution: {integrity: sha512-gjVS5hOP+M3wMm5nmNOucbIrqudzs9v/57bWRHQWLYklXqoXKrVfYW2W9+glfGsqtPgpiz5WwyEEB+ksXIx3gQ==}
-    engines: {node: '>=18'}
 
   prism-react-renderer@1.3.5:
     resolution: {integrity: sha512-IJ+MSwBWKG+SM3b2SUfdrhC+gu01QkV2KmRQgREThBfSQRoufqRfxfHUxpG1WcaFjP+kojcFyO9Qqtpgt3qLCg==}
@@ -12594,10 +12348,6 @@ packages:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
 
-  resolve-cwd@3.0.0:
-    resolution: {integrity: sha512-OrZaX2Mb+rJCpH/6CpSqt9xFVpN++x01XnN2ie9g6P5/3xelLAkXWVADpdz1IHD/KFfEXyE6V0U01OQ3UO2rEg==}
-    engines: {node: '>=8'}
-
   resolve-from@4.0.0:
     resolution: {integrity: sha512-pb/MYmXstAkysRFx8piNI1tGFNQIFA3vkE3Gq4EuA1dF6gHp/+vgZqsCGJapvy8N3Q+4o7FwvquPJcnZ7RYy4g==}
     engines: {node: '>=4'}
@@ -12817,10 +12567,6 @@ packages:
   seq-queue@0.0.5:
     resolution: {integrity: sha512-hr3Wtp/GZIc/6DAGPDcV4/9WoZhjrkXsi5B/07QgX8tsdc6ilr7BFM6PM6rbdAX1kFSDYeZGLipIZZKyQP0O5Q==}
 
-  serialize-error@7.0.1:
-    resolution: {integrity: sha512-8I8TjW5KMOKsZQTvoxjuSIa7foAwPWGOts+6o7sgjz41/qMD9VQHEDxi6PBvK2l0MXUmqZyNpUK+T2tQaaElvw==}
-    engines: {node: '>=10'}
-
   serve-static@1.16.2:
     resolution: {integrity: sha512-VqpjJZKadQB/PEbEwvFdO43Ax5dFBZ2UECszz8bQ7pi7wt//PWe1P6MN7eCnjsatYtBT6EuiClbjSWP2WrIoTw==}
     engines: {node: '>= 0.8.0'}
@@ -12925,10 +12671,6 @@ packages:
   slash@3.0.0:
     resolution: {integrity: sha512-g9Q1haeby36OSStwb4ntCGGGaKsaVSjQ68fBxoQcutl5fS1vuY18H3wSt3jFyFtrkx+Kz0V1G85A4MyAdDMi2Q==}
     engines: {node: '>=8'}
-
-  slash@5.1.0:
-    resolution: {integrity: sha512-ZA6oR3T/pEyuqwMgAKT0/hAv8oAXckzbkmR0UkUosQ+Mc4RxGoJkRmwHgHufaenlyAgE1Mxgpdcrf75y6XcnDg==}
-    engines: {node: '>=14.16'}
 
   slice-ansi@5.0.0:
     resolution: {integrity: sha512-FC+lgizVPfie0kkhqUScwRu1O/lF6NOgJmlCgK+/LYxDCTk8sGelYaHDhFcDN+Sn3Cv+3VSa4Byeo+IMCzpMgQ==}
@@ -13174,10 +12916,6 @@ packages:
     engines: {node: '>=16 || 14 >=14.17'}
     hasBin: true
 
-  supertap@3.0.1:
-    resolution: {integrity: sha512-u1ZpIBCawJnO+0QePsEiOknOfCRq0yERxiAchT0i4li0WHNUJbf0evXXSXOcCAR4M8iMDoajXYmstm/qO81Isw==}
-    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
-
   supports-color@10.0.0:
     resolution: {integrity: sha512-HRVVSbCCMbj7/kdWF9Q+bbckjBHLtHMEoJWlkmYzzdwhYMkjkOwubLM6t7NbWKjgKamGDrWL1++KrjUO1t9oAQ==}
     engines: {node: '>=18'}
@@ -13235,14 +12973,6 @@ packages:
   tar-stream@3.1.7:
     resolution: {integrity: sha512-qJj60CXt7IU1Ffyc3NJMjh6EkuCFej46zUqJ4J7pqYlThyd9bO0XBTmcOIhSzZJVWfsLks0+nle/j538YAW9RQ==}
 
-  tar@7.5.2:
-    resolution: {integrity: sha512-7NyxrTE4Anh8km8iEy7o0QYPs+0JKBTj5ZaqHg6B39erLg0qYXN3BijtShwbsNSvQ+LN75+KV+C4QR/f6Gwnpg==}
-    engines: {node: '>=18'}
-
-  temp-dir@3.0.0:
-    resolution: {integrity: sha512-nHc6S/bwIilKHNRgK/3jlhDoIHcp45YgyiwcAk46Tr0LfEqGBVpmiAyuiuxeVE44m3mXnEeVhaipLOEWmH+Njw==}
-    engines: {node: '>=14.16'}
-
   term-size@2.2.1:
     resolution: {integrity: sha512-wK0Ri4fOGjv/XPy8SBHZChl8CM7uMc5VML7SqiQ0zG7+J5Vr+RMQDoHa2CNT6KHUnTGIXH34UDMkPzAUyapBZg==}
     engines: {node: '>=8'}
@@ -13265,10 +12995,6 @@ packages:
 
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
-
-  time-zone@1.0.0:
-    resolution: {integrity: sha512-TIsDdtKo6+XrPtiTm1ssmMngN1sAhyKnTO2kunQWqNPWIVvCm15Wmw4SWInwTVgJ5u/Tr04+8Ei9TNcw4x4ONA==}
-    engines: {node: '>=4'}
 
   timeago.js@4.0.2:
     resolution: {integrity: sha512-a7wPxPdVlQL7lqvitHGGRsofhdwtkoSXPGATFuSOA2i1ZNQEPLrGnj68vOp2sOJTCFAQVXPeNMX/GctBaO9L2w==}
@@ -13494,8 +13220,18 @@ packages:
     cpu: [x64]
     os: [darwin]
 
+  turbo-darwin-64@2.7.2:
+    resolution: {integrity: sha512-dxY3X6ezcT5vm3coK6VGixbrhplbQMwgNsCsvZamS/+/6JiebqW9DKt4NwpgYXhDY2HdH00I7FWs3wkVuan4rA==}
+    cpu: [x64]
+    os: [darwin]
+
   turbo-darwin-arm64@2.2.3:
     resolution: {integrity: sha512-+EIMHkuLFqUdJYsA3roj66t9+9IciCajgj+DVek+QezEdOJKcRxlvDOS2BUaeN8kEzVSsNiAGnoysFWYw4K0HA==}
+    cpu: [arm64]
+    os: [darwin]
+
+  turbo-darwin-arm64@2.7.2:
+    resolution: {integrity: sha512-1bXmuwPLqNFt3mzrtYcVx1sdJ8UYb124Bf48nIgcpMCGZy3kDhgxNv1503kmuK/37OGOZbsWSQFU4I08feIuSg==}
     cpu: [arm64]
     os: [darwin]
 
@@ -13504,8 +13240,18 @@ packages:
     cpu: [x64]
     os: [linux]
 
+  turbo-linux-64@2.7.2:
+    resolution: {integrity: sha512-kP+TiiMaiPugbRlv57VGLfcjFNsFbo8H64wMBCPV2270Or2TpDCBULMzZrvEsvWFjT3pBFvToYbdp8/Kw0jAQg==}
+    cpu: [x64]
+    os: [linux]
+
   turbo-linux-arm64@2.2.3:
     resolution: {integrity: sha512-hJYT9dN06XCQ3jBka/EWvvAETnHRs3xuO/rb5bESmDfG+d9yQjeTMlhRXKrr4eyIMt6cLDt1LBfyi+6CQ+VAwQ==}
+    cpu: [arm64]
+    os: [linux]
+
+  turbo-linux-arm64@2.7.2:
+    resolution: {integrity: sha512-VDJwQ0+8zjAfbyY6boNaWfP6RIez4ypKHxwkuB6SrWbOSk+vxTyW5/hEjytTwK8w/TsbKVcMDyvpora8tEsRFw==}
     cpu: [arm64]
     os: [linux]
 
@@ -13517,13 +13263,27 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  turbo-windows-64@2.7.2:
+    resolution: {integrity: sha512-rPjqQXVnI6A6oxgzNEE8DNb6Vdj2Wwyhfv3oDc+YM3U9P7CAcBIlKv/868mKl4vsBtz4ouWpTQNXG8vljgJO+w==}
+    cpu: [x64]
+    os: [win32]
+
   turbo-windows-arm64@2.2.3:
     resolution: {integrity: sha512-fnNrYBCqn6zgKPKLHu4sOkihBI/+0oYFr075duRxqUZ+1aLWTAGfHZLgjVeLh3zR37CVzuerGIPWAEkNhkWEIw==}
     cpu: [arm64]
     os: [win32]
 
+  turbo-windows-arm64@2.7.2:
+    resolution: {integrity: sha512-tcnHvBhO515OheIFWdxA+qUvZzNqqcHbLVFc1+n+TJ1rrp8prYicQtbtmsiKgMvr/54jb9jOabU62URAobnB7g==}
+    cpu: [arm64]
+    os: [win32]
+
   turbo@2.2.3:
     resolution: {integrity: sha512-5lDvSqIxCYJ/BAd6rQGK/AzFRhBkbu4JHVMLmGh/hCb7U3CqSnr5Tjwfy9vc+/5wG2DJ6wttgAaA7MoCgvBKZQ==}
+    hasBin: true
+
+  turbo@2.7.2:
+    resolution: {integrity: sha512-5JIA5aYBAJSAhrhbyag1ZuMSgUZnHtI+Sq3H8D3an4fL8PeF+L1yYvbEJg47akP1PFfATMf5ehkqFnxfkmuwZQ==}
     hasBin: true
 
   tweetnacl@0.14.5:
@@ -13538,10 +13298,6 @@ packages:
   type-check@0.4.0:
     resolution: {integrity: sha512-XleUoc9uwGXqjWwXaUTZAmzMcFZ5858QA2vvx1Ur5xIcixXIP+8LnFDgRplU30us6teqdlskFfu+ae4K79Ooew==}
     engines: {node: '>= 0.8.0'}
-
-  type-fest@0.13.1:
-    resolution: {integrity: sha512-34R7HTnG0XIJcBSn5XhDd7nNFPRcXYRZrBB2O2jdKqYODldSzBAqzsWoZYYvduky73toYS/ESqxPvkDf/F0XMg==}
-    engines: {node: '>=10'}
 
   type-fest@1.4.0:
     resolution: {integrity: sha512-yGSza74xk0UG8k+pLh5oeoYirvIiWo5t0/o3zHHAO2tRDiZcxWP7fywNlXhqb6/r6sWvwi+RsyQMWhVLe4BVuA==}
@@ -13672,10 +13428,6 @@ packages:
 
   unicorn-magic@0.1.0:
     resolution: {integrity: sha512-lRfVq8fE8gz6QMBuDM6a+LO3IAzTi05H6gCVaUpir2E1Rwpo4ZUog45KpNXKC/Mn3Yb9UDuHumeFTo9iV/D9FQ==}
-    engines: {node: '>=18'}
-
-  unicorn-magic@0.3.0:
-    resolution: {integrity: sha512-+QBBXBCvifc56fsbuxZQ6Sic3wqqc3WWaqxs58gvJrcOuN83HGTCwz3oS5phzU9LthRNE9VrJCFCLUgHeeFnfA==}
     engines: {node: '>=18'}
 
   universal-user-agent@6.0.1:
@@ -14011,10 +13763,6 @@ packages:
   webidl-conversions@4.0.2:
     resolution: {integrity: sha512-YQ+BmxuTgd6UXZW3+ICGfyqRyHXVlD5GtQr5+qjiNW7bF0cqrzX500HVXPBOvgXb5YnzDd+h0zqyv61KUD7+Sg==}
 
-  well-known-symbols@2.0.0:
-    resolution: {integrity: sha512-ZMjC3ho+KXo0BfJb7JgtQ5IBuvnShdlACNkKkdsqBmYw3bPAaJfPeYUo6tLUaT5tG/Gkh7xkpBhKRQ9e7pyg9Q==}
-    engines: {node: '>=6'}
-
   whatwg-url@5.0.0:
     resolution: {integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==}
 
@@ -14075,8 +13823,8 @@ packages:
     engines: {node: '>=16'}
     hasBin: true
 
-  workerd@1.20251223.0:
-    resolution: {integrity: sha512-fgKQPhWsfo84x/Bl87a3DqHPLTgGVmZ4D2YsHqqxgLJaNH83G4uPF7xL4UICtD7f9cG03rmGBvcMg5liyXs23w==}
+  workerd@1.20260103.0:
+    resolution: {integrity: sha512-uB5eliFHVCdPD3uaPGe6zNRFjWzijOb26c0/1oXKmQFUSUR7GFPCTTd0iJXZAGKZDZ0DNgzQCPoolWelz6W5Zg==}
     engines: {node: '>=16'}
     hasBin: true
 
@@ -14108,10 +13856,6 @@ packages:
 
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
-
-  write-file-atomic@6.0.0:
-    resolution: {integrity: sha512-GmqrO8WJ1NuzJ2DrziEI2o57jKAVIQNf8a18W3nCYU3H7PNWqCCVTeH6/NQE93CIllIgQS98rrmVkYgTX9fFJQ==}
-    engines: {node: ^18.17.0 || >=20.5.0}
 
   ws@8.17.0:
     resolution: {integrity: sha512-uJq6108EgZMAl20KagGkzCKfMEjxmKvZHG7Tlq0Z6nOky7YF7aq4mOx6xK8TJ/i1LeK4Qus7INktacctDgY8Ow==}
@@ -14161,10 +13905,6 @@ packages:
 
   yallist@4.0.0:
     resolution: {integrity: sha512-3wdGidZyq5PB084XLES5TpOSRA3wjXAlIWMhum2kRcv/41Sn2emQ0dycQW4uZXLejwKvg6EsvbdlVL+FYEct7A==}
-
-  yallist@5.0.0:
-    resolution: {integrity: sha512-YgvUTfwqyc7UXVMrB+SImsVYSmTS8X/tSrtdNZMImM+n7+QTriRXyXim0mBrTXNeqzVF0KWGgHPeiyViFFrNDw==}
-    engines: {node: '>=18'}
 
   yaml@2.8.1:
     resolution: {integrity: sha512-lcYcMxX2PO9XMGvAJkJ3OsNMw+/7FKes7/hgerGUYWIoWu5j/+YQqcZr5JnPZWzOsEBgMbSbiSTn/dv/69Mkpw==}
@@ -14252,11 +13992,6 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.1.1
       '@jridgewell/trace-mapping': 0.3.31
-
-  '@ava/typescript@4.1.0':
-    dependencies:
-      escape-string-regexp: 5.0.0
-      execa: 7.1.1
 
   '@aws-crypto/crc32@5.2.0':
     dependencies:
@@ -15515,7 +15250,7 @@ snapshots:
       lodash.memoize: 4.1.2
       marked: 0.3.19
 
-  '@cloudflare/vitest-pool-workers@0.10.15(@cloudflare/workers-types@4.20251223.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)':
+  '@cloudflare/vitest-pool-workers@0.10.15(@cloudflare/workers-types@4.20260103.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)':
     dependencies:
       '@vitest/runner': 3.2.3
       '@vitest/snapshot': 3.2.3
@@ -15525,14 +15260,14 @@ snapshots:
       miniflare: 4.20251210.0
       semver: 7.7.3
       vitest: 2.1.9(@types/node@20.19.9)(@vitest/ui@2.1.9)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.9.3))
-      wrangler: 4.54.0(@cloudflare/workers-types@4.20251223.0)
-      zod: 3.22.3
+      wrangler: 4.54.0(@cloudflare/workers-types@4.20260103.0)
+      zod: 3.25.76
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
       - bufferutil
       - utf-8-validate
 
-  '@cloudflare/vitest-pool-workers@0.10.15(@cloudflare/workers-types@4.20251223.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)':
+  '@cloudflare/vitest-pool-workers@0.10.15(@cloudflare/workers-types@4.20260103.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)':
     dependencies:
       '@vitest/runner': 3.2.3
       '@vitest/snapshot': 3.2.3
@@ -15542,8 +15277,8 @@ snapshots:
       miniflare: 4.20251210.0
       semver: 7.7.3
       vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
-      wrangler: 4.54.0(@cloudflare/workers-types@4.20251223.0)
-      zod: 3.22.3
+      wrangler: 4.54.0(@cloudflare/workers-types@4.20260103.0)
+      zod: 3.25.76
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
       - bufferutil
@@ -15555,7 +15290,7 @@ snapshots:
   '@cloudflare/workerd-darwin-64@1.20251210.0':
     optional: true
 
-  '@cloudflare/workerd-darwin-64@1.20251223.0':
+  '@cloudflare/workerd-darwin-64@1.20260103.0':
     optional: true
 
   '@cloudflare/workerd-darwin-arm64@1.20251202.0':
@@ -15564,7 +15299,7 @@ snapshots:
   '@cloudflare/workerd-darwin-arm64@1.20251210.0':
     optional: true
 
-  '@cloudflare/workerd-darwin-arm64@1.20251223.0':
+  '@cloudflare/workerd-darwin-arm64@1.20260103.0':
     optional: true
 
   '@cloudflare/workerd-linux-64@1.20251202.0':
@@ -15573,7 +15308,7 @@ snapshots:
   '@cloudflare/workerd-linux-64@1.20251210.0':
     optional: true
 
-  '@cloudflare/workerd-linux-64@1.20251223.0':
+  '@cloudflare/workerd-linux-64@1.20260103.0':
     optional: true
 
   '@cloudflare/workerd-linux-arm64@1.20251202.0':
@@ -15582,7 +15317,7 @@ snapshots:
   '@cloudflare/workerd-linux-arm64@1.20251210.0':
     optional: true
 
-  '@cloudflare/workerd-linux-arm64@1.20251223.0':
+  '@cloudflare/workerd-linux-arm64@1.20260103.0':
     optional: true
 
   '@cloudflare/workerd-windows-64@1.20251202.0':
@@ -15591,10 +15326,10 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20251210.0':
     optional: true
 
-  '@cloudflare/workerd-windows-64@1.20251223.0':
+  '@cloudflare/workerd-windows-64@1.20260103.0':
     optional: true
 
-  '@cloudflare/workers-types@4.20251223.0': {}
+  '@cloudflare/workers-types@4.20260103.0': {}
 
   '@colors/colors@1.5.0':
     optional: true
@@ -16323,10 +16058,6 @@ snapshots:
       wrap-ansi: 8.1.0
       wrap-ansi-cjs: wrap-ansi@7.0.0
 
-  '@isaacs/fs-minipass@4.0.1':
-    dependencies:
-      minipass: 7.1.2
-
   '@jest/expect-utils@29.7.0':
     dependencies:
       jest-get-type: 29.6.3
@@ -16430,19 +16161,6 @@ snapshots:
       globby: 11.1.0
       jju: 1.4.0
       read-yaml-file: 1.1.0
-
-  '@mapbox/node-pre-gyp@2.0.3(encoding@0.1.13)':
-    dependencies:
-      consola: 3.4.2
-      detect-libc: 2.1.2
-      https-proxy-agent: 7.0.6
-      node-fetch: 2.7.0(encoding@0.1.13)
-      nopt: 8.1.0
-      semver: 7.7.3
-      tar: 7.5.2
-    transitivePeerDependencies:
-      - encoding
-      - supports-color
 
   '@microlabs/otel-cf-workers@1.0.0-rc.45(@opentelemetry/api@1.7.0)':
     dependencies:
@@ -16770,7 +16488,7 @@ snapshots:
 
   '@prisma/adapter-d1@7.0.1':
     dependencies:
-      '@cloudflare/workers-types': 4.20251223.0
+      '@cloudflare/workers-types': 4.20260103.0
       '@prisma/driver-adapter-utils': 7.0.1
       ky: 1.7.5
 
@@ -16997,10 +16715,10 @@ snapshots:
     optionalDependencies:
       '@types/react': 18.3.3
 
-  '@remix-run/cloudflare@2.12.0(@cloudflare/workers-types@4.20251223.0)(typescript@5.8.3)':
+  '@remix-run/cloudflare@2.12.0(@cloudflare/workers-types@4.20260103.0)(typescript@5.8.3)':
     dependencies:
       '@cloudflare/kv-asset-handler': 0.1.3
-      '@cloudflare/workers-types': 4.20251223.0
+      '@cloudflare/workers-types': 4.20260103.0
       '@remix-run/server-runtime': 2.12.0(typescript@5.8.3)
     optionalDependencies:
       typescript: 5.8.3
@@ -17169,14 +16887,6 @@ snapshots:
       picomatch: 4.0.3
     optionalDependencies:
       rollup: 4.30.1
-
-  '@rollup/pluginutils@5.3.0(rollup@4.44.1)':
-    dependencies:
-      '@types/estree': 1.0.5
-      estree-walker: 2.0.2
-      picomatch: 4.0.3
-    optionalDependencies:
-      rollup: 4.44.1
 
   '@rollup/rollup-android-arm-eabi@4.30.1':
     optional: true
@@ -17441,8 +17151,6 @@ snapshots:
   '@sinclair/typebox@0.27.8': {}
 
   '@sindresorhus/is@7.0.2': {}
-
-  '@sindresorhus/merge-streams@2.3.0': {}
 
   '@smithy/abort-controller@3.1.9':
     dependencies:
@@ -18358,25 +18066,6 @@ snapshots:
       '@typescript-eslint/types': 8.46.3
       eslint-visitor-keys: 4.2.1
 
-  '@vercel/nft@0.29.4(encoding@0.1.13)(rollup@4.44.1)':
-    dependencies:
-      '@mapbox/node-pre-gyp': 2.0.3(encoding@0.1.13)
-      '@rollup/pluginutils': 5.3.0(rollup@4.44.1)
-      acorn: 8.15.0
-      acorn-import-attributes: 1.9.5(acorn@8.15.0)
-      async-sema: 3.1.1
-      bindings: 1.5.0
-      estree-walker: 2.0.2
-      glob: 10.5.0
-      graceful-fs: 4.2.11
-      node-gyp-build: 4.8.4
-      picomatch: 4.0.3
-      resolve-from: 5.0.0
-    transitivePeerDependencies:
-      - encoding
-      - rollup
-      - supports-color
-
   '@verdaccio/auth@8.0.0-next-8.7':
     dependencies:
       '@verdaccio/config': 8.0.0-next-8.7
@@ -18818,8 +18507,6 @@ snapshots:
       jsonparse: 1.3.1
       through: 2.3.8
 
-  abbrev@3.0.1: {}
-
   abort-controller@3.0.0:
     dependencies:
       event-target-shim: 5.0.1
@@ -18834,19 +18521,11 @@ snapshots:
       mime-types: 3.0.1
       negotiator: 1.0.0
 
-  acorn-import-attributes@1.9.5(acorn@8.15.0):
-    dependencies:
-      acorn: 8.15.0
-
   acorn-jsx@5.3.2(acorn@8.15.0):
     dependencies:
       acorn: 8.15.0
 
   acorn-walk@8.3.2: {}
-
-  acorn-walk@8.3.4:
-    dependencies:
-      acorn: 8.15.0
 
   acorn@8.14.0: {}
 
@@ -18945,8 +18624,6 @@ snapshots:
       call-bound: 1.0.4
       is-array-buffer: 3.0.5
 
-  array-find-index@1.0.2: {}
-
   array-flatten@1.1.1: {}
 
   array-includes@3.1.9:
@@ -19035,10 +18712,6 @@ snapshots:
       get-intrinsic: 1.3.0
       is-array-buffer: 3.0.5
 
-  arrgv@1.0.2: {}
-
-  arrify@3.0.0: {}
-
   asn1@0.2.6:
     dependencies:
       safer-buffer: 2.1.2
@@ -19077,8 +18750,6 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  async-sema@3.1.1: {}
-
   async@3.2.4: {}
 
   async@3.2.6: {}
@@ -19096,55 +18767,6 @@ snapshots:
       picocolors: 1.1.1
       postcss: 8.5.6
       postcss-value-parser: 4.2.0
-
-  ava@6.4.1(@ava/typescript@4.1.0)(encoding@0.1.13)(rollup@4.44.1):
-    dependencies:
-      '@vercel/nft': 0.29.4(encoding@0.1.13)(rollup@4.44.1)
-      acorn: 8.15.0
-      acorn-walk: 8.3.4
-      ansi-styles: 6.2.1
-      arrgv: 1.0.2
-      arrify: 3.0.0
-      callsites: 4.2.0
-      cbor: 10.0.11
-      chalk: 5.6.2
-      chunkd: 2.0.1
-      ci-info: 4.3.1
-      ci-parallel-vars: 1.0.1
-      cli-truncate: 4.0.0
-      code-excerpt: 4.0.0
-      common-path-prefix: 3.0.0
-      concordance: 5.0.4(patch_hash=c3utx6zbsihhgmgyftee3iwqa4)
-      currently-unhandled: 0.4.1
-      debug: 4.4.1(supports-color@9.2.2)
-      emittery: 1.2.0
-      figures: 6.1.0
-      globby: 14.1.0
-      ignore-by-default: 2.1.0
-      indent-string: 5.0.0
-      is-plain-object: 5.0.0
-      is-promise: 4.0.0
-      matcher: 5.0.0
-      memoize: 10.2.0
-      ms: 2.1.3
-      p-map: 7.0.4
-      package-config: 5.0.0
-      picomatch: 4.0.3
-      plur: 5.1.0
-      pretty-ms: 9.3.0
-      resolve-cwd: 3.0.0
-      stack-utils: 2.0.6
-      strip-ansi: 7.1.0
-      supertap: 3.0.1
-      temp-dir: 3.0.0
-      write-file-atomic: 6.0.0
-      yargs: 17.7.2
-    optionalDependencies:
-      '@ava/typescript': 4.1.0
-    transitivePeerDependencies:
-      - encoding
-      - rollup
-      - supports-color
 
   available-typed-arrays@1.0.7:
     dependencies:
@@ -19222,10 +18844,6 @@ snapshots:
 
   binary-extensions@2.3.0: {}
 
-  bindings@1.5.0:
-    dependencies:
-      file-uri-to-path: 1.0.0
-
   birpc@0.2.14: {}
 
   birpc@2.6.1: {}
@@ -19240,8 +18858,6 @@ snapshots:
     optional: true
 
   blake3-wasm@2.1.5: {}
-
-  blueimp-md5@2.19.0: {}
 
   body-parser@1.20.3:
     dependencies:
@@ -19376,8 +18992,6 @@ snapshots:
 
   callsites@3.1.0: {}
 
-  callsites@4.2.0: {}
-
   caniuse-api@3.0.0:
     dependencies:
       browserslist: 4.24.2
@@ -19394,10 +19008,6 @@ snapshots:
   capnweb@0.1.0: {}
 
   caseless@0.12.0: {}
-
-  cbor@10.0.11:
-    dependencies:
-      nofilter: 3.1.0
 
   chai@5.1.2:
     dependencies:
@@ -19421,8 +19031,6 @@ snapshots:
       supports-color: 7.2.0
 
   chalk@5.3.0: {}
-
-  chalk@5.6.2: {}
 
   chardet@2.1.1: {}
 
@@ -19462,15 +19070,7 @@ snapshots:
 
   chownr@2.0.0: {}
 
-  chownr@3.0.0: {}
-
-  chunkd@2.0.1: {}
-
   ci-info@3.9.0: {}
-
-  ci-info@4.3.1: {}
-
-  ci-parallel-vars@1.0.1: {}
 
   citty@0.1.6:
     dependencies:
@@ -19487,11 +19087,6 @@ snapshots:
       string-width: 4.2.3
     optionalDependencies:
       '@colors/colors': 1.5.0
-
-  cli-truncate@4.0.0:
-    dependencies:
-      slice-ansi: 5.0.0
-      string-width: 7.1.0
 
   cli-width@4.1.0: {}
 
@@ -19526,10 +19121,6 @@ snapshots:
   cmd-shim@4.1.0:
     dependencies:
       mkdirp-infer-owner: 2.0.0
-
-  code-excerpt@4.0.0:
-    dependencies:
-      convert-to-spaces: 2.0.1
 
   color-convert@2.0.1:
     dependencies:
@@ -19571,8 +19162,6 @@ snapshots:
       core-util-is: 1.0.3
       esprima: 4.0.1
 
-  common-path-prefix@3.0.0: {}
-
   commondir@1.0.1: {}
 
   compare-versions@6.1.1: {}
@@ -19598,17 +19187,6 @@ snapshots:
   computeds@0.0.1: {}
 
   concat-map@0.0.1: {}
-
-  concordance@5.0.4(patch_hash=c3utx6zbsihhgmgyftee3iwqa4):
-    dependencies:
-      date-time: 3.1.0
-      esutils: 2.0.3
-      fast-diff: 1.2.0
-      js-string-escape: 1.0.1
-      lodash: 4.17.21
-      md5-hex: 3.0.1
-      semver: 7.7.3
-      well-known-symbols: 2.0.0
 
   concurrently@8.2.2:
     dependencies:
@@ -19646,8 +19224,6 @@ snapshots:
   content-type@1.0.5: {}
 
   convert-source-map@2.0.0: {}
-
-  convert-to-spaces@2.0.1: {}
 
   cookie-signature@1.0.6: {}
 
@@ -19782,10 +19358,6 @@ snapshots:
 
   csstype@3.1.2: {}
 
-  currently-unhandled@0.4.1:
-    dependencies:
-      array-find-index: 1.0.2
-
   dashdash@1.14.1:
     dependencies:
       assert-plus: 1.0.0
@@ -19835,10 +19407,6 @@ snapshots:
       '@babel/runtime': 7.22.5
 
   date-fns@4.1.0: {}
-
-  date-time@3.1.0:
-    dependencies:
-      time-zone: 1.0.0
 
   dayjs@1.11.13: {}
 
@@ -19943,7 +19511,8 @@ snapshots:
 
   detect-libc@2.0.3: {}
 
-  detect-libc@2.1.2: {}
+  detect-libc@2.1.2:
+    optional: true
 
   detect-newline@3.1.0: {}
 
@@ -20063,8 +19632,6 @@ snapshots:
       fast-check: 3.23.2
 
   electron-to-chromium@1.5.45: {}
-
-  emittery@1.2.0: {}
 
   emoji-regex@10.3.0: {}
 
@@ -20457,8 +20024,6 @@ snapshots:
 
   escape-string-regexp@4.0.0: {}
 
-  escape-string-regexp@5.0.0: {}
-
   escodegen@2.1.0:
     dependencies:
       esprima: 4.0.1
@@ -20471,11 +20036,11 @@ snapshots:
     dependencies:
       eslint: 9.39.1(jiti@2.6.0)
 
-  eslint-config-turbo@2.4.4(eslint@9.39.1(jiti@2.6.0))(turbo@2.2.3):
+  eslint-config-turbo@2.4.4(eslint@9.39.1(jiti@2.6.0))(turbo@2.7.2):
     dependencies:
       eslint: 9.39.1(jiti@2.6.0)
-      eslint-plugin-turbo: 2.4.4(eslint@9.39.1(jiti@2.6.0))(turbo@2.2.3)
-      turbo: 2.2.3
+      eslint-plugin-turbo: 2.4.4(eslint@9.39.1(jiti@2.6.0))(turbo@2.7.2)
+      turbo: 2.7.2
 
   eslint-import-resolver-node@0.3.9:
     dependencies:
@@ -20574,11 +20139,11 @@ snapshots:
       string.prototype.matchall: 4.0.12
       string.prototype.repeat: 1.0.0
 
-  eslint-plugin-turbo@2.4.4(eslint@9.39.1(jiti@2.6.0))(turbo@2.2.3):
+  eslint-plugin-turbo@2.4.4(eslint@9.39.1(jiti@2.6.0))(turbo@2.7.2):
     dependencies:
       dotenv: 16.0.3
       eslint: 9.39.1(jiti@2.6.0)
-      turbo: 2.2.3
+      turbo: 2.7.2
 
   eslint-plugin-unused-imports@4.1.4(@typescript-eslint/eslint-plugin@8.46.3(@typescript-eslint/parser@8.46.3(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3))(eslint@9.39.1(jiti@2.6.0))(typescript@5.9.3))(eslint@9.39.1(jiti@2.6.0)):
     dependencies:
@@ -20882,14 +20447,6 @@ snapshots:
       merge2: 1.4.1
       micromatch: 4.0.8
 
-  fast-glob@3.3.3:
-    dependencies:
-      '@nodelib/fs.stat': 2.0.5
-      '@nodelib/fs.walk': 1.2.8
-      glob-parent: 5.1.2
-      merge2: 1.4.1
-      micromatch: 4.0.8
-
   fast-json-stable-stringify@2.1.0: {}
 
   fast-levenshtein@2.0.6: {}
@@ -20996,15 +20553,9 @@ snapshots:
 
   fflate@0.8.2: {}
 
-  figures@6.1.0:
-    dependencies:
-      is-unicode-supported: 2.1.0
-
   file-entry-cache@8.0.0:
     dependencies:
       flat-cache: 4.0.1
-
-  file-uri-to-path@1.0.0: {}
 
   fill-range@7.1.1:
     dependencies:
@@ -21032,8 +20583,6 @@ snapshots:
       statuses: 2.0.1
     transitivePeerDependencies:
       - supports-color
-
-  find-up-simple@1.0.0: {}
 
   find-up@4.1.0:
     dependencies:
@@ -21255,15 +20804,6 @@ snapshots:
       package-json-from-dist: 1.0.0
       path-scurry: 1.11.1
 
-  glob@10.5.0:
-    dependencies:
-      foreground-child: 3.3.1
-      jackspeak: 3.4.3
-      minimatch: 9.0.5
-      minipass: 7.1.2
-      package-json-from-dist: 1.0.1
-      path-scurry: 1.11.1
-
   glob@11.0.3:
     dependencies:
       foreground-child: 3.3.1
@@ -21318,15 +20858,6 @@ snapshots:
       ignore: 5.3.1
       merge2: 1.4.1
       slash: 3.0.0
-
-  globby@14.1.0:
-    dependencies:
-      '@sindresorhus/merge-streams': 2.3.0
-      fast-glob: 3.3.3
-      ignore: 7.0.5
-      path-type: 6.0.0
-      slash: 5.1.0
-      unicorn-magic: 0.3.0
 
   globrex@0.1.2: {}
 
@@ -21496,8 +21027,6 @@ snapshots:
 
   ieee754@1.2.1: {}
 
-  ignore-by-default@2.1.0: {}
-
   ignore@5.3.1: {}
 
   ignore@7.0.5: {}
@@ -21552,8 +21081,6 @@ snapshots:
       sprintf-js: 1.1.3
 
   ipaddr.js@1.9.1: {}
-
-  irregular-plurals@3.5.0: {}
 
   is-arguments@1.2.0:
     dependencies:
@@ -21708,8 +21235,6 @@ snapshots:
 
   is-plain-obj@2.1.0: {}
 
-  is-plain-object@5.0.0: {}
-
   is-promise@2.2.2: {}
 
   is-promise@4.0.0: {}
@@ -21774,8 +21299,6 @@ snapshots:
       which-typed-array: 1.1.19
 
   is-typedarray@1.0.0: {}
-
-  is-unicode-supported@2.1.0: {}
 
   is-weakmap@2.0.2: {}
 
@@ -21900,8 +21423,6 @@ snapshots:
   joycon@3.1.1: {}
 
   js-base64@3.7.7: {}
-
-  js-string-escape@1.0.1: {}
 
   js-tokens@4.0.0: {}
 
@@ -22120,8 +21641,6 @@ snapshots:
 
   lines-and-columns@1.2.4: {}
 
-  load-json-file@7.0.1: {}
-
   load-tsconfig@0.2.5: {}
 
   local-pkg@0.5.0:
@@ -22244,17 +21763,9 @@ snapshots:
       '@babel/runtime': 7.22.5
       remove-accents: 0.4.2
 
-  matcher@5.0.0:
-    dependencies:
-      escape-string-regexp: 5.0.0
-
   math-intrinsics@1.1.0: {}
 
   md5-file@5.0.0: {}
-
-  md5-hex@3.0.1:
-    dependencies:
-      blueimp-md5: 2.19.0
 
   mdn-data@2.0.28: {}
 
@@ -22263,10 +21774,6 @@ snapshots:
   media-typer@0.3.0: {}
 
   media-typer@1.1.0: {}
-
-  memoize@10.2.0:
-    dependencies:
-      mimic-function: 5.0.1
 
   merge-descriptors@1.0.3: {}
 
@@ -22313,8 +21820,6 @@ snapshots:
   mimic-fn@2.1.0: {}
 
   mimic-fn@4.0.0: {}
-
-  mimic-function@5.0.1: {}
 
   mimic-response@3.1.0:
     optional: true
@@ -22364,10 +21869,6 @@ snapshots:
   minimist@1.2.6: {}
 
   minipass@7.1.2: {}
-
-  minizlib@3.1.0:
-    dependencies:
-      minipass: 7.1.2
 
   mkdirp-classic@0.5.3:
     optional: true
@@ -22568,8 +22069,6 @@ snapshots:
 
   node-forge@1.3.1: {}
 
-  node-gyp-build@4.8.4: {}
-
   node-polyglot@2.5.0:
     dependencies:
       array.prototype.foreach: 1.0.5
@@ -22579,12 +22078,6 @@ snapshots:
       warning: 4.0.3
 
   node-releases@2.0.18: {}
-
-  nofilter@3.1.0: {}
-
-  nopt@8.1.0:
-    dependencies:
-      abbrev: 3.0.1
 
   normalize-package-data@6.0.2:
     dependencies:
@@ -22765,8 +22258,6 @@ snapshots:
 
   p-map@2.1.0: {}
 
-  p-map@7.0.4: {}
-
   p-queue@9.0.0:
     dependencies:
       eventemitter3: 5.0.1
@@ -22793,11 +22284,6 @@ snapshots:
     dependencies:
       degenerator: 5.0.1
       netmask: 2.0.2
-
-  package-config@5.0.0:
-    dependencies:
-      find-up-simple: 1.0.0
-      load-json-file: 7.0.1
 
   package-json-from-dist@1.0.0: {}
 
@@ -22826,15 +22312,13 @@ snapshots:
       index-to-position: 1.2.0
       type-fest: 4.41.0
 
-  parse-ms@4.0.0: {}
-
   parserlib@1.1.1: {}
 
   parseurl@1.3.3: {}
 
-  partyserver@0.0.64(@cloudflare/workers-types@4.20251223.0):
+  partyserver@0.0.64(@cloudflare/workers-types@4.20260103.0):
     dependencies:
-      '@cloudflare/workers-types': 4.20251223.0
+      '@cloudflare/workers-types': 4.20260103.0
       nanoid: 5.1.0
 
   partysocket@1.0.3:
@@ -22874,8 +22358,6 @@ snapshots:
   path-to-regexp@8.2.0: {}
 
   path-type@4.0.0: {}
-
-  path-type@6.0.0: {}
 
   pathe@1.1.2: {}
 
@@ -23009,10 +22491,6 @@ snapshots:
       playwright-core: 1.56.1
 
   playwright-core@1.56.1: {}
-
-  plur@5.1.0:
-    dependencies:
-      irregular-plurals: 3.5.0
 
   pngjs@3.4.0: {}
 
@@ -23278,10 +22756,6 @@ snapshots:
       '@jest/schemas': 29.6.3
       ansi-styles: 5.2.0
       react-is: 18.2.0
-
-  pretty-ms@9.3.0:
-    dependencies:
-      parse-ms: 4.0.0
 
   prism-react-renderer@1.3.5(react@18.3.1):
     dependencies:
@@ -23686,10 +23160,6 @@ snapshots:
 
   require-from-string@2.0.2: {}
 
-  resolve-cwd@3.0.0:
-    dependencies:
-      resolve-from: 5.0.0
-
   resolve-from@4.0.0: {}
 
   resolve-from@5.0.0: {}
@@ -23998,10 +23468,6 @@ snapshots:
 
   seq-queue@0.0.5: {}
 
-  serialize-error@7.0.1:
-    dependencies:
-      type-fest: 0.13.1
-
   serve-static@1.16.2:
     dependencies:
       encodeurl: 2.0.0
@@ -24154,8 +23620,6 @@ snapshots:
       express: 4.21.2
 
   slash@3.0.0: {}
-
-  slash@5.1.0: {}
 
   slice-ansi@5.0.0:
     dependencies:
@@ -24437,18 +23901,11 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.13
       commander: 4.1.1
-      glob: 10.5.0
+      glob: 10.4.5
       lines-and-columns: 1.2.4
       mz: 2.7.0
       pirates: 4.0.6
       ts-interface-checker: 0.1.13
-
-  supertap@3.0.1:
-    dependencies:
-      indent-string: 5.0.0
-      js-yaml: 3.14.1
-      serialize-error: 7.0.1
-      strip-ansi: 7.1.0
 
   supports-color@10.0.0: {}
 
@@ -24532,16 +23989,6 @@ snapshots:
       fast-fifo: 1.3.2
       streamx: 2.21.1
 
-  tar@7.5.2:
-    dependencies:
-      '@isaacs/fs-minipass': 4.0.1
-      chownr: 3.0.0
-      minipass: 7.1.2
-      minizlib: 3.1.0
-      yallist: 5.0.0
-
-  temp-dir@3.0.0: {}
-
   term-size@2.2.1: {}
 
   text-decoder@1.2.3:
@@ -24566,8 +24013,6 @@ snapshots:
       xtend: 4.0.2
 
   through@2.3.8: {}
-
-  time-zone@1.0.0: {}
 
   timeago.js@4.0.2: {}
 
@@ -24816,13 +24261,25 @@ snapshots:
   turbo-darwin-64@2.2.3:
     optional: true
 
+  turbo-darwin-64@2.7.2:
+    optional: true
+
   turbo-darwin-arm64@2.2.3:
+    optional: true
+
+  turbo-darwin-arm64@2.7.2:
     optional: true
 
   turbo-linux-64@2.2.3:
     optional: true
 
+  turbo-linux-64@2.7.2:
+    optional: true
+
   turbo-linux-arm64@2.2.3:
+    optional: true
+
+  turbo-linux-arm64@2.7.2:
     optional: true
 
   turbo-stream@2.4.0: {}
@@ -24830,7 +24287,13 @@ snapshots:
   turbo-windows-64@2.2.3:
     optional: true
 
+  turbo-windows-64@2.7.2:
+    optional: true
+
   turbo-windows-arm64@2.2.3:
+    optional: true
+
+  turbo-windows-arm64@2.7.2:
     optional: true
 
   turbo@2.2.3:
@@ -24842,6 +24305,15 @@ snapshots:
       turbo-windows-64: 2.2.3
       turbo-windows-arm64: 2.2.3
 
+  turbo@2.7.2:
+    optionalDependencies:
+      turbo-darwin-64: 2.7.2
+      turbo-darwin-arm64: 2.7.2
+      turbo-linux-64: 2.7.2
+      turbo-linux-arm64: 2.7.2
+      turbo-windows-64: 2.7.2
+      turbo-windows-arm64: 2.7.2
+
   tweetnacl@0.14.5: {}
 
   tweetnacl@1.0.3: {}
@@ -24851,8 +24323,6 @@ snapshots:
   type-check@0.4.0:
     dependencies:
       prelude-ls: 1.2.1
-
-  type-fest@0.13.1: {}
 
   type-fest@1.4.0: {}
 
@@ -25031,8 +24501,6 @@ snapshots:
       pathe: 2.0.3
 
   unicorn-magic@0.1.0: {}
-
-  unicorn-magic@0.3.0: {}
 
   universal-user-agent@6.0.1: {}
 
@@ -25507,6 +24975,49 @@ snapshots:
       - tsx
       - yaml
 
+  vitest@3.2.3(@types/debug@4.1.7)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(yaml@2.8.1):
+    dependencies:
+      '@types/chai': 5.2.2
+      '@vitest/expect': 3.2.3
+      '@vitest/mocker': 3.2.3(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(vite@5.4.14(@types/node@20.19.9)(lightningcss@1.30.2))
+      '@vitest/pretty-format': 3.2.3
+      '@vitest/runner': 3.2.3
+      '@vitest/snapshot': 3.2.3
+      '@vitest/spy': 3.2.3
+      '@vitest/utils': 3.2.3
+      chai: 5.2.0
+      debug: 4.4.1(supports-color@9.2.2)
+      expect-type: 1.2.1
+      magic-string: 0.30.21
+      pathe: 2.0.3
+      picomatch: 4.0.3
+      std-env: 3.9.0
+      tinybench: 2.9.0
+      tinyexec: 0.3.2
+      tinyglobby: 0.2.15
+      tinypool: 1.1.0
+      tinyrainbow: 2.0.0
+      vite: 5.4.14(@types/node@20.19.9)(lightningcss@1.30.2)
+      vite-node: 3.2.3(@types/node@20.19.9)(jiti@2.6.0)(lightningcss@1.30.2)(supports-color@9.2.2)(yaml@2.8.1)
+      why-is-node-running: 2.3.0
+    optionalDependencies:
+      '@types/debug': 4.1.7
+      '@types/node': 20.19.9
+      '@vitest/ui': 3.2.3(vitest@3.2.3)
+    transitivePeerDependencies:
+      - jiti
+      - less
+      - lightningcss
+      - msw
+      - sass
+      - sass-embedded
+      - stylus
+      - sugarss
+      - supports-color
+      - terser
+      - tsx
+      - yaml
+
   vscode-uri@3.0.8: {}
 
   vue-tsc@2.0.29(typescript@5.8.3):
@@ -25525,8 +25036,6 @@ snapshots:
   webidl-conversions@3.0.1: {}
 
   webidl-conversions@4.0.2: {}
-
-  well-known-symbols@2.0.0: {}
 
   whatwg-url@5.0.0:
     dependencies:
@@ -25635,15 +25144,15 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20251210.0
       '@cloudflare/workerd-windows-64': 1.20251210.0
 
-  workerd@1.20251223.0:
+  workerd@1.20260103.0:
     optionalDependencies:
-      '@cloudflare/workerd-darwin-64': 1.20251223.0
-      '@cloudflare/workerd-darwin-arm64': 1.20251223.0
-      '@cloudflare/workerd-linux-64': 1.20251223.0
-      '@cloudflare/workerd-linux-arm64': 1.20251223.0
-      '@cloudflare/workerd-windows-64': 1.20251223.0
+      '@cloudflare/workerd-darwin-64': 1.20260103.0
+      '@cloudflare/workerd-darwin-arm64': 1.20260103.0
+      '@cloudflare/workerd-linux-64': 1.20260103.0
+      '@cloudflare/workerd-linux-arm64': 1.20260103.0
+      '@cloudflare/workerd-windows-64': 1.20260103.0
 
-  wrangler@4.54.0(@cloudflare/workers-types@4.20251223.0):
+  wrangler@4.54.0(@cloudflare/workers-types@4.20260103.0):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.4.1
       '@cloudflare/unenv-preset': 2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251210.0)
@@ -25654,7 +25163,7 @@ snapshots:
       unenv: 2.0.0-rc.24
       workerd: 1.20251210.0
     optionalDependencies:
-      '@cloudflare/workers-types': 4.20251223.0
+      '@cloudflare/workers-types': 4.20260103.0
       fsevents: 2.3.3
     transitivePeerDependencies:
       - bufferutil
@@ -25686,11 +25195,6 @@ snapshots:
 
   wrappy@1.0.2: {}
 
-  write-file-atomic@6.0.0:
-    dependencies:
-      imurmurhash: 0.1.4
-      signal-exit: 4.1.0
-
   ws@8.17.0: {}
 
   ws@8.18.0: {}
@@ -25716,8 +25220,6 @@ snapshots:
   yallist@3.1.1: {}
 
   yallist@4.0.0: {}
-
-  yallist@5.0.0: {}
 
   yaml@2.8.1: {}
 
