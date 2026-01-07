@@ -17,6 +17,7 @@ Telemetry in Wrangler allows us to better identify bugs and gain visibility on u
   - Whether or not TypeScript is being used
   - The framework being used
   - The build command being used
+  - How secrets are managed (e.g. whether secrets are added individually or in bulk, whether input comes from interactive prompts, stdin, or files, and the format used for bulk imports). No secret names, values, or counts are tracked.
 - Information about your connection to Cloudflare's API (e.g. how long it takes Wrangler to deploy your Worker)
 - The version of the Wrangler client that is sending the event
 - The package manager that the Wrangler client is using. (e.g. npm, yarn)
