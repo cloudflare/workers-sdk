@@ -187,6 +187,13 @@ export function createCloudflareEnvironmentOptions({
 }): vite.EnvironmentOptions {
 	const isRolldown = "rolldownVersion" in vite;
 	const define = getProcessEnvReplacements(hasNodeJsCompat, mode);
+	const rollupOptions: vite.Rollup.RollupOptions = {
+		input: {
+			[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
+		},
+		// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
+		preserveEntrySignatures: "strict",
+	};
 
 	return {
 		resolve: {
@@ -217,22 +224,12 @@ export function createCloudflareEnvironmentOptions({
 			...(isRolldown
 				? {
 						rolldownOptions: {
+							...rollupOptions,
 							platform: "neutral",
-							input: {
-								[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
-							},
-							// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
-							preserveEntrySignatures: "strict",
 						},
 					}
 				: {
-						rollupOptions: {
-							input: {
-								[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
-							},
-							// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
-							preserveEntrySignatures: "strict",
-						},
+						rollupOptions,
 					}),
 		},
 		optimizeDeps: {

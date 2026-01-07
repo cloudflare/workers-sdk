@@ -206,7 +206,7 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 					return {
 						optimizeDeps: {
 							...("rolldownVersion" in vite
-								? ({
+								? {
 										rolldownOptions: {
 											plugins: [
 												{
@@ -217,8 +217,7 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 												},
 											],
 										},
-										// eslint-disable-next-line @typescript-eslint/no-explicit-any
-									} as any)
+									}
 								: {
 										esbuildOptions: {
 											plugins: [
@@ -252,7 +251,7 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 											],
 										},
 									}),
-						},
+						} as vite.DepOptimizationOptions, // `rolldownOptions` added in Vite 8
 					};
 				}
 			},
