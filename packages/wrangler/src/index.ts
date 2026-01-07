@@ -529,9 +529,9 @@ export function createCLIParser(argv: string[]) {
 			const match = line.match(/^\s*wrangler\s+(\S+)/);
 			if (match) {
 				const cmdName = match[1];
-				const [foundCategory] = registry.orderedCategories
-					.entries()
-					.find(([_, commands]) => commands.includes(cmdName)) ?? [null];
+				const [foundCategory] = Array.from(
+					registry.orderedCategories.entries()
+				).find(([_, commands]) => commands.includes(cmdName)) ?? [null];
 
 				if (foundCategory) {
 					const existing = categoryCommandLines.get(foundCategory) ?? [];
