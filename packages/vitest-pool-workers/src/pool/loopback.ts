@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { opendirSync, rmSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
@@ -61,34 +62,35 @@ async function handleSnapshotRequest(
 	return new Response(null, { status: 405 });
 }
 
-async function emptyDir(dirPath: string) {
-	let entries: { name: string; isDirectory: boolean }[];
+function emptyDir(dirPath: string) {
+	let dir;
 	try {
-		const dirents = await fs.readdir(dirPath, { withFileTypes: true });
-		entries = dirents.map((d) => ({
-			name: d.name,
-			isDirectory: d.isDirectory(),
-		}));
+		dir = opendirSync(dirPath);
 	} catch (e) {
 		if (isFileNotFoundError(e)) {
 			return;
 		}
 		throw e;
 	}
-	for (const entry of entries) {
-		const fullPath = path.join(dirPath, entry.name);
+	try {
+		let entry;
+		while ((entry = dir.readSync()) !== null) {
+			const fullPath = path.join(dirPath, entry.name);
 
-		if (entry.isDirectory) {
-			await emptyDir(fullPath);
-		} else {
-			try {
-				await fs.rm(fullPath, { force: true });
-			} catch (e) {
-				if (isEbusyError(e)) {
-					console.warn(`vitest-pool-worker: Unable to remove file: ${e}`);
+			if (entry.isDirectory()) {
+				emptyDir(fullPath);
+			} else {
+				try {
+					rmSync(fullPath, { force: true });
+				} catch (e) {
+					if (isEbusyError(e)) {
+						console.warn(`vitest-pool-worker: Unable to remove file: ${e}`);
+					}
 				}
 			}
 		}
+	} finally {
+		dir.closeSync();
 	}
 }
 
@@ -258,7 +260,9 @@ async function pushStackedStorage(intoDepth: number, persistPath: string) {
 	await fs.mkdir(stackFramePath, { recursive: true });
 
 	// For each Durable Object unique key in the persistence path...
-	for (const key of await fs.readdir(persistPath, { withFileTypes: true })) {
+	for (const key of await fs.readdir(persistPath, {
+		withFileTypes: true,
+	})) {
 		// (skipping stack directory)
 		if (key.name === STACK_DIR_NAME) {
 			continue;
@@ -286,7 +290,9 @@ async function pushStackedStorage(intoDepth: number, persistPath: string) {
 }
 async function popStackedStorage(fromDepth: number, persistPath: string) {
 	// Delete every Durable Object unique key directory in the persistence path
-	for (const key of await fs.readdir(persistPath, { withFileTypes: true })) {
+	for (const key of await fs.readdir(persistPath, {
+		withFileTypes: true,
+	})) {
 		// (skipping stack directory)
 		if (key.name === STACK_DIR_NAME) {
 			continue;
