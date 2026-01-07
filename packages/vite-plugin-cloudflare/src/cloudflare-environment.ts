@@ -185,7 +185,15 @@ export function createCloudflareEnvironmentOptions({
 	isEntryWorker: boolean;
 	hasNodeJsCompat: boolean;
 }): vite.EnvironmentOptions {
+	const isRolldown = "rolldownVersion" in vite;
 	const define = getProcessEnvReplacements(hasNodeJsCompat, mode);
+	const rollupOptions: vite.Rollup.RollupOptions = {
+		input: {
+			[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
+		},
+		// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
+		preserveEntrySignatures: "strict",
+	};
 
 	return {
 		resolve: {
@@ -213,16 +221,16 @@ export function createCloudflareEnvironmentOptions({
 			outDir: getOutputDirectory(userConfig, environmentName),
 			copyPublicDir: false,
 			ssr: true,
-			rollupOptions: {
-				input: {
-					[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
-				},
-				// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
-				preserveEntrySignatures: "strict",
-				// rolldown-only option
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				...("rolldownVersion" in vite ? ({ platform: "neutral" } as any) : {}),
-			},
+			...(isRolldown
+				? {
+						rolldownOptions: {
+							...rollupOptions,
+							platform: "neutral",
+						},
+					}
+				: {
+						rollupOptions,
+					}),
 		},
 		optimizeDeps: {
 			// Note: ssr pre-bundling is opt-in and we need to enable it by setting `noDiscovery` to false
@@ -234,24 +242,51 @@ export function createCloudflareEnvironmentOptions({
 			// We need to normalize the path as it is treated as a glob and backslashes are therefore treated as escape characters.
 			entries: vite.normalizePath(workerConfig.main),
 			exclude: [...cloudflareBuiltInModules],
-			esbuildOptions: {
-				platform: "neutral",
-				target,
-				conditions: [...defaultConditions, "development"],
-				resolveExtensions: [
-					".mjs",
-					".js",
-					".mts",
-					".ts",
-					".jsx",
-					".tsx",
-					".json",
-					".cjs",
-					".cts",
-					".ctx",
-				],
-				define,
-			},
+			...(isRolldown
+				? {
+						rolldownOptions: {
+							platform: "neutral",
+							resolve: {
+								conditionNames: [...defaultConditions, "development"],
+								extensions: [
+									".mjs",
+									".js",
+									".mts",
+									".ts",
+									".jsx",
+									".tsx",
+									".json",
+									".cjs",
+									".cts",
+									".ctx",
+								],
+							},
+							transform: {
+								target,
+								define,
+							},
+						},
+					}
+				: {
+						esbuildOptions: {
+							platform: "neutral",
+							target,
+							conditions: [...defaultConditions, "development"],
+							resolveExtensions: [
+								".mjs",
+								".js",
+								".mts",
+								".ts",
+								".jsx",
+								".tsx",
+								".json",
+								".cjs",
+								".cts",
+								".ctx",
+							],
+							define,
+						},
+					}),
 		},
 		// We manually set `process.env` replacements using `define`
 		keepProcessEnv: true,
