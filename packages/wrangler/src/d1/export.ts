@@ -105,7 +105,9 @@ async function exportLocal(
 	noSchema: boolean,
 	noData: boolean
 ) {
-	const localDB = getDatabaseInfoFromConfig(config, name);
+	const localDB = getDatabaseInfoFromConfig(config, name, {
+		requireDatabaseId: false,
+	});
 	if (!localDB) {
 		throw new UserError(
 			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`

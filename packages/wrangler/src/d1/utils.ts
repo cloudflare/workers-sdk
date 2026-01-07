@@ -7,15 +7,30 @@ import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 
 export function getDatabaseInfoFromConfig(
 	config: Config,
-	name: string
+	name: string,
+	options?: {
+		/** Local databases might not have a database id, so we don't require it for local-only operations */
+		requireDatabaseId?: boolean;
+	}
 ): Database | null {
+	const requireDatabaseId = options?.requireDatabaseId ?? true;
+
 	for (const d1Database of config.d1_databases) {
-		if (
-			d1Database.database_id &&
-			(name === d1Database.database_name || name === d1Database.binding)
-		) {
+		if (name === d1Database.database_name || name === d1Database.binding) {
+			if (requireDatabaseId && !d1Database.database_id) {
+				throw new UserError(
+					`Found a database with name or binding ${name} but it is missing a database_id, which is needed for operations on remote resources. Please create the remote D1 database by deploying your project or running 'wrangler d1 create ${name}'.`
+				);
+			}
+			// If requireDatabaseId is true (default), skip entries without database_id
+			// This is needed for remote operations that require a real database UUID
+
+			// For local operations, fall back to using the binding as the ID
+			// This matches the behavior in wrangler dev (see d1DatabaseEntry in dev/miniflare/index.ts)
+			const uuid = d1Database.database_id ?? d1Database.binding;
+
 			return {
-				uuid: d1Database.database_id,
+				uuid,
 				previewDatabaseUuid: d1Database.preview_database_id,
 				binding: d1Database.binding,
 				name: d1Database.database_name,
