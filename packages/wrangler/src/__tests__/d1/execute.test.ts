@@ -198,6 +198,17 @@ describe("execute", () => {
 		await runWrangler("d1 execute db --command 'select 1;'");
 		expect(std.out).toContain("⛅️ wrangler x.x.x");
 	});
+
+	it("should execute locally without database_id", async () => {
+		setIsTTY(false);
+		writeWranglerConfig({
+			d1_databases: [{ binding: "D1", database_name: "D1" }],
+		});
+
+		await runWrangler("d1 execute D1 --command 'select 1;' --local");
+		expect(std.out).toContain("1 command executed successfully");
+	});
+
 	it("should not show banner if --json=true", async () => {
 		setIsTTY(false);
 		writeWranglerConfig({

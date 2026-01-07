@@ -14,7 +14,7 @@ import { runWrangler } from "../helpers/run-wrangler";
 
 describe("migrate", () => {
 	runInTempDir();
-	mockConsoleMethods();
+	const mockStd = mockConsoleMethods();
 	mockSetTimeout();
 
 	const { setIsTTY } = useMockIsTTY();
@@ -40,6 +40,16 @@ describe("migrate", () => {
 			).rejects.toThrowError(
 				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
 			);
+		});
+
+		it("should work without a database_id", async () => {
+			setIsTTY(false);
+			writeWranglerConfig({
+				d1_databases: [{ binding: "D1", database_name: "D1" }],
+			});
+
+			await runWrangler("d1 migrations create D1 test-migration");
+			expect(mockStd.out).toContain("Successfully created Migration");
 		});
 	});
 
