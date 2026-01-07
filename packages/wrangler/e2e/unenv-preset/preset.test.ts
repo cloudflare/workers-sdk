@@ -429,6 +429,28 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:sqlite (experimental, no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "sqlite enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_sqlite_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_sqlite_module: true,
+			},
+		},
+		// TODO: update the date past the default enable date (when defined)
+		{
+			name: "sqlite disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_sqlite_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_sqlite_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(localTestConfigs)(

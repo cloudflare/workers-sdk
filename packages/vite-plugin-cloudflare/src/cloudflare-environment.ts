@@ -227,6 +227,10 @@ export function createCloudflareEnvironmentOptions({
 		optimizeDeps: {
 			// Note: ssr pre-bundling is opt-in and we need to enable it by setting `noDiscovery` to false
 			noDiscovery: false,
+			// Workaround for https://github.com/vitejs/vite/issues/20867
+			// Longer term solution is to use full-bundle mode rather than `optimizeDeps`
+			// @ts-expect-error - option added in Vite 7.3.1
+			ignoreOutdatedRequests: true,
 			// We need to normalize the path as it is treated as a glob and backslashes are therefore treated as escape characters.
 			entries: vite.normalizePath(workerConfig.main),
 			exclude: [...cloudflareBuiltInModules],

@@ -1,5 +1,49 @@
 # @cloudflare/unenv-preset
 
+## 2.8.0
+
+### Minor Changes
+
+- [#11733](https://github.com/cloudflare/workers-sdk/pull/11733) [`62fd118`](https://github.com/cloudflare/workers-sdk/commit/62fd11870972ea67b638452bd29fc2ead648f52f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:inspector` module when the `enable_nodejs_inspector_module` compatibility flag is enabled. This feature is currently experimental and requires both the `enable_nodejs_inspector_module` and `experimental` compatibility flags to be set.
+
+  To enable the native inspector module, add the following to your `wrangler.jsonc`:
+
+  ```jsonc
+  {
+  	"compatibility_flags": ["experimental", "enable_nodejs_inspector_module"],
+  }
+  ```
+
+  Then you can import and use the inspector module in your Worker:
+
+  ```javascript
+  import inspector from "node:inspector";
+
+  // Access inspector APIs (note: workerd's implementation is a non-functional stub)
+  inspector.url(); // returns undefined
+  inspector.close(); // no-op
+  ```
+
+- [#11744](https://github.com/cloudflare/workers-sdk/pull/11744) [`a7e9f80`](https://github.com/cloudflare/workers-sdk/commit/a7e9f8016de23b1ad8a1cdea8c2029e8808aa7d0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:inspector/promises` module when the `enable_nodejs_inspector_module` compatibility flag is enabled. This extends the existing `node:inspector` support to include the promises-based API.
+
+  To enable the native inspector/promises module, add the following to your `wrangler.jsonc`:
+
+  ```jsonc
+  {
+  	"compatibility_flags": ["experimental", "enable_nodejs_inspector_module"],
+  }
+  ```
+
+  Then you can import and use the inspector/promises module in your Worker:
+
+  ```javascript
+  import inspector from "node:inspector/promises";
+
+  // Access inspector APIs (note: workerd's implementation is a non-functional stub)
+  inspector.url(); // returns undefined
+  inspector.close(); // no-op
+  ```
+
 ## 2.7.13
 
 ### Patch Changes
