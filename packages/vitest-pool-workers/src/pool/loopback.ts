@@ -234,7 +234,7 @@ export function scheduleStorageReset(mf: Miniflare) {
 		await abortAllWorker.fetch("http://placeholder", { method: "DELETE" });
 		for (const persistPath of state.persistPaths) {
 			// Clear directory rather than removing it so `workerd` can retain handle
-			await emptyDir(persistPath);
+			emptyDir(persistPath);
 		}
 		state.depth = 0;
 		// If any of the code in this callback throws, the `storageResetPromise`
