@@ -106,9 +106,10 @@ export async function handleError(
 
 		if (isRootLevelError) {
 			await showHelpWithCategories();
-		} else {
-			await wrangler.parse();
+			return;
 		}
+
+		await wrangler.parse();
 	} else if (
 		isAuthenticationError(e) ||
 		// Is this a Containers/Cloudchamber-based auth error?
