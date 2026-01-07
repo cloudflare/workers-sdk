@@ -35,6 +35,7 @@ export const deployCommand = createCommand({
 		description: "🆙 Deploy a Worker to Cloudflare",
 		owner: "Workers: Deploy and Config",
 		status: "stable",
+		category: "Compute & AI",
 	},
 	positionalArgs: ["script"],
 	args: {
