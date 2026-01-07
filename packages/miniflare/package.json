@@ -48,7 +48,7 @@
 		"acorn-walk": "8.3.2",
 		"exit-hook": "2.2.1",
 		"glob-to-regexp": "0.4.1",
-		"sharp": "^0.33.5",
+		"sharp": "^0.34.5",
 		"stoppable": "1.1.0",
 		"undici": "catalog:default",
 		"workerd": "1.20260103.0",
