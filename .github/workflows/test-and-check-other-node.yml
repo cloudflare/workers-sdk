@@ -27,7 +27,6 @@ jobs:
           - { node_version: 20, description: "Node 20" }
           - { node_version: 24, description: "Node 24", expected_to_fail: true }
           - { node_version: 25, description: "Node 25", expected_to_fail: true }
-          - { node_version: 26, description: "Node 26", expected_to_fail: true }
 
     steps:
       - name: Checkout Repo
