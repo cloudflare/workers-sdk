@@ -1,5 +1,55 @@
 # create-cloudflare
 
+## 2.62.1
+
+### Patch Changes
+
+- [#11540](https://github.com/cloudflare/workers-sdk/pull/11540) [`3f2d2c9`](https://github.com/cloudflare/workers-sdk/commit/3f2d2c959a738dc6ed4218adaad859c48305380a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-hono | 0.19.3 | 0.19.4 |
+
+- [#11542](https://github.com/cloudflare/workers-sdk/pull/11542) [`01b8c2b`](https://github.com/cloudflare/workers-sdk/commit/01b8c2bfbde1160b9192ba99ad4cd20d87a7c4d6) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.10.5 | 0.11.2 |
+
+- [#11546](https://github.com/cloudflare/workers-sdk/pull/11546) [`d7112b6`](https://github.com/cloudflare/workers-sdk/commit/d7112b69e127dfac7b2376cf35c13ba7d1645c4c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.0.1 | 21.0.4 |
+
+- [#11638](https://github.com/cloudflare/workers-sdk/pull/11638) [`7ce9240`](https://github.com/cloudflare/workers-sdk/commit/7ce9240f36a89ce9a2025209942fc7dae350c855) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From  | To     |
+  | ------------------- | ----- | ------ |
+  | create-react-router | 7.9.6 | 7.11.0 |
+
+- [#11762](https://github.com/cloudflare/workers-sdk/pull/11762) [`835bf59`](https://github.com/cloudflare/workers-sdk/commit/835bf59e17db12754741dcdecc8553650ce77fe9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.17.2 | 1.18.0 |
+
+- [#11778](https://github.com/cloudflare/workers-sdk/pull/11778) [`c3b8268`](https://github.com/cloudflare/workers-sdk/commit/c3b8268a6a066d512d7ee5e301f384c6175d33ff) Thanks [@rmarscher](https://github.com/rmarscher)! - Update Waku framework template wrangler.jsonc main entry path
+
+  Waku changed the worker main entry build path for v1.0. https://github.com/wakujs/waku/pull/1758
+
+  Removed not_found_handling so the worker will be invoked when no asset is found. This avoids 404 errors Waku server-side routes when assets_navigation_prefers_asset_serving is enabled. https://developers.cloudflare.com/workers/configuration/compatibility-flags/#navigation-requests-prefer-asset-serving
+
 ## 2.62.0
 
 ### Minor Changes
