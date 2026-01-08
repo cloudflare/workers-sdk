@@ -56,9 +56,7 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 						// resolve these imports using our `resolveId()` hook causing the optimization step to fail.
 						exclude: [
 							...nonPrefixedNodeModules,
-							...nonPrefixedNodeModules.map(
-								(module: string) => `node:${module}`
-							),
+							...nonPrefixedNodeModules.map((module) => `node:${module}`),
 							...prefixedOnlyNodeModules,
 						],
 					},
