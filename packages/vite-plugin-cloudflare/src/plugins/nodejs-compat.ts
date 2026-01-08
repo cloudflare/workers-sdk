@@ -237,7 +237,7 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 														build.onResolve(
 															{
 																filter: new RegExp(
-																	`^(${nonPrefixedNodeModules.join("|")}|node:.*)$`
+																	`^(${nonPrefixedNodeModules.join("|")}|node:.+)$`
 																),
 															},
 															({ path, importer }) => {
