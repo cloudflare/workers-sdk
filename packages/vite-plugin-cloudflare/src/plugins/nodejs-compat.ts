@@ -3,7 +3,6 @@ import {
 	nonPrefixedNodeModules,
 	prefixedOnlyNodeModules,
 } from "@cloudflare/unenv-preset";
-import * as vite from "vite";
 import {
 	assertHasNodeJsCompat,
 	hasNodeJsAls,
