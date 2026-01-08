@@ -20,30 +20,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # skip_on_normal_pr: if true, skip this Node version on normal PRs.
-        # Tests will still run on Version Packages PRs (changeset-release/main)
-        # or when the 'test all node versions' label is added.
+        # expected_to_fail: if true, tests may fail on this Node version.
+        # These versions are skipped on normal PRs but run on Version Packages PRs
+        # (changeset-release/main) or when the 'test all node versions' label is added.
         include:
-          - {
-              node_version: 20,
-              description: "Node 20",
-              skip_on_normal_pr: false,
-            }
-          - {
-              node_version: 24,
-              description: "Node 24",
-              skip_on_normal_pr: true,
-            }
-          - {
-              node_version: 25,
-              description: "Node 25",
-              skip_on_normal_pr: true,
-            }
-          - {
-              node_version: 26,
-              description: "Node 26",
-              skip_on_normal_pr: true,
-            }
+          - { node_version: 20, description: "Node 20" }
+          - { node_version: 24, description: "Node 24", expected_to_fail: true }
+          - { node_version: 25, description: "Node 25", expected_to_fail: true }
+          - { node_version: 26, description: "Node 26", expected_to_fail: true }
 
     steps:
       - name: Checkout Repo
@@ -60,10 +44,10 @@ jobs:
               - '!**/*.md'
 
       - name: Install Dependencies
-        # Skip if matrix.skip_on_normal_pr is true, unless this is a Version Packages PR or the label is set
+        # Skip if expected_to_fail is true, unless this is a Version Packages PR or the label is set
         if: |
           steps.changes.outputs.everything_but_markdown == 'true' &&
-          (!matrix.skip_on_normal_pr || github.event.pull_request.head.ref == 'changeset-release/main' || contains(github.event.pull_request.labels.*.name, 'test all node versions'))
+          (!matrix.expected_to_fail || github.event.pull_request.head.ref == 'changeset-release/main' || contains(github.event.pull_request.labels.*.name, 'test all node versions'))
         uses: ./.github/actions/install-dependencies
         with:
           node-version: ${{ matrix.node_version }}
@@ -77,7 +61,7 @@ jobs:
         # There is no point in running the fixtures if a package is broken.
         if: |
           steps.changes.outputs.everything_but_markdown == 'true' &&
-          (!matrix.skip_on_normal_pr || github.event.pull_request.head.ref == 'changeset-release/main' || contains(github.event.pull_request.labels.*.name, 'test all node versions'))
+          (!matrix.expected_to_fail || github.event.pull_request.head.ref == 'changeset-release/main' || contains(github.event.pull_request.labels.*.name, 'test all node versions'))
         run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*"
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
@@ -88,7 +72,7 @@ jobs:
       - name: Run e2e tests (unenv-preset)
         if: |
           steps.changes.outputs.everything_but_markdown == 'true' &&
-          (!matrix.skip_on_normal_pr || github.event.pull_request.head.ref == 'changeset-release/main' || contains(github.event.pull_request.labels.*.name, 'test all node versions'))
+          (!matrix.expected_to_fail || github.event.pull_request.head.ref == 'changeset-release/main' || contains(github.event.pull_request.labels.*.name, 'test all node versions'))
         run: pnpm test:e2e --filter wrangler -- unenv-preset
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
@@ -98,7 +82,7 @@ jobs:
       - name: Run tests (vite-plugin)
         if: |
           steps.changes.outputs.everything_but_markdown == 'true' &&
-          (!matrix.skip_on_normal_pr || github.event.pull_request.head.ref == 'changeset-release/main' || contains(github.event.pull_request.labels.*.name, 'test all node versions'))
+          (!matrix.expected_to_fail || github.event.pull_request.head.ref == 'changeset-release/main' || contains(github.event.pull_request.labels.*.name, 'test all node versions'))
         run: pnpm test:ci --filter @cloudflare/vite-plugin
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
