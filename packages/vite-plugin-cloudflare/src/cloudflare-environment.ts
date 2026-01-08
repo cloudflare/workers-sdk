@@ -170,6 +170,14 @@ const defaultConditions = ["workerd", "worker", "module", "browser"];
 // workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
 const target = "es2024";
 
+const rollupOptions: vite.Rollup.RollupOptions = {
+	input: {
+		[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
+	},
+	// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
+	preserveEntrySignatures: "strict",
+};
+
 // TODO: consider removing in next major to use default extensions
 const resolveExtensions = [
 	".mjs",
@@ -201,13 +209,6 @@ export function createCloudflareEnvironmentOptions({
 }): vite.EnvironmentOptions {
 	const isRolldown = "rolldownVersion" in vite;
 	const define = getProcessEnvReplacements(hasNodeJsCompat, mode);
-	const rollupOptions: vite.Rollup.RollupOptions = {
-		input: {
-			[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
-		},
-		// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
-		preserveEntrySignatures: "strict",
-	};
 
 	return {
 		resolve: {
