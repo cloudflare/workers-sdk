@@ -21,10 +21,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { node_version: 20, description: "Node 20" }
-          - { node_version: 24, description: "Node 24" }
-          - { node_version: 25, description: "Node 25" }
-          - { node_version: 26, description: "Node 26" }
+          - { node_version: 20, description: "Node 20", skip_on_normal_pr: false }
+          - { node_version: 24, description: "Node 24", skip_on_normal_pr: true }
+          - { node_version: 25, description: "Node 25", skip_on_normal_pr: true }
+          - { node_version: 26, description: "Node 26", skip_on_normal_pr: true }
 
     steps:
       - name: Checkout Repo
@@ -40,20 +40,11 @@ jobs:
             everything_but_markdown:
               - '!**/*.md'
 
-      # Skip Node 24+ on normal PRs, but run on Version Packages PRs (changeset-release/main)
-      - name: Check if should run Node 24+ tests
-        id: should_run
-        run: |
-          if [[ "${{ matrix.node_version }}" -lt 24 ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-          elif [[ "${{ github.event.pull_request.head.ref }}" == "changeset-release/main" ]]; then
-            echo "run=true" >> $GITHUB_OUTPUT
-          else
-            echo "run=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Install Dependencies
-        if: steps.changes.outputs.everything_but_markdown == 'true' && steps.should_run.outputs.run == 'true'
+        # Skip if matrix.skip_on_normal_pr is true, unless this is a Version Packages PR
+        if: |
+          steps.changes.outputs.everything_but_markdown == 'true' &&
+          (!matrix.skip_on_normal_pr || github.event.pull_request.head.ref == 'changeset-release/main')
         uses: ./.github/actions/install-dependencies
         with:
           node-version: ${{ matrix.node_version }}
@@ -65,7 +56,9 @@ jobs:
       - name: Run tests (packages)
         # We are running the package tests first be able to get early feedback on changes.
         # There is no point in running the fixtures if a package is broken.
-        if: steps.changes.outputs.everything_but_markdown == 'true' && steps.should_run.outputs.run == 'true'
+        if: |
+          steps.changes.outputs.everything_but_markdown == 'true' &&
+          (!matrix.skip_on_normal_pr || github.event.pull_request.head.ref == 'changeset-release/main')
         run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*"
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
@@ -74,7 +67,9 @@ jobs:
           CI_OS: ${{ matrix.description }}
 
       - name: Run e2e tests (unenv-preset)
-        if: steps.changes.outputs.everything_but_markdown == 'true' && steps.should_run.outputs.run == 'true'
+        if: |
+          steps.changes.outputs.everything_but_markdown == 'true' &&
+          (!matrix.skip_on_normal_pr || github.event.pull_request.head.ref == 'changeset-release/main')
         run: pnpm test:e2e --filter wrangler -- unenv-preset
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
@@ -82,7 +77,9 @@ jobs:
           CI_OS: ${{ matrix.description }}
 
       - name: Run tests (vite-plugin)
-        if: steps.changes.outputs.everything_but_markdown == 'true' && steps.should_run.outputs.run == 'true'
+        if: |
+          steps.changes.outputs.everything_but_markdown == 'true' &&
+          (!matrix.skip_on_normal_pr || github.event.pull_request.head.ref == 'changeset-release/main')
         run: pnpm test:ci --filter @cloudflare/vite-plugin
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
