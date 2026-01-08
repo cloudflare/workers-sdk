@@ -480,7 +480,6 @@ export function createCLIParser(argv: string[]) {
 		["config", "cwd", "env", "env-file", "help", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
-	wrangler.help("help", "Show help").alias("h", "help");
 
 	// Default help command that supports the subcommands
 	const subHelp: SubHelp = {
@@ -491,6 +490,105 @@ export function createCLIParser(argv: string[]) {
 			);
 		},
 	};
+
+	const registerCommand = createRegisterYargsCommand(wrangler, subHelp);
+	const registry = new CommandRegistry(registerCommand);
+
+	// Helper to show help with command categories
+	const showHelpWithCategories = async (): Promise<void> => {
+		if (registry.orderedCategories.size === 0) {
+			wrangler.showHelp("log");
+			return;
+		}
+
+		const helpOutput = await wrangler.getHelp();
+		const lines = helpOutput.split("\n");
+		const commandsHeaderIndex = lines.findIndex((line) =>
+			line.includes("COMMANDS")
+		);
+		const globalFlagsIndex = lines.findIndex((line) =>
+			line.includes("GLOBAL FLAGS")
+		);
+
+		// Fallback to standard help if we can't parse
+		if (commandsHeaderIndex === -1 || globalFlagsIndex === -1) {
+			logger.log(helpOutput);
+			return;
+		}
+
+		// Extract command lines (between `COMMANDS` header and `GLOBAL FLAGS`)
+		const beforeCommands = lines.slice(0, commandsHeaderIndex + 1);
+		const commandLines = lines.slice(commandsHeaderIndex + 1, globalFlagsIndex);
+		const afterCommands = lines.slice(globalFlagsIndex);
+
+		// Separate regular commands from categorized commands
+		const regularCommandLines = new Array<string>();
+		const categoryCommandLines = new Map<string, Array<string>>();
+		for (const line of commandLines) {
+			// Extract command name from line (e.g., "  wrangler r2  " -> "r2")
+			const match = line.match(/^\s*wrangler\s+(\S+)/);
+			if (match) {
+				const cmdName = match[1];
+				const [foundCategory] = Array.from(
+					registry.orderedCategories.entries()
+				).find(([_, commands]) => commands.includes(cmdName)) ?? [null];
+
+				if (foundCategory) {
+					const existing = categoryCommandLines.get(foundCategory) ?? [];
+					existing.push(line);
+					categoryCommandLines.set(foundCategory, existing);
+				} else {
+					regularCommandLines.push(line);
+				}
+			} else {
+				// Empty lines or other content - keep with regular commands
+				regularCommandLines.push(line);
+			}
+		}
+
+		// Remove trailing empty lines from regular commands section
+		const lastNonEmptyIndex = regularCommandLines.findLastIndex(
+			(line) => line.trim() !== ""
+		);
+		const trimmedRegularCommandLines = regularCommandLines.slice(
+			0,
+			lastNonEmptyIndex + 1
+		);
+
+		const outputLines = [
+			...beforeCommands,
+			...trimmedRegularCommandLines,
+		] satisfies Array<string>;
+		for (const category of registry.orderedCategories.keys()) {
+			const cmdLines = categoryCommandLines.get(category);
+			if (!cmdLines || cmdLines.length <= 0) {
+				continue;
+			}
+
+			outputLines.push(""); // Empty line before category
+			outputLines.push(chalk.bold(category.toUpperCase()));
+
+			// Sort command lines alphabetically by command name
+			const sortedCmdLines = Array.from(cmdLines).sort((a, b) => {
+				const matchA = a.match(/^\s*wrangler\s+(\S+)/);
+				const matchB = b.match(/^\s*wrangler\s+(\S+)/);
+				const cmdA = matchA ? matchA[1] : "";
+				const cmdB = matchB ? matchB[1] : "";
+				return cmdA.localeCompare(cmdB);
+			});
+			outputLines.push(...sortedCmdLines);
+		}
+
+		// Ensure empty line before `GLOBAL FLAGS` if we added categories
+		if (categoryCommandLines.size > 0) {
+			outputLines.push("");
+		}
+
+		outputLines.push(...afterCommands);
+
+		logger.log(outputLines.join("\n"));
+	};
+
 	wrangler.command(
 		["*"],
 		false,
@@ -509,14 +607,11 @@ export function createCLIParser(argv: string[]) {
 						logger.log(wranglerVersion);
 					}
 				} else {
-					wrangler.showHelp("log");
+					await showHelpWithCategories();
 				}
 			}
 		}
 	);
-
-	const registerCommand = createRegisterYargsCommand(wrangler, subHelp);
-	const registry = new CommandRegistry(registerCommand);
 
 	/*
 	 * You will note that we use the form for all commands where we use the builder function
@@ -1620,11 +1715,16 @@ export function createCLIParser(argv: string[]) {
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
 
+	registry.registerLegacyCommandCategory("containers", "Compute & AI");
+	registry.registerLegacyCommandCategory("pubsub", "Compute & AI");
+
 	registry.registerAll();
+
+	wrangler.help("help", "Show help").alias("h", "help");
 
 	wrangler.exitProcess(false);
 
-	return { wrangler, registry, globalFlags };
+	return { wrangler, registry, globalFlags, showHelpWithCategories };
 }
 
 export async function main(argv: string[]): Promise<void> {
@@ -1633,7 +1733,19 @@ export async function main(argv: string[]): Promise<void> {
 	checkMacOSVersion({ shouldThrow: false });
 
 	const startTime = Date.now();
-	const { wrangler } = createCLIParser(argv);
+
+	// Check if this is a root-level help request (--help or -h with no subcommand)
+	// In this case, we use our custom help formatter to show command categories
+	const isRootHelpRequest =
+		(argv.includes("--help") || argv.includes("-h")) &&
+		argv.filter((arg) => !arg.startsWith("-")).length === 0;
+
+	const { wrangler, showHelpWithCategories } = createCLIParser(argv);
+
+	if (isRootHelpRequest) {
+		await showHelpWithCategories();
+		return;
+	}
 	let command: string | undefined;
 	let metricsArgs: Record<string, unknown> | undefined;
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;

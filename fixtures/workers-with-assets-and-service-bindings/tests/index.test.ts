@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { setTimeout } from "timers/promises";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("[Workers + Assets] Service bindings to Worker with assets", () => {
@@ -111,7 +111,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 				});
 			});
 
-			it("should return cron trigger responses", async ({ expect }) => {
+			it("should return cron trigger responses", async () => {
 				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// env.DEFAULT_EXPORT.scheduled({cron: "* * * * *"}) instead
@@ -130,7 +130,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 				});
 			});
 
-			it("should support promise pipelining", async ({ expect }) => {
+			it("should support promise pipelining", async () => {
 				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
@@ -143,7 +143,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 				});
 			});
 
-			it("should support property access", async ({ expect }) => {
+			it("should support property access", async () => {
 				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
@@ -214,7 +214,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 				});
 			});
 
-			it("should return cron trigger responses", async ({ expect }) => {
+			it("should return cron trigger responses", async () => {
 				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// env.DEFAULT_ENTRYPOINT.scheduled({cron: "* * * * *"}) instead
@@ -233,7 +233,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 				});
 			});
 
-			it("should support promise pipelining", async ({ expect }) => {
+			it("should support promise pipelining", async () => {
 				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
@@ -249,7 +249,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 				});
 			});
 
-			it("should support property access", async ({ expect }) => {
+			it("should support property access", async () => {
 				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
@@ -317,7 +317,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 				});
 			});
 
-			it("should support promise pipelining", async ({ expect }) => {
+			it("should support promise pipelining", async () => {
 				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
@@ -333,7 +333,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 				});
 			});
 
-			it("should support property access", async ({ expect }) => {
+			it("should support property access", async () => {
 				await vi.waitFor(async () => {
 					// fetch URL is irrelevant here. workerA will internally call
 					// the appropriate fns on the service binding instead
@@ -388,7 +388,7 @@ describe("[Workers + Assets] Service bindings to Worker with assets", () => {
 				});
 			});
 
-			it("should be able to communicate over WebSocket", async ({ expect }) => {
+			it("should be able to communicate over WebSocket", async () => {
 				await vi.waitFor(async () => {
 					// workerA will internally set the "Upgrade" header value to "websocket" and attach
 					// the header to the request

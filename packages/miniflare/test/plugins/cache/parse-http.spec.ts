@@ -1,9 +1,6 @@
-import test from "ava";
-import { workerTestMacro } from "../../test-shared";
+import { test } from "vitest";
+import { runWorkerTest } from "../../test-shared";
 
-test(
-	"parseHttpResponse: parses HTTP response messages",
-	workerTestMacro,
-	"cache",
-	"parse-http.ts"
-);
+test("parseHttpResponse: parses HTTP response messages", async () => {
+	await runWorkerTest("cache", "cache", "parse-http.ts");
+});

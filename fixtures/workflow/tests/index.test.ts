@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { rm } from "fs/promises";
 import { resolve } from "path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it, test, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, test, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Workflows", () => {
@@ -44,7 +44,7 @@ describe("Workflows", () => {
 		}
 	}
 
-	it("creates a workflow with id", async ({ expect }) => {
+	it("creates a workflow with id", async () => {
 		await expect(fetchJson(`http://${ip}:${port}/create?workflowName=test`))
 			.resolves.toMatchInlineSnapshot(`
 			{
@@ -77,7 +77,7 @@ describe("Workflows", () => {
 		);
 	});
 
-	it("creates a workflow without id", async ({ expect }) => {
+	it("creates a workflow without id", async () => {
 		await expect(fetchJson(`http://${ip}:${port}/create`)).resolves
 			.toMatchInlineSnapshot(`
 			{
@@ -230,7 +230,7 @@ describe("Workflows", () => {
 		});
 	});
 
-	test("waitForEvent should work", async ({ expect }) => {
+	test("waitForEvent should work", async () => {
 		await fetchJson(`http://${ip}:${port}/createDemo2?workflowName=something`);
 
 		await fetchJson(
@@ -282,7 +282,7 @@ describe("Workflows", () => {
 		`);
 	});
 
-	it("should persist instances across lifetimes", async ({ expect }) => {
+	it("should persist instances across lifetimes", async () => {
 		await fetchJson(`http://${ip}:${port}/create?workflowName=something`);
 
 		await stop?.();
