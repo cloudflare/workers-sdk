@@ -21,10 +21,26 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { node_version: 20, description: "Node 20", skip_on_normal_pr: false }
-          - { node_version: 24, description: "Node 24", skip_on_normal_pr: true }
-          - { node_version: 25, description: "Node 25", skip_on_normal_pr: true }
-          - { node_version: 26, description: "Node 26", skip_on_normal_pr: true }
+          - {
+              node_version: 20,
+              description: "Node 20",
+              skip_on_normal_pr: false,
+            }
+          - {
+              node_version: 24,
+              description: "Node 24",
+              skip_on_normal_pr: true,
+            }
+          - {
+              node_version: 25,
+              description: "Node 25",
+              skip_on_normal_pr: true,
+            }
+          - {
+              node_version: 26,
+              description: "Node 26",
+              skip_on_normal_pr: true,
+            }
 
     steps:
       - name: Checkout Repo
