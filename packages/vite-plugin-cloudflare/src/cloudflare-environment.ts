@@ -10,7 +10,7 @@ import {
 	VIRTUAL_WORKER_ENTRY,
 	WORKER_ENTRY_PATH_HEADER,
 } from "./shared";
-import { debuglog, getOutputDirectory } from "./utils";
+import { debuglog, getOutputDirectory, isRolldown } from "./utils";
 import type { ExportTypes } from "./export-types";
 import type {
 	ResolvedWorkerConfig,
@@ -207,7 +207,6 @@ export function createCloudflareEnvironmentOptions({
 	isEntryWorker: boolean;
 	hasNodeJsCompat: boolean;
 }): vite.EnvironmentOptions {
-	const isRolldown = "rolldownVersion" in vite;
 	const define = getProcessEnvReplacements(hasNodeJsCompat, mode);
 
 	return {

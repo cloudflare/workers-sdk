@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import * as vite from "vite";
 import {
 	assertHasNodeJsCompat,
 	hasNodeJsAls,
@@ -8,8 +7,9 @@ import {
 	nodeJsBuiltins,
 	NodeJsCompatWarnings,
 } from "../nodejs-compat";
-import { createPlugin } from "../utils";
+import { createPlugin, isRolldown } from "../utils";
 import type { ResolvedWorkerConfig } from "../plugin-config";
+import type * as vite from "vite";
 
 /**
  * Plugin to support the `nodejs_als` compatibility flag
@@ -205,7 +205,7 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 				if (workerConfig && !nodeJsCompat) {
 					return {
 						optimizeDeps: {
-							...("rolldownVersion" in vite
+							...(isRolldown
 								? {
 										rolldownOptions: {
 											plugins: [
