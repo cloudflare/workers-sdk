@@ -20,6 +20,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # skip_on_normal_pr: if true, skip this Node version on normal PRs.
+        # Tests will still run on Version Packages PRs (changeset-release/main)
+        # or when the 'test all node versions' label is added.
         include:
           - {
               node_version: 20,
