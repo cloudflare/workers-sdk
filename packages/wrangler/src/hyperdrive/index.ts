@@ -16,6 +16,7 @@ export const hyperdriveNamespace = createNamespace({
 		description: "🚀 Manage Hyperdrive databases",
 		status: "stable",
 		owner: "Product: Hyperdrive",
+		category: "Storage & databases",
 	},
 });
 
