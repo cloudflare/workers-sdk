@@ -170,6 +170,20 @@ const defaultConditions = ["workerd", "worker", "module", "browser"];
 // workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
 const target = "es2024";
 
+// TODO: consider removing in next major to use default extensions
+const resolveExtensions = [
+	".mjs",
+	".js",
+	".mts",
+	".ts",
+	".jsx",
+	".tsx",
+	".json",
+	".cjs",
+	".cts",
+	".ctx",
+];
+
 export function createCloudflareEnvironmentOptions({
 	workerConfig,
 	userConfig,
@@ -226,6 +240,9 @@ export function createCloudflareEnvironmentOptions({
 						rolldownOptions: {
 							...rollupOptions,
 							platform: "neutral",
+							resolve: {
+								extensions: resolveExtensions,
+							},
 						},
 					}
 				: {
@@ -248,18 +265,7 @@ export function createCloudflareEnvironmentOptions({
 							platform: "neutral",
 							resolve: {
 								conditionNames: [...defaultConditions, "development"],
-								extensions: [
-									".mjs",
-									".js",
-									".mts",
-									".ts",
-									".jsx",
-									".tsx",
-									".json",
-									".cjs",
-									".cts",
-									".ctx",
-								],
+								extensions: resolveExtensions,
 							},
 							transform: {
 								target,
@@ -270,20 +276,9 @@ export function createCloudflareEnvironmentOptions({
 				: {
 						esbuildOptions: {
 							platform: "neutral",
-							target,
 							conditions: [...defaultConditions, "development"],
-							resolveExtensions: [
-								".mjs",
-								".js",
-								".mts",
-								".ts",
-								".jsx",
-								".tsx",
-								".json",
-								".cjs",
-								".cts",
-								".ctx",
-							],
+							resolveExtensions,
+							target,
 							define,
 						},
 					}),
