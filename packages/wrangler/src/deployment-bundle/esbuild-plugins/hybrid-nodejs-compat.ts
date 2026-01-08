@@ -44,6 +44,7 @@ export function nodejsHybridPlugin({
 				npmShims: true,
 			}).env;
 
+			// RegExp to match Node.js built-in modules with and without the `node:` prefix
 			const nodeJsModuleRegexp = new RegExp(
 				`^(${nonPrefixedNodeModules.join("|")}|node:.+)$`
 			);
@@ -61,11 +62,14 @@ export function nodejsHybridPlugin({
  * which won't be inlined/bundled by esbuild, are invalid.
  *
  * This `onResolve()` handler will error if it identifies node.js external imports.
+ *
+ * @param build ESBuild PluginBuild.
+ * @param nodeJsModuleRegexp RegExp matching Node.js built-in modules.
  */
 function errorOnServiceWorkerFormat(
 	build: PluginBuild,
 	nodeJsModuleRegexp: RegExp
-) {
+): void {
 	const paths = new Set();
 	build.onStart(() => paths.clear());
 	build.onResolve({ filter: nodeJsModuleRegexp }, (args) => {
@@ -100,11 +104,14 @@ function errorOnServiceWorkerFormat(
  * We must convert `require()` calls for Node.js modules to a virtual ES Module that can be imported avoiding the require calls.
  * We do this by creating a special virtual ES module that re-exports the library in an onLoad handler.
  * The onLoad handler is triggered by matching the "namespace" added to the resolve.
+ *
+ * @param build ESBuild PluginBuild.
+ * @param nodeJsModuleRegexp RegExp matching Node.js built-in modules.
  */
 function handleRequireCallsToNodeJSBuiltins(
 	build: PluginBuild,
 	nodeJsModuleRegexp: RegExp
-) {
+): void {
 	build.onResolve({ filter: nodeJsModuleRegexp }, (args) => {
 		if (args.kind === "require-call") {
 			return {

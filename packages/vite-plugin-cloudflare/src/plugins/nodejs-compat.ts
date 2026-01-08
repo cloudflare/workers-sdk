@@ -3,6 +3,7 @@ import {
 	nonPrefixedNodeModules,
 	prefixedOnlyNodeModules,
 } from "@cloudflare/unenv-preset";
+import * as vite from "vite";
 import {
 	assertHasNodeJsCompat,
 	hasNodeJsAls,
@@ -189,7 +190,10 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 
 				const nodeJsCompatWarnings = nodeJsCompatWarningsMap.get(workerConfig);
 
-				if (source.startsWith('node:') || nonPrefixedNodeModules.includes(source)) {
+				if (
+					source.startsWith("node:") ||
+					nonPrefixedNodeModules.includes(source)
+				) {
 					nodeJsCompatWarnings?.registerImport(source, importer);
 
 					// Mark this path as external to avoid messy unwanted resolve errors.
@@ -233,9 +237,11 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 													name: "vite-plugin-cloudflare:nodejs-compat-warnings-resolver",
 													setup(build) {
 														build.onResolve(
-															{ filter: new RegExp(
-														`^(${nonPrefixedNodeModules.join("|")}|node:.*)$`
-													), },
+															{
+																filter: new RegExp(
+																	`^(${nonPrefixedNodeModules.join("|")}|node:.*)$`
+																),
+															},
 															({ path, importer }) => {
 																if (
 																	hasNodeJsAls(workerConfig) &&
