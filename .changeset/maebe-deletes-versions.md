@@ -4,9 +4,10 @@
 
 Add `wrangler versions delete` command
 
-Adds a new CLI command to delete specific Worker versions that have been uploaded but not deployed. This uses the beta Workers API endpoint and includes:
+You can now delete Worker versions that were uploaded but not deployed:
 
-- `--name` flag to specify the Worker name
-- `--yes` / `-y` flag to skip confirmation prompt
-- `--json` flag for machine-readable output
-- Confirmation prompt by default (safe for CI with `fallbackValue: false`)
+```bash
+wrangler versions delete <version-id> --name my-worker
+```
+
+This is useful for cleaning up unused versions created via `wrangler versions upload`.
