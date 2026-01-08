@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
 Add AI agent detection to analytics events
