@@ -1,15 +1,17 @@
 import assert from "node:assert";
-import * as vite from "vite";
+import {
+	nonPrefixedNodeModules,
+	prefixedOnlyNodeModules,
+} from "@cloudflare/unenv-preset";
 import {
 	assertHasNodeJsCompat,
 	hasNodeJsAls,
 	isNodeAlsModule,
-	NODEJS_MODULES_RE,
-	nodeJsBuiltins,
 	NodeJsCompatWarnings,
 } from "../nodejs-compat";
-import { createPlugin } from "../utils";
+import { createPlugin, isRolldown } from "../utils";
 import type { ResolvedWorkerConfig } from "../plugin-config";
+import type * as vite from "vite";
 
 /**
  * Plugin to support the `nodejs_als` compatibility flag
@@ -51,7 +53,11 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 						// Obviously we don't want/need the optimizer to try to process modules that are built-in;
 						// But also we want to avoid following the ones that are polyfilled since the dependency-optimizer import analyzer does not
 						// resolve these imports using our `resolveId()` hook causing the optimization step to fail.
-						exclude: [...nodeJsBuiltins],
+						exclude: [
+							...nonPrefixedNodeModules,
+							...nonPrefixedNodeModules.map((module) => `node:${module}`),
+							...prefixedOnlyNodeModules,
+						],
 					},
 				};
 			}
@@ -181,7 +187,10 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 
 				const nodeJsCompatWarnings = nodeJsCompatWarningsMap.get(workerConfig);
 
-				if (nodeJsBuiltins.has(source)) {
+				if (
+					source.startsWith("node:") ||
+					nonPrefixedNodeModules.includes(source)
+				) {
 					nodeJsCompatWarnings?.registerImport(source, importer);
 
 					// Mark this path as external to avoid messy unwanted resolve errors.
@@ -205,7 +214,7 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 				if (workerConfig && !nodeJsCompat) {
 					return {
 						optimizeDeps: {
-							...("rolldownVersion" in vite
+							...(isRolldown
 								? {
 										rolldownOptions: {
 											plugins: [
@@ -225,7 +234,11 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 													name: "vite-plugin-cloudflare:nodejs-compat-warnings-resolver",
 													setup(build) {
 														build.onResolve(
-															{ filter: NODEJS_MODULES_RE },
+															{
+																filter: new RegExp(
+																	`^(${nonPrefixedNodeModules.join("|")}|node:.+)$`
+																),
+															},
 															({ path, importer }) => {
 																if (
 																	hasNodeJsAls(workerConfig) &&
