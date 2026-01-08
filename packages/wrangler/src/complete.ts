@@ -3,7 +3,7 @@ import t from "@bomb.sh/tab";
 import { experimental_getWranglerCommands } from "./experimental-commands-api";
 import type { DefinitionTreeNode } from "./core/types";
 
-export function setupCompletions() {
+function setupCompletions() {
 	const { registry, globalFlags } = experimental_getWranglerCommands();
 
 	// global flags that work on every command
