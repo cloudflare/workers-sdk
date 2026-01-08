@@ -61,3 +61,14 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
           CI_OS: ${{ matrix.description }}
+
+      - name: Run tests (fixtures)
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        # Browser rendering is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
+        run: pnpm run test:ci --concurrency 1 --log-order=stream --filter="./fixtures/*" ${{ matrix.os == 'ubuntu-latest' && '--filter="!./fixtures/browser-rendering"' || '' }}
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
+          CI_OS: ${{ matrix.description }}
+
