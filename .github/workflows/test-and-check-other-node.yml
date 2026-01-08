@@ -81,9 +81,9 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           CI_OS: ${{ matrix.description }}
 
-      - name: Run tests (vite-plugin get-started)
+      - name: Run tests (vite-plugin)
         if: steps.changes.outputs.everything_but_markdown == 'true' && steps.should_run.outputs.run == 'true'
-        run: pnpm test:ci --filter @cloudflare-docs/src/content/docs/workers/vite-plugin/get-started.mdx
+        run: pnpm test:ci --filter @cloudflare/vite-plugin
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
