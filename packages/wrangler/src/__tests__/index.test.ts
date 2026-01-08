@@ -62,7 +62,7 @@ describe("wrangler", () => {
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
 				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler types [path]           📝 Generate types from your Worker configuration
-				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
+				  wrangler versions               🫧 List, view, upload, deploy and delete Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
 				  wrangler workflows              🔁 Manage Workflows
 
@@ -133,7 +133,7 @@ describe("wrangler", () => {
 				  wrangler tail [worker]          🦚 Start a log tailing session for a Worker
 				  wrangler triggers               🎯 Updates the triggers of your current deployment [experimental]
 				  wrangler types [path]           📝 Generate types from your Worker configuration
-				  wrangler versions               🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
+				  wrangler versions               🫧 List, view, upload, deploy and delete Versions of your Worker to Cloudflare
 				  wrangler vpc                    🌐 Manage VPC [open beta]
 				  wrangler workflows              🔁 Manage Workflows
 

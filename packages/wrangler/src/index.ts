@@ -310,6 +310,7 @@ import { vectorizeListVectorsCommand } from "./vectorize/listVectors";
 import { vectorizeQueryCommand } from "./vectorize/query";
 import { vectorizeUpsertCommand } from "./vectorize/upsert";
 import { versionsNamespace } from "./versions";
+import { versionsDeleteCommand } from "./versions/delete";
 import { versionsDeployCommand } from "./versions/deploy";
 import { deploymentsNamespace } from "./versions/deployments";
 import { deploymentsListCommand } from "./versions/deployments/list";
@@ -716,6 +717,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler versions deploy",
 			definition: versionsDeployCommand,
+		},
+		{
+			command: "wrangler versions delete",
+			definition: versionsDeleteCommand,
 		},
 		{
 			command: "wrangler versions secret",

@@ -14,13 +14,14 @@ describe("versions --help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler versions
 
-			🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
+			🫧 List, view, upload, deploy and delete Versions of your Worker to Cloudflare
 
 			COMMANDS
 			  wrangler versions view <version-id>         View the details of a specific version of your Worker
 			  wrangler versions list                      List the 10 most recent Versions of your Worker
 			  wrangler versions upload [script]           Uploads your Worker code and config as a new Version
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions
+			  wrangler versions delete <version-id>       Delete a specific Version of your Worker
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
 			GLOBAL FLAGS
@@ -46,13 +47,14 @@ describe("versions subhelp", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler versions
 
-			🫧 List, view, upload and deploy Versions of your Worker to Cloudflare
+			🫧 List, view, upload, deploy and delete Versions of your Worker to Cloudflare
 
 			COMMANDS
 			  wrangler versions view <version-id>         View the details of a specific version of your Worker
 			  wrangler versions list                      List the 10 most recent Versions of your Worker
 			  wrangler versions upload [script]           Uploads your Worker code and config as a new Version
 			  wrangler versions deploy [version-specs..]  Safely roll out new Versions of your Worker by splitting traffic between multiple Versions
+			  wrangler versions delete <version-id>       Delete a specific Version of your Worker
 			  wrangler versions secret                    Generate a secret that can be referenced in a Worker
 
 			GLOBAL FLAGS

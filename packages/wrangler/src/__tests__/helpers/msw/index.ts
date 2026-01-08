@@ -12,6 +12,7 @@ import { mswR2handlers } from "./handlers/r2";
 import { default as mswSucessScriptHandlers } from "./handlers/script";
 import { mswSuccessUserHandlers } from "./handlers/user";
 import {
+	mswDeleteVersion,
 	mswGetVersion,
 	mswListNewDeployments,
 	mswListVersions,
@@ -58,6 +59,7 @@ export {
 	mswAccessHandlers,
 	mswSuccessDeploymentScriptMetadata,
 	mswSuccessDeploymentScriptAPI,
+	mswDeleteVersion,
 	mswPostNewDeployment,
 	mswGetVersion,
 	mswListNewDeployments,

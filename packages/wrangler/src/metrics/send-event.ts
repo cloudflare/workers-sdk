@@ -71,6 +71,7 @@ export type EventNames =
 	| "rollback deployments"
 	| "upload worker version"
 	| "deploy worker versions"
+	| "delete worker version"
 	| "view worker version"
 	| "list worker versions"
 	| "view versioned deployment"

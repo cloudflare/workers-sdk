@@ -339,3 +339,17 @@ export const mswPatchNonVersionedScriptSettings = http.patch(
 		return HttpResponse.json(createFetchResult(await request.json()));
 	}
 );
+
+export const mswDeleteVersion = http.delete(
+	"*/accounts/:accountId/workers/workers/:workerName/versions/:versionId",
+	({ params }) => {
+		const versionId = String(params["versionId"]);
+
+		// Simulate error for non-existent version
+		if (versionId === "ffffffff-ffff-ffff-ffff-ffffffffffff") {
+			return HttpResponse.json(createFetchResult({}, false));
+		}
+
+		return HttpResponse.json(createFetchResult({}));
+	}
+);
