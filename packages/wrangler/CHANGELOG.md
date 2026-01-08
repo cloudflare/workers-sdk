@@ -1,5 +1,45 @@
 # wrangler
 
+## 4.58.0
+
+### Minor Changes
+
+- [#11728](https://github.com/cloudflare/workers-sdk/pull/11728) [`7d63fa5`](https://github.com/cloudflare/workers-sdk/commit/7d63fa5f7c3c170d666df0fafe2904c4c6f794a6) Thanks [@NuroDev](https://github.com/NuroDev)! - Add command categories to `wrangler` help menu
+
+  The help output now groups commands by product category (Account, Compute & AI, Storage & Databases, Networking & Security) to match the Cloudflare dashboard organization:
+
+  ```
+  $ wrangler --help
+
+  COMMANDS
+    wrangler docs [search..]  📚 Open Wrangler's command documentation in your browser
+
+  ACCOUNT
+    wrangler auth    🔓 Manage authentication
+    wrangler login   🔑 Login to Cloudflare
+    ...
+
+  COMPUTE & AI
+    wrangler ai          🤖 Manage AI models
+    wrangler containers  📦 Manage Containers [open beta]
+    ...
+  ```
+
+  This improves discoverability by organizing the 20+ wrangler commands into logical groups.
+
+### Patch Changes
+
+- [#11822](https://github.com/cloudflare/workers-sdk/pull/11822) [`97e67b9`](https://github.com/cloudflare/workers-sdk/commit/97e67b984a788a807c77309fb5391b5ecf190888) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260103.0 | 1.20260107.1 |
+
+- Updated dependencies [[`97e67b9`](https://github.com/cloudflare/workers-sdk/commit/97e67b984a788a807c77309fb5391b5ecf190888)]:
+  - miniflare@4.20260107.0
+
 ## 4.57.0
 
 ### Minor Changes
