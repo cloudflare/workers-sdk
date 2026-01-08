@@ -23,6 +23,8 @@ jobs:
         include:
           - { node_version: 20, description: "Node 20" }
           - { node_version: 24, description: "Node 24" }
+          - { node_version: 25, description: "Node 25" }
+          - { node_version: 26, description: "Node 26" }
 
     steps:
       - name: Checkout Repo
@@ -38,8 +40,20 @@ jobs:
             everything_but_markdown:
               - '!**/*.md'
 
+      # Skip Node 24+ on normal PRs, but run on Version Packages PRs (changeset-release/main)
+      - name: Check if should run Node 24+ tests
+        id: should_run
+        run: |
+          if [[ "${{ matrix.node_version }}" -lt 24 ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.pull_request.head.ref }}" == "changeset-release/main" ]]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+          else
+            echo "run=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Install Dependencies
-        if: steps.changes.outputs.everything_but_markdown == 'true'
+        if: steps.changes.outputs.everything_but_markdown == 'true' && steps.should_run.outputs.run == 'true'
         uses: ./.github/actions/install-dependencies
         with:
           node-version: ${{ matrix.node_version }}
@@ -51,13 +65,26 @@ jobs:
       - name: Run tests (packages)
         # We are running the package tests first be able to get early feedback on changes.
         # There is no point in running the fixtures if a package is broken.
-        if: ${{
-          steps.changes.outputs.everything_but_markdown == 'true' &&
-          (matrix.node_version != 24 || contains(github.event.pull_request.labels.*.name, 'test on node 24'))
-          }}
+        if: steps.changes.outputs.everything_but_markdown == 'true' && steps.should_run.outputs.run == 'true'
         run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*"
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
+          CI_OS: ${{ matrix.description }}
+
+      - name: Run e2e tests (unenv-preset)
+        if: steps.changes.outputs.everything_but_markdown == 'true' && steps.should_run.outputs.run == 'true'
+        run: pnpm test:e2e --filter wrangler -- unenv-preset
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
+          CI_OS: ${{ matrix.description }}
+
+      - name: Run tests (vite-plugin get-started)
+        if: steps.changes.outputs.everything_but_markdown == 'true' && steps.should_run.outputs.run == 'true'
+        run: pnpm test:ci --filter @cloudflare-docs/src/content/docs/workers/vite-plugin/get-started.mdx
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           CI_OS: ${{ matrix.description }}
