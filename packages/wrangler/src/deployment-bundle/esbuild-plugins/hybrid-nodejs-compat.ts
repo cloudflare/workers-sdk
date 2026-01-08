@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { builtinModules } from "node:module";
 import nodePath from "node:path";
 import dedent from "ts-dedent";
 import { getBasePath } from "../../paths";
@@ -25,7 +24,9 @@ export function nodejsHybridPlugin({
 		async setup(build) {
 			// `unenv` and `@cloudflare/unenv-preset` only publish esm
 			const { defineEnv } = await import("unenv");
-			const { getCloudflarePreset } = await import("@cloudflare/unenv-preset");
+			const { getCloudflarePreset, nonPrefixedNodeModules } = await import(
+				"@cloudflare/unenv-preset"
+			);
 			const { alias, inject, external, polyfill } = defineEnv({
 				presets: [
 					getCloudflarePreset({
@@ -43,26 +44,35 @@ export function nodejsHybridPlugin({
 				npmShims: true,
 			}).env;
 
-			errorOnServiceWorkerFormat(build);
-			handleRequireCallsToNodeJSBuiltins(build);
+			// RegExp to match Node.js built-in modules with and without the `node:` prefix
+			const nodeJsModuleRegexp = new RegExp(
+				`^(${nonPrefixedNodeModules.join("|")}|node:.+)$`
+			);
+
+			errorOnServiceWorkerFormat(build, nodeJsModuleRegexp);
+			handleRequireCallsToNodeJSBuiltins(build, nodeJsModuleRegexp);
 			handleUnenvAliasedPackages(build, alias, external);
 			handleNodeJSGlobals(build, inject, polyfill);
 		},
 	};
 }
 
-const NODEJS_MODULES_RE = new RegExp(`^(node:)?(${builtinModules.join("|")})$`);
-
 /**
  * If we are bundling a "Service Worker" formatted Worker, imports of external modules,
  * which won't be inlined/bundled by esbuild, are invalid.
  *
  * This `onResolve()` handler will error if it identifies node.js external imports.
+ *
+ * @param build ESBuild PluginBuild.
+ * @param nodeJsModuleRegexp RegExp matching Node.js built-in modules.
  */
-function errorOnServiceWorkerFormat(build: PluginBuild) {
+function errorOnServiceWorkerFormat(
+	build: PluginBuild,
+	nodeJsModuleRegexp: RegExp
+): void {
 	const paths = new Set();
 	build.onStart(() => paths.clear());
-	build.onResolve({ filter: NODEJS_MODULES_RE }, (args) => {
+	build.onResolve({ filter: nodeJsModuleRegexp }, (args) => {
 		paths.add(args.path);
 		return null;
 	});
@@ -94,9 +104,15 @@ function errorOnServiceWorkerFormat(build: PluginBuild) {
  * We must convert `require()` calls for Node.js modules to a virtual ES Module that can be imported avoiding the require calls.
  * We do this by creating a special virtual ES module that re-exports the library in an onLoad handler.
  * The onLoad handler is triggered by matching the "namespace" added to the resolve.
+ *
+ * @param build ESBuild PluginBuild.
+ * @param nodeJsModuleRegexp RegExp matching Node.js built-in modules.
  */
-function handleRequireCallsToNodeJSBuiltins(build: PluginBuild) {
-	build.onResolve({ filter: NODEJS_MODULES_RE }, (args) => {
+function handleRequireCallsToNodeJSBuiltins(
+	build: PluginBuild,
+	nodeJsModuleRegexp: RegExp
+): void {
+	build.onResolve({ filter: nodeJsModuleRegexp }, (args) => {
 		if (args.kind === "require-call") {
 			return {
 				path: args.path,
