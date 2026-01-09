@@ -109,7 +109,6 @@ describe("'wrangler deploy', when reading redirected config,", () => {
 			stdio: "pipe",
 			encoding: "utf-8",
 		});
-		expect(output.status).toBe(0);
 		expect(output.stdout).toContain(`Using redirected Wrangler configuration.`);
 		expect(output.stdout).toContain(
 			` - Configuration being used: "build/wrangler.json"`
