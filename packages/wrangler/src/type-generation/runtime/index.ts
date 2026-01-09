@@ -35,6 +35,25 @@ const DEFAULT_OUTFILE_RELATIVE_PATH = "worker-configuration.d.ts";
  * - The generated types are written to a file specified by DEFAULT_OUTFILE_RELATIVE_PATH.
  * - This could be improved by hashing the compat date and flags to avoid unnecessary regeneration.
  */
+
+/**
+ * Generate the runtime header string used in the generated types file.
+ * This header is used to detect when runtime types need to be regenerated.
+ *
+ * @param {string} workerdVersion
+ * @param {string} compatibilityDate
+ * @param {string[]} compatibilityFlags
+ *
+ * @returns {string} A string containing the comment outlining the generated runtime types.
+ */
+export const getRuntimeHeader = (
+	workerdVersion: string,
+	compatibilityDate: string,
+	compatibilityFlags: Array<string>
+): string => {
+	return `// Runtime types generated with workerd@${workerdVersion} ${compatibilityDate} ${compatibilityFlags.sort().join(",")}`;
+};
+
 export async function generateRuntimeTypes({
 	config: { compatibility_date, compatibility_flags = [] },
 	outFile = DEFAULT_OUTFILE_RELATIVE_PATH,
@@ -46,7 +65,11 @@ export async function generateRuntimeTypes({
 		throw new Error("Config must have a compatibility date.");
 	}
 
-	const header = `// Runtime types generated with workerd@${version} ${compatibility_date} ${compatibility_flags.sort().join(",")}`;
+	const header = getRuntimeHeader(
+		version,
+		compatibility_date,
+		compatibility_flags
+	);
 
 	try {
 		const lines = (await readFile(outFile, "utf8")).split("\n");
