@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { Miniflare } from "miniflare";
 import { version } from "workerd";
 import { logger } from "../../logger";
+import { RUNTIME_HEADER_COMMENT_PREFIX } from "../helpers";
 import type { Config } from "@cloudflare/workers-utils";
 
 const DEFAULT_OUTFILE_RELATIVE_PATH = "worker-configuration.d.ts";
@@ -51,7 +52,7 @@ export const getRuntimeHeader = (
 	compatibilityDate: string,
 	compatibilityFlags: Array<string>
 ): string => {
-	return `// Runtime types generated with workerd@${workerdVersion} ${compatibilityDate} ${compatibilityFlags.sort().join(",")}`;
+	return `${RUNTIME_HEADER_COMMENT_PREFIX}${workerdVersion} ${compatibilityDate} ${compatibilityFlags.sort().join(",")}`;
 };
 
 export async function generateRuntimeTypes({
@@ -74,7 +75,7 @@ export async function generateRuntimeTypes({
 	try {
 		const lines = (await readFile(outFile, "utf8")).split("\n");
 		const existingHeader = lines.find((line) =>
-			line.startsWith("// Runtime types generated with workerd@")
+			line.startsWith(RUNTIME_HEADER_COMMENT_PREFIX)
 		);
 		const existingTypesStart = lines.findIndex(
 			(line) => line === "// Begin runtime types"
