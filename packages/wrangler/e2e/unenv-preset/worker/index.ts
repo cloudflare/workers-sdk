@@ -856,9 +856,23 @@ export const WorkerdTests: Record<string, () => void> = {
 		// @ts-expect-error TS2307 - _stream_wrap is an internal Node.js module without type declarations
 		const streamWrap = await import("node:_stream_wrap");
 
-		// workerd exports JSStreamSocket (the default export is available as JSStreamSocket)
-		assertTypeOf(streamWrap, "JSStreamSocket", "function");
-		assertTypeOf(streamWrap.JSStreamSocket, "prototype", "object");
+		// workerd exports JSStreamSocket as the default export
+		// The import may return the function directly or as streamWrap.default
+		const JSStreamSocket =
+			typeof streamWrap === "function"
+				? streamWrap
+				: (streamWrap as { default?: unknown }).default;
+
+		assert.strictEqual(
+			typeof JSStreamSocket,
+			"function",
+			"JSStreamSocket should be a function"
+		);
+		assert.strictEqual(
+			typeof (JSStreamSocket as { prototype?: unknown }).prototype,
+			"object",
+			"JSStreamSocket.prototype should be an object"
+		);
 	},
 };
 
