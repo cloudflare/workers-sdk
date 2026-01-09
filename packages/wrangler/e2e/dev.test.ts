@@ -266,7 +266,7 @@ describe.each([
 			const worker = helper.runLongLived(cmd);
 
 			const { url } = await worker.waitForReady();
-			const { hostname, port} = new URL(url);
+			const { hostname, port } = new URL(url);
 
 			// The warning should contain the actual port, not "undefined"
 			expect(worker.currentOutput).toContain(
