@@ -18,7 +18,6 @@ import {
 	vi,
 } from "vitest";
 import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
-import type pty from "@cdktf/node-pty-prebuilt-multiarch";
 
 // These tests are failing with `Error: read EPIPE` on Windows in CI. There's still value running them on macOS and Linux.
 if (process.platform === "win32") {
@@ -43,67 +42,27 @@ if (process.platform === "win32") {
 	}
 
 	const pkgRoot = path.resolve(__dirname, "..");
-	const ptyOptions: pty.IPtyForkOptions = {
-		name: "xterm-color",
-		cols: 80,
-		rows: 30,
-		cwd: pkgRoot,
-		env: process.env as Record<string, string>,
-	};
 
-	// Check `node-pty` installed and working correctly, skipping tests if not
-	let nodePtySupported = true;
-	try {
-		const pty = await import("@cdktf/node-pty-prebuilt-multiarch");
-		const ptyProcess = pty.spawn(
-			process.execPath,
-			["-p", "'ran node'"],
-			ptyOptions
-		);
-		let output = "";
-		ptyProcess.onData((data) => (output += data));
-		const code = await new Promise<number>((resolve) =>
-			ptyProcess.onExit(({ exitCode }) => resolve(exitCode))
-		);
-		assert.strictEqual(code, 0);
-		assert(output.includes("ran node"));
-	} catch (e) {
-		nodePtySupported = false;
-		const message = [
-			"=".repeat(80),
-			"`node-pty` unsupported, skipping interactive dev session tests... :(",
-			"",
-			"Ensure its dependencies (https://github.com/microsoft/node-pty#dependencies)",
-			"are installed, then re-run `pnpm install` in the repository root.",
-			"",
-			"On Windows, make sure you have `Desktop development with C++`, `Windows SDK`,",
-			"`MSVC VS C++ build tools`, and `MSVC VS C++ Spectre-mitigated libs` Visual",
-			"Studio components installed.",
-			"",
-			e instanceof Error ? e.stack : String(e),
-			"=".repeat(80),
-		].join("\n");
-		console.error(message);
-	}
-	const describe = baseDescribe.runIf(nodePtySupported);
-
-	interface PtyProcess {
-		pty: pty.IPty;
+	interface TestProcess {
+		process: childProcess.ChildProcess;
 		stdout: string;
 		exitCode: number | null;
 		exitPromise: Promise<number>;
 		url: string;
+		write: (data: string) => void;
+		kill: (signal?: NodeJS.Signals) => void;
+		onExit: (callback: (exitCode: number) => void) => void;
 	}
-	const processes: PtyProcess[] = [];
+	const processes: TestProcess[] = [];
 	afterEach(() => {
 		for (const p of processes.splice(0)) {
 			// If the process didn't exit cleanly, log its output for debugging
 			if (p.exitCode !== 0) console.log(p.stdout);
 			// If the process hasn't exited yet, kill it
 			if (p.exitCode === null) {
-				// `node-pty` throws if signal passed on Windows
-				if (process.platform === "win32") p.pty.kill();
-				else p.pty.kill("SIGKILL");
+				// On Windows, just kill the process
+				if (process.platform === "win32") p.kill();
+				else p.kill("SIGKILL");
 			}
 		}
 	});
@@ -118,8 +77,9 @@ if (process.platform === "win32") {
 			(resolve) => (exitResolve = resolve)
 		);
 
-		const pty = await import("@cdktf/node-pty-prebuilt-multiarch");
-		const ptyProcess = pty.spawn(
+		const exitCallbacks: ((exitCode: number) => void)[] = [];
+
+		const child = childProcess.spawn(
 			process.execPath,
 			[
 				wranglerEntryPath,
@@ -128,24 +88,62 @@ if (process.platform === "win32") {
 				"--port=0",
 				"--inspector-port=0",
 			],
-			ptyOptions
+			{
+				cwd: pkgRoot,
+				env: {
+					...process.env,
+					// Force wrangler to enable interactive mode even without a real TTY
+					WRANGLER_FORCE_INTERACTIVE: "1",
+					// Set terminal columns/rows similar to what node-pty did
+					COLUMNS: "80",
+					LINES: "30",
+				},
+				stdio: ["pipe", "pipe", "pipe"],
+			}
 		);
-		const result: PtyProcess = {
-			pty: ptyProcess,
+
+		const result: TestProcess = {
+			process: child,
 			stdout: "",
 			exitCode: null,
 			exitPromise,
 			url: "",
+			write: (data: string) => {
+				child.stdin?.write(data);
+			},
+			kill: (signal?: NodeJS.Signals) => {
+				if (signal) {
+					child.kill(signal);
+				} else {
+					child.kill();
+				}
+			},
+			onExit: (callback: (exitCode: number) => void) => {
+				exitCallbacks.push(callback);
+			},
 		};
 		processes.push(result);
-		ptyProcess.onData((data) => {
-			result.stdout += data;
-			stdoutStream.write(data);
+
+		child.stdout?.on("data", (data: Buffer) => {
+			const str = data.toString();
+			result.stdout += str;
+			stdoutStream.write(str);
 		});
-		ptyProcess.onExit(({ exitCode }) => {
+
+		child.stderr?.on("data", (data: Buffer) => {
+			const str = data.toString();
+			result.stdout += str;
+			stdoutStream.write(str);
+		});
+
+		child.on("exit", (code) => {
+			const exitCode = code ?? 0;
 			result.exitCode = exitCode;
 			exitResolve?.(exitCode);
 			stdoutStream.end();
+			for (const callback of exitCallbacks) {
+				callback(exitCode);
+			}
 		});
 
 		if (!skipWaitingForReady) {
@@ -220,7 +218,7 @@ if (process.platform === "win32") {
 		{ name: "x", key: "x" },
 	];
 
-	describe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
+	baseDescribe.each(devScripts)("wrangler $args", ({ args, expectedBody }) => {
 		it.each(exitKeys)("cleanly exits with $name", async ({ key }) => {
 			const beginProcesses = getStartedWorkerdProcesses();
 
@@ -232,7 +230,7 @@ if (process.platform === "win32") {
 			expect((await res.text()).trim()).toBe(expectedBody);
 
 			// Check key cleanly exits dev server
-			wrangler.pty.write(key);
+			wrangler.write(key);
 			expect(await wrangler.exitPromise).toBe(0);
 			const endProcesses = getStartedWorkerdProcesses();
 
@@ -242,10 +240,10 @@ if (process.platform === "win32") {
 				expect(duringProcesses.length).toBeGreaterThan(beginProcesses.length);
 			}
 		});
-		describe("--show-interactive-dev-session", () => {
+		baseDescribe("--show-interactive-dev-session", () => {
 			it("should show hotkeys when interactive", async () => {
 				const wrangler = await startWranglerDev(args);
-				wrangler.pty.kill();
+				wrangler.kill();
 				expect(wrangler.stdout).toContain("open a browser");
 				expect(wrangler.stdout).toContain("open devtools");
 				expect(wrangler.stdout).toContain("clear console");
@@ -257,7 +255,7 @@ if (process.platform === "win32") {
 					...args,
 					"--show-interactive-dev-session=false",
 				]);
-				wrangler.pty.kill();
+				wrangler.kill();
 				expect(wrangler.stdout).not.toContain("open a browser");
 				expect(wrangler.stdout).not.toContain("open devtools");
 				expect(wrangler.stdout).not.toContain("clear console");
@@ -284,7 +282,7 @@ if (process.platform === "win32") {
 		expect((await res.text()).trim()).toBe("hello from a & hello from b");
 
 		// Check key cleanly exits dev server
-		wrangler.pty.write(key);
+		wrangler.write(key);
 		expect(await wrangler.exitPromise).toBe(0);
 		const endProcesses = getStartedWorkerdProcesses();
 
@@ -376,7 +374,7 @@ if (process.platform === "win32") {
 					"-c",
 					path.join(tmpDir, "wrangler.jsonc"),
 				]);
-				wrangler.pty.kill();
+				wrangler.kill();
 				expect(wrangler.stdout).toContain("rebuild container");
 			});
 
@@ -438,7 +436,7 @@ if (process.platform === "win32") {
 					"utf-8"
 				);
 
-				wrangler.pty.write("r");
+				wrangler.write("r");
 
 				await vi.waitFor(async () => {
 					const status = await fetch(wrangler.url + "/status");
@@ -462,7 +460,7 @@ if (process.platform === "win32") {
 					execSync(`docker image inspect ${imageName}`, { encoding: "utf8" });
 				}).toThrow();
 
-				wrangler.pty.kill();
+				wrangler.kill();
 			});
 
 			it("should clean up any containers that were started", async () => {
@@ -480,9 +478,9 @@ if (process.platform === "win32") {
 				}, WAITFOR_OPTIONS);
 
 				// ctrl + c
-				wrangler.pty.write("\x03");
+				wrangler.write("\x03");
 				await new Promise<void>((resolve) => {
-					wrangler.pty.onExit(() => resolve());
+					wrangler.onExit(() => resolve());
 				});
 
 				await vi.waitFor(() => {
@@ -566,7 +564,7 @@ if (process.platform === "win32") {
 						expect(wrangler.stdout).toContain("RUN sleep 50000");
 					}, waitForOptions);
 
-					wrangler.pty.write("q");
+					wrangler.write("q");
 
 					await vi.waitFor(async () => {
 						expect(wrangler.stdout).toMatch(/CANCELED \[.*?\] RUN sleep 50000/);
@@ -593,7 +591,7 @@ if (process.platform === "win32") {
 						wrangler.stdout.match(/This \(no-op\) build takes forever.../g)
 							?.length ?? 0;
 
-					wrangler.pty.write("r");
+					wrangler.write("r");
 
 					await vi.waitFor(async () => {
 						const logOccurrences =
@@ -605,14 +603,14 @@ if (process.platform === "win32") {
 
 					await vi.waitFor(async () => {
 						await setTimeout(700);
-						wrangler.pty.write("r");
+						wrangler.write("r");
 						const logOccurrences =
 							wrangler.stdout.match(/This \(no-op\) build takes forever.../g)
 								?.length ?? 0;
 						expect(logOccurrences).toBeGreaterThan(logOccurrencesBefore);
 					}, waitForOptions);
 
-					wrangler.pty.kill();
+					wrangler.kill();
 				});
 			}
 		);
@@ -678,7 +676,7 @@ if (process.platform === "win32") {
 					},
 					{ timeout: 10_000 }
 				);
-				wrangler.pty.kill();
+				wrangler.kill();
 			});
 
 			it("should rebuild all the containers when the hotkey is pressed", async () => {
@@ -722,7 +720,7 @@ if (process.platform === "win32") {
 					"utf-8"
 				);
 
-				wrangler.pty.write("r");
+				wrangler.write("r");
 
 				await vi.waitFor(
 					async () => {
@@ -739,7 +737,7 @@ if (process.platform === "win32") {
 				fs.writeFileSync(tmpDockerfileAPath, dockerFileAContent, "utf-8");
 				fs.writeFileSync(tmpDockerfileBPath, dockerFileBContent, "utf-8");
 
-				wrangler.pty.kill();
+				wrangler.kill();
 			});
 
 			it("should clean up any containers that were started", async () => {
@@ -764,9 +762,9 @@ if (process.platform === "win32") {
 				expect(ids.length).toBe(2);
 
 				// ctrl + c
-				wrangler.pty.write("\x03");
+				wrangler.write("\x03");
 				await new Promise<void>((resolve) => {
-					wrangler.pty.onExit(() => resolve());
+					wrangler.onExit(() => resolve());
 				});
 				await vi.waitFor(() => {
 					const remainingIds = getContainerIds();
@@ -879,7 +877,7 @@ if (process.platform === "win32") {
 						"utf-8"
 					);
 
-					wrangler.pty.write("r");
+					wrangler.write("r");
 
 					await vi.waitFor(
 						async () => {
@@ -899,7 +897,7 @@ if (process.platform === "win32") {
 					fs.writeFileSync(tmpDockerfileAPath, dockerFileAContent, "utf-8");
 					fs.writeFileSync(tmpDockerfileBPath, dockerFileBContent, "utf-8");
 
-					wrangler.pty.kill("SIGINT");
+					wrangler.kill("SIGINT");
 				});
 			}
 		);
