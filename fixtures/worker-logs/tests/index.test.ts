@@ -198,9 +198,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 				);
 			});
 
-			test("a workerd structured message in the message", async ({
-				expect,
-			}) => {
+			test("a workerd structured message in the message", async () => {
 				const getOutput = await getWranglerDevOutput(
 					"module",
 					[],
@@ -213,9 +211,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 				);
 			});
 
-			test("a very very very long message (that gets split in multiple chunks)", async ({
-				expect,
-			}) => {
+			test("a very very very long message (that gets split in multiple chunks)", async () => {
 				const getOutput = await getWranglerDevOutput(
 					"module",
 					[],
