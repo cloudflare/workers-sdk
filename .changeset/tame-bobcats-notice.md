@@ -23,5 +23,5 @@ $ wrangler types --check
 You can also use it with a custom output path:
 
 ```bash
-wrangler types ./custom-types.d.ts --check
+$ wrangler types ./custom-types.d.ts --check
 ```
