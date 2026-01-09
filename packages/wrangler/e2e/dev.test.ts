@@ -266,14 +266,14 @@ describe.each([
 			const worker = helper.runLongLived(cmd);
 
 			const { url } = await worker.waitForReady();
-			const port = new URL(url).port;
+			const { host, port} = new URL(url);
 
 			// The warning should contain the actual port, not "undefined"
 			expect(worker.currentOutput).toContain(
 				"Scheduled Workers are not automatically triggered"
 			);
 			expect(worker.currentOutput).toContain(
-				`curl "http://localhost:${port}/cdn-cgi/handler/scheduled"`
+				`curl "http://${host}:${port}/cdn-cgi/handler/scheduled"`
 			);
 			expect(worker.currentOutput).not.toContain("undefined");
 		});
