@@ -12,16 +12,6 @@ import type { Config } from "@cloudflare/workers-utils";
 export const DEFAULT_WORKERS_TYPES_FILE_NAME = "worker-configuration.d.ts";
 export const DEFAULT_WORKERS_TYPES_FILE_PATH = `./${DEFAULT_WORKERS_TYPES_FILE_NAME}`;
 
-export type CheckTypesResult =
-	| {
-			outOfDate: true;
-			reason: "env" | "runtime" | "both";
-	  }
-	| {
-			outOfDate: false;
-			reason: null;
-	  };
-
 /**
  * Checks if the generated types file at the specified path is up-to-date
  * by comparing the recorded hash and runtime header with what would be
@@ -35,7 +25,7 @@ export type CheckTypesResult =
 export const checkTypesUpToDate = async (
 	primaryConfig: Config,
 	typesPath: string = DEFAULT_WORKERS_TYPES_FILE_PATH
-): Promise<CheckTypesResult> => {
+): Promise<boolean> => {
 	let typesFileLines = new Array<string>();
 	try {
 		typesFileLines = readFileSync(typesPath, "utf-8").split("\n");
@@ -131,23 +121,7 @@ export const checkTypesUpToDate = async (
 		}
 	}
 
-	if (envOutOfDate || runtimeOutOfDate) {
-		const reason =
-			envOutOfDate && runtimeOutOfDate
-				? "both"
-				: envOutOfDate
-					? "env"
-					: "runtime";
-		return {
-			outOfDate: true,
-			reason,
-		};
-	}
-
-	return {
-		outOfDate: false,
-		reason: null,
-	};
+	return envOutOfDate || runtimeOutOfDate;
 };
 
 /**
