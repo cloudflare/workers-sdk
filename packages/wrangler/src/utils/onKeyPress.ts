@@ -12,9 +12,19 @@ export function onKeyPress(callback: (key: Key) => void) {
 	const stream = new PassThrough();
 	process.stdin.pipe(stream);
 
-	if (isInteractive()) {
+	// Check if setRawMode is available (only on real TTYs)
+	// Note: isInteractive() may return true via WRANGLER_FORCE_INTERACTIVE even when
+	// stdin is not a real TTY, so we need to check for setRawMode availability
+	const hasRawMode =
+		isInteractive() && typeof process.stdin.setRawMode === "function";
+
+	if (hasRawMode) {
 		readline.emitKeypressEvents(stream);
 		process.stdin.setRawMode(true);
+	} else if (isInteractive()) {
+		// Still emit keypress events even without raw mode
+		// This allows testing with piped stdin
+		readline.emitKeypressEvents(stream);
 	}
 
 	const handler = async (_char: string, key: Key) => {
@@ -26,7 +36,7 @@ export function onKeyPress(callback: (key: Key) => void) {
 	stream.on("keypress", handler);
 
 	return () => {
-		if (isInteractive()) {
+		if (hasRawMode) {
 			process.stdin.setRawMode(false);
 		}
 		stream.off("keypress", handler);

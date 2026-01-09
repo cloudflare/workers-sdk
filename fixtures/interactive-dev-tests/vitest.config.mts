@@ -5,7 +5,7 @@ export default mergeConfig(
 	configShared,
 	defineProject({
 		test: {
-			// `node-pty` doesn't work inside worker threads
+			// Use forks pool for process spawning tests
 			pool: "forks",
 		},
 	})
