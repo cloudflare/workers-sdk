@@ -215,14 +215,15 @@ describe("types", () => {
 
 			await helper.seed({
 				...seed,
-				"wrangler.toml": dedent`
-					name = "test-worker"
-					main = "src/index.ts"
-					compatibility_date = "2023-01-01"
-					compatibility_flags = ["nodejs_compat", "no_global_navigator"]
-					[vars]
-					NEW_VAR = "new-value"
-				`,
+				"wrangler.jsonc": JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2026-01-01",
+					compatibility_flags: ["nodejs_compat", "no_global_navigator"],
+					vars: {
+						NEW_VAR: "new-value",
+					},
+				}),
 			});
 
 			const output = await helper.run(`wrangler types --check`);
@@ -234,14 +235,15 @@ describe("types", () => {
 
 			await helper.seed({
 				...seed,
-				"wrangler.toml": dedent`
-					name = "test-worker"
-					main = "src/index.ts"
-					compatibility_date = "2023-01-01"
-					compatibility_flags = ["nodejs_compat"]
-					[vars]
-					MY_VAR = "my-var-value"
-				`,
+				"wrangler.jsonc": JSON.stringify({
+					name: "test-worker",
+					main: "src/index.ts",
+					compatibility_date: "2026-01-01",
+					compatibility_flags: ["nodejs_compat"],
+					vars: {
+						MY_VAR: "my-var-value",
+					},
+				}),
 			});
 
 			const output = await helper.run(`wrangler types --check`);
