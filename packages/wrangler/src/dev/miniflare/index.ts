@@ -837,23 +837,6 @@ export async function buildMiniflareOptions(
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
 	onDevRegistryUpdate?: (registry: WorkerRegistry) => void
 ): Promise<Options> {
-	if (config.crons?.length && !config.testScheduled) {
-		const host =
-			config.initialIp === "0.0.0.0" || config.initialIp === "::"
-				? "localhost"
-				: config.initialIp.includes(":")
-					? `[${config.initialIp}]`
-					: config.initialIp;
-		const port = config.initialPort;
-
-		logger.once.warn(
-			`Scheduled Workers are not automatically triggered during local development.\n` +
-				`To manually trigger a scheduled event, run:\n` +
-				`  curl "http://${host}:${port}/cdn-cgi/handler/scheduled"\n` +
-				`For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally`
-		);
-	}
-
 	const upstream =
 		typeof config.localUpstream === "string"
 			? `${config.upstreamProtocol}://${config.localUpstream}`
