@@ -37,7 +37,7 @@ const DEFAULT_OUTFILE_RELATIVE_PATH = "worker-configuration.d.ts";
  */
 
 /**
- * Generate the runtime header string used in the generated types file.
+ * Generates the runtime header string used in the generated types file.
  * This header is used to detect when runtime types need to be regenerated.
  *
  * @param workerdVersion - The version of workerd to use.
