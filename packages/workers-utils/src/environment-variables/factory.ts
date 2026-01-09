@@ -41,6 +41,9 @@ type VariableNames =
 	/** Disable the check for mixed state of subdomain flags (`workers_dev`, `preview_urls`, etc.) (default: false). */
 	| "WRANGLER_DISABLE_SUBDOMAIN_MIXED_STATE_CHECK"
 
+	/** Force wrangler to run in interactive mode (useful for testing interactive features without a real TTY) */
+	| "WRANGLER_FORCE_INTERACTIVE"
+
 	// ## Logging & Output
 
 	/** Set log level: "debug", "info", "log", "warn", "error". */
