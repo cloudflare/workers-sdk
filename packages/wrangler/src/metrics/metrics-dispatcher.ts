@@ -66,16 +66,13 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	let amplitude_event_id = 0;
 
 	// Detect agent environment once when dispatcher is created
-	// On Windows, pass empty array for processAncestry to skip process tree checks,
-	// as the underlying library uses `wmic` which is deprecated and prints errors
-	// to stderr when unavailable. On other platforms, use default behavior.
+	// Pass empty array for processAncestry to skip process tree checks entirely.
+	// Process tree traversal uses execSync('ps ...') which is slow and can cause
+	// timeouts, especially in CI environments. Environment variable detection
+	// is sufficient for identifying most agentic environments.
 	let agent: string | null = null;
 	try {
-		const processAncestry = process.platform === "win32" ? [] : undefined;
-		const agentDetection = detectAgenticEnvironment(
-			process.env,
-			processAncestry
-		);
+		const agentDetection = detectAgenticEnvironment(process.env, []);
 		agent = agentDetection.id;
 	} catch {
 		// Silent failure - agent remains null
