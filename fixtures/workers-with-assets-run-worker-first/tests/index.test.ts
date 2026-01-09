@@ -17,9 +17,7 @@ describe("[Workers + Assets] run_worker_first true", () => {
 		await stop?.();
 	});
 
-	it("should return a 403 without an Authorization header", async ({
-		expect,
-	}) => {
+	it("should return a 403 without an Authorization header", async () => {
 		let response = await fetch(`http://${ip}:${port}/index.html`);
 		let text = await response.text();
 		expect(response.status).toBe(403);

@@ -24,17 +24,13 @@ describe("[Workers + Assets] static routing", () => {
 			expect(await response.text()).toContain(`<h1>A normal asset</h1>`);
 		});
 
-		it("should run the worker when no assets exist for a path", async ({
-			expect,
-		}) => {
+		it("should run the worker when no assets exist for a path", async () => {
 			let response = await fetch(`http://${ip}:${port}/`);
 			expect(response.status).toBe(404);
 			expect(await response.text()).toContain(`404 from the User Worker`);
 		});
 
-		it("should run the worker when a positive run_worker_first rule matches", async ({
-			expect,
-		}) => {
+		it("should run the worker when a positive run_worker_first rule matches", async () => {
 			let response = await fetch(`http://${ip}:${port}/worker/worker-runs`);
 			expect(response.status).toBe(200);
 			expect(await response.text()).toContain(
@@ -42,17 +38,13 @@ describe("[Workers + Assets] static routing", () => {
 			);
 		});
 
-		it("should serve a 404 when a negative run_worker_first rule matches", async ({
-			expect,
-		}) => {
+		it("should serve a 404 when a negative run_worker_first rule matches", async () => {
 			let response = await fetch(`http://${ip}:${port}/missing-asset`);
 			expect(response.status).toBe(404);
 			expect(await response.text()).toEqual("");
 		});
 
-		it("should serve an asset when both a positive and negative (asset) run_worker_first matches", async ({
-			expect,
-		}) => {
+		it("should serve an asset when both a positive and negative (asset) run_worker_first matches", async () => {
 			let response = await fetch(`http://${ip}:${port}/worker/asset`);
 			expect(response.status).toBe(200);
 			expect(await response.text()).toContain(`<h1>Hello, I'm an asset!</h1>`);

@@ -37,9 +37,7 @@ describe("[Workers + Assets] static-assets only site`", () => {
 		);
 	});
 
-	it("should 404 if asset is not found in the asset manifest", async ({
-		expect,
-	}) => {
+	it("should 404 if asset is not found in the asset manifest", async () => {
 		let response = await fetch(`http://${ip}:${port}/hello.html`);
 		expect(response.status).toBe(404);
 
@@ -76,9 +74,7 @@ describe("[Workers + Assets] static-assets only site`", () => {
 		expect(response.headers.get("Content-Type")).toBe("image/jpeg");
 	});
 
-	it("should return 405 for non-GET or HEAD requests if asset route exists", async ({
-		expect,
-	}) => {
+	it("should return 405 for non-GET or HEAD requests if asset route exists", async () => {
 		// as per https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
 		// excl. TRACE and CONNECT which are not supported
 
@@ -113,9 +109,7 @@ describe("[Workers + Assets] static-assets only site`", () => {
 		expect(response.statusText).toBe("Method Not Allowed");
 	});
 
-	it("should return 404 for non-GET requests if asset route does not exist", async ({
-		expect,
-	}) => {
+	it("should return 404 for non-GET requests if asset route does not exist", async () => {
 		// as per https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
 		// excl. TRACE and CONNECT which are not supported
 
