@@ -1,7 +1,7 @@
 import { rm } from "fs/promises";
 import { resolve } from "path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Workflows", () => {
@@ -41,9 +41,7 @@ describe("Workflows", () => {
 		}
 	}
 
-	it("creates two instances with same id in two different workflows", async ({
-		expect,
-	}) => {
+	it("creates two instances with same id in two different workflows", async () => {
 		const createResult = {
 			id: "test",
 			status: {

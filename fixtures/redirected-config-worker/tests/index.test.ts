@@ -1,13 +1,13 @@
 import { execSync } from "child_process";
 import { resolve } from "path";
 import { fetch } from "undici";
-import { describe, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 const basePath = resolve(__dirname, "..");
 
 describe("'wrangler dev', when reading redirected config,", () => {
-	it("uses the generated config", async ({ expect, onTestFinished }) => {
+	it("uses the generated config", async () => {
 		build("prod");
 		const { ip, port, stop } = await runWranglerDev(basePath, [
 			"--port=0",
@@ -22,10 +22,7 @@ describe("'wrangler dev', when reading redirected config,", () => {
 		expect(text).toMatchInlineSnapshot(`"Generated: prod"`);
 	});
 
-	it("works when specifying the same environment via CLI arg to the one used in build", async ({
-		expect,
-		onTestFinished,
-	}) => {
+	it("works when specifying the same environment via CLI arg to the one used in build", async () => {
 		build("production");
 
 		const { ip, port, stop } = await runWranglerDev(basePath, [
@@ -41,9 +38,7 @@ describe("'wrangler dev', when reading redirected config,", () => {
 		expect(text).toMatchInlineSnapshot(`"Generated: production"`);
 	});
 
-	it("errors when specifying a different environment via CLI arg to the one used in build", async ({
-		expect,
-	}) => {
+	it("errors when specifying a different environment via CLI arg to the one used in build", async () => {
 		build("production");
 
 		const error = await runWranglerDev(basePath, [
@@ -67,9 +62,7 @@ describe("'wrangler dev', when reading redirected config,", () => {
 		);
 	});
 
-	it("errors when specifying a different environment via CLOUDFLARE_ENV to the one used in build", async ({
-		expect,
-	}) => {
+	it("errors when specifying a different environment via CLOUDFLARE_ENV to the one used in build", async () => {
 		build("production");
 
 		let error = "";
@@ -92,10 +85,7 @@ describe("'wrangler dev', when reading redirected config,", () => {
 		);
 	});
 
-	it("uses a custom config from command line rather than generated config", async ({
-		expect,
-		onTestFinished,
-	}) => {
+	it("uses a custom config from command line rather than generated config", async () => {
 		const { ip, port, stop } = await runWranglerDev(basePath, [
 			"-c=wrangler.jsonc",
 			"--port=0",
