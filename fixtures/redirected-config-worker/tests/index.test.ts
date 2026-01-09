@@ -102,7 +102,7 @@ describe("'wrangler dev', when reading redirected config,", () => {
 });
 
 describe("'wrangler deploy', when reading redirected config,", () => {
-	it("uses the generated config", async ({ expect }) => {
+	it("uses the generated config", async () => {
 		build("prod");
 		const output = spawnSync("pnpm", ["wrangler", "deploy", "--dry-run"], {
 			cwd: basePath,
