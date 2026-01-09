@@ -91,6 +91,20 @@ export const getNormalizedContainerOptions = async (
 		const rolloutStepPercentageFallback =
 			(container.max_instances ?? 0) < 2 ? 100 : [10, 100];
 
+		// tiers will take precedence over tier
+		// if unset, wrangler will default to [1, 2]
+		// A value of -1 will be treated as "all tiers"
+		let tiers: number[] | undefined;
+		if (container.constraints?.tiers) {
+			tiers = container.constraints.tiers;
+		} else if (container.constraints?.tier === -1) {
+			tiers = undefined;
+		} else if (container.constraints?.tier) {
+			tiers = [container.constraints.tier];
+		} else {
+			tiers = [1, 2];
+		}
+
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name: container.name,
 			class_name: container.class_name,
@@ -98,13 +112,7 @@ export const getNormalizedContainerOptions = async (
 			scheduling_policy: (container.scheduling_policy ??
 				SchedulingPolicy.DEFAULT) as SchedulingPolicy,
 			constraints: {
-				// if the tier is -1, then we allow all tiers
-				// Wrangler will default an input value to 1. The API, however, will
-				// treat an undefined value to mean no constraints on tier (i.e. "all tiers")
-				tier:
-					container.constraints?.tier === -1
-						? undefined
-						: container.constraints?.tier ?? 1,
+				tiers,
 				regions: container.constraints?.regions?.map((region) =>
 					region.toUpperCase()
 				),
