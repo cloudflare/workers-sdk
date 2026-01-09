@@ -663,14 +663,14 @@ describe("multiworker", () => {
 			);
 
 			const { url } = await worker.waitForReady(5_000);
-			const port = new URL(url).port;
+			const { hostname, port } = new URL(url);
 
 			// The warning should contain the actual port, not "undefined"
 			expect(worker.currentOutput).toContain(
 				"Scheduled Workers are not automatically triggered"
 			);
 			expect(worker.currentOutput).toContain(
-				`curl "http://localhost:${port}/cdn-cgi/handler/scheduled"`
+				`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`
 			);
 			expect(worker.currentOutput).not.toContain("undefined");
 		});
