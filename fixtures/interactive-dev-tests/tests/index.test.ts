@@ -601,9 +601,6 @@ if (process.platform === "win32") {
 					await vi.waitFor(async () => {
 						const hasCanceled = /CANCELED/.test(wrangler.stdout);
 						const buildStarts = countBuildStarts();
-						console.log(
-							`Checking: CANCELED=${hasCanceled}, buildStarts=${buildStarts}, buildStartsBefore=${buildStartsBefore}`
-						);
 						expect(hasCanceled).toBe(true);
 						expect(buildStarts).toBeGreaterThan(buildStartsBefore);
 					}, waitForOptions);
