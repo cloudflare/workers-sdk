@@ -1,8 +1,5 @@
 import assert from "node:assert";
-import {
-	nonPrefixedNodeModules,
-	prefixedOnlyNodeModules,
-} from "@cloudflare/unenv-preset";
+import { nonPrefixedNodeModules } from "@cloudflare/unenv-preset";
 import {
 	assertHasNodeJsCompat,
 	hasNodeJsAls,
@@ -54,9 +51,16 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 						// But also we want to avoid following the ones that are polyfilled since the dependency-optimizer import analyzer does not
 						// resolve these imports using our `resolveId()` hook causing the optimization step to fail.
 						exclude: [
+							// The `node:` prefix is optional for older built-in modules.
 							...nonPrefixedNodeModules,
 							...nonPrefixedNodeModules.map((module) => `node:${module}`),
-							...prefixedOnlyNodeModules,
+							// New Node.js built-in modules are only published with the `node:` prefix.
+							...[
+								"node:sea",
+								"node:sqlite",
+								"node:test",
+								"node:test/reporters",
+							],
 						],
 					},
 				};
@@ -282,6 +286,12 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 						);
 					}
 				}
+			},
+			applyToEnvironment(environment) {
+				return (
+					ctx.getWorkerConfig(environment.name) !== undefined &&
+					!ctx.getNodeJsCompat(environment.name)
+				);
 			},
 			async resolveId(source, importer) {
 				return resolveId(this.environment.name, source, importer);

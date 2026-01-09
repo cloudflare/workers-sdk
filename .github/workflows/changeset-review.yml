@@ -51,7 +51,6 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           allowed_bots: "devin-ai-integration[bot]"
-          track_progress: true
           use_sticky_comment: true
           prompt: |
             Review the changeset files in this PR.
