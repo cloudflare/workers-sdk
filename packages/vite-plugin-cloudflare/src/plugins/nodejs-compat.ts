@@ -283,6 +283,12 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 					}
 				}
 			},
+			applyToEnvironment(environment) {
+				return (
+					ctx.getWorkerConfig(environment.name) !== undefined &&
+					!ctx.getNodeJsCompat(environment.name)
+				);
+			},
 			async resolveId(source, importer) {
 				return resolveId(this.environment.name, source, importer);
 			},
