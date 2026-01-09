@@ -1,12 +1,10 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages Dev", () => {
-	it("should work with `nodejs_compat` when running code requiring polyfills", async ({
-		expect,
-	}) => {
+	it("should work with `nodejs_compat` when running code requiring polyfills", async () => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"public",

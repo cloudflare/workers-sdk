@@ -82,18 +82,6 @@ export const nonPrefixedNodeModules = [
 ];
 
 /**
- * List of the Node.js built-in modules that must be imported with the `node:` prefix.
- *
- * Generated using `module.builtinModules` in Node.js 24.11.1
- */
-export const prefixedOnlyNodeModules = [
-	"node:sea",
-	"node:sqlite",
-	"node:test",
-	"node:test/reporters",
-];
-
-/**
  * @deprecated Use getCloudflarePreset instead.
  */
 export const cloudflare = getCloudflarePreset({});
