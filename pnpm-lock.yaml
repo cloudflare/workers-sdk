@@ -428,9 +428,6 @@ importers:
       '@fixture/shared':
         specifier: workspace:*
         version: link:../shared
-      strip-ansi:
-        specifier: ^7.1.0
-        version: 7.1.0
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1270,9 +1267,6 @@ importers:
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
-      strip-ansi:
-        specifier: ^7.1.0
-        version: 7.1.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -2393,9 +2387,6 @@ importers:
       semver:
         specifier: ^7.7.1
         version: 7.7.3
-      strip-ansi:
-        specifier: ^7.1.0
-        version: 7.1.0
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
@@ -4097,9 +4088,6 @@ importers:
       source-map:
         specifier: ^0.6.1
         version: 0.6.1
-      strip-ansi:
-        specifier: ^7.1.0
-        version: 7.1.0
       supports-color:
         specifier: ^9.2.2
         version: 9.2.2

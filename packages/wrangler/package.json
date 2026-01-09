@@ -156,7 +156,6 @@
 		"signal-exit": "^3.0.7",
 		"smol-toml": "catalog:default",
 		"source-map": "^0.6.1",
-		"strip-ansi": "^7.1.0",
 		"supports-color": "^9.2.2",
 		"timeago.js": "^4.0.2",
 		"ts-dedent": "^2.2.0",

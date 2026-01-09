@@ -1,5 +1,5 @@
 import path from "node:path";
-import stripAnsi from "strip-ansi";
+import { stripVTControlCharacters } from "node:util";
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
 import {
 	resetServerLogs,
@@ -12,7 +12,7 @@ import { resolvePluginConfig } from "../../../src/plugin-config";
 import { addBindingsShortcut } from "../../../src/plugins/shortcuts";
 
 const normalize = (logs: string[]) =>
-	stripAnsi(logs.join("\n"))
+	stripVTControlCharacters(logs.join("\n"))
 		.split("\n")
 		.map((line: string) => line.trim())
 		.join("\n");
