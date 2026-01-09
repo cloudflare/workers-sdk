@@ -81,7 +81,6 @@ export const checkTypesUpToDate = async (
 		strictVars: Boolean(rawArgs["strict-vars"] ?? rawArgs.strictVars) || true,
 	} satisfies Record<string, string | number | boolean>;
 
-	// Resolve entrypoint if config has one - needed for accurate hash comparison
 	const configContainsEntrypoint =
 		primaryConfig.main !== undefined || !!primaryConfig.site?.["entry-point"];
 
