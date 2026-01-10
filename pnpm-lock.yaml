@@ -78,6 +78,9 @@ patchedDependencies:
   '@netlify/build-info':
     hash: m4wvy4p7g3z4a5zv6jw4gevqr4
     path: patches/@netlify__build-info.patch
+  buffer-equal-constant-time@1.0.1:
+    hash: tqrgoq4svwn634bborukfokeme
+    path: patches/buffer-equal-constant-time@1.0.1.patch
   postal-mime:
     hash: ngwql2fj2dlex3jjynq4iizhk4
     path: patches/postal-mime.patch
@@ -19153,7 +19156,7 @@ snapshots:
 
   buffer-crc32@0.2.13: {}
 
-  buffer-equal-constant-time@1.0.1: {}
+  buffer-equal-constant-time@1.0.1(patch_hash=tqrgoq4svwn634bborukfokeme): {}
 
   buffer-from@1.1.2: {}
 
@@ -21736,7 +21739,7 @@ snapshots:
 
   jwa@1.4.1:
     dependencies:
-      buffer-equal-constant-time: 1.0.1
+      buffer-equal-constant-time: 1.0.1(patch_hash=tqrgoq4svwn634bborukfokeme)
       ecdsa-sig-formatter: 1.0.11
       safe-buffer: 5.2.1
 
