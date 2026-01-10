@@ -46,9 +46,7 @@ describe("d1-sessions-api - getBookmark", () => {
 			).toEqual(true);
 		});
 
-		it("should maintain the latest bookmark after many queries", async ({
-			expect,
-		}) => {
+		it("should maintain the latest bookmark after many queries", async () => {
 			let responses = [];
 
 			for (let i = 0; i < 10; i++) {

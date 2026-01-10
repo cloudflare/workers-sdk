@@ -28,7 +28,7 @@ export class Waku extends Framework {
 			});
 
 			await createCloudflareMiddleware(projectPath);
-			await createServerEntryFile(projectPath);
+			await createWakuServerFile(projectPath);
 			await updateWakuConfig(projectPath);
 		}
 
@@ -40,7 +40,6 @@ export class Waku extends Framework {
 					binding: "ASSETS",
 					directory: "./dist/public",
 					html_handling: "drop-trailing-slash",
-					not_found_handling: "404-page",
 				},
 			},
 		};
@@ -48,25 +47,36 @@ export class Waku extends Framework {
 }
 
 /**
- * Created a server-entry file that uses the Cloudflare middleware
+ * Created a waku.server.tsx file that uses the Cloudflare adapter
  *
  * @param projectPath Path to the project
  */
-async function createServerEntryFile(projectPath: string) {
+async function createWakuServerFile(projectPath: string) {
 	await writeFile(
-		`${projectPath}/src/server-entry.tsx`,
+		`${projectPath}/src/waku.server.tsx`,
 		dedent`
-					/// <reference types="vite/client" />
-					import { contextStorage } from 'hono/context-storage';
-					import { fsRouter } from 'waku';
-					import adapter from 'waku/adapters/cloudflare';
-					import cloudflareMiddleware from './middleware/cloudflare';
+			import { fsRouter } from 'waku';
+			import adapter from 'waku/adapters/cloudflare';
 
-					export default adapter(
-						fsRouter(import.meta.glob('./**/*.tsx', { base: './pages' })),
-						{ middlewareFns: [contextStorage, cloudflareMiddleware] },
-					);
-				`
+			export default adapter(
+				fsRouter(import.meta.glob('./**/*.{tsx,ts}', { base: './pages' })),
+				{
+					handlers: {
+					// Define additional Cloudflare Workers handlers here
+					// https://developers.cloudflare.com/workers/runtime-apis/handlers/
+					// async queue(
+					//   batch: MessageBatch,
+					//   _env: Env,
+					//   _ctx: ExecutionContext,
+					// ): Promise<void> {
+					//   for (const message of batch.messages) {
+					//     console.log('Received', message);
+					//   }
+					// },
+					},
+				},
+			);
+			`
 	);
 }
 

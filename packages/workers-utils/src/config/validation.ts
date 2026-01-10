@@ -3180,6 +3180,36 @@ function validateContainerApp(
 				}
 			}
 
+			if (
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"constraints",
+					containerAppOptional.constraints,
+					"object"
+				) &&
+				containerAppOptional.constraints
+			) {
+				const constraints = containerAppOptional.constraints;
+				if ("tier" in constraints) {
+					diagnostics.warnings.push(
+						`"constraints.tier" has been deprecated in favor of "constraints.tiers". Please update your configuration to use "constraints.tiers" instead.`
+					);
+
+					if ("tiers" in constraints) {
+						diagnostics.errors.push(
+							`${field}.constraints.tier and ${field}.constraints.tiers cannot both be set`
+						);
+					}
+				}
+				validateOptionalTypedArray(
+					diagnostics,
+					`${field}.constraints.tiers`,
+					constraints.tiers,
+					"number"
+				);
+			}
+
 			// Instance Type validation: When present, the instance type should be either (1) a string
 			// representing a predefined instance type or (2) an object that optionally defines vcpu,
 			// memory, and disk.

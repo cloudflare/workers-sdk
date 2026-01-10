@@ -26,9 +26,7 @@ describe("Pages Functions with custom _routes.json", () => {
 		);
 	});
 
-	it("should correctly apply the routing rules provided in the custom _routes.json file", async ({
-		expect,
-	}) => {
+	it("should correctly apply the routing rules provided in the custom _routes.json file", async () => {
 		// matches / include rule
 		let response = await fetch(`http://${ip}:${port}`);
 		let text = await response.text();
