@@ -107,16 +107,17 @@ describe("'wrangler deploy', when reading redirected config,", () => {
 		const output = spawnSync("pnpm", ["wrangler", "deploy", "--dry-run"], {
 			cwd: basePath,
 			stdio: "pipe",
+			shell: true,
 			encoding: "utf-8",
 		});
 		expect(output.stdout).toContain(`Using redirected Wrangler configuration.`);
-		expect(output.stdout).toContain(
+		expect(output.stdout.replace(/\\/g, "/")).toContain(
 			` - Configuration being used: "build/wrangler.json"`
 		);
 		expect(output.stdout).toContain(
 			` - Original user's configuration: "wrangler.jsonc"`
 		);
-		expect(output.stdout).toContain(
+		expect(output.stdout.replace(/\\/g, "/")).toContain(
 			` - Deploy configuration file: ".wrangler/deploy/config.json"`
 		);
 		expect(output.stderr).toMatchInlineSnapshot(`""`);
