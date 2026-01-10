@@ -442,6 +442,20 @@ describe("metrics", () => {
 				expect(std.debug).toContain('"command":"wrangler login"');
 			});
 
+			it("should not send arguments with wrangler secret put to avoid capturing accidentally pasted secrets", async () => {
+				const requests = mockMetricRequest();
+
+				await expect(
+					runWrangler("secret put SECRET_KEY accidentallyPastedSecret")
+				).rejects.toThrow();
+
+				expect(requests.count).toBe(2);
+				expect(std.debug).toContain('"argsCombination":""');
+				expect(std.debug).toContain('"command":"wrangler secret put"');
+				// Ensure the accidentally pasted secret is not in the debug output
+				expect(std.debug).not.toContain("accidentallyPastedSecret");
+			});
+
 			it("should include args provided by the user", async () => {
 				const requests = mockMetricRequest();
 
