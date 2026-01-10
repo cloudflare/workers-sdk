@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execSync, spawnSync } from "child_process";
 import { resolve } from "path";
 import { fetch } from "undici";
 import { describe, expect, it, onTestFinished } from "vitest";
@@ -97,7 +97,30 @@ describe("'wrangler dev', when reading redirected config,", () => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
 		expect(response.status).toBe(200);
-		expect(text).toMatchInlineSnapshot(`"Generated: undefined"`);
+		expect(text).toMatchInlineSnapshot(`"Generated: false"`);
+	});
+});
+
+describe("'wrangler deploy', when reading redirected config,", () => {
+	it("uses the generated config", async () => {
+		build("prod");
+		const output = spawnSync("pnpm", ["wrangler", "deploy", "--dry-run"], {
+			cwd: basePath,
+			stdio: "pipe",
+			shell: true,
+			encoding: "utf-8",
+		});
+		expect(output.stdout).toContain(`Using redirected Wrangler configuration.`);
+		expect(output.stdout.replace(/\\/g, "/")).toContain(
+			` - Configuration being used: "build/wrangler.json"`
+		);
+		expect(output.stdout).toContain(
+			` - Original user's configuration: "wrangler.jsonc"`
+		);
+		expect(output.stdout.replace(/\\/g, "/")).toContain(
+			` - Deploy configuration file: ".wrangler/deploy/config.json"`
+		);
+		expect(output.stderr).toMatchInlineSnapshot(`""`);
 	});
 });
 

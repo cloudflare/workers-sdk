@@ -5,10 +5,10 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
+import { experimental_readRawConfig } from "../../../workers-utils/src";
 import { fetchResult } from "../cfetch";
 import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
-import { hasDefinedEnvironments } from "../environments";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { writeOutput } from "../output";
@@ -176,8 +176,15 @@ function createHandler(def: CommandDefinition, commandName: string) {
 						: defaultWranglerConfig;
 
 				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
-					if (!("env" in args)) {
-						if (hasDefinedEnvironments(config)) {
+					if (!("env" in args) && config.configPath) {
+						const { rawConfig } = experimental_readRawConfig(
+							{
+								config: config.configPath,
+							},
+							{ hideWarnings: true }
+						);
+						const availableEnvs = Object.keys(rawConfig.env ?? {});
+						if (availableEnvs.length > 0) {
 							logger.warn(
 								dedent`
 										Multiple environments are defined in the Wrangler configuration file, but no target environment was specified for the ${commandName.replace(/^wrangler\s+/, "")} command.
