@@ -21,7 +21,10 @@ import { msw } from "../helpers/msw";
 import { normalizeProgressSteps } from "../helpers/normalize-progress";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { toString } from "../helpers/serialize-form-data-entry";
+import {
+	formDataToObject,
+	toString,
+} from "../helpers/serialize-form-data-entry";
 import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { StrictRequest } from "msw";
 import type { FormDataEntryValue } from "undici";
@@ -175,16 +178,15 @@ describe("pages deploy", () => {
 				"*/accounts/:accountId/pages/projects/foo/deployments",
 				async ({ request, params }) => {
 					expect(params.accountId).toEqual("some-account-id");
-					expect(await request.formData()).toMatchInlineSnapshot(`
-				FormData {
-				  Symbol(state): Array [
-				    Object {
-				      "name": "manifest",
-				      "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
-				    },
-				  ],
-				}
-			`);
+					expect(await formDataToObject(await request.formData()))
+						.toMatchInlineSnapshot(`
+							Array [
+							  Object {
+							    "name": "manifest",
+							    "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
+							  },
+							]
+						`);
 					return HttpResponse.json(
 						{
 							success: true,
@@ -346,16 +348,15 @@ describe("pages deploy", () => {
 				"*/accounts/:accountId/pages/projects/foo/deployments",
 				async ({ request, params }) => {
 					expect(params.accountId).toEqual("some-account-id");
-					expect(await request.formData()).toMatchInlineSnapshot(`
-				FormData {
-				  Symbol(state): Array [
-				    Object {
-				      "name": "manifest",
-				      "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
-				    },
-				  ],
-				}
-			`);
+					expect(await formDataToObject(await request.formData()))
+						.toMatchInlineSnapshot(`
+							Array [
+							  Object {
+							    "name": "manifest",
+							    "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+							  },
+							]
+						`);
 
 					return HttpResponse.json(
 						{
@@ -499,16 +500,15 @@ describe("pages deploy", () => {
 					requests.push(request);
 					expect(params.accountId).toEqual("some-account-id");
 					if (requests.length === 1) {
-						expect(await request.formData()).toMatchInlineSnapshot(`
-				      FormData {
-				        Symbol(state): Array [
-				          Object {
-				            "name": "manifest",
-				            "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
-				          },
-				        ],
-				      }
-			    `);
+						expect(await formDataToObject(await request.formData()))
+							.toMatchInlineSnapshot(`
+								Array [
+								  Object {
+								    "name": "manifest",
+								    "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+								  },
+								]
+							`);
 					}
 
 					if (requests.length < 2) {
@@ -953,16 +953,15 @@ describe("pages deploy", () => {
 				"*/accounts/:accountId/pages/projects/foo/deployments",
 				async ({ request, params }) => {
 					expect(params.accountId).toEqual("some-account-id");
-					expect(await request.formData()).toMatchInlineSnapshot(`
-				      FormData {
-				        Symbol(state): Array [
-				          Object {
-				            "name": "manifest",
-				            "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
-				          },
-				        ],
-				      }
-			    `);
+					expect(await formDataToObject(await request.formData()))
+						.toMatchInlineSnapshot(`
+							Array [
+							  Object {
+							    "name": "manifest",
+							    "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+							  },
+							]
+						`);
 
 					return HttpResponse.json(
 						{
@@ -1831,20 +1830,19 @@ describe("pages deploy", () => {
 				"*/accounts/:accountId/pages/projects/foo/deployments",
 				async ({ request, params }) => {
 					expect(params.accountId).toEqual("some-account-id");
-					expect(await request.formData()).toMatchInlineSnapshot(`
-						FormData {
-						  Symbol(state): Array [
-						    Object {
-						      "name": "manifest",
-						      "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
-						    },
-						    Object {
-						      "name": "commit_dirty",
-						      "value": "true",
-						    },
-						  ],
-						}
-					`);
+					expect(await formDataToObject(await request.formData()))
+						.toMatchInlineSnapshot(`
+							Array [
+							  Object {
+							    "name": "manifest",
+							    "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
+							  },
+							  Object {
+							    "name": "commit_dirty",
+							    "value": "true",
+							  },
+							]
+						`);
 					return HttpResponse.json(
 						{
 							success: true,
