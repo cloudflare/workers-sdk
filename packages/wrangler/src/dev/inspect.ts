@@ -247,7 +247,10 @@ export function maybeHandleNetworkLoadResource(
 }
 
 /**
- * Builds the DevTools URL with all necessary query parameters including telemetry context.
+ * Returns the DevTools URL.
+ * 
+ *  The returned URL contains all necessary query parameters including telemetry context.
+ * 
  * Exported for testing purposes.
  */
 export function buildInspectorUrl(
