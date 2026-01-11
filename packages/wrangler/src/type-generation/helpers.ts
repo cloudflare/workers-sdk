@@ -142,7 +142,7 @@ export const checkTypesUpToDate = async (
 			const newRuntimeHeader = getRuntimeHeader(
 				version,
 				primaryConfig.compatibility_date,
-				primaryConfig.compatibility_flags ?? []
+				primaryConfig.compatibility_flags
 			);
 			runtimeOutOfDate = existingRuntimeHeader !== newRuntimeHeader;
 		}

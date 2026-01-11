@@ -50,7 +50,7 @@ const DEFAULT_OUTFILE_RELATIVE_PATH = "worker-configuration.d.ts";
 export const getRuntimeHeader = (
 	workerdVersion: string,
 	compatibilityDate: string,
-	compatibilityFlags: Array<string>
+	compatibilityFlags: Array<string> = []
 ): string => {
 	return `${RUNTIME_HEADER_COMMENT_PREFIX}${workerdVersion} ${compatibilityDate} ${compatibilityFlags.sort().join(",")}`;
 };
