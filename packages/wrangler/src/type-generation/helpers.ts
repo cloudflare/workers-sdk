@@ -46,6 +46,8 @@ const unsafeParseBooleanString = (value: unknown): boolean => {
 };
 
 /**
+ * Determines whether the generated types file is stale compared to the current config.
+ *
  * Checks if the generated types file at the specified path is up-to-date
  * by comparing the recorded hash and runtime header with what would be
  * generated from the current config.
@@ -152,6 +154,8 @@ export const checkTypesUpToDate = async (
 };
 
 /**
+ * Detects stale types during `wrangler dev` and optionally regenerates them.
+ *
  * Checks the default location for a generated types file and compares if the
  * recorded Env hash, workerd version or compat date and flags have changed
  * compared to the current values in the config. Prompts user to re-run wrangler
