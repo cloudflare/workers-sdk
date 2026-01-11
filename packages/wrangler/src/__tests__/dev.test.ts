@@ -16,10 +16,7 @@ import { getWorkerAccountAndContext } from "../dev/remote";
 import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
-import {
-	DEFAULT_WORKERS_TYPES_FILE_PATH,
-	RUNTIME_HEADER_COMMENT_PREFIX,
-} from "../type-generation/helpers";
+import { DEFAULT_WORKERS_TYPES_FILE_PATH } from "../type-generation/helpers";
 import * as generateRuntime from "../type-generation/runtime";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
