@@ -246,6 +246,12 @@ import {
 	r2ObjectPutCommand,
 } from "./r2/object";
 import {
+	r2BucketLocalUploadsDisableCommand,
+	r2BucketLocalUploadsEnableCommand,
+	r2BucketLocalUploadsGetCommand,
+	r2BucketLocalUploadsNamespace,
+} from "./r2/local-uploads";
+import {
 	r2BucketDevUrlDisableCommand,
 	r2BucketDevUrlEnableCommand,
 	r2BucketDevUrlGetCommand,
@@ -1054,6 +1060,22 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler r2 bucket dev-url disable",
 			definition: r2BucketDevUrlDisableCommand,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads",
+			definition: r2BucketLocalUploadsNamespace,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads get",
+			definition: r2BucketLocalUploadsGetCommand,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads enable",
+			definition: r2BucketLocalUploadsEnableCommand,
+		},
+		{
+			command: "wrangler r2 bucket local-uploads disable",
+			definition: r2BucketLocalUploadsDisableCommand,
 		},
 		{
 			command: "wrangler r2 bucket lifecycle",
