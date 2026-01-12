@@ -17,8 +17,8 @@ Tracked events (all sent as "wrangler devtools action" with type property):
 The telemetry respects the user's wrangler telemetry preferences, which
 are passed via URL query parameters when DevTools is opened.
 ---
- front_end/entrypoints/js_app/js_app.ts | 95 ++++++++++++++++++++++++++
- 1 file changed, 95 insertions(+)
+ front_end/entrypoints/js_app/js_app.ts | 82 ++++++++++++++++++++++++++
+ 1 file changed, 82 insertions(+)
 
 diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
 index 937e646ab5..xxxxxxxxxxxx 100644
@@ -51,8 +51,7 @@ index 937e646ab5..xxxxxxxxxxxx 100644
 +    deviceId: query.get('deviceId'),
 +    wranglerVersion: query.get('wranglerVersion'),
 +    workerName: query.get('domain'),
-+    // This key is injected at build time - same as wrangler's SPARROW_SOURCE_KEY
-+    sourceKey: globalThis.SPARROW_SOURCE_KEY ?? '',
++    sourceKey: query.get('sourceKey') ?? '',
 +  };
 +}
 +
@@ -89,21 +88,8 @@ index 937e646ab5..xxxxxxxxxxxx 100644
 +  });
 +
 +  // Use sendBeacon for non-blocking request that survives page unload
-+  if (navigator.sendBeacon) {
-+    const blob = new Blob([body], { type: 'application/json' });
-+    navigator.sendBeacon(`${SPARROW_URL}?key=${analyticsConfig.sourceKey}`, blob);
-+  } else {
-+    // Fallback to fetch for older browsers
-+    void fetch(SPARROW_URL, {
-+      method: 'POST',
-+      headers: {
-+        'Content-Type': 'application/json',
-+        'Sparrow-Source-Key': analyticsConfig.sourceKey,
-+      },
-+      body,
-+      keepalive: true,
-+    }).catch(() => { /* Silently ignore analytics errors */ });
-+  }
++  const blob = new Blob([body], { type: 'application/json' });
++  navigator.sendBeacon(`${SPARROW_URL}?key=${analyticsConfig.sourceKey}`, blob);
 +}
 +
 +function setupAnalyticsHooks(): void {

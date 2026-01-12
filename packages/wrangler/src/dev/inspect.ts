@@ -248,9 +248,9 @@ export function maybeHandleNetworkLoadResource(
 
 /**
  * Returns the DevTools URL.
- * 
+ *
  *  The returned URL contains all necessary query parameters including telemetry context.
- * 
+ *
  * Exported for testing purposes.
  */
 export function buildInspectorUrl(
@@ -271,6 +271,11 @@ export function buildInspectorUrl(
 	query.set("telemetry", String(telemetryEnabled));
 	if (telemetryEnabled && metricsConfig.deviceId) {
 		query.set("deviceId", metricsConfig.deviceId);
+		// Pass the Sparrow source key so DevTools can send analytics
+		const sourceKey = process.env.SPARROW_SOURCE_KEY ?? "";
+		if (sourceKey) {
+			query.set("sourceKey", sourceKey);
+		}
 	}
 	query.set("wranglerVersion", getWranglerVersion());
 
