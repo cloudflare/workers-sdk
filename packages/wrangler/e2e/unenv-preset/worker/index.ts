@@ -785,8 +785,15 @@ export const WorkerdTests: Record<string, () => void> = {
 	},
 
 	async testSqlite() {
-		// @ts-expect-error TS2307 - node:sqlite is experimental and may not have type declarations
-		const sqlite = await import("node:sqlite");
+		let sqlite;
+		try {
+			// This source file is used by the Node runtime (to retrieve the list of tests).
+			// As `node:sqlite` has only be added in Node 22.5.0, we need to try/catch to not error with older versions.
+			// @ts-expect-error TS2307 - node:sqlite is only available in Node 22.5.0+
+			sqlite = await import("node:sqlite");
+		} catch {
+			throw new Error("sqlite is not available");
+		}
 
 		// Common exports (both unenv stub and native workerd)
 		assertTypeOfProperties(sqlite, {
