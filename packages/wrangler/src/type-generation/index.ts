@@ -77,7 +77,7 @@ export const typesCommand = createCommand({
 		check: {
 			demandOption: false,
 			describe:
-				"Check if the types at the provided path are up to date without regenerating",
+				"Check if the types at the provided path are up to date without regenerating them",
 			type: "boolean",
 		},
 	},

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { Miniflare } from "miniflare";
 import { version } from "workerd";
 import { logger } from "../../logger";
-import { RUNTIME_HEADER_COMMENT_PREFIX } from "../helpers";
+import { getRuntimeHeader, RUNTIME_HEADER_COMMENT_PREFIX } from "../helpers";
 import type { Config } from "@cloudflare/workers-utils";
 
 const DEFAULT_OUTFILE_RELATIVE_PATH = "worker-configuration.d.ts";
@@ -36,24 +36,6 @@ const DEFAULT_OUTFILE_RELATIVE_PATH = "worker-configuration.d.ts";
  * - The generated types are written to a file specified by DEFAULT_OUTFILE_RELATIVE_PATH.
  * - This could be improved by hashing the compat date and flags to avoid unnecessary regeneration.
  */
-
-/**
- * Generates the runtime header string used in the generated types file.
- * This header is used to detect when runtime types need to be regenerated.
- *
- * @param workerdVersion - The version of workerd to use.
- * @param compatibilityDate - The compatibility date of the runtime. Expected `YYYY-MM-DD` format.
- * @param compatibilityFlags - Any additional compatibility flags to use.
- *
- * @returns {string} A string containing the comment outlining the generated runtime types.
- */
-export const getRuntimeHeader = (
-	workerdVersion: string,
-	compatibilityDate: string,
-	compatibilityFlags: Array<string> = []
-): string => {
-	return `${RUNTIME_HEADER_COMMENT_PREFIX}${workerdVersion} ${compatibilityDate} ${compatibilityFlags.sort().join(",")}`;
-};
 
 export async function generateRuntimeTypes({
 	config: { compatibility_date, compatibility_flags = [] },
