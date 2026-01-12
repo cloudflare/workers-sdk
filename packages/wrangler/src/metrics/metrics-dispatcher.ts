@@ -104,22 +104,10 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		) {
 			try {
 				// Sanitize sensitive commands to prevent accidentally capturing secrets
-				// or credentials that users may have pasted as arguments
-				const sensitiveCommandPrefixes = [
-					"wrangler login",
-					"wrangler secret put",
-					"wrangler secret bulk",
-					"wrangler pages secret put",
-					"wrangler pages secret bulk",
-					"wrangler versions secret put",
-					"wrangler versions secret bulk",
-				];
-				for (const prefix of sensitiveCommandPrefixes) {
-					if (properties.command?.startsWith(prefix)) {
-						properties.command = prefix;
-						argv = [];
-						break;
-					}
+				// or credentials that users may have pasted as arguments.
+				// The sensitiveArgs flag is set from the command definition's metadata.
+				if (properties.sensitiveArgs) {
+					argv = [];
 				}
 				if (
 					properties.command === "wrangler telemetry disable" ||

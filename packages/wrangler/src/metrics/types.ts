@@ -81,6 +81,11 @@ export type Events =
 				 * All user-inputted string values are redacted, except for some cases where there are set options.
 				 */
 				args: Record<string, unknown>;
+				/**
+				 * If true, this command handles sensitive data and args should be stripped from telemetry.
+				 * Passed from the command definition's metadata.sensitiveArgs.
+				 */
+				sensitiveArgs?: boolean;
 			};
 	  }
 	| {
@@ -101,6 +106,11 @@ export type Events =
 				durationMs: number;
 				durationMinutes: number;
 				durationSeconds: number;
+				/**
+				 * If true, this command handles sensitive data and args should be stripped from telemetry.
+				 * Passed from the command definition's metadata.sensitiveArgs.
+				 */
+				sensitiveArgs?: boolean;
 			};
 	  }
 	| {
@@ -129,5 +139,10 @@ export type Events =
 				 * Sanitised error messages that will not include user information like filepaths or stack traces (e.g. `Asset too large`).
 				 */
 				errorMessage: string | undefined;
+				/**
+				 * If true, this command handles sensitive data and args should be stripped from telemetry.
+				 * Passed from the command definition's metadata.sensitiveArgs.
+				 */
+				sensitiveArgs?: boolean;
 			};
 	  };

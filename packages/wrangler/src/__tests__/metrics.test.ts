@@ -254,6 +254,7 @@ describe("metrics", () => {
 						amplitude_session_id: 1733961600000,
 						amplitude_event_id: 0,
 						...reused,
+						sensitiveArgs: false,
 					},
 				};
 				expect(std.debug).toContain(
@@ -270,6 +271,7 @@ describe("metrics", () => {
 						durationMs: 6000,
 						durationSeconds: 6,
 						durationMinutes: 0.1,
+						sensitiveArgs: false,
 					},
 				};
 				// command completed
@@ -316,6 +318,7 @@ describe("metrics", () => {
 						amplitude_session_id: 1733961600000,
 						amplitude_event_id: 0,
 						...reused,
+						sensitiveArgs: false,
 					},
 				};
 				expect(std.debug).toContain(
@@ -335,6 +338,7 @@ describe("metrics", () => {
 						durationMinutes: 0.1,
 						errorType: "TypeError",
 						errorMessage: undefined,
+						sensitiveArgs: false,
 					},
 				};
 
@@ -393,6 +397,7 @@ describe("metrics", () => {
 						amplitude_session_id: 1733961600000,
 						amplitude_event_id: 0,
 						...{ ...reused, hasAssets: true },
+						sensitiveArgs: false,
 					},
 				};
 				expect(std.debug).toContain(
@@ -411,6 +416,7 @@ describe("metrics", () => {
 						durationMs: 6000,
 						durationSeconds: 6,
 						durationMinutes: 0.1,
+						sensitiveArgs: false,
 					},
 				};
 				expect(std.debug).toContain(
@@ -439,7 +445,8 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 				expect(std.debug).toContain('"argsCombination":""');
-				expect(std.debug).toContain('"command":"wrangler login"');
+				expect(std.debug).toContain('"command":"wrangler login');
+				expect(std.debug).toContain('"sensitiveArgs":true');
 			});
 
 			it("should not send arguments with wrangler secret put to avoid capturing accidentally pasted secrets", async () => {
@@ -451,7 +458,10 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 				expect(std.debug).toContain('"argsCombination":""');
-				expect(std.debug).toContain('"command":"wrangler secret put"');
+				// The command string will include the full args, but sensitiveArgs flag ensures
+				// that argv is cleared so no sensitive values leak through arg sanitization
+				expect(std.debug).toContain('"command":"wrangler secret put');
+				expect(std.debug).toContain('"sensitiveArgs":true');
 				// Ensure the accidentally pasted secret is not in the debug output
 				expect(std.debug).not.toContain("accidentallyPastedSecret");
 			});
