@@ -37,12 +37,16 @@ export const getRuntimeHeader = (
  * Attempts to convert a boolean serialized as a string.
  *
  * @param value - The unknown or serialized value.
+ * @param defaultValue - An optional default value to return if the value cannot be parsed.
  *
  * @returns `true` or `false` depending on the contents of the string.
  *
  * @throws {ParseError} If the provided value cannot be parsed as a boolean.
  */
-const unsafeParseBooleanString = (value: unknown): boolean => {
+const unsafeParseBooleanString = (
+	value: unknown,
+	defaultValue?: boolean
+): boolean => {
 	if (typeof value !== "string") {
 		throw new ParseError({
 			text: `Invalid value: ${value}`,
@@ -55,6 +59,10 @@ const unsafeParseBooleanString = (value: unknown): boolean => {
 	}
 	if (value.toLowerCase() === "false") {
 		return false;
+	}
+
+	if (defaultValue) {
+		return defaultValue;
 	}
 
 	throw new ParseError({
@@ -113,13 +121,13 @@ export const checkTypesUpToDate = async (
 	// If no runtime header exists, runtime types were not included (--include-runtime=false)
 	const args = {
 		includeEnv: existingEnvHeader
-			? unsafeParseBooleanString(rawArgs.includeEnv ?? "true")
+			? unsafeParseBooleanString(rawArgs.includeEnv, true)
 			: false,
 		includeRuntime: existingRuntimeHeader
-			? unsafeParseBooleanString(rawArgs.includeRuntime ?? "true")
+			? unsafeParseBooleanString(rawArgs.includeRuntime, true)
 			: false,
 		envInterface: (rawArgs.envInterface ?? "Env") as string,
-		strictVars: unsafeParseBooleanString(rawArgs.strictVars ?? "true"),
+		strictVars: unsafeParseBooleanString(rawArgs.strictVars, true),
 	} satisfies Record<string, string | number | boolean>;
 
 	const configContainsEntrypoint =
