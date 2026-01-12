@@ -41,8 +41,8 @@ export function addBindingsShortcut(
 		return;
 	}
 
-	// TURBO_HASH is set by Turborepo, which can cause issues with interactive shortcuts
-	if (process.env.TURBO_HASH) {
+	// Interactive shortcuts should only be registered in a TTY environment
+	if (!process.stdin.isTTY) {
 		return;
 	}
 
