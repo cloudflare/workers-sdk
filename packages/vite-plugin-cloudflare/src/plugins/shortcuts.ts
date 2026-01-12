@@ -41,6 +41,11 @@ export function addBindingsShortcut(
 		return;
 	}
 
+	// TURBO_HASH is set by Turborepo, which can cause issues with interactive shortcuts
+	if (process.env.TURBO_HASH) {
+		return;
+	}
+
 	const registryPath = getDefaultDevRegistryPath();
 	const printBindingsShortcut = {
 		key: "b",
