@@ -11,7 +11,7 @@ import {
 	RequestInit,
 } from "miniflare";
 import { describe, expect, onTestFinished, test } from "vitest";
-import { useDispose, useTmp } from "../../test-shared";
+import { disposeWithRetry, useDispose, useTmp } from "../../test-shared";
 
 const COUNTER_SCRIPT = (responsePrefix = "") => `export class Counter {
   instanceId = crypto.randomUUID();
@@ -335,9 +335,8 @@ test("proxies Durable Object methods", async () => {
 });
 
 describe("evictions", { concurrent: true }, () => {
-	test("Durable Object eviction", async () => {
+	test("Durable Object eviction", async ({ onTestFinished }) => {
 		// this test requires testing over a 10 second timeout
-		// Vitest handles timeouts via test options
 		// first set unsafePreventEviction to undefined
 		const mf = new Miniflare({
 			modules: true,
@@ -346,7 +345,9 @@ describe("evictions", { concurrent: true }, () => {
 				DURABLE_OBJECT: "DurableObject",
 			},
 		});
-		useDispose(mf);
+		// Use onTestFinished from test context (not imported) for proper scoping
+		// with concurrent tests, combined with disposeWithRetry for Windows support
+		onTestFinished(() => disposeWithRetry(mf));
 
 		// get uuid generated at durable object startup
 		let res = await mf.dispatchFetch("http://localhost");
@@ -358,7 +359,7 @@ describe("evictions", { concurrent: true }, () => {
 		expect(await res.text()).not.toBe(original);
 	});
 
-	test("prevent Durable Object eviction", { timeout: 20_000 }, async () => {
+	test("prevent Durable Object eviction", async ({ onTestFinished }) => {
 		// this test requires testing over a 10 second timeout
 		// first set unsafePreventEviction to true
 		const mf = new Miniflare({
@@ -371,7 +372,9 @@ describe("evictions", { concurrent: true }, () => {
 				},
 			},
 		});
-		useDispose(mf);
+		// Use onTestFinished from test context (not imported) for proper scoping
+		// with concurrent tests, combined with disposeWithRetry for Windows support
+		onTestFinished(() => disposeWithRetry(mf));
 
 		// get uuid generated at durable object startup
 		let res = await mf.dispatchFetch("http://localhost");
