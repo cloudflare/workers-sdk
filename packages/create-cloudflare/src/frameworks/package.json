@@ -17,7 +17,7 @@
 		"create-react-router": "7.11.0",
 		"create-solid": "0.6.11",
 		"create-vike": "0.0.558",
-		"create-vue": "3.18.3",
+		"create-vue": "3.18.5",
 		"create-waku": "0.12.5-1.0.0-alpha.1-0",
 		"@tanstack/create-start": "0.40.0",
 		"gatsby": "5.15.0",
