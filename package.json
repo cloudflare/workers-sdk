@@ -81,7 +81,8 @@
 			"toucan-js@4.0.0": "patches/toucan-js@4.0.0.patch",
 			"postal-mime": "patches/postal-mime.patch",
 			"youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch",
-			"@netlify/build-info": "patches/@netlify__build-info.patch"
+			"@netlify/build-info": "patches/@netlify__build-info.patch",
+			"buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
 		}
 	}
 }
