@@ -58,7 +58,7 @@ describe("inspect", () => {
 					enabled: true,
 					date: new Date(),
 				},
-				deviceId: "test-device-id-123",
+				deviceId: "test-device-id",
 			});
 
 			const url = buildInspectorUrl(9229, "my-worker");
