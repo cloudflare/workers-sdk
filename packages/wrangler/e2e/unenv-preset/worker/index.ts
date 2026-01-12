@@ -787,12 +787,16 @@ export const WorkerdTests: Record<string, () => void> = {
 	async testSqlite() {
 		let sqlite;
 		try {
-			// This source file is used by the Node runtime (to retrieve the list of tests).
+			// This source file is imported by the Node runtime (to retrieve the list of tests).
 			// As `node:sqlite` has only be added in Node 22.5.0, we need to try/catch to not error with older versions.
+			// Note: This test is not meant to be executed by the Node runtime,
+			// but only by workerd where `node:sqlite` is available.
 			// @ts-expect-error TS2307 - node:sqlite is only available in Node 22.5.0+
 			sqlite = await import("node:sqlite");
 		} catch {
-			throw new Error("sqlite is not available");
+			throw new Error(
+				"sqlite is not available. This should never happen in workerd."
+			);
 		}
 
 		// Common exports (both unenv stub and native workerd)
