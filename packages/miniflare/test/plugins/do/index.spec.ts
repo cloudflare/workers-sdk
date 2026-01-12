@@ -335,7 +335,7 @@ test("proxies Durable Object methods", async () => {
 });
 
 describe("evictions", { concurrent: true }, () => {
-	test("Durable Object eviction", async () => {
+	test("Durable Object eviction", { timeout: 21_000 }, async () => {
 		// this test requires testing over a 10 second timeout
 		// Vitest handles timeouts via test options
 		// first set unsafePreventEviction to undefined
@@ -353,7 +353,8 @@ describe("evictions", { concurrent: true }, () => {
 		const original = await res.text();
 
 		// after 10+ seconds, durable object should be evicted, so new uuid generated
-		await setTimeout(10_000);
+		// Use 11s instead of 10s to account for timing variability on Windows CI
+		await setTimeout(11_000);
 		res = await mf.dispatchFetch("http://localhost");
 		expect(await res.text()).not.toBe(original);
 	});
