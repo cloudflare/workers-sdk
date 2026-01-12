@@ -144,7 +144,12 @@ jobs:
       # This step can be removed once we're confident the fix is stable
       - name: Run eviction tests multiple times (stability check)
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm --filter miniflare vitest run test/plugins/do/index.spec.ts -t "evictions" --repeat=20
+        shell: bash
+        run: |
+          for i in {1..20}; do
+            echo "=== Eviction test run $i of 20 ==="
+            pnpm --filter miniflare vitest run test/plugins/do/index.spec.ts -t "evictions"
+          done
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
 
