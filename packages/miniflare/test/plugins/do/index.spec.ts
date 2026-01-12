@@ -335,37 +335,31 @@ test("proxies Durable Object methods", async () => {
 });
 
 describe("evictions", { concurrent: true }, () => {
-	test(
-		"Durable Object eviction",
-		{ timeout: 20_000 },
-		async ({ onTestFinished }) => {
-			// this test requires testing over a 10 second timeout
-			// Vitest handles timeouts via test options
-			// first set unsafePreventEviction to undefined
-			const mf = new Miniflare({
-				modules: true,
-				script: STATEFUL_SCRIPT(),
-				durableObjects: {
-					DURABLE_OBJECT: "DurableObject",
-				},
-			});
-			// Use onTestFinished from test context (not imported) for proper scoping
-			// with concurrent tests, combined with disposeWithRetry for Windows support
-			onTestFinished(() => disposeWithRetry(mf));
+	test("Durable Object eviction", async ({ onTestFinished }) => {
+		// this test requires testing over a 10 second timeout
+		// first set unsafePreventEviction to undefined
+		const mf = new Miniflare({
+			modules: true,
+			script: STATEFUL_SCRIPT(),
+			durableObjects: {
+				DURABLE_OBJECT: "DurableObject",
+			},
+		});
+		// Use onTestFinished from test context (not imported) for proper scoping
+		// with concurrent tests, combined with disposeWithRetry for Windows support
+		onTestFinished(() => disposeWithRetry(mf));
 
-			// get uuid generated at durable object startup
-			let res = await mf.dispatchFetch("http://localhost");
-			const original = await res.text();
+		// get uuid generated at durable object startup
+		let res = await mf.dispatchFetch("http://localhost");
+		const original = await res.text();
 
-			// after 10+ seconds, durable object should be evicted, so new uuid generated
-			// Use 10.5s instead of 10s to account for timing variability on Windows CI
-			await setTimeout(10_500);
-			res = await mf.dispatchFetch("http://localhost");
-			expect(await res.text()).not.toBe(original);
-		}
-	);
+		// after 10+ seconds, durable object should be evicted, so new uuid generated
+		await setTimeout(10_000);
+		res = await mf.dispatchFetch("http://localhost");
+		expect(await res.text()).not.toBe(original);
+	});
 
-	test("prevent Durable Object eviction", { timeout: 20_000 }, async () => {
+	test("prevent Durable Object eviction", async ({ onTestFinished }) => {
 		// this test requires testing over a 10 second timeout
 		// first set unsafePreventEviction to true
 		const mf = new Miniflare({
@@ -378,7 +372,9 @@ describe("evictions", { concurrent: true }, () => {
 				},
 			},
 		});
-		useDispose(mf);
+		// Use onTestFinished from test context (not imported) for proper scoping
+		// with concurrent tests, combined with disposeWithRetry for Windows support
+		onTestFinished(() => disposeWithRetry(mf));
 
 		// get uuid generated at durable object startup
 		let res = await mf.dispatchFetch("http://localhost");
