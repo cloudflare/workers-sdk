@@ -140,6 +140,14 @@ jobs:
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
           CI_OS: ${{ matrix.description }}
 
+      # TEMPORARY: Run eviction tests multiple times to verify stability of fix
+      # This step can be removed once we're confident the fix is stable
+      - name: Run eviction tests multiple times (stability check)
+        if: steps.changes.outputs.everything_but_markdown == 'true'
+        run: pnpm --filter miniflare vitest run test/plugins/do/index.spec.ts -t "evictions" --repeat=20
+        env:
+          NODE_OPTIONS: "--max_old_space_size=8192"
+
       - name: Run tests (fixtures)
         if: steps.changes.outputs.everything_but_markdown == 'true'
         # Browser rendering is disabled on Ubuntu because of https://pptr.dev/troubleshooting#issues-with-apparmor-on-ubuntu
