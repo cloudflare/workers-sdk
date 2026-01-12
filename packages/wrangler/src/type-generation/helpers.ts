@@ -125,14 +125,9 @@ export const checkTypesUpToDate = async (
 	const configContainsEntrypoint =
 		primaryConfig.main !== undefined || !!primaryConfig.site?.["entry-point"];
 
-	let entrypoint: Entry | undefined;
-	if (configContainsEntrypoint) {
-		try {
-			entrypoint = await getEntry({}, primaryConfig, "types");
-		} catch {
-			entrypoint = undefined;
-		}
-	}
+	const entrypoint = configContainsEntrypoint
+		? await getEntry({}, primaryConfig, "types").catch(() => undefined)
+		: undefined;
 
 	let envOutOfDate = false;
 	let runtimeOutOfDate = false;
