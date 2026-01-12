@@ -9,7 +9,10 @@ export function getDatabaseInfoFromConfig(
 	config: Config,
 	name: string,
 	options?: {
-		/** Local databases might not have a database id, so we don't require it for local-only operations */
+		/**
+		 * Local databases might not have a database id, so we don't require it for local-only operations
+		 * @default true
+		 */
 		requireDatabaseId?: boolean;
 	}
 ): Database | null {
