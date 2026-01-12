@@ -2309,7 +2309,7 @@ describe.sequential("wrangler dev", () => {
 				generateRuntimeTypesSpy = vi
 					.spyOn(generateRuntime, "generateRuntimeTypes")
 					.mockResolvedValue({
-						runtimeHeader: `// Runtime types generated with workerd@mocked`,
+						runtimeHeader: "// Runtime types generated with workerd@mocked",
 						runtimeTypes: "<mocked runtime types>",
 					});
 			});
