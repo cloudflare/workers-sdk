@@ -94,8 +94,12 @@ export const checkTypesUpToDate = async (
 	// If no env header exists, env types were not included (--include-env=false)
 	// If no runtime header exists, runtime types were not included (--include-runtime=false)
 	const args = {
-		includeEnv: unsafeParseBooleanString(rawArgs.includeEnv ?? "true"),
-		includeRuntime: unsafeParseBooleanString(rawArgs.includeRuntime ?? "true"),
+		includeEnv: existingEnvHeader
+			? unsafeParseBooleanString(rawArgs.includeEnv ?? "true")
+			: false,
+		includeRuntime: existingRuntimeHeader
+			? unsafeParseBooleanString(rawArgs.includeRuntime ?? "true")
+			: false,
 		envInterface: (rawArgs.envInterface ?? "Env") as string,
 		strictVars: unsafeParseBooleanString(rawArgs.strictVars ?? "true"),
 	} satisfies Record<string, string | number | boolean>;
