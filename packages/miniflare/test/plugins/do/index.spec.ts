@@ -11,7 +11,7 @@ import {
 	RequestInit,
 } from "miniflare";
 import { describe, expect, onTestFinished, test } from "vitest";
-import { useDispose, useTmp } from "../../test-shared";
+import { disposeWithRetry, useDispose, useTmp } from "../../test-shared";
 
 const COUNTER_SCRIPT = (responsePrefix = "") => `export class Counter {
   instanceId = crypto.randomUUID();
@@ -335,19 +335,24 @@ test("proxies Durable Object methods", async () => {
 });
 
 describe("evictions", { concurrent: true }, () => {
-	test("Durable Object eviction", { timeout: 20_000 }, async () => {
-		// this test requires testing over a 10 second timeout
-		// Vitest handles timeouts via test options
-		// first set unsafePreventEviction to undefined
-		const mf = new Miniflare({
-			modules: true,
-			script: STATEFUL_SCRIPT(),
-			durableObjects: {
-				DURABLE_OBJECT: "DurableObject",
-			},
-		});
+	test(
+		"Durable Object eviction",
+		{ timeout: 20_000 },
+		async ({ onTestFinished }) => {
+			// this test requires testing over a 10 second timeout
+			// Vitest handles timeouts via test options
+			// first set unsafePreventEviction to undefined
+			const mf = new Miniflare({
+				modules: true,
+				script: STATEFUL_SCRIPT(),
+				durableObjects: {
+					DURABLE_OBJECT: "DurableObject",
+				},
+			});
+			// Use onTestFinished from test context (not imported) for proper scoping
+			// with concurrent tests, combined with disposeWithRetry for Windows support
+			onTestFinished(() => disposeWithRetry(mf));
 
-		try {
 			// get uuid generated at durable object startup
 			let res = await mf.dispatchFetch("http://localhost");
 			const original = await res.text();
@@ -357,10 +362,8 @@ describe("evictions", { concurrent: true }, () => {
 			await setTimeout(10_500);
 			res = await mf.dispatchFetch("http://localhost");
 			expect(await res.text()).not.toBe(original);
-		} finally {
-			await mf.dispose();
 		}
-	});
+	);
 
 	test("prevent Durable Object eviction", { timeout: 20_000 }, async () => {
 		// this test requires testing over a 10 second timeout
