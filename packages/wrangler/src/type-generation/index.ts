@@ -444,17 +444,28 @@ export async function generateEnvTypes(
 			(e) => e === durableObject.class_name
 		);
 
-		let typeName: string;
+		const key = constructTypeKey(durableObject.name);
 
 		if (importPath && exportExists) {
-			typeName = `DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`;
-		} else if (durableObject.script_name) {
-			typeName = `DurableObjectNamespace /* ${durableObject.class_name} from ${durableObject.script_name} */`;
-		} else {
-			typeName = `DurableObjectNamespace /* ${durableObject.class_name} */`;
+			envTypeStructure.push([
+				key,
+				`DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`,
+			]);
+			continue;
 		}
 
-		envTypeStructure.push([constructTypeKey(durableObject.name), typeName]);
+		if (durableObject.script_name) {
+			envTypeStructure.push([
+				key,
+				`DurableObjectNamespace /* ${durableObject.class_name} from ${durableObject.script_name} */`,
+			]);
+			continue;
+		}
+
+		envTypeStructure.push([
+			key,
+			`DurableObjectNamespace /* ${durableObject.class_name} */`,
+		]);
 	}
 
 	for (const service of collectedServices) {
@@ -471,43 +482,59 @@ export async function generateEnvTypes(
 			(e) => e === (service.entrypoint ?? "default")
 		);
 
-		let typeName: string;
+		const key = constructTypeKey(service.binding);
 
 		if (importPath && exportExists) {
-			typeName = `Service<typeof import("${importPath}").${service.entrypoint ?? "default"}>`;
-		} else if (service.entrypoint) {
-			typeName = `Service /* entrypoint ${service.entrypoint} from ${service.service} */`;
-		} else {
-			typeName = `Fetcher /* ${service.service} */`;
+			envTypeStructure.push([
+				key,
+				`Service<typeof import("${importPath}").${service.entrypoint ?? "default"}>`,
+			]);
+			continue;
 		}
 
-		envTypeStructure.push([constructTypeKey(service.binding), typeName]);
+		if (service.entrypoint) {
+			envTypeStructure.push([
+				key,
+				`Service /* entrypoint ${service.entrypoint} from ${service.service} */`,
+			]);
+			continue;
+		}
+
+		envTypeStructure.push([key, `Fetcher /* ${service.service} */`]);
 	}
 
 	for (const workflow of collectedWorkflows) {
-		const doEntrypoint = workflow.script_name
+		const workflowEntrypoint = workflow.script_name
 			? serviceEntries?.get(workflow.script_name)
 			: entrypoint;
 
-		const importPath = doEntrypoint
-			? generateImportSpecifier(fullOutputPath, doEntrypoint.file)
+		const importPath = workflowEntrypoint
+			? generateImportSpecifier(fullOutputPath, workflowEntrypoint.file)
 			: undefined;
 
-		const exportExists = doEntrypoint?.exports?.some(
+		const exportExists = workflowEntrypoint?.exports?.some(
 			(e) => e === workflow.class_name
 		);
 
-		let typeName: string;
+		const key = constructTypeKey(workflow.binding);
 
 		if (importPath && exportExists) {
-			typeName = `Workflow<Parameters<import("${importPath}").${workflow.class_name}['run']>[0]['payload']>`;
-		} else if (workflow.script_name) {
-			typeName = `Workflow /* ${workflow.class_name} from ${workflow.script_name} */`;
-		} else {
-			typeName = `Workflow /* ${workflow.class_name} */`;
+			envTypeStructure.push([
+				key,
+				`Workflow<Parameters<import("${importPath}").${workflow.class_name}['run']>[0]['payload']>`,
+			]);
+			continue;
 		}
 
-		envTypeStructure.push([constructTypeKey(workflow.binding), typeName]);
+		if (workflow.script_name) {
+			envTypeStructure.push([
+				key,
+				`Workflow /* ${workflow.class_name} from ${workflow.script_name} */`,
+			]);
+			continue;
+		}
+
+		envTypeStructure.push([key, `Workflow /* ${workflow.class_name} */`]);
 	}
 
 	for (const unsafe of collectedUnsafeBindings) {
