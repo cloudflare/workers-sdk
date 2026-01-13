@@ -1897,24 +1897,12 @@ importers:
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1
-      sharp:
-        specifier: ^0.34.5
-        version: 0.34.5
-      undici:
-        specifier: catalog:default
-        version: 7.14.0
       workerd:
         specifier: 1.20260115.0
         version: 1.20260115.0
-      ws:
-        specifier: catalog:default
-        version: 8.18.0
       youch:
         specifier: 4.1.0-beta.10
         version: 4.1.0-beta.10(patch_hash=flgmw54jmjdxqmelxigtxg6kum)
-      zod:
-        specifier: ^3.25.76
-        version: 3.25.76
     devDependencies:
       '@cloudflare/cli':
         specifier: workspace:*
@@ -2042,6 +2030,9 @@ importers:
       rimraf:
         specifier: catalog:default
         version: 6.0.1
+      sharp:
+        specifier: ^0.34.5
+        version: 0.34.5
       source-map:
         specifier: ^0.6.1
         version: 0.6.1
@@ -2054,15 +2045,24 @@ importers:
       typescript:
         specifier: catalog:default
         version: 5.8.3
+      undici:
+        specifier: catalog:default
+        version: 7.14.0
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/debug@4.1.7)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(yaml@2.8.1)
       which:
         specifier: ^2.0.2
         version: 2.0.2
+      ws:
+        specifier: catalog:default
+        version: 8.18.0
       xdg-app-paths:
         specifier: ^8.3.0
         version: 8.3.0
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
 
   packages/mock-npm-registry:
     devDependencies:
