@@ -1,5 +1,41 @@
 # miniflare
 
+## 4.20260111.0
+
+### Patch Changes
+
+- [#11494](https://github.com/cloudflare/workers-sdk/pull/11494) [`ed60c4f`](https://github.com/cloudflare/workers-sdk/commit/ed60c4f01c0e4ac9683a73fb5cf849ad74255b35) Thanks [@jalmonter](https://github.com/jalmonter)! - Fix scheduled trigger warning showing `undefined` port
+
+  When running `wrangler dev` with a worker that has cron triggers, the warning message displayed an invalid URL like `curl "http://localhost:undefined/cdn-cgi/handler/scheduled"` because the port wasn't yet determined when the warning was logged.
+
+  Moved the warning to after the proxy server is fully ready, where the actual public URL and port are known.
+
+- [#11831](https://github.com/cloudflare/workers-sdk/pull/11831) [`faa5753`](https://github.com/cloudflare/workers-sdk/commit/faa5753fa685117065c801e5d1fcee3486a6f0bd) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260107.1 | 1.20260108.0 |
+
+- [#11844](https://github.com/cloudflare/workers-sdk/pull/11844) [`e574ef3`](https://github.com/cloudflare/workers-sdk/commit/e574ef3e73aa00ca82e84fe308da0fed768477d9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260108.0 | 1.20260109.0 |
+
+- [#11872](https://github.com/cloudflare/workers-sdk/pull/11872) [`b6148ed`](https://github.com/cloudflare/workers-sdk/commit/b6148ed733f6d6873261df5ae61e71c475ba8a8d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260109.0 | 1.20260111.0 |
+
+- [#11816](https://github.com/cloudflare/workers-sdk/pull/11816) [`fc96e5f`](https://github.com/cloudflare/workers-sdk/commit/fc96e5fe117948c57e49bf0741d55955691f1c28) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Bump sharp dependency (from `0.33.5` to `0.34.5`)
+
 ## 4.20260107.0
 
 ### Patch Changes
