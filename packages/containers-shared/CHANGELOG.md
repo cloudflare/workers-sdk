@@ -1,5 +1,13 @@
 # @cloudflare/containers-shared
 
+## 0.8.0
+
+### Minor Changes
+
+- [#11755](https://github.com/cloudflare/workers-sdk/pull/11755) [`0f8d69d`](https://github.com/cloudflare/workers-sdk/commit/0f8d69d31071abeb567aa3c8478492536b5740fb) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Users can now specify `constraints.tiers` for their container applications. `tier` is deprecated in favor of `tiers`.
+  If left unset, we will default to `tiers: [1, 2]`.
+  Note that `constraints` is an experimental feature.
+
 ## 0.7.0
 
 ### Minor Changes
