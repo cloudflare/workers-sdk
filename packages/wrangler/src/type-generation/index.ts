@@ -339,43 +339,55 @@ export async function generateEnvTypes(
 		true
 	) as Record<string, string>;
 
-	const configToDTS: ConfigToDTS = {
-		kv_namespaces: config.kv_namespaces ?? [],
-		vars: collectAllVars({ ...args, config: config.configPath }),
+	const collectionArgs = {
+		...args,
+		config: config.configPath,
+	} satisfies Partial<(typeof typesCommand)["args"]>;
+	const collectedBindings = collectAllBindings(collectionArgs);
+	const collectedDurableObjects = collectAllDurableObjects(collectionArgs);
+	const collectedServices = collectAllServices(collectionArgs);
+	const collectedUnsafeBindings = collectAllUnsafeBindings(collectionArgs);
+	const collectedVars = collectAllVars(collectionArgs);
+	const collectedWorkflows = collectAllWorkflows(collectionArgs);
+
+	// These fields are not environment-specific, so we still read from config
+	// Any empty resource arrays here are due to be populated later on using
+	// their respective `collectAllX` helper functions.
+	const configToDTS = {
+		kv_namespaces: [],
+		vars: collectedVars,
 		wasm_modules: config.wasm_modules,
-		text_blobs: {
-			...config.text_blobs,
-		},
+		text_blobs: { ...config.text_blobs },
 		data_blobs: config.data_blobs,
-		durable_objects: config.durable_objects,
-		r2_buckets: config.r2_buckets,
-		d1_databases: config.d1_databases,
-		services: config.services,
-		analytics_engine_datasets: config.analytics_engine_datasets,
-		dispatch_namespaces: config.dispatch_namespaces,
+		durable_objects: { bindings: [] },
+		r2_buckets: [],
+		d1_databases: [],
+		services: [],
+		analytics_engine_datasets: [],
+		dispatch_namespaces: [],
 		logfwdr: config.logfwdr,
-		unsafe: config.unsafe,
+		unsafe: { bindings: [] },
 		rules: config.rules,
-		queues: config.queues,
-		send_email: config.send_email,
-		vectorize: config.vectorize,
-		hyperdrive: config.hyperdrive,
-		mtls_certificates: config.mtls_certificates,
-		browser: config.browser,
-		images: config.images,
-		ai: config.ai,
-		version_metadata: config.version_metadata,
+		queues: { producers: [] },
+		send_email: [],
+		vectorize: [],
+		hyperdrive: [],
+		mtls_certificates: [],
+		browser: undefined,
+		images: undefined,
+		ai: undefined,
+		version_metadata: undefined,
 		secrets,
-		assets: config.assets,
-		workflows: config.workflows,
-		pipelines: config.pipelines,
-		secrets_store_secrets: config.secrets_store_secrets,
-		unsafe_hello_world: config.unsafe_hello_world,
-		ratelimits: config.ratelimits,
-		worker_loaders: config.worker_loaders,
-		vpc_services: config.vpc_services,
-		media: config.media,
-	};
+		assets: undefined,
+		workflows: [],
+		pipelines: [],
+		secrets_store_secrets: [],
+		unsafe_hello_world: [],
+		ratelimits: [],
+		worker_loaders: [],
+		vpc_services: [],
+		media: undefined,
+	} satisfies ConfigToDTS;
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
 	const fullOutputPath = resolve(outputPath);
@@ -396,13 +408,8 @@ export async function generateEnvTypes(
 
 	const envTypeStructure: [string, string][] = [];
 
-	if (configToDTS.kv_namespaces) {
-		for (const kvNamespace of configToDTS.kv_namespaces) {
-			envTypeStructure.push([
-				constructTypeKey(kvNamespace.binding),
-				"KVNamespace",
-			]);
-		}
+	for (const binding of collectedBindings) {
+		envTypeStructure.push([constructTypeKey(binding.name), binding.type]);
 	}
 
 	if (configToDTS.vars) {
@@ -424,275 +431,105 @@ export async function generateEnvTypes(
 		stringKeys.push(secretName);
 	}
 
-	if (configToDTS.durable_objects?.bindings) {
-		for (const durableObject of configToDTS.durable_objects.bindings) {
-			const doEntrypoint = durableObject.script_name
-				? serviceEntries?.get(durableObject.script_name)
+	for (const durableObject of collectedDurableObjects) {
+		const doEntrypoint = durableObject.script_name
+			? serviceEntries?.get(durableObject.script_name)
+			: entrypoint;
+
+		const importPath = doEntrypoint
+			? generateImportSpecifier(fullOutputPath, doEntrypoint.file)
+			: undefined;
+
+		const exportExists = doEntrypoint?.exports?.some(
+			(e) => e === durableObject.class_name
+		);
+
+		let typeName: string;
+
+		if (importPath && exportExists) {
+			typeName = `DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`;
+		} else if (durableObject.script_name) {
+			typeName = `DurableObjectNamespace /* ${durableObject.class_name} from ${durableObject.script_name} */`;
+		} else {
+			typeName = `DurableObjectNamespace /* ${durableObject.class_name} */`;
+		}
+
+		envTypeStructure.push([constructTypeKey(durableObject.name), typeName]);
+	}
+
+	for (const service of collectedServices) {
+		const serviceEntry =
+			service.service !== entrypoint?.name
+				? serviceEntries?.get(service.service)
 				: entrypoint;
 
-			const importPath = doEntrypoint
-				? generateImportSpecifier(fullOutputPath, doEntrypoint.file)
-				: undefined;
+		const importPath = serviceEntry
+			? generateImportSpecifier(fullOutputPath, serviceEntry.file)
+			: undefined;
 
-			const exportExists = doEntrypoint?.exports?.some(
-				(e) => e === durableObject.class_name
-			);
+		const exportExists = serviceEntry?.exports?.some(
+			(e) => e === (service.entrypoint ?? "default")
+		);
 
-			let typeName: string;
+		let typeName: string;
 
-			if (importPath && exportExists) {
-				typeName = `DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`;
-			} else if (durableObject.script_name) {
-				typeName = `DurableObjectNamespace /* ${durableObject.class_name} from ${durableObject.script_name} */`;
-			} else {
-				typeName = `DurableObjectNamespace /* ${durableObject.class_name} */`;
-			}
-
-			envTypeStructure.push([constructTypeKey(durableObject.name), typeName]);
+		if (importPath && exportExists) {
+			typeName = `Service<typeof import("${importPath}").${service.entrypoint ?? "default"}>`;
+		} else if (service.entrypoint) {
+			typeName = `Service /* entrypoint ${service.entrypoint} from ${service.service} */`;
+		} else {
+			typeName = `Fetcher /* ${service.service} */`;
 		}
+
+		envTypeStructure.push([constructTypeKey(service.binding), typeName]);
 	}
 
-	if (configToDTS.r2_buckets) {
-		for (const R2Bucket of configToDTS.r2_buckets) {
-			envTypeStructure.push([constructTypeKey(R2Bucket.binding), "R2Bucket"]);
+	for (const workflow of collectedWorkflows) {
+		const doEntrypoint = workflow.script_name
+			? serviceEntries?.get(workflow.script_name)
+			: entrypoint;
+
+		const importPath = doEntrypoint
+			? generateImportSpecifier(fullOutputPath, doEntrypoint.file)
+			: undefined;
+
+		const exportExists = doEntrypoint?.exports?.some(
+			(e) => e === workflow.class_name
+		);
+
+		let typeName: string;
+
+		if (importPath && exportExists) {
+			typeName = `Workflow<Parameters<import("${importPath}").${workflow.class_name}['run']>[0]['payload']>`;
+		} else if (workflow.script_name) {
+			typeName = `Workflow /* ${workflow.class_name} from ${workflow.script_name} */`;
+		} else {
+			typeName = `Workflow /* ${workflow.class_name} */`;
 		}
+
+		envTypeStructure.push([constructTypeKey(workflow.binding), typeName]);
 	}
 
-	if (configToDTS.d1_databases) {
-		for (const d1 of configToDTS.d1_databases) {
-			envTypeStructure.push([constructTypeKey(d1.binding), "D1Database"]);
+	for (const unsafe of collectedUnsafeBindings) {
+		if (unsafe.type === "ratelimit") {
+			envTypeStructure.push([constructTypeKey(unsafe.name), "RateLimit"]);
+			continue;
 		}
+
+		envTypeStructure.push([constructTypeKey(unsafe.name), "any"]);
 	}
 
-	if (configToDTS.secrets_store_secrets) {
-		for (const secretsStoreSecret of configToDTS.secrets_store_secrets) {
-			envTypeStructure.push([
-				constructTypeKey(secretsStoreSecret.binding),
-				"SecretsStoreSecret",
-			]);
-		}
-	}
-
-	if (configToDTS.unsafe_hello_world) {
-		for (const helloWorld of configToDTS.unsafe_hello_world) {
-			envTypeStructure.push([
-				constructTypeKey(helloWorld.binding),
-				"HelloWorldBinding",
-			]);
-		}
-	}
-
-	if (configToDTS.ratelimits) {
-		for (const ratelimit of configToDTS.ratelimits) {
-			envTypeStructure.push([constructTypeKey(ratelimit.name), "RateLimit"]);
-		}
-	}
-
-	if (configToDTS.worker_loaders) {
-		for (const workerLoader of configToDTS.worker_loaders) {
-			envTypeStructure.push([
-				constructTypeKey(workerLoader.binding),
-				"WorkerLoader",
-			]);
-		}
-	}
-
-	if (configToDTS.services) {
-		for (const service of configToDTS.services) {
-			const serviceEntry =
-				service.service !== entrypoint?.name
-					? serviceEntries?.get(service.service)
-					: entrypoint;
-
-			const importPath = serviceEntry
-				? generateImportSpecifier(fullOutputPath, serviceEntry.file)
-				: undefined;
-
-			const exportExists = serviceEntry?.exports?.some(
-				(e) => e === (service.entrypoint ?? "default")
-			);
-
-			let typeName: string;
-
-			if (importPath && exportExists) {
-				typeName = `Service<typeof import("${importPath}").${service.entrypoint ?? "default"}>`;
-			} else if (service.entrypoint) {
-				typeName = `Service /* entrypoint ${service.entrypoint} from ${service.service} */`;
-			} else {
-				typeName = `Fetcher /* ${service.service} */`;
-			}
-
-			envTypeStructure.push([constructTypeKey(service.binding), typeName]);
-		}
-	}
-
-	if (configToDTS.analytics_engine_datasets) {
-		for (const analyticsEngine of configToDTS.analytics_engine_datasets) {
-			envTypeStructure.push([
-				constructTypeKey(analyticsEngine.binding),
-				"AnalyticsEngineDataset",
-			]);
-		}
-	}
-
-	if (configToDTS.dispatch_namespaces) {
-		for (const namespace of configToDTS.dispatch_namespaces) {
-			envTypeStructure.push([
-				constructTypeKey(namespace.binding),
-				"DispatchNamespace",
-			]);
-		}
-	}
-
-	if (configToDTS.logfwdr?.bindings?.length) {
-		envTypeStructure.push([constructTypeKey("LOGFWDR_SCHEMA"), "any"]);
-	}
-
+	// Data blobs are not environment-specific
 	if (configToDTS.data_blobs) {
 		for (const dataBlobs in configToDTS.data_blobs) {
 			envTypeStructure.push([constructTypeKey(dataBlobs), "ArrayBuffer"]);
 		}
 	}
 
+	// Text blobs are not environment-specific
 	if (configToDTS.text_blobs) {
 		for (const textBlobs in configToDTS.text_blobs) {
 			envTypeStructure.push([constructTypeKey(textBlobs), "string"]);
-		}
-	}
-
-	if (configToDTS.unsafe?.bindings) {
-		for (const unsafe of configToDTS.unsafe.bindings) {
-			if (unsafe.type === "ratelimit") {
-				envTypeStructure.push([constructTypeKey(unsafe.name), "RateLimit"]);
-			} else {
-				envTypeStructure.push([constructTypeKey(unsafe.name), "any"]);
-			}
-		}
-	}
-
-	if (configToDTS.queues) {
-		if (configToDTS.queues.producers) {
-			for (const queue of configToDTS.queues.producers) {
-				envTypeStructure.push([constructTypeKey(queue.binding), "Queue"]);
-			}
-		}
-	}
-
-	if (configToDTS.send_email) {
-		for (const sendEmail of configToDTS.send_email) {
-			envTypeStructure.push([constructTypeKey(sendEmail.name), "SendEmail"]);
-		}
-	}
-
-	if (configToDTS.vectorize) {
-		for (const vectorize of configToDTS.vectorize) {
-			envTypeStructure.push([
-				constructTypeKey(vectorize.binding),
-				"VectorizeIndex",
-			]);
-		}
-	}
-
-	if (configToDTS.hyperdrive) {
-		for (const hyperdrive of configToDTS.hyperdrive) {
-			envTypeStructure.push([
-				constructTypeKey(hyperdrive.binding),
-				"Hyperdrive",
-			]);
-		}
-	}
-
-	if (configToDTS.vpc_services) {
-		for (const vpcService of configToDTS.vpc_services) {
-			envTypeStructure.push([constructTypeKey(vpcService.binding), "Fetcher"]);
-		}
-	}
-
-	if (configToDTS.mtls_certificates) {
-		for (const mtlsCertificate of configToDTS.mtls_certificates) {
-			envTypeStructure.push([
-				constructTypeKey(mtlsCertificate.binding),
-				"Fetcher",
-			]);
-		}
-	}
-
-	if (configToDTS.browser) {
-		// The BrowserWorker type in @cloudflare/puppeteer is of type
-		// { fetch: typeof fetch }, but workers-types doesn't include it
-		// and Fetcher is valid for the purposes of handing it to puppeteer
-		envTypeStructure.push([
-			constructTypeKey(configToDTS.browser.binding),
-			"Fetcher",
-		]);
-	}
-
-	if (configToDTS.ai) {
-		envTypeStructure.push([constructTypeKey(configToDTS.ai.binding), "Ai"]);
-	}
-
-	if (configToDTS.images) {
-		envTypeStructure.push([
-			constructTypeKey(configToDTS.images.binding),
-			"ImagesBinding",
-		]);
-	}
-
-	if (configToDTS.media) {
-		envTypeStructure.push([
-			constructTypeKey(configToDTS.media.binding),
-			"MediaBinding",
-		]);
-	}
-
-	if (configToDTS.version_metadata) {
-		envTypeStructure.push([
-			configToDTS.version_metadata.binding,
-			"WorkerVersionMetadata",
-		]);
-	}
-
-	if (configToDTS.assets?.binding) {
-		envTypeStructure.push([
-			constructTypeKey(configToDTS.assets.binding),
-			"Fetcher",
-		]);
-	}
-
-	if (configToDTS.workflows) {
-		for (const workflow of configToDTS.workflows) {
-			const doEntrypoint = workflow.script_name
-				? serviceEntries?.get(workflow.script_name)
-				: entrypoint;
-
-			const importPath = doEntrypoint
-				? generateImportSpecifier(fullOutputPath, doEntrypoint.file)
-				: undefined;
-
-			const exportExists = doEntrypoint?.exports?.some(
-				(e) => e === workflow.class_name
-			);
-
-			let typeName: string;
-
-			if (importPath && exportExists) {
-				typeName = `Workflow<Parameters<import("${importPath}").${workflow.class_name}['run']>[0]['payload']>`;
-			} else if (workflow.script_name) {
-				typeName = `Workflow /* ${workflow.class_name} from ${workflow.script_name} */`;
-			} else {
-				typeName = `Workflow /* ${workflow.class_name} */`;
-			}
-
-			envTypeStructure.push([constructTypeKey(workflow.binding), typeName]);
-		}
-	}
-
-	if (configToDTS.pipelines) {
-		for (const pipeline of configToDTS.pipelines) {
-			envTypeStructure.push([
-				constructTypeKey(pipeline.binding),
-				`import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>`,
-			]);
 		}
 	}
 
@@ -847,6 +684,10 @@ type VarTypes = Record<string, string[]>;
  *
  * @param args all the CLI arguments passed to the `types` command
  * @returns an object which keys are the variable names and values are arrays containing all the computed types for such variables
+ *
+ * Behavior:
+ * - If `args.env` is specified: only collect vars from that specific environment
+ * - Otherwise: collect vars from top-level AND all named environments
  */
 function collectAllVars(
 	args: Partial<(typeof typesCommand)["args"]>
@@ -881,10 +722,18 @@ function collectAllVars(
 	}
 
 	const { rawConfig } = experimental_readRawConfig(args);
-	collectEnvironmentVars(rawConfig.vars);
-	Object.entries(rawConfig.env ?? {}).forEach(([_envName, env]) => {
-		collectEnvironmentVars(env.vars);
-	});
+
+	if (args.env) {
+		const envConfig = rawConfig.env?.[args.env];
+		if (envConfig) {
+			collectEnvironmentVars(envConfig.vars);
+		}
+	} else {
+		collectEnvironmentVars(rawConfig.vars);
+		for (const [_envName, env] of Object.entries(rawConfig.env ?? {})) {
+			collectEnvironmentVars(env.vars);
+		}
+	}
 
 	return Object.fromEntries(
 		Object.entries(varsInfo).map(([key, value]) => [key, [...value]])
@@ -910,6 +759,443 @@ function typeofArray(array: unknown[]): string {
 	}
 
 	return `(${typesInArray.join("|")})[]`;
+}
+
+interface CollectedBinding {
+	/**
+	 * The binding category (e.g., "kv_namespaces", "d1_databases")
+	 */
+	bindingCategory: string;
+
+	/**
+	 * The binding name (e.g., "MY_KV_NAMESPACE")
+	 */
+	name: string;
+
+	/**
+	 * The TypeScript type (e.g., "KVNamespace")
+	 */
+	type: string;
+}
+
+/**
+ * Collects all bindings across environments defined in the config file
+ *
+ * Behavior:
+ * - If `args.env` is specified: only collect bindings from that specific environment
+ * - Otherwise: collect bindings from top-level AND all named environments
+ *
+ * @param args - All the CLI arguments passed to the `types` command
+ *
+ * @returns An array of collected bindings with their names, types, and categories
+ *
+ * @throws {UserError} If a binding name exists with different types across environments
+ */
+function collectAllBindings(
+	args: Partial<(typeof typesCommand)["args"]>
+): Array<CollectedBinding> {
+	const bindingsMap = new Map<string, CollectedBinding>();
+
+	function addBinding(
+		name: string,
+		type: string,
+		bindingCategory: string,
+		envName: string
+	) {
+		const existing = bindingsMap.get(name);
+		if (existing) {
+			if (existing.bindingCategory !== bindingCategory) {
+				throw new UserError(
+					`Binding "${name}" has conflicting types across environments: ` +
+						`"${existing.bindingCategory}" vs "${bindingCategory}" (in ${envName}). ` +
+						`Please use unique binding names for different binding types.`
+				);
+			}
+
+			return;
+		}
+		bindingsMap.set(name, { name, type, bindingCategory });
+	}
+
+	function collectEnvironmentBindings(
+		env: RawEnvironment | undefined,
+		envName: string
+	) {
+		if (!env) {
+			return;
+		}
+
+		for (const kv of env.kv_namespaces ?? []) {
+			addBinding(kv.binding, "KVNamespace", "kv_namespaces", envName);
+		}
+
+		for (const r2 of env.r2_buckets ?? []) {
+			addBinding(r2.binding, "R2Bucket", "r2_buckets", envName);
+		}
+
+		for (const d1 of env.d1_databases ?? []) {
+			addBinding(d1.binding, "D1Database", "d1_databases", envName);
+		}
+
+		for (const vectorize of env.vectorize ?? []) {
+			addBinding(vectorize.binding, "VectorizeIndex", "vectorize", envName);
+		}
+
+		for (const hyperdrive of env.hyperdrive ?? []) {
+			addBinding(hyperdrive.binding, "Hyperdrive", "hyperdrive", envName);
+		}
+
+		for (const sendEmail of env.send_email ?? []) {
+			addBinding(sendEmail.name, "SendEmail", "send_email", envName);
+		}
+
+		for (const ae of env.analytics_engine_datasets ?? []) {
+			addBinding(
+				ae.binding,
+				"AnalyticsEngineDataset",
+				"analytics_engine_datasets",
+				envName
+			);
+		}
+
+		for (const dispatch of env.dispatch_namespaces ?? []) {
+			addBinding(
+				dispatch.binding,
+				"DispatchNamespace",
+				"dispatch_namespaces",
+				envName
+			);
+		}
+
+		for (const mtls of env.mtls_certificates ?? []) {
+			addBinding(mtls.binding, "Fetcher", "mtls_certificates", envName);
+		}
+
+		for (const queue of env.queues?.producers ?? []) {
+			addBinding(queue.binding, "Queue", "queues_producers", envName);
+		}
+
+		for (const secret of env.secrets_store_secrets ?? []) {
+			addBinding(
+				secret.binding,
+				"SecretsStoreSecret",
+				"secrets_store_secrets",
+				envName
+			);
+		}
+
+		for (const helloWorld of env.unsafe_hello_world ?? []) {
+			addBinding(
+				helloWorld.binding,
+				"HelloWorldBinding",
+				"unsafe_hello_world",
+				envName
+			);
+		}
+
+		for (const ratelimit of env.ratelimits ?? []) {
+			addBinding(ratelimit.name, "RateLimit", "ratelimits", envName);
+		}
+
+		for (const workerLoader of env.worker_loaders ?? []) {
+			addBinding(
+				workerLoader.binding,
+				"WorkerLoader",
+				"worker_loaders",
+				envName
+			);
+		}
+
+		for (const vpcService of env.vpc_services ?? []) {
+			addBinding(vpcService.binding, "Fetcher", "vpc_services", envName);
+		}
+
+		for (const pipeline of env.pipelines ?? []) {
+			addBinding(
+				pipeline.binding,
+				'import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>',
+				"pipelines",
+				envName
+			);
+		}
+
+		if (env.logfwdr?.bindings?.length) {
+			addBinding("LOGFWDR_SCHEMA", "any", "logfwdr", envName);
+		}
+
+		if (env.browser) {
+			addBinding(env.browser.binding, "Fetcher", "browser", envName);
+		}
+
+		if (env.ai) {
+			addBinding(env.ai.binding, "Ai", "ai", envName);
+		}
+
+		if (env.images) {
+			addBinding(env.images.binding, "ImagesBinding", "images", envName);
+		}
+
+		if (env.media) {
+			addBinding(env.media.binding, "MediaBinding", "media", envName);
+		}
+
+		if (env.version_metadata) {
+			addBinding(
+				env.version_metadata.binding,
+				"WorkerVersionMetadata",
+				"version_metadata",
+				envName
+			);
+		}
+
+		if (env.assets?.binding) {
+			addBinding(env.assets.binding, "Fetcher", "assets", envName);
+		}
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	if (args.env) {
+		const envConfig = rawConfig.env?.[args.env];
+		collectEnvironmentBindings(envConfig, args.env);
+	} else {
+		collectEnvironmentBindings(rawConfig, "top-level");
+		for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+			collectEnvironmentBindings(env, envName);
+		}
+	}
+
+	return Array.from(bindingsMap.values());
+}
+
+/**
+ * Collects Durable Object bindings across environments.
+ *
+ * This is separate because DOs need special handling for type generation.
+ *
+ * @param args - All the CLI arguments passed to the `types` command
+ *
+ * @returns An array of collected Durable Object bindings with their names, class name & possible script name.
+ */
+function collectAllDurableObjects(
+	args: Partial<(typeof typesCommand)["args"]>
+): Array<{
+	class_name: string;
+	name: string;
+	script_name?: string;
+}> {
+	const durableObjectsMap = new Map<
+		string,
+		{
+			class_name: string;
+			name: string;
+			script_name?: string;
+		}
+	>();
+
+	function collectEnvironmentDOs(env: RawEnvironment | undefined) {
+		if (!env?.durable_objects?.bindings) {
+			return;
+		}
+
+		for (const doBinding of env.durable_objects.bindings) {
+			if (durableObjectsMap.has(doBinding.name)) {
+				continue;
+			}
+
+			durableObjectsMap.set(doBinding.name, {
+				class_name: doBinding.class_name,
+				name: doBinding.name,
+				script_name: doBinding.script_name,
+			});
+		}
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	if (args.env) {
+		const envConfig = rawConfig.env?.[args.env];
+		collectEnvironmentDOs(envConfig);
+	} else {
+		collectEnvironmentDOs(rawConfig);
+		for (const env of Object.values(rawConfig.env ?? {})) {
+			collectEnvironmentDOs(env);
+		}
+	}
+
+	return Array.from(durableObjectsMap.values());
+}
+
+/**
+ * Collects Service bindings across environments.
+ *
+ * This is separate because services need special handling for type generation.
+ *
+ * @param args - All the CLI arguments passed to the `types` command
+ *
+ * @returns An array of collected service bindings with their binding, service & possible entrypoint.
+ */
+function collectAllServices(
+	args: Partial<(typeof typesCommand)["args"]>
+): Array<{
+	binding: string;
+	service: string;
+	entrypoint?: string;
+}> {
+	const servicesMap = new Map<
+		string,
+		{
+			binding: string;
+			entrypoint?: string;
+			service: string;
+		}
+	>();
+
+	function collectEnvironmentServices(env: RawEnvironment | undefined) {
+		if (!env?.services) {
+			return;
+		}
+
+		for (const service of env.services) {
+			if (servicesMap.has(service.binding)) {
+				continue;
+			}
+
+			servicesMap.set(service.binding, {
+				binding: service.binding,
+				entrypoint: service.entrypoint,
+				service: service.service,
+			});
+		}
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	if (args.env) {
+		const envConfig = rawConfig.env?.[args.env];
+		collectEnvironmentServices(envConfig);
+	} else {
+		collectEnvironmentServices(rawConfig);
+		for (const env of Object.values(rawConfig.env ?? {})) {
+			collectEnvironmentServices(env);
+		}
+	}
+
+	return Array.from(servicesMap.values());
+}
+
+/**
+ * Collects Workflow bindings across environments.
+ *
+ * This is separate because workflows need special handling for type generation.
+ *
+ * @param args - All the CLI arguments passed to the `types` command
+ *
+ * @returns An array of collected workflow bindings with their names, class name, binding and possible script name.
+ */
+function collectAllWorkflows(
+	args: Partial<(typeof typesCommand)["args"]>
+): Array<{
+	binding: string;
+	name: string;
+	class_name: string;
+	script_name?: string;
+}> {
+	const workflowsMap = new Map<
+		string,
+		{
+			binding: string;
+			name: string;
+			class_name: string;
+			script_name?: string;
+		}
+	>();
+
+	function collectEnvironmentWorkflows(env: RawEnvironment | undefined) {
+		if (!env?.workflows) {
+			return;
+		}
+
+		for (const workflow of env.workflows) {
+			if (workflowsMap.has(workflow.binding)) {
+				continue;
+			}
+
+			workflowsMap.set(workflow.binding, {
+				binding: workflow.binding,
+				name: workflow.name,
+				class_name: workflow.class_name,
+				script_name: workflow.script_name,
+			});
+		}
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	if (args.env) {
+		const envConfig = rawConfig.env?.[args.env];
+		collectEnvironmentWorkflows(envConfig);
+	} else {
+		collectEnvironmentWorkflows(rawConfig);
+		for (const env of Object.values(rawConfig.env ?? {})) {
+			collectEnvironmentWorkflows(env);
+		}
+	}
+
+	return Array.from(workflowsMap.values());
+}
+
+/**
+ * Collects unsafe bindings across environments.
+ *
+ * @param args - All the CLI arguments passed to the `types` command
+ *
+ * @returns An array of collected unsafe bindings with their names and type.
+ */
+function collectAllUnsafeBindings(
+	args: Partial<(typeof typesCommand)["args"]>
+): Array<{
+	name: string;
+	type: string;
+}> {
+	const unsafeMap = new Map<
+		string,
+		{
+			name: string;
+			type: string;
+		}
+	>();
+
+	function collectEnvironmentUnsafe(env: RawEnvironment | undefined) {
+		if (!env?.unsafe?.bindings) {
+			return;
+		}
+
+		for (const binding of env.unsafe.bindings) {
+			if (unsafeMap.has(binding.name)) {
+				continue;
+			}
+
+			unsafeMap.set(binding.name, {
+				name: binding.name,
+				type: binding.type,
+			});
+		}
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	if (args.env) {
+		const envConfig = rawConfig.env?.[args.env];
+		collectEnvironmentUnsafe(envConfig);
+	} else {
+		collectEnvironmentUnsafe(rawConfig);
+		for (const env of Object.values(rawConfig.env ?? {})) {
+			collectEnvironmentUnsafe(env);
+		}
+	}
+
+	return Array.from(unsafeMap.values());
 }
 
 const logHorizontalRule = () => {

@@ -512,6 +512,28 @@ describe("generate types", () => {
 				}
 				interface Env {
 					TEST_KV_NAMESPACE: KVNamespace;
+					R2_BUCKET_BINDING: R2Bucket;
+					D1_TESTING_SOMETHING: D1Database;
+					VECTORIZE_BINDING: VectorizeIndex;
+					HYPERDRIVE_BINDING: Hyperdrive;
+					SEND_EMAIL_BINDING: SendEmail;
+					AE_DATASET_BINDING: AnalyticsEngineDataset;
+					NAMESPACE_BINDING: DispatchNamespace;
+					MTLS_BINDING: Fetcher;
+					TEST_QUEUE_BINDING: Queue;
+					SECRET: SecretsStoreSecret;
+					HELLO_WORLD: HelloWorldBinding;
+					RATE_LIMITER: RateLimit;
+					WORKER_LOADER_BINDING: WorkerLoader;
+					VPC_SERVICE_BINDING: Fetcher;
+					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+					LOGFWDR_SCHEMA: any;
+					BROWSER_BINDING: Fetcher;
+					AI_BINDING: Ai;
+					IMAGES_BINDING: ImagesBinding;
+					MEDIA_BINDING: MediaBinding;
+					VERSION_METADATA_BINDING: WorkerVersionMetadata;
+					ASSETS_BINDING: Fetcher;
 					SOMETHING: \\"asdasdfasdf\\";
 					ANOTHER: \\"thing\\";
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
@@ -521,38 +543,16 @@ describe("generate types", () => {
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
 					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
 					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
-					R2_BUCKET_BINDING: R2Bucket;
-					D1_TESTING_SOMETHING: D1Database;
-					SECRET: SecretsStoreSecret;
-					HELLO_WORLD: HelloWorldBinding;
-					RATE_LIMITER: RateLimit;
-					WORKER_LOADER_BINDING: WorkerLoader;
 					SERVICE_BINDING: Fetcher /* service_name */;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
-					AE_DATASET_BINDING: AnalyticsEngineDataset;
-					NAMESPACE_BINDING: DispatchNamespace;
-					LOGFWDR_SCHEMA: any;
+					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
+					testing_unsafe: any;
+					UNSAFE_RATELIMIT: RateLimit;
 					SOME_DATA_BLOB1: ArrayBuffer;
 					SOME_DATA_BLOB2: ArrayBuffer;
 					SOME_TEXT_BLOB1: string;
 					SOME_TEXT_BLOB2: string;
-					testing_unsafe: any;
-					UNSAFE_RATELIMIT: RateLimit;
-					TEST_QUEUE_BINDING: Queue;
-					SEND_EMAIL_BINDING: SendEmail;
-					VECTORIZE_BINDING: VectorizeIndex;
-					HYPERDRIVE_BINDING: Hyperdrive;
-					VPC_SERVICE_BINDING: Fetcher;
-					MTLS_BINDING: Fetcher;
-					BROWSER_BINDING: Fetcher;
-					AI_BINDING: Ai;
-					IMAGES_BINDING: ImagesBinding;
-					MEDIA_BINDING: MediaBinding;
-					VERSION_METADATA_BINDING: WorkerVersionMetadata;
-					ASSETS_BINDING: Fetcher;
-					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -622,6 +622,28 @@ describe("generate types", () => {
 				}
 				interface Env {
 					TEST_KV_NAMESPACE: KVNamespace;
+					R2_BUCKET_BINDING: R2Bucket;
+					D1_TESTING_SOMETHING: D1Database;
+					VECTORIZE_BINDING: VectorizeIndex;
+					HYPERDRIVE_BINDING: Hyperdrive;
+					SEND_EMAIL_BINDING: SendEmail;
+					AE_DATASET_BINDING: AnalyticsEngineDataset;
+					NAMESPACE_BINDING: DispatchNamespace;
+					MTLS_BINDING: Fetcher;
+					TEST_QUEUE_BINDING: Queue;
+					SECRET: SecretsStoreSecret;
+					HELLO_WORLD: HelloWorldBinding;
+					RATE_LIMITER: RateLimit;
+					WORKER_LOADER_BINDING: WorkerLoader;
+					VPC_SERVICE_BINDING: Fetcher;
+					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+					LOGFWDR_SCHEMA: any;
+					BROWSER_BINDING: Fetcher;
+					AI_BINDING: Ai;
+					IMAGES_BINDING: ImagesBinding;
+					MEDIA_BINDING: MediaBinding;
+					VERSION_METADATA_BINDING: WorkerVersionMetadata;
+					ASSETS_BINDING: Fetcher;
 					SOMETHING: \\"asdasdfasdf\\";
 					ANOTHER: \\"thing\\";
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
@@ -632,38 +654,16 @@ describe("generate types", () => {
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
 					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
 					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
-					R2_BUCKET_BINDING: R2Bucket;
-					D1_TESTING_SOMETHING: D1Database;
-					SECRET: SecretsStoreSecret;
-					HELLO_WORLD: HelloWorldBinding;
-					RATE_LIMITER: RateLimit;
-					WORKER_LOADER_BINDING: WorkerLoader;
 					SERVICE_BINDING: Fetcher /* service_name */;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
-					AE_DATASET_BINDING: AnalyticsEngineDataset;
-					NAMESPACE_BINDING: DispatchNamespace;
-					LOGFWDR_SCHEMA: any;
+					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
+					testing_unsafe: any;
+					UNSAFE_RATELIMIT: RateLimit;
 					SOME_DATA_BLOB1: ArrayBuffer;
 					SOME_DATA_BLOB2: ArrayBuffer;
 					SOME_TEXT_BLOB1: string;
 					SOME_TEXT_BLOB2: string;
-					testing_unsafe: any;
-					UNSAFE_RATELIMIT: RateLimit;
-					TEST_QUEUE_BINDING: Queue;
-					SEND_EMAIL_BINDING: SendEmail;
-					VECTORIZE_BINDING: VectorizeIndex;
-					HYPERDRIVE_BINDING: Hyperdrive;
-					VPC_SERVICE_BINDING: Fetcher;
-					MTLS_BINDING: Fetcher;
-					BROWSER_BINDING: Fetcher;
-					AI_BINDING: Ai;
-					IMAGES_BINDING: ImagesBinding;
-					MEDIA_BINDING: MediaBinding;
-					VERSION_METADATA_BINDING: WorkerVersionMetadata;
-					ASSETS_BINDING: Fetcher;
-					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -797,6 +797,28 @@ describe("generate types", () => {
 				}
 				interface Env {
 					TEST_KV_NAMESPACE: KVNamespace;
+					R2_BUCKET_BINDING: R2Bucket;
+					D1_TESTING_SOMETHING: D1Database;
+					VECTORIZE_BINDING: VectorizeIndex;
+					HYPERDRIVE_BINDING: Hyperdrive;
+					SEND_EMAIL_BINDING: SendEmail;
+					AE_DATASET_BINDING: AnalyticsEngineDataset;
+					NAMESPACE_BINDING: DispatchNamespace;
+					MTLS_BINDING: Fetcher;
+					TEST_QUEUE_BINDING: Queue;
+					SECRET: SecretsStoreSecret;
+					HELLO_WORLD: HelloWorldBinding;
+					RATE_LIMITER: RateLimit;
+					WORKER_LOADER_BINDING: WorkerLoader;
+					VPC_SERVICE_BINDING: Fetcher;
+					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+					LOGFWDR_SCHEMA: any;
+					BROWSER_BINDING: Fetcher;
+					AI_BINDING: Ai;
+					IMAGES_BINDING: ImagesBinding;
+					MEDIA_BINDING: MediaBinding;
+					VERSION_METADATA_BINDING: WorkerVersionMetadata;
+					ASSETS_BINDING: Fetcher;
 					SOMETHING: \\"asdasdfasdf\\";
 					ANOTHER: \\"thing\\";
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
@@ -807,38 +829,16 @@ describe("generate types", () => {
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
 					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
 					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace<import(\\"../c/index\\").RealDurableExternal>;
-					R2_BUCKET_BINDING: R2Bucket;
-					D1_TESTING_SOMETHING: D1Database;
-					SECRET: SecretsStoreSecret;
-					HELLO_WORLD: HelloWorldBinding;
-					RATE_LIMITER: RateLimit;
-					WORKER_LOADER_BINDING: WorkerLoader;
 					SERVICE_BINDING: Service<typeof import(\\"../b/index\\").default>;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service<typeof import(\\"../c/index\\").RealEntrypoint>;
-					AE_DATASET_BINDING: AnalyticsEngineDataset;
-					NAMESPACE_BINDING: DispatchNamespace;
-					LOGFWDR_SCHEMA: any;
+					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
+					testing_unsafe: any;
+					UNSAFE_RATELIMIT: RateLimit;
 					SOME_DATA_BLOB1: ArrayBuffer;
 					SOME_DATA_BLOB2: ArrayBuffer;
 					SOME_TEXT_BLOB1: string;
 					SOME_TEXT_BLOB2: string;
-					testing_unsafe: any;
-					UNSAFE_RATELIMIT: RateLimit;
-					TEST_QUEUE_BINDING: Queue;
-					SEND_EMAIL_BINDING: SendEmail;
-					VECTORIZE_BINDING: VectorizeIndex;
-					HYPERDRIVE_BINDING: Hyperdrive;
-					VPC_SERVICE_BINDING: Fetcher;
-					MTLS_BINDING: Fetcher;
-					BROWSER_BINDING: Fetcher;
-					AI_BINDING: Ai;
-					IMAGES_BINDING: ImagesBinding;
-					MEDIA_BINDING: MediaBinding;
-					VERSION_METADATA_BINDING: WorkerVersionMetadata;
-					ASSETS_BINDING: Fetcher;
-					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -1533,6 +1533,286 @@ describe("generate types", () => {
 						MY_VAR_A: string;
 						MY_VAR_B: object;
 						MY_VAR_C: string[] | number[];
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				"
+			`);
+		});
+	});
+
+	describe("bindings present in multiple environments", () => {
+		it("should collect bindings from all environments when no --env is specified", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					d1_databases: [
+						{
+							binding: "D1_TOP",
+							database_id: "top-d1-id",
+							database_name: "top",
+						},
+					],
+					kv_namespaces: [
+						{
+							binding: "KV_TOP",
+							id: "top-kv-id",
+						},
+					],
+					env: {
+						staging: {
+							d1_databases: [
+								{
+									binding: "D1_STAGING",
+									database_id: "staging-d1-id",
+									database_name: "staging",
+								},
+							],
+							kv_namespaces: [
+								{
+									binding: "KV_STAGING",
+									id: "staging-kv-id",
+								},
+							],
+						},
+						production: {
+							kv_namespaces: [
+								{
+									binding: "KV_PROD",
+									id: "prod-kv-id",
+								},
+							],
+							r2_buckets: [
+								{
+									binding: "R2_PROD",
+									bucket_name: "prod-bucket",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface Env {
+						KV_TOP: KVNamespace;
+						D1_TOP: D1Database;
+						KV_STAGING: KVNamespace;
+						D1_STAGING: D1Database;
+						KV_PROD: KVNamespace;
+						R2_PROD: R2Bucket;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				"
+			`);
+		});
+
+		it("should only collect bindings from the specified environment when --env is used", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [
+						{
+							binding: "KV_TOP",
+							id: "top-kv-id",
+						},
+					],
+					env: {
+						staging: {
+							d1_databases: [
+								{
+									binding: "D1_STAGING",
+									database_id: "staging-d1-id",
+									database_name: "staging",
+								},
+							],
+							kv_namespaces: [
+								{
+									binding: "KV_STAGING",
+									id: "staging-kv-id",
+								},
+							],
+						},
+						production: {
+							kv_namespaces: [
+								{
+									binding: "KV_PROD",
+									id: "prod-kv-id",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false --env staging");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface Env {
+						KV_STAGING: KVNamespace;
+						D1_STAGING: D1Database;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				"
+			`);
+		});
+
+		it("should deduplicate bindings with the same name across environments", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [
+						{
+							binding: "MY_KV",
+							id: "top-kv-id",
+						},
+					],
+					env: {
+						staging: {
+							kv_namespaces: [
+								{
+									binding: "MY_KV",
+									id: "staging-kv-id",
+								},
+							],
+						},
+						production: {
+							kv_namespaces: [
+								{
+									binding: "MY_KV",
+									id: "prod-kv-id",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface Env {
+						MY_KV: KVNamespace;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				"
+			`);
+		});
+
+		it("should error when binding name has conflicting types across environments", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [
+						{
+							binding: "CACHE",
+							id: "kv-id",
+						},
+					],
+					env: {
+						staging: {
+							r2_buckets: [
+								{
+									binding: "CACHE",
+									bucket_name: "r2-bucket",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await expect(
+				runWrangler("types --include-runtime=false")
+			).rejects.toThrowError(
+				/Binding "CACHE" has conflicting types across environments/
+			);
+		});
+
+		it("should collect vars only from specified environment with --env", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					vars: {
+						MY_VAR: "top-level",
+					},
+					env: {
+						staging: {
+							vars: {
+								MY_VAR: "staging",
+								STAGING_ONLY: "staging-only-value",
+							},
+						},
+						production: {
+							vars: {
+								MY_VAR: "production",
+								PROD_ONLY: "prod-only-value",
+							},
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false --env staging");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface Env {
+						MY_VAR: \\"staging\\";
+						STAGING_ONLY: \\"staging-only-value\\";
 					}
 				}
 				interface Env extends Cloudflare.Env {}
