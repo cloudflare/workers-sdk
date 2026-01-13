@@ -8,12 +8,6 @@ export const EXTERNAL_DEPENDENCIES = [
 	// Source map support for better error stack traces - needs to be loaded at runtime
 	"@cspotcode/source-map-support",
 
-	// JavaScript parser used for code analysis - complex parser that's better kept external
-	"acorn",
-
-	// AST walker for acorn - companion to acorn parser
-	"acorn-walk",
-
 	// Synchronous process exit hooks - uses native bindings
 	"exit-hook",
 
