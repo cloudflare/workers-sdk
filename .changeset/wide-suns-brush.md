@@ -1,5 +1,5 @@
 ---
-"@cloudflare/containers-shared": patch
+"@cloudflare/containers-shared": minor
 "@cloudflare/workers-utils": minor
 "wrangler": minor
 ---
