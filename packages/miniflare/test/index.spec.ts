@@ -1255,7 +1255,7 @@ test("Miniflare: custom upstream as origin", async () => {
 		host: upstream.http.host,
 	});
 });
-test("Miniflare: custom upstream sets X-Miniflare-Original-Hostname header", async () => {
+test("Miniflare: custom upstream sets MF-Original-Hostname header", async () => {
 	const upstream = await useServer((req, res) => {
 		res.end(`upstream`);
 	});
@@ -1266,7 +1266,7 @@ test("Miniflare: custom upstream sets X-Miniflare-Original-Hostname header", asy
 			async fetch(request) {
 				return Response.json({
 					host: request.headers.get("Host"),
-					originalHostname: request.headers.get("X-Miniflare-Original-Hostname")
+					originalHostname: request.headers.get("MF-Original-Hostname")
 				});
 			}
 		}`,
@@ -1281,13 +1281,13 @@ test("Miniflare: custom upstream sets X-Miniflare-Original-Hostname header", asy
 		originalHostname: "my-original-host.example.com:8080",
 	});
 });
-test("Miniflare: X-Miniflare-Original-Hostname header not set without upstream", async () => {
+test("Miniflare: MF-Original-Hostname header not set without upstream", async () => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
 			async fetch(request) {
 				return Response.json({
-					originalHostname: request.headers.get("X-Miniflare-Original-Hostname")
+					originalHostname: request.headers.get("MF-Original-Hostname")
 				});
 			}
 		}`,

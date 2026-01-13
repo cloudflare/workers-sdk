@@ -744,15 +744,15 @@ Options shared between all Workers/"nanoservices".
 
   When `upstream` is set, the `Host` header is rewritten to match the upstream
   server. To preserve the original hostname, Miniflare adds an
-  `X-Miniflare-Original-Hostname` header containing the original `Host` value:
+  `MF-Original-Hostname` header containing the original `Host` value:
 
   ```js
   export default {
   	async fetch(request) {
   		// When upstream is set, Host header contains the upstream hostname
   		const upstreamHost = request.headers.get("Host");
-  		// Original hostname is preserved in X-Miniflare-Original-Hostname
-  		const originalHost = request.headers.get("X-Miniflare-Original-Hostname");
+  		// Original hostname is preserved in MF-Original-Hostname
+  		const originalHost = request.headers.get("MF-Original-Hostname");
   		return new Response(
   			`Original: ${originalHost}, Upstream: ${upstreamHost}`
   		);

@@ -8,7 +8,7 @@ export const CoreHeaders = {
 	 * to match the upstream. This header preserves the original hostname
 	 * so Workers can access it if needed.
 	 */
-	ORIGINAL_HOSTNAME: "X-Miniflare-Original-Hostname",
+	ORIGINAL_HOSTNAME: "MF-Original-Hostname",
 	PROXY_SHARED_SECRET: "MF-Proxy-Shared-Secret",
 	DISABLE_PRETTY_ERROR: "MF-Disable-Pretty-Error",
 	ERROR_STACK: "MF-Experimental-Error-Stack",
