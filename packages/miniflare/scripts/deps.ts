@@ -5,33 +5,29 @@
  * This list is validated by `tools/deployments/validate-package-dependencies.ts`.
  */
 export const EXTERNAL_DEPENDENCIES = [
-	// Source map support for better error stack traces - needs to be loaded at runtime
+	// Must be external - uses require.resolve() and require.cache manipulation
+	// to load fresh instances of the module at runtime (see sourcemap.ts)
 	"@cspotcode/source-map-support",
 
-	// Synchronous process exit hooks - uses native bindings
-	"exit-hook",
-
-	// Glob pattern matching - small utility kept external for consistency
-	"glob-to-regexp",
-
-	// Image processing library with native platform-specific binaries
+	// Native binary with platform-specific builds - cannot be bundled
 	"sharp",
 
-	// Gracefully stop HTTP servers - needs runtime integration
-	"stoppable",
-
-	// HTTP client used for fetch implementation - large dependency better kept external
+	// Large HTTP client with optional native dependencies; commonly shared
+	// with other packages to avoid version conflicts and duplication
 	"undici",
 
-	// Cloudflare's JavaScript runtime - native binary, cannot be bundled
+	// Native binary - Cloudflare's JavaScript runtime cannot be bundled
 	"workerd",
 
-	// WebSocket implementation - needs native bindings for performance
+	// Has optional native bindings (bufferutil, utf-8-validate) for performance;
+	// commonly shared with other packages to avoid duplication
 	"ws",
 
-	// Error formatting library - kept external for easier debugging
+	// Must be external - dynamically required at runtime via require("youch")
+	// for lazy loading of pretty error pages
 	"youch",
 
-	// Schema validation library - used throughout for runtime validation
+	// Large validation library; commonly shared as a dependency
+	// to avoid version conflicts and bundle size duplication
 	"zod",
 ];
