@@ -2285,7 +2285,7 @@ importers:
         version: 2.0.0-rc.24
       workerd:
         specifier: ^1.20251221.0
-        version: 1.20260108.0
+        version: 1.20260111.0
     devDependencies:
       '@types/node-unenv':
         specifier: npm:@types/node@^22.14.0
