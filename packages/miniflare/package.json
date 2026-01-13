@@ -44,12 +44,8 @@
 	},
 	"dependencies": {
 		"@cspotcode/source-map-support": "0.8.1",
-		"sharp": "^0.34.5",
-		"undici": "catalog:default",
-		"workerd": "1.20260120.0",
-		"ws": "catalog:default",
-		"youch": "4.1.0-beta.10",
-		"zod": "^3.25.76"
+		"workerd": "1.20260115.0",
+		"youch": "4.1.0-beta.10"
 	},
 	"devDependencies": {
 		"@cloudflare/cli": "workspace:*",
@@ -94,13 +90,17 @@
 		"postal-mime": "^2.4.3",
 		"pretty-bytes": "^6.0.0",
 		"rimraf": "catalog:default",
+		"sharp": "^0.34.5",
 		"source-map": "^0.6.1",
 		"stoppable": "1.1.0",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
+		"undici": "catalog:default",
 		"vitest": "catalog:default",
 		"which": "^2.0.2",
-		"xdg-app-paths": "^8.3.0"
+		"ws": "catalog:default",
+		"xdg-app-paths": "^8.3.0",
+		"zod": "^3.25.76"
 	},
 	"engines": {
 		"node": ">=18.0.0"
