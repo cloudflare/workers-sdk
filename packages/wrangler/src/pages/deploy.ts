@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { deploy } from "../api/pages/deploy";
@@ -334,7 +334,12 @@ export const Handler = async (args: PagesDeployArgs) => {
 			}
 
 			if (!commitMessage) {
-				commitMessage = execSync(`git show -s --format=%B ${commitHash}`)
+				commitMessage = execFileSync("git", [
+					"show",
+					"-s",
+					"--format=%B",
+					commitHash,
+				])
 					.toString()
 					.trim();
 			}
