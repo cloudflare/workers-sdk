@@ -451,6 +451,27 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
+	// node:dgram (experimental, no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "dgram enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_dgram_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_dgram_module: true,
+			},
+		},
+		{
+			name: "dgram disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_dgram_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_dgram_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(localTestConfigs)(

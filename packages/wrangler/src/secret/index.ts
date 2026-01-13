@@ -216,11 +216,12 @@ export const secretPutCommand = createCommand({
 			} catch (e) {
 				if (e instanceof APIError && e.code === VERSION_NOT_DEPLOYED_ERR_CODE) {
 					throw new UserError(
-						"Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed. " +
-							"Please ensure that the latest version of your Worker is fully deployed " +
-							"(wrangler versions deploy) before modifying secrets. " +
-							"Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version." +
-							"\n\nNote: This limitation will be addressed in an upcoming release."
+						"Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed.\n" +
+							"This limitation exists to prevent accidental deployment when using Worker versions and secrets together.\n" +
+							"To resolve this, you have two options:\n" +
+							"(1) use the `wrangler versions secret put` instead, which allows you to update secrets without deploying; or\n" +
+							"(2) deploy the latest version first, then modify secrets.\n" +
+							"Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version."
 					);
 				} else {
 					throw e;
