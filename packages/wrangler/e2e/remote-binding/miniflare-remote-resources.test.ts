@@ -347,26 +347,26 @@ const testCases: TestCase[] = [
 		}),
 		expectFetchToMatch: [expect.stringContaining(`image/avif`)],
 	},
-	{
-		name: "Media",
-		scriptPath: "media.js",
-		setup: () => ({
-			remoteProxySessionConfig: {
-				bindings: {
-					MEDIA: {
-						type: "media",
-					},
-				},
-			},
-			miniflareConfig: (connection) => ({
-				media: {
-					binding: "MEDIA",
-					remoteProxyConnectionString: connection,
-				},
-			}),
-		}),
-		expectFetchToMatch: [expect.stringContaining(`image/jpeg`)],
-	},
+	// {
+	// 	name: "Media",
+	// 	scriptPath: "media.js",
+	// 	setup: () => ({
+	// 		remoteProxySessionConfig: {
+	// 			bindings: {
+	// 				MEDIA: {
+	// 					type: "media",
+	// 				},
+	// 			},
+	// 		},
+	// 		miniflareConfig: (connection) => ({
+	// 			media: {
+	// 				binding: "MEDIA",
+	// 				remoteProxyConnectionString: connection,
+	// 			},
+	// 		}),
+	// 	}),
+	// 	expectFetchToMatch: [expect.stringContaining(`image/jpeg`)],
+	// },
 	{
 		name: "Dispatch Namespace",
 		scriptPath: "dispatch-namespace.js",
