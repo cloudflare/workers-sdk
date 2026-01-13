@@ -1,5 +1,13 @@
 # wrangler
 
+## 3.114.17
+
+### Patch Changes
+
+- [#11891](https://github.com/cloudflare/workers-sdk/pull/11891) [`6d5557b`](https://github.com/cloudflare/workers-sdk/commit/6d5557ba22fba7d65193276a94cb5b54ead521d9) Thanks [@emily-shen](https://github.com/emily-shen)! - Use argument array when executing git commands with `wrangler pages deploy`
+
+  Pass user provided values from `--commit-hash` safely to underlying git command.
+
 ## 3.114.16
 
 ### Patch Changes
