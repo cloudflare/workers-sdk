@@ -496,7 +496,7 @@ class ErrorOAuth2 extends UserError {
 	}
 }
 
-// For really unknown errors.
+// Unclassified Oauth errors
 class ErrorUnknown extends UserError {
 	toString(): string {
 		return "ErrorUnknown";
