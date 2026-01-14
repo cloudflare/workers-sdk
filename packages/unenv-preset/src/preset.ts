@@ -80,6 +80,8 @@ export function getCloudflarePreset({
 	const consoleOverrides = getConsoleOverrides(compat);
 	const vmOverrides = getVmOverrides(compat);
 	const inspectorOverrides = getInspectorOverrides(compat);
+	const sqliteOverrides = getSqliteOverrides(compat);
+	const dgramOverrides = getDgramOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -96,6 +98,8 @@ export function getCloudflarePreset({
 		...consoleOverrides.nativeModules,
 		...vmOverrides.nativeModules,
 		...inspectorOverrides.nativeModules,
+		...sqliteOverrides.nativeModules,
+		...dgramOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -113,6 +117,8 @@ export function getCloudflarePreset({
 		...consoleOverrides.hybridModules,
 		...vmOverrides.hybridModules,
 		...inspectorOverrides.hybridModules,
+		...sqliteOverrides.hybridModules,
+		...dgramOverrides.hybridModules,
 	];
 
 	return {
@@ -628,6 +634,78 @@ function getInspectorOverrides({
 	return enabled
 		? {
 				nativeModules: ["inspector/promises", "inspector"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:sqlite` (unenv or workerd)
+ *
+ * The native sqlite implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_sqlite_module" flag
+ * - can be disabled with the "disable_nodejs_sqlite_module" flag
+ */
+function getSqliteOverrides({
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_sqlite_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_sqlite_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `sqlite` module from workerd
+	return enabled
+		? {
+				nativeModules: ["sqlite"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:dgram` (unenv or workerd)
+ *
+ * The native dgram implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_dgram_module" flag
+ * - can be disabled with the "disable_nodejs_dgram_module" flag
+ */
+function getDgramOverrides({
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_dgram_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_dgram_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `dgram` module from workerd
+	return enabled
+		? {
+				nativeModules: ["dgram"],
 				hybridModules: [],
 			}
 		: {

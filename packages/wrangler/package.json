@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.58.0",
+	"version": "4.59.1",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -112,6 +112,7 @@
 		"@types/yargs": "^17.0.22",
 		"@vitest/ui": "catalog:default",
 		"@webcontainer/env": "^1.1.0",
+		"am-i-vibing": "^0.1.0",
 		"capnweb": "^0.1.0",
 		"chalk": "^5.2.0",
 		"chokidar": "^4.0.1",

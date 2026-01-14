@@ -1,5 +1,25 @@
 # @cloudflare/unenv-preset
 
+## 2.9.0
+
+### Minor Changes
+
+- [#11841](https://github.com/cloudflare/workers-sdk/pull/11841) [`beb96af`](https://github.com/cloudflare/workers-sdk/commit/beb96af470aefaae73237309244cf7369b329ff0) Thanks [@vicb](https://github.com/vicb)! - Add support for native `node:sqlite` module when the `enable_nodejs_sqlite_module` compatibility flag is enabled. This feature is currently experimental and requires `nodejs_compat`, `experimental`, and `enable_nodejs_sqlite_module` compatibility flags to be set.
+
+- [#11834](https://github.com/cloudflare/workers-sdk/pull/11834) [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad) Thanks [@vicb](https://github.com/vicb)! - Export the list of built-in node modules that are available without the `node:` prefix.
+  Modules that are only available with the `node:` prefix are not included (i.e. `node:sqlite`).
+  Note that new modules will be added with the `node:` prefix only and not be added to the list.
+
+### Patch Changes
+
+- [#11834](https://github.com/cloudflare/workers-sdk/pull/11834) [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad) Thanks [@vicb](https://github.com/vicb)! - fix handling of Node builtin modules
+
+  The list of builtin modules should not depend on the version of Node.
+  Switch to using the lists published by `@cloudflare/unenv-preset`.
+
+  This fixes an issue with trying to import i.e. `node:sqlite` with Node < 22.5.0
+  which does not implement this module.
+
 ## 2.8.0
 
 ### Minor Changes

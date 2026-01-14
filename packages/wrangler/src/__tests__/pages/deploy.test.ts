@@ -5714,6 +5714,118 @@ and that at least one include rule is provided.
 		});
 	});
 
+	describe("deploys with custom commit information", () => {
+		it("should accept and send --commit-hash parameter", async () => {
+			mkdirSync("public");
+			writeFileSync("public/README.md", "# Test project");
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			let deploymentFormData: Record<string, unknown> | null = null;
+
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: [],
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post("*/pages/assets/upload", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}),
+				http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { deployment_configs: { production: {}, preview: {} } },
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request }) => {
+						const formData = await request.formData();
+						const formDataObj: Record<string, unknown> = {};
+						for (const [key, value] of formData.entries()) {
+							formDataObj[key] = value;
+						}
+						deploymentFormData = formDataObj;
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler(
+				"pages deploy public --project-name=foo --commit-hash=abc123def456 --commit-message='Test commit'"
+			);
+
+			// Verify the commit_hash was sent in the deployment request
+			expect(deploymentFormData).not.toBeNull();
+			expect(deploymentFormData).toHaveProperty("commit_hash", "abc123def456");
+			expect(deploymentFormData).toHaveProperty(
+				"commit_message",
+				"Test commit"
+			);
+		});
+	});
+
 	describe("deploys using redirected configs", () => {
 		let fooProjectDetailsChecked = false;
 

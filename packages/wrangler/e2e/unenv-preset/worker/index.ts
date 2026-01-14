@@ -783,6 +783,69 @@ export const WorkerdTests: Record<string, () => void> = {
 			assertTypeOf(inspectorPromises.default, "Network", "object");
 		}
 	},
+
+	async testSqlite() {
+		let sqlite;
+		try {
+			// This source file is imported by the Node runtime (to retrieve the list of tests).
+			// As `node:sqlite` has only be added in Node 22.5.0, we need to try/catch to not error with older versions.
+			// Note: This test is not meant to be executed by the Node runtime,
+			// but only by workerd where `node:sqlite` is available.
+			// @ts-expect-error TS2307 - node:sqlite is only available in Node 22.5.0+
+			sqlite = await import("node:sqlite");
+		} catch {
+			throw new Error(
+				"sqlite is not available. This should never happen in workerd."
+			);
+		}
+
+		// Common exports (both unenv stub and native workerd)
+		assertTypeOfProperties(sqlite, {
+			DatabaseSync: "function",
+			StatementSync: "function",
+			constants: "object",
+			default: "object",
+		});
+		assertTypeOfProperties(sqlite.default, {
+			DatabaseSync: "function",
+			StatementSync: "function",
+			constants: "object",
+		});
+
+		if (getRuntimeFlagValue("enable_nodejs_sqlite_module")) {
+			// Native workerd exports `backup` function and non-empty constants
+			assertTypeOf(sqlite, "backup", "function");
+			assertTypeOf(sqlite.default, "backup", "function");
+			assert.strictEqual(
+				"SQLITE_CHANGESET_OMIT" in sqlite.constants,
+				true,
+				"constants should contain SQLITE_CHANGESET_OMIT"
+			);
+		} else {
+			// unenv stub: no backup function and empty constants
+			assertTypeOf(sqlite, "backup", "undefined");
+			assertTypeOf(sqlite.default, "backup", "undefined");
+			assert.deepStrictEqual(
+				Object.keys(sqlite.constants),
+				[],
+				"constants should be empty in unenv stub"
+			);
+		}
+	},
+
+	async testDgram() {
+		const dgram = await import("node:dgram");
+
+		assertTypeOfProperties(dgram, {
+			createSocket: "function",
+			Socket: "function",
+		});
+
+		assertTypeOfProperties(dgram.default, {
+			createSocket: "function",
+			Socket: "function",
+		});
+	},
 };
 
 /**
