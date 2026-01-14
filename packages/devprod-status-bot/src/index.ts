@@ -3,6 +3,7 @@ import type {
 	IssueCommentEvent,
 	IssuesEvent,
 	Schema,
+	SecurityAdvisoryEvent,
 	WebhookEvent,
 } from "@octokit/webhooks-types";
 
@@ -274,6 +275,18 @@ function isIssueOrPREvent(
 	return null;
 }
 
+function isSecurityAdvisoryEvent(
+	message: WebhookEvent
+): SecurityAdvisoryEvent | null {
+	if (
+		"security_advisory" in message &&
+		(message.action === "published" || message.action === "performed")
+	) {
+		return message as SecurityAdvisoryEvent;
+	}
+	return null;
+}
+
 async function sendSecurityAlert(
 	webhookUrl: string,
 	{
@@ -344,6 +357,64 @@ async function sendSecurityAlert(
 			],
 		},
 		"-security-alert-" + issueEvent.issue.number
+	);
+}
+
+async function sendSecurityAdvisoryAlert(
+	webhookUrl: string,
+	advisoryEvent: SecurityAdvisoryEvent
+) {
+	const advisory = advisoryEvent.security_advisory;
+	const action =
+		advisoryEvent.action === "performed"
+			? "Needs Triaging"
+			: advisoryEvent.action === "published"
+				? "Published"
+				: "Updated";
+
+	if (action === "Published") {
+		return;
+	}
+
+	const advisoryUrl = `https://github.com/cloudflare/workers-sdk/security/advisories/${advisory.ghsa_id}`;
+
+	return sendMessage(
+		webhookUrl,
+		{
+			cardsV2: [
+				{
+					cardId: "unique-card-id",
+					card: {
+						header: {
+							title: `🔐 Security Advisory ${action}`,
+							subtitle: advisory.summary,
+						},
+						sections: [
+							{
+								collapsible: false,
+								widgets: [
+									{
+										buttonList: {
+											buttons: [
+												{
+													text: "View Advisory",
+													onClick: {
+														openLink: {
+															url: advisoryUrl,
+														},
+													},
+												},
+											],
+										},
+									},
+								],
+							},
+						],
+					},
+				},
+			],
+		},
+		"-security-advisory-" + advisory.ghsa_id
 	);
 }
 
@@ -514,8 +585,17 @@ export default {
 				env.GITHUB_PAT,
 				body
 			);
+			// Flags suspicious issues/PRs for review
 			if (maybeSecurityIssue) {
 				await sendSecurityAlert(env.ALERTS_WEBHOOK, maybeSecurityIssue);
+			}
+			// Notifies when a security advisory is published/updated to workers-sdk
+			const maybeSecurityAdvisory = isSecurityAdvisoryEvent(body);
+			if (maybeSecurityAdvisory) {
+				await sendSecurityAdvisoryAlert(
+					env.ALERTS_WEBHOOK,
+					maybeSecurityAdvisory
+				);
 			}
 		}
 
