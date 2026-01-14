@@ -318,6 +318,23 @@ type ConfigToDTS = Partial<Omit<Config, "vars">> & { vars: VarTypes } & {
 	secrets: Secrets;
 };
 
+/**
+ * Generates TypeScript environment type definitions from a Wrangler configuration.
+ *
+ * This function collects all bindings (KV, R2, D1, Durable Objects, Services, etc.),
+ * variables, and secrets from the config and produces TypeScript type declarations
+ * for the `Env` interface used by Cloudflare Workers.
+ *
+ * @param config - The parsed Wrangler configuration object
+ * @param args - CLI arguments passed to the `types` command
+ * @param envInterface - The name of the generated environment interface (default: "Env")
+ * @param outputPath - The file path where the generated types will be written
+ * @param [entrypoint] - Optional entry point information for the Worker
+ * @param [serviceEntries] - Optional map of service names to their entry points for cross-worker type generation
+ * @param [log] - Whether to log output to the console (default: true)
+ *
+ * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
+ */
 export async function generateEnvTypes(
 	config: Config,
 	args: Partial<(typeof typesCommand)["args"]>,
