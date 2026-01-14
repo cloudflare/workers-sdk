@@ -76,7 +76,7 @@ export const validate = async (args: {
 		fileMap: Map<string, FileContainer> = new Map(),
 		startingDir: string = dir
 	) => {
-		let files;
+		let files: string[];
 		try {
 			files = await readdir(dir);
 		} catch (e) {
