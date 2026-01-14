@@ -2,7 +2,7 @@
 "wrangler": patch
 ---
 
-Show helpful messages for errors outside of Wrangler's control. This prevents unnecessary Sentry reports for issues outside of the user's control.
+Show helpful messages for errors outside of Wrangler's control. This prevents unnecessary Sentry reports.
 
 Errors now handled with user-friendly messages:
 
