@@ -52,7 +52,6 @@
 		"eslint": "catalog:default",
 		"ignore": "^5.2.0",
 		"mime": "^4.0.7",
-		"rimraf": "catalog:default",
 		"toucan-js": "4.0.0",
 		"typescript": "catalog:default",
 		"vitest": "~2.1.0",

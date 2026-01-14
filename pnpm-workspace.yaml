@@ -22,8 +22,6 @@ catalog:
   "@vitest/runner": ~3.2.0
   "@vitest/snapshot": ~3.2.0
   "@vitest/ui": ~3.2.0
-  # rimraf@6 requires node 20 or >=22
-  rimraf: "^6.0.1"
   typescript: "~5.8.3"
   undici: "7.18.2"
   # Override undici-types from @types/node so that the Cloudflare SDK typings match our installed
@@ -44,6 +42,7 @@ catalog:
   # ultimately included in vitest-pool-workers (through Wrangler), causing a circular dependency.
   "@cloudflare/vitest-pool-workers": "^0.10.11"
   "capnp-es": "^0.0.14"
+  premove: "^4.0.0"
 
 catalogs:
   vite-plugin:
