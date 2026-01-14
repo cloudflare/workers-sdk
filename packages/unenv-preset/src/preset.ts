@@ -82,6 +82,7 @@ export function getCloudflarePreset({
 	const inspectorOverrides = getInspectorOverrides(compat);
 	const sqliteOverrides = getSqliteOverrides(compat);
 	const dgramOverrides = getDgramOverrides(compat);
+	const streamWrapOverrides = getStreamWrapOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -100,6 +101,7 @@ export function getCloudflarePreset({
 		...inspectorOverrides.nativeModules,
 		...sqliteOverrides.nativeModules,
 		...dgramOverrides.nativeModules,
+		...streamWrapOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -119,6 +121,7 @@ export function getCloudflarePreset({
 		...inspectorOverrides.hybridModules,
 		...sqliteOverrides.hybridModules,
 		...dgramOverrides.hybridModules,
+		...streamWrapOverrides.hybridModules,
 	];
 
 	return {
@@ -706,6 +709,42 @@ function getDgramOverrides({
 	return enabled
 		? {
 				nativeModules: ["dgram"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:_stream_wrap` (unenv or workerd)
+ *
+ * The native _stream_wrap implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_stream_wrap_module" flag
+ * - can be disabled with the "disable_nodejs_stream_wrap_module" flag
+ */
+function getStreamWrapOverrides({
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_stream_wrap_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_stream_wrap_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `_stream_wrap` module from workerd
+	return enabled
+		? {
+				nativeModules: ["_stream_wrap"],
 				hybridModules: [],
 			}
 		: {
