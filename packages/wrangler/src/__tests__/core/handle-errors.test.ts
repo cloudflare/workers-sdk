@@ -173,4 +173,83 @@ describe("handleError", () => {
 			);
 		});
 	});
+
+	describe("Permission errors (EPERM)", () => {
+		it("should show user-friendly message for EPERM errors with path", async () => {
+			const error = Object.assign(
+				new Error(
+					"EPERM: operation not permitted, open '/Users/user/.wrangler/logs/wrangler.log'"
+				),
+				{
+					code: "EPERM",
+					errno: -1,
+					syscall: "open",
+					path: "/Users/user/.wrangler/logs/wrangler.log",
+				}
+			);
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("PermissionError");
+			expect(std.err).toContain(
+				"A permission error occurred while accessing the file system"
+			);
+			expect(std.err).toContain(
+				"Affected path: /Users/user/.wrangler/logs/wrangler.log"
+			);
+			expect(std.err).toContain("Insufficient file or directory permissions");
+		});
+
+		it("should show error message when path is not available", async () => {
+			const error = Object.assign(
+				new Error("EPERM: operation not permitted, mkdir"),
+				{
+					code: "EPERM",
+				}
+			);
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("PermissionError");
+			expect(std.err).toContain(
+				"A permission error occurred while accessing the file system"
+			);
+			expect(std.err).toContain("Error: EPERM: operation not permitted, mkdir");
+			expect(std.err).not.toContain("Affected path:");
+		});
+
+		it("should handle EPERM errors in error cause", async () => {
+			const cause = Object.assign(
+				new Error(
+					"EPERM: operation not permitted, open '/var/logs/wrangler.log'"
+				),
+				{
+					code: "EPERM",
+					path: "/var/logs/wrangler.log",
+				}
+			);
+			const error = new Error("Failed to write to log file", { cause });
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("PermissionError");
+			expect(std.err).toContain(
+				"A permission error occurred while accessing the file system"
+			);
+			expect(std.err).toContain("Affected path: /var/logs/wrangler.log");
+		});
+
+		it("should NOT treat non-EPERM errors as permission errors", async () => {
+			const error = Object.assign(new Error("ENOENT: file not found"), {
+				code: "ENOENT",
+			});
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).not.toBe("PermissionError");
+			expect(std.err).not.toContain(
+				"A permission error occurred while accessing the file system"
+			);
+		});
+	});
 });

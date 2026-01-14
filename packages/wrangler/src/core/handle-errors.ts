@@ -11,6 +11,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Cloudflare } from "cloudflare";
+import dedent from "ts-dedent";
 import { createCLIParser } from "..";
 import { renderError } from "../cfetch";
 import { readConfig } from "../config";
@@ -55,6 +56,34 @@ function isCertificateError(e: unknown): boolean {
 		(errorText) =>
 			message.includes(errorText) || causeMessage.includes(errorText)
 	);
+}
+
+/**
+ * Permission errors (EPERM) are environmental issues caused by file system
+ * permissions that users need to fix outside of their code, so we present
+ * a helpful message instead of reporting to Sentry.
+ *
+ * @param e - The error to check
+ * @returns `true` if the error is a permission error, `false` otherwise
+ */
+function isPermissionError(e: unknown): boolean {
+	// Check for Node.js ErrnoException with EPERM code
+	if (
+		e &&
+		typeof e === "object" &&
+		"code" in e &&
+		e.code === "EPERM" &&
+		"message" in e
+	) {
+		return true;
+	}
+
+	// Check in the error cause as well
+	if (e instanceof Error && e.cause) {
+		return isPermissionError(e.cause);
+	}
+
+	return false;
 }
 
 /**
@@ -127,6 +156,58 @@ export async function handleError(
 				"resulting in API calls failing due to a certificate mismatch. " +
 				"It is likely that you need to install the missing system roots provided by your corporate proxy vendor."
 		);
+	}
+
+	// Handle permission errors with a user-friendly message
+	if (isPermissionError(e)) {
+		mayReport = false;
+		errorType = "PermissionError";
+
+		// Extract the error message and path, checking both the error and its cause
+		const errorMessage = e instanceof Error ? e.message : String(e);
+		let path: string | null = null;
+
+		// Check main error for path
+		if (
+			e &&
+			typeof e === "object" &&
+			"path" in e &&
+			typeof e.path === "string"
+		) {
+			path = e.path;
+		}
+
+		// If no path in main error, check the cause
+		if (
+			!path &&
+			e instanceof Error &&
+			e.cause &&
+			typeof e.cause === "object" &&
+			"path" in e.cause &&
+			typeof e.cause.path === "string"
+		) {
+			path = e.cause.path;
+		}
+
+		// Always log the full error message in debug
+		logger.debug(`Permission error: ${errorMessage}`);
+
+		// Include path in main error if available, otherwise include the error message
+		const errorDetails = path
+			? `\nAffected path: ${path}\n`
+			: `\nError: ${errorMessage}\n`;
+
+		logger.error(dedent`
+			A permission error occurred while accessing the file system.
+			${errorDetails}
+			This is typically caused by:
+			  - Insufficient file or directory permissions
+			  - Files or directories being locked by another process
+			  - Antivirus or security software blocking access
+
+			Please check the file permissions and try again.
+		`);
+		return errorType;
 	}
 
 	// Handle connection timeout errors to Cloudflare API with a user-friendly message

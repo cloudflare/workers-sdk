@@ -2,6 +2,11 @@
 "wrangler": patch
 ---
 
-Show user-friendly message for Cloudflare API connection timeouts
+Show user-friendly messages for environmental errors
 
-When users experience connection timeouts to Cloudflare's API (typically due to slow networks or connectivity issues), Wrangler now displays a helpful message instead of the raw `UND_ERR_CONNECT_TIMEOUT` error. This prevents unnecessary Sentry reports for environmental issues that users cannot fix by modifying their code.
+When users experience environmental errors that they cannot fix by modifying their code, Wrangler now displays helpful messages instead of raw error codes. This prevents unnecessary Sentry reports for issues outside of the user's control.
+
+Errors now handled with user-friendly messages:
+
+- Connection timeouts to Cloudflare's API (`UND_ERR_CONNECT_TIMEOUT`) - typically due to slow networks or connectivity issues
+- File system permission errors (`EPERM`) - caused by insufficient permissions, locked files, or antivirus software
