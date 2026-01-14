@@ -402,21 +402,32 @@ const localTestConfigs: TestConfig[] = [
 	],
 	// wasi
 	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
 		{
-			name: "wasi enabled by flag",
-			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_wasi_module", "experimental"],
+			name: "wasi enabled by date",
+			compatibilityDate: "2025-12-04",
 			expectRuntimeFlags: {
 				enable_nodejs_wasi_module: true,
 			},
 		},
-		// TODO: update the date past the default enable date (when defined)
+		{
+			name: "wasi disabled by date",
+			compatibilityDate: "2024-09-23",
+			expectRuntimeFlags: {
+				enable_nodejs_wasi_module: false,
+			},
+		},
+		{
+			name: "wasi enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_wasi_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_wasi_module: true,
+			},
+		},
 		{
 			name: "wasi disabled by flag",
-			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_wasi_module", "experimental"],
+			compatibilityDate: "2025-12-04",
+			compatibilityFlags: ["disable_nodejs_wasi_module"],
 			expectRuntimeFlags: {
 				enable_nodejs_wasi_module: false,
 			},
