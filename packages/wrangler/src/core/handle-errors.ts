@@ -58,6 +58,50 @@ function isCertificateError(e: unknown): boolean {
 }
 
 /**
+ * Connection timeouts to Cloudflare's API are environmental issues (slow networks,
+ * connectivity problems) that users cannot fix by modifying their code, so we
+ * present a helpful message instead of reporting to Sentry.
+ */
+function isCloudflareAPIConnectionTimeoutError(e: unknown): boolean {
+	// Only handle timeouts to Cloudflare APIs - timeouts to user endpoints
+	// (e.g., in dev server or user's own APIs) may indicate actual bugs
+	const isCloudflareAPI = (text: string): boolean => {
+		return (
+			text.includes("api.cloudflare.com") ||
+			text.includes("dash.cloudflare.com")
+		);
+	};
+
+	const hasTimeoutCode = (obj: unknown): boolean => {
+		return (
+			obj !== null &&
+			typeof obj === "object" &&
+			"code" in obj &&
+			obj.code === "UND_ERR_CONNECT_TIMEOUT"
+		);
+	};
+
+	if (hasTimeoutCode(e)) {
+		const message = e instanceof Error ? e.message : String(e);
+		if (isCloudflareAPI(message)) {
+			return true;
+		}
+	}
+
+	// Errors are often wrapped, so check the cause chain as well
+	if (e instanceof Error && e.cause && hasTimeoutCode(e.cause)) {
+		const causeMessage =
+			e.cause instanceof Error ? e.cause.message : String(e.cause);
+		const parentMessage = e.message;
+		if (isCloudflareAPI(causeMessage) || isCloudflareAPI(parentMessage)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * Handles an error thrown during command execution.
  *
  * This can involve filtering, transforming and logging the error appropriately.
@@ -80,6 +124,18 @@ export async function handleError(
 				"resulting in API calls failing due to a certificate mismatch. " +
 				"It is likely that you need to install the missing system roots provided by your corporate proxy vendor."
 		);
+	}
+
+	// Handle connection timeout errors to Cloudflare API with a user-friendly message
+	if (isCloudflareAPIConnectionTimeoutError(e)) {
+		mayReport = false;
+		errorType = "ConnectionTimeout";
+		logger.error(
+			"The request to Cloudflare's API timed out.\n" +
+				"This is likely due to network connectivity issues or slow network speeds.\n" +
+				"Please check your internet connection and try again."
+		);
+		return errorType;
 	}
 
 	if (e instanceof CommandLineArgsError) {

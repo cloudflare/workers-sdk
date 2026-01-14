@@ -88,4 +88,89 @@ describe("handleError", () => {
 			expect(std.err).toContain("self-signed certificate in certificate chain");
 		});
 	});
+
+	describe("Cloudflare API connection timeout errors", () => {
+		it("should show user-friendly message for api.cloudflare.com timeouts", async () => {
+			const error = Object.assign(
+				new Error("Connect Timeout Error: https://api.cloudflare.com/endpoint"),
+				{ code: "UND_ERR_CONNECT_TIMEOUT" }
+			);
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("ConnectionTimeout");
+			expect(std.err).toContain("The request to Cloudflare's API timed out");
+			expect(std.err).toContain("network connectivity issues");
+			expect(std.err).toContain("Please check your internet connection");
+		});
+
+		it("should show user-friendly message for dash.cloudflare.com timeouts", async () => {
+			const error = Object.assign(
+				new Error("Connect Timeout Error: https://dash.cloudflare.com/api"),
+				{ code: "UND_ERR_CONNECT_TIMEOUT" }
+			);
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("ConnectionTimeout");
+			expect(std.err).toContain("The request to Cloudflare's API timed out");
+		});
+
+		it("should handle timeout errors in error cause", async () => {
+			const cause = Object.assign(
+				new Error("timeout connecting to api.cloudflare.com"),
+				{ code: "UND_ERR_CONNECT_TIMEOUT" }
+			);
+			const error = new Error("Request failed", { cause });
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("ConnectionTimeout");
+			expect(std.err).toContain("The request to Cloudflare's API timed out");
+		});
+
+		it("should handle timeout when Cloudflare URL is in parent message", async () => {
+			const cause = Object.assign(new Error("connect timeout"), {
+				code: "UND_ERR_CONNECT_TIMEOUT",
+			});
+			const error = new Error(
+				"Failed to connect to https://api.cloudflare.com/client/v4/accounts",
+				{ cause }
+			);
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("ConnectionTimeout");
+			expect(std.err).toContain("The request to Cloudflare's API timed out");
+		});
+
+		it("should NOT show timeout message for non-Cloudflare URLs", async () => {
+			const error = Object.assign(
+				new Error("Connect Timeout Error: https://example.com/api"),
+				{ code: "UND_ERR_CONNECT_TIMEOUT" }
+			);
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).not.toBe("ConnectionTimeout");
+			expect(std.err).not.toContain(
+				"The request to Cloudflare's API timed out"
+			);
+		});
+
+		it("should NOT show timeout message for user's dev server timeouts", async () => {
+			const cause = Object.assign(
+				new Error("timeout connecting to localhost:8787"),
+				{ code: "UND_ERR_CONNECT_TIMEOUT" }
+			);
+			const error = new Error("Request failed", { cause });
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).not.toBe("ConnectionTimeout");
+			expect(std.err).not.toContain(
+				"The request to Cloudflare's API timed out"
+			);
+		});
+	});
 });
