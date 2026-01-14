@@ -438,14 +438,6 @@ export const EXTERNAL_DEPENDENCIES = [
 - **Runtime resolution**: Packages like `esbuild` or `unenv` that need to be resolved when bundling user code
 - **Peer dependencies**: Packages the user is expected to provide (e.g., `react`, `vite`)
 
-### CI Validation
-
-The `pnpm check:package-deps` command (run as part of `pnpm check`) validates that:
-
-- Every non-workspace item in `dependencies` is listed in `EXTERNAL_DEPENDENCIES`
-- Every item in `EXTERNAL_DEPENDENCIES` exists in `dependencies` or `peerDependencies` (no stale entries)
-- Packages with external dependencies have a `scripts/deps.ts` file
-
 ## Changesets
 
 Every non-trivial change to the project - those that should appear in the changelog - must be captured in a "changeset".
