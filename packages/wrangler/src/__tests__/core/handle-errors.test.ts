@@ -174,7 +174,7 @@ describe("handleError", () => {
 		});
 	});
 
-	describe("Permission errors (EPERM)", () => {
+	describe("Permission errors (EPERM, EACCES)", () => {
 		it("should show user-friendly message for EPERM errors with path", async () => {
 			const error = Object.assign(
 				new Error(
@@ -196,6 +196,31 @@ describe("handleError", () => {
 			);
 			expect(std.err).toContain(
 				"Affected path: /Users/user/.wrangler/logs/wrangler.log"
+			);
+			expect(std.err).toContain("Insufficient file or directory permissions");
+		});
+
+		it("should show user-friendly message for EACCES errors with path", async () => {
+			const error = Object.assign(
+				new Error(
+					"EACCES: permission denied, open '/Users/songmingyu/Library/Preferences/.wrangler/config/default.toml'"
+				),
+				{
+					code: "EACCES",
+					errno: -13,
+					syscall: "open",
+					path: "/Users/songmingyu/Library/Preferences/.wrangler/config/default.toml",
+				}
+			);
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("PermissionError");
+			expect(std.err).toContain(
+				"A permission error occurred while accessing the file system"
+			);
+			expect(std.err).toContain(
+				"Affected path: /Users/songmingyu/Library/Preferences/.wrangler/config/default.toml"
 			);
 			expect(std.err).toContain("Insufficient file or directory permissions");
 		});

@@ -59,7 +59,7 @@ function isCertificateError(e: unknown): boolean {
 }
 
 /**
- * Permission errors (EPERM) are environmental issues caused by file system
+ * Permission errors (EPERM, EACCES) are environmental issues caused by file system
  * permissions that users need to fix outside of their code, so we present
  * a helpful message instead of reporting to Sentry.
  *
@@ -67,12 +67,12 @@ function isCertificateError(e: unknown): boolean {
  * @returns `true` if the error is a permission error, `false` otherwise
  */
 function isPermissionError(e: unknown): boolean {
-	// Check for Node.js ErrnoException with EPERM code
+	// Check for Node.js ErrnoException with EPERM or EACCES code
 	if (
 		e &&
 		typeof e === "object" &&
 		"code" in e &&
-		e.code === "EPERM" &&
+		(e.code === "EPERM" || e.code === "EACCES") &&
 		"message" in e
 	) {
 		return true;
