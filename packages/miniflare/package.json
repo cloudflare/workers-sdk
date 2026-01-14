@@ -51,7 +51,7 @@
 		"sharp": "^0.34.5",
 		"stoppable": "1.1.0",
 		"undici": "catalog:default",
-		"workerd": "1.20260111.0",
+		"workerd": "1.20260114.0",
 		"ws": "catalog:default",
 		"youch": "4.1.0-beta.10",
 		"zod": "^3.25.76"
@@ -75,8 +75,6 @@
 		"@types/stoppable": "^1.1.1",
 		"@types/which": "^2.0.1",
 		"@types/ws": "^8.5.7",
-		"@typescript-eslint/eslint-plugin": "catalog:default",
-		"@typescript-eslint/parser": "catalog:default",
 		"capnp-es": "^0.0.11",
 		"capnweb": "^0.1.0",
 		"chokidar": "^4.0.1",
