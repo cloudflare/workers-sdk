@@ -2,38 +2,11 @@
 "wrangler": minor
 ---
 
-Collect bindings from all environments when running `wrangler types`
+`wrangler types` now generates types for all wrangler environments.
 
 Previously, `wrangler types` only generated TypeScript types for bindings defined in the top-level configuration (or a single environment when using `--env`). Now, by default, it collects & generates types for bindings from **all environments** in your configuration.
 
 This ensures your generated types include all bindings that might be used across different deployment environments (e.g., staging, production), preventing TypeScript errors when accessing environment-specific bindings.
-
-An example with a configuration that has different bindings per environment:
-
-```json
-{
-	"vars": {
-		"API_URL": "https://api.example.com"
-	},
-	"env": {
-		"staging": {
-			"vars": {
-				"DEBUG": "true"
-			}
-		},
-		"production": {
-			"kv_namespaces": [
-				{
-					"binding": "CACHE",
-					"id": "abc123"
-				}
-			]
-		}
-	}
-}
-```
-
-Running `wrangler types` will now generate types for `API_URL`, `DEBUG`, and `CACHE` bindings.
 
 **Behavior:**
 
