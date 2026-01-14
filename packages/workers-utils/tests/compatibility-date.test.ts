@@ -1,5 +1,6 @@
 import module from "node:module";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { beforeEach, describe, it, vi } from "vitest";
 import { getLocalWorkerdCompatibilityDate } from "../src/compatibility-date";
 
@@ -8,7 +9,7 @@ describe("getLocalWorkerdCompatibilityDate", () => {
 		vi.setSystemTime(vi.getRealSystemTime());
 	});
 
-	it("should successfully get the local latest compatibility date from the local workerd instance", ({
+	it("should successfully get the local latest compatibility date from a mock workerd path", ({
 		expect,
 	}) => {
 		const createRequireSpy = vi
@@ -32,6 +33,21 @@ describe("getLocalWorkerdCompatibilityDate", () => {
 		expect(createRequireSpy).toHaveBeenCalledWith(
 			path.join("/test/project", "package.json")
 		);
+	});
+
+	it("should successfully get the local latest compatibility date from the local workerd instance via the wrangler package", ({
+		expect,
+	}) => {
+		// Note: this works because Wrangler depends on `miniflare` (and therefore `workerd`)
+		// in the monorepo.
+		const wranglerPackageJson = fileURLToPath(
+			new URL("../../wrangler/package.json", import.meta.url)
+		);
+		const { date, source } = getLocalWorkerdCompatibilityDate({
+			projectPath: wranglerPackageJson,
+		});
+		expect(date).toMatch(/\d{4}-\d{2}-\d{2}/);
+		expect(source).toEqual("workerd");
 	});
 
 	it("should fallback to the fallback date if it fails to get the date from a local workerd instance", ({

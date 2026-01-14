@@ -40,8 +40,12 @@ export function getLocalWorkerdCompatibilityDate({
 		const projectRequire = module.createRequire(
 			path.join(projectPath, "package.json")
 		);
-		const miniflareEntry = projectRequire.resolve("miniflare");
-		const miniflareRequire = module.createRequire(miniflareEntry);
+		// `require.resolve("miniflare")` can fail in workspaces when the package hasn't been built yet,
+		// as its `main` points at `dist/`. Resolving the package.json avoids that pitfall.
+		const miniflarePackageJson = projectRequire.resolve(
+			"miniflare/package.json"
+		);
+		const miniflareRequire = module.createRequire(miniflarePackageJson);
 		const miniflareWorkerd = miniflareRequire("workerd") as {
 			compatibilityDate: string;
 		};
