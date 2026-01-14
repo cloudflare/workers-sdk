@@ -61,6 +61,9 @@ function isCertificateError(e: unknown): boolean {
  * Connection timeouts to Cloudflare's API are environmental issues (slow networks,
  * connectivity problems) that users cannot fix by modifying their code, so we
  * present a helpful message instead of reporting to Sentry.
+ *
+ * @param e - The error to check
+ * @returns `true` if the error is a connection timeout to Cloudflare's API, `false` otherwise
  */
 function isCloudflareAPIConnectionTimeoutError(e: unknown): boolean {
 	// Only handle timeouts to Cloudflare APIs - timeouts to user endpoints
