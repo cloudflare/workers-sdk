@@ -726,12 +726,13 @@ type VarTypes = Record<string, string[]>;
 /**
  * Collects all the vars types across all the environments defined in the config file
  *
- * @param args all the CLI arguments passed to the `types` command
- * @returns an object which keys are the variable names and values are arrays containing all the computed types for such variables
- *
  * Behavior:
  * - If `args.env` is specified: only collect vars from that specific environment
  * - Otherwise: collect vars from top-level AND all named environments
+ *
+ * @param args all the CLI arguments passed to the `types` command
+ *
+ * @returns an object which keys are the variable names and values are arrays containing all the computed types for such variables
  */
 function collectAllVars(
 	args: Partial<(typeof typesCommand)["args"]>
@@ -752,7 +753,7 @@ function collectAllVars(
 			}
 
 			if (typeof value === "number" || typeof value === "boolean") {
-				varsInfo[key].add(`${value}`);
+				varsInfo[key].add(JSON.stringify(value));
 				return;
 			}
 			if (typeof value === "string" || typeof value === "object") {
@@ -774,7 +775,7 @@ function collectAllVars(
 		}
 	} else {
 		collectEnvironmentVars(rawConfig.vars);
-		for (const [_envName, env] of Object.entries(rawConfig.env ?? {})) {
+		for (const env of Object.values(rawConfig.env ?? {})) {
 			collectEnvironmentVars(env.vars);
 		}
 	}
