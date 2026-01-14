@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   generate-changeset:
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     if: |
       github.event.pull_request.user.login == 'dependabot[bot]'
     steps:
@@ -26,10 +26,28 @@ jobs:
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
 
+      - name: Install Cap'n Proto compiler
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y capnproto
+
       - name: Configure Git
         run: |
           git config --global user.email wrangler@cloudflare.com
           git config --global user.name 'Wrangler automated PR updater'
+
+      - name: Regenerate compatibility flags
+        run: |
+          pnpm --filter miniflare run capnp:compat
+
+          # Commit the regenerated files if there are changes
+          git add packages/miniflare/src/shared/compatibility-date.ts packages/miniflare/src/shared/compatibility-flags-metadata.ts
+          if git diff --cached --quiet; then
+            echo "No changes to compatibility flags files"
+          else
+            git commit -m "chore(miniflare): regenerate compatibility flags for workerd update"
+            git push
+          fi
 
       - name: Generate Miniflare changesets
         # The paremeters to the script are:

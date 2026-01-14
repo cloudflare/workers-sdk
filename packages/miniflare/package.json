@@ -31,6 +31,7 @@
 	],
 	"scripts": {
 		"build": "node scripts/build.mjs && pnpm run types:build",
+		"capnp:compat": "node scripts/build-capnp-compat.mjs",
 		"capnp:workerd": "node scripts/build-capnp.mjs",
 		"check:lint": "eslint --max-warnings=0 \"{src,test}/**/*.ts\" \"types/**/*.ts\"",
 		"check:type": "tsc",
