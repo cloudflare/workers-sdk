@@ -252,4 +252,73 @@ describe("handleError", () => {
 			);
 		});
 	});
+
+	describe("DNS resolution errors (ENOTFOUND)", () => {
+		it("should show user-friendly message for ENOTFOUND to api.cloudflare.com", async () => {
+			const error = Object.assign(
+				new Error("getaddrinfo ENOTFOUND api.cloudflare.com"),
+				{
+					code: "ENOTFOUND",
+					hostname: "api.cloudflare.com",
+					syscall: "getaddrinfo",
+				}
+			);
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("DNSError");
+			expect(std.err).toContain("Unable to resolve Cloudflare's API hostname");
+			expect(std.err).toContain("api.cloudflare.com or dash.cloudflare.com");
+			expect(std.err).toContain("No internet connection");
+			expect(std.err).toContain("DNS resolver not configured");
+		});
+
+		it("should show user-friendly message for ENOTFOUND to dash.cloudflare.com", async () => {
+			const error = Object.assign(
+				new Error("getaddrinfo ENOTFOUND dash.cloudflare.com"),
+				{
+					code: "ENOTFOUND",
+					hostname: "dash.cloudflare.com",
+				}
+			);
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("DNSError");
+			expect(std.err).toContain("Unable to resolve Cloudflare's API hostname");
+		});
+
+		it("should handle DNS errors in error cause", async () => {
+			const cause = Object.assign(
+				new Error("getaddrinfo ENOTFOUND api.cloudflare.com"),
+				{
+					code: "ENOTFOUND",
+					hostname: "api.cloudflare.com",
+				}
+			);
+			const error = new Error("Request failed", { cause });
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("DNSError");
+			expect(std.err).toContain("Unable to resolve Cloudflare's API hostname");
+		});
+
+		it("should NOT show DNS error for non-Cloudflare hostnames", async () => {
+			const error = Object.assign(
+				new Error("getaddrinfo ENOTFOUND example.com"),
+				{
+					code: "ENOTFOUND",
+					hostname: "example.com",
+				}
+			);
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).not.toBe("DNSError");
+			expect(std.err).not.toContain(
+				"Unable to resolve Cloudflare's API hostname"
+			);
+		});
+	});
 });

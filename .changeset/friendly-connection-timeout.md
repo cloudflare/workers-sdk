@@ -10,3 +10,4 @@ Errors now handled with user-friendly messages:
 
 - Connection timeouts to Cloudflare's API (`UND_ERR_CONNECT_TIMEOUT`) - typically due to slow networks or connectivity issues
 - File system permission errors (`EPERM`) - caused by insufficient permissions, locked files, or antivirus software
+- DNS resolution failures (`ENOTFOUND`) - caused by network connectivity issues or DNS configuration problems

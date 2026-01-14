@@ -87,6 +87,73 @@ function isPermissionError(e: unknown): boolean {
 }
 
 /**
+ * DNS resolution failures (ENOTFOUND) to Cloudflare's API are environmental issues
+ * caused by network connectivity or DNS problems that users cannot fix by modifying
+ * their code, so we present a helpful message instead of reporting to Sentry.
+ *
+ * @param e - The error to check
+ * @returns `true` if the error is a DNS resolution failure to Cloudflare's API, `false` otherwise
+ */
+function isCloudflareAPIDNSError(e: unknown): boolean {
+	// Only handle DNS errors to Cloudflare APIs
+	const isCloudflareAPI = (text: string): boolean => {
+		return (
+			text.includes("api.cloudflare.com") ||
+			text.includes("dash.cloudflare.com")
+		);
+	};
+
+	const hasDNSErrorCode = (obj: unknown): boolean => {
+		return (
+			obj !== null &&
+			typeof obj === "object" &&
+			"code" in obj &&
+			obj.code === "ENOTFOUND"
+		);
+	};
+
+	if (hasDNSErrorCode(e)) {
+		const message = e instanceof Error ? e.message : String(e);
+		if (isCloudflareAPI(message)) {
+			return true;
+		}
+		// Also check hostname property
+		if (
+			e &&
+			typeof e === "object" &&
+			"hostname" in e &&
+			typeof e.hostname === "string"
+		) {
+			if (isCloudflareAPI(e.hostname)) {
+				return true;
+			}
+		}
+	}
+
+	// Errors are often wrapped, so check the cause chain as well
+	if (e instanceof Error && e.cause && hasDNSErrorCode(e.cause)) {
+		const causeMessage =
+			e.cause instanceof Error ? e.cause.message : String(e.cause);
+		const parentMessage = e.message;
+		if (isCloudflareAPI(causeMessage) || isCloudflareAPI(parentMessage)) {
+			return true;
+		}
+		// Check hostname in cause
+		if (
+			typeof e.cause === "object" &&
+			"hostname" in e.cause &&
+			typeof e.cause.hostname === "string"
+		) {
+			if (isCloudflareAPI(e.cause.hostname)) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+/**
  * Connection timeouts to Cloudflare's API are environmental issues (slow networks,
  * connectivity problems) that users cannot fix by modifying their code, so we
  * present a helpful message instead of reporting to Sentry.
@@ -156,6 +223,24 @@ export async function handleError(
 				"resulting in API calls failing due to a certificate mismatch. " +
 				"It is likely that you need to install the missing system roots provided by your corporate proxy vendor."
 		);
+	}
+
+	// Handle DNS resolution errors to Cloudflare API with a user-friendly message
+	if (isCloudflareAPIDNSError(e)) {
+		mayReport = false;
+		errorType = "DNSError";
+		logger.error(dedent`
+			Unable to resolve Cloudflare's API hostname (api.cloudflare.com or dash.cloudflare.com).
+
+			This is typically caused by:
+			  - No internet connection or network connectivity issues
+			  - DNS resolver not configured or not responding
+			  - Firewall or VPN blocking DNS requests
+			  - Corporate network with restricted DNS
+
+			Please check your network connection and DNS settings.
+		`);
+		return errorType;
 	}
 
 	// Handle permission errors with a user-friendly message
