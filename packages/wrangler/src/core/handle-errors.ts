@@ -59,7 +59,7 @@ function isCertificateError(e: unknown): boolean {
 }
 
 /**
- * Permission errors (EPERM, EACCES) are environmental issues caused by file system
+ * Permission errors (EPERM, EACCES) are caused by file system
  * permissions that users need to fix outside of their code, so we present
  * a helpful message instead of reporting to Sentry.
  *
@@ -101,9 +101,9 @@ function isCloudflareAPI(text: string): boolean {
 }
 
 /**
- * DNS resolution failures (ENOTFOUND) to Cloudflare's API are environmental issues
- * caused by network connectivity or DNS problems that users cannot fix by modifying
- * their code, so we present a helpful message instead of reporting to Sentry.
+ * DNS resolution failures (ENOTFOUND) to Cloudflare's API are
+ * caused by network connectivity or DNS problems, so we present
+ * a helpful message instead of reporting to Sentry.
  *
  * @param e - The error to check
  * @returns `true` if the error is a DNS resolution failure to Cloudflare's API, `false` otherwise
@@ -162,9 +162,9 @@ function isCloudflareAPIDNSError(e: unknown): boolean {
 }
 
 /**
- * Connection timeouts to Cloudflare's API are environmental issues (slow networks,
- * connectivity problems) that users cannot fix by modifying their code, so we
- * present a helpful message instead of reporting to Sentry.
+ * Connection timeouts to Cloudflare's API are caused by slow networks or
+ * connectivity problems, so we present a helpful message instead of
+ * reporting to Sentry.
  *
  * @param e - The error to check
  * @returns `true` if the error is a connection timeout to Cloudflare's API, `false` otherwise

@@ -2,9 +2,7 @@
 "wrangler": patch
 ---
 
-Show user-friendly messages for environmental errors
-
-When users experience environmental errors that they cannot fix by modifying their code, Wrangler now displays helpful messages instead of raw error codes. This prevents unnecessary Sentry reports for issues outside of the user's control.
+Show helpful messages for errors outside of Wrangler's control. This prevents unnecessary Sentry reports for issues outside of the user's control.
 
 Errors now handled with user-friendly messages:
 
