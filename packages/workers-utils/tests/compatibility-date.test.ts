@@ -8,7 +8,22 @@ describe("getLocalWorkerdCompatibilityDate", () => {
 		vi.setSystemTime(vi.getRealSystemTime());
 	});
 
-	it("should successfully get the local latest compatibility date from the local workerd instance", ({
+	it("should successfully get the local latest compatibility date from a mock workerd path", ({
+		expect,
+	}) => {
+		// Note: this works because Wrangler depends on `miniflare` (and therefore `workerd`)
+		// in the monorepo.
+		const wranglerPackageJson = fileURLToPath(
+			new URL("../../wrangler/package.json", import.meta.url)
+		);
+		const { date, source } = getLocalWorkerdCompatibilityDate({
+			projectPath: wranglerPackageJson,
+		});
+		expect(date).toMatch(/\d{4}-\d{2}-\d{2}/);
+		expect(source).toEqual("workerd");
+	});
+
+	it("should successfully get the local latest compatibility date from the local workerd instance via the wrangler package", ({
 		expect,
 	}) => {
 		const createRequireSpy = vi
