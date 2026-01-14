@@ -347,6 +347,8 @@ const testCases: TestCase[] = [
 		}),
 		expectFetchToMatch: [expect.stringContaining(`image/avif`)],
 	},
+	// TODO: re-enable when Media binding is stable again
+	// (this is an unreleased feature that temporarily broke in the course of development)
 	// {
 	// 	name: "Media",
 	// 	scriptPath: "media.js",
