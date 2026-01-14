@@ -752,11 +752,12 @@ function collectAllVars(
 				return;
 			}
 
-			if (typeof value === "number" || typeof value === "boolean") {
-				varsInfo[key].add(JSON.stringify(value));
-				return;
-			}
-			if (typeof value === "string" || typeof value === "object") {
+			if (
+				typeof value === "string" ||
+				typeof value === "number" ||
+				typeof value === "boolean" ||
+				typeof value === "object"
+			) {
 				varsInfo[key].add(JSON.stringify(value));
 				return;
 			}
