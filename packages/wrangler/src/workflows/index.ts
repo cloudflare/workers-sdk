@@ -5,6 +5,7 @@ export const workflowsNamespace = createNamespace({
 		description: "🔁 Manage Workflows",
 		owner: "Product: Workflows",
 		status: "stable",
+		category: "Compute & AI",
 	},
 });
 

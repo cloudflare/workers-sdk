@@ -26,9 +26,7 @@ describe("Pages project with `_worker.js` and `/functions` directory", () => {
 		);
 	});
 
-	it("runs our _worker.js and ignores the functions directory", async ({
-		expect,
-	}) => {
+	it("runs our _worker.js and ignores the functions directory", async () => {
 		let response = await fetch(`http://${ip}:${port}/greeting/hello`);
 		let text = await response.text();
 		expect(text).toEqual("Bonjour le monde!");

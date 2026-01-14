@@ -234,6 +234,89 @@ describe.each([
 		});
 	});
 
+	describe(`scheduled worker warning with ${cmd}`, () => {
+		it("shows warning with correct port when cron trigger is configured", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+								name = "${workerName}"
+								main = "src/index.ts"
+								compatibility_date = "2023-01-01"
+
+								[triggers]
+								crons = ["* * * * *"]
+						`,
+				"src/index.ts": dedent`
+								export default {
+									fetch(request) {
+										return new Response("Hello World!")
+									},
+									scheduled(event) {
+										console.log("Scheduled event triggered");
+									}
+								}`,
+				"package.json": dedent`
+								{
+									"name": "worker",
+									"version": "0.0.0",
+									"private": true
+								}
+								`,
+			});
+			const worker = helper.runLongLived(cmd);
+
+			const { url } = await worker.waitForReady();
+			const { hostname, port } = new URL(url);
+
+			// The warning should contain the actual port, not "undefined"
+			expect(worker.currentOutput).toContain(
+				"Scheduled Workers are not automatically triggered"
+			);
+			expect(worker.currentOutput).toContain(
+				`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`
+			);
+			expect(worker.currentOutput).not.toContain("undefined");
+		});
+
+		it("does not show warning when --test-scheduled is enabled", async () => {
+			const helper = new WranglerE2ETestHelper();
+			await helper.seed({
+				"wrangler.toml": dedent`
+								name = "${workerName}"
+								main = "src/index.ts"
+								compatibility_date = "2023-01-01"
+
+								[triggers]
+								crons = ["* * * * *"]
+						`,
+				"src/index.ts": dedent`
+								export default {
+									fetch(request) {
+										return new Response("Hello World!")
+									},
+									scheduled(event) {
+										console.log("Scheduled event triggered");
+									}
+								}`,
+				"package.json": dedent`
+								{
+									"name": "worker",
+									"version": "0.0.0",
+									"private": true
+								}
+								`,
+			});
+			const worker = helper.runLongLived(`${cmd} --test-scheduled`);
+
+			await worker.waitForReady();
+
+			// The warning should NOT appear when testScheduled is enabled
+			expect(worker.currentOutput).not.toContain(
+				"Scheduled Workers are not automatically triggered"
+			);
+		});
+	});
+
 	describe("Workers + Assets", () => {
 		it(`can modify User Worker during ${cmd}`, async () => {
 			const helper = new WranglerE2ETestHelper();

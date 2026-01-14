@@ -143,9 +143,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 			pm: "pnpm",
 		});
 
-		test("for connection to remote bindings during dev the account_id present in the wrangler config file is used", async ({
-			expect,
-		}) => {
+		test("for connection to remote bindings during dev the account_id present in the wrangler config file is used", async () => {
 			const proc = await runLongLived("pnpm", "dev", projectPath);
 			await vi.waitFor(
 				async () => {

@@ -7,6 +7,7 @@ export const pagesNamespace = createNamespace({
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
 		hideGlobalFlags: ["config", "env"],
+		category: "Compute & AI",
 	},
 });
 

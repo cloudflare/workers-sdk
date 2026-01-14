@@ -43,8 +43,11 @@ export function validateDescription(
 
 	if (
 		!(
-			/- \[x\] Tests included/i.test(body) ||
-			/- \[x\] Tests not necessary because: .+/i.test(body)
+			/- \[x\] Tests included\/updated/i.test(body) ||
+			/- \[x\] Automated tests not possible - manual testing has been completed as follows:\s*.+/i.test(
+				body
+			) ||
+			/- \[x\] Additional testing not necessary because:\s*.+/i.test(body)
 		)
 	) {
 		errors.push(

@@ -1,4 +1,5 @@
 import { configFormat } from "@cloudflare/workers-utils";
+import { detectAgenticEnvironment } from "am-i-vibing";
 import chalk from "chalk";
 import { fetch } from "undici";
 import isInteractive from "../is-interactive";
@@ -64,6 +65,19 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	const amplitude_session_id = Date.now();
 	let amplitude_event_id = 0;
 
+	// Detect agent environment once when dispatcher is created
+	// Pass empty array for processAncestry to skip process tree checks entirely.
+	// Process tree traversal uses execSync('ps ...') which is slow and can cause
+	// timeouts, especially in CI environments. Environment variable detection
+	// is sufficient for identifying most agentic environments.
+	let agent: string | null = null;
+	try {
+		const agentDetection = detectAgenticEnvironment(process.env, []);
+		agent = agentDetection.id;
+	} catch {
+		// Silent failure - agent remains null
+	}
+
 	return {
 		/**
 		 * This doesn't have a session id and is not tied to the command events.
@@ -82,6 +96,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					wranglerMinorVersion,
 					wranglerPatchVersion,
 					os: getOS(),
+					agent,
 					...properties,
 				},
 			});
@@ -140,6 +155,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					hasAssets: options.hasAssets ?? false,
 					argsUsed: sanitizedArgsKeys,
 					argsCombination: sanitizedArgsKeys.join(", "),
+					agent,
 				};
 
 				// get the args where we don't want to redact their values

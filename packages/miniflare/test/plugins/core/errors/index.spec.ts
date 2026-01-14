@@ -15,6 +15,10 @@ const SERVICE_WORKER_ENTRY_PATH = path.join(FIXTURES_PATH, "service-worker.ts");
 const MODULES_ENTRY_PATH = path.join(FIXTURES_PATH, "modules.ts");
 const DEP_ENTRY_PATH = path.join(FIXTURES_PATH, "nested/dep.ts");
 const REDUCE_PATH = path.join(FIXTURES_PATH, "reduce.ts");
+const INLINE_SOURCEMAP_WORKER_PATH = path.join(
+	FIXTURES_PATH,
+	"inline-sourcemap-worker.js"
+);
 
 export function escapeRegexpComponent(value: string): string {
 	// From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions#escaping
@@ -46,6 +50,13 @@ test("source maps workers", async () => {
 	const depPath = path.join(tmp, "nested", "dep.js");
 	const serviceWorkerContent = await fs.readFile(serviceWorkerPath, "utf8");
 	const modulesContent = await fs.readFile(modulesPath, "utf8");
+
+	// Load the inline source map worker from an external file to prevent
+	// Vite from stripping the sourceMappingURL comment during transformation.
+	const inlineSourceMapWorkerContent = await fs.readFile(
+		INLINE_SOURCEMAP_WORKER_PATH,
+		"utf8"
+	);
 
 	const mf = new Miniflare({
 		inspectorPort: 0,
@@ -121,13 +132,8 @@ test("source maps workers", async () => {
 			{
 				name: "i",
 				routes: ["*/i"],
-				// Generated with `esbuild --sourcemap=inline --sources-content=false worker.ts`
-				script: `"use strict";
-addEventListener("fetch", (event) => {
-  event.respondWith(new Response("body"));
-});
-//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKICAic291cmNlcyI6IFsid29ya2VyLnRzIl0sCiAgIm1hcHBpbmdzIjogIjtBQUFBLGlCQUFpQixTQUFTLENBQUMsVUFBVTtBQUNuQyxRQUFNLFlBQVksSUFBSSxTQUFTLE1BQU0sQ0FBQztBQUN4QyxDQUFDOyIsCiAgIm5hbWVzIjogW10KfQo=
-`,
+				// Worker with inline source map loaded from external file
+				script: inlineSourceMapWorkerContent,
 			},
 		],
 	});
@@ -253,32 +259,17 @@ addEventListener("fetch", (event) => {
 		),
 	]);
 
-	// Check does nothing with URL source mapping URLs
-	// Skip this assertion on Node < 24 because the inspector doesn't populate
-	// params.sourceMapURL for inline data URL source maps on those versions
-	const nodeMajor = parseInt(process.versions.node.split(".")[0], 10);
-	if (nodeMajor >= 24) {
-		// Connect to inspector FIRST, then dispatch to worker i to ensure we catch the scriptParsed event
-		const sourceMapURL = await getSourceMapURL(
-			inspectorBaseURL,
-			"core:user:i",
-			async () => {
-				const iRes = await mf.dispatchFetch("http://localhost/i");
-				expect(await iRes.text()).toBe("body");
-			}
-		);
-		expect(sourceMapURL).toMatch(/^data:application\/json;base64/);
-	}
+	// Check does nothing with URL source mapping URLs (i.e. inline data: URLs are preserved)
+	const sourceMapURL = await getSourceMapURL(inspectorBaseURL, "core:user:i");
+	expect(sourceMapURL).toMatch(/^data:application\/json;base64/);
 });
 
 function getSourceMapURL(
 	inspectorBaseURL: URL,
-	serviceName: string,
-	activateWorker?: () => Promise<void>
+	serviceName: string
 ): Promise<string> {
 	let sourceMapURL: string | undefined;
 	let settled = false;
-	let activateWorkerCalled = false;
 	const promise = new DeferredPromise<string>();
 	const inspectorURL = new URL(`/${serviceName}`, inspectorBaseURL);
 	const ws = new NodeWebSocket(inspectorURL);
@@ -314,17 +305,6 @@ function getSourceMapURL(
 		if (settled) return;
 		try {
 			const message = JSON.parse(raw.toString("utf8"));
-
-			// Handle Debugger.enable response (id: 0), then activate the worker
-			// This ensures the inspector is listening before the script is parsed
-			if (message.id === 0 && activateWorker && !activateWorkerCalled) {
-				activateWorkerCalled = true;
-				activateWorker().catch((e) => {
-					finish(e instanceof Error ? e : new Error(String(e)));
-				});
-			}
-
-			// Handle scriptParsed event
 			if (message.method === "Debugger.scriptParsed") {
 				const params: Protocol.Debugger.ScriptParsedEvent = message.params;
 				if (params.sourceMapURL === undefined || params.sourceMapURL === "") {

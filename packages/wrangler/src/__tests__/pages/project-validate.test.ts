@@ -1,6 +1,7 @@
 // /* eslint-disable no-shadow */
 import { writeFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { validate } from "../../pages/validate";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -10,7 +11,7 @@ vi.mock("../../pages/constants", async (importActual) => ({
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
 	...(await importActual<typeof import("../../pages/constants")>()),
 	MAX_ASSET_SIZE: 1 * 1024 * 1024,
-	MAX_ASSET_COUNT: 10,
+	MAX_ASSET_COUNT_DEFAULT: 10,
 }));
 
 describe("pages project validate", () => {
@@ -54,7 +55,32 @@ describe("pages project validate", () => {
 		await expect(() =>
 			runWrangler("pages project validate .")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Error: Pages only supports up to 10 files in a deployment. Ensure you have specified your build output directory correctly.]`
+			`[Error: Error: Pages only supports up to 10 files in a deployment for your current plan. Ensure you have specified your build output directory correctly.]`
+		);
+	});
+
+	it("should succeed with custom fileCountLimit even when exceeding default limit", async () => {
+		// Create 11 files, which exceeds the mocked MAX_ASSET_COUNT_DEFAULT of 10
+		for (let i = 0; i < 11; i++) {
+			writeFileSync(`logo${i}.png`, Buffer.alloc(1));
+		}
+
+		// Should succeed when passing a custom fileCountLimit of 20
+		const fileMap = await validate({ directory: ".", fileCountLimit: 20 });
+		expect(fileMap.size).toBe(11);
+	});
+
+	it("should error with custom fileCountLimit when exceeding custom limit", async () => {
+		// Create 6 files
+		for (let i = 0; i < 6; i++) {
+			writeFileSync(`logo${i}.png`, Buffer.alloc(1));
+		}
+
+		// Should fail when passing a custom fileCountLimit of 5
+		await expect(() =>
+			validate({ directory: ".", fileCountLimit: 5 })
+		).rejects.toThrowError(
+			"Error: Pages only supports up to 5 files in a deployment for your current plan. Ensure you have specified your build output directory correctly."
 		);
 	});
 });

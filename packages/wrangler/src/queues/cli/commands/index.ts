@@ -5,5 +5,6 @@ export const queuesNamespace = createNamespace({
 		description: "📬 Manage Workers Queues",
 		owner: "Product: Queues",
 		status: "stable",
+		category: "Compute & AI",
 	},
 });

@@ -2,6 +2,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { maxFileCountAllowedFromClaims } from "../../pages/upload";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -663,5 +664,52 @@ describe("pages project upload", () => {
 		await runWrangler("pages project upload .");
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+});
+
+describe("maxFileCountAllowedFromClaims", () => {
+	it("should return the value from max_file_count_allowed claim when present", () => {
+		// JWT payload: {"max_file_count_allowed": 100000}
+		const jwt =
+			"header." +
+			Buffer.from(JSON.stringify({ max_file_count_allowed: 100000 })).toString(
+				"base64"
+			) +
+			".signature";
+		expect(maxFileCountAllowedFromClaims(jwt)).toBe(100000);
+	});
+
+	it("should return default value when max_file_count_allowed is not a number", () => {
+		// JWT payload: {"max_file_count_allowed": "invalid"}
+		const jwt =
+			"header." +
+			Buffer.from(
+				JSON.stringify({ max_file_count_allowed: "invalid" })
+			).toString("base64") +
+			".signature";
+		expect(maxFileCountAllowedFromClaims(jwt)).toBe(20000);
+	});
+
+	it("should return default value when JWT does not have max_file_count_allowed claim", () => {
+		// JWT payload: {}
+		const jwt =
+			"header." +
+			Buffer.from(JSON.stringify({})).toString("base64") +
+			".signature";
+		expect(maxFileCountAllowedFromClaims(jwt)).toBe(20000);
+	});
+
+	it("should return default value for test tokens without parsing", () => {
+		expect(maxFileCountAllowedFromClaims("<<funfetti-auth-jwt>>")).toBe(20000);
+		expect(maxFileCountAllowedFromClaims("<<funfetti-auth-jwt2>>")).toBe(20000);
+		expect(maxFileCountAllowedFromClaims("<<aus-completion-token>>")).toBe(
+			20000
+		);
+	});
+
+	it("should throw error for invalid JWT format", () => {
+		expect(() => maxFileCountAllowedFromClaims("invalid-jwt")).toThrow(
+			"Invalid token:"
+		);
 	});
 });

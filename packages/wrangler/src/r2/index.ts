@@ -5,5 +5,6 @@ export const r2Namespace = createNamespace({
 		description: "📦 Manage R2 buckets & objects",
 		status: "stable",
 		owner: "Product: R2",
+		category: "Storage & databases",
 	},
 });

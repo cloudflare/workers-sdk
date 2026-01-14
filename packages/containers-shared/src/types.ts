@@ -84,7 +84,7 @@ export type SharedContainerConfig = {
 	constraints: {
 		regions?: string[];
 		cities?: string[];
-		tier: number | undefined;
+		tiers?: number[];
 	};
 	affinities?: {
 		colocation?: ApplicationAffinityColocation;

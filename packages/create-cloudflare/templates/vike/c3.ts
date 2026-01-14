@@ -24,5 +24,10 @@ const config: TemplateConfig = {
 	devScript: "dev",
 	deployScript: "deploy",
 	previewScript: "preview",
+	transformPackageJson: async () => ({
+		scripts: {
+			"cf-typegen": `wrangler types`,
+		},
+	}),
 };
 export default config;

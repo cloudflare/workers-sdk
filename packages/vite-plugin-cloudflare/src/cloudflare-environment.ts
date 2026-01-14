@@ -10,7 +10,7 @@ import {
 	VIRTUAL_WORKER_ENTRY,
 	WORKER_ENTRY_PATH_HEADER,
 } from "./shared";
-import { debuglog, getOutputDirectory } from "./utils";
+import { debuglog, getOutputDirectory, isRolldown } from "./utils";
 import type { ExportTypes } from "./export-types";
 import type {
 	ResolvedWorkerConfig,
@@ -170,6 +170,28 @@ const defaultConditions = ["workerd", "worker", "module", "browser"];
 // workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
 const target = "es2024";
 
+const rollupOptions: vite.Rollup.RollupOptions = {
+	input: {
+		[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
+	},
+	// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
+	preserveEntrySignatures: "strict",
+};
+
+// TODO: consider removing in next major to use default extensions
+const resolveExtensions = [
+	".mjs",
+	".js",
+	".mts",
+	".ts",
+	".jsx",
+	".tsx",
+	".json",
+	".cjs",
+	".cts",
+	".ctx",
+];
+
 export function createCloudflareEnvironmentOptions({
 	workerConfig,
 	userConfig,
@@ -213,41 +235,53 @@ export function createCloudflareEnvironmentOptions({
 			outDir: getOutputDirectory(userConfig, environmentName),
 			copyPublicDir: false,
 			ssr: true,
-			rollupOptions: {
-				input: {
-					[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
-				},
-				// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
-				preserveEntrySignatures: "strict",
-				// rolldown-only option
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				...("rolldownVersion" in vite ? ({ platform: "neutral" } as any) : {}),
-			},
+			...(isRolldown
+				? {
+						rolldownOptions: {
+							...rollupOptions,
+							platform: "neutral",
+							resolve: {
+								extensions: resolveExtensions,
+							},
+						},
+					}
+				: {
+						rollupOptions,
+					}),
 		},
 		optimizeDeps: {
 			// Note: ssr pre-bundling is opt-in and we need to enable it by setting `noDiscovery` to false
 			noDiscovery: false,
+			// Workaround for https://github.com/vitejs/vite/issues/20867
+			// Longer term solution is to use full-bundle mode rather than `optimizeDeps`
+			// @ts-expect-error - option added in Vite 7.3.1
+			ignoreOutdatedRequests: true,
 			// We need to normalize the path as it is treated as a glob and backslashes are therefore treated as escape characters.
 			entries: vite.normalizePath(workerConfig.main),
 			exclude: [...cloudflareBuiltInModules],
-			esbuildOptions: {
-				platform: "neutral",
-				target,
-				conditions: [...defaultConditions, "development"],
-				resolveExtensions: [
-					".mjs",
-					".js",
-					".mts",
-					".ts",
-					".jsx",
-					".tsx",
-					".json",
-					".cjs",
-					".cts",
-					".ctx",
-				],
-				define,
-			},
+			...(isRolldown
+				? {
+						rolldownOptions: {
+							platform: "neutral",
+							resolve: {
+								conditionNames: [...defaultConditions, "development"],
+								extensions: resolveExtensions,
+							},
+							transform: {
+								target,
+								define,
+							},
+						},
+					}
+				: {
+						esbuildOptions: {
+							platform: "neutral",
+							conditions: [...defaultConditions, "development"],
+							resolveExtensions,
+							target,
+							define,
+						},
+					}),
 		},
 		// We manually set `process.env` replacements using `define`
 		keepProcessEnv: true,

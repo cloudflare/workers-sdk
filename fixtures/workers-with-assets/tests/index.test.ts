@@ -37,9 +37,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(text).toContain(`<p>Learn more about Workers with Assets soon!</p>`);
 	});
 
-	it("should fallback to the user Worker if there are no assets at a given path ", async ({
-		expect,
-	}) => {
+	it("should fallback to the user Worker if there are no assets at a given path ", async () => {
 		// Requests should hit the Asset Worker *first*, then try the user Worker
 		const response = await fetch(`http://${ip}:${port}/no-assets-here`);
 		const text = await response.text();
@@ -55,9 +53,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(text).toContain("<h1>Hello Workers + Assets World 🚀!</h1>");
 	});
 
-	it("should handle content types correctly on asset routes", async ({
-		expect,
-	}) => {
+	it("should handle content types correctly on asset routes", async () => {
 		let response = await fetch(`http://${ip}:${port}/index.html`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -90,9 +86,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(response.headers.has("Content-Type")).toBeFalsy();
 	});
 
-	it("should return 405 for non-GET or HEAD requests on routes where assets exist", async ({
-		expect,
-	}) => {
+	it("should return 405 for non-GET or HEAD requests on routes where assets exist", async () => {
 		// these should return the error and NOT be forwarded onto the user Worker
 		// POST etc. request -> RW -> AW -> check manifest --405--> RW --405--> eyeball
 
@@ -156,9 +150,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(text).toContain(`%5Bboop%5D.html`);
 	});
 
-	it("should forward all request types to the user Worker if there are *not* assets on that route", async ({
-		expect,
-	}) => {
+	it("should forward all request types to the user Worker if there are *not* assets on that route", async () => {
 		// Unlike above, if the AW does NOT find assets on a route, non-GET request should return 404s
 		// This is because all requests are first sent to the AW and only then to the UW
 		// and we don't want to 405 on a valid POST request intended for the UW
@@ -210,9 +202,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(text).toContain("<h1>✨This is from a user Worker binding✨</h1>");
 	});
 
-	it("should be able to use a binding to a named entrypoint", async ({
-		expect,
-	}) => {
+	it("should be able to use a binding to a named entrypoint", async () => {
 		let response = await fetch(`http://${ip}:${port}/named-entrypoint`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -293,9 +283,7 @@ describe("[Workers + Assets] logging", () => {
 		onTestFinished(() => stop());
 	});
 
-	it("should not log _headers and _redirects parsing when log level set to none", async ({
-		expect,
-	}) => {
+	it("should not log _headers and _redirects parsing when log level set to none", async () => {
 		const { ip, port, stop, getOutput } = await runWranglerDev(
 			resolve(__dirname, ".."),
 			["--port=0", "--inspector-port=0", "--log-level=none"]

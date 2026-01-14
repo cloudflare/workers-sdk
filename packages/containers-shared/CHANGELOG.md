@@ -1,5 +1,34 @@
 # @cloudflare/containers-shared
 
+## 0.8.0
+
+### Minor Changes
+
+- [#11755](https://github.com/cloudflare/workers-sdk/pull/11755) [`0f8d69d`](https://github.com/cloudflare/workers-sdk/commit/0f8d69d31071abeb567aa3c8478492536b5740fb) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Users can now specify `constraints.tiers` for their container applications. `tier` is deprecated in favor of `tiers`.
+  If left unset, we will default to `tiers: [1, 2]`.
+  Note that `constraints` is an experimental feature.
+
+## 0.7.0
+
+### Minor Changes
+
+- [#11702](https://github.com/cloudflare/workers-sdk/pull/11702) [`f612b46`](https://github.com/cloudflare/workers-sdk/commit/f612b4683a7e1408709ad378fb6c5b96af485d49) Thanks [@gpanders](https://github.com/gpanders)! - Add support for trusted_user_ca_keys in Wrangler
+
+  You can now configure SSH trusted user CA keys for containers. Add the following to your wrangler.toml:
+
+  ```toml
+  [[containers.trusted_user_ca_keys]]
+  public_key = "ssh-ed25519 AAAAC3..."
+  ```
+
+  This allows you to specify CA public keys that can be used to verify SSH user certificates.
+
+- [#11437](https://github.com/cloudflare/workers-sdk/pull/11437) [`9e360f6`](https://github.com/cloudflare/workers-sdk/commit/9e360f6918588af59f86bb153008f3ec18b082c6) Thanks [@ichernetsky-cf](https://github.com/ichernetsky-cf)! - Drop deprecated containers `observability.logging` field
+
+### Patch Changes
+
+- [#11768](https://github.com/cloudflare/workers-sdk/pull/11768) [`2a4299d`](https://github.com/cloudflare/workers-sdk/commit/2a4299db71d39c68eac2e51abd8c14398b813adc) Thanks [@gpanders](https://github.com/gpanders)! - Rename "durable_objects_active" field in ApplicationHealthInstances to "active"
+
 ## 0.6.0
 
 ### Minor Changes

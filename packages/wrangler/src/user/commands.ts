@@ -25,6 +25,7 @@ export const loginCommand = createCommand({
 		description: "🔓 Login to Cloudflare",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		category: "Account",
 	},
 	behaviour: {
 		printConfigWarnings: false,
@@ -102,6 +103,7 @@ export const logoutCommand = createCommand({
 		description: "🚪 Logout from Cloudflare",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		category: "Account",
 	},
 	behaviour: {
 		printConfigWarnings: false,
@@ -119,6 +121,7 @@ export const whoamiCommand = createCommand({
 		description: "🕵️ Retrieve your user information",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		category: "Account",
 	},
 	behaviour: {
 		printConfigWarnings: false,
@@ -143,6 +146,7 @@ export const authNamespace = createNamespace({
 		description: "🔐 Manage authentication",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		category: "Account",
 	},
 });
 

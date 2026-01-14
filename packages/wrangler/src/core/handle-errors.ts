@@ -87,7 +87,28 @@ export async function handleError(
 		// We are not able to ask the `wrangler` CLI parser to show help for a subcommand programmatically.
 		// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
 		// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
-		const { wrangler } = createCLIParser([...subCommandParts, "--help"]);
+
+		// Check if this is a root-level error (unknown argument at root level)
+		// by looking at the error message - if it says "Unknown argument" or "Unknown command",
+		// and there's only one non-flag argument, show the categorized root help
+		const nonFlagArgs = subCommandParts.filter(
+			(arg) => !arg.startsWith("-") && arg !== ""
+		);
+		const isRootLevelError =
+			nonFlagArgs.length <= 1 &&
+			(e.message.includes("Unknown argument") ||
+				e.message.includes("Unknown command"));
+
+		const { wrangler, showHelpWithCategories } = createCLIParser([
+			...(isRootLevelError ? [] : subCommandParts),
+			"--help",
+		]);
+
+		if (isRootLevelError) {
+			await showHelpWithCategories();
+			return;
+		}
+
 		await wrangler.parse();
 	} else if (
 		isAuthenticationError(e) ||

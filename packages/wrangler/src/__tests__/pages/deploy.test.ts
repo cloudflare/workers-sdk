@@ -21,7 +21,10 @@ import { msw } from "../helpers/msw";
 import { normalizeProgressSteps } from "../helpers/normalize-progress";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { toString } from "../helpers/serialize-form-data-entry";
+import {
+	formDataToObject,
+	toString,
+} from "../helpers/serialize-form-data-entry";
 import type { Project, UploadPayloadFile } from "../../pages/types";
 import type { StrictRequest } from "msw";
 import type { FormDataEntryValue } from "undici";
@@ -175,16 +178,15 @@ describe("pages deploy", () => {
 				"*/accounts/:accountId/pages/projects/foo/deployments",
 				async ({ request, params }) => {
 					expect(params.accountId).toEqual("some-account-id");
-					expect(await request.formData()).toMatchInlineSnapshot(`
-				FormData {
-				  Symbol(state): Array [
-				    Object {
-				      "name": "manifest",
-				      "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
-				    },
-				  ],
-				}
-			`);
+					expect(await formDataToObject(await request.formData()))
+						.toMatchInlineSnapshot(`
+							Array [
+							  Object {
+							    "name": "manifest",
+							    "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
+							  },
+							]
+						`);
 					return HttpResponse.json(
 						{
 							success: true,
@@ -346,16 +348,15 @@ describe("pages deploy", () => {
 				"*/accounts/:accountId/pages/projects/foo/deployments",
 				async ({ request, params }) => {
 					expect(params.accountId).toEqual("some-account-id");
-					expect(await request.formData()).toMatchInlineSnapshot(`
-				FormData {
-				  Symbol(state): Array [
-				    Object {
-				      "name": "manifest",
-				      "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
-				    },
-				  ],
-				}
-			`);
+					expect(await formDataToObject(await request.formData()))
+						.toMatchInlineSnapshot(`
+							Array [
+							  Object {
+							    "name": "manifest",
+							    "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+							  },
+							]
+						`);
 
 					return HttpResponse.json(
 						{
@@ -499,16 +500,15 @@ describe("pages deploy", () => {
 					requests.push(request);
 					expect(params.accountId).toEqual("some-account-id");
 					if (requests.length === 1) {
-						expect(await request.formData()).toMatchInlineSnapshot(`
-				      FormData {
-				        Symbol(state): Array [
-				          Object {
-				            "name": "manifest",
-				            "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
-				          },
-				        ],
-				      }
-			    `);
+						expect(await formDataToObject(await request.formData()))
+							.toMatchInlineSnapshot(`
+								Array [
+								  Object {
+								    "name": "manifest",
+								    "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+								  },
+								]
+							`);
 					}
 
 					if (requests.length < 2) {
@@ -953,16 +953,15 @@ describe("pages deploy", () => {
 				"*/accounts/:accountId/pages/projects/foo/deployments",
 				async ({ request, params }) => {
 					expect(params.accountId).toEqual("some-account-id");
-					expect(await request.formData()).toMatchInlineSnapshot(`
-				      FormData {
-				        Symbol(state): Array [
-				          Object {
-				            "name": "manifest",
-				            "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
-				          },
-				        ],
-				      }
-			    `);
+					expect(await formDataToObject(await request.formData()))
+						.toMatchInlineSnapshot(`
+							Array [
+							  Object {
+							    "name": "manifest",
+							    "value": "{\\"/logo.txt\\":\\"1a98fb08af91aca4a7df1764a2c4ddb0\\"}",
+							  },
+							]
+						`);
 
 					return HttpResponse.json(
 						{
@@ -1831,20 +1830,19 @@ describe("pages deploy", () => {
 				"*/accounts/:accountId/pages/projects/foo/deployments",
 				async ({ request, params }) => {
 					expect(params.accountId).toEqual("some-account-id");
-					expect(await request.formData()).toMatchInlineSnapshot(`
-						FormData {
-						  Symbol(state): Array [
-						    Object {
-						      "name": "manifest",
-						      "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
-						    },
-						    Object {
-						      "name": "commit_dirty",
-						      "value": "true",
-						    },
-						  ],
-						}
-					`);
+					expect(await formDataToObject(await request.formData()))
+						.toMatchInlineSnapshot(`
+							Array [
+							  Object {
+							    "name": "manifest",
+							    "value": "{\\"/logo.png\\":\\"2082190357cfd3617ccfe04f340c6247\\"}",
+							  },
+							  Object {
+							    "name": "commit_dirty",
+							    "value": "true",
+							  },
+							]
+						`);
 					return HttpResponse.json(
 						{
 							success: true,
@@ -5713,6 +5711,118 @@ and that at least one include rule is provided.
 			`);
 
 			expect(std.err).toMatchInlineSnapshot(`""`);
+		});
+	});
+
+	describe("deploys with custom commit information", () => {
+		it("should accept and send --commit-hash parameter", async () => {
+			mkdirSync("public");
+			writeFileSync("public/README.md", "# Test project");
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			let deploymentFormData: Record<string, unknown> | null = null;
+
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: [],
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post("*/pages/assets/upload", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}),
+				http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { deployment_configs: { production: {}, preview: {} } },
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ request }) => {
+						const formData = await request.formData();
+						const formDataObj: Record<string, unknown> = {};
+						for (const [key, value] of formData.entries()) {
+							formDataObj[key] = value;
+						}
+						deploymentFormData = formDataObj;
+
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler(
+				"pages deploy public --project-name=foo --commit-hash=abc123def456 --commit-message='Test commit'"
+			);
+
+			// Verify the commit_hash was sent in the deployment request
+			expect(deploymentFormData).not.toBeNull();
+			expect(deploymentFormData).toHaveProperty("commit_hash", "abc123def456");
+			expect(deploymentFormData).toHaveProperty(
+				"commit_message",
+				"Test commit"
+			);
 		});
 	});
 

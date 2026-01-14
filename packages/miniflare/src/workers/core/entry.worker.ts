@@ -76,6 +76,8 @@ function getUserRequest(
 
 	// If Miniflare was configured with `upstream`, then we use this to override the url and host in the request.
 	const upstreamUrl = env[CoreBindings.TEXT_UPSTREAM_URL];
+	// Store the original hostname before it gets rewritten by upstream
+	const originalHostname = upstreamUrl !== undefined ? url.host : undefined;
 	if (upstreamUrl !== undefined) {
 		// If a custom `upstream` was specified, make sure the URL starts with it
 		let path = url.pathname + url.search;
@@ -107,6 +109,12 @@ function getUserRequest(
 
 	if (rewriteHeadersFromOriginalUrl) {
 		request.headers.set("Host", url.host);
+	}
+
+	// Set the original hostname header when using upstream, so Workers can
+	// access the original hostname even after the Host header is rewritten
+	if (originalHostname !== undefined) {
+		request.headers.set(CoreHeaders.ORIGINAL_HOSTNAME, originalHostname);
 	}
 
 	if (clientIp && !request.headers.get("CF-Connecting-IP")) {

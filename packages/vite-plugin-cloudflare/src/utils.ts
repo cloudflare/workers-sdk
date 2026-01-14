@@ -8,9 +8,9 @@ import {
 } from "miniflare";
 import semverGte from "semver/functions/gte";
 import { version as viteVersion } from "vite";
+import * as vite from "vite";
 import type { PluginContext } from "./context";
 import type * as http from "node:http";
-import type * as vite from "vite";
 
 export const debuglog = util.debuglog("@cloudflare:vite-plugin");
 
@@ -129,3 +129,5 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 		signal: request.signal,
 	});
 }
+
+export const isRolldown = "rolldownVersion" in vite;

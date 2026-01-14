@@ -6,5 +6,6 @@ export const deploymentsNamespace = createNamespace({
 			"🚢 List and view the current and past deployments for your Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		category: "Compute & AI",
 	},
 });

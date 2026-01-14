@@ -2,7 +2,7 @@ import { execFileSync } from "child_process";
 import { mkdtempSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
-import { beforeEach, describe, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
 
 const basePath = resolve(__dirname, "..");
@@ -14,9 +14,7 @@ describe("'wrangler dev' with WRANGLER_BUILD_CONDITIONS", () => {
 		tempDir = mkdtempSync(join(tmpdir(), "c3-wrangler-init--from-dash-"));
 	});
 
-	it("should import from the `other` package export if that is in the conditions", async ({
-		expect,
-	}) => {
+	it("should import from the `other` package export if that is in the conditions", async () => {
 		execFileSync(
 			"node",
 			[wranglerEntryPath, "deploy", "--dry-run", `--outdir=${tempDir}`],
@@ -33,9 +31,7 @@ describe("'wrangler dev' with WRANGLER_BUILD_CONDITIONS", () => {
 		);
 	});
 
-	it("should import from the `default` package export if the conditions are explicitly empty", async ({
-		expect,
-	}) => {
+	it("should import from the `default` package export if the conditions are explicitly empty", async () => {
 		execFileSync(
 			"node",
 			[wranglerEntryPath, "deploy", "--dry-run", `--outdir=${tempDir}`],
@@ -54,9 +50,7 @@ describe("'wrangler dev' with WRANGLER_BUILD_CONDITIONS", () => {
 });
 
 describe("'wrangler build' with WRANGLER_BUILD_PLATFORM", () => {
-	it("should import from node imports if platform is set to 'node'", ({
-		expect,
-	}) => {
+	it("should import from node imports if platform is set to 'node'", () => {
 		execFileSync(
 			"node",
 			[wranglerEntryPath, "deploy", "--dry-run", "--outdir=dist/node"],

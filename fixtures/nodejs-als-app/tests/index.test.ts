@@ -1,12 +1,10 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("nodejs als", () => {
-	it("should work with node:async_hooks without full nodejs compat", async ({
-		expect,
-	}) => {
+	it("should work with node:async_hooks without full nodejs compat", async () => {
 		const { ip, port, stop, getOutput } = await runWranglerDev(
 			resolve(__dirname, "../src"),
 			["--port=0", "--inspector-port=0"]

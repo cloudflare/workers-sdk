@@ -65,6 +65,11 @@ export type CommonEventProperties = {
 	 * Same as argsUsed except concatenated for convenience in Amplitude
 	 */
 	argsCombination: string;
+	/**
+	 * The detected AI agent environment ID, if any (e.g., "claude-code", "cursor-agent").
+	 * Null if not running in an agentic environment.
+	 */
+	agent: string | null;
 };
 
 /** We send a metrics event at the start and end of a command run */
