@@ -1,5 +1,32 @@
 # wrangler
 
+## 4.59.2
+
+### Patch Changes
+
+- [#11908](https://github.com/cloudflare/workers-sdk/pull/11908) [`e78186d`](https://github.com/cloudflare/workers-sdk/commit/e78186dae926c0ae1ab387aaa6cb8ba53bed9992) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260111.0 | 1.20260114.0 |
+
+- [#11880](https://github.com/cloudflare/workers-sdk/pull/11880) [`fe4faa3`](https://github.com/cloudflare/workers-sdk/commit/fe4faa306609514863fa770bac1dba5ff618f4be) Thanks [@penalosa](https://github.com/penalosa)! - Show helpful messages for errors outside of Wrangler's control. This prevents unnecessary Sentry reports.
+
+  Errors now handled with user-friendly messages:
+
+  - Connection timeouts to Cloudflare's API (`UND_ERR_CONNECT_TIMEOUT`) - typically due to slow networks or connectivity issues
+  - File system permission errors (`EPERM`, `EACCES`) - caused by insufficient permissions, locked files, or antivirus software
+  - DNS resolution failures (`ENOTFOUND`) - caused by network connectivity issues or DNS configuration problems
+
+- [#11882](https://github.com/cloudflare/workers-sdk/pull/11882) [`695b043`](https://github.com/cloudflare/workers-sdk/commit/695b043b4ddc99bf9a3fe93cc7daa8347b29ccb3) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Improve the error message for `wrangler secret put` when using Worker versions or gradual deployments. `wrangler versions secret put` should be used instead, or ensure to deploy the latest version before using `wrangler secret put`. `wrangler secret put` alone will add the new secret to the latest version (possibly undeployed) and immediately deploy that which is usually not intended.
+
+- Updated dependencies [[`e78186d`](https://github.com/cloudflare/workers-sdk/commit/e78186dae926c0ae1ab387aaa6cb8ba53bed9992), [`fec8f5b`](https://github.com/cloudflare/workers-sdk/commit/fec8f5b82e0bb64400bbfcced302748dbe9a3062), [`d39777f`](https://github.com/cloudflare/workers-sdk/commit/d39777f1e354e8f3abd02164e76c2501e47e713f), [`4714ca1`](https://github.com/cloudflare/workers-sdk/commit/4714ca12c1f24c7e3553d3bfd2812a833a07826c), [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a)]:
+  - miniflare@4.20260114.0
+  - @cloudflare/unenv-preset@2.10.0
+  - @cloudflare/kv-asset-handler@0.4.2
+
 ## 4.59.1
 
 ### Patch Changes
