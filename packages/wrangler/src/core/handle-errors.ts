@@ -87,6 +87,20 @@ function isPermissionError(e: unknown): boolean {
 }
 
 /**
+ * Check if a text string contains a reference to Cloudflare's API domains.
+ * This is a safety precaution to only handle errors related to Cloudflare's
+ * infrastructure, not user endpoints.
+ *
+ * @param text - The text to check for Cloudflare API references
+ * @returns `true` if the text contains a Cloudflare API domain, `false` otherwise
+ */
+function isCloudflareAPI(text: string): boolean {
+	return (
+		text.includes("api.cloudflare.com") || text.includes("dash.cloudflare.com")
+	);
+}
+
+/**
  * DNS resolution failures (ENOTFOUND) to Cloudflare's API are environmental issues
  * caused by network connectivity or DNS problems that users cannot fix by modifying
  * their code, so we present a helpful message instead of reporting to Sentry.
@@ -96,12 +110,6 @@ function isPermissionError(e: unknown): boolean {
  */
 function isCloudflareAPIDNSError(e: unknown): boolean {
 	// Only handle DNS errors to Cloudflare APIs
-	const isCloudflareAPI = (text: string): boolean => {
-		return (
-			text.includes("api.cloudflare.com") ||
-			text.includes("dash.cloudflare.com")
-		);
-	};
 
 	const hasDNSErrorCode = (obj: unknown): boolean => {
 		return (
@@ -164,13 +172,6 @@ function isCloudflareAPIDNSError(e: unknown): boolean {
 function isCloudflareAPIConnectionTimeoutError(e: unknown): boolean {
 	// Only handle timeouts to Cloudflare APIs - timeouts to user endpoints
 	// (e.g., in dev server or user's own APIs) may indicate actual bugs
-	const isCloudflareAPI = (text: string): boolean => {
-		return (
-			text.includes("api.cloudflare.com") ||
-			text.includes("dash.cloudflare.com")
-		);
-	};
-
 	const hasTimeoutCode = (obj: unknown): boolean => {
 		return (
 			obj !== null &&
