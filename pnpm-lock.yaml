@@ -1863,10 +1863,6 @@ importers:
         version: 3.22.3
 
   packages/kv-asset-handler:
-    dependencies:
-      mime:
-        specifier: ^3.0.0
-        version: 3.0.0
     devDependencies:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
@@ -1886,6 +1882,9 @@ importers:
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.0)
+      mime:
+        specifier: ^3.0.0
+        version: 3.0.0
       tsup:
         specifier: 8.3.0
         version: 8.3.0(@microsoft/api-extractor@7.52.8(@types/node@20.19.9))(jiti@2.6.0)(postcss@8.5.6)(typescript@5.9.3)(yaml@2.8.1)
@@ -1898,24 +1897,9 @@ importers:
       '@cspotcode/source-map-support':
         specifier: 0.8.1
         version: 0.8.1
-      acorn:
-        specifier: 8.14.0
-        version: 8.14.0
-      acorn-walk:
-        specifier: 8.3.2
-        version: 8.3.2
-      exit-hook:
-        specifier: 2.2.1
-        version: 2.2.1
-      glob-to-regexp:
-        specifier: 0.4.1
-        version: 0.4.1
       sharp:
         specifier: ^0.34.5
         version: 0.34.5
-      stoppable:
-        specifier: 1.1.0
-        version: 1.1.0
       undici:
         specifier: catalog:default
         version: 7.14.0
@@ -1986,6 +1970,12 @@ importers:
       '@types/ws':
         specifier: ^8.5.7
         version: 8.5.10
+      acorn:
+        specifier: 8.14.0
+        version: 8.14.0
+      acorn-walk:
+        specifier: 8.3.2
+        version: 8.3.2
       capnp-es:
         specifier: ^0.0.11
         version: 0.0.11(typescript@5.8.3)
@@ -2019,12 +2009,18 @@ importers:
       eslint-plugin-prettier:
         specifier: ^5.0.1
         version: 5.0.1(eslint-config-prettier@9.0.0(eslint@9.39.1(jiti@2.6.0)))(eslint@9.39.1(jiti@2.6.0))(prettier@3.2.5)
+      exit-hook:
+        specifier: 2.2.1
+        version: 2.2.1
       expect-type:
         specifier: ^0.15.0
         version: 0.15.0
       get-port:
         specifier: ^7.1.0
         version: 7.1.0
+      glob-to-regexp:
+        specifier: 0.4.1
+        version: 0.4.1
       heap-js:
         specifier: ^2.5.0
         version: 2.5.0
@@ -2049,6 +2045,9 @@ importers:
       source-map:
         specifier: ^0.6.1
         version: 0.6.1
+      stoppable:
+        specifier: 1.1.0
+        version: 1.1.0
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
@@ -2284,24 +2283,9 @@ importers:
       '@cloudflare/unenv-preset':
         specifier: workspace:*
         version: link:../unenv-preset
-      '@remix-run/node-fetch-server':
-        specifier: ^0.8.0
-        version: 0.8.0
-      defu:
-        specifier: ^6.1.4
-        version: 6.1.4
-      get-port:
-        specifier: ^7.1.0
-        version: 7.1.0
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
-      picocolors:
-        specifier: ^1.1.1
-        version: 1.1.1
-      tinyglobby:
-        specifier: ^0.2.12
-        version: 0.2.12
       unenv:
         specifier: 2.0.0-rc.24
         version: 2.0.0-rc.24
@@ -2330,6 +2314,9 @@ importers:
       '@cloudflare/workers-utils':
         specifier: workspace:*
         version: link:../workers-utils
+      '@remix-run/node-fetch-server':
+        specifier: ^0.8.0
+        version: 0.8.0
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
@@ -2339,15 +2326,27 @@ importers:
       '@types/ws':
         specifier: ^8.5.13
         version: 8.5.13
+      defu:
+        specifier: ^6.1.4
+        version: 6.1.4
+      get-port:
+        specifier: ^7.1.0
+        version: 7.1.0
       magic-string:
         specifier: ^0.30.12
         version: 0.30.17
       mlly:
         specifier: ^1.7.4
         version: 1.7.4
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
       semver:
         specifier: ^7.7.1
         version: 7.7.3
+      tinyglobby:
+        specifier: ^0.2.12
+        version: 0.2.12
       tree-kill:
         specifier: ^1.2.2
         version: 1.2.2
@@ -3405,27 +3404,15 @@ importers:
 
   packages/vitest-pool-workers:
     dependencies:
-      birpc:
-        specifier: 0.2.14
-        version: 0.2.14
       cjs-module-lexer:
         specifier: ^1.2.3
         version: 1.2.3
-      devalue:
-        specifier: ^5.3.2
-        version: 5.3.2
       esbuild:
         specifier: catalog:default
         version: 0.27.0
-      get-port:
-        specifier: ^7.1.0
-        version: 7.1.0
       miniflare:
         specifier: workspace:*
         version: link:../miniflare
-      semver:
-        specifier: ^7.7.1
-        version: 7.7.1
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
@@ -3460,12 +3447,24 @@ importers:
       '@vitest/snapshot':
         specifier: catalog:default
         version: 3.2.3
+      birpc:
+        specifier: 0.2.14
+        version: 0.2.14
       capnp-es:
         specifier: ^0.0.11
         version: 0.0.11(typescript@5.8.3)
+      devalue:
+        specifier: ^5.3.2
+        version: 5.3.2
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.0)
+      get-port:
+        specifier: ^7.1.0
+        version: 7.1.0
+      semver:
+        specifier: ^7.7.1
+        version: 7.7.1
       ts-dedent:
         specifier: ^2.2.0
         version: 2.2.0
