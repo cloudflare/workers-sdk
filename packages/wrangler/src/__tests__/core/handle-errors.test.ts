@@ -203,13 +203,13 @@ describe("handleError", () => {
 		it("should show user-friendly message for EACCES errors with path", async () => {
 			const error = Object.assign(
 				new Error(
-					"EACCES: permission denied, open '/Users/songmingyu/Library/Preferences/.wrangler/config/default.toml'"
+					"EACCES: permission denied, open '/Users/user/Library/Preferences/.wrangler/config/default.toml'"
 				),
 				{
 					code: "EACCES",
 					errno: -13,
 					syscall: "open",
-					path: "/Users/songmingyu/Library/Preferences/.wrangler/config/default.toml",
+					path: "/Users/user/Library/Preferences/.wrangler/config/default.toml",
 				}
 			);
 
@@ -220,7 +220,7 @@ describe("handleError", () => {
 				"A permission error occurred while accessing the file system"
 			);
 			expect(std.err).toContain(
-				"Affected path: /Users/songmingyu/Library/Preferences/.wrangler/config/default.toml"
+				"Affected path: /Users/user/Library/Preferences/.wrangler/config/default.toml"
 			);
 			expect(std.err).toContain("Insufficient file or directory permissions");
 		});
