@@ -354,7 +354,6 @@ export async function handleError(
 			path = e.cause.path;
 		}
 
-		// Always log the full error message in debug
 		logger.debug(`File not found error: ${errorMessage}`);
 
 		// Include path in main error if available, otherwise include the error message
