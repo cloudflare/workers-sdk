@@ -281,6 +281,7 @@ interface RepositoryAdvisoryEvent {
 		ghsa_id: string;
 		html_url: string;
 		summary: string;
+		description: string;
 	};
 }
 
@@ -388,6 +389,16 @@ async function sendRepositoryAdvisoryAlert(
 							subtitle: advisory.summary,
 						},
 						sections: [
+							{
+								collapsible: true,
+								widgets: [
+									{
+										textParagraph: {
+											text: advisory.description,
+										},
+									},
+								],
+							},
 							{
 								collapsible: false,
 								widgets: [
