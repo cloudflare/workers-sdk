@@ -378,6 +378,7 @@ export interface CfTailConsumer {
 
 export interface CfUserLimits {
 	cpu_ms?: number;
+	subrequests?: number;
 }
 
 /**
