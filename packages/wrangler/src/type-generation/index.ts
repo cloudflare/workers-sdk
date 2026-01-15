@@ -724,6 +724,35 @@ type TSConfig = {
 type VarTypes = Record<string, string[]>;
 
 /**
+ * Retrieves the environment config for a specific environment name, throwing if it doesn't exist.
+ *
+ * @param environmentName - The environment name specified via --env
+ * @param rawConfig - The raw config object
+ *
+ * @returns The environment config object
+ *
+ * @throws {UserError} If the environment doesn't exist in the config
+ */
+function getEnvConfig(
+	environmentName: string,
+	rawConfig: { env?: Record<string, RawEnvironment> }
+): RawEnvironment {
+	const envConfig = rawConfig.env?.[environmentName];
+	if (!envConfig) {
+		const availableEnvs = Object.keys(rawConfig.env ?? {});
+		const envList =
+			availableEnvs.length > 0
+				? `Available environments: ${availableEnvs.join(", ")}`
+				: "No environments are defined in the configuration file.";
+		throw new UserError(
+			`Environment "${environmentName}" not found in configuration.\n${envList}`
+		);
+	}
+
+	return envConfig;
+}
+
+/**
  * Collects all the vars types across all the environments defined in the config file
  *
  * Behavior:
@@ -770,10 +799,8 @@ function collectAllVars(
 	const { rawConfig } = experimental_readRawConfig(args);
 
 	if (args.env) {
-		const envConfig = rawConfig.env?.[args.env];
-		if (envConfig) {
-			collectEnvironmentVars(envConfig.vars);
-		}
+		const envConfig = getEnvConfig(args.env, rawConfig);
+		collectEnvironmentVars(envConfig.vars);
 	} else {
 		collectEnvironmentVars(rawConfig.vars);
 		for (const env of Object.values(rawConfig.env ?? {})) {
@@ -1002,7 +1029,7 @@ function collectAllBindings(
 	const { rawConfig } = experimental_readRawConfig(args);
 
 	if (args.env) {
-		const envConfig = rawConfig.env?.[args.env];
+		const envConfig = getEnvConfig(args.env, rawConfig);
 		collectEnvironmentBindings(envConfig, args.env);
 	} else {
 		collectEnvironmentBindings(rawConfig, "top-level");
@@ -1060,7 +1087,7 @@ function collectAllDurableObjects(
 	const { rawConfig } = experimental_readRawConfig(args);
 
 	if (args.env) {
-		const envConfig = rawConfig.env?.[args.env];
+		const envConfig = getEnvConfig(args.env, rawConfig);
 		collectEnvironmentDOs(envConfig);
 	} else {
 		collectEnvironmentDOs(rawConfig);
@@ -1118,7 +1145,7 @@ function collectAllServices(
 	const { rawConfig } = experimental_readRawConfig(args);
 
 	if (args.env) {
-		const envConfig = rawConfig.env?.[args.env];
+		const envConfig = getEnvConfig(args.env, rawConfig);
 		collectEnvironmentServices(envConfig);
 	} else {
 		collectEnvironmentServices(rawConfig);
@@ -1179,7 +1206,7 @@ function collectAllWorkflows(
 	const { rawConfig } = experimental_readRawConfig(args);
 
 	if (args.env) {
-		const envConfig = rawConfig.env?.[args.env];
+		const envConfig = getEnvConfig(args.env, rawConfig);
 		collectEnvironmentWorkflows(envConfig);
 	} else {
 		collectEnvironmentWorkflows(rawConfig);
@@ -1232,7 +1259,7 @@ function collectAllUnsafeBindings(
 	const { rawConfig } = experimental_readRawConfig(args);
 
 	if (args.env) {
-		const envConfig = rawConfig.env?.[args.env];
+		const envConfig = getEnvConfig(args.env, rawConfig);
 		collectEnvironmentUnsafe(envConfig);
 	} else {
 		collectEnvironmentUnsafe(rawConfig);
