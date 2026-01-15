@@ -1,5 +1,46 @@
 # @cloudflare/vite-plugin
 
+## 1.21.0
+
+### Minor Changes
+
+- [#11879](https://github.com/cloudflare/workers-sdk/pull/11879) [`5c8ff05`](https://github.com/cloudflare/workers-sdk/commit/5c8ff05079d71810fb1546f3dc788cc44ee00e22) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add support for child environments.
+
+  This is to support React Server Components via [@vitejs/plugin-rsc](https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-rsc) and frameworks that build on top of it. A `childEnvironments` option is now added to the plugin config to enable using multiple environments within a single Worker. The parent environment can import modules from a child environment in order to access a separate module graph. For a typical RSC use case, the plugin might be configured as in the following example:
+
+  ```ts
+  export default defineConfig({
+  	plugins: [
+  		cloudflare({
+  			viteEnvironment: {
+  				name: "rsc",
+  				childEnvironments: ["ssr"],
+  			},
+  		}),
+  	],
+  });
+  ```
+
+### Patch Changes
+
+- [#11898](https://github.com/cloudflare/workers-sdk/pull/11898) [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bundle more third-party dependencies to reduce supply chain risk
+
+  Previously, several small utility packages were listed as runtime dependencies and
+  installed separately. These are now bundled directly into the published packages,
+  reducing the number of external dependencies users need to trust.
+
+  Bundled dependencies:
+
+  - **miniflare**: `acorn`, `acorn-walk`, `exit-hook`, `glob-to-regexp`, `stoppable`
+  - **kv-asset-handler**: `mime`
+  - **vite-plugin-cloudflare**: `@remix-run/node-fetch-server`, `defu`, `get-port`, `picocolors`, `tinyglobby`
+  - **vitest-pool-workers**: `birpc`, `devalue`, `get-port`, `semver`
+
+- Updated dependencies [[`e78186d`](https://github.com/cloudflare/workers-sdk/commit/e78186dae926c0ae1ab387aaa6cb8ba53bed9992), [`fe4faa3`](https://github.com/cloudflare/workers-sdk/commit/fe4faa306609514863fa770bac1dba5ff618f4be), [`fec8f5b`](https://github.com/cloudflare/workers-sdk/commit/fec8f5b82e0bb64400bbfcced302748dbe9a3062), [`d39777f`](https://github.com/cloudflare/workers-sdk/commit/d39777f1e354e8f3abd02164e76c2501e47e713f), [`4714ca1`](https://github.com/cloudflare/workers-sdk/commit/4714ca12c1f24c7e3553d3bfd2812a833a07826c), [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a), [`695b043`](https://github.com/cloudflare/workers-sdk/commit/695b043b4ddc99bf9a3fe93cc7daa8347b29ccb3)]:
+  - miniflare@4.20260114.0
+  - wrangler@4.59.2
+  - @cloudflare/unenv-preset@2.10.0
+
 ## 1.20.3
 
 ### Patch Changes
