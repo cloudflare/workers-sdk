@@ -11,9 +11,6 @@
 		"undici": "catalog:default",
 		"vitest": "catalog:default"
 	},
-	"optionalDependencies": {
-		"@cdktf/node-pty-prebuilt-multiarch": "0.10.2"
-	},
 	"volta": {
 		"extends": "../../package.json"
 	}

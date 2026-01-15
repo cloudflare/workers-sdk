@@ -365,7 +365,7 @@ export class LocalRuntimeController extends RuntimeController {
 			if (
 				this.containerBeingBuilt?.abortRequested &&
 				error instanceof Error &&
-				error.message === "Build exited with code: 1"
+				/Docker build exited with code: \d+/.test(error.message)
 			) {
 				// The user caused the container image build to be aborted, so it's expected
 				// to get a build error here, this can be safely ignored because after this
