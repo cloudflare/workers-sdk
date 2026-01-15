@@ -447,33 +447,6 @@ const testCases: TestCase[] = [
 		worksWithoutRemoteBindings: true,
 	},
 	{
-		name: "Email",
-		scriptPath: "email.js",
-		setup: () => ({
-			remoteProxySessionConfig: {
-				bindings: {
-					EMAIL: {
-						type: "send_email",
-					},
-				},
-			},
-			miniflareConfig: (connection) => ({
-				email: {
-					send_email: [
-						{ name: "EMAIL", remoteProxyConnectionString: connection },
-					],
-				},
-			}),
-		}),
-		expectFetchToMatch: [
-			// This error message comes from the production binding, and so indicates that the binding has been called
-			// successfully, which is all we care about. Full E2E testing of email sending would be _incredibly_ flaky
-			expect.stringContaining(
-				`email from example.com not allowed because domain is not owned by the same account`
-			),
-		],
-	},
-	{
 		name: "VPC Service",
 		scriptPath: "vpc-service.js",
 		// TODO: Enable post VPC announcement

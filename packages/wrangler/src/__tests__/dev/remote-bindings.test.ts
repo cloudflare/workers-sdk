@@ -451,36 +451,6 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 				}),
 			],
 		},
-		{
-			name: "email",
-			config: {
-				send_email: [
-					{
-						name: "EMAIL",
-						remote: true,
-					},
-				],
-			},
-			expectedProxyWorkerBindings: {
-				EMAIL: {
-					remote: true,
-					type: "send_email",
-				},
-			},
-			expectedWorkerOptions: [
-				expect.objectContaining({
-					email: {
-						send_email: [
-							{
-								name: "EMAIL",
-								remote: true,
-								remoteProxyConnectionString,
-							},
-						],
-					},
-				}),
-			],
-		},
 	];
 
 	it.each(testCases)(
@@ -768,5 +738,32 @@ describe("dev with remote bindings", { sequential: true, retry: 2 }, () => {
 		await stopWrangler();
 
 		await wranglerStopped;
+	});
+
+	it("throws an error when send_email binding is configured with remote: true", async () => {
+		await seed({
+			"wrangler.jsonc": JSON.stringify(
+				{
+					name: "worker",
+					main: "index.js",
+					compatibility_date: "2025-01-01",
+					send_email: [
+						{
+							name: "EMAIL",
+							remote: true,
+						},
+					],
+				},
+				null,
+				2
+			),
+			"index.js": `export default { fetch() { return new Response("hello") } }`,
+		});
+
+		await runWrangler("dev --port=0 --inspector-port=0").catch(() => {});
+
+		expect(std.err).toContain(
+			"Send Email bindings do not support accessing remote resources."
+		);
 	});
 });

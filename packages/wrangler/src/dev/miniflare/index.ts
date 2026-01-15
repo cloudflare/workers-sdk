@@ -656,13 +656,13 @@ export function buildMiniflareBindingOptions(
 			bindings.worker_loaders?.map(({ binding }) => [binding, {}]) ?? []
 		),
 		email: {
-			send_email: bindings.send_email?.map((b) => ({
-				...b,
-				remoteProxyConnectionString:
-					b.remote && remoteProxyConnectionString
-						? remoteProxyConnectionString
-						: undefined,
-			})),
+			send_email: bindings.send_email?.map((b) => {
+				warnOrError("send_email", b.remote, "local");
+				return {
+					...b,
+					remoteProxyConnectionString: undefined,
+				};
+			}),
 		},
 		images: bindings.images
 			? {
