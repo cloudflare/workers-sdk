@@ -1,0 +1,3 @@
+# Do not ignore this generated folder.
+# `node_modules` is ignored in the root .gitignore, so we need to re-include it here.
+!src/runtime/config/node_modules
