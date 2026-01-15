@@ -149,7 +149,7 @@ export function transformViteConfig(
 				throw new UserError(dedent`
 					Cannot modify Vite config: expected an object literal but found ${config.type}.
 
-					The Cloudflare plugin can only be added to Vite configs that use a simple object.
+					The Cloudflare plugin can only be automatically added to Vite configs that use a simple object.
 					If your config uses a function or other dynamic configuration, please manually add the plugin:
 
 					  import { cloudflare } from "@cloudflare/vite-plugin";
