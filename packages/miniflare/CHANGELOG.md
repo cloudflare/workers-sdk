@@ -1,5 +1,47 @@
 # miniflare
 
+## 4.20260114.0
+
+### Minor Changes
+
+- [#11883](https://github.com/cloudflare/workers-sdk/pull/11883) [`4714ca1`](https://github.com/cloudflare/workers-sdk/commit/4714ca12c1f24c7e3553d3bfd2812a833a07826c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `MF-Original-Hostname` header when using the `upstream` option
+
+  When using the `upstream` option in Miniflare, the `Host` header is rewritten to match the upstream server, which means the original hostname is lost. This change adds a new `MF-Original-Hostname` header that preserves the original hostname from the incoming request.
+
+  This allows Workers to access the original hostname when proxying requests through an upstream server:
+
+  ```js
+  export default {
+  	async fetch(request) {
+  		const originalHostname = request.headers.get("MF-Original-Hostname");
+  		// originalHostname contains the hostname before it was rewritten
+  	},
+  };
+  ```
+
+### Patch Changes
+
+- [#11908](https://github.com/cloudflare/workers-sdk/pull/11908) [`e78186d`](https://github.com/cloudflare/workers-sdk/commit/e78186dae926c0ae1ab387aaa6cb8ba53bed9992) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260111.0 | 1.20260114.0 |
+
+- [#11898](https://github.com/cloudflare/workers-sdk/pull/11898) [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bundle more third-party dependencies to reduce supply chain risk
+
+  Previously, several small utility packages were listed as runtime dependencies and
+  installed separately. These are now bundled directly into the published packages,
+  reducing the number of external dependencies users need to trust.
+
+  Bundled dependencies:
+
+  - **miniflare**: `acorn`, `acorn-walk`, `exit-hook`, `glob-to-regexp`, `stoppable`
+  - **kv-asset-handler**: `mime`
+  - **vite-plugin-cloudflare**: `@remix-run/node-fetch-server`, `defu`, `get-port`, `picocolors`, `tinyglobby`
+  - **vitest-pool-workers**: `birpc`, `devalue`, `get-port`, `semver`
+
 ## 4.20260111.0
 
 ### Patch Changes
