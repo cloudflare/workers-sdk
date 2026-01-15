@@ -3,7 +3,6 @@ import type {
 	IssueCommentEvent,
 	IssuesEvent,
 	Schema,
-	SecurityAdvisoryEvent,
 	WebhookEvent,
 } from "@octokit/webhooks-types";
 
@@ -275,14 +274,25 @@ function isIssueOrPREvent(
 	return null;
 }
 
-function isSecurityAdvisoryEvent(
+// Repository advisory event type (not yet in @octokit/webhooks-types)
+interface RepositoryAdvisoryEvent {
+	action: "reported" | "published";
+	repository_advisory: {
+		ghsa_id: string;
+		html_url: string;
+		summary: string;
+	};
+}
+
+function isRepositoryAdvisoryEvent(
 	message: WebhookEvent
-): SecurityAdvisoryEvent | null {
+): RepositoryAdvisoryEvent | null {
 	if (
-		"security_advisory" in message &&
-		(message.action === "published" || message.action === "performed")
+		"repository_advisory" in message &&
+		"action" in message &&
+		message.action === "reported"
 	) {
-		return message as SecurityAdvisoryEvent;
+		return message as RepositoryAdvisoryEvent;
 	}
 	return null;
 }
@@ -360,23 +370,11 @@ async function sendSecurityAlert(
 	);
 }
 
-async function sendSecurityAdvisoryAlert(
+async function sendRepositoryAdvisoryAlert(
 	webhookUrl: string,
-	advisoryEvent: SecurityAdvisoryEvent
+	advisoryEvent: RepositoryAdvisoryEvent
 ) {
-	const advisory = advisoryEvent.security_advisory;
-	const action =
-		advisoryEvent.action === "performed"
-			? "Needs Triaging"
-			: advisoryEvent.action === "published"
-				? "Published"
-				: "Updated";
-
-	if (action === "Published") {
-		return;
-	}
-
-	const advisoryUrl = `https://github.com/cloudflare/workers-sdk/security/advisories/${advisory.ghsa_id}`;
+	const advisory = advisoryEvent.repository_advisory;
 
 	return sendMessage(
 		webhookUrl,
@@ -386,7 +384,7 @@ async function sendSecurityAdvisoryAlert(
 					cardId: "unique-card-id",
 					card: {
 						header: {
-							title: `🔐 Security Advisory ${action}`,
+							title: `🔐 Repository Security Advisory Reported`,
 							subtitle: advisory.summary,
 						},
 						sections: [
@@ -400,7 +398,7 @@ async function sendSecurityAdvisoryAlert(
 													text: "View Advisory",
 													onClick: {
 														openLink: {
-															url: advisoryUrl,
+															url: advisory.html_url,
 														},
 													},
 												},
@@ -414,7 +412,7 @@ async function sendSecurityAdvisoryAlert(
 				},
 			],
 		},
-		"-security-advisory-" + advisory.ghsa_id
+		"-repository-advisory-" + advisory.ghsa_id
 	);
 }
 
@@ -589,12 +587,12 @@ export default {
 			if (maybeSecurityIssue) {
 				await sendSecurityAlert(env.ALERTS_WEBHOOK, maybeSecurityIssue);
 			}
-			// Notifies when a security advisory is published/updated to workers-sdk
-			const maybeSecurityAdvisory = isSecurityAdvisoryEvent(body);
-			if (maybeSecurityAdvisory) {
-				await sendSecurityAdvisoryAlert(
+			// Notifies when a repository advisory is reported to workers-sdk
+			const maybeRepositoryAdvisory = isRepositoryAdvisoryEvent(body);
+			if (maybeRepositoryAdvisory) {
+				await sendRepositoryAdvisoryAlert(
 					env.ALERTS_WEBHOOK,
-					maybeSecurityAdvisory
+					maybeRepositoryAdvisory
 				);
 			}
 		}
