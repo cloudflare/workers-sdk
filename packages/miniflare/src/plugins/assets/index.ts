@@ -112,7 +112,9 @@ export const ASSETS_PLUGIN: Plugin<typeof AssetsOptionsSchema> = {
 
 		let parsedRedirects: AssetConfig["redirects"] | undefined;
 		if (redirectsContents !== undefined) {
-			const redirects = parseRedirects(redirectsContents);
+			const redirects = parseRedirects(redirectsContents, {
+				htmlHandling: options.assets.assetConfig?.html_handling,
+			});
 			parsedRedirects = RedirectsSchema.parse(
 				constructRedirects({
 					redirects,
