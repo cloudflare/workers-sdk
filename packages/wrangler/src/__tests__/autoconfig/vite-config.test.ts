@@ -1,16 +1,21 @@
 import { writeFile } from "node:fs/promises";
 import { UserError } from "@cloudflare/workers-utils";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import {
 	checkIfViteConfigUsesCloudflarePlugin,
 	transformViteConfig,
 } from "../../autoconfig/frameworks/utils/vite-config";
+import { logger } from "../../logger";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 
 describe("vite-config utils", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
+
+	beforeEach(() => {
+		logger.loggerLevel = "debug";
+	});
 
 	describe("checkIfViteConfigUsesCloudflarePlugin", () => {
 		it("should handle vite config with function-based defineConfig", async () => {
