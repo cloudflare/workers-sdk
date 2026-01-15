@@ -50,10 +50,7 @@ function isUnsafeChildProcessCall(node, context) {
 	}
 
 	// Check for imported functions: const { exec } = require('child_process') or import { exec } from 'child_process'
-	if (
-		node.callee.type === "Identifier" &&
-		UNSAFE_FUNCTIONS.includes(node.callee.name)
-	) {
+	if (node.callee.type === "Identifier") {
 		// Walk up the scope chain to find if this identifier is from child_process
 		let currentScope = scope;
 		while (currentScope) {
@@ -62,13 +59,21 @@ function isUnsafeChildProcessCall(node, context) {
 				const def = variable.defs[0];
 
 				// Check for ES module import: import { execSync } from 'node:child_process'
+				// or import { execSync as run } from 'node:child_process'
 				if (
 					def.type === "ImportBinding" &&
 					def.parent?.type === "ImportDeclaration"
 				) {
 					const importSource = def.parent.source?.value;
 					if (CHILD_PROCESS_MODULES.includes(importSource)) {
-						return node.callee.name;
+						// Check if it's one of the unsafe functions
+						// For aliased imports: import { execSync as run } - def.node.imported.name = "execSync"
+						// For regular imports: import { execSync } - def.node.local.name = "execSync"
+						const importedName =
+							def.node.imported?.name || def.node.local?.name;
+						if (importedName && UNSAFE_FUNCTIONS.includes(importedName)) {
+							return importedName;
+						}
 					}
 				}
 
@@ -86,7 +91,20 @@ function isUnsafeChildProcessCall(node, context) {
 						init.arguments[0]?.type === "Literal" &&
 						CHILD_PROCESS_MODULES.includes(init.arguments[0].value)
 					) {
-						return node.callee.name;
+						// For destructured requires, check the property name
+						// const { execSync: run } = require('child_process')
+						if (def.node.id?.type === "ObjectPattern") {
+							const prop = def.node.id.properties.find(
+								(p) => p.value?.name === node.callee.name
+							);
+							if (prop && UNSAFE_FUNCTIONS.includes(prop.key?.name)) {
+								return prop.key.name;
+							}
+						}
+						// For direct import: const execSync = require('child_process').execSync
+						if (UNSAFE_FUNCTIONS.includes(node.callee.name)) {
+							return node.callee.name;
+						}
 					}
 					// Check if it's from destructuring: const { exec } = require('child_process')
 					if (
@@ -96,7 +114,9 @@ function isUnsafeChildProcessCall(node, context) {
 						init.object.arguments[0]?.type === "Literal" &&
 						CHILD_PROCESS_MODULES.includes(init.object.arguments[0].value)
 					) {
-						return node.callee.name;
+						if (UNSAFE_FUNCTIONS.includes(node.callee.name)) {
+							return node.callee.name;
+						}
 					}
 				}
 			}

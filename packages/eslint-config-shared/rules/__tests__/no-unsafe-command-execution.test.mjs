@@ -41,6 +41,18 @@ ruleTester.run("no-unsafe-command-execution", rule, {
 		{
 			code: 'import { execFileSync } from "node:child_process"; execFileSync("git", ["show", commitHash]);',
 		},
+		// Aliased imports with static strings are safe
+		{
+			code: 'import { execSync as run } from "node:child_process"; run("git status");',
+		},
+		// Namespaced imports with static strings are safe
+		{
+			code: 'import * as cp from "node:child_process"; cp.execSync("git status");',
+		},
+		// Aliased CommonJS imports with static strings are safe
+		{
+			code: 'const { execSync: run } = require("node:child_process"); run("git status");',
+		},
 	],
 
 	invalid: [
@@ -134,6 +146,42 @@ if (!commitMessage) {
 		.toString()
 		.trim();
 }`,
+			errors: [
+				{
+					messageId: "unsafeCommandExecution",
+				},
+			],
+		},
+		// Aliased ES module import with template literal
+		{
+			code: 'import { execSync as run } from "node:child_process"; run(`git show ${hash}`);',
+			errors: [
+				{
+					messageId: "unsafeCommandExecution",
+				},
+			],
+		},
+		// Namespaced ES module import with template literal
+		{
+			code: 'import * as cp from "node:child_process"; cp.execSync(`git show ${hash}`);',
+			errors: [
+				{
+					messageId: "unsafeCommandExecution",
+				},
+			],
+		},
+		// Aliased CommonJS import with template literal
+		{
+			code: 'const { execSync: run } = require("node:child_process"); run(`git ${cmd}`);',
+			errors: [
+				{
+					messageId: "unsafeCommandExecution",
+				},
+			],
+		},
+		// Namespaced CommonJS import with template literal
+		{
+			code: 'const cp = require("node:child_process"); cp.execSync(`git ${cmd}`);',
 			errors: [
 				{
 					messageId: "unsafeCommandExecution",
