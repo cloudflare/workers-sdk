@@ -33,13 +33,6 @@ export function nodejsHybridPlugin({
 						compatibilityDate,
 						compatibilityFlags,
 					}),
-					{
-						alias: {
-							// Force esbuild to use the node implementation of debug instead of unenv's no-op stub.
-							// The alias is processed by handleUnenvAliasedPackages which uses require.resolve().
-							debug: "debug",
-						},
-					},
 				],
 				npmShims: true,
 			}).env;
