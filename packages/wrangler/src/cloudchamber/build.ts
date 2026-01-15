@@ -31,6 +31,14 @@ import type {
 } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
 
+function stripImageTag(image: string): string {
+	const [name] = image.split("@");
+	const lastColon = name.lastIndexOf(":");
+	const lastSlash = name.lastIndexOf("/");
+
+	return lastColon > lastSlash ? name.slice(0, lastColon) : name;
+}
+
 export function buildYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.positional("PATH", {
@@ -162,10 +170,9 @@ export async function buildAndMaybePush(
 					);
 				}
 
-				const repositoryOnly = resolveImageName(
-					account.external_account_id,
-					imageTag
-				).split(":")[0];
+				const repositoryOnly = stripImageTag(
+					resolveImageName(account.external_account_id, imageTag)
+				);
 
 				logger.debug("respositoryOnly:", repositoryOnly);
 
