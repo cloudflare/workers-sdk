@@ -159,7 +159,10 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 		this.checkSenderAllowed(fromEmail);
 
 		// Check "to" recipients are allowed (same as EmailMessage - only validate "to")
-		this.validateRecipients(builder.to);
+		// Extract email addresses from potential EmailAddress objects
+		const toArray = Array.isArray(builder.to) ? builder.to : [builder.to];
+		const toEmails = toArray.map((addr) => extractEmailAddress(addr));
+		this.validateRecipients(toEmails);
 	}
 
 	async send(
