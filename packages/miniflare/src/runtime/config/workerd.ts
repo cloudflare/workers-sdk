@@ -2,7 +2,7 @@ import type {
 	HttpOptions_Style,
 	TlsOptions_Version,
 	Worker_Binding_CryptoKey_Usage,
-} from "./generated";
+} from "./node_modules/workerd/workerd";
 
 // TODO: auto-generate this file
 
@@ -10,7 +10,7 @@ export {
 	HttpOptions_Style,
 	TlsOptions_Version,
 	Worker_Binding_CryptoKey_Usage,
-} from "./generated";
+} from "./node_modules/workerd/workerd";
 
 export const kVoid = Symbol("kVoid");
 export type Void = typeof kVoid;
