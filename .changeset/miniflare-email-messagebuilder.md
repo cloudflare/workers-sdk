@@ -4,7 +4,7 @@
 
 Add support for Email Sending API's MessageBuilder interface in local mode
 
-Miniflare now supports the simplified MessageBuilder interface for sending emails, alongside the existing EmailMessage (raw MIME) support. This matches the API available in production Workers.
+Miniflare now supports the simplified MessageBuilder interface for sending emails, alongside the existing `EmailMessage` support.
 
 Example usage:
 
@@ -12,7 +12,7 @@ Example usage:
 await env.EMAIL.send({
 	from: { name: "Alice", email: "alice@example.com" },
 	to: ["bob@example.com"],
-	subject: "Hello from Miniflare",
+	subject: "Hello",
 	text: "Plain text version",
 	html: "<h1>HTML version</h1>",
 	attachments: [

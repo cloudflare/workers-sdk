@@ -73,7 +73,6 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			)
 		);
 	}
-
 	/**
 	 * Stores content to a temporary file via the loopback service
 	 */
