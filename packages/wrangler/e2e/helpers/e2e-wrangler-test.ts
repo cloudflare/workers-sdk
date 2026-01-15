@@ -182,20 +182,29 @@ export class WranglerE2ETestHelper {
 	}
 
 	/** Create a Hyperdrive connection and clean it up during tear-down. */
-	async hyperdrive(isLocal: boolean): Promise<{ id: string; name: string }> {
+	async hyperdrive(
+		isLocal: boolean,
+		scheme: "postgresql" | "mysql" = "postgresql"
+	): Promise<{ id: string; name: string }> {
 		const name = generateResourceName("hyperdrive");
 
 		if (isLocal) {
 			return { id: crypto.randomUUID(), name };
 		}
 
+		const envVar =
+			scheme === "mysql"
+				? "HYPERDRIVE_MYSQL_DATABASE_URL"
+				: "HYPERDRIVE_DATABASE_URL";
+		const connectionString = process.env[envVar];
+
 		assert(
-			process.env.HYPERDRIVE_DATABASE_URL,
-			"HYPERDRIVE_DATABASE_URL must be set in order to create a Hyperdrive resource for this test"
+			connectionString,
+			`${envVar} must be set in order to create a Hyperdrive resource for this test`
 		);
 
 		const result = await this.run(
-			`wrangler hyperdrive create ${name} --connection-string="${process.env.HYPERDRIVE_DATABASE_URL}"`
+			`wrangler hyperdrive create ${name} --connection-string="${connectionString}"`
 		);
 		const tomlMatch = /id = "([0-9a-f]{32})"/.exec(result.stdout);
 		const jsonMatch = /"id": "([0-9a-f]{32})"/.exec(result.stdout);
