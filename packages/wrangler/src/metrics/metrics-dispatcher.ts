@@ -1,3 +1,4 @@
+import { detectAgenticEnvironment } from "am-i-vibing";
 import chalk from "chalk";
 import { fetch } from "undici";
 import { configFormat } from "../config";
@@ -62,6 +63,15 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	const amplitude_session_id = Date.now();
 	let amplitude_event_id = 0;
 
+	// Detect agent environment once when dispatcher is created
+	let agent: string | null = null;
+	try {
+		const agentDetection = detectAgenticEnvironment();
+		agent = agentDetection.id;
+	} catch {
+		// Silent failure - agent remains null
+	}
+
 	return {
 		/**
 		 * This doesn't have a session id and is not tied to the command events.
@@ -77,6 +87,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					category: "Workers",
 					wranglerVersion,
 					os: getOS(),
+					agent,
 					...properties,
 				},
 			});
@@ -135,6 +146,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					hasAssets: options.hasAssets ?? false,
 					argsUsed: sanitizedArgsKeys,
 					argsCombination: sanitizedArgsKeys.join(", "),
+					agent,
 				};
 
 				// get the args where we don't want to redact their values
