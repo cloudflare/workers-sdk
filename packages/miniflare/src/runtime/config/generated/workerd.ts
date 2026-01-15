@@ -10,7 +10,7 @@ export class Config extends $.Struct {
 	static readonly _capnp = {
 		displayName: "Config",
 		id: "8794486c76aaa7d6",
-		size: new $.ObjectSize(8, 5),
+		size: new $.ObjectSize(8, 6),
 		defaultStructuredLogging: $.getBitMask(false, 0),
 	};
 	static _Services: $.ListCtor<Service>;
@@ -157,6 +157,7 @@ export class Config extends $.Struct {
 	 * When false, logs use the traditional human-readable format.
 	 * This affects the format of logs from KJ_LOG and exception reporting as well as js logs.
 	 * This won't work for logs coming from service worker syntax workers with the old module registry.
+	 * Note: This field is obsolete and deprecated. Use the logging struct instead.
 	 *
 	 */
 	get structuredLogging(): boolean {
@@ -165,8 +166,84 @@ export class Config extends $.Struct {
 	set structuredLogging(value: boolean) {
 		$.utils.setBit(0, value, this, Config._capnp.defaultStructuredLogging);
 	}
+	_adoptLogging(value: $.Orphan<LoggingOptions>): void {
+		$.utils.adopt(value, $.utils.getPointer(5, this));
+	}
+	_disownLogging(): $.Orphan<LoggingOptions> {
+		return $.utils.disown(this.logging);
+	}
+	/**
+	 * Console and Stdio logging configuration options.
+	 *
+	 */
+	get logging(): LoggingOptions {
+		return $.utils.getStruct(5, LoggingOptions, this);
+	}
+	_hasLogging(): boolean {
+		return !$.utils.isNull($.utils.getPointer(5, this));
+	}
+	_initLogging(): LoggingOptions {
+		return $.utils.initStructAt(5, LoggingOptions, this);
+	}
+	set logging(value: LoggingOptions) {
+		$.utils.copyFrom(value, $.utils.getPointer(5, this));
+	}
 	toString(): string {
 		return "Config_" + super.toString();
+	}
+}
+export class LoggingOptions extends $.Struct {
+	static readonly _capnp = {
+		displayName: "LoggingOptions",
+		id: "c62297899c35d548",
+		size: new $.ObjectSize(8, 2),
+		defaultStructuredLogging: $.getBitMask(false, 0),
+	};
+	/**
+	 * Override of top-level structured logging (only when true).
+	 * If true, logs will be emitted as JSON for structured logging.
+	 * When false, logs use the traditional human-readable format.
+	 * This affects the format of logs from KJ_LOG and exception reporting as well as js logs.
+	 * This won't work for logs coming from service worker syntax workers with the old module registry.
+	 *
+	 */
+	get structuredLogging(): boolean {
+		return $.utils.getBit(
+			0,
+			this,
+			LoggingOptions._capnp.defaultStructuredLogging
+		);
+	}
+	set structuredLogging(value: boolean) {
+		$.utils.setBit(
+			0,
+			value,
+			this,
+			LoggingOptions._capnp.defaultStructuredLogging
+		);
+	}
+	/**
+	 * Set a custom prefix for process.stdout. Defaults to "stdout: ".
+	 *
+	 */
+	get stdoutPrefix(): string {
+		return $.utils.getText(0, this);
+	}
+	set stdoutPrefix(value: string) {
+		$.utils.setText(0, value, this);
+	}
+	/**
+	 * Set a custom prefix for process.stderr. Defaults to "stderr: ".
+	 *
+	 */
+	get stderrPrefix(): string {
+		return $.utils.getText(1, this);
+	}
+	set stderrPrefix(value: string) {
+		$.utils.setText(1, value, this);
+	}
+	toString(): string {
+		return "LoggingOptions_" + super.toString();
 	}
 }
 export class Socket_Https extends $.Struct {
@@ -967,6 +1044,7 @@ export const Worker_Binding_Type_Which = {
 	ANALYTICS_ENGINE: 12,
 	HYPERDRIVE: 13,
 	DURABLE_OBJECT_CLASS: 14,
+	WORKERD_DEBUG_PORT: 15,
 } as const;
 export type Worker_Binding_Type_Which =
 	(typeof Worker_Binding_Type_Which)[keyof typeof Worker_Binding_Type_Which];
@@ -992,6 +1070,8 @@ export class Worker_Binding_Type extends $.Struct {
 	static readonly HYPERDRIVE = Worker_Binding_Type_Which.HYPERDRIVE;
 	static readonly DURABLE_OBJECT_CLASS =
 		Worker_Binding_Type_Which.DURABLE_OBJECT_CLASS;
+	static readonly WORKERD_DEBUG_PORT =
+		Worker_Binding_Type_Which.WORKERD_DEBUG_PORT;
 	static readonly _capnp = {
 		displayName: "Type",
 		id: "8906a1296519bf8a",
@@ -1116,6 +1196,12 @@ export class Worker_Binding_Type extends $.Struct {
 	}
 	set durableObjectClass(_: true) {
 		$.utils.setUint16(0, 14, this);
+	}
+	get _isWorkerdDebugPort(): boolean {
+		return $.utils.getUint16(0, this) === 15;
+	}
+	set workerdDebugPort(_: true) {
+		$.utils.setUint16(0, 15, this);
 	}
 	toString(): string {
 		return "Worker_Binding_Type_" + super.toString();
@@ -1877,6 +1963,16 @@ export const Worker_Binding_Which = {
 	 *
 	 */
 	WORKER_LOADER: 20,
+	/**
+	 * A binding representing the ability to dynamically load Workers from code presented at
+	 * runtime.
+	 *
+	 * A Worker loader is not just a function that loads a Worker, but also serves as a
+	 * cache of Workers, automatically unloading Workers that are not in use. To that end, each
+	 * Worker must have a name, and if a Worker with that name already exists, it'll be reused.
+	 *
+	 */
+	WORKERD_DEBUG_PORT: 21,
 } as const;
 export type Worker_Binding_Which =
 	(typeof Worker_Binding_Which)[keyof typeof Worker_Binding_Which];
@@ -1904,6 +2000,7 @@ export class Worker_Binding extends $.Struct {
 	static readonly UNSAFE_EVAL = Worker_Binding_Which.UNSAFE_EVAL;
 	static readonly MEMORY_CACHE = Worker_Binding_Which.MEMORY_CACHE;
 	static readonly WORKER_LOADER = Worker_Binding_Which.WORKER_LOADER;
+	static readonly WORKERD_DEBUG_PORT = Worker_Binding_Which.WORKERD_DEBUG_PORT;
 	static readonly Type = Worker_Binding_Type;
 	static readonly DurableObjectNamespaceDesignator =
 		Worker_Binding_DurableObjectNamespaceDesignator;
@@ -2445,6 +2542,12 @@ export class Worker_Binding extends $.Struct {
 	}
 	set workerLoader(_: true) {
 		$.utils.setUint16(0, 20, this);
+	}
+	get _isWorkerdDebugPort(): boolean {
+		return $.utils.getUint16(0, this) === 21;
+	}
+	set workerdDebugPort(_: true) {
+		$.utils.setUint16(0, 21, this);
 	}
 	toString(): string {
 		return "Worker_Binding_" + super.toString();
