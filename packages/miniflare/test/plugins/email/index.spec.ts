@@ -1201,9 +1201,9 @@ test("MessageBuilder log output format snapshot", async () => {
 			// Strip ANSI color codes and normalize file paths for snapshot
 			const cleanMessage = message
 				.replace(/\x1b\[[0-9;]*m/g, "")
-				// Replace dynamic file paths with placeholders
+				// Replace dynamic file paths with placeholders (Unix and Windows)
 				.replace(
-					/\/.*\/(email-text|email-html|email-attachment)\/[a-f0-9-]+\.(txt|html|png|pdf)/g,
+					/(?:[A-Z]:\\|\/)[^\s]*[/\\](email-text|email-html|email-attachment)[/\\][a-f0-9-]+\.(txt|html|png|pdf)/g,
 					"/$1/[FILE].$2"
 				);
 
