@@ -42,6 +42,7 @@ catalog:
   # However, some packages (pages-shared, workers-shared, etc...) need to be tested using vitest-pool-workers but are themselves
   # ultimately included in vitest-pool-workers (through Wrangler), causing a circular dependency.
   "@cloudflare/vitest-pool-workers": "^0.10.11"
+  "capnp-es": "^0.0.14"
 
 catalogs:
   vite-plugin:
