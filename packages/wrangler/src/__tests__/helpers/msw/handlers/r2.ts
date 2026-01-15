@@ -133,4 +133,18 @@ export const mswR2handlers = [
 		},
 		{ once: true }
 	),
+	// Local uploads endpoints
+	http.get(
+		"*/accounts/:accountId/r2/buckets/:bucketName/local-uploads",
+		() => HttpResponse.json(createFetchResult({ enabled: false })),
+		{ once: true }
+	),
+	http.put(
+		"*/accounts/:accountId/r2/buckets/:bucketName/local-uploads",
+		async ({ request }) => {
+			const body = (await request.json()) as { enabled: boolean };
+			return HttpResponse.json(createFetchResult({ enabled: body.enabled }));
+		},
+		{ once: true }
+	),
 ];
