@@ -87,6 +87,33 @@ function isPermissionError(e: unknown): boolean {
 }
 
 /**
+ * File not found errors (ENOENT) occur when users reference files or directories
+ * that don't exist. We present a helpful message instead of reporting to Sentry.
+ *
+ * @param e - The error to check
+ * @returns `true` if the error is a file not found error, `false` otherwise
+ */
+function isFileNotFoundError(e: unknown): boolean {
+	// Check for Node.js ErrnoException with ENOENT code
+	if (
+		e &&
+		typeof e === "object" &&
+		"code" in e &&
+		e.code === "ENOENT" &&
+		"message" in e
+	) {
+		return true;
+	}
+
+	// Check in the error cause as well
+	if (e instanceof Error && e.cause) {
+		return isFileNotFoundError(e.cause);
+	}
+
+	return false;
+}
+
+/**
  * Check if a text string contains a reference to Cloudflare's API domains.
  * This is a safety precaution to only handle errors related to Cloudflare's
  * infrastructure, not user endpoints.
@@ -292,6 +319,58 @@ export async function handleError(
 			  - Antivirus or security software blocking access
 
 			Please check the file permissions and try again.
+		`);
+		return errorType;
+	}
+
+	// Handle file not found errors with a user-friendly message
+	if (isFileNotFoundError(e)) {
+		mayReport = false;
+		errorType = "FileNotFoundError";
+
+		// Extract the error message and path, checking both the error and its cause
+		const errorMessage = e instanceof Error ? e.message : String(e);
+		let path: string | null = null;
+
+		// Check main error for path
+		if (
+			e &&
+			typeof e === "object" &&
+			"path" in e &&
+			typeof e.path === "string"
+		) {
+			path = e.path;
+		}
+
+		// If no path in main error, check the cause
+		if (
+			!path &&
+			e instanceof Error &&
+			e.cause &&
+			typeof e.cause === "object" &&
+			"path" in e.cause &&
+			typeof e.cause.path === "string"
+		) {
+			path = e.cause.path;
+		}
+
+		// Always log the full error message in debug
+		logger.debug(`File not found error: ${errorMessage}`);
+
+		// Include path in main error if available, otherwise include the error message
+		const errorDetails = path
+			? `\nMissing file or directory: ${path}\n`
+			: `\nError: ${errorMessage}\n`;
+
+		logger.error(dedent`
+			A file or directory could not be found.
+			${errorDetails}
+			This is typically caused by:
+			  - The file or directory does not exist
+			  - A typo in the file path
+			  - The file was moved or deleted
+
+			Please check the file path and try again.
 		`);
 		return errorType;
 	}
