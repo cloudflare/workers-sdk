@@ -40,10 +40,11 @@ export function configFormat(
 }
 
 export function configFileName(configPath: string | undefined) {
-	const format = configFormat(configPath);
-	if (format === "toml") {
+	if (configPath?.endsWith(".toml")) {
 		return "wrangler.toml";
-	} else if (format === "jsonc") {
+	} else if (configPath?.endsWith(".jsonc")) {
+		return "wrangler.jsonc";
+	} else if (configPath?.endsWith(".json")) {
 		return "wrangler.json";
 	} else {
 		return "Wrangler configuration";

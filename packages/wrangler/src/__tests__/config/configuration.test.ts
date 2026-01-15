@@ -1,6 +1,10 @@
 import * as fs from "fs";
 import path from "node:path";
-import { experimental_readRawConfig, readConfig } from "../../config";
+import {
+	configFileName,
+	experimental_readRawConfig,
+	readConfig,
+} from "../../config";
 import { normalizeAndValidateConfig } from "../../config/validation";
 import { run } from "../../experimental-flags";
 import { normalizeString } from "../helpers/normalize";
@@ -7282,6 +7286,28 @@ compatibility_date = "2022-01-12"`;
 
 		const config = readConfig({ config: "wrangler.toml" });
 		expect(config.name).toBe("no-bom-test");
+	});
+});
+
+describe("configFileName()", () => {
+	it("should return wrangler.toml for .toml files", () => {
+		expect(configFileName("path/to/wrangler.toml")).toBe("wrangler.toml");
+	});
+
+	it("should return wrangler.jsonc for .jsonc files", () => {
+		expect(configFileName("path/to/wrangler.jsonc")).toBe("wrangler.jsonc");
+	});
+
+	it("should return wrangler.json for .json files", () => {
+		expect(configFileName("path/to/wrangler.json")).toBe("wrangler.json");
+	});
+
+	it("should return generic message when no path provided", () => {
+		expect(configFileName(undefined)).toBe("Wrangler configuration");
+	});
+
+	it("should handle paths without extension", () => {
+		expect(configFileName("path/to/config")).toBe("Wrangler configuration");
 	});
 });
 
