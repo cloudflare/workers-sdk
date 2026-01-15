@@ -7,6 +7,7 @@ import {
 	SPLAT_REGEX,
 } from "./constants";
 import { urlHasHost, validateUrl } from "./validateURL";
+import type { AssetConfig } from "../types";
 import type {
 	InvalidRedirectRule,
 	ParsedRedirects,
@@ -17,10 +18,12 @@ import type {
 export function parseRedirects(
 	input: string,
 	{
+		htmlHandling = undefined,
 		maxStaticRules = MAX_STATIC_REDIRECT_RULES,
 		maxDynamicRules = MAX_DYNAMIC_REDIRECT_RULES,
 		maxLineLength = MAX_LINE_LENGTH,
 	}: {
+		htmlHandling?: AssetConfig["html_handling"];
 		maxStaticRules?: number;
 		maxDynamicRules?: number;
 		maxLineLength?: number;
@@ -122,10 +125,21 @@ export function parseRedirects(
 			continue;
 		}
 
-		// We want to always block the `/* /index.html` redirect - this will cause TOO_MANY_REDIRECTS errors as
-		// the asset worker will redirect it back to `/`, removing the `/index.html`. This is the case for regular
-		// redirects, as well as proxied (200) rewrites. We only want to run this on relative urls
-		if (/\/\*?$/.test(from) && /\/index(.html)?$/.test(to) && !urlHasHost(to)) {
+		// Here we reject two patterns:
+		// 1. `/* /index.html` Is always rejected.
+		// 2. `/ /index` Is rejected when HTML handling is enabled.
+		// Allowing the redirect in other cases will cause TOO_MANY_REDIRECTS errors as the asset Worker will
+		// redirect it back to `/` by removing the `/index.html`.
+		// We only want to run this on relative URLs.
+		const hasRelativePath = !urlHasHost(to);
+		const hasWildcardToIndex =
+			/\/\*$/.test(from) && /\/index(.html)?$/.test(to);
+		const hasRootToIndex = /\/$/.test(from) && /\/index(.html)?$/.test(to);
+		const hasHTMLHandling = htmlHandling !== "none"; // HTML handling is enabled by default.
+		if (
+			hasRelativePath &&
+			(hasWildcardToIndex || (hasRootToIndex && hasHTMLHandling))
+		) {
 			invalid.push({
 				line,
 				lineNumber: i + 1,
