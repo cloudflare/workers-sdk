@@ -1,6 +1,7 @@
-declare namespace Cloudflare {
-	interface Env {
-		CONTAINER_B: DurableObjectNamespace<import(".").FixtureTestContainerB>;
-	}
+interface BaseEnv {
+	CONTAINER_B: DurableObjectNamespace<import(".").FixtureTestContainerB>;
 }
-interface Env extends Cloudflare.Env {}
+declare namespace Cloudflare {
+	interface Env extends BaseEnv {}
+}
+interface Env extends BaseEnv {}
