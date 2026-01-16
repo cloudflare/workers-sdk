@@ -97,7 +97,10 @@ export async function createdResourceConfig<K extends ValidKeys>(
 
 	// This is a JSON config file that we're capable of editing
 	const format = configFormat(configPath);
-	if (configPath && JSON_CONFIG_FORMATS.includes(format)) {
+	if (
+		configPath &&
+		(JSON_CONFIG_FORMATS as readonly string[]).includes(format)
+	) {
 		const writeToConfig =
 			defaults?.binding ??
 			defaults?.updateConfig ??
