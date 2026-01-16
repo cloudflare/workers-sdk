@@ -64,6 +64,7 @@ jobs:
             3. **Markdown Headers**: No h1/h2/h3 headers (breaks changelog formatting)
             4. **Analytics**: If the change collects more analytics, it should be a minor even though there is no user-visible change
             5. **Dependabot**: Do not validate dependency update changesets for create-cloudflare
+            6. **Experimental features**: Changesets for experimental features should include note on how users can opt in.
 
             If all changesets pass, just output "✅ All changesets look good" - no need for a detailed checklist.
 
