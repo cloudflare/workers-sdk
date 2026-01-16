@@ -2,12 +2,15 @@ import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
+import { getProfile, isValidProfileName } from "./profile";
 import {
+	getActiveProfileName,
 	getAuthFromEnv,
 	getOAuthTokenFromLocalState,
 	listScopes,
 	login,
 	logout,
+	setActiveProfile,
 	validateScopeKeys,
 } from "./user";
 import { whoami } from "./whoami";
@@ -16,8 +19,8 @@ import { whoami } from "./whoami";
  * Represents the authentication information returned by `wrangler auth token --json`.
  */
 export type AuthTokenInfo =
-	| { type: "oauth"; token: string }
-	| { type: "api_token"; token: string }
+	| { type: "oauth"; token: string; profile?: string }
+	| { type: "api_token"; token: string; profile?: string }
 	| { type: "api_key"; key: string; email: string };
 
 export const loginCommand = createCommand({
@@ -58,8 +61,20 @@ export const loginCommand = createCommand({
 			requiresArg: false,
 			default: 8976,
 		},
+		profile: {
+			describe:
+				"Profile name to save credentials to. If not specified, updates the 'default' profile.",
+			type: "string",
+			requiresArg: true,
+		},
 	},
 	async handler(args, { config }) {
+		// Validate profile name if specified
+		if (args.profile && !isValidProfileName(args.profile)) {
+			throw new CommandLineArgsError(
+				`Invalid profile name '${args.profile}'. Profile names can only contain alphanumeric characters, dashes, and underscores.`
+			);
+		}
 		if (args.scopesList) {
 			listScopes();
 			return;
@@ -80,6 +95,7 @@ export const loginCommand = createCommand({
 				browser: args.browser,
 				callbackHost: args.callbackHost,
 				callbackPort: args.callbackPort,
+				profile: args.profile,
 			});
 			return;
 		}
@@ -87,6 +103,7 @@ export const loginCommand = createCommand({
 			browser: args.browser,
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
+			profile: args.profile,
 		});
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,
@@ -166,9 +183,25 @@ export const authTokenCommand = createCommand({
 			description: "Return output as JSON with token type information",
 			default: false,
 		},
+		profile: {
+			describe: "Profile to get the token from",
+			type: "string",
+			requiresArg: true,
+		},
 	},
-	async handler({ json }, { config }) {
+	async handler({ json, profile }, { config }) {
+		// If --profile is specified, set it as the active profile for this command
+		if (profile) {
+			if (!isValidProfileName(profile)) {
+				throw new CommandLineArgsError(
+					`Invalid profile name '${profile}'. Profile names can only contain alphanumeric characters, dashes, and underscores.`
+				);
+			}
+			setActiveProfile(profile);
+		}
+
 		const authFromEnv = getAuthFromEnv();
+		const activeProfileName = getActiveProfileName();
 
 		let result: AuthTokenInfo;
 
@@ -185,14 +218,24 @@ export const authTokenCommand = createCommand({
 				};
 			}
 		} else {
-			// OAuth token from local state (wrangler login)
-			const token = await getOAuthTokenFromLocalState();
-			if (!token) {
-				throw new UserError(
-					"Not logged in. Please run `wrangler login` to authenticate."
-				);
+			// Check if the profile has an API token
+			const profileData = getProfile(activeProfileName);
+			if (profileData?.api_token) {
+				result = {
+					type: "api_token",
+					token: profileData.api_token,
+					profile: activeProfileName,
+				};
+			} else {
+				// OAuth token from local state (wrangler login)
+				const token = await getOAuthTokenFromLocalState();
+				if (!token) {
+					throw new UserError(
+						`Not logged in. Please run \`wrangler login${profile ? ` --profile ${profile}` : ""}\` to authenticate.`
+					);
+				}
+				result = { type: "oauth", token, profile: activeProfileName };
 			}
-			result = { type: "oauth", token };
 		}
 
 		if (json) {
