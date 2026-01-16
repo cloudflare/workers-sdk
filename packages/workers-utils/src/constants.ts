@@ -11,4 +11,4 @@ export const PATH_TO_DEPLOY_CONFIG = ".wrangler/deploy/config.json";
 /**
  * Config formats that use JSON parsing
  */
-export const JSON_CONFIG_FORMATS = ["json", "jsonc"] as const;
+export const JSON_CONFIG_FORMATS: readonly string[] = ["json", "jsonc"];
