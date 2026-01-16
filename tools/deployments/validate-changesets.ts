@@ -34,6 +34,7 @@ export function validateChangesets(
 				const ALLOWED_PRIVATE_PACKAGES = [
 					"@cloudflare/workers-shared",
 					"@cloudflare/quick-edit",
+					"@cloudflare/devprod-status-bot",
 				];
 				if (
 					packages.get(release.name)?.["workers-sdk"]?.deploy &&
