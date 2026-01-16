@@ -346,4 +346,58 @@ describe("handleError", () => {
 			);
 		});
 	});
+
+	describe("File not found errors (ENOENT)", () => {
+		it("should show user-friendly message for ENOENT errors with path", async () => {
+			const error = Object.assign(
+				new Error("ENOENT: no such file or directory, open 'wrangler.toml'"),
+				{
+					code: "ENOENT",
+					errno: -2,
+					syscall: "open",
+					path: "wrangler.toml",
+				}
+			);
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("FileNotFoundError");
+			expect(std.err).toContain("A file or directory could not be found");
+			expect(std.err).toContain("Missing file or directory: wrangler.toml");
+			expect(std.err).toContain("The file or directory does not exist");
+		});
+
+		it("should show error message when path is not available", async () => {
+			const error = Object.assign(
+				new Error("ENOENT: no such file or directory"),
+				{
+					code: "ENOENT",
+				}
+			);
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("FileNotFoundError");
+			expect(std.err).toContain("A file or directory could not be found");
+			expect(std.err).toContain("Error: ENOENT: no such file or directory");
+			expect(std.err).not.toContain("Missing file or directory:");
+		});
+
+		it("should handle ENOENT errors in error cause", async () => {
+			const cause = Object.assign(
+				new Error("ENOENT: no such file or directory, stat '.wrangler'"),
+				{
+					code: "ENOENT",
+					path: ".wrangler",
+				}
+			);
+			const error = new Error("Failed to read directory", { cause });
+
+			const errorType = await handleError(error, {}, []);
+
+			expect(errorType).toBe("FileNotFoundError");
+			expect(std.err).toContain("A file or directory could not be found");
+			expect(std.err).toContain("Missing file or directory: .wrangler");
+		});
+	});
 });

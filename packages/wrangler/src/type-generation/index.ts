@@ -389,7 +389,7 @@ export async function generateEnvTypes(
 	const userProvidedEnvInterface = envInterface !== "Env";
 
 	if (userProvidedEnvInterface && entrypointFormat === "service-worker") {
-		throw new Error(
+		throw new UserError(
 			"An env-interface value has been provided but the worker uses the incompatible Service Worker syntax"
 		);
 	}
