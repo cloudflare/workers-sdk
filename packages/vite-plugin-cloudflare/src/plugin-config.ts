@@ -433,11 +433,11 @@ function createEnvironmentNameValidator() {
 
 	return (name: string): void => {
 		if (name === "client") {
-			throw new Error(`'client' is a reserved Vite environment name`);
+			throw new Error(`"client" is a reserved Vite environment name`);
 		}
 
 		if (usedNames.has(name)) {
-			throw new Error(`Duplicate Vite environment name '${name}'`);
+			throw new Error(`Duplicate Vite environment name: "${name}"`);
 		}
 
 		usedNames.add(name);
