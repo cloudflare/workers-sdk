@@ -93,7 +93,7 @@ export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
 
 		if (pathname !== INIT_PATH) {
 			throw new Error(
-				`__VITE_RUNNER_OBJECT__ received invalid pathname: ${pathname}`
+				`__VITE_RUNNER_OBJECT__ received invalid pathname: "${pathname}"`
 			);
 		}
 
@@ -101,13 +101,13 @@ export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
 
 		if (!environmentName) {
 			throw new Error(
-				`__VITE_RUNNER_OBJECT__ received request without ${ENVIRONMENT_NAME_HEADER} header`
+				`__VITE_RUNNER_OBJECT__ received request without "${ENVIRONMENT_NAME_HEADER}" header`
 			);
 		}
 
 		if (moduleRunners.has(environmentName)) {
 			throw new Error(
-				`Module runner already initialized for environment: ${environmentName}`
+				`Module runner already initialized for environment: "${environmentName}"`
 			);
 		}
 
@@ -147,7 +147,7 @@ export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
 
 		if (!environmentState) {
 			throw new Error(
-				`Module runner WebSocket not initialized for environment: ${environmentName}`
+				`Module runner WebSocket not initialized for environment: "${environmentName}"`
 			);
 		}
 
@@ -170,14 +170,14 @@ export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
 
 		if (!moduleRunner) {
 			throw new Error(
-				`Module runner not initialized for environment: ${environmentName}`
+				`Module runner not initialized for environment: "${environmentName}"`
 			);
 		}
 
 		const environmentState = this.#environments.get(environmentName);
 		if (!environmentState) {
 			throw new Error(
-				`Environment state not found for environment: ${environmentName}`
+				`Environment state not found for environment: "${environmentName}"`
 			);
 		}
 
@@ -356,7 +356,7 @@ async function importFromEnvironment(
 
 	if (!moduleRunner) {
 		throw new Error(
-			`Module runner not initialized for environment: ${environmentName}`
+			`Module runner not initialized for environment: "${environmentName}". Do you need to set \`childEnvironments: ["${environmentName}"]\` in the plugin config?`
 		);
 	}
 
