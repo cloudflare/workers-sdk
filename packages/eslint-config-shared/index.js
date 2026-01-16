@@ -93,6 +93,7 @@ export default defineConfig(
 			"**/*.test.ts",
 			"**/*.test.mts",
 			"**/*.test.tsx",
+			"**/test/**/*.ts",
 			"**/__tests__/**/*.ts",
 			"**/__tests__/**/*.mts",
 			"**/__tests__/**/*.tsx",
