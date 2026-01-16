@@ -312,12 +312,6 @@ export function generateImportSpecifier(from: string, to: string) {
 	}
 }
 
-type Secrets = Record<string, string>;
-
-type ConfigToDTS = Partial<Omit<Config, "vars">> & { vars: VarTypes } & {
-	secrets: Secrets;
-};
-
 /**
  * Generates TypeScript environment type definitions from a Wrangler configuration.
  *
@@ -367,45 +361,6 @@ export async function generateEnvTypes(
 	const collectedVars = collectAllVars(collectionArgs);
 	const collectedWorkflows = collectAllWorkflows(collectionArgs);
 
-	// These fields are not environment-specific, so we still read from config
-	// Any empty resource arrays here are due to be populated later on using
-	// their respective `collectAllX` helper functions.
-	const configToDTS = {
-		kv_namespaces: [],
-		vars: collectedVars,
-		wasm_modules: config.wasm_modules,
-		text_blobs: { ...config.text_blobs },
-		data_blobs: config.data_blobs,
-		durable_objects: { bindings: [] },
-		r2_buckets: [],
-		d1_databases: [],
-		services: [],
-		analytics_engine_datasets: [],
-		dispatch_namespaces: [],
-		logfwdr: config.logfwdr,
-		unsafe: { bindings: [] },
-		rules: config.rules,
-		queues: { producers: [] },
-		send_email: [],
-		vectorize: [],
-		hyperdrive: [],
-		mtls_certificates: [],
-		browser: undefined,
-		images: undefined,
-		ai: undefined,
-		version_metadata: undefined,
-		secrets,
-		assets: undefined,
-		workflows: [],
-		pipelines: [],
-		secrets_store_secrets: [],
-		unsafe_hello_world: [],
-		ratelimits: [],
-		worker_loaders: [],
-		vpc_services: [],
-		media: undefined,
-	} satisfies ConfigToDTS;
-
 	const entrypointFormat = entrypoint?.format ?? "modules";
 	const fullOutputPath = resolve(outputPath);
 
@@ -429,10 +384,10 @@ export async function generateEnvTypes(
 		envTypeStructure.push([constructTypeKey(binding.name), binding.type]);
 	}
 
-	if (configToDTS.vars) {
+	if (collectedVars) {
 		// Note: vars get overridden by secrets, so should their types
-		const vars = Object.entries(configToDTS.vars).filter(
-			([key]) => !(key in configToDTS.secrets)
+		const vars = Object.entries(collectedVars).filter(
+			([key]) => !(key in secrets)
 		);
 		for (const [varName, varValues] of vars) {
 			envTypeStructure.push([
@@ -443,7 +398,7 @@ export async function generateEnvTypes(
 		}
 	}
 
-	for (const secretName in configToDTS.secrets) {
+	for (const secretName in secrets) {
 		envTypeStructure.push([constructTypeKey(secretName), "string"]);
 		stringKeys.push(secretName);
 	}
@@ -564,27 +519,27 @@ export async function generateEnvTypes(
 	}
 
 	// Data blobs are not environment-specific
-	if (configToDTS.data_blobs) {
-		for (const dataBlobs in configToDTS.data_blobs) {
+	if (config.data_blobs) {
+		for (const dataBlobs in config.data_blobs) {
 			envTypeStructure.push([constructTypeKey(dataBlobs), "ArrayBuffer"]);
 		}
 	}
 
 	// Text blobs are not environment-specific
-	if (configToDTS.text_blobs) {
-		for (const textBlobs in configToDTS.text_blobs) {
+	if (config.text_blobs) {
+		for (const textBlobs in config.text_blobs) {
 			envTypeStructure.push([constructTypeKey(textBlobs), "string"]);
 		}
 	}
 
 	const modulesTypeStructure: string[] = [];
-	if (configToDTS.rules) {
+	if (config.rules) {
 		const moduleTypeMap = {
 			Text: "string",
 			Data: "ArrayBuffer",
 			CompiledWasm: "WebAssembly.Module",
 		};
-		for (const ruleObject of configToDTS.rules) {
+		for (const ruleObject of config.rules) {
 			const typeScriptType =
 				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
 			if (typeScriptType !== undefined) {
@@ -720,8 +675,6 @@ type TSConfig = {
 		types: string[];
 	};
 };
-
-type VarTypes = Record<string, string[]>;
 
 /**
  * Retrieves the environment config for a specific environment name, throwing if it doesn't exist.
