@@ -69,10 +69,7 @@ describe("sentry", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Getting User settings...
-
-				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m
-				? Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.
-				🤖 Using fallback value in non-interactive context: no"
+				"
 			`);
 			expect(sentryRequests?.length).toEqual(0);
 		});
@@ -104,12 +101,15 @@ describe("sentry", () => {
 		});
 
 		it("should not hit sentry after reportable error when permission denied", async () => {
-			// Trigger an API error
+			// Trigger an API error (500 internal server error, not a network error)
 			msw.use(
 				http.get(
 					`https://api.cloudflare.com/client/v4/user`,
 					async () => {
-						return HttpResponse.error();
+						return HttpResponse.json(
+							{ success: false, errors: [{ message: "Internal server error" }] },
+							{ status: 500 }
+						);
 					},
 					{ once: true }
 				),
@@ -121,16 +121,15 @@ describe("sentry", () => {
 				text: "Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
 				result: false,
 			});
-			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
-				`[TypeError: Failed to fetch]`
+			await expect(runWrangler("whoami")).rejects.toThrow(
+				"A request to the Cloudflare API"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Getting User settings...
-
-				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+				"
 			`);
 			expect(sentryRequests?.length).toEqual(0);
 		});
@@ -157,19 +156,21 @@ describe("sentry", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Getting User settings...
-
-				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+				"
 			`);
 			expect(sentryRequests?.length).toEqual(0);
 		});
 
 		it("should hit sentry after reportable error when permission provided", async () => {
-			// Trigger an API error
+			// Trigger an API error (500 internal server error, not a network error)
 			msw.use(
 				http.get(
 					`https://api.cloudflare.com/client/v4/user`,
 					async () => {
-						return HttpResponse.error();
+						return HttpResponse.json(
+							{ success: false, errors: [{ message: "Internal server error" }] },
+							{ status: 500 }
+						);
 					},
 					{ once: true }
 				),
@@ -181,16 +182,15 @@ describe("sentry", () => {
 				text: "Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
 				result: true,
 			});
-			await expect(runWrangler("whoami")).rejects.toMatchInlineSnapshot(
-				`[TypeError: Failed to fetch]`
+			await expect(runWrangler("whoami")).rejects.toThrow(
+				"A request to the Cloudflare API"
 			);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Getting User settings...
-
-				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+				"
 			`);
 
 			// Sentry sends multiple HTTP requests to capture breadcrumbs
@@ -473,12 +473,15 @@ describe("sentry", () => {
 		});
 
 		it("should hit sentry after reportable error (without confirmation) if WRANGLER_SEND_ERROR_REPORTS is explicitly true", async () => {
-			// Trigger an API error
+			// Trigger an API error (500 internal server error, not a network error)
 			msw.use(
 				http.get(
 					`https://api.cloudflare.com/client/v4/user`,
 					async () => {
-						return HttpResponse.error();
+						return HttpResponse.json(
+							{ success: false, errors: [{ message: "Internal server error" }] },
+							{ status: 500 }
+						);
 					},
 					{ once: true }
 				),
@@ -488,14 +491,13 @@ describe("sentry", () => {
 			);
 			await expect(
 				runWrangler("whoami", { WRANGLER_SEND_ERROR_REPORTS: "true" })
-			).rejects.toMatchInlineSnapshot(`[TypeError: Failed to fetch]`);
+			).rejects.toThrow("A request to the Cloudflare API failed");
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Getting User settings...
-
-				[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+				"
 			`);
 
 			// Sentry sends multiple HTTP requests to capture breadcrumbs
@@ -775,6 +777,33 @@ describe("sentry", () => {
 					type: "event",
 				},
 			});
+		});
+
+		it("should not send 'fetch failed' errors to sentry and show a helpful message", async () => {
+			// Trigger a "Failed to fetch" error (network error)
+			msw.use(
+				http.get(
+					`https://api.cloudflare.com/client/v4/user`,
+					async () => {
+						return HttpResponse.error();
+					},
+					{ once: true }
+				),
+				http.get("*/user/tokens/verify", () => {
+					return HttpResponse.json(createFetchResult([]));
+				})
+			);
+			await expect(
+				runWrangler("whoami", { WRANGLER_SEND_ERROR_REPORTS: "true" })
+			).rejects.toMatchInlineSnapshot(`[TypeError: Failed to fetch]`);
+
+			// Should show a helpful error message to the user
+			expect(std.err).toContain(
+				"A network error occurred while trying to reach Cloudflare's API"
+			);
+
+			// Sentry should NOT receive any requests for fetch failed errors
+			expect(sentryRequests?.length).toEqual(0);
 		});
 	});
 });

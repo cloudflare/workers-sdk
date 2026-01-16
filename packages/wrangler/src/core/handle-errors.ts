@@ -229,6 +229,52 @@ function isCloudflareAPIConnectionTimeoutError(e: unknown): boolean {
 }
 
 /**
+ * Generic "fetch failed" / "Failed to fetch" TypeErrors are network errors
+ * caused by network connectivity problems. These don't include the URL in the
+ * error message, but we can check the stack trace to see if it's a Cloudflare API call.
+ * If we can't determine the URL, we still treat these as environmental issues
+ * and present a helpful message instead of reporting to Sentry.
+ *
+ * @param e - The error to check
+ * @returns `true` if the error appears to be a network fetch failure, `false` otherwise
+ */
+function isNetworkFetchFailedError(e: unknown): boolean {
+	if (e instanceof TypeError) {
+		const message = e.message;
+		if (message.includes("fetch failed") || message.includes("Failed to fetch")) {
+			// Check if this is related to Cloudflare API by examining the stack
+			const stack = e.stack ?? "";
+			if (isCloudflareAPI(stack)) {
+				return true;
+			}
+			// Even if we can't determine the URL, "fetch failed" / "Failed to fetch"
+			// are generic network errors that shouldn't be reported to Sentry
+			// Only return true if there's no other indication this is a bug
+			// (e.g., if the stack trace doesn't show it's from user code)
+			return true;
+		}
+	}
+
+	// Errors are often wrapped, so check the cause chain as well
+	if (e instanceof Error && e.cause instanceof TypeError) {
+		const causeMessage = e.cause.message;
+		if (
+			causeMessage.includes("fetch failed") ||
+			causeMessage.includes("Failed to fetch")
+		) {
+			const parentStack = e.stack ?? "";
+			const causeStack = e.cause.stack ?? "";
+			if (isCloudflareAPI(parentStack) || isCloudflareAPI(causeStack)) {
+				return true;
+			}
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * Handles an error thrown during command execution.
  *
  * This can involve filtering, transforming and logging the error appropriately.
@@ -383,6 +429,23 @@ export async function handleError(
 				"This is likely due to network connectivity issues or slow network speeds.\n" +
 				"Please check your internet connection and try again."
 		);
+		return errorType;
+	}
+
+	// Handle generic "fetch failed" / "Failed to fetch" network errors
+	if (isNetworkFetchFailedError(e)) {
+		mayReport = false;
+		errorType = "NetworkError";
+		logger.error(dedent`
+			A network error occurred while trying to reach Cloudflare's API.
+
+			This is typically caused by:
+			  - No internet connection or network connectivity issues
+			  - Firewall or VPN blocking the request
+			  - Network proxy configuration issues
+
+			Please check your network connection and try again.
+		`);
 		return errorType;
 	}
 
