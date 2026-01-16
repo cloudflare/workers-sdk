@@ -91,7 +91,7 @@ export default async function triggersDeploy(
 	const uploadMs = Date.now() - start;
 	const deployments: Promise<string[]>[] = [];
 
-	const { wantWorkersDev, workersDevInSync } = await subdomainDeploy(
+	await subdomainDeploy(
 		props,
 		accountId,
 		scriptName,
@@ -102,98 +102,6 @@ export default async function triggersDeploy(
 		props.firstDeploy
 	);
 
-	if (!wantWorkersDev && workersDevInSync && routes.length !== 0) {
-		// TODO is this true? How does last subdomain status affect route confict??
-		// Why would we only need to validate route conflicts if didn't need to
-		// disable the subdomain deployment?
-
-		// if you get to this point it's because
-		// you're trying to deploy a worker to a route
-		// that's already bound to another worker.
-		// so this thing is about finding workers that have
-		// bindings to the routes you're trying to deploy to.
-		//
-		// the logic is kinda similar (read: duplicated) from publishRoutesFallback,
-		// except here we know we have a good API token or whatever so we don't need
-		// to bother with all the error handling tomfoolery.
-		const routesWithOtherBindings: Record<string, string[]> = {};
-
-		/**
-		 * This queue ensures we limit how many concurrent fetch
-		 * requests we're making to the Zones API.
-		 */
-		const queue = new PQueue({ concurrency: 10 });
-		const queuePromises: Array<Promise<void>> = [];
-		const zoneRoutesCache = new Map<
-			string,
-			Promise<Array<{ pattern: string; script: string }>>
-		>();
-
-		const zoneIdCache = new Map();
-		for (const route of routes) {
-			queuePromises.push(
-				queue.add(async () => {
-					const zone = await getZoneForRoute(
-						config,
-						{ route, accountId },
-						zoneIdCache
-					);
-					if (!zone) {
-						return;
-					}
-
-					const routePattern =
-						typeof route === "string" ? route : route.pattern;
-
-					let routesInZone = zoneRoutesCache.get(zone.id);
-					if (!routesInZone) {
-						routesInZone = retryOnAPIFailure(() =>
-							fetchListResult<{
-								pattern: string;
-								script: string;
-							}>(config, `/zones/${zone.id}/workers/routes`)
-						);
-						zoneRoutesCache.set(zone.id, routesInZone);
-					}
-
-					(await routesInZone).forEach(({ script, pattern }) => {
-						if (pattern === routePattern && script !== scriptName) {
-							if (!(script in routesWithOtherBindings)) {
-								routesWithOtherBindings[script] = [];
-							}
-
-							routesWithOtherBindings[script].push(pattern);
-						}
-					});
-				})
-			);
-		}
-		// using Promise.all() here instead of queue.onIdle() to ensure
-		// we actually throw errors that occur within queued promises.
-		await Promise.all(queuePromises);
-
-		if (Object.keys(routesWithOtherBindings).length > 0) {
-			let errorMessage =
-				"Can't deploy routes that are assigned to another worker.\n";
-
-			for (const worker in routesWithOtherBindings) {
-				const assignedRoutes = routesWithOtherBindings[worker];
-				errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes.map(
-					(r) => `  - ${chalk.underline(r)}\n`
-				)}`;
-			}
-
-			const resolution =
-				"Unassign other workers from the routes you want to deploy to, and then try again.";
-			const dashHref = chalk.blue.underline(
-				`https://dash.cloudflare.com/${accountId}/workers/overview`
-			);
-			const dashLink = `Visit ${dashHref} to unassign a worker from a route.`;
-
-			throw new UserError(`${errorMessage}\n${resolution}\n${dashLink}`);
-		}
-	}
-
 	// Update routing table for the script.
 	if (routesOnly.length > 0) {
 		deployments.push(
@@ -202,15 +110,42 @@ export default async function triggersDeploy(
 				scriptName,
 				useServiceEnvironments,
 				accountId,
-			}).then(() => {
-				if (routesOnly.length > 10) {
-					return routesOnly
-						.slice(0, 9)
-						.map((route) => renderRoute(route))
-						.concat([`...and ${routesOnly.length - 10} more routes`]);
-				}
-				return routesOnly.map((route) => renderRoute(route));
 			})
+				.then(() => {
+					if (routesOnly.length > 10) {
+						return routesOnly
+							.slice(0, 9)
+							.map((route) => renderRoute(route))
+							.concat([`...and ${routesOnly.length - 10} more routes`]);
+					}
+					return routesOnly.map((route) => renderRoute(route));
+				})
+				.catch(async (error) => {
+					let routesWithOtherBindings: Record<string, string[]> | undefined;
+					try {
+						routesWithOtherBindings = await getRoutesWithOtherBindings({
+							config,
+							accountId,
+							routes: routesOnly,
+							scriptName,
+						});
+					} catch {
+						// If we can't determine conflicts (e.g. permission issues), fall back to
+						// the original error from the bulk routes API.
+					}
+
+					if (
+						routesWithOtherBindings &&
+						Object.keys(routesWithOtherBindings).length > 0
+					) {
+						throw createRoutesWithOtherBindingsError(
+							routesWithOtherBindings,
+							accountId
+						);
+					}
+
+					throw error;
+				})
 		);
 	}
 
@@ -543,4 +478,97 @@ async function subdomainDeploy(
 		workersDevInSync: before.enabled === after.enabled,
 		previewsInSync: before.previews_enabled === after.previews_enabled,
 	};
+}
+
+async function getRoutesWithOtherBindings({
+	config,
+	accountId,
+	routes,
+	scriptName,
+}: {
+	config: Config;
+	accountId: string;
+	routes: Route[];
+	scriptName: string;
+}): Promise<Record<string, string[]>> {
+	const routesWithOtherBindings: Record<string, string[]> = {};
+
+	/**
+	 * This queue ensures we limit how many concurrent fetch
+	 * requests we're making to the Zones API.
+	 */
+	const queue = new PQueue({ concurrency: 10 });
+	const queuePromises: Array<Promise<void>> = [];
+	const zoneRoutesCache = new Map<
+		string,
+		Promise<Array<{ pattern: string; script: string }>>
+	>();
+
+	const zoneIdCache = new Map<string, Promise<string | null>>();
+	for (const route of routes) {
+		queuePromises.push(
+			queue.add(async () => {
+				const zone = await getZoneForRoute(
+					config,
+					{ route, accountId },
+					zoneIdCache
+				);
+				if (!zone) {
+					return;
+				}
+
+				const routePattern = typeof route === "string" ? route : route.pattern;
+
+				let routesInZone = zoneRoutesCache.get(zone.id);
+				if (!routesInZone) {
+					routesInZone = retryOnAPIFailure(() =>
+						fetchListResult<{ pattern: string; script: string }>(
+							config,
+							`/zones/${zone.id}/workers/routes`
+						)
+					);
+					zoneRoutesCache.set(zone.id, routesInZone);
+				}
+
+				(await routesInZone).forEach(({ script, pattern }) => {
+					if (pattern === routePattern && script !== scriptName) {
+						if (!(script in routesWithOtherBindings)) {
+							routesWithOtherBindings[script] = [];
+						}
+
+						routesWithOtherBindings[script].push(pattern);
+					}
+				});
+			})
+		);
+	}
+	// using Promise.all() here instead of queue.onIdle() to ensure
+	// we actually throw errors that occur within queued promises.
+	await Promise.all(queuePromises);
+
+	return routesWithOtherBindings;
+}
+
+function createRoutesWithOtherBindingsError(
+	routesWithOtherBindings: Record<string, string[]>,
+	accountId: string
+) {
+	let errorMessage =
+		"Can't deploy routes that are assigned to another worker.\n";
+
+	for (const worker in routesWithOtherBindings) {
+		const assignedRoutes = routesWithOtherBindings[worker];
+		errorMessage += `"${worker}" is already assigned to routes:\n${assignedRoutes
+			.map((r) => `  - ${chalk.underline(r)}\n`)
+			.join("")}`;
+	}
+
+	const resolution =
+		"Unassign other workers from the routes you want to deploy to, and then try again.";
+	const dashHref = chalk.blue.underline(
+		`https://dash.cloudflare.com/${accountId}/workers/overview`
+	);
+	const dashLink = `Visit ${dashHref} to unassign a worker from a route.`;
+
+	return new UserError(`${errorMessage}\n${resolution}\n${dashLink}`);
 }
