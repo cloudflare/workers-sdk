@@ -23,9 +23,11 @@ export function configFormat(
 ): "json" | "jsonc" | "toml" | "none" {
 	if (configPath?.endsWith("toml")) {
 		return "toml";
-	} else if (configPath?.endsWith("jsonc")) {
+	}
+	if (configPath?.endsWith("jsonc")) {
 		return "jsonc";
-	} else if (configPath?.endsWith("json")) {
+	}
+	if (configPath?.endsWith("json")) {
 		return "json";
 	}
 	return "none";
@@ -33,14 +35,15 @@ export function configFormat(
 
 export function configFileName(configPath: string | undefined) {
 	const format = configFormat(configPath);
-	if (format === "toml") {
-		return "wrangler.toml";
-	} else if (format === "json") {
-		return "wrangler.json";
-	} else if (format === "jsonc") {
-		return "wrangler.jsonc";
-	} else {
-		return "Wrangler configuration";
+	switch (format) {
+		case "toml":
+			return "wrangler.toml";
+		case "json":
+			return "wrangler.json";
+		case "jsonc":
+			return "wrangler.jsonc";
+		default:
+			return "Wrangler configuration";
 	}
 }
 
