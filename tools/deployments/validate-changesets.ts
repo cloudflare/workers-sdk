@@ -31,10 +31,15 @@ export function validateChangesets(
 				}
 
 				// TEMPORARILY BLOCK PACKAGES THAT WOULD DEPLOY WORKERS
+				const ALLOWED_PRIVATE_PACKAGES = [
+					"@cloudflare/workers-shared",
+					"@cloudflare/quick-edit",
+					"@cloudflare/devprod-status-bot",
+				];
 				if (
 					packages.get(release.name)?.["workers-sdk"]?.deploy &&
 					// Exception: deployments for these workers are allowed now
-					release.name !== "@cloudflare/workers-shared"
+					!ALLOWED_PRIVATE_PACKAGES.includes(release.name)
 				) {
 					errors.push(
 						`Currently we are not allowing changes to package "${release.name}" in changeset at "${file}" since it would trigger a Worker/Pages deployment.`
