@@ -327,6 +327,9 @@ export function resolvePluginConfig(
 		pluginConfig.viteEnvironment?.name ??
 		workerNameToEnvironmentName(entryWorkerConfig.topLevelName);
 
+	const validateAndAddEnvironmentName = createEnvironmentNameValidator();
+	validateAndAddEnvironmentName(entryWorkerEnvironmentName);
+
 	let staticRouting: StaticRouting | undefined;
 
 	if (Array.isArray(entryWorkerConfig.assets?.run_worker_first)) {
@@ -345,6 +348,10 @@ export function resolvePluginConfig(
 		pluginConfig.viteEnvironment?.childEnvironments;
 
 	if (entryWorkerChildEnvironments) {
+		for (const childName of entryWorkerChildEnvironments) {
+			validateAndAddEnvironmentName(childName);
+		}
+
 		environmentNameToChildEnvironmentNamesMap.set(
 			entryWorkerEnvironmentName,
 			entryWorkerChildEnvironments
@@ -377,11 +384,7 @@ export function resolvePluginConfig(
 			auxiliaryWorker.viteEnvironment?.name ??
 			workerNameToEnvironmentName(workerResolvedConfig.config.topLevelName);
 
-		if (environmentNameToWorkerMap.has(workerEnvironmentName)) {
-			throw new Error(
-				`Duplicate Vite environment name found: ${workerEnvironmentName}`
-			);
-		}
+		validateAndAddEnvironmentName(workerEnvironmentName);
 
 		environmentNameToWorkerMap.set(
 			workerEnvironmentName,
@@ -392,6 +395,10 @@ export function resolvePluginConfig(
 			auxiliaryWorker.viteEnvironment?.childEnvironments;
 
 		if (auxiliaryWorkerChildEnvironments) {
+			for (const childName of auxiliaryWorkerChildEnvironments) {
+				validateAndAddEnvironmentName(childName);
+			}
+
 			environmentNameToChildEnvironmentNamesMap.set(
 				workerEnvironmentName,
 				auxiliaryWorkerChildEnvironments
@@ -419,6 +426,22 @@ export function resolvePluginConfig(
 // Worker names can only contain alphanumeric characters and '-' whereas environment names can only contain alphanumeric characters and '$', '_'
 function workerNameToEnvironmentName(workerName: string) {
 	return workerName.replaceAll("-", "_");
+}
+
+function createEnvironmentNameValidator() {
+	const usedNames = new Set<string>();
+
+	return (name: string): void => {
+		if (name === "client") {
+			throw new Error(`"client" is a reserved Vite environment name`);
+		}
+
+		if (usedNames.has(name)) {
+			throw new Error(`Duplicate Vite environment name: "${name}"`);
+		}
+
+		usedNames.add(name);
+	};
 }
 
 function resolveWorker(workerConfig: ResolvedWorkerConfig) {
