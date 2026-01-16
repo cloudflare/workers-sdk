@@ -35,14 +35,6 @@ const pythonWorker = async () => {
 		}),
 		"index.py"
 	);
-
-	worker.set(
-		"cf-requirements.txt",
-		new Blob([await readFile("./welcome/cf-requirements.txt", "utf8")], {
-			type: "text/plain",
-		}),
-		"cf-requirements.txt"
-	);
 	return worker;
 };
 
