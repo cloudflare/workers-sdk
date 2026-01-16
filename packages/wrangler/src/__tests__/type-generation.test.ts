@@ -1622,7 +1622,7 @@ describe("generate types", () => {
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -1685,7 +1685,7 @@ describe("generate types", () => {
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -1740,7 +1740,7 @@ describe("generate types", () => {
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -1820,7 +1820,7 @@ describe("generate types", () => {
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -2158,7 +2158,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
