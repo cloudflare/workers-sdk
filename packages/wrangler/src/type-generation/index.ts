@@ -354,7 +354,7 @@ export async function generateEnvTypes(
 		...args,
 		config: config.configPath,
 	} satisfies Partial<(typeof typesCommand)["args"]>;
-	const collectedBindings = collectAllBindings(collectionArgs);
+	const collectedBindings = collectCoreBindings(collectionArgs);
 	const collectedDurableObjects = collectAllDurableObjects(collectionArgs);
 	const collectedServices = collectAllServices(collectionArgs);
 	const collectedUnsafeBindings = collectAllUnsafeBindings(collectionArgs);
@@ -805,7 +805,11 @@ interface CollectedBinding {
 }
 
 /**
- * Collects all bindings across environments defined in the config file
+ * Collects all core bindings across environments defined in the config file
+ *
+ * This will aggregate and collect all bindings that can be collected in the same way.
+ * However some other resources, such as Durable Objects, services, etc, all have to be
+ * handled uniquely and as such have their own dedicated `collectX` functions.
  *
  * Behavior:
  * - If `args.env` is specified: only collect bindings from that specific environment
@@ -817,7 +821,7 @@ interface CollectedBinding {
  *
  * @throws {UserError} If a binding name exists with different types across environments
  */
-function collectAllBindings(
+function collectCoreBindings(
 	args: Partial<(typeof typesCommand)["args"]>
 ): Array<CollectedBinding> {
 	const bindingsMap = new Map<string, CollectedBinding>();
