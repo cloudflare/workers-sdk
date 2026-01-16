@@ -323,9 +323,9 @@ export function generateImportSpecifier(from: string, to: string) {
  * @param args - CLI arguments passed to the `types` command
  * @param envInterface - The name of the generated environment interface (default: "Env")
  * @param outputPath - The file path where the generated types will be written
- * @param [entrypoint] - Optional entry point information for the Worker
- * @param [serviceEntries] - Optional map of service names to their entry points for cross-worker type generation
- * @param [log] - Whether to log output to the console (default: true)
+ * @param entrypoint - Optional entry point information for the Worker
+ * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
+ * @param log - Whether to log output to the console (default: true)
  *
  * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
  */
