@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { createServer, IncomingMessage, Server } from "node:http";
 import { DeferredPromise } from "miniflare:shared";
+import { Agent } from "undici";
 import WebSocket, { WebSocketServer } from "ws";
 import { version as miniflareVersion } from "../../../../package.json";
 import { Log } from "../../../shared";
@@ -262,8 +263,13 @@ export class InspectorProxyController {
 			await this.#restartServer();
 		}
 
+		// Create a local agent to bypass any global proxy settings.
+		// Local inspector connections should never go through a proxy.
+		const localAgent = new Agent({ connect: { timeout: 10_000 } });
+
 		const workerdInspectorJson = (await fetch(
-			`http://127.0.0.1:${runtimeInspectorPort}/json`
+			`http://127.0.0.1:${runtimeInspectorPort}/json`,
+			{ dispatcher: localAgent }
 		).then((resp) => resp.json())) as {
 			id: string;
 		}[];
