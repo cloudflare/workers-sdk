@@ -46,7 +46,7 @@
 		"@cloudflare/unenv-preset": "workspace:*",
 		"miniflare": "workspace:*",
 		"unenv": "2.0.0-rc.24",
-		"wrangler": "workspace:*",
+		"wrangler": "workspace:^",
 		"ws": "catalog:default"
 	},
 	"devDependencies": {
