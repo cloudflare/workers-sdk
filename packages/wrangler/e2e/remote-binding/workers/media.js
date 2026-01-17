@@ -8,7 +8,7 @@ export default {
 
 		const contentType = await env.MEDIA.input(image.body)
 			.transform({ width: 10 })
-			.output({ mode: "frame", format: "image/jpeg" })
+			.output({ mode: "frame", format: "jpg" })
 			.contentType();
 
 		return new Response(contentType);
