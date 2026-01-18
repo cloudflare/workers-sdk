@@ -1,5 +1,38 @@
 # wrangler
 
+## 4.60.0
+
+### Minor Changes
+
+- [#11922](https://github.com/cloudflare/workers-sdk/pull/11922) [`93d8d78`](https://github.com/cloudflare/workers-sdk/commit/93d8d78ce081f821671b2c4a1ffcd7df733a0866) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve telemetry errors being sent to Sentry by `wrangler init` when it delegates to C3 by ensuring that they contain the output of the C3 execution.
+
+### Patch Changes
+
+- [#11925](https://github.com/cloudflare/workers-sdk/pull/11925) [`8e4a0e5`](https://github.com/cloudflare/workers-sdk/commit/8e4a0e5e8d1e0bf75b6f11000f89f7eabafa392a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260114.0 | 1.20260115.0 |
+
+- [#11904](https://github.com/cloudflare/workers-sdk/pull/11904) [`22727c2`](https://github.com/cloudflare/workers-sdk/commit/22727c29ee244cddebf93d855e4e052973479ad3) Thanks [@danielrs](https://github.com/danielrs)! - Fix false positive infinite loop detection for exact path redirects
+
+  Fixed an issue where the redirect validation incorrectly flagged exact path redirects like `/ /index.html 200` as infinite loops. This was particularly problematic when `html_handling` is set to "none", where such redirects are valid.
+
+  The fix makes the validation more specific to only block wildcard patterns (like `/* /index.html`) that would actually cause infinite loops, while allowing exact path matches that are valid in certain configurations.
+
+  Fixes: https://github.com/cloudflare/workers-sdk/issues/11824
+
+- [#11946](https://github.com/cloudflare/workers-sdk/pull/11946) [`fa39a73`](https://github.com/cloudflare/workers-sdk/commit/fa39a73040dd27d35d429deda34fdc8e15b15fbe) Thanks [@MattieTK](https://github.com/MattieTK)! - Fix `configFileName` returning wrong filename for `.jsonc` config files
+
+  Previously, users with a `wrangler.jsonc` config file would see error messages and hints referring to `wrangler.json` instead of `wrangler.jsonc`. This was because the `configFormat` function collapsed both `.json` and `.jsonc` files into a single `"jsonc"` value, losing the distinction between them.
+
+  Now `configFormat` returns `"json"` for `.json` files and `"jsonc"` for `.jsonc` files, allowing `configFileName` to return the correct filename for each format.
+
+- Updated dependencies [[`8e4a0e5`](https://github.com/cloudflare/workers-sdk/commit/8e4a0e5e8d1e0bf75b6f11000f89f7eabafa392a), [`25e2c60`](https://github.com/cloudflare/workers-sdk/commit/25e2c608d529664ede251abe45fdb13ea9e56a9d)]:
+  - miniflare@4.20260115.0
+
 ## 4.59.2
 
 ### Patch Changes
