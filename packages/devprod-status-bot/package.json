@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/devprod-status-bot",
-	"version": "1.2.3",
+	"version": "1.3.0",
 	"private": true,
 	"scripts": {
 		"check:lint": "eslint . --max-warnings=0",
