@@ -12,7 +12,7 @@ import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
 import type { PluginContext } from "../context";
-import type { EnvironmentOptions, UserConfig } from "vite";
+import type { ConfigEnv, EnvironmentOptions, UserConfig } from "vite";
 
 /**
  * Plugin to handle configuration and config file watching
@@ -144,7 +144,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 function getEnvironmentsConfig(
 	ctx: PluginContext,
 	userConfig: UserConfig,
-	mode: string
+	mode: ConfigEnv["mode"]
 ): Record<string, EnvironmentOptions> | undefined {
 	if (ctx.resolvedPluginConfig.type !== "workers") {
 		return undefined;
