@@ -192,6 +192,7 @@ export function createCloudflareEnvironmentOptions({
 	workerConfig,
 	userConfig,
 	mode,
+	command,
 	environmentName,
 	isEntryWorker,
 	isParentEnvironment,
@@ -200,6 +201,7 @@ export function createCloudflareEnvironmentOptions({
 	workerConfig: ResolvedWorkerConfig;
 	userConfig: vite.UserConfig;
 	mode: vite.ConfigEnv["mode"];
+	command: vite.ConfigEnv["command"];
 	environmentName: string;
 	isEntryWorker: boolean;
 	isParentEnvironment: boolean;
@@ -236,6 +238,10 @@ export function createCloudflareEnvironmentOptions({
 			createEnvironment(name, config) {
 				return new vite.BuildEnvironment(name, config);
 			},
+			sourcemap:
+				workerConfig.upload_source_maps === true && command === "build"
+					? true
+					: undefined,
 			target,
 			emitAssets: true,
 			manifest: isEntryWorker,

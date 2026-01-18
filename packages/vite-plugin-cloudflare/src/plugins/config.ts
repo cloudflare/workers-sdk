@@ -48,7 +48,12 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						deny: [...defaultDeniedFiles, ".dev.vars", ".dev.vars.*"],
 					},
 				},
-				environments: getEnvironmentsConfig(ctx, userConfig, env.mode),
+				environments: getEnvironmentsConfig(
+					ctx,
+					userConfig,
+					env.mode,
+					env.command
+				),
 				builder: {
 					buildApp:
 						userConfig.builder?.buildApp ??
@@ -144,7 +149,8 @@ export const configPlugin = createPlugin("config", (ctx) => {
 function getEnvironmentsConfig(
 	ctx: PluginContext,
 	userConfig: UserConfig,
-	mode: ConfigEnv["mode"]
+	mode: ConfigEnv["mode"],
+	command: ConfigEnv["command"]
 ): Record<string, EnvironmentOptions> | undefined {
 	if (ctx.resolvedPluginConfig.type !== "workers") {
 		return undefined;
@@ -164,6 +170,7 @@ function getEnvironmentsConfig(
 					workerConfig: worker.config,
 					userConfig,
 					mode,
+					command,
 					hasNodeJsCompat: ctx.getNodeJsCompat(environmentName) !== undefined,
 				};
 
