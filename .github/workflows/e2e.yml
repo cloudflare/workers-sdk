@@ -89,6 +89,7 @@ jobs:
       cancel-in-progress: true
     timeout-minutes: 60
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest

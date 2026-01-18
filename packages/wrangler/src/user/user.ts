@@ -496,8 +496,8 @@ class ErrorOAuth2 extends UserError {
 	}
 }
 
-// For really unknown errors.
-class ErrorUnknown extends Error {
+// Unclassified Oauth errors
+class ErrorUnknown extends UserError {
 	toString(): string {
 		return "ErrorUnknown";
 	}
@@ -626,7 +626,7 @@ function toErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
 		case "invalid_token":
 			return new ErrorInvalidToken(rawError);
 		default:
-			return new ErrorUnknown();
+			return new ErrorUnknown(rawError);
 	}
 }
 

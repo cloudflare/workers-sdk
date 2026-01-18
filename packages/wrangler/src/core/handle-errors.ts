@@ -11,6 +11,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Cloudflare } from "cloudflare";
+import dedent from "ts-dedent";
 import { createCLIParser } from "..";
 import { renderError } from "../cfetch";
 import { readConfig } from "../config";
@@ -58,6 +59,149 @@ function isCertificateError(e: unknown): boolean {
 }
 
 /**
+ * Permission errors (EPERM, EACCES) are caused by file system
+ * permissions that users need to fix outside of their code, so we present
+ * a helpful message instead of reporting to Sentry.
+ *
+ * @param e - The error to check
+ * @returns `true` if the error is a permission error, `false` otherwise
+ */
+function isPermissionError(e: unknown): boolean {
+	// Check for Node.js ErrnoException with EPERM or EACCES code
+	if (
+		e &&
+		typeof e === "object" &&
+		"code" in e &&
+		(e.code === "EPERM" || e.code === "EACCES") &&
+		"message" in e
+	) {
+		return true;
+	}
+
+	// Check in the error cause as well
+	if (e instanceof Error && e.cause) {
+		return isPermissionError(e.cause);
+	}
+
+	return false;
+}
+
+/**
+ * Check if a text string contains a reference to Cloudflare's API domains.
+ * This is a safety precaution to only handle errors related to Cloudflare's
+ * infrastructure, not user endpoints.
+ *
+ * @param text - The text to check for Cloudflare API references
+ * @returns `true` if the text contains a Cloudflare API domain, `false` otherwise
+ */
+function isCloudflareAPI(text: string): boolean {
+	return (
+		text.includes("api.cloudflare.com") || text.includes("dash.cloudflare.com")
+	);
+}
+
+/**
+ * DNS resolution failures (ENOTFOUND) to Cloudflare's API are
+ * caused by network connectivity or DNS problems, so we present
+ * a helpful message instead of reporting to Sentry.
+ *
+ * @param e - The error to check
+ * @returns `true` if the error is a DNS resolution failure to Cloudflare's API, `false` otherwise
+ */
+function isCloudflareAPIDNSError(e: unknown): boolean {
+	// Only handle DNS errors to Cloudflare APIs
+
+	const hasDNSErrorCode = (obj: unknown): boolean => {
+		return (
+			obj !== null &&
+			typeof obj === "object" &&
+			"code" in obj &&
+			obj.code === "ENOTFOUND"
+		);
+	};
+
+	if (hasDNSErrorCode(e)) {
+		const message = e instanceof Error ? e.message : String(e);
+		if (isCloudflareAPI(message)) {
+			return true;
+		}
+		// Also check hostname property
+		if (
+			e &&
+			typeof e === "object" &&
+			"hostname" in e &&
+			typeof e.hostname === "string"
+		) {
+			if (isCloudflareAPI(e.hostname)) {
+				return true;
+			}
+		}
+	}
+
+	// Errors are often wrapped, so check the cause chain as well
+	if (e instanceof Error && e.cause && hasDNSErrorCode(e.cause)) {
+		const causeMessage =
+			e.cause instanceof Error ? e.cause.message : String(e.cause);
+		const parentMessage = e.message;
+		if (isCloudflareAPI(causeMessage) || isCloudflareAPI(parentMessage)) {
+			return true;
+		}
+		// Check hostname in cause
+		if (
+			typeof e.cause === "object" &&
+			"hostname" in e.cause &&
+			typeof e.cause.hostname === "string"
+		) {
+			if (isCloudflareAPI(e.cause.hostname)) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Connection timeouts to Cloudflare's API are caused by slow networks or
+ * connectivity problems, so we present a helpful message instead of
+ * reporting to Sentry.
+ *
+ * @param e - The error to check
+ * @returns `true` if the error is a connection timeout to Cloudflare's API, `false` otherwise
+ */
+function isCloudflareAPIConnectionTimeoutError(e: unknown): boolean {
+	// Only handle timeouts to Cloudflare APIs - timeouts to user endpoints
+	// (e.g., in dev server or user's own APIs) may indicate actual bugs
+	const hasTimeoutCode = (obj: unknown): boolean => {
+		return (
+			obj !== null &&
+			typeof obj === "object" &&
+			"code" in obj &&
+			obj.code === "UND_ERR_CONNECT_TIMEOUT"
+		);
+	};
+
+	if (hasTimeoutCode(e)) {
+		const message = e instanceof Error ? e.message : String(e);
+		if (isCloudflareAPI(message)) {
+			return true;
+		}
+	}
+
+	// Errors are often wrapped, so check the cause chain as well
+	if (e instanceof Error && e.cause && hasTimeoutCode(e.cause)) {
+		const causeMessage =
+			e.cause instanceof Error ? e.cause.message : String(e.cause);
+		const parentMessage = e.message;
+		if (isCloudflareAPI(causeMessage) || isCloudflareAPI(parentMessage)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
  * Handles an error thrown during command execution.
  *
  * This can involve filtering, transforming and logging the error appropriately.
@@ -80,6 +224,88 @@ export async function handleError(
 				"resulting in API calls failing due to a certificate mismatch. " +
 				"It is likely that you need to install the missing system roots provided by your corporate proxy vendor."
 		);
+	}
+
+	// Handle DNS resolution errors to Cloudflare API with a user-friendly message
+	if (isCloudflareAPIDNSError(e)) {
+		mayReport = false;
+		errorType = "DNSError";
+		logger.error(dedent`
+			Unable to resolve Cloudflare's API hostname (api.cloudflare.com or dash.cloudflare.com).
+
+			This is typically caused by:
+			  - No internet connection or network connectivity issues
+			  - DNS resolver not configured or not responding
+			  - Firewall or VPN blocking DNS requests
+			  - Corporate network with restricted DNS
+
+			Please check your network connection and DNS settings.
+		`);
+		return errorType;
+	}
+
+	// Handle permission errors with a user-friendly message
+	if (isPermissionError(e)) {
+		mayReport = false;
+		errorType = "PermissionError";
+
+		// Extract the error message and path, checking both the error and its cause
+		const errorMessage = e instanceof Error ? e.message : String(e);
+		let path: string | null = null;
+
+		// Check main error for path
+		if (
+			e &&
+			typeof e === "object" &&
+			"path" in e &&
+			typeof e.path === "string"
+		) {
+			path = e.path;
+		}
+
+		// If no path in main error, check the cause
+		if (
+			!path &&
+			e instanceof Error &&
+			e.cause &&
+			typeof e.cause === "object" &&
+			"path" in e.cause &&
+			typeof e.cause.path === "string"
+		) {
+			path = e.cause.path;
+		}
+
+		// Always log the full error message in debug
+		logger.debug(`Permission error: ${errorMessage}`);
+
+		// Include path in main error if available, otherwise include the error message
+		const errorDetails = path
+			? `\nAffected path: ${path}\n`
+			: `\nError: ${errorMessage}\n`;
+
+		logger.error(dedent`
+			A permission error occurred while accessing the file system.
+			${errorDetails}
+			This is typically caused by:
+			  - Insufficient file or directory permissions
+			  - Files or directories being locked by another process
+			  - Antivirus or security software blocking access
+
+			Please check the file permissions and try again.
+		`);
+		return errorType;
+	}
+
+	// Handle connection timeout errors to Cloudflare API with a user-friendly message
+	if (isCloudflareAPIConnectionTimeoutError(e)) {
+		mayReport = false;
+		errorType = "ConnectionTimeout";
+		logger.error(
+			"The request to Cloudflare's API timed out.\n" +
+				"This is likely due to network connectivity issues or slow network speeds.\n" +
+				"Please check your internet connection and try again."
+		);
+		return errorType;
 	}
 
 	if (e instanceof CommandLineArgsError) {
