@@ -26,6 +26,7 @@ export const loginCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		category: "Account",
+		sensitiveArgs: true,
 	},
 	behaviour: {
 		printConfigWarnings: false,

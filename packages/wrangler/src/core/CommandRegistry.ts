@@ -100,6 +100,36 @@ export class CommandRegistry {
 	}
 
 	/**
+	 * Finds the command definition that matches the given args array.
+	 * Walks through the tree trying progressively longer command paths to find the best match.
+	 * Returns the command definition and the number of args segments that form the command
+	 * (excluding positional args), or undefined if no command is found.
+	 */
+	findCommandDefinition(
+		args: readonly string[]
+	): { definition: InternalDefinition; commandSegments: number } | undefined {
+		let node = this.#DefinitionTreeRoot;
+		let lastCommandDef: InternalDefinition | undefined;
+		let commandSegments = 0;
+
+		for (let i = 0; i < args.length; i++) {
+			const child = node.subtree.get(args[i]);
+			if (!child) {
+				break;
+			}
+			node = child;
+			if (node.definition?.type === "command") {
+				lastCommandDef = node.definition;
+				commandSegments = i + 1;
+			}
+		}
+
+		return lastCommandDef
+			? { definition: lastCommandDef, commandSegments }
+			: undefined;
+	}
+
+	/**
 	 * Registers all commands in the command registry, walking through the definition tree.
 	 */
 	registerAll() {

@@ -118,8 +118,11 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			argv?: string[]
 		) {
 			try {
-				if (properties.command?.startsWith("wrangler login")) {
-					properties.command = "wrangler login";
+				// Sanitize sensitive commands to prevent accidentally capturing secrets
+				// or credentials that users may have pasted as arguments.
+				// The sensitiveArgs flag is set from the command definition's metadata.
+				if (properties.sensitiveArgs) {
+					argv = [];
 				}
 				if (
 					properties.command === "wrangler telemetry disable" ||

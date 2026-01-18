@@ -1740,7 +1740,7 @@ export async function main(argv: string[]): Promise<void> {
 		(argv.includes("--help") || argv.includes("-h")) &&
 		argv.filter((arg) => !arg.startsWith("-")).length === 0;
 
-	const { wrangler, showHelpWithCategories } = createCLIParser(argv);
+	const { wrangler, registry, showHelpWithCategories } = createCLIParser(argv);
 
 	if (isRootHelpRequest) {
 		await showHelpWithCategories();
@@ -1749,6 +1749,7 @@ export async function main(argv: string[]): Promise<void> {
 	let command: string | undefined;
 	let metricsArgs: Record<string, unknown> | undefined;
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
+	let sensitiveArgs = false;
 	// Register Yargs middleware to record command as Sentry breadcrumb
 	let recordedCommand = false;
 	const wranglerWithMiddleware = wrangler.middleware((args) => {
@@ -1779,9 +1780,20 @@ export async function main(argv: string[]): Promise<void> {
 			logger.debug("Failed to parse config. Disabling metrics dispatcher.", e);
 		}
 
-		command = `wrangler ${args._.join(" ")}`;
+		const fullCommand = `wrangler ${args._.join(" ")}`;
 		metricsArgs = args;
-		addBreadcrumb(command);
+		addBreadcrumb(fullCommand);
+
+		// Look up the command definition to check if it has sensitive args
+		const commandResult = registry.findCommandDefinition(args._ as string[]);
+		sensitiveArgs = commandResult?.definition?.metadata?.sensitiveArgs ?? false;
+
+		// If this command handles sensitive data, strip positional args from the command string
+		// to prevent accidentally capturing secrets in telemetry
+		command = sensitiveArgs
+			? `wrangler ${(args._ as string[]).slice(0, commandResult?.commandSegments ?? 0).join(" ")}`
+			: fullCommand;
+
 		// NB despite 'applyBeforeValidation = true', this runs *after* yargs 'validates' options,
 		// e.g. if a required arg is missing, yargs will error out before we send any events :/
 		dispatcher?.sendCommandEvent(
@@ -1789,6 +1801,7 @@ export async function main(argv: string[]): Promise<void> {
 			{
 				command,
 				args,
+				sensitiveArgs,
 			},
 			argv
 		);
@@ -1808,6 +1821,7 @@ export async function main(argv: string[]): Promise<void> {
 				durationMs,
 				durationSeconds: durationMs / 1000,
 				durationMinutes: durationMs / 1000 / 60,
+				sensitiveArgs,
 			},
 			argv
 		);
@@ -1829,6 +1843,7 @@ export async function main(argv: string[]): Promise<void> {
 					e instanceof UserError || e instanceof ContainersUserError
 						? e.telemetryMessage
 						: undefined,
+				sensitiveArgs,
 			},
 			argv
 		);

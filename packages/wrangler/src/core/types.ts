@@ -76,6 +76,11 @@ export type Metadata = {
 	 * Commands without a category will appear under the default "COMMANDS" group.
 	 */
 	category?: MetadataCategory;
+	/**
+	 * If true, arguments for this command will be stripped from telemetry
+	 * to prevent accidentally capturing secrets or credentials.
+	 */
+	sensitiveArgs?: boolean;
 };
 
 export type ArgDefinition = Omit<PositionalOptions, "type"> &
