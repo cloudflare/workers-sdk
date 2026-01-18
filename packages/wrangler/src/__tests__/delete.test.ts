@@ -46,6 +46,57 @@ describe("delete", () => {
 		`);
 	});
 
+	it("should delete a service using positional name argument", async () => {
+		mockConfirm({
+			text: `Are you sure you want to delete my-positional-worker? This action cannot be undone.`,
+			result: true,
+		});
+		mockListKVNamespacesRequest();
+		mockListReferencesRequest("my-positional-worker");
+		mockListTailsByConsumerRequest("my-positional-worker");
+		mockDeleteWorkerRequest({ name: "my-positional-worker" });
+		await runWrangler("delete my-positional-worker");
+
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Successfully deleted my-positional-worker",
+			  "warn": "",
+			}
+		`);
+	});
+
+	it("should use positional name argument over the name from the Wrangler config file", async () => {
+		writeWranglerConfig({ name: "config-provided-name" });
+		mockConfirm({
+			text: `Are you sure you want to delete cli-provided-name? This action cannot be undone.`,
+			result: true,
+		});
+		mockListKVNamespacesRequest();
+		mockListReferencesRequest("cli-provided-name");
+		mockListTailsByConsumerRequest("cli-provided-name");
+		mockDeleteWorkerRequest({ name: "cli-provided-name" });
+		await runWrangler("delete cli-provided-name");
+
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Successfully deleted cli-provided-name",
+			  "warn": "",
+			}
+		`);
+	});
+
 	it("should delete a script by configuration", async () => {
 		mockConfirm({
 			text: `Are you sure you want to delete test-name? This action cannot be undone.`,
