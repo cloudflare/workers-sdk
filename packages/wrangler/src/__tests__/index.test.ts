@@ -47,7 +47,7 @@ describe("wrangler", () => {
 				COMPUTE & AI
 				  wrangler ai                     🤖 Manage AI models
 				  wrangler containers             📦 Manage Containers [open beta]
-				  wrangler delete [script]        🗑️ Delete a Worker from Cloudflare
+				  wrangler delete [name]          🗑️ Delete a Worker from Cloudflare
 				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
@@ -118,7 +118,7 @@ describe("wrangler", () => {
 				COMPUTE & AI
 				  wrangler ai                     🤖 Manage AI models
 				  wrangler containers             📦 Manage Containers [open beta]
-				  wrangler delete [script]        🗑️ Delete a Worker from Cloudflare
+				  wrangler delete [name]          🗑️ Delete a Worker from Cloudflare
 				  wrangler deploy [script]        🆙 Deploy a Worker to Cloudflare
 				  wrangler deployments            🚢 List and view the current and past deployments for your Worker
 				  wrangler dev [script]           👂 Start a local server for developing your Worker
