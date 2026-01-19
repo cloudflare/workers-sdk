@@ -14,6 +14,7 @@ import {
 	generateImportSpecifier,
 	isValidIdentifier,
 } from "../type-generation";
+import { throwMissingBindingError } from "../type-generation/helpers";
 import * as generateRuntime from "../type-generation/runtime";
 import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -88,6 +89,83 @@ describe("generateImportSpecifier", () => {
 
 		expect(generateImportSpecifier("/app/types.ts", "/app/src/index.mjs")).toBe(
 			"./src/index"
+		);
+	});
+});
+
+describe("throwMissingBindingError", () => {
+	it("should throw a `UserError` for top-level bindings with array index", () => {
+		expect(() =>
+			throwMissingBindingError(
+				"wrangler.toml",
+				"kv_namespaces",
+				"top-level",
+				0,
+				"binding",
+				{ id: "1234" }
+			)
+		).toThrowError(
+			'Processing wrangler.toml configuration:\n  - "kv_namespaces[0]" bindings should have a string "binding" field but got {"id":"1234"}.'
+		);
+	});
+
+	it("should throw a `UserError` for environment bindings with array index", () => {
+		expect(() =>
+			throwMissingBindingError(
+				"wrangler.toml",
+				"d1_databases",
+				"production",
+				2,
+				"binding",
+				{ database_id: "abc123" }
+			)
+		).toThrowError(
+			'Processing wrangler.toml configuration:\n  - "env.production" environment configuration\n    - "env.production.d1_databases[2]" bindings should have a string "binding" field but got {"database_id":"abc123"}.'
+		);
+	});
+
+	it("should handle non-array bindings (index = -1)", () => {
+		expect(() =>
+			throwMissingBindingError(
+				"wrangler.json",
+				"ai",
+				"top-level",
+				-1,
+				"binding",
+				{}
+			)
+		).toThrowError(
+			'Processing wrangler.json configuration:\n  - "ai" bindings should have a string "binding" field but got {}.'
+		);
+	});
+
+	it("should handle undefined config path", () => {
+		expect(() =>
+			throwMissingBindingError(
+				undefined,
+				"kv_namespaces",
+				"top-level",
+				0,
+				"binding",
+				{}
+			)
+		).toThrowError(
+			'Processing Wrangler configuration configuration:\n  - "kv_namespaces[0]" bindings should have a string "binding" field but got {}.'
+		);
+	});
+
+	it("should handle different field names", () => {
+		expect(() =>
+			throwMissingBindingError(
+				"wrangler.toml",
+				"unsafe",
+				"staging",
+				1,
+				"name",
+				{ type: "ratelimit" }
+			)
+		).toThrowError(
+			'Processing wrangler.toml configuration:\n  - "env.staging" environment configuration\n    - "env.staging.unsafe[1]" bindings should have a string "name" field but got {"type":"ratelimit"}.'
 		);
 	});
 });
