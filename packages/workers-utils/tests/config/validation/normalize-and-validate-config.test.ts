@@ -1,4 +1,5 @@
 import path from "node:path";
+import TOML from "smol-toml";
 import { describe, expect, it, test, vi } from "vitest";
 import { normalizeAndValidateConfig } from "../../../src/config/validation";
 import { normalizeString } from "../../../src/test-helpers";
@@ -2788,6 +2789,86 @@ describe("normalizeAndValidateConfig()", () => {
 					  - The \\"dev\\" instance_type has been renamed to \\"lite\\" and will be removed in a subsequent version. Please update your configuration to use \\"lite\\" instead."
 				`);
 			});
+
+			it("should error when both constraints.tier and constraints.tiers are set", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									tier: 1,
+									tiers: [1, 2],
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"constraints.tier\\" has been deprecated in favor of \\"constraints.tiers\\". Please update your configuration to use \\"constraints.tiers\\" instead."
+				`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.constraints.tier and containers.constraints.tiers cannot both be set"
+				`);
+			});
+
+			it("should error when constraints.tiers is not an array of numbers", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									tiers: ["a", "b"],
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected \\"containers.constraints.tiers.[0]\\" to be of type number but got \\"a\\".
+					  - Expected \\"containers.constraints.tiers.[1]\\" to be of type number but got \\"b\\"."
+				`);
+			});
+
+			it("should allow valid constraints.tiers array of numbers", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									tiers: [1, 2, 3],
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
+			});
 		});
 
 		describe("[kv_namespaces]", () => {
@@ -5469,6 +5550,51 @@ describe("normalizeAndValidateConfig()", () => {
 				      Please add \\"unsafe\\" to \\"env.ENV1\\"."
 			`);
 		});
+
+		it("should error on Date values in vars (parsed by TOML)", () => {
+			const rawConfig = TOML.parse(`
+				[vars]
+				VALID_VAR = "some string"
+				DATE_VAR = 2024-01-01
+			`) as unknown as RawConfig;
+
+			const { diagnostics } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{ env: undefined }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(true);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+				  - The field \\"vars.DATE_VAR\\" is a TOML date, which is not supported. Please use a string instead, e.g. DATE_VAR = \\"2025-12-19\\"."
+			`);
+		});
+
+		it("should error on Date values in env vars (parsed by TOML)", () => {
+			const rawConfig = TOML.parse(`
+				[env.production.vars]
+				VALID_VAR = "some string"
+				RELEASE_DATE = 2025-06-15
+			`) as unknown as RawConfig;
+
+			const { diagnostics } = normalizeAndValidateConfig(
+				rawConfig,
+				undefined,
+				undefined,
+				{ env: "production" }
+			);
+
+			expect(diagnostics.hasErrors()).toBe(true);
+			expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+
+				  - \\"env.production\\" environment configuration
+				    - The field \\"env.production.vars.RELEASE_DATE\\" is a TOML date, which is not supported. Please use a string instead, e.g. RELEASE_DATE = \\"2025-12-19\\"."
+			`);
+		});
+
 		it("should error on node_compat", () => {
 			const { diagnostics } = normalizeAndValidateConfig(
 				// @ts-expect-error node_compat has been removed

@@ -1,5 +1,162 @@
 # miniflare
 
+## 4.20260114.0
+
+### Minor Changes
+
+- [#11883](https://github.com/cloudflare/workers-sdk/pull/11883) [`4714ca1`](https://github.com/cloudflare/workers-sdk/commit/4714ca12c1f24c7e3553d3bfd2812a833a07826c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `MF-Original-Hostname` header when using the `upstream` option
+
+  When using the `upstream` option in Miniflare, the `Host` header is rewritten to match the upstream server, which means the original hostname is lost. This change adds a new `MF-Original-Hostname` header that preserves the original hostname from the incoming request.
+
+  This allows Workers to access the original hostname when proxying requests through an upstream server:
+
+  ```js
+  export default {
+  	async fetch(request) {
+  		const originalHostname = request.headers.get("MF-Original-Hostname");
+  		// originalHostname contains the hostname before it was rewritten
+  	},
+  };
+  ```
+
+### Patch Changes
+
+- [#11908](https://github.com/cloudflare/workers-sdk/pull/11908) [`e78186d`](https://github.com/cloudflare/workers-sdk/commit/e78186dae926c0ae1ab387aaa6cb8ba53bed9992) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260111.0 | 1.20260114.0 |
+
+- [#11898](https://github.com/cloudflare/workers-sdk/pull/11898) [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bundle more third-party dependencies to reduce supply chain risk
+
+  Previously, several small utility packages were listed as runtime dependencies and
+  installed separately. These are now bundled directly into the published packages,
+  reducing the number of external dependencies users need to trust.
+
+  Bundled dependencies:
+
+  - **miniflare**: `acorn`, `acorn-walk`, `exit-hook`, `glob-to-regexp`, `stoppable`
+  - **kv-asset-handler**: `mime`
+  - **vite-plugin-cloudflare**: `@remix-run/node-fetch-server`, `defu`, `get-port`, `picocolors`, `tinyglobby`
+  - **vitest-pool-workers**: `birpc`, `devalue`, `get-port`, `semver`
+
+## 4.20260111.0
+
+### Patch Changes
+
+- [#11494](https://github.com/cloudflare/workers-sdk/pull/11494) [`ed60c4f`](https://github.com/cloudflare/workers-sdk/commit/ed60c4f01c0e4ac9683a73fb5cf849ad74255b35) Thanks [@jalmonter](https://github.com/jalmonter)! - Fix scheduled trigger warning showing `undefined` port
+
+  When running `wrangler dev` with a worker that has cron triggers, the warning message displayed an invalid URL like `curl "http://localhost:undefined/cdn-cgi/handler/scheduled"` because the port wasn't yet determined when the warning was logged.
+
+  Moved the warning to after the proxy server is fully ready, where the actual public URL and port are known.
+
+- [#11831](https://github.com/cloudflare/workers-sdk/pull/11831) [`faa5753`](https://github.com/cloudflare/workers-sdk/commit/faa5753fa685117065c801e5d1fcee3486a6f0bd) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260107.1 | 1.20260108.0 |
+
+- [#11844](https://github.com/cloudflare/workers-sdk/pull/11844) [`e574ef3`](https://github.com/cloudflare/workers-sdk/commit/e574ef3e73aa00ca82e84fe308da0fed768477d9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260108.0 | 1.20260109.0 |
+
+- [#11872](https://github.com/cloudflare/workers-sdk/pull/11872) [`b6148ed`](https://github.com/cloudflare/workers-sdk/commit/b6148ed733f6d6873261df5ae61e71c475ba8a8d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260109.0 | 1.20260111.0 |
+
+- [#11816](https://github.com/cloudflare/workers-sdk/pull/11816) [`fc96e5f`](https://github.com/cloudflare/workers-sdk/commit/fc96e5fe117948c57e49bf0741d55955691f1c28) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Bump sharp dependency (from `0.33.5` to `0.34.5`)
+
+## 4.20260107.0
+
+### Patch Changes
+
+- [#11822](https://github.com/cloudflare/workers-sdk/pull/11822) [`97e67b9`](https://github.com/cloudflare/workers-sdk/commit/97e67b984a788a807c77309fb5391b5ecf190888) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260103.0 | 1.20260107.1 |
+
+## 4.20260103.0
+
+### Minor Changes
+
+- [#11648](https://github.com/cloudflare/workers-sdk/pull/11648) [`eac5cf7`](https://github.com/cloudflare/workers-sdk/commit/eac5cf74db6d1b0865f5dc3a744ff28e695d53ca) Thanks [@pombosilva](https://github.com/pombosilva)! - Add Workflows test handlers in vitest-pool-workers to get the Workflow instance output and error:
+
+  - `getOutput()`: Returns the output of the successfully completed Workflow instance.
+  - `getError()`: Returns the error information of the errored Workflow instance.
+
+  Example:
+
+  ```ts
+  // First wait for the workflow instance to complete:
+  await expect(
+  	instance.waitForStatus({ status: "complete" })
+  ).resolves.not.toThrow();
+
+  // Then, get its output
+  const output = await instance.getOutput();
+
+  // Or for errored workflow instances, get their error:
+  await expect(
+  	instance.waitForStatus({ status: "errored" })
+  ).resolves.not.toThrow();
+  const error = await instance.getError();
+  ```
+
+### Patch Changes
+
+- [#11714](https://github.com/cloudflare/workers-sdk/pull/11714) [`65d1850`](https://github.com/cloudflare/workers-sdk/commit/65d185016bc9650ae28077bba573dba120ccee1c) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251217.0 | 1.20251219.0 |
+
+- [#11732](https://github.com/cloudflare/workers-sdk/pull/11732) [`1615fce`](https://github.com/cloudflare/workers-sdk/commit/1615fce11d4f3c73c93d85d8904062ab1dbddfb1) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251219.0 | 1.20251221.0 |
+
+- [#11748](https://github.com/cloudflare/workers-sdk/pull/11748) [`b2769bf`](https://github.com/cloudflare/workers-sdk/commit/b2769bf18ece177b407235993f53f6fd8e1ac829) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251221.0 | 1.20251223.0 |
+
+- [#11791](https://github.com/cloudflare/workers-sdk/pull/11791) [`554a4df`](https://github.com/cloudflare/workers-sdk/commit/554a4dfd49b56a3e0ef4ba09fbb33a56e47a4932) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20251223.0 | 1.20260103.0 |
+
+- [#11642](https://github.com/cloudflare/workers-sdk/pull/11642) [`8eede3f`](https://github.com/cloudflare/workers-sdk/commit/8eede3f213ef8ad5aed3102e6f9c20cba9ea8a66) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix intermittent "Fetch failed" errors in Miniflare tests on Windows
+
+  Miniflare tests would occasionally fail with "Fetch failed" errors (particularly on Windows CI runners) due to race conditions between undici's Keep-Alive mechanism and the Miniflare server closing idle connections. Miniflare now configures the Dispatcher to prevent connection reuse and eliminate these race condition errors.
+
+- [#11493](https://github.com/cloudflare/workers-sdk/pull/11493) [`6a05b1c`](https://github.com/cloudflare/workers-sdk/commit/6a05b1cdf808c9f50cd461472fc430f9b029139d) Thanks [@GameRoMan](https://github.com/GameRoMan)! - Update `zod` from 3.22.3 to 3.25.76
+
 ## 4.20251217.0
 
 ### Patch Changes

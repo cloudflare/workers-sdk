@@ -3,6 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import colors from "picocolors";
 import { VIRTUAL_CLIENT_FALLBACK_ENTRY } from "./plugins/virtual-modules";
+import { satisfiesViteVersion } from "./utils";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
@@ -66,16 +67,10 @@ export function createBuildApp(
 		} else if (importedAssetPaths.size || getHasPublicAssets(builder.config)) {
 			await fallbackBuild(builder, clientEnvironment);
 		} else {
-			const entryWorkerConfigPath = path.join(
-				entryWorkerBuildDirectory,
-				"wrangler.json"
-			);
-			const workerConfig = JSON.parse(
-				fs.readFileSync(entryWorkerConfigPath, "utf-8")
-			) as Unstable_Config;
-			// Remove `assets` field as there are no assets
-			workerConfig.assets = undefined;
-			fs.writeFileSync(entryWorkerConfigPath, JSON.stringify(workerConfig));
+			// In Vite 7 and above we do this in the `buildApp` hook
+			if (!satisfiesViteVersion("7.0.0")) {
+				removeAssetsField(entryWorkerBuildDirectory);
+			}
 
 			// Return early as there is no client build
 			return;
@@ -173,4 +168,21 @@ function getImportedAssetPaths(viteManifest: vite.Manifest): Set<string> {
 	);
 
 	return new Set(assetPaths);
+}
+
+/**
+ * Used to remove the `assets` field from the entry Worker config if there are no assets
+ */
+export function removeAssetsField(entryWorkerBuildDirectory: string): void {
+	const entryWorkerConfigPath = path.join(
+		entryWorkerBuildDirectory,
+		"wrangler.json"
+	);
+	const workerConfig = JSON.parse(
+		fs.readFileSync(entryWorkerConfigPath, "utf-8")
+	) as Unstable_Config;
+
+	workerConfig.assets = undefined;
+
+	fs.writeFileSync(entryWorkerConfigPath, JSON.stringify(workerConfig));
 }

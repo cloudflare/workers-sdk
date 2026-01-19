@@ -606,4 +606,73 @@ describe("multiworker", () => {
 			);
 		});
 	});
+
+	describe("scheduled worker warnings", () => {
+		beforeEach(async () => {
+			await baseSeed(a, {
+				"wrangler.toml": dedent`
+						name = "${workerName}"
+						main = "src/index.ts"
+						compatibility_date = "2024-11-01"
+
+						[triggers]
+						crons = ["* * * * *"]
+
+						[[services]]
+						binding = "BEE"
+						service = '${workerName2}'
+				`,
+				"src/index.ts": dedent/* javascript */ `
+					export default {
+						async fetch(req, env) {
+							return env.BEE.fetch(req);
+						},
+						scheduled(event) {
+							console.log("Worker A scheduled event");
+						}
+					};
+					`,
+			});
+
+			await baseSeed(b, {
+				"wrangler.toml": dedent`
+						name = "${workerName2}"
+						main = "src/index.ts"
+						compatibility_date = "2024-11-01"
+
+						[triggers]
+						crons = ["0 * * * *"]
+				`,
+				"src/index.ts": dedent/* javascript */ `
+					export default {
+						async fetch(req, env) {
+							return new Response("hello world");
+						},
+						scheduled(event) {
+							console.log("Worker B scheduled event");
+						}
+					};
+				`,
+			});
+		});
+
+		it("shows warning with correct port when multiple workers have cron triggers", async () => {
+			const worker = helper.runLongLived(
+				`wrangler dev -c wrangler.toml -c ${b}/wrangler.toml`,
+				{ cwd: a }
+			);
+
+			const { url } = await worker.waitForReady(5_000);
+			const { hostname, port } = new URL(url);
+
+			// The warning should contain the actual port, not "undefined"
+			expect(worker.currentOutput).toContain(
+				"Scheduled Workers are not automatically triggered"
+			);
+			expect(worker.currentOutput).toContain(
+				`curl "http://${hostname}:${port}/cdn-cgi/handler/scheduled"`
+			);
+			expect(worker.currentOutput).not.toContain("undefined");
+		});
+	});
 });

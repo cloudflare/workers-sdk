@@ -1,3 +1,4 @@
 custom-root-output-directory
 custom-environment-output-directory
 custom-worker-output-directory
+custom-build-app-directory

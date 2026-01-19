@@ -19,10 +19,12 @@ updates:
       - "c3"
       - "dependencies"
       - "skip-pr-description-validation"
+      - "skip-changeset-review"
+
   # Check for workerd & workers-types updates for Miniflare
   - package-ecosystem: "npm"
     # If you restrict the update to a directory that is not the root
-    # then it will not update the package-lock.json.
+    # then it will not update the pnpm-lock.yaml.
     directory: "/"
     groups:
       # We want to keep workerd and workers-types updates in lock-step
@@ -32,7 +34,7 @@ updates:
           - "@cloudflare/workers-types"
     schedule:
       interval: "daily"
-      time: "06:00" # the workerd release starts at 00:30 UTC each day
+      time: "06:00"
     versioning-strategy: increase
     labels:
       - "miniflare"

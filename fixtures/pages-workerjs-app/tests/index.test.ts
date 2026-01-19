@@ -3,13 +3,11 @@ import { rename } from "node:fs/promises";
 import path, { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
-import { describe, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages _worker.js", () => {
-	it("should throw an error when the _worker.js file imports something and --bundle is false", ({
-		expect,
-	}) => {
+	it("should throw an error when the _worker.js file imports something and --bundle is false", () => {
 		expect(() =>
 			execSync("pnpm run dev -- --bundle=false", {
 				cwd: path.resolve(__dirname, ".."),
@@ -18,9 +16,7 @@ describe("Pages _worker.js", () => {
 		).toThrowError();
 	});
 
-	it("should throw an error when the _worker.js file imports something and --no-bundle is true", ({
-		expect,
-	}) => {
+	it("should throw an error when the _worker.js file imports something and --no-bundle is true", () => {
 		expect(() =>
 			execSync("pnpm run dev -- --no-bundle", {
 				cwd: path.resolve(__dirname, ".."),
@@ -29,9 +25,7 @@ describe("Pages _worker.js", () => {
 		).toThrowError();
 	});
 
-	it("should not throw an error when the _worker.js file imports something if --no-bundle is false", async ({
-		expect,
-	}) => {
+	it("should not throw an error when the _worker.js file imports something if --no-bundle is false", async () => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"./workerjs-test",
@@ -51,9 +45,7 @@ describe("Pages _worker.js", () => {
 		}
 	});
 
-	it("should not throw an error when the _worker.js file imports something if --bundle is true", async ({
-		expect,
-	}) => {
+	it("should not throw an error when the _worker.js file imports something if --bundle is true", async () => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"./workerjs-test",
@@ -73,9 +65,7 @@ describe("Pages _worker.js", () => {
 		}
 	});
 
-	it("should not error if the worker.js file is removed while watching", async ({
-		expect,
-	}) => {
+	it("should not error if the worker.js file is removed while watching", async () => {
 		const basePath = resolve(__dirname, "..");
 		const { ip, port, getOutput, clearOutput, stop } =
 			await runWranglerPagesDev(resolve(__dirname, ".."), "./workerjs-test", [
@@ -120,9 +110,7 @@ describe("Pages _worker.js", () => {
 		}
 	});
 
-	it("should not error if the _routes.json file is removed while watching", async ({
-		expect,
-	}) => {
+	it("should not error if the _routes.json file is removed while watching", async () => {
 		const basePath = resolve(__dirname, "..");
 		const { ip, port, getOutput, clearOutput, stop } =
 			await runWranglerPagesDev(resolve(__dirname, ".."), "./workerjs-test", [
@@ -169,7 +157,7 @@ describe("Pages _worker.js", () => {
 	});
 
 	// Serendipitously, this .env reading also works for `wrangler pages dev`.
-	it("should read local dev vars from the .env file", async ({ expect }) => {
+	it("should read local dev vars from the .env file", async () => {
 		const { ip, port, stop } = await runWranglerPagesDev(
 			resolve(__dirname, ".."),
 			"./workerjs-test",

@@ -2,7 +2,6 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
-import test from "ava";
 import {
 	DeferredPromise,
 	kUnsafeEphemeralUniqueKey,
@@ -11,7 +10,8 @@ import {
 	MiniflareOptions,
 	RequestInit,
 } from "miniflare";
-import { useTmp } from "../../test-shared";
+import { describe, expect, onTestFinished, test } from "vitest";
+import { disposeWithRetry, useDispose, useTmp } from "../../test-shared";
 
 const COUNTER_SCRIPT = (responsePrefix = "") => `export class Counter {
   instanceId = crypto.randomUUID();
@@ -53,58 +53,59 @@ const STATEFUL_SCRIPT = (responsePrefix = "") => `
   }
 `;
 
-test("persists Durable Object data in-memory between options reloads", async (t) => {
+test("persists Durable Object data in-memory between options reloads", async () => {
 	const opts: MiniflareOptions = {
 		modules: true,
 		script: COUNTER_SCRIPT("Options #1: "),
 		durableObjects: { COUNTER: "Counter" },
 	};
-	let mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+	const mf = new Miniflare(opts);
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "Options #1: 1");
+	expect(await res.text()).toBe("Options #1: 1");
 
 	opts.script = COUNTER_SCRIPT("Options #2: ");
 	await mf.setOptions(opts);
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "Options #2: 2");
+	expect(await res.text()).toBe("Options #2: 2");
 
 	opts.durableObjectsPersist = false;
 	opts.script = COUNTER_SCRIPT("Options #3: ");
 	await mf.setOptions(opts);
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "Options #3: 3");
+	expect(await res.text()).toBe("Options #3: 3");
 
 	opts.durableObjectsPersist = "memory:";
 	opts.script = COUNTER_SCRIPT("Options #4: ");
 	await mf.setOptions(opts);
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "Options #4: 4");
+	expect(await res.text()).toBe("Options #4: 4");
 
 	// Check a `new Miniflare()` instance has its own in-memory storage
 	delete opts.durableObjectsPersist;
 	opts.script = COUNTER_SCRIPT("Options #5: ");
 	await mf.dispose();
-	mf = new Miniflare(opts);
-	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "Options #5: 1");
+	const mf2 = new Miniflare(opts);
+	useDispose(mf2);
+	res = await mf2.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("Options #5: 1");
 
 	// Check doesn't persist with `unsafeEphemeralDurableObjects` enabled
 	opts.script = COUNTER_SCRIPT("Options #6: ");
 	opts.unsafeEphemeralDurableObjects = true;
-	await mf.setOptions(opts);
-	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "Options #6: 1");
-	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "Options #6: 2");
-	await mf.setOptions(opts);
-	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "Options #6: 1");
+	await mf2.setOptions(opts);
+	res = await mf2.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("Options #6: 1");
+	res = await mf2.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("Options #6: 2");
+	await mf2.setOptions(opts);
+	res = await mf2.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("Options #6: 1");
 });
 
-test("persists Durable Object data on file-system", async (t) => {
-	const tmp = await useTmp(t);
+test("persists Durable Object data on file-system", async () => {
+	const tmp = await useTmp();
 	const opts: MiniflareOptions = {
 		name: "worker",
 		modules: true,
@@ -112,20 +113,20 @@ test("persists Durable Object data on file-system", async (t) => {
 		durableObjects: { COUNTER: "Counter" },
 		durableObjectsPersist: tmp,
 	};
-	let mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+	const mf = new Miniflare(opts);
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "1");
+	expect(await res.text()).toBe("1");
 
 	// Check directory created for "worker"'s Durable Object
 	const names = await fs.readdir(tmp);
-	t.deepEqual(names, ["worker-Counter"]);
+	expect(names).toEqual(["worker-Counter"]);
 
 	// Check reloading keeps persisted data
 	await mf.setOptions(opts);
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "2");
+	expect(await res.text()).toBe("2");
 
 	// Check removing persisted data then reloaded resets count (note we have to
 	// reload here as `workerd` keeps a copy of the SQLite database in-memory,
@@ -133,19 +134,22 @@ test("persists Durable Object data on file-system", async (t) => {
 	await mf.dispose();
 	await fs.rm(path.join(tmp, names[0]), { force: true, recursive: true });
 
-	mf = new Miniflare(opts);
-	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "1");
+	const mf2 = new Miniflare(opts);
+	useDispose(mf2);
+
+	res = await mf2.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("1");
 
 	// Check "restarting" keeps persisted data
-	await mf.dispose();
-	mf = new Miniflare(opts);
-	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "2");
+	await mf2.dispose();
+	const mf3 = new Miniflare(opts);
+	useDispose(mf3);
+	res = await mf3.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("2");
 });
 
-test("multiple Workers access same Durable Object data", async (t) => {
-	const tmp = await useTmp(t);
+test("multiple Workers access same Durable Object data", async () => {
+	const tmp = await useTmp();
 	const mf = new Miniflare({
 		durableObjectsPersist: tmp,
 		workers: [
@@ -184,37 +188,37 @@ test("multiple Workers access same Durable Object data", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost", {
 		headers: { "MF-Test-Service": "A", "MF-Test-Object": "COUNTER_A" },
 	});
-	t.is(await res.text(), "via A: a: 1");
+	expect(await res.text()).toBe("via A: a: 1");
 	res = await mf.dispatchFetch("http://localhost", {
 		headers: { "MF-Test-Service": "A", "MF-Test-Object": "COUNTER_A" },
 	});
-	t.is(await res.text(), "via A: a: 2");
+	expect(await res.text()).toBe("via A: a: 2");
 	res = await mf.dispatchFetch("http://localhost", {
 		headers: { "MF-Test-Service": "A", "MF-Test-Object": "COUNTER_B" },
 	});
-	t.is(await res.text(), "via A: b: 1");
+	expect(await res.text()).toBe("via A: b: 1");
 
 	// Check directory created for Durable Objects
 	const names = await fs.readdir(tmp);
-	t.deepEqual(names.sort(), ["a-Counter", "b-Counter"]);
+	expect(names.sort()).toEqual(["a-Counter", "b-Counter"]);
 
 	// Check accessing via a different service accesses same persisted data
 	res = await mf.dispatchFetch("http://localhost", {
 		headers: { "MF-Test-Service": "B", "MF-Test-Object": "COUNTER_A" },
 	});
-	t.is(await res.text(), "via B: a: 3");
+	expect(await res.text()).toBe("via B: a: 3");
 	res = await mf.dispatchFetch("http://localhost", {
 		headers: { "MF-Test-Service": "B", "MF-Test-Object": "COUNTER_B" },
 	});
-	t.is(await res.text(), "via B: b: 2");
+	expect(await res.text()).toBe("via B: b: 2");
 });
 
-test("can use Durable Object ID from one object in another", async (t) => {
+test("can use Durable Object ID from one object in another", async () => {
 	const mf1 = new Miniflare({
 		name: "a",
 		routes: ["*/id"],
@@ -257,41 +261,43 @@ test("can use Durable Object ID from one object in another", async (t) => {
     }
     `,
 	});
-	t.teardown(() => Promise.all([mf1.dispose(), mf2.dispose()]));
+	onTestFinished(async () => {
+		await Promise.all([mf1.dispose(), mf2.dispose()]);
+	});
 
 	const idRes = await mf1.dispatchFetch("http://localhost/id");
 	const id = await idRes.text();
 	const res = await mf2.dispatchFetch(`http://localhost/${id}`);
-	t.is(await res.text(), `id:${id}`);
+	expect(await res.text()).toBe(`id:${id}`);
 });
 
-test("proxies Durable Object methods", async (t) => {
+test("proxies Durable Object methods", async () => {
 	const mf = new Miniflare({
 		modules: true,
 		script: COUNTER_SCRIPT(""),
 		durableObjects: { COUNTER: "Counter" },
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	// Check can call synchronous ID creation methods
 	let ns = await mf.getDurableObjectNamespace("COUNTER");
 	let id = ns.idFromName("/a");
-	t.regex(String(id), /[0-9a-f]{64}/i);
+	expect(String(id)).toMatch(/[0-9a-f]{64}/i);
 
 	// Check using result of proxied method in another
 	let stub = ns.get(id);
 	let res = await stub.fetch("http://placeholder/");
-	t.is(await res.text(), "1");
+	expect(await res.text()).toBe("1");
 
 	// Check reuses exact same instance with un-proxied access
 	res = await mf.dispatchFetch("http://localhost/a");
-	t.is(await res.text(), "2");
+	expect(await res.text()).toBe("2");
 	const requestId: RequestInit = { cf: { instanceId: true } };
 	const proxyIdRes = await stub.fetch("http://placeholder/", requestId);
 	const proxyId = await proxyIdRes.text();
 	const regularIdRes = await mf.dispatchFetch("http://localhost/a", requestId);
 	const regularId = await regularIdRes.text();
-	t.is(proxyId, regularId);
+	expect(proxyId).toBe(regularId);
 
 	// Check with WebSocket
 	await mf.setOptions({
@@ -325,58 +331,60 @@ test("proxies Durable Object methods", async (t) => {
 	res.webSocket.accept();
 	res.webSocket.send("hello");
 	const event = await eventPromise;
-	t.is(event.data, "echo:hello");
+	expect(event.data).toBe("echo:hello");
 });
 
-test("Durable Object eviction", async (t) => {
-	// this test requires testing over a 10 second timeout
-	t.timeout(20_000);
-
-	// first set unsafePreventEviction to undefined
-	const mf = new Miniflare({
-		modules: true,
-		script: STATEFUL_SCRIPT(),
-		durableObjects: {
-			DURABLE_OBJECT: "DurableObject",
-		},
-	});
-	t.teardown(() => mf.dispose());
-
-	// get uuid generated at durable object startup
-	let res = await mf.dispatchFetch("http://localhost");
-	const original = await res.text();
-
-	// after 10+ seconds, durable object should be evicted, so new uuid generated
-	await setTimeout(10_000);
-	res = await mf.dispatchFetch("http://localhost");
-	t.not(await res.text(), original);
-});
-
-test("prevent Durable Object eviction", async (t) => {
-	// this test requires testing over a 10 second timeout
-	t.timeout(20_000);
-
-	// first set unsafePreventEviction to true
-	const mf = new Miniflare({
-		modules: true,
-		script: STATEFUL_SCRIPT(),
-		durableObjects: {
-			DURABLE_OBJECT: {
-				className: "DurableObject",
-				unsafePreventEviction: true,
+describe("evictions", { concurrent: true }, () => {
+	test("Durable Object eviction", async ({ onTestFinished }) => {
+		// this test requires testing over a 10 second timeout
+		// first set unsafePreventEviction to undefined
+		const mf = new Miniflare({
+			modules: true,
+			script: STATEFUL_SCRIPT(),
+			durableObjects: {
+				DURABLE_OBJECT: "DurableObject",
 			},
-		},
+		});
+		// Use onTestFinished from test context (not imported) for proper scoping
+		// with concurrent tests, combined with disposeWithRetry for Windows support
+		onTestFinished(() => disposeWithRetry(mf));
+
+		// get uuid generated at durable object startup
+		let res = await mf.dispatchFetch("http://localhost");
+		const original = await res.text();
+
+		// after 10+ seconds, durable object should be evicted, so new uuid generated
+		await setTimeout(10_000);
+		res = await mf.dispatchFetch("http://localhost");
+		expect(await res.text()).not.toBe(original);
 	});
-	t.teardown(() => mf.dispose());
 
-	// get uuid generated at durable object startup
-	let res = await mf.dispatchFetch("http://localhost");
-	const original = await res.text();
+	test("prevent Durable Object eviction", async ({ onTestFinished }) => {
+		// this test requires testing over a 10 second timeout
+		// first set unsafePreventEviction to true
+		const mf = new Miniflare({
+			modules: true,
+			script: STATEFUL_SCRIPT(),
+			durableObjects: {
+				DURABLE_OBJECT: {
+					className: "DurableObject",
+					unsafePreventEviction: true,
+				},
+			},
+		});
+		// Use onTestFinished from test context (not imported) for proper scoping
+		// with concurrent tests, combined with disposeWithRetry for Windows support
+		onTestFinished(() => disposeWithRetry(mf));
 
-	// after 10+ seconds, durable object should NOT be evicted, so same uuid
-	await setTimeout(10_000);
-	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), original);
+		// get uuid generated at durable object startup
+		let res = await mf.dispatchFetch("http://localhost");
+		const original = await res.text();
+
+		// after 10+ seconds, durable object should NOT be evicted, so same uuid
+		await setTimeout(10_000);
+		res = await mf.dispatchFetch("http://localhost");
+		expect(await res.text()).toBe(original);
+	});
 });
 
 const MINIFLARE_WITH_SQLITE = (useSQLite: boolean) =>
@@ -410,43 +418,43 @@ const MINIFLARE_WITH_SQLITE = (useSQLite: boolean) =>
 		},
 	});
 
-test("SQLite is available in SQLite backed Durable Objects", async (t) => {
+test("SQLite is available in SQLite backed Durable Objects", async () => {
 	const mf = MINIFLARE_WITH_SQLITE(true);
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "4096");
+	expect(await res.text()).toBe("4096");
 
 	const ns = await mf.getDurableObjectNamespace("SQLITE_DURABLE_OBJECT");
 	const id = ns.newUniqueId();
 	const stub = ns.get(id);
 	res = await stub.fetch("http://localhost");
-	t.is(await res.text(), "4096");
+	expect(await res.text()).toBe("4096");
 });
 
-test("SQLite is not available in default Durable Objects", async (t) => {
+test("SQLite is not available in default Durable Objects", async () => {
 	const mf = MINIFLARE_WITH_SQLITE(false);
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
-	t.assert(
-		(await res.text()).startsWith(
-			"SQL is not enabled for this Durable Object class."
-		)
-	);
+	let text = await res.text();
+	expect(text).toBeTruthy();
+	expect(
+		text.startsWith("SQL is not enabled for this Durable Object class.")
+	).toBe(true);
 
 	const ns = await mf.getDurableObjectNamespace("SQLITE_DURABLE_OBJECT");
 	const id = ns.newUniqueId();
 	const stub = ns.get(id);
 	res = await stub.fetch("http://localhost");
-	t.assert(
-		(await res.text()).startsWith(
-			"SQL is not enabled for this Durable Object class."
-		)
-	);
+	text = await res.text();
+	expect(text).toBeTruthy();
+	expect(
+		text.startsWith("SQL is not enabled for this Durable Object class.")
+	).toBe(true);
 });
 
-test("colo-local actors", async (t) => {
+test("colo-local actors", async () => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `export class TestObject {
@@ -466,18 +474,18 @@ test("colo-local actors", async (t) => {
 			},
 		},
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	let res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "body:thing1");
+	expect(await res.text()).toBe("body:thing1");
 
 	const ns = await mf.getDurableObjectNamespace("OBJECT");
 	// @ts-expect-error `ColoLocalActorNamespace`s are not included in types
 	const stub = ns.get("thing2");
 	res = await stub.fetch("http://localhost");
-	t.is(await res.text(), "body:thing2");
+	expect(await res.text()).toBe("body:thing2");
 });
 
-test("multiple workers with DO conflicting useSQLite booleans cause options error", async (t) => {
+test("multiple workers with DO conflicting useSQLite booleans cause options error", async () => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -488,66 +496,61 @@ test("multiple workers with DO conflicting useSQLite booleans cause options erro
 		],
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
-	await t.throwsAsync(
-		async () => {
-			await mf.setOptions({
-				workers: [
-					{
-						modules: true,
-						name: "worker-c",
-						script: "export default {}",
-						durableObjects: {
-							MY_DO: {
-								className: "MyDo",
-								scriptName: "worker-a",
-								useSQLite: false,
-							},
+	await expect(async () => {
+		await mf.setOptions({
+			workers: [
+				{
+					modules: true,
+					name: "worker-c",
+					script: "export default {}",
+					durableObjects: {
+						MY_DO: {
+							className: "MyDo",
+							scriptName: "worker-a",
+							useSQLite: false,
 						},
 					},
-					{
-						modules: true,
-						name: "worker-a",
-						script: `
+				},
+				{
+					modules: true,
+					name: "worker-a",
+					script: `
 							import { DurableObject } from "cloudflare:workers";
 
 							export class MyDo extends DurableObject {}
 
 							export default { }
 						`,
-						durableObjects: {
-							MY_DO: {
-								className: "MyDo",
-								scriptName: undefined,
-								useSQLite: true,
-							},
+					durableObjects: {
+						MY_DO: {
+							className: "MyDo",
+							scriptName: undefined,
+							useSQLite: true,
 						},
 					},
-					{
-						modules: true,
-						name: "worker-b",
-						script: "export default {}",
-						durableObjects: {
-							MY_DO: {
-								className: "MyDo",
-								scriptName: "worker-a",
-								useSQLite: false,
-							},
+				},
+				{
+					modules: true,
+					name: "worker-b",
+					script: "export default {}",
+					durableObjects: {
+						MY_DO: {
+							className: "MyDo",
+							scriptName: "worker-a",
+							useSQLite: false,
 						},
 					},
-				],
-			});
-		},
-		{
-			instanceOf: Error,
-			message:
-				'Different storage backends defined for Durable Object "MyDo" in "core:user:worker-a": false and true',
-		}
+				},
+			],
+		});
+	}).rejects.toThrow(
+		'Different storage backends defined for Durable Object "MyDo" in "core:user:worker-a": false and true'
 	);
 });
 
-test("multiple workers with DO useSQLite true and undefined does not cause options error", async (t) => {
+test("multiple workers with DO useSQLite true and undefined does not cause options error", async () => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -558,10 +561,10 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 		],
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
-	await t.notThrowsAsync(async () => {
-		await mf.setOptions({
+	await expect(
+		mf.setOptions({
 			workers: [
 				{
 					modules: true,
@@ -594,8 +597,8 @@ test("multiple workers with DO useSQLite true and undefined does not cause optio
 					},
 				},
 			],
-		});
-	});
+		})
+	).resolves.not.toThrow();
 });
 
 const BLOCKING_DO_SCRIPT = `
@@ -624,14 +627,14 @@ export default {
 }
 `;
 
-test("Durable Object RPC calls do not block Node.js event loop", async (t) => {
+test("Durable Object RPC calls do not block Node.js event loop", async () => {
 	const mf = new Miniflare({
 		durableObjects: { BLOCKING_DO: "BlockingDO" },
 		modules: true,
 		script: BLOCKING_DO_SCRIPT,
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const namespace = await mf.getDurableObjectNamespace("BLOCKING_DO");
 	const stubId = namespace.idFromName("test");
@@ -648,17 +651,17 @@ test("Durable Object RPC calls do not block Node.js event loop", async (t) => {
 	]);
 
 	// If the event loop wasn't blocked, the timeout should win
-	t.deepEqual(raced, { type: "timeout" });
+	expect(raced).toEqual({ type: "timeout" });
 });
 
-test("Durable Object RPC calls complete when unblocked", async (t) => {
+test("Durable Object RPC calls complete when unblocked", async () => {
 	const mf = new Miniflare({
 		durableObjects: { BLOCKING_DO: "BlockingDO" },
 		modules: true,
 		script: BLOCKING_DO_SCRIPT,
 	});
 
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const namespace = await mf.getDurableObjectNamespace("BLOCKING_DO");
 	const stubId = namespace.idFromName("test");
@@ -680,5 +683,5 @@ test("Durable Object RPC calls complete when unblocked", async (t) => {
 			.then(() => ({ type: "timeout" })),
 	]);
 
-	t.deepEqual(raced, { type: "resolved", result: 12 });
+	expect(raced).toEqual({ type: "resolved", result: 12 });
 });

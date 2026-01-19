@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { rm } from "fs/promises";
 import { resolve } from "path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it, test, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, test, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Workflows", () => {
@@ -44,7 +44,7 @@ describe("Workflows", () => {
 		}
 	}
 
-	it("creates a workflow with id", async ({ expect }) => {
+	it("creates a workflow with id", async () => {
 		await expect(fetchJson(`http://${ip}:${port}/create?workflowName=test`))
 			.resolves.toMatchInlineSnapshot(`
 			{
@@ -77,7 +77,7 @@ describe("Workflows", () => {
 		);
 	});
 
-	it("creates a workflow without id", async ({ expect }) => {
+	it("creates a workflow without id", async () => {
 		await expect(fetchJson(`http://${ip}:${port}/create`)).resolves
 			.toMatchInlineSnapshot(`
 			{
@@ -92,9 +92,7 @@ describe("Workflows", () => {
 		`);
 	});
 
-	it("fails getting a workflow without creating it first", async ({
-		expect,
-	}) => {
+	it("fails getting a workflow without creating it first", async () => {
 		await expect(
 			fetchJson(`http://${ip}:${port}/status?workflowName=anotherTest`)
 		).resolves.toMatchObject({
@@ -103,9 +101,7 @@ describe("Workflows", () => {
 		});
 	});
 
-	test("batchCreate should create multiple instances and run them separately", async ({
-		expect,
-	}) => {
+	test("batchCreate should create multiple instances and run them separately", async () => {
 		await expect(fetchJson(`http://${ip}:${port}/createBatch`)).resolves
 			.toMatchInlineSnapshot(`
 			[
@@ -149,9 +145,7 @@ describe("Workflows", () => {
 	});
 
 	describe("retrying a step", () => {
-		test("should retry a step if a generic Error (with a generic error message) is thrown", async ({
-			expect,
-		}) => {
+		test("should retry a step if a generic Error (with a generic error message) is thrown", async () => {
 			const name = randomUUID();
 			await fetchJson(
 				`http://${ip}:${port}/createDemo3?workflowName=${name}&doRetry=true&errorMessage=generic_error_message`
@@ -169,9 +163,7 @@ describe("Workflows", () => {
 			);
 		});
 
-		test("should retry a step if a generic Error (with an empty error message) is thrown", async ({
-			expect,
-		}) => {
+		test("should retry a step if a generic Error (with an empty error message) is thrown", async () => {
 			const name = randomUUID();
 			await fetchJson(
 				`http://${ip}:${port}/createDemo3?workflowName=${name}&doRetry=true&errorMessage=`
@@ -189,9 +181,7 @@ describe("Workflows", () => {
 			);
 		});
 
-		test("should not retry a step if a NonRetryableError (with a generic error message) is thrown", async ({
-			expect,
-		}) => {
+		test("should not retry a step if a NonRetryableError (with a generic error message) is thrown", async () => {
 			const name = randomUUID();
 			await fetchJson(
 				`http://${ip}:${port}/createDemo3?workflowName=${name}&doRetry=false&errorMessage=generic_error_message"`
@@ -209,9 +199,7 @@ describe("Workflows", () => {
 			);
 		});
 
-		test("should not retry a step if a NonRetryableError (with an empty error message) is thrown", async ({
-			expect,
-		}) => {
+		test("should not retry a step if a NonRetryableError (with an empty error message) is thrown", async () => {
 			const name = randomUUID();
 			await fetchJson(
 				`http://${ip}:${port}/createDemo3?workflowName=${name}&doRetry=false&errorMessage=`
@@ -230,7 +218,7 @@ describe("Workflows", () => {
 		});
 	});
 
-	test("waitForEvent should work", async ({ expect }) => {
+	test("waitForEvent should work", async () => {
 		await fetchJson(`http://${ip}:${port}/createDemo2?workflowName=something`);
 
 		await fetchJson(
@@ -265,9 +253,7 @@ describe("Workflows", () => {
 		);
 	});
 
-	it("should create an instance after immediate redirect", async ({
-		expect,
-	}) => {
+	it("should create an instance after immediate redirect", async () => {
 		await expect(fetchJson(`http://${ip}:${port}/createWithRedirect`)).resolves
 			.toMatchInlineSnapshot(`
 			{
@@ -282,7 +268,7 @@ describe("Workflows", () => {
 		`);
 	});
 
-	it("should persist instances across lifetimes", async ({ expect }) => {
+	it("should persist instances across lifetimes", async () => {
 		await fetchJson(`http://${ip}:${port}/create?workflowName=something`);
 
 		await stop?.();

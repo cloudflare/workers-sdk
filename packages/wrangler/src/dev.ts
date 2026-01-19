@@ -31,6 +31,7 @@ import type {
 	Route,
 	Rule,
 } from "@cloudflare/workers-utils";
+import type { EventName } from "chokidar/handler.js";
 import type { Json } from "miniflare";
 
 export const dev = createCommand({
@@ -46,6 +47,7 @@ export const dev = createCommand({
 		description: "👂 Start a local server for developing your Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		category: "Compute & AI",
 	},
 	positionalArgs: ["script"],
 	args: {
@@ -684,7 +686,7 @@ export function getBindings(
 }
 
 export function getAssetChangeMessage(
-	eventName: "add" | "addDir" | "change" | "unlink" | "unlinkDir",
+	eventName: EventName,
 	assetPath: string
 ): string {
 	let message = `${assetPath} changed`;

@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { readFile, writeFile } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
-import { beforeAll, describe, test, vi } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 import {
 	fetchJson,
 	isBuildAndPreviewOnWindows,
@@ -55,7 +55,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 			describe.each(commands)('with "%s" command', (command) => {
 				test.skipIf(isBuildAndPreviewOnWindows(command))(
 					"can fetch from both local (/auxiliary) and remote workers",
-					async ({ expect }) => {
+					async () => {
 						const proc = await runLongLived("pnpm", command, projectPath);
 						const url = await waitForReady(proc);
 						expect(await fetchJson(url)).toEqual({
@@ -70,7 +70,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 				// This test checks that wrapped bindings (e.g. AI) which rely on additional workers with an authed connection to the CF API work
 				test.skipIf(isBuildAndPreviewOnWindows(command))(
 					"Wrapped bindings (e.g. Workers AI) can serve a request",
-					async ({ expect }) => {
+					async () => {
 						const proc = await runLongLived("pnpm", command, projectPath);
 						const url = await waitForReady(proc);
 
@@ -81,7 +81,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 				);
 			});
 
-			test("reflects changes applied during dev", async ({ expect }) => {
+			test("reflects changes applied during dev", async () => {
 				const proc = await runLongLived("pnpm", "dev", projectPath);
 				const url = await waitForReady(proc);
 				expect(await fetchJson(url)).toEqual({
@@ -143,9 +143,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 			pm: "pnpm",
 		});
 
-		test("for connection to remote bindings during dev the account_id present in the wrangler config file is used", async ({
-			expect,
-		}) => {
+		test("for connection to remote bindings during dev the account_id present in the wrangler config file is used", async () => {
 			const proc = await runLongLived("pnpm", "dev", projectPath);
 			await vi.waitFor(
 				async () => {
@@ -174,7 +172,7 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 			// we should look into re-enable this once we can move to a node a newer version of node
 			test.skipIf(process.platform === "win32")(
 				"exit with a non zero error code and log an error",
-				async ({ expect }) => {
+				async () => {
 					const proc = await runLongLived("pnpm", command, projectPath);
 
 					expect(await proc.exitCode).not.toBe(0);
@@ -200,7 +198,7 @@ describe("remote bindings disabled", () => {
 		// we should look into re-enable this once we can move to a node a newer version of node
 		test.skipIf(process.platform === "win32")(
 			"cannot connect to remote bindings",
-			async ({ expect }) => {
+			async () => {
 				const proc = await runLongLived("pnpm", command, projectPath);
 				const url = await waitForReady(proc);
 

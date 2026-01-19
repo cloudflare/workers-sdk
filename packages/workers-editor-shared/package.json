@@ -36,8 +36,6 @@
 		"@cloudflare/style-container": "7.12.2",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@types/react": "^18.3.3",
-		"@typescript-eslint/eslint-plugin": "catalog:default",
-		"@typescript-eslint/parser": "catalog:default",
 		"@vitejs/plugin-react": "^4.3.3",
 		"eslint": "catalog:default",
 		"react": "^18.3.1",

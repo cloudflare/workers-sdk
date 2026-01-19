@@ -148,6 +148,9 @@ declare module "cloudflare:test" {
 	 *   // 3. ASSERTION
 	 *   await instance.waitForStatus("complete");
 	 *
+	 * 	 const output = await instance.getOutput();
+	 *   expect(output).toEqual({ success: true });
+	 *
 	 *   // 4. DISPOSE is implicit and automatic here.
 	 * });
 	 */
@@ -193,6 +196,49 @@ declare module "cloudflare:test" {
 		 * @param status - The target `InstanceStatus` to wait for.
 		 */
 		waitForStatus(status: InstanceStatus["status"]): Promise<void>;
+
+		/**
+		 * Retrieves the output value returned by the Workflow instance upon successful completion.
+		 *
+		 * This method should only be called after the Workflow instance has completed successfully.
+		 * It's recommended to use `waitForStatus("complete")` before calling this method.
+		 *
+		 * @example
+		 * ```ts
+		 * it('my workflow test', async () => {
+		 *   await using instance = await introspectWorkflowInstance(env.MY_WORKFLOW, "123");
+		 *   await env.MY_WORKFLOW.create({ id: "123" });
+		 *
+		 *   await instance.waitForStatus("complete");
+		 *
+		 *   const output = await instance.getOutput();
+		 *   expect(output).toEqual({ success: true });
+		 * });
+		 * ```
+		 */
+		getOutput(): Promise<unknown>;
+
+		/**
+		 * Retrieves the error information from a failed Workflow instance.
+		 *
+		 * This method should only be called after the Workflow instance has failed.
+		 * It's recommended to use `waitForStatus("errored")` before calling this method.
+		 *
+		 * @example
+		 * ```ts
+		 * it('my workflow test', async () => {
+		 * 	 await using instance = await introspectWorkflowInstance(env.MY_WORKFLOW, "123");
+		 *   await env.MY_WORKFLOW.create({ id: "123" });
+		 *
+		 *   await instance.waitForStatus("errored");
+		 *
+		 *   const error = await instance.getError();
+		 *   expect(error.name).toBe("Error");
+		 *   expect(error.message).toContain("some error");
+		 * });
+		 * ```
+		 */
+		getError(): Promise<{ name: string; message: string }>;
 
 		/**
 		 * Disposes the Workflow instance introspector.
@@ -416,6 +462,9 @@ declare module "cloudflare:test" {
 	 *   const instances = introspector.get();
 	 *   for(const instance of instances) {
 	 *     await instance.waitForStatus("complete");
+	 *
+	 *     const output = await instance.getOutput();
+	 *     expect(output).toEqual({ success: true });
 	 *   }
 	 *
 	 * // 4. DISPOSE is implicit and automatic here.

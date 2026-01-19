@@ -35,6 +35,7 @@ export const deployCommand = createCommand({
 		description: "🆙 Deploy a Worker to Cloudflare",
 		owner: "Workers: Deploy and Config",
 		status: "stable",
+		category: "Compute & AI",
 	},
 	positionalArgs: ["script"],
 	args: {
@@ -302,6 +303,12 @@ export const deployCommand = createCommand({
 		//       make sure that the deployment of brand newly auto-configured Next.js apps is correctly
 		//       delegated here
 		const deploymentDelegatedToOpenNext =
+			// Currently the delegation to open-next is gated behind the autoconfig experimental flag, this is because
+			// this behavior is currently only necessary in the autoconfig flow and having it un-gated/stable in wrangler
+			// releases caused different issues. All the issues should have been fixed (by
+			// https://github.com/cloudflare/workers-sdk/pull/11694 and https://github.com/cloudflare/workers-sdk/pull/11710)
+			// but as a precaution we're gating the feature under the autoconfig flag for the time being
+			args.experimentalAutoconfig &&
 			!args.dryRun &&
 			(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
 

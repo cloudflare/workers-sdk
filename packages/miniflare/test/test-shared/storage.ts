@@ -8,8 +8,8 @@ import {
 	ReadableStreamBYOBRequest,
 } from "node:stream/web";
 import { TextDecoder, TextEncoder } from "node:util";
-import { ExecutionContext } from "ava";
 import { sanitisePath } from "miniflare";
+import { onTestFinished } from "vitest";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -22,23 +22,24 @@ export function utf8Decode(encoded?: Uint8Array): string {
 }
 
 const tmpRoot = path.resolve(".tmp");
-export async function useTmp(t: ExecutionContext): Promise<string> {
+export async function useTmp(testName?: string): Promise<string> {
+	// If no test name is provided, use a random name
+	const name = testName ?? crypto.randomBytes(4).toString("hex");
 	const filePath = path.join(
 		tmpRoot,
-		sanitisePath(t.title),
+		sanitisePath(name),
 		crypto.randomBytes(4).toString("hex")
 	);
 	await fs.mkdir(filePath, { recursive: true });
 	return filePath;
 }
 
-// Must be called from a `.serial()` test
-export function useCwd(t: ExecutionContext, cwd: string) {
+export function useCwd(cwd: string) {
 	const originalCwd = process.cwd();
 	const originalPWD = process.env.PWD;
 	process.chdir(cwd);
 	process.env.PWD = cwd;
-	t.teardown(() => {
+	onTestFinished(() => {
 		process.chdir(originalCwd);
 		process.env.PWD = originalPWD;
 	});
