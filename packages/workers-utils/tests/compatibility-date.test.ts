@@ -19,7 +19,7 @@ describe("getLocalWorkerdCompatibilityDate", () => {
 			return mockedRequire;
 		});
 		const { date, source } = getLocalWorkerdCompatibilityDate();
-		expect(date).toMatch(/\d{4}-\d{2}-\d{2}/);
+		expect(date).toBe("2025-01-10");
 		expect(source).toEqual("workerd");
 	});
 
