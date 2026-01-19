@@ -7,7 +7,7 @@ describe("getLocalWorkerdCompatibilityDate", () => {
 		vi.setSystemTime(vi.getRealSystemTime());
 	});
 
-	it.only("should successfully get the local latest compatibility date from the local workerd instance", () => {
+	it("should successfully get the local latest compatibility date from the local workerd instance", () => {
 		// Note: this works because the function gets the monorepo's miniflare/workerd instance
 		const { date, source } = getLocalWorkerdCompatibilityDate();
 		expect(date).toMatch(/\d{4}-\d{2}-\d{2}/);
