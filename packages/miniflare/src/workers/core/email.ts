@@ -146,7 +146,10 @@ export async function handleEmail(
 				);
 				maybeClientError = reason;
 			},
-			forward: async (rcptTo: string, headers?: Headers): Promise<void> => {
+			forward: async (
+				rcptTo: string,
+				headers?: Headers
+			): Promise<EmailSendResult> => {
 				await env[CoreBindings.SERVICE_LOOPBACK].fetch(
 					"http://localhost/core/log",
 					{
@@ -155,8 +158,13 @@ export async function handleEmail(
 						body: `${blue("Email handler forwarded message")}${reset(` with\n  rcptTo: ${rcptTo}${renderEmailHeaders(headers)}`)}`,
 					}
 				);
+
+				const uuid = crypto.randomUUID().replaceAll("-", "");
+				return { messageId: `${uuid}@example.com` };
 			},
-			reply: async (replyMessage: MiniflareEmailMessage): Promise<void> => {
+			reply: async (
+				replyMessage: MiniflareEmailMessage
+			): Promise<EmailSendResult> => {
 				if (
 					!(await isEmailReplyable(
 						parsedIncomingEmail,
@@ -198,6 +206,8 @@ export async function handleEmail(
 						body: `${blue("Email handler replied to sender")}${reset(` with the following message:\n  ${file}`)}`,
 					}
 				);
+				const uuid = crypto.randomUUID().replaceAll("-", "");
+				return { messageId: `${uuid}@example.com` };
 			},
 		} satisfies ForwardableEmailMessage
 	);
