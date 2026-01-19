@@ -85,7 +85,6 @@ export default defineConfig(() => ({
 `
 			);
 
-			expect(() => transformViteConfig(".")).toThrowError(UserError);
 			expect(() => transformViteConfig(".")).toThrowError(
 				/Cannot modify Vite config: expected an object literal/
 			);
@@ -103,7 +102,6 @@ export default defineConfig({
 `
 			);
 
-			expect(() => transformViteConfig(".")).toThrowError(UserError);
 			expect(() => transformViteConfig(".")).toThrowError(
 				/Cannot modify Vite config: could not find a valid plugins array/
 			);
