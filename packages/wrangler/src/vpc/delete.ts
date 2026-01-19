@@ -7,6 +7,7 @@ export const vpcServiceDeleteCommand = createCommand({
 		description: "Delete a VPC service",
 		status: "stable",
 		owner: "Product: WVPC",
+		sensitiveArgs: false,
 	},
 	args: {
 		"service-id": {

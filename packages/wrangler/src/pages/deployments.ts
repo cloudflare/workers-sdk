@@ -20,6 +20,7 @@ export const pagesDeploymentListCommand = createCommand({
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
 		hideGlobalFlags: ["config", "env"],
+		sensitiveArgs: false,
 	},
 	behaviour: {
 		provideConfig: false,

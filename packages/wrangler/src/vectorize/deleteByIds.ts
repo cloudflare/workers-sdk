@@ -9,6 +9,7 @@ export const vectorizeDeleteVectorsCommand = createCommand({
 		description: "Delete vectors in a Vectorize index",
 		owner: "Product: Vectorize",
 		status: "stable",
+		sensitiveArgs: false,
 	},
 	args: {
 		name: {

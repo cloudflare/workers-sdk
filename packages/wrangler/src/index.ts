@@ -1746,10 +1746,11 @@ export async function main(argv: string[]): Promise<void> {
 		await showHelpWithCategories();
 		return;
 	}
-	let command: string | undefined;
+	let safeCommand: string | undefined;
 	let metricsArgs: Record<string, unknown> | undefined;
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
-	let sensitiveArgs = false;
+	// Default to true (sensitive) - commands must explicitly opt-in to sending args
+	let sensitiveArgs = true;
 	// Register Yargs middleware to record command as Sentry breadcrumb
 	let recordedCommand = false;
 	const wranglerWithMiddleware = wrangler.middleware((args) => {
@@ -1785,12 +1786,13 @@ export async function main(argv: string[]): Promise<void> {
 		addBreadcrumb(fullCommand);
 
 		// Look up the command definition to check if it has sensitive args
+		// Default to true (sensitive) - commands must explicitly set sensitiveArgs: false to send args
 		const commandResult = registry.findCommandDefinition(args._ as string[]);
-		sensitiveArgs = commandResult?.definition?.metadata?.sensitiveArgs ?? false;
+		sensitiveArgs = commandResult?.definition?.metadata?.sensitiveArgs ?? true;
 
 		// If this command handles sensitive data, strip positional args from the command string
 		// to prevent accidentally capturing secrets in telemetry
-		command = sensitiveArgs
+		safeCommand = sensitiveArgs
 			? `wrangler ${(args._ as string[]).slice(0, commandResult?.commandSegments ?? 0).join(" ")}`
 			: fullCommand;
 
@@ -1799,8 +1801,8 @@ export async function main(argv: string[]): Promise<void> {
 		dispatcher?.sendCommandEvent(
 			"wrangler command started",
 			{
-				command,
-				args,
+				safe_command: safeCommand,
+				safe_args: args,
 				sensitiveArgs,
 			},
 			argv
@@ -1816,8 +1818,8 @@ export async function main(argv: string[]): Promise<void> {
 		dispatcher?.sendCommandEvent(
 			"wrangler command completed",
 			{
-				command,
-				args: metricsArgs,
+				safe_command: safeCommand,
+				safe_args: metricsArgs,
 				durationMs,
 				durationSeconds: durationMs / 1000,
 				durationMinutes: durationMs / 1000 / 60,
@@ -1832,8 +1834,8 @@ export async function main(argv: string[]): Promise<void> {
 		dispatcher?.sendCommandEvent(
 			"wrangler command errored",
 			{
-				command,
-				args: metricsArgs,
+				safe_command: safeCommand,
+				safe_args: metricsArgs,
 				durationMs,
 				durationSeconds: durationMs / 1000,
 				durationMinutes: durationMs / 1000 / 60,

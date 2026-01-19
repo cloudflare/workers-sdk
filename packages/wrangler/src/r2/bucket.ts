@@ -182,6 +182,7 @@ export const r2BucketListCommand = createCommand({
 		description: "List R2 buckets",
 		status: "stable",
 		owner: "Product: R2",
+		sensitiveArgs: false,
 	},
 	args: {
 		jurisdiction: {
@@ -207,6 +208,7 @@ export const r2BucketInfoCommand = createCommand({
 		description: "Get information about an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+		sensitiveArgs: false,
 	},
 	positionalArgs: ["bucket"],
 	args: {

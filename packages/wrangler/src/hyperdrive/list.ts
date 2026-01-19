@@ -8,6 +8,7 @@ export const hyperdriveListCommand = createCommand({
 		description: "List Hyperdrive configs",
 		status: "stable",
 		owner: "Product: Hyperdrive",
+		sensitiveArgs: false,
 	},
 	args: {},
 	async handler(_, { config }) {

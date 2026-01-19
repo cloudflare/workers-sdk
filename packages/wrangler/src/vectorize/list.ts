@@ -8,6 +8,7 @@ export const vectorizeListCommand = createCommand({
 		description: "List your Vectorize indexes",
 		status: "stable",
 		owner: "Product: Vectorize",
+		sensitiveArgs: false,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

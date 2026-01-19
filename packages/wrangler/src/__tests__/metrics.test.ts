@@ -207,8 +207,8 @@ describe("metrics", () => {
 				hasAssets: false,
 				argsUsed: [],
 				argsCombination: "",
-				command: "wrangler docs",
-				args: {},
+				safe_command: "wrangler docs",
+				safe_args: {},
 			};
 			beforeEach(() => {
 				globalThis.ALGOLIA_APP_ID = "FAKE-ID";
@@ -445,7 +445,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 				expect(std.debug).toContain('"argsCombination":""');
-				expect(std.debug).toContain('"command":"wrangler login');
+				expect(std.debug).toContain('"safe_command":"wrangler login');
 				expect(std.debug).toContain('"sensitiveArgs":true');
 			});
 
@@ -458,9 +458,9 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 				expect(std.debug).toContain('"argsCombination":""');
-				// The command string will include the full args, but sensitiveArgs flag ensures
-				// that argv is cleared so no sensitive values leak through arg sanitization
-				expect(std.debug).toContain('"command":"wrangler secret put');
+				// The safe_command string is truncated to just the command prefix,
+				// and argv is cleared so no sensitive values leak through arg sanitization
+				expect(std.debug).toContain('"safe_command":"wrangler secret put');
 				expect(std.debug).toContain('"sensitiveArgs":true');
 				// Ensure the accidentally pasted secret is not in the debug output
 				expect(std.debug).not.toContain("accidentallyPastedSecret");

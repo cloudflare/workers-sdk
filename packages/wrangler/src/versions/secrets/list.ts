@@ -13,6 +13,7 @@ export const versionsSecretsListCommand = createCommand({
 		description: "List the secrets currently deployed",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		sensitiveArgs: false,
 	},
 	behaviour: {
 		printConfigWarnings: false,

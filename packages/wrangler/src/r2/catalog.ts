@@ -121,6 +121,7 @@ export const r2BucketCatalogGetCommand = createCommand({
 		description: "Get the status of the data catalog for an R2 bucket",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
+		sensitiveArgs: false,
 	},
 	positionalArgs: ["bucket"],
 	args: {

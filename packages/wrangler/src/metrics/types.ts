@@ -73,33 +73,48 @@ export type Events =
 			name: "wrangler command started";
 			properties: CommonEventProperties & {
 				/**
-				 * The command that was used, e.g. `wrangler dev`
+				 * The command that was used, e.g. `wrangler dev`.
+				 * When sensitiveArgs is true, this is truncated to just the command prefix
+				 * (e.g., `wrangler secret put` instead of `wrangler secret put MY_KEY`).
+				 *
+				 * Named `safe_command` to distinguish from historical `command` field which
+				 * may have contained sensitive positional arguments in older Wrangler versions.
 				 */
-				command: string;
+				safe_command: string;
 				/**
 				 * The args and flags that were passed in when running the command.
 				 * All user-inputted string values are redacted, except for some cases where there are set options.
+				 * When sensitiveArgs is true, this is an empty object.
+				 *
+				 * Named `safe_args` to distinguish from historical `args` field which
+				 * may have contained sensitive data in older Wrangler versions.
 				 */
-				args: Record<string, unknown>;
+				safe_args: Record<string, unknown>;
 				/**
-				 * If true, this command handles sensitive data and args should be stripped from telemetry.
+				 * If true, this command handles sensitive data and args have been stripped from telemetry.
 				 * Passed from the command definition's metadata.sensitiveArgs.
 				 */
-				sensitiveArgs?: boolean;
+				sensitiveArgs: boolean;
 			};
 	  }
 	| {
 			name: "wrangler command completed";
 			properties: CommonEventProperties & {
 				/**
-				 * The command that was used, e.g. `wrangler dev`
+				 * The command that was used, e.g. `wrangler dev`.
+				 * When sensitiveArgs is true, this is truncated to just the command prefix.
+				 *
+				 * Named `safe_command` to distinguish from historical `command` field.
 				 */
-				command: string | undefined;
+				safe_command: string | undefined;
 				/**
 				 * The args and flags that were passed in when running the command.
 				 * All user-inputted string values are redacted, except for some cases where there are set options.
+				 * When sensitiveArgs is true, this is an empty object.
+				 *
+				 * Named `safe_args` to distinguish from historical `args` field.
 				 */
-				args: Record<string, unknown> | undefined;
+				safe_args: Record<string, unknown> | undefined;
 				/**
 				 * The time elapsed between the "wrangler command started" and "wrangler command completed" events
 				 */
@@ -107,24 +122,30 @@ export type Events =
 				durationMinutes: number;
 				durationSeconds: number;
 				/**
-				 * If true, this command handles sensitive data and args should be stripped from telemetry.
+				 * If true, this command handles sensitive data and args have been stripped from telemetry.
 				 * Passed from the command definition's metadata.sensitiveArgs.
 				 */
-				sensitiveArgs?: boolean;
+				sensitiveArgs: boolean;
 			};
 	  }
 	| {
 			name: "wrangler command errored";
 			properties: CommonEventProperties & {
 				/**
-				 * The command that was used, e.g. `wrangler dev`
+				 * The command that was used, e.g. `wrangler dev`.
+				 * When sensitiveArgs is true, this is truncated to just the command prefix.
+				 *
+				 * Named `safe_command` to distinguish from historical `command` field.
 				 */
-				command: string | undefined;
+				safe_command: string | undefined;
 				/**
 				 * The args and flags that were passed in when running the command.
 				 * All user-inputted string values are redacted, except for some cases where there are set options.
+				 * When sensitiveArgs is true, this is an empty object.
+				 *
+				 * Named `safe_args` to distinguish from historical `args` field.
 				 */
-				args: Record<string, unknown> | undefined;
+				safe_args: Record<string, unknown> | undefined;
 				/**
 				 * The time elapsed between the "wrangler command started" and "wrangler command errored" events
 				 */
@@ -140,9 +161,9 @@ export type Events =
 				 */
 				errorMessage: string | undefined;
 				/**
-				 * If true, this command handles sensitive data and args should be stripped from telemetry.
+				 * If true, this command handles sensitive data and args have been stripped from telemetry.
 				 * Passed from the command definition's metadata.sensitiveArgs.
 				 */
-				sensitiveArgs?: boolean;
+				sensitiveArgs: boolean;
 			};
 	  };

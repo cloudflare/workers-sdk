@@ -9,6 +9,7 @@ export const pipelinesSinksDeleteCommand = createCommand({
 		description: "Delete a sink",
 		owner: "Product: Pipelines",
 		status: "open beta",
+		sensitiveArgs: false,
 	},
 	positionalArgs: ["sink"],
 	args: {

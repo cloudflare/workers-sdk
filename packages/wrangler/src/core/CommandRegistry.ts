@@ -102,6 +102,7 @@ export class CommandRegistry {
 	/**
 	 * Finds the command definition that matches the given args array.
 	 * Walks through the tree trying progressively longer command paths to find the best match.
+	 * Follows aliases to resolve the actual command definition.
 	 * Returns the command definition and the number of args segments that form the command
 	 * (excluding positional args), or undefined if no command is found.
 	 */
@@ -113,10 +114,23 @@ export class CommandRegistry {
 		let commandSegments = 0;
 
 		for (let i = 0; i < args.length; i++) {
-			const child = node.subtree.get(args[i]);
+			let child = node.subtree.get(args[i]);
 			if (!child) {
 				break;
 			}
+
+			// If this node is an alias, resolve it to get the target's subtree
+			if (child.definition?.type === "alias") {
+				const targetNode = this.#findNodeFor(child.definition.aliasOf);
+				if (targetNode) {
+					// Use the target's subtree for further traversal
+					child = {
+						definition: child.definition,
+						subtree: targetNode.subtree,
+					};
+				}
+			}
+
 			node = child;
 			if (node.definition?.type === "command") {
 				lastCommandDef = node.definition;

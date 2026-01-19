@@ -8,6 +8,7 @@ export const aiModelsCommand = createCommand({
 		description: "List catalog models",
 		status: "stable",
 		owner: "Product: AI",
+		sensitiveArgs: false,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

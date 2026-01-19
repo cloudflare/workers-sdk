@@ -8,6 +8,7 @@ export const workflowsInstancesRestartCommand = createCommand({
 		description: "Restart a workflow instance",
 		owner: "Product: Workflows",
 		status: "stable",
+		sensitiveArgs: false,
 	},
 
 	positionalArgs: ["name", "id"],

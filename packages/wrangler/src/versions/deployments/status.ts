@@ -17,6 +17,7 @@ export const deploymentsStatusCommand = createCommand({
 		description: "View the current state of your production",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		sensitiveArgs: false,
 	},
 	args: {
 		name: {

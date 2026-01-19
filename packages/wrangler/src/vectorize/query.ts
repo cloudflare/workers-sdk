@@ -16,6 +16,7 @@ export const vectorizeQueryCommand = createCommand({
 		description: "Query a Vectorize index",
 		status: "stable",
 		owner: "Product: Vectorize",
+		sensitiveArgs: false,
 		examples: [
 			{
 				command: `wrangler vectorize query --vector 1 2 3 0.5 1.25 6`,

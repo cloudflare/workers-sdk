@@ -8,6 +8,7 @@ export const workflowsInstancesResumeCommand = createCommand({
 		description: "Resume a workflow instance",
 		owner: "Product: Workflows",
 		status: "stable",
+		sensitiveArgs: false,
 	},
 
 	positionalArgs: ["name", "id"],

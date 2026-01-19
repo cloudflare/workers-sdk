@@ -9,6 +9,7 @@ export const docs = createCommand({
 		description: "📚 Open Wrangler's command documentation in your browser\n",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		sensitiveArgs: false,
 	},
 	args: {
 		search: {

@@ -16,6 +16,7 @@ export const queuesUpdateCommand = createCommand({
 		description: "Update a queue",
 		owner: "Product: Queues",
 		status: "stable",
+		sensitiveArgs: false,
 	},
 	args: {
 		name: {

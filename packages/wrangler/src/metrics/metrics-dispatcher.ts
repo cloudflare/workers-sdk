@@ -110,21 +110,21 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					argv = [];
 				}
 				if (
-					properties.command === "wrangler telemetry disable" ||
-					properties.command === "wrangler metrics disable"
+					properties.safe_command === "wrangler telemetry disable" ||
+					properties.safe_command === "wrangler metrics disable"
 				) {
 					return;
 				}
 				if (
-					properties.command === "wrangler deploy" ||
-					properties.command === "wrangler dev" ||
+					properties.safe_command === "wrangler deploy" ||
+					properties.safe_command === "wrangler dev" ||
 					// for testing purposes
-					properties.command === "wrangler docs"
+					properties.safe_command === "wrangler docs"
 				) {
 					printMetricsBanner();
 				}
 
-				const sanitizedArgs = sanitizeArgKeys(properties.args ?? {}, argv);
+				const sanitizedArgs = sanitizeArgKeys(properties.safe_args ?? {}, argv);
 				const sanitizedArgsKeys = Object.keys(sanitizedArgs).sort();
 				const commonEventProperties: CommonEventProperties = {
 					amplitude_session_id,
@@ -148,9 +148,9 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				// get the args where we don't want to redact their values
 				const allowedArgs = getAllowedArgs(
 					COMMAND_ARG_ALLOW_LIST,
-					properties.command ?? "wrangler"
+					properties.safe_command ?? "wrangler"
 				);
-				properties.args = sanitizeArgValues(sanitizedArgs, allowedArgs);
+				properties.safe_args = sanitizeArgValues(sanitizedArgs, allowedArgs);
 
 				dispatch({
 					name,

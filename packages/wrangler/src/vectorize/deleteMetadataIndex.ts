@@ -8,6 +8,7 @@ export const vectorizeDeleteMetadataIndexCommand = createCommand({
 		description: "Delete metadata indexes",
 		owner: "Product: Vectorize",
 		status: "stable",
+		sensitiveArgs: false,
 	},
 	args: {
 		name: {
