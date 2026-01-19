@@ -395,6 +395,49 @@ CLOUDFLARE_ACCOUNT_ID="<Account ID for the token you just created>" CLOUDFLARE_A
 > [!NOTE]
 > Workers and other resources created in the E2E tests might not always be cleaned up. Internal users with access to the "DevProd Testing" account can rely on an automated job to clean up the Workers and other resources, but if you use another account, please be aware you may want to manually delete the Workers and other resources yourself.
 
+## Managing Package Dependencies
+
+Packages in this monorepo should bundle their dependencies into the distributable code rather than leaving them as runtime `dependencies` that get installed by downstream users. This prevents dependency chain poisoning where a transitive dependency could introduce unexpected or malicious code.
+
+### The Rule
+
+- **Bundle dependencies**: Most dependencies should be listed in `devDependencies` and bundled into the package output by esbuild/tsup/etc.
+- **External dependencies**: Only dependencies that _cannot_ be bundled should be listed in `dependencies`. These must be explicitly declared with documentation explaining why.
+
+### Why This Matters
+
+When users install one of our packages (e.g., `wrangler`), npm/pnpm will also install everything listed in `dependencies`. If one of those dependencies has unpinned transitive dependencies, a malicious actor could publish a compromised version that gets pulled into user installations. By bundling our dependencies, we control exactly what code ships.
+
+### Adding a New External Dependency
+
+If you need to add a dependency that cannot be bundled (native binaries, WASM modules, packages that must be resolved at runtime, etc.):
+
+1. **Add to `dependencies`** in `package.json` with a pinned version
+2. **Add to `EXTERNAL_DEPENDENCIES`** in `scripts/deps.ts` with a comment explaining why it can't be bundled
+3. **Run `pnpm check:package-deps`** to verify the allowlist is correct
+
+Example `scripts/deps.ts`:
+
+```typescript
+export const EXTERNAL_DEPENDENCIES = [
+	// Native binary - cannot be bundled
+	"workerd",
+
+	// WASM module that blows up when bundled
+	"blake3-wasm",
+
+	// Must be resolved at runtime when bundling user's worker code
+	"esbuild",
+];
+```
+
+### Valid Reasons for External Dependencies
+
+- **Native binaries**: Packages like `workerd` or `sharp` contain platform-specific binaries
+- **WASM modules**: Some WASM packages don't bundle correctly
+- **Runtime resolution**: Packages like `esbuild` or `unenv` that need to be resolved when bundling user code
+- **Peer dependencies**: Packages the user is expected to provide (e.g., `react`, `vite`)
+
 ## Changesets
 
 Every non-trivial change to the project - those that should appear in the changelog - must be captured in a "changeset".
@@ -420,23 +463,3 @@ When contributing to Wrangler, please refer to the [`STYLEGUIDE.md file`](STYLEG
 ## Releases
 
 We generally cut Wrangler releases on Tuesday & Thursday each week. If you need a release cut outside of the regular cadence, please reach out to the [@cloudflare/wrangler-admins](https://github.com/orgs/cloudflare/teams/wrangler-admins) team.
-
-### Hotfix releases
-
-Only members of `@cloudflare/wrangler` can trigger a hotfix release. A hotfix release should be treated as a solution of last resort—before use, please first check whether the fix can be applied and released using the regular Version Packages release flow.
-
-If a hotfix release of Wrangler, Miniflare, or C3 is required, you should:
-
-- Prepare a hotfix release PR:
-
-  - Checkout the previous release of `workers-sdk`
-  - Apply the changes that should be in the hotfix
-  - Manually, increment the patch version of the packages that should be released as part of the hotfix
-  - Manually, update the changelog for the package(s) being released.
-
-- Get approvals for that PR, and make sure CI checks are passing
-- Manually trigger a hotfix release from that PR using the ["Release a hotfix"](https://github.com/cloudflare/workers-sdk/actions/workflows/hotfix-release.yml) GitHub action.
-  - Make sure you set the dist-tag to `latest`
-  - Optionally, you can first publish it to the `hotfix` dist-tag on NPM in order to verify the release.
-- **[CRUCIAL]** Once the hotfix release is out and verified, merge the fixes into main before the next regular release of `workers-sdk`.
-  - Make sure that the version number of the released package(s) on `main` are the same as the versions that were released to ensure that any subsequent changesets will bump the version correctly for the next release.

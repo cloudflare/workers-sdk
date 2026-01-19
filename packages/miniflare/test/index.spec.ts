@@ -1255,6 +1255,50 @@ test("Miniflare: custom upstream as origin", async () => {
 		host: upstream.http.host,
 	});
 });
+test("Miniflare: custom upstream sets MF-Original-Hostname header", async () => {
+	const upstream = await useServer((req, res) => {
+		res.end(`upstream`);
+	});
+	const mf = new Miniflare({
+		upstream: upstream.http.toString(),
+		modules: true,
+		script: `export default {
+			async fetch(request) {
+				return Response.json({
+					host: request.headers.get("Host"),
+					originalHostname: request.headers.get("MF-Original-Hostname")
+				});
+			}
+		}`,
+	});
+	useDispose(mf);
+	// Check that original hostname is preserved when using upstream
+	const res = await mf.dispatchFetch(
+		"https://my-original-host.example.com:8080/path?a=1"
+	);
+	expect(await res.json()).toEqual({
+		host: upstream.http.host,
+		originalHostname: "my-original-host.example.com:8080",
+	});
+});
+test("Miniflare: MF-Original-Hostname header not set without upstream", async () => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `export default {
+			async fetch(request) {
+				return Response.json({
+					originalHostname: request.headers.get("MF-Original-Hostname")
+				});
+			}
+		}`,
+	});
+	useDispose(mf);
+	// Check that original hostname header is not set when not using upstream
+	const res = await mf.dispatchFetch("https://random:0/path?a=1");
+	expect(await res.json()).toEqual({
+		originalHostname: null,
+	});
+});
 test("Miniflare: set origin to original URL if proxy shared secret matches", async () => {
 	const mf = new Miniflare({
 		unsafeProxySharedSecret: "SOME_PROXY_SHARED_SECRET_VALUE",

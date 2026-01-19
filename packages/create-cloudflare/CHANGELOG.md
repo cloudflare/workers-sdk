@@ -1,5 +1,35 @@
 # create-cloudflare
 
+## 2.62.2
+
+### Patch Changes
+
+- [#11541](https://github.com/cloudflare/workers-sdk/pull/11541) [`707dee0`](https://github.com/cloudflare/workers-sdk/commit/707dee055a9401f163d07241201fee11dcfb81ba) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.528 | 0.0.558 |
+
+- [#11843](https://github.com/cloudflare/workers-sdk/pull/11843) [`ab3859c`](https://github.com/cloudflare/workers-sdk/commit/ab3859c597fe30cdcd9ffa67f9fb7865539bf592) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From            | To                     |
+  | ----------- | --------------- | ---------------------- |
+  | create-waku | 0.12.5-0.27.1-0 | 0.12.5-1.0.0-alpha.1-0 |
+
+- [#11866](https://github.com/cloudflare/workers-sdk/pull/11866) [`fe3e955`](https://github.com/cloudflare/workers-sdk/commit/fe3e9552dba58122cc37a4c0179be0bea9e631a8) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.18.3 | 3.18.5 |
+
+- [#11541](https://github.com/cloudflare/workers-sdk/pull/11541) [`707dee0`](https://github.com/cloudflare/workers-sdk/commit/707dee055a9401f163d07241201fee11dcfb81ba) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update vike template to add `cf-typegen` script
+
 ## 2.62.1
 
 ### Patch Changes

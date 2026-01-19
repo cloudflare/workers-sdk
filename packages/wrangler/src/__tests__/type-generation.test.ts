@@ -420,7 +420,7 @@ describe("generate types", () => {
 
 			📖 Read about runtime types
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 
 
 			 ⛅️ wrangler x.x.x
@@ -443,7 +443,7 @@ describe("generate types", () => {
 
 			📖 Read about runtime types
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 
 
 			 ⛅️ wrangler x.x.x
@@ -466,7 +466,7 @@ describe("generate types", () => {
 
 			📖 Read about runtime types
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -571,7 +571,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -688,7 +688,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -863,7 +863,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to a/worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -933,7 +933,7 @@ describe("generate types", () => {
 				No project types to add.
 
 				────────────────────────────────────────────────────────────
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -978,7 +978,7 @@ describe("generate types", () => {
 
 				📖 Read about runtime types
 				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -1015,7 +1015,7 @@ describe("generate types", () => {
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -1082,7 +1082,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1123,7 +1123,7 @@ describe("generate types", () => {
 
 			📖 Read about runtime types
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1159,7 +1159,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1217,7 +1217,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1269,7 +1269,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 		// Verify that .dev.vars secrets are NOT included
@@ -1321,7 +1321,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1361,7 +1361,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1404,7 +1404,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1455,7 +1455,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1513,7 +1513,7 @@ describe("generate types", () => {
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -1540,7 +1540,7 @@ describe("generate types", () => {
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -1579,7 +1579,7 @@ describe("generate types", () => {
 					────────────────────────────────────────────────────────────
 					✨ Types written to worker-configuration.d.ts
 
-					📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+					📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 					"
 				`);
 			});
@@ -1790,7 +1790,7 @@ describe("generate types", () => {
 
 				📖 Read about runtime types
 				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -1826,7 +1826,7 @@ describe("generate types", () => {
 
 				📖 Read about runtime types
 				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
