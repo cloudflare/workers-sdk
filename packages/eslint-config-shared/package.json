@@ -9,6 +9,7 @@
 		"./react": "./react.js"
 	},
 	"scripts": {
+		"deploy": "echo 'no deploy'",
 		"test": "node rules/__tests__/no-unsafe-command-execution.test.mjs",
 		"test:ci": "node rules/__tests__/no-unsafe-command-execution.test.mjs"
 	},
