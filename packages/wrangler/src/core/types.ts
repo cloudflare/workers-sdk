@@ -79,6 +79,9 @@ export type Metadata = {
 	/**
 	 * If true, arguments for this command will be stripped from telemetry
 	 * to prevent accidentally capturing secrets or credentials.
+	 *
+	 * @default true - Commands are treated as sensitive by default (args stripped).
+	 * Set to `false` to explicitly mark a command as safe and include its args in telemetry.
 	 */
 	sensitiveArgs?: boolean;
 };
