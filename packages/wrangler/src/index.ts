@@ -1781,20 +1781,21 @@ export async function main(argv: string[]): Promise<void> {
 			logger.debug("Failed to parse config. Disabling metrics dispatcher.", e);
 		}
 
-		const fullCommand = `wrangler ${args._.join(" ")}`;
+		const commandParts = args._ as string[];
 		metricsArgs = args;
-		addBreadcrumb(fullCommand);
+		addBreadcrumb(`wrangler ${commandParts.join(" ")}`);
 
 		// Look up the command definition to check if it has sensitive args
 		// Default to true (sensitive) - commands must explicitly set sensitiveArgs: false to send args
-		const commandResult = registry.findCommandDefinition(args._ as string[]);
+		const commandResult = registry.findCommandDefinition(commandParts);
 		sensitiveArgs = commandResult?.definition?.metadata?.sensitiveArgs ?? true;
 
+		// Build safe_command without "wrangler" prefix for future-proofing
 		// If this command handles sensitive data, strip positional args from the command string
 		// to prevent accidentally capturing secrets in telemetry
 		safeCommand = sensitiveArgs
-			? `wrangler ${(args._ as string[]).slice(0, commandResult?.commandSegments ?? 0).join(" ")}`
-			: fullCommand;
+			? commandParts.slice(0, commandResult?.commandSegments ?? 0).join(" ")
+			: commandParts.join(" ");
 
 		// NB despite 'applyBeforeValidation = true', this runs *after* yargs 'validates' options,
 		// e.g. if a required arg is missing, yargs will error out before we send any events :/

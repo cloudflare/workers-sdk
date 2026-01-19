@@ -8,11 +8,13 @@ This change significantly improves telemetry security by:
 
 1. **Renaming telemetry fields**: `command` → `safe_command` and `args` → `safe_args` to distinguish from historical data that may have contained sensitive information.
 
-2. **Inverting the default**: Commands now default to `sensitiveArgs: true` (sensitive), meaning arguments are stripped from telemetry unless a command explicitly opts in with `sensitiveArgs: false`.
+2. **Removing "wrangler" prefix**: The `safe_command` field no longer includes the "wrangler" prefix (e.g., `secret put` instead of `wrangler secret put`) for future-proofing.
 
-3. **Truncating command strings**: When `sensitiveArgs` is true, the command string is truncated to just the command prefix (e.g., `wrangler secret put` instead of `wrangler secret put MY_KEY accidentally_pasted_secret`).
+3. **Inverting the default**: Commands now default to `sensitiveArgs: true` (sensitive), meaning arguments are stripped from telemetry unless a command explicitly opts in with `sensitiveArgs: false`.
 
-4. **Auditing all commands**: Each command has been reviewed and explicitly marked as safe or sensitive based on whether its arguments could contain secrets.
+4. **Truncating command strings**: When `sensitiveArgs` is true, the command string is truncated to just the command prefix (e.g., `secret put` instead of `secret put MY_KEY accidentally_pasted_secret`).
+
+5. **Auditing all commands**: Each command has been reviewed and explicitly marked as safe or sensitive based on whether its arguments could contain secrets.
 
 Commands marked as **sensitive** (args stripped):
 

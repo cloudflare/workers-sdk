@@ -43,12 +43,12 @@ const SPARROW_URL = "https://sparrow.cloudflare.com";
  */
 const COMMAND_ARG_ALLOW_LIST: AllowList = {
 	// * applies to all sub commands
-	"wrangler *": {
+	"*": {
 		format: ALLOW,
 		logLevel: ALLOW,
 	},
-	"wrangler tail": { status: ALLOW },
-	"wrangler types": {
+	tail: { status: ALLOW },
+	types: {
 		xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
 		path: ["worker-configuration.d.ts"],
 	},
@@ -125,16 +125,16 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					argv = [];
 				}
 				if (
-					properties.safe_command === "wrangler telemetry disable" ||
-					properties.safe_command === "wrangler metrics disable"
+					properties.safe_command === "telemetry disable" ||
+					properties.safe_command === "metrics disable"
 				) {
 					return;
 				}
 				if (
-					properties.safe_command === "wrangler deploy" ||
-					properties.safe_command === "wrangler dev" ||
+					properties.safe_command === "deploy" ||
+					properties.safe_command === "dev" ||
 					// for testing purposes
-					properties.safe_command === "wrangler docs"
+					properties.safe_command === "docs"
 				) {
 					printMetricsBanner();
 				}
@@ -167,7 +167,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				// get the args where we don't want to redact their values
 				const allowedArgs = getAllowedArgs(
 					COMMAND_ARG_ALLOW_LIST,
-					properties.safe_command ?? "wrangler"
+					properties.safe_command ?? ""
 				);
 				properties.safe_args = sanitizeArgValues(sanitizedArgs, allowedArgs);
 
