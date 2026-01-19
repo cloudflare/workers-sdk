@@ -14,14 +14,6 @@ declare module "cloudflare:test" {
 	export const SELF: Fetcher;
 
 	/**
-	 * Declarative interface for mocking outbound `fetch()` requests. Deactivated
-	 * by default and reset before running each test file. Only mocks `fetch()`
-	 * requests for the current test runner worker. Auxiliary workers should mock
-	 * `fetch()`es with the Miniflare `fetchMock`/`outboundService` options.
-	 */
-	export const fetchMock: MockAgent;
-
-	/**
 	 * Runs `callback` inside the Durable Object pointed-to by `stub`'s context.
 	 * Conceptually, this temporarily replaces your Durable Object's `fetch()`
 	 * handler with `callback`, then sends a request to it, returning the result.

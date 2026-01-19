@@ -44,8 +44,6 @@ function vitestPoolV3ToV4(args: string | undefined) {
 		throw new UserError("Could not find Vitest config file to modify");
 	}
 
-	logger.log(filePath);
-
 	transformFile(filePath, {
 		visitProgram(n) {
 			// Find the existing import of @cloudflare/vitest-pool-workers/config

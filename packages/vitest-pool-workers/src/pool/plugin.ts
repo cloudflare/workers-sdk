@@ -108,7 +108,7 @@ export function cloudflareTest(
 				return contents;
 			}
 			if (id.endsWith("msw/lib/node/index.mjs")) {
-				// HACK: This is a tempory solution while MSW works on some changes to better support the Workers
+				// HACK: This is a temporary solution while MSW works on some changes to better support the Workers
 				// environment. In the meantime, this replaces the `msw/node` entrypoint with the `msw/native`
 				// entrypoint (which is designed for React Native and does work in Workers). Users can't use
 				// `msw/native` themselves directly as the export conditions are not compatible with the Vitest Pool

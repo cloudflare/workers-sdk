@@ -9,14 +9,14 @@ it("can use context exports on the SELF worker", async () => {
 	);
 });
 
-it("can use context exports (parameterized with props) on the SELF worker", async () => {
+it("can use context exports (parameterized with props) on the exports.default worker", async () => {
 	const response = await exports.default.fetch("http://example.com/props");
 	expect(await response.text()).toBe(
 		"👋 Hello MainWorker from Main NamedEntryPoint!\nAdditional props!!"
 	);
 });
 
-it("will warn on missing context exports on the SELF worker", async () => {
+it("will warn on missing context exports on the exports.default worker", async () => {
 	const warnSpy = vi.spyOn(console, "warn");
 	const response = await exports.default.fetch(
 		"http://example.com/invalid-export"
@@ -29,7 +29,7 @@ it("will warn on missing context exports on the SELF worker", async () => {
 	);
 });
 
-it("will warn on implicit re-exports that will exist in production but cannot not be guessed on the SELF worker", async () => {
+it("will warn on implicit re-exports that will exist in production but cannot not be guessed on the exports.default worker", async () => {
 	// In this test, we are trying to access an entry-point that is wildcard (*) re-exported from a virtual module.
 	// This virtual module is understood by Vitest and TypeScript but not the lightweight esbuild that we use to guess exports.
 	const warnSpy = vi.spyOn(console, "warn");
@@ -44,7 +44,7 @@ it("will warn on implicit re-exports that will exist in production but cannot no
 	);
 });
 
-it("will still guess re-exports on the SELF worker that cannot be fully analyzed by esbuild", async () => {
+it("will still guess re-exports on the exports.default worker that cannot be fully analyzed by esbuild", async () => {
 	// In this test, we are trying to access an entry-point that is explicitly re-exported from a virtual module.
 	// Although esbuild cannot really analyze what is being re-exported, it can at least see that something is being re-exported with that name.
 	const warnSpy = vi.spyOn(console, "warn");
@@ -56,7 +56,7 @@ it("will still guess re-exports on the SELF worker that cannot be fully analyzed
 	);
 });
 
-it("can access configured virtual entry points on the SELF worker that cannot be fully analyzed by esbuild", async () => {
+it("can access configured virtual entry points on the exports.default worker that cannot be fully analyzed by esbuild", async () => {
 	// In this test, we are trying to access an entry-point that is explicitly re-exported from a virtual module.
 	// Although esbuild cannot really analyze what is being re-exported, it can at least see that something is being re-exported with that name.
 	const warnSpy = vi.spyOn(console, "warn");
@@ -68,7 +68,7 @@ it("can access configured virtual entry points on the SELF worker that cannot be
 	);
 });
 
-it("can access imported context exports for SELF worker", async () => {
+it("can access imported context exports for exports.default worker", async () => {
 	const msg = await exports.NamedEntryPoint.greet();
 	expect(msg).toMatchInlineSnapshot(
 		`"Hello MainWorker from Main NamedEntryPoint!"`
