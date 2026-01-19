@@ -805,6 +805,47 @@ interface CollectedBinding {
 }
 
 /**
+ * Throws a UserError when a binding is missing its required property.
+ *
+ * The error format matches the existing config validation errors for consistency.
+ *
+ * @param configPath - The path to the config file
+ * @param bindingType - The type of binding (e.g., "kv_namespaces", "d1_databases")
+ * @param envName - The environment name where the invalid binding was found
+ * @param index - The index of the binding in the array (0-based), or -1 for non-array bindings
+ * @param fieldName - The name of the missing field (e.g., "binding", "name")
+ * @param binding - The actual binding object for error context
+ *
+ * @throws {UserError} Always throws with a formatted error message
+ */
+function throwMissingBindingError(
+	configPath: string | undefined,
+	bindingType: string,
+	envName: string,
+	index: number,
+	fieldName: string,
+	binding: unknown
+): never {
+	const isArrayBinding = index >= 0;
+	const bindingPath = isArrayBinding ? `${bindingType}[${index}]` : bindingType;
+	const field =
+		envName === "top-level" ? bindingPath : `env.${envName}.${bindingPath}`;
+	const bindingError = `"${field}" bindings should have a string "${fieldName}" field but got ${JSON.stringify(binding)}.`;
+
+	const configFile = configFileName(configPath);
+
+	if (envName === "top-level") {
+		throw new UserError(
+			`Processing ${configFile} configuration:\n  - ${bindingError}`
+		);
+	}
+
+	throw new UserError(
+		`Processing ${configFile} configuration:\n  - "env.${envName}" environment configuration\n    - ${bindingError}`
+	);
+}
+
+/**
  * Collects all core bindings across environments defined in the config file
  *
  * This will aggregate and collect all bindings that can be collected in the same way.
@@ -855,31 +896,108 @@ function collectCoreBindings(
 			return;
 		}
 
-		for (const kv of env.kv_namespaces ?? []) {
+		for (const [index, kv] of (env.kv_namespaces ?? []).entries()) {
+			if (!kv.binding) {
+				throwMissingBindingError(
+					args.config,
+					"kv_namespaces",
+					envName,
+					index,
+					"binding",
+					kv
+				);
+			}
+
 			addBinding(kv.binding, "KVNamespace", "kv_namespaces", envName);
 		}
 
-		for (const r2 of env.r2_buckets ?? []) {
+		for (const [index, r2] of (env.r2_buckets ?? []).entries()) {
+			if (!r2.binding) {
+				throwMissingBindingError(
+					args.config,
+					"r2_buckets",
+					envName,
+					index,
+					"binding",
+					r2
+				);
+			}
+
 			addBinding(r2.binding, "R2Bucket", "r2_buckets", envName);
 		}
 
-		for (const d1 of env.d1_databases ?? []) {
+		for (const [index, d1] of (env.d1_databases ?? []).entries()) {
+			if (!d1.binding) {
+				throwMissingBindingError(
+					args.config,
+					"d1_databases",
+					envName,
+					index,
+					"binding",
+					d1
+				);
+			}
+
 			addBinding(d1.binding, "D1Database", "d1_databases", envName);
 		}
 
-		for (const vectorize of env.vectorize ?? []) {
+		for (const [index, vectorize] of (env.vectorize ?? []).entries()) {
+			if (!vectorize.binding) {
+				throwMissingBindingError(
+					args.config,
+					"vectorize",
+					envName,
+					index,
+					"binding",
+					vectorize
+				);
+			}
+
 			addBinding(vectorize.binding, "VectorizeIndex", "vectorize", envName);
 		}
 
-		for (const hyperdrive of env.hyperdrive ?? []) {
+		for (const [index, hyperdrive] of (env.hyperdrive ?? []).entries()) {
+			if (!hyperdrive.binding) {
+				throwMissingBindingError(
+					args.config,
+					"hyperdrive",
+					envName,
+					index,
+					"binding",
+					hyperdrive
+				);
+			}
+
 			addBinding(hyperdrive.binding, "Hyperdrive", "hyperdrive", envName);
 		}
 
-		for (const sendEmail of env.send_email ?? []) {
+		for (const [index, sendEmail] of (env.send_email ?? []).entries()) {
+			if (!sendEmail.name) {
+				throwMissingBindingError(
+					args.config,
+					"send_email",
+					envName,
+					index,
+					"name",
+					sendEmail
+				);
+			}
+
 			addBinding(sendEmail.name, "SendEmail", "send_email", envName);
 		}
 
-		for (const ae of env.analytics_engine_datasets ?? []) {
+		for (const [index, ae] of (env.analytics_engine_datasets ?? []).entries()) {
+			if (!ae.binding) {
+				throwMissingBindingError(
+					args.config,
+					"analytics_engine_datasets",
+					envName,
+					index,
+					"binding",
+					ae
+				);
+			}
+
 			addBinding(
 				ae.binding,
 				"AnalyticsEngineDataset",
@@ -888,7 +1006,18 @@ function collectCoreBindings(
 			);
 		}
 
-		for (const dispatch of env.dispatch_namespaces ?? []) {
+		for (const [index, dispatch] of (env.dispatch_namespaces ?? []).entries()) {
+			if (!dispatch.binding) {
+				throwMissingBindingError(
+					args.config,
+					"dispatch_namespaces",
+					envName,
+					index,
+					"binding",
+					dispatch
+				);
+			}
+
 			addBinding(
 				dispatch.binding,
 				"DispatchNamespace",
@@ -897,15 +1026,48 @@ function collectCoreBindings(
 			);
 		}
 
-		for (const mtls of env.mtls_certificates ?? []) {
+		for (const [index, mtls] of (env.mtls_certificates ?? []).entries()) {
+			if (!mtls.binding) {
+				throwMissingBindingError(
+					args.config,
+					"mtls_certificates",
+					envName,
+					index,
+					"binding",
+					mtls
+				);
+			}
+
 			addBinding(mtls.binding, "Fetcher", "mtls_certificates", envName);
 		}
 
-		for (const queue of env.queues?.producers ?? []) {
+		for (const [index, queue] of (env.queues?.producers ?? []).entries()) {
+			if (!queue.binding) {
+				throwMissingBindingError(
+					args.config,
+					"queues.producers",
+					envName,
+					index,
+					"binding",
+					queue
+				);
+			}
+
 			addBinding(queue.binding, "Queue", "queues_producers", envName);
 		}
 
-		for (const secret of env.secrets_store_secrets ?? []) {
+		for (const [index, secret] of (env.secrets_store_secrets ?? []).entries()) {
+			if (!secret.binding) {
+				throwMissingBindingError(
+					args.config,
+					"secrets_store_secrets",
+					envName,
+					index,
+					"binding",
+					secret
+				);
+			}
+
 			addBinding(
 				secret.binding,
 				"SecretsStoreSecret",
@@ -914,7 +1076,20 @@ function collectCoreBindings(
 			);
 		}
 
-		for (const helloWorld of env.unsafe_hello_world ?? []) {
+		for (const [index, helloWorld] of (
+			env.unsafe_hello_world ?? []
+		).entries()) {
+			if (!helloWorld.binding) {
+				throwMissingBindingError(
+					args.config,
+					"unsafe_hello_world",
+					envName,
+					index,
+					"binding",
+					helloWorld
+				);
+			}
+
 			addBinding(
 				helloWorld.binding,
 				"HelloWorldBinding",
@@ -923,11 +1098,33 @@ function collectCoreBindings(
 			);
 		}
 
-		for (const ratelimit of env.ratelimits ?? []) {
+		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
+			if (!ratelimit.name) {
+				throwMissingBindingError(
+					args.config,
+					"ratelimits",
+					envName,
+					index,
+					"name",
+					ratelimit
+				);
+			}
+
 			addBinding(ratelimit.name, "RateLimit", "ratelimits", envName);
 		}
 
-		for (const workerLoader of env.worker_loaders ?? []) {
+		for (const [index, workerLoader] of (env.worker_loaders ?? []).entries()) {
+			if (!workerLoader.binding) {
+				throwMissingBindingError(
+					args.config,
+					"worker_loaders",
+					envName,
+					index,
+					"binding",
+					workerLoader
+				);
+			}
+
 			addBinding(
 				workerLoader.binding,
 				"WorkerLoader",
@@ -936,11 +1133,33 @@ function collectCoreBindings(
 			);
 		}
 
-		for (const vpcService of env.vpc_services ?? []) {
+		for (const [index, vpcService] of (env.vpc_services ?? []).entries()) {
+			if (!vpcService.binding) {
+				throwMissingBindingError(
+					args.config,
+					"vpc_services",
+					envName,
+					index,
+					"binding",
+					vpcService
+				);
+			}
+
 			addBinding(vpcService.binding, "Fetcher", "vpc_services", envName);
 		}
 
-		for (const pipeline of env.pipelines ?? []) {
+		for (const [index, pipeline] of (env.pipelines ?? []).entries()) {
+			if (!pipeline.binding) {
+				throwMissingBindingError(
+					args.config,
+					"pipelines",
+					envName,
+					index,
+					"binding",
+					pipeline
+				);
+			}
+
 			addBinding(
 				pipeline.binding,
 				'import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>',
@@ -954,28 +1173,83 @@ function collectCoreBindings(
 		}
 
 		if (env.browser) {
-			addBinding(env.browser.binding, "Fetcher", "browser", envName);
+			if (!env.browser.binding) {
+				throwMissingBindingError(
+					args.config,
+					"browser",
+					envName,
+					-1,
+					"binding",
+					env.browser
+				);
+			} else {
+				addBinding(env.browser.binding, "Fetcher", "browser", envName);
+			}
 		}
 
 		if (env.ai) {
-			addBinding(env.ai.binding, "Ai", "ai", envName);
+			if (!env.ai.binding) {
+				throwMissingBindingError(
+					args.config,
+					"ai",
+					envName,
+					-1,
+					"binding",
+					env.ai
+				);
+			} else {
+				addBinding(env.ai.binding, "Ai", "ai", envName);
+			}
 		}
 
 		if (env.images) {
-			addBinding(env.images.binding, "ImagesBinding", "images", envName);
+			if (!env.images.binding) {
+				throwMissingBindingError(
+					args.config,
+					"images",
+					envName,
+					-1,
+					"binding",
+					env.images
+				);
+			} else {
+				addBinding(env.images.binding, "ImagesBinding", "images", envName);
+			}
 		}
 
 		if (env.media) {
-			addBinding(env.media.binding, "MediaBinding", "media", envName);
+			if (!env.media.binding) {
+				throwMissingBindingError(
+					args.config,
+					"media",
+					envName,
+					-1,
+					"binding",
+					env.media
+				);
+			} else {
+				addBinding(env.media.binding, "MediaBinding", "media", envName);
+			}
 		}
 
 		if (env.version_metadata) {
-			addBinding(
-				env.version_metadata.binding,
-				"WorkerVersionMetadata",
-				"version_metadata",
-				envName
-			);
+			if (!env.version_metadata.binding) {
+				throwMissingBindingError(
+					args.config,
+					"version_metadata",
+					envName,
+					-1,
+					"binding",
+					env.version_metadata
+				);
+			} else {
+				addBinding(
+					env.version_metadata.binding,
+					"WorkerVersionMetadata",
+					"version_metadata",
+					envName
+				);
+			}
 		}
 
 		if (env.assets?.binding) {
@@ -1004,6 +1278,7 @@ function collectCoreBindings(
  * This is separate because DOs need special handling for type generation.
  *
  * @param args - All the CLI arguments passed to the `types` command
+ * @param errors - Array to collect binding errors into (for aggregated error reporting)
  *
  * @returns An array of collected Durable Object bindings with their names, class name & possible script name.
  */
@@ -1023,12 +1298,26 @@ function collectAllDurableObjects(
 		}
 	>();
 
-	function collectEnvironmentDOs(env: RawEnvironment | undefined) {
+	function collectEnvironmentDOs(
+		env: RawEnvironment | undefined,
+		envName: string
+	) {
 		if (!env?.durable_objects?.bindings) {
 			return;
 		}
 
-		for (const doBinding of env.durable_objects.bindings) {
+		for (const [index, doBinding] of env.durable_objects.bindings.entries()) {
+			if (!doBinding.name) {
+				throwMissingBindingError(
+					args.config,
+					"durable_objects.bindings",
+					envName,
+					index,
+					"name",
+					doBinding
+				);
+			}
+
 			if (durableObjectsMap.has(doBinding.name)) {
 				continue;
 			}
@@ -1045,11 +1334,11 @@ function collectAllDurableObjects(
 
 	if (args.env) {
 		const envConfig = getEnvConfig(args.env, rawConfig);
-		collectEnvironmentDOs(envConfig);
+		collectEnvironmentDOs(envConfig, args.env);
 	} else {
-		collectEnvironmentDOs(rawConfig);
-		for (const env of Object.values(rawConfig.env ?? {})) {
-			collectEnvironmentDOs(env);
+		collectEnvironmentDOs(rawConfig, "top-level");
+		for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+			collectEnvironmentDOs(env, envName);
 		}
 	}
 
@@ -1062,6 +1351,7 @@ function collectAllDurableObjects(
  * This is separate because services need special handling for type generation.
  *
  * @param args - All the CLI arguments passed to the `types` command
+ * @param errors - Array to collect binding errors into (for aggregated error reporting)
  *
  * @returns An array of collected service bindings with their binding, service & possible entrypoint.
  */
@@ -1081,12 +1371,26 @@ function collectAllServices(
 		}
 	>();
 
-	function collectEnvironmentServices(env: RawEnvironment | undefined) {
+	function collectEnvironmentServices(
+		env: RawEnvironment | undefined,
+		envName: string
+	) {
 		if (!env?.services) {
 			return;
 		}
 
-		for (const service of env.services) {
+		for (const [index, service] of env.services.entries()) {
+			if (!service.binding) {
+				throwMissingBindingError(
+					args.config,
+					"services",
+					envName,
+					index,
+					"binding",
+					service
+				);
+			}
+
 			if (servicesMap.has(service.binding)) {
 				continue;
 			}
@@ -1103,11 +1407,11 @@ function collectAllServices(
 
 	if (args.env) {
 		const envConfig = getEnvConfig(args.env, rawConfig);
-		collectEnvironmentServices(envConfig);
+		collectEnvironmentServices(envConfig, args.env);
 	} else {
-		collectEnvironmentServices(rawConfig);
-		for (const env of Object.values(rawConfig.env ?? {})) {
-			collectEnvironmentServices(env);
+		collectEnvironmentServices(rawConfig, "top-level");
+		for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+			collectEnvironmentServices(env, envName);
 		}
 	}
 
@@ -1120,6 +1424,7 @@ function collectAllServices(
  * This is separate because workflows need special handling for type generation.
  *
  * @param args - All the CLI arguments passed to the `types` command
+ * @param errors - Array to collect binding errors into (for aggregated error reporting)
  *
  * @returns An array of collected workflow bindings with their names, class name, binding and possible script name.
  */
@@ -1141,12 +1446,26 @@ function collectAllWorkflows(
 		}
 	>();
 
-	function collectEnvironmentWorkflows(env: RawEnvironment | undefined) {
+	function collectEnvironmentWorkflows(
+		env: RawEnvironment | undefined,
+		envName: string
+	) {
 		if (!env?.workflows) {
 			return;
 		}
 
-		for (const workflow of env.workflows) {
+		for (const [index, workflow] of env.workflows.entries()) {
+			if (!workflow.binding) {
+				throwMissingBindingError(
+					args.config,
+					"workflows",
+					envName,
+					index,
+					"binding",
+					workflow
+				);
+			}
+
 			if (workflowsMap.has(workflow.binding)) {
 				continue;
 			}
@@ -1164,11 +1483,11 @@ function collectAllWorkflows(
 
 	if (args.env) {
 		const envConfig = getEnvConfig(args.env, rawConfig);
-		collectEnvironmentWorkflows(envConfig);
+		collectEnvironmentWorkflows(envConfig, args.env);
 	} else {
-		collectEnvironmentWorkflows(rawConfig);
-		for (const env of Object.values(rawConfig.env ?? {})) {
-			collectEnvironmentWorkflows(env);
+		collectEnvironmentWorkflows(rawConfig, "top-level");
+		for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+			collectEnvironmentWorkflows(env, envName);
 		}
 	}
 
@@ -1179,6 +1498,7 @@ function collectAllWorkflows(
  * Collects unsafe bindings across environments.
  *
  * @param args - All the CLI arguments passed to the `types` command
+ * @param errors - Array to collect binding errors into (for aggregated error reporting)
  *
  * @returns An array of collected unsafe bindings with their names and type.
  */
@@ -1196,12 +1516,26 @@ function collectAllUnsafeBindings(
 		}
 	>();
 
-	function collectEnvironmentUnsafe(env: RawEnvironment | undefined) {
+	function collectEnvironmentUnsafe(
+		env: RawEnvironment | undefined,
+		envName: string
+	) {
 		if (!env?.unsafe?.bindings) {
 			return;
 		}
 
-		for (const binding of env.unsafe.bindings) {
+		for (const [index, binding] of env.unsafe.bindings.entries()) {
+			if (!binding.name) {
+				throwMissingBindingError(
+					args.config,
+					"unsafe.bindings",
+					envName,
+					index,
+					"name",
+					binding
+				);
+			}
+
 			if (unsafeMap.has(binding.name)) {
 				continue;
 			}
@@ -1217,11 +1551,11 @@ function collectAllUnsafeBindings(
 
 	if (args.env) {
 		const envConfig = getEnvConfig(args.env, rawConfig);
-		collectEnvironmentUnsafe(envConfig);
+		collectEnvironmentUnsafe(envConfig, args.env);
 	} else {
-		collectEnvironmentUnsafe(rawConfig);
-		for (const env of Object.values(rawConfig.env ?? {})) {
-			collectEnvironmentUnsafe(env);
+		collectEnvironmentUnsafe(rawConfig, "top-level");
+		for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+			collectEnvironmentUnsafe(env, envName);
 		}
 	}
 

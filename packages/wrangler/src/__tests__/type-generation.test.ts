@@ -1776,6 +1776,53 @@ describe("generate types", () => {
 			);
 		});
 
+		it("should error when a binding is missing its binding name in an environment", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [
+						{
+							binding: "KV_TOP",
+							id: "top-kv-id",
+						},
+					],
+					env: {
+						staging: {
+							// Empty object with no binding property should error
+							kv_namespaces: [{}],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await expect(
+				runWrangler("types --include-runtime=false")
+			).rejects.toThrowError(
+				/Processing wrangler\.jsonc configuration:\n\s+- "env\.staging" environment configuration\n\s+- "env\.staging\.kv_namespaces\[0\]" bindings should have a string "binding" field but got \{\}/
+			);
+		});
+
+		it("should error when a binding is missing its binding name at top-level", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					r2_buckets: [
+						{
+							bucket_name: "my-bucket",
+						},
+					],
+				}),
+				"utf-8"
+			);
+
+			await expect(
+				runWrangler("types --include-runtime=false")
+			).rejects.toThrowError(
+				/Processing wrangler\.jsonc configuration:\n\s+- "r2_buckets\[0\]" bindings should have a string "binding" field/
+			);
+		});
+
 		it("should collect vars only from specified environment with --env", async () => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
