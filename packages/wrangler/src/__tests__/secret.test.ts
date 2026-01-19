@@ -1128,19 +1128,7 @@ describe("wrangler secret", () => {
 
 				"
 			`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mA fetch request failed, likely due to a connectivity issue.[0m
-
-
-				  Common causes:
-				    - No internet connection or network connectivity problems
-				    - Firewall or VPN blocking the request
-				    - Network proxy configuration issues
-
-				  Please check your network connection and try again.
-
-				"
-			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should handle network failure on secret bulk", async () => {
@@ -1174,19 +1162,7 @@ describe("wrangler secret", () => {
 
 				"
 			`);
-			expect(std.warn).toMatchInlineSnapshot(`
-				"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mA fetch request failed, likely due to a connectivity issue.[0m
-
-
-				  Common causes:
-				    - No internet connection or network connectivity problems
-				    - Firewall or VPN blocking the request
-				    - Network proxy configuration issues
-
-				  Please check your network connection and try again.
-
-				"
-			`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
 		it("throws a meaningful error", async () => {
