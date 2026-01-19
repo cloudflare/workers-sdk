@@ -241,6 +241,9 @@ describe("metrics", () => {
 		describe("sendCommandEvent()", () => {
 			const reused = {
 				wranglerVersion: "1.2.3",
+				wranglerMajorVersion: 1,
+				wranglerMinorVersion: 2,
+				wranglerPatchVersion: 3,
 				osPlatform: "mock platform",
 				osVersion: "mock os version",
 				nodeVersion: 1,
