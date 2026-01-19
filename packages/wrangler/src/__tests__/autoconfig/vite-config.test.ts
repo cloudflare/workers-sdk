@@ -32,9 +32,7 @@ export default defineConfig(() => ({
 
 			const result = checkIfViteConfigUsesCloudflarePlugin(".");
 			expect(result).toBe(false);
-			expect(std.debug).toContain(
-				"Vite config uses a non-object expression"
-			);
+			expect(std.debug).toContain("Vite config uses a non-object expression");
 		});
 
 		it("should handle vite config without plugins array", async () => {

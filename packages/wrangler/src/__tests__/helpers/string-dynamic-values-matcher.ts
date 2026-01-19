@@ -29,7 +29,7 @@ export function replaceRandomWithConstantData(
 	// Convert "------formdata-undici-0.test--"" to "------formdata-undici-0.test--\n\t\t\t\t""
 	stringWithConstantData = stringWithConstantData.replace(
 		/(------formdata-undici-[^\n-]+)--"/g,
-		"$1--\n\t\t\t\t\""
+		'$1--\n\t\t\t\t"'
 	);
 
 	return stringWithConstantData;
