@@ -1,5 +1,4 @@
 import { writeFile } from "node:fs/promises";
-import { UserError } from "@cloudflare/workers-utils";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
 	checkIfViteConfigUsesCloudflarePlugin,
