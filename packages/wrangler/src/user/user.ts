@@ -249,7 +249,7 @@ import {
 import { getAccountChoices } from "./choose-account";
 import { generateAuthUrl } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
-import type { ChooseAccountItem } from "./choose-account";
+import type { Account } from "./shared";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
@@ -305,6 +305,7 @@ interface State extends AuthTokens {
 	hasAuthCodeBeenExchangedForAccessToken?: boolean;
 	stateQueryParam?: string;
 	scopes?: Scope[];
+	account?: Account;
 }
 
 /**
@@ -1289,9 +1290,7 @@ export async function getAccountId(
 				value: account.id,
 			})),
 		});
-		const account = accounts.find(
-			(a) => a.id === accountID
-		) as ChooseAccountItem;
+		const account = accounts.find((a) => a.id === accountID) as Account;
 		saveAccountToCache({ id: account.id, name: account.name });
 		return accountID;
 	} catch (e) {
@@ -1349,24 +1348,25 @@ export function requireApiToken(): ApiCredentials {
 }
 
 /**
- * Save the given account details to a cache
+ * Saves the given account details to the filesystem cache as well as the local state
+ *
+ * @param account The account to save
  */
-function saveAccountToCache(account: { id: string; name: string }): void {
-	saveToConfigCache<{ account: { id: string; name: string } }>(
-		"wrangler-account.json",
-		{ account }
-	);
+function saveAccountToCache(account: Account): void {
+	localState.account = account;
+	saveToConfigCache<{ account: Account }>("wrangler-account.json", { account });
 }
 
 /**
- * Fetch the given account details from a cache if available
+ * Retrieves the account details from either the local state or the filesystem cache (in that order)
+ *
+ * @returns The cached account if present, `undefined` otherwise
  */
-export function getAccountFromCache():
-	| undefined
-	| { id: string; name: string } {
-	return getConfigCache<{ account: { id: string; name: string } }>(
-		"wrangler-account.json"
-	).account;
+export function getAccountFromCache(): undefined | Account {
+	if (localState.account) {
+		return localState.account;
+	}
+	return getConfigCache<{ account: Account }>("wrangler-account.json").account;
 }
 
 /**

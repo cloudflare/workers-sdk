@@ -10,6 +10,8 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CI } from "../is-ci";
 import {
+	getAccountFromCache,
+	getAccountId,
 	getAuthConfigFilePath,
 	getOAuthTokenFromLocalState,
 	loginOrRefreshIfRequired,
@@ -18,9 +20,11 @@ import {
 	writeAuthConfigFile,
 } from "../user";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockSelect } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import {
 	mockExchangeRefreshTokenForAccessToken,
+	mockGetMemberships,
 	mockOAuthFlow,
 } from "./helpers/mock-oauth-flow";
 import {
@@ -503,6 +507,98 @@ describe("User", () => {
 
 			const token = await getOAuthTokenFromLocalState();
 			expect(token).toBeUndefined();
+		});
+	});
+
+	describe("account caching", () => {
+		beforeEach(() => {
+			vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-api-token");
+		});
+
+		it("should only prompt for account selection once when getAccountId is called multiple times", async () => {
+			setIsTTY(true);
+
+			// Mock the memberships API to return multiple accounts
+			// Note: mockGetMemberships uses { once: true }, so we need to set it up for each expected call
+			// But since we're testing caching, the second call should NOT hit the API
+			mockGetMemberships([
+				{
+					id: "membership-1",
+					account: { id: "account-1", name: "Account One" },
+				},
+				{
+					id: "membership-2",
+					account: { id: "account-2", name: "Account Two" },
+				},
+			]);
+
+			// Mock the select dialog - should only be called once
+			mockSelect({
+				text: "Select an account",
+				result: "account-1",
+			});
+
+			// First call - should prompt for account selection
+			const firstAccountId = await getAccountId({});
+			expect(firstAccountId).toBe("account-1");
+
+			// Verify account is cached
+			const cachedAccount = getAccountFromCache();
+			expect(cachedAccount).toEqual({ id: "account-1", name: "Account One" });
+
+			// Second call - should use cached account, not prompt again
+			const secondAccountId = await getAccountId({});
+			expect(secondAccountId).toBe("account-1");
+
+			// Third call - should still use cached account
+			const thirdAccountId = await getAccountId({});
+			expect(thirdAccountId).toBe("account-1");
+
+			// If mockSelect was called more than once, the test would fail because
+			// we only set up one expectation and prompts mock throws on unexpected calls
+		});
+
+		it("should use account_id from config without prompting", async () => {
+			// When config has account_id, it should be used directly without prompting
+			const accountId = await getAccountId({ account_id: "config-account-id" });
+			expect(accountId).toBe("config-account-id");
+
+			// Cache should not be populated when using config account_id
+			const cachedAccount = getAccountFromCache();
+			expect(cachedAccount).toBeUndefined();
+		});
+
+		it("should cache account when only one account is available (no prompt needed)", async () => {
+			// Mock single account - no prompt needed
+			mockGetMemberships([
+				{
+					id: "membership-1",
+					account: { id: "single-account", name: "Only Account" },
+				},
+			]);
+
+			const accountId = await getAccountId({});
+			expect(accountId).toBe("single-account");
+
+			// Account should still be cached even without prompting
+			const cachedAccount = getAccountFromCache();
+			expect(cachedAccount).toEqual({
+				id: "single-account",
+				name: "Only Account",
+			});
+
+			// Set up another membership response for verification
+			// (won't be called because cache is used)
+			mockGetMemberships([
+				{
+					id: "membership-2",
+					account: { id: "different-account", name: "Different" },
+				},
+			]);
+
+			// Second call should use cache
+			const secondAccountId = await getAccountId({});
+			expect(secondAccountId).toBe("single-account");
 		});
 	});
 });
