@@ -257,6 +257,7 @@ describe("metrics", () => {
 				hasAssets: false,
 				argsUsed: [],
 				argsCombination: "",
+				agent: null,
 				safe_command: "docs",
 				safe_args: {},
 			};
