@@ -99,7 +99,7 @@ export class SendEmailBinding extends WorkerEntrypoint<SendEmailEnv> {
 			`http://localhost/core/store-temp-file?extension=${extension}&prefix=${prefix}`,
 			{
 				method: "POST",
-				body: body,
+				body,
 			}
 		);
 		return await resp.text();
