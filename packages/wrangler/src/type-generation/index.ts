@@ -19,7 +19,11 @@ import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqli
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
 import { isProcessEnvPopulated } from "../process-env";
-import { checkTypesUpToDate, DEFAULT_WORKERS_TYPES_FILE_NAME } from "./helpers";
+import {
+	checkTypesUpToDate,
+	DEFAULT_WORKERS_TYPES_FILE_NAME,
+	throwMissingBindingError,
+} from "./helpers";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Entry } from "../deployment-bundle/entry";
@@ -802,47 +806,6 @@ interface CollectedBinding {
 	 * The TypeScript type (e.g., "KVNamespace")
 	 */
 	type: string;
-}
-
-/**
- * Throws a UserError when a binding is missing its required property.
- *
- * The error format matches the existing config validation errors for consistency.
- *
- * @param configPath - The path to the config file
- * @param bindingType - The type of binding (e.g., "kv_namespaces", "d1_databases")
- * @param envName - The environment name where the invalid binding was found
- * @param index - The index of the binding in the array (0-based), or -1 for non-array bindings
- * @param fieldName - The name of the missing field (e.g., "binding", "name")
- * @param binding - The actual binding object for error context
- *
- * @throws {UserError} Always throws with a formatted error message
- */
-function throwMissingBindingError(
-	configPath: string | undefined,
-	bindingType: string,
-	envName: string,
-	index: number,
-	fieldName: string,
-	binding: unknown
-): never {
-	const isArrayBinding = index >= 0;
-	const bindingPath = isArrayBinding ? `${bindingType}[${index}]` : bindingType;
-	const field =
-		envName === "top-level" ? bindingPath : `env.${envName}.${bindingPath}`;
-	const bindingError = `"${field}" bindings should have a string "${fieldName}" field but got ${JSON.stringify(binding)}.`;
-
-	const configFile = configFileName(configPath);
-
-	if (envName === "top-level") {
-		throw new UserError(
-			`Processing ${configFile} configuration:\n  - ${bindingError}`
-		);
-	}
-
-	throw new UserError(
-		`Processing ${configFile} configuration:\n  - "env.${envName}" environment configuration\n    - ${bindingError}`
-	);
 }
 
 /**
