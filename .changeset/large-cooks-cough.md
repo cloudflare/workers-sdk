@@ -2,9 +2,7 @@
 "@cloudflare/cli": patch
 "create-cloudflare": patch
 "miniflare": patch
-"@cloudflare/playground-preview-worker": patch
 "@cloudflare/vitest-pool-workers": patch
-"@cloudflare/workers-playground": patch
 "wrangler": patch
 ---
 
