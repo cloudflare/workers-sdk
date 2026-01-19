@@ -1,0 +1,20 @@
+{
+	"name": "@fixture/multi-worker",
+	"private": true,
+	"scripts": {
+		"deploy": "wrangler deploy",
+		"start": "wrangler dev -c workers/sentry/wrangler.jsonc -c workers/default/wrangler.jsonc",
+		"test:ci": "vitest run",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"@sentry/cloudflare": "^10"
+	},
+	"devDependencies": {
+		"vitest": "catalog:default",
+		"wrangler": "workspace:*"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	}
+}
