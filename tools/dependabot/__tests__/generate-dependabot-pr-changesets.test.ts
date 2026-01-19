@@ -193,7 +193,7 @@ describe("writeChangeSet()", () => {
 });
 
 describe("commitAndPush()", () => {
-	it("should call spawnSync with appropriate git commands", ({ expect }) => {
+	it("should call spawnSync with appropriate git commands", () => {
 		(spawnSync as Mock).mockClear();
 		(spawnSync as Mock).mockReturnValue({ output: [] });
 		const commitMessage = dedent`

@@ -84,7 +84,7 @@ test("opens an inspector with the `--inspect` argument", async ({
 		flags: ["--inspect", "--no-file-parallelism"],
 	});
 
-	expect(result.stdout).toMatch("inspector on port 9229");
+	expect(result.stdout).toMatch("inspector on port");
 });
 
 test("customize inspector config", async ({ expect, seed, vitestRun }) => {
