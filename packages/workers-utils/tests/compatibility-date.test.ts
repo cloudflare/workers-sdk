@@ -1,4 +1,5 @@
 import module from "node:module";
+import { fileURLToPath } from "node:url";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getLocalWorkerdCompatibilityDate } from "../src/compatibility-date";
 
@@ -8,8 +9,14 @@ describe("getLocalWorkerdCompatibilityDate", () => {
 	});
 
 	it("should successfully get the local latest compatibility date from the local workerd instance", () => {
-		// Note: this works because the function gets the monorepo's miniflare/workerd instance
-		const { date, source } = getLocalWorkerdCompatibilityDate();
+		// Note: this works because Wrangler depends on `miniflare` (and therefore `workerd`)
+		// in the monorepo.
+		const wranglerPackageJson = fileURLToPath(
+			new URL("../../wrangler/package.json", import.meta.url)
+		);
+		const { date, source } = getLocalWorkerdCompatibilityDate({
+			projectPath: wranglerPackageJson,
+		});
 		expect(date).toMatch(/\d{4}-\d{2}-\d{2}/);
 		expect(source).toEqual("workerd");
 	});
