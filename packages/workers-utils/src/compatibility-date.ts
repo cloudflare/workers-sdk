@@ -33,13 +33,23 @@ export function getLocalWorkerdCompatibilityDate({
 	projectPath = process.cwd(),
 }: GetCompatDateOptions = {}): GetCompatDateResult {
 	try {
+		console.log(`getLocalWorkerdCompatibilityDate ${"=".repeat(100)}\n\n`);
+		console.log(` => projectPath: ${JSON.stringify(projectPath)}\n`);
 		const projectRequire = module.createRequire(projectPath);
+		console.log(` => projectRequire: ${projectRequire}\n`);
 		const miniflareEntry = projectRequire.resolve("miniflare");
+		console.log(` => miniflareEntry: ${JSON.stringify(miniflareEntry)}\n`);
 		const miniflareRequire = module.createRequire(miniflareEntry);
+		console.log(` => typeof miniflareRequire: ${miniflareRequire}\n`);
 		const miniflareWorkerd = miniflareRequire("workerd") as {
 			compatibilityDate: string;
 		};
+		console.log(
+			` => typeof miniflareWorkerd: ${JSON.stringify(miniflareWorkerd)}`
+		);
 		const workerdDate = miniflareWorkerd.compatibilityDate;
+		console.log(` => workerdDate: ${workerdDate}`);
+		console.log(`${"\n".repeat(5)}`);
 		return {
 			date: toSafeCompatibilityDate(new Date(workerdDate)),
 			source: "workerd",
