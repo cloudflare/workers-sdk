@@ -33,7 +33,7 @@
 		"check:type": "tsc -p ./tsconfig.json",
 		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"test": "vitest",
-		"test:ci": "vitest run",
+		"test:ci": "pnpm --filter miniflare build && vitest run",
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
