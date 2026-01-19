@@ -92,6 +92,7 @@ export class NextJs extends Framework {
 				deploy: "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
 			},
 			buildCommand: `${npx} @opennextjs/cloudflare build`,
+			deployCommand: `${npx} @opennextjs/cloudflare deploy`,
 		};
 	}
 

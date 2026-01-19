@@ -2,6 +2,7 @@ import { updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
 import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import * as recast from "recast";
+import { getPackageManager } from "../../package-manager";
 import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
 import { usesTypescript } from "../uses-typescript";
 import { Framework } from ".";
@@ -54,6 +55,8 @@ export class SolidStart extends Framework {
 			});
 		}
 
+		const { type: npm } = await getPackageManager();
+
 		return {
 			wranglerConfig: {
 				main: "./.output/server/index.mjs",
@@ -63,6 +66,7 @@ export class SolidStart extends Framework {
 					directory: "./.output/public",
 				},
 			},
+			buildCommand: `${npm} run build`,
 		};
 	}
 }

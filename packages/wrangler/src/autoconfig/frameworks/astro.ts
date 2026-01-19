@@ -10,7 +10,7 @@ export class Astro extends Framework {
 		outputDir,
 		dryRun,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		const { npx } = await getPackageManager();
+		const { type: npm, npx } = await getPackageManager();
 		if (!dryRun) {
 			await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
 				silent: true,
@@ -30,6 +30,7 @@ export class Astro extends Framework {
 					directory: outputDir,
 				},
 			},
+			buildCommand: `${npm} run build`,
 		};
 	}
 

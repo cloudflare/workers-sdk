@@ -1,3 +1,4 @@
+import type { FrameworkInfo } from "./get-framework";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 export type ConfigurationOptions = {
@@ -17,11 +18,20 @@ export type ConfigurationResults = {
 	wranglerConfig: RawConfig;
 	// Scripts to override in the package.json. Most frameworks should not need to do this, as their default detected build command will be sufficient
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides;
-	buildCommand?: string;
+	// Note: `buildCommand` isn't optional but it is `string | undefined` instead, because we want all frameworks to define such value, if a framework
+	//       doesn't require a build step (e.g. the `Static` framework) then it should explicitly declare that
+	buildCommand: string | undefined;
+	deployCommand?: string;
 };
 
 export abstract class Framework {
-	constructor(public name: string = "Static") {}
+	readonly id: string;
+	readonly name: string;
+
+	constructor(frameworkInfo: FrameworkInfo) {
+		this.id = frameworkInfo.id;
+		this.name = frameworkInfo.name;
+	}
 
 	isConfigured(_projectPath: string): boolean {
 		return false;

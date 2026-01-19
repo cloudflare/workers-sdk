@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 import { confirmAutoConfigDetails } from "../../../autoconfig/details";
 import { mockConfirm, mockPrompt } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
+import type { Framework } from "../../../autoconfig/frameworks";
 
 vi.mock("../../../package-manager", () => ({
 	getPackageManager() {
@@ -103,7 +104,12 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				buildCommand: "astro build",
 				framework: {
 					isConfigured: () => false,
-					configure: () => ({ wranglerConfig: {} }),
+					id: "astro",
+					configure: () =>
+						({
+							wranglerConfig: {},
+							buildCommand: undefined,
+						}) satisfies ReturnType<Framework["configure"]>,
 					name: "astro",
 					autoConfigSupported: true,
 				},
@@ -118,6 +124,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				  "framework": Object {
 				    "autoConfigSupported": true,
 				    "configure": [Function],
+				    "id": "astro",
 				    "isConfigured": [Function],
 				    "name": "astro",
 				  },

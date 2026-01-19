@@ -6,6 +6,7 @@ import { blue } from "@cloudflare/cli/colors";
 import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import * as recast from "recast";
 import semiver from "semiver";
+import { getPackageManager } from "../../package-manager";
 import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
 import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
@@ -21,6 +22,9 @@ export class Analog extends Framework {
 		if (!dryRun) {
 			await updateViteConfig(projectPath);
 		}
+
+		const { type: npm } = await getPackageManager();
+
 		return {
 			wranglerConfig: {
 				main: "./dist/analog/server/index.mjs",
@@ -29,6 +33,7 @@ export class Analog extends Framework {
 					directory: "./dist/analog/public",
 				},
 			},
+			buildCommand: `${npm} run build`,
 		};
 	}
 }

@@ -10,7 +10,7 @@ export class SvelteKit extends Framework {
 	async configure({
 		dryRun,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		const { dlx } = await getPackageManager();
+		const { type: npm, dlx } = await getPackageManager();
 		if (!dryRun) {
 			await runCommand(
 				[
@@ -45,6 +45,7 @@ export class SvelteKit extends Framework {
 					directory: ".svelte-kit/cloudflare",
 				},
 			},
+			buildCommand: `${npm} run build`,
 		};
 	}
 

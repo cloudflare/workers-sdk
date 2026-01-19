@@ -50,6 +50,7 @@ export class Qwik extends Framework {
 				preview: `${packageManager.type} run build && wrangler dev`,
 				deploy: `${packageManager.type} run build && wrangler deploy`,
 			},
+			buildCommand: `${packageManager.type} run build`,
 		};
 	}
 

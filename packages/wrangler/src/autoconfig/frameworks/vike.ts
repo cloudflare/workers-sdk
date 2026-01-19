@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { brandColor } from "@cloudflare/cli/colors";
 import * as recast from "recast";
+import { getPackageManager } from "../../package-manager";
 import { transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
 import { isPackageInstalled } from "./utils/packages";
@@ -45,6 +46,8 @@ export class Vike extends Framework {
 			addVikePhotonToConfigFile(projectPath);
 		}
 
+		const { type: npm } = await getPackageManager();
+
 		return {
 			wranglerConfig: {
 				main: "virtual:photon:cloudflare:server-entry",
@@ -53,6 +56,7 @@ export class Vike extends Framework {
 				preview: "vike build && vike preview",
 				deploy: "vike build && wrangler deploy",
 			},
+			buildCommand: `${npm} run build`,
 		};
 	}
 }

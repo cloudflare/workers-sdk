@@ -157,11 +157,15 @@ describe("autoconfig (deploy)", () => {
 				result: true,
 			});
 			await writeFile(".gitignore", "");
-			const configureSpy = vi.fn(async ({ outputDir }) => ({
-				wranglerConfig: {
-					assets: { directory: outputDir },
-				},
-			}));
+			const configureSpy = vi.fn(
+				async ({ outputDir }) =>
+					({
+						wranglerConfig: {
+							assets: { directory: outputDir },
+						},
+						buildCommand: undefined,
+					}) satisfies ReturnType<Framework["configure"]>
+			);
 			await run.runAutoConfig(
 				{
 					projectPath: process.cwd(),
@@ -169,11 +173,12 @@ describe("autoconfig (deploy)", () => {
 					configured: false,
 					workerName: "my-worker",
 					framework: {
+						id: "fake",
 						name: "Fake",
 						configure: configureSpy,
 						isConfigured: () => false,
 						autoConfigSupported: true,
-					} as Framework,
+					},
 					outputDir: "dist",
 					packageJson: {
 						dependencies: {
@@ -277,7 +282,7 @@ describe("autoconfig (deploy)", () => {
 			await run.runAutoConfig({
 				projectPath: process.cwd(),
 				configured: false,
-				framework: new Static("static"),
+				framework: new Static({ id: "static", name: "Static" }),
 				workerName: "my-worker",
 				outputDir: "dist",
 			});
@@ -286,13 +291,13 @@ describe("autoconfig (deploy)", () => {
 				"
 				Detected Project Settings:
 				 - Worker Name: my-worker
-				 - Framework: static
+				 - Framework: Static
 				 - Output Directory: dist
 
 
 				Updated Project Settings:
 				 - Worker Name: edited-worker-name
-				 - Framework: static
+				 - Framework: Static
 				 - Output Directory: dist
 
 
@@ -366,7 +371,7 @@ describe("autoconfig (deploy)", () => {
 				run.runAutoConfig({
 					projectPath: process.cwd(),
 					configured: false,
-					framework: new Static("static"),
+					framework: new Static({ id: "static", name: "Static" }),
 					workerName: "my-worker",
 					outputDir: "",
 				})

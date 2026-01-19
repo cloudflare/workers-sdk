@@ -6,6 +6,7 @@ import * as recast from "recast";
 import semiver from "semiver";
 import dedent from "ts-dedent";
 import { logger } from "../../logger";
+import { getPackageManager } from "../../package-manager";
 import { transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
 import { getInstalledPackageVersion } from "./utils/packages";
@@ -255,10 +256,13 @@ export class ReactRouter extends Framework {
 			transformReactRouterConfig(projectPath, viteEnvironmentKey);
 		}
 
+		const { type: npm } = await getPackageManager();
+
 		return {
 			wranglerConfig: {
 				main: "./workers/app.ts",
 			},
+			buildCommand: `${npm} run build`,
 		};
 	}
 
