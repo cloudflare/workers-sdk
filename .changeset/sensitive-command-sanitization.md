@@ -6,17 +6,9 @@ Sanitize sensitive commands in telemetry to prevent accidentally capturing secre
 
 This change significantly improves telemetry security by:
 
-1. **Renaming telemetry fields**: `command` → `safe_command` and `args` → `safe_args` to distinguish from historical data that may have contained sensitive information.
+This prevents accidentally capturing secrets or credentials that users may have pasted as command arguments.
 
-2. **Removing "wrangler" prefix**: The `safe_command` field no longer includes the "wrangler" prefix (e.g., `secret put` instead of `wrangler secret put`) for future-proofing.
-
-3. **Inverting the default**: Commands now default to `sensitiveArgs: true` (sensitive), meaning arguments are stripped from telemetry unless a command explicitly opts in with `sensitiveArgs: false`.
-
-4. **Truncating command strings**: When `sensitiveArgs` is true, the command string is truncated to just the command prefix (e.g., `secret put` instead of `secret put MY_KEY accidentally_pasted_secret`).
-
-5. **Auditing all commands**: Each command has been reviewed and explicitly marked as safe or sensitive based on whether its arguments could contain secrets.
-
-Commands marked as **sensitive** (args stripped):
+The following commands will no longer collect any telemetry on argument usage:
 
 - All secret commands: `wrangler secret put/bulk`, `wrangler pages secret put/bulk`, `wrangler versions secret put/bulk`
 - `wrangler login`
