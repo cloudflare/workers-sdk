@@ -438,13 +438,13 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(normalizeString(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - [1mDeprecation[0m: \\"site.entry-point\\":
-			              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
-			              \`\`\`
-			              main = \\"my-site/index.js\\"
-			              \`\`\`"
-		        `);
+						"Processing wrangler configuration:
+						  - [1mDeprecation[0m: \\"site.entry-point\\":
+						    Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+						    \`\`\`
+						    main = \\"my-site/index.js\\"
+						    \`\`\`"
+					`);
 			});
 
 			it("should error if `site` config is missing `bucket`", () => {
@@ -471,13 +471,13 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(normalizeString(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - [1mDeprecation[0m: \\"site.entry-point\\":
-			              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
-			              \`\`\`
-			              main = \\"workers-site/index.js\\"
-			              \`\`\`"
-		        `);
+						"Processing wrangler configuration:
+						  - [1mDeprecation[0m: \\"site.entry-point\\":
+						    Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+						    \`\`\`
+						    main = \\"workers-site/index.js\\"
+						    \`\`\`"
+					`);
 
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
@@ -516,13 +516,13 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(normalizeString(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - [1mDeprecation[0m: \\"site.entry-point\\":
-			              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
-			              \`\`\`
-			              main = \\"111/index.js\\"
-			              \`\`\`"
-		        `);
+						"Processing wrangler configuration:
+						  - [1mDeprecation[0m: \\"site.entry-point\\":
+						    Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+						    \`\`\`
+						    main = \\"111/index.js\\"
+						    \`\`\`"
+					`);
 			});
 
 			it("should log a deprecation warning if entry-point is defined", async () => {
@@ -552,13 +552,13 @@ describe("normalizeAndValidateConfig()", () => {
 
 				expect(normalizeString(diagnostics.renderWarnings()))
 					.toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
-			            - [1mDeprecation[0m: \\"site.entry-point\\":
-			              Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
-			              \`\`\`
-			              main = \\"some/other/script.js\\"
-			              \`\`\`"
-		        `);
+						"Processing wrangler configuration:
+						  - [1mDeprecation[0m: \\"site.entry-point\\":
+						    Delete the \`site.entry-point\` field, then add the top level \`main\` field to your configuration file:
+						    \`\`\`
+						    main = \\"some/other/script.js\\"
+						    \`\`\`"
+					`);
 			});
 		});
 
@@ -5182,9 +5182,9 @@ describe("normalizeAndValidateConfig()", () => {
 				"
 			`);
 			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			        "Processing wrangler configuration:
-			        "
-		      `);
+				"Processing wrangler configuration:
+				"
+			`);
 		});
 
 		it("should use top-level values for inheritable config fields", () => {
@@ -5678,6 +5678,23 @@ describe("normalizeAndValidateConfig()", () => {
 			`);
 		});
 
+		it("should warn on unexpected fields", () => {
+			const { diagnostics } = normalizeAndValidateConfig(
+				// @ts-expect-error purposely using an invalid field
+				{ env: { ENV1: { bla: "haj" } } },
+				undefined,
+				undefined,
+				{ env: "ENV1" }
+			);
+			expect(diagnostics.hasWarnings()).toBe(true);
+			expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+				"Processing wrangler configuration:
+
+				  - \\"env.ENV1\\" environment configuration
+				    - Unexpected fields found in env.ENV1 field: \\"bla\\""
+			`);
+		});
+
 		describe("[define]", () => {
 			it("should accept valid values for config.define", () => {
 				const rawConfig: RawConfig = {
@@ -5846,16 +5863,16 @@ describe("normalizeAndValidateConfig()", () => {
 					expect(diagnostics.hasErrors()).toBe(false);
 
 					expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-				            "Processing wrangler configuration:
+						"Processing wrangler configuration:
 
-				              - \\"env.ENV1\\" environment configuration
-				                - \\"define.ghi\\" exists at the top level, but not on \\"env.ENV1.define\\".
-				                  This is not what you probably want, since \\"define\\" configuration is not inherited by environments.
-				                  Please add \\"define.ghi\\" to \\"env.ENV1\\".
-				                - \\"xyz\\" exists on \\"env.ENV1\\", but not on the top level.
-				                  This is not what you probably want, since \\"define\\" configuration within environments can only override existing top level \\"define\\" configuration
-				                  Please remove \\"env.ENV1.define.xyz\\", or add \\"define.xyz\\"."
-			          `);
+						  - \\"env.ENV1\\" environment configuration
+						    - \\"define.ghi\\" exists at the top level, but not on \\"env.ENV1.define\\".
+						      This is not what you probably want, since \\"define\\" configuration is not inherited by environments.
+						      Please add \\"define.ghi\\" to \\"env.ENV1\\".
+						    - \\"xyz\\" exists on \\"env.ENV1\\", but not on the top level.
+						      This is not what you probably want, since \\"define\\" configuration within environments can only override existing top level \\"define\\" configuration
+						      Please remove \\"env.ENV1.define.xyz\\", or add \\"define.xyz\\"."
+					`);
 				});
 
 				it("should error if the values on config.define in an environment are not strings", () => {
@@ -6572,11 +6589,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -6594,11 +6611,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -6616,11 +6633,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -6638,11 +6655,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -6682,11 +6699,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.hasErrors()).toBe(false);
 			});
 
@@ -6724,11 +6741,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -6748,11 +6765,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -6772,11 +6789,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -6796,11 +6813,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -6835,11 +6852,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -6869,11 +6886,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			          "Processing wrangler configuration:
 
@@ -6893,11 +6910,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 
@@ -6917,11 +6934,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 
@@ -6941,11 +6958,11 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
-			          "Processing wrangler configuration:
+					"Processing wrangler configuration:
 
-			            - \\"env.ENV1\\" environment configuration
-			              - \\"unsafe\\" fields are experimental and may change or break at any time."
-		        `);
+					  - \\"env.ENV1\\" environment configuration
+					    - \\"unsafe\\" fields are experimental and may change or break at any time."
+				`);
 				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
 			"Processing wrangler configuration:
 
