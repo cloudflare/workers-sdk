@@ -1,5 +1,90 @@
 # wrangler
 
+## 4.59.3
+
+### Patch Changes
+
+- [#9396](https://github.com/cloudflare/workers-sdk/pull/9396) [`75386b1`](https://github.com/cloudflare/workers-sdk/commit/75386b1f14d7d0606bece547399e33a9f5bbadb8) Thanks [@gnekich](https://github.com/gnekich)! - Fix `wrangler login` with custom `callback-host`/`callback-port`
+
+  The Cloudflare OAuth API always requires the `redirect_uri` to be `localhost:8976`. However, sometimes the Wrangler OAuth server needed to listen on a different host/port, for example when running from inside a container. We were previously incorrectly setting the `redirect_uri` to the configured callback host/port, but it needs to be up to the user to map `localhost:8976` to the Wrangler OAuth server in the container.
+
+  **Example:**
+
+  You might run Wrangler inside a docker container like this: `docker run -p 8989:8976 <image>`, which forwards port 8976 on your host to 8989 inside the container.
+
+  Then inside the container, run `wrangler login --callback-host=0.0.0.0 --callback-port=8989`
+
+  The OAuth link still has a `redirect_uri` set to`localhost:8976`. For example `https://dash.cloudflare.com/oauth2/auth?...&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&...`
+
+  However the redirect to` localhost:8976` is then forwarded to the Wrangler OAuth server inside your container, allowing the login to complete.
+
+- [#11925](https://github.com/cloudflare/workers-sdk/pull/11925) [`8e4a0e5`](https://github.com/cloudflare/workers-sdk/commit/8e4a0e5e8d1e0bf75b6f11000f89f7eabafa392a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260114.0 | 1.20260115.0 |
+
+- [#11942](https://github.com/cloudflare/workers-sdk/pull/11942) [`133bf95`](https://github.com/cloudflare/workers-sdk/commit/133bf95783c8b63ecc2b572a4400c7aa4bd4f8c4) Thanks [@penalosa](https://github.com/penalosa)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260115.0 | 1.20260116.0 |
+
+- [#11922](https://github.com/cloudflare/workers-sdk/pull/11922) [`93d8d78`](https://github.com/cloudflare/workers-sdk/commit/93d8d78ce081f821671b2c4a1ffcd7df733a0866) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve telemetry errors being sent to Sentry by `wrangler init` when it delegates to C3 by ensuring that they contain the output of the C3 execution.
+
+- [#11940](https://github.com/cloudflare/workers-sdk/pull/11940) [`69ff962`](https://github.com/cloudflare/workers-sdk/commit/69ff9620487a6ae979f369eb1dbac887ce46e246) Thanks [@penalosa](https://github.com/penalosa)! - Show helpful messages for file not found errors (`ENOENT`)
+
+  When users encounter file not found errors, Wrangler now displays a helpful message with the missing file path and common causes, instead of reporting to Sentry.
+
+- [#11904](https://github.com/cloudflare/workers-sdk/pull/11904) [`22727c2`](https://github.com/cloudflare/workers-sdk/commit/22727c29ee244cddebf93d855e4e052973479ad3) Thanks [@danielrs](https://github.com/danielrs)! - Fix false positive infinite loop detection for exact path redirects
+
+  Fixed an issue where the redirect validation incorrectly flagged exact path redirects like `/ /index.html 200` as infinite loops. This was particularly problematic when `html_handling` is set to "none", where such redirects are valid.
+
+  The fix makes the validation more specific to only block wildcard patterns (like `/* /index.html`) that would actually cause infinite loops, while allowing exact path matches that are valid in certain configurations.
+
+  Fixes: https://github.com/cloudflare/workers-sdk/issues/11824
+
+- [#11946](https://github.com/cloudflare/workers-sdk/pull/11946) [`fa39a73`](https://github.com/cloudflare/workers-sdk/commit/fa39a73040dd27d35d429deda34fdc8e15b15fbe) Thanks [@MattieTK](https://github.com/MattieTK)! - Fix `configFileName` returning wrong filename for `.jsonc` config files
+
+  Previously, users with a `wrangler.jsonc` config file would see error messages and hints referring to `wrangler.json` instead of `wrangler.jsonc`. This was because the `configFormat` function collapsed both `.json` and `.jsonc` files into a single `"jsonc"` value, losing the distinction between them.
+
+  Now `configFormat` returns `"json"` for `.json` files and `"jsonc"` for `.jsonc` files, allowing `configFileName` to return the correct filename for each format.
+
+- [#11968](https://github.com/cloudflare/workers-sdk/pull/11968) [`4ac7c82`](https://github.com/cloudflare/workers-sdk/commit/4ac7c82609354115d53cd17f4cf78eabf3d6c23a) Thanks [@MattieTK](https://github.com/MattieTK)! - fix: include version components in command event metrics
+
+  Adds `wranglerMajorVersion`, `wranglerMinorVersion`, and `wranglerPatchVersion` to command events (`wrangler command started`, `wrangler command completed`, `wrangler command errored`). These properties were previously only included in adhoc events.
+
+- [#11940](https://github.com/cloudflare/workers-sdk/pull/11940) [`69ff962`](https://github.com/cloudflare/workers-sdk/commit/69ff9620487a6ae979f369eb1dbac887ce46e246) Thanks [@penalosa](https://github.com/penalosa)! - Improve error message when creating duplicate KV namespace
+
+  When attempting to create a KV namespace with a title that already exists, Wrangler now provides a clear, user-friendly error message instead of the generic API error. The new message explains that the namespace already exists and suggests running `wrangler kv namespace list` to see existing namespaces with their IDs, or choosing a different namespace name.
+
+- [#11962](https://github.com/cloudflare/workers-sdk/pull/11962) [`029531a`](https://github.com/cloudflare/workers-sdk/commit/029531acd2e6fac10f21c7b0cecb6b4830f77d02) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Cache chosen account in memory to avoid repeated prompts
+
+  When users have multiple accounts and no `node_modules` directory exists for file caching, Wrangler (run via `npx` and equivalent commands) would prompt for account selection multiple times during a single command. Now the selected account is also stored in process memory, preventing duplicate prompts and potential issues from inconsistent account choices.
+
+- [#11964](https://github.com/cloudflare/workers-sdk/pull/11964) [`d58fbd1`](https://github.com/cloudflare/workers-sdk/commit/d58fbd1189ec7417d8f2930eac3e71f7680bd679) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Make `name` the positional argument for `wrangler delete` instead of `script`
+
+  The `script` argument was meaningless for the delete command since it deletes by worker name, not by entry point path. The `name` argument is now accepted as a positional argument, allowing users to run `wrangler delete my-worker` instead of `wrangler delete --name my-worker`. The `script` argument is now hidden but still accepted for backwards compatibility.
+
+- [#11967](https://github.com/cloudflare/workers-sdk/pull/11967) [`202c59e`](https://github.com/cloudflare/workers-sdk/commit/202c59e4f4f28419fb6ac0aa8c7dc3960a0c8d3e) Thanks [@emily-shen](https://github.com/emily-shen)! - chore: update undici
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | undici     | 7.14.0 | 7.18.2 |
+
+- [#11940](https://github.com/cloudflare/workers-sdk/pull/11940) [`69ff962`](https://github.com/cloudflare/workers-sdk/commit/69ff9620487a6ae979f369eb1dbac887ce46e246) Thanks [@penalosa](https://github.com/penalosa)! - Improve error handling for Vite config transformations
+
+  Replace assertions with proper error handling when transforming Vite configs. When Wrangler encounters a Vite config that uses a function or lacks a plugins array, it now provides clear, actionable error messages instead of crashing with assertion failures. The check function gracefully skips incompatible configs with debug logging.
+
+- Updated dependencies [[`8e4a0e5`](https://github.com/cloudflare/workers-sdk/commit/8e4a0e5e8d1e0bf75b6f11000f89f7eabafa392a), [`133bf95`](https://github.com/cloudflare/workers-sdk/commit/133bf95783c8b63ecc2b572a4400c7aa4bd4f8c4), [`202c59e`](https://github.com/cloudflare/workers-sdk/commit/202c59e4f4f28419fb6ac0aa8c7dc3960a0c8d3e), [`133bf95`](https://github.com/cloudflare/workers-sdk/commit/133bf95783c8b63ecc2b572a4400c7aa4bd4f8c4), [`25e2c60`](https://github.com/cloudflare/workers-sdk/commit/25e2c608d529664ede251abe45fdb13ea9e56a9d)]:
+  - miniflare@4.20260116.0
+
 ## 4.59.2
 
 ### Patch Changes
