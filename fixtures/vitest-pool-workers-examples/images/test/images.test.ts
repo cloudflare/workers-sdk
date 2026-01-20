@@ -1,5 +1,5 @@
-import { SELF } from "cloudflare:test";
-import { it } from "vitest";
+import { env, SELF } from "cloudflare:test";
+import { afterEach, describe, it } from "vitest";
 
 const TINY_PNG = new Uint8Array([
 	137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 18, 0,
@@ -88,13 +88,141 @@ const TINY_PNG = new Uint8Array([
 	78, 68, 174, 66, 96, 130,
 ]);
 
-it("can return image info", async ({ expect }) => {
-	const resp = (await (
-		await SELF.fetch("https://example.com/", {
+describe("Images binding", () => {
+	afterEach(async () => {
+		const list = await env.IMAGES.hosted.list();
+		for (const image of list.images) {
+			await env.IMAGES.hosted.delete(image.id);
+		}
+	});
+
+	it("can upload an image", async ({ expect }) => {
+		const metadata = await env.IMAGES.hosted.upload(TINY_PNG.buffer, {
+			id: "test-123",
+		});
+		expect(metadata.id).toBe("test-123");
+		expect(metadata.filename).toBe("uploaded.jpg");
+	});
+
+	it("can upload a base64-encoded image", async ({ expect }) => {
+		const base64String = btoa(String.fromCharCode(...TINY_PNG));
+		const base64Bytes = new TextEncoder().encode(base64String);
+
+		const metadata = await env.IMAGES.hosted.upload(base64Bytes, {
+			id: "base64-test",
+			encoding: "base64",
+		});
+		expect(metadata.id).toBe("base64-test");
+
+		const retrievedStream = await env.IMAGES.hosted.image("base64-test");
+		const data = await new Response(retrievedStream).arrayBuffer();
+		expect(new Uint8Array(data)).toEqual(TINY_PNG);
+	});
+
+	it("can get image metadata", async ({ expect }) => {
+		await env.IMAGES.hosted.upload(TINY_PNG.buffer, { id: "get-test" });
+
+		const metadata = await env.IMAGES.hosted.details("get-test");
+		expect(metadata).not.toBeNull();
+		expect(metadata?.id).toBe("get-test");
+	});
+
+	it("can get image data", async ({ expect }) => {
+		await env.IMAGES.hosted.upload(TINY_PNG.buffer, { id: "blob-test" });
+
+		const stream = await env.IMAGES.hosted.image("blob-test");
+		expect(stream).not.toBeNull();
+
+		const data = await new Response(stream).arrayBuffer();
+		expect(new Uint8Array(data)).toEqual(TINY_PNG);
+	});
+
+	it("can update image metadata", async ({ expect }) => {
+		await env.IMAGES.hosted.upload(TINY_PNG.buffer, { id: "update-test" });
+
+		const metadata = await env.IMAGES.hosted.update("update-test", {
+			requireSignedURLs: true,
+		});
+		expect(metadata.requireSignedURLs).toBe(true);
+	});
+
+	it("can delete an image", async ({ expect }) => {
+		await env.IMAGES.hosted.upload(TINY_PNG.buffer, { id: "delete-test" });
+
+		const deleted = await env.IMAGES.hosted.delete("delete-test");
+		expect(deleted).toBe(true);
+
+		// Verify it's gone
+		const metadata = await env.IMAGES.hosted.details("delete-test");
+		expect(metadata).toBe(null);
+	});
+
+	it("can list images", async ({ expect }) => {
+		await env.IMAGES.hosted.upload(TINY_PNG.buffer);
+
+		const list = await env.IMAGES.hosted.list();
+		expect(list.listComplete).toBe(true);
+		expect(Array.isArray(list.images)).toBe(true);
+	});
+
+	it("can list images filtered by creator", async ({ expect }) => {
+		await env.IMAGES.hosted.upload(TINY_PNG.buffer, {
+			id: "img1",
+			creator: "socrates",
+		});
+		await env.IMAGES.hosted.upload(TINY_PNG.buffer, { id: "img2", creator: "plato" });
+		const list = await env.IMAGES.hosted.list({ creator: "plato" });
+		expect(list.images.length).toBe(1);
+		expect(list.images[0].id).toBe("img2");
+	});
+
+	it("can use list images with a cursor", async ({ expect }) => {
+		const imageIds = ["img1", "img2", "img3", "img4", "img5"];
+
+		for (const id of imageIds) {
+			await env.IMAGES.hosted.upload(TINY_PNG.buffer, { id });
+		}
+
+		const page1 = await env.IMAGES.hosted.list({ limit: 2 });
+		expect(page1.images.length).toBe(2);
+		expect(page1.cursor).toBeDefined();
+		expect(page1.listComplete).toBe(false);
+
+		const page2 = await env.IMAGES.hosted.list({ limit: 2, cursor: page1.cursor });
+		expect(page2.images.length).toBe(2);
+		expect(page2.cursor).toBeDefined();
+		expect(page2.listComplete).toBe(false);
+
+		const page3 = await env.IMAGES.hosted.list({ limit: 2, cursor: page2.cursor });
+		expect(page3.images.length).toBe(1);
+		expect(page3.cursor).toBeUndefined();
+		expect(page3.listComplete).toBe(true);
+
+		const allFetchedIds = [
+			...page1.images.map((img) => img.id),
+			...page2.images.map((img) => img.id),
+			...page3.images.map((img) => img.id),
+		];
+		expect(new Set(allFetchedIds).size).toBe(5);
+	});
+
+	it("returns null for non-existent image metadata", async ({ expect }) => {
+		const metadata = await env.IMAGES.hosted.details("does-not-exist");
+		expect(metadata).toBe(null);
+	});
+
+	it("returns null for non-existent image blob", async ({ expect }) => {
+		const stream = await env.IMAGES.hosted.image("does-not-exist");
+		expect(stream).toBe(null);
+	});
+
+	it("can return image info", async ({ expect }) => {
+		// This test uses SELF.fetch because info() goes through our HTTP handler
+		const resp = await SELF.fetch("https://example.com/info", {
 			method: "POST",
 			body: new Blob([TINY_PNG]).stream(),
-		})
-	).json()) as ImageInfoResponse;
-
-	expect(resp.format).toEqual("image/png");
+		});
+		const result = (await resp.json()) as { format: string };
+		expect(result.format).toEqual("image/png");
+	});
 });
