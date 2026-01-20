@@ -139,17 +139,21 @@ afterAll(() => msw.close());
 vi.mock("../open-in-browser");
 
 // Mock the functions involved in getAuthURL so we don't take snapshots of the constantly changing URL.
-vi.mock("../user/generate-auth-url", () => {
+vi.mock("../user/generate-auth-url", async (importOriginal) => {
+	const OAUTH_CALLBACK_URL = (
+		await importOriginal<typeof import("../user/generate-auth-url")>()
+	).OAUTH_CALLBACK_URL;
 	return {
 		generateRandomState: vi.fn().mockImplementation(() => "MOCK_STATE_PARAM"),
+		OAUTH_CALLBACK_URL,
 		generateAuthUrl: vi
 			.fn()
-			.mockImplementation(({ authUrl, clientId, callbackUrl, scopes }) => {
+			.mockImplementation(({ authUrl, clientId, scopes }) => {
 				return (
 					authUrl +
 					`?response_type=code&` +
 					`client_id=${encodeURIComponent(clientId)}&` +
-					`redirect_uri=${encodeURIComponent(callbackUrl)}&` +
+					`redirect_uri=${encodeURIComponent(OAUTH_CALLBACK_URL)}&` +
 					// we add offline_access manually for every request
 					`scope=${encodeURIComponent(
 						[...scopes, "offline_access"].join(" ")
