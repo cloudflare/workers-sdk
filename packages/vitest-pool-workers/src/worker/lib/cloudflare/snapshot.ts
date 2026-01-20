@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { dirname } from "node:path";
 import { env } from "cloudflare:workers";
-import { VitestSnapshotEnvironment } from "vitest/snapshot";
+import { VitestSnapshotEnvironment } from "vitest/runtime";
 
 // Define a custom `SnapshotEnvironment` that uses a service binding for file
 // system operations, rather than `node:fs`
