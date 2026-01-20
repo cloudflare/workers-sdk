@@ -29,11 +29,6 @@ export const hyperdriveCreateCommand = createCommand({
 			type: "string",
 			description: "The binding name of this resource in your Worker",
 		},
-		"use-remote": {
-			type: "boolean",
-			description:
-				"Use a remote binding when adding the newly created resource to your config",
-		},
 		"update-config": {
 			type: "boolean",
 			description:
@@ -64,7 +59,11 @@ export const hyperdriveCreateCommand = createCommand({
 			}),
 			config.configPath,
 			args.env,
-			args
+			{
+				binding: args.binding,
+				updateConfig: args.updateConfig,
+				useRemote: false, // Hyperdrive does not support remote bindings in local dev
+			}
 		);
 	},
 });
