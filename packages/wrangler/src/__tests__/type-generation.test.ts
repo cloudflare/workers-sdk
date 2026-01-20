@@ -14,7 +14,12 @@ import {
 	generateImportSpecifier,
 	isValidIdentifier,
 } from "../type-generation";
-import { throwMissingBindingError } from "../type-generation/helpers";
+import {
+	throwMissingBindingError,
+	toEnvInterfaceName,
+	toPascalCase,
+	validateEnvInterfaceNames,
+} from "../type-generation/helpers";
 import * as generateRuntime from "../type-generation/runtime";
 import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -89,6 +94,76 @@ describe("generateImportSpecifier", () => {
 
 		expect(generateImportSpecifier("/app/types.ts", "/app/src/index.mjs")).toBe(
 			"./src/index"
+		);
+	});
+});
+
+describe("toPascalCase", () => {
+	it("should convert simple strings to PascalCase", () => {
+		expect(toPascalCase("staging")).toBe("Staging");
+		expect(toPascalCase("production")).toBe("Production");
+	});
+
+	it("should convert kebab-case to PascalCase", () => {
+		expect(toPascalCase("my-prod-env")).toBe("MyProdEnv");
+		expect(toPascalCase("staging-env")).toBe("StagingEnv");
+	});
+
+	it("should convert snake_case to PascalCase", () => {
+		expect(toPascalCase("my_test_env")).toBe("MyTestEnv");
+		expect(toPascalCase("prod_env")).toBe("ProdEnv");
+	});
+
+	it("should handle mixed separators", () => {
+		expect(toPascalCase("my-test_env")).toBe("MyTestEnv");
+	});
+});
+
+describe("toEnvInterfaceName", () => {
+	it("should add Env suffix to environment names", () => {
+		expect(toEnvInterfaceName("staging")).toBe("StagingEnv");
+		expect(toEnvInterfaceName("production")).toBe("ProductionEnv");
+	});
+
+	it("should deduplicate Env suffix", () => {
+		expect(toEnvInterfaceName("staging-env")).toBe("StagingEnv");
+		expect(toEnvInterfaceName("prod-env")).toBe("ProdEnv");
+		expect(toEnvInterfaceName("my_env")).toBe("MyEnv");
+	});
+
+	it("should handle kebab-case environment names", () => {
+		expect(toEnvInterfaceName("my-prod")).toBe("MyProdEnv");
+		expect(toEnvInterfaceName("test-staging")).toBe("TestStagingEnv");
+	});
+});
+
+describe("validateEnvInterfaceNames", () => {
+	it("should not throw for valid, unique environment names", () => {
+		expect(() =>
+			validateEnvInterfaceNames(["staging", "production", "dev"])
+		).not.toThrow();
+	});
+
+	it("should throw for reserved name Env", () => {
+		expect(() => validateEnvInterfaceNames(["env"])).toThrowError(
+			/Environment name "env" converts to reserved interface name "Env"/
+		);
+	});
+
+	it("should throw when two environment names convert to the same interface name", () => {
+		// Both staging-env and staging_env convert to StagingEnv
+		expect(() =>
+			validateEnvInterfaceNames(["staging-env", "staging_env"])
+		).toThrowError(
+			/Environment names "staging-env" and "staging_env" both convert to interface name "StagingEnv"/
+		);
+	});
+
+	it("should throw when names with different separators collide", () => {
+		expect(() =>
+			validateEnvInterfaceNames(["my-prod", "my_prod"])
+		).toThrowError(
+			/Environment names "my-prod" and "my_prod" both convert to interface name "MyProdEnv"/
 		);
 	});
 });
@@ -1579,11 +1654,20 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface Env {
+					interface ProductionEnv {
 						MY_VAR: \\"a var\\";
-						MY_VAR_A: \\"A (dev)\\" | \\"A (prod)\\" | \\"A (stag)\\";
-						MY_VAR_B: {\\"value\\":\\"B (dev)\\"} | {\\"value\\":\\"B (prod)\\"};
-						MY_VAR_C: [\\"a\\",\\"b\\",\\"c\\"] | [1,2,3];
+						MY_VAR_A: \\"A (prod)\\";
+						MY_VAR_B: {\\"value\\":\\"B (prod)\\"};
+						MY_VAR_C: [1,2,3];
+					}
+					interface StagingEnv {
+						MY_VAR_A: \\"A (stag)\\";
+					}
+					interface Env {
+						MY_VAR?: \\"a var\\";
+						MY_VAR_A: \\"A (prod)\\" | \\"A (stag)\\" | \\"A (dev)\\";
+						MY_VAR_B?: {\\"value\\":\\"B (prod)\\"} | {\\"value\\":\\"B (dev)\\"};
+						MY_VAR_C?: [1,2,3] | [\\"a\\",\\"b\\",\\"c\\"];
 					}
 				}
 				interface Env extends Cloudflare.Env {}
@@ -1606,11 +1690,20 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface Env {
+					interface ProductionEnv {
 						MY_VAR: string;
 						MY_VAR_A: string;
 						MY_VAR_B: object;
-						MY_VAR_C: string[] | number[];
+						MY_VAR_C: number[];
+					}
+					interface StagingEnv {
+						MY_VAR_A: string;
+					}
+					interface Env {
+						MY_VAR?: string;
+						MY_VAR_A: string;
+						MY_VAR_B?: object;
+						MY_VAR_C?: number[] | string[];
 					}
 				}
 				interface Env extends Cloudflare.Env {}
@@ -1686,13 +1779,21 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface Env {
-						KV_TOP: KVNamespace;
-						D1_TOP: D1Database;
+					interface StagingEnv {
 						KV_STAGING: KVNamespace;
 						D1_STAGING: D1Database;
+					}
+					interface ProductionEnv {
 						KV_PROD: KVNamespace;
 						R2_PROD: R2Bucket;
+					}
+					interface Env {
+						KV_STAGING?: KVNamespace;
+						D1_STAGING?: D1Database;
+						KV_PROD?: KVNamespace;
+						R2_PROD?: R2Bucket;
+						KV_TOP?: KVNamespace;
+						D1_TOP?: D1Database;
 					}
 				}
 				interface Env extends Cloudflare.Env {}
@@ -1809,6 +1910,12 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
+					interface StagingEnv {
+						MY_KV: KVNamespace;
+					}
+					interface ProductionEnv {
+						MY_KV: KVNamespace;
+					}
 					interface Env {
 						MY_KV: KVNamespace;
 					}
@@ -1823,7 +1930,7 @@ describe("generate types", () => {
 			`);
 		});
 
-		it("should error when binding name has conflicting types across environments", async () => {
+		it("should produce union types when binding name has different types across environments", async () => {
 			fs.writeFileSync(
 				"./wrangler.jsonc",
 				JSON.stringify({
@@ -1847,11 +1954,30 @@ describe("generate types", () => {
 				"utf-8"
 			);
 
-			await expect(
-				runWrangler("types --include-runtime=false")
-			).rejects.toThrowError(
-				/Binding "CACHE" has conflicting types across environments/
-			);
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						CACHE: R2Bucket;
+					}
+					interface Env {
+						CACHE: R2Bucket | KVNamespace;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
 		});
 
 		it("should error when a binding is missing its binding name in an environment", async () => {
@@ -1948,6 +2074,256 @@ describe("generate types", () => {
 				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
+		});
+
+		it("should mark bindings as optional if not present in all environments", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [{ binding: "KV_SHARED", id: "top-kv" }],
+					env: {
+						staging: {
+							kv_namespaces: [
+								{ binding: "KV_SHARED", id: "staging-kv" },
+								{ binding: "KV_STAGING_ONLY", id: "staging-only" },
+							],
+						},
+						production: {
+							kv_namespaces: [
+								{ binding: "KV_SHARED", id: "prod-kv" },
+								{ binding: "KV_PROD_ONLY", id: "prod-only" },
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						KV_SHARED: KVNamespace;
+						KV_STAGING_ONLY: KVNamespace;
+					}
+					interface ProductionEnv {
+						KV_SHARED: KVNamespace;
+						KV_PROD_ONLY: KVNamespace;
+					}
+					interface Env {
+						KV_SHARED: KVNamespace;
+						KV_STAGING_ONLY?: KVNamespace;
+						KV_PROD_ONLY?: KVNamespace;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should not include top-level bindings in per-environment interfaces", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [{ binding: "KV_TOP_ONLY", id: "top-kv" }],
+					env: {
+						staging: {
+							d1_databases: [
+								{
+									binding: "D1_STAGING",
+									database_id: "staging-d1",
+									database_name: "staging",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						D1_STAGING: D1Database;
+					}
+					interface Env {
+						D1_STAGING?: D1Database;
+						KV_TOP_ONLY?: KVNamespace;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should include secrets in per-environment interfaces since they are inherited", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					env: {
+						staging: {
+							kv_namespaces: [{ binding: "KV_STAGING", id: "staging-kv" }],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			// Create a .dev.vars file with secrets
+			fs.writeFileSync("./.dev.vars", "MY_SECRET=secret-value\n", "utf-8");
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						KV_STAGING: KVNamespace;
+						MY_SECRET: string;
+					}
+					interface Env {
+						MY_SECRET: string;
+						KV_STAGING?: KVNamespace;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should produce union types for vars with different values across environments", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					vars: { DEBUG: "false" },
+					env: {
+						staging: {
+							vars: { DEBUG: "true" },
+						},
+						production: {
+							vars: { DEBUG: "false" },
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						DEBUG: \\"true\\";
+					}
+					interface ProductionEnv {
+						DEBUG: \\"false\\";
+					}
+					interface Env {
+						DEBUG: \\"true\\" | \\"false\\";
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should generate simple Env when no environments are defined", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [{ binding: "MY_KV", id: "kv-id" }],
+					vars: { MY_VAR: "value" },
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface Env {
+						MY_KV: KVNamespace;
+						MY_VAR: \\"value\\";
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should error when environment names would collide after conversion", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					env: {
+						"my-env": {
+							vars: { A: "a" },
+						},
+						my_env: {
+							vars: { B: "b" },
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await expect(
+				runWrangler("types --include-runtime=false")
+			).rejects.toThrowError(
+				/Environment names "my-env" and "my_env" both convert to interface name "MyEnv"/
+			);
 		});
 	});
 
@@ -2283,7 +2659,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
 			"
 		`);
 	});

@@ -23,6 +23,8 @@ import {
 	checkTypesUpToDate,
 	DEFAULT_WORKERS_TYPES_FILE_NAME,
 	throwMissingBindingError,
+	toEnvInterfaceName,
+	validateEnvInterfaceNames,
 } from "./helpers";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
@@ -342,7 +344,6 @@ export async function generateEnvTypes(
 	serviceEntries?: Map<string, Entry>,
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
-	const stringKeys: string[] = [];
 	const secrets = getVarsForDev(
 		config.userConfigPath,
 		args.envFile,
@@ -358,15 +359,8 @@ export async function generateEnvTypes(
 		...args,
 		config: config.configPath,
 	} satisfies Partial<(typeof typesCommand)["args"]>;
-	const collectedBindings = collectCoreBindings(collectionArgs);
-	const collectedDurableObjects = collectAllDurableObjects(collectionArgs);
-	const collectedServices = collectAllServices(collectionArgs);
-	const collectedUnsafeBindings = collectAllUnsafeBindings(collectionArgs);
-	const collectedVars = collectAllVars(collectionArgs);
-	const collectedWorkflows = collectAllWorkflows(collectionArgs);
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
-	const fullOutputPath = resolve(outputPath);
 
 	// Note: we infer whether the user has provided an envInterface by checking
 	//       if it is different from the default `Env` value, this works well
@@ -382,7 +376,81 @@ export async function generateEnvTypes(
 		);
 	}
 
-	const envTypeStructure: [string, string][] = [];
+	// Check if config has named environments and no --env flag was specified
+	const { rawConfig } = experimental_readRawConfig(collectionArgs);
+	const hasEnvironments =
+		!!rawConfig.env && Object.keys(rawConfig.env).length > 0;
+
+	const shouldGeneratePerEnvTypes = hasEnvironments && !args.env;
+	if (shouldGeneratePerEnvTypes) {
+		return generatePerEnvironmentTypes(
+			config,
+			collectionArgs,
+			envInterface,
+			outputPath,
+			entrypoint,
+			serviceEntries,
+			secrets,
+			log
+		);
+	}
+
+	return generateSimpleEnvTypes(
+		config,
+		collectionArgs,
+		envInterface,
+		outputPath,
+		entrypoint,
+		serviceEntries,
+		secrets,
+		log
+	);
+}
+
+/**
+ * Generates simple `Env` types (original behavior).
+ *
+ * Used when no named environments exist or when `--env` is specified.
+ *
+ * @param config - The parsed Wrangler configuration object
+ * @param collectionArgs - CLI arguments for collecting bindings
+ * @param envInterface - The name of the generated environment interface
+ * @param outputPath - The file path where the generated types will be written
+ * @param entrypoint - Optional entry point information for the Worker
+ * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
+ * @param secrets - Record of secret variable names to their values
+ * @param log - Whether to log output to the console (default: true)
+ *
+ * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
+ */
+async function generateSimpleEnvTypes(
+	config: Config,
+	collectionArgs: Partial<(typeof typesCommand)["args"]>,
+	envInterface: string,
+	outputPath: string,
+	entrypoint?: Entry,
+	serviceEntries?: Map<string, Entry>,
+	secrets: Record<string, string> = {},
+	log = true
+): Promise<{ envHeader?: string; envTypes?: string }> {
+	const stringKeys = new Array<string>();
+
+	const collectedBindings = collectCoreBindings(collectionArgs);
+	const collectedDurableObjects = collectAllDurableObjects(collectionArgs);
+	const collectedServices = collectAllServices(collectionArgs);
+	const collectedUnsafeBindings = collectAllUnsafeBindings(collectionArgs);
+	const collectedVars = collectAllVars(collectionArgs);
+	const collectedWorkflows = collectAllWorkflows(collectionArgs);
+
+	const entrypointFormat = entrypoint?.format ?? "modules";
+	const fullOutputPath = resolve(outputPath);
+
+	const envTypeStructure = new Array<
+		[
+			string, // Key
+			string, // Type
+		]
+	>();
 
 	for (const binding of collectedBindings) {
 		envTypeStructure.push([constructTypeKey(binding.name), binding.type]);
@@ -536,33 +604,35 @@ export async function generateEnvTypes(
 		}
 	}
 
-	const modulesTypeStructure: string[] = [];
+	const modulesTypeStructure = new Array<string>();
 	if (config.rules) {
 		const moduleTypeMap = {
-			Text: "string",
-			Data: "ArrayBuffer",
 			CompiledWasm: "WebAssembly.Module",
+			Data: "ArrayBuffer",
+			Text: "string",
 		};
 		for (const ruleObject of config.rules) {
 			const typeScriptType =
 				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
-			if (typeScriptType !== undefined) {
-				ruleObject.globs.forEach((glob) => {
-					modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
-	const value: ${typeScriptType};
-	export default value;
-}`);
-				});
+			if (typeScriptType === undefined) {
+				continue;
 			}
+
+			ruleObject.globs.forEach((glob) => {
+				modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
+\tconst value: ${typeScriptType};
+\texport default value;
+}`);
+			});
 		}
 	}
 
 	const wranglerCommandUsed = ["wrangler", ...process.argv.slice(2)].join(" ");
 
 	const typesHaveBeenFound =
-		envTypeStructure.length || modulesTypeStructure.length;
+		envTypeStructure.length > 0 || modulesTypeStructure.length > 0;
 	if (entrypointFormat === "modules" || typesHaveBeenFound) {
-		const { fileContent, consoleOutput } = generateTypeStrings(
+		const { consoleOutput, fileContent } = generateTypeStrings(
 			entrypointFormat,
 			envInterface,
 			envTypeStructure.map(([key, value]) => `${key}: ${value};`),
@@ -586,16 +656,476 @@ export async function generateEnvTypes(
 			logger.log(chalk.dim(consoleOutput));
 		}
 
-		return { envHeader, envTypes: fileContent };
+		return {
+			envHeader,
+			envTypes: fileContent,
+		};
 	} else {
 		if (log) {
 			logger.log(chalk.dim("No project types to add.\n"));
 		}
+
 		return {
 			envHeader: undefined,
 			envTypes: undefined,
 		};
 	}
+}
+
+/**
+ * Generates per-environment interface types plus an aggregated `Env` interface.
+ *
+ * Used when named environments exist and no `--env` flag is specified.
+ *
+ * @param config - The parsed Wrangler configuration object
+ * @param collectionArgs - CLI arguments for collecting bindings
+ * @param envInterface - The name of the generated environment interface
+ * @param outputPath - The file path where the generated types will be written
+ * @param entrypoint - Optional entry point information for the Worker
+ * @param serviceEntries - Optional map of service names to their entry points for cross-worker type generation
+ * @param secrets - Record of secret variable names to their values
+ * @param log - Whether to log output to the console (default: true)
+ *
+ * @returns An object containing the generated header comment and type definitions, or undefined values if no types were generated
+ */
+async function generatePerEnvironmentTypes(
+	config: Config,
+	collectionArgs: Partial<(typeof typesCommand)["args"]>,
+	envInterface: string,
+	outputPath: string,
+	entrypoint?: Entry,
+	serviceEntries?: Map<string, Entry>,
+	secrets: Record<string, string> = {},
+	log = true
+): Promise<{ envHeader?: string; envTypes?: string }> {
+	const { rawConfig } = experimental_readRawConfig(collectionArgs);
+	const envNames = Object.keys(rawConfig.env ?? {});
+
+	validateEnvInterfaceNames(envNames);
+
+	const entrypointFormat = entrypoint?.format ?? "modules";
+	const fullOutputPath = resolve(outputPath);
+
+	const bindingsPerEnv = collectCoreBindingsPerEnvironment(collectionArgs);
+	const varsPerEnv = collectVarsPerEnvironment(collectionArgs);
+	const durableObjectsPerEnv =
+		collectDurableObjectsPerEnvironment(collectionArgs);
+	const servicesPerEnv = collectServicesPerEnvironment(collectionArgs);
+	const workflowsPerEnv = collectWorkflowsPerEnvironment(collectionArgs);
+	const unsafePerEnv = collectUnsafeBindingsPerEnvironment(collectionArgs);
+
+	// Track all binding names and their types across all environments for aggregation
+	// Key: binding name, Value: Set of types
+	const aggregatedBindings = new Map<string, Set<string>>();
+
+	// Track which environments each binding appears in
+	const bindingPresence = new Map<string, Set<string>>();
+
+	const allEnvNames = [TOP_LEVEL_ENV_NAME, ...envNames];
+
+	function trackBinding(name: string, type: string, envName: string): void {
+		let types = aggregatedBindings.get(name);
+		let presence = bindingPresence.get(name);
+
+		if (!types) {
+			types = new Set();
+			aggregatedBindings.set(name, types);
+		}
+
+		if (!presence) {
+			presence = new Set();
+			bindingPresence.set(name, presence);
+		}
+
+		types.add(type);
+		presence.add(envName);
+	}
+
+	function getDurableObjectType(durableObject: {
+		name: string;
+		class_name: string;
+		script_name?: string;
+	}): string {
+		const doEntrypoint = durableObject.script_name
+			? serviceEntries?.get(durableObject.script_name)
+			: entrypoint;
+
+		const importPath = doEntrypoint
+			? generateImportSpecifier(fullOutputPath, doEntrypoint.file)
+			: undefined;
+
+		const exportExists = doEntrypoint?.exports?.some(
+			(e) => e === durableObject.class_name
+		);
+
+		if (importPath && exportExists) {
+			return `DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`;
+		}
+
+		if (durableObject.script_name) {
+			return `DurableObjectNamespace /* ${durableObject.class_name} from ${durableObject.script_name} */`;
+		}
+
+		return `DurableObjectNamespace /* ${durableObject.class_name} */`;
+	}
+
+	function getServiceType(service: {
+		binding: string;
+		service: string;
+		entrypoint?: string;
+	}): string {
+		const serviceEntry =
+			service.service !== entrypoint?.name
+				? serviceEntries?.get(service.service)
+				: entrypoint;
+
+		const importPath = serviceEntry
+			? generateImportSpecifier(fullOutputPath, serviceEntry.file)
+			: undefined;
+
+		const exportExists = serviceEntry?.exports?.some(
+			(e) => e === (service.entrypoint ?? "default")
+		);
+
+		if (importPath && exportExists) {
+			return `Service<typeof import("${importPath}").${service.entrypoint ?? "default"}>`;
+		}
+
+		if (service.entrypoint) {
+			return `Service /* entrypoint ${service.entrypoint} from ${service.service} */`;
+		}
+
+		return `Fetcher /* ${service.service} */`;
+	}
+
+	function getWorkflowType(workflow: {
+		binding: string;
+		name: string;
+		class_name: string;
+		script_name?: string;
+	}): string {
+		const workflowEntrypoint = workflow.script_name
+			? serviceEntries?.get(workflow.script_name)
+			: entrypoint;
+
+		const importPath = workflowEntrypoint
+			? generateImportSpecifier(fullOutputPath, workflowEntrypoint.file)
+			: undefined;
+
+		const exportExists = workflowEntrypoint?.exports?.some(
+			(e) => e === workflow.class_name
+		);
+
+		if (importPath && exportExists) {
+			return `Workflow<Parameters<import("${importPath}").${workflow.class_name}['run']>[0]['payload']>`;
+		}
+
+		if (workflow.script_name) {
+			return `Workflow /* ${workflow.class_name} from ${workflow.script_name} */`;
+		}
+
+		return `Workflow /* ${workflow.class_name} */`;
+	}
+
+	const perEnvInterfaces = new Array<string>();
+	const stringKeys = new Array<string>();
+
+	for (const envName of envNames) {
+		const interfaceName = toEnvInterfaceName(envName);
+		const envBindings: [string, string][] = [];
+
+		const bindings = bindingsPerEnv.get(envName) ?? [];
+		for (const binding of bindings) {
+			envBindings.push([constructTypeKey(binding.name), binding.type]);
+			trackBinding(binding.name, binding.type, envName);
+		}
+
+		const vars = varsPerEnv.get(envName) ?? {};
+		for (const [varName, varValues] of Object.entries(vars)) {
+			if (varName in secrets) {
+				continue;
+			}
+
+			const varType =
+				varValues.length === 1 ? varValues[0] : varValues.join(" | ");
+			envBindings.push([constructTypeKey(varName), varType]);
+			trackBinding(varName, varType, envName);
+			if (!stringKeys.includes(varName)) {
+				stringKeys.push(varName);
+			}
+		}
+
+		for (const secretName in secrets) {
+			envBindings.push([constructTypeKey(secretName), "string"]);
+			if (!stringKeys.includes(secretName)) {
+				stringKeys.push(secretName);
+			}
+		}
+
+		const durableObjects = durableObjectsPerEnv.get(envName) ?? [];
+		for (const durableObject of durableObjects) {
+			const type = getDurableObjectType(durableObject);
+			envBindings.push([constructTypeKey(durableObject.name), type]);
+			trackBinding(durableObject.name, type, envName);
+		}
+
+		const services = servicesPerEnv.get(envName) ?? [];
+		for (const service of services) {
+			const type = getServiceType(service);
+			envBindings.push([constructTypeKey(service.binding), type]);
+			trackBinding(service.binding, type, envName);
+		}
+
+		const workflows = workflowsPerEnv.get(envName) ?? [];
+		for (const workflow of workflows) {
+			const type = getWorkflowType(workflow);
+			envBindings.push([constructTypeKey(workflow.binding), type]);
+			trackBinding(workflow.binding, type, envName);
+		}
+
+		const unsafeBindings = unsafePerEnv.get(envName) ?? [];
+		for (const unsafe of unsafeBindings) {
+			const type = unsafe.type === "ratelimit" ? "RateLimit" : "any";
+			envBindings.push([constructTypeKey(unsafe.name), type]);
+			trackBinding(unsafe.name, type, envName);
+		}
+
+		if (envBindings.length > 0) {
+			const bindingLines = envBindings
+				.map(([key, value]) => `\t\t${key}: ${value};`)
+				.join("\n");
+			perEnvInterfaces.push(
+				`\tinterface ${interfaceName} {\n${bindingLines}\n\t}`
+			);
+		} else {
+			perEnvInterfaces.push(`\tinterface ${interfaceName} {}`);
+		}
+	}
+
+	const topLevelBindings = bindingsPerEnv.get(TOP_LEVEL_ENV_NAME) ?? [];
+	for (const binding of topLevelBindings) {
+		trackBinding(binding.name, binding.type, TOP_LEVEL_ENV_NAME);
+	}
+
+	const topLevelVars = varsPerEnv.get(TOP_LEVEL_ENV_NAME) ?? {};
+	for (const [varName, varValues] of Object.entries(topLevelVars)) {
+		if (varName in secrets) {
+			continue;
+		}
+
+		const varType =
+			varValues.length === 1 ? varValues[0] : varValues.join(" | ");
+		trackBinding(varName, varType, TOP_LEVEL_ENV_NAME);
+		if (!stringKeys.includes(varName)) {
+			stringKeys.push(varName);
+		}
+	}
+
+	const topLevelDOs = durableObjectsPerEnv.get(TOP_LEVEL_ENV_NAME) ?? [];
+	for (const durableObject of topLevelDOs) {
+		const type = getDurableObjectType(durableObject);
+		trackBinding(durableObject.name, type, TOP_LEVEL_ENV_NAME);
+	}
+
+	const topLevelServices = servicesPerEnv.get(TOP_LEVEL_ENV_NAME) ?? [];
+	for (const service of topLevelServices) {
+		const type = getServiceType(service);
+		trackBinding(service.binding, type, TOP_LEVEL_ENV_NAME);
+	}
+
+	const topLevelWorkflows = workflowsPerEnv.get(TOP_LEVEL_ENV_NAME) ?? [];
+	for (const workflow of topLevelWorkflows) {
+		const type = getWorkflowType(workflow);
+		trackBinding(workflow.binding, type, TOP_LEVEL_ENV_NAME);
+	}
+
+	const topLevelUnsafe = unsafePerEnv.get(TOP_LEVEL_ENV_NAME) ?? [];
+	for (const unsafe of topLevelUnsafe) {
+		const type = unsafe.type === "ratelimit" ? "RateLimit" : "any";
+		trackBinding(unsafe.name, type, TOP_LEVEL_ENV_NAME);
+	}
+
+	const aggregatedEnvBindings = new Array<{
+		key: string;
+		required: boolean;
+		type: string;
+	}>();
+
+	for (const secretName in secrets) {
+		aggregatedEnvBindings.push({
+			key: constructTypeKey(secretName),
+			required: true,
+			type: "string",
+		});
+	}
+
+	for (const [name, types] of aggregatedBindings.entries()) {
+		if (name in secrets) {
+			continue;
+		}
+
+		const typeArray = Array.from(types);
+		const unionType =
+			typeArray.length === 1 ? typeArray[0] : typeArray.join(" | ");
+		const presence = bindingPresence.get(name);
+
+		// Required if present in all environments (top-level + all named envs)
+		const isRequired = presence
+			? allEnvNames.every((env) => presence.has(env))
+			: false;
+
+		aggregatedEnvBindings.push({
+			key: constructTypeKey(name),
+			required: isRequired,
+			type: unionType,
+		});
+	}
+
+	// Data blobs are not environment-specific, add to aggregated `Env`
+	if (config.data_blobs) {
+		for (const dataBlobs in config.data_blobs) {
+			aggregatedEnvBindings.push({
+				key: constructTypeKey(dataBlobs),
+				required: true,
+				type: "ArrayBuffer",
+			});
+		}
+	}
+
+	// Text blobs are not environment-specific, add to aggregated `Env`
+	if (config.text_blobs) {
+		for (const textBlobs in config.text_blobs) {
+			aggregatedEnvBindings.push({
+				key: constructTypeKey(textBlobs),
+				required: true,
+				type: "string",
+			});
+		}
+	}
+
+	const modulesTypeStructure = new Array<string>();
+	if (config.rules) {
+		const moduleTypeMap = {
+			CompiledWasm: "WebAssembly.Module",
+			Data: "ArrayBuffer",
+			Text: "string",
+		};
+		for (const ruleObject of config.rules) {
+			const typeScriptType =
+				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
+			if (typeScriptType !== undefined) {
+				ruleObject.globs.forEach((glob) => {
+					modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
+	const value: ${typeScriptType};
+	export default value;
+}`);
+				});
+			}
+		}
+	}
+
+	const wranglerCommandUsed = ["wrangler", ...process.argv.slice(2)].join(" ");
+
+	const { consoleOutput, fileContent } = generatePerEnvTypeStrings(
+		entrypointFormat,
+		envInterface,
+		perEnvInterfaces,
+		aggregatedEnvBindings,
+		modulesTypeStructure,
+		stringKeys,
+		config.compatibility_date,
+		config.compatibility_flags,
+		entrypoint
+			? generateImportSpecifier(fullOutputPath, entrypoint.file)
+			: undefined,
+		[...getDurableObjectClassNameToUseSQLiteMap(config.migrations).keys()]
+	);
+
+	const hash = createHash("sha256")
+		.update(consoleOutput)
+		.digest("hex")
+		.slice(0, 32);
+
+	const envHeader = `// Generated by Wrangler by running \`${wranglerCommandUsed}\` (hash: ${hash})`;
+
+	if (log) {
+		logger.log(chalk.dim(consoleOutput));
+	}
+
+	return {
+		envHeader,
+		envTypes: fileContent,
+	};
+}
+
+/**
+ * Generates type strings for per-environment interfaces plus aggregated Env.
+ *
+ * @param formatType - The worker format type ("modules" or "service-worker")
+ * @param envInterface - The name of the generated environment interface
+ * @param perEnvInterfaces - Array of per-environment interface strings
+ * @param aggregatedEnvBindings - Array of aggregated environment bindings as [key, type, required]
+ * @param modulesTypeStructure - Array of module type declaration strings
+ * @param stringKeys - Array of variable names that should be typed as strings in process.env
+ * @param compatibilityDate - Compatibility date for the worker
+ * @param compatibilityFlags - Compatibility flags for the worker
+ * @param entrypointModule - The import specifier for the main entrypoint module
+ * @param configuredDurableObjects - Array of configured Durable Object class names
+ *
+ * @returns An object containing the complete file content and console output strings
+ */
+function generatePerEnvTypeStrings(
+	formatType: string,
+	envInterface: string,
+	perEnvInterfaces: Array<string>,
+	aggregatedEnvBindings: Array<{
+		key: string;
+		required: boolean;
+		type: string;
+	}>,
+	modulesTypeStructure: Array<string>,
+	stringKeys: Array<string>,
+	compatibilityDate: string | undefined,
+	compatibilityFlags: Array<string> | undefined,
+	entrypointModule: string | undefined,
+	configuredDurableObjects: Array<string>
+): { fileContent: string; consoleOutput: string } {
+	let baseContent = "";
+	let processEnv = "";
+
+	if (formatType === "modules") {
+		if (
+			isProcessEnvPopulated(compatibilityDate, compatibilityFlags) &&
+			stringKeys.length > 0
+		) {
+			processEnv = `\ntype StringifyValues<EnvType extends Record<string, unknown>> = {\n\t[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;\n};\ndeclare namespace NodeJS {\n\tinterface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, ${stringKeys.map((k) => `"${k}"`).join(" | ")}>> {}\n}`;
+		}
+
+		const perEnvContent = perEnvInterfaces.join("\n");
+
+		const envBindingLines = aggregatedEnvBindings
+			.map((b) => `\t\t${b.key}${b.required ? "" : "?"}: ${b.type};`)
+			.join("\n");
+
+		const globalPropsContent = entrypointModule
+			? `\n\tinterface GlobalProps {\n\t\tmainModule: typeof import("${entrypointModule}");${configuredDurableObjects.length > 0 ? `\n\t\tdurableNamespaces: ${configuredDurableObjects.map((d) => `"${d}"`).join(" | ")};` : ""}\n\t}`
+			: "";
+
+		baseContent = `declare namespace Cloudflare {${globalPropsContent}\n${perEnvContent}\n\tinterface Env {\n${envBindingLines}\n\t}\n}\ninterface ${envInterface} extends Cloudflare.Env {}${processEnv}`;
+	} else {
+		// Service worker syntax - just output aggregated bindings as globals
+		const envBindingLines = aggregatedEnvBindings
+			.map(({ key, type }) => `\tconst ${key}: ${type};`)
+			.join("\n");
+		baseContent = `export {};\ndeclare global {\n${envBindingLines}\n}`;
+	}
+
+	const modulesContent = modulesTypeStructure.join("\n");
+
+	return {
+		consoleOutput: `${baseContent}\n${modulesContent}`,
+		fileContent: `${baseContent}\n${modulesContent}`,
+	};
 }
 
 const checkPath = (path: string) => {
@@ -1529,3 +2059,884 @@ const logHorizontalRule = () => {
 	const screenWidth = process.stdout.columns;
 	logger.log(chalk.dim("─".repeat(Math.min(screenWidth, 60))));
 };
+
+/**
+ * Sentinel value used to identify top-level (non-environment) bindings when collecting bindings per environment.
+ */
+const TOP_LEVEL_ENV_NAME = "$top-level";
+
+interface PerEnvBinding {
+	bindingCategory: string;
+	name: string;
+	type: string;
+}
+
+/**
+ * Collects vars per environment, returning a map from environment name to vars.
+ *
+ * Top-level vars use the sentinel `TOP_LEVEL_ENV_NAME`.
+ *
+ * @param args - CLI arguments passed to the `types` command
+ *
+ * @returns A map of environment name to an object of var names to their type values
+ */
+function collectVarsPerEnvironment(
+	args: Partial<(typeof typesCommand)["args"]>
+): Map<string, Record<string, Array<string>>> {
+	const result = new Map<string, Record<string, Array<string>>>();
+
+	function collectVars(
+		vars: RawEnvironment["vars"]
+	): Record<string, Array<string>> {
+		const varsInfo: Record<string, Set<string>> = {};
+
+		Object.entries(vars ?? {}).forEach(([key, value]) => {
+			varsInfo[key] ??= new Set();
+
+			if (!args.strictVars) {
+				varsInfo[key].add(
+					Array.isArray(value) ? typeofArray(value) : typeof value
+				);
+				return;
+			}
+
+			if (
+				typeof value === "string" ||
+				typeof value === "number" ||
+				typeof value === "boolean" ||
+				typeof value === "object"
+			) {
+				varsInfo[key].add(JSON.stringify(value));
+				return;
+			}
+
+			varsInfo[key].add("unknown");
+		});
+
+		return Object.fromEntries(
+			Object.entries(varsInfo).map(([key, value]) => [key, [...value]])
+		);
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	// Collect top-level vars
+	const topLevelVars = collectVars(rawConfig.vars);
+	if (Object.keys(topLevelVars).length > 0) {
+		result.set(TOP_LEVEL_ENV_NAME, topLevelVars);
+	}
+
+	// Collect per-environment vars
+	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+		const envVars = collectVars(env.vars);
+		if (Object.keys(envVars).length > 0) {
+			result.set(envName, envVars);
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Collects core bindings per environment, returning a map from environment name to bindings.
+ *
+ * Top-level bindings use the sentinel `TOP_LEVEL_ENV_NAME`.
+ *
+ * Unlike collectCoreBindings which aggregates all bindings, this function keeps them separate
+ * per environment for per-environment interface generation.
+ *
+ * @param args - CLI arguments passed to the `types` command
+ *
+ * @returns A map of environment name to array of bindings
+ */
+function collectCoreBindingsPerEnvironment(
+	args: Partial<(typeof typesCommand)["args"]>
+): Map<string, Array<PerEnvBinding>> {
+	const result = new Map<string, Array<PerEnvBinding>>();
+
+	function collectEnvironmentBindings(
+		env: RawEnvironment | undefined,
+		envName: string
+	): Array<PerEnvBinding> {
+		if (!env) {
+			return [];
+		}
+
+		const bindings = new Array<PerEnvBinding>();
+
+		for (const [index, kv] of (env.kv_namespaces ?? []).entries()) {
+			if (!kv.binding) {
+				throwMissingBindingError(
+					args.config,
+					"kv_namespaces",
+					envName,
+					index,
+					"binding",
+					kv
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "kv_namespaces",
+				name: kv.binding,
+				type: "KVNamespace",
+			});
+		}
+
+		for (const [index, r2] of (env.r2_buckets ?? []).entries()) {
+			if (!r2.binding) {
+				throwMissingBindingError(
+					args.config,
+					"r2_buckets",
+					envName,
+					index,
+					"binding",
+					r2
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "r2_buckets",
+				name: r2.binding,
+				type: "R2Bucket",
+			});
+		}
+
+		for (const [index, d1] of (env.d1_databases ?? []).entries()) {
+			if (!d1.binding) {
+				throwMissingBindingError(
+					args.config,
+					"d1_databases",
+					envName,
+					index,
+					"binding",
+					d1
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "d1_databases",
+				name: d1.binding,
+				type: "D1Database",
+			});
+		}
+
+		for (const [index, vectorize] of (env.vectorize ?? []).entries()) {
+			if (!vectorize.binding) {
+				throwMissingBindingError(
+					args.config,
+					"vectorize",
+					envName,
+					index,
+					"binding",
+					vectorize
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "vectorize",
+				name: vectorize.binding,
+				type: "VectorizeIndex",
+			});
+		}
+
+		for (const [index, hyperdrive] of (env.hyperdrive ?? []).entries()) {
+			if (!hyperdrive.binding) {
+				throwMissingBindingError(
+					args.config,
+					"hyperdrive",
+					envName,
+					index,
+					"binding",
+					hyperdrive
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "hyperdrive",
+				name: hyperdrive.binding,
+				type: "Hyperdrive",
+			});
+		}
+
+		for (const [index, sendEmail] of (env.send_email ?? []).entries()) {
+			if (!sendEmail.name) {
+				throwMissingBindingError(
+					args.config,
+					"send_email",
+					envName,
+					index,
+					"name",
+					sendEmail
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "send_email",
+				name: sendEmail.name,
+				type: "SendEmail",
+			});
+		}
+
+		for (const [index, ae] of (env.analytics_engine_datasets ?? []).entries()) {
+			if (!ae.binding) {
+				throwMissingBindingError(
+					args.config,
+					"analytics_engine_datasets",
+					envName,
+					index,
+					"binding",
+					ae
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "analytics_engine_datasets",
+				name: ae.binding,
+				type: "AnalyticsEngineDataset",
+			});
+		}
+
+		for (const [index, dispatch] of (env.dispatch_namespaces ?? []).entries()) {
+			if (!dispatch.binding) {
+				throwMissingBindingError(
+					args.config,
+					"dispatch_namespaces",
+					envName,
+					index,
+					"binding",
+					dispatch
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "dispatch_namespaces",
+				name: dispatch.binding,
+				type: "DispatchNamespace",
+			});
+		}
+
+		for (const [index, mtls] of (env.mtls_certificates ?? []).entries()) {
+			if (!mtls.binding) {
+				throwMissingBindingError(
+					args.config,
+					"mtls_certificates",
+					envName,
+					index,
+					"binding",
+					mtls
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "mtls_certificates",
+				name: mtls.binding,
+				type: "Fetcher",
+			});
+		}
+
+		for (const [index, queue] of (env.queues?.producers ?? []).entries()) {
+			if (!queue.binding) {
+				throwMissingBindingError(
+					args.config,
+					"queues.producers",
+					envName,
+					index,
+					"binding",
+					queue
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "queues_producers",
+				name: queue.binding,
+				type: "Queue",
+			});
+		}
+
+		for (const [index, secret] of (env.secrets_store_secrets ?? []).entries()) {
+			if (!secret.binding) {
+				throwMissingBindingError(
+					args.config,
+					"secrets_store_secrets",
+					envName,
+					index,
+					"binding",
+					secret
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "secrets_store_secrets",
+				name: secret.binding,
+				type: "SecretsStoreSecret",
+			});
+		}
+
+		for (const [index, helloWorld] of (
+			env.unsafe_hello_world ?? []
+		).entries()) {
+			if (!helloWorld.binding) {
+				throwMissingBindingError(
+					args.config,
+					"unsafe_hello_world",
+					envName,
+					index,
+					"binding",
+					helloWorld
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "unsafe_hello_world",
+				name: helloWorld.binding,
+				type: "HelloWorldBinding",
+			});
+		}
+
+		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
+			if (!ratelimit.name) {
+				throwMissingBindingError(
+					args.config,
+					"ratelimits",
+					envName,
+					index,
+					"name",
+					ratelimit
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "ratelimits",
+				name: ratelimit.name,
+				type: "RateLimit",
+			});
+		}
+
+		for (const [index, workerLoader] of (env.worker_loaders ?? []).entries()) {
+			if (!workerLoader.binding) {
+				throwMissingBindingError(
+					args.config,
+					"worker_loaders",
+					envName,
+					index,
+					"binding",
+					workerLoader
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "worker_loaders",
+				name: workerLoader.binding,
+				type: "WorkerLoader",
+			});
+		}
+
+		for (const [index, vpcService] of (env.vpc_services ?? []).entries()) {
+			if (!vpcService.binding) {
+				throwMissingBindingError(
+					args.config,
+					"vpc_services",
+					envName,
+					index,
+					"binding",
+					vpcService
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "vpc_services",
+				name: vpcService.binding,
+				type: "Fetcher",
+			});
+		}
+
+		for (const [index, pipeline] of (env.pipelines ?? []).entries()) {
+			if (!pipeline.binding) {
+				throwMissingBindingError(
+					args.config,
+					"pipelines",
+					envName,
+					index,
+					"binding",
+					pipeline
+				);
+			}
+
+			bindings.push({
+				bindingCategory: "pipelines",
+				name: pipeline.binding,
+				type: 'import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>',
+			});
+		}
+
+		if (env.logfwdr?.bindings?.length) {
+			bindings.push({
+				bindingCategory: "logfwdr",
+				name: "LOGFWDR_SCHEMA",
+				type: "any",
+			});
+		}
+
+		if (env.browser) {
+			if (!env.browser.binding) {
+				throwMissingBindingError(
+					args.config,
+					"browser",
+					envName,
+					-1,
+					"binding",
+					env.browser
+				);
+			} else {
+				bindings.push({
+					bindingCategory: "browser",
+					name: env.browser.binding,
+					type: "Fetcher",
+				});
+			}
+		}
+
+		if (env.ai) {
+			if (!env.ai.binding) {
+				throwMissingBindingError(
+					args.config,
+					"ai",
+					envName,
+					-1,
+					"binding",
+					env.ai
+				);
+			} else {
+				bindings.push({
+					bindingCategory: "ai",
+					name: env.ai.binding,
+					type: "Ai",
+				});
+			}
+		}
+
+		if (env.images) {
+			if (!env.images.binding) {
+				throwMissingBindingError(
+					args.config,
+					"images",
+					envName,
+					-1,
+					"binding",
+					env.images
+				);
+			} else {
+				bindings.push({
+					bindingCategory: "images",
+					name: env.images.binding,
+					type: "ImagesBinding",
+				});
+			}
+		}
+
+		if (env.media) {
+			if (!env.media.binding) {
+				throwMissingBindingError(
+					args.config,
+					"media",
+					envName,
+					-1,
+					"binding",
+					env.media
+				);
+			} else {
+				bindings.push({
+					bindingCategory: "media",
+					name: env.media.binding,
+					type: "MediaBinding",
+				});
+			}
+		}
+
+		if (env.version_metadata) {
+			if (!env.version_metadata.binding) {
+				throwMissingBindingError(
+					args.config,
+					"version_metadata",
+					envName,
+					-1,
+					"binding",
+					env.version_metadata
+				);
+			} else {
+				bindings.push({
+					bindingCategory: "version_metadata",
+					name: env.version_metadata.binding,
+					type: "WorkerVersionMetadata",
+				});
+			}
+		}
+
+		if (env.assets?.binding) {
+			bindings.push({
+				bindingCategory: "assets",
+				name: env.assets.binding,
+				type: "Fetcher",
+			});
+		}
+
+		return bindings;
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	const topLevelBindings = collectEnvironmentBindings(
+		rawConfig,
+		TOP_LEVEL_ENV_NAME
+	);
+	if (topLevelBindings.length > 0) {
+		result.set(TOP_LEVEL_ENV_NAME, topLevelBindings);
+	}
+
+	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+		const envBindings = collectEnvironmentBindings(env, envName);
+		if (envBindings.length > 0) {
+			result.set(envName, envBindings);
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Collects Durable Object bindings per environment.
+ *
+ * @param args - CLI arguments passed to the `types` command
+ *
+ * @returns A map of environment name to array of DO bindings
+ */
+function collectDurableObjectsPerEnvironment(
+	args: Partial<(typeof typesCommand)["args"]>
+): Map<
+	string,
+	Array<{
+		class_name: string;
+		name: string;
+		script_name?: string;
+	}>
+> {
+	const result = new Map<
+		string,
+		Array<{
+			class_name: string;
+			name: string;
+			script_name?: string;
+		}>
+	>();
+
+	function collectEnvironmentDOs(
+		env: RawEnvironment | undefined,
+		envName: string
+	): Array<{ name: string; class_name: string; script_name?: string }> {
+		const durableObjects = new Array<{
+			name: string;
+			class_name: string;
+			script_name?: string;
+		}>();
+
+		if (!env?.durable_objects?.bindings) {
+			return durableObjects;
+		}
+
+		for (const [index, doBinding] of env.durable_objects.bindings.entries()) {
+			if (!doBinding.name) {
+				throwMissingBindingError(
+					args.config,
+					"durable_objects.bindings",
+					envName,
+					index,
+					"name",
+					doBinding
+				);
+			}
+
+			durableObjects.push({
+				class_name: doBinding.class_name,
+				name: doBinding.name,
+				script_name: doBinding.script_name,
+			});
+		}
+
+		return durableObjects;
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	const topLevelDOs = collectEnvironmentDOs(rawConfig, TOP_LEVEL_ENV_NAME);
+	if (topLevelDOs.length > 0) {
+		result.set(TOP_LEVEL_ENV_NAME, topLevelDOs);
+	}
+
+	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+		const envDOs = collectEnvironmentDOs(env, envName);
+		if (envDOs.length > 0) {
+			result.set(envName, envDOs);
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Collects Service bindings per environment.
+ *
+ * @param args - CLI arguments passed to the `types` command
+ *
+ * @returns A map of environment name to array of service bindings
+ */
+function collectServicesPerEnvironment(
+	args: Partial<(typeof typesCommand)["args"]>
+): Map<
+	string,
+	Array<{
+		binding: string;
+		entrypoint?: string;
+		service: string;
+	}>
+> {
+	const result = new Map<
+		string,
+		Array<{
+			binding: string;
+			entrypoint?: string;
+			service: string;
+		}>
+	>();
+
+	function collectEnvironmentServices(
+		env: RawEnvironment | undefined,
+		envName: string
+	): Array<{
+		binding: string;
+		entrypoint?: string;
+		service: string;
+	}> {
+		const services = new Array<{
+			binding: string;
+			service: string;
+			entrypoint?: string;
+		}>();
+
+		if (!env?.services) {
+			return services;
+		}
+
+		for (const [index, service] of env.services.entries()) {
+			if (!service.binding) {
+				throwMissingBindingError(
+					args.config,
+					"services",
+					envName,
+					index,
+					"binding",
+					service
+				);
+			}
+
+			services.push({
+				binding: service.binding,
+				entrypoint: service.entrypoint,
+				service: service.service,
+			});
+		}
+
+		return services;
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	const topLevelServices = collectEnvironmentServices(
+		rawConfig,
+		TOP_LEVEL_ENV_NAME
+	);
+	if (topLevelServices.length > 0) {
+		result.set(TOP_LEVEL_ENV_NAME, topLevelServices);
+	}
+
+	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+		const envServices = collectEnvironmentServices(env, envName);
+		if (envServices.length > 0) {
+			result.set(envName, envServices);
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Collects Workflow bindings per environment.
+ *
+ * @param args - CLI arguments passed to the `types` command
+ *
+ * @returns A map of environment name to array of workflow bindings
+ */
+function collectWorkflowsPerEnvironment(
+	args: Partial<(typeof typesCommand)["args"]>
+): Map<
+	string,
+	Array<{
+		binding: string;
+		class_name: string;
+		name: string;
+		script_name?: string;
+	}>
+> {
+	const result = new Map<
+		string,
+		Array<{
+			binding: string;
+			class_name: string;
+			name: string;
+			script_name?: string;
+		}>
+	>();
+
+	function collectEnvironmentWorkflows(
+		env: RawEnvironment | undefined,
+		envName: string
+	): Array<{
+		binding: string;
+		class_name: string;
+		name: string;
+		script_name?: string;
+	}> {
+		const workflows = new Array<{
+			binding: string;
+			class_name: string;
+			name: string;
+			script_name?: string;
+		}>();
+
+		if (!env?.workflows) {
+			return workflows;
+		}
+
+		for (const [index, workflow] of env.workflows.entries()) {
+			if (!workflow.binding) {
+				throwMissingBindingError(
+					args.config,
+					"workflows",
+					envName,
+					index,
+					"binding",
+					workflow
+				);
+			}
+
+			workflows.push({
+				binding: workflow.binding,
+				class_name: workflow.class_name,
+				name: workflow.name,
+				script_name: workflow.script_name,
+			});
+		}
+
+		return workflows;
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	const topLevelWorkflows = collectEnvironmentWorkflows(
+		rawConfig,
+		TOP_LEVEL_ENV_NAME
+	);
+	if (topLevelWorkflows.length > 0) {
+		result.set(TOP_LEVEL_ENV_NAME, topLevelWorkflows);
+	}
+
+	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+		const envWorkflows = collectEnvironmentWorkflows(env, envName);
+		if (envWorkflows.length > 0) {
+			result.set(envName, envWorkflows);
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Collects unsafe bindings per environment.
+ *
+ * @param args - CLI arguments passed to the `types` command
+ *
+ * @returns A map of environment name to array of unsafe bindings
+ */
+function collectUnsafeBindingsPerEnvironment(
+	args: Partial<(typeof typesCommand)["args"]>
+): Map<
+	string,
+	Array<{
+		name: string;
+		type: string;
+	}>
+> {
+	const result = new Map<
+		string,
+		Array<{
+			name: string;
+			type: string;
+		}>
+	>();
+
+	function collectEnvironmentUnsafe(
+		env: RawEnvironment | undefined,
+		envName: string
+	): Array<{
+		name: string;
+		type: string;
+	}> {
+		const unsafeBindings = new Array<{
+			name: string;
+			type: string;
+		}>();
+
+		if (!env?.unsafe?.bindings) {
+			return unsafeBindings;
+		}
+
+		for (const [index, binding] of env.unsafe.bindings.entries()) {
+			if (!binding.name) {
+				throwMissingBindingError(
+					args.config,
+					"unsafe.bindings",
+					envName,
+					index,
+					"name",
+					binding
+				);
+			}
+
+			unsafeBindings.push({
+				name: binding.name,
+				type: binding.type,
+			});
+		}
+
+		return unsafeBindings;
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	const topLevelUnsafe = collectEnvironmentUnsafe(
+		rawConfig,
+		TOP_LEVEL_ENV_NAME
+	);
+	if (topLevelUnsafe.length > 0) {
+		result.set(TOP_LEVEL_ENV_NAME, topLevelUnsafe);
+	}
+
+	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+		const envUnsafe = collectEnvironmentUnsafe(env, envName);
+		if (envUnsafe.length > 0) {
+			result.set(envName, envUnsafe);
+		}
+	}
+
+	return result;
+}
