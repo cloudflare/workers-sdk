@@ -2192,7 +2192,6 @@ describe("generate types", () => {
 				"utf-8"
 			);
 
-			// Create a .dev.vars file with secrets
 			fs.writeFileSync("./.dev.vars", "MY_SECRET=secret-value\n", "utf-8");
 
 			await runWrangler("types --include-runtime=false");
