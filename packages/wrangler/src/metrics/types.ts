@@ -4,6 +4,12 @@ import type { configFormat } from "@cloudflare/workers-utils";
 export type CommonEventProperties = {
 	/** The version of the Wrangler client that is sending the event. */
 	wranglerVersion: string;
+	/** The major version component of the Wrangler client. */
+	wranglerMajorVersion: number;
+	/** The minor version component of the Wrangler client. */
+	wranglerMinorVersion: number;
+	/** The patch version component of the Wrangler client. */
+	wranglerPatchVersion: number;
 	/**
 	 * The platform that the Wrangler client is running on.
 	 */
