@@ -832,6 +832,33 @@ export const WorkerdTests: Record<string, () => void> = {
 			);
 		}
 	},
+
+	async testDgram() {
+		const dgram = await import("node:dgram");
+
+		assertTypeOfProperties(dgram, {
+			createSocket: "function",
+			Socket: "function",
+		});
+
+		assertTypeOfProperties(dgram.default, {
+			createSocket: "function",
+			Socket: "function",
+		});
+	},
+
+	async testStreamWrap() {
+		if (!getRuntimeFlagValue("enable_nodejs_stream_wrap_module")) {
+			// `node:_stream_wrap` is implemented as a mock in unenv
+			return;
+		}
+
+		// @ts-expect-error TS2307 - _stream_wrap is an internal Node.js module without type declarations
+		const streamWrap = await import("node:_stream_wrap");
+
+		// `JSStreamSocket` is the default export of `node:_stream_wrap`
+		assertTypeOf(streamWrap, "default", "function");
+	},
 };
 
 /**

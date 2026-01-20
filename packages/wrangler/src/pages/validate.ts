@@ -76,7 +76,16 @@ export const validate = async (args: {
 		fileMap: Map<string, FileContainer> = new Map(),
 		startingDir: string = dir
 	) => {
-		const files = await readdir(dir);
+		let files: string[];
+		try {
+			files = await readdir(dir);
+		} catch (e) {
+			if ((e as NodeJS.ErrnoException).code === "ENOENT") {
+				// File not found exeptions should be marked as user error
+				throw new FatalError((e as NodeJS.ErrnoException).message);
+			}
+			throw e;
+		}
 
 		await Promise.all(
 			files.map(async (file) => {

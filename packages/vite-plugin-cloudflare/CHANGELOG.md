@@ -1,5 +1,76 @@
 # @cloudflare/vite-plugin
 
+## 1.21.0
+
+### Minor Changes
+
+- [#11879](https://github.com/cloudflare/workers-sdk/pull/11879) [`5c8ff05`](https://github.com/cloudflare/workers-sdk/commit/5c8ff05079d71810fb1546f3dc788cc44ee00e22) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add support for child environments.
+
+  This is to support React Server Components via [@vitejs/plugin-rsc](https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-rsc) and frameworks that build on top of it. A `childEnvironments` option is now added to the plugin config to enable using multiple environments within a single Worker. The parent environment can import modules from a child environment in order to access a separate module graph. For a typical RSC use case, the plugin might be configured as in the following example:
+
+  ```ts
+  export default defineConfig({
+  	plugins: [
+  		cloudflare({
+  			viteEnvironment: {
+  				name: "rsc",
+  				childEnvironments: ["ssr"],
+  			},
+  		}),
+  	],
+  });
+  ```
+
+### Patch Changes
+
+- [#11898](https://github.com/cloudflare/workers-sdk/pull/11898) [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bundle more third-party dependencies to reduce supply chain risk
+
+  Previously, several small utility packages were listed as runtime dependencies and
+  installed separately. These are now bundled directly into the published packages,
+  reducing the number of external dependencies users need to trust.
+
+  Bundled dependencies:
+
+  - **miniflare**: `acorn`, `acorn-walk`, `exit-hook`, `glob-to-regexp`, `stoppable`
+  - **kv-asset-handler**: `mime`
+  - **vite-plugin-cloudflare**: `@remix-run/node-fetch-server`, `defu`, `get-port`, `picocolors`, `tinyglobby`
+  - **vitest-pool-workers**: `birpc`, `devalue`, `get-port`, `semver`
+
+- Updated dependencies [[`e78186d`](https://github.com/cloudflare/workers-sdk/commit/e78186dae926c0ae1ab387aaa6cb8ba53bed9992), [`fe4faa3`](https://github.com/cloudflare/workers-sdk/commit/fe4faa306609514863fa770bac1dba5ff618f4be), [`fec8f5b`](https://github.com/cloudflare/workers-sdk/commit/fec8f5b82e0bb64400bbfcced302748dbe9a3062), [`d39777f`](https://github.com/cloudflare/workers-sdk/commit/d39777f1e354e8f3abd02164e76c2501e47e713f), [`4714ca1`](https://github.com/cloudflare/workers-sdk/commit/4714ca12c1f24c7e3553d3bfd2812a833a07826c), [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a), [`695b043`](https://github.com/cloudflare/workers-sdk/commit/695b043b4ddc99bf9a3fe93cc7daa8347b29ccb3)]:
+  - miniflare@4.20260114.0
+  - wrangler@4.59.2
+  - @cloudflare/unenv-preset@2.10.0
+
+## 1.20.3
+
+### Patch Changes
+
+- Updated dependencies [[`99b1f32`](https://github.com/cloudflare/workers-sdk/commit/99b1f328a9afe181b49f1114ed47f15f6d25f0be)]:
+  - wrangler@4.59.1
+
+## 1.20.2
+
+### Patch Changes
+
+- [#11834](https://github.com/cloudflare/workers-sdk/pull/11834) [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad) Thanks [@vicb](https://github.com/vicb)! - fix handling of Node builtin modules
+
+  The list of builtin modules should not depend on the version of Node.
+  Switch to using the lists published by `@cloudflare/unenv-preset`.
+
+  This fixes an issue with trying to import i.e. `node:sqlite` with Node < 22.5.0
+  which does not implement this module.
+
+- [#11838](https://github.com/cloudflare/workers-sdk/pull/11838) [`88a9e20`](https://github.com/cloudflare/workers-sdk/commit/88a9e204004b671d5e5f545efdfd6285c80eaab6) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Set `build.rolldownOptions.resolve.extensions` for compatibility with Vite 8 beta.
+
+- [#11847](https://github.com/cloudflare/workers-sdk/pull/11847) [`46e09a6`](https://github.com/cloudflare/workers-sdk/commit/46e09a6c0b7d5921a52e8acfe97370c909b4f308) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Apply `vite-plugin-cloudflare:nodejs-compat-warnings` plugin only to relevant environments.
+
+  This is an optimisation so that it doesn't run for the `client` environment or Worker environments that have the `nodejs_compat` compatibility flag enabled.
+
+- Updated dependencies [[`b0e54b2`](https://github.com/cloudflare/workers-sdk/commit/b0e54b26f261234ec47dcc673a5240734ba03fcc), [`ed60c4f`](https://github.com/cloudflare/workers-sdk/commit/ed60c4f01c0e4ac9683a73fb5cf849ad74255b35), [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad), [`faa5753`](https://github.com/cloudflare/workers-sdk/commit/faa5753fa685117065c801e5d1fcee3486a6f0bd), [`e574ef3`](https://github.com/cloudflare/workers-sdk/commit/e574ef3e73aa00ca82e84fe308da0fed768477d9), [`b6148ed`](https://github.com/cloudflare/workers-sdk/commit/b6148ed733f6d6873261df5ae61e71c475ba8a8d), [`beb96af`](https://github.com/cloudflare/workers-sdk/commit/beb96af470aefaae73237309244cf7369b329ff0), [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad), [`ab3859c`](https://github.com/cloudflare/workers-sdk/commit/ab3859c597fe30cdcd9ffa67f9fb7865539bf592), [`0eb973d`](https://github.com/cloudflare/workers-sdk/commit/0eb973deb57b8d8b9bb2fe4e5cb471fabab51bac), [`ad65efa`](https://github.com/cloudflare/workers-sdk/commit/ad65efa73ae8b666e1669964ccacc2680b12c853), [`fc96e5f`](https://github.com/cloudflare/workers-sdk/commit/fc96e5fe117948c57e49bf0741d55955691f1c28), [`43d5363`](https://github.com/cloudflare/workers-sdk/commit/43d5363c7b40191723e9bab9900edd70ecac5837), [`0f8d69d`](https://github.com/cloudflare/workers-sdk/commit/0f8d69d31071abeb567aa3c8478492536b5740fb)]:
+  - wrangler@4.59.0
+  - miniflare@4.20260111.0
+  - @cloudflare/unenv-preset@2.9.0
+
 ## 1.20.1
 
 ### Patch Changes

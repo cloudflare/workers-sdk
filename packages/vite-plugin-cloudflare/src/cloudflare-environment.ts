@@ -3,9 +3,11 @@ import { CoreHeaders } from "miniflare";
 import * as vite from "vite";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import {
+	ENVIRONMENT_NAME_HEADER,
 	GET_EXPORT_TYPES_PATH,
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
+	IS_PARENT_ENVIRONMENT_HEADER,
 	UNKNOWN_HOST,
 	VIRTUAL_WORKER_ENTRY,
 	WORKER_ENTRY_PATH_HEADER,
@@ -97,7 +99,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	async initRunner(
 		miniflare: Miniflare,
 		workerConfig: ResolvedWorkerConfig,
-		isEntryWorker: boolean
+		options: { isEntryWorker: boolean; isParentEnvironment: boolean }
 	): Promise<void> {
 		const response = await miniflare.dispatchFetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
@@ -105,7 +107,9 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 				headers: {
 					[CoreHeaders.ROUTE_OVERRIDE]: workerConfig.name,
 					[WORKER_ENTRY_PATH_HEADER]: encodeURIComponent(workerConfig.main),
-					[IS_ENTRY_WORKER_HEADER]: String(isEntryWorker),
+					[IS_ENTRY_WORKER_HEADER]: String(options.isEntryWorker),
+					[ENVIRONMENT_NAME_HEADER]: this.name,
+					[IS_PARENT_ENVIRONMENT_HEADER]: String(options.isParentEnvironment),
 					upgrade: "websocket",
 				},
 			}
@@ -170,14 +174,6 @@ const defaultConditions = ["workerd", "worker", "module", "browser"];
 // workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
 const target = "es2024";
 
-const rollupOptions: vite.Rollup.RollupOptions = {
-	input: {
-		[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
-	},
-	// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
-	preserveEntrySignatures: "strict",
-};
-
 // TODO: consider removing in next major to use default extensions
 const resolveExtensions = [
 	".mjs",
@@ -198,6 +194,7 @@ export function createCloudflareEnvironmentOptions({
 	mode,
 	environmentName,
 	isEntryWorker,
+	isParentEnvironment,
 	hasNodeJsCompat,
 }: {
 	workerConfig: ResolvedWorkerConfig;
@@ -205,8 +202,18 @@ export function createCloudflareEnvironmentOptions({
 	mode: vite.ConfigEnv["mode"];
 	environmentName: string;
 	isEntryWorker: boolean;
+	isParentEnvironment: boolean;
 	hasNodeJsCompat: boolean;
 }): vite.EnvironmentOptions {
+	const rollupOptions: vite.Rollup.RollupOptions = isParentEnvironment
+		? {
+				input: {
+					[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
+				},
+				// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
+				preserveEntrySignatures: "strict",
+			}
+		: {};
 	const define = getProcessEnvReplacements(hasNodeJsCompat, mode);
 
 	return {
@@ -323,19 +330,39 @@ export function initRunners(
 	viteDevServer: vite.ViteDevServer,
 	miniflare: Miniflare
 ): Promise<void[]> | undefined {
-	return Promise.all(
-		[...resolvedPluginConfig.environmentNameToWorkerMap].map(
-			([environmentName, worker]) => {
-				debuglog("Initializing worker:", worker.config.name);
-				const isEntryWorker =
-					environmentName === resolvedPluginConfig.entryWorkerEnvironmentName;
+	const initPromises = [
+		...resolvedPluginConfig.environmentNameToWorkerMap,
+	].flatMap(([environmentName, worker]) => {
+		debuglog("Initializing worker:", worker.config.name);
+		const isEntryWorker =
+			environmentName === resolvedPluginConfig.entryWorkerEnvironmentName;
 
-				return (
-					viteDevServer.environments[
-						environmentName
-					] as CloudflareDevEnvironment
-				).initRunner(miniflare, worker.config, isEntryWorker);
-			}
-		)
-	);
+		const childEnvironmentNames =
+			resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap.get(
+				environmentName
+			) ?? [];
+
+		const parentInit = (
+			viteDevServer.environments[environmentName] as CloudflareDevEnvironment
+		).initRunner(miniflare, worker.config, {
+			isEntryWorker,
+			isParentEnvironment: true,
+		});
+
+		const childInits = childEnvironmentNames.map((childEnvironmentName) => {
+			debuglog("Initializing child environment:", childEnvironmentName);
+			return (
+				viteDevServer.environments[
+					childEnvironmentName
+				] as CloudflareDevEnvironment
+			).initRunner(miniflare, worker.config, {
+				isEntryWorker: false,
+				isParentEnvironment: false,
+			});
+		});
+
+		return [parentInit, ...childInits];
+	});
+
+	return Promise.all(initPromises);
 }

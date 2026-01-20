@@ -156,5 +156,10 @@ function getNoCIEnv(): typeof process.env {
 	const env = { ...process.env };
 	env.CI = undefined;
 	env.GITHUB_ACTIONS = undefined;
+	// Suppress Node.js deprecation warnings in spawned processes to prevent
+	// them from appearing in stderr (which breaks tests that assert stderr is empty)
+	env.NODE_OPTIONS = [env.NODE_OPTIONS, "--no-deprecation"]
+		.filter(Boolean)
+		.join(" ");
 	return env;
 }
