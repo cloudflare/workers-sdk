@@ -376,7 +376,6 @@ export async function generateEnvTypes(
 		);
 	}
 
-	// Check if config has named environments and no --env flag was specified
 	const { rawConfig } = experimental_readRawConfig(collectionArgs);
 	const hasEnvironments =
 		!!rawConfig.env && Object.keys(rawConfig.env).length > 0;
@@ -408,7 +407,7 @@ export async function generateEnvTypes(
 }
 
 /**
- * Generates simple `Env` types (original behavior).
+ * Generates simple `Env` types.
  *
  * Used when no named environments exist or when `--env` is specified.
  *
@@ -445,15 +444,16 @@ async function generateSimpleEnvTypes(
 	const entrypointFormat = entrypoint?.format ?? "modules";
 	const fullOutputPath = resolve(outputPath);
 
-	const envTypeStructure = new Array<
-		[
-			string, // Key
-			string, // Type
-		]
-	>();
+	const envTypeStructure = new Array<{
+		key: string;
+		type: string;
+	}>();
 
 	for (const binding of collectedBindings) {
-		envTypeStructure.push([constructTypeKey(binding.name), binding.type]);
+		envTypeStructure.push({
+			key: constructTypeKey(binding.name),
+			type: binding.type,
+		});
 	}
 
 	if (collectedVars) {
@@ -462,16 +462,19 @@ async function generateSimpleEnvTypes(
 			([key]) => !(key in secrets)
 		);
 		for (const [varName, varValues] of vars) {
-			envTypeStructure.push([
-				constructTypeKey(varName),
-				varValues.length === 1 ? varValues[0] : varValues.join(" | "),
-			]);
+			envTypeStructure.push({
+				key: constructTypeKey(varName),
+				type: varValues.length === 1 ? varValues[0] : varValues.join(" | "),
+			});
 			stringKeys.push(varName);
 		}
 	}
 
 	for (const secretName in secrets) {
-		envTypeStructure.push([constructTypeKey(secretName), "string"]);
+		envTypeStructure.push({
+			key: constructTypeKey(secretName),
+			type: "string",
+		});
 		stringKeys.push(secretName);
 	}
 
@@ -491,25 +494,25 @@ async function generateSimpleEnvTypes(
 		const key = constructTypeKey(durableObject.name);
 
 		if (importPath && exportExists) {
-			envTypeStructure.push([
-				key,
-				`DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`,
-			]);
+			envTypeStructure.push({
+				key: key,
+				type: `DurableObjectNamespace<import("${importPath}").${durableObject.class_name}>`,
+			});
 			continue;
 		}
 
 		if (durableObject.script_name) {
-			envTypeStructure.push([
-				key,
-				`DurableObjectNamespace /* ${durableObject.class_name} from ${durableObject.script_name} */`,
-			]);
+			envTypeStructure.push({
+				key: key,
+				type: `DurableObjectNamespace /* ${durableObject.class_name} from ${durableObject.script_name} */`,
+			});
 			continue;
 		}
 
-		envTypeStructure.push([
-			key,
-			`DurableObjectNamespace /* ${durableObject.class_name} */`,
-		]);
+		envTypeStructure.push({
+			key: key,
+			type: `DurableObjectNamespace /* ${durableObject.class_name} */`,
+		});
 	}
 
 	for (const service of collectedServices) {
@@ -529,22 +532,25 @@ async function generateSimpleEnvTypes(
 		const key = constructTypeKey(service.binding);
 
 		if (importPath && exportExists) {
-			envTypeStructure.push([
-				key,
-				`Service<typeof import("${importPath}").${service.entrypoint ?? "default"}>`,
-			]);
+			envTypeStructure.push({
+				key: key,
+				type: `Service<typeof import("${importPath}").${service.entrypoint ?? "default"}>`,
+			});
 			continue;
 		}
 
 		if (service.entrypoint) {
-			envTypeStructure.push([
-				key,
-				`Service /* entrypoint ${service.entrypoint} from ${service.service} */`,
-			]);
+			envTypeStructure.push({
+				key: key,
+				type: `Service /* entrypoint ${service.entrypoint} from ${service.service} */`,
+			});
 			continue;
 		}
 
-		envTypeStructure.push([key, `Fetcher /* ${service.service} */`]);
+		envTypeStructure.push({
+			key,
+			type: `Fetcher /* ${service.service} */`,
+		});
 	}
 
 	for (const workflow of collectedWorkflows) {
@@ -563,44 +569,59 @@ async function generateSimpleEnvTypes(
 		const key = constructTypeKey(workflow.binding);
 
 		if (importPath && exportExists) {
-			envTypeStructure.push([
-				key,
-				`Workflow<Parameters<import("${importPath}").${workflow.class_name}['run']>[0]['payload']>`,
-			]);
+			envTypeStructure.push({
+				key: key,
+				type: `Workflow<Parameters<import("${importPath}").${workflow.class_name}['run']>[0]['payload']>`,
+			});
 			continue;
 		}
 
 		if (workflow.script_name) {
-			envTypeStructure.push([
-				key,
-				`Workflow /* ${workflow.class_name} from ${workflow.script_name} */`,
-			]);
+			envTypeStructure.push({
+				key: key,
+				type: `Workflow /* ${workflow.class_name} from ${workflow.script_name} */`,
+			});
 			continue;
 		}
 
-		envTypeStructure.push([key, `Workflow /* ${workflow.class_name} */`]);
+		envTypeStructure.push({
+			key,
+			type: `Workflow /* ${workflow.class_name} */`,
+		});
 	}
 
 	for (const unsafe of collectedUnsafeBindings) {
 		if (unsafe.type === "ratelimit") {
-			envTypeStructure.push([constructTypeKey(unsafe.name), "RateLimit"]);
+			envTypeStructure.push({
+				key: constructTypeKey(unsafe.name),
+				type: "RateLimit",
+			});
 			continue;
 		}
 
-		envTypeStructure.push([constructTypeKey(unsafe.name), "any"]);
+		envTypeStructure.push({
+			key: constructTypeKey(unsafe.name),
+			type: "any",
+		});
 	}
 
 	// Data blobs are not environment-specific
 	if (config.data_blobs) {
 		for (const dataBlobs in config.data_blobs) {
-			envTypeStructure.push([constructTypeKey(dataBlobs), "ArrayBuffer"]);
+			envTypeStructure.push({
+				key: constructTypeKey(dataBlobs),
+				type: "ArrayBuffer",
+			});
 		}
 	}
 
 	// Text blobs are not environment-specific
 	if (config.text_blobs) {
 		for (const textBlobs in config.text_blobs) {
-			envTypeStructure.push([constructTypeKey(textBlobs), "string"]);
+			envTypeStructure.push({
+				key: constructTypeKey(textBlobs),
+				type: "string",
+			});
 		}
 	}
 
@@ -618,12 +639,12 @@ async function generateSimpleEnvTypes(
 				continue;
 			}
 
-			ruleObject.globs.forEach((glob) => {
+			for (const glob of ruleObject.globs) {
 				modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
-\tconst value: ${typeScriptType};
-\texport default value;
-}`);
-			});
+	\tconst value: ${typeScriptType};
+	\texport default value;
+	}`);
+			}
 		}
 	}
 
@@ -635,7 +656,7 @@ async function generateSimpleEnvTypes(
 		const { consoleOutput, fileContent } = generateTypeStrings(
 			entrypointFormat,
 			envInterface,
-			envTypeStructure.map(([key, value]) => `${key}: ${value};`),
+			envTypeStructure.map(({ key, type }) => `${key}: ${type};`),
 			modulesTypeStructure,
 			stringKeys,
 			config.compatibility_date,
@@ -715,8 +736,10 @@ async function generatePerEnvironmentTypes(
 	const unsafePerEnv = collectUnsafeBindingsPerEnvironment(collectionArgs);
 
 	// Track all binding names and their types across all environments for aggregation
-	// Key: binding name, Value: Set of types
-	const aggregatedBindings = new Map<string, Set<string>>();
+	const aggregatedBindings = new Map<
+		string, // Binding name
+		Set<string> // Set of types
+	>();
 
 	// Track which environments each binding appears in
 	const bindingPresence = new Map<string, Set<string>>();
@@ -832,11 +855,14 @@ async function generatePerEnvironmentTypes(
 
 	for (const envName of envNames) {
 		const interfaceName = toEnvInterfaceName(envName);
-		const envBindings: [string, string][] = [];
+		const envBindings = new Array<{ key: string; value: string }>();
 
 		const bindings = bindingsPerEnv.get(envName) ?? [];
 		for (const binding of bindings) {
-			envBindings.push([constructTypeKey(binding.name), binding.type]);
+			envBindings.push({
+				key: constructTypeKey(binding.name),
+				value: binding.type,
+			});
 			trackBinding(binding.name, binding.type, envName);
 		}
 
@@ -848,7 +874,7 @@ async function generatePerEnvironmentTypes(
 
 			const varType =
 				varValues.length === 1 ? varValues[0] : varValues.join(" | ");
-			envBindings.push([constructTypeKey(varName), varType]);
+			envBindings.push({ key: constructTypeKey(varName), value: varType });
 			trackBinding(varName, varType, envName);
 			if (!stringKeys.includes(varName)) {
 				stringKeys.push(varName);
@@ -856,7 +882,7 @@ async function generatePerEnvironmentTypes(
 		}
 
 		for (const secretName in secrets) {
-			envBindings.push([constructTypeKey(secretName), "string"]);
+			envBindings.push({ key: constructTypeKey(secretName), value: "string" });
 			if (!stringKeys.includes(secretName)) {
 				stringKeys.push(secretName);
 			}
@@ -865,34 +891,40 @@ async function generatePerEnvironmentTypes(
 		const durableObjects = durableObjectsPerEnv.get(envName) ?? [];
 		for (const durableObject of durableObjects) {
 			const type = getDurableObjectType(durableObject);
-			envBindings.push([constructTypeKey(durableObject.name), type]);
+			envBindings.push({
+				key: constructTypeKey(durableObject.name),
+				value: type,
+			});
 			trackBinding(durableObject.name, type, envName);
 		}
 
 		const services = servicesPerEnv.get(envName) ?? [];
 		for (const service of services) {
 			const type = getServiceType(service);
-			envBindings.push([constructTypeKey(service.binding), type]);
+			envBindings.push({ key: constructTypeKey(service.binding), value: type });
 			trackBinding(service.binding, type, envName);
 		}
 
 		const workflows = workflowsPerEnv.get(envName) ?? [];
 		for (const workflow of workflows) {
 			const type = getWorkflowType(workflow);
-			envBindings.push([constructTypeKey(workflow.binding), type]);
+			envBindings.push({
+				key: constructTypeKey(workflow.binding),
+				value: type,
+			});
 			trackBinding(workflow.binding, type, envName);
 		}
 
 		const unsafeBindings = unsafePerEnv.get(envName) ?? [];
 		for (const unsafe of unsafeBindings) {
 			const type = unsafe.type === "ratelimit" ? "RateLimit" : "any";
-			envBindings.push([constructTypeKey(unsafe.name), type]);
+			envBindings.push({ key: constructTypeKey(unsafe.name), value: type });
 			trackBinding(unsafe.name, type, envName);
 		}
 
 		if (envBindings.length > 0) {
 			const bindingLines = envBindings
-				.map(([key, value]) => `\t\t${key}: ${value};`)
+				.map(({ key, value }) => `\t\t${key}: ${value};`)
 				.join("\n");
 			perEnvInterfaces.push(
 				`\tinterface ${interfaceName} {\n${bindingLines}\n\t}`
@@ -1014,12 +1046,12 @@ async function generatePerEnvironmentTypes(
 			const typeScriptType =
 				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
 			if (typeScriptType !== undefined) {
-				ruleObject.globs.forEach((glob) => {
+				for (const glob of ruleObject.globs) {
 					modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
 	const value: ${typeScriptType};
 	export default value;
-}`);
-				});
+	}`);
+				}
 			}
 		}
 	}
@@ -1128,11 +1160,19 @@ function generatePerEnvTypeStrings(
 	};
 }
 
-const checkPath = (path: string) => {
+/**
+ * Checks if a .d.ts file at the given path exists and was not generated by Wrangler.
+ *
+ * @param path - The path to the .d.ts file to check.
+ *
+ * @throws {UserError} If a non-Wrangler .d.ts file already exists at the given path.
+ */
+const checkPath = (path: string): void => {
 	const wranglerOverrideDTSPath = findUpSync(path);
 	if (wranglerOverrideDTSPath === undefined) {
 		return;
 	}
+
 	try {
 		const fileContent = fs.readFileSync(wranglerOverrideDTSPath, "utf8");
 		if (
@@ -1151,17 +1191,35 @@ const checkPath = (path: string) => {
 	}
 };
 
+/**
+ * Generates type strings for a single aggregated Env interface.
+ *
+ * @param formatType - The worker format type ("modules" or "service-worker")
+ * @param envInterface - The name of the generated environment interface
+ * @param envTypeStructure - Array of environment binding strings
+ * @param modulesTypeStructure - Array of module type declaration strings
+ * @param stringKeys - Array of variable names that should be typed as strings in process.env
+ * @param compatibilityDate - Compatibility date for the worker
+ * @param compatibilityFlags - Compatibility flags for the worker
+ * @param entrypointModule - The entrypoint module path
+ * @param configuredDurableObjects - Array of configured durable object names
+ *
+ * @returns An object containing the complete file content and console output strings
+ */
 function generateTypeStrings(
 	formatType: string,
 	envInterface: string,
-	envTypeStructure: string[],
-	modulesTypeStructure: string[],
-	stringKeys: string[],
+	envTypeStructure: Array<string>,
+	modulesTypeStructure: Array<string>,
+	stringKeys: Array<string>,
 	compatibilityDate: string | undefined,
-	compatibilityFlags: string[] | undefined,
+	compatibilityFlags: Array<string> | undefined,
 	entrypointModule: string | undefined,
-	configuredDurableObjects: string[]
-): { fileContent: string; consoleOutput: string } {
+	configuredDurableObjects: Array<string>
+): {
+	consoleOutput: string;
+	fileContent: string;
+} {
 	let baseContent = "";
 	let processEnv = "";
 
@@ -1188,8 +1246,12 @@ function generateTypeStrings(
 
 /**
  * Attempts to read the tsconfig.json at the current path.
+ *
+ * @param tsconfigPath - The path to the tsconfig.json file
+ *
+ * @returns An array of types defined in the tsconfig.json's compilerOptions.types, or an empty array if not found or on error
  */
-function readTsconfigTypes(tsconfigPath: string): string[] {
+function readTsconfigTypes(tsconfigPath: string): Array<string> {
 	if (!fs.existsSync(tsconfigPath)) {
 		return [];
 	}
@@ -1303,13 +1365,14 @@ function collectAllVars(
 /**
  * Given an array it returns a string representing the types present in such array
  *
- * e.g.
- * 		`[1, 2, 3]` returns `number[]`,
- * 		`[1, 2, 'three']` returns `(number|string)[]`,
- * 		`['false', true]` returns `(string|boolean)[]`,
- *
  * @param array the target array
+ *
  * @returns a string representing the types of such array
+ *
+ * @example
+ * `[1, 2, 3]` => `number[]`
+ * `[1, 2, 'three']` => `(number|string)[]`
+ * `['false', true]` => `(string|boolean)[]`
  */
 function typeofArray(array: unknown[]): string {
 	const typesInArray = [...new Set(array.map((item) => typeof item))].sort();
