@@ -91,6 +91,8 @@ The changelog uses h3 for section headers, so any headers in changeset content m
 
 For new features or significant changes, include a brief usage example. This helps users understand how to use the new functionality.
 
+When showing Wrangler configuration examples, use `wrangler.json` (with JSONC syntax for comments) rather than `wrangler.toml`.
+
 ## Multiple Changesets
 
 If your PR makes multiple distinct user-facing changes, create separate changesets so each gets its own changelog entry. Don't lump unrelated changes together, and don't mix different types of changes (e.g., bug fix + new feature) in a single changeset.
