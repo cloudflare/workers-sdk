@@ -7,7 +7,7 @@ export const deploymentsViewCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		hidden: true,
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	args: {
 		name: {

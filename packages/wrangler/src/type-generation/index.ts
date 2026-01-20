@@ -33,7 +33,7 @@ export const typesCommand = createCommand({
 		epilogue:
 			"📖 Learn more at https://developers.cloudflare.com/workers/languages/typescript/#generate-types",
 		category: "Compute & AI",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	behaviour: {
 		provideConfig: false,

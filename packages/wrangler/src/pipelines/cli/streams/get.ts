@@ -9,7 +9,7 @@ export const pipelinesStreamsGetCommand = createCommand({
 		description: "Get details about a specific stream",
 		owner: "Product: Pipelines",
 		status: "open beta",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

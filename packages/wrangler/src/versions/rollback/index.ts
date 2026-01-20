@@ -42,7 +42,7 @@ export const versionsRollbackCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		category: "Compute & AI",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	handler: async function handleRollback(args, { config }) {
 		const accountId = await requireAuth(config);

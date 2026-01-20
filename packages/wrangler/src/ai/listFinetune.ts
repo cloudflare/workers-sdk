@@ -9,7 +9,7 @@ export const aiFineTuneListCommand = createCommand({
 		description: "List your finetune files",
 		status: "stable",
 		owner: "Product: AI",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

@@ -28,7 +28,7 @@ export const tailCommand = createCommand({
 		status: "stable",
 		owner: "Workers: Workers Observability",
 		category: "Compute & AI",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	positionalArgs: ["worker"],
 	args: {

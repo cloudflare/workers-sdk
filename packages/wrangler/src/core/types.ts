@@ -77,13 +77,12 @@ export type Metadata = {
 	 */
 	category?: MetadataCategory;
 	/**
-	 * If true, arguments for this command will be stripped from telemetry
-	 * to prevent accidentally capturing secrets or credentials.
+	 * If true, arguments for this command will be included in telemetry.
 	 *
-	 * @default true - Commands are treated as sensitive by default (args stripped).
-	 * Set to `false` to explicitly mark a command as safe and include its args in telemetry.
+	 * @default false - Arguments are not logged by default.
+	 * Set to `true` to explicitly include this command's args in telemetry.
 	 */
-	sensitiveArgs?: boolean;
+	logArgs?: boolean;
 };
 
 export type ArgDefinition = Omit<PositionalOptions, "type"> &

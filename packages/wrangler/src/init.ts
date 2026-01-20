@@ -29,7 +29,7 @@ export const init = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		category: "Compute & AI",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	args: {
 		name: {

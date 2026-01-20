@@ -20,7 +20,7 @@ export const triggersDeployCommand = createCommand({
 			"Apply changes to triggers (Routes or domains and Cron Triggers) when using `wrangler versions upload`",
 		status: "experimental",
 		owner: "Workers: Authoring and Testing",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	args: {
 		name: {

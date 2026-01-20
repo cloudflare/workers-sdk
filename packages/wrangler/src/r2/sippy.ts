@@ -288,7 +288,7 @@ export const r2BucketSippyGetCommand = createCommand({
 		description: "Check the status of Sippy on an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	positionalArgs: ["name"],
 	args: {

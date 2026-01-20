@@ -120,7 +120,6 @@ export const pagesSecretPutCommand = createCommand({
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
 		hideGlobalFlags: ["config", "env"],
-		sensitiveArgs: true,
 	},
 	behaviour: {
 		provideConfig: false,
@@ -198,7 +197,6 @@ export const pagesSecretBulkCommand = createCommand({
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
 		hideGlobalFlags: ["config", "env"],
-		sensitiveArgs: true,
 	},
 	behaviour: {
 		provideConfig: false,
@@ -356,7 +354,7 @@ export const pagesSecretListCommand = createCommand({
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
 		hideGlobalFlags: ["config", "env"],
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	behaviour: {
 		provideConfig: false,

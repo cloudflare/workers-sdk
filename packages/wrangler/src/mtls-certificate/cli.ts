@@ -64,7 +64,7 @@ export const mTlsCertificateListCommand = createCommand({
 		description: "List uploaded mTLS certificates",
 		owner: "Product: SSL",
 		status: "stable",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	async handler(_, { config }) {
 		const accountId = await requireAuth(config);
@@ -91,7 +91,7 @@ export const mTlsCertificateDeleteCommand = createCommand({
 		description: "Delete an mTLS certificate",
 		owner: "Product: SSL",
 		status: "stable",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	args: {
 		id: {

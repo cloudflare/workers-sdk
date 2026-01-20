@@ -7,7 +7,7 @@ export const vectorizeListVectorsCommand = createCommand({
 		description: "List vector identifiers in a Vectorize index",
 		status: "stable",
 		owner: "Product: Vectorize",
-		sensitiveArgs: false,
+		logArgs: true,
 		examples: [
 			{
 				command: "wrangler vectorize list-vectors my-index",

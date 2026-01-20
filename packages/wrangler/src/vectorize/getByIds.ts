@@ -9,7 +9,7 @@ export const vectorizeGetVectorsCommand = createCommand({
 		description: "Get vectors from a Vectorize index",
 		owner: "Product: Vectorize",
 		status: "stable",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	args: {
 		name: {

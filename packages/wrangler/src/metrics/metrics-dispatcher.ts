@@ -120,8 +120,8 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			try {
 				// Sanitize sensitive commands to prevent accidentally capturing secrets
 				// or credentials that users may have pasted as arguments.
-				// The sensitiveArgs flag is set from the command definition's metadata.
-				if (properties.sensitiveArgs) {
+				// The logArgs flag is set from the command definition's metadata.
+				if (!properties.logArgs) {
 					argv = [];
 				}
 				if (

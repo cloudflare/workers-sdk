@@ -30,7 +30,7 @@ export const r2BucketLifecycleListCommand = createCommand({
 		description: "List lifecycle rules for an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -74,7 +74,7 @@ export const r2BucketLifecycleAddCommand = createCommand({
 		description: "Add a lifecycle rule to an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	positionalArgs: ["bucket", "name", "prefix"],
 	args: {
@@ -331,7 +331,7 @@ export const r2BucketLifecycleRemoveCommand = createCommand({
 		description: "Remove a lifecycle rule from an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -394,7 +394,7 @@ export const r2BucketLifecycleSetCommand = createCommand({
 			"Set the lifecycle configuration for an R2 bucket from a JSON file",
 		status: "stable",
 		owner: "Product: R2",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {

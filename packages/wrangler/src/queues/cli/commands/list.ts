@@ -7,7 +7,7 @@ export const queuesListCommand = createCommand({
 		description: "List queues",
 		status: "stable",
 		owner: "Product: Queues",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	args: {
 		page: {

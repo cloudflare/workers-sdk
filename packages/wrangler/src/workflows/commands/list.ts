@@ -9,7 +9,7 @@ export const workflowsListCommand = createCommand({
 		description: "List Workflows associated to account",
 		owner: "Product: Workflows",
 		status: "stable",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	args: {
 		page: {

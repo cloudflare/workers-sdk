@@ -8,7 +8,7 @@ export const vectorizeListMetadataIndexCommand = createCommand({
 			"List metadata properties on which metadata filtering is enabled",
 		owner: "Product: Vectorize",
 		status: "stable",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

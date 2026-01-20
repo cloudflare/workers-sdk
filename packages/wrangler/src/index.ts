@@ -1749,8 +1749,8 @@ export async function main(argv: string[]): Promise<void> {
 	let safeCommand: string | undefined;
 	let metricsArgs: Record<string, unknown> | undefined;
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
-	// Default to true (sensitive) - commands must explicitly opt-in to sending args
-	let sensitiveArgs = true;
+	// Default to false - commands must explicitly opt-in to sending args
+	let logArgs = false;
 	// Register Yargs middleware to record command as Sentry breadcrumb
 	let recordedCommand = false;
 	const wranglerWithMiddleware = wrangler.middleware((args) => {
@@ -1785,17 +1785,17 @@ export async function main(argv: string[]): Promise<void> {
 		metricsArgs = args;
 		addBreadcrumb(`wrangler ${commandParts.join(" ")}`);
 
-		// Look up the command definition to check if it has sensitive args
-		// Default to true (sensitive) - commands must explicitly set sensitiveArgs: false to send args
+		// Look up the command definition to check if it has logArgs enabled
+		// Default to false - commands must explicitly set logArgs: true to send args
 		const commandResult = registry.findCommandDefinition(commandParts);
-		sensitiveArgs = commandResult?.definition?.metadata?.sensitiveArgs ?? true;
+		logArgs = commandResult?.definition?.metadata?.logArgs ?? false;
 
 		// Build safeCommand without "wrangler" prefix for future-proofing
-		// If this command handles sensitive data, strip positional args from the command string
+		// If this command does not log args, strip positional args from the command string
 		// to prevent accidentally capturing secrets in telemetry
-		safeCommand = sensitiveArgs
-			? commandParts.slice(0, commandResult?.commandSegments ?? 0).join(" ")
-			: commandParts.join(" ");
+		safeCommand = logArgs
+			? commandParts.join(" ")
+			: commandParts.slice(0, commandResult?.commandSegments ?? 0).join(" ");
 
 		// NB despite 'applyBeforeValidation = true', this runs *after* yargs 'validates' options,
 		// e.g. if a required arg is missing, yargs will error out before we send any events :/
@@ -1804,7 +1804,7 @@ export async function main(argv: string[]): Promise<void> {
 			{
 				safeCommand: safeCommand,
 				safe_args: args,
-				sensitiveArgs,
+				logArgs,
 			},
 			argv
 		);
@@ -1824,7 +1824,7 @@ export async function main(argv: string[]): Promise<void> {
 				durationMs,
 				durationSeconds: durationMs / 1000,
 				durationMinutes: durationMs / 1000 / 60,
-				sensitiveArgs,
+				logArgs,
 			},
 			argv
 		);
@@ -1846,7 +1846,7 @@ export async function main(argv: string[]): Promise<void> {
 					e instanceof UserError || e instanceof ContainersUserError
 						? e.telemetryMessage
 						: undefined,
-				sensitiveArgs,
+				logArgs,
 			},
 			argv
 		);

@@ -14,7 +14,7 @@ export const pipelinesStreamsCreateCommand = createCommand({
 		description: "Create a new stream",
 		owner: "Product: Pipelines",
 		status: "open beta",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	positionalArgs: ["stream"],
 	args: {

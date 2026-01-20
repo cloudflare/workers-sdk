@@ -312,7 +312,7 @@ describe("metrics", () => {
 						amplitude_session_id: 1733961600000,
 						amplitude_event_id: 0,
 						...reused,
-						sensitiveArgs: false,
+						logArgs: true,
 					},
 				};
 				expect(std.debug).toContain(
@@ -329,7 +329,7 @@ describe("metrics", () => {
 						durationMs: 6000,
 						durationSeconds: 6,
 						durationMinutes: 0.1,
-						sensitiveArgs: false,
+						logArgs: true,
 					},
 				};
 				// command completed
@@ -376,7 +376,7 @@ describe("metrics", () => {
 						amplitude_session_id: 1733961600000,
 						amplitude_event_id: 0,
 						...reused,
-						sensitiveArgs: false,
+						logArgs: true,
 					},
 				};
 				expect(std.debug).toContain(
@@ -396,7 +396,7 @@ describe("metrics", () => {
 						durationMinutes: 0.1,
 						errorType: "TypeError",
 						errorMessage: undefined,
-						sensitiveArgs: false,
+						logArgs: true,
 					},
 				};
 
@@ -455,7 +455,7 @@ describe("metrics", () => {
 						amplitude_session_id: 1733961600000,
 						amplitude_event_id: 0,
 						...{ ...reused, hasAssets: true },
-						sensitiveArgs: false,
+						logArgs: true,
 					},
 				};
 				expect(std.debug).toContain(
@@ -474,7 +474,7 @@ describe("metrics", () => {
 						durationMs: 6000,
 						durationSeconds: 6,
 						durationMinutes: 0.1,
-						sensitiveArgs: false,
+						logArgs: true,
 					},
 				};
 				expect(std.debug).toContain(
@@ -504,7 +504,7 @@ describe("metrics", () => {
 				expect(requests.count).toBe(2);
 				expect(std.debug).toContain('"argsCombination":""');
 				expect(std.debug).toContain('"safeCommand":"login');
-				expect(std.debug).toContain('"sensitiveArgs":true');
+				expect(std.debug).toContain('"logArgs":false');
 			});
 
 			it("should not send arguments with wrangler secret put to avoid capturing accidentally pasted secrets", async () => {
@@ -519,7 +519,7 @@ describe("metrics", () => {
 				// The safeCommand string is truncated to just the command prefix,
 				// and argv is cleared so no sensitive values leak through arg sanitization
 				expect(std.debug).toContain('"safeCommand":"secret put');
-				expect(std.debug).toContain('"sensitiveArgs":true');
+				expect(std.debug).toContain('"logArgs":false');
 				// Ensure the accidentally pasted secret is not in the debug output
 				expect(std.debug).not.toContain("accidentallyPastedSecret");
 			});

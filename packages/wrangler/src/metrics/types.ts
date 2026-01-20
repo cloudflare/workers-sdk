@@ -85,7 +85,7 @@ export type Events =
 			properties: CommonEventProperties & {
 				/**
 				 * The command that was used, e.g. `wrangler dev`.
-				 * When sensitiveArgs is true, this is truncated to just the command prefix
+				 * When logArgs is false, this is truncated to just the command prefix
 				 * (e.g., `wrangler secret put` instead of `wrangler secret put MY_KEY`).
 				 *
 				 * Named `safeCommand` to distinguish from historical `command` field which
@@ -95,17 +95,17 @@ export type Events =
 				/**
 				 * The args and flags that were passed in when running the command.
 				 * All user-inputted string values are redacted, except for some cases where there are set options.
-				 * When sensitiveArgs is true, this is an empty object.
+				 * When logArgs is false, this is an empty object.
 				 *
 				 * Named `safe_args` to distinguish from historical `args` field which
 				 * may have contained sensitive data in older Wrangler versions.
 				 */
 				safe_args: Record<string, unknown>;
 				/**
-				 * If true, this command handles sensitive data and args have been stripped from telemetry.
-				 * Passed from the command definition's metadata.sensitiveArgs.
+				 * If true, this command's args are included in telemetry.
+				 * Passed from the command definition's metadata.logArgs.
 				 */
-				sensitiveArgs: boolean;
+				logArgs: boolean;
 			};
 	  }
 	| {
@@ -113,7 +113,7 @@ export type Events =
 			properties: CommonEventProperties & {
 				/**
 				 * The command that was used, e.g. `wrangler dev`.
-				 * When sensitiveArgs is true, this is truncated to just the command prefix.
+				 * When logArgs is false, this is truncated to just the command prefix.
 				 *
 				 * Named `safeCommand` to distinguish from historical `command` field.
 				 */
@@ -121,7 +121,7 @@ export type Events =
 				/**
 				 * The args and flags that were passed in when running the command.
 				 * All user-inputted string values are redacted, except for some cases where there are set options.
-				 * When sensitiveArgs is true, this is an empty object.
+				 * When logArgs is false, this is an empty object.
 				 *
 				 * Named `safe_args` to distinguish from historical `args` field.
 				 */
@@ -133,10 +133,10 @@ export type Events =
 				durationMinutes: number;
 				durationSeconds: number;
 				/**
-				 * If true, this command handles sensitive data and args have been stripped from telemetry.
-				 * Passed from the command definition's metadata.sensitiveArgs.
+				 * If true, this command's args are included in telemetry.
+				 * Passed from the command definition's metadata.logArgs.
 				 */
-				sensitiveArgs: boolean;
+				logArgs: boolean;
 			};
 	  }
 	| {
@@ -144,7 +144,7 @@ export type Events =
 			properties: CommonEventProperties & {
 				/**
 				 * The command that was used, e.g. `wrangler dev`.
-				 * When sensitiveArgs is true, this is truncated to just the command prefix.
+				 * When logArgs is false, this is truncated to just the command prefix.
 				 *
 				 * Named `safeCommand` to distinguish from historical `command` field.
 				 */
@@ -152,7 +152,7 @@ export type Events =
 				/**
 				 * The args and flags that were passed in when running the command.
 				 * All user-inputted string values are redacted, except for some cases where there are set options.
-				 * When sensitiveArgs is true, this is an empty object.
+				 * When logArgs is false, this is an empty object.
 				 *
 				 * Named `safe_args` to distinguish from historical `args` field.
 				 */
@@ -172,9 +172,9 @@ export type Events =
 				 */
 				errorMessage: string | undefined;
 				/**
-				 * If true, this command handles sensitive data and args have been stripped from telemetry.
-				 * Passed from the command definition's metadata.sensitiveArgs.
+				 * If true, this command's args are included in telemetry.
+				 * Passed from the command definition's metadata.logArgs.
 				 */
-				sensitiveArgs: boolean;
+				logArgs: boolean;
 			};
 	  };

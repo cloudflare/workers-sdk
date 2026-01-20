@@ -143,7 +143,6 @@ export const secretPutCommand = createCommand({
 		description: "Create or update a secret for a Worker",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
-		sensitiveArgs: true,
 	},
 	positionalArgs: ["key"],
 	behaviour: {
@@ -350,7 +349,7 @@ export const secretListCommand = createCommand({
 		description: "List all secrets for a Worker",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	args: {
 		name: {
@@ -412,7 +411,6 @@ export const secretBulkCommand = createCommand({
 		description: "Upload multiple secrets for a Worker at once",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
-		sensitiveArgs: true,
 	},
 	positionalArgs: ["file"],
 	behaviour: {

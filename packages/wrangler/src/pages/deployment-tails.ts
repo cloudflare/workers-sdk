@@ -39,7 +39,7 @@ export const pagesDeploymentTailCommand = createCommand({
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
 		hideGlobalFlags: ["config", "env"],
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	behaviour: {
 		provideConfig: false,

@@ -11,7 +11,7 @@ export const pipelinesDeleteCommand = createCommand({
 		description: "Delete a pipeline",
 		owner: "Product: Pipelines",
 		status: "open beta",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	args: {
 		pipeline: {

@@ -14,7 +14,6 @@ export const versionsSecretBulkCommand = createCommand({
 		description: "Create or update a secret variable for a Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
-		sensitiveArgs: true,
 	},
 	behaviour: {
 		printConfigWarnings: false,

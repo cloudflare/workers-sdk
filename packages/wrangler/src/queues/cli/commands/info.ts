@@ -9,7 +9,7 @@ export const queuesInfoCommand = createCommand({
 		description: "Get queue information",
 		owner: "Product: Queues",
 		status: "stable",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	args: {
 		name: {

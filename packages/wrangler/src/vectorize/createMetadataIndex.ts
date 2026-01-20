@@ -11,7 +11,7 @@ export const vectorizeCreateMetadataIndexCommand = createCommand({
 		description: "Enable metadata filtering on the specified property",
 		owner: "Product: Vectorize",
 		status: "stable",
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	args: {
 		name: {

@@ -20,7 +20,7 @@ export const pagesFunctionsBuildEnvCommand = createCommand({
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
 		hidden: true,
-		sensitiveArgs: false,
+		logArgs: true,
 	},
 	behaviour: {
 		provideConfig: false,
