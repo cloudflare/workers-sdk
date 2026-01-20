@@ -2,27 +2,17 @@
 "wrangler": patch
 ---
 
-Always pass a valid `redirect_uri` callback parameter (`localhost:8976`) to Cloudflare OAuth API, even when the `--callback-host` and `--callback-port` params would not be accepted.
+Fix `wrangler login` with custom `callback-host`/`callback-port`
 
-The OAuth provider only accepts `localhost:8976` as the host and port in the `redirect_uri` parameter of the login request.
-
-One can configure the Wrangler's OAuth callback server to listen on custom host, via `--callback-host` (e.g. 0.0.0.0 or 127.0.0.1), and port, via `--callback-port`.
-This is useful when running Wrangler inside a Docker container (or equivalent) where it is not possible to listen on `localhost`.
-
-In this case, you can configure Wrangler to listen on a different host and/or port but then it is up to you to configure your container to map `localhost:8976` to the host and port on which Wrangler is listening.
+The Cloudflare OAuth API always requires the `redirect_uri` to be `localhost:8976`. However, sometimes the Wrangler OAuth server needed to listen on a different host/port, for example when running from inside a container. We were previously incorrectly setting the `redirect_uri` to the configured callback host/port, but it needs to be up to the user to map `localhost:8976` to the Wrangler OAuth server in the container.
 
 **Example:**
 
-Running the callback server on `127.0.0.1:8989`:
+You might run Wrangler inside a docker container like this: `docker run -p 8989:8976 <image>`, which forwards port 8976 on your host to 8989 inside the container.
 
-```
-wrangler login --calback-host=127.0.0.1 --callback-port=8989
-```
+Then inside the container, run `wrangler login --callback-host=0.0.0.0 --callback-port=8989`
 
-results in Wrangler listening on 127.0.0.1:8989 and a login URL that looks like:
+The OAuth link still has a `redirect_uri` set to`localhost:8976`. For example `https://dash.cloudflare.com/oauth2/auth?...&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&...`
 
-```
-https://dash.cloudflare.com/oauth2/auth?...&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&...
-```
+However the redirect to` localhost:8976` is then forwarded to the Wrangler OAuth server inside your container, allowing the login to complete.
 
-Note that the `redirect_uri` is always `localhost:8976` whatever the callback host and port are.
