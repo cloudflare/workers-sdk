@@ -26,6 +26,7 @@ Consider using a Node.js version manager such as https://volta.sh/ or https://gi
 		process.execPath,
 		[
 			"--no-warnings",
+			"--no-deprecation",
 			"--experimental-vm-modules",
 			...process.execArgv,
 			path.join(__dirname, "../wrangler-dist/cli.js"),
