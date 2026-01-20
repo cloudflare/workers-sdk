@@ -19,9 +19,9 @@ catalog:
   "@types/node": "^20.19.9"
   "@typescript-eslint/eslint-plugin": "^8.35.1"
   "@typescript-eslint/parser": "^8.35.1"
-  "@vitest/runner": 4.0.16
-  "@vitest/snapshot": 4.0.16
-  "@vitest/ui": 4.0.16
+  "@vitest/runner": 4.1.0-beta.1
+  "@vitest/snapshot": 4.1.0-beta.1
+  "@vitest/ui": 4.1.0-beta.1
   # rimraf@6 requires node 20 or >=22
   rimraf: "^6.0.1"
   typescript: "~5.8.3"
@@ -29,7 +29,7 @@ catalog:
   # Override undici-types from @types/node so that the Cloudflare SDK typings match our installed
   # version of Undici
   undici-types: "7.18.2"
-  vitest: "4.0.16"
+  vitest: "4.1.0-beta.1"
   vite: "^5.4.14"
   "ws": "8.18.0"
   esbuild: "0.27.0"

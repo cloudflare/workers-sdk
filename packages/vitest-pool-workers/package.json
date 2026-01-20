@@ -80,9 +80,9 @@
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"@vitest/runner": "4.0.16 - 4.0.17",
-		"@vitest/snapshot": "4.0.16 - 4.0.17",
-		"vitest": "4.0.16 - 4.0.17"
+		"@vitest/runner": "4.1.0-beta.1",
+		"@vitest/snapshot": "4.1.0-beta.1",
+		"vitest": "4.1.0-beta.1"
 	},
 	"volta": {
 		"extends": "../../package.json"
