@@ -26,7 +26,12 @@ jobs:
         include:
           - { node_version: 20, description: "Node 20" }
           - { node_version: 24, description: "Node 24", expected_to_fail: true }
-          - { node_version: 25, description: "Node 25", expected_to_fail: true }
+          # Pin to 25.3.0 to test hypothesis that 25.4.0 changed deprecation warning behavior
+          - {
+              node_version: "25.3.0",
+              description: "Node 25",
+              expected_to_fail: true,
+            }
 
     steps:
       - name: Checkout Repo
