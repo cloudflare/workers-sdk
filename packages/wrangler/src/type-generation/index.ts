@@ -18,6 +18,7 @@ import { getEntry } from "../deployment-bundle/entry";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
+import { sniffUserAgent } from "../package-manager";
 import { isProcessEnvPopulated } from "../process-env";
 import { checkTypesUpToDate, DEFAULT_WORKERS_TYPES_FILE_NAME } from "./helpers";
 import { generateRuntimeTypes } from "./runtime";
@@ -259,7 +260,9 @@ export const typesCommand = createCommand({
 			logRuntimeTypesMessage(tsconfigTypes, mode !== null);
 		}
 		logger.log(
-			`📣 Remember to rerun 'wrangler types' after you change your ${configFileName(config.configPath)} file.\n`
+			`📣 Remember to rerun '${getInvokedCommand()}' after you change your ${configFileName(
+				config.configPath
+			)} file.\n`
 		);
 	},
 });
@@ -310,6 +313,25 @@ export function generateImportSpecifier(from: string, to: string) {
 		// Deeper directory
 		return `./${relativePath}/${filename}`;
 	}
+}
+
+/**
+ * Gets the command string that the user invoked, preserving package manager
+ * script invocations (e.g., "npm run cf-typegen" instead of "wrangler types")
+ */
+function getInvokedCommand(): string {
+	// Check if this was run through a package manager script
+	// eslint-disable-next-line turbo/no-undeclared-env-vars
+	const npmLifecycleEvent = process.env.npm_lifecycle_event;
+	const packageManager = sniffUserAgent();
+
+	if (npmLifecycleEvent && packageManager) {
+		// Running through a package manager script (npm run, pnpm run, etc.)
+		return `${packageManager} run ${npmLifecycleEvent}`;
+	}
+
+	// Fallback to showing the direct wrangler command
+	return ["wrangler", ...process.argv.slice(2)].join(" ");
 }
 
 type Secrets = Record<string, string>;
@@ -717,7 +739,7 @@ export async function generateEnvTypes(
 		}
 	}
 
-	const wranglerCommandUsed = ["wrangler", ...process.argv.slice(2)].join(" ");
+	const wranglerCommandUsed = getInvokedCommand();
 
 	const typesHaveBeenFound =
 		envTypeStructure.length || modulesTypeStructure.length;
