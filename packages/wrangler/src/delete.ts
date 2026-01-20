@@ -70,6 +70,9 @@ export const deleteCommand = createCommand({
 			describe: "The path to an entry point for your worker",
 			type: "string",
 			requiresArg: true,
+			// TODO: the script argument is meaningless for the delete command, we haven't removed it as that could be
+			//       considered a breaking change, we should do so in the next major Wrangler release
+			hidden: true,
 		},
 		name: {
 			describe: "Name of the worker",
@@ -91,7 +94,7 @@ export const deleteCommand = createCommand({
 			hidden: true,
 		},
 	},
-	positionalArgs: ["script"],
+	positionalArgs: ["name"],
 	async handler(args, { config }) {
 		if (config.pages_build_output_dir) {
 			throw new UserError(
