@@ -2,11 +2,7 @@
 "wrangler": minor
 ---
 
-Sanitize commands in telemetry to prevent accidentally capturing sensitive information
-
-This change improves telemetry security by:
-
-This prevents accidentally capturing sensitive information that users may have mistakenly pasted as command arguments.
+Sanitize commands in telemetry to prevent accidentally capturing sensitive information that users may have mistakenly pasted as command arguments.
 
 The following commands will no longer collect any telemetry on argument usage:
 
