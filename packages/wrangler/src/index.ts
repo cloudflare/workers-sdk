@@ -1790,7 +1790,7 @@ export async function main(argv: string[]): Promise<void> {
 		const commandResult = registry.findCommandDefinition(commandParts);
 		sensitiveArgs = commandResult?.definition?.metadata?.sensitiveArgs ?? true;
 
-		// Build safe_command without "wrangler" prefix for future-proofing
+		// Build safeCommand without "wrangler" prefix for future-proofing
 		// If this command handles sensitive data, strip positional args from the command string
 		// to prevent accidentally capturing secrets in telemetry
 		safeCommand = sensitiveArgs
@@ -1802,7 +1802,7 @@ export async function main(argv: string[]): Promise<void> {
 		dispatcher?.sendCommandEvent(
 			"wrangler command started",
 			{
-				safe_command: safeCommand,
+				safeCommand: safeCommand,
 				safe_args: args,
 				sensitiveArgs,
 			},
@@ -1819,7 +1819,7 @@ export async function main(argv: string[]): Promise<void> {
 		dispatcher?.sendCommandEvent(
 			"wrangler command completed",
 			{
-				safe_command: safeCommand,
+				safeCommand: safeCommand,
 				safe_args: metricsArgs,
 				durationMs,
 				durationSeconds: durationMs / 1000,
@@ -1835,7 +1835,7 @@ export async function main(argv: string[]): Promise<void> {
 		dispatcher?.sendCommandEvent(
 			"wrangler command errored",
 			{
-				safe_command: safeCommand,
+				safeCommand: safeCommand,
 				safe_args: metricsArgs,
 				durationMs,
 				durationSeconds: durationMs / 1000,

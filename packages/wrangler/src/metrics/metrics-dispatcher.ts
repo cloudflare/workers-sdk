@@ -125,16 +125,16 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					argv = [];
 				}
 				if (
-					properties.safe_command === "telemetry disable" ||
-					properties.safe_command === "metrics disable"
+					properties.safeCommand === "telemetry disable" ||
+					properties.safeCommand === "metrics disable"
 				) {
 					return;
 				}
 				if (
-					properties.safe_command === "deploy" ||
-					properties.safe_command === "dev" ||
+					properties.safeCommand === "deploy" ||
+					properties.safeCommand === "dev" ||
 					// for testing purposes
-					properties.safe_command === "docs"
+					properties.safeCommand === "docs"
 				) {
 					printMetricsBanner();
 				}
@@ -167,7 +167,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				// get the args where we don't want to redact their values
 				const allowedArgs = getAllowedArgs(
 					COMMAND_ARG_ALLOW_LIST,
-					properties.safe_command ?? ""
+					properties.safeCommand ?? ""
 				);
 				properties.safe_args = sanitizeArgValues(sanitizedArgs, allowedArgs);
 

@@ -88,10 +88,10 @@ export type Events =
 				 * When sensitiveArgs is true, this is truncated to just the command prefix
 				 * (e.g., `wrangler secret put` instead of `wrangler secret put MY_KEY`).
 				 *
-				 * Named `safe_command` to distinguish from historical `command` field which
+				 * Named `safeCommand` to distinguish from historical `command` field which
 				 * may have contained sensitive positional arguments in older Wrangler versions.
 				 */
-				safe_command: string;
+				safeCommand: string;
 				/**
 				 * The args and flags that were passed in when running the command.
 				 * All user-inputted string values are redacted, except for some cases where there are set options.
@@ -115,9 +115,9 @@ export type Events =
 				 * The command that was used, e.g. `wrangler dev`.
 				 * When sensitiveArgs is true, this is truncated to just the command prefix.
 				 *
-				 * Named `safe_command` to distinguish from historical `command` field.
+				 * Named `safeCommand` to distinguish from historical `command` field.
 				 */
-				safe_command: string | undefined;
+				safeCommand: string | undefined;
 				/**
 				 * The args and flags that were passed in when running the command.
 				 * All user-inputted string values are redacted, except for some cases where there are set options.
@@ -146,9 +146,9 @@ export type Events =
 				 * The command that was used, e.g. `wrangler dev`.
 				 * When sensitiveArgs is true, this is truncated to just the command prefix.
 				 *
-				 * Named `safe_command` to distinguish from historical `command` field.
+				 * Named `safeCommand` to distinguish from historical `command` field.
 				 */
-				safe_command: string | undefined;
+				safeCommand: string | undefined;
 				/**
 				 * The args and flags that were passed in when running the command.
 				 * All user-inputted string values are redacted, except for some cases where there are set options.
