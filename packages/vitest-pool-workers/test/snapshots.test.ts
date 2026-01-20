@@ -2,7 +2,11 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
-import { minimalVitestConfig, test } from "./helpers";
+import {
+	filterDeprecationWarnings,
+	minimalVitestConfig,
+	test,
+} from "./helpers";
 
 test(
 	"disk snapshots",
@@ -130,7 +134,7 @@ test.skipIf(process.platform === "win32")(
 		`,
 		});
 		let result = await vitestRun();
-		expect(result.stderr).toEqual("");
+		expect(filterDeprecationWarnings(result.stderr)).toEqual("");
 		let exitCode = await result.exitCode;
 		expect(result.stdout).toMatch("Snapshots  2 written");
 		expect(exitCode).toBe(0);

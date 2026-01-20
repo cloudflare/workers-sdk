@@ -47,6 +47,28 @@ export interface Process {
 	readonly exitCode: Promise<number>;
 }
 
+/**
+ * Filter out Node.js deprecation warnings from stderr.
+ * These warnings (e.g., DEP0040 for punycode) can appear in child processes
+ * and are not relevant to the actual test assertions.
+ */
+export function filterDeprecationWarnings(stderr: string): string {
+	return stderr
+		.split("\n")
+		.filter((line) => {
+			// Filter out deprecation warning lines and their "Use node --trace-deprecation" hints
+			if (/\[DEP\d+\] DeprecationWarning:/.test(line)) {
+				return false;
+			}
+			if (/\(Use `node --trace-deprecation \.\.\.`/.test(line)) {
+				return false;
+			}
+			return true;
+		})
+		.join("\n")
+		.trim();
+}
+
 function wrap(proc: childProcess.ChildProcess): Process {
 	let stdout = "";
 	let stderr = "";
