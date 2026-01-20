@@ -641,9 +641,9 @@ async function generateSimpleEnvTypes(
 
 			for (const glob of ruleObject.globs) {
 				modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
-	\tconst value: ${typeScriptType};
-	\texport default value;
-	}`);
+\tconst value: ${typeScriptType};
+\texport default value;
+}`);
 			}
 		}
 	}
