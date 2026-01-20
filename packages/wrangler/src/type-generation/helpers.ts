@@ -333,9 +333,11 @@ export const checkTypesDiff = async (config: Config, entry: Entry) => {
  * @returns The PascalCase version of the input string.
  *
  * @example
+ * ```ts
  * toPascalCase("staging") // "Staging"
  * toPascalCase("my-prod-env") // "MyProdEnv"
  * toPascalCase("my_test_env") // "MyTestEnv"
+ * ```
  */
 export const toPascalCase = (str: string): string =>
 	str
@@ -349,10 +351,12 @@ export const toPascalCase = (str: string): string =>
  * Handles the `Env` suffix deduplication.
  *
  * @example
+ * ```ts
  * toEnvInterfaceName("staging") // "StagingEnv"
  * toEnvInterfaceName("my-prod-env") // "MyProdEnv"
  * toEnvInterfaceName("prod-env") // "ProdEnv"
  * toEnvInterfaceName("testing") // "TestingEnv"
+ * ```
  */
 export const toEnvInterfaceName = (envName: string): string => {
 	const pascalCase = toPascalCase(envName);
