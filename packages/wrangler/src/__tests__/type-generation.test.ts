@@ -172,7 +172,7 @@ describe("throwMissingBindingError", () => {
 	it("should throw a `UserError` for top-level bindings with array index", () => {
 		expect(() =>
 			throwMissingBindingError(
-				"wrangler.toml",
+				"wrangler.json",
 				"kv_namespaces",
 				"top-level",
 				0,
@@ -180,14 +180,14 @@ describe("throwMissingBindingError", () => {
 				{ id: "1234" }
 			)
 		).toThrowError(
-			'Processing wrangler.toml configuration:\n  - "kv_namespaces[0]" bindings should have a string "binding" field but got {"id":"1234"}.'
+			'Processing wrangler.json configuration:\n  - "kv_namespaces[0]" bindings should have a string "binding" field but got {"id":"1234"}.'
 		);
 	});
 
 	it("should throw a `UserError` for environment bindings with array index", () => {
 		expect(() =>
 			throwMissingBindingError(
-				"wrangler.toml",
+				"wrangler.json",
 				"d1_databases",
 				"production",
 				2,
@@ -195,7 +195,7 @@ describe("throwMissingBindingError", () => {
 				{ database_id: "abc123" }
 			)
 		).toThrowError(
-			'Processing wrangler.toml configuration:\n  - "env.production" environment configuration\n    - "env.production.d1_databases[2]" bindings should have a string "binding" field but got {"database_id":"abc123"}.'
+			'Processing wrangler.json configuration:\n  - "env.production" environment configuration\n    - "env.production.d1_databases[2]" bindings should have a string "binding" field but got {"database_id":"abc123"}.'
 		);
 	});
 
@@ -232,7 +232,7 @@ describe("throwMissingBindingError", () => {
 	it("should handle different field names", () => {
 		expect(() =>
 			throwMissingBindingError(
-				"wrangler.toml",
+				"wrangler.json",
 				"unsafe",
 				"staging",
 				1,
@@ -240,7 +240,7 @@ describe("throwMissingBindingError", () => {
 				{ type: "ratelimit" }
 			)
 		).toThrowError(
-			'Processing wrangler.toml configuration:\n  - "env.staging" environment configuration\n    - "env.staging.unsafe[1]" bindings should have a string "name" field but got {"type":"ratelimit"}.'
+			'Processing wrangler.json configuration:\n  - "env.staging" environment configuration\n    - "env.staging.unsafe[1]" bindings should have a string "name" field but got {"type":"ratelimit"}.'
 		);
 	});
 });
