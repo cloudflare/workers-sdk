@@ -1,5 +1,5 @@
 ---
-"wrangler": minor
+"wrangler": patch
 ---
 
 Sanitize commands in telemetry to prevent accidentally capturing sensitive information that users may have mistakenly pasted as command arguments.
