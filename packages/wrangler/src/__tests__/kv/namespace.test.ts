@@ -120,6 +120,42 @@ describe("kv", () => {
 		        `);
 			});
 
+			it("should error if the namespace already exists", async () => {
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/storage/kv/namespaces",
+						() => {
+							return HttpResponse.json(
+								{
+									result: null,
+									success: false,
+									errors: [
+										{
+											code: 10014,
+											message:
+												"create namespace: 'A namespace with this account ID and title already exists'",
+										},
+									],
+									messages: [],
+								},
+								{ status: 400 }
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await expect(runWrangler("kv namespace create DuplicateNamespace"))
+					.rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: A KV namespace with the title "DuplicateNamespace" already exists.
+
+				You can list existing namespaces with their IDs by running:
+				  wrangler kv namespace list
+
+				Or choose a different namespace name.]
+			`);
+			});
+
 			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
 				it("should create a namespace", async () => {
 					writeWranglerConfig({ name: "worker" }, configPath);
