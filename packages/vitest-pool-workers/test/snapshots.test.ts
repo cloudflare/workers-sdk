@@ -1,3 +1,4 @@
+// Cache bust: verifying Node 25.4.0 behavior
 import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
