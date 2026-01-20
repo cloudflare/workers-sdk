@@ -1,5 +1,6 @@
+import SCRIPT_IMAGES_SERVICE from "worker:images/images";
 import { z } from "zod";
-import { CoreBindings, CoreHeaders } from "../../workers";
+import { Service } from "../../runtime";
 import {
 	getUserBindingServiceName,
 	Plugin,
@@ -8,17 +9,6 @@ import {
 	RemoteProxyConnectionString,
 	WORKER_BINDING_SERVICE_LOOPBACK,
 } from "../shared";
-
-const IMAGES_LOCAL_FETCHER = /* javascript */ `
-	export default {
-		fetch(req, env) {
-			const request = new Request(req);
-			request.headers.set("${CoreHeaders.CUSTOM_FETCH_SERVICE}", "${CoreBindings.IMAGES_SERVICE}");
-			request.headers.set("${CoreHeaders.ORIGINAL_URL}", request.url);
-			return env.${CoreBindings.SERVICE_LOOPBACK}.fetch(request)
-		}
-	}
-`;
 
 const ImagesSchema = z.object({
 	binding: z.string(),
@@ -74,29 +64,32 @@ export const IMAGES_PLUGIN: Plugin<typeof ImagesOptionsSchema> = {
 			return [];
 		}
 
-		return [
-			{
-				name: getUserBindingServiceName(
-					IMAGES_PLUGIN_NAME,
-					options.images.binding,
-					options.images.remoteProxyConnectionString
-				),
-				worker: options.images.remoteProxyConnectionString
-					? remoteProxyClientWorker(
-							options.images.remoteProxyConnectionString,
-							options.images.binding
-						)
-					: {
-							modules: [
-								{
-									name: "index.worker.js",
-									esModule: IMAGES_LOCAL_FETCHER,
-								},
-							],
-							compatibilityDate: "2025-04-01",
-							bindings: [WORKER_BINDING_SERVICE_LOOPBACK],
+		const serviceName = getUserBindingServiceName(
+			IMAGES_PLUGIN_NAME,
+			options.images.binding,
+			options.images.remoteProxyConnectionString
+		);
+
+		const service: Service = {
+			name: serviceName,
+			worker: options.images.remoteProxyConnectionString
+				? remoteProxyClientWorker(
+						options.images.remoteProxyConnectionString,
+						options.images.binding
+					)
+			: {
+					compatibilityDate: "2025-04-01",
+					compatibilityFlags: ["nodejs_compat"],
+					modules: [
+						{
+							name: "images.worker.js",
+							esModule: SCRIPT_IMAGES_SERVICE(),
 						},
-			},
-		];
+					],
+					bindings: [WORKER_BINDING_SERVICE_LOOPBACK],
+				},
+		};
+
+		return [service];
 	},
 };

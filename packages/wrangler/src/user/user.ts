@@ -377,6 +377,7 @@ const DefaultScopes = {
 	"cloudchamber:write": "Manage Cloudchamber",
 	"connectivity:admin":
 		" See, change, and bind to Connectivity Directory services, including creating services targeting Cloudflare Tunnel.",
+	"images:write": "View and transform Cloudflare Images",
 } as const;
 
 /**
