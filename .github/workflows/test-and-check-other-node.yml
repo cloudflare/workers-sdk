@@ -95,3 +95,4 @@ jobs:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           CI_OS: ${{ matrix.description }}
+# Test trigger for Node 25.3.0 pinning hypothesis
