@@ -5,7 +5,7 @@ import { getType } from "mime";
 import { Minimatch } from "minimatch";
 import prettyBytes from "pretty-bytes";
 import { createCommand } from "../core/create-command";
-import { MAX_ASSET_COUNT, MAX_ASSET_SIZE } from "./constants";
+import { MAX_ASSET_COUNT_DEFAULT, MAX_ASSET_SIZE } from "./constants";
 import { hashFile } from "./hash";
 
 export const pagesProjectValidateCommand = createCommand({
@@ -46,6 +46,7 @@ export type FileContainer = {
 
 export const validate = async (args: {
 	directory: string;
+	fileCountLimit?: number;
 }): Promise<Map<string, FileContainer>> => {
 	const IGNORE_LIST = [
 		"_worker.js",
@@ -68,12 +69,23 @@ export const validate = async (args: {
 	// 	maxMemory = (parsed['max-old-space-size'] ? parsed['max-old-space-size'] : parsed['max_old_space_size']) * 1000 * 1000; // Turn MB into bytes
 	// }
 
+	const fileCountLimit = args.fileCountLimit ?? MAX_ASSET_COUNT_DEFAULT;
+
 	const walk = async (
 		dir: string,
 		fileMap: Map<string, FileContainer> = new Map(),
 		startingDir: string = dir
 	) => {
-		const files = await readdir(dir);
+		let files: string[];
+		try {
+			files = await readdir(dir);
+		} catch (e) {
+			if ((e as NodeJS.ErrnoException).code === "ENOENT") {
+				// File not found exeptions should be marked as user error
+				throw new FatalError((e as NodeJS.ErrnoException).message);
+			}
+			throw e;
+		}
 
 		await Promise.all(
 			files.map(async (file) => {
@@ -124,9 +136,9 @@ export const validate = async (args: {
 
 	const fileMap = await walk(directory);
 
-	if (fileMap.size > MAX_ASSET_COUNT) {
+	if (fileMap.size > fileCountLimit) {
 		throw new FatalError(
-			`Error: Pages only supports up to ${MAX_ASSET_COUNT.toLocaleString()} files in a deployment. Ensure you have specified your build output directory correctly.`,
+			`Error: Pages only supports up to ${fileCountLimit.toLocaleString()} files in a deployment for your current plan. Ensure you have specified your build output directory correctly.`,
 			1
 		);
 	}

@@ -5,6 +5,7 @@ import {
 	CommandLineArgsError,
 	configFileName,
 	experimental_readRawConfig,
+	FatalError,
 	parseJSONC,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -18,7 +19,7 @@ import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqli
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
 import { isProcessEnvPopulated } from "../process-env";
-import { DEFAULT_WORKERS_TYPES_FILE_NAME } from "./helpers";
+import { checkTypesUpToDate, DEFAULT_WORKERS_TYPES_FILE_NAME } from "./helpers";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Entry } from "../deployment-bundle/entry";
@@ -31,6 +32,7 @@ export const typesCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		epilogue:
 			"📖 Learn more at https://developers.cloudflare.com/workers/languages/typescript/#generate-types",
+		category: "Compute & AI",
 	},
 	behaviour: {
 		provideConfig: false,
@@ -71,6 +73,12 @@ export const typesCommand = createCommand({
 			demandOption: false,
 			hidden: true,
 			deprecated: true,
+		},
+		check: {
+			demandOption: false,
+			describe:
+				"Check if the types at the provided path are up to date without regenerating them",
+			type: "boolean",
 		},
 	},
 	validateArgs(args) {
@@ -141,6 +149,19 @@ export const typesCommand = createCommand({
 				`No config file detected${args.config ? ` (at ${args.config})` : ""}. This command requires a Wrangler configuration file.`,
 				{ telemetryMessage: "No config file detected" }
 			);
+		}
+
+		if (args.check) {
+			const outOfDate = await checkTypesUpToDate(config, outputPath);
+			if (outOfDate) {
+				throw new FatalError(
+					`Types at ${outputPath} are out of date. Run \`wrangler types\` to regenerate.`,
+					1
+				);
+			}
+
+			logger.log(`✨ Types at ${outputPath} are up to date.\n`);
+			return;
 		}
 
 		const secondaryEntries: Map<string, Entry> = new Map();
@@ -368,7 +389,7 @@ export async function generateEnvTypes(
 	const userProvidedEnvInterface = envInterface !== "Env";
 
 	if (userProvidedEnvInterface && entrypointFormat === "service-worker") {
-		throw new Error(
+		throw new UserError(
 			"An env-interface value has been provided but the worker uses the incompatible Service Worker syntax"
 		);
 	}

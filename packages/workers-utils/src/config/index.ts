@@ -20,23 +20,30 @@ export type {
 
 export function configFormat(
 	configPath: string | undefined
-): "jsonc" | "toml" | "none" {
+): "json" | "jsonc" | "toml" | "none" {
 	if (configPath?.endsWith("toml")) {
 		return "toml";
-	} else if (configPath?.endsWith("json") || configPath?.endsWith("jsonc")) {
+	}
+	if (configPath?.endsWith("jsonc")) {
 		return "jsonc";
+	}
+	if (configPath?.endsWith("json")) {
+		return "json";
 	}
 	return "none";
 }
 
 export function configFileName(configPath: string | undefined) {
 	const format = configFormat(configPath);
-	if (format === "toml") {
-		return "wrangler.toml";
-	} else if (format === "jsonc") {
-		return "wrangler.json";
-	} else {
-		return "Wrangler configuration";
+	switch (format) {
+		case "toml":
+			return "wrangler.toml";
+		case "json":
+			return "wrangler.json";
+		case "jsonc":
+			return "wrangler.jsonc";
+		default:
+			return "Wrangler configuration";
 	}
 }
 

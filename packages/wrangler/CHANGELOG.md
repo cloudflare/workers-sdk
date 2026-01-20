@@ -1,5 +1,302 @@
 # wrangler
 
+## 4.59.2
+
+### Patch Changes
+
+- [#11908](https://github.com/cloudflare/workers-sdk/pull/11908) [`e78186d`](https://github.com/cloudflare/workers-sdk/commit/e78186dae926c0ae1ab387aaa6cb8ba53bed9992) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260111.0 | 1.20260114.0 |
+
+- [#11880](https://github.com/cloudflare/workers-sdk/pull/11880) [`fe4faa3`](https://github.com/cloudflare/workers-sdk/commit/fe4faa306609514863fa770bac1dba5ff618f4be) Thanks [@penalosa](https://github.com/penalosa)! - Show helpful messages for errors outside of Wrangler's control. This prevents unnecessary Sentry reports.
+
+  Errors now handled with user-friendly messages:
+
+  - Connection timeouts to Cloudflare's API (`UND_ERR_CONNECT_TIMEOUT`) - typically due to slow networks or connectivity issues
+  - File system permission errors (`EPERM`, `EACCES`) - caused by insufficient permissions, locked files, or antivirus software
+  - DNS resolution failures (`ENOTFOUND`) - caused by network connectivity issues or DNS configuration problems
+
+- [#11882](https://github.com/cloudflare/workers-sdk/pull/11882) [`695b043`](https://github.com/cloudflare/workers-sdk/commit/695b043b4ddc99bf9a3fe93cc7daa8347b29ccb3) Thanks [@GregBrimble](https://github.com/GregBrimble)! - Improve the error message for `wrangler secret put` when using Worker versions or gradual deployments. `wrangler versions secret put` should be used instead, or ensure to deploy the latest version before using `wrangler secret put`. `wrangler secret put` alone will add the new secret to the latest version (possibly undeployed) and immediately deploy that which is usually not intended.
+
+- Updated dependencies [[`e78186d`](https://github.com/cloudflare/workers-sdk/commit/e78186dae926c0ae1ab387aaa6cb8ba53bed9992), [`fec8f5b`](https://github.com/cloudflare/workers-sdk/commit/fec8f5b82e0bb64400bbfcced302748dbe9a3062), [`d39777f`](https://github.com/cloudflare/workers-sdk/commit/d39777f1e354e8f3abd02164e76c2501e47e713f), [`4714ca1`](https://github.com/cloudflare/workers-sdk/commit/4714ca12c1f24c7e3553d3bfd2812a833a07826c), [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a)]:
+  - miniflare@4.20260114.0
+  - @cloudflare/unenv-preset@2.10.0
+  - @cloudflare/kv-asset-handler@0.4.2
+
+## 4.59.1
+
+### Patch Changes
+
+- [#11889](https://github.com/cloudflare/workers-sdk/pull/11889) [`99b1f32`](https://github.com/cloudflare/workers-sdk/commit/99b1f328a9afe181b49f1114ed47f15f6d25f0be) Thanks [@emily-shen](https://github.com/emily-shen)! - Use argument array when executing git commands with `wrangler pages deploy`
+
+  Pass user provided values from `--commit-hash` safely to underlying git command.
+
+## 4.59.0
+
+### Minor Changes
+
+- [#11852](https://github.com/cloudflare/workers-sdk/pull/11852) [`ad65efa`](https://github.com/cloudflare/workers-sdk/commit/ad65efa73ae8b666e1669964ccacc2680b12c853) Thanks [@NuroDev](https://github.com/NuroDev)! - Add `--check` flag to `wrangler types` command
+
+  The new `--check` flag allows you to verify that your generated types file is up-to-date without regenerating it. This is useful for CI/CD pipelines, pre-commit hooks, or any scenario where you want to ensure types have been committed after configuration changes.
+
+  When types are up-to-date, the command exits with code 0:
+
+  ```bash
+  $ wrangler types --check
+  ✨ Types at worker-configuration.d.ts are up to date.
+  ```
+
+  When types are out-of-date, the command exits with code 1:
+
+  ```bash
+  $ wrangler types --check
+  ✘ [ERROR] Types at worker-configuration.d.ts are out of date. Run `wrangler types` to regenerate.
+  ```
+
+  You can also use it with a custom output path:
+
+  ```bash
+  $ wrangler types ./custom-types.d.ts --check
+  ```
+
+- [#11529](https://github.com/cloudflare/workers-sdk/pull/11529) [`43d5363`](https://github.com/cloudflare/workers-sdk/commit/43d5363c7b40191723e9bab9900edd70ecac5837) Thanks [@matthewdavidrodgers](https://github.com/matthewdavidrodgers)! - Add ability to enable higher asset count limits for Pages deployments
+
+  Wrangler can now read asset count limits from JWT claims during Pages deployments,
+  allowing users to be enabled for higher limits (up to 100,000 assets) on a per-account
+  basis. The default limit remains at 20,000 assets.
+
+- [#11755](https://github.com/cloudflare/workers-sdk/pull/11755) [`0f8d69d`](https://github.com/cloudflare/workers-sdk/commit/0f8d69d31071abeb567aa3c8478492536b5740fb) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Users can now specify `constraints.tiers` for their container applications. `tier` is deprecated in favor of `tiers`.
+  If left unset, we will default to `tiers: [1, 2]`.
+  Note that `constraints` is an experimental feature.
+
+### Patch Changes
+
+- [#11820](https://github.com/cloudflare/workers-sdk/pull/11820) [`b0e54b2`](https://github.com/cloudflare/workers-sdk/commit/b0e54b26f261234ec47dcc673a5240734ba03fcc) Thanks [@MattieTK](https://github.com/MattieTK)! - Add AI agent detection to analytics events
+
+  Wrangler now detects when commands are executed by AI coding agents (such as Claude Code, Cursor, GitHub Copilot, etc.) using the `am-i-vibing` library. This information is included as an `agent` property in all analytics events, helping Cloudflare understand how developers interact with Wrangler through AI assistants.
+
+  The `agent` property will contain the agent ID (e.g., `"claude-code"`, `"cursor-agent"`) when detected, or `null` when running outside an agentic environment.
+
+- [#11494](https://github.com/cloudflare/workers-sdk/pull/11494) [`ed60c4f`](https://github.com/cloudflare/workers-sdk/commit/ed60c4f01c0e4ac9683a73fb5cf849ad74255b35) Thanks [@jalmonter](https://github.com/jalmonter)! - Fix scheduled trigger warning showing `undefined` port
+
+  When running `wrangler dev` with a worker that has cron triggers, the warning message displayed an invalid URL like `curl "http://localhost:undefined/cdn-cgi/handler/scheduled"` because the port wasn't yet determined when the warning was logged.
+
+  Moved the warning to after the proxy server is fully ready, where the actual public URL and port are known.
+
+- [#11831](https://github.com/cloudflare/workers-sdk/pull/11831) [`faa5753`](https://github.com/cloudflare/workers-sdk/commit/faa5753fa685117065c801e5d1fcee3486a6f0bd) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260107.1 | 1.20260108.0 |
+
+- [#11844](https://github.com/cloudflare/workers-sdk/pull/11844) [`e574ef3`](https://github.com/cloudflare/workers-sdk/commit/e574ef3e73aa00ca82e84fe308da0fed768477d9) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260108.0 | 1.20260109.0 |
+
+- [#11872](https://github.com/cloudflare/workers-sdk/pull/11872) [`b6148ed`](https://github.com/cloudflare/workers-sdk/commit/b6148ed733f6d6873261df5ae61e71c475ba8a8d) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260109.0 | 1.20260111.0 |
+
+- [#11843](https://github.com/cloudflare/workers-sdk/pull/11843) [`ab3859c`](https://github.com/cloudflare/workers-sdk/commit/ab3859c597fe30cdcd9ffa67f9fb7865539bf592) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update the Wrangler autoconfig logic to work with the latest version of Waku
+
+  The latest version of Waku (`0.12.5-1.0.0-alpha.1-0`) requires a `src/waku.server.tsx` file instead of a `src/server-entry.tsx` one, so the Wrangler autoconfig logic (the logic being run as part of `wrangler setup` and `wrangler deploy --x-autoconfig` that configures a project to be deployable on Cloudflare) has been updated accordingly.
+
+  Also the way the worker needs to handle static assets has been updated as recommended from the Waku team.
+
+- [#11848](https://github.com/cloudflare/workers-sdk/pull/11848) [`0eb973d`](https://github.com/cloudflare/workers-sdk/commit/0eb973deb57b8d8b9bb2fe4e5cb471fabab51bac) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Fix incorrect warning about multiple environments when using redirected config
+
+  Previously, when using a redirected config (via `configPath` in another config file) that originated from a config with multiple environments, wrangler would incorrectly warn about missing environment specification. This fix ensures the warning is only shown when the actual config being used has multiple environments defined, not when the original config did.
+
+- Updated dependencies [[`ed60c4f`](https://github.com/cloudflare/workers-sdk/commit/ed60c4f01c0e4ac9683a73fb5cf849ad74255b35), [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad), [`faa5753`](https://github.com/cloudflare/workers-sdk/commit/faa5753fa685117065c801e5d1fcee3486a6f0bd), [`e574ef3`](https://github.com/cloudflare/workers-sdk/commit/e574ef3e73aa00ca82e84fe308da0fed768477d9), [`b6148ed`](https://github.com/cloudflare/workers-sdk/commit/b6148ed733f6d6873261df5ae61e71c475ba8a8d), [`beb96af`](https://github.com/cloudflare/workers-sdk/commit/beb96af470aefaae73237309244cf7369b329ff0), [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad), [`fc96e5f`](https://github.com/cloudflare/workers-sdk/commit/fc96e5fe117948c57e49bf0741d55955691f1c28)]:
+  - miniflare@4.20260111.0
+  - @cloudflare/unenv-preset@2.9.0
+
+## 4.58.0
+
+### Minor Changes
+
+- [#11728](https://github.com/cloudflare/workers-sdk/pull/11728) [`7d63fa5`](https://github.com/cloudflare/workers-sdk/commit/7d63fa5f7c3c170d666df0fafe2904c4c6f794a6) Thanks [@NuroDev](https://github.com/NuroDev)! - Add command categories to `wrangler` help menu
+
+  The help output now groups commands by product category (Account, Compute & AI, Storage & Databases, Networking & Security) to match the Cloudflare dashboard organization:
+
+  ```
+  $ wrangler --help
+
+  COMMANDS
+    wrangler docs [search..]  📚 Open Wrangler's command documentation in your browser
+
+  ACCOUNT
+    wrangler auth    🔓 Manage authentication
+    wrangler login   🔑 Login to Cloudflare
+    ...
+
+  COMPUTE & AI
+    wrangler ai          🤖 Manage AI models
+    wrangler containers  📦 Manage Containers [open beta]
+    ...
+  ```
+
+  This improves discoverability by organizing the 20+ wrangler commands into logical groups.
+
+### Patch Changes
+
+- [#11822](https://github.com/cloudflare/workers-sdk/pull/11822) [`97e67b9`](https://github.com/cloudflare/workers-sdk/commit/97e67b984a788a807c77309fb5391b5ecf190888) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260103.0 | 1.20260107.1 |
+
+- Updated dependencies [[`97e67b9`](https://github.com/cloudflare/workers-sdk/commit/97e67b984a788a807c77309fb5391b5ecf190888)]:
+  - miniflare@4.20260107.0
+
+## 4.57.0
+
+### Minor Changes
+
+- [#11682](https://github.com/cloudflare/workers-sdk/pull/11682) [`b993d95`](https://github.com/cloudflare/workers-sdk/commit/b993d9528646943ad3b5d9c6d4239551ad490fa9) Thanks [@ascorbic](https://github.com/ascorbic)! - Add `wrangler auth token` command to retrieve your current authentication credentials.
+
+  You can now retrieve your authentication token for use with other tools and scripts:
+
+  ```bash
+  wrangler auth token
+  ```
+
+  The command returns whichever authentication method is currently configured:
+
+  - OAuth token from `wrangler login` (automatically refreshed if expired)
+  - API token from `CLOUDFLARE_API_TOKEN` environment variable
+
+  Use `--json` to get structured output including the token type, which also supports API key/email authentication:
+
+  ```bash
+  wrangler auth token --json
+  ```
+
+  This is similar to `gh auth token` in the GitHub CLI.
+
+- [#11702](https://github.com/cloudflare/workers-sdk/pull/11702) [`f612b46`](https://github.com/cloudflare/workers-sdk/commit/f612b4683a7e1408709ad378fb6c5b96af485d49) Thanks [@gpanders](https://github.com/gpanders)! - Add support for trusted_user_ca_keys in Wrangler
+
+  You can now configure SSH trusted user CA keys for containers. Add the following to your wrangler.toml:
+
+  ```toml
+  [[containers.trusted_user_ca_keys]]
+  public_key = "ssh-ed25519 AAAAC3..."
+  ```
+
+  This allows you to specify CA public keys that can be used to verify SSH user certificates.
+
+- [#11437](https://github.com/cloudflare/workers-sdk/pull/11437) [`9e360f6`](https://github.com/cloudflare/workers-sdk/commit/9e360f6918588af59f86bb153008f3ec18b082c6) Thanks [@ichernetsky-cf](https://github.com/ichernetsky-cf)! - Drop deprecated containers `observability.logging` field
+
+- [#11616](https://github.com/cloudflare/workers-sdk/pull/11616) [`fc95831`](https://github.com/cloudflare/workers-sdk/commit/fc958315f7f452155385628092db822badc09404) Thanks [@NuroDev](https://github.com/NuroDev)! - Add type generation support to `wrangler dev`
+
+  You can now have your worker configuration types be automatically generated when the local Wrangler development server starts.
+
+  To use it you can either:
+
+  1. Add the `--types` flag when running `wrangler dev`.
+  2. Update your Wrangler configuration file to add the new `dev.generate_types` boolean property.
+
+  ```json
+  {
+  	"$schema": "node_modules/wrangler/config-schema.json",
+  	"name": "example",
+  	"main": "src/index.ts",
+  	"compatibility_date": "2025-12-12",
+  	"dev": {
+  		"generate_types": true
+  	}
+  }
+  ```
+
+- [#11524](https://github.com/cloudflare/workers-sdk/pull/11524) [`b0dbf1a`](https://github.com/cloudflare/workers-sdk/commit/b0dbf1ac5c998365bb14e9a25f9a28773ba299d5) Thanks [@penalosa](https://github.com/penalosa)! - Add hidden CLI flags to `wrangler setup` for suppressing output
+
+  Two new hidden flags have been added to `wrangler setup`:
+
+  - `--no-completion-message`: Suppresses the deployment details message after setup completes
+  - `--no-install-wrangler`: Skips Wrangler installation during project setup
+
+- [#11777](https://github.com/cloudflare/workers-sdk/pull/11777) [`69979a3`](https://github.com/cloudflare/workers-sdk/commit/69979a3e0c20c8c8ec6c41253876e594ffb899f3) Thanks [@MattieTK](https://github.com/MattieTK)! - Add analytics properties to secret commands for better usage insights
+
+  Secret commands (`wrangler secret put`, `wrangler secret bulk`, and their Pages/versions equivalents) now include additional analytics properties to help understand how secrets are being managed:
+
+  - `secretOperation`: Whether this is a "single" or "bulk" secret operation
+  - `secretSource`: How the secret was provided ("interactive", "stdin", or "file")
+  - `secretFormat`: For bulk operations, the format used ("json" or "dotenv")
+  - `hasEnvironment`: Whether an environment was specified
+
+  These properties help improve the developer experience by understanding common usage patterns. No sensitive information (secret names, values, or counts) is tracked.
+
+- [#11738](https://github.com/cloudflare/workers-sdk/pull/11738) [`c54f8da`](https://github.com/cloudflare/workers-sdk/commit/c54f8da0ec5503408b1c0da236964b4c8a8d5d26) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add default `Text` module rule for `.sql` files.
+
+  This enables importing `.sql` files directly in Wrangler and the Cloudflare Vite plugin without extra configuration.
+
+- [#11692](https://github.com/cloudflare/workers-sdk/pull/11692) [`df1f9c9`](https://github.com/cloudflare/workers-sdk/commit/df1f9c914524b7a20396aaa4476200501ea05fc1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Waku in autoconfig
+
+- [#11549](https://github.com/cloudflare/workers-sdk/pull/11549) [`d059f69`](https://github.com/cloudflare/workers-sdk/commit/d059f69706bcb6c2fc4c3e65bad4f8effeffcb6a) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Support Vike in autoconfig
+
+### Patch Changes
+
+- [#11683](https://github.com/cloudflare/workers-sdk/pull/11683) [`02fbd22`](https://github.com/cloudflare/workers-sdk/commit/02fbd229b339667d9985d0cc648a8cbecc53962e) Thanks [@ascorbic](https://github.com/ascorbic)! - Display a warning when authentication errors occur and the `account_id` in your Wrangler configuration does not match any of your authenticated accounts. This helps identify configuration issues where you may have the wrong account ID set in your `wrangler.toml` or `wrangler.jsonc` file.
+
+- [#11704](https://github.com/cloudflare/workers-sdk/pull/11704) [`77078ef`](https://github.com/cloudflare/workers-sdk/commit/77078eff5eb4b2318282b76b30205d35bf22ad66) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix autoconfig handling of Next.js apps with CJS config files and incompatible Next.js versions
+
+  Previously, `wrangler setup` and `wrangler deploy --x-autoconfig` would fail when working with Next.js applications that use CommonJS config files (next.config.cjs) or have versions of Next.js that don't match the required peer dependencies. The autoconfig process now uses dynamic imports and forced installation to handle these scenarios gracefully.
+
+- [#11796](https://github.com/cloudflare/workers-sdk/pull/11796) [`2510723`](https://github.com/cloudflare/workers-sdk/commit/25107237167ab0e5dae0912ec5ce8c3d3221c0a3) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - `wrangler deploy` delegates to `opennextjs-cloudflare deploy` only when the `--x-autoconfig` flag is used
+
+  The `wrangler deploy` command has been updated to delegate to the `opennextjs-cloudflare deploy` command when run in an open-next project. Once this behavior had been introduced it caused a few issues. So it's been decided to enable it for the time being only when the `--x-autoconfig` flag is set (since this behavior, although generally valid, is only strictly necessary for the `wrangler deploy`'s autoconfig flow).
+
+- [#11764](https://github.com/cloudflare/workers-sdk/pull/11764) [`9f6dd71`](https://github.com/cloudflare/workers-sdk/commit/9f6dd716262a813980f6acd77986d9bbc25e6214) Thanks [@terakoya76](https://github.com/terakoya76)! - Fix R2 Data Catalog snapshot-expiration API field names
+
+  The `wrangler r2 bucket catalog snapshot-expiration enable` command was sending incorrect field names
+  to the Cloudflare API, resulting in a 422 Unprocessable Entity error. This fix updates the API request
+  body to use the correct field names:
+
+  - `olderThanDays` -> `max_snapshot_age` (as duration string, e.g., "30d")
+  - `retainLast` -> `min_snapshots_to_keep`
+
+  The CLI options (`--older-than-days` and `--retain-last`) remain unchanged.
+
+- [#11651](https://github.com/cloudflare/workers-sdk/pull/11651) [`d123ad0`](https://github.com/cloudflare/workers-sdk/commit/d123ad006d72bdee97cce5f4857e6d06a6fc16da) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Surface a more helpful error message for TOML Date, Date-Time, and Time values in `vars`
+
+  TOML parses unquoted date/time values like `DATE = 2024-01-01` as objects. Previously this would cause an unhelpful error message further down the stack. Now wrangler surfaces a more helpful error message earlier, telling you to quote the value as a string, e.g. `DATE = "2024-01-01"`.
+
+- [#11711](https://github.com/cloudflare/workers-sdk/pull/11711) [`5121b23`](https://github.com/cloudflare/workers-sdk/commit/5121b23cb1e892597befe9e4ee2ec0fee143f482) Thanks [@southpolesteve](https://github.com/southpolesteve)! - Show an error when D1 migration commands are run without a configuration file
+
+  Previously, running `wrangler d1 migrations apply`, `wrangler d1 migrations list`, or `wrangler d1 migrations create` in a directory without a Wrangler configuration file would silently exit with no feedback. Now these commands display a clear error message:
+
+  "No configuration file found. Create a wrangler.jsonc file to define your D1 database."
+
+- [#11710](https://github.com/cloudflare/workers-sdk/pull/11710) [`82e7e90`](https://github.com/cloudflare/workers-sdk/commit/82e7e90e3635c0d7fecdb7c7e29cb391f47bd8b6) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix arguments passed to `wrangler deploy` not being forwarded to `opennextjs-cloudflare deploy`
+
+  `wrangler deploy` run in an open-next project delegates to `opennextjs-cloudflare deploy`, as part of this all the arguments passed to `wrangler deploy` need be forwarded to `opennextjs-cloudflare deploy`, before the arguments would be lost, now they will be successfully forwarded (for example `wrangler deploy --keep-vars` will call `opennextjs-cloudflare deploy --keep-vars`)
+
+- [#10750](https://github.com/cloudflare/workers-sdk/pull/10750) [`4688f59`](https://github.com/cloudflare/workers-sdk/commit/4688f59907dd9a574a5c3a916024e6033ff8490b) Thanks [@jacoblearned](https://github.com/jacoblearned)! - Notify user on local dev server reload.
+
+  When running `wrangler dev`, the local server suppresses Miniflare's reload messages to prevent duplicate log entries from the proxy and user workers. This update adds a reload complete message so users know their changes were applied, instead of only seeing "Reloading local server...".
+
+- [#11673](https://github.com/cloudflare/workers-sdk/pull/11673) [`b827893`](https://github.com/cloudflare/workers-sdk/commit/b82789341b4cb6e0f49c69682a75fb4a1036077b) Thanks [@MattieTK](https://github.com/MattieTK)! - Breaks out version numbers into sortable number types for analytics logging
+
+- Updated dependencies [[`65d1850`](https://github.com/cloudflare/workers-sdk/commit/65d185016bc9650ae28077bba573dba120ccee1c), [`1615fce`](https://github.com/cloudflare/workers-sdk/commit/1615fce11d4f3c73c93d85d8904062ab1dbddfb1), [`b2769bf`](https://github.com/cloudflare/workers-sdk/commit/b2769bf18ece177b407235993f53f6fd8e1ac829), [`554a4df`](https://github.com/cloudflare/workers-sdk/commit/554a4dfd49b56a3e0ef4ba09fbb33a56e47a4932), [`8eede3f`](https://github.com/cloudflare/workers-sdk/commit/8eede3f213ef8ad5aed3102e6f9c20cba9ea8a66), [`6a05b1c`](https://github.com/cloudflare/workers-sdk/commit/6a05b1cdf808c9f50cd461472fc430f9b029139d), [`62fd118`](https://github.com/cloudflare/workers-sdk/commit/62fd11870972ea67b638452bd29fc2ead648f52f), [`a7e9f80`](https://github.com/cloudflare/workers-sdk/commit/a7e9f8016de23b1ad8a1cdea8c2029e8808aa7d0), [`eac5cf7`](https://github.com/cloudflare/workers-sdk/commit/eac5cf74db6d1b0865f5dc3a744ff28e695d53ca)]:
+  - miniflare@4.20260103.0
+  - @cloudflare/unenv-preset@2.8.0
+
 ## 4.56.0
 
 ### Minor Changes

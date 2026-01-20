@@ -122,6 +122,7 @@ export const pipelinesNamespace = createNamespace({
 		description: "🚰 Manage Cloudflare Pipelines",
 		owner: "Product: Pipelines",
 		status: "open beta",
+		category: "Storage & databases",
 	},
 });
 

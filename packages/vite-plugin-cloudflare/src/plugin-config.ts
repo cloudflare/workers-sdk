@@ -25,7 +25,7 @@ import type { Unstable_Config } from "wrangler";
 export type PersistState = boolean | { path: string };
 
 interface BaseWorkerConfig {
-	viteEnvironment?: { name?: string };
+	viteEnvironment?: { name?: string; childEnvironments?: string[] };
 }
 
 interface EntryWorkerConfig extends BaseWorkerConfig {
@@ -112,6 +112,7 @@ export interface WorkersResolvedConfig extends BaseResolvedConfig {
 	configPaths: Set<string>;
 	cloudflareEnv: string | undefined;
 	environmentNameToWorkerMap: Map<string, Worker>;
+	environmentNameToChildEnvironmentNamesMap: Map<string, string[]>;
 	entryWorkerEnvironmentName: string;
 	staticRouting: StaticRouting | undefined;
 	rawConfigs: {
@@ -326,6 +327,9 @@ export function resolvePluginConfig(
 		pluginConfig.viteEnvironment?.name ??
 		workerNameToEnvironmentName(entryWorkerConfig.topLevelName);
 
+	const validateAndAddEnvironmentName = createEnvironmentNameValidator();
+	validateAndAddEnvironmentName(entryWorkerEnvironmentName);
+
 	let staticRouting: StaticRouting | undefined;
 
 	if (Array.isArray(entryWorkerConfig.assets?.run_worker_first)) {
@@ -337,6 +341,22 @@ export function resolvePluginConfig(
 	const environmentNameToWorkerMap: Map<string, Worker> = new Map([
 		[entryWorkerEnvironmentName, resolveWorker(entryWorkerConfig)],
 	]);
+
+	const environmentNameToChildEnvironmentNamesMap = new Map<string, string[]>();
+
+	const entryWorkerChildEnvironments =
+		pluginConfig.viteEnvironment?.childEnvironments;
+
+	if (entryWorkerChildEnvironments) {
+		for (const childName of entryWorkerChildEnvironments) {
+			validateAndAddEnvironmentName(childName);
+		}
+
+		environmentNameToChildEnvironmentNamesMap.set(
+			entryWorkerEnvironmentName,
+			entryWorkerChildEnvironments
+		);
+	}
 
 	const auxiliaryWorkersResolvedConfigs: WorkerResolvedConfig[] = [];
 
@@ -364,16 +384,26 @@ export function resolvePluginConfig(
 			auxiliaryWorker.viteEnvironment?.name ??
 			workerNameToEnvironmentName(workerResolvedConfig.config.topLevelName);
 
-		if (environmentNameToWorkerMap.has(workerEnvironmentName)) {
-			throw new Error(
-				`Duplicate Vite environment name found: ${workerEnvironmentName}`
-			);
-		}
+		validateAndAddEnvironmentName(workerEnvironmentName);
 
 		environmentNameToWorkerMap.set(
 			workerEnvironmentName,
 			resolveWorker(workerResolvedConfig.config as ResolvedWorkerConfig)
 		);
+
+		const auxiliaryWorkerChildEnvironments =
+			auxiliaryWorker.viteEnvironment?.childEnvironments;
+
+		if (auxiliaryWorkerChildEnvironments) {
+			for (const childName of auxiliaryWorkerChildEnvironments) {
+				validateAndAddEnvironmentName(childName);
+			}
+
+			environmentNameToChildEnvironmentNamesMap.set(
+				workerEnvironmentName,
+				auxiliaryWorkerChildEnvironments
+			);
+		}
 	}
 
 	return {
@@ -382,6 +412,7 @@ export function resolvePluginConfig(
 		cloudflareEnv,
 		configPaths,
 		environmentNameToWorkerMap,
+		environmentNameToChildEnvironmentNamesMap,
 		entryWorkerEnvironmentName,
 		staticRouting,
 		remoteBindings: pluginConfig.remoteBindings ?? true,
@@ -395,6 +426,22 @@ export function resolvePluginConfig(
 // Worker names can only contain alphanumeric characters and '-' whereas environment names can only contain alphanumeric characters and '$', '_'
 function workerNameToEnvironmentName(workerName: string) {
 	return workerName.replaceAll("-", "_");
+}
+
+function createEnvironmentNameValidator() {
+	const usedNames = new Set<string>();
+
+	return (name: string): void => {
+		if (name === "client") {
+			throw new Error(`"client" is a reserved Vite environment name`);
+		}
+
+		if (usedNames.has(name)) {
+			throw new Error(`Duplicate Vite environment name: "${name}"`);
+		}
+
+		usedNames.add(name);
+	};
 }
 
 function resolveWorker(workerConfig: ResolvedWorkerConfig) {

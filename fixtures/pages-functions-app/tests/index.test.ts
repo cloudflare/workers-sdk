@@ -89,9 +89,7 @@ describe("Pages Functions", () => {
 		expect(text).toContain("<h1>A blog with a slug: hello-world</h1>");
 	});
 
-	it("can override the incoming request with next() parameters", async ({
-		expect,
-	}) => {
+	it("can override the incoming request with next() parameters", async () => {
 		const response = await fetch(`http://${ip}:${port}/next`);
 		const text = await response.text();
 		expect(text).toContain("<h1>An asset</h1>");
@@ -124,9 +122,7 @@ describe("Pages Functions", () => {
 			expect(response.status).toBe(200);
 		});
 
-		it("should mount a Plugin even if in a parameterized route", async ({
-			expect,
-		}) => {
+		it("should mount a Plugin even if in a parameterized route", async () => {
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-with-param/p123/plugin/status`
 			);
@@ -151,9 +147,7 @@ describe("Pages Functions", () => {
 			expect(text).toContain("I'm a fixed response");
 		});
 
-		it("should support proxying through to next(request)", async ({
-			expect,
-		}) => {
+		it("should support proxying through to next(request)", async () => {
 			const response = await fetch(
 				`http://${ip}:${port}/mounted-plugin/proxy-me-somewhere-else`
 			);
@@ -285,9 +279,7 @@ describe("Pages Functions", () => {
 			expect(await response.text()).toContain("Hello, world!");
 		});
 
-		it("allows errors to still be manually caught in middleware", async ({
-			expect,
-		}) => {
+		it("allows errors to still be manually caught in middleware", async () => {
 			let response = await fetch(
 				`http://${ip}:${port}/passThroughOnExceptionWithCapture/nested`
 			);
@@ -332,9 +324,7 @@ describe("Pages Functions", () => {
 			});
 		});
 
-		it("allows middleware to be overriden and not merged", async ({
-			expect,
-		}) => {
+		it("allows middleware to be overridden and not merged", async () => {
 			const response = await fetch(
 				`http://${ip}:${port}/middleware-data/merge-data`
 			);

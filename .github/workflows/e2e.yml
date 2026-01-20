@@ -11,7 +11,7 @@ jobs:
   e2e-wrangler-test:
     name: ${{ format('Wrangler E2E ({0})', matrix.description) }}
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}-wrangler
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-wrangler
       cancel-in-progress: true
     timeout-minutes: 60
     strategy:
@@ -19,11 +19,11 @@ jobs:
       matrix:
         include:
           - os: macos-latest
-            description: v20, macOS
+            description: macOS
           - os: windows-latest
-            description: v20, Windows
+            description: Windows
           - os: ubuntu-latest
-            description: v20, Linux
+            description: Linux
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -79,16 +79,17 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
+          name: turbo-runs-${{ matrix.os }}
           path: .turbo/runs
 
   e2e-vite-plugin-test:
     name: ${{ format('Vite Plugin E2E ({0})', matrix.description) }}
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-${{ matrix.node }}-vite
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.os }}-vite
       cancel-in-progress: true
     timeout-minutes: 60
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-latest
@@ -142,5 +143,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: turbo-runs-${{ matrix.os }}-${{ matrix.node }}
+          name: turbo-runs-${{ matrix.os }}
           path: .turbo/runs

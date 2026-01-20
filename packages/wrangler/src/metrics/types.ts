@@ -4,6 +4,12 @@ import type { configFormat } from "@cloudflare/workers-utils";
 export type CommonEventProperties = {
 	/** The version of the Wrangler client that is sending the event. */
 	wranglerVersion: string;
+	/** The major version component of the Wrangler client. */
+	wranglerMajorVersion: number;
+	/** The minor version component of the Wrangler client. */
+	wranglerMinorVersion: number;
+	/** The patch version component of the Wrangler client. */
+	wranglerPatchVersion: number;
 	/**
 	 * The platform that the Wrangler client is running on.
 	 */
@@ -65,6 +71,11 @@ export type CommonEventProperties = {
 	 * Same as argsUsed except concatenated for convenience in Amplitude
 	 */
 	argsCombination: string;
+	/**
+	 * The detected AI agent environment ID, if any (e.g., "claude-code", "cursor-agent").
+	 * Null if not running in an agentic environment.
+	 */
+	agent: string | null;
 };
 
 /** We send a metrics event at the start and end of a command run */
