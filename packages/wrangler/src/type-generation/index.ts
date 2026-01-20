@@ -1834,7 +1834,6 @@ function collectCoreBindings(
  * This is separate because DOs need special handling for type generation.
  *
  * @param args - All the CLI arguments passed to the `types` command
- * @param errors - Array to collect binding errors into (for aggregated error reporting)
  *
  * @returns An array of collected Durable Object bindings with their names, class name & possible script name.
  */
@@ -1907,7 +1906,6 @@ function collectAllDurableObjects(
  * This is separate because services need special handling for type generation.
  *
  * @param args - All the CLI arguments passed to the `types` command
- * @param errors - Array to collect binding errors into (for aggregated error reporting)
  *
  * @returns An array of collected service bindings with their binding, service & possible entrypoint.
  */
@@ -1980,7 +1978,6 @@ function collectAllServices(
  * This is separate because workflows need special handling for type generation.
  *
  * @param args - All the CLI arguments passed to the `types` command
- * @param errors - Array to collect binding errors into (for aggregated error reporting)
  *
  * @returns An array of collected workflow bindings with their names, class name, binding and possible script name.
  */
@@ -2054,7 +2051,6 @@ function collectAllWorkflows(
  * Collects unsafe bindings across environments.
  *
  * @param args - All the CLI arguments passed to the `types` command
- * @param errors - Array to collect binding errors into (for aggregated error reporting)
  *
  * @returns An array of collected unsafe bindings with their names and type.
  */
