@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Add support for increased Pages max asset limit in the pages validate command
+Fix `wrangler pages project validate` to respect file count limits from `CF_PAGES_UPLOAD_JWT`
