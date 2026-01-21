@@ -3,12 +3,18 @@ import { ms } from "itty-time";
 import { INSTANCE_METADATA, InstanceEvent, InstanceStatus } from "./instance";
 import { computeHash } from "./lib/cache";
 import {
+	ABORT_REASONS,
 	WorkflowFatalError,
 	WorkflowInternalError,
 	WorkflowTimeoutError,
 } from "./lib/errors";
 import { calcRetryDuration } from "./lib/retries";
-import { isValidStepName, MAX_STEP_NAME_LENGTH } from "./lib/validators";
+import {
+	isValidStepConfig,
+	isValidStepName,
+	MAX_STEP_NAME_LENGTH,
+} from "./lib/validators";
+import { MODIFIER_KEYS } from "./modifier";
 import type { Engine } from "./engine";
 import type { InstanceMetadata } from "./instance";
 import type {
@@ -45,6 +51,7 @@ export type StepState = {
 export type WorkflowStepContext = {
 	attempt: number;
 };
+const PAUSE_DATETIME = "PAUSE_DATETIME";
 
 export class Context extends RpcTarget {
 	#engine: Engine;
@@ -57,6 +64,23 @@ export class Context extends RpcTarget {
 		super();
 		this.#engine = engine;
 		this.#state = state;
+	}
+
+	async #checkForPendingPause(): Promise<void> {
+		const status = await this.#engine.getStatus();
+		if (status === InstanceStatus.WaitingForPause) {
+			await this.#state.storage.put(PAUSE_DATETIME, new Date());
+			const metadata =
+				await this.#state.storage.get<InstanceMetadata>(INSTANCE_METADATA);
+			if (metadata) {
+				await this.#engine.setStatus(
+					metadata.accountId,
+					metadata.instance.id,
+					InstanceStatus.Paused
+				);
+			}
+			await this.#engine.abort(ABORT_REASONS.USER_PAUSE);
+		}
 	}
 
 	#getCount(name: string): number {
@@ -111,6 +135,14 @@ export class Context extends RpcTarget {
 			// in the obs layer in case changes to workerd happen
 			const error = new WorkflowFatalError(
 				`Step name "${name}" exceeds max length (${MAX_STEP_NAME_LENGTH} chars) or invalid characters found`
+			) as Error & UserErrorField;
+			error.isUserError = true;
+			throw error;
+		}
+
+		if (!isValidStepConfig(stepConfig)) {
+			const error = new WorkflowFatalError(
+				`Step config for "${name}" is in a invalid format. See https://developers.cloudflare.com/workflows/build/sleeping-and-retrying/`
 			) as Error & UserErrorField;
 			error.isUserError = true;
 			throw error;
@@ -300,7 +332,7 @@ export class Context extends RpcTarget {
 				await this.#state.storage.put(stepStateKey, stepState);
 				const priorityQueueHash = `${cacheKey}-${stepState.attemptedCount}`;
 
-				const mockErrorKey = `mock-step-error-${valueKey}`;
+				const mockErrorKey = `${MODIFIER_KEYS.MOCK_STEP_ERROR}${valueKey}`;
 				const persistentMockError = await this.#state.storage.get<{
 					name: string;
 					message: string;
@@ -319,10 +351,10 @@ export class Context extends RpcTarget {
 				}
 
 				const replaceResult = await this.#state.storage.get(
-					`replace-result-${valueKey}`
+					`${MODIFIER_KEYS.REPLACE_RESULT}${valueKey}`
 				);
 
-				const forceStepTimeoutKey = `force-step-timeout-${valueKey}`;
+				const forceStepTimeoutKey = `${MODIFIER_KEYS.FORCE_STEP_TIMEOUT}${valueKey}`;
 				const persistentStepTimeout =
 					await this.#state.storage.get(forceStepTimeoutKey);
 				const transientStepTimeout = await this.#state.storage.get(
@@ -334,7 +366,6 @@ export class Context extends RpcTarget {
 					result = await timeoutPromise();
 				} else if (replaceResult) {
 					result = replaceResult;
-					await this.#state.storage.delete(`replace-result-${valueKey}`);
 					// if there is a timeout to be forced we dont want to race with closure
 				} else {
 					result = await Promise.race([
@@ -387,11 +418,18 @@ export class Context extends RpcTarget {
 							InstanceStatus.Errored
 						);
 						await this.#engine.timeoutHandler.release(this.#engine);
-						await this.#engine.abort("Value is not serialisable");
+						await this.#engine.abort(ABORT_REASONS.NOT_SERIALISABLE);
+					} else if (
+						e instanceof Error &&
+						e.message.includes("string or blob too big: SQLITE_TOOBIG")
+					) {
+						throw new WorkflowInternalError(
+							`Step ${stepNameWithCounter} output is too large. Maximum allowed size is 1MiB.`
+						);
 					} else {
 						// TODO (WOR-77): Send this to Sentry
 						throw new WorkflowInternalError(
-							`Storage failure for ${valueKey}: ${e} `
+							`Storage failure for ${stepNameWithCounter} due to internal error.`
 						);
 					}
 					return;
@@ -507,7 +545,12 @@ export class Context extends RpcTarget {
 			return result;
 		};
 
-		return doWrapper(closure);
+		const result = await doWrapper(closure);
+
+		// Check if a pause was requested while this step was running
+		await this.#checkForPendingPause();
+
+		return result;
 	}
 
 	async sleep(name: string, duration: WorkflowSleepDuration): Promise<void> {
@@ -527,8 +570,12 @@ export class Context extends RpcTarget {
 		const sleepNameCountHash = await computeHash(
 			name + this.#getCount("sleep-" + name)
 		);
-		const disableThisSleep = await this.#state.storage.get(sleepNameCountHash);
-		const disableAllSleeps = await this.#state.storage.get("disableAllSleeps");
+		const disableThisSleep = await this.#state.storage.get(
+			`${MODIFIER_KEYS.DISABLE_SLEEP}${sleepNameCountHash}`
+		);
+		const disableAllSleeps = await this.#state.storage.get(
+			MODIFIER_KEYS.DISABLE_ALL_SLEEPS
+		);
 
 		const disableSleep = disableAllSleeps || disableThisSleep;
 
@@ -596,6 +643,9 @@ export class Context extends RpcTarget {
 
 		// @ts-expect-error priorityQueue is initiated in init
 		this.#engine.priorityQueue.remove({ hash: cacheKey, type: "sleep" });
+
+		// Check if a pause was requested while this sleep was running
+		await this.#checkForPendingPause();
 	}
 
 	async sleepUntil(name: string, timestamp: Date | number): Promise<void> {
@@ -684,7 +734,7 @@ export class Context extends RpcTarget {
 			(a) => a.hash === cacheKey && a.type === "timeout"
 		);
 		const forceEventTimeout = await this.#state.storage.get(
-			`force-event-timeout-${waitForEventKey}`
+			`${MODIFIER_KEYS.FORCE_EVENT_TIMEOUT}${waitForEventKey}`
 		);
 		if (
 			(timeoutEntryPQ === undefined &&
@@ -781,6 +831,9 @@ export class Context extends RpcTarget {
 				await this.#state.storage.put(errorKey, error);
 				throw error;
 			});
+
+		// Check if a pause was requested while we were waiting for the event
+		await this.#checkForPendingPause();
 
 		return result as WorkflowStepEvent<T>;
 	}

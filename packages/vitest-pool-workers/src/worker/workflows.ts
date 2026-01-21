@@ -86,15 +86,6 @@ class WorkflowInstanceIntrospectorHandle
 	}
 
 	async waitForStatus(status: InstanceStatus["status"]): Promise<void> {
-		if (
-			status === instanceStatusName(InstanceStatusNumber.Terminated) ||
-			status === instanceStatusName(InstanceStatusNumber.Paused)
-		) {
-			throw new Error(
-				`[WorkflowIntrospector] InstanceStatus '${status}' is not implemented yet and cannot be waited.`
-			);
-		}
-
 		if (status === instanceStatusName(InstanceStatusNumber.Queued)) {
 			// we currently don't have a queue mechanism, but it would happen before it
 			// starts running, so waiting for it to be queued should always return
