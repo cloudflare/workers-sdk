@@ -5,10 +5,11 @@ import type { DefinitionTreeNode } from "./core/types";
 function setupCompletions() {
 	const { registry, globalFlags } = experimental_getWranglerCommands();
 
-	// global flags that work on every command
+	// Global flags that work on every command
 	for (const [flagName, flagDef] of Object.entries(globalFlags)) {
-		// skip hidden flags
-		if ("hidden" in flagDef && flagDef.hidden) continue;
+		if ("hidden" in flagDef && flagDef.hidden) {
+			continue;
+		}
 
 		const description = flagDef.describe || "";
 		t.option(flagName, description);
@@ -23,7 +24,7 @@ function setupCompletions() {
 		}
 	}
 
-	// recursively add commands from the registry tree
+	// Recursively add commands from the registry tree
 	function addCommandsFromTree(
 		node: DefinitionTreeNode,
 		parentPath: string[] = []
@@ -64,7 +65,9 @@ function setupCompletions() {
 					if (def.type === "command" && "args" in def) {
 						const args = def.args || {};
 						for (const [argName, argDef] of Object.entries(args)) {
-							if (argDef.hidden) continue;
+							if (argDef.hidden) {
+								continue;
+							}
 
 							const argDescription = argDef.describe || "";
 
@@ -101,17 +104,25 @@ function setupCompletions() {
 
 	return t;
 }
-// Handle completion requests from the shell
-export function handleCompletion(args: string[]) {
+
+/**
+ * Handle completion requests from the shell
+ *
+ * @param args - The command-line arguments
+ *
+ * @returns void
+ */
+export function handleCompletion(args: string[]): void {
 	const shell = args[0];
 
 	if (shell === "--") {
 		// Parse completion request from shell
 		setupCompletions();
 		t.parse(args.slice(1));
-	} else {
-		// Generate shell completion script
-		setupCompletions();
-		t.setup("wrangler", "wrangler", shell);
+		return;
 	}
+
+	// Generate shell completion script
+	setupCompletions();
+	t.setup("wrangler", "wrangler", shell);
 }
