@@ -1803,7 +1803,7 @@ export async function main(argv: string[]): Promise<void> {
 			"wrangler command started",
 			{
 				safeCommand: safeCommand,
-				safe_args: args,
+				safeArgs: args,
 				logArgs,
 			},
 			argv
@@ -1820,7 +1820,7 @@ export async function main(argv: string[]): Promise<void> {
 			"wrangler command completed",
 			{
 				safeCommand: safeCommand,
-				safe_args: metricsArgs,
+				safeArgs: metricsArgs,
 				durationMs,
 				durationSeconds: durationMs / 1000,
 				durationMinutes: durationMs / 1000 / 60,
@@ -1836,7 +1836,7 @@ export async function main(argv: string[]): Promise<void> {
 			"wrangler command errored",
 			{
 				safeCommand: safeCommand,
-				safe_args: metricsArgs,
+				safeArgs: metricsArgs,
 				durationMs,
 				durationSeconds: durationMs / 1000,
 				durationMinutes: durationMs / 1000 / 60,

@@ -259,7 +259,7 @@ describe("metrics", () => {
 				argsCombination: "",
 				agent: null,
 				safeCommand: "docs",
-				safe_args: {},
+				safeArgs: {},
 			};
 			beforeEach(() => {
 				// Default: no agent detected

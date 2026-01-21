@@ -139,7 +139,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					printMetricsBanner();
 				}
 
-				const sanitizedArgs = sanitizeArgKeys(properties.safe_args ?? {}, argv);
+				const sanitizedArgs = sanitizeArgKeys(properties.safeArgs ?? {}, argv);
 				const sanitizedArgsKeys = Object.keys(sanitizedArgs).sort();
 				const commonEventProperties: CommonEventProperties = {
 					amplitude_session_id,
@@ -169,7 +169,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					COMMAND_ARG_ALLOW_LIST,
 					properties.safeCommand ?? ""
 				);
-				properties.safe_args = sanitizeArgValues(sanitizedArgs, allowedArgs);
+				properties.safeArgs = sanitizeArgValues(sanitizedArgs, allowedArgs);
 
 				dispatch({
 					name,

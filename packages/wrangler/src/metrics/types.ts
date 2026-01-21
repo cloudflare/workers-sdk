@@ -97,10 +97,10 @@ export type Events =
 				 * All user-inputted string values are redacted, except for some cases where there are set options.
 				 * When logArgs is false, this is an empty object.
 				 *
-				 * Named `safe_args` to distinguish from historical `args` field which
+				 * Named `safeArgs` to distinguish from historical `args` field which
 				 * may have contained sensitive data in older Wrangler versions.
 				 */
-				safe_args: Record<string, unknown>;
+				safeArgs: Record<string, unknown>;
 				/**
 				 * If true, this command's args are included in telemetry.
 				 * Passed from the command definition's metadata.logArgs.
@@ -123,9 +123,9 @@ export type Events =
 				 * All user-inputted string values are redacted, except for some cases where there are set options.
 				 * When logArgs is false, this is an empty object.
 				 *
-				 * Named `safe_args` to distinguish from historical `args` field.
+				 * Named `safeArgs` to distinguish from historical `args` field.
 				 */
-				safe_args: Record<string, unknown> | undefined;
+				safeArgs: Record<string, unknown> | undefined;
 				/**
 				 * The time elapsed between the "wrangler command started" and "wrangler command completed" events
 				 */
@@ -154,9 +154,9 @@ export type Events =
 				 * All user-inputted string values are redacted, except for some cases where there are set options.
 				 * When logArgs is false, this is an empty object.
 				 *
-				 * Named `safe_args` to distinguish from historical `args` field.
+				 * Named `safeArgs` to distinguish from historical `args` field.
 				 */
-				safe_args: Record<string, unknown> | undefined;
+				safeArgs: Record<string, unknown> | undefined;
 				/**
 				 * The time elapsed between the "wrangler command started" and "wrangler command errored" events
 				 */
