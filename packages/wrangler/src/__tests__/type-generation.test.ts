@@ -19,6 +19,7 @@ import {
 	getEnvHeader,
 	throwMissingBindingError,
 	toEnvInterfaceName,
+	TOP_LEVEL_ENV_NAME,
 	toPascalCase,
 	validateEnvInterfaceNames,
 } from "../type-generation/helpers";
@@ -217,7 +218,7 @@ describe("throwMissingBindingError", () => {
 				binding: { id: "1234" },
 				bindingType: "kv_namespaces",
 				configPath: "wrangler.json",
-				envName: "top-level",
+				envName: TOP_LEVEL_ENV_NAME,
 				fieldName: "binding",
 				index: 0,
 			})
@@ -247,7 +248,7 @@ describe("throwMissingBindingError", () => {
 				binding: {},
 				bindingType: "ai",
 				configPath: "wrangler.json",
-				envName: "top-level",
+				envName: TOP_LEVEL_ENV_NAME,
 				fieldName: "binding",
 			})
 		).toThrowError(
@@ -261,7 +262,7 @@ describe("throwMissingBindingError", () => {
 				binding: {},
 				bindingType: "kv_namespaces",
 				configPath: undefined,
-				envName: "top-level",
+				envName: TOP_LEVEL_ENV_NAME,
 				fieldName: "binding",
 				index: 0,
 			})

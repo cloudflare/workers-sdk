@@ -25,6 +25,7 @@ import {
 	getEnvHeader,
 	throwMissingBindingError,
 	toEnvInterfaceName,
+	TOP_LEVEL_ENV_NAME,
 	validateEnvInterfaceNames,
 } from "./helpers";
 import { generateRuntimeTypes } from "./runtime";
@@ -1811,7 +1812,7 @@ function collectCoreBindings(
 		const envConfig = getEnvConfig(args.env, rawConfig);
 		collectEnvironmentBindings(envConfig, args.env);
 	} else {
-		collectEnvironmentBindings(rawConfig, "top-level");
+		collectEnvironmentBindings(rawConfig, TOP_LEVEL_ENV_NAME);
 		for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
 			collectEnvironmentBindings(env, envName);
 		}
@@ -1883,7 +1884,7 @@ function collectAllDurableObjects(
 		const envConfig = getEnvConfig(args.env, rawConfig);
 		collectEnvironmentDOs(envConfig, args.env);
 	} else {
-		collectEnvironmentDOs(rawConfig, "top-level");
+		collectEnvironmentDOs(rawConfig, TOP_LEVEL_ENV_NAME);
 		for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
 			collectEnvironmentDOs(env, envName);
 		}
@@ -1955,7 +1956,7 @@ function collectAllServices(
 		const envConfig = getEnvConfig(args.env, rawConfig);
 		collectEnvironmentServices(envConfig, args.env);
 	} else {
-		collectEnvironmentServices(rawConfig, "top-level");
+		collectEnvironmentServices(rawConfig, TOP_LEVEL_ENV_NAME);
 		for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
 			collectEnvironmentServices(env, envName);
 		}
@@ -2030,7 +2031,7 @@ function collectAllWorkflows(
 		const envConfig = getEnvConfig(args.env, rawConfig);
 		collectEnvironmentWorkflows(envConfig, args.env);
 	} else {
-		collectEnvironmentWorkflows(rawConfig, "top-level");
+		collectEnvironmentWorkflows(rawConfig, TOP_LEVEL_ENV_NAME);
 		for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
 			collectEnvironmentWorkflows(env, envName);
 		}
@@ -2097,7 +2098,7 @@ function collectAllUnsafeBindings(
 		const envConfig = getEnvConfig(args.env, rawConfig);
 		collectEnvironmentUnsafe(envConfig, args.env);
 	} else {
-		collectEnvironmentUnsafe(rawConfig, "top-level");
+		collectEnvironmentUnsafe(rawConfig, TOP_LEVEL_ENV_NAME);
 		for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
 			collectEnvironmentUnsafe(env, envName);
 		}
@@ -2110,11 +2111,6 @@ const logHorizontalRule = () => {
 	const screenWidth = process.stdout.columns;
 	logger.log(chalk.dim("─".repeat(Math.min(screenWidth, 60))));
 };
-
-/**
- * Sentinel value used to identify top-level (non-environment) bindings when collecting bindings per environment.
- */
-const TOP_LEVEL_ENV_NAME = "$top-level";
 
 interface PerEnvBinding {
 	bindingCategory: string;
