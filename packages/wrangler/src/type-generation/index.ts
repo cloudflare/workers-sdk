@@ -1451,14 +1451,14 @@ function collectCoreBindings(
 
 		for (const [index, kv] of (env.kv_namespaces ?? []).entries()) {
 			if (!kv.binding) {
-				throwMissingBindingError(
-					args.config,
-					"kv_namespaces",
+				throwMissingBindingError({
+					binding: kv,
+					bindingType: "kv_namespaces",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					kv
-				);
+				});
 			}
 
 			addBinding(kv.binding, "KVNamespace", "kv_namespaces", envName);
@@ -1466,14 +1466,14 @@ function collectCoreBindings(
 
 		for (const [index, r2] of (env.r2_buckets ?? []).entries()) {
 			if (!r2.binding) {
-				throwMissingBindingError(
-					args.config,
-					"r2_buckets",
+				throwMissingBindingError({
+					binding: r2,
+					bindingType: "r2_buckets",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					r2
-				);
+				});
 			}
 
 			addBinding(r2.binding, "R2Bucket", "r2_buckets", envName);
@@ -1481,14 +1481,14 @@ function collectCoreBindings(
 
 		for (const [index, d1] of (env.d1_databases ?? []).entries()) {
 			if (!d1.binding) {
-				throwMissingBindingError(
-					args.config,
-					"d1_databases",
+				throwMissingBindingError({
+					binding: d1,
+					bindingType: "d1_databases",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					d1
-				);
+				});
 			}
 
 			addBinding(d1.binding, "D1Database", "d1_databases", envName);
@@ -1496,14 +1496,14 @@ function collectCoreBindings(
 
 		for (const [index, vectorize] of (env.vectorize ?? []).entries()) {
 			if (!vectorize.binding) {
-				throwMissingBindingError(
-					args.config,
-					"vectorize",
+				throwMissingBindingError({
+					binding: vectorize,
+					bindingType: "vectorize",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					vectorize
-				);
+				});
 			}
 
 			addBinding(vectorize.binding, "VectorizeIndex", "vectorize", envName);
@@ -1511,14 +1511,14 @@ function collectCoreBindings(
 
 		for (const [index, hyperdrive] of (env.hyperdrive ?? []).entries()) {
 			if (!hyperdrive.binding) {
-				throwMissingBindingError(
-					args.config,
-					"hyperdrive",
+				throwMissingBindingError({
+					binding: hyperdrive,
+					bindingType: "hyperdrive",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					hyperdrive
-				);
+				});
 			}
 
 			addBinding(hyperdrive.binding, "Hyperdrive", "hyperdrive", envName);
@@ -1526,14 +1526,14 @@ function collectCoreBindings(
 
 		for (const [index, sendEmail] of (env.send_email ?? []).entries()) {
 			if (!sendEmail.name) {
-				throwMissingBindingError(
-					args.config,
-					"send_email",
+				throwMissingBindingError({
+					binding: sendEmail,
+					bindingType: "send_email",
+					configPath: args.config,
 					envName,
+					fieldName: "name",
 					index,
-					"name",
-					sendEmail
-				);
+				});
 			}
 
 			addBinding(sendEmail.name, "SendEmail", "send_email", envName);
@@ -1541,14 +1541,14 @@ function collectCoreBindings(
 
 		for (const [index, ae] of (env.analytics_engine_datasets ?? []).entries()) {
 			if (!ae.binding) {
-				throwMissingBindingError(
-					args.config,
-					"analytics_engine_datasets",
+				throwMissingBindingError({
+					binding: ae,
+					bindingType: "analytics_engine_datasets",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					ae
-				);
+				});
 			}
 
 			addBinding(
@@ -1561,14 +1561,14 @@ function collectCoreBindings(
 
 		for (const [index, dispatch] of (env.dispatch_namespaces ?? []).entries()) {
 			if (!dispatch.binding) {
-				throwMissingBindingError(
-					args.config,
-					"dispatch_namespaces",
+				throwMissingBindingError({
+					binding: dispatch,
+					bindingType: "dispatch_namespaces",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					dispatch
-				);
+				});
 			}
 
 			addBinding(
@@ -1581,14 +1581,14 @@ function collectCoreBindings(
 
 		for (const [index, mtls] of (env.mtls_certificates ?? []).entries()) {
 			if (!mtls.binding) {
-				throwMissingBindingError(
-					args.config,
-					"mtls_certificates",
+				throwMissingBindingError({
+					binding: mtls,
+					bindingType: "mtls_certificates",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					mtls
-				);
+				});
 			}
 
 			addBinding(mtls.binding, "Fetcher", "mtls_certificates", envName);
@@ -1596,14 +1596,14 @@ function collectCoreBindings(
 
 		for (const [index, queue] of (env.queues?.producers ?? []).entries()) {
 			if (!queue.binding) {
-				throwMissingBindingError(
-					args.config,
-					"queues.producers",
+				throwMissingBindingError({
+					binding: queue,
+					bindingType: "queues.producers",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					queue
-				);
+				});
 			}
 
 			addBinding(queue.binding, "Queue", "queues_producers", envName);
@@ -1611,14 +1611,14 @@ function collectCoreBindings(
 
 		for (const [index, secret] of (env.secrets_store_secrets ?? []).entries()) {
 			if (!secret.binding) {
-				throwMissingBindingError(
-					args.config,
-					"secrets_store_secrets",
+				throwMissingBindingError({
+					binding: secret,
+					bindingType: "secrets_store_secrets",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					secret
-				);
+				});
 			}
 
 			addBinding(
@@ -1633,14 +1633,14 @@ function collectCoreBindings(
 			env.unsafe_hello_world ?? []
 		).entries()) {
 			if (!helloWorld.binding) {
-				throwMissingBindingError(
-					args.config,
-					"unsafe_hello_world",
+				throwMissingBindingError({
+					binding: helloWorld,
+					bindingType: "unsafe_hello_world",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					helloWorld
-				);
+				});
 			}
 
 			addBinding(
@@ -1653,14 +1653,14 @@ function collectCoreBindings(
 
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
 			if (!ratelimit.name) {
-				throwMissingBindingError(
-					args.config,
-					"ratelimits",
+				throwMissingBindingError({
+					binding: ratelimit,
+					bindingType: "ratelimits",
+					configPath: args.config,
 					envName,
+					fieldName: "name",
 					index,
-					"name",
-					ratelimit
-				);
+				});
 			}
 
 			addBinding(ratelimit.name, "RateLimit", "ratelimits", envName);
@@ -1668,14 +1668,14 @@ function collectCoreBindings(
 
 		for (const [index, workerLoader] of (env.worker_loaders ?? []).entries()) {
 			if (!workerLoader.binding) {
-				throwMissingBindingError(
-					args.config,
-					"worker_loaders",
+				throwMissingBindingError({
+					binding: workerLoader,
+					bindingType: "worker_loaders",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					workerLoader
-				);
+				});
 			}
 
 			addBinding(
@@ -1688,14 +1688,14 @@ function collectCoreBindings(
 
 		for (const [index, vpcService] of (env.vpc_services ?? []).entries()) {
 			if (!vpcService.binding) {
-				throwMissingBindingError(
-					args.config,
-					"vpc_services",
+				throwMissingBindingError({
+					binding: vpcService,
+					bindingType: "vpc_services",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					vpcService
-				);
+				});
 			}
 
 			addBinding(vpcService.binding, "Fetcher", "vpc_services", envName);
@@ -1703,14 +1703,14 @@ function collectCoreBindings(
 
 		for (const [index, pipeline] of (env.pipelines ?? []).entries()) {
 			if (!pipeline.binding) {
-				throwMissingBindingError(
-					args.config,
-					"pipelines",
+				throwMissingBindingError({
+					binding: pipeline,
+					bindingType: "pipelines",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					pipeline
-				);
+				});
 			}
 
 			addBinding(
@@ -1727,14 +1727,14 @@ function collectCoreBindings(
 
 		if (env.browser) {
 			if (!env.browser.binding) {
-				throwMissingBindingError(
-					args.config,
-					"browser",
+				throwMissingBindingError({
+					binding: env.browser,
+					bindingType: "browser",
+					configPath: args.config,
 					envName,
-					-1,
-					"binding",
-					env.browser
-				);
+					fieldName: "binding",
+					index: -1,
+				});
 			} else {
 				addBinding(env.browser.binding, "Fetcher", "browser", envName);
 			}
@@ -1742,14 +1742,14 @@ function collectCoreBindings(
 
 		if (env.ai) {
 			if (!env.ai.binding) {
-				throwMissingBindingError(
-					args.config,
-					"ai",
+				throwMissingBindingError({
+					binding: env.ai,
+					bindingType: "ai",
+					configPath: args.config,
 					envName,
-					-1,
-					"binding",
-					env.ai
-				);
+					fieldName: "binding",
+					index: -1,
+				});
 			} else {
 				addBinding(env.ai.binding, "Ai", "ai", envName);
 			}
@@ -1757,14 +1757,14 @@ function collectCoreBindings(
 
 		if (env.images) {
 			if (!env.images.binding) {
-				throwMissingBindingError(
-					args.config,
-					"images",
+				throwMissingBindingError({
+					binding: env.images,
+					bindingType: "images",
+					configPath: args.config,
 					envName,
-					-1,
-					"binding",
-					env.images
-				);
+					fieldName: "binding",
+					index: -1,
+				});
 			} else {
 				addBinding(env.images.binding, "ImagesBinding", "images", envName);
 			}
@@ -1772,14 +1772,14 @@ function collectCoreBindings(
 
 		if (env.media) {
 			if (!env.media.binding) {
-				throwMissingBindingError(
-					args.config,
-					"media",
+				throwMissingBindingError({
+					binding: env.media,
+					bindingType: "media",
+					configPath: args.config,
 					envName,
-					-1,
-					"binding",
-					env.media
-				);
+					fieldName: "binding",
+					index: -1,
+				});
 			} else {
 				addBinding(env.media.binding, "MediaBinding", "media", envName);
 			}
@@ -1787,14 +1787,14 @@ function collectCoreBindings(
 
 		if (env.version_metadata) {
 			if (!env.version_metadata.binding) {
-				throwMissingBindingError(
-					args.config,
-					"version_metadata",
+				throwMissingBindingError({
+					binding: env.version_metadata,
+					bindingType: "version_metadata",
+					configPath: args.config,
 					envName,
-					-1,
-					"binding",
-					env.version_metadata
-				);
+					fieldName: "binding",
+					index: -1,
+				});
 			} else {
 				addBinding(
 					env.version_metadata.binding,
@@ -1860,14 +1860,14 @@ function collectAllDurableObjects(
 
 		for (const [index, doBinding] of env.durable_objects.bindings.entries()) {
 			if (!doBinding.name) {
-				throwMissingBindingError(
-					args.config,
-					"durable_objects.bindings",
+				throwMissingBindingError({
+					binding: doBinding,
+					bindingType: "durable_objects.bindings",
+					configPath: args.config,
 					envName,
+					fieldName: "name",
 					index,
-					"name",
-					doBinding
-				);
+				});
 			}
 
 			if (durableObjectsMap.has(doBinding.name)) {
@@ -1932,14 +1932,14 @@ function collectAllServices(
 
 		for (const [index, service] of env.services.entries()) {
 			if (!service.binding) {
-				throwMissingBindingError(
-					args.config,
-					"services",
+				throwMissingBindingError({
+					binding: service,
+					bindingType: "services",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					service
-				);
+				});
 			}
 
 			if (servicesMap.has(service.binding)) {
@@ -2006,14 +2006,14 @@ function collectAllWorkflows(
 
 		for (const [index, workflow] of env.workflows.entries()) {
 			if (!workflow.binding) {
-				throwMissingBindingError(
-					args.config,
-					"workflows",
+				throwMissingBindingError({
+					binding: workflow,
+					bindingType: "workflows",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					workflow
-				);
+				});
 			}
 
 			if (workflowsMap.has(workflow.binding)) {
@@ -2075,14 +2075,14 @@ function collectAllUnsafeBindings(
 
 		for (const [index, binding] of env.unsafe.bindings.entries()) {
 			if (!binding.name) {
-				throwMissingBindingError(
-					args.config,
-					"unsafe.bindings",
+				throwMissingBindingError({
+					binding,
+					bindingType: "unsafe.bindings",
+					configPath: args.config,
 					envName,
+					fieldName: "name",
 					index,
-					"name",
-					binding
-				);
+				});
 			}
 
 			if (unsafeMap.has(binding.name)) {
@@ -2222,14 +2222,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, kv] of (env.kv_namespaces ?? []).entries()) {
 			if (!kv.binding) {
-				throwMissingBindingError(
-					args.config,
-					"kv_namespaces",
+				throwMissingBindingError({
+					binding: kv,
+					bindingType: "kv_namespaces",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					kv
-				);
+				});
 			}
 
 			bindings.push({
@@ -2241,14 +2241,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, r2] of (env.r2_buckets ?? []).entries()) {
 			if (!r2.binding) {
-				throwMissingBindingError(
-					args.config,
-					"r2_buckets",
+				throwMissingBindingError({
+					binding: r2,
+					bindingType: "r2_buckets",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					r2
-				);
+				});
 			}
 
 			bindings.push({
@@ -2260,14 +2260,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, d1] of (env.d1_databases ?? []).entries()) {
 			if (!d1.binding) {
-				throwMissingBindingError(
-					args.config,
-					"d1_databases",
+				throwMissingBindingError({
+					binding: d1,
+					bindingType: "d1_databases",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					d1
-				);
+				});
 			}
 
 			bindings.push({
@@ -2279,14 +2279,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, vectorize] of (env.vectorize ?? []).entries()) {
 			if (!vectorize.binding) {
-				throwMissingBindingError(
-					args.config,
-					"vectorize",
+				throwMissingBindingError({
+					binding: vectorize,
+					bindingType: "vectorize",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					vectorize
-				);
+				});
 			}
 
 			bindings.push({
@@ -2298,14 +2298,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, hyperdrive] of (env.hyperdrive ?? []).entries()) {
 			if (!hyperdrive.binding) {
-				throwMissingBindingError(
-					args.config,
-					"hyperdrive",
+				throwMissingBindingError({
+					binding: hyperdrive,
+					bindingType: "hyperdrive",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					hyperdrive
-				);
+				});
 			}
 
 			bindings.push({
@@ -2317,14 +2317,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, sendEmail] of (env.send_email ?? []).entries()) {
 			if (!sendEmail.name) {
-				throwMissingBindingError(
-					args.config,
-					"send_email",
+				throwMissingBindingError({
+					binding: sendEmail,
+					bindingType: "send_email",
+					configPath: args.config,
 					envName,
+					fieldName: "name",
 					index,
-					"name",
-					sendEmail
-				);
+				});
 			}
 
 			bindings.push({
@@ -2336,14 +2336,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, ae] of (env.analytics_engine_datasets ?? []).entries()) {
 			if (!ae.binding) {
-				throwMissingBindingError(
-					args.config,
-					"analytics_engine_datasets",
+				throwMissingBindingError({
+					binding: ae,
+					bindingType: "analytics_engine_datasets",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					ae
-				);
+				});
 			}
 
 			bindings.push({
@@ -2355,14 +2355,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, dispatch] of (env.dispatch_namespaces ?? []).entries()) {
 			if (!dispatch.binding) {
-				throwMissingBindingError(
-					args.config,
-					"dispatch_namespaces",
+				throwMissingBindingError({
+					binding: dispatch,
+					bindingType: "dispatch_namespaces",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					dispatch
-				);
+				});
 			}
 
 			bindings.push({
@@ -2374,14 +2374,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, mtls] of (env.mtls_certificates ?? []).entries()) {
 			if (!mtls.binding) {
-				throwMissingBindingError(
-					args.config,
-					"mtls_certificates",
+				throwMissingBindingError({
+					binding: mtls,
+					bindingType: "mtls_certificates",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					mtls
-				);
+				});
 			}
 
 			bindings.push({
@@ -2393,14 +2393,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, queue] of (env.queues?.producers ?? []).entries()) {
 			if (!queue.binding) {
-				throwMissingBindingError(
-					args.config,
-					"queues.producers",
+				throwMissingBindingError({
+					binding: queue,
+					bindingType: "queues.producers",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					queue
-				);
+				});
 			}
 
 			bindings.push({
@@ -2412,14 +2412,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, secret] of (env.secrets_store_secrets ?? []).entries()) {
 			if (!secret.binding) {
-				throwMissingBindingError(
-					args.config,
-					"secrets_store_secrets",
+				throwMissingBindingError({
+					binding: secret,
+					bindingType: "secrets_store_secrets",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					secret
-				);
+				});
 			}
 
 			bindings.push({
@@ -2433,14 +2433,14 @@ function collectCoreBindingsPerEnvironment(
 			env.unsafe_hello_world ?? []
 		).entries()) {
 			if (!helloWorld.binding) {
-				throwMissingBindingError(
-					args.config,
-					"unsafe_hello_world",
+				throwMissingBindingError({
+					binding: helloWorld,
+					bindingType: "unsafe_hello_world",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					helloWorld
-				);
+				});
 			}
 
 			bindings.push({
@@ -2452,14 +2452,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, ratelimit] of (env.ratelimits ?? []).entries()) {
 			if (!ratelimit.name) {
-				throwMissingBindingError(
-					args.config,
-					"ratelimits",
+				throwMissingBindingError({
+					binding: ratelimit,
+					bindingType: "ratelimits",
+					configPath: args.config,
 					envName,
+					fieldName: "name",
 					index,
-					"name",
-					ratelimit
-				);
+				});
 			}
 
 			bindings.push({
@@ -2471,14 +2471,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, workerLoader] of (env.worker_loaders ?? []).entries()) {
 			if (!workerLoader.binding) {
-				throwMissingBindingError(
-					args.config,
-					"worker_loaders",
+				throwMissingBindingError({
+					binding: workerLoader,
+					bindingType: "worker_loaders",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					workerLoader
-				);
+				});
 			}
 
 			bindings.push({
@@ -2490,14 +2490,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, vpcService] of (env.vpc_services ?? []).entries()) {
 			if (!vpcService.binding) {
-				throwMissingBindingError(
-					args.config,
-					"vpc_services",
+				throwMissingBindingError({
+					binding: vpcService,
+					bindingType: "vpc_services",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					vpcService
-				);
+				});
 			}
 
 			bindings.push({
@@ -2509,14 +2509,14 @@ function collectCoreBindingsPerEnvironment(
 
 		for (const [index, pipeline] of (env.pipelines ?? []).entries()) {
 			if (!pipeline.binding) {
-				throwMissingBindingError(
-					args.config,
-					"pipelines",
+				throwMissingBindingError({
+					binding: pipeline,
+					bindingType: "pipelines",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					pipeline
-				);
+				});
 			}
 
 			bindings.push({
@@ -2536,14 +2536,14 @@ function collectCoreBindingsPerEnvironment(
 
 		if (env.browser) {
 			if (!env.browser.binding) {
-				throwMissingBindingError(
-					args.config,
-					"browser",
+				throwMissingBindingError({
+					binding: env.browser,
+					bindingType: "browser",
+					configPath: args.config,
 					envName,
-					-1,
-					"binding",
-					env.browser
-				);
+					fieldName: "binding",
+					index: -1,
+				});
 			} else {
 				bindings.push({
 					bindingCategory: "browser",
@@ -2555,14 +2555,14 @@ function collectCoreBindingsPerEnvironment(
 
 		if (env.ai) {
 			if (!env.ai.binding) {
-				throwMissingBindingError(
-					args.config,
-					"ai",
+				throwMissingBindingError({
+					binding: env.ai,
+					bindingType: "ai",
+					configPath: args.config,
 					envName,
-					-1,
-					"binding",
-					env.ai
-				);
+					fieldName: "binding",
+					index: -1,
+				});
 			} else {
 				bindings.push({
 					bindingCategory: "ai",
@@ -2574,14 +2574,14 @@ function collectCoreBindingsPerEnvironment(
 
 		if (env.images) {
 			if (!env.images.binding) {
-				throwMissingBindingError(
-					args.config,
-					"images",
+				throwMissingBindingError({
+					binding: env.images,
+					bindingType: "images",
+					configPath: args.config,
 					envName,
-					-1,
-					"binding",
-					env.images
-				);
+					fieldName: "binding",
+					index: -1,
+				});
 			} else {
 				bindings.push({
 					bindingCategory: "images",
@@ -2593,14 +2593,14 @@ function collectCoreBindingsPerEnvironment(
 
 		if (env.media) {
 			if (!env.media.binding) {
-				throwMissingBindingError(
-					args.config,
-					"media",
+				throwMissingBindingError({
+					binding: env.media,
+					bindingType: "media",
+					configPath: args.config,
 					envName,
-					-1,
-					"binding",
-					env.media
-				);
+					fieldName: "binding",
+					index: -1,
+				});
 			} else {
 				bindings.push({
 					bindingCategory: "media",
@@ -2612,14 +2612,14 @@ function collectCoreBindingsPerEnvironment(
 
 		if (env.version_metadata) {
 			if (!env.version_metadata.binding) {
-				throwMissingBindingError(
-					args.config,
-					"version_metadata",
+				throwMissingBindingError({
+					binding: env.version_metadata,
+					bindingType: "version_metadata",
+					configPath: args.config,
 					envName,
-					-1,
-					"binding",
-					env.version_metadata
-				);
+					fieldName: "binding",
+					index: -1,
+				});
 			} else {
 				bindings.push({
 					bindingCategory: "version_metadata",
@@ -2702,14 +2702,14 @@ function collectDurableObjectsPerEnvironment(
 
 		for (const [index, doBinding] of env.durable_objects.bindings.entries()) {
 			if (!doBinding.name) {
-				throwMissingBindingError(
-					args.config,
-					"durable_objects.bindings",
+				throwMissingBindingError({
+					binding: doBinding,
+					bindingType: "durable_objects.bindings",
+					configPath: args.config,
 					envName,
+					fieldName: "name",
 					index,
-					"name",
-					doBinding
-				);
+				});
 			}
 
 			durableObjects.push({
@@ -2785,14 +2785,14 @@ function collectServicesPerEnvironment(
 
 		for (const [index, service] of env.services.entries()) {
 			if (!service.binding) {
-				throwMissingBindingError(
-					args.config,
-					"services",
+				throwMissingBindingError({
+					binding: service,
+					bindingType: "services",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					service
-				);
+				});
 			}
 
 			services.push({
@@ -2875,14 +2875,14 @@ function collectWorkflowsPerEnvironment(
 
 		for (const [index, workflow] of env.workflows.entries()) {
 			if (!workflow.binding) {
-				throwMissingBindingError(
-					args.config,
-					"workflows",
+				throwMissingBindingError({
+					binding: workflow,
+					bindingType: "workflows",
+					configPath: args.config,
 					envName,
+					fieldName: "binding",
 					index,
-					"binding",
-					workflow
-				);
+				});
 			}
 
 			workflows.push({
@@ -2958,14 +2958,14 @@ function collectUnsafeBindingsPerEnvironment(
 
 		for (const [index, binding] of env.unsafe.bindings.entries()) {
 			if (!binding.name) {
-				throwMissingBindingError(
-					args.config,
-					"unsafe.bindings",
+				throwMissingBindingError({
+					binding,
+					bindingType: "unsafe.bindings",
+					configPath: args.config,
 					envName,
+					fieldName: "name",
 					index,
-					"name",
-					binding
-				);
+				});
 			}
 
 			unsafeBindings.push({

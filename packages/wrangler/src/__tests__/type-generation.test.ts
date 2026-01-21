@@ -213,14 +213,14 @@ describe("validateEnvInterfaceNames", () => {
 describe("throwMissingBindingError", () => {
 	it("should throw a `UserError` for top-level bindings with array index", () => {
 		expect(() =>
-			throwMissingBindingError(
-				"wrangler.json",
-				"kv_namespaces",
-				"top-level",
-				0,
-				"binding",
-				{ id: "1234" }
-			)
+			throwMissingBindingError({
+				binding: { id: "1234" },
+				bindingType: "kv_namespaces",
+				configPath: "wrangler.json",
+				envName: "top-level",
+				fieldName: "binding",
+				index: 0,
+			})
 		).toThrowError(
 			'Processing wrangler.json configuration:\n  - "kv_namespaces[0]" bindings should have a string "binding" field but got {"id":"1234"}.'
 		);
@@ -228,14 +228,14 @@ describe("throwMissingBindingError", () => {
 
 	it("should throw a `UserError` for environment bindings with array index", () => {
 		expect(() =>
-			throwMissingBindingError(
-				"wrangler.json",
-				"d1_databases",
-				"production",
-				2,
-				"binding",
-				{ database_id: "abc123" }
-			)
+			throwMissingBindingError({
+				binding: { database_id: "abc123" },
+				bindingType: "d1_databases",
+				configPath: "wrangler.json",
+				envName: "production",
+				fieldName: "binding",
+				index: 2,
+			})
 		).toThrowError(
 			'Processing wrangler.json configuration:\n  - "env.production" environment configuration\n    - "env.production.d1_databases[2]" bindings should have a string "binding" field but got {"database_id":"abc123"}.'
 		);
@@ -243,14 +243,14 @@ describe("throwMissingBindingError", () => {
 
 	it("should handle non-array bindings (index = -1)", () => {
 		expect(() =>
-			throwMissingBindingError(
-				"wrangler.json",
-				"ai",
-				"top-level",
-				-1,
-				"binding",
-				{}
-			)
+			throwMissingBindingError({
+				binding: {},
+				bindingType: "ai",
+				configPath: "wrangler.json",
+				envName: "top-level",
+				fieldName: "binding",
+				index: -1,
+			})
 		).toThrowError(
 			'Processing wrangler.json configuration:\n  - "ai" bindings should have a string "binding" field but got {}.'
 		);
@@ -258,14 +258,14 @@ describe("throwMissingBindingError", () => {
 
 	it("should handle undefined config path", () => {
 		expect(() =>
-			throwMissingBindingError(
-				undefined,
-				"kv_namespaces",
-				"top-level",
-				0,
-				"binding",
-				{}
-			)
+			throwMissingBindingError({
+				binding: {},
+				bindingType: "kv_namespaces",
+				configPath: undefined,
+				envName: "top-level",
+				fieldName: "binding",
+				index: 0,
+			})
 		).toThrowError(
 			'Processing Wrangler configuration configuration:\n  - "kv_namespaces[0]" bindings should have a string "binding" field but got {}.'
 		);
@@ -273,14 +273,14 @@ describe("throwMissingBindingError", () => {
 
 	it("should handle different field names", () => {
 		expect(() =>
-			throwMissingBindingError(
-				"wrangler.json",
-				"unsafe",
-				"staging",
-				1,
-				"name",
-				{ type: "ratelimit" }
-			)
+			throwMissingBindingError({
+				binding: { type: "ratelimit" },
+				bindingType: "unsafe",
+				configPath: "wrangler.json",
+				envName: "staging",
+				fieldName: "name",
+				index: 1,
+			})
 		).toThrowError(
 			'Processing wrangler.json configuration:\n  - "env.staging" environment configuration\n    - "env.staging.unsafe[1]" bindings should have a string "name" field but got {"type":"ratelimit"}.'
 		);
