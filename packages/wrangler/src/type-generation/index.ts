@@ -1103,18 +1103,18 @@ async function generatePerEnvironmentTypes(
 function generatePerEnvTypeStrings(
 	formatType: string,
 	envInterface: string,
-	perEnvInterfaces: Array<string>,
+	perEnvInterfaces: string[],
 	aggregatedEnvBindings: Array<{
 		key: string;
 		required: boolean;
 		type: string;
 	}>,
-	modulesTypeStructure: Array<string>,
-	stringKeys: Array<string>,
+	modulesTypeStructure: string[],
+	stringKeys: string[],
 	compatibilityDate: string | undefined,
-	compatibilityFlags: Array<string> | undefined,
+	compatibilityFlags: string[] | undefined,
 	entrypointModule: string | undefined,
-	configuredDurableObjects: Array<string>
+	configuredDurableObjects: string[]
 ): { fileContent: string; consoleOutput: string } {
 	let baseContent = "";
 	let processEnv = "";
@@ -1206,13 +1206,13 @@ const validateTypesFile = (path: string): void => {
 function generateTypeStrings(
 	formatType: string,
 	envInterface: string,
-	envTypeStructure: Array<string>,
-	modulesTypeStructure: Array<string>,
-	stringKeys: Array<string>,
+	envTypeStructure: string[],
+	modulesTypeStructure: string[],
+	stringKeys: string[],
 	compatibilityDate: string | undefined,
-	compatibilityFlags: Array<string> | undefined,
+	compatibilityFlags: string[] | undefined,
 	entrypointModule: string | undefined,
-	configuredDurableObjects: Array<string>
+	configuredDurableObjects: string[]
 ): {
 	consoleOutput: string;
 	fileContent: string;
@@ -1248,7 +1248,7 @@ function generateTypeStrings(
  *
  * @returns An array of types defined in the tsconfig.json's compilerOptions.types, or an empty array if not found or on error
  */
-function readTsconfigTypes(tsconfigPath: string): Array<string> {
+function readTsconfigTypes(tsconfigPath: string): string[] {
 	if (!fs.existsSync(tsconfigPath)) {
 		return [];
 	}
@@ -2133,12 +2133,10 @@ interface PerEnvBinding {
  */
 function collectVarsPerEnvironment(
 	args: Partial<(typeof typesCommand)["args"]>
-): Map<string, Record<string, Array<string>>> {
-	const result = new Map<string, Record<string, Array<string>>>();
+): Map<string, Record<string, string[]>> {
+	const result = new Map<string, Record<string, string[]>>();
 
-	function collectVars(
-		vars: RawEnvironment["vars"]
-	): Record<string, Array<string>> {
+	function collectVars(vars: RawEnvironment["vars"]): Record<string, string[]> {
 		const varsInfo: Record<string, Set<string>> = {};
 
 		Object.entries(vars ?? {}).forEach(([key, value]) => {
