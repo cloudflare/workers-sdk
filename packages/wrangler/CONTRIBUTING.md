@@ -137,7 +137,7 @@ Errors are caught at the top-level and formatted for the console.
 
 ### Integration with Cloudflare REST API
 
-The [Cloudflare REST API](https://developers.cloudflare.com/api/) whenever possible should not be interacted directly with, the [Cloudflare TypeScript SDK](https://www.npmjs.com/package/cloudflare) package should be used instead. This helps maintaining the code more type safe and concise as well as preventing the usage of undocumented and unstable features that might be present in the raw REST API.
+The [Cloudflare REST API](https://developers.cloudflare.com/api/) whenever possible should not be interacted directly with, the [Cloudflare TypeScript SDK](https://www.npmjs.com/package/cloudflare) package should be used instead. This helps the type safety of the code as well as preventing the usage of undocumented and unstable features that might be present in the raw REST API.
 
 The SDK is set up for every command's handler ([code](https://github.com/cloudflare/workers-sdk/blob/20467fda1/packages/wrangler/src/core/register-yargs-command.ts#L200)) and unless there are other needs, this should be the preferred way of consuming it.
 You can see an example of using the SDK in the [KV create command](https://github.com/cloudflare/workers-sdk/blob/20467fda1/packages/wrangler/src/kv/index.ts#L110).
