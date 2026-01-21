@@ -881,15 +881,18 @@ export const WorkerdTests: Record<string, () => void> = {
 		assert.strictEqual(tty.isatty(1), false);
 		assert.strictEqual(tty.isatty(2), false);
 
-		// Both implementations throw when calling ReadStream/WriteStream constructors
-		assert.throws(
-			() => new (tty.ReadStream as any)(0),
-			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
-		);
-		assert.throws(
-			() => new (tty.WriteStream as any)(1),
-			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
-		);
+		// Native workerd throws when calling ReadStream/WriteStream constructors
+		// unenv stub does not throw - it creates stub objects
+		if (getRuntimeFlagValue("enable_nodejs_tty_module")) {
+			assert.throws(
+				() => new (tty.ReadStream as any)(0),
+				/ERR_METHOD_NOT_IMPLEMENTED/
+			);
+			assert.throws(
+				() => new (tty.WriteStream as any)(1),
+				/ERR_METHOD_NOT_IMPLEMENTED/
+			);
+		}
 	},
 };
 
