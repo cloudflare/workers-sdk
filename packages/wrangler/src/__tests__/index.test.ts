@@ -37,6 +37,7 @@ describe("wrangler", () => {
 
 				COMMANDS
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
+				  wrangler complete [shell]       ⌨️ Generate and handle shell completions
 
 				ACCOUNT
 				  wrangler auth                   🔐 Manage authentication
@@ -108,6 +109,7 @@ describe("wrangler", () => {
 
 				COMMANDS
 				  wrangler docs [search..]        📚 Open Wrangler's command documentation in your browser
+				  wrangler complete [shell]       ⌨️ Generate and handle shell completions
 
 				ACCOUNT
 				  wrangler auth                   🔐 Manage authentication
