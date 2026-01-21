@@ -15,6 +15,8 @@ import {
 	isValidIdentifier,
 } from "../type-generation";
 import {
+	ENV_HEADER_COMMENT_PREFIX,
+	getEnvHeader,
 	throwMissingBindingError,
 	toEnvInterfaceName,
 	toPascalCase,
@@ -95,6 +97,46 @@ describe("generateImportSpecifier", () => {
 		expect(generateImportSpecifier("/app/types.ts", "/app/src/index.mjs")).toBe(
 			"./src/index"
 		);
+	});
+});
+
+describe("getEnvHeader", () => {
+	it("should generate a header with the provided hash and command", () => {
+		const result = getEnvHeader("abc123", "wrangler types");
+		expect(result).toBe(
+			`${ENV_HEADER_COMMENT_PREFIX} \`wrangler types\` (hash: abc123)`
+		);
+	});
+
+	it("should include complex commands with flags", () => {
+		const result = getEnvHeader(
+			"def456",
+			"wrangler types --strict-vars=false --env-interface=MyEnv"
+		);
+		expect(result).toBe(
+			`${ENV_HEADER_COMMENT_PREFIX} \`wrangler types --strict-vars=false --env-interface=MyEnv\` (hash: def456)`
+		);
+	});
+
+	it("should handle empty hash", () => {
+		const result = getEnvHeader("", "wrangler types");
+		expect(result).toBe(
+			`${ENV_HEADER_COMMENT_PREFIX} \`wrangler types\` (hash: )`
+		);
+	});
+
+	it("should use process.argv when command is not provided", () => {
+		const originalArgv = process.argv;
+		process.argv = ["node", "wrangler", "types", "--include-runtime=false"];
+
+		try {
+			const result = getEnvHeader("xyz789");
+			expect(result).toBe(
+				`${ENV_HEADER_COMMENT_PREFIX} \`wrangler types --include-runtime=false\` (hash: xyz789)`
+			);
+		} finally {
+			process.argv = originalArgv;
+		}
 	});
 });
 
