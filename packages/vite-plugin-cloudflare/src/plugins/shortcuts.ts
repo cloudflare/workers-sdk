@@ -41,6 +41,11 @@ export function addBindingsShortcut(
 		return;
 	}
 
+	// Interactive shortcuts should only be registered in a TTY environment
+	if (!process.stdin.isTTY) {
+		return;
+	}
+
 	const registryPath = getDefaultDevRegistryPath();
 	const printBindingsShortcut = {
 		key: "b",
