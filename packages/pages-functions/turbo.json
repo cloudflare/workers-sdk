@@ -3,8 +3,11 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"dependsOn": ["@cloudflare/pages-functions#build"],
+			"inputs": ["$TURBO_DEFAULT$", "!__tests__/**"],
 			"outputs": ["dist/**"]
+		},
+		"test:ci": {
+			"dependsOn": ["build"]
 		}
 	}
 }
