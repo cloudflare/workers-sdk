@@ -13,6 +13,9 @@ wrangler complete bash >> ~/.bashrc
 # Zsh
 wrangler complete zsh >> ~/.zshrc
 
+# Fish
+wrangler complete fish >> ~/.config/fish/completions/wrangler.fish
+
 # PowerShell
 wrangler complete powershell > $PROFILE
 ```
