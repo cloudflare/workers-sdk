@@ -122,7 +122,7 @@ export const typesCommand = createCommand({
 			);
 		}
 
-		checkPath(args.path);
+		validateTypesFile(args.path);
 
 		if (!args.includeEnv && !args.includeRuntime) {
 			throw new CommandLineArgsError(
@@ -1161,7 +1161,7 @@ function generatePerEnvTypeStrings(
  *
  * @throws {UserError} If a non-Wrangler .d.ts file already exists at the given path.
  */
-const checkPath = (path: string): void => {
+const validateTypesFile = (path: string): void => {
 	const wranglerOverrideDTSPath = findUpSync(path);
 	if (wranglerOverrideDTSPath === undefined) {
 		return;
