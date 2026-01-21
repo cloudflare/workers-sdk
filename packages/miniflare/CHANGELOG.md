@@ -1,5 +1,63 @@
 # miniflare
 
+## 4.20260116.0
+
+### Minor Changes
+
+- [#11942](https://github.com/cloudflare/workers-sdk/pull/11942) [`133bf95`](https://github.com/cloudflare/workers-sdk/commit/133bf95783c8b63ecc2b572a4400c7aa4bd4f8c4) Thanks [@penalosa](https://github.com/penalosa)! - Add support for Email Sending API's MessageBuilder interface in local mode
+
+  Miniflare now supports the simplified MessageBuilder interface for sending emails, alongside the existing `EmailMessage` support.
+
+  Example usage:
+
+  ```javascript
+  await env.EMAIL.send({
+  	from: { name: "Alice", email: "alice@example.com" },
+  	to: ["bob@example.com"],
+  	subject: "Hello",
+  	text: "Plain text version",
+  	html: "<h1>HTML version</h1>",
+  	attachments: [
+  		{
+  			disposition: "attachment",
+  			filename: "report.pdf",
+  			type: "application/pdf",
+  			content: pdfData,
+  		},
+  	],
+  });
+  ```
+
+  In local mode, email content (text, HTML, attachments) is stored to temporary files that you can open in your editor or browser for inspection. File paths are logged to the console when emails are sent.
+
+### Patch Changes
+
+- [#11925](https://github.com/cloudflare/workers-sdk/pull/11925) [`8e4a0e5`](https://github.com/cloudflare/workers-sdk/commit/8e4a0e5e8d1e0bf75b6f11000f89f7eabafa392a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260114.0 | 1.20260115.0 |
+
+- [#11942](https://github.com/cloudflare/workers-sdk/pull/11942) [`133bf95`](https://github.com/cloudflare/workers-sdk/commit/133bf95783c8b63ecc2b572a4400c7aa4bd4f8c4) Thanks [@penalosa](https://github.com/penalosa)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260115.0 | 1.20260116.0 |
+
+- [#11967](https://github.com/cloudflare/workers-sdk/pull/11967) [`202c59e`](https://github.com/cloudflare/workers-sdk/commit/202c59e4f4f28419fb6ac0aa8c7dc3960a0c8d3e) Thanks [@emily-shen](https://github.com/emily-shen)! - chore: update undici
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | undici     | 7.14.0 | 7.18.2 |
+
+- [#11943](https://github.com/cloudflare/workers-sdk/pull/11943) [`25e2c60`](https://github.com/cloudflare/workers-sdk/commit/25e2c608d529664ede251abe45fdb13ea9e56a9d) Thanks [@vicb](https://github.com/vicb)! - Bump capnp-es to ^0.0.14
+
 ## 4.20260114.0
 
 ### Minor Changes

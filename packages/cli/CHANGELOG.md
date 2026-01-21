@@ -1,5 +1,21 @@
 # @cloudflare/cli
 
+## 1.2.1
+
+### Patch Changes
+
+- [#11940](https://github.com/cloudflare/workers-sdk/pull/11940) [`69ff962`](https://github.com/cloudflare/workers-sdk/commit/69ff9620487a6ae979f369eb1dbac887ce46e246) Thanks [@penalosa](https://github.com/penalosa)! - Mark macOS version compatibility errors as user errors
+
+  When checking macOS version compatibility, the CLI now throws `UserError` instead of generic `Error`. This ensures that version incompatibility issues are properly classified as user-facing errors that shouldn't be reported to Sentry.
+
+- [#11967](https://github.com/cloudflare/workers-sdk/pull/11967) [`202c59e`](https://github.com/cloudflare/workers-sdk/commit/202c59e4f4f28419fb6ac0aa8c7dc3960a0c8d3e) Thanks [@emily-shen](https://github.com/emily-shen)! - chore: update undici
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | undici     | 7.14.0 | 7.18.2 |
+
 ## 1.2.0
 
 ### Minor Changes

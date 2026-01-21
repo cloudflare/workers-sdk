@@ -1,5 +1,69 @@
 # create-cloudflare
 
+## 2.62.3
+
+### Patch Changes
+
+- [#11861](https://github.com/cloudflare/workers-sdk/pull/11861) [`27ea230`](https://github.com/cloudflare/workers-sdk/commit/27ea230b036e262c692c438405c477afb50e02a6) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.558 | 0.0.564 |
+
+- [#11862](https://github.com/cloudflare/workers-sdk/pull/11862) [`6bd2ab4`](https://github.com/cloudflare/workers-sdk/commit/6bd2ab491cda9e18c2315bbf0564658692ab36fe) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.1.3 | 2.2.1 |
+
+- [#11864](https://github.com/cloudflare/workers-sdk/pull/11864) [`283a9e4`](https://github.com/cloudflare/workers-sdk/commit/283a9e4671020ad5db3a943d943d576efdb87450) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency   | From  | To    |
+  | ------------ | ----- | ----- |
+  | create-rwsdk | 3.1.2 | 3.1.3 |
+
+- [#11865](https://github.com/cloudflare/workers-sdk/pull/11865) [`8522a8b`](https://github.com/cloudflare/workers-sdk/commit/8522a8b48ccff3da14a42c3413b6adcdacca79dc) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From   | To     |
+  | ------------------- | ------ | ------ |
+  | create-react-router | 7.11.0 | 7.12.0 |
+
+- [#11915](https://github.com/cloudflare/workers-sdk/pull/11915) [`20467fd`](https://github.com/cloudflare/workers-sdk/commit/20467fda188c70237805b00dafcb5e2acc9dc259) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From                   | To                     |
+  | ----------- | ---------------------- | ---------------------- |
+  | create-waku | 0.12.5-1.0.0-alpha.1-0 | 0.12.5-1.0.0-alpha.2-0 |
+
+- [#11961](https://github.com/cloudflare/workers-sdk/pull/11961) [`844975f`](https://github.com/cloudflare/workers-sdk/commit/844975fac1d46fabd2573f209fbb029f21097b8f) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.2.1 | 2.2.2 |
+
+- [#11952](https://github.com/cloudflare/workers-sdk/pull/11952) [`c09dbd7`](https://github.com/cloudflare/workers-sdk/commit/c09dbd7e43d934c19a5daafa62936603f2e3bfec) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Bump the version of `@cloudflare/vitest-pool-workers` in the hello-world templates from `^0.8.19` to `^0.12.4`
+
+  The version of the `@cloudflare/vitest-pool-workers` in the hello-world templates is currently `^0.8.19`, since the package is pre v1, the Caret syntax only installs the latest `0.8.x` version of the package, which is a bit outdated. So the changes here manually keep the package more up to date.
+
+- [#11967](https://github.com/cloudflare/workers-sdk/pull/11967) [`202c59e`](https://github.com/cloudflare/workers-sdk/commit/202c59e4f4f28419fb6ac0aa8c7dc3960a0c8d3e) Thanks [@emily-shen](https://github.com/emily-shen)! - chore: update undici
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | undici     | 7.14.0 | 7.18.2 |
+
 ## 2.62.2
 
 ### Patch Changes

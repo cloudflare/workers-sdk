@@ -7,6 +7,7 @@ import prettyBytes from "pretty-bytes";
 import { createCommand } from "../core/create-command";
 import { MAX_ASSET_COUNT_DEFAULT, MAX_ASSET_SIZE } from "./constants";
 import { hashFile } from "./hash";
+import { maxFileCountAllowedFromClaims } from "./upload";
 
 export const pagesProjectValidateCommand = createCommand({
 	metadata: {
@@ -31,8 +32,13 @@ export const pagesProjectValidateCommand = createCommand({
 			throw new FatalError("Must specify a directory.", 1);
 		}
 
+		const fileCountLimit = process.env.CF_PAGES_UPLOAD_JWT
+			? maxFileCountAllowedFromClaims(process.env.CF_PAGES_UPLOAD_JWT)
+			: undefined;
+
 		await validate({
 			directory,
+			fileCountLimit,
 		});
 	},
 });
