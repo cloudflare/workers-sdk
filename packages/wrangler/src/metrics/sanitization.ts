@@ -46,11 +46,12 @@ export function getAllowedArgs(
 	const commandParts = command.split(" ");
 	while (commandParts.length > 0) {
 		const subCommand = commandParts.join(" ");
-		allowedArgs = { ...commandArgAllowList[subCommand], ...allowedArgs };
+		// Merge so that more specific command entries override less specific ones
+		allowedArgs = { ...allowedArgs, ...commandArgAllowList[subCommand] };
 		commandParts.pop();
 		if (commandParts.length > 0) {
 			const wildcardCommand = commandParts.join(" ") + " *";
-			allowedArgs = { ...commandArgAllowList[wildcardCommand], ...allowedArgs };
+			allowedArgs = { ...allowedArgs, ...commandArgAllowList[wildcardCommand] };
 		}
 	}
 	return allowedArgs;

@@ -126,4 +126,22 @@ describe("getAllowedArgs", () => {
 			logLevel: ALLOW,
 		});
 	});
+
+	it("should allow command-specific entries to override global '*' defaults", () => {
+		const commandArgAllowList: AllowList = {
+			"*": {
+				format: ALLOW,
+				logLevel: ALLOW,
+			},
+			sensitive: {
+				format: REDACT,
+			},
+		};
+
+		// The "sensitive" command should REDACT format, overriding the global ALLOW
+		expect(getAllowedArgs(commandArgAllowList, "sensitive")).toEqual({
+			format: REDACT,
+			logLevel: ALLOW,
+		});
+	});
 });
