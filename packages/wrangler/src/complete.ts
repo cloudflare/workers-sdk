@@ -1,4 +1,3 @@
-// shell completions for wrangler - this dynamically extracts commands from the actual command registry
 import t from "@bomb.sh/tab";
 import { experimental_getWranglerCommands } from "./experimental-commands-api";
 import type { DefinitionTreeNode } from "./core/types";

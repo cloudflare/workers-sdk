@@ -18,7 +18,6 @@ describe("wrangler", () => {
 		const std = mockConsoleMethods();
 		runInTempDir();
 
-		// Inline completion tests (complete --)
 		describe("complete --", () => {
 			test("should return top-level commands", async ({ expect }) => {
 				await runWrangler('complete -- ""');
@@ -45,7 +44,6 @@ describe("wrangler", () => {
 			test("should not include internal commands", async ({ expect }) => {
 				await runWrangler('complete -- ""');
 
-				// Verify we get expected commands and not internal/debug ones
 				expect(std.out).toContain("deploy\t");
 				expect(std.out).toContain("dev\t");
 				// Internal commands like "_dev" should not be exposed
@@ -66,7 +64,6 @@ describe("wrangler", () => {
 				const lines = std.out.trim().split("\n");
 				let tabSeparatedCount = 0;
 				for (const line of lines) {
-					// Skip empty lines and directive lines (starts with :)
 					if (line.trim() && !line.startsWith(":")) {
 						if (line.includes("\t")) {
 							tabSeparatedCount++;
@@ -87,14 +84,12 @@ describe("wrangler", () => {
 			});
 		});
 
-		// Shell script generation tests
 		const shells = ["bash", "zsh", "fish"] as const;
 
 		describe.each(shells)("%s", (shell) => {
 			test("should output valid shell script", async ({ expect }) => {
 				await runWrangler(`complete ${shell}`);
 
-				// Should have some content
 				expect(std.out.length).toBeGreaterThan(100);
 			});
 
@@ -105,7 +100,6 @@ describe("wrangler", () => {
 			});
 		});
 
-		// Shell syntax validation tests
 		describe("bash", () => {
 			test.skipIf(!shellAvailable("bash"))(
 				"should generate valid bash syntax",
