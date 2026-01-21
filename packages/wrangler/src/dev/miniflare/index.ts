@@ -862,6 +862,7 @@ export async function buildMiniflareOptions(
 		unsafeHandleDevRegistryUpdate: onDevRegistryUpdate,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
+		unsafeResourceInspector: true,
 		// The way we run Miniflare instances with wrangler dev is that there are two:
 		//  - one holding the proxy worker,
 		//  - and one holding the user worker.

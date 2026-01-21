@@ -430,6 +430,7 @@ export async function getDevMiniflareOptions(
 				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
+			unsafeResourceInspector: true,
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
@@ -621,6 +622,7 @@ export async function getPreviewMiniflareOptions(
 				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
+			unsafeResourceInspector: true,
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,

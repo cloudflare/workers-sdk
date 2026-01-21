@@ -9,6 +9,7 @@ import { bold } from "kleur/colors";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
+import SCRIPT_RESOURCE_VIEWER_API from "worker:resource-viewer/api";
 import { z } from "zod";
 import { fetch } from "../../http";
 import {
@@ -55,6 +56,7 @@ import {
 	getCustomNodeServiceName,
 	getUserServiceName,
 	SERVICE_ENTRY,
+	SERVICE_RESOURCE_INSPECTOR,
 } from "./constants";
 import {
 	buildStringScriptPath,
@@ -275,6 +277,8 @@ export const CoreSharedOptionsSchema = z
 		unsafeStickyBlobs: z.boolean().optional(),
 		// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/handler/scheduled`
 		unsafeTriggerHandlers: z.boolean().optional(),
+		// Enable the resource inspector at /cdn-cgi/devtools
+		unsafeResourceInspector: z.boolean().optional(),
 		// Enable logging requests
 		logRequests: z.boolean().default(true),
 
@@ -945,6 +949,7 @@ export interface GlobalServicesOptions {
 	fallbackWorkerName: string | undefined;
 	loopbackPort: number;
 	log: Log;
+	/** All user workerd-native bindings, used for Miniflare's magic proxy and the resource inspector worker */
 	proxyBindings: Worker_Binding[];
 }
 export function getGlobalServices({
@@ -996,6 +1001,14 @@ export function getGlobalServices({
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,
 	];
+	if (sharedOptions.unsafeResourceInspector) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_RESOURCE_INSPECTOR,
+			service: {
+				name: SERVICE_RESOURCE_INSPECTOR,
+			},
+		});
+	}
 	if (sharedOptions.upstream !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.TEXT_UPSTREAM_URL,
@@ -1015,7 +1028,7 @@ export function getGlobalServices({
 			data: encoder.encode(liveReloadScript),
 		});
 	}
-	return [
+	const services: Service[] = [
 		{
 			name: SERVICE_LOOPBACK,
 			external: { http: { cfBlobHeader: CoreHeaders.CF_BLOB } },
@@ -1061,6 +1074,25 @@ export function getGlobalServices({
 			},
 		},
 	];
+
+	if (sharedOptions.unsafeResourceInspector) {
+		services.push({
+			name: SERVICE_RESOURCE_INSPECTOR,
+			worker: {
+				compatibilityDate: "2025-01-01",
+				compatibilityFlags: ["nodejs_compat"],
+				modules: [
+					{
+						name: "api.worker.js",
+						esModule: SCRIPT_RESOURCE_VIEWER_API(),
+					},
+				],
+				bindings: [...proxyBindings],
+			},
+		});
+	}
+
+	return services;
 }
 
 function getWorkerScript(
