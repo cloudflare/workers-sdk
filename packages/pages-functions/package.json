@@ -37,15 +37,18 @@
 		"check:lint": "eslint . --max-warnings=0",
 		"check:type": "tsc --noEmit",
 		"test": "vitest run",
-		"test:ci": "vitest run",
+		"test:ci": "vitest run && vitest run -c vitest.config.runtime.mts",
+		"test:runtime": "vitest run -c vitest.config.runtime.mts",
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"esbuild": "catalog:default"
+		"path-to-regexp": "^6.3.0"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
+		"@cloudflare/vitest-pool-workers": "catalog:default",
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
 		"@types/node": "catalog:default",
 		"eslint": "catalog:default",
 		"typescript": "catalog:default",

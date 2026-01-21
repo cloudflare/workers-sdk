@@ -19,7 +19,8 @@ describe("codegen", () => {
 				fallbackService: "ASSETS",
 			});
 
-			expect(code).toContain('import { match } from "path-to-regexp"');
+			// path-to-regexp is imported from its resolved absolute path
+			expect(code).toMatch(/import \{ match \} from ".*path-to-regexp.*"/);
 			expect(code).toContain("import { onRequestGet as");
 			expect(code).toContain('routePath: "/api/:id"');
 			expect(code).toContain('mountPath: "/api"');
