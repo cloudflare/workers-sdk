@@ -146,7 +146,7 @@ export const completionsCommand = createCommand({
 		// Yargs puts everything after -- into the _ array
 		const rawArgs = (args as unknown as { _: string[] })._ ?? [];
 
-		const completionArgs = rawArgs.filter((arg) => arg !== "complete");
+		const completionArgs = rawArgs.slice(rawArgs[0] === "complete" ? 1 : 0);
 
 		if (completionArgs.length > 0) {
 			setupCompletions();
