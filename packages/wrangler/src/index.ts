@@ -26,7 +26,14 @@ import {
 } from "./cert/cert";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
-import { handleCompletion } from "./complete";
+import {
+	completeBashCommand,
+	completeFishCommand,
+	completeInternalCommand,
+	completePowershellCommand,
+	completeZshCommand,
+	completionsNamespace,
+} from "./completions/commands";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
@@ -1631,6 +1638,36 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("hello-world");
 
+	registry.define([
+		{
+			command: "wrangler complete",
+			definition: completionsNamespace,
+		},
+		{
+			command: "wrangler complete bash",
+			definition: completeBashCommand,
+		},
+		{
+			command: "wrangler complete fish",
+			definition: completeFishCommand,
+		},
+		{
+			command: "wrangler complete powershell",
+			definition: completePowershellCommand,
+		},
+		{
+			command: "wrangler complete zsh",
+			definition: completeZshCommand,
+		},
+
+		// Hidden command for shell integration - called as `wrangler __complete -- <args>`
+		{
+			command: "wrangler __complete",
+			definition: completeInternalCommand,
+		},
+	]);
+	registry.registerNamespace("complete");
+
 	/******************** CMD GROUP ***********************/
 
 	registry.define([
@@ -1730,12 +1767,6 @@ export function createCLIParser(argv: string[]) {
 
 export async function main(argv: string[]): Promise<void> {
 	setupSentry();
-
-	// Handle shell completion requests
-	if (argv[0] === "complete") {
-		handleCompletion(argv.slice(1));
-		return;
-	}
 
 	checkMacOSVersion({ shouldThrow: false });
 
