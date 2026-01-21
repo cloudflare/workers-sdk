@@ -336,3 +336,14 @@ export const getCloudflareEnv = getEnvironmentVariableFactory({
 export const getOpenNextDeployFromEnv = getEnvironmentVariableFactory({
 	variableName: "OPEN_NEXT_DEPLOY",
 });
+
+/**
+ * `X_RESOURCE_INSPECTOR` enables the resource inspector UI at /cdn-cgi/devtools.
+ * This is an experimental feature flag. Defaults to false when not set.
+ */
+export const getResourceInspectorFromEnv = getBooleanEnvironmentVariableFactory(
+	{
+		variableName: "X_RESOURCE_INSPECTOR",
+		defaultValue: false,
+	}
+);
