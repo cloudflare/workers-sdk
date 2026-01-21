@@ -1,0 +1,14 @@
+{
+	"name": "@fixture/pages-functions-test",
+	"private": true,
+	"scripts": {
+		"build": "node build.mjs",
+		"dev": "node build.mjs && wrangler dev"
+	},
+	"dependencies": {
+		"@cloudflare/pages-functions": "workspace:*"
+	},
+	"devDependencies": {
+		"wrangler": "workspace:*"
+	}
+}

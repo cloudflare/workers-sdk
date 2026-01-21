@@ -1,0 +1,8 @@
+{
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"dependsOn": ["@cloudflare/pages-functions#build"]
+		}
+	}
+}

@@ -1,0 +1,5 @@
+{
+	"name": "pages-functions-test",
+	"main": "dist/worker.js",
+	"compatibility_date": "2026-01-20",
+}
