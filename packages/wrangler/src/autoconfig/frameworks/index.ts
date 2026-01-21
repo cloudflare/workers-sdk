@@ -18,8 +18,7 @@ export type ConfigurationResults = {
 	wranglerConfig: RawConfig;
 	// Scripts to override in the package.json. Most frameworks should not need to do this, as their default detected build command will be sufficient
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides;
-	// Note: `buildCommand` isn't optional but it is `string | undefined` instead, because we want all frameworks to define such value, if a framework
-	//       doesn't require a build step (e.g. the `Static` framework) then it should explicitly declare that
+	// Note: The `buildCommand` field is required (not optional with `?`) to ensure all frameworks explicitly specify a build command (`undefined` if they don't have one)
 	buildCommand: string | undefined;
 	deployCommand?: string;
 };
