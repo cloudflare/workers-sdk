@@ -96,4 +96,34 @@ describe("getAllowedArgs", () => {
 			subArg: ALLOW,
 		});
 	});
+
+	it("should include global '*' allow-list for all commands", () => {
+		const commandArgAllowList: AllowList = {
+			"*": {
+				format: ALLOW,
+				logLevel: ALLOW,
+			},
+			tail: { status: ALLOW },
+			types: {
+				path: ["worker-configuration.d.ts"],
+			},
+		};
+
+		expect(getAllowedArgs(commandArgAllowList, "tail")).toEqual({
+			format: ALLOW,
+			logLevel: ALLOW,
+			status: ALLOW,
+		});
+
+		expect(getAllowedArgs(commandArgAllowList, "types")).toEqual({
+			format: ALLOW,
+			logLevel: ALLOW,
+			path: ["worker-configuration.d.ts"],
+		});
+
+		expect(getAllowedArgs(commandArgAllowList, "deploy")).toEqual({
+			format: ALLOW,
+			logLevel: ALLOW,
+		});
+	});
 });
