@@ -14,3 +14,43 @@ When your configuration has named environments (an `env` object), `wrangler type
   - Conflicting binding types across environments produce union types (e.g., `KVNamespace | R2Bucket`)
 
 However, if your config does not contain any environments, or you manually specify an environment via `--env`, `wrangler types` will continue to generate a single interface as before.
+
+**Example:**
+
+Given the following `wrangler.jsonc`:
+
+```jsonc
+{
+	"name": "my-worker",
+	"kv_namespaces": [
+		{
+			"binding": "SHARED_KV",
+			"id": "abc123",
+		},
+	],
+	"env": {
+		"staging": {
+			"kv_namespaces": [
+				{ "binding": "SHARED_KV", "id": "staging-kv" },
+				{ "binding": "STAGING_CACHE", "id": "staging-cache" },
+			],
+		},
+	},
+}
+```
+
+Running `wrangler types` will generate:
+
+```ts
+declare namespace Cloudflare {
+	interface StagingEnv {
+		SHARED_KV: KVNamespace;
+		STAGING_CACHE: KVNamespace;
+	}
+	interface Env {
+		SHARED_KV: KVNamespace; // Required: in all environments
+		STAGING_CACHE?: KVNamespace; // Optional: only in staging
+	}
+}
+interface Env extends Cloudflare.Env {}
+```
