@@ -752,7 +752,6 @@ export const WorkerdTests: Record<string, () => void> = {
 			Network: "object",
 		});
 	},
-<<<<<<< HEAD
 
 	async testInspectorPromises() {
 		const inspectorPromises = await import("node:inspector/promises");
