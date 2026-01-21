@@ -1733,7 +1733,6 @@ function collectCoreBindings(
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
-					index: -1,
 				});
 			} else {
 				addBinding(env.browser.binding, "Fetcher", "browser", envName);
@@ -1748,7 +1747,6 @@ function collectCoreBindings(
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
-					index: -1,
 				});
 			} else {
 				addBinding(env.ai.binding, "Ai", "ai", envName);
@@ -1763,7 +1761,6 @@ function collectCoreBindings(
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
-					index: -1,
 				});
 			} else {
 				addBinding(env.images.binding, "ImagesBinding", "images", envName);
@@ -1778,7 +1775,6 @@ function collectCoreBindings(
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
-					index: -1,
 				});
 			} else {
 				addBinding(env.media.binding, "MediaBinding", "media", envName);
@@ -1793,7 +1789,6 @@ function collectCoreBindings(
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
-					index: -1,
 				});
 			} else {
 				addBinding(
@@ -2542,7 +2537,6 @@ function collectCoreBindingsPerEnvironment(
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
-					index: -1,
 				});
 			} else {
 				bindings.push({
@@ -2561,7 +2555,6 @@ function collectCoreBindingsPerEnvironment(
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
-					index: -1,
 				});
 			} else {
 				bindings.push({
@@ -2580,7 +2573,6 @@ function collectCoreBindingsPerEnvironment(
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
-					index: -1,
 				});
 			} else {
 				bindings.push({
@@ -2599,7 +2591,6 @@ function collectCoreBindingsPerEnvironment(
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
-					index: -1,
 				});
 			} else {
 				bindings.push({
@@ -2618,7 +2609,6 @@ function collectCoreBindingsPerEnvironment(
 					configPath: args.config,
 					envName,
 					fieldName: "binding",
-					index: -1,
 				});
 			} else {
 				bindings.push({

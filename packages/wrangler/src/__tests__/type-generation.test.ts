@@ -241,7 +241,7 @@ describe("throwMissingBindingError", () => {
 		);
 	});
 
-	it("should handle non-array bindings (index = -1)", () => {
+	it("should handle non-array bindings (index omitted)", () => {
 		expect(() =>
 			throwMissingBindingError({
 				binding: {},
@@ -249,7 +249,6 @@ describe("throwMissingBindingError", () => {
 				configPath: "wrangler.json",
 				envName: "top-level",
 				fieldName: "binding",
-				index: -1,
 			})
 		).toThrowError(
 			'Processing wrangler.json configuration:\n  - "ai" bindings should have a string "binding" field but got {}.'
