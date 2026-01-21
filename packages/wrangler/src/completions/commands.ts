@@ -58,8 +58,8 @@ function setupCompletions(): void {
 					const statusLabels = {
 						experimental: "[experimental]",
 						alpha: "[alpha]",
-						"private-beta": "[private-beta]",
-						"open-beta": "[open-beta]",
+						"private beta": "[private beta]",
+						"open beta": "[open beta]",
 					};
 					const statusLabel =
 						statusLabels[def.metadata.status as keyof typeof statusLabels];
