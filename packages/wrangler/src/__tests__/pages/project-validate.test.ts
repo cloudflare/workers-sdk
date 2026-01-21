@@ -83,4 +83,55 @@ describe("pages project validate", () => {
 			"Error: Pages only supports up to 5 files in a deployment for your current plan. Ensure you have specified your build output directory correctly."
 		);
 	});
+
+	it("should use fileCountLimit from CF_PAGES_UPLOAD_JWT when set", async () => {
+		// Create 11 files, which exceeds the mocked MAX_ASSET_COUNT_DEFAULT of 10
+		for (let i = 0; i < 11; i++) {
+			writeFileSync(`logo${i}.png`, Buffer.alloc(1));
+		}
+
+		// Create a JWT with max_file_count_allowed: 20
+		const jwt =
+			"header." +
+			Buffer.from(JSON.stringify({ max_file_count_allowed: 20 })).toString(
+				"base64"
+			) +
+			".signature";
+
+		vi.stubEnv("CF_PAGES_UPLOAD_JWT", jwt);
+
+		// Should succeed because the JWT allows up to 20 files
+		await runWrangler("pages project validate .");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────"
+		`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+	});
+
+	it("should error when file count exceeds limit from CF_PAGES_UPLOAD_JWT", async () => {
+		// Create 6 files
+		for (let i = 0; i < 6; i++) {
+			writeFileSync(`logo${i}.png`, Buffer.alloc(1));
+		}
+
+		// Create a JWT with max_file_count_allowed: 5
+		const jwt =
+			"header." +
+			Buffer.from(JSON.stringify({ max_file_count_allowed: 5 })).toString(
+				"base64"
+			) +
+			".signature";
+
+		vi.stubEnv("CF_PAGES_UPLOAD_JWT", jwt);
+
+		// Should fail because we have 6 files but JWT only allows 5
+		await expect(() =>
+			runWrangler("pages project validate .")
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Error: Pages only supports up to 5 files in a deployment for your current plan. Ensure you have specified your build output directory correctly.]`
+		);
+	});
 });
