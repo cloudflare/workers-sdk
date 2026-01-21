@@ -648,6 +648,36 @@ export function createCLIParser(argv: string[]) {
 	]);
 	registry.registerNamespace("docs");
 
+	registry.define([
+		{
+			command: "wrangler complete",
+			definition: completionsNamespace,
+		},
+		{
+			command: "wrangler complete bash",
+			definition: completeBashCommand,
+		},
+		{
+			command: "wrangler complete fish",
+			definition: completeFishCommand,
+		},
+		{
+			command: "wrangler complete powershell",
+			definition: completePowershellCommand,
+		},
+		{
+			command: "wrangler complete zsh",
+			definition: completeZshCommand,
+		},
+
+		// Hidden command for shell integration - called as `wrangler __complete -- <args>`
+		{
+			command: "wrangler __complete",
+			definition: completeInternalCommand,
+		},
+	]);
+	registry.registerNamespace("complete");
+
 	/******************** CMD GROUP ***********************/
 
 	registry.define([
@@ -1637,36 +1667,6 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("hello-world");
-
-	registry.define([
-		{
-			command: "wrangler complete",
-			definition: completionsNamespace,
-		},
-		{
-			command: "wrangler complete bash",
-			definition: completeBashCommand,
-		},
-		{
-			command: "wrangler complete fish",
-			definition: completeFishCommand,
-		},
-		{
-			command: "wrangler complete powershell",
-			definition: completePowershellCommand,
-		},
-		{
-			command: "wrangler complete zsh",
-			definition: completeZshCommand,
-		},
-
-		// Hidden command for shell integration - called as `wrangler __complete -- <args>`
-		{
-			command: "wrangler __complete",
-			definition: completeInternalCommand,
-		},
-	]);
-	registry.registerNamespace("complete");
 
 	/******************** CMD GROUP ***********************/
 
