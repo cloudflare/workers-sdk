@@ -29,6 +29,26 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 	});
 
 	test("display binding shortcut hint", () => {
+		// Set up the shortcut wrapper (after stubs are in place from beforeAll)
+		const mockContext = new PluginContext({
+			hasShownWorkerConfigWarnings: false,
+			isRestartingDevServer: false,
+		});
+		mockContext.setResolvedPluginConfig(
+			resolvePluginConfig(
+				{
+					configPath: path.resolve(__dirname, "../wrangler.jsonc"),
+				},
+				{},
+				{
+					command: "serve",
+					mode: "development",
+				}
+			)
+		);
+		addBindingsShortcut(viteServer, mockContext);
+
+		resetServerLogs();
 		viteServer.bindCLIShortcuts();
 
 		expect(normalize(serverLogs.info)).not.toMatch(
@@ -114,7 +134,10 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 					configPath: path.resolve(__dirname, "../wrangler.jsonc"),
 					auxiliaryWorkers: [
 						{
-							configPath: path.resolve(__dirname, "../wrangler.auxiliary.jsonc"),
+							configPath: path.resolve(
+								__dirname,
+								"../wrangler.auxiliary.jsonc"
+							),
 						},
 					],
 				},
