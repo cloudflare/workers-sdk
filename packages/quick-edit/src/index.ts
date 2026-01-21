@@ -29,7 +29,7 @@ export default {
 					dataFolderName: ".quick-edit",
 					version: "1.76.0",
 					extensionEnabledApiProposals: {
-						"cloudflare.quick-edit-extension": [
+						"cloudflare.@cloudflare/quick-edit-extension": [
 							"fileSearchProvider",
 							"textSearchProvider",
 							"ipc",
