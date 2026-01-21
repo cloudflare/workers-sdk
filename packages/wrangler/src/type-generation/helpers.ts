@@ -63,13 +63,15 @@ export const throwMissingBindingError = (
 /**
  * Generates the environment header string used in the generated types file.
  *
- * @param command - The wrangler command used to generate the types.
  * @param hash - The hash representing the environment configuration.
+ * @param command - The wrangler command used to generate the types.
  *
  * @returns A string containing the comment outlining the generated environment types.
  */
-export const getEnvHeader = (command: string, hash: string): string => {
-	return `${ENV_HEADER_COMMENT_PREFIX} \`${command}\` (hash: ${hash})`;
+export const getEnvHeader = (hash: string, command?: string): string => {
+	const wranglerCommand =
+		command ?? ["wrangler", ...process.argv.slice(2)].join(" ");
+	return `${ENV_HEADER_COMMENT_PREFIX} \`${wranglerCommand}\` (hash: ${hash})`;
 };
 
 /**
