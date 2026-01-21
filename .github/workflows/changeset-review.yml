@@ -59,7 +59,7 @@ jobs:
             For regular PRs, review: ${{ steps.changed-changesets.outputs.added_files }}
 
             Read `.changeset/README.md` for guidelines, then validate:
-            1. **Version Type**: Correct patch/minor/major (major forbidden for wrangler)
+            1. **Version Type**: Accept the author's choice of patch/minor unless clearly incorrect
             2. **Changelog Quality**: Meaningful descriptions (examples encouraged but not required for features)
             3. **Markdown Headers**: No h1/h2/h3 headers (breaks changelog formatting)
             4. **Analytics**: If the change collects more analytics, it should be a minor even though there is no user-visible change
