@@ -1,15 +1,8 @@
 import t from "@bomb.sh/tab";
-import { createCommand, createNamespace } from "../core/create-command";
-import { experimental_getWranglerCommands } from "../experimental-commands-api";
-import type { DefinitionTreeNode } from "../core/types";
-
-export const completionsNamespace = createNamespace({
-	metadata: {
-		description: "⌨️ Generate and handle shell completions",
-		owner: "Workers: Authoring and Testing",
-		status: "stable",
-	},
-});
+import { CommandLineArgsError } from "@cloudflare/workers-utils";
+import { createCommand } from "./core/create-command";
+import { experimental_getWranglerCommands } from "./experimental-commands-api";
+import type { DefinitionTreeNode } from "./core/types";
 
 function setupCompletions(): void {
 	const { registry, globalFlags } = experimental_getWranglerCommands();
@@ -112,106 +105,60 @@ function setupCompletions(): void {
 	addCommandsFromTree(registry);
 }
 
-export const completeBashCommand = createCommand({
+export const completionsCommand = createCommand({
 	metadata: {
-		description: "Generate bash completion script",
+		description: "⌨️ Generate and handle shell completions",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		examples: [
+			{
+				description: "Generate bash completion script",
+				command: "wrangler complete bash",
+			},
+			{
+				description: "Generate fish completion script",
+				command: "wrangler complete fish",
+			},
+			{
+				description: "Generate powershell completion script",
+				command: "wrangler complete powershell",
+			},
+			{
+				description: "Generate zsh completion script",
+				command: "wrangler complete zsh",
+			},
+		],
 	},
 	behaviour: {
 		printBanner: false,
 		provideConfig: false,
 	},
-	handler() {
-		setupCompletions();
-		t.setup("wrangler", "wrangler", "bash");
-	},
-});
-
-export const completeZshCommand = createCommand({
-	metadata: {
-		description: "Generate zsh completion script",
-		owner: "Workers: Authoring and Testing",
-		status: "stable",
-	},
-	behaviour: {
-		printBanner: false,
-		provideConfig: false,
-	},
-	handler() {
-		setupCompletions();
-		t.setup("wrangler", "wrangler", "zsh");
-	},
-});
-
-export const completeFishCommand = createCommand({
-	metadata: {
-		description: "Generate fish completion script",
-		owner: "Workers: Authoring and Testing",
-		status: "stable",
-	},
-	behaviour: {
-		printBanner: false,
-		provideConfig: false,
-	},
-	handler() {
-		setupCompletions();
-		t.setup("wrangler", "wrangler", "fish");
-	},
-});
-
-export const completePowershellCommand = createCommand({
-	metadata: {
-		description: "Generate PowerShell completion script",
-		owner: "Workers: Authoring and Testing",
-		status: "stable",
-	},
-	behaviour: {
-		printBanner: false,
-		provideConfig: false,
-	},
-	handler() {
-		setupCompletions();
-		t.setup("wrangler", "wrangler", "powershell");
-	},
-});
-
-export const completeInternalCommand = createCommand({
-	metadata: {
-		description: "Output completions for shell integration (internal use)",
-		owner: "Workers: Authoring and Testing",
-		status: "stable",
-		hidden: true,
-	},
-	behaviour: {
-		printBanner: false,
-		provideConfig: false,
-	},
-	positionalArgs: ["args"],
+	positionalArgs: ["shell"],
 	args: {
-		args: {
+		shell: {
+			choices: ["bash", "fish", "powershell", "zsh"],
+			describe: "Shell type to generate completions for",
 			type: "string",
-			array: true,
-			describe: "Command line words to complete",
 		},
 	},
 	handler(args) {
-		// When -- is used, yargs puts args in _ instead of the positional array
-		// and includes the command name as first element
-		let completionArgs =
-			args.args && args.args.length > 0
-				? args.args
-				: (args as unknown as { _: string[] })._ ?? [];
+		// When shells request completions, they call: wrangler complete -- <partial-command>
+		// Yargs puts everything after -- into the _ array
+		const rawArgs = (args as unknown as { _: string[] })._ ?? [];
 
-		// Filter out the command name if it's the first arg
-		if (
-			completionArgs[0] === "__complete" ||
-			completionArgs[0] === "complete"
-		) {
-			completionArgs = completionArgs.slice(1);
+		const completionArgs = rawArgs.filter((arg) => arg !== "complete");
+
+		if (completionArgs.length > 0) {
+			setupCompletions();
+			t.parse(completionArgs);
+			return;
+		}
+
+		if (!args.shell) {
+			throw new CommandLineArgsError("Missing required argument: shell");
 		}
 
 		setupCompletions();
-		t.parse(completionArgs);
+		t.setup("wrangler", "wrangler", args.shell);
 	},
 });
