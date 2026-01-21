@@ -859,6 +859,48 @@ export const WorkerdTests: Record<string, () => void> = {
 		// `JSStreamSocket` is the default export of `node:_stream_wrap`
 		assertTypeOf(streamWrap, "default", "function");
 	},
+
+	async testReadline() {
+		const readline = await import("node:readline");
+
+		assertTypeOfProperties(readline, {
+			Interface: "function",
+			clearLine: "function",
+			clearScreenDown: "function",
+			createInterface: "function",
+			cursorTo: "function",
+			emitKeypressEvents: "function",
+			moveCursor: "function",
+			promises: "object",
+		});
+
+		assertTypeOfProperties(readline.default, {
+			Interface: "function",
+			clearLine: "function",
+			clearScreenDown: "function",
+			createInterface: "function",
+			cursorTo: "function",
+			emitKeypressEvents: "function",
+			moveCursor: "function",
+			promises: "object",
+		});
+	},
+
+	async testReadlinePromises() {
+		const readlinePromises = await import("node:readline/promises");
+
+		assertTypeOfProperties(readlinePromises, {
+			Interface: "function",
+			Readline: "function",
+			createInterface: "function",
+		});
+
+		assertTypeOfProperties(readlinePromises.default, {
+			Interface: "function",
+			Readline: "function",
+			createInterface: "function",
+		});
+	},
 };
 
 /**
