@@ -1159,6 +1159,9 @@ function generatePerEnvTypeStrings(
  *
  * @param path - The path to the .d.ts file to check.
  *
+ * @returns void if no conflicting file exists.
+ *
+ * @throws {Error} If an unexpected error occurs while reading the file.
  * @throws {UserError} If a non-Wrangler .d.ts file already exists at the given path.
  */
 const validateTypesFile = (path: string): void => {
