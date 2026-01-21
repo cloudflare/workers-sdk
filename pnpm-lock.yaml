@@ -1298,6 +1298,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/worker-with-resources:
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20260120.0
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/worker-with-unsafe-external-plugin:
     devDependencies:
       '@cloudflare/vitest-pool-workers':
