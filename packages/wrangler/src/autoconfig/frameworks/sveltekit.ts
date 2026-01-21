@@ -25,7 +25,7 @@ export class SvelteKit extends Framework {
 					silent: true,
 					startText: "Installing adapter",
 					doneText: `${brandColor("installed")} ${dim(
-						`via \`${dlx} sv add sveltekit-adapter=adapter:cloudflare\``
+						`via \`${dlx} sv add sveltekit-adapter=adapter:cloudflare+cfTarget:workers\``
 					)}`,
 				}
 			);
