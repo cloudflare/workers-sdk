@@ -330,7 +330,7 @@ export class Runtime {
 		runtimeProcess.stdin?.destroy();
 		runtimeProcess.stdout?.destroy();
 		runtimeProcess.stderr?.destroy();
-		// The control pipe at stdio[3] is a Readable stream
+		// The control pipe at stdio[3] could be a Readable stream
 		const controlPipe = runtimeProcess.stdio[3];
 		if (controlPipe instanceof Readable) {
 			controlPipe.destroy();
