@@ -871,6 +871,8 @@ export const WorkerdTests: Record<string, () => void> = {
 			REPLServer: "function",
 			builtinModules: "object",
 			_builtinLibs: "object",
+			REPL_MODE_SLOPPY: "symbol",
+			REPL_MODE_STRICT: "symbol",
 		});
 
 		assertTypeOfProperties(repl.default, {
@@ -880,13 +882,9 @@ export const WorkerdTests: Record<string, () => void> = {
 			REPLServer: "function",
 			builtinModules: "object",
 			_builtinLibs: "object",
+			REPL_MODE_SLOPPY: "symbol",
+			REPL_MODE_STRICT: "symbol",
 		});
-
-		// REPL_MODE_SLOPPY and REPL_MODE_STRICT are symbols
-		assertTypeOf(repl, "REPL_MODE_SLOPPY", "symbol");
-		assertTypeOf(repl, "REPL_MODE_STRICT", "symbol");
-		assertTypeOf(repl.default, "REPL_MODE_SLOPPY", "symbol");
-		assertTypeOf(repl.default, "REPL_MODE_STRICT", "symbol");
 
 		// builtinModules should be an array (not in TypeScript types but exported by both unenv and workerd)
 		assert.ok(Array.isArray((repl as any).builtinModules));
