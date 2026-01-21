@@ -859,6 +859,38 @@ export const WorkerdTests: Record<string, () => void> = {
 		// `JSStreamSocket` is the default export of `node:_stream_wrap`
 		assertTypeOf(streamWrap, "default", "function");
 	},
+
+	async testTty() {
+		const tty = await import("node:tty");
+
+		// Common exports (both unenv stub and native workerd)
+		assertTypeOfProperties(tty, {
+			isatty: "function",
+			ReadStream: "function",
+			WriteStream: "function",
+		});
+
+		assertTypeOfProperties(tty.default, {
+			isatty: "function",
+			ReadStream: "function",
+			WriteStream: "function",
+		});
+
+		// isatty should return false (both unenv and workerd)
+		assert.strictEqual(tty.isatty(0), false);
+		assert.strictEqual(tty.isatty(1), false);
+		assert.strictEqual(tty.isatty(2), false);
+
+		// Both implementations throw when calling ReadStream/WriteStream constructors
+		assert.throws(
+			() => new (tty.ReadStream as any)(0),
+			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
+		);
+		assert.throws(
+			() => new (tty.WriteStream as any)(1),
+			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
+		);
+	},
 };
 
 /**
