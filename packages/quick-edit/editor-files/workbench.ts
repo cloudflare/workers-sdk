@@ -62,8 +62,8 @@ function createEditor(port: MessagePort) {
 
 	const messagePorts = new Map();
 
-	// This passes the MessagePort through to the `cloudflare.quick-edit-extension` VSCode extension, which is preloaded
-	messagePorts.set("cloudflare.quick-edit-extension", port);
+	// This passes the MessagePort through to the `cloudflare.@cloudflare/quick-edit-extension` VSCode extension, which is preloaded
+	messagePorts.set("cloudflare.@cloudflare/quick-edit-extension", port);
 
 	const folderUri = searchParams.get("worker");
 
