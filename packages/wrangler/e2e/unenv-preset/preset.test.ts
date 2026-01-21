@@ -466,92 +466,137 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 	],
-	// node:inspector and node:inspector/promises (experimental, no default enable date)
+	// node:inspector and node:inspector/promises
 	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
+		// {
+		// 	name: "inspector enabled by date",
+		// 	compatibilityDate: "2026-01-29",
+		// 	expectRuntimeFlags: {
+		// 		enable_nodejs_inspector_module: true,
+		// 	},
+		// },
 		{
-			name: "inspector enabled by flag",
+			name: "inspector disabled by date",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_inspector_module", "experimental"],
-			expectRuntimeFlags: {
-				enable_nodejs_inspector_module: true,
-			},
-		},
-		// TODO: update the date past the default enable date (when defined)
-		{
-			name: "inspector disabled by flag",
-			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_inspector_module", "experimental"],
 			expectRuntimeFlags: {
 				enable_nodejs_inspector_module: false,
 			},
 		},
-	],
-	// node:sqlite (experimental, no default enable date)
-	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
 		{
-			name: "sqlite enabled by flag",
+			name: "inspector enabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_sqlite_module", "experimental"],
+			compatibilityFlags: ["enable_nodejs_inspector_module"],
 			expectRuntimeFlags: {
-				enable_nodejs_sqlite_module: true,
+				enable_nodejs_inspector_module: true,
 			},
 		},
-		// TODO: update the date past the default enable date (when defined)
+		// {
+		// 	name: "inspector disabled by flag",
+		// 	compatibilityDate: "2026-01-29",
+		// 	compatibilityFlags: ["disable_nodejs_inspector_module"],
+		// 	expectRuntimeFlags: {
+		// 		enable_nodejs_inspector_module: false,
+		// 	},
+		// },
+	],
+	// node:sqlite
+	[
+		// {
+		// 	name: "sqlite enabled by date",
+		// 	compatibilityDate: "2026-01-29",
+		// 	expectRuntimeFlags: {
+		// 		enable_nodejs_sqlite_module: true,
+		// 	},
+		// },
 		{
-			name: "sqlite disabled by flag",
+			name: "sqlite disabled by date",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_sqlite_module", "experimental"],
 			expectRuntimeFlags: {
 				enable_nodejs_sqlite_module: false,
 			},
 		},
-	],
-	// node:dgram (experimental, no default enable date)
-	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
 		{
-			name: "dgram enabled by flag",
+			name: "sqlite enabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_dgram_module", "experimental"],
+			compatibilityFlags: ["enable_nodejs_sqlite_module"],
 			expectRuntimeFlags: {
-				enable_nodejs_dgram_module: true,
+				enable_nodejs_sqlite_module: true,
 			},
 		},
+		// {
+		// 	name: "sqlite disabled by flag",
+		// 	compatibilityDate: "2026-01-29",
+		// 	compatibilityFlags: ["disable_nodejs_sqlite_module"],
+		// 	expectRuntimeFlags: {
+		// 		enable_nodejs_sqlite_module: false,
+		// 	},
+		// },
+	],
+	// node:dgram
+	[
+		// {
+		// 	name: "dgram enabled by date",
+		// 	compatibilityDate: "2026-01-29",
+		// 	expectRuntimeFlags: {
+		// 		enable_nodejs_dgram_module: true,
+		// 	},
+		// },
 		{
-			name: "dgram disabled by flag",
+			name: "dgram disabled by date",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_dgram_module", "experimental"],
 			expectRuntimeFlags: {
 				enable_nodejs_dgram_module: false,
 			},
 		},
-	],
-	// node:_stream_wrap (experimental, no default enable date)
-	[
-		// TODO: add test for disabled by date (no date defined yet)
-		// TODO: add test for enabled by date (no date defined yet)
 		{
-			name: "_stream_wrap enabled by flag",
+			name: "dgram enabled by flag",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_stream_wrap_module", "experimental"],
+			compatibilityFlags: ["enable_nodejs_dgram_module"],
 			expectRuntimeFlags: {
-				enable_nodejs_stream_wrap_module: true,
+				enable_nodejs_dgram_module: true,
 			},
 		},
-		// TODO: update the date past the default enable date (when defined)
+		// {
+		// 	name: "dgram disabled by flag",
+		// 	compatibilityDate: "2026-01-29",
+		// 	compatibilityFlags: ["disable_nodejs_dgram_module"],
+		// 	expectRuntimeFlags: {
+		// 		enable_nodejs_dgram_module: false,
+		// 	},
+		// },
+	],
+	// node:_stream_wrap
+	[
+		// {
+		// 	name: "_stream_wrap enabled by date",
+		// 	compatibilityDate: "2026-01-29",
+		// 	expectRuntimeFlags: {
+		// 		enable_nodejs_stream_wrap_module: true,
+		// 	},
+		// },
 		{
-			name: "_stream_wrap disabled by flag",
+			name: "_stream_wrap disabled by date",
 			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["disable_nodejs_stream_wrap_module", "experimental"],
 			expectRuntimeFlags: {
 				enable_nodejs_stream_wrap_module: false,
 			},
 		},
+		{
+			name: "_stream_wrap enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_stream_wrap_module"],
+			expectRuntimeFlags: {
+				enable_nodejs_stream_wrap_module: true,
+			},
+		},
+		// {
+		// 	name: "_stream_wrap disabled by flag",
+		// 	compatibilityDate: "2026-01-29",
+		// 	compatibilityFlags: ["disable_nodejs_stream_wrap_module"],
+		// 	expectRuntimeFlags: {
+		// 		enable_nodejs_stream_wrap_module: false,
+		// 	},
+		// },
 	],
 ].flat() as TestConfig[];
 
