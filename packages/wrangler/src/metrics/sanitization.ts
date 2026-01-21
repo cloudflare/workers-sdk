@@ -41,7 +41,8 @@ export function getAllowedArgs(
 	commandArgAllowList: AllowList,
 	command: string
 ): AllowedArgs {
-	let allowedArgs: AllowedArgs = {};
+	// Start with the global "*" allow list as a base
+	let allowedArgs: AllowedArgs = { ...commandArgAllowList["*"] };
 	const commandParts = command.split(" ");
 	while (commandParts.length > 0) {
 		const subCommand = commandParts.join(" ");
