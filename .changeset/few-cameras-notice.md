@@ -2,7 +2,7 @@
 "wrangler": patch
 ---
 
-Add framework id, build command and deploy command to `autoconfig_summary` field in the deploy output entry
+Add framework id, build command, and deploy command to the `autoconfig_summary` field in the deploy output entry
 
 Add the framework id alongside the commands to build and deploy the project to the output being printed by `wrangler deploy` to `WRANGLER_OUTPUT_FILE_DIRECTORY` or `WRANGLER_OUTPUT_FILE_PATH`.
 
