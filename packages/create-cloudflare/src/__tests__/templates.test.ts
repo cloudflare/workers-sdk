@@ -15,7 +15,6 @@ import {
 	addWranglerToGitIgnore,
 	deriveCorrelatedArgs,
 	downloadRemoteTemplate,
-	ghRegex,
 	updatePackageName,
 } from "../templates";
 import type { PathLike } from "node:fs";
@@ -434,6 +433,69 @@ describe("downloadRemoteTemplate", () => {
 
 		expect(cloneMock).toHaveBeenCalledWith("/path/to/clone");
 	});
+
+	test("should transform GitHub URL without path to degit format", async () => {
+		await downloadRemoteTemplate(
+			"https://github.com/cloudflare/workers-graphql-server",
+		);
+
+		expect(degit).toHaveBeenCalledWith(
+			"github:cloudflare/workers-graphql-server#main",
+			expect.anything(),
+		);
+	});
+
+	test("should transform GitHub URL with trailing slash to degit format", async () => {
+		await downloadRemoteTemplate("https://github.com/cloudflare/workers-sdk/");
+
+		expect(degit).toHaveBeenCalledWith(
+			"github:cloudflare/workers-sdk#main",
+			expect.anything(),
+		);
+	});
+
+	test("should transform GitHub URL with subdirectory to degit format", async () => {
+		await downloadRemoteTemplate(
+			"https://github.com/cloudflare/workers-sdk/templates/worker-r2",
+		);
+
+		expect(degit).toHaveBeenCalledWith(
+			"github:cloudflare/workers-sdk/templates/worker-r2#main",
+			expect.anything(),
+		);
+	});
+
+	test("should transform GitHub URL with tree/main to degit format", async () => {
+		await downloadRemoteTemplate(
+			"https://github.com/cloudflare/workers-sdk/tree/main",
+		);
+
+		expect(degit).toHaveBeenCalledWith(
+			"github:cloudflare/workers-sdk#main",
+			expect.anything(),
+		);
+	});
+
+	test("should transform GitHub URL with tree/main/subdirectory to degit format", async () => {
+		await downloadRemoteTemplate(
+			"https://github.com/cloudflare/workers-sdk/tree/main/templates",
+		);
+
+		expect(degit).toHaveBeenCalledWith(
+			"github:cloudflare/workers-sdk/templates#main",
+			expect.anything(),
+		);
+	});
+
+	test("should throw error when using a branch other than main", async () => {
+		await expect(
+			downloadRemoteTemplate(
+				"https://github.com/cloudflare/workers-sdk/tree/dev",
+			),
+		).rejects.toThrow(
+			"Failed to clone remote template: https://github.com/cloudflare/workers-sdk/tree/dev\nUse the format \"github:<owner>/<repo>/sub/directory[#<branch>]\" to clone a specific branch other than 'main'",
+		);
+	});
 });
 
 describe("deriveCorrelatedArgs", () => {
@@ -542,55 +604,5 @@ version = "0.1.0"`;
 			expect.stringContaining("pyproject.toml"),
 			expect.stringContaining(`name = "my-project"`),
 		);
-	});
-});
-
-describe("ghRegex", () => {
-	test("should match basic GitHub URL without path", () => {
-		const url = "https://github.com/cloudflare/workers-sdk";
-		const match = url.match(ghRegex);
-
-		expect(match).toBeTruthy();
-		expect(match?.groups).toMatchObject({
-			user: "cloudflare",
-			repo: "workers-sdk",
-			path: undefined,
-		});
-	});
-
-	test("should match basic GitHub URL without path (trailing slash)", () => {
-		const url = "https://github.com/cloudflare/workers-sdk/";
-		const match = url.match(ghRegex);
-
-		expect(match).toBeTruthy();
-		expect(match?.groups).toMatchObject({
-			user: "cloudflare",
-			repo: "workers-sdk",
-			path: "",
-		});
-	});
-
-	test("should match GitHub URL with one folder", () => {
-		const url = "https://github.com/cloudflare/workers-sdk/one";
-		const match = url.match(ghRegex);
-
-		expect(match).toBeTruthy();
-		expect(match?.groups).toMatchObject({
-			user: "cloudflare",
-			repo: "workers-sdk",
-			path: "one",
-		});
-	});
-
-	test("should match GitHub URL with multiple folders", () => {
-		const url = "https://github.com/cloudflare/workers-sdk/one/two";
-		const match = url.match(ghRegex);
-
-		expect(match).toBeTruthy();
-		expect(match?.groups).toMatchObject({
-			user: "cloudflare",
-			repo: "workers-sdk",
-			path: "one/two",
-		});
 	});
 });

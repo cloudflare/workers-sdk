@@ -869,9 +869,6 @@ const inferCopyFilesDefinition = (path: string): CopyFiles => {
 	return copyFiles;
 };
 
-export const ghRegex =
-	/^https:\/\/github\.com\/(?<user>[\w-]+)\/(?<repo>[\w.-]+)(?:\/(?<path>.*))?$/;
-
 /**
  * Downloads an external template from a git repo.
  *
@@ -890,6 +887,9 @@ export async function downloadRemoteTemplate(
 		intoFolder?: string;
 	} = {},
 ) {
+	const ghRegex =
+		/^https:\/\/github\.com\/(?<user>[\w-]+)\/(?<repo>[\w.-]+)(?:\/(?<path>.*))?$/;
+
 	let errorMessage = `Failed to clone remote template: ${src}`;
 	try {
 		// degit runs `git clone` internally which may prompt for credentials if required
@@ -903,7 +903,7 @@ export async function downloadRemoteTemplate(
 			if (match?.groups) {
 				const { user, repo, path } = match.groups;
 
-				const pathSegments = (path ?? "").split("/");
+				const pathSegments = (path ?? "").split("/").filter((s) => s !== "");
 
 				if (pathSegments[0] === "tree") {
 					// The URL contains a branch.
