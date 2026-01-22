@@ -2,13 +2,11 @@
 	"name": "@fixture/pages-functions-test",
 	"private": true,
 	"scripts": {
-		"build": "pages-functions",
-		"dev": "pages-functions && wrangler dev"
-	},
-	"dependencies": {
-		"@cloudflare/pages-functions": "workspace:*"
+		"build": "node ../../packages/pages-functions/dist/cli.js",
+		"dev": "node ../../packages/pages-functions/dist/cli.js && wrangler dev"
 	},
 	"devDependencies": {
+		"@cloudflare/pages-functions": "workspace:*",
 		"wrangler": "workspace:*"
 	}
 }
