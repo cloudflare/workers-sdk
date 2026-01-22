@@ -905,10 +905,14 @@ export async function downloadRemoteTemplate(
 
 				const pathSegments = (path ?? "").split("/").filter((s) => s !== "");
 
-				if (pathSegments[0] === "tree") {
+				let branch = "";
+
+				if (pathSegments[0] === "tree" && pathSegments.length >= 2) {
 					// The URL contains a branch.
 					// Subdirectories are only supported for the 'main' branch.
-					if (pathSegments.length >= 2 && pathSegments[1] !== "main") {
+					branch = pathSegments[1];
+
+					if (branch !== "main") {
 						errorMessage +=
 							"\nUse the format \"github:<owner>/<repo>/sub/directory[#<branch>]\" to clone a specific branch other than 'main'";
 						throw new Error("Unsupported format");
@@ -917,7 +921,7 @@ export async function downloadRemoteTemplate(
 					pathSegments.splice(0, 2); // Remove 'tree' and branch name
 				}
 
-				src = `github:${user}/${repo}${pathSegments.length > 0 ? `/${pathSegments.join("/")}` : ""}#main`;
+				src = `github:${user}/${repo}${pathSegments.length > 0 ? `/${pathSegments.join("/")}` : ""}${branch ? `#${branch}` : ""}`;
 			}
 		}
 

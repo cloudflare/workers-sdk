@@ -440,7 +440,7 @@ describe("downloadRemoteTemplate", () => {
 		);
 
 		expect(degit).toHaveBeenCalledWith(
-			"github:cloudflare/workers-graphql-server#main",
+			"github:cloudflare/workers-graphql-server",
 			expect.anything(),
 		);
 	});
@@ -449,7 +449,7 @@ describe("downloadRemoteTemplate", () => {
 		await downloadRemoteTemplate("https://github.com/cloudflare/workers-sdk/");
 
 		expect(degit).toHaveBeenCalledWith(
-			"github:cloudflare/workers-sdk#main",
+			"github:cloudflare/workers-sdk",
 			expect.anything(),
 		);
 	});
@@ -460,7 +460,7 @@ describe("downloadRemoteTemplate", () => {
 		);
 
 		expect(degit).toHaveBeenCalledWith(
-			"github:cloudflare/workers-sdk/templates/worker-r2#main",
+			"github:cloudflare/workers-sdk/templates/worker-r2",
 			expect.anything(),
 		);
 	});
