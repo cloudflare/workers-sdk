@@ -6,7 +6,7 @@ const generate = async (ctx: C3Context) => {
 	// Easy way to switch branch for local testing
 	const branch = "main";
 
-	const repoUrl = `github:opennextjs/opennextjs-cloudflare#${branch}/create-cloudflare/next`;
+	const repoUrl = `github:opennextjs/opennextjs-cloudflare/create-cloudflare/next#${branch}`;
 
 	await downloadRemoteTemplate(repoUrl, {
 		intoFolder: ctx.project.path,
