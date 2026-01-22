@@ -955,7 +955,10 @@ export const WorkerdTests: Record<string, () => void> = {
 
 	async testWorkerThreads() {
 		const workerThreads = await import("node:worker_threads");
-		const isNative = getRuntimeFlagValue("enable_nodejs_worker_threads_module");
+
+		// Detect if we're using native workerd implementation by checking if
+		// MessageChannel is exported (unenv exports it, workerd doesn't)
+		const isNative = typeof workerThreads.MessageChannel !== "function";
 
 		// Common exports available in both unenv stub and native workerd
 		for (const target of [workerThreads, workerThreads.default]) {
