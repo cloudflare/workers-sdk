@@ -338,12 +338,10 @@ export const getOpenNextDeployFromEnv = getEnvironmentVariableFactory({
 });
 
 /**
- * `X_RESOURCE_INSPECTOR` enables the resource inspector UI at /cdn-cgi/devtools.
+ * `X_LOCAL_EXPLORER` enables the local explorer UI at /cdn-cgi/explorer.
  * This is an experimental feature flag. Defaults to false when not set.
  */
-export const getResourceInspectorFromEnv = getBooleanEnvironmentVariableFactory(
-	{
-		variableName: "X_RESOURCE_INSPECTOR",
-		defaultValue: false,
-	}
-);
+export const getLocalExplorerFromEnv = getBooleanEnvironmentVariableFactory({
+	variableName: "X_LOCAL_EXPLORER",
+	defaultValue: false,
+});

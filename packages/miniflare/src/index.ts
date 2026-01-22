@@ -1587,7 +1587,7 @@ export class Miniflare {
 		}
 
 		/**
-		 * Bindings for `ProxyServer` Durable Object for the magic proxy and resource inspector.
+		 * Bindings for `ProxyServer` Durable Object for the magic proxy and local explorer.
 		 * Contains all workerd-native bindings.
 		 */
 		const proxyBindings: Worker_Binding[] = [];

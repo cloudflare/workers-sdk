@@ -5,4 +5,4 @@
 "wrangler": minor
 ---
 
-Add a no-op resource inspector worker, which is gated by the experimental flag `X_RESOURCE_INSPECTOR`.
+Add a no-op local explorer worker, which is gated by the experimental flag `X_LOCAL_EXPLORER`.

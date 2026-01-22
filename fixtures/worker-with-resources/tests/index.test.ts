@@ -2,8 +2,8 @@ import { resolve } from "path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
-describe("Resource Inspector", () => {
-	describe("with X_RESOURCE_INSPECTOR=true", () => {
+describe("local explorer", () => {
+	describe("with X_LOCAL_EXPLORER=true", () => {
 		let ip: string;
 		let port: number;
 		let stop: (() => Promise<unknown>) | undefined;
@@ -12,7 +12,7 @@ describe("Resource Inspector", () => {
 			({ ip, port, stop } = await runWranglerDev(
 				resolve(__dirname, ".."),
 				["--port=0", "--inspector-port=0"],
-				{ X_RESOURCE_INSPECTOR: "true" }
+				{ X_LOCAL_EXPLORER: "true" }
 			));
 		});
 
@@ -20,10 +20,10 @@ describe("Resource Inspector", () => {
 			await stop?.();
 		});
 
-		it("returns resource viewer API response for /cdn-cgi/devtools/api", async () => {
-			const response = await fetch(`http://${ip}:${port}/cdn-cgi/devtools/api`);
+		it("returns local explorer API response for /cdn-cgi/explorer/api", async () => {
+			const response = await fetch(`http://${ip}:${port}/cdn-cgi/explorer/api`);
 			const text = await response.text();
-			expect(text).toBe("Hello from Resource Viewer API");
+			expect(text).toBe("Hello from local explorer API");
 		});
 
 		it("returns worker response for normal requests", async () => {
@@ -33,7 +33,7 @@ describe("Resource Inspector", () => {
 		});
 	});
 
-	describe("without X_RESOURCE_INSPECTOR (default)", () => {
+	describe("without X_LOCAL_EXPLORER (default)", () => {
 		let ip: string;
 		let port: number;
 		let stop: (() => Promise<unknown>) | undefined;
@@ -49,8 +49,8 @@ describe("Resource Inspector", () => {
 			await stop?.();
 		});
 
-		it("returns worker response for /cdn-cgi/devtools/api", async () => {
-			const response = await fetch(`http://${ip}:${port}/cdn-cgi/devtools/api`);
+		it("returns worker response for /cdn-cgi/explorer/api", async () => {
+			const response = await fetch(`http://${ip}:${port}/cdn-cgi/explorer/api`);
 			const text = await response.text();
 			expect(text).toBe("Hello World!");
 		});

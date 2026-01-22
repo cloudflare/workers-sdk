@@ -88,8 +88,8 @@ type VariableNames =
 
 	// ## Experimental Feature Flags
 
-	/** Enable the resource inspector UI at /cdn-cgi/devtools (experimental, default: false). */
-	| "X_RESOURCE_INSPECTOR"
+	/** Enable the local explorer UI at /cdn-cgi/explorer (experimental, default: false). */
+	| "X_LOCAL_EXPLORER"
 
 	// ## CI-specific Variables (Internal Use)
 
