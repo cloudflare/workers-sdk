@@ -2,15 +2,7 @@ import path from "path";
 import { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import { toMatchImageSnapshot } from "jest-image-snapshot";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- uses expect throughout tests */
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	MockInstance,
-	vi,
-} from "vitest";
+import { beforeEach, describe, expect, it, MockInstance, vi } from "vitest";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getPlatformProxy } from "./shared";
 import type {
@@ -20,7 +12,6 @@ import type {
 	KVNamespace,
 	Workflow,
 } from "@cloudflare/workers-types";
-import type { Unstable_DevWorker } from "wrangler";
 
 type Env = {
 	MY_VAR: string;
@@ -41,7 +32,6 @@ type Env = {
 const wranglerConfigFilePath = path.join(__dirname, "..", "wrangler.jsonc");
 
 describe("getPlatformProxy - env", () => {
-	let devWorkers: Unstable_DevWorker[];
 	let warn = {} as MockInstance<typeof console.warn>;
 
 	beforeEach(() => {
@@ -278,7 +268,7 @@ describe("getPlatformProxy - env", () => {
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m				You have defined bindings to the following internal Durable Objects:[0m
 					  				- {"class_name":"MyDurableObject","name":"MY_DURABLE_OBJECT"}
 					  				These will not work in local development, but they should work in production.
-					  
+
 					  				If you want to develop these locally, you can define your DO in a separate Worker, with a separate configuration file.
 					  				For detailed instructions, refer to the Durable Objects section here: [4mhttps://developers.cloudflare.com/workers/wrangler/api#supported-bindings[0m
 					"
