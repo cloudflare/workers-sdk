@@ -4,6 +4,8 @@ import { Utils } from "discord-api-types/v10";
 import dep from "ext-dep";
 import { assert, describe, expect, test } from "vitest";
 import worker from "../src/index";
+import sqlPlain from "../src/test.sql";
+import sqlRaw from "../src/test.sql?raw";
 
 describe("test", () => {
 	test("resolves commonjs directory dependencies correctly", async () => {
@@ -25,5 +27,11 @@ describe("test", () => {
 	test("can use toucan-js (unit)", async () => {
 		const response = await worker.fetch();
 		expect(response.status).toBe(200);
+	});
+
+	// Regression test for https://github.com/cloudflare/workers-sdk/issues/12049
+	// Vite query parameters like ?raw should be handled by Vite, not module rules
+	test("resolves file with ?raw query parameter", async () => {
+		assert.equal(sqlRaw, sqlPlain);
 	});
 });

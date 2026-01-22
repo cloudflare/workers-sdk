@@ -193,7 +193,8 @@ export class CloudflarePoolWorker implements PoolWorker {
 					const maybeRule = compiledRules.find((rule) =>
 						testRegExps(rule.include, specifier)
 					);
-					if (maybeRule !== undefined) {
+					// Skip if specifier already has query params (e.g. `?raw`), letting Vite handle it.
+					if (maybeRule !== undefined && !specifier.includes("?")) {
 						const externalize =
 							this.options.project.config.root +
 							specifier +

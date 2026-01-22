@@ -4,7 +4,7 @@
 		"types": [
 			"@cloudflare/workers-types/experimental",
 			"@cloudflare/vitest-pool-workers/types",
-			"node"
+			"vite/client" // For `?raw`, `?url`, etc. import types
 		]
 	}
 }
