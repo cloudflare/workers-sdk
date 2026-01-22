@@ -336,3 +336,13 @@ export const getCloudflareEnv = getEnvironmentVariableFactory({
 export const getOpenNextDeployFromEnv = getEnvironmentVariableFactory({
 	variableName: "OPEN_NEXT_DEPLOY",
 });
+
+/**
+ * `WRANGLER_FORCE_INTERACTIVE` is an environment variables that indicates that the current wrangler
+ * process should be run in interactive mode (useful for testing interactive features without a real TTY)
+ */
+export const getWranglerForceInteractiveFromEnv = getEnvironmentVariableFactory(
+	{
+		variableName: "WRANGLER_FORCE_INTERACTIVE",
+	}
+);
