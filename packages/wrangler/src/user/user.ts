@@ -247,7 +247,7 @@ import {
 	getTokenUrlFromEnv,
 } from "./auth-variables";
 import { getAccountChoices } from "./choose-account";
-import { generateAuthUrl } from "./generate-auth-url";
+import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
 import type { Account } from "./shared";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
@@ -394,10 +394,6 @@ export function validateScopeKeys(
 	scopes: string[]
 ): scopes is typeof DefaultScopeKeys {
 	return scopes.every((scope) => scope in DefaultScopes);
-}
-
-function getCallbackUrl(host = "localhost", port = 8976) {
-	return `http://${host}:${port}/oauth/callback`;
 }
 
 let localState: State = {
@@ -688,12 +684,7 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 	return true;
 }
 
-async function getAuthURL(
-	scopes: string[],
-	clientId: string,
-	callbackHost: string,
-	callbackPort: number
-): Promise<string> {
+async function getAuthURL(scopes: string[], clientId: string): Promise<string> {
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
 	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
 
@@ -706,7 +697,6 @@ async function getAuthURL(
 	return generateAuthUrl({
 		authUrl: getAuthUrlFromEnv(),
 		clientId,
-		callbackUrl: getCallbackUrl(callbackHost, callbackPort),
 		scopes,
 		stateQueryParam,
 		codeChallenge,
@@ -820,7 +810,7 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 	const params = new URLSearchParams({
 		grant_type: `authorization_code`,
 		code: authorizationCode ?? "",
-		redirect_uri: getCallbackUrl(),
+		redirect_uri: OAUTH_CALLBACK_URL,
 		client_id: getClientIdFromEnv(),
 		code_verifier: codeVerifier,
 	});
@@ -1013,12 +1003,7 @@ export async function getOauthToken(options: {
 	callbackHost: string;
 	callbackPort: number;
 }): Promise<AccessContext> {
-	const urlToOpen = await getAuthURL(
-		options.scopes,
-		options.clientId,
-		options.callbackHost,
-		options.callbackPort
-	);
+	const urlToOpen = await getAuthURL(options.scopes, options.clientId);
 	let server: http.Server;
 	let loginTimeoutHandle: ReturnType<typeof setTimeout>;
 	const timerPromise = new Promise<AccessContext>((_, reject) => {
@@ -1096,6 +1081,10 @@ export async function getOauthToken(options: {
 		if (options.callbackHost !== "localhost" || options.callbackPort !== 8976) {
 			logger.log(
 				`Temporary login server listening on ${options.callbackHost}:${options.callbackPort}`
+			);
+			logger.log(
+				"Note that the OAuth login page will always redirect to `localhost:8976`.\n" +
+					"If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly."
 			);
 		}
 		server.listen(options.callbackPort, options.callbackHost);

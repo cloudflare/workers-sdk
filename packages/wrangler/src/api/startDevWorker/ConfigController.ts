@@ -60,6 +60,25 @@ import type { WorkerRegistry } from "miniflare";
 const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "127.0.0.1");
 const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, "localhost");
 
+async function resolveInspectorConfig(
+	config: Config,
+	input: StartDevWorkerInput
+): Promise<StartDevWorkerOptions["dev"]["inspector"]> {
+	if (input.dev?.inspector === false) {
+		return false;
+	}
+	const hostname =
+		input.dev?.inspector?.hostname ?? config.dev.inspector_ip ?? "127.0.0.1";
+	const port =
+		input.dev?.inspector?.port ??
+		config.dev.inspector_port ??
+		(await getInspectorPort(hostname));
+	return {
+		hostname,
+		port,
+	};
+}
+
 async function resolveDevConfig(
 	config: Config,
 	input: StartDevWorkerInput
@@ -133,15 +152,7 @@ async function resolveDevConfig(
 			httpsKeyPath: input.dev?.server?.httpsKeyPath,
 			httpsCertPath: input.dev?.server?.httpsCertPath,
 		},
-		inspector:
-			input.dev?.inspector === false
-				? false
-				: {
-						port:
-							input.dev?.inspector?.port ??
-							config.dev.inspector_port ??
-							(await getInspectorPort()),
-					},
+		inspector: await resolveInspectorConfig(config, input),
 		origin: {
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",

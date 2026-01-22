@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.59.2",
+	"version": "4.60.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -73,10 +73,11 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20260116.0"
+		"workerd": "1.20260122.0"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
+		"@bomb.sh/tab": "^0.0.11",
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/eslint-config-shared": "workspace:*",
