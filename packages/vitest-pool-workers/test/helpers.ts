@@ -110,7 +110,7 @@ export const test = baseTest.extend<{
 		const tmpPathBase = path.join(tmpPoolInstallationPath, "test-");
 		const tmpPath = await fs.mkdtemp(tmpPathBase);
 		await use(tmpPath);
-		// await fs.rm(tmpPath, { recursive: true, maxRetries: 10 });
+		await fs.rm(tmpPath, { recursive: true, maxRetries: 10 });
 	},
 	// Fixture for seeding data in the temporary directory
 	async seed({ tmpPath }, use) {
