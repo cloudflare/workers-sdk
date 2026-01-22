@@ -136,7 +136,7 @@ The generated code:
 3. Includes the Pages Functions runtime (route matching, middleware execution)
 4. Exports a default handler that routes requests
 
-The output imports `path-to-regexp` for route matching. When bundled by wrangler or esbuild, this dependency is resolved and included automatically.
+The output imports `path-to-regexp` for route matching. This package includes `path-to-regexp` as a dependency, so it will be available when you bundle with wrangler or esbuild.
 
 ## License
 
