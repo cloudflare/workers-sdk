@@ -1,5 +1,18 @@
 # @cloudflare/vite-plugin
 
+## 1.21.2
+
+### Patch Changes
+
+- [#11875](https://github.com/cloudflare/workers-sdk/pull/11875) [`ae2459c`](https://github.com/cloudflare/workers-sdk/commit/ae2459c6ef0dc2d5419bc692dea4a936c1859c21) Thanks [@bxff](https://github.com/bxff)! - Skip shortcut registration in non-TTY environments
+
+  Previously, registering keyboard shortcuts in non-TTY environments (e.g., Turborepo) caused Miniflare `ERR_DISPOSED` errors during prerendering. Shortcuts are now only registered when running in an interactive terminal.
+
+- Updated dependencies [[`614bbd7`](https://github.com/cloudflare/workers-sdk/commit/614bbd709529191bbae6aa92790bbfe00a37e3d9), [`788bf78`](https://github.com/cloudflare/workers-sdk/commit/788bf786b4c5cb8e1bdd6464d3f88b4125cebc75), [`1375577`](https://github.com/cloudflare/workers-sdk/commit/1375577c860f1ae9af5caf1c488d47ec1cf52b6f), [`ae108f0`](https://github.com/cloudflare/workers-sdk/commit/ae108f090532765751c3996ba4c863a9fe858ddf), [`bba0968`](https://github.com/cloudflare/workers-sdk/commit/bba09689ca258b6da36b21b7300845ce031eaca6), [`c3407ad`](https://github.com/cloudflare/workers-sdk/commit/c3407ada8cff1170ef2a3bbc4d3137dcf3998461), [`f9e8a45`](https://github.com/cloudflare/workers-sdk/commit/f9e8a452fb299e6cb1a0ff2985347bfc277deac8)]:
+  - wrangler@4.60.0
+  - miniflare@4.20260120.0
+  - @cloudflare/unenv-preset@2.11.0
+
 ## 1.21.1
 
 ### Patch Changes
