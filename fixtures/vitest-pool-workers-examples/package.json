@@ -17,6 +17,7 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@microlabs/otel-cf-workers": "1.0.0-rc.45",
 		"@types/node": "catalog:default",
+		"@types/nunjucks": "^3.2.6",
 		"better-auth": "^1.4.6",
 		"discord-api-types": "0.37.98",
 		"ext-dep": "file:./module-resolution/vendor/ext-dep",

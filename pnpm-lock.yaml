@@ -1197,6 +1197,9 @@ importers:
       '@types/node':
         specifier: ^20.19.9
         version: 20.19.9
+      '@types/nunjucks':
+        specifier: ^3.2.6
+        version: 3.2.6
       better-auth:
         specifier: ^1.4.6
         version: 1.4.15(@prisma/client@7.0.1(prisma@7.0.1(@types/react@19.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.8.3))(typescript@5.8.3))(mysql2@3.15.3)(pg@8.16.3)(prisma@7.0.1(@types/react@19.1.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.8.3))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(vitest@4.1.0-beta.1)
@@ -7967,6 +7970,9 @@ packages:
 
   '@types/normalize-package-data@2.4.4':
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
+
+  '@types/nunjucks@3.2.6':
+    resolution: {integrity: sha512-pHiGtf83na1nCzliuAdq8GowYiXvH5l931xZ0YEHaLMNFgynpEqx+IPStlu7UaDkehfvl01e4x/9Tpwhy7Ue3w==}
 
   '@types/pg@8.11.6':
     resolution: {integrity: sha512-/2WmmBXHLsfRqzfHW7BNZ8SbYzE8OSk7i3WjFYvfgRHj7S1xj+16Je5fUKv3lVdVzk/zn9TXOqf+avFCFIE0yQ==}
@@ -18263,6 +18269,8 @@ snapshots:
 
   '@types/normalize-package-data@2.4.4': {}
 
+  '@types/nunjucks@3.2.6': {}
+
   '@types/pg@8.11.6':
     dependencies:
       '@types/node': 20.19.9
@@ -18775,7 +18783,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.4)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.4(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.4)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.4(@types/node@20.19.9)(typescript@5.9.3))(yaml@2.8.1)
 
   '@vitest/ui@4.1.0-beta.1(vitest@4.1.0-beta.1)':
     dependencies:
