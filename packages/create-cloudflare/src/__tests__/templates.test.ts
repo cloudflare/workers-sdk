@@ -15,6 +15,7 @@ import {
 	addWranglerToGitIgnore,
 	deriveCorrelatedArgs,
 	downloadRemoteTemplate,
+	ghRegex,
 	updatePackageName,
 } from "../templates";
 import type { PathLike } from "node:fs";
@@ -541,5 +542,55 @@ version = "0.1.0"`;
 			expect.stringContaining("pyproject.toml"),
 			expect.stringContaining(`name = "my-project"`),
 		);
+	});
+});
+
+describe("ghRegex", () => {
+	test("should match basic GitHub URL without path", () => {
+		const url = "https://github.com/cloudflare/workers-sdk";
+		const match = url.match(ghRegex);
+
+		expect(match).toBeTruthy();
+		expect(match?.groups).toMatchObject({
+			user: "cloudflare",
+			repo: "workers-sdk",
+			path: undefined,
+		});
+	});
+
+	test("should match basic GitHub URL without path (trailing slash)", () => {
+		const url = "https://github.com/cloudflare/workers-sdk/";
+		const match = url.match(ghRegex);
+
+		expect(match).toBeTruthy();
+		expect(match?.groups).toMatchObject({
+			user: "cloudflare",
+			repo: "workers-sdk",
+			path: "",
+		});
+	});
+
+	test("should match GitHub URL with one folder", () => {
+		const url = "https://github.com/cloudflare/workers-sdk/one";
+		const match = url.match(ghRegex);
+
+		expect(match).toBeTruthy();
+		expect(match?.groups).toMatchObject({
+			user: "cloudflare",
+			repo: "workers-sdk",
+			path: "one",
+		});
+	});
+
+	test("should match GitHub URL with multiple folders", () => {
+		const url = "https://github.com/cloudflare/workers-sdk/one/two";
+		const match = url.match(ghRegex);
+
+		expect(match).toBeTruthy();
+		expect(match?.groups).toMatchObject({
+			user: "cloudflare",
+			repo: "workers-sdk",
+			path: "one/two",
+		});
 	});
 });
