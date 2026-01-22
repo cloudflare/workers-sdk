@@ -1725,6 +1725,7 @@ export function createCLIParser(argv: string[]) {
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
 
+	registry.registerLegacyCommand("cloudchamber");
 	registry.registerLegacyCommandCategory("containers", "Compute & AI");
 	registry.registerLegacyCommandCategory("pubsub", "Compute & AI");
 
@@ -1746,16 +1747,28 @@ export async function main(argv: string[]): Promise<void> {
 
 	// Check if this is a root-level help request (--help or -h with no subcommand)
 	// In this case, we use our custom help formatter to show command categories
-	const isRootHelpRequest =
-		(argv.includes("--help") || argv.includes("-h")) &&
-		argv.filter((arg) => !arg.startsWith("-")).length === 0;
+	const hasHelpFlag = argv.includes("--help") || argv.includes("-h");
+	const nonFlagArgs = argv.filter((arg) => !arg.startsWith("-"));
+	const isRootHelpRequest = hasHelpFlag && nonFlagArgs.length === 0;
 
-	const { wrangler, showHelpWithCategories } = createCLIParser(argv);
+	const { wrangler, registry, showHelpWithCategories } = createCLIParser(argv);
 
 	if (isRootHelpRequest) {
 		await showHelpWithCategories();
 		return;
 	}
+
+	// Check for unknown command with a `--help` flag
+	const [subCommand] = nonFlagArgs;
+	if (hasHelpFlag && subCommand) {
+		const knownCommands = registry.topLevelCommands;
+		if (!knownCommands.has(subCommand)) {
+			logger.error(`Unknown argument: ${subCommand}`);
+			await showHelpWithCategories();
+			throw new CommandLineArgsError(`Unknown argument: ${subCommand}`);
+		}
+	}
+
 	let command: string | undefined;
 	let metricsArgs: Record<string, unknown> | undefined;
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
