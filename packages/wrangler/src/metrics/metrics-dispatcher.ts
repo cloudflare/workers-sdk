@@ -114,8 +114,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			properties: Omit<
 				Extract<Events, { name: EventName }>["properties"],
 				keyof CommonEventProperties
-			>,
-			argv?: string[]
+			>
 		) {
 			try {
 				if (properties.command?.startsWith("wrangler login")) {
@@ -136,7 +135,10 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					printMetricsBanner();
 				}
 
-				const sanitizedArgs = sanitizeArgKeys(properties.args ?? {}, argv);
+				const sanitizedArgs = sanitizeArgKeys(
+					properties.args ?? {},
+					options.argv
+				);
 				const sanitizedArgsKeys = Object.keys(sanitizedArgs).sort();
 				const commonEventProperties: CommonEventProperties = {
 					amplitude_session_id,

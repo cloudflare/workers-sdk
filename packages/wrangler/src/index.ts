@@ -30,8 +30,9 @@ import { completionsCommand } from "./complete";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
+import { CommandHandledError } from "./core/CommandHandledError";
 import { CommandRegistry } from "./core/CommandRegistry";
-import { handleError } from "./core/handle-errors";
+import { getErrorType, handleError } from "./core/handle-errors";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1Namespace } from "./d1";
 import { d1CreateCommand } from "./d1/create";
@@ -492,7 +493,7 @@ export function createCLIParser(argv: string[]) {
 		},
 	};
 
-	const registerCommand = createRegisterYargsCommand(wrangler, subHelp);
+	const registerCommand = createRegisterYargsCommand(wrangler, subHelp, argv);
 	const registry = new CommandRegistry(registerCommand);
 
 	// Helper to show help with command categories
@@ -1742,8 +1743,6 @@ export async function main(argv: string[]): Promise<void> {
 
 	checkMacOSVersion({ shouldThrow: false });
 
-	const startTime = Date.now();
-
 	// Check if this is a root-level help request (--help or -h with no subcommand)
 	// In this case, we use our custom help formatter to show command categories
 	const isRootHelpRequest =
@@ -1756,10 +1755,8 @@ export async function main(argv: string[]): Promise<void> {
 		await showHelpWithCategories();
 		return;
 	}
-	let command: string | undefined;
-	let metricsArgs: Record<string, unknown> | undefined;
-	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
-	// Register Yargs middleware to record command as Sentry breadcrumb
+
+	// Register Yargs middleware to record command as Sentry breadcrumb and set logger level
 	let recordedCommand = false;
 	const wranglerWithMiddleware = wrangler.middleware((args) => {
 		// Update logger level, before we do any logging
@@ -1774,8 +1771,26 @@ export async function main(argv: string[]): Promise<void> {
 			return;
 		}
 		recordedCommand = true;
-		// `args._` doesn't include any positional arguments (e.g. script name,
-		// key to fetch) or flags
+
+		// Record command as Sentry breadcrumb
+		const command = `wrangler ${args._.join(" ")}`;
+		addBreadcrumb(command);
+
+		// TODO: Legacy commands (cloudchamber, containers) don't use defineCommand
+		// and won't emit telemetry events. Migrate them to defineCommand to enable telemetry.
+	}, /* applyBeforeValidation */ true);
+
+	const startTime = Date.now();
+	let command: string | undefined;
+	let metricsArgs: Record<string, unknown> | undefined;
+	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
+
+	// Register middleware to capture command info for fallback telemetry
+	const wranglerWithTelemetry = wranglerWithMiddleware.middleware((args) => {
+		// Capture command and args for potential fallback telemetry
+		// (used when yargs validation errors occur before handler runs)
+		command = `wrangler ${args._.join(" ")}`;
+		metricsArgs = args;
 
 		try {
 			const { rawConfig, configPath } = experimental_readRawConfig(args);
@@ -1783,65 +1798,55 @@ export async function main(argv: string[]): Promise<void> {
 				sendMetrics: rawConfig.send_metrics,
 				hasAssets: !!rawConfig.assets?.directory,
 				configPath,
+				argv,
 			});
 		} catch (e) {
-			// If we can't parse the config, we can't send metrics
-			logger.debug("Failed to parse config. Disabling metrics dispatcher.", e);
+			// If we can't parse the config, we can still send metrics with defaults
+			logger.debug("Failed to parse config for metrics. Using defaults.", e);
+			dispatcher = getMetricsDispatcher({ argv });
 		}
-
-		command = `wrangler ${args._.join(" ")}`;
-		metricsArgs = args;
-		addBreadcrumb(command);
-		// NB despite 'applyBeforeValidation = true', this runs *after* yargs 'validates' options,
-		// e.g. if a required arg is missing, yargs will error out before we send any events :/
-		dispatcher?.sendCommandEvent(
-			"wrangler command started",
-			{
-				command,
-				args,
-			},
-			argv
-		);
 	}, /* applyBeforeValidation */ true);
 
 	let cliHandlerThrew = false;
 	try {
-		await wranglerWithMiddleware.parse();
-
-		const durationMs = Date.now() - startTime;
-
-		dispatcher?.sendCommandEvent(
-			"wrangler command completed",
-			{
-				command,
-				args: metricsArgs,
-				durationMs,
-				durationSeconds: durationMs / 1000,
-				durationMinutes: durationMs / 1000 / 60,
-			},
-			argv
-		);
+		await wranglerWithTelemetry.parse();
 	} catch (e) {
 		cliHandlerThrew = true;
-		const errorType = await handleError(e, wrangler.arguments, argv);
-		const durationMs = Date.now() - startTime;
-		dispatcher?.sendCommandEvent(
-			"wrangler command errored",
-			{
+
+		// Check if this is a CommandHandledError (telemetry already sent by handler)
+		if (e instanceof CommandHandledError) {
+			// Unwrap and handle the original error
+			await handleError(e.originalError, metricsArgs ?? {}, argv);
+			throw e.originalError;
+		}
+
+		// Fallback telemetry for errors that occurred before handler ran
+		// (e.g., yargs validation errors like unknown commands or invalid arguments)
+		if (dispatcher && command && metricsArgs) {
+			const durationMs = Date.now() - startTime;
+
+			// Send "started" event (since handler never got to send it)
+			dispatcher.sendCommandEvent("wrangler command started", {
+				command,
+				args: metricsArgs,
+			});
+
+			// Send "errored" event
+			dispatcher.sendCommandEvent("wrangler command errored", {
 				command,
 				args: metricsArgs,
 				durationMs,
 				durationSeconds: durationMs / 1000,
 				durationMinutes: durationMs / 1000 / 60,
-				errorType:
-					errorType ?? (e instanceof Error ? e.constructor.name : undefined),
+				errorType: getErrorType(e),
 				errorMessage:
 					e instanceof UserError || e instanceof ContainersUserError
 						? e.telemetryMessage
 						: undefined,
-			},
-			argv
-		);
+			});
+		}
+
+		await handleError(e, metricsArgs ?? {}, argv);
 		throw e;
 	} finally {
 		try {
@@ -1859,6 +1864,7 @@ export async function main(argv: string[]): Promise<void> {
 
 			await closeSentry();
 
+			// Wait for any pending telemetry requests to complete (with timeout)
 			await Promise.race([
 				Promise.allSettled(dispatcher?.requests ?? []),
 				setTimeout(1000, undefined, { ref: false }),
