@@ -1763,6 +1763,7 @@ export async function main(argv: string[]): Promise<void> {
 	if (hasHelpFlag && subCommand) {
 		const knownCommands = registry.topLevelCommands;
 		if (!knownCommands.has(subCommand)) {
+			logger.info("");
 			logger.error(`Unknown argument: ${subCommand}`);
 			await showHelpWithCategories();
 			throw new CommandLineArgsError(`Unknown argument: ${subCommand}`);
