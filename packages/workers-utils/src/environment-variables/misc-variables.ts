@@ -336,3 +336,12 @@ export const getCloudflareEnv = getEnvironmentVariableFactory({
 export const getOpenNextDeployFromEnv = getEnvironmentVariableFactory({
 	variableName: "OPEN_NEXT_DEPLOY",
 });
+
+/**
+ * `X_LOCAL_EXPLORER` enables the local explorer UI at /cdn-cgi/explorer.
+ * This is an experimental feature flag. Defaults to false when not set.
+ */
+export const getLocalExplorerFromEnv = getBooleanEnvironmentVariableFactory({
+	variableName: "X_LOCAL_EXPLORER",
+	defaultValue: false,
+});
