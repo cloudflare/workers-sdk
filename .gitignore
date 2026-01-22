@@ -232,4 +232,4 @@ dist/**
 .node-cache/
 
 AGENTS.local.md
-.opencode/
+.opencode/plans/
