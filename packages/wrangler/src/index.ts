@@ -26,6 +26,7 @@ import {
 } from "./cert/cert";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
+import { completionsCommand } from "./complete";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
 import { demandSingleValue } from "./core";
@@ -639,6 +640,15 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("docs");
+
+	// completions
+	registry.define([
+		{
+			command: "wrangler complete",
+			definition: completionsCommand,
+		},
+	]);
+	registry.registerNamespace("complete");
 
 	/******************** CMD GROUP ***********************/
 

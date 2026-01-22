@@ -387,10 +387,21 @@ export const secretListCommand = createCommand({
 			);
 		}
 
-		const secrets = await fetchSecrets(
-			{ ...config, name: scriptName },
-			args.env
-		);
+		let secrets: Awaited<ReturnType<typeof fetchSecrets>>;
+
+		try {
+			secrets = await fetchSecrets({ ...config, name: scriptName }, args.env);
+		} catch (e) {
+			if (isWorkerNotFoundError(e)) {
+				throw new UserError(
+					`Worker "${scriptName}"${args.env ? ` (env: ${args.env})` : ""} not found.\n\n` +
+						`If this is a new Worker, run \`wrangler deploy\` first to create it.\n` +
+						`Otherwise, check that the Worker name is correct and you're logged into the right account.`
+				);
+			}
+
+			throw e;
+		}
 
 		if (args.format === "pretty") {
 			for (const workerSecret of secrets) {

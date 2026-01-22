@@ -44,6 +44,7 @@ describe("normalizeAndValidateConfig()", () => {
 				host: undefined,
 				enable_containers: true,
 				inspector_port: undefined,
+				inspector_ip: undefined,
 				container_engine: undefined,
 				generate_types: false,
 			},

@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/quick-edit",
-	"version": "0.4.3",
+	"version": "0.4.4",
 	"private": true,
 	"description": "VSCode for Web hosted for use in Cloudflare's Quick Editor",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
