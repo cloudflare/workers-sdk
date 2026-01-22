@@ -897,6 +897,35 @@ describe("wrangler secret", () => {
 			);
 		});
 
+		it("should error if worker is not found (error code 10007)", async () => {
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+					() => {
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: WORKER_NOT_FOUND_ERR_CODE,
+									message: workerNotFoundErrorMessage,
+								},
+							])
+						);
+					},
+					{ once: true }
+				)
+			);
+			await expect(
+				runWrangler("secret list --name non-existent-worker")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: Worker "non-existent-worker" not found.
+
+				If this is a new Worker, run \`wrangler deploy\` first to create it.
+				Otherwise, check that the Worker name is correct and you're logged into the right account.]
+			`
+			);
+		});
+
 		describe("banner tests", () => {
 			it("banner if pretty", async () => {
 				mockListRequest({ scriptName: "script-name" });
