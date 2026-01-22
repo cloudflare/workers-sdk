@@ -36,7 +36,6 @@ Options:
   -o, --outfile <path>     Output file for the worker entrypoint (default: "dist/worker.js")
   --routes-json <path>     Output path for _routes.json (default: "_routes.json")
   --no-routes-json         Don't generate _routes.json
-  --functions-dir <dir>    Functions directory relative to project (default: "functions")
   --base-url <url>         Base URL for routes (default: "/")
   --fallback-service <name> Fallback service binding name (default: "ASSETS")
   -h, --help               Show this help message
@@ -68,9 +67,8 @@ Compiles a Pages project's functions directory into a worker entrypoint.
 
 #### Parameters
 
-- `projectDirectory` (string): Path to the project root (containing the functions directory)
+- `projectDirectory` (string): Path to the project root (containing the `functions` directory)
 - `options` (object, optional):
-  - `functionsDir` (string): Functions directory relative to project root. Default: `"functions"`
   - `baseURL` (string): Base URL prefix for all routes. Default: `"/"`
   - `fallbackService` (string): Fallback service binding name. Default: `"ASSETS"`
 

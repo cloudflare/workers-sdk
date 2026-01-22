@@ -56,8 +56,6 @@ export interface RoutesJSONSpec {
  * Options for compiling a functions directory.
  */
 export interface CompileOptions {
-	/** Path to the functions directory relative to the project root. Default: "functions" */
-	functionsDir?: string;
 	/** Base URL for routes. Default: "/" */
 	baseURL?: string;
 	/** Fallback service binding name. Default: "ASSETS" */

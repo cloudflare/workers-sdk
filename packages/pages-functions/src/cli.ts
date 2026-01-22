@@ -7,7 +7,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseArgs } from "node:util";
-import { compileFunctions, DEFAULT_FUNCTIONS_DIR } from "./index.js";
+import { compileFunctions } from "./index.js";
 
 const HELP = `
 Usage: pages-functions [options] [project-dir]
@@ -21,7 +21,6 @@ Options:
   -o, --outfile <path>     Output file for the worker entrypoint (default: "dist/worker.js")
   --routes-json <path>     Output path for _routes.json (default: "_routes.json")
   --no-routes-json         Don't generate _routes.json
-  --functions-dir <dir>    Functions directory relative to project (default: "functions")
   --base-url <url>         Base URL for routes (default: "/")
   --fallback-service <name> Fallback service binding name (default: "ASSETS")
   -h, --help               Show this help message
@@ -40,7 +39,6 @@ async function main() {
 			outfile: { type: "string", short: "o", default: "dist/worker.js" },
 			"routes-json": { type: "string", default: "_routes.json" },
 			"no-routes-json": { type: "boolean", default: false },
-			"functions-dir": { type: "string", default: DEFAULT_FUNCTIONS_DIR },
 			"base-url": { type: "string", default: "/" },
 			"fallback-service": { type: "string", default: "ASSETS" },
 			help: { type: "boolean", short: "h", default: false },
@@ -58,13 +56,11 @@ async function main() {
 	const routesJson = values["no-routes-json"]
 		? null
 		: values["routes-json"] ?? "_routes.json";
-	const functionsDir = values["functions-dir"] ?? DEFAULT_FUNCTIONS_DIR;
 	const baseURL = values["base-url"] ?? "/";
 	const fallbackService = values["fallback-service"] ?? "ASSETS";
 
 	try {
 		const result = await compileFunctions(projectDir, {
-			functionsDir,
 			baseURL,
 			fallbackService,
 		});

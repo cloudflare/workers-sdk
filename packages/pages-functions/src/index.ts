@@ -64,13 +64,9 @@ export async function compileFunctions(
 	projectDirectory: string,
 	options: CompileOptions = {}
 ): Promise<CompileResult> {
-	const {
-		functionsDir = DEFAULT_FUNCTIONS_DIR,
-		baseURL = "/" as UrlPath,
-		fallbackService = "ASSETS",
-	} = options;
+	const { baseURL = "/" as UrlPath, fallbackService = "ASSETS" } = options;
 
-	const functionsDirectory = path.join(projectDirectory, functionsDir);
+	const functionsDirectory = path.join(projectDirectory, DEFAULT_FUNCTIONS_DIR);
 
 	// Generate route configuration from the file tree
 	const config = await generateConfigFromFileTree({
