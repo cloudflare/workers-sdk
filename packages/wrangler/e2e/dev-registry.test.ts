@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import getPort from "get-port";
 import dedent from "ts-dedent";
 import { fetch, Request } from "undici";
@@ -7,8 +6,7 @@ import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { fetchText } from "./helpers/fetch-text";
 import { generateResourceName } from "./helpers/generate-resource-name";
 import { normalizeOutput } from "./helpers/normalize";
-import { seed as baseSeed, makeRoot, seed } from "./helpers/setup";
-import { WRANGLER_IMPORT } from "./helpers/wrangler";
+import { seed as baseSeed, makeRoot } from "./helpers/setup";
 import type { RequestInit } from "undici";
 
 async function fetchJson<T>(url: string, info?: RequestInit): Promise<T> {

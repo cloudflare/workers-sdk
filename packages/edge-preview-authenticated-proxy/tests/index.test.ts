@@ -14,7 +14,7 @@ function removeUUID(str: string) {
 
 // Mock implementation for the remote worker
 function createMockFetchImplementation() {
-	return async (input: RequestInfo | URL, init?: RequestInit) => {
+	return async (input: Request | string | URL, init?: RequestInit) => {
 		const request = new Request(input, init);
 		const url = new URL(request.url);
 
