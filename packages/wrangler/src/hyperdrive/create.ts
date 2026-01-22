@@ -60,8 +60,7 @@ export const hyperdriveCreateCommand = createCommand({
 			config.configPath,
 			args.env,
 			{
-				binding: args.binding,
-				updateConfig: args.updateConfig,
+				...args,
 				useRemote: false, // Hyperdrive does not support remote bindings in local dev
 			}
 		);
