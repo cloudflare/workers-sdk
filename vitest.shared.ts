@@ -13,9 +13,6 @@ export default defineConfig({
 		testTimeout: 50_000,
 		hookTimeout: 50_000,
 		teardownTimeout: 50_000,
-		poolOptions: {
-			useAtomics: true,
-		},
 		restoreMocks: true,
 		// A lot of the fixture tests are extremely flaky because of the dev registry
 		// Retry tests by default so that only real errors are reported

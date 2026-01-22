@@ -4,8 +4,6 @@ export default defineWorkersConfig({
 	test: {
 		poolOptions: {
 			workers: {
-				singleWorker: false,
-				isolatedStorage: true,
 				miniflare: {
 					compatibilityDate: "2025-02-04",
 				},

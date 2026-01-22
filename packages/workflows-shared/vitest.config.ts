@@ -4,8 +4,6 @@ export default defineWorkersProject({
 	test: {
 		poolOptions: {
 			workers: {
-				singleWorker: true,
-				isolatedStorage: true,
 				main: "src/index.ts",
 				miniflare: {
 					compatibilityDate: "2025-02-04",

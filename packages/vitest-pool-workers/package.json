@@ -28,27 +28,25 @@
 	"type": "module",
 	"exports": {
 		".": {
-			"types": "./types/cloudflare-test.d.ts",
+			"types": "./dist/pool/index.d.mts",
 			"import": "./dist/pool/index.mjs"
 		},
-		"./config": {
-			"types": "./dist/config/index.d.ts",
-			"import": "./dist/config/index.cjs",
-			"require": "./dist/config/index.cjs"
+		"./types": {
+			"types": "./types/cloudflare-test.d.ts"
 		}
 	},
 	"main": "dist/pool/index.mjs",
-	"types": "types/cloudflare-test.d.ts",
+	"types": "dist/pool/index.d.mts",
 	"files": [
 		"dist",
 		"types/cloudflare-test.d.ts"
 	],
 	"scripts": {
-		"build": "node scripts/bundle.mjs && tsc -p tsconfig.emit.json",
+		"build": "tsdown",
 		"capnp:rtti": "capnp-es scripts/rtti/rtti.capnp -ojs",
 		"check:lint": "eslint .  --max-warnings=0",
 		"check:type": "tsc && tsc -p src/worker/tsconfig.json && tsc -p types/tsconfig.json",
-		"dev": "node scripts/bundle.mjs watch",
+		"dev": "tsdown --watch",
 		"test": "vitest run",
 		"test:ci": "vitest run"
 	},
@@ -76,14 +74,15 @@
 		"get-port": "^7.1.0",
 		"semver": "^7.7.1",
 		"ts-dedent": "^2.2.0",
+		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",
 		"vitest": "catalog:default"
 	},
 	"peerDependencies": {
-		"@vitest/runner": "2.0.x - 3.2.x",
-		"@vitest/snapshot": "2.0.x - 3.2.x",
-		"vitest": "2.0.x - 3.2.x"
+		"@vitest/runner": "4.1.0-beta.1",
+		"@vitest/snapshot": "4.1.0-beta.1",
+		"vitest": "4.1.0-beta.1"
 	},
 	"volta": {
 		"extends": "../../package.json"

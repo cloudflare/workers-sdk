@@ -1,11 +1,11 @@
 import dedent from "ts-dedent";
-import { minimalVitestConfig, test, waitFor } from "./helpers";
+import { test, vitestConfig, waitFor } from "./helpers";
 
 test.skipIf(process.platform === "win32")(
 	"console.log()s include correct source-mapped locations",
 	async ({ expect, seed, vitestDev }) => {
 		await seed({
-			"vitest.config.mts": minimalVitestConfig,
+			"vitest.config.mts": vitestConfig(),
 			"index.test.ts": dedent`
 			import { describe, it } from "vitest";
 			console.log("global");
@@ -58,7 +58,7 @@ test("handles detatched console methods", async ({
 	vitestDev,
 }) => {
 	await seed({
-		"vitest.config.mts": minimalVitestConfig,
+		"vitest.config.mts": vitestConfig(),
 		"index.test.ts": dedent`
 			import { SELF } from "cloudflare:test";
 			import { expect, it } from "vitest";
@@ -79,23 +79,14 @@ test("console.logs() inside `export default`ed handlers with SELF", async ({
 	vitestRun,
 }) => {
 	await seed({
-		"vitest.config.mts": dedent`
-			import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
-			export default defineWorkersConfig({
-				test: {
-					poolOptions: {
-						workers: {
-							main: "./index.ts",
-							singleWorker: true,
-							miniflare: {
-								compatibilityDate: "2024-01-01",
-								compatibilityFlags: ["nodejs_compat"],
-							},
-						},
-					},
-				}
-			});
-		`,
+		"vitest.config.mts": vitestConfig({
+			main: "./index.ts",
+			singleWorker: true,
+			miniflare: {
+				compatibilityDate: "2025-12-02",
+				compatibilityFlags: ["nodejs_compat"],
+			},
+		}),
 		"index.ts": dedent`
 			export default {
 				fetch() {
@@ -115,6 +106,7 @@ test("console.logs() inside `export default`ed handlers with SELF", async ({
 		`,
 	});
 	const result = await vitestRun();
+	console.log(result.stderr);
 	expect(result.stdout).toMatch(
 		"stdout | index.test.ts > sends request\none\ntwo"
 	);

@@ -1,40 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare module "cloudflare:test" {
-	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-	interface ProvidedEnv {}
-
 	/**
-	 * 2nd argument passed to modules-format exported handlers. Contains bindings
-	 * configured in top-level `miniflare` pool options. To configure the type
-	 * of this value, use an ambient module type:
-	 *
-	 * ```ts
-	 * declare module "cloudflare:test" {
-	 *   interface ProvidedEnv {
-	 *     NAMESPACE: KVNamespace;
-	 *   }
-	 *
-	 *   // ...or if you have an existing `Env` type...
-	 *   interface ProvidedEnv extends Env {}
-	 * }
-	 * ```
+	 * @deprecated Instead, use `import { env } from "cloudflare:workers"`
 	 */
-	export const env: ProvidedEnv;
+	export const env: Cloudflare.Env;
 
 	/**
 	 * Service binding to the default export defined in the `main` worker. Note
 	 * this `main` worker runs in the same isolate/context as tests, so any global
 	 * mocks will apply to it too.
+	 * @deprecated Instead, use `import { exports } from "cloudflare:workers"` and `exports.default.fetch()`
 	 */
 	export const SELF: Fetcher;
-
-	/**
-	 * Declarative interface for mocking outbound `fetch()` requests. Deactivated
-	 * by default and reset before running each test file. Only mocks `fetch()`
-	 * requests for the current test runner worker. Auxiliary workers should mock
-	 * `fetch()`es with the Miniflare `fetchMock`/`outboundService` options.
-	 */
-	export const fetchMock: MockAgent;
 
 	/**
 	 * Runs `callback` inside the Durable Object pointed-to by `stub`'s context.
@@ -63,8 +40,6 @@ declare module "cloudflare:test" {
 	): Promise<boolean /* ran */>;
 	/**
 	 * Gets the IDs of all objects that have been created in the `namespace`.
-	 * Respects `isolatedStorage` if enabled, i.e. objects created in a different
-	 * test won't be returned.
 	 */
 	export function listDurableObjectIds<T>(
 		namespace: DurableObjectNamespace<T>
@@ -81,7 +56,7 @@ declare module "cloudflare:test" {
 	 * `EventContext`s return by `createPagesEventContext()`.
 	 */
 	export function waitOnExecutionContext(
-		ctx: ExecutionContext | EventContext<ProvidedEnv, string, any>
+		ctx: ExecutionContext | EventContext<Cloudflare.Env, string, any>
 	): Promise<void>;
 	/**
 	 * Creates an instance of `ScheduledController` for use as the 1st argument to
@@ -566,7 +541,7 @@ declare module "cloudflare:test" {
 	 * Functions.
 	 */
 	export function createPagesEventContext<
-		F extends PagesFunction<ProvidedEnv, string, any>,
+		F extends PagesFunction<Cloudflare.Env, string, any>,
 	>(init: EventContextInit<Parameters<F>[0]>): Parameters<F>[0];
 
 	// Taken from `undici` (https://github.com/nodejs/undici/tree/main/types) with

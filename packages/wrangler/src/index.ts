@@ -26,6 +26,7 @@ import {
 } from "./cert/cert";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
 import { cloudchamber } from "./cloudchamber";
+import { codemodCommand } from "./codemod";
 import { completionsCommand } from "./complete";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { containers } from "./containers";
@@ -667,6 +668,14 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("dev");
+
+	registry.define([
+		{
+			command: "wrangler codemod",
+			definition: codemodCommand,
+		},
+	]);
+	registry.registerNamespace("codemod");
 
 	registry.define([
 		{
