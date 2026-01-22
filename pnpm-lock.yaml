@@ -689,11 +689,10 @@ importers:
         version: link:../../packages/wrangler
 
   fixtures/pages-functions-test:
-    dependencies:
+    devDependencies:
       '@cloudflare/pages-functions':
         specifier: workspace:*
         version: link:../../packages/pages-functions
-    devDependencies:
       wrangler:
         specifier: workspace:*
         version: link:../../packages/wrangler
