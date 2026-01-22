@@ -48,7 +48,7 @@ export class CloudflarePoolWorker implements PoolWorker {
 	async start(): Promise<void> {
 		let resolvedPoolOptions: WorkersPoolOptions;
 		if (typeof this.poolOptions === "function") {
-			// hhttps://github.com/vitest-dev/vitest/blob/v4.0.15/packages/vitest/src/integrations/inject.ts
+			// https://github.com/vitest-dev/vitest/blob/v4.0.15/packages/vitest/src/integrations/inject.ts
 			const inject = <K extends keyof ProvidedContext>(
 				key: K
 			): ProvidedContext[K] => {
