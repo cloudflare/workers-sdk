@@ -4,11 +4,12 @@ import { describe, expect, it } from "vitest";
 import { compileFunctions, FunctionsNoRoutesError } from "../src/index.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const fixturesDir = path.join(__dirname, "fixtures");
 
 describe("compileFunctions", () => {
-	it("compiles a functions directory to worker code", async () => {
-		const functionsDir = path.join(__dirname, "fixtures/basic-functions");
-		const result = await compileFunctions(functionsDir);
+	it("compiles a project to worker code", async () => {
+		const projectDir = path.join(fixturesDir, "basic-project");
+		const result = await compileFunctions(projectDir);
 
 		// Should have generated code
 		expect(result.code).toBeDefined();
@@ -28,8 +29,8 @@ describe("compileFunctions", () => {
 	});
 
 	it("uses custom fallbackService", async () => {
-		const functionsDir = path.join(__dirname, "fixtures/basic-functions");
-		const result = await compileFunctions(functionsDir, {
+		const projectDir = path.join(fixturesDir, "basic-project");
+		const result = await compileFunctions(projectDir, {
 			fallbackService: "CUSTOM_ASSETS",
 		});
 
@@ -37,8 +38,8 @@ describe("compileFunctions", () => {
 	});
 
 	it("uses custom baseURL", async () => {
-		const functionsDir = path.join(__dirname, "fixtures/basic-functions");
-		const result = await compileFunctions(functionsDir, {
+		const projectDir = path.join(fixturesDir, "basic-project");
+		const result = await compileFunctions(projectDir, {
 			baseURL: "/v1",
 		});
 
@@ -48,17 +49,17 @@ describe("compileFunctions", () => {
 		}
 	});
 
-	it("throws FunctionsNoRoutesError for empty directory", async () => {
-		const emptyDir = path.join(__dirname, "fixtures/empty-functions");
+	it("throws FunctionsNoRoutesError for empty project", async () => {
+		const projectDir = path.join(fixturesDir, "empty-project");
 
-		await expect(compileFunctions(emptyDir)).rejects.toThrow(
+		await expect(compileFunctions(projectDir)).rejects.toThrow(
 			FunctionsNoRoutesError
 		);
 	});
 
 	it("generates valid _routes.json", async () => {
-		const functionsDir = path.join(__dirname, "fixtures/basic-functions");
-		const result = await compileFunctions(functionsDir);
+		const projectDir = path.join(fixturesDir, "basic-project");
+		const result = await compileFunctions(projectDir);
 
 		// Validate structure
 		expect(result.routesJson.version).toBe(1);

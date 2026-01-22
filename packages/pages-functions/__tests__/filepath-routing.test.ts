@@ -298,9 +298,15 @@ describe("filepath-routing", () => {
 	});
 
 	describe("generateConfigFromFileTree (fixture)", () => {
+		const functionsDir = path.join(
+			__dirname,
+			"fixtures/basic-project/functions"
+		);
+
 		it("generates routes from a functions directory", async () => {
-			const baseDir = path.join(__dirname, "fixtures/basic-functions");
-			const config = await generateConfigFromFileTree({ baseDir });
+			const config = await generateConfigFromFileTree({
+				baseDir: functionsDir,
+			});
 
 			expect(config.routes).toBeDefined();
 			expect(config.routes.length).toBeGreaterThan(0);
@@ -330,8 +336,9 @@ describe("filepath-routing", () => {
 		});
 
 		it("converts bracket params to path-to-regexp format", async () => {
-			const baseDir = path.join(__dirname, "fixtures/basic-functions");
-			const config = await generateConfigFromFileTree({ baseDir });
+			const config = await generateConfigFromFileTree({
+				baseDir: functionsDir,
+			});
 
 			// [id] should become :id
 			const apiRoute = config.routes.find((r) => r.routePath.includes("/api/"));
@@ -340,9 +347,8 @@ describe("filepath-routing", () => {
 		});
 
 		it("respects baseURL option", async () => {
-			const baseDir = path.join(__dirname, "fixtures/basic-functions");
 			const config = await generateConfigFromFileTree({
-				baseDir,
+				baseDir: functionsDir,
 				baseURL: "/prefix" as UrlPath,
 			});
 
@@ -353,8 +359,9 @@ describe("filepath-routing", () => {
 		});
 
 		it("sorts routes by specificity", async () => {
-			const baseDir = path.join(__dirname, "fixtures/basic-functions");
-			const config = await generateConfigFromFileTree({ baseDir });
+			const config = await generateConfigFromFileTree({
+				baseDir: functionsDir,
+			});
 
 			// More specific routes should come before less specific ones
 			const routePaths = config.routes.map((r) => r.routePath);

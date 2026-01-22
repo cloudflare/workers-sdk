@@ -1,6 +1,6 @@
 # @cloudflare/pages-functions
 
-Compile a Pages functions directory into a deployable worker entrypoint.
+Compile a Pages project's functions directory into a deployable worker entrypoint.
 
 ## Installation
 
@@ -8,33 +8,69 @@ Compile a Pages functions directory into a deployable worker entrypoint.
 npm install @cloudflare/pages-functions
 ```
 
-## Usage
+## CLI Usage
+
+```bash
+# Compile the current project (looks for ./functions)
+pages-functions
+
+# Compile a specific project
+pages-functions ./my-project
+
+# Custom output location
+pages-functions -o worker.js
+
+# See all options
+pages-functions --help
+```
+
+### CLI Options
+
+```
+Usage: pages-functions [options] [project-dir]
+
+Arguments:
+  project-dir              Path to the project root (default: ".")
+
+Options:
+  -o, --outfile <path>     Output file for the worker entrypoint (default: "dist/worker.js")
+  --routes-json <path>     Output path for _routes.json (default: "_routes.json")
+  --no-routes-json         Don't generate _routes.json
+  --functions-dir <dir>    Functions directory relative to project (default: "functions")
+  --base-url <url>         Base URL for routes (default: "/")
+  --fallback-service <name> Fallback service binding name (default: "ASSETS")
+  -h, --help               Show this help message
+```
+
+## Programmatic API
 
 ```typescript
 import * as fs from "node:fs/promises";
 import { compileFunctions } from "@cloudflare/pages-functions";
 
-const result = await compileFunctions("./functions", {
+const result = await compileFunctions(".", {
 	fallbackService: "ASSETS",
 });
 
 // Write the generated worker entrypoint
-await fs.writeFile("worker.js", result.code);
+await fs.writeFile("dist/worker.js", result.code);
 
 // Write _routes.json for Pages deployment
-await fs.writeFile("_routes.json", JSON.stringify(result.routesJson, null, 2));
+await fs.writeFile(
+	"_routes.json",
+	JSON.stringify(result.routesJson, null, "\t")
+);
 ```
 
-## API
+### `compileFunctions(projectDirectory, options?)`
 
-### `compileFunctions(functionsDirectory, options?)`
-
-Compiles a Pages functions directory into a worker entrypoint.
+Compiles a Pages project's functions directory into a worker entrypoint.
 
 #### Parameters
 
-- `functionsDirectory` (string): Path to the functions directory
+- `projectDirectory` (string): Path to the project root (containing the functions directory)
 - `options` (object, optional):
+  - `functionsDir` (string): Functions directory relative to project root. Default: `"functions"`
   - `baseURL` (string): Base URL prefix for all routes. Default: `"/"`
   - `fallbackService` (string): Fallback service binding name. Default: `"ASSETS"`
 
@@ -46,18 +82,21 @@ A `Promise<CompileResult>` with:
 - `routes` (RouteConfig[]): Parsed route configuration
 - `routesJson` (RoutesJSONSpec): `_routes.json` content for Pages deployment
 
-## Functions Directory Structure
+## Project Structure
 
-The functions directory uses file-based routing:
+Your project should have a `functions` directory with file-based routing:
 
 ```
-functions/
-├── index.ts              # Handles /
-├── _middleware.ts        # Middleware for all routes
-├── api/
-│   ├── index.ts          # Handles /api
-│   ├── [id].ts           # Handles /api/:id
-│   └── [[catchall]].ts   # Handles /api/*
+my-project/
+├── functions/
+│   ├── index.ts              # Handles /
+│   ├── _middleware.ts        # Middleware for all routes
+│   └── api/
+│       ├── index.ts          # Handles /api
+│       ├── [id].ts           # Handles /api/:id
+│       └── [[catchall]].ts   # Handles /api/*
+├── wrangler.jsonc
+└── package.json
 ```
 
 ### Route Parameters
@@ -65,7 +104,7 @@ functions/
 - `[param]` - Dynamic parameter (e.g., `[id].ts` → `/api/:id`)
 - `[[catchall]]` - Catch-all parameter (e.g., `[[path]].ts` → `/api/:path*`)
 
-### Exports
+### Handler Exports
 
 Export handlers from your function files:
 
@@ -78,16 +117,28 @@ export const onRequestGet = (context) => new Response("GET");
 export const onRequestPost = (context) => new Response("POST");
 ```
 
+### Middleware
+
+Create a `_middleware.ts` file to run code before your handlers:
+
+```typescript
+export const onRequest = async (context) => {
+	const response = await context.next();
+	response.headers.set("X-Custom-Header", "value");
+	return response;
+};
+```
+
 ## Generated Output
 
 The generated code:
 
-1. Imports all function handlers
+1. Imports all function handlers from the functions directory
 2. Creates a route configuration array
-3. Includes the Pages Functions runtime (inlined)
+3. Includes the Pages Functions runtime (route matching, middleware execution)
 4. Exports a default handler that routes requests
 
-The output requires `path-to-regexp` as a runtime dependency (resolved during bundling).
+The output imports `path-to-regexp` for route matching. When bundled by wrangler or esbuild, this dependency is resolved and included automatically.
 
 ## License
 

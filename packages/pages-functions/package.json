@@ -28,6 +28,9 @@
 	},
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
+	"bin": {
+		"pages-functions": "./dist/cli.js"
+	},
 	"files": [
 		"dist",
 		"README.md"

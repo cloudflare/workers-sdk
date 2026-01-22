@@ -4,6 +4,7 @@
  * Compile a Pages functions directory into a deployable worker entrypoint.
  */
 
+import * as path from "node:path";
 import { generateWorkerEntrypoint } from "./codegen.js";
 import { generateConfigFromFileTree } from "./filepath-routing.js";
 import { convertRoutesToRoutesJSONSpec } from "./routes-transformation.js";
@@ -24,6 +25,9 @@ export { generateConfigFromFileTree } from "./filepath-routing.js";
 export { convertRoutesToRoutesJSONSpec } from "./routes-transformation.js";
 export { generateWorkerEntrypoint } from "./codegen.js";
 
+/** Default functions directory relative to project root */
+export const DEFAULT_FUNCTIONS_DIR = "functions";
+
 /**
  * Error thrown when no routes are found in the functions directory.
  */
@@ -35,9 +39,9 @@ export class FunctionsNoRoutesError extends Error {
 }
 
 /**
- * Compile a Pages functions directory into a worker entrypoint.
+ * Compile a Pages project's functions directory into a worker entrypoint.
  *
- * @param functionsDirectory Path to the functions directory
+ * @param projectDirectory Path to the project root (containing the functions directory)
  * @param options Compilation options
  * @returns Compilation result containing generated code and route info
  *
@@ -45,22 +49,28 @@ export class FunctionsNoRoutesError extends Error {
  * ```ts
  * import { compileFunctions } from '@cloudflare/pages-functions';
  *
- * const result = await compileFunctions('./functions', {
+ * const result = await compileFunctions('.', {
  *   fallbackService: 'ASSETS',
  * });
  *
  * // Write the generated entrypoint
- * await fs.writeFile('worker.js', result.code);
+ * await fs.writeFile('dist/worker.js', result.code);
  *
  * // Write _routes.json for Pages deployment
  * await fs.writeFile('_routes.json', JSON.stringify(result.routesJson, null, 2));
  * ```
  */
 export async function compileFunctions(
-	functionsDirectory: string,
+	projectDirectory: string,
 	options: CompileOptions = {}
 ): Promise<CompileResult> {
-	const { baseURL = "/" as UrlPath, fallbackService = "ASSETS" } = options;
+	const {
+		functionsDir = DEFAULT_FUNCTIONS_DIR,
+		baseURL = "/" as UrlPath,
+		fallbackService = "ASSETS",
+	} = options;
+
+	const functionsDirectory = path.join(projectDirectory, functionsDir);
 
 	// Generate route configuration from the file tree
 	const config = await generateConfigFromFileTree({
