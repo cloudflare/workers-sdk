@@ -3,10 +3,16 @@
 	"private": true,
 	"scripts": {
 		"deploy": "wrangler deploy",
-		"start": "wrangler dev"
+		"start": "wrangler dev",
+		"test:ci": "vitest run",
+		"test:watch": "vitest",
+		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-tsconfig": "workspace:^",
 		"@cloudflare/workers-types": "catalog:default",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
 	},
 	"volta": {
