@@ -19,6 +19,7 @@ import { handleScheduled } from "./scheduled";
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
+	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
@@ -349,6 +350,9 @@ function maybeLogRequest(
 	return res;
 }
 
+/**
+ * Proxy here refers to the 'magic proxy' used by getPlatformProxy
+ */
 function handleProxy(request: Request, env: Env) {
 	const ns = env[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY];
 	// Always use the same singleton Durable Object instance, so we always have
@@ -378,7 +382,7 @@ export default <ExportedHandler<Env>>{
 				};
 		request = new Request(request, { cf });
 
-		// The proxy client will always specify an operation
+		// The magic proxy client (used by getPlatformProxy) will always specify an operation
 		const isProxy = request.headers.get(CoreHeaders.OP) !== null;
 		if (isProxy) return handleProxy(request, env);
 
@@ -405,6 +409,14 @@ export default <ExportedHandler<Env>>{
 		}
 
 		try {
+			if (env[CoreBindings.SERVICE_LOCAL_EXPLORER]) {
+				if (url.pathname.startsWith("/cdn-cgi/explorer/api")) {
+					return await env[CoreBindings.SERVICE_LOCAL_EXPLORER].fetch(request);
+				} else if (url.pathname.startsWith("/cdn-cgi/explorer")) {
+					return new Response("Pretend this is an asset");
+					// TODO: serve assets using disk service
+				}
+			}
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {
 				if (
 					url.pathname === "/cdn-cgi/handler/scheduled" ||
