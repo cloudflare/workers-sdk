@@ -23,6 +23,7 @@
 		"jose": "^5.9.3",
 		"miniflare": "workspace:*",
 		"msw": "catalog:default",
+		"nunjucks": "^3.2.4",
 		"run-script-os": "^1.1.6",
 		"stripe": "^20.0.0",
 		"toucan-js": "4.0.0",

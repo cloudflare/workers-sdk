@@ -9,71 +9,18 @@ catalogs:
     '@cloudflare/workers-types':
       specifier: ^4.20260116.0
       version: 4.20260118.0
-    '@typescript-eslint/eslint-plugin':
-      specifier: ^8.35.1
-      version: 8.46.3
-    '@typescript-eslint/parser':
-      specifier: ^8.35.1
-      version: 8.46.3
-    '@vitest/runner':
-      specifier: 4.1.0-beta.1
-      version: 4.1.0-beta.1
-    '@vitest/snapshot':
-      specifier: 4.1.0-beta.1
-      version: 4.1.0-beta.1
-    '@vitest/ui':
-      specifier: 4.1.0-beta.1
-      version: 4.1.0-beta.1
-    capnp-es:
-      specifier: ^0.0.14
-      version: 0.0.14
-    esbuild:
-      specifier: 0.27.0
-      version: 0.27.0
-    eslint:
-      specifier: ^9.39.1
-      version: 9.39.1
     msw:
       specifier: 2.12.4
       version: 2.12.4
-    playwright-chromium:
-      specifier: ^1.56.1
-      version: 1.56.1
-    rimraf:
-      specifier: ^6.0.1
-      version: 6.0.1
-    smol-toml:
-      specifier: ^1.5.2
-      version: 1.5.2
     typescript:
       specifier: ~5.8.3
       version: 5.8.3
-    undici:
-      specifier: 7.18.2
-      version: 7.18.2
     vite:
       specifier: ^5.4.14
       version: 5.4.14
     vitest:
       specifier: 4.1.0-beta.1
       version: 4.1.0-beta.1
-    ws:
-      specifier: 8.18.0
-      version: 8.18.0
-  vite-plugin:
-    vite:
-      specifier: 7.1.12
-      version: 7.1.12
-  vitest-3:
-    '@cloudflare/vitest-pool-workers':
-      specifier: ^0.10.0
-      version: 0.10.15
-    '@vitest/ui':
-      specifier: 3.2.4
-      version: 3.2.4
-    vitest:
-      specifier: 3.2.4
-      version: 3.2.4
 
 overrides:
   '@types/react-dom@18>@types/react': ^18
@@ -1215,6 +1162,9 @@ importers:
       msw:
         specifier: catalog:default
         version: 2.12.4(@types/node@20.19.9)(typescript@5.8.3)
+      nunjucks:
+        specifier: ^3.2.4
+        version: 3.2.4(chokidar@3.6.0)
       run-script-os:
         specifier: ^1.1.6
         version: 1.1.6
@@ -8344,6 +8294,9 @@ packages:
     resolution: {integrity: sha512-E+iruNOY8VV9s4JEbe1aNEm6MiszPRr/UfcHMz0TQh1BXSxHK+ASV1R6W4HpjBhSeS+54PIsAMCBmwD06LLsqQ==}
     hasBin: true
 
+  a-sync-waterfall@1.0.1:
+    resolution: {integrity: sha512-RYTOHHdWipFUliRFMCS4X2Yn2X8M87V/OpSqWzKKOGhzqyUxzyVmhHDH9sAvG+ZuQf/TAOFsLCpMw09I1ufUnA==}
+
   abort-controller@3.0.0:
     resolution: {integrity: sha512-h8lQ8tacZYnR3vNQTgibj+tODHI5/+l06Au2Pcriv/Gmet0eaj4TwWH41sO9wnHDiQsEj19q0drzdWdeAHtweg==}
     engines: {node: '>=6.5'}
@@ -8521,6 +8474,9 @@ packages:
   arraybuffer.prototype.slice@1.0.4:
     resolution: {integrity: sha512-BNoCY6SXXPQ7gF2opIP4GBE+Xw7U+pHMYKuzjgCN3GwiaIR09UUeKfheyIry77QtrCBlC0KK0q5/TER/tYh3PQ==}
     engines: {node: '>= 0.4'}
+
+  asap@2.0.6:
+    resolution: {integrity: sha512-BSHWgDSAiKs50o2Re8ppvp3seVHXSRM44cdSsT9FfNEUUZLOGWVCsiWaRPWM1Znn+mqZ1OfVZ3z3DWEzSp7hRA==}
 
   asn1@0.2.6:
     resolution: {integrity: sha512-ix/FxPn0MDjeyJ7i/yoHGFt/EX6LyNbxSEhPPXODPL+KB0VPk86UYfL0lMdy+KCnv+fmvIzySwaK5COwqVbWTQ==}
@@ -8994,6 +8950,10 @@ packages:
 
   commander@4.1.1:
     resolution: {integrity: sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA==}
+    engines: {node: '>= 6'}
+
+  commander@5.1.0:
+    resolution: {integrity: sha512-P0CysNDQ7rtVw4QIQtm+MRxV66vKFSvlsQvGYXZWR3qFU0jlMKHZZZgw8e+8DSah4UDKMqnknRDQz+xuQXQ/Zg==}
     engines: {node: '>= 6'}
 
   commander@7.2.0:
@@ -11600,6 +11560,16 @@ packages:
 
   nth-check@2.1.1:
     resolution: {integrity: sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w==}
+
+  nunjucks@3.2.4:
+    resolution: {integrity: sha512-26XRV6BhkgK0VOxfbU5cQI+ICFUtMLixv1noZn1tGU38kQH5A5nmmbk/O45xdyBhD1esk47nKrY0mvQpZIhRjQ==}
+    engines: {node: '>= 6.9.0'}
+    hasBin: true
+    peerDependencies:
+      chokidar: ^3.3.0
+    peerDependenciesMeta:
+      chokidar:
+        optional: true
 
   nypm@0.6.1:
     resolution: {integrity: sha512-hlacBiRiv1k9hZFiphPUkfSQ/ZfQzZDzC+8z0wL3lvDAOUu/2NnChkKuMoMjNur/9OpKuz2QsIeiPVN0xM5Q0w==}
@@ -18715,7 +18685,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 2.0.0
-      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.4)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.4(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.4)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.4(@types/node@20.19.9)(typescript@5.9.3))(yaml@2.8.1)
 
   '@vitest/ui@4.1.0-beta.1(vitest@4.1.0-beta.1)':
     dependencies:
@@ -18850,6 +18820,8 @@ snapshots:
     dependencies:
       jsonparse: 1.3.1
       through: 2.3.8
+
+  a-sync-waterfall@1.0.1: {}
 
   abort-controller@3.0.0:
     dependencies:
@@ -19059,6 +19031,8 @@ snapshots:
       es-errors: 1.3.0
       get-intrinsic: 1.3.0
       is-array-buffer: 3.0.5
+
+  asap@2.0.6: {}
 
   asn1@0.2.6:
     dependencies:
@@ -19441,7 +19415,7 @@ snapshots:
 
   citty@0.1.6:
     dependencies:
-      consola: 3.3.3
+      consola: 3.4.2
 
   cjs-module-lexer@1.2.3: {}
 
@@ -19521,6 +19495,8 @@ snapshots:
 
   commander@4.1.1: {}
 
+  commander@5.1.0: {}
+
   commander@7.2.0: {}
 
   comment-json@4.5.0:
@@ -19535,7 +19511,7 @@ snapshots:
 
   compressible@2.0.18:
     dependencies:
-      mime-db: 1.52.0
+      mime-db: 1.54.0
 
   compression@1.7.5:
     dependencies:
@@ -19995,7 +19971,7 @@ snapshots:
 
   effect@3.18.4:
     dependencies:
-      '@standard-schema/spec': 1.0.0
+      '@standard-schema/spec': 1.1.0
       fast-check: 3.23.2
 
   electron-to-chromium@1.5.45: {}
@@ -22471,6 +22447,14 @@ snapshots:
   nth-check@2.1.1:
     dependencies:
       boolbase: 1.0.0
+
+  nunjucks@3.2.4(chokidar@3.6.0):
+    dependencies:
+      a-sync-waterfall: 1.0.1
+      asap: 2.0.6
+      commander: 5.1.0
+    optionalDependencies:
+      chokidar: 3.6.0
 
   nypm@0.6.1:
     dependencies:

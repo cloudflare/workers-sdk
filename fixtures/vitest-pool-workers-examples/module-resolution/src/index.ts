@@ -7,6 +7,7 @@ import * as bAuth from "better-auth";
 // @see https://github.com/cloudflare/workers-sdk/issues/6591
 import * as discord from "discord-api-types/v10";
 import * as jose from "jose";
+import nunjucks from "nunjucks";
 import Stripe from "stripe";
 import { Toucan } from "toucan-js";
 
@@ -18,9 +19,23 @@ export default {
 		});
 		const a = Stripe;
 
+		nunjucks.configure({ autoescape: true });
+
+		console.log(
+			nunjucks.renderString("Hello {{ username }}", { username: "James" })
+		);
+
 		// Make sure none of the imports are tree shaken
 		return new Response(
-			JSON.stringify({ discord, otel, jose, bAuth, bAuthStripe, a })
+			JSON.stringify({
+				discord,
+				otel,
+				jose,
+				bAuth,
+				bAuthStripe,
+				a,
+				n: nunjucks.renderString("Hello {{ username }}", { username: "James" }),
+			})
 		);
 	},
 };
