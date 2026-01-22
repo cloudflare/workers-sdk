@@ -136,7 +136,11 @@ The generated code:
 3. Includes the Pages Functions runtime (route matching, middleware execution)
 4. Exports a default handler that routes requests
 
-The output imports `path-to-regexp` for route matching. This package includes `path-to-regexp` as a dependency, so it will be available when you bundle with wrangler or esbuild.
+The output imports `path-to-regexp` for route matching. You need to install it in your project:
+
+```bash
+npm install path-to-regexp
+```
 
 ## License
 

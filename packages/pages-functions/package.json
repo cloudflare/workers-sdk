@@ -45,8 +45,7 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
-		"esbuild": "catalog:default",
-		"path-to-regexp": "^6.3.0"
+		"esbuild": "catalog:default"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
