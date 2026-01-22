@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { SELF } from "cloudflare:test";
-import { afterEach, beforeAll, describe, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 // Mock URL for the remote worker - all outbound fetches will be intercepted
 const MOCK_REMOTE_URL = "http://mock-remote.test";
@@ -20,8 +20,6 @@ function createMockFetchImplementation() {
 
 		// Only intercept requests to our mock remote URL
 		if (url.origin !== MOCK_REMOTE_URL) {
-			// Let other requests pass through (e.g., prometheus logging)
-			// In tests, we don't want these to fail
 			return new Response("OK", { status: 200 });
 		}
 
@@ -72,7 +70,7 @@ function createMockFetchImplementation() {
 }
 
 describe("Preview Worker", () => {
-	beforeAll(() => {
+	beforeEach(() => {
 		vi.spyOn(globalThis, "fetch").mockImplementation(
 			createMockFetchImplementation()
 		);
@@ -80,10 +78,6 @@ describe("Preview Worker", () => {
 
 	afterEach(() => {
 		vi.restoreAllMocks();
-		// Re-apply the mock after restoreAllMocks
-		vi.spyOn(globalThis, "fetch").mockImplementation(
-			createMockFetchImplementation()
-		);
 	});
 
 	let tokenId: string | null = null;
@@ -298,7 +292,7 @@ describe("Preview Worker", () => {
 });
 
 describe("Raw HTTP preview", () => {
-	beforeAll(() => {
+	beforeEach(() => {
 		vi.spyOn(globalThis, "fetch").mockImplementation(
 			createMockFetchImplementation()
 		);
@@ -306,10 +300,6 @@ describe("Raw HTTP preview", () => {
 
 	afterEach(() => {
 		vi.restoreAllMocks();
-		// Re-apply the mock after restoreAllMocks
-		vi.spyOn(globalThis, "fetch").mockImplementation(
-			createMockFetchImplementation()
-		);
 	});
 
 	it("should allow arbitrary headers in cross-origin requests", async ({
@@ -356,7 +346,7 @@ describe("Raw HTTP preview", () => {
 					"Access-Control-Request-Method": "GET",
 					origin: "https://cloudflare.dev",
 					"X-CF-Token": token,
-					"X-CF-Remote": `${MOCK_REMOTE_URL}`,
+					"X-CF-Remote": MOCK_REMOTE_URL,
 				},
 			}
 		);
@@ -376,7 +366,7 @@ describe("Raw HTTP preview", () => {
 					"Access-Control-Request-Method": "GET",
 					origin: "https://cloudflare.dev",
 					"X-CF-Token": token,
-					"X-CF-Remote": `${MOCK_REMOTE_URL}`,
+					"X-CF-Remote": MOCK_REMOTE_URL,
 					"Some-Custom-Header": "custom",
 					Accept: "application/json",
 				},
@@ -415,7 +405,7 @@ describe("Raw HTTP preview", () => {
 				headers: {
 					origin: "https://cloudflare.dev",
 					"X-CF-Token": token,
-					"X-CF-Remote": `${MOCK_REMOTE_URL}`,
+					"X-CF-Remote": MOCK_REMOTE_URL,
 					"X-CF-Http-Method": "PUT",
 				},
 			}
@@ -435,7 +425,7 @@ describe("Raw HTTP preview", () => {
 					headers: {
 						origin: "https://cloudflare.dev",
 						"X-CF-Token": token,
-						"X-CF-Remote": `${MOCK_REMOTE_URL}`,
+						"X-CF-Remote": MOCK_REMOTE_URL,
 						"X-CF-Http-Method": method,
 					},
 				}
@@ -459,7 +449,7 @@ describe("Raw HTTP preview", () => {
 				headers: {
 					origin: "https://cloudflare.dev",
 					"X-CF-Token": token,
-					"X-CF-Remote": `${MOCK_REMOTE_URL}`,
+					"X-CF-Remote": MOCK_REMOTE_URL,
 				},
 			}
 		);
@@ -479,7 +469,7 @@ describe("Raw HTTP preview", () => {
 					"Access-Control-Request-Method": "GET",
 					origin: "https://cloudflare.dev",
 					"X-CF-Token": token,
-					"X-CF-Remote": `${MOCK_REMOTE_URL}`,
+					"X-CF-Remote": MOCK_REMOTE_URL,
 					"cf-ew-raw-Some-Custom-Header": "custom",
 					"cf-ew-raw-Accept": "application/json",
 				},

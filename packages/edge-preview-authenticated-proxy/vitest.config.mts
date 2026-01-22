@@ -16,8 +16,8 @@ export default defineWorkersConfig({
 			},
 		},
 	},
-	// promjs has broken package.json (main points to lib/index.js but files are at root)
 	resolve: {
+		// promjs has broken package.json (main points to lib/index.js but files are at root)
 		alias: {
 			promjs: path.resolve(__dirname, "node_modules/promjs/index.js"),
 		},
