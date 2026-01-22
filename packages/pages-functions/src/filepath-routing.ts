@@ -13,7 +13,7 @@ import type {
 	HTTPMethod,
 	RouteConfig,
 	UrlPath,
-} from "./types.js";
+} from "./types";
 
 /**
  * Error thrown when building/parsing a function file fails.

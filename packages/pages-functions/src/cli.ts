@@ -7,7 +7,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseArgs } from "node:util";
-import { compileFunctions } from "./index.js";
+import { compileFunctions } from "./index";
 
 const HELP = `
 Usage: pages-functions [options] [project-dir]
