@@ -1766,7 +1766,7 @@ export async function main(argv: string[]): Promise<void> {
 			logger.info("");
 			logger.error(`Unknown argument: ${subCommand}`);
 			await showHelpWithCategories();
-			return;
+			throw new CommandLineArgsError(`Unknown argument: ${subCommand}`);
 		}
 	}
 
