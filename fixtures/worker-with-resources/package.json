@@ -5,8 +5,7 @@
 		"deploy": "wrangler deploy",
 		"start": "wrangler dev",
 		"test:ci": "vitest run",
-		"test:watch": "vitest",
-		"type:tests": "tsc -p ./tests/tsconfig.json"
+		"test:watch": "vitest"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:^",

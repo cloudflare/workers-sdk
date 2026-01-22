@@ -4,6 +4,9 @@ import configShared from "../../vitest.shared";
 export default mergeConfig(
 	configShared,
 	defineProject({
-		test: {},
+		test: {
+			maxConcurrency: 1,
+			fileParallelism: false,
+		},
 	})
 );
