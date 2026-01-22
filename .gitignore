@@ -231,4 +231,6 @@ dist/**
 !.env.example
 .node-cache/
 
+.opencode/plans
+
 AGENTS.local.md

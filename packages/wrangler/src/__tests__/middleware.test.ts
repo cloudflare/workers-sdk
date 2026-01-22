@@ -3,7 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import dedent from "ts-dedent";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { unstable_dev } from "../api";
+import { startWorker } from "../api/startDevWorker";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -52,21 +52,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should be able to access scheduled workers from middleware", async () => {
@@ -86,21 +86,21 @@ describe("middleware", () => {
 
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"OK"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should trigger an error in a scheduled work from middleware", async () => {
@@ -123,21 +123,21 @@ describe("middleware", () => {
 
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Error in scheduled worker"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 		});
 
@@ -156,21 +156,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should register a middleware and intercept using addMiddlewareInternal", async () => {
@@ -187,21 +187,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should be able to access scheduled workers from middleware", async () => {
@@ -218,21 +218,21 @@ describe("middleware", () => {
 
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"OK"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should trigger an error in a scheduled work from middleware", async () => {
@@ -252,21 +252,21 @@ describe("middleware", () => {
 
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Error in scheduled worker"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 		});
 	});
@@ -289,20 +289,20 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				if (resp) {
 					const text = await resp.text();
 					expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				}
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should return hello world with empty middleware array", async () => {
@@ -317,21 +317,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should return hello world passing through middleware", async () => {
@@ -349,20 +349,20 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				if (resp) {
 					const text = await resp.text();
 					expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				}
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should return hello world with multiple middleware in array", async () => {
@@ -383,21 +383,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should leave response headers unchanged with middleware", async () => {
@@ -415,15 +415,15 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				const status = resp?.status;
 				let text;
 				if (resp) {
@@ -433,7 +433,7 @@ describe("middleware", () => {
 				expect(status).toEqual(500);
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				expect(testHeader).toEqual("test");
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("waitUntil should not block responses", async () => {
@@ -460,21 +460,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world0"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 		});
 
@@ -487,20 +487,20 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				if (resp) {
 					const text = await resp.text();
 					expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				}
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should return hello world with empty middleware array", async () => {
@@ -512,21 +512,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should return hello world passing through middleware", async () => {
@@ -541,20 +541,20 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				if (resp) {
 					const text = await resp.text();
 					expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				}
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should return hello world with addMiddleware function called multiple times", async () => {
@@ -573,21 +573,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should return hello world with addMiddleware function called with array of middleware", async () => {
@@ -605,21 +605,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should return hello world with addMiddlewareInternal function called multiple times", async () => {
@@ -638,21 +638,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should return hello world with addMiddlewareInternal function called with array of middleware", async () => {
@@ -670,21 +670,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should return hello world with both addMiddleware and addMiddlewareInternal called", async () => {
@@ -703,21 +703,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should leave response headers unchanged with middleware", async () => {
@@ -731,15 +731,15 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				const status = resp?.status;
 				let text;
 				if (resp) {
@@ -749,7 +749,7 @@ describe("middleware", () => {
 				expect(status).toEqual(500);
 				expect(text).toMatchInlineSnapshot(`"Hello world"`);
 				expect(testHeader).toEqual("test");
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("should allow multiple addEventListeners for fetch", async () => {
@@ -764,21 +764,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world1"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 
 			it("waitUntil should not block responses", async () => {
@@ -797,21 +797,21 @@ describe("middleware", () => {
 			`;
 				fs.writeFileSync("index.js", scriptContent);
 
-				const worker = await unstable_dev("index.js", {
-					ip: "127.0.0.1",
-					experimental: {
-						disableExperimentalWarning: true,
-						disableDevRegistry: true,
+				const worker = await startWorker({
+					entrypoint: "index.js",
+					dev: {
+						server: { hostname: "127.0.0.1", port: 0 },
+						inspector: false,
 					},
 				});
 
-				const resp = await worker.fetch();
+				const resp = await worker.fetch("http://dummy");
 				let text;
 				if (resp) {
 					text = await resp.text();
 				}
 				expect(text).toMatchInlineSnapshot(`"Hello world0"`);
-				await worker.stop();
+				await worker.dispose();
 			});
 		});
 	});
@@ -1058,32 +1058,38 @@ describe("middleware", () => {
 		`;
 			fs.writeFileSync("index.js", scriptContent);
 
-			const worker = await unstable_dev("index.js", {
-				ip: "127.0.0.1",
-				experimental: {
-					disableExperimentalWarning: true,
-					disableDevRegistry: true,
+			const worker = await startWorker({
+				entrypoint: "index.js",
+				dev: {
+					server: { hostname: "127.0.0.1", port: 0 },
+					inspector: false,
 					testScheduled: true,
-					d1Databases: [
-						{
-							binding: "DB",
-							database_name: "db",
-							database_id: "00000000-0000-0000-0000-000000000000",
-						},
-					],
+				},
+				bindings: {
+					DB: {
+						type: "d1",
+						database_name: "db",
+						database_id: "00000000-0000-0000-0000-000000000000",
+					},
 				},
 			});
 
 			try {
-				let res = await worker.fetch("http://localhost/setup");
+				await worker.ready;
+				const url = await worker.url;
+				// TODO(startWorker): worker.fetch() doesn't work correctly with paths when
+				// EXPERIMENTAL_MIDDLEWARE=true is set. The request URL pathname gets
+				// lost, causing the worker to not match routes like "/setup".
+				// We use native fetch() with the worker URL as a workaround.
+				let res = await fetch(new URL("/setup", url).href);
 				expect(res.status).toBe(204);
-				res = await worker.fetch("http://localhost/__scheduled");
+				res = await fetch(new URL("/__scheduled", url).href);
 				expect(res.status).toBe(200);
 				expect(await res.text()).toBe("Ran scheduled event");
-				res = await worker.fetch("http://localhost/query");
+				res = await fetch(new URL("/query", url).href);
 				expect(res.status).toBe(200);
 				expect(await res.json()).toEqual([{ id: 1, value: "one" }]);
-				res = await worker.fetch("http://localhost/bad");
+				res = await fetch(new URL("/bad", url).href);
 				expect(res.status).toBe(500);
 				// TODO: in miniflare we don't have the `pretty-error` middleware implemented.
 				// instead it uses `middleware-miniflare3-json-error`, which outputs JSON rather than text.
@@ -1092,7 +1098,7 @@ describe("middleware", () => {
 				// );
 				expect(await res.text()).toContain("Not found!");
 			} finally {
-				await worker.stop();
+				await worker.dispose();
 			}
 		});
 	});
