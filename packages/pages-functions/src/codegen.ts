@@ -5,9 +5,9 @@
  */
 
 import * as path from "node:path";
-import { isValidIdentifier, normalizeIdentifier } from "./identifiers";
-import { generateRuntimeCode } from "./runtime";
-import type { RouteConfig } from "./types";
+import { isValidIdentifier, normalizeIdentifier } from "./identifiers.js";
+import { generateRuntimeCode } from "./runtime.js";
+import type { RouteConfig } from "./types.js";
 
 /**
  * Internal representation of routes with resolved identifiers.

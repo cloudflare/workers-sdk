@@ -5,10 +5,10 @@
  */
 
 import * as path from "node:path";
-import { generateWorkerEntrypoint } from "./codegen";
-import { generateConfigFromFileTree } from "./filepath-routing";
-import { convertRoutesToRoutesJSONSpec } from "./routes-transformation";
-import type { CompileOptions, CompileResult, UrlPath } from "./types";
+import { generateWorkerEntrypoint } from "./codegen.js";
+import { generateConfigFromFileTree } from "./filepath-routing.js";
+import { convertRoutesToRoutesJSONSpec } from "./routes-transformation.js";
+import type { CompileOptions, CompileResult, UrlPath } from "./types.js";
 
 // Re-export types
 export type {
@@ -18,12 +18,12 @@ export type {
 	RouteConfig,
 	RoutesJSONSpec,
 	UrlPath,
-} from "./types";
+} from "./types.js";
 
 // Re-export utilities that may be useful
-export { generateConfigFromFileTree } from "./filepath-routing";
-export { convertRoutesToRoutesJSONSpec } from "./routes-transformation";
-export { generateWorkerEntrypoint } from "./codegen";
+export { generateConfigFromFileTree } from "./filepath-routing.js";
+export { convertRoutesToRoutesJSONSpec } from "./routes-transformation.js";
+export { generateWorkerEntrypoint } from "./codegen.js";
 
 /** Default functions directory relative to project root */
 export const DEFAULT_FUNCTIONS_DIR = "functions";
