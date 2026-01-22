@@ -917,7 +917,7 @@ export async function downloadRemoteTemplate(
 					pathSegments.splice(0, 2); // Remove 'tree' and branch name
 				}
 
-				src = `github:${user}/${repo}/${pathSegments.join("/")}#main`;
+				src = `github:${user}/${repo}${pathSegments.length > 0 ? `/${pathSegments.join("/")}` : ""}#main`;
 			}
 		}
 
