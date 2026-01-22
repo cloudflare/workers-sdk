@@ -20,6 +20,9 @@ export function handleWebSocket(
 	httpServer.on(
 		"upgrade",
 		async (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+			// Socket errors crash Node.js if unhandled
+			socket.on("error", () => socket.destroy());
+
 			const url = new URL(request.url ?? "", UNKNOWN_HOST);
 
 			// Ignore Vite HMR WebSockets
