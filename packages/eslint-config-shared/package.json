@@ -8,6 +8,11 @@
 		".": "./index.js",
 		"./react": "./react.js"
 	},
+	"scripts": {
+		"deploy": "echo 'no deploy'",
+		"test": "node rules/__tests__/no-unsafe-command-execution.test.mjs",
+		"test:ci": "node rules/__tests__/no-unsafe-command-execution.test.mjs"
+	},
 	"devDependencies": {
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@eslint/js": "^9.39.1",
