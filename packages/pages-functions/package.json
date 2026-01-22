@@ -45,6 +45,7 @@
 		"test:watch": "vitest"
 	},
 	"dependencies": {
+		"esbuild": "catalog:default",
 		"path-to-regexp": "^6.3.0"
 	},
 	"devDependencies": {

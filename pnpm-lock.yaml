@@ -2108,6 +2108,9 @@ importers:
 
   packages/pages-functions:
     dependencies:
+      esbuild:
+        specifier: catalog:default
+        version: 0.27.0
       path-to-regexp:
         specifier: ^6.3.0
         version: 6.3.0
