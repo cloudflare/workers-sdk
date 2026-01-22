@@ -955,14 +955,11 @@ export const WorkerdTests: Record<string, () => void> = {
 
 	async testWorkerThreads() {
 		const workerThreads = await import("node:worker_threads");
+		const isNative = getRuntimeFlagValue("enable_nodejs_worker_threads_module");
 
-		// Common exports (both unenv stub and native workerd)
+		// Common exports available in both unenv stub and native workerd
 		for (const target of [workerThreads, workerThreads.default]) {
 			assertTypeOfProperties(target, {
-				BroadcastChannel: "function",
-				MessageChannel: "function",
-				MessagePort: "function",
-				Worker: "function",
 				SHARE_ENV: "symbol",
 				getEnvironmentData: "function",
 				isMainThread: "boolean",
@@ -973,7 +970,6 @@ export const WorkerdTests: Record<string, () => void> = {
 				receiveMessageOnPort: "function",
 				setEnvironmentData: "function",
 				postMessageToThread: "function",
-				isInternalThread: "boolean",
 			});
 
 			// These are values, not functions
@@ -990,11 +986,22 @@ export const WorkerdTests: Record<string, () => void> = {
 				true,
 				"isMainThread should be true"
 			);
-			assert.strictEqual(
-				(target as Record<string, unknown>).isInternalThread,
-				false,
-				"isInternalThread should be false"
-			);
+
+			if (!isNative) {
+				// unenv stub exports these as functions
+				assertTypeOfProperties(target, {
+					BroadcastChannel: "function",
+					MessageChannel: "function",
+					MessagePort: "function",
+					Worker: "function",
+					isInternalThread: "boolean",
+				});
+				assert.strictEqual(
+					(target as Record<string, unknown>).isInternalThread,
+					false,
+					"isInternalThread should be false"
+				);
+			}
 		}
 
 		// Test SHARE_ENV symbol value
@@ -1012,23 +1019,16 @@ export const WorkerdTests: Record<string, () => void> = {
 			"getEnvironmentData should return the set value"
 		);
 
-		// Test MessageChannel creates ports
-		const channel = new workerThreads.MessageChannel();
-		assert.ok(channel.port1, "MessageChannel should have port1");
-		assert.ok(channel.port2, "MessageChannel should have port2");
-
-		if (getRuntimeFlagValue("enable_nodejs_worker_threads_module")) {
-			// Native workerd: Worker and BroadcastChannel constructors throw
-			assert.throws(
-				() => new workerThreads.Worker("test.js"),
-				/not implemented|ERR_METHOD_NOT_IMPLEMENTED/,
-				"Worker constructor should throw"
-			);
-			assert.throws(
-				() => new workerThreads.BroadcastChannel("test"),
-				/not implemented|ERR_METHOD_NOT_IMPLEMENTED/,
-				"BroadcastChannel constructor should throw"
-			);
+		if (!isNative) {
+			// unenv stub: Test MessageChannel creates ports
+			const channel = new workerThreads.MessageChannel();
+			assert.ok(channel.port1, "MessageChannel should have port1");
+			assert.ok(channel.port2, "MessageChannel should have port2");
+		} else {
+			// Native workerd: MessageChannel is on globalThis, not exported from module
+			const channel = new globalThis.MessageChannel();
+			assert.ok(channel.port1, "globalThis.MessageChannel should have port1");
+			assert.ok(channel.port2, "globalThis.MessageChannel should have port2");
 		}
 	},
 };
