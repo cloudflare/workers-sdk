@@ -2130,6 +2130,9 @@ importers:
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.0)
+      path-to-regexp:
+        specifier: ^6.3.0
+        version: 6.3.0
       typescript:
         specifier: catalog:default
         version: 5.8.3

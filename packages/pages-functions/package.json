@@ -54,6 +54,7 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/node": "catalog:default",
 		"eslint": "catalog:default",
+		"path-to-regexp": "^6.3.0",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},
