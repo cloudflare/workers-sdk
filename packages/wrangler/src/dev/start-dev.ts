@@ -272,6 +272,7 @@ async function setupDevEnv(
 					httpsKeyPath: args.httpsKeyPath,
 				},
 				inspector: {
+					hostname: args.inspectorIp,
 					port: args.inspectorPort,
 				},
 				origin: {

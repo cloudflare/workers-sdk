@@ -70,7 +70,7 @@ export const d1InsightsCommand = createCommand({
 			demandOption: true,
 			description: "The name of the DB",
 		},
-		timePeriod: {
+		"time-period": {
 			type: "string",
 			description: "Fetch data from now to the provided time period",
 			default: "1d",

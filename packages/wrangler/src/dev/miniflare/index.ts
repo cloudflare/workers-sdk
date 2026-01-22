@@ -72,6 +72,7 @@ export interface ConfigBundle {
 	initialIp: string;
 	rules: Config["rules"];
 	inspectorPort: number | undefined;
+	inspectorHost: string | undefined;
 	localPersistencePath: string | null;
 	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
@@ -855,6 +856,7 @@ export async function buildMiniflareOptions(
 		host: config.initialIp,
 		port: config.initialPort,
 		inspectorPort: config.inspect ? config.inspectorPort : undefined,
+		inspectorHost: config.inspect ? config.inspectorHost : undefined,
 		liveReload: config.liveReload,
 		upstream,
 		unsafeDevRegistryPath: config.devRegistry,

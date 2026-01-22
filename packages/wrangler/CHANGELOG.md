@@ -1,5 +1,106 @@
 # wrangler
 
+## 4.60.0
+
+### Minor Changes
+
+- [#11113](https://github.com/cloudflare/workers-sdk/pull/11113) [`bba0968`](https://github.com/cloudflare/workers-sdk/commit/bba09689ca258b6da36b21b7300845ce031eaca6) Thanks [@AmirSa12](https://github.com/AmirSa12)! - Add `wrangler complete` command for shell completion scripts (bash, zsh, powershell)
+
+  Usage:
+
+  ```bash
+  # Bash
+  wrangler complete bash >> ~/.bashrc
+
+  # Zsh
+  wrangler complete zsh >> ~/.zshrc
+
+  # Fish
+  wrangler complete fish >> ~/.config/fish/completions/wrangler.fish
+
+  # PowerShell
+  wrangler complete powershell > $PROFILE
+  ```
+
+  - Uses `@bomb.sh/tab` library for cross-shell compatibility
+  - Completions are dynamically generated from `experimental_getWranglerCommands()` API
+
+- [#11893](https://github.com/cloudflare/workers-sdk/pull/11893) [`f9e8a45`](https://github.com/cloudflare/workers-sdk/commit/f9e8a452fb299e6cb1a0ff2985347bfc277deac8) Thanks [@NuroDev](https://github.com/NuroDev)! - `wrangler types` now generates per-environment TypeScript interfaces when named environments exist in your configuration.
+
+  When your configuration has named environments (an `env` object), `wrangler types` now generates both:
+
+  - **Per-environment interfaces** (e.g., `StagingEnv`, `ProductionEnv`) containing only the bindings explicitly declared in each environment, plus inherited secrets
+  - **An aggregated `Env` interface** with all bindings from all environments (top-level + named environments), where:
+    - Bindings present in **all** environments are required
+    - Bindings not present in all environments are optional
+    - Secrets are always required (since they're inherited everywhere)
+    - Conflicting binding types across environments produce union types (e.g., `KVNamespace | R2Bucket`)
+
+  However, if your config does not contain any environments, or you manually specify an environment via `--env`, `wrangler types` will continue to generate a single interface as before.
+
+  **Example:**
+
+  Given the following `wrangler.jsonc`:
+
+  ```jsonc
+  {
+  	"name": "my-worker",
+  	"kv_namespaces": [
+  		{
+  			"binding": "SHARED_KV",
+  			"id": "abc123",
+  		},
+  	],
+  	"env": {
+  		"staging": {
+  			"kv_namespaces": [
+  				{ "binding": "SHARED_KV", "id": "staging-kv" },
+  				{ "binding": "STAGING_CACHE", "id": "staging-cache" },
+  			],
+  		},
+  	},
+  }
+  ```
+
+  Running `wrangler types` will generate:
+
+  ```ts
+  declare namespace Cloudflare {
+  	interface StagingEnv {
+  		SHARED_KV: KVNamespace;
+  		STAGING_CACHE: KVNamespace;
+  	}
+  	interface Env {
+  		SHARED_KV: KVNamespace; // Required: in all environments
+  		STAGING_CACHE?: KVNamespace; // Optional: only in staging
+  	}
+  }
+  interface Env extends Cloudflare.Env {}
+  ```
+
+### Patch Changes
+
+- [#12030](https://github.com/cloudflare/workers-sdk/pull/12030) [`614bbd7`](https://github.com/cloudflare/workers-sdk/commit/614bbd709529191bbae6aa92790bbfe00a37e3d9) Thanks [@jbwcloudflare](https://github.com/jbwcloudflare)! - Fix `wrangler pages project validate` to respect file count limits from `CF_PAGES_UPLOAD_JWT`
+
+- [#11993](https://github.com/cloudflare/workers-sdk/pull/11993) [`788bf78`](https://github.com/cloudflare/workers-sdk/commit/788bf786b4c5cb8e1bdd6464d3f88b4125cebc75) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260116.0 | 1.20260120.0 |
+
+- [#12039](https://github.com/cloudflare/workers-sdk/pull/12039) [`1375577`](https://github.com/cloudflare/workers-sdk/commit/1375577c860f1ae9af5caf1c488d47ec1cf52b6f) Thanks [@dimitropoulos](https://github.com/dimitropoulos)! - Fixed the flag casing for the time period flag for the `d1 insights` command.
+
+- [#12026](https://github.com/cloudflare/workers-sdk/pull/12026) [`c3407ad`](https://github.com/cloudflare/workers-sdk/commit/c3407ada8cff1170ef2a3bbc4d3137dcf3998461) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix `wrangler setup` not automatically selecting `workers` as the target for new SvelteKit apps
+
+  The Sveltekit `adapter:cloudflare` adapter now accepts two different targets `workers` or `pages`. Since the wrangler auto configuration only targets workers, wrangler should instruct the adapter to use the `workers` variant. (The auto configuration process would in any case not work if the user were to target `pages`.)
+
+- Updated dependencies [[`788bf78`](https://github.com/cloudflare/workers-sdk/commit/788bf786b4c5cb8e1bdd6464d3f88b4125cebc75), [`ae108f0`](https://github.com/cloudflare/workers-sdk/commit/ae108f090532765751c3996ba4c863a9fe858ddf)]:
+  - miniflare@4.20260120.0
+  - @cloudflare/unenv-preset@2.11.0
+  - @cloudflare/kv-asset-handler@0.4.2
+
 ## 4.59.3
 
 ### Patch Changes

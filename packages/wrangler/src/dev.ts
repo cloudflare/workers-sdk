@@ -108,6 +108,10 @@ export const dev = createCommand({
 			describe: "Port for devtools to connect to",
 			type: "number",
 		},
+		"inspector-ip": {
+			describe: "IP address for devtools to connect to",
+			type: "string",
+		},
 		routes: {
 			describe: "Routes to upload",
 			alias: "route",
