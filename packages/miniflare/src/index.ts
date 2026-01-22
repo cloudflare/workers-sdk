@@ -1003,6 +1003,7 @@ export class Miniflare {
 
 			this.#maybeInspectorProxyController = new InspectorProxyController(
 				this.#sharedOpts.core.inspectorPort,
+				this.#sharedOpts.core.inspectorHost,
 				this.#log,
 				workerNamesToProxy
 			);
@@ -2042,6 +2043,7 @@ export class Miniflare {
 			} else {
 				await this.#maybeInspectorProxyController.updateConnection(
 					this.#sharedOpts.core.inspectorPort,
+					this.#sharedOpts.core.inspectorHost ?? "127.0.0.1",
 					maybePort,
 					this.#workerNamesToProxy()
 				);

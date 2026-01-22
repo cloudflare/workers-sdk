@@ -920,6 +920,7 @@ export const pagesDevCommand = createCommand({
 					ip,
 					port,
 					inspectorPort,
+					inspectorIp: undefined,
 					localProtocol,
 					httpsKeyPath: args.httpsKeyPath,
 					httpsCertPath: args.httpsCertPath,

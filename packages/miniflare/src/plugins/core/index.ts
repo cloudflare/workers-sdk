@@ -239,6 +239,7 @@ export const CoreSharedOptionsSchema = z
 		httpsCertPath: z.string().optional(),
 
 		inspectorPort: z.number().optional(),
+		inspectorHost: z.string().optional(),
 
 		verbose: z.boolean().optional(),
 
