@@ -220,6 +220,8 @@ export class CloudflarePoolWorker implements PoolWorker {
 	}
 
 	off(_event: string, callback: (_arg: unknown) => void): void {
+		// The event names that Vitest uses and the event names that Websockets use don't fully match up.
+		// As such, we hardcode "close" given that Vitest's internals only actually seem to call off() for "close".
 		this.socket?.removeEventListener("close", callback as () => void);
 	}
 
