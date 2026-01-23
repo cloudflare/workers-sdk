@@ -30,6 +30,18 @@ import type { CommonEventProperties, Events } from "./types";
 
 const SPARROW_URL = "https://sparrow.cloudflare.com";
 
+// Module-level Set to track all pending requests across all dispatchers.
+// Promises are automatically removed from this Set once they settle.
+const pendingRequests = new Set<Promise<void>>();
+
+/**
+ * Wait for all pending metrics requests to complete.
+ * This should be called before the process exits to ensure all metrics are sent.
+ */
+export function waitForAllMetricsDispatches(): Promise<void> {
+	return Promise.allSettled(pendingRequests).then(() => {});
+}
+
 /**
  * A list of all the command args that can be included in the event.
  *
@@ -58,7 +70,6 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	// The SPARROW_SOURCE_KEY will be provided at build time through esbuild's `define` option
 	// No events will be sent if the env `SPARROW_SOURCE_KEY` is not provided and the value will be set to an empty string instead.
 	const SPARROW_SOURCE_KEY = process.env.SPARROW_SOURCE_KEY ?? "";
-	const requests: Array<Promise<void>> = [];
 	const wranglerVersion = getWranglerVersion();
 	const [wranglerMajorVersion, wranglerMinorVersion, wranglerPatchVersion] =
 		wranglerVersion.split(".").map((v) => parseInt(v, 10));
@@ -181,10 +192,6 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				logger.debug("Error sending metrics event", err);
 			}
 		},
-
-		get requests() {
-			return requests;
-		},
 	};
 
 	function dispatch(event: { name: string; properties: Properties }) {
@@ -241,9 +248,12 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					"Metrics dispatcher: Failed to send request:",
 					(e as Error).message
 				);
+			})
+			.finally(() => {
+				pendingRequests.delete(request);
 			});
 
-		requests.push(request);
+		pendingRequests.add(request);
 	}
 
 	function printMetricsBanner() {

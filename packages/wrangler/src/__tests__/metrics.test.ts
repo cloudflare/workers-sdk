@@ -18,7 +18,10 @@ import {
 	readMetricsConfig,
 	writeMetricsConfig,
 } from "../metrics/metrics-config";
-import { getMetricsDispatcher } from "../metrics/metrics-dispatcher";
+import {
+	getMetricsDispatcher,
+	waitForAllMetricsDispatches,
+} from "../metrics/metrics-dispatcher";
 import { sniffUserAgent } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -79,7 +82,8 @@ describe("metrics", () => {
 			});
 		});
 
-		afterEach(() => {
+		afterEach(async () => {
+			await waitForAllMetricsDispatches();
 			vi.useRealTimers();
 		});
 
@@ -101,7 +105,7 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1, b: 2 });
-				await Promise.all(dispatcher.requests);
+				await waitForAllMetricsDispatches();
 				expect(requests.count).toBe(1);
 				expect(std.debug).toMatchInlineSnapshot(
 					`"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"os\\":\\"foo:bar\\",\\"agent\\":null,\\"a\\":1,\\"b\\":2}}"`
@@ -118,7 +122,7 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("version-test");
-				await Promise.all(dispatcher.requests);
+				await waitForAllMetricsDispatches();
 				expect(requests.count).toBe(1);
 				expect(std.debug).toContain('"wranglerVersion":"1.2.3"');
 				expect(std.debug).toContain('"wranglerMajorVersion":1');
@@ -152,7 +156,7 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1, b: 2 });
-				await Promise.all(dispatcher.requests);
+				await waitForAllMetricsDispatches();
 
 				expect(std.debug).toMatchInlineSnapshot(`
 					"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"os\\":\\"foo:bar\\",\\"agent\\":null,\\"a\\":1,\\"b\\":2}}
@@ -194,7 +198,7 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1 });
-				await Promise.all(dispatcher.requests);
+				await waitForAllMetricsDispatches();
 
 				expect(requests.count).toBe(1);
 				expect(std.debug).toContain('"agent":"claude-code"');
@@ -210,32 +214,11 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1 });
-				await Promise.all(dispatcher.requests);
+				await waitForAllMetricsDispatches();
 
 				expect(requests.count).toBe(1);
 				expect(std.debug).toContain('"agent":null');
 			});
-		});
-
-		it("should keep track of all requests made", async () => {
-			const requests = mockMetricRequest();
-			const dispatcher = getMetricsDispatcher({
-				sendMetrics: true,
-			});
-
-			dispatcher.sendAdhocEvent("some-event", { a: 1, b: 2 });
-			expect(dispatcher.requests.length).toBe(1);
-
-			expect(requests.count).toBe(0);
-			await Promise.allSettled(dispatcher.requests);
-			expect(requests.count).toBe(1);
-
-			dispatcher.sendAdhocEvent("another-event", { c: 3, d: 4 });
-			expect(dispatcher.requests.length).toBe(2);
-
-			expect(requests.count).toBe(1);
-			await Promise.allSettled(dispatcher.requests);
-			expect(requests.count).toBe(2);
 		});
 
 		describe("sendCommandEvent()", () => {

@@ -91,7 +91,7 @@ import {
 	kvNamespaceRenameCommand,
 } from "./kv";
 import { logger, LOGGER_LEVELS } from "./logger";
-import { getMetricsDispatcher } from "./metrics";
+import { getMetricsDispatcher, waitForAllMetricsDispatches } from "./metrics";
 import {
 	metricsAlias,
 	telemetryDisableCommand,
@@ -346,6 +346,7 @@ import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/inst
 import { workflowsListCommand } from "./workflows/commands/list";
 import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
+import type { ReadConfigCommandArgs } from "./config";
 import type { LoggerLevel } from "./logger";
 import type { CommonYargsArgv, SubHelp } from "./yargs-types";
 
@@ -1782,7 +1783,7 @@ export async function main(argv: string[]): Promise<void> {
 
 	const startTime = Date.now();
 	let command: string | undefined;
-	let metricsArgs: Record<string, unknown> | undefined;
+	let configArgs: ReadConfigCommandArgs = {};
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
 
 	// Register middleware to capture command info for fallback telemetry
@@ -1790,7 +1791,7 @@ export async function main(argv: string[]): Promise<void> {
 		// Capture command and args for potential fallback telemetry
 		// (used when yargs validation errors occur before handler runs)
 		command = `wrangler ${args._.join(" ")}`;
-		metricsArgs = args;
+		configArgs = args;
 
 		try {
 			const { rawConfig, configPath } = experimental_readRawConfig(args);
@@ -1816,25 +1817,25 @@ export async function main(argv: string[]): Promise<void> {
 		// Check if this is a CommandHandledError (telemetry already sent by handler)
 		if (e instanceof CommandHandledError) {
 			// Unwrap and handle the original error
-			await handleError(e.originalError, metricsArgs ?? {}, argv);
+			await handleError(e.originalError, configArgs, argv);
 			throw e.originalError;
 		}
 
 		// Fallback telemetry for errors that occurred before handler ran
 		// (e.g., yargs validation errors like unknown commands or invalid arguments)
-		if (dispatcher && command && metricsArgs) {
+		if (dispatcher && command) {
 			const durationMs = Date.now() - startTime;
 
 			// Send "started" event (since handler never got to send it)
 			dispatcher.sendCommandEvent("wrangler command started", {
 				command,
-				args: metricsArgs,
+				args: configArgs,
 			});
 
 			// Send "errored" event
 			dispatcher.sendCommandEvent("wrangler command errored", {
 				command,
-				args: metricsArgs,
+				args: configArgs,
 				durationMs,
 				durationSeconds: durationMs / 1000,
 				durationMinutes: durationMs / 1000 / 60,
@@ -1846,7 +1847,7 @@ export async function main(argv: string[]): Promise<void> {
 			});
 		}
 
-		await handleError(e, metricsArgs ?? {}, argv);
+		await handleError(e, configArgs, argv);
 		throw e;
 	} finally {
 		try {
@@ -1866,7 +1867,7 @@ export async function main(argv: string[]): Promise<void> {
 
 			// Wait for any pending telemetry requests to complete (with timeout)
 			await Promise.race([
-				Promise.allSettled(dispatcher?.requests ?? []),
+				waitForAllMetricsDispatches(),
 				setTimeout(1000, undefined, { ref: false }),
 			]);
 		} catch (e) {
