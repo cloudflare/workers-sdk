@@ -14,6 +14,7 @@ import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
 import { writeOutput } from "../output";
+import { addBreadcrumb } from "../sentry";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
@@ -115,6 +116,9 @@ function createHandler(
 	return async function handler(args: HandlerArgs<NamedArgDefinitions>) {
 		const startTime = Date.now();
 
+		// Record command as Sentry breadcrumb using the safe commandName from definition
+		addBreadcrumb(commandName);
+
 		try {
 			const shouldPrintBanner = def.behaviour?.printBanner;
 
@@ -214,9 +218,13 @@ function createHandler(
 					}
 				}
 
+				// Compute safe telemetry properties
+				// Strip "wrangler " prefix to get just the command (e.g., "wrangler dev" -> "dev")
+				const sanitizedCommand = commandName.replace(/^wrangler\s*/, "");
+
 				dispatcher.sendCommandEvent("wrangler command started", {
-					command: commandName,
-					args,
+					sanitizedCommand,
+					sanitizedArgs: args,
 				});
 
 				try {
@@ -230,8 +238,8 @@ function createHandler(
 
 					const durationMs = Date.now() - startTime;
 					dispatcher.sendCommandEvent("wrangler command completed", {
-						command: commandName,
-						args,
+						sanitizedCommand,
+						sanitizedArgs: args,
 						durationMs,
 						durationSeconds: durationMs / 1000,
 						durationMinutes: durationMs / 1000 / 60,
@@ -247,8 +255,8 @@ function createHandler(
 
 					const durationMs = Date.now() - startTime;
 					dispatcher.sendCommandEvent("wrangler command errored", {
-						command: commandName,
-						args,
+						sanitizedCommand,
+						sanitizedArgs: args,
 						durationMs,
 						durationSeconds: durationMs / 1000,
 						durationMinutes: durationMs / 1000 / 60,

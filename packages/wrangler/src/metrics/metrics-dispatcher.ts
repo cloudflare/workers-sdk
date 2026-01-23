@@ -46,7 +46,8 @@ export function allMetricsDispatchesCompleted(): Promise<void> {
 /**
  * A list of all the command args that can be included in the event.
  *
- * The "*" command applies to all sub commands at this level.
+ * A wildcard "<command> *" applies to all sub-commands of `<command>`.
+ * The top level "*" applies to all commands.
  * Specific commands can override or add to the allow list.
  *
  * Each arg can have one of three values:
@@ -55,13 +56,13 @@ export function allMetricsDispatchesCompleted(): Promise<void> {
  * - ALLOW: all values for that arg are allowed
  */
 const COMMAND_ARG_ALLOW_LIST: AllowList = {
-	// * applies to all sub commands
-	"wrangler *": {
+	// * applies to all commands
+	"*": {
 		format: ALLOW,
 		logLevel: ALLOW,
 	},
-	"wrangler tail": { status: ALLOW },
-	"wrangler types": {
+	tail: { status: ALLOW },
+	types: {
 		xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
 		path: ["worker-configuration.d.ts"],
 	},
@@ -129,26 +130,29 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			>
 		) {
 			try {
-				if (properties.command?.startsWith("wrangler login")) {
-					properties.command = "wrangler login";
+				// Truncate login commands to just "login" to avoid capturing tokens
+				if (properties.sanitizedCommand?.startsWith("login")) {
+					properties.sanitizedCommand = "login";
 				}
+				// Don't send metrics for telemetry/metrics disable commands
 				if (
-					properties.command === "wrangler telemetry disable" ||
-					properties.command === "wrangler metrics disable"
+					properties.sanitizedCommand === "telemetry disable" ||
+					properties.sanitizedCommand === "metrics disable"
 				) {
 					return;
 				}
+				// Show metrics banner for certain commands
 				if (
-					properties.command === "wrangler deploy" ||
-					properties.command === "wrangler dev" ||
+					properties.sanitizedCommand === "deploy" ||
+					properties.sanitizedCommand === "dev" ||
 					// for testing purposes
-					properties.command === "wrangler docs"
+					properties.sanitizedCommand === "docs"
 				) {
 					printMetricsBanner();
 				}
 
 				const sanitizedArgs = sanitizeArgKeys(
-					properties.args ?? {},
+					properties.sanitizedArgs ?? {},
 					options.argv
 				);
 				const sanitizedArgsKeys = Object.keys(sanitizedArgs).sort();
@@ -178,9 +182,12 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				// get the args where we don't want to redact their values
 				const allowedArgs = getAllowedArgs(
 					COMMAND_ARG_ALLOW_LIST,
-					properties.command ?? "wrangler"
+					properties.sanitizedCommand
 				);
-				properties.args = sanitizeArgValues(sanitizedArgs, allowedArgs);
+				properties.sanitizedArgs = sanitizeArgValues(
+					sanitizedArgs,
+					allowedArgs
+				);
 
 				dispatch({
 					name,

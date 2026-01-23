@@ -35,16 +35,21 @@ export type AllowList = Record<string, AllowedArgs>;
 /**
  * Returns the allowed args for a given command.
  *
- * This takes into account wildcard commands (e.g., "wrangler *").
+ * This takes into account:
+ * - Global "*" allow-list that applies to all commands
+ * - Wildcard commands (e.g., "deploy *" for subcommands)
+ * - Specific command entries that override less specific ones
  */
 export function getAllowedArgs(
 	commandArgAllowList: AllowList,
 	command: string
 ): AllowedArgs {
+	// Start with the global "*" allow list as a base
 	let allowedArgs: AllowedArgs = {};
 	const commandParts = command.split(" ");
 	while (commandParts.length > 0) {
 		const subCommand = commandParts.join(" ");
+		// Merge so that more specific command entries (already in allowedArgs) override less specific ones
 		allowedArgs = { ...commandArgAllowList[subCommand], ...allowedArgs };
 		commandParts.pop();
 		if (commandParts.length > 0) {
@@ -52,7 +57,7 @@ export function getAllowedArgs(
 			allowedArgs = { ...commandArgAllowList[wildcardCommand], ...allowedArgs };
 		}
 	}
-	return allowedArgs;
+	return { ...commandArgAllowList["*"], ...allowedArgs };
 }
 
 /**
