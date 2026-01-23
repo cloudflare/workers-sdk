@@ -56,7 +56,7 @@ const RESERVED_KEYWORDS = [
 	"undefined",
 ];
 
-const reservedKeywordRegex = new RegExp(`^${RESERVED_KEYWORDS.join("|")}$`);
+const reservedKeywordRegex = new RegExp(`^(${RESERVED_KEYWORDS.join("|")})$`);
 
 const identifierNameRegex =
 	/^(?:[$_\p{ID_Start}])(?:[$_\u200C\u200D\p{ID_Continue}])*$/u;
