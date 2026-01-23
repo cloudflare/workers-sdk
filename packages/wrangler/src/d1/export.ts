@@ -89,7 +89,11 @@ export const d1ExportCommand = createCommand({
 					`Please specify a file path for --output, not a directory.`
 				);
 			}
-		} catch {}
+		} catch (e) {
+			if (e instanceof UserError) {
+				throw e;
+			}
+		}
 
 		// Allow multiple --table x --table y flags or none
 		const tables: string[] = table
