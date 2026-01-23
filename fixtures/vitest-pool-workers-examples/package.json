@@ -19,6 +19,7 @@
 		"discord-api-types": "0.37.98",
 		"ext-dep": "file:./module-resolution/vendor/ext-dep",
 		"jose": "^5.2.2",
+		"mime-types": "^2.1.35",
 		"miniflare": "workspace:*",
 		"run-script-os": "^1.1.6",
 		"toucan-js": "4.0.0",

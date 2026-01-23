@@ -461,22 +461,13 @@ async function load(
 		(filePath.endsWith(".js") && isWithinTypeModuleContext(filePath));
 
 	// JSON modules: CommonJS `require("./data.json")` is common in many widely
-	// used packages (e.g. Ajv). If we return raw JSON as a `commonJsModule`,
+	// used packages (e.g. mime-types). If we return raw JSON as a `commonJsModule`,
 	// `workerd` will try to parse it as JavaScript and fail with
 	// `SyntaxError: Unexpected token ':'`.
-	//
-	// Use `JSON.parse()` rather than inlining JSON as an object literal: object
-	// literals treat `"__proto__"` specially and can accidentally mutate the
-	// exported value's prototype.
 	if (filePath.endsWith(".json")) {
 		const json = fs.readFileSync(filePath, "utf8");
-		const targetUrl = pathToFileURL(target);
-		const esModule = withSourceUrl(
-			`export default JSON.parse(${JSON.stringify(json)});`,
-			targetUrl
-		);
 		debuglog(logBase, "json:", filePath);
-		return buildModuleResponse(target, { esModule });
+		return buildModuleResponse(target, { json });
 	}
 
 	let contents = fs.readFileSync(filePath, "utf8");

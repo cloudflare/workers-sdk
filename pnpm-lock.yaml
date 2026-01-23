@@ -1192,6 +1192,9 @@ importers:
       jose:
         specifier: ^5.2.2
         version: 5.9.3
+      mime-types:
+        specifier: ^2.1.35
+        version: 2.1.35
       miniflare:
         specifier: workspace:*
         version: link:../../packages/miniflare
@@ -19375,7 +19378,7 @@ snapshots:
 
   compressible@2.0.18:
     dependencies:
-      mime-db: 1.52.0
+      mime-db: 1.54.0
 
   compression@1.7.5:
     dependencies:
