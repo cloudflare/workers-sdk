@@ -79,6 +79,10 @@ export const cloudchamberDeleteCommand = createCommand({
 			"Delete an existing deployment that is running in the Cloudflare edge",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {
 		deploymentId: {

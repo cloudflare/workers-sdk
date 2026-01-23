@@ -31,6 +31,12 @@ describe("cloudchamber image", () => {
 
 			Configure registries via Cloudchamber [alpha]
 
+			COMMANDS
+			  wrangler cloudchamber registries configure             Configure Cloudchamber to pull from specific registries [alpha]
+			  wrangler cloudchamber registries credentials <domain>  Get a temporary password for a specific domain [alpha]
+			  wrangler cloudchamber registries remove <domain>       Remove the registry at the given domain [alpha]
+			  wrangler cloudchamber registries list                  List registries configured for this account [alpha]
+
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
@@ -67,13 +73,10 @@ describe("cloudchamber image", () => {
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			{
-			    \\"domain\\": \\"docker.io\\"
-			}"
-		`);
+		"{
+		    \\"domain\\": \\"docker.io\\"
+		}"
+	`);
 	});
 
 	it("should create an image registry (no interactivity)", async () => {
@@ -97,12 +100,7 @@ describe("cloudchamber image", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
-		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			jwt"
-		`);
+		expect(std.out).toMatchInlineSnapshot(`"jwt"`);
 	});
 
 	it("should remove an image registry (no interactivity)", async () => {
@@ -120,12 +118,7 @@ describe("cloudchamber image", () => {
 		);
 		await runWrangler("cloudchamber registries remove docker.io");
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			{}"
-		`);
+		expect(std.out).toMatchInlineSnapshot(`"{}"`);
 	});
 
 	it("should list registries (no interactivity)", async () => {
@@ -152,10 +145,7 @@ describe("cloudchamber image", () => {
 		await runWrangler("cloudchamber registries list");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			[
+			"[
 			    {
 			        \\"public_key\\": \\"\\",
 			        \\"domain\\": \\"docker.io\\"
@@ -191,6 +181,8 @@ describe("cloudchamber image list", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber images list
+
+			List images in the Cloudflare managed registry [alpha]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -232,10 +224,7 @@ describe("cloudchamber image list", () => {
 		await runWrangler("cloudchamber images list");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			REPOSITORY  TAG
+			"REPOSITORY  TAG
 			one         hundred
 			one         ten
 			two         thousand
@@ -271,10 +260,7 @@ describe("cloudchamber image list", () => {
 		await runWrangler("cloudchamber images list --filter '^two$'");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			REPOSITORY  TAG
+			"REPOSITORY  TAG
 			two         thousand
 			two         twenty"
 		`);
@@ -308,10 +294,7 @@ describe("cloudchamber image list", () => {
 		await runWrangler("cloudchamber images list");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			REPOSITORY  TAG
+			"REPOSITORY  TAG
 			one         hundred
 			one         ten
 			two         thousand
@@ -347,10 +330,7 @@ describe("cloudchamber image list", () => {
 		await runWrangler("cloudchamber images list --json");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			[
+			"[
 			  {
 			    \\"name\\": \\"one\\",
 			    \\"tags\\": [
@@ -404,10 +384,7 @@ describe("cloudchamber image list", () => {
 		await runWrangler("cloudchamber images list --json");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			[
+			"[
 			  {
 			    \\"name\\": \\"one\\",
 			    \\"tags\\": [
@@ -456,6 +433,8 @@ describe("cloudchamber image delete", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber images delete <image>
+
+			Remove an image from the Cloudflare managed registry [alpha]
 
 			POSITIONALS
 			  image  Image and tag to delete, of the form IMAGE:TAG  [string] [required]
@@ -509,12 +488,7 @@ describe("cloudchamber image delete", () => {
 		await runWrangler("cloudchamber images delete one:hundred");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(
-			`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			Deleted one:hundred (some-digest)"
-		`
+			`"Deleted one:hundred (some-digest)"`
 		);
 	});
 

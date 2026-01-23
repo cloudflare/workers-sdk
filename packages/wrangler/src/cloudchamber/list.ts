@@ -200,6 +200,10 @@ export const cloudchamberListCommand = createCommand({
 		description: "List and view status of deployments",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {
 		deploymentIdPrefix: {

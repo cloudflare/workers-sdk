@@ -337,6 +337,7 @@ export const cloudchamberBuildCommand = createCommand({
 		description: "Build a container image",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
 	},
 	args: {
 		PATH: {
@@ -384,6 +385,7 @@ export const cloudchamberPushCommand = createCommand({
 		description: "Push a local image to the Cloudflare managed registry",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
 	},
 	args: {
 		TAG: {

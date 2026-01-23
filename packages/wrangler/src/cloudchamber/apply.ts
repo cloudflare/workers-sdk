@@ -680,6 +680,7 @@ export const cloudchamberApplyCommand = createCommand({
 		description: "Apply the changes in the container applications to deploy",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
 	},
 	args: {
 		"skip-defaults": {

@@ -58,10 +58,7 @@ describe("containers list", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler("containers list");
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			[
+			"[
 			    {
 			        \\"id\\": \\"asdf-2\\",
 			        \\"created_at\\": \\"123\\",

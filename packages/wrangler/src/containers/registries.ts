@@ -401,6 +401,9 @@ export const containersRegistriesListCommand = createCommand({
 		owner: "Product: Cloudchamber",
 		hidden: true,
 	},
+	behaviour: {
+		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
+	},
 	args: {
 		json: {
 			type: "boolean",

@@ -207,10 +207,7 @@ describe("cloudchamber create", () => {
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			{
+			"{
 			    \\"id\\": \\"1\\",
 			    \\"type\\": \\"default\\",
 			    \\"created_at\\": \\"123\\",
@@ -254,12 +251,7 @@ describe("cloudchamber create", () => {
 		await runWrangler(
 			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --instance-type lite --ipv4 true"
 		);
-		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			{}"
-		`);
+		expect(std.out).toMatchInlineSnapshot(`"{}"`);
 	});
 
 	it("properly reads wrangler config", async () => {
@@ -281,10 +273,7 @@ describe("cloudchamber create", () => {
 			"cloudchamber create --var HELLO:WORLD --var YOU:CONQUERED"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			{
+			"{
 			    \\"id\\": \\"1\\",
 			    \\"type\\": \\"default\\",
 			    \\"created_at\\": \\"123\\",
@@ -337,12 +326,7 @@ describe("cloudchamber create", () => {
 		await runWrangler(
 			"cloudchamber create --var HELLO:WORLD --var YOU:CONQUERED"
 		);
-		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			{}"
-		`);
+		expect(std.out).toMatchInlineSnapshot(`"{}"`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
@@ -386,10 +370,7 @@ describe("cloudchamber create", () => {
 			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --all-ssh-keys --ipv4"
 		);
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			{
+			"{
 			    \\"id\\": \\"1\\",
 			    \\"type\\": \\"default\\",
 			    \\"created_at\\": \\"123\\",
@@ -426,9 +407,6 @@ describe("cloudchamber create", () => {
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-
 			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 		`);
 	});

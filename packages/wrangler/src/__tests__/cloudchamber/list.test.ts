@@ -70,10 +70,7 @@ describe("cloudchamber list", () => {
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			[
+			"[
 			    {
 			        \\"id\\": \\"1\\",
 			        \\"type\\": \\"default\\",

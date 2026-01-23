@@ -4,6 +4,7 @@ import {
 } from "@cloudflare/containers-shared";
 import { fetch } from "undici";
 import { createCommand, createNamespace } from "../../core/create-command";
+import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { getAccountId } from "../../user";
 import {
@@ -280,6 +281,7 @@ export const cloudchamberImagesNamespace = createNamespace({
 		description: "Manage images in the Cloudflare managed registry",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
 	},
 });
 
@@ -288,6 +290,10 @@ export const cloudchamberImagesListCommand = createCommand({
 		description: "List images in the Cloudflare managed registry",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
 	},
 	args: {
 		filter: {
@@ -311,6 +317,10 @@ export const cloudchamberImagesDeleteCommand = createCommand({
 		description: "Remove an image from the Cloudflare managed registry",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {
 		image: {

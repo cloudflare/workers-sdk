@@ -259,6 +259,9 @@ export const containersListCommand = createCommand({
 		status: "open beta",
 		owner: "Product: Cloudchamber",
 	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
 	args: {},
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);
@@ -271,6 +274,9 @@ export const containersInfoCommand = createCommand({
 		description: "Get information about a specific container",
 		status: "open beta",
 		owner: "Product: Cloudchamber",
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {
 		ID: {

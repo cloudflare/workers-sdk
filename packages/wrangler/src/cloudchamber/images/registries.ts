@@ -227,6 +227,7 @@ export const cloudchamberRegistriesNamespace = createNamespace({
 		description: "Configure registries via Cloudchamber",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
 	},
 });
 
@@ -235,6 +236,10 @@ export const cloudchamberRegistriesConfigureCommand = createCommand({
 		description: "Configure Cloudchamber to pull from specific registries",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {
 		domain: {
@@ -259,6 +264,10 @@ export const cloudchamberRegistriesCredentialsCommand = createCommand({
 		description: "Get a temporary password for a specific domain",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {
 		domain: {
@@ -290,6 +299,10 @@ export const cloudchamberRegistriesRemoveCommand = createCommand({
 		description: "Remove the registry at the given domain",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {
 		domain: {
@@ -309,6 +322,10 @@ export const cloudchamberRegistriesListCommand = createCommand({
 		description: "List registries configured for this account",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {},
 	async handler(args, { config }) {

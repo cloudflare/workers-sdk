@@ -75,12 +75,7 @@ describe("containers info", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler("containers info asdf");
-		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			{}"
-		`);
+		expect(std.out).toMatchInlineSnapshot(`"{}"`);
 	});
 
 	it("should error when not given an ID", async () => {

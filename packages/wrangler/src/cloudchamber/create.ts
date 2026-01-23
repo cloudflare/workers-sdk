@@ -397,6 +397,10 @@ export const cloudchamberCreateCommand = defineCommand({
 		description: "Create a new deployment",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {
 		image: {

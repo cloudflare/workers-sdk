@@ -319,6 +319,10 @@ export const cloudchamberModifyCommand = createCommand({
 		description: "Modify an existing deployment",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {
 		deploymentId: {

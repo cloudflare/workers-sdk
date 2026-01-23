@@ -173,6 +173,7 @@ export const cloudchamberCurlCommand = createCommand({
 		description: "Send a request to an arbitrary Cloudchamber endpoint",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
 	},
 	args: {
 		path: {

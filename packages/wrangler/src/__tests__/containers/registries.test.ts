@@ -434,10 +434,7 @@ describe("containers registries list", () => {
 		mockListRegistries(mockRegistries);
 		await runWrangler("containers registries list --json");
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			[
+			"[
 			    {
 			        \\"domain\\": \\"123456789012.dkr.ecr.us-west-2.amazonaws.com\\"
 			    }

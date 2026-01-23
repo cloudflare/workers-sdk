@@ -376,6 +376,7 @@ export const cloudchamberSshNamespace = createNamespace({
 		description: "Manage the ssh keys of your account",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
 	},
 });
 
@@ -384,6 +385,10 @@ export const cloudchamberSshListCommand = createCommand({
 		description: "List the ssh keys added to your account",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {},
 	async handler(args, { config }) {
@@ -397,6 +402,10 @@ export const cloudchamberSshCreateCommand = createCommand({
 		description: "Create an ssh key",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {
 		name: {

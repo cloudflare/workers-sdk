@@ -80,10 +80,7 @@ describe("cloudchamber modify", () => {
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			{
+			"{
 			    \\"id\\": \\"1\\",
 			    \\"type\\": \\"default\\",
 			    \\"created_at\\": \\"123\\",
@@ -121,10 +118,7 @@ describe("cloudchamber modify", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			{
+			"{
 			    \\"id\\": \\"1\\",
 			    \\"type\\": \\"default\\",
 			    \\"created_at\\": \\"123\\",
@@ -161,9 +155,6 @@ describe("cloudchamber modify", () => {
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
 			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-
 			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
 		`);
 	});
