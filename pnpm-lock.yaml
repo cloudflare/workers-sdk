@@ -1936,9 +1936,6 @@ importers:
       youch:
         specifier: 4.1.0-beta.10
         version: 4.1.0-beta.10(patch_hash=flgmw54jmjdxqmelxigtxg6kum)
-      zod:
-        specifier: ^3.25.76
-        version: 3.25.76
     devDependencies:
       '@cloudflare/cli':
         specifier: workspace:*
@@ -2087,6 +2084,9 @@ importers:
       xdg-app-paths:
         specifier: ^8.3.0
         version: 8.3.0
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
 
   packages/mock-npm-registry:
     devDependencies:
@@ -3461,9 +3461,6 @@ importers:
       wrangler:
         specifier: workspace:*
         version: link:../wrangler
-      zod:
-        specifier: ^3.25.76
-        version: 3.25.76
     devDependencies:
       '@cloudflare/eslint-config-shared':
         specifier: workspace:*
@@ -3522,6 +3519,9 @@ importers:
       vitest:
         specifier: catalog:default
         version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
 
   packages/workers-editor-shared:
     dependencies:
