@@ -110,4 +110,30 @@ describe("updateTsConfig", () => {
 			`./worker-configuration.d.ts`,
 		);
 	});
+
+	test("skips modification when tsconfig uses project references", async () => {
+		vi.mocked(readFile).mockImplementation(
+			() => `{
+				"files": [],
+				"references": [
+					{ "path": "./tsconfig.app.json" },
+					{ "path": "./tsconfig.node.json" }
+				]
+			}`,
+		);
+		await updateTsConfig(ctx, { usesNodeCompat: false });
+		expect(writeFile).not.toHaveBeenCalled();
+	});
+
+	test("modifies tsconfig when references array is empty", async () => {
+		ctx.template.workersTypes = "installed";
+		vi.mocked(readFile).mockImplementation(
+			() => `{
+				"compilerOptions": { "types": [] },
+				"references": []
+			}`,
+		);
+		await updateTsConfig(ctx, { usesNodeCompat: false });
+		expect(writeFile).toHaveBeenCalled();
+	});
 });
