@@ -21,9 +21,11 @@ describe("local explorer", () => {
 		});
 
 		it("returns local explorer API response for /cdn-cgi/explorer/api", async () => {
-			const response = await fetch(`http://${ip}:${port}/cdn-cgi/explorer/api`);
+			const response = await fetch(
+				`http://${ip}:${port}/cdn-cgi/explorer/api/storage/kv/namespaces`
+			);
 			const text = await response.text();
-			expect(text).toBe("Hello from local explorer API");
+			expect(text).toMatchInlineSnapshot(`"{"success":true,"errors":[],"messages":[],"result":[{"id":"KV","title":"KV"},{"id":"some-kv-id","title":"KV_WITH_ID"}],"result_info":{"count":2,"page":1,"per_page":20,"total_count":2}}"`);
 		});
 
 		it("returns worker response for normal requests", async () => {
