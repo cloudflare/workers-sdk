@@ -105,6 +105,13 @@ export async function updateTsConfig(
 	const tsconfig = readFile(tsconfigPath);
 	try {
 		const config = jsonc.parse(tsconfig);
+
+		// Skip if tsconfig uses project references
+		// Types should be defined in child tsconfigs (e.g., tsconfig.worker.json)
+		if (hasProjectReferences(config)) {
+			return;
+		}
+
 		const currentTypes: string[] = config.compilerOptions?.types ?? [];
 		let newTypes = new Set(currentTypes);
 		if (ctx.template.workersTypes === "installed") {
@@ -164,6 +171,16 @@ export async function updateTsConfig(
 	} catch {
 		warn("Failed to update `tsconfig.json`.");
 	}
+}
+
+function hasProjectReferences(config: unknown): boolean {
+	if (typeof config !== "object" || config === null) {
+		return false;
+	}
+
+	const tsconfig = config as Record<string, unknown>;
+
+	return Array.isArray(tsconfig.references) && tsconfig.references.length > 0;
 }
 
 /**
