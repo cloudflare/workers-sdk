@@ -6,7 +6,7 @@ import path from "node:path";
 import rl from "node:readline";
 import stream from "node:stream";
 import { setTimeout } from "node:timers/promises";
-import stripAnsi from "strip-ansi";
+import { stripVTControlCharacters } from "node:util";
 import { fetch } from "undici";
 import {
 	afterAll,
@@ -151,7 +151,11 @@ if (process.platform === "win32") {
 		if (!skipWaitingForReady) {
 			let readyMatch: RegExpMatchArray | null = null;
 			for await (const line of stdoutInterface) {
-				if ((readyMatch = readyRegexp.exec(stripAnsi(line))) !== null) break;
+				if (
+					(readyMatch = readyRegexp.exec(stripVTControlCharacters(line))) !==
+					null
+				)
+					break;
 			}
 			assert(readyMatch !== null, "Expected ready message");
 			result.url = readyMatch[1];

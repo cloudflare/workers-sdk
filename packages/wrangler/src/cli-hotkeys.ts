@@ -1,5 +1,5 @@
+import { stripVTControlCharacters } from "node:util";
 import { dim } from "@cloudflare/cli/colors";
-import stripAnsi from "strip-ansi";
 import { unwrapHook } from "./api/startDevWorker/utils";
 import { logger } from "./logger";
 import { onKeyPress } from "./utils/onKeyPress";
@@ -39,7 +39,7 @@ export default function (
 			.map(({ keys, label }) => `[${keys[0]}] ${dim(unwrapHook(label))}`);
 
 		let stringifiedInstructions = instructions.join(" ");
-		const length = stripAnsi(stringifiedInstructions).length;
+		const length = stripVTControlCharacters(stringifiedInstructions).length;
 
 		const ADDITIONAL_CHARS = 6; // 3 chars on each side of the instructions for the box and spacing ("│  " and "  │")
 		const willWrap = length + ADDITIONAL_CHARS > process.stdout.columns;
@@ -50,14 +50,14 @@ export default function (
 		const maxLineLength = Math.max(
 			...stringifiedInstructions
 				.split("\n")
-				.map((line) => stripAnsi(line).length)
+				.map((line) => stripVTControlCharacters(line).length)
 		);
 
 		stringifiedInstructions = stringifiedInstructions
 			.split("\n")
 			.map(
 				(line) =>
-					`│  ${line + " ".repeat(Math.max(0, maxLineLength - stripAnsi(line).length))}  │`
+					`│  ${line + " ".repeat(Math.max(0, maxLineLength - stripVTControlCharacters(line).length))}  │`
 			)
 			.join("\n");
 

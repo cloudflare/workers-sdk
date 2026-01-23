@@ -1,7 +1,7 @@
+import { stripVTControlCharacters } from "node:util";
 import { getWranglerHideBanner } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import semiver from "semiver";
-import stripAnsi from "strip-ansi";
 import supportsColor from "supports-color";
 import { version as wranglerVersion } from "../package.json";
 import { logger } from "./logger";
@@ -35,7 +35,9 @@ export async function printWranglerBanner(performUpdateCheck = true) {
 			text +
 			"\n" +
 			(supportsColor.stdout
-				? chalk.hex("#FF8800")("─".repeat(stripAnsi(text).length))
+				? chalk.hex("#FF8800")(
+						"─".repeat(stripVTControlCharacters(text).length)
+					)
 				: "─".repeat(text.length))
 	);
 

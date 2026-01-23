@@ -1,5 +1,5 @@
+import { stripVTControlCharacters } from "node:util";
 import { resolve } from "path";
-import stripAnsi from "strip-ansi";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
@@ -43,7 +43,7 @@ async function getWranglerDevOutput(
 	await response.text();
 
 	return () => {
-		const output = stripAnsi(getOutput())
+		const output = stripVTControlCharacters(getOutput())
 			// Windows gets a different marker for ✘, so let's normalize it here
 			// so that these tests can be platform independent
 			.replaceAll("✘", "X")
