@@ -82,6 +82,15 @@ export const d1ExportCommand = createCommand({
 			throw new UserError(`You cannot specify both --no-schema and --no-data`);
 		}
 
+		try {
+			const stats = await fs.stat(output);
+			if (stats.isDirectory()) {
+				throw new UserError(
+					`Please specify a file path for --output, not a directory.`
+				);
+			}
+		} catch {}
+
 		// Allow multiple --table x --table y flags or none
 		const tables: string[] = table
 			? Array.isArray(table)
