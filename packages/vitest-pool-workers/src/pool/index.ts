@@ -936,7 +936,9 @@ async function runTests(
 			const maybeRule = compiledRules.find((rule) =>
 				testRegExps(rule.include, specifier)
 			);
-			if (maybeRule !== undefined) {
+
+			// Skip if specifier already has query params (e.g. `?raw`), letting Vite handle it.
+			if (maybeRule !== undefined && !specifier.includes("?")) {
 				const externalize = specifier + `?mf_vitest_force=${maybeRule.type}`;
 				return { externalize };
 			}

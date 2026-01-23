@@ -2,6 +2,8 @@ import { instrument } from "@microlabs/otel-cf-workers";
 import { Utils } from "discord-api-types/v10";
 import dep from "ext-dep";
 import { assert, describe, test } from "vitest";
+import sqlPlain from "../src/test.sql";
+import sqlRaw from "../src/test.sql?raw";
 
 describe("test", () => {
 	test("resolves commonjs directory dependencies correctly", async () => {
@@ -16,5 +18,11 @@ describe("test", () => {
 	// This requires the `deps.optimizer` option to be set in the vitest config
 	test("resolves dependency with mapping on the browser field", async () => {
 		assert.isFunction(instrument);
+	});
+
+	// Regression test for https://github.com/cloudflare/workers-sdk/issues/12049
+	// Vite query parameters like ?raw should be handled by Vite, not module rules
+	test("resolves file with ?raw query parameter", async () => {
+		assert.equal(sqlRaw, sqlPlain);
 	});
 });
