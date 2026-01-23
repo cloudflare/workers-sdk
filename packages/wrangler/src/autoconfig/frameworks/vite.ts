@@ -1,5 +1,4 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { getPackageManager } from "../../package-manager";
 import { installPackages } from "../c3-vendor/packages";
 import {
 	checkIfViteConfigUsesCloudflarePlugin,
@@ -27,15 +26,12 @@ export class Vite extends Framework {
 			transformViteConfig(projectPath);
 		}
 
-		const { type: npm } = await getPackageManager();
-
 		return {
 			wranglerConfig: {
 				assets: {
 					not_found_handling: "single-page-application",
 				},
 			},
-			buildCommand: `${npm} run build`,
 		};
 	}
 }

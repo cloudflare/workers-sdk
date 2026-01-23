@@ -1,5 +1,4 @@
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { getPackageManager } from "../../package-manager";
 import { installPackages } from "../c3-vendor/packages";
 import { transformViteConfig } from "./utils/vite-config";
 import { Framework } from ".";
@@ -20,14 +19,11 @@ export class TanstackStart extends Framework {
 			transformViteConfig(projectPath, { viteEnvironmentName: "ssr" });
 		}
 
-		const { type: npm } = await getPackageManager();
-
 		return {
 			wranglerConfig: {
 				compatibility_flags: ["nodejs_compat"],
 				main: "@tanstack/react-start/server-entry",
 			},
-			buildCommand: `${npm} run build`,
 		};
 	}
 

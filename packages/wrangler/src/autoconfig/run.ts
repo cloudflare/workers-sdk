@@ -113,9 +113,12 @@ export async function runAutoConfig(
 			...dryRunConfigurationResults?.wranglerConfig,
 		},
 		{
-			build: dryRunConfigurationResults?.buildCommand,
+			build:
+				dryRunConfigurationResults?.buildCommandOverride ??
+				autoConfigDetails.buildCommand,
 			deploy:
-				dryRunConfigurationResults?.deployCommand ?? `${npx} wrangler deploy`,
+				dryRunConfigurationResults?.deployCommandOverride ??
+				`${npx} wrangler deploy`,
 		},
 		dryRunConfigurationResults?.packageJsonScriptsOverrides
 	);
@@ -198,8 +201,7 @@ export async function runAutoConfig(
 		addWranglerToAssetsIgnore(autoConfigDetails.projectPath);
 	}
 
-	const buildCommand =
-		configurationResults?.buildCommand ?? autoConfigDetails.buildCommand;
+	const buildCommand = autoConfigDetails.buildCommand;
 
 	if (buildCommand && runBuild) {
 		await runCommand(buildCommand, autoConfigDetails.projectPath, "[build]");

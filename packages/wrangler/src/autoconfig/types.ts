@@ -14,6 +14,8 @@ export type AutoConfigDetails = {
 	framework?: Framework;
 	/** The build command used to build the project (if any) */
 	buildCommand?: string;
+	/** The deploy command used to deploy the project without building it (the default is `npx wrangler deploy`) */
+	// deployCommand?: string;
 	/** The output directory (if no framework is used, points to the raw asset files) */
 	outputDir?: string;
 };

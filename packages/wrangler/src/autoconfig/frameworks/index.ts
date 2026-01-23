@@ -18,9 +18,10 @@ export type ConfigurationResults = {
 	wranglerConfig: RawConfig;
 	// Scripts to override in the package.json. Most frameworks should not need to do this, as their default detected build command will be sufficient
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides;
-	// Note: The `buildCommand` field is required (not optional with `?`) to ensure all frameworks explicitly specify a build command (`undefined` if they don't have one)
-	buildCommand: string | undefined;
-	deployCommand?: string;
+	// Build command to override the standard one (`npm run build` or framework's build command)
+	buildCommandOverride?: string;
+	// Deploy command to override the standard one (`npx wrangler deploy`)
+	deployCommandOverride?: string;
 };
 
 export abstract class Framework {

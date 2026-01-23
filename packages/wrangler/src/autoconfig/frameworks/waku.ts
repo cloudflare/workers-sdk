@@ -6,7 +6,6 @@ import { updateStatus } from "@cloudflare/cli";
 import { blue, brandColor } from "@cloudflare/cli/colors";
 import * as recast from "recast";
 import dedent from "ts-dedent";
-import { getPackageManager } from "../../package-manager";
 import { transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
 import { Framework } from ".";
@@ -33,8 +32,6 @@ export class Waku extends Framework {
 			await updateWakuConfig(projectPath);
 		}
 
-		const { type: npm } = await getPackageManager();
-
 		return {
 			wranglerConfig: {
 				main: "./dist/server/serve-cloudflare.js",
@@ -45,7 +42,6 @@ export class Waku extends Framework {
 					html_handling: "drop-trailing-slash",
 				},
 			},
-			buildCommand: `${npm} run build`,
 		};
 	}
 }

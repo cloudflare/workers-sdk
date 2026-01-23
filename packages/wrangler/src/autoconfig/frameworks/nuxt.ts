@@ -1,7 +1,6 @@
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import * as recast from "recast";
-import { getPackageManager } from "../../package-manager";
 import { mergeObjectProperties, transformFile } from "../c3-vendor/codemod";
 import { installPackages } from "../c3-vendor/packages";
 import { Framework } from ".";
@@ -66,8 +65,6 @@ export class Nuxt extends Framework {
 			updateNuxtConfig(projectPath);
 		}
 
-		const { type: npm } = await getPackageManager();
-
 		return {
 			wranglerConfig: {
 				main: "./.output/server/index.mjs",
@@ -79,7 +76,6 @@ export class Nuxt extends Framework {
 					enabled: true,
 				},
 			},
-			buildCommand: `${npm} run build`,
 		};
 	}
 

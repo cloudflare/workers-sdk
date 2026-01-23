@@ -9,7 +9,6 @@ export class Static extends Framework {
 					directory: outputDir,
 				},
 			},
-			buildCommand: undefined,
 		};
 	}
 }

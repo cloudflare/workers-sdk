@@ -3,7 +3,6 @@ import { resolve } from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
 import { parseJSONC } from "@cloudflare/workers-utils";
-import { getPackageManager } from "../../package-manager";
 import { dedent } from "../../utils/dedent";
 import { installPackages } from "../c3-vendor/packages";
 import { Framework } from ".";
@@ -15,8 +14,6 @@ export class Angular extends Framework {
 		outputDir,
 		dryRun,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		const { type: npm } = await getPackageManager();
-
 		if (!dryRun) {
 			await updateAngularJson(workerName);
 			await overrideServerFile();
@@ -30,7 +27,6 @@ export class Angular extends Framework {
 					directory: `${outputDir}browser`,
 				},
 			},
-			buildCommand: `${npm} run build`,
 		};
 	}
 }
