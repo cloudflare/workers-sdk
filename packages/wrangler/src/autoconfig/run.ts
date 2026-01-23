@@ -201,7 +201,9 @@ export async function runAutoConfig(
 		addWranglerToAssetsIgnore(autoConfigDetails.projectPath);
 	}
 
-	const buildCommand = autoConfigDetails.buildCommand;
+	const buildCommand =
+		configurationResults?.buildCommandOverride ??
+		autoConfigDetails.buildCommand;
 
 	if (buildCommand && runBuild) {
 		await runCommand(buildCommand, autoConfigDetails.projectPath, "[build]");
