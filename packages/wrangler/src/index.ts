@@ -1814,41 +1814,27 @@ export async function main(argv: string[]): Promise<void> {
 	} catch (e) {
 		cliHandlerThrew = true;
 
-		// Check if this is a CommandHandledError (telemetry already sent by handler)
 		if (e instanceof CommandHandledError) {
-			// Unwrap and handle the original error
-			await handleError(e.originalError, configArgs, argv);
+			// This error occurred during Command handler execution,
+			// and has already sent metrics and reported to the user.
+			// So we can just re-throw the original error.
 			throw e.originalError;
+		} else {
+			// The error occurred before Command handler ran
+			// (e.g., yargs validation errors like unknown commands or invalid arguments).
+			// So we need to handle telemetry and error reporting here.
+			if (dispatcher && command) {
+				dispatchGenericCommandErrorEvent(
+					dispatcher,
+					command,
+					configArgs,
+					startTime,
+					e
+				);
+			}
+			await handleError(e, configArgs, argv);
+			throw e;
 		}
-
-		// Fallback telemetry for errors that occurred before handler ran
-		// (e.g., yargs validation errors like unknown commands or invalid arguments)
-		if (dispatcher && command) {
-			const durationMs = Date.now() - startTime;
-
-			// Send "started" event (since handler never got to send it)
-			dispatcher.sendCommandEvent("wrangler command started", {
-				command,
-				args: configArgs,
-			});
-
-			// Send "errored" event
-			dispatcher.sendCommandEvent("wrangler command errored", {
-				command,
-				args: configArgs,
-				durationMs,
-				durationSeconds: durationMs / 1000,
-				durationMinutes: durationMs / 1000 / 60,
-				errorType: getErrorType(e),
-				errorMessage:
-					e instanceof UserError || e instanceof ContainersUserError
-						? e.telemetryMessage
-						: undefined,
-			});
-		}
-
-		await handleError(e, configArgs, argv);
-		throw e;
 	} finally {
 		try {
 			// In the bootstrapper script `bin/wrangler.js`, we open an IPC channel,
@@ -1880,4 +1866,37 @@ export async function main(argv: string[]): Promise<void> {
 			}
 		}
 	}
+}
+
+/**
+ * Dispatches generic metrics events to indicate that a wrangler command errored
+ * when we don't know the CommandDefinition and cannot be sure what is safe to send.
+ */
+function dispatchGenericCommandErrorEvent(
+	dispatcher: ReturnType<typeof getMetricsDispatcher>,
+	command: string,
+	configArgs: ReadConfigCommandArgs,
+	startTime: number,
+	error: unknown
+) {
+	const durationMs = Date.now() - startTime;
+
+	// Send "started" event since handler never got to send it.
+	dispatcher.sendCommandEvent("wrangler command started", {
+		command,
+		args: configArgs,
+	});
+
+	dispatcher.sendCommandEvent("wrangler command errored", {
+		command,
+		args: configArgs,
+		durationMs,
+		durationSeconds: durationMs / 1000,
+		durationMinutes: durationMs / 1000 / 60,
+		errorType: getErrorType(error),
+		errorMessage:
+			error instanceof UserError || error instanceof ContainersUserError
+				? error.telemetryMessage
+				: undefined,
+	});
 }

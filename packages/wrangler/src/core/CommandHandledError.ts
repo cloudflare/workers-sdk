@@ -1,14 +1,9 @@
 /**
- * A wrapper that indicates the original error was thrown from a command handler
- * that has already sent telemetry (started + errored events).
- *
- * When this error is caught in index.ts, the outer error handler should:
- * 1. NOT send fallback telemetry (it's already been sent)
- * 2. Unwrap and rethrow the original error for proper error handling/display
+ * A wrapper Error that indicates the original error was thrown during Command handler execution.
  *
  * This is used to distinguish between:
- * - Errors from command handlers (telemetry sent by handler)
- * - Yargs validation errors (telemetry needs to be sent by fallback handler)
+ * - Errors from within command handlers: telemetry and error reporting already sent by handler.
+ * - Yargs validation errors: telemetry and error reporting needs to be sent in the yargs middleware.
  */
 export class CommandHandledError {
 	constructor(public readonly originalError: unknown) {}

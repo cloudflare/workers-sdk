@@ -249,7 +249,6 @@ function isNetworkFetchFailedError(e: unknown): boolean {
 
 /**
  * Determines the error type for telemetry purposes.
- * This is a pure function that doesn't log or have side effects.
  */
 export function getErrorType(e: unknown): string | undefined {
 	if (isCloudflareAPIDNSError(e)) {
@@ -264,12 +263,7 @@ export function getErrorType(e: unknown): string | undefined {
 	if (isCloudflareAPIConnectionTimeoutError(e)) {
 		return "ConnectionTimeout";
 	}
-	if (
-		isAuthenticationError(e) ||
-		(e instanceof UserError &&
-			e.cause instanceof ApiError &&
-			e.cause.status === 403)
-	) {
+	if (isAuthenticationError(e) || isContainersAuthenticationError(e)) {
 		return "AuthenticationError";
 	}
 	if (isBuildFailure(e) || isBuildFailureFromCause(e)) {
@@ -475,14 +469,7 @@ export async function handleError(
 		}
 
 		await wrangler.parse();
-	} else if (
-		isAuthenticationError(e) ||
-		// Is this a Containers/Cloudchamber-based auth error?
-		// This is different because it uses a custom OpenAPI-based generated client
-		(e instanceof UserError &&
-			e.cause instanceof ApiError &&
-			e.cause.status === 403)
-	) {
+	} else if (isAuthenticationError(e) || isContainersAuthenticationError(e)) {
 		mayReport = false;
 		if (e.cause instanceof ApiError) {
 			logger.error(e.cause);
@@ -599,4 +586,17 @@ export async function handleError(
 	) {
 		await captureGlobalException(loggableException);
 	}
+}
+
+/**
+ * Is this a Containers/Cloudchamber-based auth error?
+ *
+ * This is different because it uses a custom OpenAPI-based generated client
+ */
+function isContainersAuthenticationError(e: unknown): e is UserError {
+	return (
+		e instanceof UserError &&
+		e.cause instanceof ApiError &&
+		e.cause.status === 403
+	);
 }

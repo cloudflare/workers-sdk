@@ -18,7 +18,7 @@ import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
 import { CommandHandledError } from "./CommandHandledError";
-import { getErrorType } from "./handle-errors";
+import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
@@ -186,7 +186,6 @@ function createHandler(
 							})
 						: defaultWranglerConfig;
 
-				// Create metrics dispatcher with config info
 				const dispatcher = getMetricsDispatcher({
 					sendMetrics: config.send_metrics,
 					hasAssets: !!config.assets?.directory,
@@ -215,7 +214,6 @@ function createHandler(
 					}
 				}
 
-				// Send "started" event
 				dispatcher.sendCommandEvent("wrangler command started", {
 					command: commandName,
 					args,
@@ -230,7 +228,6 @@ function createHandler(
 						fetchResult,
 					});
 
-					// Send "completed" event
 					const durationMs = Date.now() - startTime;
 					dispatcher.sendCommandEvent("wrangler command completed", {
 						command: commandName,
@@ -243,12 +240,11 @@ function createHandler(
 					return result;
 				} catch (err) {
 					// If the error is already a CommandHandledError (e.g., from a nested wrangler.parse() call),
-					// don't wrap it again - just rethrow it
+					// don't wrap it again; just rethrow.
 					if (err instanceof CommandHandledError) {
 						throw err;
 					}
 
-					// Send "errored" event
 					const durationMs = Date.now() - startTime;
 					dispatcher.sendCommandEvent("wrangler command errored", {
 						command: commandName,
@@ -262,7 +258,10 @@ function createHandler(
 								? err.telemetryMessage
 								: undefined,
 					});
-					// Wrap the error to signal that telemetry has been sent
+
+					await handleError(err, args, argv);
+
+					// Wrap the error to signal that the telemetry has already been sent and the error reporting handled.
 					throw new CommandHandledError(err);
 				}
 			});
@@ -274,13 +273,11 @@ function createHandler(
 			if (outputErr instanceof Error) {
 				const code =
 					"code" in outputErr ? (outputErr.code as number) : undefined;
-				const message =
-					"message" in outputErr ? (outputErr.message as string) : undefined;
 				writeOutput({
 					type: "command-failed",
 					version: 1,
 					code,
-					message,
+					message: outputErr.message,
 				});
 			}
 			throw err;
