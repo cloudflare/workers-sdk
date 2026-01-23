@@ -1,5 +1,4 @@
 ---
-"@vite-plugin-cloudflare/playground": patch
 "miniflare": patch
 "wrangler": patch
 ---
