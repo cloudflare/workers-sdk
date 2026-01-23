@@ -28,12 +28,12 @@ describe("containers info", () => {
 		await runWrangler("containers info --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers info ID
+			"wrangler containers info <ID>
 
-			Get information about a specific container
+			Get information about a specific container [open beta]
 
 			POSITIONALS
-			  ID  id of the containers to view  [string] [required]
+			  ID  ID of the container to view  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -75,7 +75,12 @@ describe("containers info", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler("containers info asdf");
-		expect(std.out).toMatchInlineSnapshot(`"{}"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			{}"
+		`);
 	});
 
 	it("should error when not given an ID", async () => {

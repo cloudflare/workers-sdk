@@ -28,7 +28,7 @@ describe("containers list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler containers list
 
-			List containers
+			List containers [open beta]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -58,7 +58,10 @@ describe("containers list", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler("containers list");
 		expect(std.out).toMatchInlineSnapshot(`
-			"[
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			[
 			    {
 			        \\"id\\": \\"asdf-2\\",
 			        \\"created_at\\": \\"123\\",
