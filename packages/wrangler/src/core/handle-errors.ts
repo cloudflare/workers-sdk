@@ -248,7 +248,7 @@ function isNetworkFetchFailedError(e: unknown): boolean {
 }
 
 /**
- * Determines the error type for telemetry purposes.
+ * Determines the error type for telemetry purposes, or `undefined` if it cannot be determined.
  */
 export function getErrorType(e: unknown): string | undefined {
 	if (isCloudflareAPIDNSError(e)) {
