@@ -34,7 +34,7 @@ describe("cloudchamber curl", () => {
 		expect(helpStd.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber curl <path>
 
-			Send a request to an arbitrary Cloudchamber endpoint
+			Send a request to an arbitrary Cloudchamber endpoint [alpha]
 
 			POSITIONALS
 			  path  [string] [required] [default: \\"/\\"]
