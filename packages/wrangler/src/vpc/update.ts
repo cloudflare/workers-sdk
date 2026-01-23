@@ -9,6 +9,7 @@ export const vpcServiceUpdateCommand = createCommand({
 		description: "Update a VPC service",
 		status: "stable",
 		owner: "Product: WVPC",
+		logArgs: true,
 	},
 	args: {
 		"service-id": {

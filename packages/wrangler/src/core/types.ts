@@ -76,6 +76,13 @@ export type Metadata = {
 	 * Commands without a category will appear under the default "COMMANDS" group.
 	 */
 	category?: MetadataCategory;
+	/**
+	 * If true, arguments for this command will be included in telemetry.
+	 *
+	 * @default false - Arguments are not logged by default.
+	 * Set to `true` to explicitly include this command's args in telemetry.
+	 */
+	logArgs?: boolean;
 };
 
 export type ArgDefinition = Omit<PositionalOptions, "type"> &

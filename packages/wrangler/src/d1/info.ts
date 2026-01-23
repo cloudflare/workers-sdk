@@ -16,6 +16,7 @@ export const d1InfoCommand = createCommand({
 		epilogue: "This command acts on remote D1 Databases.",
 		status: "stable",
 		owner: "Product: D1",
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

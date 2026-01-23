@@ -37,6 +37,7 @@ export const r2BucketCatalogEnableCommand = createCommand({
 		description: "Enable the data catalog on an R2 bucket",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
+		logArgs: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -77,6 +78,7 @@ export const r2BucketCatalogDisableCommand = createCommand({
 		description: "Disable the data catalog for an R2 bucket",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
+		logArgs: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -121,6 +123,7 @@ export const r2BucketCatalogGetCommand = createCommand({
 		description: "Get the status of the data catalog for an R2 bucket",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
+		logArgs: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -183,6 +186,7 @@ export const r2BucketCatalogCompactionEnableCommand = createCommand({
 			"Enable automatic file compaction for your R2 data catalog or a specific table",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
+		logArgs: true,
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
 	args: {
@@ -279,6 +283,7 @@ export const r2BucketCatalogCompactionDisableCommand = createCommand({
 			"Disable automatic file compaction for your R2 data catalog or a specific table",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
+		logArgs: true,
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
 	args: {
@@ -365,6 +370,7 @@ export const r2BucketCatalogSnapshotExpirationEnableCommand = createCommand({
 			"Enable automatic snapshot expiration for your R2 data catalog or a specific table",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
+		logArgs: true,
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
 	args: {
@@ -467,6 +473,7 @@ export const r2BucketCatalogSnapshotExpirationDisableCommand = createCommand({
 			"Disable automatic snapshot expiration for your R2 data catalog or a specific table",
 		status: "open beta",
 		owner: "Product: R2 Data Catalog",
+		logArgs: true,
 	},
 	positionalArgs: ["bucket", "namespace", "table"],
 	args: {

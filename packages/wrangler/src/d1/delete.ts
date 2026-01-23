@@ -14,6 +14,7 @@ export const d1DeleteCommand = createCommand({
 		status: "stable",
 		epilogue: "This command acts on remote D1 Databases.",
 		owner: "Product: D1",
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: true,

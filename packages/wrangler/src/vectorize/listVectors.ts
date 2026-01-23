@@ -21,6 +21,7 @@ export const vectorizeListVectorsCommand = createCommand({
 				description: "Continue listing from a specific cursor position",
 			},
 		],
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

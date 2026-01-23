@@ -26,6 +26,7 @@ export const loginCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		category: "Account",
+		logArgs: true,
 	},
 	behaviour: {
 		printConfigWarnings: false,
@@ -104,6 +105,7 @@ export const logoutCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		category: "Account",
+		logArgs: true,
 	},
 	behaviour: {
 		printConfigWarnings: false,
@@ -122,6 +124,7 @@ export const whoamiCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		category: "Account",
+		logArgs: true,
 	},
 	behaviour: {
 		printConfigWarnings: false,
@@ -155,6 +158,7 @@ export const authTokenCommand = createCommand({
 		description: "🔑 Retrieve the current authentication token or credentials",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

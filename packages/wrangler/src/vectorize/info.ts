@@ -7,6 +7,7 @@ export const vectorizeInfoCommand = createCommand({
 		description: "Get additional details about the index",
 		owner: "Product: Vectorize",
 		status: "stable",
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

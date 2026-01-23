@@ -32,6 +32,7 @@ export const vectorizeQueryCommand = createCommand({
 				description: "Filter the query results.",
 			},
 		],
+		logArgs: true,
 	},
 	args: {
 		name: {

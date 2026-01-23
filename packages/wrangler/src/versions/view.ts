@@ -16,6 +16,7 @@ export const versionsViewCommand = createCommand({
 		description: "View the details of a specific version of your Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

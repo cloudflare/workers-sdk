@@ -64,6 +64,7 @@ export const deleteCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 		category: "Compute & AI",
+		logArgs: true,
 	},
 	args: {
 		script: {

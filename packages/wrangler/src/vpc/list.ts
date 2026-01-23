@@ -8,6 +8,7 @@ export const vpcServiceListCommand = createCommand({
 		description: "List VPC services",
 		status: "stable",
 		owner: "Product: WVPC",
+		logArgs: true,
 	},
 	args: {},
 	async handler(args, { config }) {

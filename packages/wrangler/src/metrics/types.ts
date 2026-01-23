@@ -78,34 +78,45 @@ export type CommonEventProperties = {
 	agent: string | null;
 };
 
+/**
+ * Properties included in all "wrangler command started / completed / errored" events
+ */
+type CommandEventProperties = CommonEventProperties & {
+	/**
+	 * The command that was used, e.g. `dev`.
+	 * Does not include the "wrangler" prefix.
+	 * When logArgs is false, positional arguments are stripped to prevent
+	 * accidentally capturing secrets in telemetry.
+	 *
+	 * Named `safeCommand` to distinguish from historical `command` field which
+	 * may have contained sensitive positional arguments in older Wrangler versions.
+	 */
+	safeCommand: string;
+	/**
+	 * The args and flags that were passed in when running the command.
+	 * All user-inputted string values are redacted, except for some cases where there are set options.
+	 * When logArgs is false, this is an empty object.
+	 *
+	 * Named `safeArgs` to distinguish from historical `args` field which
+	 * may have contained sensitive data in older Wrangler versions.
+	 */
+	safeArgs: Record<string, unknown>;
+	/**
+	 * If true, this command's args are included in telemetry.
+	 * Passed from the command definition's metadata.logArgs.
+	 */
+	logArgs: boolean;
+};
+
 /** We send a metrics event at the start and end of a command run */
 export type Events =
 	| {
 			name: "wrangler command started";
-			properties: CommonEventProperties & {
-				/**
-				 * The command that was used, e.g. `wrangler dev`
-				 */
-				command: string;
-				/**
-				 * The args and flags that were passed in when running the command.
-				 * All user-inputted string values are redacted, except for some cases where there are set options.
-				 */
-				args: Record<string, unknown>;
-			};
+			properties: CommandEventProperties;
 	  }
 	| {
 			name: "wrangler command completed";
-			properties: CommonEventProperties & {
-				/**
-				 * The command that was used, e.g. `wrangler dev`
-				 */
-				command: string | undefined;
-				/**
-				 * The args and flags that were passed in when running the command.
-				 * All user-inputted string values are redacted, except for some cases where there are set options.
-				 */
-				args: Record<string, unknown> | undefined;
+			properties: CommandEventProperties & {
 				/**
 				 * The time elapsed between the "wrangler command started" and "wrangler command completed" events
 				 */
@@ -116,16 +127,7 @@ export type Events =
 	  }
 	| {
 			name: "wrangler command errored";
-			properties: CommonEventProperties & {
-				/**
-				 * The command that was used, e.g. `wrangler dev`
-				 */
-				command: string | undefined;
-				/**
-				 * The args and flags that were passed in when running the command.
-				 * All user-inputted string values are redacted, except for some cases where there are set options.
-				 */
-				args: Record<string, unknown> | undefined;
+			properties: CommandEventProperties & {
 				/**
 				 * The time elapsed between the "wrangler command started" and "wrangler command errored" events
 				 */

@@ -135,6 +135,7 @@ export const dispatchNamespaceListCommand = createCommand({
 		description: "List all dispatch namespaces",
 		owner: "Workers: Deploy and Config",
 		status: "stable",
+		logArgs: true,
 	},
 	async handler(_, { config }) {
 		const accountId = await requireAuth(config);
@@ -149,6 +150,7 @@ export const dispatchNamespaceGetCommand = createCommand({
 		description: "Get information about a dispatch namespace",
 		owner: "Workers: Deploy and Config",
 		status: "stable",
+		logArgs: true,
 	},
 	args: {
 		name: {
@@ -172,6 +174,7 @@ export const dispatchNamespaceCreateCommand = createCommand({
 		description: "Create a dispatch namespace",
 		owner: "Workers: Deploy and Config",
 		status: "stable",
+		logArgs: true,
 	},
 	args: {
 		name: {
@@ -195,6 +198,7 @@ export const dispatchNamespaceDeleteCommand = createCommand({
 		description: "Delete a dispatch namespace",
 		owner: "Workers: Deploy and Config",
 		status: "stable",
+		logArgs: true,
 	},
 	args: {
 		name: {
@@ -218,6 +222,7 @@ export const dispatchNamespaceRenameCommand = createCommand({
 		description: "Rename a dispatch namespace",
 		owner: "Workers: Deploy and Config",
 		status: "stable",
+		logArgs: true,
 	},
 	args: {
 		oldName: {

@@ -31,6 +31,7 @@ export const workflowsInstancesDescribeCommand = createCommand({
 			"Describe a workflow instance - see its logs, retries and errors",
 		owner: "Product: Workflows",
 		status: "stable",
+		logArgs: true,
 	},
 
 	positionalArgs: ["name", "id"],

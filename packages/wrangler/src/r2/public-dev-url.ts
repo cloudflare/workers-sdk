@@ -17,6 +17,7 @@ export const r2BucketDevUrlGetCommand = createCommand({
 		description: "Get the r2.dev URL and status for an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+		logArgs: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -57,6 +58,7 @@ export const r2BucketDevUrlEnableCommand = createCommand({
 		description: "Enable public access via the r2.dev URL for an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+		logArgs: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -114,6 +116,7 @@ export const r2BucketDevUrlDisableCommand = createCommand({
 		description: "Disable public access via the r2.dev URL for an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+		logArgs: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {

@@ -83,6 +83,7 @@ export const kvNamespaceCreateCommand = createCommand({
 		description: "Create a new namespace",
 		status: "stable",
 		owner: "Product: KV",
+		logArgs: true,
 	},
 
 	args: {
@@ -159,6 +160,7 @@ export const kvNamespaceListCommand = createCommand({
 			"Output a list of all KV namespaces associated with your account id",
 		status: "stable",
 		owner: "Product: KV",
+		logArgs: true,
 	},
 
 	args: {},
@@ -190,6 +192,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 		description: "Delete a given namespace.",
 		status: "stable",
 		owner: "Product: KV",
+		logArgs: true,
 	},
 	args: {
 		binding: {
@@ -275,6 +278,7 @@ export const kvNamespaceRenameCommand = createCommand({
 		description: "Rename a KV namespace",
 		status: "stable",
 		owner: "Product: KV",
+		logArgs: true,
 	},
 	positionalArgs: ["old-name"],
 	args: {
@@ -406,6 +410,7 @@ export const kvKeyPutCommand = createCommand({
 		description: "Write a single key/value pair to the given namespace",
 		status: "stable",
 		owner: "Product: KV",
+		logArgs: true,
 	},
 	behaviour: {
 		printResourceLocation: true,
@@ -497,6 +502,7 @@ export const kvKeyListCommand = createCommand({
 		description: "Output a list of all keys in a given namespace",
 		status: "stable",
 		owner: "Product: KV",
+		logArgs: true,
 	},
 	behaviour: {
 		// implicitly expects to output JSON only
@@ -621,6 +627,7 @@ export const kvKeyGetCommand = createCommand({
 		description: "Read a single value by key from the given namespace",
 		status: "stable",
 		owner: "Product: KV",
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: false,
@@ -728,6 +735,7 @@ export const kvKeyDeleteCommand = createCommand({
 		description: "Remove a single key value pair from the given namespace",
 		status: "stable",
 		owner: "Product: KV",
+		logArgs: true,
 	},
 	behaviour: {
 		printResourceLocation: true,
@@ -776,6 +784,7 @@ export const kvBulkGetCommand = createCommand({
 		description: "Gets multiple key-value pairs from a namespace",
 		status: "open beta",
 		owner: "Product: KV",
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: false,
@@ -872,6 +881,7 @@ export const kvBulkPutCommand = createCommand({
 		description: "Upload multiple key-value pairs to a namespace",
 		status: "stable",
 		owner: "Product: KV",
+		logArgs: true,
 	},
 	behaviour: {
 		printResourceLocation: true,
@@ -995,6 +1005,7 @@ export const kvBulkDeleteCommand = createCommand({
 		description: "Delete multiple key-value pairs from a namespace",
 		status: "stable",
 		owner: "Product: KV",
+		logArgs: true,
 	},
 	behaviour: {
 		printResourceLocation: true,

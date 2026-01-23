@@ -8,6 +8,7 @@ export const pipelinesStreamsListCommand = createCommand({
 		description: "List all streams",
 		owner: "Product: Pipelines",
 		status: "open beta",
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

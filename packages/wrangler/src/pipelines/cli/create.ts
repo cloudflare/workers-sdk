@@ -12,6 +12,7 @@ export const pipelinesCreateCommand = createCommand({
 		description: "Create a new pipeline",
 		owner: "Product: Pipelines",
 		status: "open beta",
+		logArgs: true,
 	},
 	args: {
 		pipeline: {

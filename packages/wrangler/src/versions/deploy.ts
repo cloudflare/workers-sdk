@@ -45,6 +45,7 @@ export const versionsDeployCommand = createCommand({
 			"Safely roll out new Versions of your Worker by splitting traffic between multiple Versions",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		logArgs: true,
 	},
 	behaviour: {
 		useConfigRedirectIfAvailable: true,

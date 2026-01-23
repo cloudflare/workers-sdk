@@ -7,6 +7,7 @@ export const hyperdriveGetCommand = createCommand({
 		description: "Get a Hyperdrive config",
 		status: "stable",
 		owner: "Product: Hyperdrive",
+		logArgs: true,
 	},
 	args: {
 		id: {

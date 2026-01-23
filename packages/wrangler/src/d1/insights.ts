@@ -60,6 +60,7 @@ export const d1InsightsCommand = createCommand({
 		epilogue: "This command acts on remote D1 Databases.",
 		status: "experimental",
 		owner: "Product: D1",
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

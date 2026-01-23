@@ -21,6 +21,7 @@ export const pagesProjectListCommand = createCommand({
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
 		hideGlobalFlags: ["config", "env"],
+		logArgs: true,
 	},
 	behaviour: {
 		provideConfig: false,
@@ -88,6 +89,7 @@ export const pagesProjectCreateCommand = createCommand({
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
 		hideGlobalFlags: ["config", "env"],
+		logArgs: true,
 	},
 	behaviour: {
 		provideConfig: false,
@@ -212,6 +214,7 @@ export const pagesProjectDeleteCommand = createCommand({
 		status: "stable",
 		owner: "Workers: Authoring and Testing",
 		hideGlobalFlags: ["config", "env"],
+		logArgs: true,
 	},
 	behaviour: {
 		provideConfig: false,

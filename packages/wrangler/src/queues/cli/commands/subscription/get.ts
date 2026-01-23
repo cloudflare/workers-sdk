@@ -9,6 +9,7 @@ export const queuesSubscriptionGetCommand = createCommand({
 		description: "Get details about a specific event subscription",
 		owner: "Product: Queues",
 		status: "stable",
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

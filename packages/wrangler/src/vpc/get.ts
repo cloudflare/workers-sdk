@@ -8,6 +8,7 @@ export const vpcServiceGetCommand = createCommand({
 		description: "Get a VPC service",
 		status: "stable",
 		owner: "Product: WVPC",
+		logArgs: true,
 	},
 	args: {
 		"service-id": {

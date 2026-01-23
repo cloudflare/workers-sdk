@@ -16,6 +16,7 @@ export const d1TimeTravelInfoCommand = createCommand({
 			For more information about Time Travel, see https://developers.cloudflare.com/d1/reference/time-travel/`,
 		status: "stable",
 		owner: "Product: D1",
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

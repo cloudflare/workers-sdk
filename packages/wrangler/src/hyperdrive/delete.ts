@@ -7,6 +7,7 @@ export const hyperdriveDeleteCommand = createCommand({
 		description: "Delete a Hyperdrive config",
 		status: "stable",
 		owner: "Product: Hyperdrive",
+		logArgs: true,
 	},
 	args: {
 		id: {

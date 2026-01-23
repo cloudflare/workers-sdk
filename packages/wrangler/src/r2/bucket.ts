@@ -38,6 +38,7 @@ export const r2BucketCreateCommand = createCommand({
 		description: "Create a new R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+		logArgs: true,
 	},
 	positionalArgs: ["name"],
 	args: {
@@ -132,6 +133,7 @@ export const r2BucketUpdateStorageClassCommand = createCommand({
 		description: "Update the default storage class of an existing R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+		logArgs: true,
 	},
 	positionalArgs: ["name"],
 	args: {
@@ -182,6 +184,7 @@ export const r2BucketListCommand = createCommand({
 		description: "List R2 buckets",
 		status: "stable",
 		owner: "Product: R2",
+		logArgs: true,
 	},
 	args: {
 		jurisdiction: {
@@ -207,6 +210,7 @@ export const r2BucketInfoCommand = createCommand({
 		description: "Get information about an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+		logArgs: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {
@@ -274,6 +278,7 @@ export const r2BucketDeleteCommand = createCommand({
 		description: "Delete an R2 bucket",
 		status: "stable",
 		owner: "Product: R2",
+		logArgs: true,
 	},
 	positionalArgs: ["bucket"],
 	args: {

@@ -11,6 +11,7 @@ export const workflowsInstancesListCommand = createCommand({
 			"Instance related commands (list, describe, terminate, pause, resume)",
 		owner: "Product: Workflows",
 		status: "stable",
+		logArgs: true,
 	},
 
 	positionalArgs: ["name"],

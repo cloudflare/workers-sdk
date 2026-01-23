@@ -14,6 +14,7 @@ export const versionsListCommand = createCommand({
 		description: "List the 10 most recent Versions of your Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		logArgs: true,
 	},
 	behaviour: {
 		printBanner: (args) => !args.json,

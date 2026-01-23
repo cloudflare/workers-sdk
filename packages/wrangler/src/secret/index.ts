@@ -349,6 +349,7 @@ export const secretListCommand = createCommand({
 		description: "List all secrets for a Worker",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
+		logArgs: true,
 	},
 	args: {
 		name: {

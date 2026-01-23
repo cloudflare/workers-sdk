@@ -11,6 +11,7 @@ export const workflowsDescribeCommand = createCommand({
 		description: "Describe Workflow resource",
 		owner: "Product: Workflows",
 		status: "stable",
+		logArgs: true,
 	},
 	args: {
 		name: {

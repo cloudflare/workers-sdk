@@ -17,6 +17,7 @@ export const deploymentsListCommand = createCommand({
 		description: "Displays the 10 most recent deployments of your Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		logArgs: true,
 	},
 	args: {
 		name: {

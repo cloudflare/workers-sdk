@@ -1929,7 +1929,7 @@ export async function main(argv: string[]): Promise<void> {
 	}, /* applyBeforeValidation */ true);
 
 	const startTime = Date.now();
-	let command: string | undefined;
+	let safeCommand: string | undefined;
 	let configArgs: ReadConfigCommandArgs = {};
 	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
 
@@ -1937,7 +1937,7 @@ export async function main(argv: string[]): Promise<void> {
 	const wranglerWithTelemetry = wranglerWithMiddleware.middleware((args) => {
 		// Capture command and args for potential fallback telemetry
 		// (used when yargs validation errors occur before handler runs)
-		command = `wrangler ${args._.join(" ")}`;
+		safeCommand = args._.join(" ");
 		configArgs = args;
 
 		try {
@@ -1970,10 +1970,10 @@ export async function main(argv: string[]): Promise<void> {
 			// The error occurred before Command handler ran
 			// (e.g., yargs validation errors like unknown commands or invalid arguments).
 			// So we need to handle telemetry and error reporting here.
-			if (dispatcher && command) {
+			if (dispatcher && safeCommand) {
 				dispatchGenericCommandErrorEvent(
 					dispatcher,
-					command,
+					safeCommand,
 					configArgs,
 					startTime,
 					e
@@ -2021,7 +2021,7 @@ export async function main(argv: string[]): Promise<void> {
  */
 function dispatchGenericCommandErrorEvent(
 	dispatcher: ReturnType<typeof getMetricsDispatcher>,
-	command: string,
+	safeCommand: string,
 	configArgs: ReadConfigCommandArgs,
 	startTime: number,
 	error: unknown
@@ -2030,13 +2030,15 @@ function dispatchGenericCommandErrorEvent(
 
 	// Send "started" event since handler never got to send it.
 	dispatcher.sendCommandEvent("wrangler command started", {
-		command,
-		args: configArgs,
+		safeCommand,
+		safeArgs: {},
+		logArgs: false,
 	});
 
 	dispatcher.sendCommandEvent("wrangler command errored", {
-		command,
-		args: configArgs,
+		safeCommand,
+		safeArgs: {},
+		logArgs: false,
 		durationMs,
 		durationSeconds: durationMs / 1000,
 		durationMinutes: durationMs / 1000 / 60,
