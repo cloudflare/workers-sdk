@@ -151,7 +151,11 @@ if (process.platform === "win32") {
 		if (!skipWaitingForReady) {
 			let readyMatch: RegExpMatchArray | null = null;
 			for await (const line of stdoutInterface) {
-				if ((readyMatch = readyRegexp.exec(stripVTControlCharacters(line))) !== null) break;
+				if (
+					(readyMatch = readyRegexp.exec(stripVTControlCharacters(line))) !==
+					null
+				)
+					break;
 			}
 			assert(readyMatch !== null, "Expected ready message");
 			result.url = readyMatch[1];

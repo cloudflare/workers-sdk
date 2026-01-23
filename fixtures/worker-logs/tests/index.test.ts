@@ -1,5 +1,5 @@
-import { resolve } from "path";
 import { stripVTControlCharacters } from "node:util";
+import { resolve } from "path";
 import { describe, expect, onTestFinished, test, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 

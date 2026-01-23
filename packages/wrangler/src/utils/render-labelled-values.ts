@@ -1,5 +1,5 @@
-import { gray, white } from "@cloudflare/cli/colors";
 import { stripVTControlCharacters } from "node:util";
+import { gray, white } from "@cloudflare/cli/colors";
 
 type Options = {
 	/** Hook to format each label. This is a convenience option to avoid manually formatting each label. */
@@ -29,7 +29,9 @@ export default function formatLabelledValues(
 		spacerCount = 2,
 		indentationCount = 0,
 		valuesAlignmentColumn: valuesAlignment = Math.max(
-			...Object.keys(view).map((label) => stripVTControlCharacters(formatLabel(label)).length)
+			...Object.keys(view).map(
+				(label) => stripVTControlCharacters(formatLabel(label)).length
+			)
 		),
 		lineSeparator = "\n",
 		labelJustification = "left",

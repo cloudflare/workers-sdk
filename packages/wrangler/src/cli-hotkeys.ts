@@ -1,5 +1,5 @@
-import { dim } from "@cloudflare/cli/colors";
 import { stripVTControlCharacters } from "node:util";
+import { dim } from "@cloudflare/cli/colors";
 import { unwrapHook } from "./api/startDevWorker/utils";
 import { logger } from "./logger";
 import { onKeyPress } from "./utils/onKeyPress";

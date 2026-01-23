@@ -1,7 +1,7 @@
+import { stripVTControlCharacters } from "node:util";
 import { brandColor, dim, white } from "@cloudflare/cli/colors";
 import { friendlyBindingNames, UserError } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { stripVTControlCharacters } from "node:util";
 import { getFlag } from "../experimental-flags";
 import { logger } from "../logger";
 import type {
@@ -782,7 +782,9 @@ export function printBindings(
 
 // Exactly the same as String.padEnd, but doesn't miscount ANSI control characters
 function padEndAnsi(str: string, length: number) {
-	return str + " ".repeat(Math.max(0, length - stripVTControlCharacters(str).length));
+	return (
+		str + " ".repeat(Math.max(0, length - stripVTControlCharacters(str).length))
+	);
 }
 
 /**

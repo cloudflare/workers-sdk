@@ -1,12 +1,12 @@
 import { appendFile } from "node:fs/promises";
 import path from "node:path";
+import { stripVTControlCharacters } from "node:util";
 import {
 	getEnvironmentVariableFactory,
 	getGlobalWranglerConfigPath,
 } from "@cloudflare/workers-utils";
 import { Mutex } from "miniflare";
 import onExit from "signal-exit";
-import { stripVTControlCharacters } from "node:util";
 import { logger } from "../logger";
 import { ensureDirectoryExists } from "./filesystem";
 import type { LoggerLevel } from "../logger";
