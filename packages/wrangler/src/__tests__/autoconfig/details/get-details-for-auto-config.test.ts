@@ -14,6 +14,7 @@ vi.mock("../../../package-manager", () => ({
 		return {
 			type: "npm",
 			npx: "npx",
+			dlx: ["npx"],
 		};
 	},
 }));
@@ -53,7 +54,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		);
 
 		await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-			buildCommand: "astro build",
+			buildCommand: "npx astro build",
 			configured: false,
 			outputDir: "dist",
 			packageJson: {
