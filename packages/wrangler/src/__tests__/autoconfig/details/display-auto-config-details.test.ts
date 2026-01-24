@@ -43,7 +43,6 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 				configure: () =>
 					({
 						wranglerConfig: {},
-						buildCommand: undefined,
 					}) satisfies ReturnType<Framework["configure"]>,
 				autoConfigSupported: true,
 			},

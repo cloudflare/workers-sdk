@@ -108,7 +108,6 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 					configure: () =>
 						({
 							wranglerConfig: {},
-							buildCommand: undefined,
 						}) satisfies ReturnType<Framework["configure"]>,
 					name: "astro",
 					autoConfigSupported: true,

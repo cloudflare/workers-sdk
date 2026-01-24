@@ -163,7 +163,6 @@ describe("autoconfig (deploy)", () => {
 						wranglerConfig: {
 							assets: { directory: outputDir },
 						},
-						buildCommand: undefined,
 					}) satisfies ReturnType<Framework["configure"]>
 			);
 			await run.runAutoConfig(
