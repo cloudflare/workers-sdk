@@ -8,6 +8,7 @@ import {
 	promiseSpinner,
 } from "../cloudchamber/common";
 import { createCommand, createNamespace } from "../core/create-command";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { getAccountId } from "../user";
 import { containersScope } from ".";
@@ -37,6 +38,9 @@ export const containersImagesListCommand = createCommand({
 		status: "open beta",
 		owner: "Product: Cloudchamber",
 	},
+	behaviour: {
+		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
+	},
 	args: {
 		filter: {
 			type: "string",
@@ -59,6 +63,9 @@ export const containersImagesDeleteCommand = createCommand({
 		description: "Remove an image from the Cloudflare managed registry",
 		status: "open beta",
 		owner: "Product: Cloudchamber",
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
 	},
 	args: {
 		image: {
