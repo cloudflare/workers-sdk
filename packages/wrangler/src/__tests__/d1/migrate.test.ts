@@ -208,6 +208,164 @@ Your database may not be available to serve requests during the migration, conti
 			await runWrangler("d1 migrations apply db --remote");
 			expect(std.out).toBe("");
 		});
+
+		it("applies migrations from a migration directory containing .sql files", async () => {
+			setIsTTY(false);
+			const commands: string[] = [];
+
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/d1/database/:databaseId/query",
+					async (req) => {
+						const { body } = req.request;
+						if (body && typeof body === "object") {
+							commands.push(JSON.stringify(body));
+						} else {
+							commands.push(String(body));
+						}
+
+						return HttpResponse.json(
+							{
+								result: [
+									{
+										results: [],
+										success: true,
+										meta: {},
+									},
+								],
+								success: true,
+								errors: [],
+								messages: [],
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database/:databaseId", async () => {
+					return HttpResponse.json(
+						{
+							result: {
+								file_size: 123,
+								name: "testdb",
+								num_tables: 0,
+								uuid: "uuid",
+								version: "production",
+							},
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				})
+			);
+
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: "migrations",
+					},
+				],
+				account_id: "nx01",
+			});
+
+			mockGetMemberships([
+				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+				{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
+			]);
+
+			await runWrangler("d1 migrations create db test");
+
+			await runWrangler("d1 migrations apply db --remote");
+
+			expect(commands.some((c) => c.includes("CREATE TABLE users"))).toBe(true);
+			expect(commands.some((c) => c.includes("INSERT INTO users"))).toBe(true);
+			expect(commands.some((c) => c.includes("INSERT INTO migrations"))).toBe(
+				true
+			);
+		});
+
+		it("should not prompt when --force-non-interactive is passed", async () => {
+			setIsTTY(false);
+			const std = mockConsoleMethods();
+
+			msw.use(
+				http.post(
+					"*/accounts/:accountId/d1/database/:databaseId/query",
+					async () => {
+						return HttpResponse.json(
+							{
+								result: [
+									{
+										results: [],
+										success: true,
+										meta: {},
+									},
+								],
+								success: true,
+								errors: [],
+								messages: [],
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			msw.use(
+				http.get("*/accounts/:accountId/d1/database/:databaseId", async () => {
+					return HttpResponse.json(
+						{
+							result: {
+								file_size: 123,
+								name: "testdb",
+								num_tables: 0,
+								uuid: "uuid",
+								version: "production",
+							},
+							success: true,
+							errors: [],
+							messages: [],
+						},
+						{ status: 200 }
+					);
+				})
+			);
+
+			writeWranglerConfig({
+				d1_databases: [
+					{
+						binding: "DATABASE",
+						database_name: "db",
+						database_id: "xxxx",
+						migrations_dir: "migrations",
+					},
+				],
+				account_id: "nx01",
+			});
+
+			// Ensure account selection works in non-interactive mode
+			mockGetMemberships([
+				{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+				{ id: "R2-D2", account: { id: "nx01", name: "enterprise-nx" } },
+			]);
+
+			await runWrangler("d1 migrations create db test");
+
+			await runWrangler(
+				"d1 migrations apply db --remote --force-non-interactive"
+			);
+
+			expect(std.out).toContain(
+				"--force-non-interactive passed, applying 1 migration(s) without prompt"
+			);
+		});
 	});
 
 	describe("list", () => {
