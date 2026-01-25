@@ -481,7 +481,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 				expect(std.debug).toContain('"argsCombination":""');
-				expect(std.debug).toContain('"safeCommand":"login"');
+				expect(std.debug).toContain('"safeCommand":""');
 			});
 
 			it("should include args provided by the user", async () => {

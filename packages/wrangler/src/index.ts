@@ -318,7 +318,7 @@ import {
 	secretsStoreStoreDeleteCommand,
 	secretsStoreStoreListCommand,
 } from "./secrets-store/commands";
-import { addBreadcrumb, closeSentry, setupSentry } from "./sentry";
+import { closeSentry, setupSentry } from "./sentry";
 import { setupCommand } from "./setup";
 import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
@@ -1907,9 +1907,12 @@ export async function main(argv: string[]): Promise<void> {
 		return;
 	}
 
-	// Register Yargs middleware to record command as Sentry breadcrumb and set logger level
-	let recordedCommand = false;
-	const wranglerWithMiddleware = wrangler.middleware((args) => {
+	const startTime = Date.now();
+	let configArgs: ReadConfigCommandArgs = {};
+	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
+
+	// Register middleware to set logger level and capture fallback telemetry info
+	const wranglerWithTelemetry = wrangler.middleware((args) => {
 		// Update logger level, before we do any logging
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
@@ -1917,27 +1920,6 @@ export async function main(argv: string[]): Promise<void> {
 		// Also set the CLI package log level to match
 		setLogLevel(logger.loggerLevel);
 
-		// Middleware called for each sub-command, but only want to record once
-		if (recordedCommand) {
-			return;
-		}
-		recordedCommand = true;
-
-		// Record command as Sentry breadcrumb
-		const command = `wrangler ${args._.join(" ")}`;
-		addBreadcrumb(command);
-	}, /* applyBeforeValidation */ true);
-
-	const startTime = Date.now();
-	let safeCommand: string | undefined;
-	let configArgs: ReadConfigCommandArgs = {};
-	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
-
-	// Register middleware to capture command info for fallback telemetry
-	const wranglerWithTelemetry = wranglerWithMiddleware.middleware((args) => {
-		// Capture command and args for potential fallback telemetry
-		// (used when yargs validation errors occur before handler runs)
-		safeCommand = args._.join(" ");
 		configArgs = args;
 
 		try {
@@ -1970,14 +1952,8 @@ export async function main(argv: string[]): Promise<void> {
 			// The error occurred before Command handler ran
 			// (e.g., yargs validation errors like unknown commands or invalid arguments).
 			// So we need to handle telemetry and error reporting here.
-			if (dispatcher && safeCommand) {
-				dispatchGenericCommandErrorEvent(
-					dispatcher,
-					safeCommand,
-					configArgs,
-					startTime,
-					e
-				);
+			if (dispatcher) {
+				dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
 			}
 			await handleError(e, configArgs, argv);
 			throw e;
@@ -2018,11 +1994,12 @@ export async function main(argv: string[]): Promise<void> {
 /**
  * Dispatches generic metrics events to indicate that a wrangler command errored
  * when we don't know the CommandDefinition and cannot be sure what is safe to send.
+ *
+ * We cannot safely derive safeCommand from args._ since it may contain
+ * sensitive user-supplied positional arguments
  */
 function dispatchGenericCommandErrorEvent(
 	dispatcher: ReturnType<typeof getMetricsDispatcher>,
-	safeCommand: string,
-	configArgs: ReadConfigCommandArgs,
 	startTime: number,
 	error: unknown
 ) {
@@ -2030,13 +2007,13 @@ function dispatchGenericCommandErrorEvent(
 
 	// Send "started" event since handler never got to send it.
 	dispatcher.sendCommandEvent("wrangler command started", {
-		safeCommand,
+		safeCommand: "",
 		safeArgs: {},
 		logArgs: false,
 	});
 
 	dispatcher.sendCommandEvent("wrangler command errored", {
-		safeCommand,
+		safeCommand: "",
 		safeArgs: {},
 		logArgs: false,
 		durationMs,

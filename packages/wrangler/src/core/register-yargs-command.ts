@@ -14,6 +14,7 @@ import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
 import { writeOutput } from "../output";
+import { addBreadcrumb } from "../sentry";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
@@ -114,6 +115,9 @@ function createHandler(
 ) {
 	return async function handler(args: HandlerArgs<NamedArgDefinitions>) {
 		const startTime = Date.now();
+
+		// Record command as Sentry breadcrumb using the safe commandName from definition
+		addBreadcrumb(commandName);
 
 		try {
 			const shouldPrintBanner = def.behaviour?.printBanner;
