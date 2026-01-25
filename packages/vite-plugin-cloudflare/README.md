@@ -23,13 +23,15 @@ Full documentation can be found [here](https://developers.cloudflare.com/workers
 - Uses the Vite [Environment API](https://vite.dev/guide/api-environment) to integrate Vite with the Workers runtime
 - Provides direct access to [Workers runtime APIs](https://developers.cloudflare.com/workers/runtime-apis/) and [bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/)
 - Builds your front-end assets for deployment to Cloudflare, enabling you to build static sites, SPAs, and full-stack applications
-- Official support for [React Router v7](https://reactrouter.com/) with server-side rendering
+- Official support for [TanStack Start](https://tanstack.com/start/) and [React Router v7](https://reactrouter.com/) with server-side rendering
 - Leverages Vite's hot module replacement for consistently fast updates
 - Supports `vite preview` for previewing your build output in the Workers runtime prior to deployment
 
 ## Use cases
 
-- React Router v7 (support for more full-stack frameworks is coming soon)
+- [TanStack Start](https://tanstack.com/start/) 
+- [React Router v7](https://reactrouter.com/)
+- Support for more full-stack frameworks is coming soon
 - Static sites, such as single-page applications, with or without an integrated backend API
 - Standalone Workers
 - Multi-Worker applications
