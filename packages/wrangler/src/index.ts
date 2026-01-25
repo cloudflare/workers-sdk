@@ -91,7 +91,7 @@ import {
 	kvNamespaceRenameCommand,
 } from "./kv";
 import { logger, LOGGER_LEVELS } from "./logger";
-import { getMetricsDispatcher, waitForAllMetricsDispatches } from "./metrics";
+import { allMetricsDispatchesCompleted, getMetricsDispatcher } from "./metrics";
 import {
 	metricsAlias,
 	telemetryDisableCommand,
@@ -1853,7 +1853,7 @@ export async function main(argv: string[]): Promise<void> {
 
 			// Wait for any pending telemetry requests to complete (with timeout)
 			await Promise.race([
-				waitForAllMetricsDispatches(),
+				allMetricsDispatchesCompleted(),
 				setTimeout(1000, undefined, { ref: false }),
 			]);
 		} catch (e) {

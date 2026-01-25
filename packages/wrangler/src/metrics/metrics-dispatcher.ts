@@ -35,10 +35,11 @@ const SPARROW_URL = "https://sparrow.cloudflare.com";
 const pendingRequests = new Set<Promise<void>>();
 
 /**
- * Wait for all pending metrics requests to complete.
- * This should be called before the process exits to ensure all metrics are sent.
+ * Returns a promise that resolves when all pending metrics requests have completed.
+ *
+ * This should be called before the process exits to ensure we don't drop any metrics.
  */
-export function waitForAllMetricsDispatches(): Promise<void> {
+export function allMetricsDispatchesCompleted(): Promise<void> {
 	return Promise.allSettled(pendingRequests).then(() => {});
 }
 

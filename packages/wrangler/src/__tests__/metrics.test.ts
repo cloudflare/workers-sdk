@@ -19,8 +19,8 @@ import {
 	writeMetricsConfig,
 } from "../metrics/metrics-config";
 import {
+	allMetricsDispatchesCompleted,
 	getMetricsDispatcher,
-	waitForAllMetricsDispatches,
 } from "../metrics/metrics-dispatcher";
 import { sniffUserAgent } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -83,7 +83,7 @@ describe("metrics", () => {
 		});
 
 		afterEach(async () => {
-			await waitForAllMetricsDispatches();
+			await allMetricsDispatchesCompleted();
 			vi.useRealTimers();
 		});
 
@@ -105,7 +105,7 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1, b: 2 });
-				await waitForAllMetricsDispatches();
+				await allMetricsDispatchesCompleted();
 				expect(requests.count).toBe(1);
 				expect(std.debug).toMatchInlineSnapshot(
 					`"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"os\\":\\"foo:bar\\",\\"agent\\":null,\\"a\\":1,\\"b\\":2}}"`
@@ -122,7 +122,7 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("version-test");
-				await waitForAllMetricsDispatches();
+				await allMetricsDispatchesCompleted();
 				expect(requests.count).toBe(1);
 				expect(std.debug).toContain('"wranglerVersion":"1.2.3"');
 				expect(std.debug).toContain('"wranglerMajorVersion":1');
@@ -156,7 +156,7 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1, b: 2 });
-				await waitForAllMetricsDispatches();
+				await allMetricsDispatchesCompleted();
 
 				expect(std.debug).toMatchInlineSnapshot(`
 					"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"os\\":\\"foo:bar\\",\\"agent\\":null,\\"a\\":1,\\"b\\":2}}
@@ -198,7 +198,7 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1 });
-				await waitForAllMetricsDispatches();
+				await allMetricsDispatchesCompleted();
 
 				expect(requests.count).toBe(1);
 				expect(std.debug).toContain('"agent":"claude-code"');
@@ -214,7 +214,7 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1 });
-				await waitForAllMetricsDispatches();
+				await allMetricsDispatchesCompleted();
 
 				expect(requests.count).toBe(1);
 				expect(std.debug).toContain('"agent":null');
