@@ -7,6 +7,8 @@ import {
 	isAllowedSourcePath,
 } from "../api/startDevWorker/bundle-allowed-paths";
 import { logger } from "../logger";
+import { getWranglerVersion } from "../metrics/helpers";
+import { readMetricsConfig } from "../metrics/metrics-config";
 import { getSourceMappedString } from "../sourcemap";
 import type { EsbuildBundle } from "../dev/use-esbuild";
 import type Protocol from "devtools-protocol";
@@ -245,12 +247,16 @@ export function maybeHandleNetworkLoadResource(
 }
 
 /**
- * Opens the chrome debugger
+ * Returns the DevTools URL.
+ *
+ *  The returned URL contains all necessary query parameters including telemetry context.
+ *
+ * Exported for testing purposes.
  */
-export const openInspector = async (
+export function buildInspectorUrl(
 	inspectorPort: number,
 	worker: string | undefined
-) => {
+): string {
 	const query = new URLSearchParams();
 	query.set("theme", "systemPreferred");
 	query.set("ws", `127.0.0.1:${inspectorPort}/ws`);
@@ -258,7 +264,32 @@ export const openInspector = async (
 		query.set("domain", worker);
 	}
 	query.set("debugger", "true");
-	const url = `https://devtools.devprod.cloudflare.dev/js_app?${query.toString()}`;
+
+	// Add telemetry context for DevTools analytics
+	const metricsConfig = readMetricsConfig();
+	const telemetryEnabled = metricsConfig.permission?.enabled ?? false;
+	query.set("telemetry", String(telemetryEnabled));
+	if (telemetryEnabled && metricsConfig.deviceId) {
+		query.set("deviceId", metricsConfig.deviceId);
+		// Pass the Sparrow source key so DevTools can send analytics
+		const sourceKey = process.env.SPARROW_SOURCE_KEY ?? "";
+		if (sourceKey) {
+			query.set("sourceKey", sourceKey);
+		}
+	}
+	query.set("wranglerVersion", getWranglerVersion());
+
+	return `https://devtools.devprod.cloudflare.dev/js_app?${query.toString()}`;
+}
+
+/**
+ * Opens the chrome debugger
+ */
+export const openInspector = async (
+	inspectorPort: number,
+	worker: string | undefined
+) => {
+	const url = buildInspectorUrl(inspectorPort, worker);
 	const errorMessage =
 		"Failed to open inspector.\nInspector depends on having a Chromium-based browser installed, maybe you need to install one?";
 
