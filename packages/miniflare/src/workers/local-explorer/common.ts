@@ -14,8 +14,6 @@ import type { Context } from "hono";
  * Query validator with string-to-type coercion.
  * Query params arrive as strings from URLs, so we coerce them before validation.
  * @returns validated query params according to openapi schema
- *
- * If the whole query param is optional, you need to unwrap it before passing to this function.
  */
 export function validateQuery<T extends z.ZodTypeAny>(schema: T) {
 	return validator("query", async (value, c) => {
@@ -37,7 +35,8 @@ export function validateQuery<T extends z.ZodTypeAny>(schema: T) {
 }
 
 /**
- * validates request body according to openapi schema
+ *
+ * @returns validated request body according to openapi schema
  */
 export function validateRequestBody<T extends z.ZodTypeAny>(schema: T) {
 	return validator("json", async (value, c) => {
@@ -54,10 +53,8 @@ export function validateRequestBody<T extends z.ZodTypeAny>(schema: T) {
  * Query params arrive as strings but schemas may expect numbers, booleans, or arrays.
  * Throw a validation error if coercion is not possible.
  *
- * We handle this manually rather than using Zod's built-in coercion because:
- * 1. Booleans: Zod's coercion turns "false" into true (any non-empty string is truthy)
- * 2. Numbers: Generated schemas use z.number() not z.coerce.number(), so we must coercem
- * 3. Arrays/Objects: We need to recursively coerce nested values
+ * We have to do this manually because zod's built-in coercion for booleans
+ * will turn the string 'false' into true, which is not what we want.
  */
 export function coerceValue(
 	schema: z.ZodTypeAny,
@@ -79,7 +76,7 @@ export function coerceValue(
 					expected: "number",
 					received: "string",
 					path,
-					message: `Expected query param to be number but received "${value}"`,
+					message: `Cannot coerce "${value}" to number`,
 				},
 			]);
 		}
@@ -95,7 +92,7 @@ export function coerceValue(
 				expected: "boolean",
 				received: "string",
 				path,
-				message: `Expected query param to be 'true' or 'false' but received "${value}"`,
+				message: `Cannot coerce "${value}" to boolean, expected "true" or "false"`,
 			},
 		]);
 	}

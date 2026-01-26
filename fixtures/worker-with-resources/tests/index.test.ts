@@ -24,29 +24,8 @@ describe("local explorer", () => {
 			const response = await fetch(
 				`http://${ip}:${port}/cdn-cgi/explorer/api/storage/kv/namespaces`
 			);
-			expect(response.headers.get("Content-Type")).toBe("application/json");
-			const json = await response.json();
-			expect(json).toMatchObject({
-				errors: [],
-				messages: [],
-				result: [
-					{
-						id: "KV",
-						title: "KV",
-					},
-					{
-						id: "some-kv-id",
-						title: "KV_WITH_ID",
-					},
-				],
-				result_info: {
-					count: 2,
-					page: 1,
-					per_page: 20,
-					total_count: 2,
-				},
-				success: true,
-			});
+			const text = await response.text();
+			expect(text).toMatchInlineSnapshot(`"{"success":true,"errors":[],"messages":[],"result":[{"id":"KV","title":"KV"},{"id":"some-kv-id","title":"KV_WITH_ID"}],"result_info":{"count":2,"page":1,"per_page":20,"total_count":2}}"`);
 		});
 
 		it("returns worker response for normal requests", async () => {

@@ -2058,7 +2058,7 @@ importers:
         specifier: ^4.1.0
         version: 4.1.1
       jsonc-parser:
-        specifier: catalog:default
+        specifier: ^3.2.0
         version: 3.2.0
       kleur:
         specifier: ^4.1.5

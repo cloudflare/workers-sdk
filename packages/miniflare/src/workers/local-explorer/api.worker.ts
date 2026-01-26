@@ -2,7 +2,7 @@
 // Provides a REST API for viewing and manipulating user resources
 
 import { Hono } from "hono/tiny";
-import { errorResponse, validateQuery, validateRequestBody } from "./common";
+import { validateQuery, validateRequestBody } from "./common";
 import {
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
@@ -31,21 +31,13 @@ const BASE_PATH = "/cdn-cgi/explorer/api";
 
 const app = new Hono<AppBindings>().basePath(BASE_PATH);
 
-// Global error handler - catches all uncaught errors and wraps them in an error response
-app.onError((err) => {
-	return errorResponse(500, 10000, err.message);
-});
-
 // ============================================================================
 // KV Endpoints
 // ============================================================================
 
 app.get(
 	"/storage/kv/namespaces",
-	// The query params are optional, so the whole schema is wrapped in an optional,
-	// but hono's validator will always receive an object.
-	// This just unwraps it so we can validate the inner schema.
-	// The inner schema has all the individual params as optional
+	// we are unwrapping (ie removing optional) because h
 	validateQuery(zWorkersKvNamespaceListNamespacesData.shape.query.unwrap()),
 	(c) => listKVNamespaces(c, c.req.valid("query"))
 );
