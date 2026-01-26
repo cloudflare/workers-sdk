@@ -3,6 +3,7 @@ import { getDetailsForAutoConfig } from "./autoconfig/details";
 import { runAutoConfig } from "./autoconfig/run";
 import { createCommand } from "./core/create-command";
 import { logger } from "./logger";
+import { writeOutput } from "./output";
 import { getPackageManager } from "./package-manager";
 
 export const setupCommand = createCommand({
@@ -57,11 +58,17 @@ export const setupCommand = createCommand({
 
 		// Only run auto config if the project is not already configured
 		if (!details.configured) {
-			await runAutoConfig(details, {
+			const autoConfigSummary = await runAutoConfig(details, {
 				runBuild: args.build,
 				skipConfirmations: args.yes,
 				dryRun: args.dryRun,
 				enableWranglerInstallation: args.installWrangler,
+			});
+			writeOutput({
+				type: "autoconfig",
+				version: 1,
+				command: "setup",
+				summary: autoConfigSummary,
 			});
 			if (!args.dryRun) {
 				logCompletionMessage(
