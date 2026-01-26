@@ -45,19 +45,19 @@ export function getAllowedArgs(
 	command: string
 ): AllowedArgs {
 	// Start with the global "*" allow list as a base
-	let allowedArgs: AllowedArgs = { ...commandArgAllowList["*"] };
+	let allowedArgs: AllowedArgs = {};
 	const commandParts = command.split(" ");
 	while (commandParts.length > 0) {
 		const subCommand = commandParts.join(" ");
-		// Merge so that more specific command entries override less specific ones
-		allowedArgs = { ...allowedArgs, ...commandArgAllowList[subCommand] };
+		// Merge so that more specific command entries (already in allowedArgs) override less specific ones
+		allowedArgs = { ...commandArgAllowList[subCommand], ...allowedArgs };
 		commandParts.pop();
 		if (commandParts.length > 0) {
 			const wildcardCommand = commandParts.join(" ") + " *";
-			allowedArgs = { ...allowedArgs, ...commandArgAllowList[wildcardCommand] };
+			allowedArgs = { ...commandArgAllowList[wildcardCommand], ...allowedArgs };
 		}
 	}
-	return allowedArgs;
+	return { ...(commandArgAllowList["*"] ?? {}), ...allowedArgs };
 }
 
 /**
