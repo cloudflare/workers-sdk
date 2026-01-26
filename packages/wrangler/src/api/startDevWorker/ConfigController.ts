@@ -43,11 +43,7 @@ import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
 import { getZoneIdForPreview } from "../../zones";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
-import {
-	convertCfWorkerInitBindingsToBindings,
-	extractBindingsOfType,
-	unwrapHook,
-} from "./utils";
+import { extractBindingsOfType, unwrapHook } from "./utils";
 import type { DevRegistryUpdateEvent } from "./events";
 import type {
 	StartDevWorkerInput,
@@ -190,27 +186,7 @@ async function resolveBindings(
 		input.env,
 		input.envFiles,
 		!input.dev?.remote,
-		{
-			kv: extractBindingsOfType("kv_namespace", input.bindings),
-			vars: Object.fromEntries(
-				extractBindingsOfType("plain_text", input.bindings).map((b) => [
-					b.binding,
-					b.value,
-				])
-			),
-			durableObjects: extractBindingsOfType(
-				"durable_object_namespace",
-				input.bindings
-			),
-			r2: extractBindingsOfType("r2_bucket", input.bindings),
-			services: extractBindingsOfType("service", input.bindings),
-			d1Databases: extractBindingsOfType("d1", input.bindings),
-			ai: extractBindingsOfType("ai", input.bindings)?.[0],
-			version_metadata: extractBindingsOfType(
-				"version_metadata",
-				input.bindings
-			)?.[0],
-		}
+		input.bindings
 	);
 
 	// Create a print function that captures the current bindings context
@@ -218,10 +194,7 @@ async function resolveBindings(
 		const maskedVars = maskVars(bindings, config);
 
 		printBindings(
-			{
-				...bindings,
-				vars: maskedVars,
-			},
+			maskedVars,
 			input.tailConsumers ?? config.tail_consumers,
 			input.streamingTailConsumers ?? config.streaming_tail_consumers,
 			config.containers,
@@ -242,9 +215,13 @@ async function resolveBindings(
 	return {
 		bindings: {
 			...input.bindings,
-			...convertCfWorkerInitBindingsToBindings(bindings),
+			...bindings,
 		},
-		unsafe: bindings.unsafe,
+		unsafe: {
+			bindings: config.unsafe.bindings,
+			metadata: config.unsafe.metadata,
+			capnp: config.unsafe.capnp,
+		},
 		printCurrentBindings,
 	};
 }

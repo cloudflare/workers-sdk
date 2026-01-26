@@ -18,7 +18,7 @@ import { getWranglerTmpDir } from "../../paths";
 import { debounce } from "../../utils/debounce";
 import { Controller } from "./BaseController";
 import { castErrorCause } from "./events";
-import { convertBindingsToCfWorkerInitBindings } from "./utils";
+import { extractBindingsOfType } from "./utils";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Entry } from "../../deployment-bundle/entry";
 import type { EsbuildBundle } from "../../dev/use-esbuild";
@@ -90,9 +90,16 @@ export class BundlerController extends Controller {
 				rules: config.build.moduleRules,
 			});
 
-			const bindings = (
-				await convertBindingsToCfWorkerInitBindings(config.bindings)
-			).bindings;
+			const expectedExports = [
+				...extractBindingsOfType(
+					"durable_object_namespace",
+					config.bindings
+				).filter((ns) => !ns.script_name),
+				...extractBindingsOfType("workflow", config.bindings).filter(
+					(ns) => !ns.script_name
+				),
+			];
+
 			const bundleResult: Omit<BundleResult, "stop"> = !config.build?.bundle
 				? await noBundleWorker(
 						entry,
@@ -104,8 +111,7 @@ export class BundlerController extends Controller {
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						workflowBindings: bindings?.workflows ?? [],
-						doBindings: bindings?.durable_objects?.bindings ?? [],
+						expectedExports,
 						jsxFactory: config.build.jsxFactory,
 						jsxFragment: config.build.jsxFactory,
 						tsconfig: config.build.tsconfig,
@@ -231,9 +237,17 @@ export class BundlerController extends Controller {
 			exports: config.build.exports,
 			name: config.name,
 		};
-		const { bindings } = await convertBindingsToCfWorkerInitBindings(
-			config.bindings
-		);
+
+		const expectedExports = [
+			...extractBindingsOfType(
+				"durable_object_namespace",
+				config.bindings
+			).filter((ns) => !ns.script_name),
+			...extractBindingsOfType("workflow", config.bindings).filter(
+				(ns) => !ns.script_name
+			),
+		];
+
 		this.#bundlerCleanup = runBuild(
 			{
 				entry,
@@ -253,8 +267,7 @@ export class BundlerController extends Controller {
 				alias: config.build.alias,
 				noBundle: !config.build?.bundle,
 				findAdditionalModules: config.build?.findAdditionalModules,
-				durableObjects: bindings?.durable_objects ?? { bindings: [] },
-				workflows: bindings?.workflows ?? [],
+				expectedExports,
 				local: !config.dev?.remote,
 				// startDevWorker only applies to "dev"
 				targetConsumer: "dev",

@@ -4112,18 +4112,19 @@ addEventListener('fetch', event => {});`
 			await runWrangler("deploy");
 
 			expect(std.info).toMatchInlineSnapshot(`
-			"Attaching additional modules:
-			Fetching list of already uploaded assets...
-			Building list of assets to upload...
-			 + file-1.2ca234f380.text (uploading new version of file-1.text)
-			 + file-2.5938485188.text (uploading new version of file-2.text)
-			Uploading 2 new assets...
-			Uploaded 100% [2 out of 2]"
-		`);
+				"Fetching list of already uploaded assets...
+				Building list of assets to upload...
+				 + file-1.2ca234f380.text (uploading new version of file-1.text)
+				 + file-2.5938485188.text (uploading new version of file-2.text)
+				Uploading 2 new assets...
+				Uploaded 100% [2 out of 2]
+				Attaching additional modules:"
+			`);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
+				↗️  Done syncing assets
 				┌─┬─┬─┐
 				│ Name │ Type │ Size │
 				├─┼─┼─┤
@@ -4137,7 +4138,6 @@ addEventListener('fetch', event => {});`
 				├─┼─┼─┤
 				│ Total (4 modules) │ │ xx KiB │
 				└─┴─┴─┘
-				↗️  Done syncing assets
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
 				Uploaded test-name (TIMINGS)
@@ -10528,7 +10528,7 @@ addEventListener('fetch', event => {});`
 					Your Worker has access to the following bindings:
 					Binding                                            Resource
 					env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
-					env.DB (UUID-1-2-3-4)                              D1 Database
+					env.DB (test-d1-db)                                D1 Database
 
 					--dry-run: exiting now."
 				`);
@@ -10589,7 +10589,7 @@ addEventListener('fetch', event => {});`
 					Your Worker has access to the following bindings:
 					Binding                                            Resource
 					env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
-					env.DB (UUID-1-2-3-4)                              D1 Database
+					env.DB (test-d1-db)                                D1 Database
 
 					--dry-run: exiting now."
 				`);
@@ -15533,8 +15533,8 @@ export default{
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
 				Binding                                 Resource
-				env.ASSETS                              Assets
 				env.MY_VAR (\\"this is a toml file\\")      Environment Variable
+				env.ASSETS                              Assets
 
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)

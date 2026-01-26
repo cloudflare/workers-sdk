@@ -58,8 +58,7 @@ export function buildPluginFromFunctions({
 		compatibilityFlags: undefined,
 		define: {},
 		alias: {},
-		doBindings: [], // Pages functions don't support internal Durable Objects
-		workflowBindings: [], // Pages functions don't support internal Workflows
+		expectedExports: [],
 		external,
 		plugins: [
 			buildNotifierPlugin(onEnd),

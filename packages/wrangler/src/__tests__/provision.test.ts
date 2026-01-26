@@ -863,8 +863,8 @@ describe("resource provisioning", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
-				Binding        Resource
-				env.D1         D1 Database
+				Binding                         Resource
+				env.D1 (prefilled-d1-name)      D1 Database
 
 
 				Provisioning D1 (D1 Database)...
@@ -992,8 +992,8 @@ describe("resource provisioning", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
-				Binding        Resource
-				env.D1         D1 Database
+				Binding                   Resource
+				env.D1 (new-d1-name)      D1 Database
 
 
 				Provisioning D1 (D1 Database)...
@@ -1071,8 +1071,8 @@ describe("resource provisioning", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
-				Binding            Resource
-				env.BUCKET         R2 Bucket
+				Binding                                  Resource
+				env.BUCKET (prefilled-r2-name (eu))      R2 Bucket
 
 
 				Provisioning BUCKET (R2 Bucket)...
@@ -1267,8 +1267,8 @@ describe("resource provisioning", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
-				Binding            Resource
-				env.BUCKET         R2 Bucket
+				Binding                                     Resource
+				env.BUCKET (existing-bucket-name (eu))      R2 Bucket
 
 
 				Provisioning BUCKET (R2 Bucket)...
