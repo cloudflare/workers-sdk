@@ -44,8 +44,7 @@ export type WorkersKvBulkGetResult = {
 			| boolean
 			| {
 					[key: string]: unknown;
-			  }
-			| null;
+			  };
 	};
 };
 
