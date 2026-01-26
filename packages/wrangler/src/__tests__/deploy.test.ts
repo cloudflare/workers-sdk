@@ -15880,10 +15880,9 @@ export default{
 			.filter(Boolean)
 			.map((line) => JSON.parse(line)) as OutputEntry[];
 
-		const deployOutputEntry = outputEntries.find(
-			(obj) => obj.type === "deploy"
+		expect(outputEntries).toContainEqual(
+			expect.objectContaining({ type: "deploy" })
 		);
-		expect(deployOutputEntry).toBeTruthy();
 
 		const autoconfigOutputEntry = outputEntries.find(
 			(obj) => obj.type === "autoconfig"
