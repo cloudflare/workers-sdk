@@ -10,8 +10,4 @@ export const EXTERNAL_DEPENDENCIES = [
 
 	// Native binary - cannot be bundled, used to bundle test files at runtime
 	"esbuild",
-
-	// Large validation library; commonly shared as a dependency
-	// to avoid version conflicts and bundle size duplication
-	"zod",
 ];

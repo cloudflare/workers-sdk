@@ -1,5 +1,5 @@
+import { stripVTControlCharacters } from "node:util";
 import { gray, white } from "@cloudflare/cli/colors";
-import stripAnsi from "strip-ansi";
 
 type Options = {
 	/** Hook to format each label. This is a convenience option to avoid manually formatting each label. */
@@ -29,14 +29,16 @@ export default function formatLabelledValues(
 		spacerCount = 2,
 		indentationCount = 0,
 		valuesAlignmentColumn: valuesAlignment = Math.max(
-			...Object.keys(view).map((label) => stripAnsi(formatLabel(label)).length)
+			...Object.keys(view).map(
+				(label) => stripVTControlCharacters(formatLabel(label)).length
+			)
 		),
 		lineSeparator = "\n",
 		labelJustification = "left",
 	}: Options = {}
 ): string {
 	const labelLengthsWithoutANSI = Object.keys(view).map(
-		(label) => stripAnsi(formatLabel(label)).length
+		(label) => stripVTControlCharacters(formatLabel(label)).length
 	);
 
 	const formattedLines = Object.entries(view).map(([label, value], i) => {
