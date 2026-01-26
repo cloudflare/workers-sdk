@@ -1,9 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
-import { afterEach, assert, describe, expect, test, vi } from "vitest";
+import { assert, describe, expect, test, vi } from "vitest";
 import * as c3 from "../autoconfig/c3-vendor/packages";
 import * as run from "../autoconfig/run";
-import { clearOutputFilePath } from "../output";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
@@ -21,10 +20,6 @@ vi.mock("../package-manager", () => ({
 describe("wrangler setup", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
-
-	afterEach(() => {
-		clearOutputFilePath();
-	});
 
 	test("--help", async () => {
 		await runWrangler("setup --help");
