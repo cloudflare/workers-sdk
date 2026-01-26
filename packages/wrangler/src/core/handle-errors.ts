@@ -269,7 +269,6 @@ export function getErrorType(e: unknown): string | undefined {
 	if (isBuildFailure(e) || isBuildFailureFromCause(e)) {
 		return "BuildFailure";
 	}
-	// Fallback to constructor name
 	return e instanceof Error ? e.constructor.name : undefined;
 }
 
@@ -591,7 +590,7 @@ export async function handleError(
 /**
  * Is this a Containers/Cloudchamber-based auth error?
  *
- * This is different because it uses a custom OpenAPI-based generated client
+ * Containers uses custom OpenAPI-based generated client that throws an error that has a different structure to standard cfetch auth errors.
  */
 function isContainersAuthenticationError(e: unknown): e is UserError {
 	return (

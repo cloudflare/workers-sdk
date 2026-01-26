@@ -37,7 +37,7 @@ const pendingRequests = new Set<Promise<void>>();
 /**
  * Returns a promise that resolves when all pending metrics requests have completed.
  *
- * This should be called before the process exits to ensure we don't drop any metrics.
+ * The returned promise should be awaited before the process exits to ensure we don't drop any metrics.
  */
 export function allMetricsDispatchesCompleted(): Promise<void> {
 	return Promise.allSettled(pendingRequests).then(() => {});
