@@ -107,7 +107,7 @@ export async function infoCommand(
 		);
 	}
 	if (isNonInteractiveOrCI()) {
-		const application = ApplicationsService.getApplication(infoArgs.ID);
+		const application = await ApplicationsService.getApplication(infoArgs.ID);
 		logger.json(application);
 		return;
 	}
