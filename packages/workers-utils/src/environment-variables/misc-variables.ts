@@ -341,7 +341,8 @@ export const getOpenNextDeployFromEnv = getEnvironmentVariableFactory({
  * `X_LOCAL_EXPLORER` enables the local explorer UI at /cdn-cgi/explorer.
  * This is an experimental feature flag. Defaults to false when not set.
  */
-export const getLocalExplorerFromEnv = getBooleanEnvironmentVariableFactory({
-	variableName: "X_LOCAL_EXPLORER",
-	defaultValue: false,
-});
+export const getLocalExplorerEnabledFromEnv =
+	getBooleanEnvironmentVariableFactory({
+		variableName: "X_LOCAL_EXPLORER",
+		defaultValue: false,
+	});
