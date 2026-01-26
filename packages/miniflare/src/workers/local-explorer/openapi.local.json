@@ -43,7 +43,10 @@
 						"name": "order",
 						"schema": {
 							"description": "Field to order results by.",
-							"enum": ["id", "title"],
+							"enum": [
+								"id",
+								"title"
+							],
 							"example": "id",
 							"type": "string"
 						}
@@ -53,7 +56,10 @@
 						"name": "direction",
 						"schema": {
 							"description": "Direction to order namespaces.",
-							"enum": ["asc", "desc"],
+							"enum": [
+								"asc",
+								"desc"
+							],
 							"example": "asc",
 							"type": "string"
 						}
@@ -97,7 +103,9 @@
 					}
 				},
 				"summary": "List Namespaces",
-				"tags": ["Workers KV Namespace"]
+				"tags": [
+					"Workers KV Namespace"
+				]
 			}
 		},
 		"/storage/kv/namespaces/{namespace_id}/keys": {
@@ -152,7 +160,17 @@
 													"type": "array"
 												},
 												"result_info": {
-													"$ref": "#/components/schemas/workers-kv_cursor_result_info"
+													"properties": {
+														"count": {
+															"description": "Total results returned based on your list parameters.",
+															"example": 1,
+															"type": "number"
+														},
+														"cursor": {
+															"$ref": "#/components/schemas/workers-kv_cursor"
+														}
+													},
+													"type": "object"
 												}
 											},
 											"type": "object"
@@ -175,7 +193,9 @@
 					}
 				},
 				"summary": "List a Namespace's Keys",
-				"tags": ["Workers KV Namespace"]
+				"tags": [
+					"Workers KV Namespace"
+				]
 			}
 		},
 		"/storage/kv/namespaces/{namespace_id}/values/{key_name}": {
@@ -223,7 +243,9 @@
 					}
 				},
 				"summary": "Read key-value pair",
-				"tags": ["Workers KV Namespace"]
+				"tags": [
+					"Workers KV Namespace"
+				]
 			},
 			"put": {
 				"description": "Write a value identified by a key. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name. Body should be the value to be stored. If JSON metadata to be associated with the key/value pair is needed, use `multipart/form-data` content type for your PUT request (see dropdown below in `REQUEST BODY SCHEMA`). Existing values, expirations, and metadata will be overwritten. If neither `expiration` nor `expiration_ttl` is specified, the key-value pair will never expire. If both are set, `expiration_ttl` is used and `expiration` is ignored.",
@@ -268,7 +290,9 @@
 										"$ref": "#/components/schemas/workers-kv_value"
 									}
 								},
-								"required": ["value"],
+								"required": [
+									"value"
+								],
 								"type": "object"
 							}
 						}
@@ -298,7 +322,9 @@
 					}
 				},
 				"summary": "Write key-value pair with optional metadata",
-				"tags": ["Workers KV Namespace"]
+				"tags": [
+					"Workers KV Namespace"
+				]
 			},
 			"delete": {
 				"description": "Remove a KV pair from the namespace. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name.",
@@ -350,7 +376,9 @@
 					}
 				},
 				"summary": "Delete key-value pair",
-				"tags": ["Workers KV Namespace"]
+				"tags": [
+					"Workers KV Namespace"
+				]
 			}
 		},
 		"/storage/kv/namespaces/{namespace_id}/bulk/get": {
@@ -381,7 +409,9 @@
 										"type": "array"
 									}
 								},
-								"required": ["keys"],
+								"required": [
+									"keys"
+								],
 								"type": "object"
 							}
 						}
@@ -430,231 +460,14 @@
 					}
 				},
 				"summary": "Get multiple key-value pairs",
-				"tags": ["Workers KV Namespace"]
-			}
-		},
-		"/d1/database": {
-			"get": {
-				"description": "Returns a list of D1 databases.",
-				"operationId": "cloudflare-d1-list-databases",
-				"parameters": [
-					{
-						"in": "query",
-						"name": "name",
-						"schema": {
-							"description": "a database name to search for.",
-							"type": "string"
-						}
-					},
-					{
-						"in": "query",
-						"name": "page",
-						"schema": {
-							"default": 1,
-							"description": "Page number of paginated results.",
-							"minimum": 1,
-							"type": "number"
-						}
-					},
-					{
-						"in": "query",
-						"name": "per_page",
-						"schema": {
-							"default": 1000,
-							"description": "Number of items per page.",
-							"maximum": 10000,
-							"minimum": 10,
-							"type": "number"
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/d1_api-response-common"
-										},
-										{
-											"properties": {
-												"result": {
-													"items": {
-														"$ref": "#/components/schemas/d1_database-response"
-													},
-													"type": "array"
-												},
-												"result_info": {
-													"properties": {
-														"count": {
-															"description": "Total number of results for the requested service",
-															"example": 1,
-															"type": "number"
-														},
-														"page": {
-															"description": "Current page within paginated list of results",
-															"example": 1,
-															"type": "number"
-														},
-														"per_page": {
-															"description": "Number of results per page of results",
-															"example": 20,
-															"type": "number"
-														},
-														"total_count": {
-															"description": "Total results available without any search parameters",
-															"example": 2000,
-															"type": "number"
-														}
-													},
-													"type": "object"
-												}
-											}
-										}
-									]
-								}
-							}
-						},
-						"description": "List D1 databases response"
-					},
-					"4XX": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/d1_api-response-common-failure"
-								}
-							}
-						},
-						"description": "List D1 databases response failure"
-					}
-				},
-				"summary": "List D1 Databases",
-				"tags": ["D1"]
+				"tags": [
+					"Workers KV Namespace"
+				]
 			}
 		}
 	},
 	"components": {
 		"schemas": {
-			"d1_api-response-common-failure": {
-				"properties": {
-					"errors": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/d1_messages"
-							}
-						],
-						"example": [
-							{
-								"code": 7003,
-								"message": "No route for the URI"
-							}
-						],
-						"minLength": 1
-					},
-					"messages": {
-						"allOf": [
-							{
-								"$ref": "#/components/schemas/d1_messages"
-							}
-						],
-						"example": []
-					},
-					"result": {
-						"enum": [null],
-						"nullable": true,
-						"type": "object"
-					},
-					"success": {
-						"description": "Whether the API call was successful",
-						"enum": [false],
-						"example": false,
-						"type": "boolean"
-					}
-				},
-				"required": ["success", "errors", "messages", "result"],
-				"type": "object"
-			},
-			"d1_messages": {
-				"example": [],
-				"items": {
-					"properties": {
-						"code": {
-							"minimum": 1000,
-							"type": "integer"
-						},
-						"message": {
-							"type": "string"
-						}
-					},
-					"required": ["code", "message"],
-					"type": "object",
-					"uniqueItems": true
-				},
-				"type": "array"
-			},
-			"d1_database-response": {
-				"properties": {
-					"created_at": {
-						"$ref": "#/components/schemas/d1_created-at"
-					},
-					"name": {
-						"$ref": "#/components/schemas/d1_database-name"
-					},
-					"uuid": {
-						"$ref": "#/components/schemas/d1_database-identifier"
-					},
-					"version": {
-						"$ref": "#/components/schemas/d1_database-version"
-					}
-				},
-				"type": "object"
-			},
-			"d1_database-version": {
-				"example": "production",
-				"pattern": "^(alpha|beta|production)$",
-				"type": "string"
-			},
-			"d1_database-identifier": {
-				"description": "D1 database identifier (UUID).",
-				"example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-				"readOnly": true,
-				"type": "string"
-			},
-			"d1_database-name": {
-				"description": "D1 database name.",
-				"example": "my-database",
-				"pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$",
-				"type": "string"
-			},
-			"d1_created-at": {
-				"description": "Specifies the timestamp the resource was created as an ISO8601 string.",
-				"example": "2022-11-15T18:25:44.442097Z",
-				"format": "date-time",
-				"readOnly": true,
-				"type": "string"
-			},
-			"d1_api-response-common": {
-				"properties": {
-					"errors": {
-						"$ref": "#/components/schemas/d1_messages"
-					},
-					"messages": {
-						"$ref": "#/components/schemas/d1_messages"
-					},
-					"result": {
-						"type": "object"
-					},
-					"success": {
-						"description": "Whether the API call was successful",
-						"enum": [true],
-						"example": true,
-						"type": "boolean"
-					}
-				},
-				"required": ["success", "errors", "messages", "result"],
-				"type": "object"
-			},
 			"workers-kv_bulk-get-result-with-metadata": {
 				"properties": {
 					"values": {
@@ -685,7 +498,10 @@
 									]
 								}
 							},
-							"required": ["value", "metadata"],
+							"required": [
+								"value",
+								"metadata"
+							],
 							"type": "object"
 						},
 						"description": "Requested keys are paired with their values and metadata in an object.",
@@ -760,8 +576,7 @@
 									"additionalProperties": true,
 									"type": "object"
 								}
-							],
-							"nullable": true
+							]
 						},
 						"description": "Requested keys are paired with their values in an object.",
 						"example": {
@@ -805,12 +620,18 @@
 					},
 					"success": {
 						"description": "Whether the API call was successful.",
-						"enum": [true],
+						"enum": [
+							true
+						],
 						"example": true,
 						"type": "boolean"
 					}
 				},
-				"required": ["success", "errors", "messages"],
+				"required": [
+					"success",
+					"errors",
+					"messages"
+				],
 				"type": "object"
 			},
 			"workers-kv_messages": {
@@ -825,7 +646,10 @@
 							"type": "string"
 						}
 					},
-					"required": ["code", "message"],
+					"required": [
+						"code",
+						"message"
+					],
 					"type": "object"
 				},
 				"type": "array",
@@ -863,19 +687,6 @@
 				"maxLength": 512,
 				"type": "string"
 			},
-			"workers-kv_cursor_result_info": {
-				"properties": {
-					"count": {
-						"description": "Total results returned based on your list parameters.",
-						"example": 1,
-						"type": "number"
-					},
-					"cursor": {
-						"$ref": "#/components/schemas/workers-kv_cursor"
-					}
-				},
-				"type": "object"
-			},
 			"workers-kv_cursor": {
 				"description": "Opaque token indicating the position from which to continue when requesting the next set of records if the amount of list results was limited by the limit parameter. A valid value for the cursor can be obtained from the cursors object in the result_info structure.",
 				"example": "6Ck1la0VxJ0djhidm1MdX2FyDGxLKVeeHZZmORS_8XeSuhz9SjIJRaSa2lnsF01tQOHrfTGAP3R5X1Kv5iVUuMbNKhWNAXHOl6ePB0TUL8nw",
@@ -896,7 +707,9 @@
 						"$ref": "#/components/schemas/workers-kv_key_name"
 					}
 				},
-				"required": ["name"],
+				"required": [
+					"name"
+				],
 				"type": "object"
 			},
 			"workers-kv_list_metadata": {
@@ -949,12 +762,19 @@
 					},
 					"success": {
 						"description": "Whether the API call was successful.",
-						"enum": [false],
+						"enum": [
+							false
+						],
 						"example": false,
 						"type": "boolean"
 					}
 				},
-				"required": ["success", "errors", "messages", "result"],
+				"required": [
+					"success",
+					"errors",
+					"messages",
+					"result"
+				],
 				"type": "object"
 			},
 			"workers-kv_namespace": {
@@ -966,7 +786,10 @@
 						"$ref": "#/components/schemas/workers-kv_namespace_title"
 					}
 				},
-				"required": ["id", "title"],
+				"required": [
+					"id",
+					"title"
+				],
 				"type": "object"
 			},
 			"workers-kv_namespace_title": {
