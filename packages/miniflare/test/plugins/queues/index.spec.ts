@@ -1,4 +1,3 @@
-import test from "ava";
 import {
 	DeferredPromise,
 	LogLevel,
@@ -8,11 +7,13 @@ import {
 	QueuesError,
 	Response,
 } from "miniflare";
+import { expect, test } from "vitest";
 import { z } from "zod";
 import {
 	LogEntry,
 	MiniflareDurableObjectControlStub,
 	TestLog,
+	useDispose,
 } from "../../test-shared";
 
 const StringArraySchema = z.string().array();
@@ -41,7 +42,7 @@ async function getControlStub(
 	return stub;
 }
 
-test("maxBatchTimeout validation", async (t) => {
+test("maxBatchTimeout validation", async () => {
 	const mf = new Miniflare({
 		queueConsumers: {
 			QUEUE: { maxBatchTimeout: 60 },
@@ -49,25 +50,24 @@ test("maxBatchTimeout validation", async (t) => {
 		modules: true,
 		script: "",
 	});
-	t.throws(
-		() =>
-			new Miniflare({
-				queueConsumers: {
-					QUEUE: { maxBatchTimeout: 61 },
-				},
-				modules: true,
-				script: "",
-			}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_VALIDATION",
-			message: /Number must be less than or equal to 60/,
-		}
-	);
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
+	let error: MiniflareCoreError | undefined = undefined;
+	try {
+		new Miniflare({
+			queueConsumers: {
+				QUEUE: { maxBatchTimeout: 61 },
+			},
+			modules: true,
+			script: "",
+		});
+	} catch (e) {
+		error = e as MiniflareCoreError;
+	}
+	expect(error?.code).toEqual("ERR_VALIDATION");
+	expect(error?.message).toMatch(/Number must be less than or equal to 60/);
 });
 
-test("flushes partial and full batches", async (t) => {
+test("flushes partial and full batches", async () => {
 	let batches: string[][] = [];
 
 	const mf = new Miniflare({
@@ -111,7 +111,7 @@ test("flushes partial and full batches", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	async function send(message: unknown) {
 		await mf.dispatchFetch("http://localhost/send", {
@@ -132,23 +132,23 @@ test("flushes partial and full batches", async (t) => {
 	await send("msg1");
 	await object.advanceFakeTime(500);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 0);
+	expect(batches.length).toBe(0);
 	await object.advanceFakeTime(500);
 	await object.waitForFakeTasks();
-	t.is(batches[0]?.length, 1);
-	t.regex(batches[0][0], /^[0-9a-f]{32}$/);
+	expect(batches[0]?.length).toBe(1);
+	expect(batches[0][0]).toMatch(/^[0-9a-f]{32}$/);
 	batches = [];
 
 	// Check with single batch
 	await sendBatch("msg1", "msg2");
 	await object.advanceFakeTime(250);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 0);
+	expect(batches.length).toBe(0);
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches[0]?.length, 2);
-	t.regex(batches[0][0], /^[0-9a-f]{32}$/);
-	t.regex(batches[0][1], /^[0-9a-f]{32}$/);
+	expect(batches[0]?.length).toBe(2);
+	expect(batches[0][0]).toMatch(/^[0-9a-f]{32}$/);
+	expect(batches[0][1]).toMatch(/^[0-9a-f]{32}$/);
 	batches = [];
 
 	// Check with messages and batches
@@ -157,53 +157,53 @@ test("flushes partial and full batches", async (t) => {
 	await send("msg4");
 	await object.advanceFakeTime(100);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 0);
+	expect(batches.length).toBe(0);
 	await object.advanceFakeTime(900);
 	await object.waitForFakeTasks();
-	t.is(batches[0]?.length, 4);
+	expect(batches[0]?.length).toBe(4);
 	batches = [];
 
 	// Check with full batch
 	await sendBatch("msg1", "msg2", "msg3", "msg4", "msg5");
 	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
-	t.is(batches[0]?.length, 5);
+	expect(batches.length).toBe(1);
+	expect(batches[0]?.length).toBe(5);
 	batches = [];
 
 	// Check with overflowing batch
 	await sendBatch("msg1", "msg2", "msg3", "msg4", "msg5", "msg6", "msg7");
 	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
+	expect(batches.length).toBe(1);
 	// (second batch isn't full, so need to wait for max batch timeout)
 	await object.advanceFakeTime(500);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
+	expect(batches.length).toBe(1);
 	await object.advanceFakeTime(500);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 2);
-	t.is(batches[0]?.length, 5);
-	t.is(batches[1]?.length, 2);
+	expect(batches.length).toBe(2);
+	expect(batches[0]?.length).toBe(5);
+	expect(batches[1]?.length).toBe(2);
 	batches = [];
 
 	// Check with overflowing batch twice
 	await sendBatch("msg1", "msg2", "msg3", "msg4", "msg5", "msg6");
 	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
+	expect(batches.length).toBe(1);
 	// (second batch isn't full yet, but sending more messages will fill it)
 	await sendBatch("msg7", "msg8", "msg9", "msg10", "msg11");
 	await object.waitForFakeTasks();
-	t.is(batches.length, 2);
+	expect(batches.length).toBe(2);
 	// (third batch isn't full, so need to wait for max batch timeout)
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 3);
-	t.is(batches[0]?.length, 5);
-	t.is(batches[1]?.length, 5);
-	t.is(batches[2]?.length, 1);
+	expect(batches.length).toBe(3);
+	expect(batches[0]?.length).toBe(5);
+	expect(batches[1]?.length).toBe(5);
+	expect(batches[2]?.length).toBe(1);
 	batches = [];
 });
 
-test("supports declaring queue producers as a key-value pair -> queueProducers: { 'MY_QUEUE_BINDING': 'my-queue_name' }", async (t) => {
+test("supports declaring queue producers as a key-value pair -> queueProducers: { 'MY_QUEUE_BINDING': 'my-queue_name' }", async () => {
 	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
 	const mf = new Miniflare({
 		queueProducers: { MY_QUEUE_PRODUCER: "MY_QUEUE" },
@@ -229,20 +229,20 @@ test("supports declaring queue producers as a key-value pair -> queueProducers: 
       }
     }`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	const object = await getControlStub(mf, "MY_QUEUE");
 
 	await mf.dispatchFetch("http://localhost");
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
 	const batch = await promise;
-	t.deepEqual(batch, [
+	expect(batch).toEqual([
 		{ queue: "MY_QUEUE", id: batch[0].id, body: "Hello world!", attempts: 1 },
 		{ queue: "MY_QUEUE", id: batch[1].id, body: "Hola mundo!", attempts: 1 },
 	]);
 });
 
-test("supports declaring queue producers as an array -> queueProducers: ['MY_QUEUE_BINDING']", async (t) => {
+test("supports declaring queue producers as an array -> queueProducers: ['MY_QUEUE_BINDING']", async () => {
 	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
 	const mf = new Miniflare({
 		queueProducers: ["MY_QUEUE"],
@@ -268,20 +268,20 @@ test("supports declaring queue producers as an array -> queueProducers: ['MY_QUE
       }
     }`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	const object = await getControlStub(mf, "MY_QUEUE");
 
 	await mf.dispatchFetch("http://localhost");
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
 	const batch = await promise;
-	t.deepEqual(batch, [
+	expect(batch).toEqual([
 		{ queue: "MY_QUEUE", id: batch[0].id, body: "Hello World!", attempts: 1 },
 		{ queue: "MY_QUEUE", id: batch[1].id, body: "Hola Mundo!", attempts: 1 },
 	]);
 });
 
-test("supports declaring queue producers as {MY_QUEUE_BINDING: {queueName: 'my-queue-name'}}", async (t) => {
+test("supports declaring queue producers as {MY_QUEUE_BINDING: {queueName: 'my-queue-name'}}", async () => {
 	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
 	const mf = new Miniflare({
 		queueProducers: { MY_QUEUE_PRODUCER: { queueName: "MY_QUEUE" } },
@@ -307,20 +307,20 @@ test("supports declaring queue producers as {MY_QUEUE_BINDING: {queueName: 'my-q
       }
     }`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	const object = await getControlStub(mf, "MY_QUEUE");
 
 	await mf.dispatchFetch("http://localhost");
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
 	const batch = await promise;
-	t.deepEqual(batch, [
+	expect(batch).toEqual([
 		{ queue: "MY_QUEUE", id: batch[0].id, body: "Hello World!", attempts: 1 },
 		{ queue: "MY_QUEUE", id: batch[1].id, body: "Hola Mundo!", attempts: 1 },
 	]);
 });
 
-test("sends all structured cloneable types", async (t) => {
+test("sends all structured cloneable types", async () => {
 	const errorPromise = new DeferredPromise<string>();
 
 	const mf = new Miniflare({
@@ -416,13 +416,13 @@ test("sends all structured cloneable types", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	const object = await getControlStub(mf, "QUEUE");
 
 	await mf.dispatchFetch("http://localhost");
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(await errorPromise, "undefined");
+	expect(await errorPromise).toBe("undefined");
 });
 
 function stripTimings(entries: LogEntry[]) {
@@ -437,7 +437,7 @@ function stripTimings(entries: LogEntry[]) {
 	});
 }
 
-test("retries messages", async (t) => {
+test("retries messages", async () => {
 	let batches: z.infer<typeof MessageArraySchema>[] = [];
 	const bodiesAttempts = () =>
 		batches.map((batch) =>
@@ -448,7 +448,7 @@ test("retries messages", async (t) => {
 	let errorAll = false;
 	let retryMessages: string[] = [];
 
-	const log = new TestLog(t);
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		queueProducers: { QUEUE: { queueName: "queue" } },
@@ -489,7 +489,7 @@ test("retries messages", async (t) => {
       }
     }`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	async function sendBatch(...messages: string[]) {
 		await mf.dispatchFetch("http://localhost", {
@@ -506,8 +506,8 @@ test("retries messages", async (t) => {
 	log.logs = [];
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
-	t.deepEqual(stripTimings(log.logs), [
+	expect(batches.length).toBe(1);
+	expect(stripTimings(log.logs)).toEqual([
 		[
 			LogLevel.DEBUG,
 			`Retrying message "${batches[0][1].id}" on queue "queue"...`,
@@ -518,15 +518,15 @@ test("retries messages", async (t) => {
 	retryMessages = [];
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 2);
-	t.deepEqual(stripTimings(log.logs), [
+	expect(batches.length).toBe(2);
+	expect(stripTimings(log.logs)).toEqual([
 		[LogLevel.INFO, "QUEUE queue 1/1 (Xms)"],
 	]);
 	log.logs = [];
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 2);
-	t.deepEqual(bodiesAttempts(), [
+	expect(batches.length).toBe(2);
+	expect(bodiesAttempts()).toEqual([
 		[
 			{ body: "msg1", attempts: 1 },
 			{ body: "msg2", attempts: 1 },
@@ -542,8 +542,8 @@ test("retries messages", async (t) => {
 	log.logs = [];
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
-	t.deepEqual(stripTimings(log.logs), [
+	expect(batches.length).toBe(1);
+	expect(stripTimings(log.logs)).toEqual([
 		[
 			LogLevel.DEBUG,
 			`Retrying message "${batches[0][0].id}" on queue "queue"...`,
@@ -562,11 +562,11 @@ test("retries messages", async (t) => {
 	retryAll = false;
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 2);
-	t.deepEqual(stripTimings(log.logs), [
+	expect(batches.length).toBe(2);
+	expect(stripTimings(log.logs)).toEqual([
 		[LogLevel.INFO, "QUEUE queue 3/3 (Xms)"],
 	]);
-	t.deepEqual(bodiesAttempts(), [
+	expect(bodiesAttempts()).toEqual([
 		[
 			{ body: "msg1", attempts: 1 },
 			{ body: "msg2", attempts: 1 },
@@ -586,8 +586,8 @@ test("retries messages", async (t) => {
 	log.logs = [];
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
-	t.deepEqual(stripTimings(log.logs), [
+	expect(batches.length).toBe(1);
+	expect(stripTimings(log.logs)).toEqual([
 		[
 			LogLevel.DEBUG,
 			`Retrying message "${batches[0][0].id}" on queue "queue"...`,
@@ -606,11 +606,11 @@ test("retries messages", async (t) => {
 	errorAll = false;
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 2);
-	t.deepEqual(stripTimings(log.logs), [
+	expect(batches.length).toBe(2);
+	expect(stripTimings(log.logs)).toEqual([
 		[LogLevel.INFO, "QUEUE queue 3/3 (Xms)"],
 	]);
-	t.deepEqual(bodiesAttempts(), [
+	expect(bodiesAttempts()).toEqual([
 		[
 			{ body: "msg1", attempts: 1 },
 			{ body: "msg2", attempts: 1 },
@@ -630,8 +630,8 @@ test("retries messages", async (t) => {
 	log.logs = [];
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 1);
-	t.deepEqual(stripTimings(log.logs), [
+	expect(batches.length).toBe(1);
+	expect(stripTimings(log.logs)).toEqual([
 		[
 			LogLevel.DEBUG,
 			`Retrying message "${batches[0][0].id}" on queue "queue"...`,
@@ -651,8 +651,8 @@ test("retries messages", async (t) => {
 	retryMessages = ["msg3"];
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 2);
-	t.deepEqual(stripTimings(log.logs), [
+	expect(batches.length).toBe(2);
+	expect(stripTimings(log.logs)).toEqual([
 		[
 			LogLevel.DEBUG,
 			`Retrying message "${batches[0][2].id}" on queue "queue"...`,
@@ -662,8 +662,8 @@ test("retries messages", async (t) => {
 	log.logs = [];
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 3);
-	t.deepEqual(stripTimings(log.logs), [
+	expect(batches.length).toBe(3);
+	expect(stripTimings(log.logs)).toEqual([
 		[
 			LogLevel.WARN,
 			`Dropped message "${batches[0][2].id}" on queue "queue" after 3 failed attempts!`,
@@ -673,8 +673,8 @@ test("retries messages", async (t) => {
 	log.logs = [];
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
-	t.is(batches.length, 3);
-	t.deepEqual(bodiesAttempts(), [
+	expect(batches.length).toBe(3);
+	expect(bodiesAttempts()).toEqual([
 		[
 			{ body: "msg1", attempts: 1 },
 			{ body: "msg2", attempts: 1 },
@@ -690,11 +690,11 @@ test("retries messages", async (t) => {
 	batches = [];
 });
 
-test("moves to dead letter queue", async (t) => {
+test("moves to dead letter queue", async () => {
 	const batches: z.infer<typeof MessageArraySchema>[] = [];
 	let retryMessages: string[] = [];
 
-	const log = new TestLog(t);
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 
@@ -741,7 +741,7 @@ test("moves to dead letter queue", async (t) => {
       }
     }`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	async function sendBatch(...messages: string[]) {
 		await mf.dispatchFetch("http://localhost", {
@@ -759,8 +759,8 @@ test("moves to dead letter queue", async (t) => {
 	log.logs = [];
 	await badObject.advanceFakeTime(1000);
 	await badObject.waitForFakeTasks();
-	t.is(batches.length, 1);
-	t.deepEqual(stripTimings(log.logs), [
+	expect(batches.length).toBe(1);
+	expect(stripTimings(log.logs)).toEqual([
 		[
 			LogLevel.WARN,
 			`Moving message "${batches[0][1].id}" on queue "bad" to dead letter queue "dlq" after 1 failed attempt...`,
@@ -776,8 +776,8 @@ test("moves to dead letter queue", async (t) => {
 	retryMessages = ["msg2"];
 	await dlqObject.advanceFakeTime(1000);
 	await dlqObject.waitForFakeTasks();
-	t.is(batches.length, 2);
-	t.deepEqual(stripTimings(log.logs), [
+	expect(batches.length).toBe(2);
+	expect(stripTimings(log.logs)).toEqual([
 		[
 			LogLevel.WARN,
 			`Moving message "${batches[0][1].id}" on queue "dlq" to dead letter queue "bad" after 1 failed attempt...`,
@@ -788,10 +788,12 @@ test("moves to dead letter queue", async (t) => {
 	retryMessages = [];
 	await badObject.advanceFakeTime(1000);
 	await badObject.waitForFakeTasks();
-	t.is(batches.length, 3);
-	t.deepEqual(stripTimings(log.logs), [[LogLevel.INFO, "QUEUE bad 1/1 (Xms)"]]);
+	expect(batches.length).toBe(3);
+	expect(stripTimings(log.logs)).toEqual([
+		[LogLevel.INFO, "QUEUE bad 1/1 (Xms)"],
+	]);
 	log.logs = [];
-	t.deepEqual(batches, [
+	expect(batches).toEqual([
 		[
 			{ queue: "bad", id: batches[0][0].id, body: "msg1", attempts: 1 },
 			{ queue: "bad", id: batches[0][1].id, body: "msg2", attempts: 1 },
@@ -810,14 +812,15 @@ test("moves to dead letter queue", async (t) => {
 		queueConsumers: { bad: { deadLetterQueue: "bad" } },
 		script: "",
 	});
-	await t.throwsAsync(promise, {
-		instanceOf: QueuesError,
-		code: "ERR_DEAD_LETTER_QUEUE_CYCLE",
-		message: 'Dead letter queue for queue "bad" cannot be itself',
-	});
+	await expect(promise).rejects.toThrow(
+		new QueuesError(
+			"ERR_DEAD_LETTER_QUEUE_CYCLE",
+			`Dead letter queue for queue "bad" cannot be itself`
+		)
+	);
 });
 
-test("operations permit strange queue names", async (t) => {
+test("operations permit strange queue names", async () => {
 	const promise = new DeferredPromise<z.infer<typeof MessageArraySchema>>();
 	const id = "my/ Queue";
 	const mf = new Miniflare({
@@ -844,20 +847,20 @@ test("operations permit strange queue names", async (t) => {
       }
     }`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	const object = await getControlStub(mf, id);
 
 	await mf.dispatchFetch("http://localhost");
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
 	const batch = await promise;
-	t.deepEqual(batch, [
+	expect(batch).toEqual([
 		{ queue: id, id: batch[0].id, body: "msg1", attempts: 1 },
 		{ queue: id, id: batch[1].id, body: "msg2", attempts: 1 },
 	]);
 });
 
-test("supports message contentTypes", async (t) => {
+test("supports message contentTypes", async () => {
 	const MessageContentTypeTestSchema = z
 		.object({ queue: z.string(), id: z.string(), body: z.any() })
 		.array();
@@ -865,7 +868,7 @@ test("supports message contentTypes", async (t) => {
 		z.infer<typeof MessageContentTypeTestSchema>
 	>();
 	const id = "my/ Queue";
-	const log = new TestLog(t);
+	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
 		queueProducers: { QUEUE: { queueName: id } },
@@ -914,7 +917,7 @@ test("supports message contentTypes", async (t) => {
       },
     };`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	const object = await getControlStub(mf, id);
 
 	const res = await mf.dispatchFetch("http://localhost");
@@ -922,7 +925,7 @@ test("supports message contentTypes", async (t) => {
 	await object.advanceFakeTime(1000);
 	await object.waitForFakeTasks();
 	const batch = await promise;
-	t.deepEqual(batch, [
+	expect(batch).toEqual([
 		{ queue: id, id: batch[0].id, body: "msg1" },
 		{ queue: id, id: batch[1].id, body: [{ message: "msg2" }] },
 		{
@@ -938,7 +941,7 @@ test("supports message contentTypes", async (t) => {
 	]);
 });
 
-test("validates message size", async (t) => {
+test("validates message size", async () => {
 	const mf = new Miniflare({
 		queueProducers: { QUEUE: "MY_QUEUE" },
 		queueConsumers: {
@@ -968,10 +971,9 @@ test("validates message size", async (t) => {
       },
     }`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
-	await t.throwsAsync(mf.dispatchFetch("http://localhost"), {
-		message:
-			"Queue send failed: message length of 128001 bytes exceeds limit of 128000",
-	});
+	await expect(mf.dispatchFetch("http://localhost")).rejects.toThrow(
+		"Queue send failed: message length of 128001 bytes exceeds limit of 128000"
+	);
 });

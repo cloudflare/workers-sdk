@@ -19,13 +19,13 @@ export class SvelteKit extends Framework {
 					"add",
 					"--no-install",
 					"--no-git-check",
-					"sveltekit-adapter=adapter:cloudflare",
+					"sveltekit-adapter=adapter:cloudflare+cfTarget:workers",
 				],
 				{
 					silent: true,
 					startText: "Installing adapter",
 					doneText: `${brandColor("installed")} ${dim(
-						`via \`${dlx} sv add sveltekit-adapter=adapter:cloudflare\``
+						`via \`${dlx.join(" ")} sv add sveltekit-adapter=adapter:cloudflare+cfTarget:workers\``
 					)}`,
 				}
 			);

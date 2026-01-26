@@ -1,5 +1,5 @@
 import path, { resolve } from "path";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { unstable_startWorker } from "wrangler";
 
 const basePath = resolve(__dirname, "..");
@@ -17,7 +17,7 @@ describe("Rate limiting bindings", () => {
 		await worker.dispose();
 	});
 
-	it("ratelimit binding is defined ", async ({ expect }) => {
+	it("ratelimit binding is defined ", async () => {
 		let response = await worker.fetch(`http://example.com`);
 		let content = await response.text();
 		expect(content).toEqual("Success");
@@ -35,7 +35,7 @@ describe("Rate limiting bindings", () => {
 		expect(content).toEqual("Slow down");
 	});
 
-	it("ratelimit unsafe binding is defined ", async ({ expect }) => {
+	it("ratelimit unsafe binding is defined ", async () => {
 		let response = await worker.fetch(`http://example.com/unsafe`);
 		let content = await response.text();
 		expect(content).toEqual("unsafe: Success");

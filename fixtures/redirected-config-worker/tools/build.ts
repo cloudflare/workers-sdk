@@ -7,6 +7,7 @@ const config = {
 	name: "redirected-config-worker",
 	compatibility_date: "2024-12-01",
 	main: "index.js",
+	definedEnvironments: ["prod", "staging"],
 	targetEnvironment: process.env.CLOUDFLARE_ENV,
 	vars: { generated: process.env.CLOUDFLARE_ENV ?? "none" },
 };

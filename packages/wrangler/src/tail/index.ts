@@ -27,6 +27,7 @@ export const tailCommand = createCommand({
 		description: "🦚 Start a log tailing session for a Worker",
 		status: "stable",
 		owner: "Workers: Workers Observability",
+		category: "Compute & AI",
 	},
 	positionalArgs: ["worker"],
 	args: {

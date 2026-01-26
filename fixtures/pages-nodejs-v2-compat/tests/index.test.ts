@@ -1,11 +1,11 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { describe, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages with Node.js compat v2", () => {
 	describe("with _worker.js file", () => {
-		it("should polyfill `process`", async ({ expect, onTestFinished }) => {
+		it("should polyfill `process`", async () => {
 			const { ip, port, stop } = await runWranglerPagesDev(
 				resolve(__dirname, ".."),
 				"./apps/workerjs-file",
@@ -21,7 +21,7 @@ describe("Pages with Node.js compat v2", () => {
 	});
 
 	describe("with _worker.js directory", () => {
-		it("should polyfill `process`", async ({ expect, onTestFinished }) => {
+		it("should polyfill `process`", async () => {
 			const { ip, port, stop } = await runWranglerPagesDev(
 				resolve(__dirname, ".."),
 				"./apps/workerjs-directory",
@@ -37,7 +37,7 @@ describe("Pages with Node.js compat v2", () => {
 	});
 
 	describe("with Pages functions", () => {
-		it("should polyfill `process`", async ({ expect, onTestFinished }) => {
+		it("should polyfill `process`", async () => {
 			const { ip, port, stop } = await runWranglerPagesDev(
 				resolve(__dirname, ".."),
 				"./apps/functions",

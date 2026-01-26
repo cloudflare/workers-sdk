@@ -1,6 +1,6 @@
+import { stripVTControlCharacters } from "node:util";
 import { resolve } from "path";
-import stripAnsi from "strip-ansi";
-import { describe, onTestFinished, test, vi } from "vitest";
+import { describe, expect, onTestFinished, test, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 /**
@@ -43,7 +43,7 @@ async function getWranglerDevOutput(
 	await response.text();
 
 	return () => {
-		const output = stripAnsi(getOutput())
+		const output = stripVTControlCharacters(getOutput())
 			// Windows gets a different marker for ✘, so let's normalize it here
 			// so that these tests can be platform independent
 			.replaceAll("✘", "X")
@@ -61,7 +61,7 @@ async function getWranglerDevOutput(
 
 describe("'wrangler dev' correctly displays logs", () => {
 	describe("module workers", () => {
-		test("default behavior", async ({ expect }) => {
+		test("default behavior", async () => {
 			const getOutput = await getWranglerDevOutput("module");
 			await vi.waitFor(
 				() =>
@@ -78,7 +78,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			);
 		});
 
-		test("with --log-level=log", async ({ expect }) => {
+		test("with --log-level=log", async () => {
 			const getOutput = await getWranglerDevOutput("module", [
 				"--log-level=log",
 			]);
@@ -95,7 +95,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			);
 		});
 
-		test("with --log-level=info", async ({ expect }) => {
+		test("with --log-level=info", async () => {
 			const getOutput = await getWranglerDevOutput("module", [
 				"--log-level=info",
 			]);
@@ -109,7 +109,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			);
 		});
 
-		test("with --log-level=warn", async ({ expect }) => {
+		test("with --log-level=warn", async () => {
 			const getOutput = await getWranglerDevOutput("module", [
 				"--log-level=warn",
 			]);
@@ -121,7 +121,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			);
 		});
 
-		test("with --log-level=error", async ({ expect }) => {
+		test("with --log-level=error", async () => {
 			const getOutput = await getWranglerDevOutput("module", [
 				"--log-level=error",
 			]);
@@ -132,7 +132,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			);
 		});
 
-		test("with --log-level=debug", async ({ expect }) => {
+		test("with --log-level=debug", async () => {
 			const getOutput = await getWranglerDevOutput("module", [
 				"--log-level=debug",
 			]);
@@ -149,7 +149,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			);
 		});
 
-		test('with WRANGLER_LOG="debug"', async ({ expect }) => {
+		test('with WRANGLER_LOG="debug"', async () => {
 			const getOutput = await getWranglerDevOutput("module", [], undefined, {
 				WRANGLER_LOG: "debug",
 			});
@@ -166,7 +166,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			);
 		});
 
-		test("with --log-level=none", async ({ expect }) => {
+		test("with --log-level=none", async () => {
 			const getOutput = await getWranglerDevOutput("module", [
 				"--log-level=none",
 			]);
@@ -178,29 +178,27 @@ describe("'wrangler dev' correctly displays logs", () => {
 		// the following tests check for edge case scenario where the following
 		// structure could not get detected correctly
 		describe("edge case scenarios", () => {
-			test("base case", async ({ expect }) => {
+			test("base case", async () => {
 				const getOutput = await getWranglerDevOutput("module", [], "hello");
 				await vi.waitFor(() =>
 					expect(getOutput()).toEqual(["<<<<< hello >>>>>"])
 				);
 			});
-			test("quotes in message", async ({ expect }) => {
+			test("quotes in message", async () => {
 				const getOutput = await getWranglerDevOutput("module", [], 'hel"lo');
 				await vi.waitFor(() =>
 					expect(getOutput()).toEqual(['<<<<< hel"lo >>>>>'])
 				);
 			});
 
-			test("braces in message", async ({ expect }) => {
+			test("braces in message", async () => {
 				const getOutput = await getWranglerDevOutput("module", [], "hel{}lo");
 				await vi.waitFor(() =>
 					expect(getOutput()).toEqual(["<<<<< hel{}lo >>>>>"])
 				);
 			});
 
-			test("a workerd structured message in the message", async ({
-				expect,
-			}) => {
+			test("a workerd structured message in the message", async () => {
 				const getOutput = await getWranglerDevOutput(
 					"module",
 					[],
@@ -213,9 +211,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 				);
 			});
 
-			test("a very very very long message (that gets split in multiple chunks)", async ({
-				expect,
-			}) => {
+			test("a very very very long message (that gets split in multiple chunks)", async () => {
 				const getOutput = await getWranglerDevOutput(
 					"module",
 					[],
@@ -236,7 +232,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 	//       tests are only here in place to make sure that the basic logging functionality of
 	//       service workers does work
 	describe("service workers", () => {
-		test("default behavior", async ({ expect }) => {
+		test("default behavior", async () => {
 			const getOutput = await getWranglerDevOutput("service");
 			await vi.waitFor(() =>
 				expect(getOutput()).toEqual([
@@ -248,7 +244,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			);
 		});
 
-		test("with --log-level=log", async ({ expect }) => {
+		test("with --log-level=log", async () => {
 			const getOutput = await getWranglerDevOutput("service", [
 				"--log-level=log",
 			]);
@@ -262,7 +258,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			);
 		});
 
-		test("with --log-level=info", async ({ expect }) => {
+		test("with --log-level=info", async () => {
 			const getOutput = await getWranglerDevOutput("service", [
 				"--log-level=info",
 			]);
@@ -275,7 +271,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			);
 		});
 
-		test("with --log-level=warn", async ({ expect }) => {
+		test("with --log-level=warn", async () => {
 			const getOutput = await getWranglerDevOutput("service", [
 				"--log-level=warn",
 			]);
@@ -287,7 +283,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			);
 		});
 
-		test("with --log-level=error", async ({ expect }) => {
+		test("with --log-level=error", async () => {
 			const getOutput = await getWranglerDevOutput("service", [
 				"--log-level=error",
 			]);
@@ -296,7 +292,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			);
 		});
 
-		test("with --log-level=debug", async ({ expect }) => {
+		test("with --log-level=debug", async () => {
 			const getOutput = await getWranglerDevOutput("service", [
 				"--log-level=debug",
 			]);
@@ -311,7 +307,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 			);
 		});
 
-		test("with --log-level=none", async ({ expect }) => {
+		test("with --log-level=none", async () => {
 			const getOutput = await getWranglerDevOutput("service", [
 				"--log-level=none",
 			]);
@@ -320,7 +316,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 	});
 
 	describe("nodejs compat process v2", () => {
-		test("default behavior", async ({ expect }) => {
+		test("default behavior", async () => {
 			const getOutput = await getWranglerDevOutput("module", [
 				"--compatibility-flags=enable_nodejs_process_v2",
 				"--compatibility-flags=nodejs_compat",

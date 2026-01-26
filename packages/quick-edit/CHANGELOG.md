@@ -1,5 +1,15 @@
 # @cloudflare/quick-edit
 
+## 0.4.4
+
+### Patch Changes
+
+- [#11878](https://github.com/cloudflare/workers-sdk/pull/11878) [`e84e8fa`](https://github.com/cloudflare/workers-sdk/commit/e84e8fab79f17ffcc6a4c29c92c6924ceb351f94) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Fix relative path computation when the root folder name appears multiple times in a path
+
+  Previously, the logic assumed the root folder appeared exactly once in the path. When the root folder name appeared more than once, file modifications were not correctly detected.
+
+  For example, if the root folder is `my-worker`, a path like `/my-worker/my-worker/util.js` would incorrectly return `/` instead of `/my-worker/util.js`.
+
 ## 0.4.3
 
 ### Patch Changes

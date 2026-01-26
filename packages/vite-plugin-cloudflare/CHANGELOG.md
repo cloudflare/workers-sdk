@@ -1,5 +1,142 @@
 # @cloudflare/vite-plugin
 
+## 1.21.2
+
+### Patch Changes
+
+- [#11875](https://github.com/cloudflare/workers-sdk/pull/11875) [`ae2459c`](https://github.com/cloudflare/workers-sdk/commit/ae2459c6ef0dc2d5419bc692dea4a936c1859c21) Thanks [@bxff](https://github.com/bxff)! - Skip shortcut registration in non-TTY environments
+
+  Previously, registering keyboard shortcuts in non-TTY environments (e.g., Turborepo) caused Miniflare `ERR_DISPOSED` errors during prerendering. Shortcuts are now only registered when running in an interactive terminal.
+
+- Updated dependencies [[`614bbd7`](https://github.com/cloudflare/workers-sdk/commit/614bbd709529191bbae6aa92790bbfe00a37e3d9), [`788bf78`](https://github.com/cloudflare/workers-sdk/commit/788bf786b4c5cb8e1bdd6464d3f88b4125cebc75), [`1375577`](https://github.com/cloudflare/workers-sdk/commit/1375577c860f1ae9af5caf1c488d47ec1cf52b6f), [`ae108f0`](https://github.com/cloudflare/workers-sdk/commit/ae108f090532765751c3996ba4c863a9fe858ddf), [`bba0968`](https://github.com/cloudflare/workers-sdk/commit/bba09689ca258b6da36b21b7300845ce031eaca6), [`c3407ad`](https://github.com/cloudflare/workers-sdk/commit/c3407ada8cff1170ef2a3bbc4d3137dcf3998461), [`f9e8a45`](https://github.com/cloudflare/workers-sdk/commit/f9e8a452fb299e6cb1a0ff2985347bfc277deac8)]:
+  - wrangler@4.60.0
+  - miniflare@4.20260120.0
+  - @cloudflare/unenv-preset@2.11.0
+
+## 1.21.1
+
+### Patch Changes
+
+- [#11951](https://github.com/cloudflare/workers-sdk/pull/11951) [`77fdc18`](https://github.com/cloudflare/workers-sdk/commit/77fdc1846c6f5533bb718a143ca01f93f3f7eaac) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add validation for environment name collisions and improve error message for missing environments.
+
+- Updated dependencies [[`75386b1`](https://github.com/cloudflare/workers-sdk/commit/75386b1f14d7d0606bece547399e33a9f5bbadb8), [`8e4a0e5`](https://github.com/cloudflare/workers-sdk/commit/8e4a0e5e8d1e0bf75b6f11000f89f7eabafa392a), [`133bf95`](https://github.com/cloudflare/workers-sdk/commit/133bf95783c8b63ecc2b572a4400c7aa4bd4f8c4), [`93d8d78`](https://github.com/cloudflare/workers-sdk/commit/93d8d78ce081f821671b2c4a1ffcd7df733a0866), [`69ff962`](https://github.com/cloudflare/workers-sdk/commit/69ff9620487a6ae979f369eb1dbac887ce46e246), [`22727c2`](https://github.com/cloudflare/workers-sdk/commit/22727c29ee244cddebf93d855e4e052973479ad3), [`fa39a73`](https://github.com/cloudflare/workers-sdk/commit/fa39a73040dd27d35d429deda34fdc8e15b15fbe), [`4ac7c82`](https://github.com/cloudflare/workers-sdk/commit/4ac7c82609354115d53cd17f4cf78eabf3d6c23a), [`69ff962`](https://github.com/cloudflare/workers-sdk/commit/69ff9620487a6ae979f369eb1dbac887ce46e246), [`029531a`](https://github.com/cloudflare/workers-sdk/commit/029531acd2e6fac10f21c7b0cecb6b4830f77d02), [`d58fbd1`](https://github.com/cloudflare/workers-sdk/commit/d58fbd1189ec7417d8f2930eac3e71f7680bd679), [`202c59e`](https://github.com/cloudflare/workers-sdk/commit/202c59e4f4f28419fb6ac0aa8c7dc3960a0c8d3e), [`133bf95`](https://github.com/cloudflare/workers-sdk/commit/133bf95783c8b63ecc2b572a4400c7aa4bd4f8c4), [`25e2c60`](https://github.com/cloudflare/workers-sdk/commit/25e2c608d529664ede251abe45fdb13ea9e56a9d), [`69ff962`](https://github.com/cloudflare/workers-sdk/commit/69ff9620487a6ae979f369eb1dbac887ce46e246)]:
+  - wrangler@4.59.3
+  - miniflare@4.20260116.0
+
+## 1.21.0
+
+### Minor Changes
+
+- [#11879](https://github.com/cloudflare/workers-sdk/pull/11879) [`5c8ff05`](https://github.com/cloudflare/workers-sdk/commit/5c8ff05079d71810fb1546f3dc788cc44ee00e22) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add support for child environments.
+
+  This is to support React Server Components via [@vitejs/plugin-rsc](https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-rsc) and frameworks that build on top of it. A `childEnvironments` option is now added to the plugin config to enable using multiple environments within a single Worker. The parent environment can import modules from a child environment in order to access a separate module graph. For a typical RSC use case, the plugin might be configured as in the following example:
+
+  ```ts
+  export default defineConfig({
+  	plugins: [
+  		cloudflare({
+  			viteEnvironment: {
+  				name: "rsc",
+  				childEnvironments: ["ssr"],
+  			},
+  		}),
+  	],
+  });
+  ```
+
+### Patch Changes
+
+- [#11898](https://github.com/cloudflare/workers-sdk/pull/11898) [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bundle more third-party dependencies to reduce supply chain risk
+
+  Previously, several small utility packages were listed as runtime dependencies and
+  installed separately. These are now bundled directly into the published packages,
+  reducing the number of external dependencies users need to trust.
+
+  Bundled dependencies:
+
+  - **miniflare**: `acorn`, `acorn-walk`, `exit-hook`, `glob-to-regexp`, `stoppable`
+  - **kv-asset-handler**: `mime`
+  - **vite-plugin-cloudflare**: `@remix-run/node-fetch-server`, `defu`, `get-port`, `picocolors`, `tinyglobby`
+  - **vitest-pool-workers**: `birpc`, `devalue`, `get-port`, `semver`
+
+- Updated dependencies [[`e78186d`](https://github.com/cloudflare/workers-sdk/commit/e78186dae926c0ae1ab387aaa6cb8ba53bed9992), [`fe4faa3`](https://github.com/cloudflare/workers-sdk/commit/fe4faa306609514863fa770bac1dba5ff618f4be), [`fec8f5b`](https://github.com/cloudflare/workers-sdk/commit/fec8f5b82e0bb64400bbfcced302748dbe9a3062), [`d39777f`](https://github.com/cloudflare/workers-sdk/commit/d39777f1e354e8f3abd02164e76c2501e47e713f), [`4714ca1`](https://github.com/cloudflare/workers-sdk/commit/4714ca12c1f24c7e3553d3bfd2812a833a07826c), [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a), [`695b043`](https://github.com/cloudflare/workers-sdk/commit/695b043b4ddc99bf9a3fe93cc7daa8347b29ccb3)]:
+  - miniflare@4.20260114.0
+  - wrangler@4.59.2
+  - @cloudflare/unenv-preset@2.10.0
+
+## 1.20.3
+
+### Patch Changes
+
+- Updated dependencies [[`99b1f32`](https://github.com/cloudflare/workers-sdk/commit/99b1f328a9afe181b49f1114ed47f15f6d25f0be)]:
+  - wrangler@4.59.1
+
+## 1.20.2
+
+### Patch Changes
+
+- [#11834](https://github.com/cloudflare/workers-sdk/pull/11834) [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad) Thanks [@vicb](https://github.com/vicb)! - fix handling of Node builtin modules
+
+  The list of builtin modules should not depend on the version of Node.
+  Switch to using the lists published by `@cloudflare/unenv-preset`.
+
+  This fixes an issue with trying to import i.e. `node:sqlite` with Node < 22.5.0
+  which does not implement this module.
+
+- [#11838](https://github.com/cloudflare/workers-sdk/pull/11838) [`88a9e20`](https://github.com/cloudflare/workers-sdk/commit/88a9e204004b671d5e5f545efdfd6285c80eaab6) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Set `build.rolldownOptions.resolve.extensions` for compatibility with Vite 8 beta.
+
+- [#11847](https://github.com/cloudflare/workers-sdk/pull/11847) [`46e09a6`](https://github.com/cloudflare/workers-sdk/commit/46e09a6c0b7d5921a52e8acfe97370c909b4f308) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Apply `vite-plugin-cloudflare:nodejs-compat-warnings` plugin only to relevant environments.
+
+  This is an optimisation so that it doesn't run for the `client` environment or Worker environments that have the `nodejs_compat` compatibility flag enabled.
+
+- Updated dependencies [[`b0e54b2`](https://github.com/cloudflare/workers-sdk/commit/b0e54b26f261234ec47dcc673a5240734ba03fcc), [`ed60c4f`](https://github.com/cloudflare/workers-sdk/commit/ed60c4f01c0e4ac9683a73fb5cf849ad74255b35), [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad), [`faa5753`](https://github.com/cloudflare/workers-sdk/commit/faa5753fa685117065c801e5d1fcee3486a6f0bd), [`e574ef3`](https://github.com/cloudflare/workers-sdk/commit/e574ef3e73aa00ca82e84fe308da0fed768477d9), [`b6148ed`](https://github.com/cloudflare/workers-sdk/commit/b6148ed733f6d6873261df5ae61e71c475ba8a8d), [`beb96af`](https://github.com/cloudflare/workers-sdk/commit/beb96af470aefaae73237309244cf7369b329ff0), [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad), [`ab3859c`](https://github.com/cloudflare/workers-sdk/commit/ab3859c597fe30cdcd9ffa67f9fb7865539bf592), [`0eb973d`](https://github.com/cloudflare/workers-sdk/commit/0eb973deb57b8d8b9bb2fe4e5cb471fabab51bac), [`ad65efa`](https://github.com/cloudflare/workers-sdk/commit/ad65efa73ae8b666e1669964ccacc2680b12c853), [`fc96e5f`](https://github.com/cloudflare/workers-sdk/commit/fc96e5fe117948c57e49bf0741d55955691f1c28), [`43d5363`](https://github.com/cloudflare/workers-sdk/commit/43d5363c7b40191723e9bab9900edd70ecac5837), [`0f8d69d`](https://github.com/cloudflare/workers-sdk/commit/0f8d69d31071abeb567aa3c8478492536b5740fb)]:
+  - wrangler@4.59.0
+  - miniflare@4.20260111.0
+  - @cloudflare/unenv-preset@2.9.0
+
+## 1.20.1
+
+### Patch Changes
+
+- [#11807](https://github.com/cloudflare/workers-sdk/pull/11807) [`fada563`](https://github.com/cloudflare/workers-sdk/commit/fada563c1e0dcbffda223cd93ce4dd232dcd9c6b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use `rolldownOptions` in plugin config when available.
+
+  This improves compatibility with Vite 8 beta and removes warnings related to use of `esbuildOptions`.
+
+- Updated dependencies [[`97e67b9`](https://github.com/cloudflare/workers-sdk/commit/97e67b984a788a807c77309fb5391b5ecf190888), [`7d63fa5`](https://github.com/cloudflare/workers-sdk/commit/7d63fa5f7c3c170d666df0fafe2904c4c6f794a6)]:
+  - miniflare@4.20260107.0
+  - wrangler@4.58.0
+
+## 1.20.0
+
+### Minor Changes
+
+- [#11620](https://github.com/cloudflare/workers-sdk/pull/11620) [`25f6672`](https://github.com/cloudflare/workers-sdk/commit/25f66726d3b2f55a6139273e8f307f0cf3c44422) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Expose a new `getLocalWorkerdCompatibilityDate` utility that allows callers to get the compatibility date of the locally installed `workerd` package.
+
+- [#11723](https://github.com/cloudflare/workers-sdk/pull/11723) [`3455912`](https://github.com/cloudflare/workers-sdk/commit/3455912ab22f9590ea990e8c34584e00eb2140e9) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add a post `buildApp` hook that builds Worker environments that haven't already been built.
+
+  This ensures that auxiliary Workers are included in the build when using full-stack frameworks that define their own `builder.buildApp` function. Note that this feature is not supported with Vite 6 as the `buildApp` hook was introduced in Vite 7.
+
+- [#11738](https://github.com/cloudflare/workers-sdk/pull/11738) [`c54f8da`](https://github.com/cloudflare/workers-sdk/commit/c54f8da0ec5503408b1c0da236964b4c8a8d5d26) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add default `Text` module rule for `.sql` files.
+
+  This enables importing `.sql` files directly in Wrangler and the Cloudflare Vite plugin without extra configuration.
+
+### Patch Changes
+
+- [#11815](https://github.com/cloudflare/workers-sdk/pull/11815) [`70ef3ed`](https://github.com/cloudflare/workers-sdk/commit/70ef3ed595d7cca6fc8a3872117b6d410b51537f) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Set `ignoreOutdatedRequests` to `true` in `optimizeDeps` config.
+
+  This is a workaround for https://github.com/vitejs/vite/issues/20867 and will resolve `Error: There is a new version of the pre-bundle for ...` errors that some users are experiencing. The longer term solution is to use full-bundle mode rather than `optimizeDeps` once it is supported for server environments. Vite v7.3.1 or above is needed for this change to take effect.
+
+- [#11735](https://github.com/cloudflare/workers-sdk/pull/11735) [`dd66dcd`](https://github.com/cloudflare/workers-sdk/commit/dd66dcdd08472d7bde944093bab74b77d1cca45a) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Remove `topLevelName` and `name` when passing `entryWorkerConfig` to the `config `function for auxiliary Workers.
+
+  The `name` for each Worker should be unique and the `topLevelName` is computed rather than provided directly.
+
+- [#11720](https://github.com/cloudflare/workers-sdk/pull/11720) [`0457de6`](https://github.com/cloudflare/workers-sdk/commit/0457de6f7076b3e707b2b5cff3c7a6578275a299) Thanks [@jamesopstad](https://github.com/jamesopstad)! - fix: regression where plain class and object types were no longer supported as Durable Objects and Worker entrypoints
+
+- Updated dependencies [[`02fbd22`](https://github.com/cloudflare/workers-sdk/commit/02fbd229b339667d9985d0cc648a8cbecc53962e), [`b993d95`](https://github.com/cloudflare/workers-sdk/commit/b993d9528646943ad3b5d9c6d4239551ad490fa9), [`f612b46`](https://github.com/cloudflare/workers-sdk/commit/f612b4683a7e1408709ad378fb6c5b96af485d49), [`77078ef`](https://github.com/cloudflare/workers-sdk/commit/77078eff5eb4b2318282b76b30205d35bf22ad66), [`2510723`](https://github.com/cloudflare/workers-sdk/commit/25107237167ab0e5dae0912ec5ce8c3d3221c0a3), [`65d1850`](https://github.com/cloudflare/workers-sdk/commit/65d185016bc9650ae28077bba573dba120ccee1c), [`1615fce`](https://github.com/cloudflare/workers-sdk/commit/1615fce11d4f3c73c93d85d8904062ab1dbddfb1), [`b2769bf`](https://github.com/cloudflare/workers-sdk/commit/b2769bf18ece177b407235993f53f6fd8e1ac829), [`554a4df`](https://github.com/cloudflare/workers-sdk/commit/554a4dfd49b56a3e0ef4ba09fbb33a56e47a4932), [`9f6dd71`](https://github.com/cloudflare/workers-sdk/commit/9f6dd716262a813980f6acd77986d9bbc25e6214), [`8eede3f`](https://github.com/cloudflare/workers-sdk/commit/8eede3f213ef8ad5aed3102e6f9c20cba9ea8a66), [`d123ad0`](https://github.com/cloudflare/workers-sdk/commit/d123ad006d72bdee97cce5f4857e6d06a6fc16da), [`9e360f6`](https://github.com/cloudflare/workers-sdk/commit/9e360f6918588af59f86bb153008f3ec18b082c6), [`5121b23`](https://github.com/cloudflare/workers-sdk/commit/5121b23cb1e892597befe9e4ee2ec0fee143f482), [`82e7e90`](https://github.com/cloudflare/workers-sdk/commit/82e7e90e3635c0d7fecdb7c7e29cb391f47bd8b6), [`6a05b1c`](https://github.com/cloudflare/workers-sdk/commit/6a05b1cdf808c9f50cd461472fc430f9b029139d), [`62fd118`](https://github.com/cloudflare/workers-sdk/commit/62fd11870972ea67b638452bd29fc2ead648f52f), [`a7e9f80`](https://github.com/cloudflare/workers-sdk/commit/a7e9f8016de23b1ad8a1cdea8c2029e8808aa7d0), [`fc95831`](https://github.com/cloudflare/workers-sdk/commit/fc958315f7f452155385628092db822badc09404), [`b0dbf1a`](https://github.com/cloudflare/workers-sdk/commit/b0dbf1ac5c998365bb14e9a25f9a28773ba299d5), [`4688f59`](https://github.com/cloudflare/workers-sdk/commit/4688f59907dd9a574a5c3a916024e6033ff8490b), [`69979a3`](https://github.com/cloudflare/workers-sdk/commit/69979a3e0c20c8c8ec6c41253876e594ffb899f3), [`c54f8da`](https://github.com/cloudflare/workers-sdk/commit/c54f8da0ec5503408b1c0da236964b4c8a8d5d26), [`df1f9c9`](https://github.com/cloudflare/workers-sdk/commit/df1f9c914524b7a20396aaa4476200501ea05fc1), [`d059f69`](https://github.com/cloudflare/workers-sdk/commit/d059f69706bcb6c2fc4c3e65bad4f8effeffcb6a), [`eac5cf7`](https://github.com/cloudflare/workers-sdk/commit/eac5cf74db6d1b0865f5dc3a744ff28e695d53ca), [`b827893`](https://github.com/cloudflare/workers-sdk/commit/b82789341b4cb6e0f49c69682a75fb4a1036077b)]:
+  - wrangler@4.57.0
+  - miniflare@4.20260103.0
+  - @cloudflare/unenv-preset@2.8.0
+
 ## 1.19.0
 
 ### Minor Changes

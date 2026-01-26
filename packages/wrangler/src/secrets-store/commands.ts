@@ -58,6 +58,7 @@ export const secretsStoreStoreCreateCommand = createCommand({
 		description: "Create a store within an account",
 		status: "open beta",
 		owner: "Product: SSL",
+		category: "Storage & databases",
 	},
 	positionalArgs: ["name"],
 	args: {

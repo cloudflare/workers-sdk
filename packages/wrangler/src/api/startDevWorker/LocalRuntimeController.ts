@@ -123,10 +123,12 @@ export async function convertToConfigBundle(
 			? {
 					inspect: false,
 					inspectorPort: undefined,
+					inspectorHost: undefined,
 				}
 			: {
 					inspect: true,
 					inspectorPort: 0,
+					inspectorHost: event.config.dev.inspector?.hostname,
 				}),
 		localPersistencePath: event.config.dev.persist,
 		liveReload: event.config.dev?.liveReload ?? false,

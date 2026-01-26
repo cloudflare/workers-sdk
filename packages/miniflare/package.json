@@ -1,6 +1,6 @@
 {
 	"name": "miniflare",
-	"version": "4.20251217.0",
+	"version": "4.20260120.0",
 	"description": "Fun, full-featured, fully-local simulator for Cloudflare Workers",
 	"keywords": [
 		"cloudflare",
@@ -31,33 +31,26 @@
 	],
 	"scripts": {
 		"build": "node scripts/build.mjs && pnpm run types:build",
-		"capnp:workerd": "node scripts/build-capnp.mjs",
+		"capnp:workerd": "capnp-es node_modules/workerd/workerd.capnp -ots:src/runtime/config/generated --src-prefix=node_modules/workerd",
 		"check:lint": "eslint --max-warnings=0 \"{src,test}/**/*.ts\" \"types/**/*.ts\"",
 		"check:type": "tsc",
 		"clean": "rimraf ./dist ./dist-types",
 		"dev": "concurrently -n esbuild,typechk,typewrk -c yellow,blue,blue.dim \"node scripts/build.mjs watch\" \"node scripts/types.mjs tsconfig.json watch\" \"node scripts/types.mjs src/workers/tsconfig.json watch\"",
 		"lint:fix": "pnpm run check:lint --fix",
-		"test": "ava",
+		"test": "vitest run",
 		"posttest": "rimraf ./.tmp",
 		"test:ci": "pnpm run test",
 		"types:build": "node scripts/types.mjs tsconfig.json && node scripts/types.mjs src/workers/tsconfig.json"
 	},
 	"dependencies": {
 		"@cspotcode/source-map-support": "0.8.1",
-		"acorn": "8.14.0",
-		"acorn-walk": "8.3.2",
-		"exit-hook": "2.2.1",
-		"glob-to-regexp": "0.4.1",
-		"sharp": "^0.33.5",
-		"stoppable": "1.1.0",
+		"sharp": "^0.34.5",
 		"undici": "catalog:default",
-		"workerd": "1.20251223.0",
+		"workerd": "1.20260124.0",
 		"ws": "catalog:default",
-		"youch": "4.1.0-beta.10",
-		"zod": "^3.25.76"
+		"youch": "4.1.0-beta.10"
 	},
 	"devDependencies": {
-		"@ava/typescript": "^4.1.0",
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/eslint-config-shared": "workspace:*",
@@ -76,10 +69,9 @@
 		"@types/stoppable": "^1.1.1",
 		"@types/which": "^2.0.1",
 		"@types/ws": "^8.5.7",
-		"@typescript-eslint/eslint-plugin": "catalog:default",
-		"@typescript-eslint/parser": "catalog:default",
-		"ava": "^6.4.1",
-		"capnp-es": "^0.0.11",
+		"acorn": "8.14.0",
+		"acorn-walk": "8.3.2",
+		"capnp-es": "catalog:default",
 		"capnweb": "^0.1.0",
 		"chokidar": "^4.0.1",
 		"concurrently": "^8.2.2",
@@ -90,8 +82,10 @@
 		"eslint-config-prettier": "^9.0.0",
 		"eslint-plugin-es": "^4.1.0",
 		"eslint-plugin-prettier": "^5.0.1",
+		"exit-hook": "2.2.1",
 		"expect-type": "^0.15.0",
 		"get-port": "^7.1.0",
+		"glob-to-regexp": "0.4.1",
 		"heap-js": "^2.5.0",
 		"http-cache-semantics": "^4.1.0",
 		"kleur": "^4.1.5",
@@ -100,10 +94,13 @@
 		"pretty-bytes": "^6.0.0",
 		"rimraf": "catalog:default",
 		"source-map": "^0.6.1",
+		"stoppable": "1.1.0",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default",
+		"vitest": "catalog:default",
 		"which": "^2.0.2",
-		"xdg-app-paths": "^8.3.0"
+		"xdg-app-paths": "^8.3.0",
+		"zod": "^3.25.76"
 	},
 	"engines": {
 		"node": ">=18.0.0"

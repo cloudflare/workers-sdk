@@ -24,8 +24,9 @@ The following selections do not need to be completed if this PR only contains ch
 -->
 
 - Tests
-  - [ ] Tests included
-  - [ ] Tests not necessary because:
+  - [ ] Tests included/updated
+  - [ ] Automated tests not possible - manual testing has been completed as follows:
+  - [ ] Additional testing not necessary because:
 - Public documentation
   - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
   - [ ] Documentation not necessary because:
@@ -63,8 +64,9 @@ The following selections do not need to be completed if this PR only contains ch
 -->
 
 - Tests
-  - [ ] Tests included
-  - [x] Tests not necessary because: test
+  - [ ] Tests included/updated
+  - [ ] Automated tests not possible - manual testing has been completed as follows:
+  - [x] Additional testing not necessary because: test
 - Public documentation
   - [ ] Cloudflare docs PR(s): <!--e.g. <https://github.com/cloudflare/cloudflare-docs/pull/>...-->
   - [x] Documentation not necessary because: test
@@ -95,11 +97,12 @@ The following selections do not need to be completed if this PR only contains ch
 -->
 
 - Tests
-  - [x] Tests included
-  - [ ] Tests not necessary because:
+  - [x] Tests included/updated
+  - [ ] Automated tests not possible - manual testing has been completed as follows:
+  - [ ] Additional testing not necessary because:
 - Public documentation
   - [x] Cloudflare docs PR(s): https://github.com/cloudflare/cloudflare-docs/pull/100
-  - [ ] Documentation not necessary because: test
+  - [ ] Documentation not necessary because:
 
 <!--
 Have you read our [Contributing guide](https://github.com/cloudflare/workers-sdk/blob/main/CONTRIBUTING.md)?
@@ -124,8 +127,9 @@ Fixes [AA-000](https://jira.cfdata.org/browse/AA-000).
 
 - Tests
   - [ ] TODO (before merge)
-  - [x] Tests included
-  - [ ] Tests not necessary because:
+  - [x] Tests included/updated
+  - [ ] Automated tests not possible - manual testing has been completed as follows:
+  - [ ] Additional testing not necessary because:
 - E2E Tests CI Job required? (Use "e2e" label or ask maintainer to run separately)
   - [ ] I don't know
   - [ ] Required

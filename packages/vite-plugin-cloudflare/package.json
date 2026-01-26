@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.19.0",
+	"version": "1.21.2",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -44,12 +44,7 @@
 	},
 	"dependencies": {
 		"@cloudflare/unenv-preset": "workspace:*",
-		"@remix-run/node-fetch-server": "^0.8.0",
-		"defu": "^6.1.4",
-		"get-port": "^7.1.0",
 		"miniflare": "workspace:*",
-		"picocolors": "^1.1.1",
-		"tinyglobby": "^0.2.12",
 		"unenv": "2.0.0-rc.24",
 		"wrangler": "workspace:*",
 		"ws": "catalog:default"
@@ -61,12 +56,17 @@
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workers-utils": "workspace:*",
+		"@remix-run/node-fetch-server": "^0.8.0",
 		"@types/node": "catalog:vite-plugin",
 		"@types/semver": "^7.5.1",
 		"@types/ws": "^8.5.13",
+		"defu": "^6.1.4",
+		"get-port": "^7.1.0",
 		"magic-string": "^0.30.12",
 		"mlly": "^1.7.4",
+		"picocolors": "^1.1.1",
 		"semver": "^7.7.1",
+		"tinyglobby": "^0.2.12",
 		"tree-kill": "^1.2.2",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",

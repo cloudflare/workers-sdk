@@ -1,37 +1,37 @@
-import test from "ava";
 import { mergeWorkerOptions } from "miniflare";
+import { expect, test } from "vitest";
 
-test("merges options", (t) => {
+test("merges options", () => {
 	// Check options in `a` but not `b`
 	// Check options in `b` but not `a`
 	const a = { compatibilityDate: "2024-01-01" };
 	let result = mergeWorkerOptions(a, { compatibilityFlags: ["nodejs_compat"] });
-	t.deepEqual(result, {
+	expect(result).toEqual({
 		compatibilityDate: "2024-01-01",
 		compatibilityFlags: ["nodejs_compat"],
 	});
-	t.is(result, a); // Check modifies `a`
+	expect(result).toBe(a); // Check modifies `a`
 
 	// Check array-valued option in both `a` and `b`
 	result = mergeWorkerOptions(
 		{ kvNamespaces: ["NAMESPACE_1"] },
 		{ kvNamespaces: ["NAMESPACE_2"] }
 	);
-	t.deepEqual(result, {
+	expect(result).toEqual({
 		kvNamespaces: ["NAMESPACE_1", "NAMESPACE_2"],
 	});
 	result = mergeWorkerOptions(
 		{ kvNamespaces: ["NAMESPACE_1"] },
 		{ kvNamespaces: ["NAMESPACE_1", "NAMESPACE_2"] }
 	);
-	t.deepEqual(result, {
+	expect(result).toEqual({
 		kvNamespaces: ["NAMESPACE_1", "NAMESPACE_2"], // Primitives de-duped
 	});
 	result = mergeWorkerOptions(
 		{ compatibilityFlags: ["global_navigator", "nodejs_compat"] },
 		{ compatibilityFlags: ["nodejs_compat", "export_commonjs_default"] }
 	);
-	t.deepEqual(result, {
+	expect(result).toEqual({
 		compatibilityFlags: [
 			"global_navigator",
 			"nodejs_compat",
@@ -44,14 +44,14 @@ test("merges options", (t) => {
 		{ d1Databases: { DATABASE_1: "database-1" } },
 		{ d1Databases: { DATABASE_2: "database-2" } }
 	);
-	t.deepEqual(result, {
+	expect(result).toEqual({
 		d1Databases: { DATABASE_1: "database-1", DATABASE_2: "database-2" },
 	});
 	result = mergeWorkerOptions(
 		{ d1Databases: { DATABASE_1: "database-1" } },
 		{ d1Databases: { DATABASE_1: "database-one", DATABASE_2: "database-two" } }
 	);
-	t.deepEqual(result, {
+	expect(result).toEqual({
 		d1Databases: { DATABASE_1: "database-one", DATABASE_2: "database-two" },
 	});
 
@@ -67,7 +67,7 @@ test("merges options", (t) => {
 			queueConsumers: ["queue-2"],
 		}
 	);
-	t.deepEqual(result, {
+	expect(result).toEqual({
 		r2Buckets: { BUCKET_1: "BUCKET_1", BUCKET_2: "bucket-2" },
 		queueConsumers: { "queue-1": { maxBatchTimeout: 0 }, "queue-2": {} },
 	});
@@ -77,7 +77,7 @@ test("merges options", (t) => {
 		{ compatibilityDate: "2024-01-01" },
 		{ compatibilityDate: "2024-02-02" }
 	);
-	t.deepEqual(result, { compatibilityDate: "2024-02-02" });
+	expect(result).toEqual({ compatibilityDate: "2024-02-02" });
 
 	// Check nested-objects not merged (e.g. service bindings, queue consumers, Durable Objects)
 	result = mergeWorkerOptions(
@@ -113,7 +113,7 @@ test("merges options", (t) => {
 			},
 		}
 	);
-	t.deepEqual(result, {
+	expect(result).toEqual({
 		serviceBindings: {
 			DISK_SERVICE: { disk: { path: "/path/to/b" } },
 			OTHER_SERVICE: "worker",

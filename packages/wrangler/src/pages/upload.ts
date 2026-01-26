@@ -13,6 +13,7 @@ import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import {
 	BULK_UPLOAD_CONCURRENCY,
+	MAX_ASSET_COUNT_DEFAULT,
 	MAX_BUCKET_FILE_COUNT,
 	MAX_BUCKET_SIZE,
 	MAX_CHECK_MISSING_ATTEMPTS,
@@ -59,7 +60,12 @@ export const pagesProjectUploadCommand = createCommand({
 			throw new FatalError("No JWT given.", 1);
 		}
 
-		const fileMap = await validate({ directory });
+		const fileMap = await validate({
+			directory,
+			fileCountLimit: maxFileCountAllowedFromClaims(
+				process.env.CF_PAGES_UPLOAD_JWT
+			),
+		});
 
 		const manifest = await upload({
 			fileMap,
@@ -397,6 +403,38 @@ export const isJwtExpired = (token: string): boolean | undefined => {
 		if (e instanceof Error) {
 			throw new Error(`Invalid token: ${e.message}`);
 		}
+	}
+};
+
+export const maxFileCountAllowedFromClaims = (token: string): number => {
+	// During testing we don't use valid JWTs, so don't try and parse them
+	if (
+		typeof vitest !== "undefined" &&
+		(token === "<<funfetti-auth-jwt>>" ||
+			token === "<<funfetti-auth-jwt2>>" ||
+			token === "<<aus-completion-token>>")
+	) {
+		return MAX_ASSET_COUNT_DEFAULT;
+	}
+	try {
+		// Not validating the JWT here, which ordinarily would be a big red flag.
+		// However, if the JWT is invalid, no uploads (calls to /pages/assets/upload)
+		// will succeed.
+		const decodedJwt = JSON.parse(
+			Buffer.from(token.split(".")[1], "base64").toString()
+		);
+
+		const maxFileCountAllowed = decodedJwt["max_file_count_allowed"];
+		if (typeof maxFileCountAllowed == "number") {
+			return maxFileCountAllowed;
+		}
+
+		return MAX_ASSET_COUNT_DEFAULT;
+	} catch (e) {
+		if (e instanceof Error) {
+			throw new Error(`Invalid token: ${e.message}`);
+		}
+		return MAX_ASSET_COUNT_DEFAULT;
 	}
 };
 

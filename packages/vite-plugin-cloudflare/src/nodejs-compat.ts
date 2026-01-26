@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { builtinModules } from "node:module";
 import * as path from "node:path";
 import { getCloudflarePreset } from "@cloudflare/unenv-preset";
 import { getNodeCompat } from "miniflare";
@@ -227,18 +226,6 @@ export function hasNodeJsAls(workerConfig: ResolvedWorkerConfig | undefined) {
 		).mode === "als"
 	);
 }
-
-/**
- * All the Node.js modules including their `node:...` aliases.
- */
-export const nodeJsBuiltins = new Set([
-	...builtinModules,
-	...builtinModules.map((m) => `node:${m}`),
-]);
-
-export const NODEJS_MODULES_RE = new RegExp(
-	`^(node:)?(${builtinModules.join("|")})$`
-);
 
 export function isNodeAlsModule(modulePath: string) {
 	return /^(?:node:)?async_hooks$/.test(modulePath);

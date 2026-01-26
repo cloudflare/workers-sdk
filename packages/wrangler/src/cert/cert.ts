@@ -19,6 +19,7 @@ export const certNamespace = createNamespace({
 			"🪪 Manage client mTLS certificates and CA certificate chains used for secured connections",
 		status: "open beta",
 		owner: "Product: SSL",
+		category: "Networking & security",
 	},
 });
 

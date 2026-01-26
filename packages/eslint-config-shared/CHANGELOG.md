@@ -1,5 +1,11 @@
 # @cloudflare/eslint-config-shared
 
+## 1.2.0
+
+### Minor Changes
+
+- [#11902](https://github.com/cloudflare/workers-sdk/pull/11902) [`2aa769c`](https://github.com/cloudflare/workers-sdk/commit/2aa769c8730a0ef99f315f9a1dd5d25d52c51974) Thanks [@emily-shen](https://github.com/emily-shen)! - Add a custom eslint rule that checks for unsafe command execution
+
 ## 1.1.0
 
 ### Minor Changes

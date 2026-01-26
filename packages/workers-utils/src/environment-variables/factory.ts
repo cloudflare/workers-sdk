@@ -86,6 +86,11 @@ type VariableNames =
 	/** Direct authorization token for API requests. */
 	| "WRANGLER_CF_AUTHORIZATION_TOKEN"
 
+	// ## Experimental Feature Flags
+
+	/** Enable the local explorer UI at /cdn-cgi/explorer (experimental, default: false). */
+	| "X_LOCAL_EXPLORER"
+
 	// ## CI-specific Variables (Internal Use)
 
 	/** Override command used by `wrangler init` (default: "create cloudflare@^2.5.0"). */

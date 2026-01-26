@@ -1,11 +1,9 @@
 import { execSync } from "node:child_process";
 import { resolve } from "node:path";
-import { assert, describe, it } from "vitest";
+import { assert, describe, expect, it } from "vitest";
 
 describe("durable objects", () => {
-	it("should throw an error when the worker doesn't export a durable object but requires one", ({
-		expect,
-	}) => {
+	it("should throw an error when the worker doesn't export a durable object but requires one", () => {
 		let err: string = "";
 		try {
 			execSync("pnpm run dev", {

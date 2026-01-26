@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/containers-shared",
-	"version": "0.6.0",
+	"version": "0.8.0",
 	"private": true,
 	"description": "Package that contains shared container functionality for Cloudflare Workers SDK.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/containers-shared#readme",

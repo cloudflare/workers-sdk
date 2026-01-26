@@ -1,12 +1,16 @@
 import path from "node:path";
-import test from "ava";
 import {
 	Miniflare,
 	MiniflareCoreError,
 	MiniflareOptions,
 	WorkerOptions,
 } from "miniflare";
-import { EXPORTED_FIXTURES, FIXTURES_PATH } from "../../test-shared";
+import { expect, test } from "vitest";
+import {
+	EXPORTED_FIXTURES,
+	FIXTURES_PATH,
+	useDispose,
+} from "../../test-shared";
 
 /**
  * Use the plugin located in `test/fixtures/unsafe-plugin`
@@ -48,7 +52,7 @@ const PLUGIN_SCRIPT = /* javascript */ `export default {
 }
 `;
 
-test("A plugin that does not expose `plugins` will cause an error to be thrown", async (t) => {
+test("A plugin that does not expose `plugins` will cause an error to be thrown", async () => {
 	const badPluginDir = path.resolve(FIXTURES_PATH, "unsafe-plugin-bad");
 	const [packageName, pluginName] = [
 		`${badPluginDir}/no-export.cjs`,
@@ -63,15 +67,21 @@ test("A plugin that does not expose `plugins` will cause an error to be thrown",
 		unsafeBindings: UNSAFE_BINDINGS(packageName, pluginName),
 	};
 	const mf = new Miniflare({ modules: true, script: "" });
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
-	await t.throwsAsync(mf.setOptions(opts), {
-		instanceOf: MiniflareCoreError,
-		code: "ERR_PLUGIN_LOADING_FAILED",
-	});
+	let error: MiniflareCoreError | undefined = undefined;
+	try {
+		await mf.setOptions(opts);
+	} catch (err) {
+		error = err as MiniflareCoreError;
+	}
+
+	expect(error).toBeInstanceOf(MiniflareCoreError);
+	expect(error?.code).toEqual("ERR_PLUGIN_LOADING_FAILED");
+	expect(error?.message).toMatch(/did not provide any plugins/);
 });
 
-test("A plugin that exposes a non-object `plugins` export will cause an error to be thrown", async (t) => {
+test("A plugin that exposes a non-object `plugins` export will cause an error to be thrown", async () => {
 	const badPluginDir = path.resolve(FIXTURES_PATH, "unsafe-plugin-bad");
 	const [packageName, pluginName] = [
 		`${badPluginDir}/not-function.cjs`,
@@ -86,15 +96,21 @@ test("A plugin that exposes a non-object `plugins` export will cause an error to
 		unsafeBindings: UNSAFE_BINDINGS(packageName, pluginName),
 	};
 	const mf = new Miniflare({ modules: true, script: "" });
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
-	await t.throwsAsync(mf.setOptions(opts), {
-		instanceOf: MiniflareCoreError,
-		code: "ERR_PLUGIN_LOADING_FAILED",
-	});
+	let error: MiniflareCoreError | undefined = undefined;
+	try {
+		await mf.setOptions(opts);
+	} catch (err) {
+		error = err as MiniflareCoreError;
+	}
+
+	expect(error).toBeInstanceOf(MiniflareCoreError);
+	expect(error?.code).toEqual("ERR_PLUGIN_LOADING_FAILED");
+	expect(error?.message).toMatch(/did not provide the plugin 'unsafe-plugin'/);
 });
 
-test("Supports specifying an unsafe plugin will be loaded into Miniflare and will be usable in local dev", async (t) => {
+test("Supports specifying an unsafe plugin will be loaded into Miniflare and will be usable in local dev", async () => {
 	const [packageName, pluginName] = [pluginEntrypoint, "unsafe-plugin"];
 	const opts: MiniflareOptions = {
 		name: "unsafe-plugin-worker",
@@ -105,11 +121,10 @@ test("Supports specifying an unsafe plugin will be loaded into Miniflare and wil
 		unsafeBindings: UNSAFE_BINDINGS(packageName, pluginName),
 	};
 	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost");
-	t.is(
-		await res.text(),
+	expect(await res.text()).toBe(
 		'{"ok":true,"result":"some-value","meta":{"workersVersion":"0.0.1"}}'
 	);
 });

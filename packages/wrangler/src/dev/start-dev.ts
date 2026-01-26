@@ -144,6 +144,15 @@ export async function startDev(args: StartDevOptions) {
 					})
 				);
 			}
+
+			// Print scheduled worker warning with the actual public URL
+			const allDevEnvs = [primaryDevEnv, ...secondary];
+			const hasCrons = allDevEnvs.some(
+				(env) =>
+					env.config.latestConfig?.triggers?.some((t) => t.type === "cron") ??
+					false
+			);
+			maybePrintScheduledWorkerWarning(hasCrons, !!args.testScheduled, url);
 		});
 
 		return {
@@ -263,6 +272,7 @@ async function setupDevEnv(
 					httpsKeyPath: args.httpsKeyPath,
 				},
 				inspector: {
+					hostname: args.inspectorIp,
 					port: args.inspectorPort,
 				},
 				origin: {
@@ -345,5 +355,35 @@ function getResolvedSiteAssetPaths(
 		args.site,
 		args.siteInclude,
 		args.siteExclude
+	);
+}
+
+/**
+ * Logs a warning about scheduled workers not being automatically triggered
+ * during local development. This should be called after the server is ready
+ * and the actual URL is known.
+ */
+function maybePrintScheduledWorkerWarning(
+	hasCrons: boolean,
+	testScheduled: boolean,
+	url: URL
+): void {
+	if (!hasCrons || testScheduled) {
+		return;
+	}
+
+	const host =
+		url.hostname === "0.0.0.0" || url.hostname === "::"
+			? "localhost"
+			: url.hostname.includes(":")
+				? `[${url.hostname}]`
+				: url.hostname;
+	const port = url.port;
+
+	logger.once.warn(
+		`Scheduled Workers are not automatically triggered during local development.\n` +
+			`To manually trigger a scheduled event, run:\n` +
+			`  curl "http://${host}:${port}/cdn-cgi/handler/scheduled"\n` +
+			`For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally`
 	);
 }

@@ -1,6 +1,6 @@
 import { resolve } from "path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("wrangler dev", () => {
@@ -18,9 +18,7 @@ describe("wrangler dev", () => {
 	});
 
 	// https://github.com/cloudflare/workers-sdk/issues/5095
-	it("should not fail requests if the Worker does not drain the body", async ({
-		expect,
-	}) => {
+	it("should not fail requests if the Worker does not drain the body", async () => {
 		const COUNT = 30;
 		const requests: boolean[] = [];
 		const errors: string[] = [];

@@ -159,7 +159,7 @@ describe("wrangler deploy with containers", () => {
 			│   instance_type = \\"lite\\"
 			│
 			│   [containers.constraints]
-			│   tier = 1
+			│   tiers = [ 1, 2 ]
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = \\"1\\"
@@ -235,7 +235,7 @@ describe("wrangler deploy with containers", () => {
 			│   instance_type = \\"lite\\"
 			│
 			│   [containers.constraints]
-			│   tier = 1
+			│   tiers = [ 1, 2 ]
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = \\"1\\"
@@ -336,7 +336,7 @@ describe("wrangler deploy with containers", () => {
 			│   size_mb = 2000
 			│
 			│   [containers.constraints]
-			│   tier = 1
+			│   tiers = [ 1, 2 ]
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = \\"1\\"
@@ -431,7 +431,7 @@ describe("wrangler deploy with containers", () => {
 			│   size_mb = 2000
 			│
 			│   [containers.constraints]
-			│   tier = 1
+			│   tiers = [ 1, 2 ]
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = \\"1\\"
@@ -620,7 +620,7 @@ describe("wrangler deploy with containers", () => {
 					memory_mib: 256,
 				},
 				constraints: {
-					tier: 1,
+					tiers: [1, 2],
 				},
 				durable_objects: {
 					namespace_id: "1",
@@ -765,7 +765,7 @@ describe("wrangler deploy with containers", () => {
 					memory_mib: 256,
 				},
 				constraints: {
-					tier: 1,
+					tiers: [1, 2],
 				},
 				durable_objects: {
 					namespace_id: "1",
@@ -836,7 +836,7 @@ describe("wrangler deploy with containers", () => {
 			│   instance_type = \\"lite\\"
 			│
 			│   [containers.constraints]
-			│   tier = 1
+			│   tiers = [ 1, 2 ]
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = \\"2\\"
@@ -879,7 +879,7 @@ describe("wrangler deploy with containers", () => {
 					memory_mib: 256,
 				},
 				constraints: {
-					tier: 1,
+					tiers: [1, 2],
 				},
 				durable_objects: {
 					namespace_id: "1",
@@ -988,7 +988,7 @@ describe("wrangler deploy with containers", () => {
 						memory_mib: 256,
 					},
 					constraints: {
-						tier: 1,
+						tiers: [1, 2],
 					},
 					durable_objects: {
 						namespace_id: "1",
@@ -1113,7 +1113,7 @@ describe("wrangler deploy with containers", () => {
 				memory_mib: 256,
 			},
 			constraints: {
-				tier: 1,
+				tiers: [1, 2],
 			},
 			durable_objects: {
 				namespace_id: "1",
@@ -1151,7 +1151,7 @@ describe("wrangler deploy with containers", () => {
 				│ + [containers.configuration.observability.logs]
 				│ + enabled = true
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1194,7 +1194,7 @@ describe("wrangler deploy with containers", () => {
 				│ + [containers.configuration.observability.logs]
 				│ + enabled = true
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1250,7 +1250,7 @@ describe("wrangler deploy with containers", () => {
 				│ - enabled = true
 				│ + enabled = false
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1306,7 +1306,7 @@ describe("wrangler deploy with containers", () => {
 				│ - enabled = true
 				│ + enabled = false
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1358,7 +1358,7 @@ describe("wrangler deploy with containers", () => {
 				│ - enabled = true
 				│ + enabled = false
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1463,7 +1463,7 @@ describe("wrangler deploy with containers", () => {
 					image: `${registry}/hello:1.0`,
 					instance_type: "lite",
 					constraints: {
-						tier: 2,
+						tiers: [2],
 					},
 				},
 			],
@@ -1501,7 +1501,7 @@ describe("wrangler deploy with containers", () => {
 			│   instance_type = \\"lite\\"
 			│
 			│   [containers.constraints]
-			│   tier = 2
+			│   tiers = [ 2 ]
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = \\"1\\"
@@ -1555,7 +1555,7 @@ describe("wrangler deploy with containers", () => {
 				│   instance_type = \\"lite\\"
 				│
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│
 				│   [containers.affinities]
 				│   hardware_generation = \\"highest-overall-performance\\"
@@ -1608,7 +1608,7 @@ describe("wrangler deploy with containers", () => {
 						memory_mib: 256,
 					},
 					constraints: {
-						tier: 1,
+						tiers: [1, 2],
 					},
 					durable_objects: {
 						namespace_id: "1",
@@ -1638,7 +1638,7 @@ describe("wrangler deploy with containers", () => {
 				├ EDIT my-container
 				│
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│ + [containers.affinities]
 				│ + hardware_generation = \\"highest-overall-performance\\"
 				│
@@ -1728,7 +1728,7 @@ describe("wrangler deploy with containers", () => {
 					memory_mib: 256,
 				},
 				constraints: {
-					tier: 1,
+					tiers: [1, 2],
 				},
 				durable_objects: {
 					namespace_id: "1",
@@ -1832,7 +1832,7 @@ describe("wrangler deploy with containers", () => {
 			│   public_key = \\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm\\"
 			│
 			│   [containers.constraints]
-			│   tier = 1
+			│   tiers = [ 1, 2 ]
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = \\"1\\"
@@ -1936,7 +1936,7 @@ describe("wrangler deploy with containers", () => {
 			│   [containers.durable_objects]
 			│   namespace_id = \\"1\\"
 			│ + [containers.constraints]
-			│ + tier = 1
+			│ + tiers = [ 1, 2 ]
 			│
 			│
 			│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -2025,7 +2025,7 @@ describe("wrangler deploy with containers", () => {
 				│   instance_type = \\"lite\\"
 				│
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│
 				│   [containers.durable_objects]
 				│   namespace_id = \\"some-id\\"
@@ -2074,7 +2074,7 @@ describe("wrangler deploy with containers", () => {
 						memory_mib: 256,
 					},
 					constraints: {
-						tier: 1,
+						tiers: [1, 2],
 					},
 					durable_objects: {
 						namespace_id: "something-else",
@@ -2148,7 +2148,7 @@ describe("wrangler deploy with containers", () => {
 						memory_mib: 256,
 					},
 					constraints: {
-						tier: 1,
+						tiers: [1, 2],
 					},
 					durable_objects: {
 						namespace_id: "something",
@@ -2373,7 +2373,7 @@ describe("containers.unsafe configuration", () => {
 					memory_mib: 256,
 				},
 				constraints: {
-					tier: 1,
+					tiers: [1, 2],
 				},
 				durable_objects: {
 					namespace_id: "1",

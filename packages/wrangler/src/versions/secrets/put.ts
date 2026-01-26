@@ -3,6 +3,7 @@ import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { prompt } from "../../dialogs";
 import { logger } from "../../logger";
+import * as metrics from "../../metrics";
 import { requireAuth } from "../../user";
 import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
@@ -94,6 +95,18 @@ export const versionsSecretPutCommand = createCommand({
 			sendMetrics: config.send_metrics,
 			unsafeMetadata: config.unsafe.metadata,
 		});
+
+		metrics.sendMetricsEvent(
+			"create encrypted variable",
+			{
+				secretOperation: "single",
+				secretSource: isInteractive ? "interactive" : "stdin",
+				hasEnvironment: Boolean(args.env),
+			},
+			{
+				sendMetrics: config.send_metrics,
+			}
+		);
 
 		logger.log(
 			`✨ Success! Created version ${newVersion.id} with secret ${args.key}.` +

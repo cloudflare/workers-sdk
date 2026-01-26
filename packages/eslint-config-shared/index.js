@@ -6,6 +6,7 @@ import turbo from "eslint-plugin-turbo";
 import unusedImports from "eslint-plugin-unused-imports";
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
+import noUnsafeCommandExecution from "./rules/no-unsafe-command-execution.mjs";
 
 export default defineConfig(
 	globalIgnores([
@@ -30,6 +31,11 @@ export default defineConfig(
 		plugins: {
 			"unused-imports": unusedImports,
 			"no-only-tests": noOnlyTests,
+			"workers-sdk": {
+				rules: {
+					"no-unsafe-command-execution": noUnsafeCommandExecution,
+				},
+			},
 		},
 	},
 
@@ -79,6 +85,25 @@ export default defineConfig(
 					argsIgnorePattern: "^_",
 				},
 			],
+			"workers-sdk/no-unsafe-command-execution": "error",
+		},
+	},
+	{
+		files: [
+			"**/*.test.ts",
+			"**/*.test.mts",
+			"**/*.test.tsx",
+			"**/test/**/*.ts",
+			"**/__tests__/**/*.ts",
+			"**/__tests__/**/*.mts",
+			"**/__tests__/**/*.tsx",
+			"**/e2e/**/*.ts",
+			"**/e2e/**/*.mts",
+			"**/fixtures/**/*.ts",
+			"**/fixtures/**/*.mts",
+		],
+		rules: {
+			"workers-sdk/no-unsafe-command-execution": "off",
 		},
 	}
 );

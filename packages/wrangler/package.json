@@ -1,6 +1,6 @@
 {
 	"name": "wrangler",
-	"version": "4.56.0",
+	"version": "4.60.0",
 	"description": "Command-line interface for all things Cloudflare Workers",
 	"keywords": [
 		"wrangler",
@@ -58,8 +58,8 @@
 		"dev": "pnpm run clean && concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src --watch ../containers-shared/src --watch ../cli\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"generate-json-schema": "node -r esbuild-register scripts/generate-json-schema.ts",
 		"start": "pnpm run build && cross-env NODE_OPTIONS=--enable-source-maps ./bin/wrangler.js",
-		"test": "dotenv -- pnpm run assert-git-version && dotenv -- vitest",
-		"test:ci": "pnpm run test run",
+		"test": "dotenv -- pnpm run assert-git-version && cross-env NODE_OPTIONS=\"$(node scripts/node-options-for-tests.js)\" dotenv -- vitest",
+		"test:ci": "cross-env NODE_OPTIONS=\"$(node scripts/node-options-for-tests.js)\" pnpm run test run",
 		"test:debug": "pnpm run test --silent=false --verbose=true",
 		"test:e2e": "dotenv -- vitest run -c ./e2e/vitest.config.mts",
 		"test:watch": "pnpm run test --testTimeout=50000 --watch",
@@ -73,10 +73,11 @@
 		"miniflare": "workspace:*",
 		"path-to-regexp": "6.3.0",
 		"unenv": "2.0.0-rc.24",
-		"workerd": "1.20251223.0"
+		"workerd": "1.20260124.0"
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
+		"@bomb.sh/tab": "^0.0.12",
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/eslint-config-shared": "workspace:*",
@@ -112,6 +113,7 @@
 		"@types/yargs": "^17.0.22",
 		"@vitest/ui": "catalog:default",
 		"@webcontainer/env": "^1.1.0",
+		"am-i-vibing": "^0.1.0",
 		"capnweb": "^0.1.0",
 		"chalk": "^5.2.0",
 		"chokidar": "^4.0.1",
@@ -156,7 +158,6 @@
 		"signal-exit": "^3.0.7",
 		"smol-toml": "catalog:default",
 		"source-map": "^0.6.1",
-		"strip-ansi": "^7.1.0",
 		"supports-color": "^9.2.2",
 		"timeago.js": "^4.0.2",
 		"ts-dedent": "^2.2.0",

@@ -2,6 +2,7 @@ import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../cfetch";
 import { createCommand } from "../../core/create-command";
 import { logger } from "../../logger";
+import * as metrics from "../../metrics";
 import { parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
 import { getLegacyScriptName } from "../../utils/getLegacyScriptName";
@@ -54,11 +55,13 @@ export const versionsSecretBulkCommand = createCommand({
 			`🌀 Creating the secrets for the Worker "${scriptName}" ${args.env ? `(${args.env})` : ""}`
 		);
 
-		const content = await parseBulkInputToObject(args.file);
+		const result = await parseBulkInputToObject(args.file);
 
-		if (!content) {
+		if (!result) {
 			return logger.error(`No content found in file or piped input.`);
 		}
+
+		const { content, secretSource, secretFormat } = result;
 
 		const secrets = Object.entries(content).map(([key, value]) => ({
 			name: key,
@@ -94,6 +97,20 @@ export const versionsSecretBulkCommand = createCommand({
 		for (const secret of secrets) {
 			logger.log(`✨ Successfully created secret for key: ${secret.name}`);
 		}
+
+		metrics.sendMetricsEvent(
+			"create encrypted variable",
+			{
+				secretOperation: "bulk",
+				secretSource,
+				secretFormat,
+				hasEnvironment: Boolean(args.env),
+			},
+			{
+				sendMetrics: config.send_metrics,
+			}
+		);
+
 		logger.log(
 			`✨ Success! Created version ${newVersion.id} with ${secrets.length} secrets.` +
 				`\n➡️  To deploy this version to production traffic use the command "wrangler versions deploy".`

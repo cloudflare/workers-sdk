@@ -742,6 +742,24 @@ Options shared between all Workers/"nanoservices".
   useful when testing Workers that act as a proxy, and not as origins
   themselves.
 
+  When `upstream` is set, the `Host` header is rewritten to match the upstream
+  server. To preserve the original hostname, Miniflare adds an
+  `MF-Original-Hostname` header containing the original `Host` value:
+
+  ```js
+  export default {
+  	async fetch(request) {
+  		// When upstream is set, Host header contains the upstream hostname
+  		const upstreamHost = request.headers.get("Host");
+  		// Original hostname is preserved in MF-Original-Hostname
+  		const originalHost = request.headers.get("MF-Original-Hostname");
+  		return new Response(
+  			`Original: ${originalHost}, Upstream: ${upstreamHost}`
+  		);
+  	},
+  };
+  ```
+
 - `cf?: boolean | string | Record<string, any>`
 
   Controls the object returned from incoming `Request`'s `cf` property.

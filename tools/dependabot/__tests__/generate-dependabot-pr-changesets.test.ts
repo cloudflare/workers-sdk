@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import dedent from "ts-dedent";
-import { beforeEach, describe, it, vitest } from "vitest";
+import { beforeEach, describe, expect, it, vitest } from "vitest";
 import {
 	commitAndPush,
 	generateChangesetHeader,
@@ -27,9 +27,7 @@ beforeEach(() => {
 });
 
 describe("getPackageJsonDiff()", () => {
-	it("should call spawnSync to the appropriate git diff command", ({
-		expect,
-	}) => {
+	it("should call spawnSync to the appropriate git diff command", () => {
 		(spawnSync as Mock).mockReturnValue({ output: [] });
 		getPackageJsonDiff("/path/to/package.json");
 		expect(spawnSync).toHaveBeenCalledOnce();
@@ -48,7 +46,7 @@ describe("getPackageJsonDiff()", () => {
 		`);
 	});
 
-	it("should split the output into lines", ({ expect }) => {
+	it("should split the output into lines", () => {
 		(spawnSync as Mock).mockReturnValue({
 			output: ["line 1", "line 2\nline 3", "line 4"],
 		});
@@ -65,9 +63,7 @@ describe("getPackageJsonDiff()", () => {
 });
 
 describe("parseDiffForChanges()", () => {
-	it("should return a map containing the changes for each package", ({
-		expect,
-	}) => {
+	it("should return a map containing the changes for each package", () => {
 		const changes = parseDiffForChanges([
 			`-               "package": "^0.0.1"`,
 			`+               "package": "^0.0.2",`,
@@ -82,32 +78,38 @@ describe("parseDiffForChanges()", () => {
 		);
 	});
 
-	it("should ignore lines that do not match a change", ({ expect }) => {
+	it("should ignore lines that do not match a change", () => {
 		const changes = parseDiffForChanges(["", undefined, "random text"]);
 		expect(changes.size).toBe(0);
 	});
 });
 
 describe("generateChangesetHeader()", () => {
-	it("should return a header with the given package name and 'patch' version bump", ({
-		expect,
-	}) => {
-		const header = generateChangesetHeader("package-name");
+	it("should return a header with a single package and 'patch' version bump", () => {
+		const header = generateChangesetHeader(["package-name"]);
 		expect(header).toMatchInlineSnapshot(`
 			"---
 			"package-name": patch
 			---"
 		`);
 	});
+
+	it("should return a header with multiple packages and 'patch' version bump", () => {
+		const header = generateChangesetHeader(["package-name", "another-package"]);
+		expect(header).toMatchInlineSnapshot(`
+			"---
+			"package-name": patch
+			"another-package": patch
+			---"
+		`);
+	});
 });
 
 describe("generateCommitMessage()", () => {
-	it("should return a commit message about the changed package", ({
-		expect,
-	}) => {
-		const message = generateCommitMessage("@namespace/package", new Map());
+	it("should return a commit message about a single changed package", () => {
+		const message = generateCommitMessage(["@namespace/package"], new Map());
 		expect(message).toMatchInlineSnapshot(`
-			"chore: update dependencies of "@namespace/package" package
+			"chore: update dependencies of "@namespace/package"
 
 			The following dependency versions have been updated:
 
@@ -116,11 +118,24 @@ describe("generateCommitMessage()", () => {
 		`);
 	});
 
-	it("should return a commit message containing a row for each change", ({
-		expect,
-	}) => {
+	it("should return a commit message about multiple packages", () => {
 		const message = generateCommitMessage(
-			"package-name",
+			["@namespace/package", "another-package"],
+			new Map()
+		);
+		expect(message).toMatchInlineSnapshot(`
+			"chore: update dependencies of "@namespace/package", "another-package"
+
+			The following dependency versions have been updated:
+
+			| Dependency | From | To |
+			| ---------- | ---- | -- |"
+		`);
+	});
+
+	it("should return a commit message containing a row for each change", () => {
+		const message = generateCommitMessage(
+			["package-name"],
 			new Map([
 				["some-package", { from: "^0.0.1", to: "^0.0.2" }],
 				["@namespace/some-package", { from: "1.3.4", to: "1.4.5" }],
@@ -128,7 +143,7 @@ describe("generateCommitMessage()", () => {
 		);
 
 		expect(message).toMatchInlineSnapshot(`
-			"chore: update dependencies of "package-name" package
+			"chore: update dependencies of "package-name"
 
 			The following dependency versions have been updated:
 
@@ -141,9 +156,7 @@ describe("generateCommitMessage()", () => {
 });
 
 describe("writeChangeSet()", () => {
-	it("should call writeFileSync with appropriate changeset path and body", ({
-		expect,
-	}) => {
+	it("should call writeFileSync with appropriate changeset path and body", () => {
 		const header = dedent`
 			---
 			"package-name": patch
@@ -180,7 +193,7 @@ describe("writeChangeSet()", () => {
 });
 
 describe("commitAndPush()", () => {
-	it("should call spawnSync with appropriate git commands", ({ expect }) => {
+	it("should call spawnSync with appropriate git commands", () => {
 		(spawnSync as Mock).mockReturnValue({ output: [] });
 		const commitMessage = dedent`
 			chore: update dependencies of "@namespace/package" package
@@ -236,7 +249,7 @@ describe("commitAndPush()", () => {
 		`);
 	});
 
-	it("should call error if any git command fails", ({ expect }) => {
+	it("should call error if any git command fails", () => {
 		(spawnSync as Mock).mockImplementation((git, args) => {
 			const error =
 				args[0] === "push" ? new Error("Failed to push") : undefined;

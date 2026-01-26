@@ -37,6 +37,7 @@ const TEAM_ASSIGNMENTS: { [label: string]: { [jobRole: string]: string } } = {
 	"start-dev-worker": { em: "lrapoport-cf", pm: "mattietk" },
 	templates: { em: "lrapoport-cf", pm: "mattietk" },
 	types: { em: "lrapoport-cf", pm: "mattietk" },
+	"types-ai": { em: "jkipp-cloudflare" },
 	unenv: { em: "lrapoport-cf", pm: "mattietk" },
 	unstable_dev: { em: "lrapoport-cf", pm: "mattietk" },
 	vectorize: { em: "sejoker", pm: "jonesphillip" },
@@ -44,7 +45,7 @@ const TEAM_ASSIGNMENTS: { [label: string]: { [jobRole: string]: string } } = {
 	vitest: { em: "lrapoport-cf", pm: "mattietk" },
 	"workers vpc": { em: "efalcao", pm: "thomasgauvin" },
 	"Workers + Assets": { em: "dcartertwo", pm: "irvinebroque" },
-	"workers ai": {},
+	"workers ai": { em: "jkipp-cloudflare" },
 	"workers-builds": {
 		director: "dcartertwo",
 		pm: "yomna-shousha",

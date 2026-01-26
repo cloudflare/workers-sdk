@@ -1,5 +1,5 @@
 import { rm, writeFile } from "node:fs/promises";
-import { describe, test, vi } from "vitest";
+import { describe, expect, onTestFinished, test, vi } from "vitest";
 import {
 	fetchJson,
 	isBuildAndPreviewOnWindows,
@@ -18,7 +18,7 @@ describe("basic e2e tests", () => {
 		describe.each(commands)('with "%s" command', (command) => {
 			test.skipIf(isBuildAndPreviewOnWindows(command))(
 				"can serve a Worker that uses a Node.js API (crypto)",
-				async ({ expect }) => {
+				async () => {
 					const proc = await runLongLived(pm, command, projectPath);
 					const url = await waitForReady(proc);
 					expect(await fetchJson(url + "/api/")).toEqual({
@@ -31,7 +31,7 @@ describe("basic e2e tests", () => {
 			// See https://github.com/cloudflare/workerd/pull/5062
 			test.skipIf(process.platform === "win32")(
 				"can listen to abort signals on the request",
-				async ({ expect }) => {
+				async () => {
 					const proc = await runLongLived(pm, command, projectPath);
 					const url = await waitForReady(proc);
 
@@ -59,10 +59,7 @@ describe("basic e2e tests", () => {
 			describe.skipIf(isBuildAndPreviewOnWindows(command))(
 				"environment variables",
 				() => {
-					test("can read vars from wrangler configuration and .env", async ({
-						expect,
-						onTestFinished,
-					}) => {
+					test("can read vars from wrangler configuration and .env", async () => {
 						await writeFile(
 							projectPath + "/.env",
 							"SECRET_A=dev-1\nSECRET_B=dev-2"
@@ -79,10 +76,7 @@ describe("basic e2e tests", () => {
 						});
 					});
 
-					test("will not load local dev vars from .env if there is a .dev.vars file", async ({
-						expect,
-						onTestFinished,
-					}) => {
+					test("will not load local dev vars from .env if there is a .dev.vars file", async () => {
 						await writeFile(
 							projectPath + "/.env",
 							"SECRET_A=dot-env-1\nSECRET_B=dot-env-2"
@@ -103,10 +97,7 @@ describe("basic e2e tests", () => {
 						});
 					});
 
-					test("will not load local dev vars from .env if CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV is set to false", async ({
-						expect,
-						onTestFinished,
-					}) => {
+					test("will not load local dev vars from .env if CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV is set to false", async () => {
 						await writeFile(
 							projectPath + "/.env",
 							"SECRET_A=dot-env-1\nSECRET_B=dot-env-2"
@@ -123,10 +114,7 @@ describe("basic e2e tests", () => {
 						});
 					});
 
-					test("can merge vars from wrangler configuration, .env, and .env.local", async ({
-						expect,
-						onTestFinished,
-					}) => {
+					test("can merge vars from wrangler configuration, .env, and .env.local", async () => {
 						await writeFile(
 							projectPath + "/.env",
 							"SECRET_A=dev-1\nSECRET_B=dev-2"
@@ -148,10 +136,7 @@ describe("basic e2e tests", () => {
 						});
 					});
 
-					test("can merge vars from wrangler configuration, .env, and .env.local, and environment specific files", async ({
-						expect,
-						onTestFinished,
-					}) => {
+					test("can merge vars from wrangler configuration, .env, and .env.local, and environment specific files", async () => {
 						await writeFile(
 							projectPath + "/.env",
 							"SECRET_A=dev-1\nSECRET_B=dev-2"
@@ -186,9 +171,7 @@ describe("basic e2e tests", () => {
 						});
 					});
 
-					test("can read vars from process.env if CLOUDFLARE_INCLUDE_PROCESS_ENV is set", async ({
-						expect,
-					}) => {
+					test("can read vars from process.env if CLOUDFLARE_INCLUDE_PROCESS_ENV is set", async () => {
 						const proc = await runLongLived(pm, command, projectPath, {
 							CLOUDFLARE_INCLUDE_PROCESS_ENV: "true",
 						});

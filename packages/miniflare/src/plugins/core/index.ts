@@ -9,6 +9,7 @@ import { bold } from "kleur/colors";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
+import SCRIPT_LOCAL_EXPLORER_API from "worker:local-explorer/api";
 import { z } from "zod";
 import { fetch } from "../../http";
 import {
@@ -55,6 +56,7 @@ import {
 	getCustomNodeServiceName,
 	getUserServiceName,
 	SERVICE_ENTRY,
+	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
 import {
 	buildStringScriptPath,
@@ -239,6 +241,7 @@ export const CoreSharedOptionsSchema = z
 		httpsCertPath: z.string().optional(),
 
 		inspectorPort: z.number().optional(),
+		inspectorHost: z.string().optional(),
 
 		verbose: z.boolean().optional(),
 
@@ -275,6 +278,8 @@ export const CoreSharedOptionsSchema = z
 		unsafeStickyBlobs: z.boolean().optional(),
 		// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/handler/scheduled`
 		unsafeTriggerHandlers: z.boolean().optional(),
+		// Enable the local explorer at /cdn-cgi/explorer
+		unsafeLocalExplorer: z.boolean().optional(),
 		// Enable logging requests
 		logRequests: z.boolean().default(true),
 
@@ -945,6 +950,7 @@ export interface GlobalServicesOptions {
 	fallbackWorkerName: string | undefined;
 	loopbackPort: number;
 	log: Log;
+	/** All user workerd-native bindings, used for Miniflare's magic proxy and the local explorer worker */
 	proxyBindings: Worker_Binding[];
 }
 export function getGlobalServices({
@@ -996,6 +1002,14 @@ export function getGlobalServices({
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,
 	];
+	if (sharedOptions.unsafeLocalExplorer) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_LOCAL_EXPLORER,
+			service: {
+				name: SERVICE_LOCAL_EXPLORER,
+			},
+		});
+	}
 	if (sharedOptions.upstream !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.TEXT_UPSTREAM_URL,
@@ -1015,7 +1029,7 @@ export function getGlobalServices({
 			data: encoder.encode(liveReloadScript),
 		});
 	}
-	return [
+	const services: Service[] = [
 		{
 			name: SERVICE_LOOPBACK,
 			external: { http: { cfBlobHeader: CoreHeaders.CF_BLOB } },
@@ -1061,6 +1075,25 @@ export function getGlobalServices({
 			},
 		},
 	];
+
+	if (sharedOptions.unsafeLocalExplorer) {
+		services.push({
+			name: SERVICE_LOCAL_EXPLORER,
+			worker: {
+				compatibilityDate: "2026-01-01",
+				compatibilityFlags: ["nodejs_compat"],
+				modules: [
+					{
+						name: "api.worker.js",
+						esModule: SCRIPT_LOCAL_EXPLORER_API(),
+					},
+				],
+				bindings: [...proxyBindings],
+			},
+		});
+	}
+
+	return services;
 }
 
 function getWorkerScript(

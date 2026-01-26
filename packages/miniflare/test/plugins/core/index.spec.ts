@@ -6,15 +6,15 @@ import { AddressInfo } from "node:net";
 import path from "node:path";
 import { text } from "node:stream/consumers";
 import tls from "node:tls";
-import test from "ava";
 import stoppable from "stoppable";
+import { expect, onTestFinished, test } from "vitest";
 import which from "which";
 import { useTmp } from "../../test-shared";
 
 const opensslInstalled = which.sync("openssl", { nothrow: true });
 const opensslTest = opensslInstalled ? test : test.skip;
-opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async (t) => {
-	const tmp = await useTmp(t);
+opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async () => {
+	const tmp = await useTmp();
 
 	// Generate self-signed certificate
 	childProcess.execSync(
@@ -34,7 +34,7 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async (t) => {
 	const stoppableServer = stoppable(server, /* grace */ 0);
 	const url = await new Promise<string>((resolve) => {
 		server.listen(0, () => {
-			t.teardown(() => {
+			onTestFinished(() => {
 				return new Promise((resolve, reject) =>
 					stoppableServer.stop((err) => (err ? reject(err) : resolve()))
 				);
@@ -90,6 +90,6 @@ opensslTest("NODE_EXTRA_CA_CERTS: loads certificates", async (t) => {
 	const exitPromise = once(result, "exit");
 	const resultText = await text(result.stdout);
 	await exitPromise;
-	t.is(result.exitCode, 0);
-	t.is(resultText.trim(), responseBody);
+	expect(result.exitCode).toBe(0);
+	expect(resultText.trim()).toBe(responseBody);
 });

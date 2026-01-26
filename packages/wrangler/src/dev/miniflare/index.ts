@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
+import { getLocalExplorerFromEnv } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
 import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
 import { withSourceURLs } from "../../deployment-bundle/source-url";
@@ -72,6 +73,7 @@ export interface ConfigBundle {
 	initialIp: string;
 	rules: Config["rules"];
 	inspectorPort: number | undefined;
+	inspectorHost: string | undefined;
 	localPersistencePath: string | null;
 	liveReload: boolean;
 	crons: Config["triggers"]["crons"];
@@ -837,23 +839,6 @@ export async function buildMiniflareOptions(
 	remoteProxyConnectionString: RemoteProxyConnectionString | undefined,
 	onDevRegistryUpdate?: (registry: WorkerRegistry) => void
 ): Promise<Options> {
-	if (config.crons?.length && !config.testScheduled) {
-		const host =
-			config.initialIp === "0.0.0.0" || config.initialIp === "::"
-				? "localhost"
-				: config.initialIp.includes(":")
-					? `[${config.initialIp}]`
-					: config.initialIp;
-		const port = config.initialPort;
-
-		logger.once.warn(
-			`Scheduled Workers are not automatically triggered during local development.\n` +
-				`To manually trigger a scheduled event, run:\n` +
-				`  curl "http://${host}:${port}/cdn-cgi/handler/scheduled"\n` +
-				`For more details, see https://developers.cloudflare.com/workers/configuration/cron-triggers/#test-cron-triggers-locally`
-		);
-	}
-
 	const upstream =
 		typeof config.localUpstream === "string"
 			? `${config.upstreamProtocol}://${config.localUpstream}`
@@ -872,6 +857,7 @@ export async function buildMiniflareOptions(
 		host: config.initialIp,
 		port: config.initialPort,
 		inspectorPort: config.inspect ? config.inspectorPort : undefined,
+		inspectorHost: config.inspect ? config.inspectorHost : undefined,
 		liveReload: config.liveReload,
 		upstream,
 		unsafeDevRegistryPath: config.devRegistry,
@@ -879,6 +865,7 @@ export async function buildMiniflareOptions(
 		unsafeHandleDevRegistryUpdate: onDevRegistryUpdate,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
+		unsafeLocalExplorer: getLocalExplorerFromEnv(),
 		// The way we run Miniflare instances with wrangler dev is that there are two:
 		//  - one holding the proxy worker,
 		//  - and one holding the user worker.

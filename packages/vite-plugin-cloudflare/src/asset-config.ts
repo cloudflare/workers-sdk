@@ -108,7 +108,9 @@ export function getAssetsConfig(
 		redirectsContents &&
 		RedirectsSchema.parse(
 			constructRedirects({
-				redirects: parseRedirects(redirectsContents),
+				redirects: parseRedirects(redirectsContents, {
+					htmlHandling: assetsConfig?.html_handling,
+				}),
 				redirectsFile,
 				logger,
 			}).redirects

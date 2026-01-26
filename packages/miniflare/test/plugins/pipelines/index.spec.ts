@@ -1,7 +1,8 @@
-import test from "ava";
 import { Miniflare } from "miniflare";
+import { test } from "vitest";
+import { useDispose } from "../../test-shared";
 
-test("supports declaring pipelines", async (t) => {
+test("supports declaring pipelines", async () => {
 	const mf = new Miniflare({
 		compatibilityDate: "2024-12-30",
 		pipelines: ["PIPELINE"],
@@ -13,8 +14,7 @@ test("supports declaring pipelines", async (t) => {
         },
     }`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	await mf.dispatchFetch("http://localhost");
-	t.assert(true);
 });

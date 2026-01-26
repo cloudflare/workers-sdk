@@ -598,6 +598,7 @@ function normalizeAndValidateDev(
 		ip = process.platform === "win32" ? "127.0.0.1" : "localhost",
 		port,
 		inspector_port,
+		inspector_ip,
 		local_protocol = localProtocolArg ?? "http",
 		// In remote mode upstream_protocol must be https, otherwise it defaults to local_protocol.
 		upstream_protocol = upstreamProtocolArg ?? remoteArg
@@ -619,6 +620,13 @@ function normalizeAndValidateDev(
 		"inspector_port",
 		inspector_port,
 		"number"
+	);
+	validateOptionalProperty(
+		diagnostics,
+		"dev",
+		"inspector_ip",
+		inspector_ip,
+		"string"
 	);
 	validateOptionalProperty(
 		diagnostics,
@@ -665,6 +673,7 @@ function normalizeAndValidateDev(
 		ip,
 		port,
 		inspector_port,
+		inspector_ip,
 		local_protocol,
 		upstream_protocol,
 		host,
@@ -3178,6 +3187,36 @@ function validateContainerApp(
 						}
 					}
 				}
+			}
+
+			if (
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"constraints",
+					containerAppOptional.constraints,
+					"object"
+				) &&
+				containerAppOptional.constraints
+			) {
+				const constraints = containerAppOptional.constraints;
+				if ("tier" in constraints) {
+					diagnostics.warnings.push(
+						`"constraints.tier" has been deprecated in favor of "constraints.tiers". Please update your configuration to use "constraints.tiers" instead.`
+					);
+
+					if ("tiers" in constraints) {
+						diagnostics.errors.push(
+							`${field}.constraints.tier and ${field}.constraints.tiers cannot both be set`
+						);
+					}
+				}
+				validateOptionalTypedArray(
+					diagnostics,
+					`${field}.constraints.tiers`,
+					constraints.tiers,
+					"number"
+				);
 			}
 
 			// Instance Type validation: When present, the instance type should be either (1) a string

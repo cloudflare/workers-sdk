@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages Functions with wrangler.toml", () => {
@@ -18,15 +18,13 @@ describe("Pages Functions with wrangler.toml", () => {
 		await stop?.();
 	});
 
-	it("should render static pages", async ({ expect }) => {
+	it("should render static pages", async () => {
 		const response = await fetch(`http://${ip}:${port}`);
 		const text = await response.text();
 		expect(text).toContain("Celebrate! Pages now supports 'wrangler.toml' 🎉");
 	});
 
-	it("should correctly apply the routing rules provided in the custom _routes.json file", async ({
-		expect,
-	}) => {
+	it("should correctly apply the routing rules provided in the custom _routes.json file", async () => {
 		// matches `/celebrate` include rule
 		let response = await fetch(`http://${ip}:${port}/celebrate`);
 		let text = await response.text();

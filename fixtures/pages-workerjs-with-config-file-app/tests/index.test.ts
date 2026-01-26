@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages Advanced Mode with wrangler.toml", () => {
@@ -18,7 +18,7 @@ describe("Pages Advanced Mode with wrangler.toml", () => {
 		await stop?.();
 	});
 
-	it("should render static pages", async ({ expect }) => {
+	it("should render static pages", async () => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
 		expect(text).toContain(
@@ -26,9 +26,7 @@ describe("Pages Advanced Mode with wrangler.toml", () => {
 		);
 	});
 
-	it("should run our _worker.js, and correctly apply the routing rules provided in the custom _routes.json file", async ({
-		expect,
-	}) => {
+	it("should run our _worker.js, and correctly apply the routing rules provided in the custom _routes.json file", async () => {
 		// matches `/holiday` include rule
 		let response = await fetch(`http://${ip}:${port}/holiday`);
 		let text = await response.text();
@@ -63,7 +61,7 @@ describe("Pages Advanced Mode with wrangler.toml", () => {
 		);
 	});
 
-	it("has version_metadata binding", async ({ expect }) => {
+	it("has version_metadata binding", async () => {
 		const response = await fetch(`http://${ip}:${port}/version_metadata`);
 
 		await expect(response.json()).resolves.toMatchObject({

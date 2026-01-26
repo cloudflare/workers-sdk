@@ -6,7 +6,7 @@ import { runSearch } from "./helpers";
 
 export const docs = createCommand({
 	metadata: {
-		description: "📚 Open Wrangler's command documentation in your browser\n",
+		description: "📚 Open Wrangler's command documentation in your browser",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},

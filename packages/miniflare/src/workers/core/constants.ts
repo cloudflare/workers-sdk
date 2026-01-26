@@ -2,6 +2,13 @@ export const CoreHeaders = {
 	CUSTOM_FETCH_SERVICE: "MF-Custom-Fetch-Service",
 	CUSTOM_NODE_SERVICE: "MF-Custom-Node-Service",
 	ORIGINAL_URL: "MF-Original-URL",
+	/**
+	 * Stores the original hostname when using the `upstream` option.
+	 * When requests are proxied to an upstream, the `Host` header is rewritten
+	 * to match the upstream. This header preserves the original hostname
+	 * so Workers can access it if needed.
+	 */
+	ORIGINAL_HOSTNAME: "MF-Original-Hostname",
 	PROXY_SHARED_SECRET: "MF-Proxy-Shared-Secret",
 	DISABLE_PRETTY_ERROR: "MF-Disable-Pretty-Error",
 	ERROR_STACK: "MF-Experimental-Error-Stack",
@@ -24,6 +31,7 @@ export const CoreBindings = {
 	SERVICE_LOOPBACK: "MINIFLARE_LOOPBACK",
 	SERVICE_USER_ROUTE_PREFIX: "MINIFLARE_USER_ROUTE_",
 	SERVICE_USER_FALLBACK: "MINIFLARE_USER_FALLBACK",
+	SERVICE_LOCAL_EXPLORER: "MINIFLARE_LOCAL_EXPLORER",
 	TEXT_CUSTOM_SERVICE: "MINIFLARE_CUSTOM_SERVICE",
 	IMAGES_SERVICE: "MINIFLARE_IMAGES_SERVICE",
 	TEXT_UPSTREAM_URL: "MINIFLARE_UPSTREAM_URL",

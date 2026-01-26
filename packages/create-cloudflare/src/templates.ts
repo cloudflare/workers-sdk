@@ -872,8 +872,9 @@ const inferCopyFilesDefinition = (path: string): CopyFiles => {
 /**
  * Downloads an external template from a git repo.
  *
- * @param src The url of the git repository to download the template from.
- *            For convenience, `owner/repo` is also accepted.
+ * @param src Any source supported by degit, e.g. a GitHub repo URL
+ *            If the URL contains a subdirectory, it must be specified using the format
+ *            supported by degit, i.e. `github:<owner>/<repo>/sub/directory[#<branch>]`
  * @param options Options for downloading the template:
  * 					- mode: The mode to use for downloading the template. Defaults to 'git'.
  * 					- intoFolder: The folder to download the template into. Defaults to a temporary directory.
@@ -886,19 +887,42 @@ export async function downloadRemoteTemplate(
 		intoFolder?: string;
 	} = {},
 ) {
+	const ghRegex =
+		/^https:\/\/github\.com\/(?<user>[\w-]+)\/(?<repo>[\w.-]+)(?:\/(?<path>.*))?$/;
+
+	let errorMessage = `Failed to clone remote template: ${src}`;
 	try {
 		// degit runs `git clone` internally which may prompt for credentials if required
 		// Avoid using a `spinner()` during this operation -- use updateStatus instead.
 		updateStatus(`Cloning template from: ${blue(src)}`);
 
-		// GitHub URL with subdirectory is not supported by degit and has to be transformed.
-		// This only addresses input template URLs on the main branch as a branch name
-		// might includes slashes that span multiple segments in the URL and cannot be
-		// reliably differentiated from the subdirectory path.
-		if (src.startsWith("https://github.com/") && src.includes("/tree/main/")) {
-			src = src
-				.replace("https://github.com/", "github:")
-				.replace("/tree/main/", "/");
+		// Add support for `https://github.com/<owner>/<repo>/tree/main/[<sub/directory>]` format
+		// Subdirectories are only supported for the 'main' branch in this format
+		if (src.startsWith("https://github.com/")) {
+			const match = src.match(ghRegex);
+			if (match?.groups) {
+				const { user, repo, path } = match.groups;
+
+				const pathSegments = (path ?? "").split("/").filter((s) => s !== "");
+
+				let branch = "";
+
+				if (pathSegments[0] === "tree" && pathSegments.length >= 2) {
+					// The URL contains a branch.
+					// Subdirectories are only supported for the 'main' branch.
+					branch = pathSegments[1];
+
+					if (branch !== "main") {
+						errorMessage +=
+							"\nUse the format \"github:<owner>/<repo>/sub/directory[#<branch>]\" to clone a specific branch other than 'main'";
+						throw new Error("Unsupported format");
+					}
+
+					pathSegments.splice(0, 2); // Remove 'tree' and branch name
+				}
+
+				src = `github:${user}/${repo}${pathSegments.length > 0 ? `/${pathSegments.join("/")}` : ""}${branch ? `#${branch}` : ""}`;
+			}
 		}
 
 		const emitter = degit(src, {
@@ -915,7 +939,7 @@ export async function downloadRemoteTemplate(
 		return tmpDir;
 	} catch {
 		updateStatus(`${brandColor("template")} ${dim("failed")}`);
-		throw new Error(`Failed to clone remote template: ${src}`);
+		throw new Error(errorMessage);
 	}
 }
 

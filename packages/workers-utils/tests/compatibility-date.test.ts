@@ -8,9 +8,18 @@ describe("getLocalWorkerdCompatibilityDate", () => {
 	});
 
 	it("should successfully get the local latest compatibility date from the local workerd instance", () => {
-		// Note: this works because the function gets the monorepo's miniflare/workerd instance
+		vi.spyOn(module, "createRequire").mockImplementation(() => {
+			const mockedRequire = ((pkg: string) => {
+				if (pkg === "workerd") {
+					return { compatibilityDate: "2025-01-10" };
+				}
+				return {};
+			}) as NodeJS.Require;
+			mockedRequire.resolve = (() => "") as unknown as NodeJS.RequireResolve;
+			return mockedRequire;
+		});
 		const { date, source } = getLocalWorkerdCompatibilityDate();
-		expect(date).toMatch(/\d{4}-\d{2}-\d{2}/);
+		expect(date).toBe("2025-01-10");
 		expect(source).toEqual("workerd");
 	});
 

@@ -547,9 +547,12 @@ describe("wrangler secret", () => {
 
 			await expect(runWrangler(`secret put secret-name --name ${scriptName}`))
 				.rejects.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed. Please ensure that the latest version of your Worker is fully deployed (wrangler versions deploy) before modifying secrets. Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.
-
-				Note: This limitation will be addressed in an upcoming release.]
+				[Error: Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed.
+				This limitation exists to prevent accidental deployment when using Worker versions and secrets together.
+				To resolve this, you have two options:
+				(1) use the \`wrangler versions secret put\` instead, which allows you to update secrets without deploying; or
+				(2) deploy the latest version first, then modify secrets.
+				Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.]
 			`);
 		});
 	});
@@ -891,6 +894,35 @@ describe("wrangler secret", () => {
 			`);
 			expect(error).toMatchInlineSnapshot(
 				`[Error: Required Worker name missing. Please specify the Worker name in your Wrangler configuration file, or pass it as an argument with \`--name <worker-name>\`]`
+			);
+		});
+
+		it("should error if worker is not found (error code 10007)", async () => {
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+					() => {
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: WORKER_NOT_FOUND_ERR_CODE,
+									message: workerNotFoundErrorMessage,
+								},
+							])
+						);
+					},
+					{ once: true }
+				)
+			);
+			await expect(
+				runWrangler("secret list --name non-existent-worker")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: Worker "non-existent-worker" not found.
+
+				If this is a new Worker, run \`wrangler deploy\` first to create it.
+				Otherwise, check that the Worker name is correct and you're logged into the right account.]
+			`
 			);
 		});
 

@@ -1,0 +1,24 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "worker-w-resources",
+	"main": "src/index.ts",
+	"compatibility_date": "2023-05-04",
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+		},
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+		},
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "DO",
+				"class_name": "MyDurableObject",
+			},
+		],
+	},
+}

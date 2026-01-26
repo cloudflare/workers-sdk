@@ -1,4 +1,5 @@
 import { fetchSecrets } from "../utils/fetch-secrets";
+import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import type { Config } from "@cloudflare/workers-utils";
 
 /**
@@ -24,8 +25,21 @@ export async function checkRemoteSecretsOverride(
 	const bindingNames = extractBindingNames(config);
 
 	if (envVarNames.length + bindingNames.length > 0) {
-		const secrets = await fetchSecrets(config, targetEnv);
-		const secretNames = new Set(secrets.map((secret) => secret.name));
+		const secretNames = new Set<string>();
+
+		try {
+			const secrets = await fetchSecrets(config, targetEnv);
+
+			for (const secret of secrets) {
+				secretNames.add(secret.name);
+			}
+		} catch (e) {
+			if (isWorkerNotFoundError(e)) {
+				// Worker doesn't exist yet (first deployment), so no secrets to override
+				return { override: false };
+			}
+			throw e;
+		}
 
 		const envVarNamesOverridingSecrets = envVarNames.filter((name) =>
 			secretNames.has(name)

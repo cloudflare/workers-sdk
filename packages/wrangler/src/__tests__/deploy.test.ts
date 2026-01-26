@@ -16008,18 +16008,24 @@ export default{
 				"npx",
 				"wrangler",
 				"deploy",
+				"--x-autoconfig",
 			]);
 			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
 				.runCommand;
 
 			await mockOpenNextLikeProject();
 
-			await runWrangler("deploy");
+			await runWrangler("deploy --x-autoconfig");
 
 			expect(runCommandSpy).toHaveBeenCalledOnce();
 			const call = (runCommandSpy as unknown as MockInstance).mock.calls[0];
 			const [command, options] = call;
-			expect(command).toEqual(["npx", "opennextjs-cloudflare", "deploy"]);
+			expect(command).toEqual([
+				"npx",
+				"opennextjs-cloudflare",
+				"deploy",
+				"--x-autoconfig",
+			]);
 			expect(options).toMatchObject({
 				env: {
 					// Note: we want to ensure that OPEN_NEXT_DEPLOY has been set, this is not strictly necessary but it helps us
@@ -16048,13 +16054,14 @@ export default{
 				"wrangler",
 				"deploy",
 				"--keep-vars",
+				"--x-autoconfig",
 			]);
 			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
 				.runCommand;
 
 			await mockOpenNextLikeProject();
 
-			await runWrangler("deploy");
+			await runWrangler("deploy --x-autoconfig");
 
 			expect(runCommandSpy).toHaveBeenCalledOnce();
 			const call = (runCommandSpy as unknown as MockInstance).mock.calls[0];
@@ -16066,6 +16073,7 @@ export default{
 				// `opennextjs-cloudflare deploy` accepts all the same arguments `wrangler deploy` does (since it then forwards them
 				// to wrangler), so we do want to make sure that arguments are indeed forwarded to `opennextjs-cloudflare deploy`
 				"--keep-vars",
+				"--x-autoconfig",
 			]);
 			expect(options).toMatchObject({
 				env: {
@@ -16092,6 +16100,35 @@ export default{
 		it("should not delegate to open-next deploy when run in an open-next project and OPEN_NEXT_DEPLOY is set", async () => {
 			vi.stubEnv("OPEN_NEXT_DEPLOY", "1");
 
+			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
+				.runCommand;
+
+			await mockOpenNextLikeProject();
+
+			await runWrangler("deploy --x-autoconfig");
+
+			expect(runCommandSpy).not.toHaveBeenCalledOnce();
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding            Resource
+				env.ASSETS         Assets
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not delegate to open-next deploy when the --x-autoconfig flag is not provided", async () => {
 			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
 				.runCommand;
 
@@ -16129,7 +16166,7 @@ export default{
 			// Let's delete the next.config.js file
 			fs.rmSync("./next.config.js");
 
-			await runWrangler("deploy");
+			await runWrangler("deploy --x-autoconfig");
 
 			expect(runCommandSpy).not.toHaveBeenCalledOnce();
 
@@ -16161,7 +16198,7 @@ export default{
 			// Let's delete the open-next.config.ts file
 			fs.rmSync("./open-next.config.ts");
 
-			await runWrangler("deploy");
+			await runWrangler("deploy --x-autoconfig");
 
 			expect(runCommandSpy).not.toHaveBeenCalledOnce();
 

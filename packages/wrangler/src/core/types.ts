@@ -48,6 +48,12 @@ export type DeepFlatten<T> = T extends object
 	? { [K in keyof T]: DeepFlatten<T[K]> }
 	: T;
 
+export type MetadataCategory =
+	| "Account"
+	| "Compute & AI"
+	| "Storage & databases"
+	| "Networking & security";
+
 export type Command = `wrangler${string}`;
 export type Metadata = {
 	description: string;
@@ -64,6 +70,12 @@ export type Metadata = {
 		description: string;
 	}[];
 	hideGlobalFlags?: string[];
+	/**
+	 * Optional category for grouping commands in the help output.
+	 * Commands with the same category will be grouped together under a shared heading.
+	 * Commands without a category will appear under the default "COMMANDS" group.
+	 */
+	category?: MetadataCategory;
 };
 
 export type ArgDefinition = Omit<PositionalOptions, "type"> &

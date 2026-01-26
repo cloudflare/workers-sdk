@@ -11,6 +11,8 @@ import { hasLocalDevVarsFileChanged } from "../dev-vars";
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
+import type { PluginContext } from "../context";
+import type { EnvironmentOptions, UserConfig } from "vite";
 
 /**
  * Plugin to handle configuration and config file watching
@@ -46,43 +48,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						deny: [...defaultDeniedFiles, ".dev.vars", ".dev.vars.*"],
 					},
 				},
-				environments:
-					ctx.resolvedPluginConfig.type === "workers"
-						? {
-								...Object.fromEntries(
-									[...ctx.resolvedPluginConfig.environmentNameToWorkerMap].map(
-										([environmentName, worker]) => {
-											return [
-												environmentName,
-												createCloudflareEnvironmentOptions({
-													workerConfig: worker.config,
-													userConfig,
-													mode: env.mode,
-													environmentName,
-													isEntryWorker:
-														ctx.resolvedPluginConfig.type === "workers" &&
-														environmentName ===
-															ctx.resolvedPluginConfig
-																.entryWorkerEnvironmentName,
-													hasNodeJsCompat:
-														ctx.getNodeJsCompat(environmentName) !== undefined,
-												}),
-											];
-										}
-									)
-								),
-								client: {
-									build: {
-										outDir: getOutputDirectory(userConfig, "client"),
-									},
-									optimizeDeps: {
-										// Some frameworks allow users to mix client and server code in the same file and then extract the server code.
-										// As the dependency optimization may happen before the server code is extracted, we should exclude Cloudflare built-ins from client optimization.
-										exclude: [...cloudflareBuiltInModules],
-									},
-								},
-							}
-						: undefined,
+				environments: getEnvironmentsConfig(ctx, userConfig, env.mode),
 				builder: {
 					buildApp:
 						userConfig.builder?.buildApp ??
@@ -171,3 +137,76 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		},
 	};
 });
+
+/**
+ * Generates the environment configuration for all Worker environments.
+ */
+function getEnvironmentsConfig(
+	ctx: PluginContext,
+	userConfig: UserConfig,
+	mode: string
+): Record<string, EnvironmentOptions> | undefined {
+	if (ctx.resolvedPluginConfig.type !== "workers") {
+		return undefined;
+	}
+
+	const workersConfig = ctx.resolvedPluginConfig;
+
+	const workerEnvironments = Object.fromEntries(
+		[...workersConfig.environmentNameToWorkerMap].flatMap(
+			([environmentName, worker]) => {
+				const childEnvironmentNames =
+					workersConfig.environmentNameToChildEnvironmentNamesMap.get(
+						environmentName
+					) ?? [];
+
+				const sharedOptions = {
+					workerConfig: worker.config,
+					userConfig,
+					mode,
+					hasNodeJsCompat: ctx.getNodeJsCompat(environmentName) !== undefined,
+				};
+
+				const parentConfig = [
+					environmentName,
+					createCloudflareEnvironmentOptions({
+						...sharedOptions,
+						environmentName,
+						isEntryWorker:
+							environmentName === workersConfig.entryWorkerEnvironmentName,
+						isParentEnvironment: true,
+					}),
+				] as const;
+
+				const childConfigs = childEnvironmentNames.map(
+					(childEnvironmentName) =>
+						[
+							childEnvironmentName,
+							createCloudflareEnvironmentOptions({
+								...sharedOptions,
+								environmentName: childEnvironmentName,
+								isEntryWorker: false,
+								isParentEnvironment: false,
+							}),
+						] as const
+				);
+
+				return [parentConfig, ...childConfigs];
+			}
+		)
+	);
+
+	return {
+		...workerEnvironments,
+		client: {
+			build: {
+				outDir: getOutputDirectory(userConfig, "client"),
+			},
+			optimizeDeps: {
+				// Some frameworks allow users to mix client and server code in the same file and then extract the server code.
+				// As the dependency optimization may happen before the server code is extracted, we should exclude Cloudflare built-ins from client optimization.
+				exclude: [...cloudflareBuiltInModules],
+			},
+		},
+	};
+}

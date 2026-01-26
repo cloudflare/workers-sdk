@@ -5,6 +5,7 @@ export const vpcNamespace = createNamespace({
 		description: "🌐 Manage VPC",
 		status: "open beta",
 		owner: "Product: WVPC",
+		category: "Compute & AI",
 	},
 });
 

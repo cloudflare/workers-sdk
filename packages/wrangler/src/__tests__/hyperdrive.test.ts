@@ -138,6 +138,17 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
+	it("should not include remote option in hyperdrive config output (hyperdrive does not support remote bindings)", async () => {
+		const reqProm = mockHyperdriveCreate();
+		await runWrangler(
+			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb'"
+		);
+		await reqProm;
+
+		// Hyperdrive does not support remote bindings in local dev, so the output should never contain "remote"
+		expect(std.out).not.toContain("remote");
+	});
+
 	it("should handle creating a hyperdrive and printing a TOML snipped", async () => {
 		const reqProm = mockHyperdriveCreate();
 		writeWranglerConfig();

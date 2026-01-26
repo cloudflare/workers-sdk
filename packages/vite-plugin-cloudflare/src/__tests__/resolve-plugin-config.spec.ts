@@ -751,3 +751,138 @@ describe("resolvePluginConfig - defaults fill in missing fields", () => {
 		expect(auxWorker?.config.compatibility_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 	});
 });
+
+describe("resolvePluginConfig - environment name validation", () => {
+	let tempDir: string;
+
+	beforeEach(() => {
+		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "vite-plugin-test-"));
+	});
+
+	afterEach(() => {
+		fs.rmSync(tempDir, { recursive: true, force: true });
+	});
+
+	const viteEnv = { mode: "development", command: "serve" as const };
+
+	test("throws when environment name is 'client'", () => {
+		const configPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({ name: "entry-worker", main: "./src/index.ts" })
+		);
+		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
+
+		const pluginConfig: PluginConfig = {
+			configPath,
+			viteEnvironment: { name: "client" },
+		};
+
+		expect(() =>
+			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
+		).toThrow('"client" is a reserved Vite environment name');
+	});
+
+	test("throws when child environment duplicates parent", () => {
+		const configPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({ name: "entry-worker", main: "./src/index.ts" })
+		);
+		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
+
+		const pluginConfig: PluginConfig = {
+			configPath,
+			viteEnvironment: { childEnvironments: ["entry_worker"] },
+		};
+
+		expect(() =>
+			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
+		).toThrow('Duplicate Vite environment name: "entry_worker"');
+	});
+
+	test("throws when child environments duplicate each other", () => {
+		const configPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({ name: "entry-worker", main: "./src/index.ts" })
+		);
+		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
+
+		const pluginConfig: PluginConfig = {
+			configPath,
+			viteEnvironment: { childEnvironments: ["child", "child"] },
+		};
+
+		expect(() =>
+			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
+		).toThrow('Duplicate Vite environment name: "child"');
+	});
+
+	test("throws when auxiliary Worker duplicates entry Worker", () => {
+		const configPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({ name: "entry-worker", main: "./src/index.ts" })
+		);
+		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
+
+		const auxDir = path.join(tempDir, "aux");
+		fs.mkdirSync(auxDir, { recursive: true });
+		fs.writeFileSync(
+			path.join(auxDir, "wrangler.jsonc"),
+			JSON.stringify({ name: "aux-worker", main: "./worker.ts" })
+		);
+		fs.writeFileSync(path.join(auxDir, "worker.ts"), "export default {}");
+
+		const pluginConfig: PluginConfig = {
+			configPath,
+			auxiliaryWorkers: [
+				{
+					configPath: path.join(auxDir, "wrangler.jsonc"),
+					viteEnvironment: { name: "entry_worker" },
+				},
+			],
+		};
+
+		expect(() =>
+			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
+		).toThrow('Duplicate Vite environment name: "entry_worker"');
+	});
+
+	test("throws when auxiliary Worker child duplicates entry Worker", () => {
+		const configPath = path.join(tempDir, "wrangler.jsonc");
+		fs.writeFileSync(
+			configPath,
+			JSON.stringify({ name: "entry-worker", main: "./src/index.ts" })
+		);
+		fs.mkdirSync(path.join(tempDir, "src"), { recursive: true });
+		fs.writeFileSync(path.join(tempDir, "src/index.ts"), "export default {}");
+
+		const auxDir = path.join(tempDir, "aux");
+		fs.mkdirSync(auxDir, { recursive: true });
+		fs.writeFileSync(
+			path.join(auxDir, "wrangler.jsonc"),
+			JSON.stringify({ name: "aux-worker", main: "./worker.ts" })
+		);
+		fs.writeFileSync(path.join(auxDir, "worker.ts"), "export default {}");
+
+		const pluginConfig: PluginConfig = {
+			configPath,
+			auxiliaryWorkers: [
+				{
+					configPath: path.join(auxDir, "wrangler.jsonc"),
+					viteEnvironment: { childEnvironments: ["entry_worker"] },
+				},
+			],
+		};
+
+		expect(() =>
+			resolvePluginConfig(pluginConfig, { root: tempDir }, viteEnv)
+		).toThrow('Duplicate Vite environment name: "entry_worker"');
+	});
+});

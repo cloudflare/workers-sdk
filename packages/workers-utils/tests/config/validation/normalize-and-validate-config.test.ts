@@ -44,6 +44,7 @@ describe("normalizeAndValidateConfig()", () => {
 				host: undefined,
 				enable_containers: true,
 				inspector_port: undefined,
+				inspector_ip: undefined,
 				container_engine: undefined,
 				generate_types: false,
 			},
@@ -2788,6 +2789,86 @@ describe("normalizeAndValidateConfig()", () => {
 					"Processing wrangler configuration:
 					  - The \\"dev\\" instance_type has been renamed to \\"lite\\" and will be removed in a subsequent version. Please update your configuration to use \\"lite\\" instead."
 				`);
+			});
+
+			it("should error when both constraints.tier and constraints.tiers are set", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									tier: 1,
+									tiers: [1, 2],
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.renderWarnings()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - \\"constraints.tier\\" has been deprecated in favor of \\"constraints.tiers\\". Please update your configuration to use \\"constraints.tiers\\" instead."
+				`);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - containers.constraints.tier and containers.constraints.tiers cannot both be set"
+				`);
+			});
+
+			it("should error when constraints.tiers is not an array of numbers", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									tiers: ["a", "b"],
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.renderErrors()).toMatchInlineSnapshot(`
+					"Processing wrangler configuration:
+					  - Expected \\"containers.constraints.tiers.[0]\\" to be of type number but got \\"a\\".
+					  - Expected \\"containers.constraints.tiers.[1]\\" to be of type number but got \\"b\\"."
+				`);
+			});
+
+			it("should allow valid constraints.tiers array of numbers", () => {
+				const { diagnostics } = normalizeAndValidateConfig(
+					{
+						name: "test-worker",
+						containers: [
+							{
+								class_name: "TestClass",
+								image: "registry.cloudflare.com/test:latest",
+								constraints: {
+									tiers: [1, 2, 3],
+								},
+							},
+						],
+					} as unknown as RawConfig,
+					undefined,
+					undefined,
+					{ env: undefined }
+				);
+
+				expect(diagnostics.hasWarnings()).toBe(false);
+				expect(diagnostics.hasErrors()).toBe(false);
 			});
 		});
 

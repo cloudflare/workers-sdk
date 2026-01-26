@@ -1,5 +1,75 @@
 # @cloudflare/workers-utils
 
+## 0.7.1
+
+### Patch Changes
+
+- [#11946](https://github.com/cloudflare/workers-sdk/pull/11946) [`fa39a73`](https://github.com/cloudflare/workers-sdk/commit/fa39a73040dd27d35d429deda34fdc8e15b15fbe) Thanks [@MattieTK](https://github.com/MattieTK)! - Fix `configFileName` returning wrong filename for `.jsonc` config files
+
+  Previously, users with a `wrangler.jsonc` config file would see error messages and hints referring to `wrangler.json` instead of `wrangler.jsonc`. This was because the `configFormat` function collapsed both `.json` and `.jsonc` files into a single `"jsonc"` value, losing the distinction between them.
+
+  Now `configFormat` returns `"json"` for `.json` files and `"jsonc"` for `.jsonc` files, allowing `configFileName` to return the correct filename for each format.
+
+## 0.7.0
+
+### Minor Changes
+
+- [#11755](https://github.com/cloudflare/workers-sdk/pull/11755) [`0f8d69d`](https://github.com/cloudflare/workers-sdk/commit/0f8d69d31071abeb567aa3c8478492536b5740fb) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Users can now specify `constraints.tiers` for their container applications. `tier` is deprecated in favor of `tiers`.
+  If left unset, we will default to `tiers: [1, 2]`.
+  Note that `constraints` is an experimental feature.
+
+## 0.6.0
+
+### Minor Changes
+
+- [#11702](https://github.com/cloudflare/workers-sdk/pull/11702) [`f612b46`](https://github.com/cloudflare/workers-sdk/commit/f612b4683a7e1408709ad378fb6c5b96af485d49) Thanks [@gpanders](https://github.com/gpanders)! - Add support for trusted_user_ca_keys in Wrangler
+
+  You can now configure SSH trusted user CA keys for containers. Add the following to your wrangler.toml:
+
+  ```toml
+  [[containers.trusted_user_ca_keys]]
+  public_key = "ssh-ed25519 AAAAC3..."
+  ```
+
+  This allows you to specify CA public keys that can be used to verify SSH user certificates.
+
+- [#11620](https://github.com/cloudflare/workers-sdk/pull/11620) [`25f6672`](https://github.com/cloudflare/workers-sdk/commit/25f66726d3b2f55a6139273e8f307f0cf3c44422) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Expose a new `getLocalWorkerdCompatibilityDate` utility that allows callers to get the compatibility date of the locally installed `workerd` package.
+
+- [#11616](https://github.com/cloudflare/workers-sdk/pull/11616) [`fc95831`](https://github.com/cloudflare/workers-sdk/commit/fc958315f7f452155385628092db822badc09404) Thanks [@NuroDev](https://github.com/NuroDev)! - Add type generation support to `wrangler dev`
+
+  You can now have your worker configuration types be automatically generated when the local Wrangler development server starts.
+
+  To use it you can either:
+
+  1. Add the `--types` flag when running `wrangler dev`.
+  2. Update your Wrangler configuration file to add the new `dev.generate_types` boolean property.
+
+  ```json
+  {
+  	"$schema": "node_modules/wrangler/config-schema.json",
+  	"name": "example",
+  	"main": "src/index.ts",
+  	"compatibility_date": "2025-12-12",
+  	"dev": {
+  		"generate_types": true
+  	}
+  }
+  ```
+
+- [#11620](https://github.com/cloudflare/workers-sdk/pull/11620) [`25f6672`](https://github.com/cloudflare/workers-sdk/commit/25f66726d3b2f55a6139273e8f307f0cf3c44422) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Expose new `isCompatDate` utility that discerns whether a string represents a compatibility date or not
+
+### Patch Changes
+
+- [#11737](https://github.com/cloudflare/workers-sdk/pull/11737) [`2cfea12`](https://github.com/cloudflare/workers-sdk/commit/2cfea12660d0ab2841d230889de6ff628792223e) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix the `triggers` JSON schema default value to use valid JSON (`{"crons":[]}`) instead of an invalid JavaScript literal, which was causing IDE auto-completion to insert a string rather than an object.
+
+- [#11651](https://github.com/cloudflare/workers-sdk/pull/11651) [`d123ad0`](https://github.com/cloudflare/workers-sdk/commit/d123ad006d72bdee97cce5f4857e6d06a6fc16da) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Surface error in diagnostics when TOML date/time values are used in `vars`
+
+  TOML parses unquoted date/time values like `DATE = 2024-01-01` as TOML Date, Date-Time, and Time values. The config validation now surfaces an error in the diagnostics result when this type of values are encountered, with a clear message telling you to quote the value as a string, e.g. `DATE = "2024-01-01"`.
+
+- [#11693](https://github.com/cloudflare/workers-sdk/pull/11693) [`385ec7f`](https://github.com/cloudflare/workers-sdk/commit/385ec7fe17b7e06d669481448555282e5a982626) Thanks [@vicb](https://github.com/vicb)! - Update the signature of ParseTOML to drop the Generics.
+
+  Use an explicit cast where required.
+
 ## 0.5.0
 
 ### Minor Changes

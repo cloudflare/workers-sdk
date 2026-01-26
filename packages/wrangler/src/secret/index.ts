@@ -135,6 +135,7 @@ export const secretNamespace = createNamespace({
 		description: "🤫 Generate a secret that can be referenced in a Worker",
 		status: "stable",
 		owner: "Workers: Deploy and Config",
+		category: "Compute & AI",
 	},
 });
 export const secretPutCommand = createCommand({
@@ -215,11 +216,12 @@ export const secretPutCommand = createCommand({
 			} catch (e) {
 				if (e instanceof APIError && e.code === VERSION_NOT_DEPLOYED_ERR_CODE) {
 					throw new UserError(
-						"Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed. " +
-							"Please ensure that the latest version of your Worker is fully deployed " +
-							"(wrangler versions deploy) before modifying secrets. " +
-							"Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version." +
-							"\n\nNote: This limitation will be addressed in an upcoming release."
+						"Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed.\n" +
+							"This limitation exists to prevent accidental deployment when using Worker versions and secrets together.\n" +
+							"To resolve this, you have two options:\n" +
+							"(1) use the `wrangler versions secret put` instead, which allows you to update secrets without deploying; or\n" +
+							"(2) deploy the latest version first, then modify secrets.\n" +
+							"Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version."
 					);
 				} else {
 					throw e;
@@ -229,9 +231,17 @@ export const secretPutCommand = createCommand({
 
 		try {
 			await submitSecret();
-			metrics.sendMetricsEvent("create encrypted variable", {
-				sendMetrics: config.send_metrics,
-			});
+			metrics.sendMetricsEvent(
+				"create encrypted variable",
+				{
+					secretOperation: "single",
+					secretSource: isInteractive ? "interactive" : "stdin",
+					hasEnvironment: Boolean(args.env),
+				},
+				{
+					sendMetrics: config.send_metrics,
+				}
+			);
 		} catch (e) {
 			if (isWorkerNotFoundError(e)) {
 				// create a draft worker and try again
@@ -377,10 +387,21 @@ export const secretListCommand = createCommand({
 			);
 		}
 
-		const secrets = await fetchSecrets(
-			{ ...config, name: scriptName },
-			args.env
-		);
+		let secrets: Awaited<ReturnType<typeof fetchSecrets>>;
+
+		try {
+			secrets = await fetchSecrets({ ...config, name: scriptName }, args.env);
+		} catch (e) {
+			if (isWorkerNotFoundError(e)) {
+				throw new UserError(
+					`Worker "${scriptName}"${args.env ? ` (env: ${args.env})` : ""} not found.\n\n` +
+						`If this is a new Worker, run \`wrangler deploy\` first to create it.\n` +
+						`Otherwise, check that the Worker name is correct and you're logged into the right account.`
+				);
+			}
+
+			throw e;
+		}
 
 		if (args.format === "pretty") {
 			for (const workerSecret of secrets) {
@@ -449,11 +470,13 @@ export const secretBulkCommand = createCommand({
 			}`
 		);
 
-		const content = await parseBulkInputToObject(args.file);
+		const result = await parseBulkInputToObject(args.file);
 
-		if (!content) {
+		if (!result) {
 			return logger.error(`🚨 No content found in file, or piped input.`);
 		}
+
+		const { content, secretSource, secretFormat } = result;
 
 		function getSettings() {
 			const url = isServiceEnv
@@ -487,13 +510,13 @@ export const secretBulkCommand = createCommand({
 		} catch (e) {
 			if (isWorkerNotFoundError(e)) {
 				// create a draft worker before patching
-				const result = await createDraftWorker({
+				const draftWorkerResult = await createDraftWorker({
 					config,
 					args: args,
 					accountId,
 					scriptName,
 				});
-				if (result === null) {
+				if (draftWorkerResult === null) {
 					return;
 				}
 				existingBindings = [];
@@ -534,6 +557,18 @@ export const secretBulkCommand = createCommand({
 			logger.log("");
 			logger.log("Finished processing secrets file:");
 			logger.log(`✨ ${upsertBindings.length} secrets successfully uploaded`);
+			metrics.sendMetricsEvent(
+				"create encrypted variable",
+				{
+					secretOperation: "bulk",
+					secretSource,
+					secretFormat,
+					hasEnvironment: Boolean(args.env),
+				},
+				{
+					sendMetrics: config.send_metrics,
+				}
+			);
 		} catch (err) {
 			logger.log("");
 			logger.log(`🚨 Secrets failed to upload`);
@@ -561,16 +596,39 @@ export function validateFileSecrets(
 	}
 }
 
-export async function parseBulkInputToObject(input?: string) {
+/** Error thrown when no input is provided to parseBulkInputToObject */
+export class NoInputError extends Error {
+	constructor() {
+		super("No input provided");
+		this.name = "NoInputError";
+	}
+}
+
+/** Result from parsing bulk secret input, including metadata for analytics */
+export type BulkInputResult = {
+	content: Record<string, string>;
+	secretSource: "file" | "stdin";
+	secretFormat: "json" | "dotenv";
+};
+
+export async function parseBulkInputToObject(
+	input?: string
+): Promise<BulkInputResult | undefined> {
 	let content: Record<string, string>;
+	let secretSource: "file" | "stdin";
+	let secretFormat: "json" | "dotenv";
+
 	if (input) {
+		secretSource = "file";
 		const jsonFilePath = path.resolve(input);
 		try {
 			const fileContent = readFileSync(jsonFilePath);
 			try {
 				content = parseJSON(fileContent) as Record<string, string>;
+				secretFormat = "json";
 			} catch (e) {
 				content = dotenvParse(fileContent);
+				secretFormat = "dotenv";
 				// dotenvParse does not error unless fileContent is undefined, no keys === error
 				if (Object.keys(content).length === 0) {
 					throw e;
@@ -583,6 +641,7 @@ export async function parseBulkInputToObject(input?: string) {
 		}
 		validateFileSecrets(content, input);
 	} else {
+		secretSource = "stdin";
 		try {
 			const rl = readline.createInterface({ input: process.stdin });
 			let pipedInput = "";
@@ -591,8 +650,10 @@ export async function parseBulkInputToObject(input?: string) {
 			}
 			try {
 				content = parseJSON(pipedInput) as Record<string, string>;
+				secretFormat = "json";
 			} catch (e) {
 				content = dotenvParse(pipedInput);
+				secretFormat = "dotenv";
 				// dotenvParse does not error unless fileContent is undefined, no keys === error
 				if (Object.keys(content).length === 0) {
 					throw e;
@@ -602,5 +663,5 @@ export async function parseBulkInputToObject(input?: string) {
 			return;
 		}
 	}
-	return content;
+	return { content, secretSource, secretFormat };
 }

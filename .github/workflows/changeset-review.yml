@@ -40,40 +40,31 @@ jobs:
             .changeset/*.md
           files_ignore: |
             .changeset/README.md
-
-      - name: Determine changesets to review
-        id: changesets-to-review
-        env:
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          ALL_CHANGED_FILES: ${{ steps.changed-changesets.outputs.all_changed_files }}
-          ADDED_FILES: ${{ steps.changed-changesets.outputs.added_files }}
-        run: |
-          # For "Version Packages" release PRs, review all changed changesets
-          # For regular PRs, only review newly added changesets (skip minor edits to pre-existing ones)
-          if [[ "$PR_TITLE" == "Version Packages" ]]; then
-            echo "Release PR detected - reviewing all changesets"
-            echo "files=$ALL_CHANGED_FILES" >> $GITHUB_OUTPUT
-          else
-            echo "Regular PR - reviewing only newly added changesets"
-            echo "files=$ADDED_FILES" >> $GITHUB_OUTPUT
-          fi
+          # Recover deleted files so Claude can read them (needed for Version Packages PRs)
+          recover_deleted_files: ${{ github.event.pull_request.title == 'Version Packages' }}
 
       - name: Review Changesets with Claude
         id: claude-review
-        if: steps.changesets-to-review.outputs.files != ''
+        # Run for Version Packages PRs (which delete changesets) or regular PRs with new changesets
+        if: github.event.pull_request.title == 'Version Packages' || steps.changed-changesets.outputs.added_files_count > 0
         uses: anthropics/claude-code-action@v1.0.22
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           allowed_bots: "devin-ai-integration[bot]"
-          track_progress: true
           use_sticky_comment: true
           prompt: |
-            Review the changeset files in this PR: ${{ steps.changesets-to-review.outputs.files }}
+            Review the changeset files in this PR.
+
+            For "Version Packages" PRs, review: ${{ steps.changed-changesets.outputs.deleted_files }}
+            For regular PRs, review: ${{ steps.changed-changesets.outputs.added_files }}
 
             Read `.changeset/README.md` for guidelines, then validate:
-            1. **Version Type**: Correct patch/minor/major (major forbidden for wrangler)
-            2. **Changelog Quality**: Meaningful descriptions with examples for features
+            1. **Version Type**: Accept the author's choice of patch/minor unless clearly incorrect
+            2. **Changelog Quality**: Meaningful descriptions (examples encouraged but not required for features)
             3. **Markdown Headers**: No h1/h2/h3 headers (breaks changelog formatting)
+            4. **Analytics**: If the change collects more analytics, it should be a minor even though there is no user-visible change
+            5. **Dependabot**: Do not validate dependency update changesets for create-cloudflare
+            6. **Experimental features**: Changesets for experimental features should include note on how users can opt in.
 
             If all changesets pass, just output "✅ All changesets look good" - no need for a detailed checklist.
 
@@ -82,20 +73,10 @@ jobs:
             If there are issues, output "⚠️ Issues found" followed by the specific problems.
 
             If the user has attached an image, use the Read tool to view it. If and only if it's a cute animal, include in your comment a short cuteness report in the style of WeRateDogs (e.g., "This is Barkley. He's wearing a tiny hat and doesn't know why. 13/10"). If it's not an animal, silently ignore the image. If there is more than one image, check each one to find an animal. If you do not find an animal, do not include any reference to a cuteness report.
-
-            Return your structured output indicating whether there are blocking issues.
           claude_args: |
             --allowedTools "Read,Glob,Grep"
-            --output-format json
-            --json-schema '{"type":"object","properties":{"has_blocking_issues":{"type":"boolean","description":"True if any changeset has blocking issues that should fail the check"},"summary":{"type":"string","description":"One-line summary of the review"},"issues":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"issue":{"type":"string"},"severity":{"type":"string","enum":["blocking","warning"]}}}}},"required":["has_blocking_issues","summary"]}'
 
       - name: Skip notice
-        if: steps.changesets-to-review.outputs.files == ''
+        if: github.event.pull_request.title != 'Version Packages' && steps.changed-changesets.outputs.added_files_count == 0
         run: |
           echo "No new changesets to review (only minor edits to pre-existing changesets detected)"
-
-      - name: Fail if blocking issues found
-        if: always() && steps.claude-review.outputs.structured_output != '' && fromJSON(steps.claude-review.outputs.structured_output).has_blocking_issues == true
-        run: |
-          echo "::error::Blocking changeset issues found. Please fix the issues identified in the Claude review comment."
-          exit 1

@@ -10,6 +10,8 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
+import { Cloudflare } from "cloudflare";
+import dedent from "ts-dedent";
 import { readConfig } from "../config";
 import { demandOneOfOption } from "../core";
 import { createCommand, createNamespace } from "../core/create-command";
@@ -48,6 +50,7 @@ export const kvNamespace = createNamespace({
 		description: "🗂️ Manage Workers KV Namespaces",
 		status: "stable",
 		owner: "Product: KV",
+		category: "Storage & databases",
 	},
 });
 
@@ -106,10 +109,30 @@ export const kvNamespaceCreateCommand = createCommand({
 		// TODO: generate a binding name stripping non alphanumeric chars
 		logger.log(`🌀 Creating namespace with title "${title}"`);
 
-		const { id: namespaceId } = await sdk.kv.namespaces.create({
-			account_id: accountId,
-			title,
-		});
+		let namespaceId: string;
+		try {
+			const result = await sdk.kv.namespaces.create({
+				account_id: accountId,
+				title,
+			});
+			namespaceId = result.id;
+		} catch (e) {
+			if (
+				e instanceof Cloudflare.APIError &&
+				e.errors.some((err) => err.code === 10014)
+			) {
+				throw new UserError(dedent`
+					A KV namespace with the title "${title}" already exists.
+
+					You can list existing namespaces with their IDs by running:
+					  wrangler kv namespace list
+
+					Or choose a different namespace name.
+				`);
+			}
+			throw e;
+		}
+
 		metrics.sendMetricsEvent("create kv namespace", {
 			sendMetrics: config.send_metrics,
 		});

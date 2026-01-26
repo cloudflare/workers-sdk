@@ -37,7 +37,7 @@ pnpm changeset
 ```
 
 - **TITLE**: A single sentence with an imperative description of the change
-- **BODY**: One or more paragraphs explaining the reason for the change and anything notable about the approach
+- **BODY**: One or more paragraphs explaining the reason for the change and anything notable about the approach. Aim for more than one sentence but less than three paragraphs to keep it succinct and useful. Larger changes may warrant more detail.
 
 ### Good Examples
 
@@ -89,7 +89,9 @@ The changelog uses h3 for section headers, so any headers in changeset content m
 
 ### Code Examples
 
-For new features or significant changes, include a brief usage example. This helps users understand how to use the new functionality.
+For new features or significant changes, consider including a brief usage example. Examples can be helpful for users to understand new functionality, but they are not mandatory—use your judgment based on how self-explanatory the change is.
+
+When showing Wrangler configuration examples, use `wrangler.json` (with JSONC syntax for comments) rather than `wrangler.toml`.
 
 ## Multiple Changesets
 

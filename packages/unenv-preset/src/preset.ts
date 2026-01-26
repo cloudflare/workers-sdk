@@ -80,6 +80,9 @@ export function getCloudflarePreset({
 	const consoleOverrides = getConsoleOverrides(compat);
 	const vmOverrides = getVmOverrides(compat);
 	const inspectorOverrides = getInspectorOverrides(compat);
+	const sqliteOverrides = getSqliteOverrides(compat);
+	const dgramOverrides = getDgramOverrides(compat);
+	const streamWrapOverrides = getStreamWrapOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -96,6 +99,9 @@ export function getCloudflarePreset({
 		...consoleOverrides.nativeModules,
 		...vmOverrides.nativeModules,
 		...inspectorOverrides.nativeModules,
+		...sqliteOverrides.nativeModules,
+		...dgramOverrides.nativeModules,
+		...streamWrapOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -113,6 +119,9 @@ export function getCloudflarePreset({
 		...consoleOverrides.hybridModules,
 		...vmOverrides.hybridModules,
 		...inspectorOverrides.hybridModules,
+		...sqliteOverrides.hybridModules,
+		...dgramOverrides.hybridModules,
+		...streamWrapOverrides.hybridModules,
 	];
 
 	return {
@@ -601,14 +610,15 @@ function getVmOverrides({
 }
 
 /**
- * Returns the overrides for `node:inspector` (unenv or workerd)
+ * Returns the overrides for `node:inspector` and `node:inspector/promises` (unenv or workerd)
  *
  * The native inspector implementation:
- * - is experimental and has no default enable date
+ * - is enabled starting from 2026-01-29
  * - can be enabled with the "enable_nodejs_inspector_module" flag
  * - can be disabled with the "disable_nodejs_inspector_module" flag
  */
 function getInspectorOverrides({
+	compatibilityDate,
 	compatibilityFlags,
 }: {
 	compatibilityDate: string;
@@ -618,16 +628,131 @@ function getInspectorOverrides({
 		"disable_nodejs_inspector_module"
 	);
 
-	const enabledByFlag =
-		compatibilityFlags.includes("enable_nodejs_inspector_module") &&
-		compatibilityFlags.includes("experimental");
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_inspector_module"
+	);
+	const enabledByDate = compatibilityDate >= "2026-01-29";
 
-	const enabled = enabledByFlag && !disabledByFlag;
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
 
 	// When enabled, use the native `inspector` module from workerd
 	return enabled
 		? {
-				nativeModules: ["inspector"],
+				nativeModules: ["inspector/promises", "inspector"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:sqlite` (unenv or workerd)
+ *
+ * The native sqlite implementation:
+ * - is enabled starting from 2026-01-29
+ * - can be enabled with the "enable_nodejs_sqlite_module" flag
+ * - can be disabled with the "disable_nodejs_sqlite_module" flag
+ */
+function getSqliteOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_sqlite_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_sqlite_module"
+	);
+	const enabledByDate = compatibilityDate >= "2026-01-29";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	// When enabled, use the native `sqlite` module from workerd
+	return enabled
+		? {
+				nativeModules: ["sqlite"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:dgram` (unenv or workerd)
+ *
+ * The native dgram implementation:
+ * - is enabled starting from 2026-01-29
+ * - can be enabled with the "enable_nodejs_dgram_module" flag
+ * - can be disabled with the "disable_nodejs_dgram_module" flag
+ */
+function getDgramOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_dgram_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_dgram_module"
+	);
+
+	const enabledByDate = compatibilityDate >= "2026-01-29";
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	// When enabled, use the native `dgram` module from workerd
+	return enabled
+		? {
+				nativeModules: ["dgram"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:_stream_wrap` (unenv or workerd)
+ *
+ * The native _stream_wrap implementation:
+ * - is enabled starting from 2026-01-29
+ * - can be enabled with the "enable_nodejs_stream_wrap_module" flag
+ * - can be disabled with the "disable_nodejs_stream_wrap_module" flag
+ */
+function getStreamWrapOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_stream_wrap_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_stream_wrap_module"
+	);
+
+	const enabledByDate = compatibilityDate >= "2026-01-29";
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	// When enabled, use the native `_stream_wrap` module from workerd
+	return enabled
+		? {
+				nativeModules: ["_stream_wrap"],
 				hybridModules: [],
 			}
 		: {

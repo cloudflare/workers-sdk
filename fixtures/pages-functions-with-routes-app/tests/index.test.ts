@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages Functions with custom _routes.json", () => {
@@ -18,7 +18,7 @@ describe("Pages Functions with custom _routes.json", () => {
 		await stop?.();
 	});
 
-	it("should render static pages", async ({ expect }) => {
+	it("should render static pages", async () => {
 		const response = await fetch(`http://${ip}:${port}/undefined-route`);
 		const text = await response.text();
 		expect(text).toContain(
@@ -26,9 +26,7 @@ describe("Pages Functions with custom _routes.json", () => {
 		);
 	});
 
-	it("should correctly apply the routing rules provided in the custom _routes.json file", async ({
-		expect,
-	}) => {
+	it("should correctly apply the routing rules provided in the custom _routes.json file", async () => {
 		// matches / include rule
 		let response = await fetch(`http://${ip}:${port}`);
 		let text = await response.text();

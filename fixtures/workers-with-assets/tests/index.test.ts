@@ -1,7 +1,14 @@
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it, onTestFinished } from "vitest";
+import {
+	afterAll,
+	beforeAll,
+	describe,
+	expect,
+	it,
+	onTestFinished,
+} from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("[Workers + Assets] dynamic site", () => {
@@ -18,7 +25,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		await stop?.();
 	});
 
-	it("should respond with static asset content", async ({ expect }) => {
+	it("should respond with static asset content", async () => {
 		let response = await fetch(`http://${ip}:${port}/index.html`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -30,9 +37,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(text).toContain(`<p>Learn more about Workers with Assets soon!</p>`);
 	});
 
-	it("should fallback to the user Worker if there are no assets at a given path ", async ({
-		expect,
-	}) => {
+	it("should fallback to the user Worker if there are no assets at a given path ", async () => {
 		// Requests should hit the Asset Worker *first*, then try the user Worker
 		const response = await fetch(`http://${ip}:${port}/no-assets-here`);
 		const text = await response.text();
@@ -42,15 +47,13 @@ describe("[Workers + Assets] dynamic site", () => {
 	});
 
 	// html_handling defaults to 'auto-trailing-slash'
-	it("should `/` resolve to `/index.html` ", async ({ expect }) => {
+	it("should `/` resolve to `/index.html` ", async () => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
 		expect(text).toContain("<h1>Hello Workers + Assets World 🚀!</h1>");
 	});
 
-	it("should handle content types correctly on asset routes", async ({
-		expect,
-	}) => {
+	it("should handle content types correctly on asset routes", async () => {
 		let response = await fetch(`http://${ip}:${port}/index.html`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -83,9 +86,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(response.headers.has("Content-Type")).toBeFalsy();
 	});
 
-	it("should return 405 for non-GET or HEAD requests on routes where assets exist", async ({
-		expect,
-	}) => {
+	it("should return 405 for non-GET or HEAD requests on routes where assets exist", async () => {
 		// these should return the error and NOT be forwarded onto the user Worker
 		// POST etc. request -> RW -> AW -> check manifest --405--> RW --405--> eyeball
 
@@ -123,7 +124,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(response.statusText).toBe("Method Not Allowed");
 	});
 
-	it("should work with encoded path names", async ({ expect }) => {
+	it("should work with encoded path names", async () => {
 		let response = await fetch(`http://${ip}:${port}/about/[fünky].txt`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -149,9 +150,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(text).toContain(`%5Bboop%5D.html`);
 	});
 
-	it("should forward all request types to the user Worker if there are *not* assets on that route", async ({
-		expect,
-	}) => {
+	it("should forward all request types to the user Worker if there are *not* assets on that route", async () => {
 		// Unlike above, if the AW does NOT find assets on a route, non-GET request should return 404s
 		// This is because all requests are first sent to the AW and only then to the UW
 		// and we don't want to 405 on a valid POST request intended for the UW
@@ -193,7 +192,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(response.status).toBe(200);
 	});
 
-	it("should be able to use an ASSETS binding", async ({ expect }) => {
+	it("should be able to use an ASSETS binding", async () => {
 		let response = await fetch(`http://${ip}:${port}/assets-binding`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -203,16 +202,14 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(text).toContain("<h1>✨This is from a user Worker binding✨</h1>");
 	});
 
-	it("should be able to use a binding to a named entrypoint", async ({
-		expect,
-	}) => {
+	it("should be able to use a binding to a named entrypoint", async () => {
 		let response = await fetch(`http://${ip}:${port}/named-entrypoint`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
 		expect(text).toContain("hello from a named entrypoint");
 	});
 
-	it("should apply custom redirects", async ({ expect }) => {
+	it("should apply custom redirects", async () => {
 		let response = await fetch(`http://${ip}:${port}/foo`, {
 			redirect: "manual",
 		});
@@ -226,13 +223,13 @@ describe("[Workers + Assets] dynamic site", () => {
 		);
 	});
 
-	it("should apply custom headers", async ({ expect }) => {
+	it("should apply custom headers", async () => {
 		let response = await fetch(`http://${ip}:${port}/`);
 		expect(response.status).toBe(200);
 		expect(response.headers.get("X-Header")).toBe("Custom-Value");
 	});
 
-	it("should apply .assetsignore", async ({ expect }) => {
+	it("should apply .assetsignore", async () => {
 		let response = await fetch(`http://${ip}:${port}/.assetsignore`);
 		expect(await response.text()).not.toContain("ignore-me.txt");
 
@@ -243,12 +240,12 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(await response.text()).not.toContain("X-Header");
 	});
 
-	it.todo("should warn of _worker.js", async ({ expect }) => {
+	it.todo("should warn of _worker.js", async () => {
 		// let response = await fetch(`http://${ip}:${port}/_worker.js`);
 		// expect(await response.text()).not.toContain("bang");
 	});
 
-	it("should work with files which start with .", async ({ expect }) => {
+	it("should work with files which start with .", async () => {
 		let response = await fetch(`http://${ip}:${port}/.dot`);
 		let text = await response.text();
 		expect(response.status).toBe(200);
@@ -268,7 +265,7 @@ describe("[Workers + Assets] dynamic site", () => {
 });
 
 describe("[Workers + Assets] logging", () => {
-	it("should log _headers and _redirects parsing", async ({ expect }) => {
+	it("should log _headers and _redirects parsing", async () => {
 		const { ip, port, stop, getOutput } = await runWranglerDev(
 			resolve(__dirname, ".."),
 			["--port=0", "--inspector-port=0"]
@@ -286,9 +283,7 @@ describe("[Workers + Assets] logging", () => {
 		onTestFinished(() => stop());
 	});
 
-	it("should not log _headers and _redirects parsing when log level set to none", async ({
-		expect,
-	}) => {
+	it("should not log _headers and _redirects parsing when log level set to none", async () => {
 		const { ip, port, stop, getOutput } = await runWranglerDev(
 			resolve(__dirname, ".."),
 			["--port=0", "--inspector-port=0", "--log-level=none"]

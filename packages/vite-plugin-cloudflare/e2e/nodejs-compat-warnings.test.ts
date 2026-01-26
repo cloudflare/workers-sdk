@@ -1,4 +1,4 @@
-import { describe, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import { runLongLived, seed } from "./helpers";
 
 // This test validates that warnings are displayed when nodejs_compat is missing
@@ -6,9 +6,7 @@ import { runLongLived, seed } from "./helpers";
 describe("nodejs_compat warnings", () => {
 	const projectPath = seed("nodejs-compat-warnings", { pm: "pnpm" });
 
-	test("displays warnings if Node.js built-ins are imported and the nodejs_compat flag is not enabled", async ({
-		expect,
-	}) => {
+	test("displays warnings if Node.js built-ins are imported and the nodejs_compat flag is not enabled", async () => {
 		const proc = await runLongLived("pnpm", "dev", projectPath);
 		expect(await proc.exitCode).not.toBe(0);
 		const errorLogs = proc.stderr.replaceAll("\\", "/");

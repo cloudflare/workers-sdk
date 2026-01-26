@@ -5,6 +5,7 @@ export const secretsStoreNamespace = createNamespace({
 		description: `🔐 Manage the Secrets Store`,
 		status: "open beta",
 		owner: "Product: SSL",
+		category: "Storage & databases",
 	},
 });
 

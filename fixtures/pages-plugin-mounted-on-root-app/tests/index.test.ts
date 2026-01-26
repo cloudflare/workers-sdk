@@ -1,6 +1,6 @@
 import * as path from "path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages Functions", () => {
@@ -20,7 +20,7 @@ describe("Pages Functions", () => {
 		await stop?.();
 	});
 
-	it("mounts a plugin correctly at root", async ({ expect }) => {
+	it("mounts a plugin correctly at root", async () => {
 		const response = await fetch(`http://${ip}:${port}/api/v1/instance`);
 		const text = await response.text();
 		expect(text).toMatchInlineSnapshot(`"Response from a nested folder"`);

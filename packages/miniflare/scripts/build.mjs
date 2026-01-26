@@ -7,22 +7,6 @@ const argv = process.argv.slice(2);
 const watch = argv[0] === "watch";
 
 /**
- * Recursively walks a directory, returning a list of all files contained within
- * @param {string} rootPath
- * @returns {Promise<string[]>}
- */
-async function walk(rootPath) {
-	const fileNames = await fs.readdir(rootPath);
-	const walkPromises = fileNames.map(async (fileName) => {
-		const filePath = path.join(rootPath, fileName);
-		return (await fs.stat(filePath)).isDirectory()
-			? await walk(filePath)
-			: [filePath];
-	});
-	return (await Promise.all(walkPromises)).flat();
-}
-
-/**
  * Gets a list of dependency names from the passed package
  * @param {~Package} pkg
  * @param {boolean} [includeDev]
@@ -53,8 +37,8 @@ const miniflareZodExtensionPath = path.join(
 );
 
 /**
- * An array of folders in `test/fixtures` that require transpilation
- * via ESBuild
+ * An array of test fixtures that require transpilation via ESBuild.
+ * These are loaded dynamically by tests and need to be pre-compiled.
  */
 const fixtureBuilds = [
 	path.join(pkgRoot, "test/fixtures/unsafe-plugin/index.ts"),
@@ -170,18 +154,6 @@ async function buildPackage() {
 		"shared",
 		"dev-registry.worker.ts"
 	);
-	// Look for test files ending with .spec.ts in the test directory, default to
-	// empty array if not found
-	let testPaths = [];
-	try {
-		testPaths = (await walk(path.join(pkgRoot, "test"))).filter((testPath) =>
-			testPath.endsWith(".spec.ts")
-		);
-	} catch (e) {
-		if (e.code !== "ENOENT") throw e;
-	}
-	// Add any test fixtures that require transpilation via ESBuild
-	testPaths.push(...fixtureBuilds);
 	const outPath = path.join(pkgRoot, "dist");
 
 	const buildOptions = {
@@ -201,15 +173,14 @@ async function buildPackage() {
 			// Mark `dependencies` as external, but not `devDependencies` (we use them
 			// to signal single-use/small packages we want inlined in the bundle)
 			...getPackageDependencies(pkg),
-			// Mark test dependencies as external
-			"ava",
+			// Mark esbuild as external (used by test fixtures)
 			"esbuild",
 		],
 		plugins: [embedWorkersPlugin],
 		logLevel: watch ? "info" : "warning",
 		outdir: outPath,
 		outbase: pkgRoot,
-		entryPoints: [indexPath, devRegistryProxyPath, ...testPaths],
+		entryPoints: [indexPath, devRegistryProxyPath, ...fixtureBuilds],
 	};
 	if (watch) {
 		const ctx = await esbuild.context(buildOptions);

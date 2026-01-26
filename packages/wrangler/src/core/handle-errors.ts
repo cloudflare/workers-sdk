@@ -11,6 +11,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { Cloudflare } from "cloudflare";
+import dedent from "ts-dedent";
 import { createCLIParser } from "..";
 import { renderError } from "../cfetch";
 import { readConfig } from "../config";
@@ -58,6 +59,220 @@ function isCertificateError(e: unknown): boolean {
 }
 
 /**
+ * Permission errors (EPERM, EACCES) are caused by file system
+ * permissions that users need to fix outside of their code, so we present
+ * a helpful message instead of reporting to Sentry.
+ *
+ * @param e - The error to check
+ * @returns `true` if the error is a permission error, `false` otherwise
+ */
+function isPermissionError(e: unknown): boolean {
+	// Check for Node.js ErrnoException with EPERM or EACCES code
+	if (
+		e &&
+		typeof e === "object" &&
+		"code" in e &&
+		(e.code === "EPERM" || e.code === "EACCES") &&
+		"message" in e
+	) {
+		return true;
+	}
+
+	// Check in the error cause as well
+	if (e instanceof Error && e.cause) {
+		return isPermissionError(e.cause);
+	}
+
+	return false;
+}
+
+/**
+ * File not found errors (ENOENT) occur when users reference files or directories
+ * that don't exist. We present a helpful message instead of reporting to Sentry.
+ *
+ * @param e - The error to check
+ * @returns `true` if the error is a file not found error, `false` otherwise
+ */
+function isFileNotFoundError(e: unknown): boolean {
+	// Check for Node.js ErrnoException with ENOENT code
+	if (
+		e &&
+		typeof e === "object" &&
+		"code" in e &&
+		e.code === "ENOENT" &&
+		"message" in e
+	) {
+		return true;
+	}
+
+	// Check in the error cause as well
+	if (e instanceof Error && e.cause) {
+		return isFileNotFoundError(e.cause);
+	}
+
+	return false;
+}
+
+/**
+ * Check if a text string contains a reference to Cloudflare's API domains.
+ * This is a safety precaution to only handle errors related to Cloudflare's
+ * infrastructure, not user endpoints.
+ *
+ * @param text - The text to check for Cloudflare API references
+ * @returns `true` if the text contains a Cloudflare API domain, `false` otherwise
+ */
+function isCloudflareAPI(text: string): boolean {
+	return (
+		text.includes("api.cloudflare.com") || text.includes("dash.cloudflare.com")
+	);
+}
+
+/**
+ * DNS resolution failures (ENOTFOUND) to Cloudflare's API are
+ * caused by network connectivity or DNS problems, so we present
+ * a helpful message instead of reporting to Sentry.
+ *
+ * @param e - The error to check
+ * @returns `true` if the error is a DNS resolution failure to Cloudflare's API, `false` otherwise
+ */
+function isCloudflareAPIDNSError(e: unknown): boolean {
+	// Only handle DNS errors to Cloudflare APIs
+
+	const hasDNSErrorCode = (obj: unknown): boolean => {
+		return (
+			obj !== null &&
+			typeof obj === "object" &&
+			"code" in obj &&
+			obj.code === "ENOTFOUND"
+		);
+	};
+
+	if (hasDNSErrorCode(e)) {
+		const message = e instanceof Error ? e.message : String(e);
+		if (isCloudflareAPI(message)) {
+			return true;
+		}
+		// Also check hostname property
+		if (
+			e &&
+			typeof e === "object" &&
+			"hostname" in e &&
+			typeof e.hostname === "string"
+		) {
+			if (isCloudflareAPI(e.hostname)) {
+				return true;
+			}
+		}
+	}
+
+	// Errors are often wrapped, so check the cause chain as well
+	if (e instanceof Error && e.cause && hasDNSErrorCode(e.cause)) {
+		const causeMessage =
+			e.cause instanceof Error ? e.cause.message : String(e.cause);
+		const parentMessage = e.message;
+		if (isCloudflareAPI(causeMessage) || isCloudflareAPI(parentMessage)) {
+			return true;
+		}
+		// Check hostname in cause
+		if (
+			typeof e.cause === "object" &&
+			"hostname" in e.cause &&
+			typeof e.cause.hostname === "string"
+		) {
+			if (isCloudflareAPI(e.cause.hostname)) {
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Connection timeouts to Cloudflare's API are caused by slow networks or
+ * connectivity problems, so we present a helpful message instead of
+ * reporting to Sentry.
+ *
+ * @param e - The error to check
+ * @returns `true` if the error is a connection timeout to Cloudflare's API, `false` otherwise
+ */
+function isCloudflareAPIConnectionTimeoutError(e: unknown): boolean {
+	// Only handle timeouts to Cloudflare APIs - timeouts to user endpoints
+	// (e.g., in dev server or user's own APIs) may indicate actual bugs
+	const hasTimeoutCode = (obj: unknown): boolean => {
+		return (
+			obj !== null &&
+			typeof obj === "object" &&
+			"code" in obj &&
+			obj.code === "UND_ERR_CONNECT_TIMEOUT"
+		);
+	};
+
+	if (hasTimeoutCode(e)) {
+		const message = e instanceof Error ? e.message : String(e);
+		if (isCloudflareAPI(message)) {
+			return true;
+		}
+	}
+
+	// Errors are often wrapped, so check the cause chain as well
+	if (e instanceof Error && e.cause && hasTimeoutCode(e.cause)) {
+		const causeMessage =
+			e.cause instanceof Error ? e.cause.message : String(e.cause);
+		const parentMessage = e.message;
+		if (isCloudflareAPI(causeMessage) || isCloudflareAPI(parentMessage)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Generic "fetch failed" TypeErrors are network errors
+ * caused by network connectivity problems. We show a helpful message instead
+ * of sending to Sentry.
+ *
+ * @param e - The error to check
+ * @returns `true` if the error is a network fetch failure, `false` otherwise
+ */
+function isNetworkFetchFailedError(e: unknown): boolean {
+	if (e instanceof TypeError) {
+		const message = e.message;
+		if (message.includes("fetch failed")) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/**
+ * Determines the error type for telemetry purposes, or `undefined` if it cannot be determined.
+ */
+export function getErrorType(e: unknown): string | undefined {
+	if (isCloudflareAPIDNSError(e)) {
+		return "DNSError";
+	}
+	if (isPermissionError(e)) {
+		return "PermissionError";
+	}
+	if (isFileNotFoundError(e)) {
+		return "FileNotFoundError";
+	}
+	if (isCloudflareAPIConnectionTimeoutError(e)) {
+		return "ConnectionTimeout";
+	}
+	if (isAuthenticationError(e) || isContainersAuthenticationError(e)) {
+		return "AuthenticationError";
+	}
+	if (isBuildFailure(e) || isBuildFailureFromCause(e)) {
+		return "BuildFailure";
+	}
+	return e instanceof Error ? e.constructor.name : undefined;
+}
+
+/**
  * Handles an error thrown during command execution.
  *
  * This can involve filtering, transforming and logging the error appropriately.
@@ -66,9 +281,8 @@ export async function handleError(
 	e: unknown,
 	args: ReadConfigCommandArgs,
 	subCommandParts: string[]
-) {
+): Promise<void> {
 	let mayReport = true;
-	let errorType: string | undefined;
 	let loggableException = e;
 
 	logger.log(""); // Just adds a bit of space
@@ -82,23 +296,180 @@ export async function handleError(
 		);
 	}
 
+	// Handle DNS resolution errors to Cloudflare API with a user-friendly message
+	if (isCloudflareAPIDNSError(e)) {
+		mayReport = false;
+		logger.error(dedent`
+			Unable to resolve Cloudflare's API hostname (api.cloudflare.com or dash.cloudflare.com).
+
+			This is typically caused by:
+			  - No internet connection or network connectivity issues
+			  - DNS resolver not configured or not responding
+			  - Firewall or VPN blocking DNS requests
+			  - Corporate network with restricted DNS
+
+			Please check your network connection and DNS settings.
+		`);
+		return;
+	}
+
+	// Handle permission errors with a user-friendly message
+	if (isPermissionError(e)) {
+		mayReport = false;
+
+		// Extract the error message and path, checking both the error and its cause
+		const errorMessage = e instanceof Error ? e.message : String(e);
+		let path: string | null = null;
+
+		// Check main error for path
+		if (
+			e &&
+			typeof e === "object" &&
+			"path" in e &&
+			typeof e.path === "string"
+		) {
+			path = e.path;
+		}
+
+		// If no path in main error, check the cause
+		if (
+			!path &&
+			e instanceof Error &&
+			e.cause &&
+			typeof e.cause === "object" &&
+			"path" in e.cause &&
+			typeof e.cause.path === "string"
+		) {
+			path = e.cause.path;
+		}
+
+		// Always log the full error message in debug
+		logger.debug(`Permission error: ${errorMessage}`);
+
+		// Include path in main error if available, otherwise include the error message
+		const errorDetails = path
+			? `\nAffected path: ${path}\n`
+			: `\nError: ${errorMessage}\n`;
+
+		logger.error(dedent`
+			A permission error occurred while accessing the file system.
+			${errorDetails}
+			This is typically caused by:
+			  - Insufficient file or directory permissions
+			  - Files or directories being locked by another process
+			  - Antivirus or security software blocking access
+
+			Please check the file permissions and try again.
+		`);
+		return;
+	}
+
+	// Handle file not found errors with a user-friendly message
+	if (isFileNotFoundError(e)) {
+		mayReport = false;
+
+		// Extract the error message and path, checking both the error and its cause
+		const errorMessage = e instanceof Error ? e.message : String(e);
+		let path: string | null = null;
+
+		// Check main error for path
+		if (
+			e &&
+			typeof e === "object" &&
+			"path" in e &&
+			typeof e.path === "string"
+		) {
+			path = e.path;
+		}
+
+		// If no path in main error, check the cause
+		if (
+			!path &&
+			e instanceof Error &&
+			e.cause &&
+			typeof e.cause === "object" &&
+			"path" in e.cause &&
+			typeof e.cause.path === "string"
+		) {
+			path = e.cause.path;
+		}
+
+		logger.debug(`File not found error: ${errorMessage}`);
+
+		// Include path in main error if available, otherwise include the error message
+		const errorDetails = path
+			? `\nMissing file or directory: ${path}\n`
+			: `\nError: ${errorMessage}\n`;
+
+		logger.error(dedent`
+			A file or directory could not be found.
+			${errorDetails}
+			This is typically caused by:
+			  - The file or directory does not exist
+			  - A typo in the file path
+			  - The file was moved or deleted
+
+			Please check the file path and try again.
+		`);
+		return;
+	}
+
+	// Handle connection timeout errors to Cloudflare API with a user-friendly message
+	if (isCloudflareAPIConnectionTimeoutError(e)) {
+		mayReport = false;
+		logger.error(
+			"The request to Cloudflare's API timed out.\n" +
+				"This is likely due to network connectivity issues or slow network speeds.\n" +
+				"Please check your internet connection and try again."
+		);
+		return;
+	}
+
+	// Handle generic "fetch failed" / "Failed to fetch" network errors
+	if (isNetworkFetchFailedError(e)) {
+		mayReport = false;
+		logger.warn(dedent`
+			A fetch request failed, likely due to a connectivity issue.
+
+			Common causes:
+			  - No internet connection or network connectivity problems
+			  - Firewall or VPN blocking the request
+			  - Network proxy configuration issues
+
+			Please check your network connection and try again.
+		`);
+	}
+
 	if (e instanceof CommandLineArgsError) {
 		logger.error(e.message);
 		// We are not able to ask the `wrangler` CLI parser to show help for a subcommand programmatically.
 		// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
 		// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
-		const { wrangler } = createCLIParser([...subCommandParts, "--help"]);
+
+		// Check if this is a root-level error (unknown argument at root level)
+		// by looking at the error message - if it says "Unknown argument" or "Unknown command",
+		// and there's only one non-flag argument, show the categorized root help
+		const nonFlagArgs = subCommandParts.filter(
+			(arg) => !arg.startsWith("-") && arg !== ""
+		);
+		const isRootLevelError =
+			nonFlagArgs.length <= 1 &&
+			(e.message.includes("Unknown argument") ||
+				e.message.includes("Unknown command"));
+
+		const { wrangler, showHelpWithCategories } = createCLIParser([
+			...(isRootLevelError ? [] : subCommandParts),
+			"--help",
+		]);
+
+		if (isRootLevelError) {
+			await showHelpWithCategories();
+			return;
+		}
+
 		await wrangler.parse();
-	} else if (
-		isAuthenticationError(e) ||
-		// Is this a Containers/Cloudchamber-based auth error?
-		// This is different because it uses a custom OpenAPI-based generated client
-		(e instanceof UserError &&
-			e.cause instanceof ApiError &&
-			e.cause.status === 403)
-	) {
+	} else if (isAuthenticationError(e) || isContainersAuthenticationError(e)) {
 		mayReport = false;
-		errorType = "AuthenticationError";
 		if (e.cause instanceof ApiError) {
 			logger.error(e.cause);
 		} else {
@@ -160,12 +531,9 @@ export async function handleError(
 		);
 	} else if (isBuildFailure(e)) {
 		mayReport = false;
-		errorType = "BuildFailure";
-
 		logBuildFailure(e.errors, e.warnings);
 	} else if (isBuildFailureFromCause(e)) {
 		mayReport = false;
-		errorType = "BuildFailure";
 		logBuildFailure(e.cause.errors, e.cause.warnings);
 	} else if (e instanceof Cloudflare.APIError) {
 		const error = new APIError({
@@ -217,6 +585,17 @@ export async function handleError(
 	) {
 		await captureGlobalException(loggableException);
 	}
+}
 
-	return errorType;
+/**
+ * Is this a Containers/Cloudchamber-based auth error?
+ *
+ * Containers uses custom OpenAPI-based generated client that throws an error that has a different structure to standard cfetch auth errors.
+ */
+function isContainersAuthenticationError(e: unknown): e is UserError {
+	return (
+		e instanceof UserError &&
+		e.cause instanceof ApiError &&
+		e.cause.status === 403
+	);
 }

@@ -150,7 +150,7 @@ describe("getNormalizedContainerOptions", () => {
 			dockerfile: expect.stringMatching(/[/\\]Dockerfile$/),
 			image_build_context: expect.stringMatching(/[/\\][^/\\]*$/),
 			image_vars: undefined,
-			constraints: { tier: 1 },
+			constraints: { tiers: [1, 2] },
 			observability: {
 				logs_enabled: false,
 			},
@@ -193,7 +193,7 @@ describe("getNormalizedContainerOptions", () => {
 			rollout_kind: "full_auto",
 			instance_type: "lite",
 			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
-			constraints: { tier: 1 },
+			constraints: { tiers: [1, 2] },
 			observability: {
 				logs_enabled: false,
 			},
@@ -280,7 +280,7 @@ describe("getNormalizedContainerOptions", () => {
 			memory_mib: 1024,
 			vcpu: 2,
 			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
-			constraints: { tier: 1 },
+			constraints: { tiers: [1, 2] },
 		});
 	});
 
@@ -328,7 +328,7 @@ describe("getNormalizedContainerOptions", () => {
 			memory_mib: 1024,
 			vcpu: 2,
 			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
-			constraints: { tier: 1 },
+			constraints: { tiers: [1, 2] },
 		});
 	});
 
@@ -373,7 +373,7 @@ describe("getNormalizedContainerOptions", () => {
 			memory_mib: 256,
 			vcpu: 2,
 			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
-			constraints: { tier: 1 },
+			constraints: { tiers: [1, 2] },
 		});
 	});
 
@@ -414,7 +414,7 @@ describe("getNormalizedContainerOptions", () => {
 			rollout_kind: "full_auto",
 			instance_type: "standard",
 			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
-			constraints: { tier: 1 },
+			constraints: { tiers: [1, 2] },
 		});
 	});
 
@@ -472,7 +472,7 @@ describe("getNormalizedContainerOptions", () => {
 			instance_type: "basic",
 			image_uri: "registry.cloudflare.com/some-account-id/test:latest",
 			constraints: {
-				tier: 2,
+				tiers: [2],
 				regions: ["US-EAST-1", "US-WEST-2"],
 				cities: ["nyc", "sf"],
 			},
@@ -525,7 +525,7 @@ describe("getNormalizedContainerOptions", () => {
 			dockerfile: expect.stringMatching(/[/\\]nested[/\\]Dockerfile$/),
 			image_build_context: expect.stringMatching(/[/\\]nested$/),
 			image_vars: undefined,
-			constraints: { tier: 1 },
+			constraints: { tiers: [1, 2] },
 			observability: {
 				logs_enabled: false,
 			},
@@ -634,7 +634,36 @@ describe("getNormalizedContainerOptions", () => {
 
 		const result = await getNormalizedContainerOptions(config, {});
 		expect(result).toHaveLength(1);
-		expect(result[0].constraints.tier).toBeUndefined();
+		expect(result[0].constraints.tiers).toBeUndefined();
+	});
+
+	it("should convert deprecated tier to tiers array", async () => {
+		const config: Config = {
+			name: "test-worker",
+			containers: [
+				{
+					class_name: "TestContainer",
+					image: `${getCloudflareContainerRegistry()}/test:latest`,
+					name: "test-container",
+					constraints: {
+						tier: 3,
+					},
+				},
+			],
+			durable_objects: {
+				bindings: [
+					{
+						name: "TEST_DO",
+						class_name: "TestContainer",
+					},
+				],
+			},
+			migrations: [{ tag: "v1", new_sqlite_classes: ["TestContainer"] }],
+		} as Partial<Config> as Config;
+
+		const result = await getNormalizedContainerOptions(config, {});
+		expect(result).toHaveLength(1);
+		expect(result[0].constraints.tiers).toEqual([3]);
 	});
 
 	it("should default rollout_step_percentage to 100 when max_instances is 1", async () => {

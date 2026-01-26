@@ -1,5 +1,85 @@
 # @cloudflare/unenv-preset
 
+## 2.11.0
+
+### Minor Changes
+
+- [#12024](https://github.com/cloudflare/workers-sdk/pull/12024) [`ae108f0`](https://github.com/cloudflare/workers-sdk/commit/ae108f090532765751c3996ba4c863a9fe858ddf) Thanks [@vicb](https://github.com/vicb)! - Remove the experimental flag from `node:_stream_wrap`, `node:dgram`, `node:inspector`, and `node:sqlite`
+
+  Those modules are no more experimental since workerd 1.20260115.0
+
+## 2.10.0
+
+### Minor Changes
+
+- [#11701](https://github.com/cloudflare/workers-sdk/pull/11701) [`fec8f5b`](https://github.com/cloudflare/workers-sdk/commit/fec8f5b82e0bb64400bbfcced302748dbe9a3062) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:dgram` module when the `enable_nodejs_dgram_module` compatibility flag is enabled. This feature is currently experimental and requires both the `enable_nodejs_dgram_module` and `experimental` compatibility flags to be set.
+
+- [#11799](https://github.com/cloudflare/workers-sdk/pull/11799) [`d39777f`](https://github.com/cloudflare/workers-sdk/commit/d39777f1e354e8f3abd02164e76c2501e47e713f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:_stream_wrap` module when the `enable_nodejs_stream_wrap_module` compatibility flag is enabled. This feature is currently experimental and requires `nodejs_compat`, `experimental`, and `enable_nodejs_stream_wrap_module` compatibility flags to be set.
+
+## 2.9.0
+
+### Minor Changes
+
+- [#11841](https://github.com/cloudflare/workers-sdk/pull/11841) [`beb96af`](https://github.com/cloudflare/workers-sdk/commit/beb96af470aefaae73237309244cf7369b329ff0) Thanks [@vicb](https://github.com/vicb)! - Add support for native `node:sqlite` module when the `enable_nodejs_sqlite_module` compatibility flag is enabled. This feature is currently experimental and requires `nodejs_compat`, `experimental`, and `enable_nodejs_sqlite_module` compatibility flags to be set.
+
+- [#11834](https://github.com/cloudflare/workers-sdk/pull/11834) [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad) Thanks [@vicb](https://github.com/vicb)! - Export the list of built-in node modules that are available without the `node:` prefix.
+  Modules that are only available with the `node:` prefix are not included (i.e. `node:sqlite`).
+  Note that new modules will be added with the `node:` prefix only and not be added to the list.
+
+### Patch Changes
+
+- [#11834](https://github.com/cloudflare/workers-sdk/pull/11834) [`5c59217`](https://github.com/cloudflare/workers-sdk/commit/5c5921768f928de4526a315bb508e3ed25a2ccad) Thanks [@vicb](https://github.com/vicb)! - fix handling of Node builtin modules
+
+  The list of builtin modules should not depend on the version of Node.
+  Switch to using the lists published by `@cloudflare/unenv-preset`.
+
+  This fixes an issue with trying to import i.e. `node:sqlite` with Node < 22.5.0
+  which does not implement this module.
+
+## 2.8.0
+
+### Minor Changes
+
+- [#11733](https://github.com/cloudflare/workers-sdk/pull/11733) [`62fd118`](https://github.com/cloudflare/workers-sdk/commit/62fd11870972ea67b638452bd29fc2ead648f52f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:inspector` module when the `enable_nodejs_inspector_module` compatibility flag is enabled. This feature is currently experimental and requires both the `enable_nodejs_inspector_module` and `experimental` compatibility flags to be set.
+
+  To enable the native inspector module, add the following to your `wrangler.jsonc`:
+
+  ```jsonc
+  {
+  	"compatibility_flags": ["experimental", "enable_nodejs_inspector_module"],
+  }
+  ```
+
+  Then you can import and use the inspector module in your Worker:
+
+  ```javascript
+  import inspector from "node:inspector";
+
+  // Access inspector APIs (note: workerd's implementation is a non-functional stub)
+  inspector.url(); // returns undefined
+  inspector.close(); // no-op
+  ```
+
+- [#11744](https://github.com/cloudflare/workers-sdk/pull/11744) [`a7e9f80`](https://github.com/cloudflare/workers-sdk/commit/a7e9f8016de23b1ad8a1cdea8c2029e8808aa7d0) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:inspector/promises` module when the `enable_nodejs_inspector_module` compatibility flag is enabled. This extends the existing `node:inspector` support to include the promises-based API.
+
+  To enable the native inspector/promises module, add the following to your `wrangler.jsonc`:
+
+  ```jsonc
+  {
+  	"compatibility_flags": ["experimental", "enable_nodejs_inspector_module"],
+  }
+  ```
+
+  Then you can import and use the inspector/promises module in your Worker:
+
+  ```javascript
+  import inspector from "node:inspector/promises";
+
+  // Access inspector APIs (note: workerd's implementation is a non-functional stub)
+  inspector.url(); // returns undefined
+  inspector.close(); // no-op
+  ```
+
 ## 2.7.13
 
 ### Patch Changes

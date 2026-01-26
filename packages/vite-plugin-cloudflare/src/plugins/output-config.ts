@@ -16,6 +16,11 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 		generateBundle(_, bundle) {
 			assertIsNotPreview(ctx);
 
+			// Child environments should not emit wrangler.json or .dev.vars files
+			if (ctx.isChildEnvironment(this.environment.name)) {
+				return;
+			}
+
 			let outputConfig: Unstable_RawConfig | undefined;
 
 			if (ctx.resolvedPluginConfig.type === "workers") {

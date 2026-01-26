@@ -274,6 +274,30 @@ function isIssueOrPREvent(
 	return null;
 }
 
+// Repository advisory event type (not yet in @octokit/webhooks-types)
+interface RepositoryAdvisoryEvent {
+	action: "reported" | "published";
+	repository_advisory: {
+		ghsa_id: string;
+		html_url: string;
+		summary: string;
+		description: string;
+	};
+}
+
+function isRepositoryAdvisoryEvent(
+	message: WebhookEvent
+): RepositoryAdvisoryEvent | null {
+	if (
+		"repository_advisory" in message &&
+		"action" in message &&
+		message.action === "reported"
+	) {
+		return message as RepositoryAdvisoryEvent;
+	}
+	return null;
+}
+
 async function sendSecurityAlert(
 	webhookUrl: string,
 	{
@@ -344,6 +368,62 @@ async function sendSecurityAlert(
 			],
 		},
 		"-security-alert-" + issueEvent.issue.number
+	);
+}
+
+async function sendRepositoryAdvisoryAlert(
+	webhookUrl: string,
+	advisoryEvent: RepositoryAdvisoryEvent
+) {
+	const advisory = advisoryEvent.repository_advisory;
+
+	return sendMessage(
+		webhookUrl,
+		{
+			cardsV2: [
+				{
+					cardId: "unique-card-id",
+					card: {
+						header: {
+							title: `🔐 Repository Security Advisory Reported`,
+							subtitle: advisory.summary,
+						},
+						sections: [
+							{
+								collapsible: true,
+								widgets: [
+									{
+										textParagraph: {
+											text: advisory.description,
+										},
+									},
+								],
+							},
+							{
+								collapsible: false,
+								widgets: [
+									{
+										buttonList: {
+											buttons: [
+												{
+													text: "View Advisory",
+													onClick: {
+														openLink: {
+															url: advisory.html_url,
+														},
+													},
+												},
+											],
+										},
+									},
+								],
+							},
+						],
+					},
+				},
+			],
+		},
+		"-repository-advisory-" + advisory.ghsa_id
 	);
 }
 
@@ -514,8 +594,17 @@ export default {
 				env.GITHUB_PAT,
 				body
 			);
+			// Flags suspicious issues/PRs for review
 			if (maybeSecurityIssue) {
 				await sendSecurityAlert(env.ALERTS_WEBHOOK, maybeSecurityIssue);
+			}
+			// Notifies when a repository advisory is reported to workers-sdk
+			const maybeRepositoryAdvisory = isRepositoryAdvisoryEvent(body);
+			if (maybeRepositoryAdvisory) {
+				await sendRepositoryAdvisoryAlert(
+					env.ALERTS_WEBHOOK,
+					maybeRepositoryAdvisory
+				);
 			}
 		}
 

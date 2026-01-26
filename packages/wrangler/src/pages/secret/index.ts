@@ -175,9 +175,17 @@ export const pagesSecretPutCommand = createCommand({
 			}
 		);
 
-		metrics.sendMetricsEvent("create pages encrypted variable", {
-			sendMetrics: config?.send_metrics,
-		});
+		metrics.sendMetricsEvent(
+			"create pages encrypted variable",
+			{
+				secretOperation: "single",
+				secretSource: isInteractive() ? "interactive" : "stdin",
+				hasEnvironment: Boolean(args.env),
+			},
+			{
+				sendMetrics: config?.send_metrics,
+			}
+		);
 
 		logger.log(`✨ Success! Uploaded secret ${args.key}`);
 	},
@@ -206,7 +214,7 @@ export const pagesSecretBulkCommand = createCommand({
 	},
 	positionalArgs: ["file"],
 	async handler(args) {
-		const { env, project, accountId } = await pagesProject(
+		const { env, project, accountId, config } = await pagesProject(
 			args.env,
 			args.projectName
 		);
@@ -214,11 +222,13 @@ export const pagesSecretBulkCommand = createCommand({
 		logger.log(
 			`🌀 Creating the secrets for the Pages project "${project.name}" (${env})`
 		);
-		const content = await parseBulkInputToObject(args.file);
+		const result = await parseBulkInputToObject(args.file);
 
-		if (!content) {
+		if (!result) {
 			throw new FatalError(`🚨 No content found in file or piped input.`);
 		}
+
+		const { content, secretSource, secretFormat } = result;
 
 		const upsertBindings = Object.fromEntries(
 			Object.entries(content).map(([key, value]) => {
@@ -253,6 +263,18 @@ export const pagesSecretBulkCommand = createCommand({
 			logger.log("Finished processing secrets file:");
 			logger.log(
 				`✨ ${Object.keys(upsertBindings).length} secrets successfully uploaded`
+			);
+			metrics.sendMetricsEvent(
+				"create pages encrypted variable",
+				{
+					secretOperation: "bulk",
+					secretSource,
+					secretFormat,
+					hasEnvironment: Boolean(args.env),
+				},
+				{
+					sendMetrics: config?.send_metrics,
+				}
 			);
 		} catch (err) {
 			logger.log(`🚨 Secrets failed to upload`);

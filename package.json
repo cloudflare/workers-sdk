@@ -11,11 +11,12 @@
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
 		"build": "dotenv -- turbo build",
-		"check": "pnpm check:fixtures && pnpm check:private-packages && pnpm check:deployments && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
+		"check": "pnpm check:fixtures && pnpm check:private-packages && pnpm check:package-deps && pnpm check:deployments && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
 		"check:deployments": "node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts check",
 		"check:fixtures": "node -r esbuild-register tools/deployments/validate-fixtures.ts",
 		"check:format": "prettier . --check --ignore-unknown",
 		"check:lint": "dotenv -- turbo check:lint",
+		"check:package-deps": "node -r esbuild-register tools/deployments/validate-package-dependencies.ts",
 		"check:private-packages": "node -r esbuild-register tools/deployments/validate-private-packages.ts",
 		"check:type": "dotenv -- turbo check:type type:tests",
 		"dev": "dotenv -- turbo dev",
@@ -44,7 +45,7 @@
 		"prettier": "^3.2.5",
 		"prettier-plugin-packagejson": "^2.2.18",
 		"tree-kill": "^1.2.2",
-		"turbo": "^2.2.3",
+		"turbo": "^2.7.2",
 		"typescript": "catalog:default",
 		"vite": "catalog:default",
 		"vitest": "catalog:default"
@@ -82,7 +83,7 @@
 			"postal-mime": "patches/postal-mime.patch",
 			"youch@4.1.0-beta.10": "patches/youch@4.1.0-beta.10.patch",
 			"@netlify/build-info": "patches/@netlify__build-info.patch",
-			"concordance@5.0.4": "patches/concordance@5.0.4.patch"
+			"buffer-equal-constant-time@1.0.1": "patches/buffer-equal-constant-time@1.0.1.patch"
 		}
 	}
 }

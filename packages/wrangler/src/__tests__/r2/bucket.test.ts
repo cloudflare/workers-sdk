@@ -1666,8 +1666,8 @@ describe("r2", () => {
 									expect(body).toEqual({
 										snapshot_expiration: {
 											state: "enabled",
-											olderThanDays: 30,
-											retainLast: 5,
+											max_snapshot_age: "30d",
+											min_snapshots_to_keep: 5,
 										},
 									});
 									return HttpResponse.json(
@@ -1717,8 +1717,8 @@ describe("r2", () => {
 									expect(body).toEqual({
 										snapshot_expiration: {
 											state: "enabled",
-											olderThanDays: 60,
-											retainLast: 10,
+											max_snapshot_age: "60d",
+											min_snapshots_to_keep: 10,
 										},
 									});
 									return HttpResponse.json(

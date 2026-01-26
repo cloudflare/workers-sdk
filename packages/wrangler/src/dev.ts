@@ -47,6 +47,7 @@ export const dev = createCommand({
 		description: "👂 Start a local server for developing your Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		category: "Compute & AI",
 	},
 	positionalArgs: ["script"],
 	args: {
@@ -106,6 +107,10 @@ export const dev = createCommand({
 		"inspector-port": {
 			describe: "Port for devtools to connect to",
 			type: "number",
+		},
+		"inspector-ip": {
+			describe: "IP address for devtools to connect to",
+			type: "string",
 		},
 		routes: {
 			describe: "Routes to upload",
