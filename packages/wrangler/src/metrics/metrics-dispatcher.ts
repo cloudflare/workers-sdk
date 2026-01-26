@@ -30,6 +30,19 @@ import type { CommonEventProperties, Events } from "./types";
 
 const SPARROW_URL = "https://sparrow.cloudflare.com";
 
+// Module-level Set to track all pending requests across all dispatchers.
+// Promises are automatically removed from this Set once they settle.
+const pendingRequests = new Set<Promise<void>>();
+
+/**
+ * Returns a promise that resolves when all pending metrics requests have completed.
+ *
+ * The returned promise should be awaited before the process exits to ensure we don't drop any metrics.
+ */
+export function allMetricsDispatchesCompleted(): Promise<void> {
+	return Promise.allSettled(pendingRequests).then(() => {});
+}
+
 /**
  * A list of all the command args that can be included in the event.
  *
@@ -58,7 +71,6 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	// The SPARROW_SOURCE_KEY will be provided at build time through esbuild's `define` option
 	// No events will be sent if the env `SPARROW_SOURCE_KEY` is not provided and the value will be set to an empty string instead.
 	const SPARROW_SOURCE_KEY = process.env.SPARROW_SOURCE_KEY ?? "";
-	const requests: Array<Promise<void>> = [];
 	const wranglerVersion = getWranglerVersion();
 	const [wranglerMajorVersion, wranglerMinorVersion, wranglerPatchVersion] =
 		wranglerVersion.split(".").map((v) => parseInt(v, 10));
@@ -114,8 +126,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			properties: Omit<
 				Extract<Events, { name: EventName }>["properties"],
 				keyof CommonEventProperties
-			>,
-			argv?: string[]
+			>
 		) {
 			try {
 				if (properties.command?.startsWith("wrangler login")) {
@@ -136,7 +147,10 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					printMetricsBanner();
 				}
 
-				const sanitizedArgs = sanitizeArgKeys(properties.args ?? {}, argv);
+				const sanitizedArgs = sanitizeArgKeys(
+					properties.args ?? {},
+					options.argv
+				);
 				const sanitizedArgsKeys = Object.keys(sanitizedArgs).sort();
 				const commonEventProperties: CommonEventProperties = {
 					amplitude_session_id,
@@ -178,10 +192,6 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			} catch (err) {
 				logger.debug("Error sending metrics event", err);
 			}
-		},
-
-		get requests() {
-			return requests;
 		},
 	};
 
@@ -239,9 +249,12 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					"Metrics dispatcher: Failed to send request:",
 					(e as Error).message
 				);
+			})
+			.finally(() => {
+				pendingRequests.delete(request);
 			});
 
-		requests.push(request);
+		pendingRequests.add(request);
 	}
 
 	function printMetricsBanner() {

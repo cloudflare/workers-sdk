@@ -1,3 +1,4 @@
+import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import {
 	defaultWranglerConfig,
 	FatalError,
@@ -11,10 +12,13 @@ import { createCloudflareClient } from "../cfetch/internal";
 import { readConfig } from "../config";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
+import { getMetricsDispatcher } from "../metrics";
 import { writeOutput } from "../output";
 import { dedent } from "../utils/dedent";
 import { isLocal, printResourceLocation } from "../utils/is-local";
 import { printWranglerBanner } from "../wrangler-banner";
+import { CommandHandledError } from "./CommandHandledError";
+import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
@@ -30,7 +34,8 @@ import type { PositionalOptions } from "yargs";
  */
 export function createRegisterYargsCommand(
 	yargs: CommonYargsArgv,
-	subHelp: SubHelp
+	subHelp: SubHelp,
+	argv: string[]
 ) {
 	return function registerCommand(
 		segment: string,
@@ -97,13 +102,19 @@ export function createRegisterYargsCommand(
 				registerSubTreeCallback();
 			},
 			// Only attach the handler for commands, not namespaces
-			def.type === "command" ? createHandler(def, def.command) : undefined
+			def.type === "command" ? createHandler(def, def.command, argv) : undefined
 		);
 	};
 }
 
-function createHandler(def: CommandDefinition, commandName: string) {
+function createHandler(
+	def: CommandDefinition,
+	commandName: string,
+	argv: string[]
+) {
 	return async function handler(args: HandlerArgs<NamedArgDefinitions>) {
+		const startTime = Date.now();
+
 		try {
 			const shouldPrintBanner = def.behaviour?.printBanner;
 
@@ -165,7 +176,7 @@ function createHandler(def: CommandDefinition, commandName: string) {
 						AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 					};
 
-			await run(experimentalFlags, () => {
+			await run(experimentalFlags, async () => {
 				const config =
 					def.behaviour?.provideConfig ?? true
 						? readConfig(args, {
@@ -174,6 +185,13 @@ function createHandler(def: CommandDefinition, commandName: string) {
 									def.behaviour?.useConfigRedirectIfAvailable,
 							})
 						: defaultWranglerConfig;
+
+				const dispatcher = getMetricsDispatcher({
+					sendMetrics: config.send_metrics,
+					hasAssets: !!config.assets?.directory,
+					configPath: config.configPath,
+					argv,
+				});
 
 				if (def.behaviour?.warnIfMultipleEnvsConfiguredButNoneSpecified) {
 					if (!("env" in args) && config.configPath) {
@@ -196,28 +214,70 @@ function createHandler(def: CommandDefinition, commandName: string) {
 					}
 				}
 
-				return def.handler(args, {
-					sdk: createCloudflareClient(config),
-					config,
-					errors: { UserError, FatalError },
-					logger,
-					fetchResult,
+				dispatcher.sendCommandEvent("wrangler command started", {
+					command: commandName,
+					args,
 				});
+
+				try {
+					const result = await def.handler(args, {
+						sdk: createCloudflareClient(config),
+						config,
+						errors: { UserError, FatalError },
+						logger,
+						fetchResult,
+					});
+
+					const durationMs = Date.now() - startTime;
+					dispatcher.sendCommandEvent("wrangler command completed", {
+						command: commandName,
+						args,
+						durationMs,
+						durationSeconds: durationMs / 1000,
+						durationMinutes: durationMs / 1000 / 60,
+					});
+
+					return result;
+				} catch (err) {
+					// If the error is already a CommandHandledError (e.g., from a nested wrangler.parse() call),
+					// don't wrap it again; just rethrow.
+					if (err instanceof CommandHandledError) {
+						throw err;
+					}
+
+					const durationMs = Date.now() - startTime;
+					dispatcher.sendCommandEvent("wrangler command errored", {
+						command: commandName,
+						args,
+						durationMs,
+						durationSeconds: durationMs / 1000,
+						durationMinutes: durationMs / 1000 / 60,
+						errorType: getErrorType(err),
+						errorMessage:
+							err instanceof UserError || err instanceof ContainersUserError
+								? err.telemetryMessage
+								: undefined,
+					});
+
+					await handleError(err, args, argv);
+
+					// Wrap the error to signal that the telemetry has already been sent and the error reporting handled.
+					throw new CommandHandledError(err);
+				}
 			});
-
-			// TODO(telemetry): send command completed event
 		} catch (err) {
-			// TODO(telemetry): send command errored event
-
 			// Write handler failure to output file if one exists
-			if (err instanceof Error) {
-				const code = "code" in err ? (err.code as number) : undefined;
-				const message = "message" in err ? (err.message as string) : undefined;
+			// Unwrap CommandHandledError to get the original error for output
+			const outputErr =
+				err instanceof CommandHandledError ? err.originalError : err;
+			if (outputErr instanceof Error) {
+				const code =
+					"code" in outputErr ? (outputErr.code as number) : undefined;
 				writeOutput({
 					type: "command-failed",
 					version: 1,
 					code,
-					message,
+					message: outputErr.message,
 				});
 			}
 			throw err;
