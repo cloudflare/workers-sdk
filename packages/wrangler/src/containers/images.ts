@@ -3,91 +3,88 @@ import {
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
 import { fetch } from "undici";
-import { createCommand, createNamespace } from "../../core/create-command";
-import { isNonInteractiveOrCI } from "../../is-interactive";
-import { logger } from "../../logger";
-import { getAccountId } from "../../user";
 import {
-	cloudchamberScope,
 	fillOpenAPIConfiguration,
-	handleFailure,
 	promiseSpinner,
-} from "../common";
-import type { containersScope } from "../../containers";
-import type {
-	CommonYargsArgv,
-	CommonYargsArgvSanitized,
-	StrictYargsOptionsToInterface,
-} from "../../yargs-types";
+} from "../cloudchamber/common";
+import { createCommand, createNamespace } from "../core/create-command";
+import { isNonInteractiveOrCI } from "../is-interactive";
+import { logger } from "../logger";
+import { getAccountId } from "../user";
+import { containersScope } from ".";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
-
-interface CatalogWithTagsResponse {
-	repositories: Record<string, string[]>;
-	cursor?: string;
-}
 
 interface Repository {
 	name: string;
 	tags: string[];
 }
 
-export const imagesCommand = (
-	yargs: CommonYargsArgv,
-	scope: typeof containersScope | typeof cloudchamberScope
-) => {
-	return yargs
-		.command(
-			["list", "ls"],
-			"List images in the Cloudflare managed registry",
-			(args) => listImagesYargs(args),
-			(args) =>
-				handleFailure(
-					`wrangler containers images list`,
-					async (_args: CommonYargsArgvSanitized, config: Config) => {
-						await handleListImagesCommand(args, config);
-					},
-					scope
-				)(args)
-		)
-		.command(
-			["delete <image>", "rm <image>"],
-			"Remove an image from the Cloudflare managed registry",
-			(args) => deleteImageYargs(args),
-			(args) =>
-				handleFailure(
-					`wrangler containers images delete`,
-					async (_args: CommonYargsArgvSanitized, config: Config) => {
-						await handleDeleteImageCommand(args, config);
-					},
-					scope
-				)(args)
-		);
-};
+// --- Namespace definition ---
 
-function deleteImageYargs(yargs: CommonYargsArgv) {
-	return yargs.positional("image", {
-		type: "string",
-		description: "Image and tag to delete, of the form IMAGE:TAG",
-		demandOption: true,
-	});
-}
+export const containersImagesNamespace = createNamespace({
+	metadata: {
+		description: "Manage images in the Cloudflare managed registry",
+		status: "open beta",
+		owner: "Product: Cloudchamber",
+	},
+});
 
-function listImagesYargs(yargs: CommonYargsArgv) {
-	return yargs
-		.option("filter", {
+// --- Command definitions ---
+
+export const containersImagesListCommand = createCommand({
+	metadata: {
+		description: "List images in the Cloudflare managed registry",
+		status: "open beta",
+		owner: "Product: Cloudchamber",
+	},
+	behaviour: {
+		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
+	},
+	args: {
+		filter: {
 			type: "string",
 			description: "Regex to filter results",
-		})
-		.option("json", {
+		},
+		json: {
 			type: "boolean",
 			description: "Format output as JSON",
 			default: false,
-		});
-}
+		},
+	},
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, containersScope);
+		await handleListImagesCommand(args, config);
+	},
+});
+
+export const containersImagesDeleteCommand = createCommand({
+	metadata: {
+		description: "Remove an image from the Cloudflare managed registry",
+		status: "open beta",
+		owner: "Product: Cloudchamber",
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {
+		image: {
+			type: "string",
+			description: "Image and tag to delete, of the form IMAGE:TAG",
+			demandOption: true,
+		},
+	},
+	positionalArgs: ["image"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, containersScope);
+		await handleDeleteImageCommand(args, config);
+	},
+});
+
+// --- Handler functions ---
 
 async function handleDeleteImageCommand(
-	args: StrictYargsOptionsToInterface<typeof deleteImageYargs>,
+	args: { image: string },
 	config: Config
 ) {
 	if (!args.image.includes(":")) {
@@ -126,7 +123,7 @@ async function handleDeleteImageCommand(
 }
 
 async function handleListImagesCommand(
-	args: StrictYargsOptionsToInterface<typeof listImagesYargs>,
+	args: { filter?: string; json: boolean },
 	config: Config
 ) {
 	const responses = await promiseSpinner(
@@ -188,6 +185,11 @@ async function listImages(
 			logger.log(row.map((v, i) => v.padEnd(widths[i], " ")).join("  "));
 		}
 	}
+}
+
+interface CatalogWithTagsResponse {
+	repositories: Record<string, string[]>;
+	cursor?: string;
 }
 
 async function listReposWithTags(
@@ -273,63 +275,3 @@ async function getCreds(): Promise<string> {
 
 	return Buffer.from(`v1:${credentials.password}`).toString("base64");
 }
-
-export const cloudchamberImagesNamespace = createNamespace({
-	metadata: {
-		description: "Manage images in the Cloudflare managed registry",
-		status: "alpha",
-		owner: "Product: Cloudchamber",
-		hidden: false,
-	},
-});
-
-export const cloudchamberImagesListCommand = createCommand({
-	metadata: {
-		description: "List images in the Cloudflare managed registry",
-		status: "alpha",
-		owner: "Product: Cloudchamber",
-		hidden: false,
-	},
-	behaviour: {
-		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
-	},
-	args: {
-		filter: {
-			type: "string",
-			description: "Regex to filter results",
-		},
-		json: {
-			type: "boolean",
-			description: "Format output as JSON",
-			default: false,
-		},
-	},
-	async handler(args, { config }) {
-		await fillOpenAPIConfiguration(config, cloudchamberScope);
-		await handleListImagesCommand(args, config);
-	},
-});
-
-export const cloudchamberImagesDeleteCommand = createCommand({
-	metadata: {
-		description: "Remove an image from the Cloudflare managed registry",
-		status: "alpha",
-		owner: "Product: Cloudchamber",
-		hidden: false,
-	},
-	behaviour: {
-		printBanner: () => !isNonInteractiveOrCI(),
-	},
-	args: {
-		image: {
-			type: "string",
-			description: "Image and tag to delete, of the form IMAGE:TAG",
-			demandOption: true,
-		},
-	},
-	positionalArgs: ["image"],
-	async handler(args, { config }) {
-		await fillOpenAPIConfiguration(config, cloudchamberScope);
-		await handleDeleteImageCommand(args, config);
-	},
-});

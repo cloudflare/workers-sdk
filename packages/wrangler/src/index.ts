@@ -25,10 +25,46 @@ import {
 	certUploadNamespace,
 } from "./cert/cert";
 import { checkNamespace, checkStartupCommand } from "./check/commands";
-import { cloudchamber } from "./cloudchamber";
+import {
+	cloudchamberApplyCommand,
+	cloudchamberBuildCommand,
+	cloudchamberCreateCommand,
+	cloudchamberCurlCommand,
+	cloudchamberDeleteCommand,
+	cloudchamberImagesDeleteCommand,
+	cloudchamberImagesListCommand,
+	cloudchamberImagesNamespace,
+	cloudchamberListCommand,
+	cloudchamberModifyCommand,
+	cloudchamberNamespace,
+	cloudchamberPushCommand,
+	cloudchamberRegistriesConfigureCommand,
+	cloudchamberRegistriesCredentialsCommand,
+	cloudchamberRegistriesListCommand,
+	cloudchamberRegistriesNamespace,
+	cloudchamberRegistriesRemoveCommand,
+	cloudchamberSshCreateCommand,
+	cloudchamberSshListCommand,
+	cloudchamberSshNamespace,
+} from "./cloudchamber";
 import { completionsCommand } from "./complete";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
-import { containers } from "./containers";
+import {
+	containersBuildCommand,
+	containersDeleteCommand,
+	containersImagesDeleteCommand,
+	containersImagesListCommand,
+	containersImagesNamespace,
+	containersInfoCommand,
+	containersListCommand,
+	containersNamespace,
+	containersPushCommand,
+	containersRegistriesConfigureCommand,
+	containersRegistriesDeleteCommand,
+	containersRegistriesListCommand,
+	containersRegistriesNamespace,
+	containersSshCommand,
+} from "./containers";
 import { demandSingleValue } from "./core";
 import { CommandHandledError } from "./core/CommandHandledError";
 import { CommandRegistry } from "./core/CommandRegistry";
@@ -1357,18 +1393,133 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("mtls-certificate");
 
 	// cloudchamber
-	wrangler.command("cloudchamber", false, (cloudchamberArgs) => {
-		return cloudchamber(cloudchamberArgs.command(subHelp), subHelp);
-	});
+	registry.define([
+		{ command: "wrangler cloudchamber", definition: cloudchamberNamespace },
+		{
+			command: "wrangler cloudchamber list",
+			definition: cloudchamberListCommand,
+		},
+		{
+			command: "wrangler cloudchamber create",
+			definition: cloudchamberCreateCommand,
+		},
+		{
+			command: "wrangler cloudchamber delete",
+			definition: cloudchamberDeleteCommand,
+		},
+		{
+			command: "wrangler cloudchamber modify",
+			definition: cloudchamberModifyCommand,
+		},
+		{
+			command: "wrangler cloudchamber apply",
+			definition: cloudchamberApplyCommand,
+		},
+		{
+			command: "wrangler cloudchamber curl",
+			definition: cloudchamberCurlCommand,
+		},
+		{
+			command: "wrangler cloudchamber build",
+			definition: cloudchamberBuildCommand,
+		},
+		{
+			command: "wrangler cloudchamber push",
+			definition: cloudchamberPushCommand,
+		},
+		{
+			command: "wrangler cloudchamber ssh",
+			definition: cloudchamberSshNamespace,
+		},
+		{
+			command: "wrangler cloudchamber ssh list",
+			definition: cloudchamberSshListCommand,
+		},
+		{
+			command: "wrangler cloudchamber ssh create",
+			definition: cloudchamberSshCreateCommand,
+		},
+		{
+			command: "wrangler cloudchamber registries",
+			definition: cloudchamberRegistriesNamespace,
+		},
+		{
+			command: "wrangler cloudchamber registries configure",
+			definition: cloudchamberRegistriesConfigureCommand,
+		},
+		{
+			command: "wrangler cloudchamber registries credentials",
+			definition: cloudchamberRegistriesCredentialsCommand,
+		},
+		{
+			command: "wrangler cloudchamber registries remove",
+			definition: cloudchamberRegistriesRemoveCommand,
+		},
+		{
+			command: "wrangler cloudchamber registries list",
+			definition: cloudchamberRegistriesListCommand,
+		},
+		{
+			command: "wrangler cloudchamber images",
+			definition: cloudchamberImagesNamespace,
+		},
+		{
+			command: "wrangler cloudchamber images list",
+			definition: cloudchamberImagesListCommand,
+		},
+		{
+			command: "wrangler cloudchamber images delete",
+			definition: cloudchamberImagesDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("cloudchamber");
 
 	// containers
-	wrangler.command(
-		"containers",
-		`📦 Manage Containers ${chalk.hex(betaCmdColor)("[open beta]")}`,
-		(containersArgs) => {
-			return containers(containersArgs.command(subHelp), subHelp);
-		}
-	);
+	registry.define([
+		{ command: "wrangler containers", definition: containersNamespace },
+		{ command: "wrangler containers list", definition: containersListCommand },
+		{ command: "wrangler containers info", definition: containersInfoCommand },
+		{
+			command: "wrangler containers delete",
+			definition: containersDeleteCommand,
+		},
+		{ command: "wrangler containers ssh", definition: containersSshCommand },
+		{
+			command: "wrangler containers build",
+			definition: containersBuildCommand,
+		},
+		{ command: "wrangler containers push", definition: containersPushCommand },
+		{
+			command: "wrangler containers registries",
+			definition: containersRegistriesNamespace,
+		},
+		{
+			command: "wrangler containers registries configure",
+			definition: containersRegistriesConfigureCommand,
+		},
+		{
+			command: "wrangler containers registries list",
+			definition: containersRegistriesListCommand,
+		},
+		{
+			command: "wrangler containers registries delete",
+			definition: containersRegistriesDeleteCommand,
+		},
+		{
+			command: "wrangler containers images",
+			definition: containersImagesNamespace,
+		},
+		{
+			command: "wrangler containers images list",
+			definition: containersImagesListCommand,
+		},
+		{
+			command: "wrangler containers images delete",
+			definition: containersImagesDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("containers");
+	registry.registerLegacyCommandCategory("containers", "Compute & AI");
 
 	// [PRIVATE BETA] pubsub
 	wrangler.command(
@@ -1727,7 +1878,6 @@ export function createCLIParser(argv: string[]) {
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
 
-	registry.registerLegacyCommandCategory("containers", "Compute & AI");
 	registry.registerLegacyCommandCategory("pubsub", "Compute & AI");
 
 	registry.registerAll();
@@ -1776,9 +1926,6 @@ export async function main(argv: string[]): Promise<void> {
 		// Record command as Sentry breadcrumb
 		const command = `wrangler ${args._.join(" ")}`;
 		addBreadcrumb(command);
-
-		// TODO: Legacy commands (cloudchamber, containers) don't use defineCommand
-		// and won't emit telemetry events. Migrate them to defineCommand to enable telemetry.
 	}, /* applyBeforeValidation */ true);
 
 	const startTime = Date.now();
