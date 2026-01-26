@@ -5,8 +5,10 @@ import {
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 } from "../generated/zod.gen";
-import type { Env } from "../api.worker";
-import type { AppContext } from "../common";
+import type { AppBindings, Env } from "../api.worker";
+import type { Context } from "hono";
+
+type AppContext = Context<AppBindings>;
 
 /**
  * Get a KV binding by namespace ID
@@ -224,10 +226,15 @@ export async function bulkGetKVValues(c: AppContext, body: BulkGetBody) {
 	// Fetch all keys at once - returns Map<string, string | null>
 	const results = await kv.get(keys);
 
-	// Build result object with null for missing keys
-	const values: Record<string, string | null> = {};
-	for (const key of keys) {
-		values[key] = results?.get(key) ?? null;
+	// Convert Map to object, filtering out null values
+	// TODO: figure out what api actually does with nulls in a bulk get
+	const values: Record<string, string> = {};
+	if (results) {
+		for (const [key, val] of results) {
+			if (val !== null) {
+				values[key] = val;
+			}
+		}
 	}
 
 	return c.json(wrapResponse({ values }));

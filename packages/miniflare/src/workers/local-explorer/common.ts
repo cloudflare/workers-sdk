@@ -5,9 +5,6 @@ import type {
 	WorkersKvMessages,
 } from "./generated/types.gen";
 import type { Context } from "hono";
-import type { AppBindings } from "./api.worker";
-
-export type AppContext = Context<AppBindings>;
 
 // ============================================================================
 // Hono middleware Validators
@@ -17,8 +14,6 @@ export type AppContext = Context<AppBindings>;
  * Query validator with string-to-type coercion.
  * Query params arrive as strings from URLs, so we coerce them before validation.
  * @returns validated query params according to openapi schema
- *
- * If the whole query param is optional, you need to unwrap it before passing to this function.
  */
 export function validateQuery<T extends z.ZodTypeAny>(schema: T) {
 	return validator("query", async (value, c) => {
@@ -40,7 +35,8 @@ export function validateQuery<T extends z.ZodTypeAny>(schema: T) {
 }
 
 /**
- * validates request body according to openapi schema
+ *
+ * @returns validated request body according to openapi schema
  */
 export function validateRequestBody<T extends z.ZodTypeAny>(schema: T) {
 	return validator("json", async (value, c) => {
@@ -80,7 +76,7 @@ export function coerceValue(
 					expected: "number",
 					received: "string",
 					path,
-					message: `Expected query param to be number but received "${value}"`,
+					message: `Cannot coerce "${value}" to number`,
 				},
 			]);
 		}
@@ -96,7 +92,7 @@ export function coerceValue(
 				expected: "boolean",
 				received: "string",
 				path,
-				message: `Expected query param to be 'true' or 'false' but received "${value}"`,
+				message: `Cannot coerce "${value}" to boolean, expected "true" or "false"`,
 			},
 		]);
 	}
