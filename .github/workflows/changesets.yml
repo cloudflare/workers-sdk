@@ -81,6 +81,7 @@ jobs:
         run: node -r esbuild-register tools/deployments/alert-on-error.ts
         env:
           PUBLISH_STATUS: ${{ steps.changesets.outcome }}
+          HAS_CHANGESETS: ${{ steps.changesets.outputs.hasChangesets }}
           DEPLOYMENT_STATUS: ${{ steps.deploy.outputs.status }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           TOKEN: ${{ secrets.STATUS_BOT_SECRET }}
