@@ -77,7 +77,7 @@
 	},
 	"devDependencies": {
 		"@aws-sdk/client-s3": "^3.721.0",
-		"@bomb.sh/tab": "^0.0.11",
+		"@bomb.sh/tab": "^0.0.12",
 		"@cloudflare/cli": "workspace:*",
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/eslint-config-shared": "workspace:*",
