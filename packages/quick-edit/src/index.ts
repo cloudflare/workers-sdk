@@ -2,6 +2,16 @@ export default {
 	async fetch(request: Request, env: Env) {
 		const url = new URL(request.url);
 
+		// When Quick Edit is accessed through a proxy (e.g., on devprod.cloudflare.dev),
+		// the browser sees the proxy's host, but the Worker receives its own host in the URL.
+		// The additionalBuiltinExtensions config tells VS Code where to load extensions from,
+		// so we need to use the proxy's host for the browser to load them correctly.
+		// We validate the X-Forwarded-Host matches *.devprod.cloudflare.dev for security.
+		const forwardedHost = request.headers.get("X-Forwarded-Host");
+		const isValidForwardedHost =
+			forwardedHost?.endsWith(".devprod.cloudflare.dev") ?? false;
+		const authority = isValidForwardedHost ? forwardedHost : url.host;
+
 		const configValues = {
 			WORKBENCH_WEB_CONFIGURATION: JSON.stringify({
 				configurationDefaults: {
@@ -40,12 +50,12 @@ export default {
 					{
 						scheme: url.protocol === "https:" ? "https" : "http",
 						path: "/quick-edit-extension",
-						authority: url.host,
+						authority: authority,
 					},
 					{
 						scheme: url.protocol === "https:" ? "https" : "http",
 						path: "/solarflare-theme",
-						authority: url.host,
+						authority: authority,
 					},
 				],
 			}).replace(/"/g, "&quot;"),
