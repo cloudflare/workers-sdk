@@ -57,7 +57,7 @@ export function getAllowedArgs(
 			allowedArgs = { ...commandArgAllowList[wildcardCommand], ...allowedArgs };
 		}
 	}
-	return { ...(commandArgAllowList["*"] ?? {}), ...allowedArgs };
+	return { ...commandArgAllowList["*"], ...allowedArgs };
 }
 
 /**

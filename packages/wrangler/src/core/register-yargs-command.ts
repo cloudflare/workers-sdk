@@ -219,15 +219,15 @@ function createHandler(
 				}
 
 				// Compute safe telemetry properties
-				// Strip "wrangler " prefix to get safeCommand (e.g., "wrangler dev" -> "dev")
-				const safeCommand = commandName.replace(/^wrangler\s*/, "");
+				// Strip "wrangler " prefix to get just the command (e.g., "wrangler dev" -> "dev")
+				const sanitizedCommand = commandName.replace(/^wrangler\s*/, "");
 				const logArgs = def.metadata.logArgs ?? false;
 				// If logArgs is false, send empty object; otherwise pass full args
-				const safeArgs = logArgs ? args : {};
+				const sanitizedArgs = logArgs ? args : {};
 
 				dispatcher.sendCommandEvent("wrangler command started", {
-					safeCommand,
-					safeArgs,
+					sanitizedCommand,
+					sanitizedArgs,
 					logArgs,
 				});
 
@@ -242,8 +242,8 @@ function createHandler(
 
 					const durationMs = Date.now() - startTime;
 					dispatcher.sendCommandEvent("wrangler command completed", {
-						safeCommand,
-						safeArgs,
+						sanitizedCommand,
+						sanitizedArgs,
 						logArgs,
 						durationMs,
 						durationSeconds: durationMs / 1000,
@@ -260,8 +260,8 @@ function createHandler(
 
 					const durationMs = Date.now() - startTime;
 					dispatcher.sendCommandEvent("wrangler command errored", {
-						safeCommand,
-						safeArgs,
+						sanitizedCommand,
+						sanitizedArgs,
 						logArgs,
 						durationMs,
 						durationSeconds: durationMs / 1000,

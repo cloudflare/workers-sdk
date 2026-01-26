@@ -241,8 +241,8 @@ describe("metrics", () => {
 				argsUsed: [],
 				argsCombination: "",
 				agent: null,
-				safeCommand: "docs",
-				safeArgs: {},
+				sanitizedCommand: "docs",
+				sanitizedArgs: {},
 				logArgs: true,
 			};
 			beforeEach(() => {
@@ -481,7 +481,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 				expect(std.debug).toContain('"argsCombination":""');
-				expect(std.debug).toContain('"safeCommand":""');
+				expect(std.debug).toContain('"sanitizedCommand":""');
 			});
 
 			it("should include args provided by the user", async () => {

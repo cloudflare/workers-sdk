@@ -1995,7 +1995,7 @@ export async function main(argv: string[]): Promise<void> {
  * Dispatches generic metrics events to indicate that a wrangler command errored
  * when we don't know the CommandDefinition and cannot be sure what is safe to send.
  *
- * We cannot safely derive safeCommand from args._ since it may contain
+ * We cannot safely derive a sanitized command from `args._` since it may contain
  * sensitive user-supplied positional arguments
  */
 function dispatchGenericCommandErrorEvent(
@@ -2007,14 +2007,14 @@ function dispatchGenericCommandErrorEvent(
 
 	// Send "started" event since handler never got to send it.
 	dispatcher.sendCommandEvent("wrangler command started", {
-		safeCommand: "",
-		safeArgs: {},
+		sanitizedCommand: "",
+		sanitizedArgs: {},
 		logArgs: false,
 	});
 
 	dispatcher.sendCommandEvent("wrangler command errored", {
-		safeCommand: "",
-		safeArgs: {},
+		sanitizedCommand: "",
+		sanitizedArgs: {},
 		logArgs: false,
 		durationMs,
 		durationSeconds: durationMs / 1000,

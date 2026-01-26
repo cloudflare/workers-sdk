@@ -83,27 +83,29 @@ export type CommonEventProperties = {
  */
 type CommandEventProperties = CommonEventProperties & {
 	/**
-	 * The command that was used, e.g. `dev`.
-	 * Does not include the "wrangler" prefix.
-	 * When logArgs is false, positional arguments are stripped to prevent
-	 * accidentally capturing secrets in telemetry.
+	 * The command that is being run, e.g. `r2 bucket create`. It does not include the "wrangler" prefix.
 	 *
-	 * Named `safeCommand` to distinguish from historical `command` field which
+	 * No user-inputted positional arguments or flags are allowed in this field.
+	 * Named `sanitizedCommand` to distinguish from historical `command` field which
 	 * may have contained sensitive positional arguments in older Wrangler versions.
 	 */
-	safeCommand: string;
+	sanitizedCommand: string;
 	/**
-	 * The args and flags that were passed in when running the command.
-	 * All user-inputted string values are redacted, except for some cases where there are set options.
-	 * When logArgs is false, this is an empty object.
+	 * Sanitized positional args and named flags that were passed in when running the command.
 	 *
-	 * Named `safeArgs` to distinguish from historical `args` field which
+	 * When `logArgs` is `false`, this is always an empty object.
+	 * Only args that are explicitly allowed via the `COMMAND_ARG_ALLOW_LIST` will appear here.
+	 * See `getAllowedArgs()` and `sanitizeArgValues()` for details.
+	 *
+	 * Named `sanitizedArgs` to distinguish from historical `args` field which
 	 * may have contained sensitive data in older Wrangler versions.
 	 */
-	safeArgs: Record<string, unknown>;
+	sanitizedArgs: Record<string, unknown>;
 	/**
-	 * If true, this command's args are included in telemetry.
-	 * Passed from the command definition's metadata.logArgs.
+	 * If true, this command's known args are included in telemetry.
+	 *
+	 * This is taken from the definition of the command being run.
+	 * See `CommandDefinition.metadata.logArgs`.
 	 */
 	logArgs: boolean;
 };

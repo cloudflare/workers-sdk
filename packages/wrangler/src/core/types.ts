@@ -77,10 +77,9 @@ export type Metadata = {
 	 */
 	category?: MetadataCategory;
 	/**
-	 * If true, arguments for this command will be included in telemetry.
+	 * Whether arguments for this command will be posted to telemetry.
 	 *
 	 * @default false - Arguments are not logged by default.
-	 * Set to `true` to explicitly include this command's args in telemetry.
 	 */
 	logArgs?: boolean;
 };

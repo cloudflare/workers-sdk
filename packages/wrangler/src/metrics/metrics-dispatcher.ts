@@ -131,28 +131,28 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		) {
 			try {
 				// Truncate login commands to just "login" to avoid capturing tokens
-				if (properties.safeCommand?.startsWith("login")) {
-					properties.safeCommand = "login";
+				if (properties.sanitizedCommand?.startsWith("login")) {
+					properties.sanitizedCommand = "login";
 				}
 				// Don't send metrics for telemetry/metrics disable commands
 				if (
-					properties.safeCommand === "telemetry disable" ||
-					properties.safeCommand === "metrics disable"
+					properties.sanitizedCommand === "telemetry disable" ||
+					properties.sanitizedCommand === "metrics disable"
 				) {
 					return;
 				}
 				// Show metrics banner for certain commands
 				if (
-					properties.safeCommand === "deploy" ||
-					properties.safeCommand === "dev" ||
+					properties.sanitizedCommand === "deploy" ||
+					properties.sanitizedCommand === "dev" ||
 					// for testing purposes
-					properties.safeCommand === "docs"
+					properties.sanitizedCommand === "docs"
 				) {
 					printMetricsBanner();
 				}
 
 				const sanitizedArgs = sanitizeArgKeys(
-					properties.safeArgs ?? {},
+					properties.sanitizedArgs ?? {},
 					options.argv
 				);
 				const sanitizedArgsKeys = Object.keys(sanitizedArgs).sort();
@@ -182,9 +182,12 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				// get the args where we don't want to redact their values
 				const allowedArgs = getAllowedArgs(
 					COMMAND_ARG_ALLOW_LIST,
-					properties.safeCommand
+					properties.sanitizedCommand
 				);
-				properties.safeArgs = sanitizeArgValues(sanitizedArgs, allowedArgs);
+				properties.sanitizedArgs = sanitizeArgValues(
+					sanitizedArgs,
+					allowedArgs
+				);
 
 				dispatch({
 					name,
