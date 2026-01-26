@@ -1079,35 +1079,9 @@ export function getGlobalServices({
 	if (sharedOptions.unsafeLocalExplorer) {
 		// Build binding ID map from proxyBindings
 		// Maps binding names to their actual namespace/bucket IDs
-		const IDToBindingName: {
-			// TODO(@nurodev): Couldn't this be a `Map`?
-			d1: Record<string, string>;
-			kv: Record<string, string>;
-		} = {
-			d1: {},
-			kv: {},
-		};
+		const IDToBindingName: { kv: Record<string, string> } = { kv: {} };
 
 		for (const binding of proxyBindings) {
-			if (
-				binding.name?.startsWith(
-					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:d1:`
-				) &&
-				"wrapped" in binding
-			) {
-				const [innerBinding] = binding.wrapped?.innerBindings ?? [null];
-				if (!innerBinding || !("service" in innerBinding))
-					// TODO(@nurodev): Provide correct error details
-					throw new MiniflareCoreError("ERR_INVALID_WRAPPED", "TODO");
-
-				const databaseId = innerBinding.service?.name?.replace("d1:db:", "");
-				if (!databaseId)
-					// TODO(@nurodev): Provide correct error details
-					throw new MiniflareCoreError("ERR_INVALID_WRAPPED", "TODO");
-
-				IDToBindingName.d1[databaseId] = binding.name;
-			}
-
 			// KV bindings: name = "MINIFLARE_PROXY:kv:worker:BINDING", kvNamespace.name = "kv:ns:ID"
 			if (
 				binding.name?.startsWith(
