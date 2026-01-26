@@ -274,8 +274,6 @@ async function getCreds(): Promise<string> {
 	return Buffer.from(`v1:${credentials.password}`).toString("base64");
 }
 
-// --- New createCommand-based commands ---
-
 export const cloudchamberImagesNamespace = createNamespace({
 	metadata: {
 		description: "Manage images in the Cloudflare managed registry",

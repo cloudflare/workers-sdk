@@ -112,7 +112,6 @@ async function sshListHandler(
 	sshArgs: CommonYargsArgvSanitized,
 	config: Config
 ) {
-	// check we are in CI or if the user wants to just use JSON
 	if (isNonInteractiveOrCI()) {
 		const sshKeys = await SshPublicKeysService.listSshPublicKeys();
 		logger.json(sshKeys);
@@ -368,8 +367,6 @@ async function promptForSSHKey(
 
 	return res;
 }
-
-// --- New defineCommand-based commands ---
 
 export const cloudchamberSshNamespace = createNamespace({
 	metadata: {

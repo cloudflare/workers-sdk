@@ -193,8 +193,6 @@ const listCommandHandle = async (
 	}
 };
 
-// --- New defineCommand-based command ---
-
 export const cloudchamberListCommand = createCommand({
 	metadata: {
 		description: "List and view status of deployments",

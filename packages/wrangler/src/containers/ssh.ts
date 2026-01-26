@@ -327,8 +327,6 @@ function buildSshArgs(
 	return flags;
 }
 
-// --- New defineCommand-based command ---
-
 export const containersSshCommand = createCommand({
 	metadata: {
 		description: "SSH into a container",

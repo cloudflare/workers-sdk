@@ -220,8 +220,6 @@ async function handleConfigureImageRegistryCommand(
 	);
 }
 
-// --- New defineCommand-based commands ---
-
 export const cloudchamberRegistriesNamespace = createNamespace({
 	metadata: {
 		description: "Configure registries via Cloudchamber",

@@ -166,8 +166,6 @@ async function requestFromCmd(
 	}
 }
 
-// --- New defineCommand-based command ---
-
 export const cloudchamberCurlCommand = createCommand({
 	metadata: {
 		description: "Send a request to an arbitrary Cloudchamber endpoint",

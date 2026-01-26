@@ -312,8 +312,6 @@ async function handleModifyCommand(
 
 const modifyImageQuestion = "URL of the image to use in your deployment";
 
-// --- New defineCommand-based command ---
-
 export const cloudchamberModifyCommand = createCommand({
 	metadata: {
 		description: "Modify an existing deployment",

@@ -673,8 +673,6 @@ export async function applyCommand(
 	);
 }
 
-// --- New defineCommand-based command ---
-
 export const cloudchamberApplyCommand = createCommand({
 	metadata: {
 		description: "Apply the changes in the container applications to deploy",

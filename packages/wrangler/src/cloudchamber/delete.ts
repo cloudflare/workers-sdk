@@ -71,8 +71,6 @@ async function handleDeleteCommand(
 	endSection("Your container has been deleted");
 }
 
-// --- New defineCommand-based command ---
-
 export const cloudchamberDeleteCommand = createCommand({
 	metadata: {
 		description:

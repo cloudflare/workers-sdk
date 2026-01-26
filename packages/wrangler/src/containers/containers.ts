@@ -251,8 +251,6 @@ async function listContainersAndChoose(
 	return applications.find((a) => a.id === application)!;
 }
 
-// --- New defineCommand-based commands ---
-
 export const containersListCommand = createCommand({
 	metadata: {
 		description: "List containers",

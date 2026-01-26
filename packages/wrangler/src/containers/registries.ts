@@ -281,6 +281,7 @@ async function registryListCommand(
 	}
 }
 
+// Only used for its type. The underscore prefix prevents unused variable linting errors.
 const _registryDeleteYargs = (yargs: CommonYargsArgv) => {
 	return yargs
 		.positional("DOMAIN", {
@@ -332,8 +333,6 @@ async function registryDeleteCommand(
 
 	endSection(`Deleted registry ${deleteArgs.DOMAIN}\n`);
 }
-
-// --- New defineCommand-based commands ---
 
 export const containersRegistriesNamespace = createNamespace({
 	metadata: {

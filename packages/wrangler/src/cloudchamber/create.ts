@@ -14,7 +14,7 @@ import {
 	DeploymentsService,
 } from "@cloudflare/containers-shared";
 import { parseByteSize } from "@cloudflare/workers-utils";
-import { createCommand as defineCommand } from "../core/create-command";
+import { createCommand } from "../core/create-command";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
@@ -55,7 +55,7 @@ import type { Config } from "@cloudflare/workers-utils";
 
 const defaultContainerImage = "docker.io/cloudflare/hello-world:1.0";
 
-export function createCommandOptionalYargs(yargs: CommonYargsArgv) {
+export function cloudchamberCreateCommandOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.option("image", {
 			requiresArg: true,
@@ -133,8 +133,10 @@ export function createCommandOptionalYargs(yargs: CommonYargsArgv) {
 		});
 }
 
-export async function createCommand(
-	args: StrictYargsOptionsToInterface<typeof createCommandOptionalYargs>,
+export async function handleCloudchamberCreateCommand(
+	args: StrictYargsOptionsToInterface<
+		typeof cloudchamberCreateCommandOptionalYargs
+	>,
 	config: Config
 ) {
 	const environmentVariables = collectEnvironmentVariables(
@@ -192,11 +194,18 @@ export async function createCommand(
 		return;
 	}
 
-	await handleCreateCommand(args, config, environmentVariables, labels);
+	await handleInteractiveCloudchamberCreateCommand(
+		args,
+		config,
+		environmentVariables,
+		labels
+	);
 }
 
 async function askWhichSSHKeysDoTheyWantToAdd(
-	args: StrictYargsOptionsToInterface<typeof createCommandOptionalYargs>,
+	args: StrictYargsOptionsToInterface<
+		typeof cloudchamberCreateCommandOptionalYargs
+	>,
 	key: SSHPublicKeyID | undefined
 ): Promise<SSHPublicKeyID[]> {
 	const keyItems = await pollSSHKeysUntilCondition(() => true);
@@ -274,8 +283,10 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 	return [];
 }
 
-async function handleCreateCommand(
-	args: StrictYargsOptionsToInterface<typeof createCommandOptionalYargs>,
+async function handleInteractiveCloudchamberCreateCommand(
+	args: StrictYargsOptionsToInterface<
+		typeof cloudchamberCreateCommandOptionalYargs
+	>,
 	config: Config,
 	environmentVariables: EnvironmentVariable[] | undefined,
 	labels: Label[] | undefined
@@ -390,9 +401,7 @@ async function handleCreateCommand(
 
 const whichImageQuestion = "Which image should we use for your container?";
 
-// --- New defineCommand-based command ---
-
-export const cloudchamberCreateCommand = defineCommand({
+export const cloudchamberCreateCommand = createCommand({
 	metadata: {
 		description: "Create a new deployment",
 		status: "alpha",
@@ -480,6 +489,6 @@ export const cloudchamberCreateCommand = defineCommand({
 	},
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, cloudchamberScope);
-		await createCommand(args, config);
+		await handleCloudchamberCreateCommand(args, config);
 	},
 });
