@@ -7,9 +7,14 @@ import { logger } from "./logger";
 
 let cacheMessageShown = false;
 
-let __cacheFolder: string | undefined;
+// Only used internally for disabling caching during tests
+export function disableConfigCache() {
+	__cacheFolder = null;
+}
+
+let __cacheFolder: string | null | undefined;
 function getCacheFolder() {
-	if (__cacheFolder) {
+	if (__cacheFolder || __cacheFolder === null) {
 		return __cacheFolder;
 	}
 

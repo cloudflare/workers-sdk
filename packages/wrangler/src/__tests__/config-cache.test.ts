@@ -10,7 +10,7 @@ interface PagesConfigCache {
 }
 
 describe("config cache", () => {
-	runInTempDir();
+	runInTempDir({ disableCaching: false });
 	mockConsoleMethods();
 	beforeEach(() => {
 		mkdirSync("node_modules");

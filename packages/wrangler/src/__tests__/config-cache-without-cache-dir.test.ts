@@ -10,7 +10,7 @@ interface PagesConfigCache {
 
 describe("config cache without node_modules", () => {
 	// Use a controlled homedir so the global cache fallback works in a predictable location
-	runInTempDir({ homedir: "home" });
+	runInTempDir({ homedir: "home", disableCaching: false });
 	mockConsoleMethods();
 	// In this set of tests, we don't create a node_modules folder,
 	// so the cache should fall back to the global wrangler config directory
