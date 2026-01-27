@@ -105,10 +105,12 @@ export async function runAutoConfig(
 
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
-		{
-			...wranglerConfig,
-			...dryRunConfigurationResults?.wranglerConfig,
-		},
+		dryRunConfigurationResults?.wranglerConfig === null
+			? null
+			: {
+					...wranglerConfig,
+					...dryRunConfigurationResults?.wranglerConfig,
+				},
 		dryRunConfigurationResults?.packageJsonScriptsOverrides
 	);
 
@@ -221,7 +223,7 @@ export async function buildOperationsSummary(
 	autoConfigDetails: Omit<AutoConfigDetails, "outputDir"> & {
 		outputDir: NonNullable<AutoConfigDetails["outputDir"]>;
 	},
-	wranglerConfigToWrite: RawConfig,
+	wranglerConfigToWrite: RawConfig | null,
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
 ): Promise<AutoConfigSummary> {
 	logger.log("");
@@ -229,7 +231,9 @@ export async function buildOperationsSummary(
 	const summary: AutoConfigSummary = {
 		wranglerInstall: false,
 		scripts: {},
-		wranglerConfig: wranglerConfigToWrite,
+		...(wranglerConfigToWrite === null
+			? {}
+			: { wranglerConfig: wranglerConfigToWrite }),
 		outputDir: autoConfigDetails.outputDir,
 	};
 
@@ -254,7 +258,12 @@ export async function buildOperationsSummary(
 					: `wrangler dev`),
 		};
 
-		const containsServerSideCode = !!wranglerConfigToWrite.main;
+		const containsServerSideCode =
+			// If wranglerConfigToWrite is null the framework's tool is generating the wrangler config so we don't know
+			// if there is server side code or not, but likely there should be so we here assume that there is
+			wranglerConfigToWrite === null ||
+			// If there is an entrypoint then we know that there is server side code
+			!!wranglerConfigToWrite?.main;
 
 		if (
 			// If there is no server side code, then there is no need to add the cf-typegen script
@@ -273,11 +282,14 @@ export async function buildOperationsSummary(
 		logger.log("");
 	}
 
-	logger.log("📄 Create wrangler.jsonc:");
-	logger.log(
-		"  " + JSON.stringify(wranglerConfigToWrite, null, 2).replace(/\n/g, "\n  ")
-	);
-	logger.log("");
+	if (wranglerConfigToWrite) {
+		logger.log("📄 Create wrangler.jsonc:");
+		logger.log(
+			"  " +
+				JSON.stringify(wranglerConfigToWrite, null, 2).replace(/\n/g, "\n  ")
+		);
+		logger.log("");
+	}
 
 	if (
 		autoConfigDetails.framework &&
