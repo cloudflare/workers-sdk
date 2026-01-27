@@ -3142,6 +3142,50 @@ test("Miniflare: does not strip CF-Connecting-IP when configured", async () => {
 	expect(await landingPage.text()).toEqual("fake-value");
 });
 
+// Test for https://github.com/cloudflare/workers-sdk/issues/4367
+// The CF-Worker header should be added to outbound fetch requests to match production behavior
+test("Miniflare: adds CF-Worker header to outbound requests", async () => {
+	const server = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }",
+		modules: true,
+	});
+	const serverUrl = await server.ready;
+
+	const client = new Miniflare({
+		name: "my-worker",
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}') } }`,
+		modules: true,
+	});
+	useDispose(client);
+	useDispose(server);
+
+	const response = await client.dispatchFetch("http://example.com/");
+	// The CF-Worker header should be set to the worker's name
+	expect(await response.text()).toEqual("my-worker");
+});
+
+test("Miniflare: CF-Worker header uses default name when worker name not set", async () => {
+	const server = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }",
+		modules: true,
+	});
+	const serverUrl = await server.ready;
+
+	const client = new Miniflare({
+		// No name set, should use default "worker"
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}') } }`,
+		modules: true,
+	});
+	useDispose(client);
+	useDispose(server);
+
+	const response = await client.dispatchFetch("http://example.com/");
+	// The CF-Worker header should be set to the default "worker" when no name is specified
+	expect(await response.text()).toEqual("worker");
+});
+
 test("Miniflare: can use module fallback service", async () => {
 	const modulesRoot = "/";
 	const modules: Record<string, Omit<Worker_Module, "name">> = {
