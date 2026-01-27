@@ -25,4 +25,10 @@
 			},
 		],
 	},
+	"migrations": [
+		{
+			"new_sqlite_classes": ["MyDurableObject"],
+			"tag": "v1",
+		},
+	],
 }
