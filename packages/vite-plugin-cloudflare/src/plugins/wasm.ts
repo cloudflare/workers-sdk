@@ -1,5 +1,7 @@
 import { cleanUrl, createPlugin } from "../utils";
 
+const wasmInitRE = /\.wasm\?init$/;
+
 /**
  * Plugin to support the `.wasm?init` extension
  */
@@ -10,8 +12,11 @@ export const wasmHelperPlugin = createPlugin("wasm-helper", (ctx) => {
 			return ctx.getWorkerConfig(environment.name) !== undefined;
 		},
 		load: {
+			filter: { id: wasmInitRE },
 			handler(id) {
-				if (!id.endsWith(".wasm?init")) {
+				// Fallback for when filter is not applied
+				// TODO: remove when we drop support for Vite 6
+				if (!wasmInitRE.test(id)) {
 					return;
 				}
 
