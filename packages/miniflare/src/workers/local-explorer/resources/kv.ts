@@ -23,9 +23,9 @@ function getKVBinding(env: Env, namespace_id: string): KVNamespace | null {
 	return env[bindingName] as KVNamespace;
 }
 
-const _listNamespacesQuerySchema =
-	zWorkersKvNamespaceListNamespacesData.shape.query.unwrap();
-type ListNamespacesQuery = z.output<typeof _listNamespacesQuerySchema>;
+type ListNamespacesQuery = NonNullable<
+	z.output<typeof zWorkersKvNamespaceListNamespacesData>["query"]
+>;
 /**
  * List Namespaces
  * https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/methods/list/
@@ -71,9 +71,9 @@ export async function listKVNamespaces(
 	});
 }
 
-const _listKeysQuerySchema =
-	zWorkersKvNamespaceListANamespaceSKeysData.shape.query.unwrap();
-type ListKeysQuery = z.output<typeof _listKeysQuerySchema>;
+type ListKeysQuery = NonNullable<
+	z.output<typeof zWorkersKvNamespaceListANamespaceSKeysData>["query"]
+>;
 /**
  * List a Namespace's Keys
  * https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/keys/methods/list/
@@ -207,9 +207,9 @@ export async function deleteKVValue(c: AppContext) {
 	return c.json(wrapResponse({}));
 }
 
-const _bulkGetBodySchema =
-	zWorkersKvNamespaceGetMultipleKeyValuePairsData.shape.body;
-type BulkGetBody = z.output<typeof _bulkGetBodySchema>;
+type BulkGetBody = NonNullable<
+	z.output<typeof zWorkersKvNamespaceGetMultipleKeyValuePairsData>["body"]
+>;
 /**
  * Get multiple key-value pairs
  * https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/methods/bulk_get/
