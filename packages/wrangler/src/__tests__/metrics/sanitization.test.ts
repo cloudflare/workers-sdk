@@ -67,33 +67,66 @@ describe("sanitizeArgValues", () => {
 describe("getAllowedArgs", () => {
 	it("should return allowed args for a given command", () => {
 		const commandArgAllowList: AllowList = {
-			"wrangler deploy": {
+			deploy: {
 				config: REDACT,
 				force: ALLOW,
 			},
-			"wrangler *": {
+			"*": {
 				env: ["production", "staging", "development"],
 			},
-			"wrangler deploy *": {
+			"deploy *": {
 				subArg: ALLOW,
 			},
 		};
 
-		expect(getAllowedArgs(commandArgAllowList, "wrangler dev")).toEqual({
+		expect(getAllowedArgs(commandArgAllowList, "dev")).toEqual({
 			env: ["production", "staging", "development"],
 		});
 
-		expect(getAllowedArgs(commandArgAllowList, "wrangler deploy")).toEqual({
+		expect(getAllowedArgs(commandArgAllowList, "deploy")).toEqual({
 			config: REDACT,
 			force: ALLOW,
 			env: ["production", "staging", "development"],
 		});
 
-		expect(getAllowedArgs(commandArgAllowList, "wrangler deploy sub")).toEqual({
+		expect(getAllowedArgs(commandArgAllowList, "deploy sub")).toEqual({
 			config: REDACT,
 			force: ALLOW,
 			env: ["production", "staging", "development"],
 			subArg: ALLOW,
 		});
+	});
+
+	it("should allow more specific command rules to override less specific ones", () => {
+		const commandArgAllowList: AllowList = {
+			"*": { global: ALLOW, sharedArg: REDACT },
+			"r2 bucket create": { sharedArg: REDACT, createOnly: ALLOW },
+			"r2 bucket": { sharedArg: ALLOW, bucketOnly: ALLOW },
+			r2: { sharedArg: ALLOW, r2Only: ALLOW },
+		};
+
+		// Most specific rule ("r2 bucket create") should win for sharedArg
+		const createResult = getAllowedArgs(
+			commandArgAllowList,
+			"r2 bucket create"
+		);
+		expect(createResult.sharedArg).toBe(REDACT);
+		expect(createResult.createOnly).toBe(ALLOW);
+		expect(createResult.bucketOnly).toBe(ALLOW);
+		expect(createResult.r2Only).toBe(ALLOW);
+		expect(createResult.global).toBe(ALLOW);
+
+		// "r2 bucket" should use its own rule for sharedArg
+		const bucketResult = getAllowedArgs(commandArgAllowList, "r2 bucket");
+		expect(bucketResult.sharedArg).toBe(ALLOW);
+		expect(bucketResult.bucketOnly).toBe(ALLOW);
+		expect(bucketResult.r2Only).toBe(ALLOW);
+		expect(bucketResult.global).toBe(ALLOW);
+
+		// "r2" should use its own rule for sharedArg
+		const r2Result = getAllowedArgs(commandArgAllowList, "r2");
+		expect(r2Result.sharedArg).toBe(ALLOW);
+		expect(r2Result.r2Only).toBe(ALLOW);
+		expect(r2Result.global).toBe(ALLOW);
 	});
 });
