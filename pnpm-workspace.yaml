@@ -34,8 +34,8 @@ catalog:
   "ws": "8.18.0"
   esbuild: "0.27.0"
   playwright-chromium: "^1.56.1"
-  "@cloudflare/workers-types": "^4.20260124.0"
-  workerd: "1.20260124.0"
+  "@cloudflare/workers-types": "^4.20260127.0"
+  workerd: "1.20260127.0"
   eslint: "^9.39.1"
   smol-toml: "^1.5.2"
   # CAUTION: Most usage of @cloudflare/vitest-pool-workers in this mono repo should use workspace:* instead of this catalog version
