@@ -206,6 +206,11 @@ function getEnvironmentsConfig(
 				// Some frameworks allow users to mix client and server code in the same file and then extract the server code.
 				// As the dependency optimization may happen before the server code is extracted, we should exclude Cloudflare built-ins from client optimization.
 				exclude: [...cloudflareBuiltInModules],
+				// Workaround for https://github.com/vitejs/vite/issues/20867
+				// When SSR environment triggers dep re-bundling mid-request, in-flight client
+				// requests would fail with 504 because their browserHash becomes stale.
+				// @ts-expect-error - option added in Vite 7.3.1
+				ignoreOutdatedRequests: true,
 			},
 		},
 	};
