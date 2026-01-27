@@ -9,17 +9,19 @@ export const wasmHelperPlugin = createPlugin("wasm-helper", (ctx) => {
 		applyToEnvironment(environment) {
 			return ctx.getWorkerConfig(environment.name) !== undefined;
 		},
-		load(id) {
-			if (!id.endsWith(".wasm?init")) {
-				return;
-			}
+		load: {
+			handler(id) {
+				if (!id.endsWith(".wasm?init")) {
+					return;
+				}
 
-			return `
+				return `
 					import wasm from "${cleanUrl(id)}";
 					export default function(opts = {}) {
 						return WebAssembly.instantiate(wasm, opts);
 					}
 				`;
+			},
 		},
 	};
 });
