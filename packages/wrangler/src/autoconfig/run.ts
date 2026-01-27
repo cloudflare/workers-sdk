@@ -174,14 +174,16 @@ export async function runAutoConfig(
 		);
 	}
 
-	await writeFile(
-		resolve(autoConfigDetails.projectPath, "wrangler.jsonc"),
-		JSON.stringify(
-			{ ...wranglerConfig, ...configurationResults?.wranglerConfig },
-			null,
-			2
-		)
-	);
+	if (configurationResults?.wranglerConfig !== null) {
+		await writeFile(
+			resolve(autoConfigDetails.projectPath, "wrangler.jsonc"),
+			JSON.stringify(
+				{ ...wranglerConfig, ...configurationResults?.wranglerConfig },
+				null,
+				2
+			)
+		);
+	}
 
 	addWranglerToGitIgnore(autoConfigDetails.projectPath);
 

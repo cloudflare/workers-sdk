@@ -1,13 +1,8 @@
 import { statSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
 import semiver from "semiver";
 import { getPackageManager } from "../../package-manager";
-import { dedent } from "../../utils/dedent";
-import { installPackages } from "../c3-vendor/packages";
+import { runCommand } from "../c3-vendor/command";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
-import { appendToGitIgnore } from "../git";
 import { usesTypescript } from "../uses-typescript";
 import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
@@ -16,7 +11,6 @@ import type { ConfigurationOptions, ConfigurationResults } from ".";
 export class NextJs extends Framework {
 	async configure({
 		dryRun,
-		workerName,
 		projectPath,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const usesTs = usesTypescript(projectPath);
@@ -43,50 +37,23 @@ export class NextJs extends Framework {
 			);
 		}
 
-		if (!dryRun) {
-			await installPackages(["@opennextjs/cloudflare@^1.12.0"], {
-				startText: "Installing @opennextjs/cloudflare adapter",
-				doneText: `${brandColor("installed")}`,
-				// Note: we force install open-next so that even if an incompatible version of
-				//       Next.js is used this installation still succeeds, moving users to
-				//       (hopefully) the right direction (instead of failing at this step)
-				force: true,
-			});
-
-			await updateNextConfig(nextConfigPath);
-
-			await createOpenNextConfigFile(projectPath);
-
-			await appendToGitIgnore(
-				projectPath,
-				dedent`
-				# OpenNext
-				.open-next
-				`,
-				{
-					startText: "Adding open-next section to .gitignore file",
-					doneText: `${brandColor(`added`)} open-next section to .gitignore file`,
-				}
-			);
-		}
-
 		const { npx } = await getPackageManager();
 
+		if (!dryRun) {
+			await runCommand([
+				npx,
+				"@opennextjs/cloudflare@^1.16.0",
+				"migrate",
+				// Note: we force-install so that even if an incompatible version of
+				//       Next.js is used this installation still succeeds, moving users to
+				//       (hopefully) the right direction (instead of failing at this step)
+				"--force-install",
+			]);
+		}
+
 		return {
-			wranglerConfig: {
-				main: ".open-next/worker.js",
-				compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"],
-				assets: {
-					binding: "ASSETS",
-					directory: ".open-next/assets",
-				},
-				services: [
-					{
-						binding: "WORKER_SELF_REFERENCE",
-						service: workerName,
-					},
-				],
-			},
+			// `@opennextjs/cloudflare migrate` creates the wrangler config file
+			wranglerConfig: null,
 			packageJsonScriptsOverrides: {
 				preview: "opennextjs-cloudflare build && opennextjs-cloudflare preview",
 				deploy: "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
@@ -95,7 +62,8 @@ export class NextJs extends Framework {
 		};
 	}
 
-	configurationDescription = "Configuring project for Next.js with OpenNext";
+	configurationDescription =
+		"Configuring project for Next.js with OpenNext by running `@opennextjs/cloudflare migrate`";
 }
 
 function findNextConfigPath(usesTs: boolean): string | undefined {
@@ -114,44 +82,4 @@ function findNextConfigPath(usesTs: boolean): string | undefined {
 			return path;
 		}
 	}
-}
-
-async function updateNextConfig(nextConfigPath: string) {
-	const s = spinner();
-
-	s.start(`Updating \`${nextConfigPath}\``);
-
-	const configContent = await readFile(nextConfigPath);
-
-	const updatedConfigFile =
-		configContent +
-		"\n\nimport('@opennextjs/cloudflare').then(m => m.initOpenNextCloudflareForDev());\n";
-
-	await writeFile(nextConfigPath, updatedConfigFile);
-
-	s.stop(`${brandColor(`updated`)} ${dim(`\`${nextConfigPath}\``)}`);
-}
-
-async function createOpenNextConfigFile(projectPath: string) {
-	const s = spinner();
-
-	s.start("Creating open-next.config.ts file");
-
-	await writeFile(
-		// TODO: this always saves the file as open-next.config.ts, is a js alternative also supported?
-		//       (since the project might not be using TypeScript)
-		`${projectPath}/open-next.config.ts`,
-		dedent`import { defineCloudflareConfig } from "@opennextjs/cloudflare";
-
-				export default defineCloudflareConfig({
-				// Uncomment to enable R2 cache,
-				// It should be imported as:
-				// \`import r2IncrementalCache from "@opennextjs/cloudflare/overrides/incremental-cache/r2-incremental-cache";\`
-				// See https://opennext.js.org/cloudflare/caching for more details
-				// incrementalCache: r2IncrementalCache,
-				});
-			`
-	);
-
-	s.stop(`${brandColor("created")} open-next.config.ts file`);
 }
