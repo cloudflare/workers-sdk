@@ -6,7 +6,7 @@ import {
 } from "@cloudflare/workers-utils";
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
-import { readConfig } from "../../../config";
+import { readConfig, readConfigAsync } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
 import { getBindings } from "../../../dev";
@@ -42,6 +42,7 @@ import type {
 
 export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
 export { readConfig as unstable_readConfig };
+export { readConfigAsync as unstable_readConfigAsync };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
 
 /**
@@ -151,7 +152,7 @@ export async function getPlatformProxy<
 ): Promise<PlatformProxy<Env, CfProperties>> {
 	const env = options.environment;
 
-	const config = readConfig({
+	const config = await readConfigAsync({
 		config: options.configPath,
 		env,
 	});
@@ -360,7 +361,7 @@ export function unstable_getMiniflareWorkerOptions(
 		};
 		containerBuildId?: string;
 	}
-): Unstable_MiniflareWorkerOptions;
+): Promise<Unstable_MiniflareWorkerOptions>;
 export function unstable_getMiniflareWorkerOptions(
 	config: Config,
 	env?: string,
@@ -372,8 +373,8 @@ export function unstable_getMiniflareWorkerOptions(
 		};
 		containerBuildId?: string;
 	}
-): Unstable_MiniflareWorkerOptions;
-export function unstable_getMiniflareWorkerOptions(
+): Promise<Unstable_MiniflareWorkerOptions>;
+export async function unstable_getMiniflareWorkerOptions(
 	configOrConfigPath: string | Config,
 	env?: string,
 	options?: {
@@ -385,10 +386,10 @@ export function unstable_getMiniflareWorkerOptions(
 		};
 		containerBuildId?: string;
 	}
-): Unstable_MiniflareWorkerOptions {
+): Promise<Unstable_MiniflareWorkerOptions> {
 	const config =
 		typeof configOrConfigPath === "string"
-			? readConfig({ config: configOrConfigPath, env })
+			? await readConfigAsync({ config: configOrConfigPath, env })
 			: configOrConfigPath;
 
 	const modulesRules: ModuleRule[] = config.rules

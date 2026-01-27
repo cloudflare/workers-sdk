@@ -114,7 +114,7 @@ export function handleFailure<
 				: "open beta";
 			logger.warn(constructStatusMessage(command, commandStatus));
 		}
-		const config = readConfig(args);
+		const config = await readConfig(args);
 		await fillOpenAPIConfiguration(config, scope);
 		await cb(args, config);
 	};

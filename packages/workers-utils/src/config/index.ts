@@ -120,16 +120,24 @@ const parseRawConfigFile = (configPath: string): RawConfig => {
 	return {};
 };
 
-export const experimental_readRawConfig = (
-	args: ReadConfigCommandArgs,
-	options: ReadConfigOptions = {}
-): {
+export type ReadRawConfigResult = {
 	rawConfig: RawConfig;
 	configPath: string | undefined;
 	userConfigPath: string | undefined;
 	deployConfigPath: string | undefined;
 	redirected: boolean;
-} => {
+};
+
+/**
+ * Synchronously read the raw Wrangler configuration from a data file (toml, json, jsonc).
+ *
+ * This function only supports data file formats. For code-based config files,
+ * use `unstable_readRawConfigAsync` instead.
+ */
+export const experimental_readRawConfig = (
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): ReadRawConfigResult => {
 	// Load the configuration from disk if available
 	const { configPath, userConfigPath, deployConfigPath, redirected } =
 		resolveWranglerConfigPath(args, options);
@@ -143,4 +151,19 @@ export const experimental_readRawConfig = (
 		deployConfigPath,
 		redirected,
 	};
+};
+
+/**
+ * Asynchronously read the raw Wrangler configuration.
+ *
+ * This function supports both data file formats (toml, json, jsonc) and
+ * will support code-based config files (ts, js, mjs) in the future.
+ *
+ * In Wrangler v5, this will become the default and be renamed to `experimental_readRawConfig`.
+ */
+export const experimental_readRawConfigAsync = async (
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): Promise<ReadRawConfigResult> => {
+	return experimental_readRawConfig(args, options);
 };

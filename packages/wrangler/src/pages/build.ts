@@ -382,7 +382,7 @@ async function maybeReadPagesConfig(
 		return undefined;
 	}
 	try {
-		const config = readPagesConfig({
+		const config = await readPagesConfig({
 			...args,
 			config: configPath,
 			// eslint-disable-next-line turbo/no-undeclared-env-vars

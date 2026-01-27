@@ -294,7 +294,7 @@ async function parseCustomPoolOptions(
 		}
 
 		const { workerOptions, externalWorkers, define, main } =
-			wrangler.unstable_getMiniflareWorkerOptions(
+			await wrangler.unstable_getMiniflareWorkerOptions(
 				configPath,
 				options.wrangler.environment,
 				{
@@ -313,6 +313,9 @@ async function parseCustomPoolOptions(
 		const hasAIOrVectorizeBindings = wrappedBindings.some((binding) => {
 			return (
 				typeof binding === "object" &&
+				binding !== null &&
+				"scriptName" in binding &&
+				typeof binding.scriptName === "string" &&
 				(binding.scriptName.includes("__WRANGLER_EXTERNAL_VECTORIZE_WORKER") ||
 					binding.scriptName.includes("__WRANGLER_EXTERNAL_AI_WORKER"))
 			);

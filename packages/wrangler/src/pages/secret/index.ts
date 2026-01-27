@@ -51,7 +51,7 @@ async function pagesProject(
 		 * return the top-level config. This contains all the information we
 		 * need.
 		 */
-		config = readPagesConfig({ config: configPath, env: undefined });
+		config = await readPagesConfig({ config: configPath, env: undefined });
 	} catch (err) {
 		if (
 			!(

@@ -149,7 +149,11 @@ export const pagesDeployCommand = createCommand({
 			 * need for now. We will perform a second config file read later
 			 * in `/api/pages/deploy`, that will get the environment specific config
 			 */
-			config = readPagesConfig({ ...args, config: configPath, env: undefined });
+			config = await readPagesConfig({
+				...args,
+				config: configPath,
+				env: undefined,
+			});
 		} catch (err) {
 			if (
 				!(

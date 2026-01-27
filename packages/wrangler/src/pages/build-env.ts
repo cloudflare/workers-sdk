@@ -64,7 +64,7 @@ export const pagesFunctionsBuildEnvCommand = createCommand({
 			pages_build_output_dir: string;
 		};
 		try {
-			config = readPagesConfig({
+			config = await readPagesConfig({
 				...args,
 				config: configPath,
 				// eslint-disable-next-line turbo/no-undeclared-env-vars

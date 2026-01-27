@@ -188,7 +188,7 @@ export function customizeWorkerConfig(
 /**
  * Resolves the config for a single worker, applying defaults, file config, and config().
  */
-function resolveWorkerConfig(
+async function resolveWorkerConfig(
 	options: {
 		root: string;
 		configPath: string | undefined;
@@ -201,7 +201,7 @@ function resolveWorkerConfig(
 		  }
 		| { configCustomizer: WorkerConfigCustomizer<true> | undefined }
 	)
-): WorkerResolvedConfig {
+): Promise<WorkerResolvedConfig> {
 	const isEntryWorker = !("entryWorkerConfig" in options);
 	let workerConfig: WorkerConfig;
 	let raw: Unstable_Config;
@@ -213,7 +213,7 @@ function resolveWorkerConfig(
 			raw,
 			config: workerConfig,
 			nonApplicable,
-		} = readWorkerConfigFromFile(options.configPath, options.env, {
+		} = await readWorkerConfigFromFile(options.configPath, options.env, {
 			visitedConfigPaths: options.visitedConfigPaths,
 		}));
 	} else {
@@ -261,11 +261,11 @@ function resolveWorkerConfig(
 	});
 }
 
-export function resolvePluginConfig(
+export async function resolvePluginConfig(
 	pluginConfig: PluginConfig,
 	userConfig: vite.UserConfig,
 	viteEnv: vite.ConfigEnv
-): ResolvedPluginConfig {
+): Promise<ResolvedPluginConfig> {
 	const shared = {
 		persistState: pluginConfig.persistState ?? true,
 		inspectorPort: pluginConfig.inspectorPort,
@@ -287,7 +287,7 @@ export function resolvePluginConfig(
 			...shared,
 			remoteBindings: pluginConfig.remoteBindings ?? true,
 			type: "preview",
-			workers: getWorkerConfigs(root),
+			workers: await getWorkerConfigs(root),
 		};
 	}
 
@@ -299,7 +299,7 @@ export function resolvePluginConfig(
 	);
 
 	// Build entry worker config: defaults → file config → config()
-	const entryWorkerResolvedConfig = resolveWorkerConfig({
+	const entryWorkerResolvedConfig = await resolveWorkerConfig({
 		root,
 		configPath,
 		env: prefixedEnv.CLOUDFLARE_ENV,
@@ -368,7 +368,7 @@ export function resolvePluginConfig(
 		);
 
 		// Build auxiliary worker config: defaults → file config → config()
-		const workerResolvedConfig = resolveWorkerConfig({
+		const workerResolvedConfig = await resolveWorkerConfig({
 			root,
 			configPath: workerConfigPath,
 			env: cloudflareEnv,

@@ -1909,7 +1909,7 @@ export async function main(argv: string[]): Promise<void> {
 
 	// Register Yargs middleware to record command as Sentry breadcrumb and set logger level
 	let recordedCommand = false;
-	const wranglerWithMiddleware = wrangler.middleware((args) => {
+	const wranglerWithMiddleware = wrangler.middleware(async (args) => {
 		// Update logger level, before we do any logging
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
@@ -1941,7 +1941,7 @@ export async function main(argv: string[]): Promise<void> {
 		configArgs = args;
 
 		try {
-			const { rawConfig, configPath } = experimental_readRawConfig(args);
+			const { rawConfig, configPath } = await experimental_readRawConfig(args);
 			dispatcher = getMetricsDispatcher({
 				sendMetrics: rawConfig.send_metrics,
 				hasAssets: !!rawConfig.assets?.directory,

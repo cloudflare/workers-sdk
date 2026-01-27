@@ -3,6 +3,7 @@ import path from "node:path";
 import {
 	configFileName,
 	experimental_readRawConfig,
+	experimental_readRawConfigAsync,
 	FatalError,
 	isPagesConfig,
 	normalizeAndValidateConfig,
@@ -16,6 +17,7 @@ import type {
 	Config,
 	NormalizeAndValidateConfigArgs,
 	RawConfig,
+	ReadRawConfigResult,
 	ResolveConfigPathOptions,
 } from "@cloudflare/workers-utils";
 
@@ -49,19 +51,19 @@ export type ConfigBindingOptions = Pick<
 >;
 
 /**
- * Get the Wrangler configuration; read it from the give `configPath` if available.
+ * Convert the result of experimental_readRawConfig into a Config shape that can be used across the codebase
  */
-export function readConfig(
+function convertRawConfigToConfig(
 	args: ReadConfigCommandArgs,
-	options: ReadConfigOptions = {}
-): Config {
-	const {
+	options: ReadConfigOptions = {},
+	{
 		rawConfig,
 		configPath,
 		userConfigPath,
 		deployConfigPath,
 		redirected,
-	} = experimental_readRawConfig(args, options);
+	}: ReturnType<typeof experimental_readRawConfig>
+): Config {
 	if (redirected) {
 		assert(configPath, "Redirected config found without a configPath");
 		assert(
@@ -92,6 +94,36 @@ export function readConfig(
 	}
 
 	return config;
+}
+
+/**
+ * Synchronously get the Wrangler configuration from a data file (toml, json, jsonc).
+ *
+ * This function only supports data file formats. For code-based config files,
+ * use `unstable_readConfigAsync` instead.
+ */
+export function readConfig(
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): Config {
+	const raw = experimental_readRawConfig(args, options);
+	return convertRawConfigToConfig(args, options, raw);
+}
+
+/**
+ * Asynchronously get the Wrangler configuration.
+ *
+ * This function supports both data file formats (toml, json, jsonc) and
+ * will support code-based config files (ts, js, mjs) in the future.
+ *
+ * In Wrangler v5, this will become the default `readConfig`.
+ */
+export async function readConfigAsync(
+	args: ReadConfigCommandArgs,
+	options: ReadConfigOptions = {}
+): Promise<Config> {
+	const raw = await experimental_readRawConfigAsync(args, options);
+	return convertRawConfigToConfig(args, options, raw);
 }
 
 export function readPagesConfig(

@@ -296,7 +296,7 @@ export const deployCommand = createCommand({
 				});
 
 				// If autoconfig worked, there should now be a new config file, and so we need to read config again
-				config = readConfig(args, {
+				config = await readConfig(args, {
 					hideWarnings: false,
 					useRedirectIfAvailable: true,
 				});

@@ -7,6 +7,7 @@ import type {
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type * as vite from "vite";
+import type { Unstable_Config } from "wrangler";
 
 interface DeployConfig {
 	configPath: string;
@@ -17,22 +18,26 @@ function getDeployConfigPath(root: string) {
 	return path.resolve(root, ".wrangler", "deploy", "config.json");
 }
 
-export function getWorkerConfigs(root: string) {
+export async function getWorkerConfigs(
+	root: string
+): Promise<Unstable_Config[]> {
 	const deployConfigPath = getDeployConfigPath(root);
 	const deployConfig = JSON.parse(
 		fs.readFileSync(deployConfigPath, "utf-8")
 	) as DeployConfig;
 
-	return [
-		{ configPath: deployConfig.configPath },
-		...deployConfig.auxiliaryWorkers,
-	].map(({ configPath }) => {
-		const resolvedConfigPath = path.resolve(
-			path.dirname(deployConfigPath),
-			configPath
-		);
-		return wrangler.unstable_readConfig({ config: resolvedConfigPath });
-	});
+	return Promise.all(
+		[
+			{ configPath: deployConfig.configPath },
+			...deployConfig.auxiliaryWorkers,
+		].map(async ({ configPath }) => {
+			const resolvedConfigPath = path.resolve(
+				path.dirname(deployConfigPath),
+				configPath
+			);
+			return wrangler.unstable_readConfig({ config: resolvedConfigPath });
+		})
+	);
 }
 
 function getRelativePathToWorkerConfig(

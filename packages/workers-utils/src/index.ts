@@ -16,6 +16,8 @@ export {
 	configFormat,
 	configFileName,
 	experimental_readRawConfig,
+	experimental_readRawConfigAsync,
+	type ReadRawConfigResult,
 } from "./config";
 export {
 	experimental_patchConfig,

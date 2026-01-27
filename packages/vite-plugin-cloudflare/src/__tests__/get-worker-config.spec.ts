@@ -6,8 +6,8 @@ import {
 } from "../workers-configs";
 
 describe("readWorkerConfigFromFile", () => {
-	test("should return a simple raw config", () => {
-		const { raw } = readWorkerConfigFromFile(
+	test("should return a simple raw config", async () => {
+		const { raw } = await readWorkerConfigFromFile(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
 		);
@@ -34,8 +34,8 @@ describe("readWorkerConfigFromFile", () => {
 		expect(raw.tsconfig).toBeUndefined();
 	});
 
-	test("should return a simple config without non-applicable fields", () => {
-		const { config } = readWorkerConfigFromFile(
+	test("should return a simple config without non-applicable fields", async () => {
+		const { config } = await readWorkerConfigFromFile(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
 		);
@@ -44,8 +44,8 @@ describe("readWorkerConfigFromFile", () => {
 		expect("preserve_file_names" in config).toBeFalsy();
 	});
 
-	test("should not return any non-applicable config when there isn't any", () => {
-		const { nonApplicable } = readWorkerConfigFromFile(
+	test("should not return any non-applicable config when there isn't any", async () => {
+		const { nonApplicable } = await readWorkerConfigFromFile(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
 		);
@@ -55,8 +55,8 @@ describe("readWorkerConfigFromFile", () => {
 		});
 	});
 
-	test("should read a simple wrangler config file", () => {
-		const { config, nonApplicable } = readWorkerConfigFromFile(
+	test("should read a simple wrangler config file", async () => {
+		const { config, nonApplicable } = await readWorkerConfigFromFile(
 			fileURLToPath(new URL("fixtures/simple-wrangler.jsonc", import.meta.url)),
 			undefined
 		);
@@ -84,8 +84,8 @@ describe("readWorkerConfigFromFile", () => {
 		});
 	});
 
-	test("should collect non applicable configs", () => {
-		const { config, raw, nonApplicable } = readWorkerConfigFromFile(
+	test("should collect non applicable configs", async () => {
+		const { config, raw, nonApplicable } = await readWorkerConfigFromFile(
 			fileURLToPath(
 				new URL(
 					"fixtures/wrangler-with-fields-to-ignore.jsonc",
@@ -159,11 +159,11 @@ describe("readWorkerConfigFromFile", () => {
 });
 
 describe("resolveWorkerType", () => {
-	test("should throw if the provided main config doesn't point to an existing file", () => {
+	test("should throw if the provided main config doesn't point to an existing file", async () => {
 		const configPath = fileURLToPath(
 			new URL("fixtures/non-existing-main-wrangler.jsonc", import.meta.url)
 		);
-		const { config, raw, nonApplicable } = readWorkerConfigFromFile(
+		const { config, raw, nonApplicable } = await readWorkerConfigFromFile(
 			configPath,
 			undefined
 		);

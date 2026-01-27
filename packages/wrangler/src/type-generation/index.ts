@@ -138,12 +138,12 @@ export const typesCommand = createCommand({
 		let config: Config;
 		const secondaryConfigs: Config[] = [];
 		if (Array.isArray(args.config)) {
-			config = readConfig({ ...args, config: args.config[0] });
+			config = await readConfig({ ...args, config: args.config[0] });
 			for (const configPath of args.config.slice(1)) {
-				secondaryConfigs.push(readConfig({ config: configPath }));
+				secondaryConfigs.push(await readConfig({ config: configPath }));
 			}
 		} else {
-			config = readConfig(args);
+			config = await readConfig(args);
 		}
 
 		const { envInterface, path: outputPath } = args;
@@ -378,7 +378,7 @@ export async function generateEnvTypes(
 		);
 	}
 
-	const { rawConfig } = experimental_readRawConfig(collectionArgs);
+	const { rawConfig } = await experimental_readRawConfig(collectionArgs);
 	const hasEnvironments =
 		!!rawConfig.env && Object.keys(rawConfig.env).length > 0;
 
@@ -436,12 +436,14 @@ async function generateSimpleEnvTypes(
 ): Promise<{ envHeader?: string; envTypes?: string }> {
 	const stringKeys = new Array<string>();
 
-	const collectedBindings = collectCoreBindings(collectionArgs);
-	const collectedDurableObjects = collectAllDurableObjects(collectionArgs);
-	const collectedServices = collectAllServices(collectionArgs);
-	const collectedUnsafeBindings = collectAllUnsafeBindings(collectionArgs);
-	const collectedVars = collectAllVars(collectionArgs);
-	const collectedWorkflows = collectAllWorkflows(collectionArgs);
+	const collectedBindings = await collectCoreBindings(collectionArgs);
+	const collectedDurableObjects =
+		await collectAllDurableObjects(collectionArgs);
+	const collectedServices = await collectAllServices(collectionArgs);
+	const collectedUnsafeBindings =
+		await collectAllUnsafeBindings(collectionArgs);
+	const collectedVars = await collectAllVars(collectionArgs);
+	const collectedWorkflows = await collectAllWorkflows(collectionArgs);
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
 	const fullOutputPath = resolve(outputPath);
@@ -718,7 +720,7 @@ async function generatePerEnvironmentTypes(
 	secrets: Record<string, string> = {},
 	log = true
 ): Promise<{ envHeader?: string; envTypes?: string }> {
-	const { rawConfig } = experimental_readRawConfig(collectionArgs);
+	const { rawConfig } = await experimental_readRawConfig(collectionArgs);
 	const envNames = Object.keys(rawConfig.env ?? {});
 
 	validateEnvInterfaceNames(envNames);
@@ -726,13 +728,15 @@ async function generatePerEnvironmentTypes(
 	const entrypointFormat = entrypoint?.format ?? "modules";
 	const fullOutputPath = resolve(outputPath);
 
-	const bindingsPerEnv = collectCoreBindingsPerEnvironment(collectionArgs);
-	const varsPerEnv = collectVarsPerEnvironment(collectionArgs);
+	const bindingsPerEnv =
+		await collectCoreBindingsPerEnvironment(collectionArgs);
+	const varsPerEnv = await collectVarsPerEnvironment(collectionArgs);
 	const durableObjectsPerEnv =
-		collectDurableObjectsPerEnvironment(collectionArgs);
-	const servicesPerEnv = collectServicesPerEnvironment(collectionArgs);
-	const workflowsPerEnv = collectWorkflowsPerEnvironment(collectionArgs);
-	const unsafePerEnv = collectUnsafeBindingsPerEnvironment(collectionArgs);
+		await collectDurableObjectsPerEnvironment(collectionArgs);
+	const servicesPerEnv = await collectServicesPerEnvironment(collectionArgs);
+	const workflowsPerEnv = await collectWorkflowsPerEnvironment(collectionArgs);
+	const unsafePerEnv =
+		await collectUnsafeBindingsPerEnvironment(collectionArgs);
 
 	// Track all binding names and their types across all environments for aggregation
 	const aggregatedBindings = new Map<
@@ -1310,9 +1314,9 @@ function getEnvConfig(
  *
  * @returns an object which keys are the variable names and values are arrays containing all the computed types for such variables
  */
-function collectAllVars(
+async function collectAllVars(
 	args: Partial<(typeof typesCommand)["args"]>
-): Record<string, string[]> {
+): Promise<Record<string, string[]>> {
 	const varsInfo: Record<string, Set<string>> = {};
 
 	// Collects onto the `varsInfo` object the vars and values for a specific environment
@@ -1343,7 +1347,7 @@ function collectAllVars(
 		});
 	}
 
-	const { rawConfig } = experimental_readRawConfig(args);
+	const { rawConfig } = await experimental_readRawConfig(args);
 
 	if (args.env) {
 		const envConfig = getEnvConfig(args.env, rawConfig);
@@ -1416,9 +1420,9 @@ interface CollectedBinding {
  *
  * @throws {UserError} If a binding name exists with different types across environments
  */
-function collectCoreBindings(
+async function collectCoreBindings(
 	args: Partial<(typeof typesCommand)["args"]>
-): Array<CollectedBinding> {
+): Promise<Array<CollectedBinding>> {
 	const bindingsMap = new Map<string, CollectedBinding>();
 
 	function addBinding(
@@ -1806,7 +1810,7 @@ function collectCoreBindings(
 		}
 	}
 
-	const { rawConfig } = experimental_readRawConfig(args);
+	const { rawConfig } = await experimental_readRawConfig(args);
 
 	if (args.env) {
 		const envConfig = getEnvConfig(args.env, rawConfig);
@@ -1830,13 +1834,15 @@ function collectCoreBindings(
  *
  * @returns An array of collected Durable Object bindings with their names, class name & possible script name.
  */
-function collectAllDurableObjects(
+async function collectAllDurableObjects(
 	args: Partial<(typeof typesCommand)["args"]>
-): Array<{
-	class_name: string;
-	name: string;
-	script_name?: string;
-}> {
+): Promise<
+	Array<{
+		class_name: string;
+		name: string;
+		script_name?: string;
+	}>
+> {
 	const durableObjectsMap = new Map<
 		string,
 		{
@@ -1878,7 +1884,7 @@ function collectAllDurableObjects(
 		}
 	}
 
-	const { rawConfig } = experimental_readRawConfig(args);
+	const { rawConfig } = await experimental_readRawConfig(args);
 
 	if (args.env) {
 		const envConfig = getEnvConfig(args.env, rawConfig);
@@ -1902,13 +1908,15 @@ function collectAllDurableObjects(
  *
  * @returns An array of collected service bindings with their binding, service & possible entrypoint.
  */
-function collectAllServices(
+async function collectAllServices(
 	args: Partial<(typeof typesCommand)["args"]>
-): Array<{
-	binding: string;
-	service: string;
-	entrypoint?: string;
-}> {
+): Promise<
+	Array<{
+		binding: string;
+		service: string;
+		entrypoint?: string;
+	}>
+> {
 	const servicesMap = new Map<
 		string,
 		{
@@ -1950,7 +1958,7 @@ function collectAllServices(
 		}
 	}
 
-	const { rawConfig } = experimental_readRawConfig(args);
+	const { rawConfig } = await experimental_readRawConfig(args);
 
 	if (args.env) {
 		const envConfig = getEnvConfig(args.env, rawConfig);
@@ -1974,14 +1982,16 @@ function collectAllServices(
  *
  * @returns An array of collected workflow bindings with their names, class name, binding and possible script name.
  */
-function collectAllWorkflows(
+async function collectAllWorkflows(
 	args: Partial<(typeof typesCommand)["args"]>
-): Array<{
-	binding: string;
-	name: string;
-	class_name: string;
-	script_name?: string;
-}> {
+): Promise<
+	Array<{
+		binding: string;
+		name: string;
+		class_name: string;
+		script_name?: string;
+	}>
+> {
 	const workflowsMap = new Map<
 		string,
 		{
@@ -2025,7 +2035,7 @@ function collectAllWorkflows(
 		}
 	}
 
-	const { rawConfig } = experimental_readRawConfig(args);
+	const { rawConfig } = await experimental_readRawConfig(args);
 
 	if (args.env) {
 		const envConfig = getEnvConfig(args.env, rawConfig);
@@ -2047,12 +2057,14 @@ function collectAllWorkflows(
  *
  * @returns An array of collected unsafe bindings with their names and type.
  */
-function collectAllUnsafeBindings(
+async function collectAllUnsafeBindings(
 	args: Partial<(typeof typesCommand)["args"]>
-): Array<{
-	name: string;
-	type: string;
-}> {
+): Promise<
+	Array<{
+		name: string;
+		type: string;
+	}>
+> {
 	const unsafeMap = new Map<
 		string,
 		{
@@ -2092,7 +2104,7 @@ function collectAllUnsafeBindings(
 		}
 	}
 
-	const { rawConfig } = experimental_readRawConfig(args);
+	const { rawConfig } = await experimental_readRawConfig(args);
 
 	if (args.env) {
 		const envConfig = getEnvConfig(args.env, rawConfig);
@@ -2127,9 +2139,9 @@ interface PerEnvBinding {
  *
  * @returns A map of environment name to an object of var names to their type values
  */
-function collectVarsPerEnvironment(
+async function collectVarsPerEnvironment(
 	args: Partial<(typeof typesCommand)["args"]>
-): Map<string, Record<string, string[]>> {
+): Promise<Map<string, Record<string, string[]>>> {
 	const result = new Map<string, Record<string, string[]>>();
 
 	function collectVars(vars: RawEnvironment["vars"]): Record<string, string[]> {
@@ -2163,7 +2175,7 @@ function collectVarsPerEnvironment(
 		);
 	}
 
-	const { rawConfig } = experimental_readRawConfig(args);
+	const { rawConfig } = await experimental_readRawConfig(args);
 
 	// Collect top-level vars
 	const topLevelVars = collectVars(rawConfig.vars);
@@ -2194,9 +2206,9 @@ function collectVarsPerEnvironment(
  *
  * @returns A map of environment name to array of bindings
  */
-function collectCoreBindingsPerEnvironment(
+async function collectCoreBindingsPerEnvironment(
 	args: Partial<(typeof typesCommand)["args"]>
-): Map<string, Array<PerEnvBinding>> {
+): Promise<Map<string, Array<PerEnvBinding>>> {
 	const result = new Map<string, Array<PerEnvBinding>>();
 
 	function collectEnvironmentBindings(
@@ -2624,7 +2636,7 @@ function collectCoreBindingsPerEnvironment(
 		return bindings;
 	}
 
-	const { rawConfig } = experimental_readRawConfig(args);
+	const { rawConfig } = await experimental_readRawConfig(args);
 
 	const topLevelBindings = collectEnvironmentBindings(
 		rawConfig,
@@ -2651,15 +2663,17 @@ function collectCoreBindingsPerEnvironment(
  *
  * @returns A map of environment name to array of DO bindings
  */
-function collectDurableObjectsPerEnvironment(
+async function collectDurableObjectsPerEnvironment(
 	args: Partial<(typeof typesCommand)["args"]>
-): Map<
-	string,
-	Array<{
-		class_name: string;
-		name: string;
-		script_name?: string;
-	}>
+): Promise<
+	Map<
+		string,
+		Array<{
+			class_name: string;
+			name: string;
+			script_name?: string;
+		}>
+	>
 > {
 	const result = new Map<
 		string,
@@ -2706,7 +2720,7 @@ function collectDurableObjectsPerEnvironment(
 		return durableObjects;
 	}
 
-	const { rawConfig } = experimental_readRawConfig(args);
+	const { rawConfig } = await experimental_readRawConfig(args);
 
 	const topLevelDOs = collectEnvironmentDOs(rawConfig, TOP_LEVEL_ENV_NAME);
 	if (topLevelDOs.length > 0) {
@@ -2730,15 +2744,17 @@ function collectDurableObjectsPerEnvironment(
  *
  * @returns A map of environment name to array of service bindings
  */
-function collectServicesPerEnvironment(
+async function collectServicesPerEnvironment(
 	args: Partial<(typeof typesCommand)["args"]>
-): Map<
-	string,
-	Array<{
-		binding: string;
-		entrypoint?: string;
-		service: string;
-	}>
+): Promise<
+	Map<
+		string,
+		Array<{
+			binding: string;
+			entrypoint?: string;
+			service: string;
+		}>
+	>
 > {
 	const result = new Map<
 		string,
@@ -2789,7 +2805,7 @@ function collectServicesPerEnvironment(
 		return services;
 	}
 
-	const { rawConfig } = experimental_readRawConfig(args);
+	const { rawConfig } = await experimental_readRawConfig(args);
 
 	const topLevelServices = collectEnvironmentServices(
 		rawConfig,
@@ -2816,16 +2832,18 @@ function collectServicesPerEnvironment(
  *
  * @returns A map of environment name to array of workflow bindings
  */
-function collectWorkflowsPerEnvironment(
+async function collectWorkflowsPerEnvironment(
 	args: Partial<(typeof typesCommand)["args"]>
-): Map<
-	string,
-	Array<{
-		binding: string;
-		class_name: string;
-		name: string;
-		script_name?: string;
-	}>
+): Promise<
+	Map<
+		string,
+		Array<{
+			binding: string;
+			class_name: string;
+			name: string;
+			script_name?: string;
+		}>
+	>
 > {
 	const result = new Map<
 		string,
@@ -2880,7 +2898,7 @@ function collectWorkflowsPerEnvironment(
 		return workflows;
 	}
 
-	const { rawConfig } = experimental_readRawConfig(args);
+	const { rawConfig } = await experimental_readRawConfig(args);
 
 	const topLevelWorkflows = collectEnvironmentWorkflows(
 		rawConfig,
@@ -2907,14 +2925,16 @@ function collectWorkflowsPerEnvironment(
  *
  * @returns A map of environment name to array of unsafe bindings
  */
-function collectUnsafeBindingsPerEnvironment(
+async function collectUnsafeBindingsPerEnvironment(
 	args: Partial<(typeof typesCommand)["args"]>
-): Map<
-	string,
-	Array<{
-		name: string;
-		type: string;
-	}>
+): Promise<
+	Map<
+		string,
+		Array<{
+			name: string;
+			type: string;
+		}>
+	>
 > {
 	const result = new Map<
 		string,
@@ -2961,7 +2981,7 @@ function collectUnsafeBindingsPerEnvironment(
 		return unsafeBindings;
 	}
 
-	const { rawConfig } = experimental_readRawConfig(args);
+	const { rawConfig } = await experimental_readRawConfig(args);
 
 	const topLevelUnsafe = collectEnvironmentUnsafe(
 		rawConfig,
