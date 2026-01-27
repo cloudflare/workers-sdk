@@ -95,7 +95,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			properties: Omit<
 				Extract<Events, { name: EventName }>["properties"],
 				keyof CommonEventProperties
-			> & { argsUsed?: string[] }
+			> & { argsUsed: string[] }
 		) {
 			try {
 				// Don't send metrics for telemetry/metrics disable commands
@@ -115,7 +115,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					printMetricsBanner();
 				}
 
-				const argsUsed = properties.argsUsed ?? [];
+				const argsUsed = properties.argsUsed;
 				const argsCombination = argsUsed.join(", ");
 
 				const commonEventProperties: CommonEventProperties = {

@@ -2011,11 +2011,13 @@ function dispatchGenericCommandErrorEvent(
 	dispatcher.sendCommandEvent("wrangler command started", {
 		sanitizedCommand,
 		sanitizedArgs,
+		argsUsed: [],
 	});
 
 	dispatcher.sendCommandEvent("wrangler command errored", {
 		sanitizedCommand,
 		sanitizedArgs,
+		argsUsed: [],
 		durationMs,
 		durationSeconds: durationMs / 1000,
 		durationMinutes: durationMs / 1000 / 60,
