@@ -50,12 +50,12 @@ export default {
 					{
 						scheme: url.protocol === "https:" ? "https" : "http",
 						path: "/quick-edit-extension",
-						authority: authority,
+						authority,
 					},
 					{
 						scheme: url.protocol === "https:" ? "https" : "http",
 						path: "/solarflare-theme",
-						authority: authority,
+						authority,
 					},
 				],
 			}).replace(/"/g, "&quot;"),
