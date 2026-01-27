@@ -16,6 +16,10 @@
 		{
 			"binding": "DB",
 		},
+		{
+			"binding": "BACKUP_DB",
+			"database_id": "some-db-id",
+		},
 	],
 	"durable_objects": {
 		"bindings": [
