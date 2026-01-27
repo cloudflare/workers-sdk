@@ -5,6 +5,9 @@ import type {
 	WorkersKvMessages,
 } from "./generated/types.gen";
 import type { Context } from "hono";
+import type { AppBindings } from "./api.worker";
+
+export type AppContext = Context<AppBindings>;
 
 // ============================================================================
 // Hono middleware Validators

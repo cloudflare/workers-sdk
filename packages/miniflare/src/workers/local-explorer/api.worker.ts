@@ -8,6 +8,7 @@ import {
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 } from "./generated/zod.gen";
+import { listD1Databases } from "./resources/d1";
 import {
 	bulkGetKVValues,
 	deleteKVValue,
@@ -66,6 +67,16 @@ app.post(
 		zWorkersKvNamespaceGetMultipleKeyValuePairsData.shape.body
 	),
 	(c) => bulkGetKVValues(c, c.req.valid("json"))
+);
+
+// ============================================================================
+// D1 Endpoints
+// ============================================================================
+
+app.get(
+	"/storage/d1",
+	validateQuery(zWorkersKvNamespaceListNamespacesData.shape.query.unwrap()),
+	(c) => listD1Databases(c, c.req.valid("query"))
 );
 
 export default app;
