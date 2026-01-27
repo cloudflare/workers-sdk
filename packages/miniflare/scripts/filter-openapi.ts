@@ -2,26 +2,27 @@
 /**
  * Filter and transform Cloudflare OpenAPI spec for local explorer
  *
- * Usage: node scripts/filter-openapi.mjs --input <path-to-openapi.json>
- * The full openapi spec is not committed to this repository due to its size.
+ * Usage: node -r esbuild-register scripts/filter-openapi.ts --input <path-to-openapi.json>
+ * The full OpenAPI spec is not committed to this repository due to its size.
  * https://github.com/cloudflare/api-schemas contains the full spec.
  *
- * This script takes openapi-filter-config.jsonc and:
+ * This script outputs a filtered OpenAPI spec based on the configuration in
+ * openapi-filter-config.ts, which defines:
  * - filters for endpoints to include
  * - filters for components to ignore (unimplemented or irrelevant locally)
- * - removes 'account_id' path parameter, security schemes, and unknown x-*
+ *
+ * We also strip out 'account_id' path parameter, security schemes, and unknown x-*
  *   extension fields
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import * as jsoncParser from "jsonc-parser";
+import config from "./openapi-filter-config";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-const CONFIG_PATH = join(__dirname, "openapi-filter-config.jsonc");
-const OUTPUT_PATH = join(
+// ============================================================================
+// CLI Entry Point
+// ============================================================================
+const DEFAULT_OUTPUT_PATH = join(
 	__dirname,
 	"../src/workers/local-explorer/openapi.local.json"
 );
@@ -40,20 +41,102 @@ const LOCAL_EXPLORER_SERVERS = [
 	},
 ];
 
-/**
- * Filter an OpenAPI spec according to the provided configuration
- * @param {object} originalSpec - Full OpenAPI spec
- * @param {object} config - Filter configuration
- * @returns {object} Filtered spec
- */
-function filterOpenAPISpec(originalSpec, config) {
+const { values } = parseArgs({
+	options: {
+		input: {
+			type: "string",
+			short: "i",
+		},
+		output: {
+			type: "string",
+			short: "o",
+		},
+	},
+});
+
+if (!values.input) {
+	console.error("Error: --input (-i) flag is required");
+	console.error(
+		"Usage: node -r esbuild-register scripts/filter-openapi.ts --input <path-to-openapi.json> [--output <path>]"
+	);
+	process.exit(1);
+}
+
+const outputPath = values.output ?? DEFAULT_OUTPUT_PATH;
+writeFilteredOpenAPIFile(values.input, outputPath, config);
+
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface FilterConfig {
+	endpoints: EndpointConfig[];
+	ignores?: IgnoresConfig;
+}
+export interface EndpointConfig {
+	path: string;
+	methods: string[];
+}
+
+export interface ParameterIgnore {
+	path: string;
+	method: string;
+	name: string;
+}
+
+export interface RequestBodyIgnore {
+	path: string;
+	method: string;
+	properties: string[];
+}
+
+export interface IgnoresConfig {
+	parameters?: ParameterIgnore[];
+	requestBodyProperties?: RequestBodyIgnore[];
+	schemaProperties?: Record<string, string[]>;
+}
+interface OpenAPIOperation {
+	parameters?: Array<{ name: string }>;
+	requestBody?: {
+		content: Record<string, { schema?: OpenAPISchema }>;
+	};
+	security?: unknown;
+}
+
+interface OpenAPISchema {
+	properties?: Record<string, unknown>;
+	required?: string[];
+}
+
+interface OpenAPIComponents {
+	schemas?: Record<string, OpenAPISchema>;
+	[key: string]: Record<string, unknown> | undefined;
+}
+
+interface OpenAPISpec {
+	openapi: string;
+	info: unknown;
+	servers?: unknown[];
+	paths: Record<string, Record<string, OpenAPIOperation>>;
+	components: OpenAPIComponents;
+}
+
+interface ParsedRef {
+	type: string;
+	name: string;
+}
+
+function filterOpenAPISpec(
+	originalSpec: OpenAPISpec,
+	config: FilterConfig
+): OpenAPISpec {
 	// Deep copy the spec once upfront so we can safely mutate it
-	const spec = JSON.parse(JSON.stringify(originalSpec));
+	const spec: OpenAPISpec = JSON.parse(JSON.stringify(originalSpec));
 	const ignores = config.ignores ?? {};
 
 	// 1. Filter `paths` to only the endpoints we want
 	const specPaths = spec.paths;
-	const filteredPaths = {};
+	const filteredPaths: Record<string, Record<string, OpenAPIOperation>> = {};
 
 	for (const { path: originalPath, methods } of config.endpoints) {
 		if (!specPaths[originalPath]) {
@@ -95,8 +178,11 @@ function filterOpenAPISpec(originalSpec, config) {
 	// 5. Filter components to only those referenced
 	const filteredComponents = filterComponents(components, allRefs);
 
-	// 6. Build the filtered spec
-	const filteredSpec = {
+	// 6. Apply temporary patches for upstream OpenAPI schema bugs
+	applyTemporarySchemaPatches(filteredComponents);
+
+	// 7. Build the filtered spec
+	const filteredSpec: OpenAPISpec = {
 		openapi: spec.openapi,
 		info: LOCAL_EXPLORER_INFO,
 		servers: LOCAL_EXPLORER_SERVERS,
@@ -104,40 +190,56 @@ function filterOpenAPISpec(originalSpec, config) {
 		components: filteredComponents,
 	};
 
-	// 7. Strip all x-* extensions from the final spec (single pass)
-	return stripExtensions(filteredSpec);
+	// 8. Strip all x-* extensions from the final spec (single pass)
+	return stripExtensions(filteredSpec) as OpenAPISpec;
 }
 
+// ============================================================================
+// Temporary Patches
+// ============================================================================
+// These patches fix bugs in the upstream Cloudflare OpenAPI schema.
+// TODO: Remove these once the upstream issues are fixed.
+// Track upstream issues at: https://github.com/cloudflare/api-schemas/issues
+
 /**
- * Load and parse a JSONC configuration file
- * @param {string} configPath
- * @returns {object}
+ * Apply temporary patches to fix known bugs in the upstream OpenAPI schema.
  */
-function loadFilterConfig(configPath) {
-	const content = readFileSync(configPath, "utf-8");
-	const errors = [];
-	const config = jsoncParser.parse(content, errors, {
-		allowTrailingComma: true,
-	});
-	if (errors.length > 0) {
-		const error = errors[0];
-		throw new Error(
-			`Failed to parse config at ${configPath}: ${jsoncParser.printParseErrorCode(error.error)} at offset ${error.offset}`
-		);
+function applyTemporarySchemaPatches(components: OpenAPIComponents): void {
+	// PATCH: workers-kv_bulk-get-result is missing nullable on additionalProperties
+	// The API returns null for non-existent keys, but the schema doesn't allow it.
+	// The similar schema workers-kv_bulk-get-result-with-metadata correctly has nullable: true.
+	// See: https://github.com/cloudflare/api-schemas (no issue filed yet)
+	const bulkGetResult = components.schemas?.["workers-kv_bulk-get-result"] as
+		| Record<string, unknown>
+		| undefined;
+	if (bulkGetResult) {
+		const properties = bulkGetResult.properties as
+			| Record<string, unknown>
+			| undefined;
+		const values = properties?.values as Record<string, unknown> | undefined;
+		if (values?.additionalProperties) {
+			const additionalProps = values.additionalProperties as Record<
+				string,
+				unknown
+			>;
+			if (!additionalProps.nullable) {
+				additionalProps.nullable = true;
+				console.log(
+					"PATCH: Added nullable: true to workers-kv_bulk-get-result.values.additionalProperties"
+				);
+			}
+		}
 	}
-	return config;
 }
 
-/**
- * Filter an OpenAPI spec file and write the result
- * @param {string} inputPath
- * @param {string} outputPath
- * @param {object} config
- */
-function filterOpenAPIFile(inputPath, outputPath, config) {
+function writeFilteredOpenAPIFile(
+	inputPath: string,
+	outputPath: string,
+	config: FilterConfig
+): void {
 	console.log(`Reading: ${inputPath}`);
 	const specContent = readFileSync(inputPath, "utf-8");
-	const spec = JSON.parse(specContent);
+	const spec: OpenAPISpec = JSON.parse(specContent);
 
 	const specPaths = spec.paths;
 	const specComponents = spec.components;
@@ -164,12 +266,10 @@ function filterOpenAPIFile(inputPath, outputPath, config) {
 	console.log("Done!");
 }
 
-/**
- * Recursively remove all x-* extension fields from an object
- * @param {unknown} obj
- * @returns {unknown}
- */
-function stripExtensions(obj) {
+// ============================================================================
+// Transformation functions
+// ============================================================================
+function stripExtensions(obj: unknown): unknown {
 	if (obj === null || typeof obj !== "object") {
 		return obj;
 	}
@@ -178,7 +278,7 @@ function stripExtensions(obj) {
 		return obj.map((item) => stripExtensions(item));
 	}
 
-	const result = {};
+	const result: Record<string, unknown> = {};
 	for (const [key, value] of Object.entries(obj)) {
 		// Skip x-* extension fields
 		if (key.startsWith("x-")) {
@@ -189,13 +289,7 @@ function stripExtensions(obj) {
 	return result;
 }
 
-/**
- * Recursively find all $ref strings in an object
- * @param {unknown} obj
- * @param {Set<string>} [refs]
- * @returns {Set<string>}
- */
-function findRefs(obj, refs = new Set()) {
+function findRefs(obj: unknown, refs: Set<string> = new Set()): Set<string> {
 	if (obj === null || typeof obj !== "object") {
 		return refs;
 	}
@@ -217,12 +311,7 @@ function findRefs(obj, refs = new Set()) {
 	return refs;
 }
 
-/**
- * Extract the component type and name from a $ref string
- * @param {string} ref
- * @returns {{type: string, name: string} | null}
- */
-function parseRef(ref) {
+function parseRef(ref: string): ParsedRef | null {
 	const match = ref.match(/^#\/components\/(\w+)\/(.+)$/);
 	if (match) {
 		return { type: match[1], name: match[2] };
@@ -230,18 +319,15 @@ function parseRef(ref) {
 	return null;
 }
 
-/**
- * Recursively resolve all references, including nested ones
- * @param {object} components
- * @param {Set<string>} initialRefs
- * @returns {Set<string>}
- */
-function resolveAllRefs(components, initialRefs) {
-	const resolved = new Set();
+function resolveAllRefs(
+	components: OpenAPIComponents,
+	initialRefs: Set<string>
+): Set<string> {
+	const resolved = new Set<string>();
 	const toResolve = [...initialRefs];
 
 	while (toResolve.length > 0) {
-		const ref = toResolve.pop();
+		const ref = toResolve.pop()!;
 		if (resolved.has(ref)) {
 			continue;
 		}
@@ -266,14 +352,11 @@ function resolveAllRefs(components, initialRefs) {
 	return resolved;
 }
 
-/**
- * Filter components to only include those that are referenced
- * @param {object} components
- * @param {Set<string>} referencedRefs
- * @returns {object}
- */
-function filterComponents(components, referencedRefs) {
-	const filtered = {};
+function filterComponents(
+	components: OpenAPIComponents,
+	referencedRefs: Set<string>
+): OpenAPIComponents {
+	const filtered: OpenAPIComponents = {};
 
 	for (const ref of referencedRefs) {
 		const parsed = parseRef(ref);
@@ -283,21 +366,19 @@ function filterComponents(components, referencedRefs) {
 		const component = components[parsed.type]?.[parsed.name];
 		if (component) {
 			filtered[parsed.type] ??= {};
-			filtered[parsed.type][parsed.name] = component;
+			filtered[parsed.type]![parsed.name] = component;
 		}
 	}
 
 	return filtered;
 }
 
-/**
- * Filter out ignored parameters and account_id from an operation
- * @param {object} operation
- * @param {string} path
- * @param {string} method
- * @param {object} ignores
- */
-function applyParameterIgnores(operation, path, method, ignores) {
+function applyParameterIgnores(
+	operation: OpenAPIOperation,
+	path: string,
+	method: string,
+	ignores: IgnoresConfig
+): void {
 	if (!operation.parameters) {
 		return;
 	}
@@ -315,12 +396,10 @@ function applyParameterIgnores(operation, path, method, ignores) {
 	);
 }
 
-/**
- * Remove properties from a schema object (mutates in place)
- * @param {object} schema
- * @param {string[]} propsToRemove
- */
-function removeSchemaProperties(schema, propsToRemove) {
+function removeSchemaProperties(
+	schema: OpenAPISchema,
+	propsToRemove: string[]
+): void {
 	if (!schema.properties) {
 		return;
 	}
@@ -333,14 +412,12 @@ function removeSchemaProperties(schema, propsToRemove) {
 	}
 }
 
-/**
- * Apply ignores to remove unimplemented request body properties
- * @param {object} operation
- * @param {string} path
- * @param {string} method
- * @param {object} ignores
- */
-function applyRequestBodyIgnores(operation, path, method, ignores) {
+function applyRequestBodyIgnores(
+	operation: OpenAPIOperation,
+	path: string,
+	method: string,
+	ignores: IgnoresConfig
+): void {
 	if (!operation.requestBody || !ignores.requestBodyProperties) {
 		return;
 	}
@@ -363,12 +440,10 @@ function applyRequestBodyIgnores(operation, path, method, ignores) {
 	}
 }
 
-/**
- * Apply ignores to remove schema properties
- * @param {object} components
- * @param {object} ignores
- */
-function applySchemaIgnores(components, ignores) {
+function applySchemaIgnores(
+	components: OpenAPIComponents,
+	ignores: IgnoresConfig
+): void {
 	if (!components.schemas || !ignores.schemaProperties) {
 		return;
 	}
@@ -383,37 +458,6 @@ function applySchemaIgnores(components, ignores) {
 	}
 }
 
-/**
- * Transform path by removing /accounts/{account_id}
- * @param {string} path
- * @returns {string}
- */
-function removeAccountPathParam(path) {
+function removeAccountPathParam(path: string): string {
 	return path.replace("/accounts/{account_id}", "");
 }
-
-// ============================================================================
-// CLI Entry Point
-// ============================================================================
-
-const { values } = parseArgs({
-	options: {
-		input: {
-			type: "string",
-			short: "i",
-		},
-	},
-});
-
-if (!values.input) {
-	console.error("Error: --input (-i) flag is required");
-	console.error(
-		"Usage: node scripts/filter-openapi.mjs --input <path-to-openapi.json>"
-	);
-	process.exit(1);
-}
-
-console.log(`Loading config from: ${CONFIG_PATH}`);
-const config = loadFilterConfig(CONFIG_PATH);
-
-filterOpenAPIFile(values.input, OUTPUT_PATH, config);
