@@ -935,6 +935,12 @@ export const CORE_PLUGIN: Plugin<
 					],
 					compatibilityDate: "2025-01-01",
 					compatibilityFlags: ["connect_pass_through", "experimental"],
+					bindings: [
+						{
+							name: "CF_WORKER_NAME",
+							text: options.name ?? "worker",
+						},
+					],
 					globalOutbound: getGlobalOutbound(workerIndex, options),
 				},
 			});
