@@ -1,0 +1,8 @@
+---
+import { env } from "cloudflare:workers";
+
+export const prerender = false;
+---
+
+<h1>Hello C3 {new Date().toISOString()}</h1>
+<p>{JSON.stringify(env)}</p>
