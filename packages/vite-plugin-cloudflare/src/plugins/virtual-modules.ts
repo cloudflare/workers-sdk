@@ -9,6 +9,9 @@ import { createPlugin } from "../utils";
 export const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
 export const VIRTUAL_CLIENT_FALLBACK_ENTRY = `${virtualPrefix}client-fallback-entry`;
 
+const virtualCloudflareResolveRE = /^virtual:cloudflare\//;
+const virtualCloudflareLoadRE = /^\0virtual:cloudflare\//;
+
 /**
  * Plugin to provide virtual modules
  */
@@ -21,12 +24,12 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 			);
 		},
 		resolveId: {
+			filter: { id: virtualCloudflareResolveRE },
 			async handler(source) {
-				if (
-					source === VIRTUAL_WORKER_ENTRY ||
-					source === VIRTUAL_EXPORT_TYPES
-				) {
-					return `\0${source}`;
+				// Fallback for when filter is not applied
+				// TODO: remove when we drop support for Vite 6
+				if (!virtualCloudflareResolveRE.test(source)) {
+					return;
 				}
 
 				if (source === VIRTUAL_USER_ENTRY) {
@@ -40,9 +43,12 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 					}
 					return main;
 				}
+
+				return `\0${source}`;
 			},
 		},
 		load: {
+			filter: { id: virtualCloudflareLoadRE },
 			handler(id) {
 				if (id === `\0${VIRTUAL_WORKER_ENTRY}`) {
 					const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
@@ -113,6 +119,11 @@ export function getExportTypes(module) {
 	};
 });
 
+const virtualClientFallbackResolveRE =
+	/^virtual:cloudflare\/client-fallback-entry$/;
+const virtualClientFallbackLoadRE =
+	/^\0virtual:cloudflare\/client-fallback-entry$/;
+
 /**
  * Plugin to provide a virtual fallback entry file for the `client` environment.
  * This is used as the entry file for the client build when only the `public` directory is present.
@@ -125,6 +136,7 @@ export const virtualClientFallbackPlugin = createPlugin(
 				return environment.name === "client";
 			},
 			resolveId: {
+				filter: { id: virtualClientFallbackResolveRE },
 				handler(source) {
 					if (source === VIRTUAL_CLIENT_FALLBACK_ENTRY) {
 						return `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`;
@@ -132,6 +144,7 @@ export const virtualClientFallbackPlugin = createPlugin(
 				},
 			},
 			load: {
+				filter: { id: virtualClientFallbackLoadRE },
 				handler(id) {
 					if (id === `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`) {
 						return ``;
