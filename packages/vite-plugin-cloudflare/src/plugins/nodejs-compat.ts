@@ -45,6 +45,22 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 					resolve: {
 						builtins: [...nodeJsCompat.externals],
 					},
+					...(isRolldown
+						? ({
+								build: {
+									rolldownOptions: {
+										plugins: [
+											// In Vite 8, `require` calls are not automatically replaced when the format is ESM and `platform` is `neutral`
+											// @ts-expect-error: added in Vite 8
+											vite.esmExternalRequirePlugin({
+												external: [...nodeJsCompat.externals],
+												skipDuplicateCheck: true,
+											}),
+										],
+									},
+								},
+							} as vite.BuildOptions)
+						: {}),
 					optimizeDeps: {
 						// This is a list of module specifiers that the dependency optimizer should not follow when doing import analysis.
 						// In this case we provide a list of all the Node.js modules, both those built-in to workerd and those that will be polyfilled.
