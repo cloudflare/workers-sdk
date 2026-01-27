@@ -60,10 +60,13 @@ export const COMMAND_ARG_ALLOW_LIST: AllowList = {
 /**
  * Returns the allowed args for a given command.
  *
+ * @param commandArgAllowList An object describing what args are allowed to be used in metrics.
  * This takes into account:
  * - Global "*" allow-list that applies to all commands
  * - Wildcard commands (e.g., "deploy *" for subcommands)
  * - Specific command entries that override less specific ones
+ * See `COMMAND_ARG_ALLOW_LIST` for more details.
+ * @param command The command being run (e.g., "deploy", "publish", etc.), which does not include the binary (e.g. `wrangler`).
  */
 export function getAllowedArgs(
 	commandArgAllowList: AllowList,

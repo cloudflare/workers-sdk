@@ -255,7 +255,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					dispatcher.sendCommandEvent("wrangler command completed", {
 						sanitizedCommand,
 						sanitizedArgs,
-						argsUsed: Object.keys(argsWithSanitizedKeys).sort(),
+						argsUsed,
 						durationMs,
 						durationSeconds: durationMs / 1000,
 						durationMinutes: durationMs / 1000 / 60,
