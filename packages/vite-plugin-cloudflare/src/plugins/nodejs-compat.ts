@@ -1,14 +1,15 @@
 import assert from "node:assert";
 import { nonPrefixedNodeModules } from "@cloudflare/unenv-preset";
+import * as vite from "vite";
 import {
 	assertHasNodeJsCompat,
 	hasNodeJsAls,
 	isNodeAlsModule,
+	nodeBuiltinsRE,
 	NodeJsCompatWarnings,
 } from "../nodejs-compat";
 import { createPlugin, isRolldown } from "../utils";
 import type { ResolvedWorkerConfig } from "../plugin-config";
-import type * as vite from "vite";
 
 /**
  * Plugin to support the `nodejs_als` compatibility flag
@@ -62,6 +63,20 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 								"node:test/reporters",
 							],
 						],
+						...(isRolldown
+							? {
+									rolldownOptions: {
+										plugins: [
+											// In Vite 8, `require` calls are not automatically replaced when the format is ESM and `platform` is `neutral`
+											// @ts-expect-error: added in Vite 8
+											vite.esmExternalRequirePlugin({
+												external: [nodeBuiltinsRE],
+												skipDuplicateCheck: true,
+											}),
+										],
+									},
+								}
+							: {}),
 					},
 				};
 			}
@@ -238,11 +253,7 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 													name: "vite-plugin-cloudflare:nodejs-compat-warnings-resolver",
 													setup(build) {
 														build.onResolve(
-															{
-																filter: new RegExp(
-																	`^(${nonPrefixedNodeModules.join("|")}|node:.+)$`
-																),
-															},
+															{ filter: nodeBuiltinsRE },
 															({ path, importer }) => {
 																if (
 																	hasNodeJsAls(workerConfig) &&
