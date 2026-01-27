@@ -411,6 +411,7 @@ type WorkerOptionsBindings = Pick<
 	| "unsafeBindings"
 	| "additionalUnboundDurableObjects"
 	| "media"
+	| "versionMetadata"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -582,11 +583,15 @@ export function buildMiniflareBindingOptions(
 	const bindingOptions: WorkerOptionsBindings = {
 		bindings: {
 			...bindings.vars,
-			// emulate version_metadata binding via a JSON var
-			...(bindings.version_metadata
-				? { [bindings.version_metadata.binding]: { id: randomUUID(), tag: "" } }
-				: undefined),
 		},
+		versionMetadata: bindings.version_metadata
+			? {
+					binding: bindings.version_metadata.binding,
+					id: randomUUID(),
+					tag: "",
+					timestamp: new Date().toISOString(),
+				}
+			: undefined,
 		textBlobBindings,
 		dataBlobBindings,
 		wasmBindings,
