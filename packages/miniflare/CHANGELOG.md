@@ -1,5 +1,189 @@
 # miniflare
 
+## 4.20260124.0
+
+### Minor Changes
+
+- [#12008](https://github.com/cloudflare/workers-sdk/pull/12008) [`e414f05`](https://github.com/cloudflare/workers-sdk/commit/e414f05271887ed43a9a0a660d66565e9847c489) Thanks [@penalosa](https://github.com/penalosa)! - Add support for customising the inspector IP address
+
+  Adds a new `--inspector-ip` CLI flag and `dev.inspector_ip` configuration option to allow customising the IP address that the inspector server listens on. Previously, the inspector was hardcoded to listen only on `127.0.0.1`.
+
+  Example usage:
+
+  ```bash
+  # CLI flag
+  wrangler dev --inspector-ip 0.0.0.0
+  ```
+
+  ```jsonc
+  // wrangler.json
+  {
+  	"dev": {
+  		"inspector_ip": "0.0.0.0",
+  	},
+  }
+  ```
+
+- [#12034](https://github.com/cloudflare/workers-sdk/pull/12034) [`05714f8`](https://github.com/cloudflare/workers-sdk/commit/05714f871022e998dfbd7005f795d2fa3b9aee56) Thanks [@emily-shen](https://github.com/emily-shen)! - Add a no-op local explorer worker, which is gated by the experimental flag `X_LOCAL_EXPLORER`.
+
+### Patch Changes
+
+- [#11853](https://github.com/cloudflare/workers-sdk/pull/11853) [`014e7aa`](https://github.com/cloudflare/workers-sdk/commit/014e7aa2074d3464e012876b70e22af44fa26e5d) Thanks [@43081j](https://github.com/43081j)! - Use built-in stripVTControlCharacters utility rather than the `strip-ansi` package.
+
+- [#12040](https://github.com/cloudflare/workers-sdk/pull/12040) [`77e82d2`](https://github.com/cloudflare/workers-sdk/commit/77e82d25e13800d34426ba6774def3fcc2c7de21) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260120.0 | 1.20260122.0 |
+
+- [#12061](https://github.com/cloudflare/workers-sdk/pull/12061) [`f08ef21`](https://github.com/cloudflare/workers-sdk/commit/f08ef210b7215921e00e8aa890d25df334a08bbe) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260122.0 | 1.20260123.0 |
+
+- [#12088](https://github.com/cloudflare/workers-sdk/pull/12088) [`0641e6c`](https://github.com/cloudflare/workers-sdk/commit/0641e6ca0708d7bc73d04c0a619676cc5fde7a4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260123.0 | 1.20260124.0 |
+
+- [#11897](https://github.com/cloudflare/workers-sdk/pull/11897) [`bbd8a5e`](https://github.com/cloudflare/workers-sdk/commit/bbd8a5e98cbe3048d80652ecf74368b9c26bd2ff) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Bundle the `zod` dependency to reduce supply chain attack surface
+
+  In order to prevent possible npm vulnerability attacks, the team's policy is to bundle
+  dependencies in our packages where possible. This helps ensure that only trusted code
+  runs on the user's system, even if compromised packages are later published to npm.
+
+  This change bundles `zod` (a pure JavaScript validation library with no native dependencies)
+  into miniflare and @cloudflare/vitest-pool-workers.
+
+  Other dependencies remain external for technical reasons:
+
+  - `sharp`: Native binary with platform-specific builds
+  - `undici`: Dynamically required at runtime in worker threads
+  - `ws`: Has optional native bindings for performance
+  - `workerd`: Native binary (Cloudflare's JavaScript runtime)
+  - `@cspotcode/source-map-support`: Uses require.cache manipulation at runtime
+  - `youch`: Dynamically required for lazy loading
+
+## 4.20260120.0
+
+### Patch Changes
+
+- [#11993](https://github.com/cloudflare/workers-sdk/pull/11993) [`788bf78`](https://github.com/cloudflare/workers-sdk/commit/788bf786b4c5cb8e1bdd6464d3f88b4125cebc75) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260116.0 | 1.20260120.0 |
+
+## 4.20260116.0
+
+### Minor Changes
+
+- [#11942](https://github.com/cloudflare/workers-sdk/pull/11942) [`133bf95`](https://github.com/cloudflare/workers-sdk/commit/133bf95783c8b63ecc2b572a4400c7aa4bd4f8c4) Thanks [@penalosa](https://github.com/penalosa)! - Add support for Email Sending API's MessageBuilder interface in local mode
+
+  Miniflare now supports the simplified MessageBuilder interface for sending emails, alongside the existing `EmailMessage` support.
+
+  Example usage:
+
+  ```javascript
+  await env.EMAIL.send({
+  	from: { name: "Alice", email: "alice@example.com" },
+  	to: ["bob@example.com"],
+  	subject: "Hello",
+  	text: "Plain text version",
+  	html: "<h1>HTML version</h1>",
+  	attachments: [
+  		{
+  			disposition: "attachment",
+  			filename: "report.pdf",
+  			type: "application/pdf",
+  			content: pdfData,
+  		},
+  	],
+  });
+  ```
+
+  In local mode, email content (text, HTML, attachments) is stored to temporary files that you can open in your editor or browser for inspection. File paths are logged to the console when emails are sent.
+
+### Patch Changes
+
+- [#11925](https://github.com/cloudflare/workers-sdk/pull/11925) [`8e4a0e5`](https://github.com/cloudflare/workers-sdk/commit/8e4a0e5e8d1e0bf75b6f11000f89f7eabafa392a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260114.0 | 1.20260115.0 |
+
+- [#11942](https://github.com/cloudflare/workers-sdk/pull/11942) [`133bf95`](https://github.com/cloudflare/workers-sdk/commit/133bf95783c8b63ecc2b572a4400c7aa4bd4f8c4) Thanks [@penalosa](https://github.com/penalosa)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260115.0 | 1.20260116.0 |
+
+- [#11967](https://github.com/cloudflare/workers-sdk/pull/11967) [`202c59e`](https://github.com/cloudflare/workers-sdk/commit/202c59e4f4f28419fb6ac0aa8c7dc3960a0c8d3e) Thanks [@emily-shen](https://github.com/emily-shen)! - chore: update undici
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | undici     | 7.14.0 | 7.18.2 |
+
+- [#11943](https://github.com/cloudflare/workers-sdk/pull/11943) [`25e2c60`](https://github.com/cloudflare/workers-sdk/commit/25e2c608d529664ede251abe45fdb13ea9e56a9d) Thanks [@vicb](https://github.com/vicb)! - Bump capnp-es to ^0.0.14
+
+## 4.20260114.0
+
+### Minor Changes
+
+- [#11883](https://github.com/cloudflare/workers-sdk/pull/11883) [`4714ca1`](https://github.com/cloudflare/workers-sdk/commit/4714ca12c1f24c7e3553d3bfd2812a833a07826c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `MF-Original-Hostname` header when using the `upstream` option
+
+  When using the `upstream` option in Miniflare, the `Host` header is rewritten to match the upstream server, which means the original hostname is lost. This change adds a new `MF-Original-Hostname` header that preserves the original hostname from the incoming request.
+
+  This allows Workers to access the original hostname when proxying requests through an upstream server:
+
+  ```js
+  export default {
+  	async fetch(request) {
+  		const originalHostname = request.headers.get("MF-Original-Hostname");
+  		// originalHostname contains the hostname before it was rewritten
+  	},
+  };
+  ```
+
+### Patch Changes
+
+- [#11908](https://github.com/cloudflare/workers-sdk/pull/11908) [`e78186d`](https://github.com/cloudflare/workers-sdk/commit/e78186dae926c0ae1ab387aaa6cb8ba53bed9992) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260111.0 | 1.20260114.0 |
+
+- [#11898](https://github.com/cloudflare/workers-sdk/pull/11898) [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bundle more third-party dependencies to reduce supply chain risk
+
+  Previously, several small utility packages were listed as runtime dependencies and
+  installed separately. These are now bundled directly into the published packages,
+  reducing the number of external dependencies users need to trust.
+
+  Bundled dependencies:
+
+  - **miniflare**: `acorn`, `acorn-walk`, `exit-hook`, `glob-to-regexp`, `stoppable`
+  - **kv-asset-handler**: `mime`
+  - **vite-plugin-cloudflare**: `@remix-run/node-fetch-server`, `defu`, `get-port`, `picocolors`, `tinyglobby`
+  - **vitest-pool-workers**: `birpc`, `devalue`, `get-port`, `semver`
+
 ## 4.20260111.0
 
 ### Patch Changes

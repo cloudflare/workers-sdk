@@ -7,6 +7,7 @@ import {
 	GET_EXPORT_TYPES_PATH,
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
+	IS_PARENT_ENVIRONMENT_HEADER,
 	WORKER_ENTRY_PATH_HEADER,
 } from "../../shared";
 import { stripInternalEnv } from "./env";
@@ -213,29 +214,36 @@ export function createWorkerEntrypointWrapper(
 
 					// Initialize the module runner
 					if (url.pathname === INIT_PATH) {
-						const workerEntryPathHeader = request.headers.get(
-							WORKER_ENTRY_PATH_HEADER
+						const isParentEnvironmentHeader = request.headers.get(
+							IS_PARENT_ENVIRONMENT_HEADER
 						);
 
-						if (!workerEntryPathHeader) {
-							throw new Error(
-								`Unexpected error: "${WORKER_ENTRY_PATH_HEADER}" header not set.`
+						// Only set Worker variables when initializing the parent environment
+						if (isParentEnvironmentHeader === "true") {
+							const workerEntryPathHeader = request.headers.get(
+								WORKER_ENTRY_PATH_HEADER
 							);
+
+							if (!workerEntryPathHeader) {
+								throw new Error(
+									`Unexpected error: "${WORKER_ENTRY_PATH_HEADER}" header not set.`
+								);
+							}
+
+							const isEntryWorkerHeader = request.headers.get(
+								IS_ENTRY_WORKER_HEADER
+							);
+
+							if (!isEntryWorkerHeader) {
+								throw new Error(
+									`Unexpected error: "${IS_ENTRY_WORKER_HEADER}" header not set.`
+								);
+							}
+
+							workerEntryPath = decodeURIComponent(workerEntryPathHeader);
+							isEntryWorker = isEntryWorkerHeader === "true";
 						}
 
-						const isEntryWorkerHeader = request.headers.get(
-							IS_ENTRY_WORKER_HEADER
-						);
-
-						if (!isEntryWorkerHeader) {
-							throw new Error(
-								`Unexpected error: "${IS_ENTRY_WORKER_HEADER}" header not set.`
-							);
-						}
-
-						// Set the Worker entry path
-						workerEntryPath = decodeURIComponent(workerEntryPathHeader);
-						isEntryWorker = isEntryWorkerHeader === "true";
 						const stub = this.env.__VITE_RUNNER_OBJECT__.get("singleton");
 
 						// Forward the request to the Durable Object to initialize the module runner and return the WebSocket

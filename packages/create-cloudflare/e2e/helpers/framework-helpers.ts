@@ -338,8 +338,15 @@ export async function verifyTypes(
 	}
 
 	const tsconfigPath = join(projectPath, "tsconfig.json");
-	const tsconfigTypes = jsonc.parse(readFile(tsconfigPath)).compilerOptions
-		?.types;
+	const tsconfig = jsonc.parse(readFile(tsconfigPath));
+
+	// Skip tsconfig verification if project uses TypeScript project references
+	// C3 doesn't modify the root tsconfig in this case - types are defined in child tsconfigs
+	if (Array.isArray(tsconfig.references) && tsconfig.references.length > 0) {
+		return;
+	}
+
+	const tsconfigTypes = tsconfig.compilerOptions?.types;
 	if (workersTypes === "generated") {
 		expect(tsconfigTypes).toContain(typesPath);
 	}

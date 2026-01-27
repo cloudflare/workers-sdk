@@ -2,18 +2,39 @@
 
 This package contains Cloudflare's fork of VSCode for Web, to support web editing of Workers. This package contains code and setup for building VSCode for Web.
 
+The code in this package is used by the `workers-playground` package.
+
 ## Developing
 
-Currently it's not possible to run VSCode's dev server to develop patches. This is because of a limitation with the `wrangler dev` file server for Workers Assets and the number of assets that would be watched locally.
+Note: Currently it's not possible to run VSCode's dev server to develop patches. This is because of a limitation with the `wrangler dev` file server for Workers Assets and the number of assets that would be watched locally.
 
 ## Building
 
-1. You must switch your NodeJS version to NodeJS 22 (using a tool like nvm). VSCode's build process requires this. For instance, if you use `nvm`, running `nvm use` would be enough to switch to the correct NodeJS version.
-2. Run `pnpm install`
-3. Run `pnpm run setup`, which will install dependencies, clone VSCode (currently v1.102.1), apply the patches specified in `./patches`, and symlink the top level packages within `workers-sdk`.
-4. Run `pnpm run custom:build`. It's `custom:build` rather than `build` because it's _really slow_, and shouldn't be regularly run by people building other packages in the repo.
+- Use Node.js 22
+  - VSCode's build process requires this
+- Run `pnpm install`
+- Run `pnpm -F "@cloudflare/quick-edit" run setup`
+  - installs dependencies
+  - clones VSCode (currently v1.102.1)
+  - applies the patches specified in `./patches`
+  - symlinks the top level packages within `workers-sdk`
+- Run `pnpm -F "@cloudflare/quick-edit" run custom:build`
+  - This takes up to 15 mins to run
+  - It's not `build` because it would then run when people run the top level `pnpm run build` to build other packages in the repository.
 
-You should then be able to test out the local VSCode for Web instance by running `pnpm wrangler dev` at http://localhost:8787
+## Debugging
+
+- Change the `quickEditHost` constant in [workers-playground/src/QuickEditor/VSCodeEditor.tsx](../workers-playground/src/QuickEditor/VSCodeEditor.tsx) to http://localhost:8787
+- Run the following in parallel:
+  - `pnpm -F workers-playground dev` -> `http://localhost:5173`
+  - `pnpm -F "@cloudflare/quick-edit" exec wrangler dev` -> `http://localhost:8787`
+- Get a user token to connect to a preview Worker
+  - Navigate to https://playground-testing.devprod.cloudflare.dev/
+  - This will respond with a `error code: 522` response, which is expected
+  - Grab the `user` cookie from the 522 response
+- Open http://localhost:5173/playground
+  - Open the devtools and add the `user` cookie from the previous step to this site
+  - Refresh the page and play around with the editor
 
 ## Deployment
 

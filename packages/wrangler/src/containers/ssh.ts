@@ -5,8 +5,13 @@ import { bold } from "@cloudflare/cli/colors";
 import { ApiError, DeploymentsService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { WebSocket } from "ws";
-import { promiseSpinner } from "../cloudchamber/common";
+import {
+	fillOpenAPIConfiguration,
+	promiseSpinner,
+} from "../cloudchamber/common";
+import { createCommand } from "../core/create-command";
 import { logger } from "../logger";
+import { containersScope } from "./index";
 import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
@@ -321,3 +326,72 @@ function buildSshArgs(
 
 	return flags;
 }
+
+export const containersSshCommand = createCommand({
+	metadata: {
+		description: "SSH into a container",
+		status: "open beta",
+		owner: "Product: Cloudchamber",
+		hidden: true,
+	},
+	args: {
+		ID: {
+			describe: "ID of the container instance",
+			type: "string",
+			demandOption: true,
+		},
+		cipher: {
+			describe:
+				"Sets `ssh -c`: Select the cipher specification for encrypting the session",
+			type: "string",
+		},
+		"log-file": {
+			describe:
+				"Sets `ssh -E`: Append debug logs to log_file instead of standard error",
+			type: "string",
+		},
+		"escape-char": {
+			describe:
+				"Sets `ssh -e`: Set the escape character for sessions with a pty (default: '~')",
+			type: "string",
+		},
+		"config-file": {
+			alias: "F",
+			describe:
+				"Sets `ssh -F`: Specify an alternative per-user ssh configuration file",
+			type: "string",
+		},
+		pkcs11: {
+			describe:
+				"Sets `ssh -I`: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication",
+			type: "string",
+		},
+		"identity-file": {
+			alias: "i",
+			describe:
+				"Sets `ssh -i`: Select a file from which the identity (private key) for public key authentication is read",
+			type: "string",
+		},
+		"mac-spec": {
+			describe:
+				"Sets `ssh -m`: A comma-separated list of MAC (message authentication code) algorithms, specified in order of preference",
+			type: "string",
+		},
+		option: {
+			alias: "o",
+			describe:
+				"Sets `ssh -o`: Set options in the format used in the ssh configuration file. May be repeated",
+			type: "string",
+		},
+		tag: {
+			describe:
+				"Sets `ssh -P`: Specify a tag name that may be used to select configuration in ssh_config",
+			type: "string",
+		},
+	},
+	positionalArgs: ["ID"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, containersScope);
+		await sshCommand(args, config);
+	},
+});

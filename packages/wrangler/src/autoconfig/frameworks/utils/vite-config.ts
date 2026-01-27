@@ -1,7 +1,9 @@
-import assert from "node:assert";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { UserError } from "@cloudflare/workers-utils";
 import * as recast from "recast";
+import dedent from "ts-dedent";
+import { logger } from "../../../logger";
 import { transformFile } from "../../c3-vendor/codemod";
 import type { types } from "recast";
 
@@ -38,9 +40,20 @@ export function checkIfViteConfigUsesCloudflarePlugin(
 			}
 
 			const config = n.node.arguments[0];
-			assert(t.ObjectExpression.check(config));
+			if (!t.ObjectExpression.check(config)) {
+				logger.debug(
+					`Vite config uses a non-object expression (e.g., function). Skipping Cloudflare plugin check.`
+				);
+				return this.traverse(n);
+			}
+
 			const pluginsProp = config.properties.find((prop) => isPluginsProp(prop));
-			assert(pluginsProp && t.ArrayExpression.check(pluginsProp.value));
+			if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
+				logger.debug(
+					`Vite config does not have a valid plugins array. Skipping Cloudflare plugin check.`
+				);
+				return this.traverse(n);
+			}
 
 			if (
 				pluginsProp.value.elements.some(
@@ -132,9 +145,33 @@ export function transformViteConfig(
 			}
 
 			const config = n.node.arguments[0];
-			assert(t.ObjectExpression.check(config));
+			if (!t.ObjectExpression.check(config)) {
+				throw new UserError(dedent`
+					Cannot modify Vite config: expected an object literal but found ${config.type}.
+
+					The Cloudflare plugin can only be automatically added to Vite configs that use a simple object.
+					If your config uses a function or other dynamic configuration, please manually add the plugin:
+
+					  import { cloudflare } from "@cloudflare/vite-plugin";
+
+					  export default defineConfig({
+					    plugins: [cloudflare()]
+					  });
+				`);
+			}
+
 			const pluginsProp = config.properties.find((prop) => isPluginsProp(prop));
-			assert(pluginsProp && t.ArrayExpression.check(pluginsProp.value));
+			if (!pluginsProp || !t.ArrayExpression.check(pluginsProp.value)) {
+				throw new UserError(dedent`
+					Cannot modify Vite config: could not find a valid plugins array.
+
+					Please ensure your Vite config has a plugins array:
+
+					  export default defineConfig({
+					    plugins: []
+					  });
+				`);
+			}
 
 			// Only add the Cloudflare plugin if it's not already present
 			if (

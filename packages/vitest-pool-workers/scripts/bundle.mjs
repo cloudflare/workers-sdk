@@ -97,19 +97,12 @@ const commonOptions = {
 		// Virtual/runtime modules
 		"__VITEST_POOL_WORKERS_DEFINES",
 		"__VITEST_POOL_WORKERS_USER_OBJECT",
-		// All npm packages (previously handled by packages: "external")
-		"birpc",
+		// External dependencies (see scripts/deps.ts for rationale)
 		"cjs-module-lexer",
-		"devalue",
 		"esbuild",
-		"get-port",
+		// Workspace dependencies
 		"miniflare",
-		"semver",
-		"semver/*",
 		"wrangler",
-		"zod",
-		"undici",
-		"undici/*",
 		// Peer dependencies
 		"vitest",
 		"vitest/*",

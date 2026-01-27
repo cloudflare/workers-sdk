@@ -15,7 +15,10 @@ export const VIRTUAL_CLIENT_FALLBACK_ENTRY = `${virtualPrefix}client-fallback-en
 export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 	return {
 		applyToEnvironment(environment) {
-			return ctx.getWorkerConfig(environment.name) !== undefined;
+			return (
+				!ctx.isChildEnvironment(environment.name) &&
+				ctx.getWorkerConfig(environment.name) !== undefined
+			);
 		},
 		async resolveId(source) {
 			if (source === VIRTUAL_WORKER_ENTRY || source === VIRTUAL_EXPORT_TYPES) {

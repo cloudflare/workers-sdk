@@ -146,7 +146,10 @@ export async function handleEmail(
 				);
 				maybeClientError = reason;
 			},
-			forward: async (rcptTo: string, headers?: Headers): Promise<void> => {
+			forward: async (
+				rcptTo: string,
+				headers?: Headers
+			): Promise<EmailSendResult> => {
 				await env[CoreBindings.SERVICE_LOOPBACK].fetch(
 					"http://localhost/core/log",
 					{
@@ -155,8 +158,17 @@ export async function handleEmail(
 						body: `${blue("Email handler forwarded message")}${reset(` with\n  rcptTo: ${rcptTo}${renderEmailHeaders(headers)}`)}`,
 					}
 				);
+				/**
+				 * The message ID in production is a 36 character random string that identifies the message for e.g. linking up threads.
+				 * In production it uses the sender domain rather than example.com. Locally, we have access to none of that information
+				 * so instead we make a dummy message ID that matches the production format (36 characters followed by a domain)
+				 */
+				const uuid = crypto.randomUUID().replaceAll("-", "");
+				return { messageId: `${uuid}@example.com` };
 			},
-			reply: async (replyMessage: MiniflareEmailMessage): Promise<void> => {
+			reply: async (
+				replyMessage: MiniflareEmailMessage
+			): Promise<EmailSendResult> => {
 				if (
 					!(await isEmailReplyable(
 						parsedIncomingEmail,
@@ -198,6 +210,14 @@ export async function handleEmail(
 						body: `${blue("Email handler replied to sender")}${reset(` with the following message:\n  ${file}`)}`,
 					}
 				);
+
+				/**
+				 * The message ID in production is a 36 character random string that identifies the message for e.g. linking up threads.
+				 * In production it uses the sender domain rather than example.com. Locally, we have access to none of that information
+				 * so instead we make a dummy message ID that matches the production format (36 characters followed by a domain)
+				 */
+				const uuid = crypto.randomUUID().replaceAll("-", "");
+				return { messageId: `${uuid}@example.com` };
 			},
 		} satisfies ForwardableEmailMessage
 	);

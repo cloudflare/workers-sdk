@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/kv-asset-handler",
-	"version": "0.4.1",
+	"version": "0.4.2",
 	"description": "Routes requests to KV assets",
 	"keywords": [
 		"kv",
@@ -36,9 +36,6 @@
 		"test": "vitest",
 		"test:ci": "vitest run"
 	},
-	"dependencies": {
-		"mime": "^3.0.0"
-	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/vitest-pool-workers": "catalog:default",
@@ -46,6 +43,7 @@
 		"@types/mime": "^3.0.4",
 		"@types/node": "catalog:default",
 		"eslint": "catalog:default",
+		"mime": "^3.0.0",
 		"tsup": "8.3.0",
 		"vitest": "~2.1.0"
 	},

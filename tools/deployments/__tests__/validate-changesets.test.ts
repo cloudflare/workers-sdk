@@ -31,6 +31,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/workers-shared",
 				"@cloudflare/workers-utils",
 				"@cloudflare/workflows-shared",
+				"@cloudflare/eslint-config-shared",
 				"@cloudflare/containers-shared",
 				"@cloudflare/vite-plugin",
 				"create-cloudflare",

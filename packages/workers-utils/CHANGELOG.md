@@ -1,5 +1,41 @@
 # @cloudflare/workers-utils
 
+## 0.8.0
+
+### Minor Changes
+
+- [#12008](https://github.com/cloudflare/workers-sdk/pull/12008) [`e414f05`](https://github.com/cloudflare/workers-sdk/commit/e414f05271887ed43a9a0a660d66565e9847c489) Thanks [@penalosa](https://github.com/penalosa)! - Add support for customising the inspector IP address
+
+  Adds a new `--inspector-ip` CLI flag and `dev.inspector_ip` configuration option to allow customising the IP address that the inspector server listens on. Previously, the inspector was hardcoded to listen only on `127.0.0.1`.
+
+  Example usage:
+
+  ```bash
+  # CLI flag
+  wrangler dev --inspector-ip 0.0.0.0
+  ```
+
+  ```jsonc
+  // wrangler.json
+  {
+  	"dev": {
+  		"inspector_ip": "0.0.0.0",
+  	},
+  }
+  ```
+
+- [#12034](https://github.com/cloudflare/workers-sdk/pull/12034) [`05714f8`](https://github.com/cloudflare/workers-sdk/commit/05714f871022e998dfbd7005f795d2fa3b9aee56) Thanks [@emily-shen](https://github.com/emily-shen)! - Add a no-op local explorer worker, which is gated by the experimental flag `X_LOCAL_EXPLORER`.
+
+## 0.7.1
+
+### Patch Changes
+
+- [#11946](https://github.com/cloudflare/workers-sdk/pull/11946) [`fa39a73`](https://github.com/cloudflare/workers-sdk/commit/fa39a73040dd27d35d429deda34fdc8e15b15fbe) Thanks [@MattieTK](https://github.com/MattieTK)! - Fix `configFileName` returning wrong filename for `.jsonc` config files
+
+  Previously, users with a `wrangler.jsonc` config file would see error messages and hints referring to `wrangler.json` instead of `wrangler.jsonc`. This was because the `configFormat` function collapsed both `.json` and `.jsonc` files into a single `"jsonc"` value, losing the distinction between them.
+
+  Now `configFormat` returns `"json"` for `.json` files and `"jsonc"` for `.jsonc` files, allowing `configFileName` to return the correct filename for each format.
+
 ## 0.7.0
 
 ### Minor Changes

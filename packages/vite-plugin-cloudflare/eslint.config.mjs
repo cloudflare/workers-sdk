@@ -5,6 +5,7 @@ export default defineConfig([
 	globalIgnores([
 		"**/dist",
 		"**/e2e",
+		"scripts/**",
 		"tsdown.config.ts",
 		"vitest.config.ts",
 		"src/__tests__/fixtures/**",

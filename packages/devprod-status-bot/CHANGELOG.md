@@ -1,5 +1,11 @@
 # devprod-status-bot
 
+## 1.3.0
+
+### Minor Changes
+
+- [#11916](https://github.com/cloudflare/workers-sdk/pull/11916) [`0b249a1`](https://github.com/cloudflare/workers-sdk/commit/0b249a103e981b6f3f92290dbb65448ecd65739a) Thanks [@emily-shen](https://github.com/emily-shen)! - Notify when security advisories are submitted to workers-sdk
+
 ## 1.2.3
 
 ### Patch Changes

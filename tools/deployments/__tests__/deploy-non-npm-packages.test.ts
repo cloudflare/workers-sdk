@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it, vitest } from "vitest";
 import {
 	deployNonNpmPackages,
@@ -11,7 +11,7 @@ import type { Mock } from "vitest";
 
 vitest.mock("node:child_process", async () => {
 	return {
-		execSync: vitest.fn(),
+		spawnSync: vitest.fn(),
 	};
 });
 
@@ -108,16 +108,17 @@ describe("findDeployablePackageNames()", () => {
 });
 
 describe("deployPackage", () => {
-	it("should run `pnpm deploy` for the given package via `execSync`", () => {
+	it("should run `pnpm deploy` for the given package via `spawnSync`", () => {
 		deployPackage("foo", new Map());
-		expect(execSync).toHaveBeenCalledWith(
-			"pnpm -F foo run deploy",
+		expect(spawnSync).toHaveBeenCalledWith(
+			"pnpm",
+			["-F", "foo", "run", "deploy"],
 			expect.any(Object)
 		);
 	});
 
-	it("should ignore failures in `execSync`", () => {
-		(execSync as Mock).mockImplementationOnce(() => {
+	it("should ignore failures in `spawnSync`", () => {
+		(spawnSync as Mock).mockImplementationOnce(() => {
 			throw new Error("Bad deployment");
 		});
 		const logs: string[] = [];

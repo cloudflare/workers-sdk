@@ -1321,6 +1321,72 @@ describe.sequential("wrangler dev", () => {
 		});
 	});
 
+	describe("inspector ip", () => {
+		it("should default inspector ip to 127.0.0.1", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev");
+			assert(typeof config.dev.inspector === "object");
+			expect(config.dev.inspector?.hostname).toEqual("127.0.0.1");
+		});
+
+		it("should read --inspector-ip", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev --inspector-ip=0.0.0.0");
+			assert(typeof config.dev.inspector === "object");
+			expect(config.dev.inspector?.hostname).toEqual("0.0.0.0");
+		});
+
+		it("should read dev.inspector_ip from wrangler config", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				dev: {
+					inspector_ip: "0.0.0.0",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig("dev");
+			assert(typeof config.dev.inspector === "object");
+			expect(config.dev.inspector?.hostname).toEqual("0.0.0.0");
+		});
+
+		it("should use --inspector-ip over dev.inspector_ip from wrangler config", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				dev: {
+					inspector_ip: "0.0.0.0",
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			const config = await runWranglerUntilConfig(
+				"dev --inspector-ip=192.168.1.1"
+			);
+			assert(typeof config.dev.inspector === "object");
+			expect(config.dev.inspector?.hostname).toEqual("192.168.1.1");
+		});
+
+		it("should error if a bad dev.inspector_ip config is provided", async () => {
+			writeWranglerConfig({
+				main: "index.js",
+				dev: {
+					// @ts-expect-error intentionally bad ip
+					inspector_ip: 12345,
+				},
+			});
+			fs.writeFileSync("index.js", `export default {};`);
+			await expect(runWrangler("dev")).rejects
+				.toThrowErrorMatchingInlineSnapshot(`
+				[Error: Processing wrangler.toml configuration:
+				  - Expected "dev.inspector_ip" to be of type string but got 12345.]
+			`);
+		});
+	});
+
 	describe("port", () => {
 		it("should default port to 8787 if it is not in use", async () => {
 			writeWranglerConfig({

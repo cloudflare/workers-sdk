@@ -9,6 +9,7 @@ import type {
 	PreviewResolvedConfig,
 	ResolvedPluginConfig,
 	ResolvedWorkerConfig,
+	Worker,
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type { MiniflareOptions } from "miniflare";
@@ -141,12 +142,47 @@ export class PluginContext {
 		return this.#resolvedViteConfig;
 	}
 
+	isChildEnvironment(environmentName: string): boolean {
+		if (this.resolvedPluginConfig.type !== "workers") {
+			return false;
+		}
+
+		for (const childEnvironmentNames of this.resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap.values()) {
+			if (childEnvironmentNames.includes(environmentName)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	#getWorker(environmentName: string): Worker | undefined {
+		if (this.resolvedPluginConfig.type !== "workers") {
+			return undefined;
+		}
+
+		const worker =
+			this.resolvedPluginConfig.environmentNameToWorkerMap.get(environmentName);
+
+		if (worker) {
+			return worker;
+		}
+
+		// Check if this is a child environment and, if so, return the parent's Worker
+		for (const [parentEnvironmentName, childEnvironmentNames] of this
+			.resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap) {
+			if (childEnvironmentNames.includes(environmentName)) {
+				return this.resolvedPluginConfig.environmentNameToWorkerMap.get(
+					parentEnvironmentName
+				);
+			}
+		}
+
+		return undefined;
+	}
+
 	getWorkerConfig(environmentName: string): ResolvedWorkerConfig | undefined {
-		return this.resolvedPluginConfig.type === "workers"
-			? this.resolvedPluginConfig.environmentNameToWorkerMap.get(
-					environmentName
-				)?.config
-			: undefined;
+		return this.#getWorker(environmentName)?.config;
 	}
 
 	get allWorkerConfigs(): Unstable_Config[] {
@@ -173,11 +209,7 @@ export class PluginContext {
 	}
 
 	getNodeJsCompat(environmentName: string): NodeJsCompat | undefined {
-		return this.resolvedPluginConfig.type === "workers"
-			? this.resolvedPluginConfig.environmentNameToWorkerMap.get(
-					environmentName
-				)?.nodeJsCompat
-			: undefined;
+		return this.#getWorker(environmentName)?.nodeJsCompat;
 	}
 }
 

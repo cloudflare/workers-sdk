@@ -1,7 +1,9 @@
 import { DurableObject } from "cloudflare:workers";
 import { ModuleRunner, ssrModuleExportsKey } from "vite/module-runner";
 import {
+	ENVIRONMENT_NAME_HEADER,
 	INIT_PATH,
+	IS_PARENT_ENVIRONMENT_HEADER,
 	UNKNOWN_HOST,
 	VIRTUAL_EXPORT_TYPES,
 	VIRTUAL_WORKER_ENTRY,
@@ -14,6 +16,14 @@ import type {
 	ModuleRunnerOptions,
 } from "vite/module-runner";
 
+declare global {
+	// This global variable is accessed by `@vitejs/plugin-rsc`
+	var __VITE_ENVIRONMENT_RUNNER_IMPORT__: (
+		environmentName: string,
+		id: string
+	) => Promise<unknown>;
+}
+
 /**
  * Custom `ModuleRunner`.
  * The `cachedModule` method is overridden to ensure compatibility with the Workers runtime.
@@ -21,21 +31,28 @@ import type {
 // @ts-expect-error: `cachedModule` is private
 class CustomModuleRunner extends ModuleRunner {
 	#env: WrapperEnv;
+	#environmentName: string;
 
 	constructor(
 		options: ModuleRunnerOptions,
 		evaluator: ModuleEvaluator,
-		env: WrapperEnv
+		env: WrapperEnv,
+		environmentName: string
 	) {
 		super(options, evaluator);
 		this.#env = env;
+		this.#environmentName = environmentName;
 	}
 	override async cachedModule(
 		url: string,
 		importer?: string
 	): Promise<EvaluatedModuleNode> {
 		const stub = this.#env.__VITE_RUNNER_OBJECT__.get("singleton");
-		const moduleId = await stub.getFetchedModuleId(url, importer);
+		const moduleId = await stub.getFetchedModuleId(
+			this.#environmentName,
+			url,
+			importer
+		);
 		const module = this.evaluatedModules.getModuleById(moduleId);
 
 		if (!module) {
@@ -46,22 +63,26 @@ class CustomModuleRunner extends ModuleRunner {
 	}
 }
 
-/** Module runner instance */
-let moduleRunner: CustomModuleRunner | undefined;
+/** Module runner instances keyed by environment name */
+const moduleRunners = new Map<string, CustomModuleRunner>();
+
+/** The parent environment name (set explicitly via IS_PARENT_ENVIRONMENT_HEADER) */
+let parentEnvironmentName: string | undefined;
+
+interface EnvironmentState {
+	webSocket: WebSocket;
+	concurrentModuleNodePromises: Map<string, Promise<EvaluatedModuleNode>>;
+}
 
 /**
  * Durable Object that creates the module runner and handles WebSocket communication with the Vite dev server.
  */
 export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
-	/** WebSocket connection to the Vite dev server */
-	#webSocket?: WebSocket;
-	#concurrentModuleNodePromises = new Map<
-		string,
-		Promise<EvaluatedModuleNode>
-	>();
+	/** Per-environment state containing WebSocket and concurrent module node promises */
+	#environments = new Map<string, EnvironmentState>();
 
 	/**
-	 * Handles fetch requests to initialize the module runner.
+	 * Handles fetch requests to initialize a module runner for an environment.
 	 * Creates a WebSocket pair for communication with the Vite dev server and initializes the ModuleRunner.
 	 * @param request - The incoming fetch request
 	 * @returns Response with WebSocket
@@ -72,49 +93,95 @@ export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
 
 		if (pathname !== INIT_PATH) {
 			throw new Error(
-				`__VITE_RUNNER_OBJECT__ received invalid pathname: ${pathname}`
+				`__VITE_RUNNER_OBJECT__ received invalid pathname: "${pathname}"`
 			);
 		}
 
-		if (moduleRunner) {
-			throw new Error(`Module runner already initialized`);
+		const environmentName = request.headers.get(ENVIRONMENT_NAME_HEADER);
+
+		if (!environmentName) {
+			throw new Error(
+				`__VITE_RUNNER_OBJECT__ received request without "${ENVIRONMENT_NAME_HEADER}" header`
+			);
+		}
+
+		if (moduleRunners.has(environmentName)) {
+			throw new Error(
+				`Module runner already initialized for environment: "${environmentName}"`
+			);
+		}
+
+		const isParentEnvironment =
+			request.headers.get(IS_PARENT_ENVIRONMENT_HEADER) === "true";
+
+		if (isParentEnvironment) {
+			parentEnvironmentName = environmentName;
 		}
 
 		const { 0: client, 1: server } = new WebSocketPair();
 		server.accept();
-		this.#webSocket = server;
-		moduleRunner = await createModuleRunner(this.env, this.#webSocket);
+
+		const environmentState: EnvironmentState = {
+			webSocket: server,
+			concurrentModuleNodePromises: new Map(),
+		};
+		this.#environments.set(environmentName, environmentState);
+
+		const moduleRunner = await createModuleRunner(
+			this.env,
+			environmentState.webSocket,
+			environmentName
+		);
+		moduleRunners.set(environmentName, moduleRunner);
 
 		return new Response(null, { status: 101, webSocket: client });
 	}
 	/**
-	 * Sends data to the Vite dev server via the WebSocket.
+	 * Sends data to the Vite dev server via the WebSocket for a specific environment.
+	 * @param environmentName - The environment name
 	 * @param data - The data to send as a string
 	 * @throws Error if the WebSocket is not initialized
 	 */
-	send(data: string): void {
-		if (!this.#webSocket) {
-			throw new Error(`Module runner WebSocket not initialized`);
+	send(environmentName: string, data: string): void {
+		const environmentState = this.#environments.get(environmentName);
+
+		if (!environmentState) {
+			throw new Error(
+				`Module runner WebSocket not initialized for environment: "${environmentName}"`
+			);
 		}
 
-		this.#webSocket.send(data);
+		environmentState.webSocket.send(data);
 	}
 	/**
 	 * Based on the implementation of `cachedModule` from Vite's `ModuleRunner`.
 	 * Running this in the DO enables us to share promises across invocations.
+	 * @param environmentName - The environment name
 	 * @param url - The module URL
 	 * @param importer - The module's importer
 	 * @returns The ID of the fetched module
 	 */
 	async getFetchedModuleId(
+		environmentName: string,
 		url: string,
 		importer: string | undefined
 	): Promise<string> {
+		const moduleRunner = moduleRunners.get(environmentName);
+
 		if (!moduleRunner) {
-			throw new Error(`Module runner not initialized`);
+			throw new Error(
+				`Module runner not initialized for environment: "${environmentName}"`
+			);
 		}
 
-		let cached = this.#concurrentModuleNodePromises.get(url);
+		const environmentState = this.#environments.get(environmentName);
+		if (!environmentState) {
+			throw new Error(
+				`Environment state not found for environment: "${environmentName}"`
+			);
+		}
+
+		let cached = environmentState.concurrentModuleNodePromises.get(url);
 
 		if (!cached) {
 			const cachedModule = moduleRunner.evaluatedModules.getModuleByUrl(url);
@@ -122,9 +189,9 @@ export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
 				// @ts-expect-error: `getModuleInformation` is private
 				.getModuleInformation(url, importer, cachedModule)
 				.finally(() => {
-					this.#concurrentModuleNodePromises.delete(url);
+					environmentState.concurrentModuleNodePromises.delete(url);
 				}) as Promise<EvaluatedModuleNode>;
-			this.#concurrentModuleNodePromises.set(url, cached);
+			environmentState.concurrentModuleNodePromises.set(url, cached);
 		} else {
 			// @ts-expect-error: `debug` is private
 			moduleRunner.debug?.("[module runner] using cached module info for", url);
@@ -140,9 +207,14 @@ export class __VITE_RUNNER_OBJECT__ extends DurableObject<WrapperEnv> {
  * Creates a new module runner instance with a WebSocket transport.
  * @param env - The wrapper env
  * @param webSocket - WebSocket connection for communication with Vite dev server
+ * @param environmentName - The name of the environment this runner is for
  * @returns Configured module runner instance
  */
-async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
+async function createModuleRunner(
+	env: WrapperEnv,
+	webSocket: WebSocket,
+	environmentName: string
+) {
 	return new CustomModuleRunner(
 		{
 			sourcemapInterceptor: "prepareStackTrace",
@@ -166,12 +238,15 @@ async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 					// This is because `import.meta.send` may be called within a Worker's request context.
 					// Directly using a WebSocket created in another context would be forbidden.
 					const stub = env.__VITE_RUNNER_OBJECT__.get("singleton");
-					stub.send(JSON.stringify(data));
+					stub.send(environmentName, JSON.stringify(data));
 				},
 				async invoke(data) {
 					const response = await env.__VITE_INVOKE_MODULE__.fetch(
 						new Request(UNKNOWN_HOST, {
 							method: "POST",
+							headers: {
+								[ENVIRONMENT_NAME_HEADER]: environmentName,
+							},
 							body: JSON.stringify(data),
 						})
 					);
@@ -207,7 +282,8 @@ async function createModuleRunner(env: WrapperEnv, webSocket: WebSocket) {
 				return import(filepath);
 			},
 		},
-		env
+		env,
+		environmentName
 	);
 }
 
@@ -222,6 +298,12 @@ export async function getWorkerEntryExport(
 	workerEntryPath: string,
 	exportName: string
 ): Promise<unknown> {
+	if (!parentEnvironmentName) {
+		throw new Error(`Parent environment not initialized`);
+	}
+
+	const moduleRunner = moduleRunners.get(parentEnvironmentName);
+
 	if (!moduleRunner) {
 		throw new Error(`Module runner not initialized`);
 	}
@@ -243,6 +325,12 @@ export async function getWorkerEntryExport(
 }
 
 export async function getWorkerEntryExportTypes() {
+	if (!parentEnvironmentName) {
+		throw new Error(`Parent environment not initialized`);
+	}
+
+	const moduleRunner = moduleRunners.get(parentEnvironmentName);
+
 	if (!moduleRunner) {
 		throw new Error(`Module runner not initialized`);
 	}
@@ -252,3 +340,28 @@ export async function getWorkerEntryExportTypes() {
 
 	return getExportTypes(module);
 }
+
+/**
+ * Imports a module from a specific environment's module runner.
+ * @param environmentName - The name of the environment to import from
+ * @param id - The module ID to import
+ * @returns The imported module
+ * @throws Error if the environment's module runner has not been initialized
+ */
+async function importFromEnvironment(
+	environmentName: string,
+	id: string
+): Promise<unknown> {
+	const moduleRunner = moduleRunners.get(environmentName);
+
+	if (!moduleRunner) {
+		throw new Error(
+			`Module runner not initialized for environment: "${environmentName}". Do you need to set \`childEnvironments: ["${environmentName}"]\` in the plugin config?`
+		);
+	}
+
+	return moduleRunner.import(id);
+}
+
+// Register the import function globally for use from worker code
+globalThis.__VITE_ENVIRONMENT_RUNNER_IMPORT__ = importFromEnvironment;

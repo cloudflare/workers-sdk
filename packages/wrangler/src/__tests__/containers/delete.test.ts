@@ -28,12 +28,12 @@ describe("containers delete", () => {
 		await runWrangler("containers delete --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers delete ID
+			"wrangler containers delete <ID>
 
-			Delete a container
+			Delete a container [open beta]
 
 			POSITIONALS
-			  ID  id of the containers to delete  [string] [required]
+			  ID  ID of the container to delete  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]

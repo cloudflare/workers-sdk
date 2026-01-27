@@ -7,6 +7,7 @@ import prettyBytes from "pretty-bytes";
 import { createCommand } from "../core/create-command";
 import { MAX_ASSET_COUNT_DEFAULT, MAX_ASSET_SIZE } from "./constants";
 import { hashFile } from "./hash";
+import { maxFileCountAllowedFromClaims } from "./upload";
 
 export const pagesProjectValidateCommand = createCommand({
 	metadata: {
@@ -31,8 +32,13 @@ export const pagesProjectValidateCommand = createCommand({
 			throw new FatalError("Must specify a directory.", 1);
 		}
 
+		const fileCountLimit = process.env.CF_PAGES_UPLOAD_JWT
+			? maxFileCountAllowedFromClaims(process.env.CF_PAGES_UPLOAD_JWT)
+			: undefined;
+
 		await validate({
 			directory,
+			fileCountLimit,
 		});
 	},
 });
@@ -76,7 +82,16 @@ export const validate = async (args: {
 		fileMap: Map<string, FileContainer> = new Map(),
 		startingDir: string = dir
 	) => {
-		const files = await readdir(dir);
+		let files: string[];
+		try {
+			files = await readdir(dir);
+		} catch (e) {
+			if ((e as NodeJS.ErrnoException).code === "ENOENT") {
+				// File not found exeptions should be marked as user error
+				throw new FatalError((e as NodeJS.ErrnoException).message);
+			}
+			throw e;
+		}
 
 		await Promise.all(
 			files.map(async (file) => {

@@ -14,14 +14,17 @@ import {
 	DeploymentsService,
 } from "@cloudflare/containers-shared";
 import { parseByteSize } from "@cloudflare/workers-utils";
+import { createCommand } from "../core/create-command";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { getLocation } from "./cli/locations";
 import {
 	checkEverythingIsSet,
+	cloudchamberScope,
 	collectEnvironmentVariables,
 	collectLabels,
+	fillOpenAPIConfiguration,
 	parseImageName,
 	promptForEnvironmentVariables,
 	promptForLabels,
@@ -52,7 +55,7 @@ import type { Config } from "@cloudflare/workers-utils";
 
 const defaultContainerImage = "docker.io/cloudflare/hello-world:1.0";
 
-export function createCommandOptionalYargs(yargs: CommonYargsArgv) {
+export function cloudchamberCreateCommandOptionalYargs(yargs: CommonYargsArgv) {
 	return yargs
 		.option("image", {
 			requiresArg: true,
@@ -130,8 +133,10 @@ export function createCommandOptionalYargs(yargs: CommonYargsArgv) {
 		});
 }
 
-export async function createCommand(
-	args: StrictYargsOptionsToInterface<typeof createCommandOptionalYargs>,
+export async function handleCloudchamberCreateCommand(
+	args: StrictYargsOptionsToInterface<
+		typeof cloudchamberCreateCommandOptionalYargs
+	>,
 	config: Config
 ) {
 	const environmentVariables = collectEnvironmentVariables(
@@ -189,11 +194,18 @@ export async function createCommand(
 		return;
 	}
 
-	await handleCreateCommand(args, config, environmentVariables, labels);
+	await handleInteractiveCloudchamberCreateCommand(
+		args,
+		config,
+		environmentVariables,
+		labels
+	);
 }
 
 async function askWhichSSHKeysDoTheyWantToAdd(
-	args: StrictYargsOptionsToInterface<typeof createCommandOptionalYargs>,
+	args: StrictYargsOptionsToInterface<
+		typeof cloudchamberCreateCommandOptionalYargs
+	>,
 	key: SSHPublicKeyID | undefined
 ): Promise<SSHPublicKeyID[]> {
 	const keyItems = await pollSSHKeysUntilCondition(() => true);
@@ -271,8 +283,10 @@ async function askWhichSSHKeysDoTheyWantToAdd(
 	return [];
 }
 
-async function handleCreateCommand(
-	args: StrictYargsOptionsToInterface<typeof createCommandOptionalYargs>,
+async function handleInteractiveCloudchamberCreateCommand(
+	args: StrictYargsOptionsToInterface<
+		typeof cloudchamberCreateCommandOptionalYargs
+	>,
 	config: Config,
 	environmentVariables: EnvironmentVariable[] | undefined,
 	labels: Label[] | undefined
@@ -386,3 +400,95 @@ async function handleCreateCommand(
 }
 
 const whichImageQuestion = "Which image should we use for your container?";
+
+export const cloudchamberCreateCommand = createCommand({
+	metadata: {
+		description: "Create a new deployment",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {
+		image: {
+			requiresArg: true,
+			type: "string",
+			demandOption: false,
+			describe: "Image to use for your deployment",
+		},
+		location: {
+			requiresArg: true,
+			type: "string",
+			demandOption: false,
+			describe:
+				"Location on Cloudflare's network where your deployment will run",
+		},
+		var: {
+			requiresArg: true,
+			type: "string",
+			array: true,
+			demandOption: false,
+			describe: "Container environment variables",
+			coerce: (arg: unknown[]) => arg.map((a) => a?.toString() ?? ""),
+		},
+		label: {
+			requiresArg: true,
+			type: "array",
+			demandOption: false,
+			describe: "Deployment labels",
+			coerce: (arg: unknown[]) => arg.map((a) => a?.toString() ?? ""),
+		},
+		"all-ssh-keys": {
+			requiresArg: false,
+			type: "boolean",
+			demandOption: false,
+			describe:
+				"To add all SSH keys configured on your account to be added to this deployment, set this option to true",
+		},
+		"ssh-key-id": {
+			requiresArg: false,
+			type: "string",
+			array: true,
+			demandOption: false,
+			describe: "ID of the SSH key to add to the deployment",
+		},
+		"instance-type": {
+			requiresArg: true,
+			choices: [
+				"lite",
+				"basic",
+				"standard-1",
+				"standard-2",
+				"standard-3",
+				"standard-4",
+			] as const,
+			demandOption: false,
+			describe: "Instance type to allocate to this deployment",
+		},
+		vcpu: {
+			requiresArg: true,
+			type: "number",
+			demandOption: false,
+			describe: "Number of vCPUs to allocate to this deployment.",
+		},
+		memory: {
+			requiresArg: true,
+			type: "string",
+			demandOption: false,
+			describe:
+				"Amount of memory (GiB, MiB...) to allocate to this deployment. Ex: 4GiB.",
+		},
+		ipv4: {
+			requiresArg: false,
+			type: "boolean",
+			demandOption: false,
+			describe: "Include an IPv4 in the deployment",
+		},
+	},
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await handleCloudchamberCreateCommand(args, config);
+	},
+});

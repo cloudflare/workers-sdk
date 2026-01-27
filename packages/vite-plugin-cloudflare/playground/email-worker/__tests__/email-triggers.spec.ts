@@ -1,28 +1,22 @@
 import dedent from "ts-dedent";
-import { describe, expect, test } from "vitest";
-import {
-	getTextResponse,
-	isVite8,
-	serverLogs,
-	viteTestUrl,
-} from "../../__test-utils__";
+import { expect, test } from "vitest";
+import { getTextResponse, serverLogs, viteTestUrl } from "../../__test-utils__";
 
-describe.skipIf(isVite8)("Email", () => {
-	test("Supports sending email via the email binding", async () => {
-		const sendEmailResponse = await getTextResponse("/send");
-		expect(sendEmailResponse).toBe("Email message sent successfully!");
-	});
+test("Supports sending email via the email binding", async () => {
+	const sendEmailResponse = await getTextResponse("/send");
+	expect(sendEmailResponse).toBe("Email message sent successfully!");
+});
 
-	test("Supports testing Email Workers at '/cdn-cgi/handler/scheduled' route", async () => {
-		const params = new URLSearchParams();
-		params.append("from", "sender@example.com");
-		params.append("to", "recipient@example.com");
+test("Supports testing Email Workers at '/cdn-cgi/handler/scheduled' route", async () => {
+	const params = new URLSearchParams();
+	params.append("from", "sender@example.com");
+	params.append("to", "recipient@example.com");
 
-		const fetchResponse = await fetch(
-			`${viteTestUrl}/cdn-cgi/handler/email?${params}`,
-			{
-				method: "POST",
-				body: dedent`
+	const fetchResponse = await fetch(
+		`${viteTestUrl}/cdn-cgi/handler/email?${params}`,
+		{
+			method: "POST",
+			body: dedent`
 				From: "John" <sender@example.com>
 				Reply-To: sender@example.com
 				To: recipient@example.com
@@ -34,16 +28,15 @@ describe.skipIf(isVite8)("Email", () => {
 
 				Hi there
 			`,
-			}
-		);
+		}
+	);
 
-		const emailStdout = serverLogs.info.join();
-		expect(await fetchResponse.text()).toBe(
-			"Worker successfully processed email"
-		);
-		expect(emailStdout).toContain(
-			`Received email from sender@example.com on ${new Date(" 27 Aug 2024 08:49:44 -0700").toISOString()} with following message:`
-		);
-		expect(emailStdout).toContain("Hi there");
-	});
+	const emailStdout = serverLogs.info.join();
+	expect(await fetchResponse.text()).toBe(
+		"Worker successfully processed email"
+	);
+	expect(emailStdout).toContain(
+		`Received email from sender@example.com on ${new Date(" 27 Aug 2024 08:49:44 -0700").toISOString()} with following message:`
+	);
+	expect(emailStdout).toContain("Hi there");
 });

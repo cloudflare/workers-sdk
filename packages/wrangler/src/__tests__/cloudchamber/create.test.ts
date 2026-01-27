@@ -13,30 +13,6 @@ import { runWrangler } from "../helpers/run-wrangler";
 import { mockAccount, setWranglerConfig } from "./utils";
 import type { SSHPublicKeyItem } from "@cloudflare/containers-shared";
 
-const MOCK_DEPLOYMENTS_COMPLEX_RESPONSE = `
-			"{
-			    \\"id\\": \\"1\\",
-			    \\"type\\": \\"default\\",
-			    \\"created_at\\": \\"123\\",
-			    \\"account_id\\": \\"123\\",
-			    \\"vcpu\\": 4,
-			    \\"memory\\": \\"400MB\\",
-			    \\"memory_mib\\": 400,
-			    \\"version\\": 1,
-			    \\"image\\": \\"hello\\",
-			    \\"location\\": {
-			        \\"name\\": \\"sfo06\\",
-			        \\"enabled\\": true
-			    },
-			    \\"network\\": {
-			        \\"mode\\": \\"public\\",
-			        \\"ipv4\\": \\"1.1.1.1\\"
-			    },
-			    \\"placements_ref\\": \\"http://ref\\",
-			    \\"node_group\\": \\"metal\\"
-			}"
-		`;
-
 function mockDeploymentPost() {
 	msw.use(
 		http.post(
@@ -103,7 +79,7 @@ describe("cloudchamber create", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber create
 
-			Create a new deployment
+			Create a new deployment [alpha]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -230,7 +206,29 @@ describe("cloudchamber create", () => {
 		);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
-		expect(std.out).toMatchInlineSnapshot(MOCK_DEPLOYMENTS_COMPLEX_RESPONSE);
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    \\"id\\": \\"1\\",
+			    \\"type\\": \\"default\\",
+			    \\"created_at\\": \\"123\\",
+			    \\"account_id\\": \\"123\\",
+			    \\"vcpu\\": 4,
+			    \\"memory\\": \\"400MB\\",
+			    \\"memory_mib\\": 400,
+			    \\"version\\": 1,
+			    \\"image\\": \\"hello\\",
+			    \\"location\\": {
+			        \\"name\\": \\"sfo06\\",
+			        \\"enabled\\": true
+			    },
+			    \\"network\\": {
+			        \\"mode\\": \\"public\\",
+			        \\"ipv4\\": \\"1.1.1.1\\"
+			    },
+			    \\"placements_ref\\": \\"http://ref\\",
+			    \\"node_group\\": \\"metal\\"
+			}"
+		`);
 	});
 
 	it("should create deployment with instance type (detects no interactivity)", async () => {
@@ -274,7 +272,29 @@ describe("cloudchamber create", () => {
 		await runWrangler(
 			"cloudchamber create --var HELLO:WORLD --var YOU:CONQUERED"
 		);
-		expect(std.out).toMatchInlineSnapshot(MOCK_DEPLOYMENTS_COMPLEX_RESPONSE);
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    \\"id\\": \\"1\\",
+			    \\"type\\": \\"default\\",
+			    \\"created_at\\": \\"123\\",
+			    \\"account_id\\": \\"123\\",
+			    \\"vcpu\\": 4,
+			    \\"memory\\": \\"400MB\\",
+			    \\"memory_mib\\": 400,
+			    \\"version\\": 1,
+			    \\"image\\": \\"hello\\",
+			    \\"location\\": {
+			        \\"name\\": \\"sfo06\\",
+			        \\"enabled\\": true
+			    },
+			    \\"network\\": {
+			        \\"mode\\": \\"public\\",
+			        \\"ipv4\\": \\"1.1.1.1\\"
+			    },
+			    \\"placements_ref\\": \\"http://ref\\",
+			    \\"node_group\\": \\"metal\\"
+			}"
+		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
@@ -349,7 +369,29 @@ describe("cloudchamber create", () => {
 		await runWrangler(
 			"cloudchamber create --image hello:world --location sfo06 --var HELLO:WORLD --var YOU:CONQUERED --all-ssh-keys --ipv4"
 		);
-		expect(std.out).toMatchInlineSnapshot(MOCK_DEPLOYMENTS_COMPLEX_RESPONSE);
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    \\"id\\": \\"1\\",
+			    \\"type\\": \\"default\\",
+			    \\"created_at\\": \\"123\\",
+			    \\"account_id\\": \\"123\\",
+			    \\"vcpu\\": 4,
+			    \\"memory\\": \\"400MB\\",
+			    \\"memory_mib\\": 400,
+			    \\"version\\": 1,
+			    \\"image\\": \\"hello\\",
+			    \\"location\\": {
+			        \\"name\\": \\"sfo06\\",
+			        \\"enabled\\": true
+			    },
+			    \\"network\\": {
+			        \\"mode\\": \\"public\\",
+			        \\"ipv4\\": \\"1.1.1.1\\"
+			    },
+			    \\"placements_ref\\": \\"http://ref\\",
+			    \\"node_group\\": \\"metal\\"
+			}"
+		`);
 	});
 
 	it("can't create deployment due to lack of fields (json)", async () => {
@@ -364,8 +406,8 @@ describe("cloudchamber create", () => {
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-	`);
+			"
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
 	});
 });

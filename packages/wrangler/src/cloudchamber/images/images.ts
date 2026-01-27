@@ -3,16 +3,22 @@ import {
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
 import { fetch } from "undici";
+import { createCommand, createNamespace } from "../../core/create-command";
+import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { getAccountId } from "../../user";
-import { handleFailure, promiseSpinner } from "../common";
+import {
+	cloudchamberScope,
+	fillOpenAPIConfiguration,
+	handleFailure,
+	promiseSpinner,
+} from "../common";
 import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgv,
 	CommonYargsArgvSanitized,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
-import type { cloudchamberScope } from "../common";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -267,3 +273,63 @@ async function getCreds(): Promise<string> {
 
 	return Buffer.from(`v1:${credentials.password}`).toString("base64");
 }
+
+export const cloudchamberImagesNamespace = createNamespace({
+	metadata: {
+		description: "Manage images in the Cloudflare managed registry",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+});
+
+export const cloudchamberImagesListCommand = createCommand({
+	metadata: {
+		description: "List images in the Cloudflare managed registry",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: (args) => !args.json && !isNonInteractiveOrCI(),
+	},
+	args: {
+		filter: {
+			type: "string",
+			description: "Regex to filter results",
+		},
+		json: {
+			type: "boolean",
+			description: "Format output as JSON",
+			default: false,
+		},
+	},
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await handleListImagesCommand(args, config);
+	},
+});
+
+export const cloudchamberImagesDeleteCommand = createCommand({
+	metadata: {
+		description: "Remove an image from the Cloudflare managed registry",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {
+		image: {
+			type: "string",
+			description: "Image and tag to delete, of the form IMAGE:TAG",
+			demandOption: true,
+		},
+	},
+	positionalArgs: ["image"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await handleDeleteImageCommand(args, config);
+	},
+});

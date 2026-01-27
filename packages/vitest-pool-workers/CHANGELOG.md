@@ -1,5 +1,87 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.12.7
+
+### Patch Changes
+
+- [#12056](https://github.com/cloudflare/workers-sdk/pull/12056) [`6d5f69f`](https://github.com/cloudflare/workers-sdk/commit/6d5f69fa0c86eed05875603ac31a9f32a4a2bfbd) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: allow Vite query parameters like `?raw` on `.sql` file imports
+
+  Importing `.sql` files with Vite query parameters (e.g., `import sql from "./query.sql?raw"`) would fail with "No such module" errors in vitest-pool-workers 0.12.x. Both import styles now work:
+
+  - `import sql from "./query.sql?raw"` (Vite handles the `?raw` transform)
+  - `import sql from "./query.sql"` (loaded as Text module)
+
+- [#11917](https://github.com/cloudflare/workers-sdk/pull/11917) [`7b40ceb`](https://github.com/cloudflare/workers-sdk/commit/7b40ceb8a54964a2be93a2897fbcabc0b0b27eae) Thanks [@ksawaneh](https://github.com/ksawaneh)! - Fix CommonJS `require()` of `.json` files in the module fallback service (avoids `SyntaxError: Unexpected token ':'`).
+
+- [#11897](https://github.com/cloudflare/workers-sdk/pull/11897) [`bbd8a5e`](https://github.com/cloudflare/workers-sdk/commit/bbd8a5e98cbe3048d80652ecf74368b9c26bd2ff) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Bundle the `zod` dependency to reduce supply chain attack surface
+
+  In order to prevent possible npm vulnerability attacks, the team's policy is to bundle
+  dependencies in our packages where possible. This helps ensure that only trusted code
+  runs on the user's system, even if compromised packages are later published to npm.
+
+  This change bundles `zod` (a pure JavaScript validation library with no native dependencies)
+  into miniflare and @cloudflare/vitest-pool-workers.
+
+  Other dependencies remain external for technical reasons:
+
+  - `sharp`: Native binary with platform-specific builds
+  - `undici`: Dynamically required at runtime in worker threads
+  - `ws`: Has optional native bindings for performance
+  - `workerd`: Native binary (Cloudflare's JavaScript runtime)
+  - `@cspotcode/source-map-support`: Uses require.cache manipulation at runtime
+  - `youch`: Dynamically required for lazy loading
+
+- Updated dependencies [[`a0a9ef6`](https://github.com/cloudflare/workers-sdk/commit/a0a9ef6cd36dc6a3aac01a576c7c41bbcd90f33c), [`ad4666c`](https://github.com/cloudflare/workers-sdk/commit/ad4666cf86db5fe08de7f798b0c8d17fdd5b10fd), [`014e7aa`](https://github.com/cloudflare/workers-sdk/commit/014e7aa2074d3464e012876b70e22af44fa26e5d), [`e414f05`](https://github.com/cloudflare/workers-sdk/commit/e414f05271887ed43a9a0a660d66565e9847c489), [`77e82d2`](https://github.com/cloudflare/workers-sdk/commit/77e82d25e13800d34426ba6774def3fcc2c7de21), [`f08ef21`](https://github.com/cloudflare/workers-sdk/commit/f08ef210b7215921e00e8aa890d25df334a08bbe), [`0641e6c`](https://github.com/cloudflare/workers-sdk/commit/0641e6ca0708d7bc73d04c0a619676cc5fde7a4e), [`eacedba`](https://github.com/cloudflare/workers-sdk/commit/eacedbaf56a9687f1bac31dd14985334263e2f0d), [`05714f8`](https://github.com/cloudflare/workers-sdk/commit/05714f871022e998dfbd7005f795d2fa3b9aee56), [`e8b2ef5`](https://github.com/cloudflare/workers-sdk/commit/e8b2ef5b855129699c4bdbb5fbd4fcbe85323769), [`bbd8a5e`](https://github.com/cloudflare/workers-sdk/commit/bbd8a5e98cbe3048d80652ecf74368b9c26bd2ff)]:
+  - wrangler@4.61.0
+  - miniflare@4.20260124.0
+
+## 0.12.6
+
+### Patch Changes
+
+- Updated dependencies [[`614bbd7`](https://github.com/cloudflare/workers-sdk/commit/614bbd709529191bbae6aa92790bbfe00a37e3d9), [`788bf78`](https://github.com/cloudflare/workers-sdk/commit/788bf786b4c5cb8e1bdd6464d3f88b4125cebc75), [`1375577`](https://github.com/cloudflare/workers-sdk/commit/1375577c860f1ae9af5caf1c488d47ec1cf52b6f), [`bba0968`](https://github.com/cloudflare/workers-sdk/commit/bba09689ca258b6da36b21b7300845ce031eaca6), [`c3407ad`](https://github.com/cloudflare/workers-sdk/commit/c3407ada8cff1170ef2a3bbc4d3137dcf3998461), [`f9e8a45`](https://github.com/cloudflare/workers-sdk/commit/f9e8a452fb299e6cb1a0ff2985347bfc277deac8)]:
+  - wrangler@4.60.0
+  - miniflare@4.20260120.0
+
+## 0.12.5
+
+### Patch Changes
+
+- [#11967](https://github.com/cloudflare/workers-sdk/pull/11967) [`202c59e`](https://github.com/cloudflare/workers-sdk/commit/202c59e4f4f28419fb6ac0aa8c7dc3960a0c8d3e) Thanks [@emily-shen](https://github.com/emily-shen)! - chore: update undici
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | undici     | 7.14.0 | 7.18.2 |
+
+- [#11943](https://github.com/cloudflare/workers-sdk/pull/11943) [`25e2c60`](https://github.com/cloudflare/workers-sdk/commit/25e2c608d529664ede251abe45fdb13ea9e56a9d) Thanks [@vicb](https://github.com/vicb)! - Bump capnp-es to ^0.0.14
+
+- Updated dependencies [[`75386b1`](https://github.com/cloudflare/workers-sdk/commit/75386b1f14d7d0606bece547399e33a9f5bbadb8), [`8e4a0e5`](https://github.com/cloudflare/workers-sdk/commit/8e4a0e5e8d1e0bf75b6f11000f89f7eabafa392a), [`133bf95`](https://github.com/cloudflare/workers-sdk/commit/133bf95783c8b63ecc2b572a4400c7aa4bd4f8c4), [`93d8d78`](https://github.com/cloudflare/workers-sdk/commit/93d8d78ce081f821671b2c4a1ffcd7df733a0866), [`69ff962`](https://github.com/cloudflare/workers-sdk/commit/69ff9620487a6ae979f369eb1dbac887ce46e246), [`22727c2`](https://github.com/cloudflare/workers-sdk/commit/22727c29ee244cddebf93d855e4e052973479ad3), [`fa39a73`](https://github.com/cloudflare/workers-sdk/commit/fa39a73040dd27d35d429deda34fdc8e15b15fbe), [`4ac7c82`](https://github.com/cloudflare/workers-sdk/commit/4ac7c82609354115d53cd17f4cf78eabf3d6c23a), [`69ff962`](https://github.com/cloudflare/workers-sdk/commit/69ff9620487a6ae979f369eb1dbac887ce46e246), [`029531a`](https://github.com/cloudflare/workers-sdk/commit/029531acd2e6fac10f21c7b0cecb6b4830f77d02), [`d58fbd1`](https://github.com/cloudflare/workers-sdk/commit/d58fbd1189ec7417d8f2930eac3e71f7680bd679), [`202c59e`](https://github.com/cloudflare/workers-sdk/commit/202c59e4f4f28419fb6ac0aa8c7dc3960a0c8d3e), [`133bf95`](https://github.com/cloudflare/workers-sdk/commit/133bf95783c8b63ecc2b572a4400c7aa4bd4f8c4), [`25e2c60`](https://github.com/cloudflare/workers-sdk/commit/25e2c608d529664ede251abe45fdb13ea9e56a9d), [`69ff962`](https://github.com/cloudflare/workers-sdk/commit/69ff9620487a6ae979f369eb1dbac887ce46e246)]:
+  - wrangler@4.59.3
+  - miniflare@4.20260116.0
+
+## 0.12.4
+
+### Patch Changes
+
+- [#11898](https://github.com/cloudflare/workers-sdk/pull/11898) [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bundle more third-party dependencies to reduce supply chain risk
+
+  Previously, several small utility packages were listed as runtime dependencies and
+  installed separately. These are now bundled directly into the published packages,
+  reducing the number of external dependencies users need to trust.
+
+  Bundled dependencies:
+
+  - **miniflare**: `acorn`, `acorn-walk`, `exit-hook`, `glob-to-regexp`, `stoppable`
+  - **kv-asset-handler**: `mime`
+  - **vite-plugin-cloudflare**: `@remix-run/node-fetch-server`, `defu`, `get-port`, `picocolors`, `tinyglobby`
+  - **vitest-pool-workers**: `birpc`, `devalue`, `get-port`, `semver`
+
+- Updated dependencies [[`e78186d`](https://github.com/cloudflare/workers-sdk/commit/e78186dae926c0ae1ab387aaa6cb8ba53bed9992), [`fe4faa3`](https://github.com/cloudflare/workers-sdk/commit/fe4faa306609514863fa770bac1dba5ff618f4be), [`4714ca1`](https://github.com/cloudflare/workers-sdk/commit/4714ca12c1f24c7e3553d3bfd2812a833a07826c), [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a), [`695b043`](https://github.com/cloudflare/workers-sdk/commit/695b043b4ddc99bf9a3fe93cc7daa8347b29ccb3)]:
+  - miniflare@4.20260114.0
+  - wrangler@4.59.2
+
 ## 0.12.3
 
 ### Patch Changes

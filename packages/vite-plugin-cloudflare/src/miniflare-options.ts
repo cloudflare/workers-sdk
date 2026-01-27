@@ -7,6 +7,7 @@ import {
 	generateContainerBuildId,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
+import { getLocalExplorerFromEnv } from "@cloudflare/workers-utils";
 import {
 	getDefaultDevRegistryPath,
 	kUnsafeEphemeralUniqueKey,
@@ -26,6 +27,7 @@ import {
 import { getContainerOptions, getDockerPath } from "./containers";
 import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
+import { ENVIRONMENT_NAME_HEADER } from "./shared";
 import { withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
@@ -381,10 +383,17 @@ export async function getDevMiniflareOptions(
 												}
 											: {}),
 										__VITE_INVOKE_MODULE__: async (request) => {
+											const targetEnvironmentName = request.headers.get(
+												ENVIRONMENT_NAME_HEADER
+											);
+											assert(
+												targetEnvironmentName,
+												`Expected ${ENVIRONMENT_NAME_HEADER} header`
+											);
 											const payload =
 												(await request.json()) as vite.CustomPayload;
 											const devEnvironment = viteDevServer.environments[
-												environmentName
+												targetEnvironmentName
 											] as CloudflareDevEnvironment;
 											const result =
 												await devEnvironment.hot.handleInvoke(payload);
@@ -422,6 +431,7 @@ export async function getDevMiniflareOptions(
 				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
+			unsafeLocalExplorer: getLocalExplorerFromEnv(),
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
@@ -613,6 +623,7 @@ export async function getPreviewMiniflareOptions(
 				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
+			unsafeLocalExplorer: getLocalExplorerFromEnv(),
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,

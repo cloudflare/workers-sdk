@@ -1,5 +1,85 @@
 # @cloudflare/vite-plugin
 
+## 1.22.0
+
+### Minor Changes
+
+- [#12034](https://github.com/cloudflare/workers-sdk/pull/12034) [`05714f8`](https://github.com/cloudflare/workers-sdk/commit/05714f871022e998dfbd7005f795d2fa3b9aee56) Thanks [@emily-shen](https://github.com/emily-shen)! - Add a no-op local explorer worker, which is gated by the experimental flag `X_LOCAL_EXPLORER`.
+
+### Patch Changes
+
+- [#12052](https://github.com/cloudflare/workers-sdk/pull/12052) [`9c76067`](https://github.com/cloudflare/workers-sdk/commit/9c7606729f166b78c8a49846861be71568a579bc) Thanks [@edmundhung](https://github.com/edmundhung)! - Fix dev server crash on WebSocket client disconnect
+
+  When a WebSocket client disconnects while an upgrade request is being processed, the server would crash with an unhandled `ECONNRESET` error. The fix adds an error handler to the socket at the start of the upgrade process.
+
+- Updated dependencies [[`a0a9ef6`](https://github.com/cloudflare/workers-sdk/commit/a0a9ef6cd36dc6a3aac01a576c7c41bbcd90f33c), [`ad4666c`](https://github.com/cloudflare/workers-sdk/commit/ad4666cf86db5fe08de7f798b0c8d17fdd5b10fd), [`014e7aa`](https://github.com/cloudflare/workers-sdk/commit/014e7aa2074d3464e012876b70e22af44fa26e5d), [`e414f05`](https://github.com/cloudflare/workers-sdk/commit/e414f05271887ed43a9a0a660d66565e9847c489), [`77e82d2`](https://github.com/cloudflare/workers-sdk/commit/77e82d25e13800d34426ba6774def3fcc2c7de21), [`f08ef21`](https://github.com/cloudflare/workers-sdk/commit/f08ef210b7215921e00e8aa890d25df334a08bbe), [`0641e6c`](https://github.com/cloudflare/workers-sdk/commit/0641e6ca0708d7bc73d04c0a619676cc5fde7a4e), [`eacedba`](https://github.com/cloudflare/workers-sdk/commit/eacedbaf56a9687f1bac31dd14985334263e2f0d), [`05714f8`](https://github.com/cloudflare/workers-sdk/commit/05714f871022e998dfbd7005f795d2fa3b9aee56), [`e8b2ef5`](https://github.com/cloudflare/workers-sdk/commit/e8b2ef5b855129699c4bdbb5fbd4fcbe85323769), [`bbd8a5e`](https://github.com/cloudflare/workers-sdk/commit/bbd8a5e98cbe3048d80652ecf74368b9c26bd2ff)]:
+  - wrangler@4.61.0
+  - miniflare@4.20260124.0
+
+## 1.21.2
+
+### Patch Changes
+
+- [#11875](https://github.com/cloudflare/workers-sdk/pull/11875) [`ae2459c`](https://github.com/cloudflare/workers-sdk/commit/ae2459c6ef0dc2d5419bc692dea4a936c1859c21) Thanks [@bxff](https://github.com/bxff)! - Skip shortcut registration in non-TTY environments
+
+  Previously, registering keyboard shortcuts in non-TTY environments (e.g., Turborepo) caused Miniflare `ERR_DISPOSED` errors during prerendering. Shortcuts are now only registered when running in an interactive terminal.
+
+- Updated dependencies [[`614bbd7`](https://github.com/cloudflare/workers-sdk/commit/614bbd709529191bbae6aa92790bbfe00a37e3d9), [`788bf78`](https://github.com/cloudflare/workers-sdk/commit/788bf786b4c5cb8e1bdd6464d3f88b4125cebc75), [`1375577`](https://github.com/cloudflare/workers-sdk/commit/1375577c860f1ae9af5caf1c488d47ec1cf52b6f), [`ae108f0`](https://github.com/cloudflare/workers-sdk/commit/ae108f090532765751c3996ba4c863a9fe858ddf), [`bba0968`](https://github.com/cloudflare/workers-sdk/commit/bba09689ca258b6da36b21b7300845ce031eaca6), [`c3407ad`](https://github.com/cloudflare/workers-sdk/commit/c3407ada8cff1170ef2a3bbc4d3137dcf3998461), [`f9e8a45`](https://github.com/cloudflare/workers-sdk/commit/f9e8a452fb299e6cb1a0ff2985347bfc277deac8)]:
+  - wrangler@4.60.0
+  - miniflare@4.20260120.0
+  - @cloudflare/unenv-preset@2.11.0
+
+## 1.21.1
+
+### Patch Changes
+
+- [#11951](https://github.com/cloudflare/workers-sdk/pull/11951) [`77fdc18`](https://github.com/cloudflare/workers-sdk/commit/77fdc1846c6f5533bb718a143ca01f93f3f7eaac) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add validation for environment name collisions and improve error message for missing environments.
+
+- Updated dependencies [[`75386b1`](https://github.com/cloudflare/workers-sdk/commit/75386b1f14d7d0606bece547399e33a9f5bbadb8), [`8e4a0e5`](https://github.com/cloudflare/workers-sdk/commit/8e4a0e5e8d1e0bf75b6f11000f89f7eabafa392a), [`133bf95`](https://github.com/cloudflare/workers-sdk/commit/133bf95783c8b63ecc2b572a4400c7aa4bd4f8c4), [`93d8d78`](https://github.com/cloudflare/workers-sdk/commit/93d8d78ce081f821671b2c4a1ffcd7df733a0866), [`69ff962`](https://github.com/cloudflare/workers-sdk/commit/69ff9620487a6ae979f369eb1dbac887ce46e246), [`22727c2`](https://github.com/cloudflare/workers-sdk/commit/22727c29ee244cddebf93d855e4e052973479ad3), [`fa39a73`](https://github.com/cloudflare/workers-sdk/commit/fa39a73040dd27d35d429deda34fdc8e15b15fbe), [`4ac7c82`](https://github.com/cloudflare/workers-sdk/commit/4ac7c82609354115d53cd17f4cf78eabf3d6c23a), [`69ff962`](https://github.com/cloudflare/workers-sdk/commit/69ff9620487a6ae979f369eb1dbac887ce46e246), [`029531a`](https://github.com/cloudflare/workers-sdk/commit/029531acd2e6fac10f21c7b0cecb6b4830f77d02), [`d58fbd1`](https://github.com/cloudflare/workers-sdk/commit/d58fbd1189ec7417d8f2930eac3e71f7680bd679), [`202c59e`](https://github.com/cloudflare/workers-sdk/commit/202c59e4f4f28419fb6ac0aa8c7dc3960a0c8d3e), [`133bf95`](https://github.com/cloudflare/workers-sdk/commit/133bf95783c8b63ecc2b572a4400c7aa4bd4f8c4), [`25e2c60`](https://github.com/cloudflare/workers-sdk/commit/25e2c608d529664ede251abe45fdb13ea9e56a9d), [`69ff962`](https://github.com/cloudflare/workers-sdk/commit/69ff9620487a6ae979f369eb1dbac887ce46e246)]:
+  - wrangler@4.59.3
+  - miniflare@4.20260116.0
+
+## 1.21.0
+
+### Minor Changes
+
+- [#11879](https://github.com/cloudflare/workers-sdk/pull/11879) [`5c8ff05`](https://github.com/cloudflare/workers-sdk/commit/5c8ff05079d71810fb1546f3dc788cc44ee00e22) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add support for child environments.
+
+  This is to support React Server Components via [@vitejs/plugin-rsc](https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-rsc) and frameworks that build on top of it. A `childEnvironments` option is now added to the plugin config to enable using multiple environments within a single Worker. The parent environment can import modules from a child environment in order to access a separate module graph. For a typical RSC use case, the plugin might be configured as in the following example:
+
+  ```ts
+  export default defineConfig({
+  	plugins: [
+  		cloudflare({
+  			viteEnvironment: {
+  				name: "rsc",
+  				childEnvironments: ["ssr"],
+  			},
+  		}),
+  	],
+  });
+  ```
+
+### Patch Changes
+
+- [#11898](https://github.com/cloudflare/workers-sdk/pull/11898) [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Bundle more third-party dependencies to reduce supply chain risk
+
+  Previously, several small utility packages were listed as runtime dependencies and
+  installed separately. These are now bundled directly into the published packages,
+  reducing the number of external dependencies users need to trust.
+
+  Bundled dependencies:
+
+  - **miniflare**: `acorn`, `acorn-walk`, `exit-hook`, `glob-to-regexp`, `stoppable`
+  - **kv-asset-handler**: `mime`
+  - **vite-plugin-cloudflare**: `@remix-run/node-fetch-server`, `defu`, `get-port`, `picocolors`, `tinyglobby`
+  - **vitest-pool-workers**: `birpc`, `devalue`, `get-port`, `semver`
+
+- Updated dependencies [[`e78186d`](https://github.com/cloudflare/workers-sdk/commit/e78186dae926c0ae1ab387aaa6cb8ba53bed9992), [`fe4faa3`](https://github.com/cloudflare/workers-sdk/commit/fe4faa306609514863fa770bac1dba5ff618f4be), [`fec8f5b`](https://github.com/cloudflare/workers-sdk/commit/fec8f5b82e0bb64400bbfcced302748dbe9a3062), [`d39777f`](https://github.com/cloudflare/workers-sdk/commit/d39777f1e354e8f3abd02164e76c2501e47e713f), [`4714ca1`](https://github.com/cloudflare/workers-sdk/commit/4714ca12c1f24c7e3553d3bfd2812a833a07826c), [`c17e971`](https://github.com/cloudflare/workers-sdk/commit/c17e971af01a9bcead0aca409666e29417f4636a), [`695b043`](https://github.com/cloudflare/workers-sdk/commit/695b043b4ddc99bf9a3fe93cc7daa8347b29ccb3)]:
+  - miniflare@4.20260114.0
+  - wrangler@4.59.2
+  - @cloudflare/unenv-preset@2.10.0
+
 ## 1.20.3
 
 ### Patch Changes

@@ -1,0 +1,17 @@
+{
+	"compilerOptions": {
+		"types": [
+			"./worker-configuration.d.ts",
+			"@cloudflare/workers-types",
+			"node"
+		],
+		"target": "ES2020",
+		"esModuleInterop": true,
+		"module": "preserve",
+		"lib": ["ES2020"],
+		"skipLibCheck": true,
+		"moduleResolution": "node",
+		"noEmit": true
+	},
+	"include": ["tests"]
+}

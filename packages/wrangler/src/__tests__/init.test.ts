@@ -76,7 +76,7 @@ describe("init", () => {
 				"mockpm",
 				["create", "cloudflare@^2.5.0"],
 				{
-					stdio: "inherit",
+					stdio: ["inherit", "pipe", "pipe"],
 				}
 			);
 		});
@@ -87,7 +87,9 @@ describe("init", () => {
 			expect(execa).toHaveBeenCalledWith(
 				"mockpm",
 				["create", "cloudflare@^2.5.0", "--wrangler-defaults"],
-				{ stdio: "inherit" }
+				{
+					stdio: ["inherit", "pipe", "pipe"],
+				}
 			);
 		});
 
@@ -126,7 +128,7 @@ describe("init", () => {
 					"mockpm",
 					["run", "create-cloudflare"],
 					{
-						stdio: "inherit",
+						stdio: ["inherit", "pipe", "pipe"],
 					}
 				);
 			});
@@ -137,7 +139,9 @@ describe("init", () => {
 				expect(execa).toHaveBeenCalledWith(
 					"mockpm",
 					["run", "create-cloudflare", "--wrangler-defaults"],
-					{ stdio: "inherit" }
+					{
+						stdio: ["inherit", "pipe", "pipe"],
+					}
 				);
 			});
 		});
@@ -158,7 +162,7 @@ describe("init", () => {
 					env: {
 						CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1",
 					},
-					stdio: "inherit",
+					stdio: ["inherit", "pipe", "pipe"],
 				}
 			);
 		});
@@ -811,7 +815,9 @@ describe("init", () => {
 					"--existing-script",
 					"existing-memory-crystal",
 				],
-				{ stdio: "inherit" }
+				{
+					stdio: ["inherit", "pipe", "pipe"],
+				}
 			);
 		});
 		it("should download routes + custom domains + workers dev", async () => {

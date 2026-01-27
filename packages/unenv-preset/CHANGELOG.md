@@ -1,5 +1,21 @@
 # @cloudflare/unenv-preset
 
+## 2.11.0
+
+### Minor Changes
+
+- [#12024](https://github.com/cloudflare/workers-sdk/pull/12024) [`ae108f0`](https://github.com/cloudflare/workers-sdk/commit/ae108f090532765751c3996ba4c863a9fe858ddf) Thanks [@vicb](https://github.com/vicb)! - Remove the experimental flag from `node:_stream_wrap`, `node:dgram`, `node:inspector`, and `node:sqlite`
+
+  Those modules are no more experimental since workerd 1.20260115.0
+
+## 2.10.0
+
+### Minor Changes
+
+- [#11701](https://github.com/cloudflare/workers-sdk/pull/11701) [`fec8f5b`](https://github.com/cloudflare/workers-sdk/commit/fec8f5b82e0bb64400bbfcced302748dbe9a3062) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:dgram` module when the `enable_nodejs_dgram_module` compatibility flag is enabled. This feature is currently experimental and requires both the `enable_nodejs_dgram_module` and `experimental` compatibility flags to be set.
+
+- [#11799](https://github.com/cloudflare/workers-sdk/pull/11799) [`d39777f`](https://github.com/cloudflare/workers-sdk/commit/d39777f1e354e8f3abd02164e76c2501e47e713f) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:_stream_wrap` module when the `enable_nodejs_stream_wrap_module` compatibility flag is enabled. This feature is currently experimental and requires `nodejs_compat`, `experimental`, and `enable_nodejs_stream_wrap_module` compatibility flags to be set.
+
 ## 2.9.0
 
 ### Minor Changes

@@ -75,10 +75,20 @@ function getExposedJSRPCBinding(request: Request, env: Env) {
 
 	if (targetBinding.constructor.name === "SendEmail") {
 		return {
-			async send(e: ForwardableEmailMessage) {
-				// @ts-expect-error EmailMessage::raw is defined in packages/miniflare/src/workers/email/email.worker.ts
-				const message = new EmailMessage(e.from, e.to, e["EmailMessage::raw"]);
-				return (targetBinding as SendEmail).send(message);
+			async send(e: any) {
+				// Check if this is an EmailMessage (has EmailMessage::raw property) or MessageBuilder
+				if ("EmailMessage::raw" in e) {
+					// EmailMessage API - reconstruct the EmailMessage object
+					const message = new EmailMessage(
+						e.from,
+						e.to,
+						e["EmailMessage::raw"]
+					);
+					return (targetBinding as SendEmail).send(message);
+				} else {
+					// MessageBuilder API - pass through directly as a plain object
+					return (targetBinding as SendEmail).send(e);
+				}
 			},
 		};
 	}

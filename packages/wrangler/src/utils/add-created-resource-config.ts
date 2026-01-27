@@ -3,6 +3,7 @@ import {
 	experimental_patchConfig,
 	formatConfigSnippet,
 	friendlyBindingNames,
+	JSON_CONFIG_FORMATS,
 } from "@cloudflare/workers-utils";
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
@@ -94,8 +95,9 @@ export async function createdResourceConfig<K extends ValidKeys>(
 		)
 	);
 
-	// This is a JSONC config file that we're capable of editing
-	if (configPath && configFormat(configPath) === "jsonc") {
+	// This is a JSON config file that we're capable of editing
+	const format = configFormat(configPath);
+	if (configPath && JSON_CONFIG_FORMATS.includes(format)) {
 		const writeToConfig =
 			defaults?.binding ??
 			defaults?.updateConfig ??

@@ -36,6 +36,7 @@ export class InspectorProxyController {
 
 	constructor(
 		private inspectorPortOption: number,
+		private inspectorHostOption: string = "127.0.0.1",
 		private log: Log,
 		private workerNamesToProxy: Set<string>
 	) {
@@ -78,10 +79,16 @@ export class InspectorProxyController {
 	 * @param server the server to start listening.
 	 */
 	async #startListening(server: Server): Promise<void> {
-		this.log.debug("Trying to listen on port: " + this.inspectorPortOption);
+		this.log.debug(
+			`Trying to listen on ${this.inspectorHostOption}:${this.inspectorPortOption}`
+		);
 		return new Promise<void>((resolve, reject) => {
 			server.once("error", reject);
-			server.listen(this.inspectorPortOption, resolve);
+			server.listen(
+				this.inspectorPortOption,
+				this.inspectorHostOption,
+				resolve
+			);
 		});
 	}
 
@@ -134,7 +141,12 @@ export class InspectorProxyController {
 		if (hostHeader == null) return { statusText: null, status: 400 };
 		try {
 			const host = new URL(`http://${hostHeader}`);
-			if (!ALLOWED_HOST_HOSTNAMES.includes(host.hostname)) {
+			// Allow the configured inspector host in addition to the default allowed hostnames
+			const allowedHostnames = [
+				...ALLOWED_HOST_HOSTNAMES,
+				this.inspectorHostOption,
+			];
+			if (!allowedHostnames.includes(host.hostname)) {
 				return { statusText: "Disallowed `Host` header", status: 401 };
 			}
 		} catch {
@@ -247,17 +259,25 @@ export class InspectorProxyController {
 	}
 
 	async getInspectorURL(): Promise<URL> {
-		return getWebsocketURL(await this.#getInspectorPort());
+		return getWebsocketURL(
+			this.inspectorHostOption,
+			await this.#getInspectorPort()
+		);
 	}
 
 	async updateConnection(
 		inspectorPortOption: number,
+		inspectorHostOption: string,
 		runtimeInspectorPort: number,
 		workerNamesToProxy: Set<string>
 	) {
 		this.workerNamesToProxy = workerNamesToProxy;
-		if (this.inspectorPortOption !== inspectorPortOption) {
+		if (
+			this.inspectorPortOption !== inspectorPortOption ||
+			this.inspectorHostOption !== inspectorHostOption
+		) {
 			this.inspectorPortOption = inspectorPortOption;
+			this.inspectorHostOption = inspectorHostOption;
 
 			await this.#restartServer();
 		}
@@ -309,8 +329,8 @@ export class InspectorProxyController {
 	}
 }
 
-function getWebsocketURL(port: number): URL {
-	return new URL(`ws://127.0.0.1:${port}`);
+function getWebsocketURL(host: string, port: number): URL {
+	return new URL(`ws://${host}:${port}`);
 }
 
 const ALLOWED_HOST_HOSTNAMES = ["127.0.0.1", "[::1]", "localhost"];

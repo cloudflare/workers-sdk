@@ -14,6 +14,15 @@ import {
 	generateImportSpecifier,
 	isValidIdentifier,
 } from "../type-generation";
+import {
+	ENV_HEADER_COMMENT_PREFIX,
+	getEnvHeader,
+	throwMissingBindingError,
+	toEnvInterfaceName,
+	TOP_LEVEL_ENV_NAME,
+	toPascalCase,
+	validateEnvInterfaceNames,
+} from "../type-generation/helpers";
 import * as generateRuntime from "../type-generation/runtime";
 import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -88,6 +97,192 @@ describe("generateImportSpecifier", () => {
 
 		expect(generateImportSpecifier("/app/types.ts", "/app/src/index.mjs")).toBe(
 			"./src/index"
+		);
+	});
+});
+
+describe("getEnvHeader", () => {
+	it("should generate a header with the provided hash and command", () => {
+		const result = getEnvHeader("abc123", "wrangler types");
+		expect(result).toBe(
+			`${ENV_HEADER_COMMENT_PREFIX} \`wrangler types\` (hash: abc123)`
+		);
+	});
+
+	it("should include complex commands with flags", () => {
+		const result = getEnvHeader(
+			"def456",
+			"wrangler types --strict-vars=false --env-interface=MyEnv"
+		);
+		expect(result).toBe(
+			`${ENV_HEADER_COMMENT_PREFIX} \`wrangler types --strict-vars=false --env-interface=MyEnv\` (hash: def456)`
+		);
+	});
+
+	it("should handle empty hash", () => {
+		const result = getEnvHeader("", "wrangler types");
+		expect(result).toBe(
+			`${ENV_HEADER_COMMENT_PREFIX} \`wrangler types\` (hash: )`
+		);
+	});
+
+	it("should use process.argv when command is not provided", () => {
+		const originalArgv = process.argv;
+		process.argv = ["node", "wrangler", "types", "--include-runtime=false"];
+
+		try {
+			const result = getEnvHeader("xyz789");
+			expect(result).toBe(
+				`${ENV_HEADER_COMMENT_PREFIX} \`wrangler types --include-runtime=false\` (hash: xyz789)`
+			);
+		} finally {
+			process.argv = originalArgv;
+		}
+	});
+});
+
+describe("toPascalCase", () => {
+	it("should convert simple strings to PascalCase", () => {
+		expect(toPascalCase("staging")).toBe("Staging");
+		expect(toPascalCase("production")).toBe("Production");
+	});
+
+	it("should convert kebab-case to PascalCase", () => {
+		expect(toPascalCase("my-prod-env")).toBe("MyProdEnv");
+		expect(toPascalCase("staging-env")).toBe("StagingEnv");
+	});
+
+	it("should convert snake_case to PascalCase", () => {
+		expect(toPascalCase("my_test_env")).toBe("MyTestEnv");
+		expect(toPascalCase("prod_env")).toBe("ProdEnv");
+	});
+
+	it("should handle mixed separators", () => {
+		expect(toPascalCase("my-test_env")).toBe("MyTestEnv");
+	});
+});
+
+describe("toEnvInterfaceName", () => {
+	it("should add Env suffix to environment names", () => {
+		expect(toEnvInterfaceName("staging")).toBe("StagingEnv");
+		expect(toEnvInterfaceName("production")).toBe("ProductionEnv");
+	});
+
+	it("should deduplicate Env suffix", () => {
+		expect(toEnvInterfaceName("staging-env")).toBe("StagingEnv");
+		expect(toEnvInterfaceName("prod-env")).toBe("ProdEnv");
+		expect(toEnvInterfaceName("my_env")).toBe("MyEnv");
+	});
+
+	it("should handle kebab-case environment names", () => {
+		expect(toEnvInterfaceName("my-prod")).toBe("MyProdEnv");
+		expect(toEnvInterfaceName("test-staging")).toBe("TestStagingEnv");
+	});
+});
+
+describe("validateEnvInterfaceNames", () => {
+	it("should not throw for valid, unique environment names", () => {
+		expect(() =>
+			validateEnvInterfaceNames(["staging", "production", "dev"])
+		).not.toThrow();
+	});
+
+	it("should throw for reserved name Env", () => {
+		expect(() => validateEnvInterfaceNames(["env"])).toThrowError(
+			/Environment name "env" converts to reserved interface name "Env"/
+		);
+	});
+
+	it("should throw when two environment names convert to the same interface name", () => {
+		// Both staging-env and staging_env convert to StagingEnv
+		expect(() =>
+			validateEnvInterfaceNames(["staging-env", "staging_env"])
+		).toThrowError(
+			/Environment names "staging-env" and "staging_env" both convert to interface name "StagingEnv"/
+		);
+	});
+
+	it("should throw when names with different separators collide", () => {
+		expect(() =>
+			validateEnvInterfaceNames(["my-prod", "my_prod"])
+		).toThrowError(
+			/Environment names "my-prod" and "my_prod" both convert to interface name "MyProdEnv"/
+		);
+	});
+});
+
+describe("throwMissingBindingError", () => {
+	it("should throw a `UserError` for top-level bindings with array index", () => {
+		expect(() =>
+			throwMissingBindingError({
+				binding: { id: "1234" },
+				bindingType: "kv_namespaces",
+				configPath: "wrangler.json",
+				envName: TOP_LEVEL_ENV_NAME,
+				fieldName: "binding",
+				index: 0,
+			})
+		).toThrowError(
+			'Processing wrangler.json configuration:\n  - "kv_namespaces[0]" bindings should have a string "binding" field but got {"id":"1234"}.'
+		);
+	});
+
+	it("should throw a `UserError` for environment bindings with array index", () => {
+		expect(() =>
+			throwMissingBindingError({
+				binding: { database_id: "abc123" },
+				bindingType: "d1_databases",
+				configPath: "wrangler.json",
+				envName: "production",
+				fieldName: "binding",
+				index: 2,
+			})
+		).toThrowError(
+			'Processing wrangler.json configuration:\n  - "env.production" environment configuration\n    - "env.production.d1_databases[2]" bindings should have a string "binding" field but got {"database_id":"abc123"}.'
+		);
+	});
+
+	it("should handle non-array bindings (index omitted)", () => {
+		expect(() =>
+			throwMissingBindingError({
+				binding: {},
+				bindingType: "ai",
+				configPath: "wrangler.json",
+				envName: TOP_LEVEL_ENV_NAME,
+				fieldName: "binding",
+			})
+		).toThrowError(
+			'Processing wrangler.json configuration:\n  - "ai" bindings should have a string "binding" field but got {}.'
+		);
+	});
+
+	it("should handle undefined config path", () => {
+		expect(() =>
+			throwMissingBindingError({
+				binding: {},
+				bindingType: "kv_namespaces",
+				configPath: undefined,
+				envName: TOP_LEVEL_ENV_NAME,
+				fieldName: "binding",
+				index: 0,
+			})
+		).toThrowError(
+			'Processing Wrangler configuration configuration:\n  - "kv_namespaces[0]" bindings should have a string "binding" field but got {}.'
+		);
+	});
+
+	it("should handle different field names", () => {
+		expect(() =>
+			throwMissingBindingError({
+				binding: { type: "ratelimit" },
+				bindingType: "unsafe",
+				configPath: "wrangler.json",
+				envName: "staging",
+				fieldName: "name",
+				index: 1,
+			})
+		).toThrowError(
+			'Processing wrangler.json configuration:\n  - "env.staging" environment configuration\n    - "env.staging.unsafe[1]" bindings should have a string "name" field but got {"type":"ratelimit"}.'
 		);
 	});
 });
@@ -420,7 +615,7 @@ describe("generate types", () => {
 
 			📖 Read about runtime types
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 
 
 			 ⛅️ wrangler x.x.x
@@ -443,7 +638,7 @@ describe("generate types", () => {
 
 			📖 Read about runtime types
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 
 
 			 ⛅️ wrangler x.x.x
@@ -466,7 +661,7 @@ describe("generate types", () => {
 
 			📖 Read about runtime types
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -512,6 +707,28 @@ describe("generate types", () => {
 				}
 				interface Env {
 					TEST_KV_NAMESPACE: KVNamespace;
+					R2_BUCKET_BINDING: R2Bucket;
+					D1_TESTING_SOMETHING: D1Database;
+					VECTORIZE_BINDING: VectorizeIndex;
+					HYPERDRIVE_BINDING: Hyperdrive;
+					SEND_EMAIL_BINDING: SendEmail;
+					AE_DATASET_BINDING: AnalyticsEngineDataset;
+					NAMESPACE_BINDING: DispatchNamespace;
+					MTLS_BINDING: Fetcher;
+					TEST_QUEUE_BINDING: Queue;
+					SECRET: SecretsStoreSecret;
+					HELLO_WORLD: HelloWorldBinding;
+					RATE_LIMITER: RateLimit;
+					WORKER_LOADER_BINDING: WorkerLoader;
+					VPC_SERVICE_BINDING: Fetcher;
+					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+					LOGFWDR_SCHEMA: any;
+					BROWSER_BINDING: Fetcher;
+					AI_BINDING: Ai;
+					IMAGES_BINDING: ImagesBinding;
+					MEDIA_BINDING: MediaBinding;
+					VERSION_METADATA_BINDING: WorkerVersionMetadata;
+					ASSETS_BINDING: Fetcher;
 					SOMETHING: \\"asdasdfasdf\\";
 					ANOTHER: \\"thing\\";
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
@@ -521,38 +738,16 @@ describe("generate types", () => {
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
 					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
 					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
-					R2_BUCKET_BINDING: R2Bucket;
-					D1_TESTING_SOMETHING: D1Database;
-					SECRET: SecretsStoreSecret;
-					HELLO_WORLD: HelloWorldBinding;
-					RATE_LIMITER: RateLimit;
-					WORKER_LOADER_BINDING: WorkerLoader;
 					SERVICE_BINDING: Fetcher /* service_name */;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
-					AE_DATASET_BINDING: AnalyticsEngineDataset;
-					NAMESPACE_BINDING: DispatchNamespace;
-					LOGFWDR_SCHEMA: any;
+					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
+					testing_unsafe: any;
+					UNSAFE_RATELIMIT: RateLimit;
 					SOME_DATA_BLOB1: ArrayBuffer;
 					SOME_DATA_BLOB2: ArrayBuffer;
 					SOME_TEXT_BLOB1: string;
 					SOME_TEXT_BLOB2: string;
-					testing_unsafe: any;
-					UNSAFE_RATELIMIT: RateLimit;
-					TEST_QUEUE_BINDING: Queue;
-					SEND_EMAIL_BINDING: SendEmail;
-					VECTORIZE_BINDING: VectorizeIndex;
-					HYPERDRIVE_BINDING: Hyperdrive;
-					VPC_SERVICE_BINDING: Fetcher;
-					MTLS_BINDING: Fetcher;
-					BROWSER_BINDING: Fetcher;
-					AI_BINDING: Ai;
-					IMAGES_BINDING: ImagesBinding;
-					MEDIA_BINDING: MediaBinding;
-					VERSION_METADATA_BINDING: WorkerVersionMetadata;
-					ASSETS_BINDING: Fetcher;
-					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -571,7 +766,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -622,6 +817,28 @@ describe("generate types", () => {
 				}
 				interface Env {
 					TEST_KV_NAMESPACE: KVNamespace;
+					R2_BUCKET_BINDING: R2Bucket;
+					D1_TESTING_SOMETHING: D1Database;
+					VECTORIZE_BINDING: VectorizeIndex;
+					HYPERDRIVE_BINDING: Hyperdrive;
+					SEND_EMAIL_BINDING: SendEmail;
+					AE_DATASET_BINDING: AnalyticsEngineDataset;
+					NAMESPACE_BINDING: DispatchNamespace;
+					MTLS_BINDING: Fetcher;
+					TEST_QUEUE_BINDING: Queue;
+					SECRET: SecretsStoreSecret;
+					HELLO_WORLD: HelloWorldBinding;
+					RATE_LIMITER: RateLimit;
+					WORKER_LOADER_BINDING: WorkerLoader;
+					VPC_SERVICE_BINDING: Fetcher;
+					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+					LOGFWDR_SCHEMA: any;
+					BROWSER_BINDING: Fetcher;
+					AI_BINDING: Ai;
+					IMAGES_BINDING: ImagesBinding;
+					MEDIA_BINDING: MediaBinding;
+					VERSION_METADATA_BINDING: WorkerVersionMetadata;
+					ASSETS_BINDING: Fetcher;
 					SOMETHING: \\"asdasdfasdf\\";
 					ANOTHER: \\"thing\\";
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
@@ -632,38 +849,16 @@ describe("generate types", () => {
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
 					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
 					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace /* RealDurableExternal from service_name_2 */;
-					R2_BUCKET_BINDING: R2Bucket;
-					D1_TESTING_SOMETHING: D1Database;
-					SECRET: SecretsStoreSecret;
-					HELLO_WORLD: HelloWorldBinding;
-					RATE_LIMITER: RateLimit;
-					WORKER_LOADER_BINDING: WorkerLoader;
 					SERVICE_BINDING: Fetcher /* service_name */;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service /* entrypoint RealEntrypoint from service_name_2 */;
-					AE_DATASET_BINDING: AnalyticsEngineDataset;
-					NAMESPACE_BINDING: DispatchNamespace;
-					LOGFWDR_SCHEMA: any;
+					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
+					testing_unsafe: any;
+					UNSAFE_RATELIMIT: RateLimit;
 					SOME_DATA_BLOB1: ArrayBuffer;
 					SOME_DATA_BLOB2: ArrayBuffer;
 					SOME_TEXT_BLOB1: string;
 					SOME_TEXT_BLOB2: string;
-					testing_unsafe: any;
-					UNSAFE_RATELIMIT: RateLimit;
-					TEST_QUEUE_BINDING: Queue;
-					SEND_EMAIL_BINDING: SendEmail;
-					VECTORIZE_BINDING: VectorizeIndex;
-					HYPERDRIVE_BINDING: Hyperdrive;
-					VPC_SERVICE_BINDING: Fetcher;
-					MTLS_BINDING: Fetcher;
-					BROWSER_BINDING: Fetcher;
-					AI_BINDING: Ai;
-					IMAGES_BINDING: ImagesBinding;
-					MEDIA_BINDING: MediaBinding;
-					VERSION_METADATA_BINDING: WorkerVersionMetadata;
-					ASSETS_BINDING: Fetcher;
-					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -688,7 +883,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -797,6 +992,28 @@ describe("generate types", () => {
 				}
 				interface Env {
 					TEST_KV_NAMESPACE: KVNamespace;
+					R2_BUCKET_BINDING: R2Bucket;
+					D1_TESTING_SOMETHING: D1Database;
+					VECTORIZE_BINDING: VectorizeIndex;
+					HYPERDRIVE_BINDING: Hyperdrive;
+					SEND_EMAIL_BINDING: SendEmail;
+					AE_DATASET_BINDING: AnalyticsEngineDataset;
+					NAMESPACE_BINDING: DispatchNamespace;
+					MTLS_BINDING: Fetcher;
+					TEST_QUEUE_BINDING: Queue;
+					SECRET: SecretsStoreSecret;
+					HELLO_WORLD: HelloWorldBinding;
+					RATE_LIMITER: RateLimit;
+					WORKER_LOADER_BINDING: WorkerLoader;
+					VPC_SERVICE_BINDING: Fetcher;
+					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+					LOGFWDR_SCHEMA: any;
+					BROWSER_BINDING: Fetcher;
+					AI_BINDING: Ai;
+					IMAGES_BINDING: ImagesBinding;
+					MEDIA_BINDING: MediaBinding;
+					VERSION_METADATA_BINDING: WorkerVersionMetadata;
+					ASSETS_BINDING: Fetcher;
 					SOMETHING: \\"asdasdfasdf\\";
 					ANOTHER: \\"thing\\";
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
@@ -807,38 +1024,16 @@ describe("generate types", () => {
 					DURABLE_NO_EXPORT: DurableObjectNamespace /* DurableNoexport */;
 					DURABLE_EXTERNAL_UNKNOWN_ENTRY: DurableObjectNamespace /* DurableExternal from external-worker */;
 					DURABLE_EXTERNAL_PROVIDED_ENTRY: DurableObjectNamespace<import(\\"../c/index\\").RealDurableExternal>;
-					R2_BUCKET_BINDING: R2Bucket;
-					D1_TESTING_SOMETHING: D1Database;
-					SECRET: SecretsStoreSecret;
-					HELLO_WORLD: HelloWorldBinding;
-					RATE_LIMITER: RateLimit;
-					WORKER_LOADER_BINDING: WorkerLoader;
 					SERVICE_BINDING: Service<typeof import(\\"../b/index\\").default>;
 					OTHER_SERVICE_BINDING: Service /* entrypoint FakeEntrypoint from service_name_2 */;
 					OTHER_SERVICE_BINDING_ENTRYPOINT: Service<typeof import(\\"../c/index\\").RealEntrypoint>;
-					AE_DATASET_BINDING: AnalyticsEngineDataset;
-					NAMESPACE_BINDING: DispatchNamespace;
-					LOGFWDR_SCHEMA: any;
+					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
+					testing_unsafe: any;
+					UNSAFE_RATELIMIT: RateLimit;
 					SOME_DATA_BLOB1: ArrayBuffer;
 					SOME_DATA_BLOB2: ArrayBuffer;
 					SOME_TEXT_BLOB1: string;
 					SOME_TEXT_BLOB2: string;
-					testing_unsafe: any;
-					UNSAFE_RATELIMIT: RateLimit;
-					TEST_QUEUE_BINDING: Queue;
-					SEND_EMAIL_BINDING: SendEmail;
-					VECTORIZE_BINDING: VectorizeIndex;
-					HYPERDRIVE_BINDING: Hyperdrive;
-					VPC_SERVICE_BINDING: Fetcher;
-					MTLS_BINDING: Fetcher;
-					BROWSER_BINDING: Fetcher;
-					AI_BINDING: Ai;
-					IMAGES_BINDING: ImagesBinding;
-					MEDIA_BINDING: MediaBinding;
-					VERSION_METADATA_BINDING: WorkerVersionMetadata;
-					ASSETS_BINDING: Fetcher;
-					MY_WORKFLOW: Workflow<Parameters<import(\\"./index\\").MyWorkflow['run']>[0]['payload']>;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
@@ -863,7 +1058,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to a/worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -933,7 +1128,7 @@ describe("generate types", () => {
 				No project types to add.
 
 				────────────────────────────────────────────────────────────
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -978,7 +1173,7 @@ describe("generate types", () => {
 
 				📖 Read about runtime types
 				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -1015,7 +1210,7 @@ describe("generate types", () => {
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -1082,7 +1277,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1123,7 +1318,7 @@ describe("generate types", () => {
 
 			📖 Read about runtime types
 			https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1159,7 +1354,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1217,7 +1412,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1269,7 +1464,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 		// Verify that .dev.vars secrets are NOT included
@@ -1321,7 +1516,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1361,7 +1556,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1404,7 +1599,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1455,7 +1650,7 @@ describe("generate types", () => {
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
-			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 			"
 		`);
 	});
@@ -1501,11 +1696,20 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface Env {
+					interface ProductionEnv {
 						MY_VAR: \\"a var\\";
-						MY_VAR_A: \\"A (dev)\\" | \\"A (prod)\\" | \\"A (stag)\\";
-						MY_VAR_B: {\\"value\\":\\"B (dev)\\"} | {\\"value\\":\\"B (prod)\\"};
-						MY_VAR_C: [\\"a\\",\\"b\\",\\"c\\"] | [1,2,3];
+						MY_VAR_A: \\"A (prod)\\";
+						MY_VAR_B: {\\"value\\":\\"B (prod)\\"};
+						MY_VAR_C: [1,2,3];
+					}
+					interface StagingEnv {
+						MY_VAR_A: \\"A (stag)\\";
+					}
+					interface Env {
+						MY_VAR?: \\"a var\\";
+						MY_VAR_A: \\"A (prod)\\" | \\"A (stag)\\" | \\"A (dev)\\";
+						MY_VAR_B?: {\\"value\\":\\"B (prod)\\"} | {\\"value\\":\\"B (dev)\\"};
+						MY_VAR_C?: [1,2,3] | [\\"a\\",\\"b\\",\\"c\\"];
 					}
 				}
 				interface Env extends Cloudflare.Env {}
@@ -1513,7 +1717,7 @@ describe("generate types", () => {
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -1528,11 +1732,20 @@ describe("generate types", () => {
 				Generating project types...
 
 				declare namespace Cloudflare {
-					interface Env {
+					interface ProductionEnv {
 						MY_VAR: string;
 						MY_VAR_A: string;
 						MY_VAR_B: object;
-						MY_VAR_C: string[] | number[];
+						MY_VAR_C: number[];
+					}
+					interface StagingEnv {
+						MY_VAR_A: string;
+					}
+					interface Env {
+						MY_VAR?: string;
+						MY_VAR_A: string;
+						MY_VAR_B?: object;
+						MY_VAR_C?: number[] | string[];
 					}
 				}
 				interface Env extends Cloudflare.Env {}
@@ -1540,9 +1753,618 @@ describe("generate types", () => {
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
+		});
+	});
+
+	describe("bindings present in multiple environments", () => {
+		it("should collect bindings from all environments when no --env is specified", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					d1_databases: [
+						{
+							binding: "D1_TOP",
+							database_id: "top-d1-id",
+							database_name: "top",
+						},
+					],
+					kv_namespaces: [
+						{
+							binding: "KV_TOP",
+							id: "top-kv-id",
+						},
+					],
+					env: {
+						staging: {
+							d1_databases: [
+								{
+									binding: "D1_STAGING",
+									database_id: "staging-d1-id",
+									database_name: "staging",
+								},
+							],
+							kv_namespaces: [
+								{
+									binding: "KV_STAGING",
+									id: "staging-kv-id",
+								},
+							],
+						},
+						production: {
+							kv_namespaces: [
+								{
+									binding: "KV_PROD",
+									id: "prod-kv-id",
+								},
+							],
+							r2_buckets: [
+								{
+									binding: "R2_PROD",
+									bucket_name: "prod-bucket",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						KV_STAGING: KVNamespace;
+						D1_STAGING: D1Database;
+					}
+					interface ProductionEnv {
+						KV_PROD: KVNamespace;
+						R2_PROD: R2Bucket;
+					}
+					interface Env {
+						KV_STAGING?: KVNamespace;
+						D1_STAGING?: D1Database;
+						KV_PROD?: KVNamespace;
+						R2_PROD?: R2Bucket;
+						KV_TOP?: KVNamespace;
+						D1_TOP?: D1Database;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should only collect bindings from the specified environment when --env is used", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [
+						{
+							binding: "KV_TOP",
+							id: "top-kv-id",
+						},
+					],
+					env: {
+						staging: {
+							d1_databases: [
+								{
+									binding: "D1_STAGING",
+									database_id: "staging-d1-id",
+									database_name: "staging",
+								},
+							],
+							kv_namespaces: [
+								{
+									binding: "KV_STAGING",
+									id: "staging-kv-id",
+								},
+							],
+						},
+						production: {
+							kv_namespaces: [
+								{
+									binding: "KV_PROD",
+									id: "prod-kv-id",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false --env staging");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface Env {
+						KV_STAGING: KVNamespace;
+						D1_STAGING: D1Database;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should deduplicate bindings with the same name across environments", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [
+						{
+							binding: "MY_KV",
+							id: "top-kv-id",
+						},
+					],
+					env: {
+						staging: {
+							kv_namespaces: [
+								{
+									binding: "MY_KV",
+									id: "staging-kv-id",
+								},
+							],
+						},
+						production: {
+							kv_namespaces: [
+								{
+									binding: "MY_KV",
+									id: "prod-kv-id",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						MY_KV: KVNamespace;
+					}
+					interface ProductionEnv {
+						MY_KV: KVNamespace;
+					}
+					interface Env {
+						MY_KV: KVNamespace;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should produce union types when binding name has different types across environments", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [
+						{
+							binding: "CACHE",
+							id: "kv-id",
+						},
+					],
+					env: {
+						staging: {
+							r2_buckets: [
+								{
+									binding: "CACHE",
+									bucket_name: "r2-bucket",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						CACHE: R2Bucket;
+					}
+					interface Env {
+						CACHE: R2Bucket | KVNamespace;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should error when a binding is missing its binding name in an environment", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [
+						{
+							binding: "KV_TOP",
+							id: "top-kv-id",
+						},
+					],
+					env: {
+						staging: {
+							// Empty object with no binding property should error
+							kv_namespaces: [{}],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await expect(
+				runWrangler("types --include-runtime=false")
+			).rejects.toThrowError(
+				/Processing wrangler\.jsonc configuration:\n\s+- "env\.staging" environment configuration\n\s+- "env\.staging\.kv_namespaces\[0\]" bindings should have a string "binding" field but got \{\}/
+			);
+		});
+
+		it("should error when a binding is missing its binding name at top-level", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					r2_buckets: [
+						{
+							bucket_name: "my-bucket",
+						},
+					],
+				}),
+				"utf-8"
+			);
+
+			await expect(
+				runWrangler("types --include-runtime=false")
+			).rejects.toThrowError(
+				/Processing wrangler\.jsonc configuration:\n\s+- "r2_buckets\[0\]" bindings should have a string "binding" field/
+			);
+		});
+
+		it("should collect vars only from specified environment with --env", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					vars: {
+						MY_VAR: "top-level",
+					},
+					env: {
+						staging: {
+							vars: {
+								MY_VAR: "staging",
+								STAGING_ONLY: "staging-only-value",
+							},
+						},
+						production: {
+							vars: {
+								MY_VAR: "production",
+								PROD_ONLY: "prod-only-value",
+							},
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false --env staging");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface Env {
+						MY_VAR: \\"staging\\";
+						STAGING_ONLY: \\"staging-only-value\\";
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should mark bindings as optional if not present in all environments", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [{ binding: "KV_SHARED", id: "top-kv" }],
+					env: {
+						staging: {
+							kv_namespaces: [
+								{ binding: "KV_SHARED", id: "staging-kv" },
+								{ binding: "KV_STAGING_ONLY", id: "staging-only" },
+							],
+						},
+						production: {
+							kv_namespaces: [
+								{ binding: "KV_SHARED", id: "prod-kv" },
+								{ binding: "KV_PROD_ONLY", id: "prod-only" },
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						KV_SHARED: KVNamespace;
+						KV_STAGING_ONLY: KVNamespace;
+					}
+					interface ProductionEnv {
+						KV_SHARED: KVNamespace;
+						KV_PROD_ONLY: KVNamespace;
+					}
+					interface Env {
+						KV_SHARED: KVNamespace;
+						KV_STAGING_ONLY?: KVNamespace;
+						KV_PROD_ONLY?: KVNamespace;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should not include top-level bindings in per-environment interfaces", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [{ binding: "KV_TOP_ONLY", id: "top-kv" }],
+					env: {
+						staging: {
+							d1_databases: [
+								{
+									binding: "D1_STAGING",
+									database_id: "staging-d1",
+									database_name: "staging",
+								},
+							],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						D1_STAGING: D1Database;
+					}
+					interface Env {
+						D1_STAGING?: D1Database;
+						KV_TOP_ONLY?: KVNamespace;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should include secrets in per-environment interfaces since they are inherited", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					env: {
+						staging: {
+							kv_namespaces: [{ binding: "KV_STAGING", id: "staging-kv" }],
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			fs.writeFileSync("./.dev.vars", "MY_SECRET=secret-value\n", "utf-8");
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						KV_STAGING: KVNamespace;
+						MY_SECRET: string;
+					}
+					interface Env {
+						MY_SECRET: string;
+						KV_STAGING?: KVNamespace;
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should produce union types for vars with different values across environments", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					vars: { DEBUG: "false" },
+					env: {
+						staging: {
+							vars: { DEBUG: "true" },
+						},
+						production: {
+							vars: { DEBUG: "false" },
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface StagingEnv {
+						DEBUG: \\"true\\";
+					}
+					interface ProductionEnv {
+						DEBUG: \\"false\\";
+					}
+					interface Env {
+						DEBUG: \\"true\\" | \\"false\\";
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should generate simple Env when no environments are defined", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					kv_namespaces: [{ binding: "MY_KV", id: "kv-id" }],
+					vars: { MY_VAR: "value" },
+				}),
+				"utf-8"
+			);
+
+			await runWrangler("types --include-runtime=false");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Generating project types...
+
+				declare namespace Cloudflare {
+					interface Env {
+						MY_KV: KVNamespace;
+						MY_VAR: \\"value\\";
+					}
+				}
+				interface Env extends Cloudflare.Env {}
+
+				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
+				"
+			`);
+		});
+
+		it("should error when environment names would collide after conversion", async () => {
+			fs.writeFileSync(
+				"./wrangler.jsonc",
+				JSON.stringify({
+					env: {
+						"my-env": {
+							vars: { A: "a" },
+						},
+						my_env: {
+							vars: { B: "b" },
+						},
+					},
+				}),
+				"utf-8"
+			);
+
+			await expect(
+				runWrangler("types --include-runtime=false")
+			).rejects.toThrowError(
+				/Environment names "my-env" and "my_env" both convert to interface name "MyEnv"/
+			);
 		});
 	});
 
@@ -1579,7 +2401,7 @@ describe("generate types", () => {
 					────────────────────────────────────────────────────────────
 					✨ Types written to worker-configuration.d.ts
 
-					📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+					📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 					"
 				`);
 			});
@@ -1790,7 +2612,7 @@ describe("generate types", () => {
 
 				📖 Read about runtime types
 				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});
@@ -1826,7 +2648,7 @@ describe("generate types", () => {
 
 				📖 Read about runtime types
 				https://developers.cloudflare.com/workers/languages/typescript/#generate-types
-				📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
 		});

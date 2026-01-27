@@ -30,10 +30,10 @@ describe("cloudchamber delete", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber delete [deploymentId]
 
-			Delete an existing deployment that is running in the Cloudflare edge
+			Delete an existing deployment that is running in the Cloudflare edge [alpha]
 
 			POSITIONALS
-			  deploymentId  deployment you want to delete  [string]
+			  deploymentId  Deployment you want to delete  [string]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -98,8 +98,8 @@ describe("cloudchamber delete", () => {
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-	`);
+			"
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
 	});
 });

@@ -2,6 +2,8 @@ export const CORE_PLUGIN_NAME = "core";
 
 // Service for HTTP socket entrypoint (for checking runtime ready, routing, etc)
 export const SERVICE_ENTRY = `${CORE_PLUGIN_NAME}:entry`;
+// Service for local explorer API
+export const SERVICE_LOCAL_EXPLORER = `${CORE_PLUGIN_NAME}:local-explorer`;
 // Service prefix for all regular user workers
 const SERVICE_USER_PREFIX = `${CORE_PLUGIN_NAME}:user`;
 // Service prefix for `workerd`'s builtin services (network, external, disk)

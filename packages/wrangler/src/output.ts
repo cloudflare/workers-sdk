@@ -73,7 +73,8 @@ export type OutputEntry =
 	| OutputEntryVersionUpload
 	| OutputEntryVersionDeployment
 	| OutputEntryPagesDeploymentDetailed
-	| OutputEntryCommandFailed;
+	| OutputEntryCommandFailed
+	| OutputEntryAutoConfig;
 
 interface OutputEntrySession extends OutputEntryBase<"wrangler-session"> {
 	version: 1;
@@ -99,8 +100,14 @@ interface OutputEntryDeployment extends OutputEntryBase<"deploy"> {
 	worker_name_overridden: boolean;
 	/** wrangler environment used */
 	wrangler_environment: string | undefined;
-	/** The summary of the autoconfig process if it did run, undefined if autoconfig didn't run. */
-	autoconfig_summary: AutoConfigSummary | undefined;
+}
+
+interface OutputEntryAutoConfig extends OutputEntryBase<"autoconfig"> {
+	version: 1;
+	/** The command that triggered autoconfig */
+	command: "setup" | "deploy";
+	/** The summary of the autoconfig process */
+	summary: AutoConfigSummary;
 }
 
 interface OutputEntryPagesDeployment extends OutputEntryBase<"pages-deploy"> {
