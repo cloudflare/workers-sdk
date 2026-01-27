@@ -105,46 +105,50 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 		// resolver will try to externalize the Node.js module imports (e.g. `perf_hooks` and `node:tty`)
 		// rather than allowing the resolve hook here to alias them to polyfills.
 		enforce: "pre",
-		async resolveId(source, importer, options) {
-			const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
-			assertHasNodeJsCompat(nodeJsCompat);
+		resolveId: {
+			async handler(source, importer, options) {
+				const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
+				assertHasNodeJsCompat(nodeJsCompat);
 
-			if (nodeJsCompat.isGlobalVirtualModule(source)) {
-				return source;
-			}
+				if (nodeJsCompat.isGlobalVirtualModule(source)) {
+					return source;
+				}
 
-			// See if we can map the `source` to a Node.js compat alias.
-			const result = nodeJsCompat.resolveNodeJsImport(source);
+				// See if we can map the `source` to a Node.js compat alias.
+				const result = nodeJsCompat.resolveNodeJsImport(source);
 
-			if (!result) {
-				// The source is not a Node.js compat alias so just pass it through
-				return this.resolve(source, importer, options);
-			}
+				if (!result) {
+					// The source is not a Node.js compat alias so just pass it through
+					return this.resolve(source, importer, options);
+				}
 
-			if (this.environment.mode === "dev") {
-				assert(
-					this.environment.depsOptimizer,
-					"depsOptimizer is required in dev mode"
-				);
-				// We are in dev mode (rather than build).
-				// So let's pre-bundle this polyfill entry-point using the dependency optimizer.
-				const { id } = this.environment.depsOptimizer.registerMissingImport(
-					result.unresolved,
-					result.resolved
-				);
-				// We use the unresolved path to the polyfill and let the dependency optimizer's
-				// resolver find the resolved path to the bundled version.
-				return this.resolve(id, importer, options);
-			}
+				if (this.environment.mode === "dev") {
+					assert(
+						this.environment.depsOptimizer,
+						"depsOptimizer is required in dev mode"
+					);
+					// We are in dev mode (rather than build).
+					// So let's pre-bundle this polyfill entry-point using the dependency optimizer.
+					const { id } = this.environment.depsOptimizer.registerMissingImport(
+						result.unresolved,
+						result.resolved
+					);
+					// We use the unresolved path to the polyfill and let the dependency optimizer's
+					// resolver find the resolved path to the bundled version.
+					return this.resolve(id, importer, options);
+				}
 
-			// We are in build mode so return the absolute path to the polyfill.
-			return this.resolve(result.resolved, importer, options);
+				// We are in build mode so return the absolute path to the polyfill.
+				return this.resolve(result.resolved, importer, options);
+			},
 		},
-		load(id) {
-			const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
-			assertHasNodeJsCompat(nodeJsCompat);
+		load: {
+			handler(id) {
+				const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
+				assertHasNodeJsCompat(nodeJsCompat);
 
-			return nodeJsCompat.getGlobalVirtualModule(id);
+				return nodeJsCompat.getGlobalVirtualModule(id);
+			},
 		},
 		async configureServer(viteDevServer) {
 			// Pre-optimize Node.js compat library entry-points for those environments that need it.
@@ -320,8 +324,10 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 					!ctx.getNodeJsCompat(environment.name)
 				);
 			},
-			async resolveId(source, importer) {
-				return resolveId(this.environment.name, source, importer);
+			resolveId: {
+				handler(source, importer) {
+					return resolveId(this.environment.name, source, importer);
+				},
 			},
 		};
 	}

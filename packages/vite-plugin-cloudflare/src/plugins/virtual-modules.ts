@@ -20,28 +20,34 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 				ctx.getWorkerConfig(environment.name) !== undefined
 			);
 		},
-		async resolveId(source) {
-			if (source === VIRTUAL_WORKER_ENTRY || source === VIRTUAL_EXPORT_TYPES) {
-				return `\0${source}`;
-			}
-
-			if (source === VIRTUAL_USER_ENTRY) {
-				const workerConfig = ctx.getWorkerConfig(this.environment.name);
-				assert(workerConfig, "Expected `workerConfig` to be defined");
-				const main = await this.resolve(workerConfig.main);
-				if (!main) {
-					throw new Error(
-						`Failed to resolve main entry file "${workerConfig.main}" for environment "${this.environment.name}"`
-					);
+		resolveId: {
+			async handler(source) {
+				if (
+					source === VIRTUAL_WORKER_ENTRY ||
+					source === VIRTUAL_EXPORT_TYPES
+				) {
+					return `\0${source}`;
 				}
-				return main;
-			}
-		},
-		load(id) {
-			if (id === `\0${VIRTUAL_WORKER_ENTRY}`) {
-				const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
 
-				return `
+				if (source === VIRTUAL_USER_ENTRY) {
+					const workerConfig = ctx.getWorkerConfig(this.environment.name);
+					assert(workerConfig, "Expected `workerConfig` to be defined");
+					const main = await this.resolve(workerConfig.main);
+					if (!main) {
+						throw new Error(
+							`Failed to resolve main entry file "${workerConfig.main}" for environment "${this.environment.name}"`
+						);
+					}
+					return main;
+				}
+			},
+		},
+		load: {
+			handler(id) {
+				if (id === `\0${VIRTUAL_WORKER_ENTRY}`) {
+					const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
+
+					return `
 ${nodeJsCompat ? nodeJsCompat.injectGlobalCode() : ""}
 import { getExportTypes } from "${VIRTUAL_EXPORT_TYPES}";
 import * as mod from "${VIRTUAL_USER_ENTRY}";
@@ -53,11 +59,11 @@ if (import.meta.hot) {
 		import.meta.hot.send("vite-plugin-cloudflare:worker-export-types", exportTypes);
 	});
 }
-				`;
-			}
+					`;
+				}
 
-			if (id === `\0${VIRTUAL_EXPORT_TYPES}`) {
-				return `
+				if (id === `\0${VIRTUAL_EXPORT_TYPES}`) {
+					return `
 import {
 	WorkerEntrypoint,
 	DurableObject,
@@ -100,8 +106,9 @@ export function getExportTypes(module) {
 
 	return exportTypes;
 }
-				`;
-			}
+					`;
+				}
+			},
 		},
 	};
 });
@@ -117,15 +124,19 @@ export const virtualClientFallbackPlugin = createPlugin(
 			applyToEnvironment(environment) {
 				return environment.name === "client";
 			},
-			resolveId(source) {
-				if (source === VIRTUAL_CLIENT_FALLBACK_ENTRY) {
-					return `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`;
-				}
+			resolveId: {
+				handler(source) {
+					if (source === VIRTUAL_CLIENT_FALLBACK_ENTRY) {
+						return `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`;
+					}
+				},
 			},
-			load(id) {
-				if (id === `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`) {
-					return ``;
-				}
+			load: {
+				handler(id) {
+					if (id === `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`) {
+						return ``;
+					}
+				},
 			},
 		};
 	}
