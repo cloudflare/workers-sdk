@@ -1,6 +1,14 @@
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import {
+	zWorkersKvNamespaceDeleteKeyValuePairResponse,
+	zWorkersKvNamespaceGetMultipleKeyValuePairsResponse,
+	zWorkersKvNamespaceListANamespaceSKeysResponse,
+	zWorkersKvNamespaceListNamespacesResponse,
+	zWorkersKvNamespaceWriteKeyValuePairWithMetadataResponse,
+} from "../../../src/workers/local-explorer/generated/zod.gen";
 import { disposeWithRetry } from "../../test-shared";
+import { expectValidResponse } from "./helpers";
 
 const BASE_URL = "http://localhost/cdn-cgi/explorer/api";
 
@@ -31,21 +39,22 @@ describe("KV API", () => {
 				`${BASE_URL}/storage/kv/namespaces`
 			);
 
-			expect(response.status).toBe(200);
-			expect(await response.json()).toMatchObject({
-				success: true,
-				errors: [],
-				result: expect.arrayContaining([
+			const data = await expectValidResponse(
+				response,
+				zWorkersKvNamespaceListNamespacesResponse
+			);
+			expect(data.result).toEqual(
+				expect.arrayContaining([
 					expect.objectContaining({ id: "test-kv-id", title: "TEST_KV" }),
 					expect.objectContaining({ id: "another-kv-id", title: "ANOTHER_KV" }),
 					expect.objectContaining({ id: "zebra-kv-id", title: "ZEBRA_KV" }),
-				]),
-				result_info: {
-					count: 3,
-					page: 1,
-					per_page: 20,
-					total_count: 3,
-				},
+				])
+			);
+			expect(data.result_info).toMatchObject({
+				count: 3,
+				page: 1,
+				per_page: 20,
+				total_count: 3,
 			});
 		});
 
@@ -139,18 +148,16 @@ describe("KV API", () => {
 				`${BASE_URL}/storage/kv/namespaces/test-kv-id/keys`
 			);
 
-			expect(response.status).toBe(200);
-			expect(await response.json()).toMatchObject({
-				success: true,
-				result: expect.arrayContaining([
+			const data = await expectValidResponse(
+				response,
+				zWorkersKvNamespaceListANamespaceSKeysResponse
+			);
+			expect(data.result).toEqual(
+				expect.arrayContaining([
 					expect.objectContaining({ name: "test-key-1" }),
 					expect.objectContaining({ name: "test-key-2" }),
-				]),
-				result_info: expect.objectContaining({
-					count: expect.any(Number),
-					cursor: expect.any(String),
-				}),
-			});
+				])
+			);
 		});
 
 		test("respects limit parameter", async () => {
@@ -244,8 +251,11 @@ describe("KV API", () => {
 				}
 			);
 
-			expect(response.status).toBe(200);
-			expect(await response.json()).toMatchObject({ success: true });
+			const data = await expectValidResponse(
+				response,
+				zWorkersKvNamespaceWriteKeyValuePairWithMetadataResponse
+			);
+			expect(data.success).toBe(true);
 
 			// Verify the value was written
 			const kv = await mf.getKVNamespace("TEST_KV");
@@ -298,8 +308,11 @@ describe("KV API", () => {
 				}
 			);
 
-			expect(response.status).toBe(200);
-			expect(await response.json()).toMatchObject({ success: true });
+			const data = await expectValidResponse(
+				response,
+				zWorkersKvNamespaceDeleteKeyValuePairResponse
+			);
+			expect(data.success).toBe(true);
 
 			// Verify the value was deleted
 			expect(await kv.get("delete-test-key")).toBeNull();
@@ -352,7 +365,7 @@ describe("KV API", () => {
 	});
 
 	describe("POST /storage/kv/namespaces/:namespaceId/bulk/get", () => {
-		test("returns multiple key-value pairs", async () => {
+		test("returns multiple key-value pairs and null for non-existing keys", async () => {
 			const kv = await mf.getKVNamespace("TEST_KV");
 			await kv.put("bulk-key-1", "value-1");
 			await kv.put("bulk-key-2", "value-2");
@@ -364,51 +377,32 @@ describe("KV API", () => {
 					method: "POST",
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
-						keys: ["bulk-key-1", "bulk-key-2", "bulk-key-3"],
+						keys: [
+							"bulk-key-1",
+							"bulk-key-2",
+							"bulk-key-3",
+							"non-existent-key",
+						],
 					}),
 				}
 			);
 
-			expect(response.status).toBe(200);
-			expect(await response.json()).toMatchObject({
-				success: true,
-				result: {
-					values: {
-						"bulk-key-1": "value-1",
-						"bulk-key-2": "value-2",
-						"bulk-key-3": "value-3",
-					},
-				},
-			});
-		});
-
-		test("omits non-existent keys from result", async () => {
-			const kv = await mf.getKVNamespace("TEST_KV");
-			await kv.put("existing-key", "existing-value");
-
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/get`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						keys: ["existing-key", "non-existent-key"],
-					}),
-				}
+			const data = await expectValidResponse(
+				response,
+				zWorkersKvNamespaceGetMultipleKeyValuePairsResponse
 			);
-
-			expect(response.status).toBe(200);
-			expect(await response.json()).toMatchObject({
-				success: true,
-				result: {
-					values: {
-						"existing-key": "existing-value",
-					},
+			expect(data.success).toBe(true);
+			expect(data.result).toMatchObject({
+				values: {
+					"bulk-key-1": "value-1",
+					"bulk-key-2": "value-2",
+					"bulk-key-3": "value-3",
+					"non-existent-key": null,
 				},
 			});
 		});
 
-		test("returns empty values object for all non-existent keys", async () => {
+		test("returns null values as success if all keys are non-existent", async () => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/get`,
 				{
@@ -424,7 +418,10 @@ describe("KV API", () => {
 			expect(await response.json()).toMatchObject({
 				success: true,
 				result: {
-					values: {},
+					values: {
+						"does-not-exist-1": null,
+						"does-not-exist-2": null,
+					},
 				},
 			});
 		});

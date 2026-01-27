@@ -43,10 +43,7 @@
 						"name": "order",
 						"schema": {
 							"description": "Field to order results by.",
-							"enum": [
-								"id",
-								"title"
-							],
+							"enum": ["id", "title"],
 							"example": "id",
 							"type": "string"
 						}
@@ -56,10 +53,7 @@
 						"name": "direction",
 						"schema": {
 							"description": "Direction to order namespaces.",
-							"enum": [
-								"asc",
-								"desc"
-							],
+							"enum": ["asc", "desc"],
 							"example": "asc",
 							"type": "string"
 						}
@@ -103,9 +97,7 @@
 					}
 				},
 				"summary": "List Namespaces",
-				"tags": [
-					"Workers KV Namespace"
-				]
+				"tags": ["Workers KV Namespace"]
 			}
 		},
 		"/storage/kv/namespaces/{namespace_id}/keys": {
@@ -193,9 +185,7 @@
 					}
 				},
 				"summary": "List a Namespace's Keys",
-				"tags": [
-					"Workers KV Namespace"
-				]
+				"tags": ["Workers KV Namespace"]
 			}
 		},
 		"/storage/kv/namespaces/{namespace_id}/values/{key_name}": {
@@ -243,9 +233,7 @@
 					}
 				},
 				"summary": "Read key-value pair",
-				"tags": [
-					"Workers KV Namespace"
-				]
+				"tags": ["Workers KV Namespace"]
 			},
 			"put": {
 				"description": "Write a value identified by a key. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name. Body should be the value to be stored. If JSON metadata to be associated with the key/value pair is needed, use `multipart/form-data` content type for your PUT request (see dropdown below in `REQUEST BODY SCHEMA`). Existing values, expirations, and metadata will be overwritten. If neither `expiration` nor `expiration_ttl` is specified, the key-value pair will never expire. If both are set, `expiration_ttl` is used and `expiration` is ignored.",
@@ -290,9 +278,7 @@
 										"$ref": "#/components/schemas/workers-kv_value"
 									}
 								},
-								"required": [
-									"value"
-								],
+								"required": ["value"],
 								"type": "object"
 							}
 						}
@@ -322,9 +308,7 @@
 					}
 				},
 				"summary": "Write key-value pair with optional metadata",
-				"tags": [
-					"Workers KV Namespace"
-				]
+				"tags": ["Workers KV Namespace"]
 			},
 			"delete": {
 				"description": "Remove a KV pair from the namespace. Use URL-encoding to use special characters (for example, `:`, `!`, `%`) in the key name.",
@@ -376,9 +360,7 @@
 					}
 				},
 				"summary": "Delete key-value pair",
-				"tags": [
-					"Workers KV Namespace"
-				]
+				"tags": ["Workers KV Namespace"]
 			}
 		},
 		"/storage/kv/namespaces/{namespace_id}/bulk/get": {
@@ -409,9 +391,7 @@
 										"type": "array"
 									}
 								},
-								"required": [
-									"keys"
-								],
+								"required": ["keys"],
 								"type": "object"
 							}
 						}
@@ -460,9 +440,7 @@
 					}
 				},
 				"summary": "Get multiple key-value pairs",
-				"tags": [
-					"Workers KV Namespace"
-				]
+				"tags": ["Workers KV Namespace"]
 			}
 		}
 	},
@@ -498,10 +476,7 @@
 									]
 								}
 							},
-							"required": [
-								"value",
-								"metadata"
-							],
+							"required": ["value", "metadata"],
 							"type": "object"
 						},
 						"description": "Requested keys are paired with their values and metadata in an object.",
@@ -576,7 +551,8 @@
 									"additionalProperties": true,
 									"type": "object"
 								}
-							]
+							],
+							"nullable": true
 						},
 						"description": "Requested keys are paired with their values in an object.",
 						"example": {
@@ -620,18 +596,12 @@
 					},
 					"success": {
 						"description": "Whether the API call was successful.",
-						"enum": [
-							true
-						],
+						"enum": [true],
 						"example": true,
 						"type": "boolean"
 					}
 				},
-				"required": [
-					"success",
-					"errors",
-					"messages"
-				],
+				"required": ["success", "errors", "messages"],
 				"type": "object"
 			},
 			"workers-kv_messages": {
@@ -646,10 +616,7 @@
 							"type": "string"
 						}
 					},
-					"required": [
-						"code",
-						"message"
-					],
+					"required": ["code", "message"],
 					"type": "object"
 				},
 				"type": "array",
@@ -707,9 +674,7 @@
 						"$ref": "#/components/schemas/workers-kv_key_name"
 					}
 				},
-				"required": [
-					"name"
-				],
+				"required": ["name"],
 				"type": "object"
 			},
 			"workers-kv_list_metadata": {
@@ -762,19 +727,12 @@
 					},
 					"success": {
 						"description": "Whether the API call was successful.",
-						"enum": [
-							false
-						],
+						"enum": [false],
 						"example": false,
 						"type": "boolean"
 					}
 				},
-				"required": [
-					"success",
-					"errors",
-					"messages",
-					"result"
-				],
+				"required": ["success", "errors", "messages", "result"],
 				"type": "object"
 			},
 			"workers-kv_namespace": {
@@ -786,10 +744,7 @@
 						"$ref": "#/components/schemas/workers-kv_namespace_title"
 					}
 				},
-				"required": [
-					"id",
-					"title"
-				],
+				"required": ["id", "title"],
 				"type": "object"
 			},
 			"workers-kv_namespace_title": {

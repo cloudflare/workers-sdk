@@ -226,15 +226,10 @@ export async function bulkGetKVValues(c: AppContext, body: BulkGetBody) {
 	// Fetch all keys at once - returns Map<string, string | null>
 	const results = await kv.get(keys);
 
-	// Convert Map to object, filtering out null values
-	// TODO: figure out what api actually does with nulls in a bulk get
-	const values: Record<string, string> = {};
-	if (results) {
-		for (const [key, val] of results) {
-			if (val !== null) {
-				values[key] = val;
-			}
-		}
+	// Build result object with null for missing keys
+	const values: Record<string, string | null> = {};
+	for (const key of keys) {
+		values[key] = results?.get(key) ?? null;
 	}
 
 	return c.json(wrapResponse({ values }));
