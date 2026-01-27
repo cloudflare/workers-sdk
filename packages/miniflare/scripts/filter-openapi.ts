@@ -1,20 +1,18 @@
-#!/usr/bin/env -S node -r esbuild-register
+#!/usr/bin/env node
 /**
  * Filter and transform Cloudflare OpenAPI spec for local explorer
  *
- * Usage:
- * 1. Download the full OpenAPI spec from https://github.com/cloudflare/api-schemas
- * 2. Run `OPENAPI_INPUT_PATH=<path> pnpm generate:api` to filter and generate types
- *    (or run the script directly with:
- *    node -r esbuild-register scripts/filter-openapi.ts --input <path-to-schema> [--output <path>])
-
+ * Usage: node -r esbuild-register scripts/filter-openapi.ts --input <path-to-openapi.json>
+ * The full OpenAPI spec is not committed to this repository due to its size.
+ * https://github.com/cloudflare/api-schemas contains the full spec.
+ *
  * This script outputs a filtered OpenAPI spec based on the configuration in
  * openapi-filter-config.ts, which defines:
  * - filters for endpoints to include
  * - filters for components to ignore (unimplemented or irrelevant locally)
  *
- * We also strip out 'account_id' path parameter, security schemes, and unknown
- *   x-* extension fields
+ * We also strip out 'account_id' path parameter, security schemes, and unknown x-*
+ *   extension fields
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";

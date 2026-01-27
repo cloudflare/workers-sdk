@@ -37,7 +37,10 @@ const app = new Hono<AppBindings>().basePath(BASE_PATH);
 
 app.get(
 	"/storage/kv/namespaces",
-	// we are unwrapping (ie removing optional) because h
+	// The query params are optional, so the whole schema is wrapped in an optional,
+	// but hono's validator will always receive an object.
+	// This just unwraps it so we can validate the inner schema.
+	// The inner schema has all the individual params as optional
 	validateQuery(zWorkersKvNamespaceListNamespacesData.shape.query.unwrap()),
 	(c) => listKVNamespaces(c, c.req.valid("query"))
 );

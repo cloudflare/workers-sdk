@@ -34,7 +34,13 @@ export const zWorkersKvBulkGetResultWithMetadata = z.object({
 export const zWorkersKvBulkGetResult = z.object({
 	values: z
 		.record(
-			z.union([z.string(), z.number(), z.boolean(), z.record(z.unknown())])
+			z.union([
+				z.string(),
+				z.number(),
+				z.boolean(),
+				z.record(z.unknown()),
+				z.null(),
+			])
 		)
 		.optional(),
 });
