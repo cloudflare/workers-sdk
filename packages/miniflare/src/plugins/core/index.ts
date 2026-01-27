@@ -178,6 +178,10 @@ const CoreOptionsSchemaInput = z.intersection(
 		// Strip the CF-Connecting-IP header from outbound fetches
 		stripCfConnectingIp: z.boolean().default(true),
 
+		// Zone to use for the CF-Worker header in outbound fetches
+		// If not specified, defaults to `${worker-name}.example.com`
+		zone: z.string().optional(),
+
 		/** Configuration used to connect to the container engine */
 		containerEngine: z
 			.union([
@@ -924,6 +928,9 @@ export const CORE_PLUGIN: Plugin<
 		}
 
 		if (options.stripCfConnectingIp) {
+			// Use the zone option if provided, otherwise default to `${worker-name}.example.com`
+			const workerName = options.name ?? "worker";
+			const cfWorkerValue = options.zone ?? `${workerName}.example.com`;
 			services.push({
 				name: getStripCfConnectingIpName(workerIndex),
 				worker: {
@@ -937,8 +944,8 @@ export const CORE_PLUGIN: Plugin<
 					compatibilityFlags: ["connect_pass_through", "experimental"],
 					bindings: [
 						{
-							name: "CF_WORKER_NAME",
-							text: options.name ?? "worker",
+							name: "CF_WORKER_ZONE",
+							text: cfWorkerValue,
 						},
 					],
 					globalOutbound: getGlobalOutbound(workerIndex, options),
