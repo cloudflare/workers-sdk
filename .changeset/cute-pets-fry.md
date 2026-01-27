@@ -2,4 +2,4 @@
 "wrangler": patch
 ---
 
-Added friendly error message when D1 export output is a directory
+Improve error message when `d1 export --output` points to a directory
