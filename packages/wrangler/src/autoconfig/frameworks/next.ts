@@ -1,9 +1,7 @@
-import { statSync } from "node:fs";
 import semiver from "semiver";
 import { getPackageManager } from "../../package-manager";
 import { runCommand } from "../c3-vendor/command";
 import { AutoConfigFrameworkConfigurationError } from "../errors";
-import { usesTypescript } from "../uses-typescript";
 import { getInstalledPackageVersion } from "./utils/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
@@ -13,15 +11,6 @@ export class NextJs extends Framework {
 		dryRun,
 		projectPath,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		const usesTs = usesTypescript(projectPath);
-
-		const nextConfigPath = findNextConfigPath(usesTs);
-		if (!nextConfigPath) {
-			throw new AutoConfigFrameworkConfigurationError(
-				"No Next.js configuration file could be detected."
-			);
-		}
-
 		const firstNextVersionSupportedByOpenNext = "14.2.35";
 		const installedNextVersion = getInstalledPackageVersion(
 			"next",
@@ -64,22 +53,4 @@ export class NextJs extends Framework {
 
 	configurationDescription =
 		"Configuring project for Next.js with OpenNext by running `@opennextjs/cloudflare migrate`";
-}
-
-function findNextConfigPath(usesTs: boolean): string | undefined {
-	const pathsToCheck = [
-		...(usesTs ? ["next.config.ts"] : []),
-		"next.config.mjs",
-		"next.config.js",
-		"next.config.cjs",
-	] as const;
-
-	for (const path of pathsToCheck) {
-		const stats = statSync(path, {
-			throwIfNoEntry: false,
-		});
-		if (stats?.isFile()) {
-			return path;
-		}
-	}
 }
