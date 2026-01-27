@@ -1864,6 +1864,15 @@ function normalizeAndValidateEnvironment(
 		configPath
 	);
 
+	// top level 'rawEnv' includes inheritable keys and is validated elsewhere
+	if (envName !== "top level") {
+		validateAdditionalProperties(
+			diagnostics,
+			"env." + envName,
+			Object.keys(rawEnv),
+			Object.keys(environment)
+		);
+	}
 	return environment;
 }
 
