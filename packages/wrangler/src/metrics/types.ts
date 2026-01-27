@@ -96,6 +96,10 @@ type CommandEventProperties = CommonEventProperties & {
 	 * Only args that are explicitly allowed via the `COMMAND_ARG_ALLOW_LIST` will appear here.
 	 * See `getAllowedArgs()` and `sanitizeArgValues()` for details.
 	 *
+	 * For example, if the user ran `wrangler kv key get <key> --format=json --namespace-id ns_12345`,
+	 * the sanitized args would only contain `{ format: "json" }` since that is the only allowed value.
+	 * The `<key>` positional argument and `--namespace-id` flag would be omitted since they are not allowed.
+	 *
 	 * It is named `sanitizedArgs` to distinguish it from the historical `args` field which
 	 * may have contained sensitive data in older Wrangler versions.
 	 */
