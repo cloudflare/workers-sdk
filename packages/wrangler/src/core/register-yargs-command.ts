@@ -123,7 +123,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 		const startTime = Date.now();
 
 		// The command definition's `command` string is safe to use in sentry messages.
-		// Sentry breadcrumbs expect the `wranger` prefix.
+		// Sentry breadcrumbs expect the `wrangler` prefix.
 		addBreadcrumb(def.command);
 
 		try {
