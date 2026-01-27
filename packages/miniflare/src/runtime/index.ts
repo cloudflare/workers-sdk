@@ -315,13 +315,35 @@ export class Runtime {
 	}
 
 	dispose(): Awaitable<void> {
+		const runtimeProcess = this.#process;
+		if (runtimeProcess === undefined) {
+			return;
+		}
+
+		// Clear reference to prevent potential race conditions
+		this.#process = undefined;
+
+		// Explicitly destroy all stdio streams to ensure file descriptors are
+		// properly released. This prevents EBADF errors when spawning a new
+		// process after restart.
+		// See https://github.com/cloudflare/workers-sdk/issues/11675
+		runtimeProcess.stdin?.destroy();
+		runtimeProcess.stdout?.destroy();
+		runtimeProcess.stderr?.destroy();
+		// The control pipe at stdio[3] could be a Readable stream
+		const controlPipe = runtimeProcess.stdio[3];
+		if (controlPipe instanceof Readable) {
+			controlPipe.destroy();
+		}
+
 		// `kill()` uses `SIGTERM` by default. In `workerd`, this waits for HTTP
 		// connections to close before exiting. Notably, Chrome sometimes keeps
 		// connections open for about 10s, blocking exit. We'd like `dispose()`/
 		// `setOptions()` to immediately terminate the existing process.
 		// Therefore, use `SIGKILL` which force closes all connections.
 		// See https://github.com/cloudflare/workerd/pull/244.
-		this.#process?.kill("SIGKILL");
+		runtimeProcess.kill("SIGKILL");
+
 		return this.#processExitPromise;
 	}
 }
