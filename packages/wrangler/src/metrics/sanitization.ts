@@ -33,6 +33,31 @@ export type AllowedArgs = {
 export type AllowList = Record<string, AllowedArgs>;
 
 /**
+ * A list of all the command args that are allowed.
+ *
+ * A wildcard "<command> *" applies to all sub-commands of `<command>`.
+ * The top level "*" applies to all commands.
+ * Specific commands can override or add to the allow list.
+ *
+ * Each arg can have one of three values:
+ * - an array of strings: only those specific values are allowed
+ * - REDACT: the arg value will always be redacted
+ * - ALLOW: all values for that arg are allowed
+ */
+export const COMMAND_ARG_ALLOW_LIST: AllowList = {
+	// * applies to all commands
+	"*": {
+		format: ALLOW,
+		logLevel: ALLOW,
+	},
+	tail: { status: ALLOW },
+	types: {
+		xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
+		path: ["worker-configuration.d.ts"],
+	},
+};
+
+/**
  * Returns the allowed args for a given command.
  *
  * This takes into account:

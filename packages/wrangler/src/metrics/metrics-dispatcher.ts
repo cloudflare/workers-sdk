@@ -18,14 +18,7 @@ import {
 	readMetricsConfig,
 	writeMetricsConfig,
 } from "./metrics-config";
-import {
-	ALLOW,
-	getAllowedArgs,
-	sanitizeArgKeys,
-	sanitizeArgValues,
-} from "./sanitization";
 import type { MetricsConfigOptions } from "./metrics-config";
-import type { AllowList } from "./sanitization";
 import type { CommonEventProperties, Events } from "./types";
 
 const SPARROW_URL = "https://sparrow.cloudflare.com";
@@ -42,31 +35,6 @@ const pendingRequests = new Set<Promise<void>>();
 export function allMetricsDispatchesCompleted(): Promise<void> {
 	return Promise.allSettled(pendingRequests).then(() => {});
 }
-
-/**
- * A list of all the command args that can be included in the event.
- *
- * A wildcard "<command> *" applies to all sub-commands of `<command>`.
- * The top level "*" applies to all commands.
- * Specific commands can override or add to the allow list.
- *
- * Each arg can have one of three values:
- * - an array of strings: only those specific values are allowed
- * - REDACT: the arg value will always be redacted
- * - ALLOW: all values for that arg are allowed
- */
-const COMMAND_ARG_ALLOW_LIST: AllowList = {
-	// * applies to all commands
-	"*": {
-		format: ALLOW,
-		logLevel: ALLOW,
-	},
-	tail: { status: ALLOW },
-	types: {
-		xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
-		path: ["worker-configuration.d.ts"],
-	},
-};
 
 export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	// The SPARROW_SOURCE_KEY will be provided at build time through esbuild's `define` option
@@ -130,10 +98,6 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			>
 		) {
 			try {
-				// Truncate login commands to just "login" to avoid capturing tokens
-				if (properties.sanitizedCommand?.startsWith("login")) {
-					properties.sanitizedCommand = "login";
-				}
 				// Don't send metrics for telemetry/metrics disable commands
 				if (
 					properties.sanitizedCommand === "telemetry disable" ||
@@ -151,11 +115,8 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					printMetricsBanner();
 				}
 
-				const sanitizedArgs = sanitizeArgKeys(
-					properties.sanitizedArgs ?? {},
-					options.argv
-				);
-				const sanitizedArgsKeys = Object.keys(sanitizedArgs).sort();
+				const argsUsed = Object.keys(properties.sanitizedArgs).sort();
+
 				const commonEventProperties: CommonEventProperties = {
 					amplitude_session_id,
 					amplitude_event_id: amplitude_event_id++,
@@ -174,20 +135,10 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					isWorkersCI: isWorkersCI(),
 					isInteractive: isInteractive(),
 					hasAssets: options.hasAssets ?? false,
-					argsUsed: sanitizedArgsKeys,
-					argsCombination: sanitizedArgsKeys.join(", "),
+					argsUsed,
+					argsCombination: argsUsed.join(", "),
 					agent,
 				};
-
-				// get the args where we don't want to redact their values
-				const allowedArgs = getAllowedArgs(
-					COMMAND_ARG_ALLOW_LIST,
-					properties.sanitizedCommand
-				);
-				properties.sanitizedArgs = sanitizeArgValues(
-					sanitizedArgs,
-					allowedArgs
-				);
 
 				dispatch({
 					name,

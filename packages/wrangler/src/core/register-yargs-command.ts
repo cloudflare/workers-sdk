@@ -13,6 +13,12 @@ import { readConfig } from "../config";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
 import { getMetricsDispatcher } from "../metrics";
+import {
+	COMMAND_ARG_ALLOW_LIST,
+	getAllowedArgs,
+	sanitizeArgKeys,
+	sanitizeArgValues,
+} from "../metrics/sanitization";
 import { writeOutput } from "../output";
 import { addBreadcrumb } from "../sentry";
 import { dedent } from "../utils/dedent";
@@ -23,8 +29,8 @@ import { getErrorType, handleError } from "./handle-errors";
 import { demandSingleValue } from "./helpers";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type {
-	CommandDefinition,
 	HandlerArgs,
+	InternalCommandDefinition,
 	InternalDefinition,
 	NamedArgDefinitions,
 } from "./types";
@@ -103,21 +109,22 @@ export function createRegisterYargsCommand(
 				registerSubTreeCallback();
 			},
 			// Only attach the handler for commands, not namespaces
-			def.type === "command" ? createHandler(def, def.command, argv) : undefined
+			def.type === "command" ? createHandler(def, argv) : undefined
 		);
 	};
 }
 
-function createHandler(
-	def: CommandDefinition,
-	commandName: string,
-	argv: string[]
-) {
+function createHandler(def: InternalCommandDefinition, argv: string[]) {
+	// Strip "wrangler " prefix to get just the command (e.g., "wrangler dev" -> "dev").
+	// What is left is safe to use in metrics and sentry messages as the parts of the command are taken directly from the command definition.
+	const sanitizedCommand = def.command.replace(/^wrangler\s+/, "");
+
 	return async function handler(args: HandlerArgs<NamedArgDefinitions>) {
 		const startTime = Date.now();
 
-		// Record command as Sentry breadcrumb using the safe commandName from definition
-		addBreadcrumb(commandName);
+		// The command definition's `command` string is safe to use in sentry messages.
+		// Sentry breadcrumbs expect the `wranger` prefix.
+		addBreadcrumb(def.command);
 
 		try {
 			const shouldPrintBanner = def.behaviour?.printBanner;
@@ -209,7 +216,7 @@ function createHandler(
 						if (availableEnvs.length > 0) {
 							logger.warn(
 								dedent`
-										Multiple environments are defined in the Wrangler configuration file, but no target environment was specified for the ${commandName.replace(/^wrangler\s+/, "")} command.
+										Multiple environments are defined in the Wrangler configuration file, but no target environment was specified for the ${sanitizedCommand} command.
 										To avoid unintentional changes to the wrong environment, it is recommended to explicitly specify the target environment using the \`-e|--env\` flag.
 										If your intention is to use the top-level environment of your configuration simply pass an empty string to the flag to target such environment. For example \`--env=""\`.
 									`
@@ -218,13 +225,18 @@ function createHandler(
 					}
 				}
 
-				// Compute safe telemetry properties
-				// Strip "wrangler " prefix to get just the command (e.g., "wrangler dev" -> "dev")
-				const sanitizedCommand = commandName.replace(/^wrangler\s*/, "");
+				const allowedArgs = getAllowedArgs(
+					COMMAND_ARG_ALLOW_LIST,
+					sanitizedCommand
+				);
+				const sanitizedArgs = sanitizeArgValues(
+					sanitizeArgKeys(args, argv),
+					allowedArgs
+				);
 
 				dispatcher.sendCommandEvent("wrangler command started", {
 					sanitizedCommand,
-					sanitizedArgs: args,
+					sanitizedArgs,
 				});
 
 				try {
@@ -239,7 +251,7 @@ function createHandler(
 					const durationMs = Date.now() - startTime;
 					dispatcher.sendCommandEvent("wrangler command completed", {
 						sanitizedCommand,
-						sanitizedArgs: args,
+						sanitizedArgs,
 						durationMs,
 						durationSeconds: durationMs / 1000,
 						durationMinutes: durationMs / 1000 / 60,
@@ -256,7 +268,7 @@ function createHandler(
 					const durationMs = Date.now() - startTime;
 					dispatcher.sendCommandEvent("wrangler command errored", {
 						sanitizedCommand,
-						sanitizedArgs: args,
+						sanitizedArgs,
 						durationMs,
 						durationSeconds: durationMs / 1000,
 						durationMinutes: durationMs / 1000 / 60,
