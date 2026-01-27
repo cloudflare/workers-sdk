@@ -95,7 +95,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			properties: Omit<
 				Extract<Events, { name: EventName }>["properties"],
 				keyof CommonEventProperties
-			>
+			> & { argsUsed?: string[] }
 		) {
 			try {
 				// Don't send metrics for telemetry/metrics disable commands
@@ -115,7 +115,8 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					printMetricsBanner();
 				}
 
-				const argsUsed = Object.keys(properties.sanitizedArgs).sort();
+				const argsUsed = properties.argsUsed ?? [];
+				const argsCombination = argsUsed.join(", ");
 
 				const commonEventProperties: CommonEventProperties = {
 					amplitude_session_id,
@@ -136,7 +137,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					isInteractive: isInteractive(),
 					hasAssets: options.hasAssets ?? false,
 					argsUsed,
-					argsCombination: argsUsed.join(", "),
+					argsCombination,
 					agent,
 				};
 

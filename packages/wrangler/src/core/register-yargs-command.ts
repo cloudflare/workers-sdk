@@ -229,14 +229,17 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					COMMAND_ARG_ALLOW_LIST,
 					sanitizedCommand
 				);
+				const argsWithSanitizedKeys = sanitizeArgKeys(args, argv);
 				const sanitizedArgs = sanitizeArgValues(
-					sanitizeArgKeys(args, argv),
+					argsWithSanitizedKeys,
 					allowedArgs
 				);
+				const argsUsed = Object.keys(argsWithSanitizedKeys).sort();
 
 				dispatcher.sendCommandEvent("wrangler command started", {
 					sanitizedCommand,
 					sanitizedArgs,
+					argsUsed,
 				});
 
 				try {
@@ -252,6 +255,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					dispatcher.sendCommandEvent("wrangler command completed", {
 						sanitizedCommand,
 						sanitizedArgs,
+						argsUsed: Object.keys(argsWithSanitizedKeys).sort(),
 						durationMs,
 						durationSeconds: durationMs / 1000,
 						durationMinutes: durationMs / 1000 / 60,
@@ -269,6 +273,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					dispatcher.sendCommandEvent("wrangler command errored", {
 						sanitizedCommand,
 						sanitizedArgs,
+						argsUsed,
 						durationMs,
 						durationSeconds: durationMs / 1000,
 						durationMinutes: durationMs / 1000 / 60,
