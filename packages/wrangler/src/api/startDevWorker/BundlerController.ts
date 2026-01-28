@@ -53,7 +53,8 @@ export class BundlerController extends Controller {
 					cwd: config.build?.custom?.workingDirectory,
 					command: config.build?.custom?.command,
 				},
-				config.config
+				config.config,
+				"dev"
 			);
 			if (buildAborter.signal.aborted) {
 				return;
