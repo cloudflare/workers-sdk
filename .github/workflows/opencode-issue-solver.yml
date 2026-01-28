@@ -1,0 +1,394 @@
+name: OpenCode Issue Solver
+
+on:
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      issue-number:
+        description: "Issue number to attempt to fix"
+        required: true
+        type: number
+
+jobs:
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Job 1: ASSESS - Determine if issue is solvable (READ-ONLY)
+  # ═══════════════════════════════════════════════════════════════════════════
+  assess-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+      id-token: write
+    outputs:
+      should_proceed: ${{ steps.gate.outputs.should_proceed }}
+      is_solvable: ${{ steps.parse.outputs.is_solvable }}
+      analysis: ${{ steps.parse.outputs.analysis }}
+      issue_number: ${{ steps.gate.outputs.issue_number }}
+    steps:
+      - name: Evaluate trigger conditions
+        id: gate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const event = context.eventName;
+            const action = context.payload.action;
+
+            let issueNumber;
+            let shouldProceed = false;
+            let requiresTeamCheck = false;
+            let reason = '';
+
+            if (event === 'workflow_dispatch') {
+              issueNumber = context.payload.inputs['issue-number'];
+              shouldProceed = true;
+              requiresTeamCheck = true;
+              reason = 'workflow_dispatch';
+            } else if (event === 'issues' && action === 'labeled') {
+              issueNumber = context.payload.issue.number;
+              const label = context.payload.label?.name;
+              if (label === 'autofix') {
+                shouldProceed = true;
+                requiresTeamCheck = true;
+                reason = 'autofix_label';
+              } else {
+                reason = `label_not_autofix: ${label}`;
+              }
+            } else if (event === 'issues' && action === 'opened') {
+              issueNumber = context.payload.issue.number;
+              const user = await github.rest.users.getByUsername({
+                username: context.payload.issue.user.login
+              });
+              const created = new Date(user.data.created_at);
+              const days = (Date.now() - created) / (1000 * 60 * 60 * 24);
+
+              if (days >= 30) {
+                shouldProceed = true;
+                requiresTeamCheck = false;
+                reason = 'new_issue_mature_account';
+              } else {
+                reason = `account_too_new: ${Math.floor(days)} days`;
+              }
+            }
+
+            console.log(`Trigger: ${event}/${action}, Proceed: ${shouldProceed}, Reason: ${reason}`);
+            core.setOutput('should_proceed', shouldProceed);
+            core.setOutput('requires_team_check', requiresTeamCheck);
+            core.setOutput('issue_number', issueNumber || '');
+
+      - name: Check team membership
+        if: steps.gate.outputs.should_proceed == 'true' && steps.gate.outputs.requires_team_check == 'true'
+        id: team-check
+        uses: tspascoal/get-user-teams-membership@v2
+        with:
+          GITHUB_TOKEN: ${{ secrets.READ_ONLY_ORG_GITHUB_TOKEN }}
+          username: ${{ github.actor }}
+          team: wrangler
+
+      - name: Verify team membership
+        if: steps.gate.outputs.should_proceed == 'true' && steps.gate.outputs.requires_team_check == 'true' && steps.team-check.outputs.isTeamMember == false
+        run: |
+          echo "You must be on the "wrangler" team to use the autofix label."
+          exit 1
+
+      - name: Checkout repository
+        if: steps.gate.outputs.should_proceed == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Assess issue with OpenCode
+        id: assess
+        if: steps.gate.outputs.should_proceed == 'true'
+        uses: anomalyco/opencode/github@latest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          model: anthropic/claude-sonnet-4-20250514
+          agent: plan
+          prompt: |
+            Analyze GitHub issue #${{ steps.gate.outputs.issue_number }} and determine if it can be fixed with an automated one-shot fix.
+
+            Evaluate:
+            1. Is the problem clearly described with specific symptoms or error messages?
+            2. Is there a specific file, function, or code location mentioned or identifiable?
+            3. Is this a bug fix, typo, small enhancement, or documentation issue?
+            4. Can you identify the likely root cause from the description?
+            5. Is this isolated enough to fix without major refactoring?
+
+            Output ONLY a JSON object (no markdown, no extra text):
+            {
+              "is_solvable": true or false,
+              "confidence": "high" or "medium" or "low",
+              "reasoning": "1-2 sentence explanation",
+              "affected_packages": ["package1", "package2"],
+              "estimated_complexity": "trivial" or "simple" or "moderate"
+            }
+
+            Only set is_solvable to true if confidence is "high".
+            Package names should match ./packages/ directories (e.g., "wrangler", "miniflare").
+
+      - name: Parse assessment
+        id: parse
+        if: steps.gate.outputs.should_proceed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const output = `${{ steps.assess.outputs.result || '{}' }}`;
+            try {
+              // Try to extract JSON from the output
+              const jsonMatch = output.match(/\{[\s\S]*\}/);
+              const analysis = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+              core.setOutput('is_solvable', analysis.is_solvable === true ? 'true' : 'false');
+              core.setOutput('analysis', JSON.stringify(analysis));
+            } catch (e) {
+              console.log('Failed to parse assessment:', e.message);
+              core.setOutput('is_solvable', 'false');
+              core.setOutput('analysis', '{"is_solvable": false, "reasoning": "Failed to parse assessment"}');
+            }
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Job 2: SOLVE - Attempt to fix the issue (READ-ONLY to repo)
+  # ═══════════════════════════════════════════════════════════════════════════
+  solve-issue:
+    needs: assess-issue
+    if: needs.assess-issue.outputs.is_solvable == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      tests_passed: ${{ steps.final-test.outputs.passed }}
+      has_changes: ${{ steps.capture.outputs.has_changes }}
+      patch_content: ${{ steps.capture.outputs.patch_content }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+        with:
+          turbo-api: ${{ secrets.TURBO_API }}
+          turbo-team: ${{ secrets.TURBO_TEAM }}
+          turbo-token: ${{ secrets.TURBO_TOKEN }}
+          turbo-signature: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
+
+      - name: Fix issue with OpenCode
+        id: solve
+        uses: anomalyco/opencode/github@latest
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          model: anthropic/claude-sonnet-4-20250514
+          agent: build
+          prompt: |
+            Fix GitHub issue #${{ needs.assess-issue.outputs.issue_number }}.
+
+            Analysis: ${{ needs.assess-issue.outputs.analysis }}
+
+            Instructions:
+            1. Implement a minimal, targeted fix
+            2. Run checks: pnpm run check
+            3. Run tests for affected packages: pnpm run test:ci --filter="./packages/{pkg}"
+            4. If tests fail, iterate (max 3 attempts)
+            5. Create a changeset if needed: pnpm changeset
+            6. Make sure you read AGENTS.md in full for more guidelines
+
+            Guidelines:
+            - Minimal changes only - no unrelated refactoring
+            - Follow existing code patterns
+            - Ensure TypeScript types are correct
+
+      - name: Final test run
+        id: final-test
+        run: |
+          ANALYSIS='${{ needs.assess-issue.outputs.analysis }}'
+          PACKAGES=$(echo "$ANALYSIS" | jq -r '.affected_packages // [] | .[]' 2>/dev/null | tr '\n' ' ' || echo "")
+
+          if [ -z "$PACKAGES" ]; then
+            echo "No specific packages identified, running check only"
+            if pnpm run check; then
+              echo "passed=true" >> $GITHUB_OUTPUT
+            else
+              echo "passed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            FILTER=""
+            for pkg in $PACKAGES; do
+              FILTER="$FILTER --filter=./packages/$pkg"
+            done
+            echo "Running tests for packages: $PACKAGES"
+            if pnpm run test:ci $FILTER; then
+              echo "passed=true" >> $GITHUB_OUTPUT
+            else
+              echo "passed=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+        env:
+          CI_OS: Linux
+          NODE_OPTIONS: "--max_old_space_size=8192"
+
+      - name: Capture changes
+        id: capture
+        run: |
+          git add -A
+          git diff --cached > solution.patch
+
+          if [ -s solution.patch ]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            {
+              echo "patch_content<<PATCHEOF"
+              cat solution.patch
+              echo "PATCHEOF"
+            } >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "patch_content=" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload patch artifact
+        if: steps.capture.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: solution-patch-${{ needs.assess-issue.outputs.issue_number }}
+          path: solution.patch
+          retention-days: 7
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Job 3a: CREATE PR - Only when tests pass (WRITE PERMISSIONS)
+  # ═══════════════════════════════════════════════════════════════════════════
+  create-pr:
+    needs: [assess-issue, solve-issue]
+    if: |
+      needs.solve-issue.outputs.has_changes == 'true' &&
+      needs.solve-issue.outputs.tests_passed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    env:
+      ISSUE_NUM: ${{ needs.assess-issue.outputs.issue_number }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_ACCESS_TOKEN }}
+
+      - name: Download patch
+        uses: actions/download-artifact@v4
+        with:
+          name: solution-patch-${{ env.ISSUE_NUM }}
+
+      - name: Apply patch and create branch
+        run: |
+          BRANCH="opencode/fix-issue-$ISSUE_NUM"
+          git checkout -b "$BRANCH"
+
+          git apply solution.patch
+          git add -A
+          git commit -m "Address issue #$ISSUE_NUM
+
+          Automated fix generated by OpenCode.
+
+          Closes #$ISSUE_NUM"
+
+          git push origin "$BRANCH"
+          echo "BRANCH=$BRANCH" >> $GITHUB_ENV
+
+      - name: Create draft PR
+        id: create-pr
+        env:
+          GH_TOKEN: ${{ secrets.GH_ACCESS_TOKEN }}
+        run: |
+          PR_URL=$(gh pr create \
+            --head "$BRANCH" \
+            --draft \
+            --title "fix: address issue #$ISSUE_NUM" \
+            --body "Fixes #$ISSUE_NUM.
+
+          🤖✨ Beep boop! I'm OpenCode, and I think I've squashed this bug! All automated tests are passing, but my silicon brain might have missed something—would love a human review before this gets merged.
+
+          ---
+
+          - Tests
+            - [x] Tests included/updated
+            - [ ] Automated tests not possible - manual testing has been completed as follows:
+            - [ ] Additional testing not necessary because:
+          - Public documentation
+            - [ ] Cloudflare docs PR(s):
+            - [x] Documentation not necessary because: This is an automated bug fix")
+
+          echo "pr_url=$PR_URL" >> $GITHUB_OUTPUT
+
+      - name: Comment on issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prUrl = '${{ steps.create-pr.outputs.pr_url }}';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt('${{ env.ISSUE_NUM }}'),
+              body: `🤖✨ Beep boop! I've opened a draft PR with a fix: ${prUrl}
+
+            Tests are passing! A human should give it a once-over before merging though—I'm just a mass of neural network weights, after all.`
+            });
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # Job 3b: COMMENT POTENTIAL FIX - Only when tests fail (MINIMAL PERMISSIONS)
+  # ═══════════════════════════════════════════════════════════════════════════
+  comment-potential-fix:
+    needs: [assess-issue, solve-issue]
+    if: |
+      needs.solve-issue.outputs.has_changes == 'true' &&
+      needs.solve-issue.outputs.tests_passed == 'false'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Comment with potential fix
+        uses: actions/github-script@v7
+        env:
+          ANALYSIS: ${{ needs.assess-issue.outputs.analysis }}
+          PATCH_CONTENT: ${{ needs.solve-issue.outputs.patch_content }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            let analysis;
+            try {
+              analysis = JSON.parse(process.env.ANALYSIS);
+            } catch (e) {
+              analysis = { reasoning: 'Unable to parse analysis' };
+            }
+
+            const diff = process.env.PATCH_CONTENT || 'No diff available';
+            const runUrl = process.env.RUN_URL;
+
+            const body = `🤖💭 I gave this one a shot, but couldn't quite get the tests to pass. Here's what I tried—maybe it'll be useful as a starting point for a human!
+
+            <details>
+            <summary><strong>🔧 My attempted fix</strong></summary>
+
+            \`\`\`diff
+            ${diff}
+            \`\`\`
+
+            </details>
+
+            **My reasoning:** ${analysis.reasoning || 'No reasoning provided'}
+
+            📋 [Check out the test output](${runUrl}) to see where my circuits got tangled.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt('${{ needs.assess-issue.outputs.issue_number }}'),
+              body: body
+            });
