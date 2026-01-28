@@ -14,7 +14,7 @@ export type PackageJsonScriptsOverrides = {
 };
 
 export type ConfigurationResults = {
-	/** The wrangler configuration that the configuration should generate. `null` if autoconfig should not create the wrangler file (in case an external too already does that) */
+	/** The framework specific wrangler configuration that should be created (it will also be augmented by autoconfig). `null` if autoconfig should not create the wrangler file (in case an external tool already does that) */
 	wranglerConfig: RawConfig | null;
 	// Scripts to override in the package.json. Most frameworks should not need to do this, as their default detected build command will be sufficient
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides;
