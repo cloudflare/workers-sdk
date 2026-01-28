@@ -17,6 +17,7 @@ describe("KV API", () => {
 
 	beforeAll(async () => {
 		mf = new Miniflare({
+			inspectorPort: 0,
 			compatibilityDate: "2025-01-01",
 			modules: true,
 			script: `export default { fetch() { return new Response("user worker"); } }`,

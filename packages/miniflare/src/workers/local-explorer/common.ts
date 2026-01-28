@@ -54,8 +54,10 @@ export function validateRequestBody<T extends z.ZodTypeAny>(schema: T) {
  * Query params arrive as strings but schemas may expect numbers, booleans, or arrays.
  * Throw a validation error if coercion is not possible.
  *
- * We have to do this manually because zod's built-in coercion for booleans
- * will turn the string 'false' into true, which is not what we want.
+ * We handle this manually rather than using Zod's built-in coercion because:
+ * 1. Booleans: Zod's coercion turns "false" into true (any non-empty string is truthy)
+ * 2. Numbers: Generated schemas use z.number() not z.coerce.number(), so we must coercem
+ * 3. Arrays/Objects: We need to recursively coerce nested values
  */
 export function coerceValue(
 	schema: z.ZodTypeAny,
