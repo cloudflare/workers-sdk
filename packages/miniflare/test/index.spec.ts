@@ -3142,6 +3142,73 @@ test("Miniflare: does not strip CF-Connecting-IP when configured", async () => {
 	expect(await landingPage.text()).toEqual("fake-value");
 });
 
+// Test for https://github.com/cloudflare/workers-sdk/issues/4367
+// The CF-Worker header should be added to outbound fetch requests to match production behavior
+test("Miniflare: adds CF-Worker header to outbound requests with zone option", async () => {
+	const server = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }",
+		modules: true,
+	});
+	const serverUrl = await server.ready;
+
+	const client = new Miniflare({
+		name: "my-worker",
+		zone: "my-zone.example.com",
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}') } }`,
+		modules: true,
+	});
+	useDispose(client);
+	useDispose(server);
+
+	const response = await client.dispatchFetch("http://example.com/");
+	// The CF-Worker header should be set to the zone value when provided
+	expect(await response.text()).toEqual("my-zone.example.com");
+});
+
+test("Miniflare: CF-Worker header defaults to worker-name.example.com when zone not set", async () => {
+	const server = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }",
+		modules: true,
+	});
+	const serverUrl = await server.ready;
+
+	const client = new Miniflare({
+		name: "my-worker",
+		// No zone set, should default to `${worker-name}.example.com`
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}') } }`,
+		modules: true,
+	});
+	useDispose(client);
+	useDispose(server);
+
+	const response = await client.dispatchFetch("http://example.com/");
+	// The CF-Worker header should default to `${worker-name}.example.com` when no zone is specified
+	expect(await response.text()).toEqual("my-worker.example.com");
+});
+
+test("Miniflare: CF-Worker header defaults to worker.example.com when neither zone nor name set", async () => {
+	const server = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }",
+		modules: true,
+	});
+	const serverUrl = await server.ready;
+
+	const client = new Miniflare({
+		// No name or zone set, should default to "worker.example.com"
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}') } }`,
+		modules: true,
+	});
+	useDispose(client);
+	useDispose(server);
+
+	const response = await client.dispatchFetch("http://example.com/");
+	// The CF-Worker header should default to "worker.example.com" when neither zone nor name is specified
+	expect(await response.text()).toEqual("worker.example.com");
+});
+
 test("Miniflare: can use module fallback service", async () => {
 	const modulesRoot = "/";
 	const modules: Record<string, Omit<Worker_Module, "name">> = {
