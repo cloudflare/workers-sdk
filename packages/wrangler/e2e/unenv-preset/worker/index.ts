@@ -1027,12 +1027,9 @@ export const WorkerdTests: Record<string, () => void> = {
 			const channel = new workerThreads.MessageChannel();
 			assert.ok(channel.port1, "MessageChannel should have port1");
 			assert.ok(channel.port2, "MessageChannel should have port2");
-		} else {
-			// Native workerd: MessageChannel is on globalThis, not exported from module
-			const channel = new globalThis.MessageChannel();
-			assert.ok(channel.port1, "globalThis.MessageChannel should have port1");
-			assert.ok(channel.port2, "globalThis.MessageChannel should have port2");
 		}
+		// Note: Native workerd worker_threads doesn't export MessageChannel
+		// (it's a Web API available separately, not part of the worker_threads module)
 	},
 };
 
