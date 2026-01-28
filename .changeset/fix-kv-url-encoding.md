@@ -2,7 +2,7 @@
 "wrangler": patch
 ---
 
-fix: add `url_encoded=true` query parameter to KV API calls for keys with special characters
+Add `url_encoded=true` query parameter to KV API calls for keys with special characters
 
 KV keys containing special characters like `^` (caret) or `...` were returning 404 errors when using `wrangler kv key get`, `put`, or `delete` commands. This was because while wrangler correctly URL-encoded the key using `encodeURIComponent()`, the Cloudflare API didn't know the key was URL-encoded.
 
