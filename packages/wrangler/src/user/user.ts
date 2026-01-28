@@ -366,6 +366,8 @@ const DefaultScopes = {
 	"zone:read": "Grants read level access to account zone.",
 	"ssl_certs:write": "See and manage mTLS certificates for your account",
 	"ai:write": "See and change Workers AI catalog and assets",
+	"ai-search:write": "See and change AI Search data",
+	"ai-search:run": "Run search queries on your AI Search instances",
 	"queues:write": "See and change Cloudflare Queues settings and data",
 	"pipelines:write":
 		"See and change Cloudflare Pipelines configurations and data",
