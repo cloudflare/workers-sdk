@@ -329,7 +329,7 @@ import {
 	logoutCommand,
 	whoamiCommand,
 } from "./user/commands";
-import { betaCmdColor, proxy } from "./utils/constants";
+import { proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
