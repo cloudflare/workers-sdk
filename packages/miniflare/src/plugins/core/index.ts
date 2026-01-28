@@ -1080,7 +1080,6 @@ export function getGlobalServices({
 		// Build binding ID map from proxyBindings
 		// Maps binding names to their actual namespace/bucket IDs
 		const IDToBindingName: {
-			// TODO(@nurodev): Couldn't this be a `Map`?
 			d1: Record<string, string>;
 			kv: Record<string, string>;
 		} = {

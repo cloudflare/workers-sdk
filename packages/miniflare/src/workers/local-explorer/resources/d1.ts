@@ -25,15 +25,15 @@ import type {
  * the corresponding D1Database instance from the environment.
  *
  * @param env - The worker environment containing bindings and configuration
- * @param database_id - The unique identifier of the D1 database
+ * @param databaseId - The unique identifier of the D1 database
  *
  * @returns The D1Database binding if found, or null if the database ID is not mapped
  */
-function getD1Binding(env: Env, database_id: string): D1Database | null {
+function getD1Binding(env: Env, databaseId: string): D1Database | null {
 	const bindingMap = env.LOCAL_EXPLORER_BINDING_MAP.d1;
 
 	// Find the binding name for this database ID
-	const bindingName = bindingMap[database_id];
+	const bindingName = bindingMap[databaseId];
 	if (!bindingName) {
 		return null;
 	}
@@ -45,13 +45,13 @@ function getD1Binding(env: Env, database_id: string): D1Database | null {
  * Retrieves the binding name for a D1 database by its database ID.
  *
  * @param env - The worker environment containing bindings and configuration
- * @param database_id - The unique identifier of the D1 database
+ * @param databaseId - The unique identifier of the D1 database
  *
  * @returns The binding name if found, or null if the database ID is not mapped
  */
-function getDatabaseInfo(env: Env, database_id: string): string | null {
+function getDatabaseInfo(env: Env, databaseId: string): string | null {
 	const bindingMap = env.LOCAL_EXPLORER_BINDING_MAP.d1;
-	return bindingMap[database_id] ?? null;
+	return bindingMap[databaseId] ?? null;
 }
 
 // ============================================================================
