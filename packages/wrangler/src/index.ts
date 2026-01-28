@@ -1868,8 +1868,6 @@ export function createCLIParser(argv: string[]) {
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
 
-	registry.registerLegacyCommandCategory("pubsub", "Compute & AI");
-
 	registry.registerAll();
 
 	wrangler.help("help", "Show help").alias("h", "help");
