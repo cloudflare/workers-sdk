@@ -86,9 +86,9 @@ jobs:
           team: wrangler
 
       - name: Verify team membership
-        if: steps.gate.outputs.should_proceed == 'true' && steps.gate.outputs.requires_team_check == 'true' && steps.team-check.outputs.isTeamMember == false
+        if: steps.gate.outputs.should_proceed == 'true' && steps.gate.outputs.requires_team_check == 'true' && steps.team-check.outputs.isTeamMember != 'true'
         run: |
-          echo "You must be on the "wrangler" team to use the autofix label."
+          echo "You must be on the 'wrangler' team to use the autofix label."
           exit 1
 
       - name: Checkout repository
@@ -287,6 +287,9 @@ jobs:
 
       - name: Apply patch and create branch
         run: |
+          git config user.email "workers-devprod@cloudflare.com"
+          git config user.name "workers-devprod"
+
           BRANCH="opencode/fix-issue-$ISSUE_NUM"
           git checkout -b "$BRANCH"
 
