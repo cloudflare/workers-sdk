@@ -678,7 +678,11 @@ export const cloudchamberApplyCommand = createCommand({
 		description: "Apply the changes in the container applications to deploy",
 		status: "alpha",
 		owner: "Product: Cloudchamber",
-		hidden: false,
+		hidden: true,
+		deprecated: true,
+		deprecatedMessage:
+			"`wrangler cloudchamber apply` is deprecated and will be removed in the next major version.\n" +
+			"Please use `wrangler deploy` instead.",
 	},
 	args: {
 		"skip-defaults": {
