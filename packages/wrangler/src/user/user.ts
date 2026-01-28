@@ -207,7 +207,13 @@
 
 import assert from "node:assert";
 import { webcrypto as crypto } from "node:crypto";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import http from "node:http";
 import path from "node:path";
 import url from "node:url";
@@ -245,6 +251,7 @@ import {
 	getCloudflareGlobalAuthKeyFromEnv,
 	getRevokeUrlFromEnv,
 	getTokenUrlFromEnv,
+	getWranglerProfileFromEnv,
 } from "./auth-variables";
 import { getAccountChoices } from "./choose-account";
 import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
@@ -324,6 +331,200 @@ interface AuthTokens {
  * relative to the user's home directory.
  */
 const USER_AUTH_CONFIG_PATH = "config";
+
+/**
+ * The subdirectory within the config path that stores named profiles.
+ */
+const PROFILES_DIR = "profiles";
+
+/**
+ * The manifest file that tracks which profile is currently active.
+ */
+const PROFILES_CONFIG_FILE = "profiles.toml";
+
+/**
+ * The regex pattern for valid profile names.
+ */
+const PROFILE_NAME_PATTERN = /^[a-zA-Z0-9_-]+$/;
+
+/**
+ * Maximum length for a profile name.
+ */
+const MAX_PROFILE_NAME_LENGTH = 64;
+
+/**
+ * Runtime override for the active profile, set by the `--profile` CLI flag.
+ */
+let _profileOverride: string | undefined;
+
+/**
+ * Set the active profile override for the current process.
+ * Called from CLI middleware when `--profile` flag is provided.
+ */
+export function setProfileOverride(profile: string): void {
+	validateProfileName(profile);
+	_profileOverride = profile;
+	reinitialiseAuthTokens();
+}
+
+/**
+ * Clear the profile override. Primarily used for testing.
+ */
+export function clearProfileOverride(): void {
+	_profileOverride = undefined;
+}
+
+/**
+ * Validate a profile name.
+ * Must be alphanumeric (with hyphens and underscores), max 64 characters.
+ */
+export function validateProfileName(name: string): void {
+	if (!name) {
+		throw new UserError("Profile name cannot be empty.");
+	}
+	if (name.length > MAX_PROFILE_NAME_LENGTH) {
+		throw new UserError(
+			`Profile name must be at most ${MAX_PROFILE_NAME_LENGTH} characters.`
+		);
+	}
+	if (!PROFILE_NAME_PATTERN.test(name)) {
+		throw new UserError(
+			`Profile name "${name}" is invalid. Only letters, numbers, hyphens, and underscores are allowed.`
+		);
+	}
+}
+
+/**
+ * Resolve the active profile name.
+ *
+ * Priority (highest to lowest):
+ * 1. `--profile` CLI flag (via `_profileOverride`)
+ * 2. `WRANGLER_PROFILE` environment variable
+ * 3. `active_profile` from `~/.wrangler/config/profiles.toml`
+ * 4. `"default"`
+ */
+export function getActiveProfile(): string {
+	if (_profileOverride) {
+		return _profileOverride;
+	}
+
+	const envProfile = getWranglerProfileFromEnv();
+	if (envProfile) {
+		return envProfile;
+	}
+
+	try {
+		const profilesConfigPath = path.join(
+			getGlobalWranglerConfigPath(),
+			USER_AUTH_CONFIG_PATH,
+			PROFILES_CONFIG_FILE
+		);
+		const profilesConfig = parseTOML(readFileSync(profilesConfigPath)) as {
+			active_profile?: string;
+		};
+		if (
+			profilesConfig.active_profile &&
+			profilesConfig.active_profile !== "default"
+		) {
+			return profilesConfig.active_profile;
+		}
+	} catch {
+		// profiles.toml doesn't exist; that's fine
+	}
+
+	return "default";
+}
+
+/**
+ * Get the directory where named profiles are stored.
+ */
+function getProfilesDir(): string {
+	return path.join(
+		getGlobalWranglerConfigPath(),
+		USER_AUTH_CONFIG_PATH,
+		PROFILES_DIR
+	);
+}
+
+/**
+ * Check whether a named profile exists on disk.
+ */
+export function profileExists(name: string): boolean {
+	if (name === "default") {
+		// The default profile always "exists" (it uses the standard config path)
+		return true;
+	}
+	const profilePath = path.join(getProfilesDir(), `${name}.toml`);
+	return existsSync(profilePath);
+}
+
+/**
+ * List all available profiles.
+ * Always includes "default" as the first entry.
+ */
+export function listProfiles(): string[] {
+	const profiles: string[] = ["default"];
+	try {
+		const profilesDir = getProfilesDir();
+		if (existsSync(profilesDir)) {
+			const files = readdirSync(profilesDir);
+			for (const file of files) {
+				if (file.endsWith(".toml")) {
+					const name = file.slice(0, -5); // remove .toml
+					if (name && PROFILE_NAME_PATTERN.test(name)) {
+						profiles.push(name);
+					}
+				}
+			}
+		}
+	} catch {
+		// If we can't read the profiles directory, just return ["default"]
+	}
+	return profiles;
+}
+
+/**
+ * Set the active profile in the profiles.toml manifest.
+ */
+export function setActiveProfile(name: string): void {
+	validateProfileName(name);
+	const profilesConfigPath = path.join(
+		getGlobalWranglerConfigPath(),
+		USER_AUTH_CONFIG_PATH,
+		PROFILES_CONFIG_FILE
+	);
+	mkdirSync(path.dirname(profilesConfigPath), { recursive: true });
+	writeFileSync(
+		profilesConfigPath,
+		TOML.stringify({ active_profile: name }),
+		{ encoding: "utf-8" }
+	);
+	reinitialiseAuthTokens();
+}
+
+/**
+ * Delete a named profile.
+ * Cannot delete the "default" profile.
+ */
+export function deleteProfile(name: string): void {
+	if (name === "default") {
+		throw new UserError(
+			'Cannot delete the default profile. Use `wrangler logout` instead.'
+		);
+	}
+	validateProfileName(name);
+
+	const profilePath = path.join(getProfilesDir(), `${name}.toml`);
+	if (!existsSync(profilePath)) {
+		throw new UserError(`Profile "${name}" does not exist.`);
+	}
+	rmSync(profilePath);
+
+	// If this was the active profile, reset to default
+	if (getActiveProfile() === name) {
+		setActiveProfile("default");
+	}
+}
 
 /**
  * The data that may be read from the `USER_CONFIG_FILE`.
@@ -904,19 +1105,41 @@ async function generatePKCECodes(): Promise<PKCECodes> {
 	return { codeChallenge, codeVerifier };
 }
 
-export function getAuthConfigFilePath() {
+export function getAuthConfigFilePath(profile?: string) {
+	const activeProfile = profile ?? getActiveProfile();
 	const environment = getCloudflareApiEnvironmentFromEnv();
-	const filePath = `${USER_AUTH_CONFIG_PATH}/${environment === "production" ? "default.toml" : `${environment}.toml`}`;
 
-	return path.join(getGlobalWranglerConfigPath(), filePath);
+	let fileName: string;
+	if (activeProfile === "default") {
+		// Backward compatible: use existing path
+		fileName =
+			environment === "production"
+				? "default.toml"
+				: `${environment}.toml`;
+	} else {
+		// Profile-specific path under profiles/ subdirectory
+		fileName =
+			environment === "production"
+				? `${PROFILES_DIR}/${activeProfile}.toml`
+				: `${PROFILES_DIR}/${activeProfile}-${environment}.toml`;
+	}
+
+	return path.join(
+		getGlobalWranglerConfigPath(),
+		USER_AUTH_CONFIG_PATH,
+		fileName
+	);
 }
 
 /**
  * Writes a a wrangler config file (auth credentials) to disk,
  * and updates the user auth state with the new credentials.
  */
-export function writeAuthConfigFile(config: UserAuthConfig) {
-	const configPath = getAuthConfigFilePath();
+export function writeAuthConfigFile(
+	config: UserAuthConfig,
+	profile?: string
+) {
+	const configPath = getAuthConfigFilePath(profile);
 
 	mkdirSync(path.dirname(configPath), {
 		recursive: true,
@@ -928,8 +1151,10 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 	reinitialiseAuthTokens();
 }
 
-export function readAuthConfigFile(): UserAuthConfig {
-	return parseTOML(readFileSync(getAuthConfigFilePath())) as UserAuthConfig;
+export function readAuthConfigFile(profile?: string): UserAuthConfig {
+	return parseTOML(
+		readFileSync(getAuthConfigFilePath(profile))
+	) as UserAuthConfig;
 }
 
 type LoginProps = {
@@ -1345,13 +1570,25 @@ export function requireApiToken(): ApiCredentials {
 }
 
 /**
+ * Get the cache file name for the current profile's account selection.
+ */
+function getAccountCacheFileName(): string {
+	const profile = getActiveProfile();
+	return profile === "default"
+		? "wrangler-account.json"
+		: `wrangler-account-${profile}.json`;
+}
+
+/**
  * Saves the given account details to the filesystem cache as well as the local state
  *
  * @param account The account to save
  */
 function saveAccountToCache(account: Account): void {
 	localState.account = account;
-	saveToConfigCache<{ account: Account }>("wrangler-account.json", { account });
+	saveToConfigCache<{ account: Account }>(getAccountCacheFileName(), {
+		account,
+	});
 }
 
 /**
@@ -1363,7 +1600,8 @@ export function getAccountFromCache(): undefined | Account {
 	if (localState.account) {
 		return localState.account;
 	}
-	return getConfigCache<{ account: Account }>("wrangler-account.json").account;
+	return getConfigCache<{ account: Account }>(getAccountCacheFileName())
+		.account;
 }
 
 /**

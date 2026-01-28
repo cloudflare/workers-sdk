@@ -4,11 +4,18 @@ import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import {
+	deleteProfile,
+	getActiveProfile,
 	getAuthFromEnv,
 	getOAuthTokenFromLocalState,
+	listProfiles,
 	listScopes,
 	login,
 	logout,
+	profileExists,
+	setActiveProfile,
+	setProfileOverride,
+	validateProfileName,
 	validateScopeKeys,
 } from "./user";
 import { whoami } from "./whoami";
@@ -65,6 +72,15 @@ export const loginCommand = createCommand({
 			listScopes();
 			return;
 		}
+
+		// If --profile was passed as a command-specific arg (in addition to global),
+		// apply the override here too so the login stores to the correct profile.
+		const profile = args.profile;
+		if (profile) {
+			setProfileOverride(profile);
+			logger.log(`Logging in to profile "${profile}"...`);
+		}
+
 		if (args.scopes) {
 			if (args.scopes.length === 0) {
 				// don't allow no scopes to be passed, that would be weird
@@ -89,13 +105,14 @@ export const loginCommand = createCommand({
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
 		});
+
+		if (profile) {
+			logger.log(`Successfully logged in to profile "${profile}".`);
+		}
+
 		metrics.sendMetricsEvent("login user", {
 			sendMetrics: config.send_metrics,
 		});
-
-		// TODO: would be nice if it optionally saved login
-		// credentials inside node_modules/.cache or something
-		// this way you could have multiple users on a single machine
 	},
 });
 
@@ -110,8 +127,19 @@ export const logoutCommand = createCommand({
 		printConfigWarnings: false,
 		provideConfig: false,
 	},
-	async handler() {
+	async handler(args) {
+		const profile = args.profile;
+		if (profile) {
+			setProfileOverride(profile);
+			logger.log(`Logging out of profile "${profile}"...`);
+		}
+
 		await logout();
+
+		if (profile) {
+			logger.log(`Successfully logged out of profile "${profile}".`);
+		}
+
 		try {
 			// If the config file is invalid then we default to not sending metrics.
 			// TODO: Clean this up as part of a general config refactor.
@@ -228,5 +256,88 @@ export const authTokenCommand = createCommand({
 		metrics.sendMetricsEvent("retrieve auth token", {
 			sendMetrics: config.send_metrics,
 		});
+	},
+});
+
+export const profileNamespace = createNamespace({
+	metadata: {
+		description: "🔀 Manage authentication profiles for multiple accounts",
+		owner: "Workers: Authoring and Testing",
+		status: "open-beta",
+		category: "Account",
+	},
+});
+
+export const profileListCommand = createCommand({
+	metadata: {
+		description: "List all authentication profiles",
+		owner: "Workers: Authoring and Testing",
+		status: "open-beta",
+	},
+	behaviour: {
+		printConfigWarnings: false,
+		provideConfig: false,
+	},
+	async handler() {
+		const profiles = listProfiles();
+		const active = getActiveProfile();
+		for (const profile of profiles) {
+			const marker = profile === active ? " (active)" : "";
+			logger.log(`${profile}${marker}`);
+		}
+	},
+});
+
+export const profileUseCommand = createCommand({
+	metadata: {
+		description: "Switch the active authentication profile",
+		owner: "Workers: Authoring and Testing",
+		status: "open-beta",
+	},
+	behaviour: {
+		printConfigWarnings: false,
+		provideConfig: false,
+	},
+	args: {
+		name: {
+			describe: "Name of the profile to switch to",
+			type: "string",
+			demandOption: true,
+		},
+	},
+	positionalArgs: ["name"],
+	async handler(args) {
+		validateProfileName(args.name);
+		if (!profileExists(args.name)) {
+			throw new UserError(
+				`Profile "${args.name}" does not exist. Run \`wrangler login --profile ${args.name}\` to create it.`
+			);
+		}
+		setActiveProfile(args.name);
+		logger.log(`Switched to profile "${args.name}".`);
+	},
+});
+
+export const profileDeleteCommand = createCommand({
+	metadata: {
+		description: "Delete an authentication profile",
+		owner: "Workers: Authoring and Testing",
+		status: "open-beta",
+	},
+	behaviour: {
+		printConfigWarnings: false,
+		provideConfig: false,
+	},
+	args: {
+		name: {
+			describe: "Name of the profile to delete",
+			type: "string",
+			demandOption: true,
+		},
+	},
+	positionalArgs: ["name"],
+	async handler(args) {
+		deleteProfile(args.name);
+		logger.log(`Deleted profile "${args.name}".`);
 	},
 });
