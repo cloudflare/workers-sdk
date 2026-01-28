@@ -55,7 +55,6 @@ describe("wrangler", () => {
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
-				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler queues                 📬 Manage Workers Queues
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
@@ -127,7 +126,6 @@ describe("wrangler", () => {
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
-				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler queues                 📬 Manage Workers Queues
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
