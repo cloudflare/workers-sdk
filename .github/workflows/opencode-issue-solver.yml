@@ -133,9 +133,11 @@ jobs:
         id: parse
         if: steps.gate.outputs.should_proceed == 'true'
         uses: actions/github-script@v7
+        env:
+          ASSESS_OUTPUT: ${{ steps.assess.outputs.result || '{}' }}
         with:
           script: |
-            const output = `${{ steps.assess.outputs.result || '{}' }}`;
+            const output = process.env.ASSESS_OUTPUT;
             try {
               // Try to extract JSON from the output
               const jsonMatch = output.match(/\{[\s\S]*\}/);
@@ -205,8 +207,11 @@ jobs:
 
       - name: Final test run
         id: final-test
+        env:
+          CI_OS: Linux
+          NODE_OPTIONS: "--max_old_space_size=8192"
+          ANALYSIS: ${{ needs.assess-issue.outputs.analysis }}
         run: |
-          ANALYSIS='${{ needs.assess-issue.outputs.analysis }}'
           PACKAGES=$(echo "$ANALYSIS" | jq -r '.affected_packages // [] | .[]' 2>/dev/null | tr '\n' ' ' || echo "")
 
           if [ -z "$PACKAGES" ]; then
@@ -228,9 +233,6 @@ jobs:
               echo "passed=false" >> $GITHUB_OUTPUT
             fi
           fi
-        env:
-          CI_OS: Linux
-          NODE_OPTIONS: "--max_old_space_size=8192"
 
       - name: Capture changes
         id: capture
@@ -240,11 +242,10 @@ jobs:
 
           if [ -s solution.patch ]; then
             echo "has_changes=true" >> $GITHUB_OUTPUT
-            {
-              echo "patch_content<<PATCHEOF"
-              cat solution.patch
-              echo "PATCHEOF"
-            } >> $GITHUB_OUTPUT
+            DELIMITER="PATCH_EOF_$(date +%s)_$$"
+            echo "patch_content<<$DELIMITER" >> $GITHUB_OUTPUT
+            cat solution.patch >> $GITHUB_OUTPUT
+            echo "$DELIMITER" >> $GITHUB_OUTPUT
           else
             echo "has_changes=false" >> $GITHUB_OUTPUT
             echo "patch_content=" >> $GITHUB_OUTPUT
