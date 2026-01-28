@@ -21,6 +21,7 @@ export const additionalModulesPlugin = createPlugin(
 				return ctx.getWorkerConfig(environment.name) !== undefined;
 			},
 			resolveId: {
+				filter: { id: moduleRuleFilters },
 				async handler(source, importer, options) {
 					const additionalModuleType = matchAdditionalModule(source);
 
@@ -58,6 +59,7 @@ export const additionalModulesPlugin = createPlugin(
 				}
 			},
 			renderChunk: {
+				filter: { code: { include: additionalModuleRE } },
 				async handler(code, chunk) {
 					const matches = code.matchAll(additionalModuleGlobalRE);
 					let magicString: MagicString | undefined;
@@ -126,21 +128,21 @@ const additionalModuleGlobalRE = new RegExp(ADDITIONAL_MODULE_PATTERN, "g");
 
 type ModuleRules = Array<{
 	type: AdditionalModuleType;
-	extensions: string[];
+	pattern: RegExp;
 }>;
 
 const moduleRules: ModuleRules = [
-	{ type: "CompiledWasm", extensions: [".wasm", ".wasm?module"] },
-	{ type: "Data", extensions: [".bin"] },
-	{ type: "Text", extensions: [".txt", ".html", ".sql"] },
+	{ type: "CompiledWasm", pattern: /\.wasm(\?module)?$/ },
+	{ type: "Data", pattern: /\.bin$/ },
+	{ type: "Text", pattern: /\.(txt|html|sql)$/ },
 ];
+
+const moduleRuleFilters = moduleRules.map((rule) => rule.pattern);
 
 function matchAdditionalModule(source: string) {
 	for (const rule of moduleRules) {
-		for (const extension of rule.extensions) {
-			if (source.endsWith(extension)) {
-				return rule.type;
-			}
+		if (rule.pattern.test(source)) {
+			return rule.type;
 		}
 	}
 
