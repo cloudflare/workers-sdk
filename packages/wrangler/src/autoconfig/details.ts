@@ -182,7 +182,7 @@ async function getProjectBuildCommand(
 	}
 
 	// The command is something like `astro build` so we need to prefix it with `npx` and equivalents
-	return `${dlx.join(" ")} ${detectedFramework.buildCommand}`;
+	return `${npx} ${detectedFramework.buildCommand}`;
 }
 
 const invalidWorkerNameCharsRegex = /[^a-z0-9- ]/g;

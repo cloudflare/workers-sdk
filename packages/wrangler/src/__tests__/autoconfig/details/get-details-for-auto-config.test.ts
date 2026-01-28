@@ -57,8 +57,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			);
 
 			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-				buildCommand:
-					pm === "pnpm" ? "pnpm dlx astro build" : "npx astro build",
+				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",
 				configured: false,
 				outputDir: "dist",
 				packageJson: {
