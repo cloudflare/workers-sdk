@@ -19,7 +19,15 @@ import type {
 // ============================================================================
 
 /**
- * Get a D1 binding by database ID
+ * Retrieves a D1 database binding from the environment by its database ID.
+ *
+ * Looks up the binding name in the local explorer binding map and returns
+ * the corresponding D1Database instance from the environment.
+ *
+ * @param env - The worker environment containing bindings and configuration
+ * @param database_id - The unique identifier of the D1 database
+ *
+ * @returns The D1Database binding if found, or null if the database ID is not mapped
  */
 function getD1Binding(env: Env, database_id: string): D1Database | null {
 	const bindingMap = env.LOCAL_EXPLORER_BINDING_MAP.d1;
@@ -34,7 +42,12 @@ function getD1Binding(env: Env, database_id: string): D1Database | null {
 }
 
 /**
- * Get database info (binding name) by database ID
+ * Retrieves the binding name for a D1 database by its database ID.
+ *
+ * @param env - The worker environment containing bindings and configuration
+ * @param database_id - The unique identifier of the D1 database
+ *
+ * @returns The binding name if found, or null if the database ID is not mapped
  */
 function getDatabaseInfo(env: Env, database_id: string): string | null {
 	const bindingMap = env.LOCAL_EXPLORER_BINDING_MAP.d1;
@@ -50,9 +63,20 @@ const _listDatabasesQuerySchema =
 type ListDatabasesQuery = z.output<typeof _listDatabasesQuerySchema>;
 
 /**
- * List D1 databases
+ * Lists all D1 databases available in the local environment.
  *
- * https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/list/
+ * Returns a paginated list of databases with their names and UUIDs.
+ * Supports filtering by database name and pagination via query parameters.
+ *
+ * @see https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/list/
+ *
+ * @param c - The Hono application context
+ * @param query - Query parameters for filtering and pagination
+ * @param query.page - The page number for pagination
+ * @param query.per_page - The number of results per page
+ * @param query.name - Optional filter to search databases by name (case-insensitive)
+ *
+ * @returns A JSON response containing the list of databases and pagination info
  */
 export async function listD1Databases(
 	c: AppContext,
@@ -105,9 +129,20 @@ const _getDatabasePathSchema = zCloudflareD1GetDatabaseData.shape.path;
 type GetDatabasePath = z.output<typeof _getDatabasePathSchema>;
 
 /**
- * Get D1 database details
+ * Retrieves details for a specific D1 database.
  *
- * https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/get/
+ * Gathers metadata about the database including its name, UUID, and version.
+ *
+ * Note: Some fields like `created_at`, `file_size`, and `num_tables` are not
+ * available in the local development environment.
+ *
+ * @see https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/get/
+ *
+ * @param c - The Hono application context
+ * @param path - Path parameters containing the database identifier
+ * @param path.database_id - The unique identifier of the D1 database to retrieve
+ *
+ * @returns A JSON response with database details, or a 404 error if not found
  */
 export async function getD1Database(
 	c: AppContext,
@@ -141,10 +176,23 @@ const _rawDatabaseBodySchema = zCloudflareD1RawDatabaseQueryData.shape.body;
 type RawDatabaseBody = z.output<typeof _rawDatabaseBodySchema>;
 
 /**
- * Raw D1 database query
+ * Executes raw SQL queries against a D1 database.
  *
- * Returns query results as arrays (performance optimized).
- * https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/raw/
+ * Returns query results as arrays rather than objects for improved performance.
+ *
+ * Supports both single queries and batch queries. Each query can include
+ * parameterized values for safe SQL execution.
+ *
+ * @see https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/raw/
+ *
+ * @param c - The Hono application context (database_id is extracted from the request path)
+ * @param body - The request body containing the SQL query or batch of queries
+ * @param body.sql - The SQL statement to execute (for single queries)
+ * @param body.params - Optional array of parameters for the SQL statement
+ * @param body.batch - Optional array of queries to execute as a batch
+ *
+ * @returns A JSON response with query results including columns, rows, and metadata,
+ *          or a 404 error if the database is not found, or a 500 error if the query fails
  */
 export async function rawD1Database(
 	c: AppContext,
