@@ -106,20 +106,18 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 		// rather than allowing the resolve hook here to alias them to polyfills.
 		enforce: "pre",
 		resolveId: {
+			filter: {
+				id: [nodeBuiltinsRE, /^unenv\//, /^@cloudflare\/unenv-preset\//],
+			},
 			async handler(source, importer, options) {
 				const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
 				assertHasNodeJsCompat(nodeJsCompat);
-
-				if (nodeJsCompat.isGlobalVirtualModule(source)) {
-					return source;
-				}
 
 				// See if we can map the `source` to a Node.js compat alias.
 				const result = nodeJsCompat.resolveNodeJsImport(source);
 
 				if (!result) {
-					// The source is not a Node.js compat alias so just pass it through
-					return this.resolve(source, importer, options);
+					return;
 				}
 
 				if (this.environment.mode === "dev") {
@@ -140,14 +138,6 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 
 				// We are in build mode so return the absolute path to the polyfill.
 				return this.resolve(result.resolved, importer, options);
-			},
-		},
-		load: {
-			handler(id) {
-				const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
-				assertHasNodeJsCompat(nodeJsCompat);
-
-				return nodeJsCompat.getGlobalVirtualModule(id);
 			},
 		},
 		async configureServer(viteDevServer) {
@@ -215,6 +205,12 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 			source: string,
 			importer?: string
 		) {
+			// Fallback for when filter is not applied
+			// TODO: remove when we drop support for Vite 6
+			if (!nodeBuiltinsRE.test(source)) {
+				return;
+			}
+
 			const workerConfig = ctx.getWorkerConfig(environmentName);
 			const nodeJsCompat = ctx.getNodeJsCompat(environmentName);
 
@@ -225,20 +221,14 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 				}
 
 				const nodeJsCompatWarnings = nodeJsCompatWarningsMap.get(workerConfig);
+				nodeJsCompatWarnings?.registerImport(source, importer);
 
-				if (
-					source.startsWith("node:") ||
-					nonPrefixedNodeModules.includes(source)
-				) {
-					nodeJsCompatWarnings?.registerImport(source, importer);
-
-					// Mark this path as external to avoid messy unwanted resolve errors.
-					// It will fail at runtime but we will log warnings to the user.
-					return {
-						id: source,
-						external: true,
-					};
-				}
+				// Mark this path as external to avoid messy unwanted resolve errors.
+				// It will fail at runtime but we will log warnings to the user.
+				return {
+					id: source,
+					external: true,
+				};
 			}
 		}
 
@@ -259,8 +249,15 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 											plugins: [
 												{
 													name: "vite-plugin-cloudflare:nodejs-compat-warnings-resolver",
-													resolveId(source: string, importer?: string) {
-														return resolveId(environmentName, source, importer);
+													resolveId: {
+														filter: { id: nodeBuiltinsRE },
+														handler(source: string, importer?: string) {
+															return resolveId(
+																environmentName,
+																source,
+																importer
+															);
+														},
 													},
 												},
 											],
@@ -325,6 +322,7 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 				);
 			},
 			resolveId: {
+				filter: { id: nodeBuiltinsRE },
 				handler(source, importer) {
 					return resolveId(this.environment.name, source, importer);
 				},

@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { assertHasNodeJsCompat } from "../nodejs-compat";
 import {
 	VIRTUAL_EXPORT_TYPES,
 	VIRTUAL_WORKER_ENTRY,
@@ -8,6 +9,7 @@ import { createPlugin } from "../utils";
 
 export const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
 export const VIRTUAL_CLIENT_FALLBACK_ENTRY = `${virtualPrefix}client-fallback-entry`;
+export const VIRTUAL_NODEJS_GLOBAL_INJECT_PREFIX = `${virtualPrefix}nodejs-global-inject/`;
 
 const virtualCloudflareResolveRE = /^virtual:cloudflare\//;
 const virtualCloudflareLoadRE = /^\0virtual:cloudflare\//;
@@ -36,11 +38,13 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 					const workerConfig = ctx.getWorkerConfig(this.environment.name);
 					assert(workerConfig, "Expected `workerConfig` to be defined");
 					const main = await this.resolve(workerConfig.main);
+
 					if (!main) {
 						throw new Error(
 							`Failed to resolve main entry file "${workerConfig.main}" for environment "${this.environment.name}"`
 						);
 					}
+
 					return main;
 				}
 
@@ -113,6 +117,13 @@ export function getExportTypes(module) {
 	return exportTypes;
 }
 					`;
+				}
+
+				if (id.startsWith(`\0${VIRTUAL_NODEJS_GLOBAL_INJECT_PREFIX}`)) {
+					const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
+					assertHasNodeJsCompat(nodeJsCompat);
+
+					return nodeJsCompat.getGlobalVirtualModule(id.slice(1));
 				}
 			},
 		},
