@@ -327,8 +327,13 @@ import {
 	authTokenCommand,
 	loginCommand,
 	logoutCommand,
+	profileDeleteCommand,
+	profileListCommand,
+	profileNamespace,
+	profileUseCommand,
 	whoamiCommand,
 } from "./user/commands";
+import { setProfileOverride } from "./user/user";
 import { proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
@@ -439,6 +444,12 @@ export function createCLIParser(argv: string[]) {
 			hidden: true,
 			alias: "x-auto-create",
 		},
+		profile: {
+			describe:
+				"Authentication profile to use for this command (allows multiple Cloudflare accounts)",
+			type: "string",
+			requiresArg: true,
+		},
 	} as const;
 	// Type check result against CommonYargsOptions to make sure we've included
 	// all common options
@@ -469,6 +480,9 @@ export function createCLIParser(argv: string[]) {
 		.middleware((_argv) => {
 			if (_argv.cwd) {
 				process.chdir(_argv.cwd);
+			}
+			if (_argv.profile) {
+				setProfileOverride(_argv.profile);
 			}
 		})
 		.check(
@@ -515,7 +529,7 @@ export function createCLIParser(argv: string[]) {
 		"Examples:": `${chalk.bold("EXAMPLES")}`,
 	});
 	wrangler.group(
-		["config", "cwd", "env", "env-file", "help", "version"],
+		["config", "cwd", "env", "env-file", "help", "profile", "version"],
 		`${chalk.bold("GLOBAL FLAGS")}`
 	);
 
@@ -1820,6 +1834,26 @@ export function createCLIParser(argv: string[]) {
 		},
 	]);
 	registry.registerNamespace("auth");
+
+	registry.define([
+		{
+			command: "wrangler profile",
+			definition: profileNamespace,
+		},
+		{
+			command: "wrangler profile list",
+			definition: profileListCommand,
+		},
+		{
+			command: "wrangler profile use",
+			definition: profileUseCommand,
+		},
+		{
+			command: "wrangler profile delete",
+			definition: profileDeleteCommand,
+		},
+	]);
+	registry.registerNamespace("profile");
 
 	registry.define([
 		{
