@@ -8,12 +8,12 @@ Add the framework id alongside the commands to build and deploy the project to t
 
 For example for an npm Astro project these would be:
 
-- Framework id: 'astro'
-- Build command: 'npm run build'
-- Deploy command: 'npx wrangler deploy'
+- Framework id: `astro`
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy`
 
 While for a Next.js project they would instead be:
 
-- Framework id: 'next'
-- Build command: 'npx @opennextjs/cloudflare build'
-- Deploy command: 'npx @opennextjs/cloudflare deploy'
+- Framework id: `next`
+- Build command: `npx @opennextjs/cloudflare build`
+- Deploy command: `npx @opennextjs/cloudflare deploy`
