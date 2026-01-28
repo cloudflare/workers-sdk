@@ -1,0 +1,8 @@
+{
+	"name": "images-hosted",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-07-01",
+	"images": {
+		"binding": "IMAGES"
+	}
+}
