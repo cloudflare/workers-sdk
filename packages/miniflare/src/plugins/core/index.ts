@@ -1079,7 +1079,13 @@ export function getGlobalServices({
 	if (sharedOptions.unsafeLocalExplorer) {
 		// Build binding ID map from proxyBindings
 		// Maps binding names to their actual namespace/bucket IDs
-		const IDToBindingName: { kv: Record<string, string> } = { kv: {} };
+		const IDToBindingName: {
+			d1: Record<string, string>;
+			kv: Record<string, string>;
+		} = {
+			d1: {},
+			kv: {},
+		};
 
 		for (const binding of proxyBindings) {
 			// KV bindings: name = "MINIFLARE_PROXY:kv:worker:BINDING", kvNamespace.name = "kv:ns:ID"
