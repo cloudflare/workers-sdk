@@ -10,13 +10,18 @@ import type { Config } from "@cloudflare/workers-utils";
 export async function runCommand(
 	command: string,
 	cwd: string | undefined,
-	prefix = "[custom build]"
+	prefix = "[custom build]",
+	wranglerCommand?: "dev" | "deploy" | "versions upload" | "types"
 ) {
 	logger.log(chalk.blue(prefix), "Running:", command);
 	try {
 		const res = execaCommand(command, {
 			shell: true,
 			cwd,
+			env: {
+				...process.env,
+				...(wranglerCommand ? { WRANGLER_COMMAND: wranglerCommand } : {}),
+			},
 		});
 		res.stdout?.pipe(
 			new Writable({
@@ -61,10 +66,11 @@ export async function runCustomBuild(
 	expectedEntryAbsolute: string,
 	expectedEntryRelative: string,
 	build: Pick<Config["build"], "command" | "cwd">,
-	configPath: string | undefined
+	configPath: string | undefined,
+	command?: "dev" | "deploy" | "versions upload" | "types"
 ) {
 	if (build.command) {
-		await runCommand(build.command, build.cwd);
+		await runCommand(build.command, build.cwd, "[custom build]", command);
 
 		assertEntryPointExists(
 			expectedEntryAbsolute,

@@ -1,0 +1,90 @@
+diff --git a/.changeset/wrangler-command-env-var.md b/.changeset/wrangler-command-env-var.md
+new file mode 100644
+index 000000000..7fa60b026
+--- /dev/null
++++ b/.changeset/wrangler-command-env-var.md
+@@ -0,0 +1,18 @@
++---
++"wrangler": minor
++---
++
++Add `WRANGLER_COMMAND` environment variable to custom build commands
++
++When using a custom build command in `wrangler.toml`, you can now detect whether `wrangler dev` or `wrangler deploy` triggered the build by reading the `WRANGLER_COMMAND` environment variable. This variable will be set to `"dev"`, `"deploy"`, `"versions upload"`, or `"types"` depending on which command invoked the build.
++
++This allows you to customize your build process based on the deployment context. For example:
++
++```bash
++# In your custom build script
++if [ "$WRANGLER_COMMAND" = "dev" ]; then
++  echo "Building for development..."
++else
++  echo "Building for production..."
++fi
++```
+diff --git a/packages/wrangler/src/api/startDevWorker/BundlerController.ts b/packages/wrangler/src/api/startDevWorker/BundlerController.ts
+index a4e7c6570..16c5e3ff2 100644
+--- a/packages/wrangler/src/api/startDevWorker/BundlerController.ts
++++ b/packages/wrangler/src/api/startDevWorker/BundlerController.ts
+@@ -53,7 +53,8 @@ export class BundlerController extends Controller {
+ 					cwd: config.build?.custom?.workingDirectory,
+ 					command: config.build?.custom?.command,
+ 				},
+-				config.config
++				config.config,
++				"dev"
+ 			);
+ 			if (buildAborter.signal.aborted) {
+ 				return;
+diff --git a/packages/wrangler/src/deployment-bundle/entry.ts b/packages/wrangler/src/deployment-bundle/entry.ts
+index 84e5df301..3e34ef055 100644
+--- a/packages/wrangler/src/deployment-bundle/entry.ts
++++ b/packages/wrangler/src/deployment-bundle/entry.ts
+@@ -125,7 +125,8 @@ export async function getEntry(
+ 		paths.absolutePath,
+ 		paths.relativePath,
+ 		config.build,
+-		config.configPath
++		config.configPath,
++		command
+ 	);
+ 
+ 	const projectRoot = paths.projectRoot ?? process.cwd();
+diff --git a/packages/wrangler/src/deployment-bundle/run-custom-build.ts b/packages/wrangler/src/deployment-bundle/run-custom-build.ts
+index 9832099db..226d73c24 100644
+--- a/packages/wrangler/src/deployment-bundle/run-custom-build.ts
++++ b/packages/wrangler/src/deployment-bundle/run-custom-build.ts
+@@ -10,13 +10,18 @@ import type { Config } from "@cloudflare/workers-utils";
+ export async function runCommand(
+ 	command: string,
+ 	cwd: string | undefined,
+-	prefix = "[custom build]"
++	prefix = "[custom build]",
++	wranglerCommand?: "dev" | "deploy" | "versions upload" | "types"
+ ) {
+ 	logger.log(chalk.blue(prefix), "Running:", command);
+ 	try {
+ 		const res = execaCommand(command, {
+ 			shell: true,
+ 			cwd,
++			env: {
++				...process.env,
++				...(wranglerCommand ? { WRANGLER_COMMAND: wranglerCommand } : {}),
++			},
+ 		});
+ 		res.stdout?.pipe(
+ 			new Writable({
+@@ -61,10 +66,11 @@ export async function runCustomBuild(
+ 	expectedEntryAbsolute: string,
+ 	expectedEntryRelative: string,
+ 	build: Pick<Config["build"], "command" | "cwd">,
+-	configPath: string | undefined
++	configPath: string | undefined,
++	command?: "dev" | "deploy" | "versions upload" | "types"
+ ) {
+ 	if (build.command) {
+-		await runCommand(build.command, build.cwd);
++		await runCommand(build.command, build.cwd, "[custom build]", command);
+ 
+ 		assertEntryPointExists(
+ 			expectedEntryAbsolute,
