@@ -860,6 +860,85 @@ export const WorkerdTests: Record<string, () => void> = {
 		assertTypeOf(streamWrap, "default", "function");
 	},
 
+	async testWorkerThreads() {
+		const workerThreads = await import("node:worker_threads");
+
+		// Detect if we're using native workerd implementation by checking if
+		// MessageChannel is exported (unenv exports it, workerd doesn't)
+		const isNative = typeof workerThreads.MessageChannel !== "function";
+
+		// Common exports available in both unenv stub and native workerd
+		for (const target of [workerThreads, workerThreads.default]) {
+			assertTypeOfProperties(target, {
+				SHARE_ENV: "symbol",
+				getEnvironmentData: "function",
+				isMainThread: "boolean",
+				isMarkedAsUntransferable: "function",
+				markAsUntransferable: "function",
+				markAsUncloneable: "function",
+				moveMessagePortToContext: "function",
+				receiveMessageOnPort: "function",
+				setEnvironmentData: "function",
+				postMessageToThread: "function",
+			});
+
+			// These are values, not functions
+			assert.strictEqual(target.parentPort, null, "parentPort should be null");
+			assert.strictEqual(target.threadId, 0, "threadId should be 0");
+			assert.strictEqual(target.workerData, null, "workerData should be null");
+			assert.deepStrictEqual(
+				target.resourceLimits,
+				{},
+				"resourceLimits should be empty object"
+			);
+			assert.strictEqual(
+				target.isMainThread,
+				true,
+				"isMainThread should be true"
+			);
+
+			if (!isNative) {
+				// unenv stub exports these as functions
+				assertTypeOfProperties(target, {
+					BroadcastChannel: "function",
+					MessageChannel: "function",
+					MessagePort: "function",
+					Worker: "function",
+					isInternalThread: "boolean",
+				});
+				assert.strictEqual(
+					(target as Record<string, unknown>).isInternalThread,
+					false,
+					"isInternalThread should be false"
+				);
+			}
+		}
+
+		// Test SHARE_ENV symbol value
+		assert.strictEqual(
+			workerThreads.SHARE_ENV,
+			Symbol.for("nodejs.worker_threads.SHARE_ENV"),
+			"SHARE_ENV should be the correct symbol"
+		);
+
+		// Test getEnvironmentData/setEnvironmentData
+		workerThreads.setEnvironmentData("test-key", "test-value");
+		assert.strictEqual(
+			workerThreads.getEnvironmentData("test-key"),
+			"test-value",
+			"getEnvironmentData should return the set value"
+		);
+
+		if (!isNative) {
+			// unenv stub: Test MessageChannel creates ports
+			const channel = new workerThreads.MessageChannel();
+			assert.ok(channel.port1, "MessageChannel should have port1");
+			assert.ok(channel.port2, "MessageChannel should have port2");
+		}
+		// Note: Native workerd worker_threads doesn't export MessageChannel
+		// (it's a Web API available separately, not part of the worker_threads module)
+	},
+
 	async testRepl() {
 		const repl = await import("node:repl");
 

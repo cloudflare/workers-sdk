@@ -83,6 +83,7 @@ export function getCloudflarePreset({
 	const sqliteOverrides = getSqliteOverrides(compat);
 	const dgramOverrides = getDgramOverrides(compat);
 	const streamWrapOverrides = getStreamWrapOverrides(compat);
+	const workerThreadsOverrides = getWorkerThreadsOverrides(compat);
 	const replOverrides = getReplOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -103,6 +104,7 @@ export function getCloudflarePreset({
 		...sqliteOverrides.nativeModules,
 		...dgramOverrides.nativeModules,
 		...streamWrapOverrides.nativeModules,
+		...workerThreadsOverrides.nativeModules,
 		...replOverrides.nativeModules,
 	];
 
@@ -124,6 +126,7 @@ export function getCloudflarePreset({
 		...sqliteOverrides.hybridModules,
 		...dgramOverrides.hybridModules,
 		...streamWrapOverrides.hybridModules,
+		...workerThreadsOverrides.hybridModules,
 		...replOverrides.hybridModules,
 	];
 
@@ -756,6 +759,43 @@ function getStreamWrapOverrides({
 	return enabled
 		? {
 				nativeModules: ["_stream_wrap"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:worker_threads` (unenv or workerd)
+ *
+ * The native worker_threads implementation:
+ * - can be enabled with the "enable_nodejs_worker_threads_module" flag
+ * - can be disabled with the "disable_nodejs_worker_threads_module" flag
+ * - is experimental (no default enable date)
+ */
+function getWorkerThreadsOverrides({
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_worker_threads_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_worker_threads_module"
+	);
+
+	// worker_threads is experimental, no default enable date
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `worker_threads` module from workerd
+	return enabled
+		? {
+				nativeModules: ["worker_threads"],
 				hybridModules: [],
 			}
 		: {
