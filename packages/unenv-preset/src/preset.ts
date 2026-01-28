@@ -83,6 +83,7 @@ export function getCloudflarePreset({
 	const sqliteOverrides = getSqliteOverrides(compat);
 	const dgramOverrides = getDgramOverrides(compat);
 	const streamWrapOverrides = getStreamWrapOverrides(compat);
+	const replOverrides = getReplOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -102,6 +103,7 @@ export function getCloudflarePreset({
 		...sqliteOverrides.nativeModules,
 		...dgramOverrides.nativeModules,
 		...streamWrapOverrides.nativeModules,
+		...replOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
@@ -122,6 +124,7 @@ export function getCloudflarePreset({
 		...sqliteOverrides.hybridModules,
 		...dgramOverrides.hybridModules,
 		...streamWrapOverrides.hybridModules,
+		...replOverrides.hybridModules,
 	];
 
 	return {
@@ -753,6 +756,42 @@ function getStreamWrapOverrides({
 	return enabled
 		? {
 				nativeModules: ["_stream_wrap"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:repl` (unenv or workerd)
+ *
+ * The native repl implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_repl_module" flag
+ * - can be disabled with the "disable_nodejs_repl_module" flag
+ */
+function getReplOverrides({
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_repl_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_repl_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `repl` module from workerd
+	return enabled
+		? {
+				nativeModules: ["repl"],
 				hybridModules: [],
 			}
 		: {

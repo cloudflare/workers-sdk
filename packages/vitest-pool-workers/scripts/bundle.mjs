@@ -100,7 +100,6 @@ const commonOptions = {
 		// External dependencies (see scripts/deps.ts for rationale)
 		"cjs-module-lexer",
 		"esbuild",
-		"zod",
 		// Workspace dependencies
 		"miniflare",
 		"wrangler",

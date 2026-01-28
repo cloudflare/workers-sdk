@@ -24,7 +24,7 @@ describe("containers ssh", () => {
 		await runWrangler("containers ssh --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers ssh ID
+			"wrangler containers ssh <ID>
 
 			POSITIONALS
 			  ID  ID of the container instance  [string] [required]
@@ -40,7 +40,7 @@ describe("containers ssh", () => {
 			OPTIONS
 			      --cipher         Sets \`ssh -c\`: Select the cipher specification for encrypting the session  [string]
 			      --log-file       Sets \`ssh -E\`: Append debug logs to log_file instead of standard error  [string]
-			      --escape-char    Sets \`ssh -e\`: Set the escape character for sessions with a pty (default: ‘~’)  [string]
+			      --escape-char    Sets \`ssh -e\`: Set the escape character for sessions with a pty (default: '~')  [string]
 			  -F, --config-file    Sets \`ssh -F\`: Specify an alternative per-user ssh configuration file  [string]
 			      --pkcs11         Sets \`ssh -I\`: Specify the PKCS#11 shared library ssh should use to communicate with a PKCS#11 token providing keys for user authentication  [string]
 			  -i, --identity-file  Sets \`ssh -i\`: Select a file from which the identity (private key) for public key authentication is read  [string]

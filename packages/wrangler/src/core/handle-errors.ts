@@ -248,6 +248,31 @@ function isNetworkFetchFailedError(e: unknown): boolean {
 }
 
 /**
+ * Determines the error type for telemetry purposes, or `undefined` if it cannot be determined.
+ */
+export function getErrorType(e: unknown): string | undefined {
+	if (isCloudflareAPIDNSError(e)) {
+		return "DNSError";
+	}
+	if (isPermissionError(e)) {
+		return "PermissionError";
+	}
+	if (isFileNotFoundError(e)) {
+		return "FileNotFoundError";
+	}
+	if (isCloudflareAPIConnectionTimeoutError(e)) {
+		return "ConnectionTimeout";
+	}
+	if (isAuthenticationError(e) || isContainersAuthenticationError(e)) {
+		return "AuthenticationError";
+	}
+	if (isBuildFailure(e) || isBuildFailureFromCause(e)) {
+		return "BuildFailure";
+	}
+	return e instanceof Error ? e.constructor.name : undefined;
+}
+
+/**
  * Handles an error thrown during command execution.
  *
  * This can involve filtering, transforming and logging the error appropriately.
@@ -256,9 +281,8 @@ export async function handleError(
 	e: unknown,
 	args: ReadConfigCommandArgs,
 	subCommandParts: string[]
-) {
+): Promise<void> {
 	let mayReport = true;
-	let errorType: string | undefined;
 	let loggableException = e;
 
 	logger.log(""); // Just adds a bit of space
@@ -275,7 +299,6 @@ export async function handleError(
 	// Handle DNS resolution errors to Cloudflare API with a user-friendly message
 	if (isCloudflareAPIDNSError(e)) {
 		mayReport = false;
-		errorType = "DNSError";
 		logger.error(dedent`
 			Unable to resolve Cloudflare's API hostname (api.cloudflare.com or dash.cloudflare.com).
 
@@ -287,13 +310,12 @@ export async function handleError(
 
 			Please check your network connection and DNS settings.
 		`);
-		return errorType;
+		return;
 	}
 
 	// Handle permission errors with a user-friendly message
 	if (isPermissionError(e)) {
 		mayReport = false;
-		errorType = "PermissionError";
 
 		// Extract the error message and path, checking both the error and its cause
 		const errorMessage = e instanceof Error ? e.message : String(e);
@@ -339,13 +361,12 @@ export async function handleError(
 
 			Please check the file permissions and try again.
 		`);
-		return errorType;
+		return;
 	}
 
 	// Handle file not found errors with a user-friendly message
 	if (isFileNotFoundError(e)) {
 		mayReport = false;
-		errorType = "FileNotFoundError";
 
 		// Extract the error message and path, checking both the error and its cause
 		const errorMessage = e instanceof Error ? e.message : String(e);
@@ -390,19 +411,18 @@ export async function handleError(
 
 			Please check the file path and try again.
 		`);
-		return errorType;
+		return;
 	}
 
 	// Handle connection timeout errors to Cloudflare API with a user-friendly message
 	if (isCloudflareAPIConnectionTimeoutError(e)) {
 		mayReport = false;
-		errorType = "ConnectionTimeout";
 		logger.error(
 			"The request to Cloudflare's API timed out.\n" +
 				"This is likely due to network connectivity issues or slow network speeds.\n" +
 				"Please check your internet connection and try again."
 		);
-		return errorType;
+		return;
 	}
 
 	// Handle generic "fetch failed" / "Failed to fetch" network errors
@@ -460,16 +480,8 @@ export async function handleError(
 		}
 
 		await wrangler.parse();
-	} else if (
-		isAuthenticationError(e) ||
-		// Is this a Containers/Cloudchamber-based auth error?
-		// This is different because it uses a custom OpenAPI-based generated client
-		(e instanceof UserError &&
-			e.cause instanceof ApiError &&
-			e.cause.status === 403)
-	) {
+	} else if (isAuthenticationError(e) || isContainersAuthenticationError(e)) {
 		mayReport = false;
-		errorType = "AuthenticationError";
 		if (e.cause instanceof ApiError) {
 			logger.error(e.cause);
 		} else {
@@ -531,12 +543,9 @@ export async function handleError(
 		);
 	} else if (isBuildFailure(e)) {
 		mayReport = false;
-		errorType = "BuildFailure";
-
 		logBuildFailure(e.errors, e.warnings);
 	} else if (isBuildFailureFromCause(e)) {
 		mayReport = false;
-		errorType = "BuildFailure";
 		logBuildFailure(e.cause.errors, e.cause.warnings);
 	} else if (e instanceof Cloudflare.APIError) {
 		const error = new APIError({
@@ -588,6 +597,17 @@ export async function handleError(
 	) {
 		await captureGlobalException(loggableException);
 	}
+}
 
-	return errorType;
+/**
+ * Is this a Containers/Cloudchamber-based auth error?
+ *
+ * Containers uses custom OpenAPI-based generated client that throws an error that has a different structure to standard cfetch auth errors.
+ */
+function isContainersAuthenticationError(e: unknown): e is UserError {
+	return (
+		e instanceof UserError &&
+		e.cause instanceof ApiError &&
+		e.cause.status === 403
+	);
 }

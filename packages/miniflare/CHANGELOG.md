@@ -1,5 +1,77 @@
 # miniflare
 
+## 4.20260124.0
+
+### Minor Changes
+
+- [#12008](https://github.com/cloudflare/workers-sdk/pull/12008) [`e414f05`](https://github.com/cloudflare/workers-sdk/commit/e414f05271887ed43a9a0a660d66565e9847c489) Thanks [@penalosa](https://github.com/penalosa)! - Add support for customising the inspector IP address
+
+  Adds a new `--inspector-ip` CLI flag and `dev.inspector_ip` configuration option to allow customising the IP address that the inspector server listens on. Previously, the inspector was hardcoded to listen only on `127.0.0.1`.
+
+  Example usage:
+
+  ```bash
+  # CLI flag
+  wrangler dev --inspector-ip 0.0.0.0
+  ```
+
+  ```jsonc
+  // wrangler.json
+  {
+  	"dev": {
+  		"inspector_ip": "0.0.0.0",
+  	},
+  }
+  ```
+
+- [#12034](https://github.com/cloudflare/workers-sdk/pull/12034) [`05714f8`](https://github.com/cloudflare/workers-sdk/commit/05714f871022e998dfbd7005f795d2fa3b9aee56) Thanks [@emily-shen](https://github.com/emily-shen)! - Add a no-op local explorer worker, which is gated by the experimental flag `X_LOCAL_EXPLORER`.
+
+### Patch Changes
+
+- [#11853](https://github.com/cloudflare/workers-sdk/pull/11853) [`014e7aa`](https://github.com/cloudflare/workers-sdk/commit/014e7aa2074d3464e012876b70e22af44fa26e5d) Thanks [@43081j](https://github.com/43081j)! - Use built-in stripVTControlCharacters utility rather than the `strip-ansi` package.
+
+- [#12040](https://github.com/cloudflare/workers-sdk/pull/12040) [`77e82d2`](https://github.com/cloudflare/workers-sdk/commit/77e82d25e13800d34426ba6774def3fcc2c7de21) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260120.0 | 1.20260122.0 |
+
+- [#12061](https://github.com/cloudflare/workers-sdk/pull/12061) [`f08ef21`](https://github.com/cloudflare/workers-sdk/commit/f08ef210b7215921e00e8aa890d25df334a08bbe) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260122.0 | 1.20260123.0 |
+
+- [#12088](https://github.com/cloudflare/workers-sdk/pull/12088) [`0641e6c`](https://github.com/cloudflare/workers-sdk/commit/0641e6ca0708d7bc73d04c0a619676cc5fde7a4e) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260123.0 | 1.20260124.0 |
+
+- [#11897](https://github.com/cloudflare/workers-sdk/pull/11897) [`bbd8a5e`](https://github.com/cloudflare/workers-sdk/commit/bbd8a5e98cbe3048d80652ecf74368b9c26bd2ff) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Bundle the `zod` dependency to reduce supply chain attack surface
+
+  In order to prevent possible npm vulnerability attacks, the team's policy is to bundle
+  dependencies in our packages where possible. This helps ensure that only trusted code
+  runs on the user's system, even if compromised packages are later published to npm.
+
+  This change bundles `zod` (a pure JavaScript validation library with no native dependencies)
+  into miniflare and @cloudflare/vitest-pool-workers.
+
+  Other dependencies remain external for technical reasons:
+
+  - `sharp`: Native binary with platform-specific builds
+  - `undici`: Dynamically required at runtime in worker threads
+  - `ws`: Has optional native bindings for performance
+  - `workerd`: Native binary (Cloudflare's JavaScript runtime)
+  - `@cspotcode/source-map-support`: Uses require.cache manipulation at runtime
+  - `youch`: Dynamically required for lazy loading
+
 ## 4.20260120.0
 
 ### Patch Changes
