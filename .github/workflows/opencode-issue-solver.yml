@@ -235,16 +235,16 @@ jobs:
             2. Run checks: pnpm run check
             3. Run tests for affected packages: pnpm run test:ci --filter="./packages/{pkg}"
             4. If tests fail, iterate (max 3 attempts)
-            5. Create a changeset if needed: pnpm changeset
-            6. Make sure you read AGENTS.md in full for more guidelines
+            5. Make sure you read AGENTS.md in full for more guidelines
 
             Guidelines:
             - Minimal changes only - no unrelated refactoring
             - Follow existing code patterns
             - Ensure TypeScript types are correct
+            - You can only run `pnpm run check` and `pnpm run test:ci` bash commands
           claude_args: |
             --max-turns 60
-            --allowedTools Edit,Write,Read,Glob,Grep,Bash
+            --allowedTools "Edit,Write,Read,Glob,Grep,Bash(pnpm run check),Bash(pnpm run test:ci)"
 
       - name: Final test run
         id: final-test
