@@ -37,6 +37,7 @@ catalog:
   "@cloudflare/workers-types": "^4.20260128.0"
   workerd: "1.20260128.0"
   eslint: "^9.39.1"
+  jsonc-parser: "^3.2.0"
   smol-toml: "^1.5.2"
   # CAUTION: Most usage of @cloudflare/vitest-pool-workers in this mono repo should use workspace:* instead of this catalog version
   # However, some packages (pages-shared, workers-shared, etc...) need to be tested using vitest-pool-workers but are themselves
