@@ -23,6 +23,12 @@ const config = {
 			path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/bulk/get",
 			methods: ["post"],
 		},
+
+		// D1 Storage endpoints
+		{
+			path: "/accounts/{account_id}/d1/database",
+			methods: ["get"],
+		},
 	],
 
 	// Ignored features (not implemented in local explorer)

@@ -4,6 +4,57 @@ export type ClientOptions = {
 	baseUrl: `${string}://${string}/cdn-cgi/explorer/api` | (string & {});
 };
 
+export type D1ApiResponseCommonFailure = {
+	errors: D1Messages;
+	messages: D1Messages;
+	result: null;
+	/**
+	 * Whether the API call was successful
+	 */
+	success: false;
+};
+
+export type D1Messages = Array<{
+	code: number;
+	message: string;
+}>;
+
+export type D1DatabaseResponse = {
+	created_at?: D1CreatedAt;
+	name?: D1DatabaseName;
+	uuid?: D1DatabaseIdentifier;
+	version?: D1DatabaseVersion;
+};
+
+export type D1DatabaseVersion = string;
+
+/**
+ * D1 database identifier (UUID).
+ */
+export type D1DatabaseIdentifier = string;
+
+/**
+ * D1 database name.
+ */
+export type D1DatabaseName = string;
+
+/**
+ * Specifies the timestamp the resource was created as an ISO8601 string.
+ */
+export type D1CreatedAt = string;
+
+export type D1ApiResponseCommon = {
+	errors: D1Messages;
+	messages: D1Messages;
+	result: {
+		[key: string]: unknown;
+	};
+	/**
+	 * Whether the API call was successful
+	 */
+	success: true;
+};
+
 export type WorkersKvBulkGetResultWithMetadata = {
 	/**
 	 * Requested keys are paired with their values and metadata in an object.
@@ -86,6 +137,14 @@ export type WorkersKvValue = string;
  */
 export type WorkersKvKeyName = string;
 
+export type WorkersKvCursorResultInfo = {
+	/**
+	 * Total results returned based on your list parameters.
+	 */
+	count?: number;
+	cursor?: WorkersKvCursor;
+};
+
 /**
  * Opaque token indicating the position from which to continue when requesting the next set of records if the amount of list results was limited by the limit parameter. A valid value for the cursor can be obtained from the cursors object in the result_info structure.
  */
@@ -153,6 +212,11 @@ export type WorkersKvResultInfo = {
 	 * Total results available without any search parameters.
 	 */
 	total_count?: number;
+};
+
+export type D1DatabaseResponseWritable = {
+	name?: D1DatabaseName;
+	version?: D1DatabaseVersion;
 };
 
 export type WorkersKvAnyWritable =
@@ -254,13 +318,7 @@ export type WorkersKvNamespaceListANamespaceSKeysResponses = {
 	 */
 	200: WorkersKvApiResponseCommon & {
 		result?: Array<WorkersKvKey>;
-		result_info?: {
-			/**
-			 * Total results returned based on your list parameters.
-			 */
-			count?: number;
-			cursor?: WorkersKvCursor;
-		};
+		result_info?: WorkersKvCursorResultInfo;
 	};
 };
 
@@ -392,3 +450,63 @@ export type WorkersKvNamespaceGetMultipleKeyValuePairsResponses = {
 
 export type WorkersKvNamespaceGetMultipleKeyValuePairsResponse =
 	WorkersKvNamespaceGetMultipleKeyValuePairsResponses[keyof WorkersKvNamespaceGetMultipleKeyValuePairsResponses];
+
+export type CloudflareD1ListDatabasesData = {
+	body?: never;
+	path?: never;
+	query?: {
+		/**
+		 * a database name to search for.
+		 */
+		name?: string;
+		/**
+		 * Page number of paginated results.
+		 */
+		page?: number;
+		/**
+		 * Number of items per page.
+		 */
+		per_page?: number;
+	};
+	url: "/d1/database";
+};
+
+export type CloudflareD1ListDatabasesErrors = {
+	/**
+	 * List D1 databases response failure
+	 */
+	"4XX": D1ApiResponseCommonFailure;
+};
+
+export type CloudflareD1ListDatabasesError =
+	CloudflareD1ListDatabasesErrors[keyof CloudflareD1ListDatabasesErrors];
+
+export type CloudflareD1ListDatabasesResponses = {
+	/**
+	 * List D1 databases response
+	 */
+	200: D1ApiResponseCommon & {
+		result?: Array<D1DatabaseResponse>;
+		result_info?: {
+			/**
+			 * Total number of results for the requested service
+			 */
+			count?: number;
+			/**
+			 * Current page within paginated list of results
+			 */
+			page?: number;
+			/**
+			 * Number of results per page of results
+			 */
+			per_page?: number;
+			/**
+			 * Total results available without any search parameters
+			 */
+			total_count?: number;
+		};
+	};
+};
+
+export type CloudflareD1ListDatabasesResponse =
+	CloudflareD1ListDatabasesResponses[keyof CloudflareD1ListDatabasesResponses];

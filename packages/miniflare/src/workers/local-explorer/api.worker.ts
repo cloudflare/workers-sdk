@@ -19,6 +19,7 @@ import {
 } from "./resources/kv";
 
 type BindingIdMap = {
+	d1: Record<string, string>; // databaseId -> bindingName
 	kv: Record<string, string>; // namespaceId -> bindingName
 };
 export type Env = {
