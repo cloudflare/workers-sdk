@@ -157,13 +157,8 @@ export async function getDetailsForAutoConfig({
 }
 
 /**
- * Given a detected framework this function gets a `build` command for the target project.
- *
- * The resulting command is a command that can be run in the terminal, such as `npm run build` or `npx astro build`.
- * (Note: the detectedFramework's raw build command could be something like `astro build` which is cannot actually be
- * run as it is, this functions adjusts such commands).
- *
- * If no build command is detected `undefined` is returned instead.
+ * Given a detected framework this function gets a `build` command for the target project that can be run in the terminal
+ * (such as `npm run build` or `npx astro build`). If no build command is detected `undefined` is returned instead.
  *
  * @param detectedFramework The detected framework (or settings) for the project
  * @returns A runnable command for the build process if detected, undefined otherwise
