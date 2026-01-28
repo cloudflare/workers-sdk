@@ -152,17 +152,7 @@
 													"type": "array"
 												},
 												"result_info": {
-													"properties": {
-														"count": {
-															"description": "Total results returned based on your list parameters.",
-															"example": 1,
-															"type": "number"
-														},
-														"cursor": {
-															"$ref": "#/components/schemas/workers-kv_cursor"
-														}
-													},
-													"type": "object"
+													"$ref": "#/components/schemas/workers-kv_cursor_result_info"
 												}
 											},
 											"type": "object"
@@ -442,10 +432,229 @@
 				"summary": "Get multiple key-value pairs",
 				"tags": ["Workers KV Namespace"]
 			}
+		},
+		"/d1/database": {
+			"get": {
+				"description": "Returns a list of D1 databases.",
+				"operationId": "cloudflare-d1-list-databases",
+				"parameters": [
+					{
+						"in": "query",
+						"name": "name",
+						"schema": {
+							"description": "a database name to search for.",
+							"type": "string"
+						}
+					},
+					{
+						"in": "query",
+						"name": "page",
+						"schema": {
+							"default": 1,
+							"description": "Page number of paginated results.",
+							"minimum": 1,
+							"type": "number"
+						}
+					},
+					{
+						"in": "query",
+						"name": "per_page",
+						"schema": {
+							"default": 1000,
+							"description": "Number of items per page.",
+							"maximum": 10000,
+							"minimum": 10,
+							"type": "number"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"allOf": [
+										{
+											"$ref": "#/components/schemas/d1_api-response-common"
+										},
+										{
+											"properties": {
+												"result": {
+													"items": {
+														"$ref": "#/components/schemas/d1_database-response"
+													},
+													"type": "array"
+												},
+												"result_info": {
+													"properties": {
+														"count": {
+															"description": "Total number of results for the requested service",
+															"example": 1,
+															"type": "number"
+														},
+														"page": {
+															"description": "Current page within paginated list of results",
+															"example": 1,
+															"type": "number"
+														},
+														"per_page": {
+															"description": "Number of results per page of results",
+															"example": 20,
+															"type": "number"
+														},
+														"total_count": {
+															"description": "Total results available without any search parameters",
+															"example": 2000,
+															"type": "number"
+														}
+													},
+													"type": "object"
+												}
+											}
+										}
+									]
+								}
+							}
+						},
+						"description": "List D1 databases response"
+					},
+					"4XX": {
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/d1_api-response-common-failure"
+								}
+							}
+						},
+						"description": "List D1 databases response failure"
+					}
+				},
+				"summary": "List D1 Databases",
+				"tags": ["D1"]
+			}
 		}
 	},
 	"components": {
 		"schemas": {
+			"d1_api-response-common-failure": {
+				"properties": {
+					"errors": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/d1_messages"
+							}
+						],
+						"example": [
+							{
+								"code": 7003,
+								"message": "No route for the URI"
+							}
+						],
+						"minLength": 1
+					},
+					"messages": {
+						"allOf": [
+							{
+								"$ref": "#/components/schemas/d1_messages"
+							}
+						],
+						"example": []
+					},
+					"result": {
+						"enum": [null],
+						"nullable": true,
+						"type": "object"
+					},
+					"success": {
+						"description": "Whether the API call was successful",
+						"enum": [false],
+						"example": false,
+						"type": "boolean"
+					}
+				},
+				"required": ["success", "errors", "messages", "result"],
+				"type": "object"
+			},
+			"d1_messages": {
+				"example": [],
+				"items": {
+					"properties": {
+						"code": {
+							"minimum": 1000,
+							"type": "integer"
+						},
+						"message": {
+							"type": "string"
+						}
+					},
+					"required": ["code", "message"],
+					"type": "object",
+					"uniqueItems": true
+				},
+				"type": "array"
+			},
+			"d1_database-response": {
+				"properties": {
+					"created_at": {
+						"$ref": "#/components/schemas/d1_created-at"
+					},
+					"name": {
+						"$ref": "#/components/schemas/d1_database-name"
+					},
+					"uuid": {
+						"$ref": "#/components/schemas/d1_database-identifier"
+					},
+					"version": {
+						"$ref": "#/components/schemas/d1_database-version"
+					}
+				},
+				"type": "object"
+			},
+			"d1_database-version": {
+				"example": "production",
+				"pattern": "^(alpha|beta|production)$",
+				"type": "string"
+			},
+			"d1_database-identifier": {
+				"description": "D1 database identifier (UUID).",
+				"example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+				"readOnly": true,
+				"type": "string"
+			},
+			"d1_database-name": {
+				"description": "D1 database name.",
+				"example": "my-database",
+				"pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$",
+				"type": "string"
+			},
+			"d1_created-at": {
+				"description": "Specifies the timestamp the resource was created as an ISO8601 string.",
+				"example": "2022-11-15T18:25:44.442097Z",
+				"format": "date-time",
+				"readOnly": true,
+				"type": "string"
+			},
+			"d1_api-response-common": {
+				"properties": {
+					"errors": {
+						"$ref": "#/components/schemas/d1_messages"
+					},
+					"messages": {
+						"$ref": "#/components/schemas/d1_messages"
+					},
+					"result": {
+						"type": "object"
+					},
+					"success": {
+						"description": "Whether the API call was successful",
+						"enum": [true],
+						"example": true,
+						"type": "boolean"
+					}
+				},
+				"required": ["success", "errors", "messages", "result"],
+				"type": "object"
+			},
 			"workers-kv_bulk-get-result-with-metadata": {
 				"properties": {
 					"values": {
@@ -653,6 +862,19 @@
 				"example": "My-Key",
 				"maxLength": 512,
 				"type": "string"
+			},
+			"workers-kv_cursor_result_info": {
+				"properties": {
+					"count": {
+						"description": "Total results returned based on your list parameters.",
+						"example": 1,
+						"type": "number"
+					},
+					"cursor": {
+						"$ref": "#/components/schemas/workers-kv_cursor"
+					}
+				},
+				"type": "object"
 			},
 			"workers-kv_cursor": {
 				"description": "Opaque token indicating the position from which to continue when requesting the next set of records if the amount of list results was limited by the limit parameter. A valid value for the cursor can be obtained from the cursors object in the result_info structure.",
