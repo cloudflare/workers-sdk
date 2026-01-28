@@ -1,5 +1,37 @@
 # miniflare
 
+## 4.20260128.0
+
+### Minor Changes
+
+- [#12152](https://github.com/cloudflare/workers-sdk/pull/12152) [`8a210af`](https://github.com/cloudflare/workers-sdk/commit/8a210afbfe6d960098ac3f280071a5282a4dd87b) Thanks [@emily-shen](https://github.com/emily-shen)! - Implement local KV API for experimental/WIP local resource explorer
+
+  The following APIs have been (mostly) implemented:
+  GET /storage/kv/namespaces - List namespaces
+  GET /storage/kv/namespaces/:id/keys - List keys
+  GET /storage/kv/namespaces/:id/values/:key - Get value
+  PUT /storage/kv/namespaces/:id/values/:key - Write value
+  DELETE /storage/kv/namespaces/:id/values/:key - Delete key
+  POST /storage/kv/namespaces/:id/bulk/get - Bulk get values
+
+### Patch Changes
+
+- [#12183](https://github.com/cloudflare/workers-sdk/pull/12183) [`17961bb`](https://github.com/cloudflare/workers-sdk/commit/17961bb6a7cadcad7e1c7f86804267f3a04da2fa) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260124.0 | 1.20260127.0 |
+
+- [#12196](https://github.com/cloudflare/workers-sdk/pull/12196) [`52fdfe7`](https://github.com/cloudflare/workers-sdk/commit/52fdfe7d9427dd65d4d8bca8f37c0c753e25bee7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260127.0 | 1.20260128.0 |
+
 ## 4.20260124.0
 
 ### Minor Changes
