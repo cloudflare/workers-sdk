@@ -231,20 +231,22 @@ jobs:
             ---
 
             Instructions:
-            1. Implement a minimal, targeted fix
-            2. Run checks: pnpm run check
-            3. Run tests for affected packages: pnpm run test:ci --filter="./packages/{pkg}"
-            4. If tests fail, iterate (max 3 attempts)
+            1. First, thoroughly understand the issue and explore the codebase to be confident about the root cause
+            2. Only implement a fix when you are certain it will solve the problem
+            3. Run checks: pnpm run check
+            4. Create a changeset if needed: pnpm changeset
             5. Make sure you read AGENTS.md in full for more guidelines
 
             Guidelines:
+            - Prioritize correctness over speed—be sure about your fix before implementing
+            - If you're uncertain, investigate more before making changes
             - Minimal changes only - no unrelated refactoring
             - Follow existing code patterns
             - Ensure TypeScript types are correct
-            - You can only run `pnpm run check` and `pnpm run test:ci` bash commands
+            - You can only run `pnpm run check`, `pnpm changeset`, and `tail` bash commands
           claude_args: |
             --max-turns 60
-            --allowedTools "Edit,Write,Read,Glob,Grep,Bash(pnpm run check),Bash(pnpm run test:ci)"
+            --allowedTools "Edit,Write,Read,Glob,Grep,Bash(pnpm run check),Bash(pnpm changeset),Bash(tail)"
 
       - name: Final test run
         id: final-test
