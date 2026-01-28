@@ -1,6 +1,7 @@
 name: Vite plugin playgrounds
 
 on:
+  merge_group:
   pull_request:
 
 permissions:
