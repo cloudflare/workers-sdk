@@ -1,5 +1,21 @@
 # @cloudflare/workers-utils
 
+## 0.8.1
+
+### Patch Changes
+
+- [#12156](https://github.com/cloudflare/workers-sdk/pull/12156) [`abd2b71`](https://github.com/cloudflare/workers-sdk/commit/abd2b716a526d2ae33b3dfab478f3ab4bdea840d) Thanks [@irvinebroque](https://github.com/irvinebroque)! - Fix compatibility date detection failing when creating new projects
+
+  Previously, `getLocalWorkerdCompatibilityDate()` would fail to find the locally installed `miniflare` and `workerd` packages, causing `npm create cloudflare@latest` to fall back to a hardcoded date (2025-09-27) instead of using the current workerd compatibility date.
+
+  The issue was that `module.createRequire()` was called with a directory path. Node.js treats this as a filename at that location and looks for `node_modules` in the parent directory rather than the intended directory. This is now fixed by appending `package.json` to the path, which ensures module resolution starts from the correct location.
+
+  Fixes #12155
+
+- [#11969](https://github.com/cloudflare/workers-sdk/pull/11969) [`9acb24b`](https://github.com/cloudflare/workers-sdk/commit/9acb24b27470ab741bb181bb0e7c21947449507b) Thanks [@emily-shen](https://github.com/emily-shen)! - Validate environments for unexpected fields in Wrangler config
+
+  Previously, this check only applied to the top-level environment.
+
 ## 0.8.0
 
 ### Minor Changes

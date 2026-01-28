@@ -1,5 +1,49 @@
 # wrangler
 
+## 4.61.1
+
+### Patch Changes
+
+- [#12189](https://github.com/cloudflare/workers-sdk/pull/12189) [`eb8a415`](https://github.com/cloudflare/workers-sdk/commit/eb8a415ce33ff16e04e989a59849d7b8ba981a01) Thanks [@NuroDev](https://github.com/NuroDev)! - Fixed Durable Object missing migrations warning message.
+
+  If a Workers project includes some `durable_objects` in it but no `migrations` we show a warning to the user to add `migrations` to their config. However, this warning recommended `new_classes` for their migrations, but we instead now recommend all users use `new_sqlite_classes` instead.
+
+- [#11804](https://github.com/cloudflare/workers-sdk/pull/11804) [`3b06b18`](https://github.com/cloudflare/workers-sdk/commit/3b06b18670bd975a6ffc1678b9d9c787f3dcf10a) Thanks [@emily-shen](https://github.com/emily-shen)! - fix: allow `d1 execute`, `d1 export`, and `d1 migrations` to work _locally_ without `database_id` in config.
+
+- [#12183](https://github.com/cloudflare/workers-sdk/pull/12183) [`17961bb`](https://github.com/cloudflare/workers-sdk/commit/17961bb6a7cadcad7e1c7f86804267f3a04da2fa) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260124.0 | 1.20260127.0 |
+
+- [#12196](https://github.com/cloudflare/workers-sdk/pull/12196) [`52fdfe7`](https://github.com/cloudflare/workers-sdk/commit/52fdfe7d9427dd65d4d8bca8f37c0c753e25bee7) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260127.0 | 1.20260128.0 |
+
+- [#12199](https://github.com/cloudflare/workers-sdk/pull/12199) [`6d8d9cd`](https://github.com/cloudflare/workers-sdk/commit/6d8d9cd6c040721037b4ac323699a35eca69f019) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Prevent `wrangler logout` from failing when the Wrangler configuration file is invalid
+
+  Previously, if your `wrangler.toml` or `wrangler.json` file contained syntax errors or invalid values, the `wrangler logout` command would fail. Now, configuration parsing errors are caught and logged at debug level, allowing you to log out regardless of the state of your configuration file.
+
+- [#12153](https://github.com/cloudflare/workers-sdk/pull/12153) [`cb72c11`](https://github.com/cloudflare/workers-sdk/commit/cb72c1146fdab8af7d071ea0af0ea04c7523ee5b) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Sanitize commands and arguments in telemetry to prevent accidentally capturing sensitive information.
+
+  **Changes:**
+
+  - Renamed telemetry fields from `command`/`args` to `sanitizedCommand`/`sanitizedArgs` to distinguish from historical fields that may have contained sensitive data in older versions
+  - Command names now come from command definitions rather than user input, preventing accidental capture of sensitive data pasted as positional arguments
+  - Sentry breadcrumbs now use the safe command name from definitions
+  - Argument values are only included if explicitly allowed via `COMMAND_ARG_ALLOW_LIST`
+  - Argument keys (names) are always included since they come from command definitions, not user input
+
+- Updated dependencies [[`8a210af`](https://github.com/cloudflare/workers-sdk/commit/8a210afbfe6d960098ac3f280071a5282a4dd87b), [`17961bb`](https://github.com/cloudflare/workers-sdk/commit/17961bb6a7cadcad7e1c7f86804267f3a04da2fa), [`52fdfe7`](https://github.com/cloudflare/workers-sdk/commit/52fdfe7d9427dd65d4d8bca8f37c0c753e25bee7), [`5f060c9`](https://github.com/cloudflare/workers-sdk/commit/5f060c9c27b9f5d2a00df374ed92f5055f24ea3c)]:
+  - miniflare@4.20260128.0
+  - @cloudflare/unenv-preset@2.12.0
+
 ## 4.61.0
 
 ### Minor Changes

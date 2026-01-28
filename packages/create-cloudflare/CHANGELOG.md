@@ -1,5 +1,25 @@
 # create-cloudflare
 
+## 2.62.5
+
+### Patch Changes
+
+- [#11860](https://github.com/cloudflare/workers-sdk/pull/11860) [`4a4007d`](https://github.com/cloudflare/workers-sdk/commit/4a4007df2eb41ea535f45bfbf934748ef73f64e0) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency      | From   | To     |
+  | --------------- | ------ | ------ |
+  | @angular/create | 21.0.4 | 21.1.1 |
+
+- [#12156](https://github.com/cloudflare/workers-sdk/pull/12156) [`abd2b71`](https://github.com/cloudflare/workers-sdk/commit/abd2b716a526d2ae33b3dfab478f3ab4bdea840d) Thanks [@irvinebroque](https://github.com/irvinebroque)! - Fix compatibility date detection failing when creating new projects
+
+  Previously, `getLocalWorkerdCompatibilityDate()` would fail to find the locally installed `miniflare` and `workerd` packages, causing `npm create cloudflare@latest` to fall back to a hardcoded date (2025-09-27) instead of using the current workerd compatibility date.
+
+  The issue was that `module.createRequire()` was called with a directory path. Node.js treats this as a filename at that location and looks for `node_modules` in the parent directory rather than the intended directory. This is now fixed by appending `package.json` to the path, which ensures module resolution starts from the correct location.
+
+  Fixes #12155
+
 ## 2.62.4
 
 ### Patch Changes
