@@ -241,7 +241,9 @@ jobs:
             - Minimal changes only - no unrelated refactoring
             - Follow existing code patterns
             - Ensure TypeScript types are correct
-          claude_args: "--max-turns 30"
+          claude_args: |
+            --max-turns 30
+            --allowedTools Edit,Write,Read,Glob,Grep,Bash
 
       - name: Final test run
         id: final-test
