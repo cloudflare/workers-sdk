@@ -1097,13 +1097,17 @@ export function getGlobalServices({
 			) {
 				const [innerBinding] = binding.wrapped?.innerBindings ?? [null];
 				if (!innerBinding || !("service" in innerBinding))
-					// TODO(@nurodev): Provide correct error details
-					throw new MiniflareCoreError("ERR_INVALID_WRAPPED", "TODO");
+					throw new MiniflareCoreError(
+						"ERR_INVALID_WRAPPED",
+						"No or invalid inner binding service property"
+					);
 
 				const databaseId = innerBinding.service?.name?.replace("d1:db:", "");
 				if (!databaseId)
-					// TODO(@nurodev): Provide correct error details
-					throw new MiniflareCoreError("ERR_INVALID_WRAPPED", "TODO");
+					throw new MiniflareCoreError(
+						"ERR_INVALID_WRAPPED",
+						"No inner binding service database ID"
+					);
 
 				IDToBindingName.d1[databaseId] = binding.name;
 			}
