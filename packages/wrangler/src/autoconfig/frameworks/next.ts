@@ -34,8 +34,8 @@ export class NextJs extends Framework {
 				"@opennextjs/cloudflare",
 				"migrate",
 				// Note: we force-install so that even if an incompatible version of
-				//       Next.js is used this installation still succeeds, moving users to
-				//       (hopefully) the right direction (instead of failing at this step)
+				//       Next.js is used this installation still succeeds, moving users
+				//       (hopefully) in right direction (instead of failing at this step)
 				"--force-install",
 			]);
 		}
