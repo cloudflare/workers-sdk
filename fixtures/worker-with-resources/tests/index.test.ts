@@ -20,7 +20,7 @@ describe("local explorer", () => {
 			await stop?.();
 		});
 
-		it("returns local explorer API response for /cdn-cgi/explorer/api", async () => {
+		it("returns local explorer KV API response", async () => {
 			const response = await fetch(
 				`http://${ip}:${port}/cdn-cgi/explorer/api/storage/kv/namespaces`
 			);
@@ -43,6 +43,35 @@ describe("local explorer", () => {
 					count: 2,
 					page: 1,
 					per_page: 20,
+					total_count: 2,
+				},
+				success: true,
+			});
+		});
+
+		it("returns local explorer D1 API response", async () => {
+			const response = await fetch(
+				`http://${ip}:${port}/cdn-cgi/explorer/api/d1/database`
+			);
+			expect(response.headers.get("Content-Type")).toBe("application/json");
+			const json = await response.json();
+			expect(json).toMatchObject({
+				errors: [],
+				messages: [],
+				result: expect.arrayContaining([
+					expect.objectContaining({
+						uuid: "DB",
+						name: "DB",
+					}),
+					expect.objectContaining({
+						uuid: "some-db-id",
+						name: "BACKUP_DB",
+					}),
+				]),
+				result_info: {
+					count: 2,
+					page: 1,
+					per_page: 1000,
 					total_count: 2,
 				},
 				success: true,
