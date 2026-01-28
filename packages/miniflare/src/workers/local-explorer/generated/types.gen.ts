@@ -4,6 +4,160 @@ export type ClientOptions = {
 	baseUrl: `${string}://${string}/cdn-cgi/explorer/api` | (string & {});
 };
 
+export type D1RawResultResponse = {
+	meta?: D1QueryMeta;
+	results?: {
+		columns?: Array<string>;
+		rows?: Array<
+			Array<
+				| number
+				| string
+				| {
+						[key: string]: unknown;
+				  }
+			>
+		>;
+	};
+	success?: boolean;
+};
+
+export type D1QueryMeta = {
+	/**
+	 * Denotes if the database has been altered in some way, like deleting rows.
+	 */
+	changed_db?: boolean;
+	/**
+	 * Rough indication of how many rows were modified by the query, as provided by SQLite's `sqlite3_total_changes()`.
+	 */
+	changes?: number;
+	/**
+	 * The duration of the SQL query execution inside the database. Does not include any network communication.
+	 */
+	duration?: number;
+	/**
+	 * The row ID of the last inserted row in a table with an `INTEGER PRIMARY KEY` as provided by SQLite. Tables created with `WITHOUT ROWID` do not populate this.
+	 */
+	last_row_id?: number;
+	/**
+	 * Number of rows read during the SQL query execution, including indices (not all rows are necessarily returned).
+	 */
+	rows_read?: number;
+	/**
+	 * Number of rows written during the SQL query execution, including indices.
+	 */
+	rows_written?: number;
+	served_by_colo?: D1ServedByColo;
+	/**
+	 * Denotes if the query has been handled by the database primary instance.
+	 */
+	served_by_primary?: boolean;
+	served_by_region?: D1ServedByRegion;
+	/**
+	 * Size of the database after the query committed, in bytes.
+	 */
+	size_after?: number;
+	/**
+	 * Various durations for the query.
+	 */
+	timings?: {
+		/**
+		 * The duration of the SQL query execution inside the database. Does not include any network communication.
+		 */
+		sql_duration_ms?: number;
+	};
+};
+
+/**
+ * Region location hint of the database instance that handled the query.
+ */
+export type D1ServedByRegion =
+	| "WNAM"
+	| "ENAM"
+	| "WEUR"
+	| "EEUR"
+	| "APAC"
+	| "OC";
+
+/**
+ * The three letters airport code of the colo that handled the query.
+ */
+export type D1ServedByColo = string;
+
+/**
+ * A single query object or a batch query object
+ */
+export type D1BatchQuery =
+	| D1SingleQuery
+	| {
+			batch?: Array<D1SingleQuery>;
+	  };
+
+/**
+ * single query
+ *
+ * A single query with or without parameters
+ */
+export type D1SingleQuery = {
+	params?: D1Params;
+	sql: D1Sql;
+};
+
+/**
+ * Your SQL query. Supports multiple statements, joined by semicolons, which will be executed as a batch.
+ */
+export type D1Sql = string;
+
+export type D1Params = Array<string>;
+
+/**
+ * The details of the D1 database.
+ */
+export type D1DatabaseDetailsResponse = {
+	created_at?: D1CreatedAt;
+	file_size?: D1FileSize;
+	name?: D1DatabaseName;
+	num_tables?: D1TableCount;
+	read_replication?: D1ReadReplicationDetails;
+	uuid?: D1DatabaseIdentifier;
+	version?: D1DatabaseVersion;
+};
+
+export type D1DatabaseVersion = string;
+
+/**
+ * D1 database identifier (UUID).
+ */
+export type D1DatabaseIdentifier = string;
+
+/**
+ * Configuration for D1 read replication.
+ */
+export type D1ReadReplicationDetails = {
+	mode: D1ReadReplicationMode;
+};
+
+/**
+ * The read replication mode for the database. Use 'auto' to create replicas and allow D1 automatically place them around the world, or 'disabled' to not use any database replicas (it can take a few hours for all replicas to be deleted).
+ */
+export type D1ReadReplicationMode = "auto" | "disabled";
+
+export type D1TableCount = number;
+
+/**
+ * D1 database name.
+ */
+export type D1DatabaseName = string;
+
+/**
+ * The D1 database's size, in bytes.
+ */
+export type D1FileSize = number;
+
+/**
+ * Specifies the timestamp the resource was created as an ISO8601 string.
+ */
+export type D1CreatedAt = string;
+
 export type D1ApiResponseCommonFailure = {
 	errors: D1Messages;
 	messages: D1Messages;
@@ -25,23 +179,6 @@ export type D1DatabaseResponse = {
 	uuid?: D1DatabaseIdentifier;
 	version?: D1DatabaseVersion;
 };
-
-export type D1DatabaseVersion = string;
-
-/**
- * D1 database identifier (UUID).
- */
-export type D1DatabaseIdentifier = string;
-
-/**
- * D1 database name.
- */
-export type D1DatabaseName = string;
-
-/**
- * Specifies the timestamp the resource was created as an ISO8601 string.
- */
-export type D1CreatedAt = string;
 
 export type D1ApiResponseCommon = {
 	errors: D1Messages;
@@ -212,6 +349,17 @@ export type WorkersKvResultInfo = {
 	 * Total results available without any search parameters.
 	 */
 	total_count?: number;
+};
+
+/**
+ * The details of the D1 database.
+ */
+export type D1DatabaseDetailsResponseWritable = {
+	file_size?: D1FileSize;
+	name?: D1DatabaseName;
+	num_tables?: D1TableCount;
+	read_replication?: D1ReadReplicationDetails;
+	version?: D1DatabaseVersion;
 };
 
 export type D1DatabaseResponseWritable = {
@@ -510,3 +658,65 @@ export type CloudflareD1ListDatabasesResponses = {
 
 export type CloudflareD1ListDatabasesResponse =
 	CloudflareD1ListDatabasesResponses[keyof CloudflareD1ListDatabasesResponses];
+
+export type CloudflareD1GetDatabaseData = {
+	body?: never;
+	path: {
+		database_id: D1DatabaseIdentifier | D1DatabaseName;
+	};
+	query?: never;
+	url: "/d1/database/{database_id}";
+};
+
+export type CloudflareD1GetDatabaseErrors = {
+	/**
+	 * Database details response failure
+	 */
+	"4XX": D1ApiResponseCommonFailure;
+};
+
+export type CloudflareD1GetDatabaseError =
+	CloudflareD1GetDatabaseErrors[keyof CloudflareD1GetDatabaseErrors];
+
+export type CloudflareD1GetDatabaseResponses = {
+	/**
+	 * Database details response
+	 */
+	200: D1ApiResponseCommon & {
+		result?: D1DatabaseDetailsResponse;
+	};
+};
+
+export type CloudflareD1GetDatabaseResponse =
+	CloudflareD1GetDatabaseResponses[keyof CloudflareD1GetDatabaseResponses];
+
+export type CloudflareD1RawDatabaseQueryData = {
+	body: D1BatchQuery;
+	path: {
+		database_id: D1DatabaseIdentifier;
+	};
+	query?: never;
+	url: "/d1/database/{database_id}/raw";
+};
+
+export type CloudflareD1RawDatabaseQueryErrors = {
+	/**
+	 * Query response failure
+	 */
+	"4XX": D1ApiResponseCommonFailure;
+};
+
+export type CloudflareD1RawDatabaseQueryError =
+	CloudflareD1RawDatabaseQueryErrors[keyof CloudflareD1RawDatabaseQueryErrors];
+
+export type CloudflareD1RawDatabaseQueryResponses = {
+	/**
+	 * Raw query response
+	 */
+	200: D1ApiResponseCommon & {
+		result?: Array<D1RawResultResponse>;
+	};
+};
+
+export type CloudflareD1RawDatabaseQueryResponse =
+	CloudflareD1RawDatabaseQueryResponses[keyof CloudflareD1RawDatabaseQueryResponses];

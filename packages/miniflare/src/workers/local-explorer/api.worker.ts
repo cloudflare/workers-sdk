@@ -4,11 +4,13 @@
 import { Hono } from "hono/tiny";
 import { validateQuery, validateRequestBody } from "./common";
 import {
+	zCloudflareD1ListDatabasesData,
+	zCloudflareD1RawDatabaseQueryData,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsData,
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 } from "./generated/zod.gen";
-import { listD1Databases } from "./resources/d1";
+import { getD1Database, listD1Databases, rawD1Database } from "./resources/d1";
 import {
 	bulkGetKVValues,
 	deleteKVValue,
@@ -75,9 +77,19 @@ app.post(
 // ============================================================================
 
 app.get(
-	"/storage/d1",
-	validateQuery(zWorkersKvNamespaceListNamespacesData.shape.query.unwrap()),
+	"/d1/database",
+	validateQuery(zCloudflareD1ListDatabasesData.shape.query.unwrap()),
 	(c) => listD1Databases(c, c.req.valid("query"))
+);
+
+app.get("/d1/database/:database_id", (c) =>
+	getD1Database(c, { database_id: c.req.param("database_id") })
+);
+
+app.post(
+	"/d1/database/:database_id/raw",
+	validateRequestBody(zCloudflareD1RawDatabaseQueryData.shape.body),
+	(c) => rawD1Database(c, c.req.valid("json"))
 );
 
 export default app;
