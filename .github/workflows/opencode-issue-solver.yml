@@ -233,13 +233,16 @@ jobs:
             Instructions:
             1. First, thoroughly understand the issue and explore the codebase to be confident about the root cause
             2. Only implement a fix when you are certain it will solve the problem
-            3. Run checks: pnpm run check
-            4. Create a changeset if needed: pnpm changeset
-            5. Make sure you read AGENTS.md in full for more guidelines
+            3. Add or update tests to cover the fix—this is essential
+            4. Run checks: pnpm run check
+            5. Create a changeset if needed: pnpm changeset
+            6. Make sure you read AGENTS.md in full for more guidelines
 
             Guidelines:
             - Prioritize correctness over speed—be sure about your fix before implementing
             - If you're uncertain, investigate more before making changes
+            - Always add tests! A fix without tests is incomplete
+            - Look at existing tests in the codebase for patterns to follow
             - Minimal changes only - no unrelated refactoring
             - Follow existing code patterns
             - Ensure TypeScript types are correct
