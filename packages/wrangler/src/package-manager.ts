@@ -67,7 +67,7 @@ export function getPackageManagerName(packageManager: PackageManager): string {
 /**
  * Manage packages using npm
  */
-const NpmPackageManager: PackageManager = {
+export const NpmPackageManager: PackageManager = {
 	type: "npm",
 	npx: "npx",
 	dlx: ["npx"],
@@ -76,7 +76,7 @@ const NpmPackageManager: PackageManager = {
 /**
  * Manage packages using pnpm
  */
-const PnpmPackageManager: PackageManager = {
+export const PnpmPackageManager: PackageManager = {
 	type: "pnpm",
 	npx: "pnpm",
 	dlx: ["pnpm", "dlx"],
@@ -85,7 +85,7 @@ const PnpmPackageManager: PackageManager = {
 /**
  * Manage packages using yarn
  */
-const YarnPackageManager: PackageManager = {
+export const YarnPackageManager: PackageManager = {
 	type: "yarn",
 	npx: "yarn",
 	dlx: ["yarn", "dlx"],
@@ -94,7 +94,7 @@ const YarnPackageManager: PackageManager = {
 /**
  * Manage packages using bun
  */
-const BunPackageManager: PackageManager = {
+export const BunPackageManager: PackageManager = {
 	type: "bun",
 	npx: "bunx",
 	dlx: ["bunx"],

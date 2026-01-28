@@ -145,21 +145,44 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
-	const { type } = await getPackageManager();
-
-	const packageJsonBuild = packageJson?.scripts?.["build"]
-		? `${type} run build`
-		: undefined;
-
 	return {
 		projectPath: projectPath,
 		configured: framework?.isConfigured(projectPath) ?? false,
 		framework,
 		packageJson,
-		buildCommand: detectedFramework?.buildCommand ?? packageJsonBuild,
+		buildCommand: await getProjectBuildCommand(detectedFramework),
 		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
+}
+
+/**
+ * Given a detected framework this function gets a `build` command for the target project that can be run in the terminal
+ * (such as `npm run build` or `npx astro build`). If no build command is detected `undefined` is returned instead.
+ *
+ * @param detectedFramework The detected framework (or settings) for the project
+ * @returns A runnable command for the build process if detected, undefined otherwise
+ */
+async function getProjectBuildCommand(
+	detectedFramework: Settings
+): Promise<string | undefined> {
+	if (!detectedFramework?.buildCommand) {
+		return undefined;
+	}
+
+	const { type, dlx, npx } = await getPackageManager();
+
+	for (const packageManagerCommandPrefix of [type, dlx.join(" "), npx]) {
+		if (
+			detectedFramework.buildCommand.startsWith(packageManagerCommandPrefix)
+		) {
+			// The build command already is something like `npm run build` or similar
+			return detectedFramework.buildCommand;
+		}
+	}
+
+	// The command is something like `astro build` so we need to prefix it with `npx` and equivalents
+	return `${npx} ${detectedFramework.buildCommand}`;
 }
 
 const invalidWorkerNameCharsRegex = /[^a-z0-9- ]/g;
