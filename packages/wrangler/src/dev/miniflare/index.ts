@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import { getLocalExplorerEnabledFromEnv } from "@cloudflare/workers-utils";
@@ -584,14 +583,7 @@ export function buildMiniflareBindingOptions(
 		bindings: {
 			...bindings.vars,
 		},
-		versionMetadata: bindings.version_metadata
-			? {
-					binding: bindings.version_metadata.binding,
-					id: randomUUID(),
-					tag: "",
-					timestamp: new Date().toISOString(),
-				}
-			: undefined,
+		versionMetadata: bindings.version_metadata?.binding,
 		textBlobBindings,
 		dataBlobBindings,
 		wasmBindings,

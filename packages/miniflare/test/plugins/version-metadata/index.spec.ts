@@ -3,18 +3,9 @@ import { expect, test } from "vitest";
 import { useDispose } from "../../test-shared";
 
 test("version-metadata: provides id, tag, and timestamp", async () => {
-	const testId = "test-version-id-12345";
-	const testTag = "test-tag";
-	const testTimestamp = "2025-01-15T10:30:00.000Z";
-
 	const mf = new Miniflare({
 		compatibilityDate: "2025-01-01",
-		versionMetadata: {
-			binding: "CF_VERSION_METADATA",
-			id: testId,
-			tag: testTag,
-			timestamp: testTimestamp,
-		},
+		versionMetadata: "CF_VERSION_METADATA",
 		modules: true,
 		script: `
 			export default {
@@ -28,29 +19,24 @@ test("version-metadata: provides id, tag, and timestamp", async () => {
 	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://placeholder");
-	const result = await response.json();
+	const result = (await response.json()) as {
+		id: string;
+		tag: string;
+		timestamp: string;
+	};
 
-	expect(result).toEqual({
-		id: testId,
-		tag: testTag,
-		timestamp: testTimestamp,
-	});
+	expect(result.id).toMatch(
+		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+	);
+	expect(result.tag).toBe("");
+	expect(new Date(result.timestamp).toISOString()).toBe(result.timestamp);
 	expect(response.status).toBe(200);
 });
 
 test("version-metadata: works with custom binding name", async () => {
-	const testId = "custom-id";
-	const testTag = "custom-tag";
-	const testTimestamp = "2025-01-20T15:45:00.000Z";
-
 	const mf = new Miniflare({
 		compatibilityDate: "2025-01-01",
-		versionMetadata: {
-			binding: "MY_VERSION",
-			id: testId,
-			tag: testTag,
-			timestamp: testTimestamp,
-		},
+		versionMetadata: "MY_VERSION",
 		modules: true,
 		script: `
 			export default {
@@ -64,29 +50,24 @@ test("version-metadata: works with custom binding name", async () => {
 	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://placeholder");
-	const result = await response.json();
+	const result = (await response.json()) as {
+		id: string;
+		tag: string;
+		timestamp: string;
+	};
 
-	expect(result).toEqual({
-		id: testId,
-		tag: testTag,
-		timestamp: testTimestamp,
-	});
+	expect(result.id).toMatch(
+		/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+	);
+	expect(result.tag).toBe("");
+	expect(new Date(result.timestamp).toISOString()).toBe(result.timestamp);
 	expect(response.status).toBe(200);
 });
 
-test("version-metadata: works with empty tag", async () => {
-	const testId = "version-with-empty-tag";
-	const testTag = "";
-	const testTimestamp = "2025-01-25T08:00:00.000Z";
-
+test("version-metadata: timestamp is valid ISO date", async () => {
 	const mf = new Miniflare({
 		compatibilityDate: "2025-01-01",
-		versionMetadata: {
-			binding: "CF_VERSION_METADATA",
-			id: testId,
-			tag: testTag,
-			timestamp: testTimestamp,
-		},
+		versionMetadata: "CF_VERSION_METADATA",
 		modules: true,
 		script: `
 			export default {
@@ -100,12 +81,14 @@ test("version-metadata: works with empty tag", async () => {
 	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://placeholder");
-	const result = await response.json();
+	const result = (await response.json()) as {
+		id: string;
+		tag: string;
+		timestamp: string;
+	};
 
-	expect(result).toEqual({
-		id: testId,
-		tag: testTag,
-		timestamp: testTimestamp,
-	});
+	const parsedDate = new Date(result.timestamp);
+	expect(parsedDate.toString()).not.toBe("Invalid Date");
+	expect(parsedDate.getTime()).toBeLessThanOrEqual(Date.now());
 	expect(response.status).toBe(200);
 });
