@@ -230,13 +230,15 @@ jobs:
 
             ---
 
+            **IMPORTANT: Before doing anything else, read AGENTS.md and CONTRIBUTING.md in full. These contain critical guidelines you must follow.**
+
             Instructions:
-            1. First, thoroughly understand the issue and explore the codebase to be confident about the root cause
-            2. Only implement a fix when you are certain it will solve the problem
-            3. Add or update tests to cover the fix—this is essential
-            4. Run checks: pnpm run check
-            5. Create a changeset if needed: pnpm changeset
-            6. Make sure you read AGENTS.md in full for more guidelines
+            1. Read AGENTS.md and CONTRIBUTING.md thoroughly—follow their guidelines strictly
+            2. Understand the issue and explore the codebase to be confident about the root cause
+            3. Only implement a fix when you are certain it will solve the problem
+            4. Add or update tests to cover the fix—this is essential
+            5. Run checks: pnpm run check
+            6. Create a changeset if needed: pnpm changeset
 
             Guidelines:
             - Prioritize correctness over speed—be sure about your fix before implementing
