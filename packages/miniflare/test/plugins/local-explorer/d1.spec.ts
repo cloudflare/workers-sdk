@@ -186,11 +186,13 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database/test-db-id/raw`,
 				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						sql: "SELECT id, name FROM users WHERE id = 1",
 					}),
+					headers: {
+						"Content-Type": "application/json",
+					},
+					method: "POST",
 				}
 			);
 
@@ -224,7 +226,9 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				`${BASE_URL}/d1/database/test-db-id/raw`,
 				{
 					method: "POST",
-					headers: { "Content-Type": "application/json" },
+					headers: {
+						"Content-Type": "application/json",
+					},
 					body: JSON.stringify({
 						sql: "SELECT name, email FROM users WHERE name = ?",
 						params: ["Bob"],
@@ -298,9 +302,13 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database/non-existent-id/raw`,
 				{
+					body: JSON.stringify({
+						sql: "SELECT 1",
+					}),
+					headers: {
+						"Content-Type": "application/json",
+					},
 					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({ sql: "SELECT 1" }),
 				}
 			);
 
@@ -367,11 +375,13 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database/test-db-id/raw`,
 				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify({
 						batch: [{ sql: 123 }], // sql in batch should be a string
 					}),
+					headers: {
+						"Content-Type": "application/json",
+					},
+					method: "POST",
 				}
 			);
 
