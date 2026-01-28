@@ -23,11 +23,11 @@ export async function getAssetWithMetadataFromKV(
 			);
 
 			if (asset.value === null) {
-				// Don't cache a 404 for a year by re-requesting with a minimum cacheTtl
+				// Don't cache a 404 for a year by re-requesting with a short cacheTtl
 				const retriedAsset =
 					await assetsKVNamespace.getWithMetadata<AssetMetadata>(assetKey, {
 						type: "stream",
-						cacheTtl: 60, // Minimum value allowed
+						cacheTtl: 10,
 					});
 
 				if (retriedAsset.value !== null && sentry) {
