@@ -56,10 +56,8 @@ jobs:
 
       - name: Push Branch
         run: |
-          # Rewrite last commit so GitHub considers it new and runs the CI jobs with our secrets
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git commit --amend --no-edit
           git push origin HEAD --force
 
       - name: "Create Draft PR"
@@ -75,3 +73,12 @@ jobs:
           PR_NUM: ${{ inputs.pr-number }}
           TITLE: "Run CI on behalf of #${{ inputs.pr-number }} @${{ inputs.commit-sha }}"
           BODY: "This PR runs CI on behalf of #${{ inputs.pr-number }} at commit ${{ inputs.commit-sha }}. It can be closed after the CI run is complete."
+
+      - name: "Trigger CI"
+        run: |
+          # Push an empty commit to trigger CI workflows
+          # This ensures CI runs because the PR already exists when this push happens
+          git commit --allow-empty -m "Trigger CI for #$PR_NUM"
+          git push origin HEAD
+        env:
+          PR_NUM: ${{ inputs.pr-number }}

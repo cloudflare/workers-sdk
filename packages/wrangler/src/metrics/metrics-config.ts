@@ -20,6 +20,10 @@ export const CURRENT_METRICS_DATE = new Date(2022, 6, 4);
 
 export interface MetricsConfigOptions {
 	/**
+	 * The argv passed to the `main()` function.
+	 */
+	argv?: string[];
+	/**
 	 * Defines whether to send metrics to Cloudflare:
 	 * If defined, then use this value for whether the dispatch is enabled.
 	 * Otherwise, infer the enabled value from the user configuration.

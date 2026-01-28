@@ -181,6 +181,7 @@ describe("validatePagesConfig()", () => {
 						ip: "127.0.0.0",
 						port: 1234,
 						inspector_port: 5678,
+						inspector_ip: undefined,
 						local_protocol: "https",
 						upstream_protocol: "https",
 						host: "test-host",

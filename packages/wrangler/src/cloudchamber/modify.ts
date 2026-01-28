@@ -2,14 +2,17 @@ import { cancel, startSection } from "@cloudflare/cli";
 import { processArgument } from "@cloudflare/cli/args";
 import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { DeploymentsService } from "@cloudflare/containers-shared";
+import { createCommand } from "../core/create-command";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { pollSSHKeysUntilCondition, waitForPlacement } from "./cli";
 import { pickDeployment } from "./cli/deployments";
 import { getLocation } from "./cli/locations";
 import {
+	cloudchamberScope,
 	collectEnvironmentVariables,
 	collectLabels,
+	fillOpenAPIConfiguration,
 	parseImageName,
 	promptForEnvironmentVariables,
 	promptForLabels,
@@ -308,3 +311,80 @@ async function handleModifyCommand(
 }
 
 const modifyImageQuestion = "URL of the image to use in your deployment";
+
+export const cloudchamberModifyCommand = createCommand({
+	metadata: {
+		description: "Modify an existing deployment",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	behaviour: {
+		printBanner: () => !isNonInteractiveOrCI(),
+	},
+	args: {
+		deploymentId: {
+			type: "string",
+			demandOption: false,
+			describe: "The deployment you want to modify",
+		},
+		var: {
+			requiresArg: true,
+			type: "array",
+			demandOption: false,
+			describe: "Container environment variables",
+			coerce: (arg: unknown[]) => arg.map((a) => a?.toString() ?? ""),
+		},
+		label: {
+			requiresArg: true,
+			type: "array",
+			demandOption: false,
+			describe: "Deployment labels",
+			coerce: (arg: unknown[]) => arg.map((a) => a?.toString() ?? ""),
+		},
+		"ssh-public-key-id": {
+			requiresArg: true,
+			type: "string",
+			array: true,
+			demandOption: false,
+			describe:
+				"Public SSH key IDs to include in this container. You can add one to your account with `wrangler cloudchamber ssh create",
+		},
+		image: {
+			requiresArg: true,
+			type: "string",
+			demandOption: false,
+			describe: "The new image that the deployment will have from now on",
+		},
+		location: {
+			requiresArg: true,
+			type: "string",
+			demandOption: false,
+			describe: "The new location that the deployment will have from now on",
+		},
+		"instance-type": {
+			requiresArg: true,
+			choices: ["dev", "basic", "standard"] as const,
+			demandOption: false,
+			describe:
+				"The new instance type that the deployment will have from now on",
+		},
+		vcpu: {
+			requiresArg: true,
+			type: "number",
+			demandOption: false,
+			describe: "The new vcpu that the deployment will have from now on",
+		},
+		memory: {
+			requiresArg: true,
+			type: "string",
+			demandOption: false,
+			describe: "The new memory that the deployment will have from now on",
+		},
+	},
+	positionalArgs: ["deploymentId"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await modifyCommand(args, config);
+	},
+});

@@ -29,13 +29,13 @@ describe("cloudchamber image", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber registries
 
-			Configure registries via Cloudchamber
+			Configure registries via Cloudchamber [alpha]
 
 			COMMANDS
-			  wrangler cloudchamber registries configure             Configure Cloudchamber to pull from specific registries
-			  wrangler cloudchamber registries credentials [domain]  get a temporary password for a specific domain
-			  wrangler cloudchamber registries remove [domain]       removes the registry at the given domain
-			  wrangler cloudchamber registries list                  list registries configured for this account
+			  wrangler cloudchamber registries configure             Configure Cloudchamber to pull from specific registries [alpha]
+			  wrangler cloudchamber registries credentials <domain>  Get a temporary password for a specific domain [alpha]
+			  wrangler cloudchamber registries remove <domain>       Remove the registry at the given domain [alpha]
+			  wrangler cloudchamber registries list                  List registries configured for this account [alpha]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -182,7 +182,7 @@ describe("cloudchamber image list", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber images list
 
-			List images in the Cloudflare managed registry
+			List images in the Cloudflare managed registry [alpha]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -434,7 +434,7 @@ describe("cloudchamber image delete", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber images delete <image>
 
-			Remove an image from the Cloudflare managed registry
+			Remove an image from the Cloudflare managed registry [alpha]
 
 			POSITIONALS
 			  image  Image and tag to delete, of the form IMAGE:TAG  [string] [required]

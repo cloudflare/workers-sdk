@@ -1003,6 +1003,7 @@ export class Miniflare {
 
 			this.#maybeInspectorProxyController = new InspectorProxyController(
 				this.#sharedOpts.core.inspectorPort,
+				this.#sharedOpts.core.inspectorHost,
 				this.#log,
 				workerNamesToProxy
 			);
@@ -1586,7 +1587,10 @@ export class Miniflare {
 			});
 		}
 
-		// Bindings for `ProxyServer` Durable Object
+		/**
+		 * Bindings for `ProxyServer` Durable Object for the magic proxy and local explorer.
+		 * Contains all workerd-native bindings.
+		 */
 		const proxyBindings: Worker_Binding[] = [];
 
 		const allWorkerBindings = new Map<string, Worker_Binding[]>();
@@ -2042,6 +2046,7 @@ export class Miniflare {
 			} else {
 				await this.#maybeInspectorProxyController.updateConnection(
 					this.#sharedOpts.core.inspectorPort,
+					this.#sharedOpts.core.inspectorHost ?? "127.0.0.1",
 					maybePort,
 					this.#workerNamesToProxy()
 				);

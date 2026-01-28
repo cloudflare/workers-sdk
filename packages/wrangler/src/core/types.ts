@@ -232,10 +232,25 @@ export type AliasDefinition = {
 	metadata?: Partial<Metadata>;
 };
 
+export type InternalCommandDefinition = {
+	type: "command";
+	command: Command;
+} & CommandDefinition;
+
+export type InternalNamespaceDefinition = {
+	type: "namespace";
+	command: Command;
+} & NamespaceDefinition;
+
+export type InternalAliasDefinition = {
+	type: "alias";
+	command: Command;
+} & AliasDefinition;
+
 export type InternalDefinition =
-	| ({ type: "command"; command: Command } & CommandDefinition)
-	| ({ type: "namespace"; command: Command } & NamespaceDefinition)
-	| ({ type: "alias"; command: Command } & AliasDefinition);
+	| InternalCommandDefinition
+	| InternalNamespaceDefinition
+	| InternalAliasDefinition;
 export type DefinitionTreeNode = {
 	definition?: InternalDefinition;
 	subtree: DefinitionTree;

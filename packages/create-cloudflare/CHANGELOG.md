@@ -1,5 +1,45 @@
 # create-cloudflare
 
+## 2.62.4
+
+### Patch Changes
+
+- [#12114](https://github.com/cloudflare/workers-sdk/pull/12114) [`efac63d`](https://github.com/cloudflare/workers-sdk/commit/efac63d265bee91b3610dd07ab0bd845ddd0797a) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.18.5 | 3.19.0 |
+
+- [#12115](https://github.com/cloudflare/workers-sdk/pull/12115) [`ade4ac2`](https://github.com/cloudflare/workers-sdk/commit/ade4ac2de4eae6c4c07872ac4a50cdf984268633) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency          | From   | To     |
+  | ------------------- | ------ | ------ |
+  | create-react-router | 7.12.0 | 7.13.0 |
+
+- [#12116](https://github.com/cloudflare/workers-sdk/pull/12116) [`dd3e1d7`](https://github.com/cloudflare/workers-sdk/commit/dd3e1d7a099070d8a1c14755a8e687df52b8cde6) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.11.2 | 0.11.3 |
+
+- [#12117](https://github.com/cloudflare/workers-sdk/pull/12117) [`88e352b`](https://github.com/cloudflare/workers-sdk/commit/88e352b15b4d411376da27a19dd43cc8657a979b) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.564 | 0.0.566 |
+
+- [#12062](https://github.com/cloudflare/workers-sdk/pull/12062) [`5658448`](https://github.com/cloudflare/workers-sdk/commit/56584481f0ab02225434a3aa5f3ae73597002453) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Skip modifying the root `tsconfig.json` in projects that use TypeScript project references.
+
+- [#12046](https://github.com/cloudflare/workers-sdk/pull/12046) [`99454f0`](https://github.com/cloudflare/workers-sdk/commit/99454f030043317b2465021a8f6e080339bf1196) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Remove duplicate references to `./worker-configuration.d.ts` in the React template's `tsconfig.worker.json` file.
+
 ## 2.62.3
 
 ### Patch Changes

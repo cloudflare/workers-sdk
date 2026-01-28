@@ -1,5 +1,13 @@
 # @cloudflare/unenv-preset
 
+## 2.11.0
+
+### Minor Changes
+
+- [#12024](https://github.com/cloudflare/workers-sdk/pull/12024) [`ae108f0`](https://github.com/cloudflare/workers-sdk/commit/ae108f090532765751c3996ba4c863a9fe858ddf) Thanks [@vicb](https://github.com/vicb)! - Remove the experimental flag from `node:_stream_wrap`, `node:dgram`, `node:inspector`, and `node:sqlite`
+
+  Those modules are no more experimental since workerd 1.20260115.0
+
 ## 2.10.0
 
 ### Minor Changes

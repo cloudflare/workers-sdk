@@ -938,6 +938,43 @@ export const WorkerdTests: Record<string, () => void> = {
 		// Note: Native workerd worker_threads doesn't export MessageChannel
 		// (it's a Web API available separately, not part of the worker_threads module)
 	},
+
+	async testRepl() {
+		const repl = await import("node:repl");
+
+		// Common exports (both unenv stub and native workerd)
+		assertTypeOfProperties(repl, {
+			writer: "function",
+			start: "function",
+			Recoverable: "function",
+			REPLServer: "function",
+			builtinModules: "object",
+			_builtinLibs: "object",
+			REPL_MODE_SLOPPY: "symbol",
+			REPL_MODE_STRICT: "symbol",
+		});
+
+		assertTypeOfProperties(repl.default, {
+			writer: "function",
+			start: "function",
+			Recoverable: "function",
+			REPLServer: "function",
+			builtinModules: "object",
+			_builtinLibs: "object",
+			REPL_MODE_SLOPPY: "symbol",
+			REPL_MODE_STRICT: "symbol",
+		});
+
+		// builtinModules should be an array (not in TypeScript types but exported by both unenv and workerd)
+		assert.ok(Array.isArray((repl as any).builtinModules));
+		assert.ok((repl as any).builtinModules.length > 0);
+
+		// Both implementations throw when calling start()
+		assert.throws(
+			() => repl.start(),
+			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
+		);
+	},
 };
 
 /**

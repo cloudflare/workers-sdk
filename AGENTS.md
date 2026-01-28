@@ -100,7 +100,9 @@ This is the **Cloudflare Workers SDK** monorepo containing tools and libraries f
 
 **Creating Pull Requests:**
 
-- Always use the PR template from `.github/pull_request_template.md`
+- Always use the PR template from `.github/PULL_REQUEST_TEMPLATE.md` - do not replace it with your own format
+- Fill in the template: replace the issue link placeholder, add description, check appropriate boxes
+- Keep all checkboxes in the template (don't delete unchecked ones)
 - PR title format: `[package name] description` (e.g. `[wrangler] Fix bug in dev command`)
 - If the change doesn't require a changeset, add the `no-changeset-required` label
 
@@ -125,3 +127,8 @@ Run `pnpm check` before submitting changes to ensure all quality gates pass.
 ## Changesets
 
 Every change to package code requires a changeset or it will not trigger a release. Read `.changeset/README.md` before creating changesets.
+
+**Changeset Format:**
+
+- Do not use conventional commit prefixes (e.g., `fix:`, `feat:`) in changeset descriptions
+- Start with a capital letter and describe the change directly (e.g., "Remove unused option" not "fix: remove unused option")

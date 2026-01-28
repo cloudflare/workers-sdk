@@ -20,16 +20,7 @@ import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
-import {
-	afterEach,
-	assert,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	test,
-	vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { Static } from "../autoconfig/frameworks/static";
 import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packages";
@@ -8360,7 +8351,7 @@ addEventListener('fetch', event => {});`
 				      \`\`\`
 				      [[migrations]]
 				      tag = \\"v1\\"
-				      new_classes = [ \\"SomeClass\\" ]
+				      new_sqlite_classes = [ \\"SomeClass\\" ]
 
 				      \`\`\`
 
@@ -15848,7 +15839,7 @@ export default{
 		});
 	});
 
-	it("should output a deploy output entry to WRANGLER_OUTPUT_FILE_PATH containing a field with the autoconfig summary if autoconfig run", async () => {
+	it("should output a deploy and an autoconfig output entry to WRANGLER_OUTPUT_FILE_PATH if autoconfig run", async () => {
 		const outputFile = "./output.json";
 
 		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
@@ -15884,15 +15875,19 @@ export default{
 			WRANGLER_OUTPUT_FILE_PATH: outputFile,
 		});
 
-		const deployOutputEntry = (await readFile(outputFile, "utf8"))
+		const outputEntries = (await readFile(outputFile, "utf8"))
 			.split("\n")
 			.filter(Boolean)
-			.map((line) => JSON.parse(line))
-			.find((obj) => obj.type === "deploy") as OutputEntry | undefined;
+			.map((line) => JSON.parse(line)) as OutputEntry[];
 
-		assert(deployOutputEntry?.type === "deploy");
+		expect(outputEntries).toContainEqual(
+			expect.objectContaining({ type: "deploy" })
+		);
 
-		expect(deployOutputEntry.autoconfig_summary).toMatchInlineSnapshot(`
+		const autoconfigOutputEntry = outputEntries.find(
+			(obj) => obj.type === "autoconfig"
+		);
+		expect(autoconfigOutputEntry?.summary).toMatchInlineSnapshot(`
 			Object {
 			  "outputDir": "public",
 			  "scripts": Object {
@@ -15908,40 +15903,6 @@ export default{
 			  "wranglerInstall": true,
 			}
 		`);
-	});
-
-	it("should output a deploy output entry to WRANGLER_OUTPUT_FILE_PATH not containing a field with the autoconfig summary if autoconfig didn't run", async () => {
-		const outputFile = "./output.json";
-
-		writeWranglerConfig({
-			name: "worker-name",
-			compatibility_date: "2025-12-02",
-			assets: {
-				directory: ".",
-			},
-		});
-
-		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
-			configured: true,
-			framework: new Static("static"),
-			workerName: "my-worker",
-			projectPath: ".",
-		});
-
-		await runWrangler("deploy --x-autoconfig --dry-run", {
-			...process.env,
-			WRANGLER_OUTPUT_FILE_PATH: outputFile,
-		});
-
-		const deployOutputEntry = (await readFile(outputFile, "utf8"))
-			.split("\n")
-			.filter(Boolean)
-			.map((line) => JSON.parse(line))
-			.find((obj) => obj.type === "deploy") as OutputEntry | undefined;
-
-		assert(deployOutputEntry?.type === "deploy");
-
-		expect(deployOutputEntry.autoconfig_summary).toBeUndefined();
 	});
 
 	describe("open-next delegation", () => {

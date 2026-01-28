@@ -12,22 +12,18 @@ export const EXTERNAL_DEPENDENCIES = [
 	// Native binary with platform-specific builds - cannot be bundled
 	"sharp",
 
-	// Large HTTP client with optional native dependencies; commonly shared
-	// with other packages to avoid version conflicts and duplication
+	// Must be external - dynamically required at runtime in worker threads via
+	// require("undici") for synchronous fetch operations (see fetch-sync.ts)
 	"undici",
 
 	// Native binary - Cloudflare's JavaScript runtime cannot be bundled
 	"workerd",
 
 	// Has optional native bindings (bufferutil, utf-8-validate) for performance;
-	// commonly shared with other packages to avoid duplication
+	// bundling would lose these optimizations and fall back to JS implementations
 	"ws",
 
 	// Must be external - dynamically required at runtime via require("youch")
 	// for lazy loading of pretty error pages
 	"youch",
-
-	// Large validation library; commonly shared as a dependency
-	// to avoid version conflicts and bundle size duplication
-	"zod",
 ];

@@ -25,30 +25,6 @@ function mockDeployment() {
 	);
 }
 
-const EXPECTED_RESULT = `
-		"{
-		    \\"id\\": \\"1\\",
-		    \\"type\\": \\"default\\",
-		    \\"created_at\\": \\"123\\",
-		    \\"account_id\\": \\"123\\",
-		    \\"vcpu\\": 4,
-		    \\"memory\\": \\"400MB\\",
-		    \\"memory_mib\\": 400,
-		    \\"version\\": 1,
-		    \\"image\\": \\"hello\\",
-		    \\"location\\": {
-		        \\"name\\": \\"sfo06\\",
-		        \\"enabled\\": true
-		    },
-		    \\"network\\": {
-		        \\"mode\\": \\"public\\",
-		        \\"ipv4\\": \\"1.1.1.1\\"
-		    },
-		    \\"placements_ref\\": \\"http://ref\\",
-		    \\"node_group\\": \\"metal\\"
-		}"
-	`;
-
 describe("cloudchamber modify", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
@@ -68,7 +44,7 @@ describe("cloudchamber modify", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler cloudchamber modify [deploymentId]
 
-			Modify an existing deployment
+			Modify an existing deployment [alpha]
 
 			POSITIONALS
 			  deploymentId  The deployment you want to modify  [string]
@@ -103,7 +79,29 @@ describe("cloudchamber modify", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
-		expect(std.out).toMatchInlineSnapshot(EXPECTED_RESULT);
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    \\"id\\": \\"1\\",
+			    \\"type\\": \\"default\\",
+			    \\"created_at\\": \\"123\\",
+			    \\"account_id\\": \\"123\\",
+			    \\"vcpu\\": 4,
+			    \\"memory\\": \\"400MB\\",
+			    \\"memory_mib\\": 400,
+			    \\"version\\": 1,
+			    \\"image\\": \\"hello\\",
+			    \\"location\\": {
+			        \\"name\\": \\"sfo06\\",
+			        \\"enabled\\": true
+			    },
+			    \\"network\\": {
+			        \\"mode\\": \\"public\\",
+			        \\"ipv4\\": \\"1.1.1.1\\"
+			    },
+			    \\"placements_ref\\": \\"http://ref\\",
+			    \\"node_group\\": \\"metal\\"
+			}"
+		`);
 	});
 
 	it("should modify deployment with wrangler args (detects no interactivity)", async () => {
@@ -119,7 +117,29 @@ describe("cloudchamber modify", () => {
 			"cloudchamber modify 1234 --var HELLO:WORLD --var YOU:CONQUERED --label appname:helloworld --label region:wnam"
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
-		expect(std.out).toMatchInlineSnapshot(EXPECTED_RESULT);
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    \\"id\\": \\"1\\",
+			    \\"type\\": \\"default\\",
+			    \\"created_at\\": \\"123\\",
+			    \\"account_id\\": \\"123\\",
+			    \\"vcpu\\": 4,
+			    \\"memory\\": \\"400MB\\",
+			    \\"memory_mib\\": 400,
+			    \\"version\\": 1,
+			    \\"image\\": \\"hello\\",
+			    \\"location\\": {
+			        \\"name\\": \\"sfo06\\",
+			        \\"enabled\\": true
+			    },
+			    \\"network\\": {
+			        \\"mode\\": \\"public\\",
+			        \\"ipv4\\": \\"1.1.1.1\\"
+			    },
+			    \\"placements_ref\\": \\"http://ref\\",
+			    \\"node_group\\": \\"metal\\"
+			}"
+		`);
 	});
 
 	it("can't modify deployment due to lack of deploymentId (json)", async () => {
@@ -134,8 +154,8 @@ describe("cloudchamber modify", () => {
 		// so testing the actual UI will be harder than expected
 		// TODO: think better on how to test UI actions
 		expect(std.out).toMatchInlineSnapshot(`
-		"
-		[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
-	`);
+			"
+			[32mIf you think this is a bug then please create an issue at https://github.com/cloudflare/workers-sdk/issues/new/choose[0m"
+		`);
 	});
 });
