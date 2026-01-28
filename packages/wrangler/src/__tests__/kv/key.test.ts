@@ -47,6 +47,8 @@ describe("kv", () => {
 							expect(accountId).toEqual("some-account-id");
 							expect(namespaceId).toEqual(expectedNamespaceId);
 							expect(encodeURIComponent(key as string)).toEqual(expectedKV.key);
+							// Verify url_encoded parameter is always set
+							expect(url.searchParams.get("url_encoded")).toEqual("true");
 							// if (expectedKV.metadata) {
 							// 	expect(body).toBeInstanceOf(FormData);
 							// 	expect((body as FormData).get("value")).toEqual(
@@ -1193,11 +1195,14 @@ describe("kv", () => {
 				msw.use(
 					http.delete(
 						"*/accounts/:accountId/storage/kv/namespaces/:namespaceId/values/:key",
-						({ params }) => {
+						({ request, params }) => {
+							const url = new URL(request.url);
 							requests.count++;
 							expect(params.accountId).toEqual("some-account-id");
 							expect(params.namespaceId).toEqual(expectedNamespaceId);
 							expect(params.key).toEqual(expectedKey);
+							// Verify url_encoded parameter is always set
+							expect(url.searchParams.get("url_encoded")).toEqual("true");
 							return HttpResponse.json(createFetchResult(null), {
 								status: 200,
 							});
@@ -1374,7 +1379,11 @@ function setMockFetchKVGetValue(
 				expect(params.accountId).toEqual(accountId);
 				expect(params.namespaceId).toEqual(namespaceId);
 				// Getting the key from params decodes it so we need to grab the encoded key from the URL
-				expect(url.toString().split("/").pop()).toBe(key);
+				// Remove query params before checking the key
+				const pathWithoutQuery = url.pathname.split("/").pop();
+				expect(pathWithoutQuery).toBe(key);
+				// Verify url_encoded parameter is always set
+				expect(url.searchParams.get("url_encoded")).toEqual("true");
 
 				return new HttpResponse(value, { status: 200 });
 			},

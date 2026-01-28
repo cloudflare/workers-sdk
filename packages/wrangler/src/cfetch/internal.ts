@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { URLSearchParams } from "node:url";
 import {
 	APIError,
 	getCloudflareApiBaseUrl,
@@ -13,7 +14,6 @@ import { logger } from "../logger";
 import { loginOrRefreshIfRequired, requireApiToken } from "../user";
 import type { ApiCredentials } from "../user";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
-import type { URLSearchParams } from "node:url";
 import type { HeadersInit, RequestInfo, RequestInit } from "undici";
 
 async function logRequest(request: Request, init?: RequestInit) {
@@ -279,7 +279,8 @@ export async function fetchKVGetValue(
 	const auth = requireApiToken();
 	const headers = new Headers();
 	addAuthorizationHeader(headers, auth);
-	const resource = `${getCloudflareApiBaseUrl(complianceConfig)}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}`;
+	const queryParams = new URLSearchParams({ url_encoded: "true" });
+	const resource = `${getCloudflareApiBaseUrl(complianceConfig)}/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${key}?${queryParams.toString()}`;
 	const response = await fetch(resource, {
 		method: "GET",
 		headers,

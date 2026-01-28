@@ -227,15 +227,12 @@ export async function putKVKeyValue(
 	namespaceId: string,
 	keyValue: KeyValue
 ) {
-	let searchParams: URLSearchParams | undefined;
-	if (keyValue.expiration || keyValue.expiration_ttl) {
-		searchParams = new URLSearchParams();
-		if (keyValue.expiration) {
-			searchParams.set("expiration", `${keyValue.expiration}`);
-		}
-		if (keyValue.expiration_ttl) {
-			searchParams.set("expiration_ttl", `${keyValue.expiration_ttl}`);
-		}
+	const searchParams = new URLSearchParams({ url_encoded: "true" });
+	if (keyValue.expiration) {
+		searchParams.set("expiration", `${keyValue.expiration}`);
+	}
+	if (keyValue.expiration_ttl) {
+		searchParams.set("expiration_ttl", `${keyValue.expiration_ttl}`);
 	}
 	return await fetchResult(
 		complianceConfig,
@@ -280,7 +277,8 @@ export async function deleteKVKeyValue(
 		`/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${encodeURIComponent(
 			key
 		)}`,
-		{ method: "DELETE" }
+		{ method: "DELETE" },
+		new URLSearchParams({ url_encoded: "true" })
 	);
 }
 
