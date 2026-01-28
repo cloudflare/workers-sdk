@@ -25,6 +25,8 @@ jobs:
       is_solvable: ${{ steps.parse.outputs.is_solvable }}
       analysis: ${{ steps.parse.outputs.analysis }}
       issue_number: ${{ steps.gate.outputs.issue_number }}
+      issue_title: ${{ steps.issue.outputs.title }}
+      issue_body: ${{ steps.issue.outputs.body }}
     steps:
       - name: Evaluate trigger conditions
         id: gate
@@ -98,14 +100,42 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Fetch issue details
+        id: issue
+        if: steps.gate.outputs.should_proceed == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: parseInt('${{ steps.gate.outputs.issue_number }}')
+            });
+            core.setOutput('title', issue.data.title);
+            core.setOutput('body', issue.data.body || 'No description provided');
+            core.setOutput('labels', issue.data.labels.map(l => l.name).join(', ') || 'None');
+
       - name: Assess issue
         id: assess
         if: steps.gate.outputs.should_proceed == 'true'
         uses: anthropics/claude-code-action@v1
+        env:
+          ISSUE_TITLE: ${{ steps.issue.outputs.title }}
+          ISSUE_BODY: ${{ steps.issue.outputs.body }}
+          ISSUE_LABELS: ${{ steps.issue.outputs.labels }}
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            Analyze GitHub issue #${{ steps.gate.outputs.issue_number }} and determine if it can be fixed with an automated one-shot fix.
+            Analyze this GitHub issue and determine if it can be fixed with an automated one-shot fix.
+
+            ## Issue #${{ steps.gate.outputs.issue_number }}
+            **Title:** ${{ steps.issue.outputs.title }}
+            **Labels:** ${{ steps.issue.outputs.labels }}
+
+            **Description:**
+            ${{ steps.issue.outputs.body }}
+
+            ---
 
             Evaluate:
             1. Is the problem clearly described with specific symptoms or error messages?
@@ -183,9 +213,19 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           prompt: |
-            Fix GitHub issue #${{ needs.assess-issue.outputs.issue_number }}.
+            Fix this GitHub issue:
 
-            Analysis: ${{ needs.assess-issue.outputs.analysis }}
+            ## Issue #${{ needs.assess-issue.outputs.issue_number }}
+            **Title:** ${{ needs.assess-issue.outputs.issue_title }}
+
+            **Description:**
+            ${{ needs.assess-issue.outputs.issue_body }}
+
+            ---
+
+            **Previous Analysis:** ${{ needs.assess-issue.outputs.analysis }}
+
+            ---
 
             Instructions:
             1. Implement a minimal, targeted fix
