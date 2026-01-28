@@ -47,7 +47,7 @@ export class NextJs extends Framework {
 
 		return {
 			// `@opennextjs/cloudflare migrate` creates the wrangler config file
-			wranglerConfig: null,
+			wranglerConfig: {},
 			packageJsonScriptsOverrides: {
 				preview: "opennextjs-cloudflare build && opennextjs-cloudflare preview",
 				deploy: "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
