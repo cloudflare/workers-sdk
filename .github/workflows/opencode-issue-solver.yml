@@ -125,6 +125,7 @@ jobs:
           ISSUE_LABELS: ${{ steps.issue.outputs.labels }}
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             Analyze this GitHub issue and determine if it can be fixed with an automated one-shot fix.
 
@@ -212,6 +213,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             Fix this GitHub issue:
 
