@@ -153,18 +153,8 @@ export async function runAutoConfig(
 			JSON.stringify(
 				{
 					...existingPackageJson,
-					name: autoConfigDetails.packageJson.name ?? existingPackageJson.name,
-					dependencies: {
-						...existingPackageJson.dependencies,
-						...autoConfigDetails.packageJson.dependencies,
-					},
-					devDependencies: {
-						...existingPackageJson.devDependencies,
-						...autoConfigDetails.packageJson.devDependencies,
-					},
 					scripts: {
 						...existingPackageJson.scripts,
-						...autoConfigDetails.packageJson.scripts,
 						...autoConfigSummary.scripts,
 					},
 				} satisfies PackageJSON,
