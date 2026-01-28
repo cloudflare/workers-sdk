@@ -11,10 +11,8 @@ on:
 jobs:
   assess-issue:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Exit
         run: |
           exit 1
-
-   
