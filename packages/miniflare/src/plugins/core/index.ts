@@ -1088,10 +1088,10 @@ export function getGlobalServices({
 					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:kv:`
 				) &&
 				"kvNamespace" in binding &&
-				binding.kvNamespace?.name
+				binding.kvNamespace?.name?.startsWith("kv:ns:")
 			) {
 				// Extract ID from service name "kv:ns:ID"
-				const namespaceId = binding.kvNamespace.name.replace("kv:ns:", "");
+				const namespaceId = binding.kvNamespace.name.replace(/^kv:ns:/, "");
 				IDToBindingName.kv[namespaceId] = binding.name;
 			}
 		}

@@ -146,6 +146,8 @@ export async function putKVValue(c: AppContext) {
 
 	const contentType = c.req.header("content-type") || "";
 
+	// Multipart form data is used when including metadata
+	// octect-stream is used when you don't need metadata
 	if (contentType.includes("multipart/form-data")) {
 		const formData = await c.req.formData();
 		const formValue = formData.get("value");
@@ -159,8 +161,7 @@ export async function putKVValue(c: AppContext) {
 		} else if (formValue === null) {
 			return errorResponse(400, 10001, "Missing value field");
 		} else {
-			// Unknown type, try to convert to string
-			value = String(formValue);
+			return errorResponse(400, 10001, "Unsupported value type in form data");
 		}
 
 		if (formMetadata instanceof Blob) {
@@ -185,7 +186,6 @@ export async function putKVValue(c: AppContext) {
 	if (metadata) options.metadata = metadata;
 
 	await kv.put(key_name, value, options);
-
 	return c.json(wrapResponse({}));
 }
 
@@ -203,7 +203,6 @@ export async function deleteKVValue(c: AppContext) {
 	}
 
 	await kv.delete(key_name);
-
 	return c.json(wrapResponse({}));
 }
 

@@ -36,6 +36,9 @@ catalogs:
     eslint:
       specifier: ^9.39.1
       version: 9.39.1
+    jsonc-parser:
+      specifier: ^3.2.0
+      version: 3.2.0
     playwright-chromium:
       specifier: ^1.56.1
       version: 1.56.1
@@ -1718,7 +1721,7 @@ importers:
         specifier: ^5.0.0
         version: 5.0.0
       jsonc-parser:
-        specifier: ^3.2.0
+        specifier: catalog:default
         version: 3.2.0
       magic-string:
         specifier: ^0.30.5
@@ -2055,7 +2058,7 @@ importers:
         specifier: ^4.1.0
         version: 4.1.1
       jsonc-parser:
-        specifier: ^3.2.0
+        specifier: catalog:default
         version: 3.2.0
       kleur:
         specifier: ^4.1.5
@@ -3779,7 +3782,7 @@ importers:
         specifier: ^6.3.0
         version: 6.3.0
       jsonc-parser:
-        specifier: ^3.2.0
+        specifier: catalog:default
         version: 3.2.0
       smol-toml:
         specifier: catalog:default
@@ -4067,7 +4070,7 @@ importers:
         specifier: ^1.0.6
         version: 1.0.6
       jsonc-parser:
-        specifier: ^3.2.0
+        specifier: catalog:default
         version: 3.2.0
       md5-file:
         specifier: 5.0.0
@@ -15581,7 +15584,7 @@ snapshots:
       miniflare: 4.20251210.0
       semver: 7.7.3
       vitest: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.1)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
-      wrangler: 4.54.0(@cloudflare/workers-types@4.20260127.0)
+      wrangler: 4.54.0(@cloudflare/workers-types@4.20260128.0)
       zod: 3.25.76
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
