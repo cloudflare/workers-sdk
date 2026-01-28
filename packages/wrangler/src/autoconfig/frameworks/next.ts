@@ -29,15 +29,20 @@ export class NextJs extends Framework {
 		const { npx, dlx } = await getPackageManager();
 
 		if (!dryRun) {
-			await runCommand([
-				...dlx,
-				"@opennextjs/cloudflare",
-				"migrate",
-				// Note: we force-install so that even if an incompatible version of
-				//       Next.js is used this installation still succeeds, moving users
-				//       (hopefully) in right direction (instead of failing at this step)
-				"--force-install",
-			]);
+			await runCommand(
+				[
+					...dlx,
+					"@opennextjs/cloudflare",
+					"migrate",
+					// Note: we force-install so that even if an incompatible version of
+					//       Next.js is used this installation still succeeds, moving users
+					//       (hopefully) in right direction (instead of failing at this step)
+					"--force-install",
+				],
+				{
+					cwd: projectPath,
+				}
+			);
 		}
 
 		return {
