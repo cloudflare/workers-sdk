@@ -76,36 +76,6 @@ export function serialiseWorker(service: PartialWorker): FormData {
 	const entrypointModule = typedModules.find(
 		(m) => m.name === service.entrypoint
 	);
-	// Try to find a cf-requirements.txt file
-	const isPythonEntrypoint = entrypointModule?.type === "python";
-
-	if (isPythonEntrypoint) {
-		try {
-			const pythonRequirements = service.modules["cf-requirements.txt"];
-			if (pythonRequirements) {
-				const textContent = decoder.decode(pythonRequirements.contents);
-				// This is incredibly naive. However, it supports common syntax for cf-requirements.txt
-				for (const requirement of textContent.split("\n")) {
-					const packageName = requirement.match(/^[^\d\W]\w*/);
-					if (typeof packageName?.[0] === "string") {
-						typedModules.push({
-							type: "python-requirement",
-							name: packageName?.[0],
-							content: {
-								contents: encoder.encode(""),
-								type: "text/x-python-requirement",
-							},
-						});
-					}
-				}
-			}
-			// We don't care if a cf-requirements.txt isn't found
-		} catch {
-			console.debug(
-				"Python entrypoint detected, but no cf-requirements.txt file found."
-			);
-		}
-	}
 	for (const { name, content, type } of typedModules) {
 		formData.set(
 			name,
