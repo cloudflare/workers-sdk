@@ -4841,7 +4841,9 @@ function warnIfDurableObjectsHaveNoMigrations(
 				\`\`\`
 				${formatConfigSnippet(
 					{
-						migrations: [{ tag: "v1", new_classes: durableObjectClassnames }],
+						migrations: [
+							{ tag: "v1", new_sqlite_classes: durableObjectClassnames },
+						],
 					},
 					configPath
 				)}

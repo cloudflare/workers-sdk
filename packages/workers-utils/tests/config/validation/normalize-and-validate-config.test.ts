@@ -1055,7 +1055,7 @@ describe("normalizeAndValidateConfig()", () => {
 				    \`\`\`
 				    [[migrations]]
 				    tag = \\"v1\\"
-				    new_classes = [ \\"CLASS1\\" ]
+				    new_sqlite_classes = [ \\"CLASS1\\" ]
 
 				    \`\`\`
 

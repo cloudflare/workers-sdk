@@ -241,8 +241,8 @@ describe("metrics", () => {
 				argsUsed: [],
 				argsCombination: "",
 				agent: null,
-				command: "wrangler docs",
-				args: {},
+				sanitizedCommand: "docs",
+				sanitizedArgs: {},
 			};
 			beforeEach(() => {
 				// Default: no agent detected
@@ -480,7 +480,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 				expect(std.debug).toContain('"argsCombination":""');
-				expect(std.debug).toContain('"command":"wrangler login"');
+				expect(std.debug).toContain('"sanitizedCommand":""');
 			});
 
 			it("should include args provided by the user", async () => {

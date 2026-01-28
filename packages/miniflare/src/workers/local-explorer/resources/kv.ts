@@ -21,9 +21,9 @@ function getKVBinding(env: Env, namespace_id: string): KVNamespace | null {
 	return env[bindingName] as KVNamespace;
 }
 
-const _listNamespacesQuerySchema =
-	zWorkersKvNamespaceListNamespacesData.shape.query.unwrap();
-type ListNamespacesQuery = z.output<typeof _listNamespacesQuerySchema>;
+type ListNamespacesQuery = NonNullable<
+	z.output<typeof zWorkersKvNamespaceListNamespacesData>["query"]
+>;
 /**
  * List Namespaces
  * https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/methods/list/
@@ -69,9 +69,9 @@ export async function listKVNamespaces(
 	});
 }
 
-const _listKeysQuerySchema =
-	zWorkersKvNamespaceListANamespaceSKeysData.shape.query.unwrap();
-type ListKeysQuery = z.output<typeof _listKeysQuerySchema>;
+type ListKeysQuery = NonNullable<
+	z.output<typeof zWorkersKvNamespaceListANamespaceSKeysData>["query"]
+>;
 /**
  * List a Namespace's Keys
  * https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/subresources/keys/methods/list/
@@ -144,6 +144,8 @@ export async function putKVValue(c: AppContext) {
 
 	const contentType = c.req.header("content-type") || "";
 
+	// Multipart form data is used when including metadata
+	// octect-stream is used when you don't need metadata
 	if (contentType.includes("multipart/form-data")) {
 		const formData = await c.req.formData();
 		const formValue = formData.get("value");
@@ -157,8 +159,7 @@ export async function putKVValue(c: AppContext) {
 		} else if (formValue === null) {
 			return errorResponse(400, 10001, "Missing value field");
 		} else {
-			// Unknown type, try to convert to string
-			value = String(formValue);
+			return errorResponse(400, 10001, "Unsupported value type in form data");
 		}
 
 		if (formMetadata instanceof Blob) {
@@ -183,7 +184,6 @@ export async function putKVValue(c: AppContext) {
 	if (metadata) options.metadata = metadata;
 
 	await kv.put(key_name, value, options);
-
 	return c.json(wrapResponse({}));
 }
 
@@ -201,13 +201,12 @@ export async function deleteKVValue(c: AppContext) {
 	}
 
 	await kv.delete(key_name);
-
 	return c.json(wrapResponse({}));
 }
 
-const _bulkGetBodySchema =
-	zWorkersKvNamespaceGetMultipleKeyValuePairsData.shape.body;
-type BulkGetBody = z.output<typeof _bulkGetBodySchema>;
+type BulkGetBody = NonNullable<
+	z.output<typeof zWorkersKvNamespaceGetMultipleKeyValuePairsData>["body"]
+>;
 /**
  * Get multiple key-value pairs
  * https://developers.cloudflare.com/api/resources/kv/subresources/namespaces/methods/bulk_get/

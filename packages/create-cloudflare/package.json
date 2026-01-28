@@ -74,7 +74,7 @@
 		"glob": "^10.3.3",
 		"haikunator": "^2.1.2",
 		"indent-string": "^5.0.0",
-		"jsonc-parser": "^3.2.0",
+		"jsonc-parser": "catalog:default",
 		"magic-string": "^0.30.5",
 		"open": "^8.4.0",
 		"recast": "^0.22.0",

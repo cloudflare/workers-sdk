@@ -8351,7 +8351,7 @@ addEventListener('fetch', event => {});`
 				      \`\`\`
 				      [[migrations]]
 				      tag = \\"v1\\"
-				      new_classes = [ \\"SomeClass\\" ]
+				      new_sqlite_classes = [ \\"SomeClass\\" ]
 
 				      \`\`\`
 

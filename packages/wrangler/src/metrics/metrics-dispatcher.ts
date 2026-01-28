@@ -18,14 +18,7 @@ import {
 	readMetricsConfig,
 	writeMetricsConfig,
 } from "./metrics-config";
-import {
-	ALLOW,
-	getAllowedArgs,
-	sanitizeArgKeys,
-	sanitizeArgValues,
-} from "./sanitization";
 import type { MetricsConfigOptions } from "./metrics-config";
-import type { AllowList } from "./sanitization";
 import type { CommonEventProperties, Events } from "./types";
 
 const SPARROW_URL = "https://sparrow.cloudflare.com";
@@ -42,30 +35,6 @@ const pendingRequests = new Set<Promise<void>>();
 export function allMetricsDispatchesCompleted(): Promise<void> {
 	return Promise.allSettled(pendingRequests).then(() => {});
 }
-
-/**
- * A list of all the command args that can be included in the event.
- *
- * The "*" command applies to all sub commands at this level.
- * Specific commands can override or add to the allow list.
- *
- * Each arg can have one of three values:
- * - an array of strings: only those specific values are allowed
- * - REDACT: the arg value will always be redacted
- * - ALLOW: all values for that arg are allowed
- */
-const COMMAND_ARG_ALLOW_LIST: AllowList = {
-	// * applies to all sub commands
-	"wrangler *": {
-		format: ALLOW,
-		logLevel: ALLOW,
-	},
-	"wrangler tail": { status: ALLOW },
-	"wrangler types": {
-		xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
-		path: ["worker-configuration.d.ts"],
-	},
-};
 
 export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	// The SPARROW_SOURCE_KEY will be provided at build time through esbuild's `define` option
@@ -126,32 +95,29 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			properties: Omit<
 				Extract<Events, { name: EventName }>["properties"],
 				keyof CommonEventProperties
-			>
+			> & { argsUsed: string[] }
 		) {
 			try {
-				if (properties.command?.startsWith("wrangler login")) {
-					properties.command = "wrangler login";
-				}
+				// Don't send metrics for telemetry/metrics disable commands
 				if (
-					properties.command === "wrangler telemetry disable" ||
-					properties.command === "wrangler metrics disable"
+					properties.sanitizedCommand === "telemetry disable" ||
+					properties.sanitizedCommand === "metrics disable"
 				) {
 					return;
 				}
+				// Show metrics banner for certain commands
 				if (
-					properties.command === "wrangler deploy" ||
-					properties.command === "wrangler dev" ||
+					properties.sanitizedCommand === "deploy" ||
+					properties.sanitizedCommand === "dev" ||
 					// for testing purposes
-					properties.command === "wrangler docs"
+					properties.sanitizedCommand === "docs"
 				) {
 					printMetricsBanner();
 				}
 
-				const sanitizedArgs = sanitizeArgKeys(
-					properties.args ?? {},
-					options.argv
-				);
-				const sanitizedArgsKeys = Object.keys(sanitizedArgs).sort();
+				const argsUsed = properties.argsUsed;
+				const argsCombination = argsUsed.join(", ");
+
 				const commonEventProperties: CommonEventProperties = {
 					amplitude_session_id,
 					amplitude_event_id: amplitude_event_id++,
@@ -170,17 +136,10 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					isWorkersCI: isWorkersCI(),
 					isInteractive: isInteractive(),
 					hasAssets: options.hasAssets ?? false,
-					argsUsed: sanitizedArgsKeys,
-					argsCombination: sanitizedArgsKeys.join(", "),
+					argsUsed,
+					argsCombination,
 					agent,
 				};
-
-				// get the args where we don't want to redact their values
-				const allowedArgs = getAllowedArgs(
-					COMMAND_ARG_ALLOW_LIST,
-					properties.command ?? "wrangler"
-				);
-				properties.args = sanitizeArgValues(sanitizedArgs, allowedArgs);
 
 				dispatch({
 					name,
