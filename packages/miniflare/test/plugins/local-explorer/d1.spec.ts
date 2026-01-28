@@ -14,6 +14,7 @@ describe("D1 API", () => {
 				TEST_DB: "test-db-id",
 				ANOTHER_DB: "another-db-id",
 			},
+			inspectorPort: 0,
 			modules: true,
 			script: `export default { fetch() { return new Response("user worker"); } }`,
 			unsafeLocalExplorer: true,
