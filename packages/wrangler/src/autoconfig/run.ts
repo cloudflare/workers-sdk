@@ -259,8 +259,7 @@ export async function buildOperationsSummary(
 		};
 
 		const containsServerSideCode =
-			// If wranglerConfigToWrite is null the framework's tool is generating the wrangler config so we don't know
-			// if there is server side code or not, but likely there should be so we here assume that there is
+			// If wranglerConfigToWrite is null we don't know whether there is server side code, we default to assume that there is
 			wranglerConfigToWrite === null ||
 			// If there is an entrypoint then we know that there is server side code
 			!!wranglerConfigToWrite?.main;
