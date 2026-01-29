@@ -6,6 +6,18 @@ import { UserError } from "./errors";
 import type { TelemetryMessage } from "./errors";
 import type { ParseError as JsoncParseError } from "jsonc-parser";
 
+/**
+ * Converts Windows backslashes to forward slashes for display purposes.
+ * This prevents backslash sequences like `\t` (in paths like `C:\Users\thepl\...`)
+ * from being interpreted as escape characters in error messages.
+ *
+ * @param filePath The file path to normalize for display
+ * @returns The path with backslashes replaced by forward slashes
+ */
+export function displayPath(filePath: string): string {
+	return filePath.replace(/\\/g, "/");
+}
+
 export type Message = {
 	text: string;
 	location?: Location;
@@ -174,10 +186,10 @@ export function readFileSyncToBuffer(file: string): Buffer {
 	} catch (err) {
 		const { message } = err as Error;
 		throw new ParseError({
-			text: `Could not read file: ${file}`,
+			text: `Could not read file: ${displayPath(file)}`,
 			notes: [
 				{
-					text: message.replace(file, resolve(file)),
+					text: message.replace(file, displayPath(resolve(file))),
 				},
 			],
 		});
@@ -198,10 +210,10 @@ export function readFileSync(file: string): string {
 
 		const { message } = err as Error;
 		throw new ParseError({
-			text: `Could not read file: ${file}`,
+			text: `Could not read file: ${displayPath(file)}`,
 			notes: [
 				{
-					text: message.replace(file, resolve(file)),
+					text: message.replace(file, displayPath(resolve(file))),
 				},
 			],
 			telemetryMessage: "Could not read file",
@@ -413,10 +425,10 @@ function removeBOMAndValidate(buffer: Buffer, file: string): string {
 				text: `Configuration file contains ${bom.encoding} byte order marker`,
 				notes: [
 					{
-						text: `The file "${file}" appears to be encoded as ${bom.encoding}. Please save the file as UTF-8 without BOM.`,
+						text: `The file "${displayPath(file)}" appears to be encoded as ${bom.encoding}. Please save the file as UTF-8 without BOM.`,
 					},
 				],
-				location: { file, line: 1, column: 0 },
+				location: { file: displayPath(file), line: 1, column: 0 },
 				telemetryMessage: `${bom.encoding} BOM detected`,
 			});
 		}

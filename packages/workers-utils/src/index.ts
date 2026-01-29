@@ -41,6 +41,7 @@ export {
 	parseHumanDuration,
 	parseNonHyphenedUuid,
 	parseByteSize,
+	displayPath,
 } from "./parse";
 export {
 	friendlyBindingNames,

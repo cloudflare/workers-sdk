@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	displayPath,
 	indexLocation,
 	parseByteSize,
 	parseJSON,
@@ -402,5 +403,42 @@ describe("parseByteSize", () => {
 		expect(parseByteSize(".B")).toBeNaN();
 		expect(parseByteSize("3iB")).toBeNaN();
 		expect(parseByteSize("3ib")).toBeNaN();
+	});
+});
+
+describe("displayPath", () => {
+	it("should convert Windows backslashes to forward slashes", () => {
+		expect(displayPath("C:\\Users\\thepl\\project\\wrangler.json")).toBe(
+			"C:/Users/thepl/project/wrangler.json"
+		);
+	});
+
+	it("should handle paths with escape sequence characters", () => {
+		// These paths contain characters that would form escape sequences
+		// \t = tab, \n = newline, \r = carriage return
+		expect(displayPath("C:\\Users\\thepl\\temp\\file.txt")).toBe(
+			"C:/Users/thepl/temp/file.txt"
+		);
+		expect(displayPath("C:\\Users\\neil\\project")).toBe(
+			"C:/Users/neil/project"
+		);
+		expect(displayPath("C:\\Users\\robin\\folder")).toBe(
+			"C:/Users/robin/folder"
+		);
+	});
+
+	it("should leave Unix paths unchanged", () => {
+		expect(displayPath("/home/user/project/wrangler.json")).toBe(
+			"/home/user/project/wrangler.json"
+		);
+	});
+
+	it("should handle relative paths", () => {
+		expect(displayPath("src\\index.ts")).toBe("src/index.ts");
+		expect(displayPath("./src/index.ts")).toBe("./src/index.ts");
+	});
+
+	it("should handle empty strings", () => {
+		expect(displayPath("")).toBe("");
 	});
 });
