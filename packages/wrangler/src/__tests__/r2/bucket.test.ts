@@ -110,6 +110,7 @@ describe("r2", () => {
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
+				  wrangler r2 bucket local-uploads    Manage local uploads configuration for an R2 bucket
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 				  wrangler r2 bucket cors             Manage CORS configuration for an R2 bucket
 				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
@@ -152,6 +153,7 @@ describe("r2", () => {
 				  wrangler r2 bucket notification     Manage event notification rules for an R2 bucket
 				  wrangler r2 bucket domain           Manage custom domains for an R2 bucket
 				  wrangler r2 bucket dev-url          Manage public access via the r2.dev URL for an R2 bucket
+				  wrangler r2 bucket local-uploads    Manage local uploads configuration for an R2 bucket
 				  wrangler r2 bucket lifecycle        Manage lifecycle rules for an R2 bucket
 				  wrangler r2 bucket cors             Manage CORS configuration for an R2 bucket
 				  wrangler r2 bucket lock             Manage lock rules for an R2 bucket
