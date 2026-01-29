@@ -454,7 +454,9 @@ export async function handleError(
 			e.message.includes("Unknown argument") ||
 			e.message.includes("Unknown command");
 
-		const unknownArgsMatch = e.message.match(/Unknown arguments?: (.+)/);
+		const unknownArgsMatch = e.message.match(
+			/Unknown (?:arguments?|command): (.+)/
+		);
 		const unknownArgs = unknownArgsMatch
 			? unknownArgsMatch[1].split(", ").map((a) => a.trim())
 			: [];
