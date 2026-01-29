@@ -92,15 +92,10 @@ export const loginCommand = createCommand({
 					`One of ${args.scopes} is not a valid authentication scope. Run "wrangler login --scopes-list" to see the valid scopes.`
 				);
 			}
-			await login(config, {
-				scopes: args.scopes,
-				browser: args.browser,
-				callbackHost: args.callbackHost,
-				callbackPort: args.callbackPort,
-			});
-			return;
 		}
+
 		await login(config, {
+			scopes: args.scopes,
 			browser: args.browser,
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
