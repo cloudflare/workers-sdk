@@ -15,6 +15,7 @@ import { getNodeCompat } from "miniflare";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
+import { parseRules } from "../deployment-bundle/rules";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
@@ -628,25 +629,25 @@ async function generateSimpleEnvTypes(
 	}
 
 	const modulesTypeStructure = new Array<string>();
-	if (config.rules) {
-		const moduleTypeMap = {
-			CompiledWasm: "WebAssembly.Module",
-			Data: "ArrayBuffer",
-			Text: "string",
-		};
-		for (const ruleObject of config.rules) {
-			const typeScriptType =
-				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
-			if (typeScriptType === undefined) {
-				continue;
-			}
+	// Use parseRules to get the effective rules (user rules + default rules)
+	const effectiveRules = parseRules(config.rules).rules;
+	const moduleTypeMap = {
+		CompiledWasm: "WebAssembly.Module",
+		Data: "ArrayBuffer",
+		Text: "string",
+	};
+	for (const ruleObject of effectiveRules) {
+		const typeScriptType =
+			moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
+		if (typeScriptType === undefined) {
+			continue;
+		}
 
-			for (const glob of ruleObject.globs) {
-				modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
+		for (const glob of ruleObject.globs) {
+			modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
 \tconst value: ${typeScriptType};
 \texport default value;
 }`);
-			}
 		}
 	}
 
@@ -1035,22 +1036,22 @@ async function generatePerEnvironmentTypes(
 	}
 
 	const modulesTypeStructure = new Array<string>();
-	if (config.rules) {
-		const moduleTypeMap = {
-			CompiledWasm: "WebAssembly.Module",
-			Data: "ArrayBuffer",
-			Text: "string",
-		};
-		for (const ruleObject of config.rules) {
-			const typeScriptType =
-				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
-			if (typeScriptType !== undefined) {
-				for (const glob of ruleObject.globs) {
-					modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
+	// Use parseRules to get the effective rules (user rules + default rules)
+	const effectiveRulesForEnv = parseRules(config.rules).rules;
+	const moduleTypeMapForEnv = {
+		CompiledWasm: "WebAssembly.Module",
+		Data: "ArrayBuffer",
+		Text: "string",
+	};
+	for (const ruleObject of effectiveRulesForEnv) {
+		const typeScriptType =
+			moduleTypeMapForEnv[ruleObject.type as keyof typeof moduleTypeMapForEnv];
+		if (typeScriptType !== undefined) {
+			for (const glob of ruleObject.globs) {
+				modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
 	const value: ${typeScriptType};
 	export default value;
 	}`);
-				}
 			}
 		}
 	}

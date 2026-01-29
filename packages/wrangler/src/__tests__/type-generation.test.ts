@@ -605,7 +605,30 @@ describe("generate types", () => {
 				}
 			}
 			interface Env extends Cloudflare.Env {}
-
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			Generating runtime types...
 
 			Runtime types generated.
@@ -628,7 +651,30 @@ describe("generate types", () => {
 				}
 			}
 			interface Env extends Cloudflare.Env {}
-
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			Generating runtime types...
 
 			Runtime types generated.
@@ -651,7 +697,30 @@ describe("generate types", () => {
 				}
 			}
 			interface Env extends Cloudflare.Env {}
-
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			Generating runtime types...
 
 			Runtime types generated.
@@ -760,6 +829,30 @@ describe("generate types", () => {
 				export default value;
 			}
 			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
 				const value: WebAssembly.Module;
 				export default value;
 			}
@@ -877,6 +970,30 @@ describe("generate types", () => {
 				export default value;
 			}
 			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
 				const value: WebAssembly.Module;
 				export default value;
 			}
@@ -1055,6 +1172,30 @@ describe("generate types", () => {
 				const value: WebAssembly.Module;
 				export default value;
 			}
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			────────────────────────────────────────────────────────────
 			✨ Types written to a/worker-configuration.d.ts
 
@@ -1081,7 +1222,7 @@ describe("generate types", () => {
 		expect(fs.readFileSync("./worker-configuration.d.ts", "utf-8"))
 			.toMatchInlineSnapshot(`
 				"/* eslint-disable */
-				// Generated by Wrangler by running \`wrangler\` (hash: d172d29d98306b9c96cfcaf16aef9056)
+				// Generated by Wrangler by running \`wrangler\` (hash: 273851f844658afc7e0b7ee94a5e89a1)
 				// Runtime types generated with workerd@
 				declare namespace Cloudflare {
 					interface GlobalProps {
@@ -1095,14 +1236,37 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+				}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
 				// Begin runtime types
 				<runtime types go here>"
 			`);
 	});
 
 	describe("when nothing was found", () => {
-		it("should not create DTS file for service syntax workers if env only", async () => {
+		it("should create DTS file for service syntax workers with default module rules even if no env bindings", async () => {
 			fs.writeFileSync(
 				"./index.ts",
 				'addEventListener("fetch", event => { event.respondWith(() => new Response("")); })'
@@ -1118,16 +1282,44 @@ describe("generate types", () => {
 			);
 
 			await runWrangler("types --include-runtime=false");
-			expect(fs.existsSync("./worker-configuration.d.ts")).toBe(false);
+			expect(fs.existsSync("./worker-configuration.d.ts")).toBe(true);
 			expect(std.out).toMatchInlineSnapshot(`
 				"
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Generating project types...
 
-				No project types to add.
+				export {};
+				declare global {
 
+				}
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+				}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
 				────────────────────────────────────────────────────────────
+				✨ Types written to worker-configuration.d.ts
+
 				📣 Remember to rerun 'wrangler types' after you change your wrangler.jsonc file.
 				"
 			`);
@@ -1152,7 +1344,36 @@ describe("generate types", () => {
 			expect(fs.readFileSync("./worker-configuration.d.ts", "utf8"))
 				.toMatchInlineSnapshot(`
 					"/* eslint-disable */
+					// Generated by Wrangler by running \`wrangler\` (hash: 166e29d991ab9610ddb7432abfabf9c0)
 					// Runtime types generated with workerd@
+					export {};
+					declare global {
+
+					}
+					declare module \\"*.txt\\" {
+						const value: string;
+						export default value;
+					}
+					declare module \\"*.html\\" {
+						const value: string;
+						export default value;
+					}
+					declare module \\"*.sql\\" {
+						const value: string;
+						export default value;
+					}
+					declare module \\"*.bin\\" {
+						const value: ArrayBuffer;
+						export default value;
+					}
+					declare module \\"*.wasm\\" {
+						const value: WebAssembly.Module;
+						export default value;
+					}
+					declare module \\"*.wasm?module\\" {
+						const value: WebAssembly.Module;
+						export default value;
+					}
 					// Begin runtime types
 					<runtime types go here>"
 				`);
@@ -1162,8 +1383,34 @@ describe("generate types", () => {
 				──────────────────
 				Generating project types...
 
-				No project types to add.
+				export {};
+				declare global {
 
+				}
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+				}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
 				Generating runtime types...
 
 				Runtime types generated.
@@ -1206,7 +1453,30 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+				}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
@@ -1273,7 +1543,30 @@ describe("generate types", () => {
 				const testing_unsafe: any;
 				const UNSAFE_RATELIMIT: RateLimit;
 			}
-
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
@@ -1308,7 +1601,30 @@ describe("generate types", () => {
 				}
 			}
 			interface Env extends Cloudflare.Env {}
-
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			Generating runtime types...
 
 			Runtime types generated.
@@ -1350,7 +1666,30 @@ describe("generate types", () => {
 				}
 			}
 			interface Env extends Cloudflare.Env {}
-
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
@@ -1408,7 +1747,30 @@ describe("generate types", () => {
 				}
 			}
 			interface Env extends Cloudflare.Env {}
-
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
@@ -1460,7 +1822,30 @@ describe("generate types", () => {
 				}
 			}
 			interface Env extends Cloudflare.Env {}
-
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
@@ -1512,7 +1897,30 @@ describe("generate types", () => {
 				}
 			}
 			interface Env extends Cloudflare.Env {}
-
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
@@ -1552,7 +1960,30 @@ describe("generate types", () => {
 				}
 			}
 			interface Env extends Cloudflare.Env {}
-
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
@@ -1595,7 +2026,30 @@ describe("generate types", () => {
 				}
 			}
 			interface Env extends Cloudflare.Env {}
-
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
@@ -1646,7 +2100,30 @@ describe("generate types", () => {
 				}
 			}
 			interface Env extends Cloudflare.Env {}
-
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
@@ -1713,7 +2190,30 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+					}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
@@ -1749,7 +2249,30 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+					}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
@@ -1839,7 +2362,30 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+					}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
@@ -1902,7 +2448,30 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+				}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
@@ -1963,7 +2532,30 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+					}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
@@ -2013,7 +2605,30 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+					}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
@@ -2109,7 +2724,30 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+				}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
@@ -2165,7 +2803,30 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+					}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
@@ -2212,7 +2873,30 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+					}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
@@ -2255,7 +2939,30 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+					}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
@@ -2301,7 +3008,30 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+					}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+					}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+					}
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
@@ -2335,7 +3065,30 @@ describe("generate types", () => {
 					}
 				}
 				interface Env extends Cloudflare.Env {}
-
+				declare module \\"*.txt\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.html\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.sql\\" {
+					const value: string;
+					export default value;
+				}
+				declare module \\"*.bin\\" {
+					const value: ArrayBuffer;
+					export default value;
+				}
+				declare module \\"*.wasm\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
+				declare module \\"*.wasm?module\\" {
+					const value: WebAssembly.Module;
+					export default value;
+				}
 				────────────────────────────────────────────────────────────
 				✨ Types written to worker-configuration.d.ts
 
@@ -2397,7 +3150,30 @@ describe("generate types", () => {
 						}
 					}
 					interface CloudflareEnv extends Cloudflare.Env {}
-
+					declare module \\"*.txt\\" {
+						const value: string;
+						export default value;
+					}
+					declare module \\"*.html\\" {
+						const value: string;
+						export default value;
+					}
+					declare module \\"*.sql\\" {
+						const value: string;
+						export default value;
+					}
+					declare module \\"*.bin\\" {
+						const value: ArrayBuffer;
+						export default value;
+					}
+					declare module \\"*.wasm\\" {
+						const value: WebAssembly.Module;
+						export default value;
+					}
+					declare module \\"*.wasm?module\\" {
+						const value: WebAssembly.Module;
+						export default value;
+					}
 					────────────────────────────────────────────────────────────
 					✨ Types written to worker-configuration.d.ts
 
@@ -2489,7 +3265,7 @@ describe("generate types", () => {
 				expect(fs.readFileSync("./cloudflare-env.d.ts", "utf-8"))
 					.toMatchInlineSnapshot(`
 						"/* eslint-disable */
-						// Generated by Wrangler by running \`wrangler\` (hash: 9dfd5cc18984b8cc3421a9e726587833)
+						// Generated by Wrangler by running \`wrangler\` (hash: b6be578a9dee3815128f8bbe013d1373)
 						// Runtime types generated with workerd@
 						declare namespace Cloudflare {
 							interface Env {
@@ -2500,7 +3276,30 @@ describe("generate types", () => {
 							}
 						}
 						interface Env extends Cloudflare.Env {}
-
+						declare module \\"*.txt\\" {
+							const value: string;
+							export default value;
+						}
+						declare module \\"*.html\\" {
+							const value: string;
+							export default value;
+						}
+						declare module \\"*.sql\\" {
+							const value: string;
+							export default value;
+						}
+						declare module \\"*.bin\\" {
+							const value: ArrayBuffer;
+							export default value;
+						}
+						declare module \\"*.wasm\\" {
+							const value: WebAssembly.Module;
+							export default value;
+						}
+						declare module \\"*.wasm?module\\" {
+							const value: WebAssembly.Module;
+							export default value;
+						}
 						// Begin runtime types
 						<runtime types go here>"
 					`);
@@ -2547,7 +3346,7 @@ describe("generate types", () => {
 			expect(fs.readFileSync("./my-cloudflare-env-interface.d.ts", "utf-8"))
 				.toMatchInlineSnapshot(`
 					"/* eslint-disable */
-					// Generated by Wrangler by running \`wrangler\` (hash: c4701684dd76f087c31740a06b0cbdb6)
+					// Generated by Wrangler by running \`wrangler\` (hash: d041530da91626d3644db75e65a4e16f)
 					// Runtime types generated with workerd@
 					declare namespace Cloudflare {
 						interface Env {
@@ -2558,7 +3357,30 @@ describe("generate types", () => {
 						}
 					}
 					interface MyCloudflareEnvInterface extends Cloudflare.Env {}
-
+					declare module \\"*.txt\\" {
+						const value: string;
+						export default value;
+					}
+					declare module \\"*.html\\" {
+						const value: string;
+						export default value;
+					}
+					declare module \\"*.sql\\" {
+						const value: string;
+						export default value;
+					}
+					declare module \\"*.bin\\" {
+						const value: ArrayBuffer;
+						export default value;
+					}
+					declare module \\"*.wasm\\" {
+						const value: WebAssembly.Module;
+						export default value;
+					}
+					declare module \\"*.wasm?module\\" {
+						const value: WebAssembly.Module;
+						export default value;
+					}
 					// Begin runtime types
 					<runtime types go here>"
 				`);
@@ -2696,7 +3518,30 @@ describe("generate types", () => {
 				}
 			}
 			interface Env extends Cloudflare.Env {}
-
+			declare module \\"*.txt\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.html\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.sql\\" {
+				const value: string;
+				export default value;
+			}
+			declare module \\"*.bin\\" {
+				const value: ArrayBuffer;
+				export default value;
+			}
+			declare module \\"*.wasm\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
+			declare module \\"*.wasm?module\\" {
+				const value: WebAssembly.Module;
+				export default value;
+			}
 			────────────────────────────────────────────────────────────
 			✨ Types written to worker-configuration.d.ts
 
