@@ -46,12 +46,6 @@ export type D1QueryMeta = {
 	 * Number of rows written during the SQL query execution, including indices.
 	 */
 	rows_written?: number;
-	served_by_colo?: D1ServedByColo;
-	/**
-	 * Denotes if the query has been handled by the database primary instance.
-	 */
-	served_by_primary?: boolean;
-	served_by_region?: D1ServedByRegion;
 	/**
 	 * Size of the database after the query committed, in bytes.
 	 */
@@ -66,22 +60,6 @@ export type D1QueryMeta = {
 		sql_duration_ms?: number;
 	};
 };
-
-/**
- * Region location hint of the database instance that handled the query.
- */
-export type D1ServedByRegion =
-	| "WNAM"
-	| "ENAM"
-	| "WEUR"
-	| "EEUR"
-	| "APAC"
-	| "OC";
-
-/**
- * The three letters airport code of the colo that handled the query.
- */
-export type D1ServedByColo = string;
 
 /**
  * A single query object or a batch query object

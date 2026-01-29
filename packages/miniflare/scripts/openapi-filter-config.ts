@@ -74,6 +74,14 @@ const config = {
 			"workers-kv_namespace": ["supports_url_encoding"],
 			// D1 database response doesn't include created_at locally
 			"d1_database-response": ["created_at"],
+			// D1 query meta doesn't include served_by fields locally
+			"d1_query-meta": [
+				"served_by_colo",
+				"served_by_primary",
+				"served_by_region",
+				"d1_served-by-region",
+				"d1_served-by-colo",
+			],
 		},
 	},
 } satisfies FilterConfig;

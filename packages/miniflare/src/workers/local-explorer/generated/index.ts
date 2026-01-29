@@ -24,8 +24,6 @@ export type {
 	D1Params,
 	D1QueryMeta,
 	D1RawResultResponse,
-	D1ServedByColo,
-	D1ServedByRegion,
 	D1SingleQuery,
 	D1Sql,
 	WorkersKvAny,

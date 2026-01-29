@@ -2,23 +2,6 @@
 
 import { z } from "zod";
 
-/**
- * Region location hint of the database instance that handled the query.
- */
-export const zD1ServedByRegion = z.enum([
-	"WNAM",
-	"ENAM",
-	"WEUR",
-	"EEUR",
-	"APAC",
-	"OC",
-]);
-
-/**
- * The three letters airport code of the colo that handled the query.
- */
-export const zD1ServedByColo = z.string();
-
 export const zD1QueryMeta = z.object({
 	changed_db: z.boolean().optional(),
 	changes: z.number().optional(),
@@ -26,9 +9,6 @@ export const zD1QueryMeta = z.object({
 	last_row_id: z.number().optional(),
 	rows_read: z.number().optional(),
 	rows_written: z.number().optional(),
-	served_by_colo: zD1ServedByColo.optional(),
-	served_by_primary: z.boolean().optional(),
-	served_by_region: zD1ServedByRegion.optional(),
 	size_after: z.number().optional(),
 	timings: z
 		.object({
