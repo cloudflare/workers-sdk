@@ -1151,7 +1151,7 @@ function generatePerEnvTypeStrings(
 	const modulesContent = modulesTypeStructure.join("\n");
 
 	return {
-		consoleOutput: `${baseContent}\n${modulesContent}`,
+		consoleOutput: baseContent,
 		fileContent: `${baseContent}\n${modulesContent}`,
 	};
 }
@@ -1239,7 +1239,7 @@ function generateTypeStrings(
 
 	return {
 		fileContent: `${baseContent}\n${modulesContent}`,
-		consoleOutput: `${baseContent}\n${modulesContent}`,
+		consoleOutput: baseContent,
 	};
 }
 
