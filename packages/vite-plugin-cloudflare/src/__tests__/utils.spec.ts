@@ -18,6 +18,24 @@ describe("cleanUrl", () => {
 		);
 	});
 
+	test("removes query parameters from subpath imports", () => {
+		expect(cleanUrl("#path/to/file.html?param=value")).toBe("#path/to/file.html");
+		expect(cleanUrl("#components/template.txt?version=1&debug=true")).toBe(
+			"#components/template.txt"
+		);
+	});
+
+	test("removes hash fragments from subpath imports", () => {
+		expect(cleanUrl("#path/to/file.html#section")).toBe("#path/to/file.html");
+		expect(cleanUrl("#components/template.txt#anchor")).toBe(
+			"#components/template.txt"
+		);
+	});
+
+	test("removes both query and hash from subpath imports", () => {
+		expect(cleanUrl("#path/to/file.html?param=value#section")).toBe("#path/to/file.html");
+	});
+
 	test("returns unchanged URL when no query or hash present", () => {
 		expect(cleanUrl("./file.html")).toBe("./file.html");
 		expect(cleanUrl("/absolute/path.txt")).toBe("/absolute/path.txt");
