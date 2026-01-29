@@ -107,36 +107,37 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				return;
 			}
 
-			const argsUsed = properties.argsUsed;
-			const argsCombination = argsUsed.join(", ");
-
-			const commonEventProperties: CommonEventProperties = {
-				amplitude_session_id,
-				amplitude_event_id: amplitude_event_id++,
-				wranglerVersion,
-				wranglerMajorVersion,
-				wranglerMinorVersion,
-				wranglerPatchVersion,
-				osPlatform: getPlatform(),
-				osVersion: getOSVersion(),
-				nodeVersion: getNodeVersion(),
-				packageManager: sniffUserAgent(),
-				isFirstUsage: readMetricsConfig().permission === undefined,
-				configFileType: configFormat(options.configPath),
-				isCI: CI.isCI(),
-				isPagesCI: isPagesCI(),
-				isWorkersCI: isWorkersCI(),
-				isInteractive: isInteractive(),
-				hasAssets: options.hasAssets ?? false,
-				argsUsed,
-				argsCombination,
-				agent,
-			};
-
 			try {
 				if (cmdBehaviour?.printMetricsBanner === true) {
+					// printMetricsBanner can throw
 					printMetricsBanner();
 				}
+
+				const argsUsed = properties.argsUsed;
+				const argsCombination = argsUsed.join(", ");
+
+				const commonEventProperties: CommonEventProperties = {
+					amplitude_session_id,
+					amplitude_event_id: amplitude_event_id++,
+					wranglerVersion,
+					wranglerMajorVersion,
+					wranglerMinorVersion,
+					wranglerPatchVersion,
+					osPlatform: getPlatform(),
+					osVersion: getOSVersion(),
+					nodeVersion: getNodeVersion(),
+					packageManager: sniffUserAgent(),
+					isFirstUsage: readMetricsConfig().permission === undefined,
+					configFileType: configFormat(options.configPath),
+					isCI: CI.isCI(),
+					isPagesCI: isPagesCI(),
+					isWorkersCI: isWorkersCI(),
+					isInteractive: isInteractive(),
+					hasAssets: options.hasAssets ?? false,
+					argsUsed,
+					argsCombination,
+					agent,
+				};
 
 				const durationMs =
 					"durationMs" in properties ? properties.durationMs : undefined;
