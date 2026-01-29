@@ -2,7 +2,7 @@ import { Framework } from ".";
 import type { ConfigurationResults } from ".";
 
 export class Hono extends Framework {
-	configure(): ConfigurationResults {
+	async configure(): Promise<ConfigurationResults> {
 		return {
 			wranglerConfig: {},
 		};

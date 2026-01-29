@@ -1,3 +1,4 @@
+import type { FrameworkInfo } from "./get-framework";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
 export type ConfigurationOptions = {
@@ -18,11 +19,20 @@ export type ConfigurationResults = {
 	wranglerConfig: RawConfig;
 	// Scripts to override in the package.json. Most frameworks should not need to do this, as their default detected build command will be sufficient
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides;
-	buildCommand?: string;
+	// Build command to override the standard one (`npm run build` or framework's build command)
+	buildCommandOverride?: string;
+	// Deploy command to override the standard one (`npx wrangler deploy`)
+	deployCommandOverride?: string;
 };
 
 export abstract class Framework {
-	constructor(public name: string = "Static") {}
+	readonly id: string;
+	readonly name: string;
+
+	constructor(frameworkInfo: FrameworkInfo) {
+		this.id = frameworkInfo.id;
+		this.name = frameworkInfo.name;
+	}
 
 	isConfigured(_projectPath: string): boolean {
 		return false;

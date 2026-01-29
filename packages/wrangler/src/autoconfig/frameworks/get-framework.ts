@@ -15,40 +15,42 @@ import { Vite } from "./vite";
 import { Waku } from "./waku";
 import type { Framework } from ".";
 
-export function getFramework(detectedFramework?: {
+export type FrameworkInfo = {
 	id: string;
 	name: string;
-}): Framework {
+};
+
+export function getFramework(detectedFramework?: FrameworkInfo): Framework {
 	switch (detectedFramework?.id) {
 		case "astro":
-			return new Astro(detectedFramework.name);
+			return new Astro(detectedFramework);
 		case "svelte-kit":
-			return new SvelteKit(detectedFramework.name);
+			return new SvelteKit(detectedFramework);
 		case "tanstack-start":
-			return new TanstackStart(detectedFramework.name);
+			return new TanstackStart(detectedFramework);
 		case "react-router":
-			return new ReactRouter(detectedFramework.name);
+			return new ReactRouter(detectedFramework);
 		case "angular":
-			return new Angular(detectedFramework.name);
+			return new Angular(detectedFramework);
 		case "nuxt":
-			return new Nuxt(detectedFramework.name);
+			return new Nuxt(detectedFramework);
 		case "solid-start":
-			return new SolidStart(detectedFramework.name);
+			return new SolidStart(detectedFramework);
 		case "qwik":
-			return new Qwik(detectedFramework.name);
+			return new Qwik(detectedFramework);
 		case "vite":
-			return new Vite(detectedFramework.name);
+			return new Vite(detectedFramework);
 		case "analog":
-			return new Analog(detectedFramework.name);
+			return new Analog(detectedFramework);
 		case "next":
-			return new NextJs(detectedFramework.name);
+			return new NextJs(detectedFramework);
 		case "hono":
-			return new Hono(detectedFramework.name);
+			return new Hono(detectedFramework);
 		case "vike":
-			return new Vike(detectedFramework.name);
+			return new Vike(detectedFramework);
 		case "waku":
-			return new Waku(detectedFramework.name);
+			return new Waku(detectedFramework);
 		default:
-			return new Static(detectedFramework?.name);
+			return new Static(detectedFramework ?? { id: "static", name: "Static" });
 	}
 }

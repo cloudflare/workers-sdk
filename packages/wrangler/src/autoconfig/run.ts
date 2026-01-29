@@ -10,6 +10,7 @@ import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
+import { getPackageManager } from "../package-manager";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
@@ -108,11 +109,21 @@ export async function runAutoConfig(
 			dryRun: true,
 		});
 
+	const { npx } = await getPackageManager();
+
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
 		{
 			...wranglerConfig,
 			...dryRunConfigurationResults?.wranglerConfig,
+		},
+		{
+			build:
+				dryRunConfigurationResults?.buildCommandOverride ??
+				autoConfigDetails.buildCommand,
+			deploy:
+				dryRunConfigurationResults?.deployCommandOverride ??
+				`${npx} wrangler deploy`,
 		},
 		dryRunConfigurationResults?.packageJsonScriptsOverrides
 	);
@@ -193,7 +204,8 @@ export async function runAutoConfig(
 	}
 
 	const buildCommand =
-		configurationResults?.buildCommand ?? autoConfigDetails.buildCommand;
+		configurationResults?.buildCommandOverride ??
+		autoConfigDetails.buildCommand;
 
 	if (buildCommand && runBuild) {
 		await runCommand(buildCommand, autoConfigDetails.projectPath, "[build]");
@@ -268,6 +280,10 @@ export async function buildOperationsSummary(
 		outputDir: NonNullable<AutoConfigDetails["outputDir"]>;
 	},
 	wranglerConfigToWrite: RawConfig,
+	projectCommands: {
+		build?: string;
+		deploy: string;
+	},
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
 ): Promise<AutoConfigSummary> {
 	logger.log("");
@@ -277,6 +293,9 @@ export async function buildOperationsSummary(
 		scripts: {},
 		wranglerConfig: wranglerConfigToWrite,
 		outputDir: autoConfigDetails.outputDir,
+		frameworkId: autoConfigDetails.framework?.id,
+		buildCommand: projectCommands.build,
+		deployCommand: projectCommands.deploy,
 	};
 
 	if (autoConfigDetails.packageJson) {
