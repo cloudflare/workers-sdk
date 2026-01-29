@@ -571,6 +571,65 @@ describe("LocalRuntimeController", () => {
 			const res = await resPromise;
 			expect(await res.text()).toBe("body");
 		});
+		it("should resolve modules relative to moduleRoot when entry is nested (issue #6353)", async () => {
+			const bus = new FakeBus();
+			const controller = new LocalRuntimeController(bus);
+			teardown(() => controller.teardown());
+
+			const config = {
+				name: "worker",
+				entrypoint: "NOT_REAL",
+				compatibilityDate: "2023-10-01",
+			};
+			const bundle: Bundle = {
+				type: "esm",
+				modules: [
+					{
+						type: "esm",
+						name: "foo.js",
+						filePath: "/virtual/base_dir/foo.js",
+						content: `export const message = "hello from foo";`,
+					},
+				],
+				id: 0,
+				path: "/virtual/base_dir/nested/index.mjs",
+				entrypointSource: dedent/*javascript*/ `
+					import { message } from "../foo.js";
+					export default {
+						fetch(request, env, ctx) {
+							return new Response(message);
+						}
+					}
+				`,
+				entry: {
+					file: "nested/index.mjs",
+					projectRoot: "/virtual/",
+					configPath: undefined,
+					format: "modules",
+					moduleRoot: "/virtual/base_dir",
+					name: undefined,
+					exports: [],
+				},
+				dependencies: {},
+				sourceMapPath: undefined,
+				sourceMapMetadata: undefined,
+			};
+			controller.onBundleStart({
+				type: "bundleStart",
+				config: configDefaults(config),
+			});
+			controller.onBundleComplete({
+				type: "bundleComplete",
+				config: configDefaults(config),
+				bundle,
+			});
+			const event = await bus.waitFor("reloadComplete");
+			const url = urlFromParts(event.proxyData.userWorkerUrl);
+
+			const res = await fetch(url);
+			expect(res.status).toBe(200);
+			expect(await res.text()).toBe("hello from foo");
+		});
 	});
 
 	describe("Bindings", () => {

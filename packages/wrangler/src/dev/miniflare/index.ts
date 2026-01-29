@@ -176,7 +176,7 @@ async function buildSourceOptions(
 
 		const entrypointNames = isPython ? [] : config.bundle.entry.exports;
 
-		const modulesRoot = path.dirname(scriptPath);
+		const modulesRoot = config.bundle.entry.moduleRoot;
 		const sourceOptions: SourceOptions = {
 			modulesRoot,
 
