@@ -261,34 +261,34 @@ describe("LocalRuntimeController", () => {
 			expect(res.status).toBe(200);
 			if (isWindows) {
 				expect(normalizeDrive(await res.text())).toMatchInlineSnapshot(`
-			"Error: Oops!
-			    at Object.throw (file:///D:/virtual/esm/add.cjs:7:14)
-			    at Object.fetch (file:///D:/virtual/esm/index.mjs:15:19)"
-			`);
+				"Error: Oops!
+				    at Object.throw (file:///D:/virtual/esm/add.cjs:7:14)
+				    at Object.fetch (file:///D:/virtual/esm/index.mjs:15:19)"
+				`);
 
 				// Check stack traces from CommonJS modules include file path
 				res = await fetch(new URL("/throw-other-commonjs", url));
 				expect(res.status).toBe(200);
 				expect(normalizeDrive(await res.text())).toMatchInlineSnapshot(`
-			"Error: Oops!
-			    at Object.throw (file:///D:/virtual/esm/base64.cjs:9:14)
-			    at Object.fetch (file:///D:/virtual/esm/index.mjs:17:22)"
-			`);
+				"Error: Oops!
+				    at Object.throw (file:///D:/virtual/esm/base64.cjs:9:14)
+				    at Object.fetch (file:///D:/virtual/esm/index.mjs:17:22)"
+				`);
 			} else {
 				expect(await res.text()).toMatchInlineSnapshot(`
-			"Error: Oops!
-			    at Object.throw (file:///virtual/esm/add.cjs:7:14)
-			    at Object.fetch (file:///virtual/esm/index.mjs:15:19)"
-			`);
+				"Error: Oops!
+				    at Object.throw (file:///virtual/esm/add.cjs:7:14)
+				    at Object.fetch (file:///virtual/esm/index.mjs:15:19)"
+				`);
 
 				// Check stack traces from CommonJS modules include file path
 				res = await fetch(new URL("/throw-other-commonjs", url));
 				expect(res.status).toBe(200);
 				expect(await res.text()).toMatchInlineSnapshot(`
-			"Error: Oops!
-			    at Object.throw (file:///virtual/esm/base64.cjs:9:14)
-			    at Object.fetch (file:///virtual/esm/index.mjs:17:22)"
-			`);
+				"Error: Oops!
+				    at Object.throw (file:///virtual/esm/base64.cjs:9:14)
+				    at Object.fetch (file:///virtual/esm/index.mjs:17:22)"
+				`);
 			}
 		});
 		it("should start Miniflare with service worker", async () => {
