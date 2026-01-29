@@ -38,6 +38,7 @@ describe("pages", () => {
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
+			      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 			  -v, --version   Show version number  [boolean]"
 		`);
 	});
@@ -61,6 +62,7 @@ describe("pages", () => {
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
+			      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
@@ -110,6 +112,7 @@ describe("pages", () => {
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
+			      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 			  -v, --version   Show version number  [boolean]"
 		`);
 	});
@@ -137,6 +140,7 @@ describe("pages", () => {
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
+			      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 			  -v, --version   Show version number  [boolean]"
 		`);
 	});
@@ -159,6 +163,7 @@ describe("pages", () => {
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
+			      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
@@ -194,6 +199,7 @@ describe("pages", () => {
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
+			      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 			  -v, --version   Show version number  [boolean]"
 		`);
 	});
@@ -216,6 +222,7 @@ describe("pages", () => {
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
+			      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 			  -v, --version   Show version number  [boolean]"
 		`);
 	});
