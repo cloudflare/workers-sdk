@@ -11,15 +11,12 @@ import type { UrlPath } from "../../paths";
 
 describe("filepath-routing", () => {
 	describe("compareRoutes()", () => {
-		test("routes / last", () => {
+		test("routes / last (except for root catch-all wildcards)", () => {
 			expect(
 				compareRoutes(routeConfig("/"), routeConfig("/foo"))
 			).toBeGreaterThanOrEqual(1);
 			expect(
 				compareRoutes(routeConfig("/"), routeConfig("/:foo"))
-			).toBeGreaterThanOrEqual(1);
-			expect(
-				compareRoutes(routeConfig("/"), routeConfig("/:foo*"))
 			).toBeGreaterThanOrEqual(1);
 		});
 
@@ -35,6 +32,15 @@ describe("filepath-routing", () => {
 		test("routes with wildcard segments come after those without", () => {
 			expect(compareRoutes(routeConfig("/:foo*"), routeConfig("/foo"))).toBe(1);
 			expect(compareRoutes(routeConfig("/:foo*"), routeConfig("/:foo"))).toBe(
+				1
+			);
+		});
+
+		test("index route takes precedence over root catch-all wildcard", () => {
+			expect(compareRoutes(routeConfig("/"), routeConfig("/:fallback*"))).toBe(
+				-1
+			);
+			expect(compareRoutes(routeConfig("/:fallback*"), routeConfig("/"))).toBe(
 				1
 			);
 		});
@@ -257,6 +263,22 @@ describe("filepath-routing", () => {
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: Invalid Pages function route parameter - "[[hyphen-not-allowed]]". Parameters names must only contain alphanumeric and underscore characters.]`
 			);
+		});
+
+		it("should sort index route before catch-all wildcard at root level", async () => {
+			writeFileSync("index.ts", "export function onRequestGet() {}");
+			writeFileSync("[[fallback]].ts", "export function onRequestGet() {}");
+
+			const entries = await generateConfigFromFileTree({
+				baseDir: ".",
+				baseURL: "/" as UrlPath,
+			});
+
+			const routePaths = entries.routes.map((r) => r.routePath);
+			const indexPosition = routePaths.indexOf("/" as UrlPath);
+			const catchAllPosition = routePaths.indexOf("/:fallback*" as UrlPath);
+
+			expect(indexPosition).toBeLessThan(catchAllPosition);
 		});
 	});
 });

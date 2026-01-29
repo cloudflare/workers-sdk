@@ -134,6 +134,21 @@ export function compareRoutes(
 	const segmentsA = parseRoutePath(routePathA);
 	const segmentsB = parseRoutePath(routePathB);
 
+	// Special handling for index routes vs catch-all wildcards
+	// Index routes (0 segments) should take precedence over catch-all wildcards
+	// that would otherwise match the same path (e.g., "/" should beat "/:fallback*")
+	const isIndexA = segmentsA.length === 0;
+	const isIndexB = segmentsB.length === 0;
+	const isCatchAllA = segmentsA.length === 1 && segmentsA[0].includes("*");
+	const isCatchAllB = segmentsB.length === 1 && segmentsB[0].includes("*");
+
+	if (isIndexA && isCatchAllB) {
+		return -1;
+	}
+	if (isCatchAllA && isIndexB) {
+		return 1;
+	}
+
 	// sort routes with fewer segments after those with more segments
 	if (segmentsA.length !== segmentsB.length) {
 		return segmentsB.length - segmentsA.length;
