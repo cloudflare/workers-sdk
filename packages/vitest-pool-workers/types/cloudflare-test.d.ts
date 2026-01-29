@@ -22,11 +22,51 @@ declare module "cloudflare:test" {
 	export const env: ProvidedEnv;
 
 	/**
+	 * Interface for configuring the type of the main worker's default export.
+	 * Used to properly type the `SELF` binding for RPC-enabled workers.
+	 *
+	 * To configure the type, use an ambient module type:
+	 *
+	 * ```ts
+	 * import type MyWorker from "./src/index";
+	 *
+	 * declare module "cloudflare:test" {
+	 *   interface ProvidedWorker {
+	 *     default: typeof MyWorker;
+	 *   }
+	 * }
+	 * ```
+	 *
+	 * This allows TypeScript to recognize RPC methods on `SELF` when your
+	 * worker extends `WorkerEntrypoint`.
+	 */
+	// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+	interface ProvidedWorker {}
+
+	/**
 	 * Service binding to the default export defined in the `main` worker. Note
 	 * this `main` worker runs in the same isolate/context as tests, so any global
 	 * mocks will apply to it too.
+	 *
+	 * For workers extending `WorkerEntrypoint` with RPC methods, configure the
+	 * `ProvidedWorker` interface to enable type-safe RPC method access:
+	 *
+	 * ```ts
+	 * import type MyWorker from "./src/index";
+	 *
+	 * declare module "cloudflare:test" {
+	 *   interface ProvidedWorker {
+	 *     default: typeof MyWorker;
+	 *   }
+	 * }
+	 *
+	 * // Now SELF will have your RPC methods typed:
+	 * const result = await SELF.myRpcMethod("test");
+	 * ```
 	 */
-	export const SELF: Fetcher;
+	export const SELF: ProvidedWorker extends { default: infer T }
+		? Service<T>
+		: Fetcher;
 
 	/**
 	 * Declarative interface for mocking outbound `fetch()` requests. Deactivated
