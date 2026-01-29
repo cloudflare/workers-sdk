@@ -157,8 +157,8 @@ export class PluginContext {
 	}
 
 	#getWorker(environmentName: string): Worker | undefined {
-		if (this.resolvedPluginConfig.type !== "workers") {
-			return undefined;
+		if (this.resolvedPluginConfig.type === "preview") {
+			return;
 		}
 
 		const worker =
@@ -186,16 +186,13 @@ export class PluginContext {
 	}
 
 	get allWorkerConfigs(): Unstable_Config[] {
-		switch (this.resolvedPluginConfig.type) {
-			case "workers":
-				return Array.from(
-					this.resolvedPluginConfig.environmentNameToWorkerMap.values()
-				).map((worker) => worker.config);
-			case "preview":
-				return this.resolvedPluginConfig.workers;
-			default:
-				return [];
+		if (this.resolvedPluginConfig.type === "preview") {
+			return this.resolvedPluginConfig.workers;
 		}
+
+		return Array.from(
+			this.resolvedPluginConfig.environmentNameToWorkerMap.values()
+		).map((worker) => worker.config);
 	}
 
 	get entryWorkerConfig(): ResolvedWorkerConfig | undefined {
