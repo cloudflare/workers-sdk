@@ -8,70 +8,70 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from "./routes/__root";
-import { Route as IndexRouteImport } from "./routes/index";
-import { Route as KvNamespaceIdRouteImport } from "./routes/kv/$namespaceId";
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as KvNamespaceIdRouteImport } from './routes/kv/$namespaceId'
 
 const IndexRoute = IndexRouteImport.update({
-	id: "/",
-	path: "/",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const KvNamespaceIdRoute = KvNamespaceIdRouteImport.update({
-	id: "/kv/$namespaceId",
-	path: "/kv/$namespaceId",
-	getParentRoute: () => rootRouteImport,
-} as any);
+  id: '/kv/$namespaceId',
+  path: '/kv/$namespaceId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
-	"/": typeof IndexRoute;
-	"/kv/$namespaceId": typeof KvNamespaceIdRoute;
+  '/': typeof IndexRoute
+  '/kv/$namespaceId': typeof KvNamespaceIdRoute
 }
 export interface FileRoutesByTo {
-	"/": typeof IndexRoute;
-	"/kv/$namespaceId": typeof KvNamespaceIdRoute;
+  '/': typeof IndexRoute
+  '/kv/$namespaceId': typeof KvNamespaceIdRoute
 }
 export interface FileRoutesById {
-	__root__: typeof rootRouteImport;
-	"/": typeof IndexRoute;
-	"/kv/$namespaceId": typeof KvNamespaceIdRoute;
+  __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
+  '/kv/$namespaceId': typeof KvNamespaceIdRoute
 }
 export interface FileRouteTypes {
-	fileRoutesByFullPath: FileRoutesByFullPath;
-	fullPaths: "/" | "/kv/$namespaceId";
-	fileRoutesByTo: FileRoutesByTo;
-	to: "/" | "/kv/$namespaceId";
-	id: "__root__" | "/" | "/kv/$namespaceId";
-	fileRoutesById: FileRoutesById;
+  fileRoutesByFullPath: FileRoutesByFullPath
+  fullPaths: '/' | '/kv/$namespaceId'
+  fileRoutesByTo: FileRoutesByTo
+  to: '/' | '/kv/$namespaceId'
+  id: '__root__' | '/' | '/kv/$namespaceId'
+  fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-	IndexRoute: typeof IndexRoute;
-	KvNamespaceIdRoute: typeof KvNamespaceIdRoute;
+  IndexRoute: typeof IndexRoute
+  KvNamespaceIdRoute: typeof KvNamespaceIdRoute
 }
 
-declare module "@tanstack/react-router" {
-	interface FileRoutesByPath {
-		"/": {
-			id: "/";
-			path: "/";
-			fullPath: "/";
-			preLoaderRoute: typeof IndexRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-		"/kv/$namespaceId": {
-			id: "/kv/$namespaceId";
-			path: "/kv/$namespaceId";
-			fullPath: "/kv/$namespaceId";
-			preLoaderRoute: typeof KvNamespaceIdRouteImport;
-			parentRoute: typeof rootRouteImport;
-		};
-	}
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kv/$namespaceId': {
+      id: '/kv/$namespaceId'
+      path: '/kv/$namespaceId'
+      fullPath: '/kv/$namespaceId'
+      preLoaderRoute: typeof KvNamespaceIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+  }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-	IndexRoute: IndexRoute,
-	KvNamespaceIdRoute: KvNamespaceIdRoute,
-};
+  IndexRoute: IndexRoute,
+  KvNamespaceIdRoute: KvNamespaceIdRoute,
+}
 export const routeTree = rootRouteImport
-	._addFileChildren(rootRouteChildren)
-	._addFileTypes<FileRouteTypes>();
+  ._addFileChildren(rootRouteChildren)
+  ._addFileTypes<FileRouteTypes>()
