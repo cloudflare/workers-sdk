@@ -352,7 +352,6 @@ export class LocalRuntimeController extends RuntimeController {
 					userWorkerInnerUrlOverrides: {
 						protocol: data.config?.dev?.origin?.secure ? "https:" : "http:",
 						hostname: data.config?.dev?.origin?.hostname,
-						port: data.config?.dev?.origin?.hostname ? "" : undefined,
 					},
 					headers: {
 						// Passing this signature from Proxy Worker allows the User Worker to trust the request.

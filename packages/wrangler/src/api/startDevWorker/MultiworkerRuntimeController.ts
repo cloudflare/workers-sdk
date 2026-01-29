@@ -245,7 +245,6 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 						userWorkerInnerUrlOverrides: {
 							protocol: data.config?.dev?.origin?.secure ? "https:" : "http:",
 							hostname: data.config?.dev?.origin?.hostname,
-							port: data.config?.dev?.origin?.hostname ? "" : undefined,
 						},
 						headers: {
 							// Passing this signature from Proxy Worker allows the User Worker to trust the request.
