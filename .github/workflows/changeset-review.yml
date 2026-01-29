@@ -2,15 +2,8 @@ name: Changeset Review
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
     paths:
       - ".changeset/*.md"
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: "PR number to review"
-        required: true
-        type: number
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,7 +18,7 @@ permissions:
 jobs:
   review-changesets:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.head.repo.full_name == github.repository && !contains(github.event.pull_request.labels.*.name, 'skip-changeset-review') && !contains(github.event.pull_request.labels.*.name, 'no-changeset-required')
+    if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -52,6 +45,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           allowed_bots: "devin-ai-integration[bot]"
           use_sticky_comment: true
+          track_progress: true
           prompt: |
             Review the changeset files in this PR.
 

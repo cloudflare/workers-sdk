@@ -1,4 +1,5 @@
 import { CommandLineArgsError, UserError } from "@cloudflare/workers-utils";
+import { readConfig } from "../config";
 import { createCommand, createNamespace } from "../core/create-command";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -107,12 +108,21 @@ export const logoutCommand = createCommand({
 	},
 	behaviour: {
 		printConfigWarnings: false,
+		provideConfig: false,
 	},
-	async handler(_, { config }) {
+	async handler() {
 		await logout();
-		metrics.sendMetricsEvent("logout user", {
-			sendMetrics: config.send_metrics,
-		});
+		try {
+			// If the config file is invalid then we default to not sending metrics.
+			// TODO: Clean this up as part of a general config refactor.
+			// See https://github.com/cloudflare/workers-sdk/issues/10682.
+			const config = readConfig({}, { hideWarnings: true });
+			metrics.sendMetricsEvent("logout user", {
+				sendMetrics: config.send_metrics,
+			});
+		} catch (e) {
+			logger.debug("Could not read config to send logout metrics.", e);
+		}
 	},
 });
 
