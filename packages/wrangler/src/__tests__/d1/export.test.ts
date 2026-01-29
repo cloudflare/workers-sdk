@@ -60,14 +60,14 @@ describe("export", () => {
 		const create_foo = "CREATE TABLE foo(id INTEGER PRIMARY KEY, value TEXT);";
 		const create_bar = "CREATE TABLE bar(id INTEGER PRIMARY KEY, value TEXT);";
 		const insert_foo = [
-			`INSERT INTO "foo" VALUES(1,'xxx');`,
-			`INSERT INTO "foo" VALUES(2,'yyy');`,
-			`INSERT INTO "foo" VALUES(3,'zzz');`,
+			`INSERT INTO "foo" ("id","value") VALUES(1,'xxx');`,
+			`INSERT INTO "foo" ("id","value") VALUES(2,'yyy');`,
+			`INSERT INTO "foo" ("id","value") VALUES(3,'zzz');`,
 		];
 		const insert_bar = [
-			`INSERT INTO "bar" VALUES(1,'aaa');`,
-			`INSERT INTO "bar" VALUES(2,'bbb');`,
-			`INSERT INTO "bar" VALUES(3,'ccc');`,
+			`INSERT INTO "bar" ("id","value") VALUES(1,'aaa');`,
+			`INSERT INTO "bar" ("id","value") VALUES(2,'bbb');`,
+			`INSERT INTO "bar" ("id","value") VALUES(3,'ccc');`,
 		];
 
 		// Full export
