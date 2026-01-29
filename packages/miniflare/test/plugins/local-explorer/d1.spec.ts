@@ -357,5 +357,33 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				success: false,
 			});
 		});
+
+		it("returns 400 for empty object body", async () => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/d1/database/test-db-id/raw`,
+				{
+					body: JSON.stringify({}),
+					headers: {
+						"Content-Type": "application/json",
+					},
+					method: "POST",
+				}
+			);
+
+			expect(response.status).toBe(400);
+			expect(response.headers.get("Content-Type")).toBe("application/json");
+
+			const json = await response.json();
+
+			expect(json).toMatchObject({
+				errors: [
+					expect.objectContaining({
+						code: 10002,
+						message: "Missing required 'sql' field in query",
+					}),
+				],
+				success: false,
+			});
+		});
 	});
 });
