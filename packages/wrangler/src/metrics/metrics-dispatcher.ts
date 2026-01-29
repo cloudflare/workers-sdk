@@ -107,7 +107,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				return;
 			}
 
-			if (cmdBehaviour?.printMetricsBanner !== true) {
+			if (cmdBehaviour?.printMetricsBanner === true) {
 				printMetricsBanner();
 			}
 
