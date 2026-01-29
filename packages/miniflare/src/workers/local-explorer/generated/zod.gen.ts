@@ -2,6 +2,160 @@
 
 import { z } from "zod";
 
+/**
+ * Region location hint of the database instance that handled the query.
+ */
+export const zD1ServedByRegion = z.enum([
+	"WNAM",
+	"ENAM",
+	"WEUR",
+	"EEUR",
+	"APAC",
+	"OC",
+]);
+
+/**
+ * The three letters airport code of the colo that handled the query.
+ */
+export const zD1ServedByColo = z.string();
+
+export const zD1QueryMeta = z.object({
+	changed_db: z.boolean().optional(),
+	changes: z.number().optional(),
+	duration: z.number().optional(),
+	last_row_id: z.number().optional(),
+	rows_read: z.number().optional(),
+	rows_written: z.number().optional(),
+	served_by_colo: zD1ServedByColo.optional(),
+	served_by_primary: z.boolean().optional(),
+	served_by_region: zD1ServedByRegion.optional(),
+	size_after: z.number().optional(),
+	timings: z
+		.object({
+			sql_duration_ms: z.number().optional(),
+		})
+		.optional(),
+});
+
+export const zD1RawResultResponse = z.object({
+	meta: zD1QueryMeta.optional(),
+	results: z
+		.object({
+			columns: z.array(z.string()).optional(),
+			rows: z
+				.array(
+					z.array(z.union([z.number(), z.string(), z.record(z.unknown())]))
+				)
+				.optional(),
+		})
+		.optional(),
+	success: z.boolean().optional(),
+});
+
+/**
+ * Your SQL query. Supports multiple statements, joined by semicolons, which will be executed as a batch.
+ */
+export const zD1Sql = z.string();
+
+export const zD1Params = z.array(z.string());
+
+/**
+ * single query
+ *
+ * A single query with or without parameters
+ */
+export const zD1SingleQuery = z.object({
+	params: zD1Params.optional(),
+	sql: zD1Sql,
+});
+
+/**
+ * A single query object or a batch query object
+ */
+export const zD1BatchQuery = z.union([
+	zD1SingleQuery,
+	z.object({
+		batch: z.array(zD1SingleQuery).optional(),
+	}),
+]);
+
+export const zD1DatabaseVersion = z.string().regex(/^(alpha|beta|production)$/);
+
+/**
+ * D1 database identifier (UUID).
+ */
+export const zD1DatabaseIdentifier = z.string().readonly();
+
+/**
+ * The read replication mode for the database. Use 'auto' to create replicas and allow D1 automatically place them around the world, or 'disabled' to not use any database replicas (it can take a few hours for all replicas to be deleted).
+ */
+export const zD1ReadReplicationMode = z.enum(["auto", "disabled"]);
+
+/**
+ * Configuration for D1 read replication.
+ */
+export const zD1ReadReplicationDetails = z.object({
+	mode: zD1ReadReplicationMode,
+});
+
+export const zD1TableCount = z.number();
+
+/**
+ * D1 database name.
+ */
+export const zD1DatabaseName = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/);
+
+/**
+ * The D1 database's size, in bytes.
+ */
+export const zD1FileSize = z.number();
+
+/**
+ * Specifies the timestamp the resource was created as an ISO8601 string.
+ */
+export const zD1CreatedAt = z.string().datetime().readonly();
+
+/**
+ * The details of the D1 database.
+ */
+export const zD1DatabaseDetailsResponse = z.object({
+	created_at: zD1CreatedAt.optional(),
+	file_size: zD1FileSize.optional(),
+	name: zD1DatabaseName.optional(),
+	num_tables: zD1TableCount.optional(),
+	read_replication: zD1ReadReplicationDetails.optional(),
+	uuid: zD1DatabaseIdentifier.optional(),
+	version: zD1DatabaseVersion.optional(),
+});
+
+export const zD1Messages = z.array(
+	z.object({
+		code: z.number().int().gte(1000),
+		message: z.string(),
+	})
+);
+
+export const zD1ApiResponseCommonFailure = z.object({
+	errors: zD1Messages,
+	messages: zD1Messages,
+	result: z.unknown(),
+	success: z.literal(false),
+});
+
+export const zD1DatabaseResponse = z.object({
+	created_at: zD1CreatedAt.optional(),
+	name: zD1DatabaseName.optional(),
+	uuid: zD1DatabaseIdentifier.optional(),
+	version: zD1DatabaseVersion.optional(),
+});
+
+export const zD1ApiResponseCommon = z.object({
+	errors: zD1Messages,
+	messages: zD1Messages,
+	result: z.record(z.unknown()),
+	success: z.literal(true),
+});
+
 export const zWorkersKvAny: z.ZodTypeAny = z.union([
 	z.string(),
 	z.number(),
@@ -87,6 +241,11 @@ export const zWorkersKvKeyName = z.string().max(512);
  */
 export const zWorkersKvCursor = z.string();
 
+export const zWorkersKvCursorResultInfo = z.object({
+	count: z.number().optional(),
+	cursor: zWorkersKvCursor.optional(),
+});
+
 export const zWorkersKvListMetadata = zWorkersKvAny.and(z.unknown());
 
 /**
@@ -132,6 +291,22 @@ export const zWorkersKvApiResponseCollection = zWorkersKvApiResponseCommon.and(
 		result_info: zWorkersKvResultInfo.optional(),
 	})
 );
+
+/**
+ * The details of the D1 database.
+ */
+export const zD1DatabaseDetailsResponseWritable = z.object({
+	file_size: zD1FileSize.optional(),
+	name: zD1DatabaseName.optional(),
+	num_tables: zD1TableCount.optional(),
+	read_replication: zD1ReadReplicationDetails.optional(),
+	version: zD1DatabaseVersion.optional(),
+});
+
+export const zD1DatabaseResponseWritable = z.object({
+	name: zD1DatabaseName.optional(),
+	version: zD1DatabaseVersion.optional(),
+});
 
 export const zWorkersKvAnyWritable: z.ZodTypeAny = z.union([
 	z.string(),
@@ -197,12 +372,7 @@ export const zWorkersKvNamespaceListANamespaceSKeysResponse =
 	zWorkersKvApiResponseCommon.and(
 		z.object({
 			result: z.array(zWorkersKvKey).optional(),
-			result_info: z
-				.object({
-					count: z.number().optional(),
-					cursor: zWorkersKvCursor.optional(),
-				})
-				.optional(),
+			result_info: zWorkersKvCursorResultInfo.optional(),
 		})
 	);
 
@@ -271,3 +441,66 @@ export const zWorkersKvNamespaceGetMultipleKeyValuePairsResponse =
 				.optional(),
 		})
 	);
+
+export const zCloudflareD1ListDatabasesData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z
+		.object({
+			name: z.string().optional(),
+			page: z.number().gte(1).optional().default(1),
+			per_page: z.number().gte(10).lte(10000).optional().default(1000),
+		})
+		.optional(),
+});
+
+/**
+ * List D1 databases response
+ */
+export const zCloudflareD1ListDatabasesResponse = zD1ApiResponseCommon.and(
+	z.object({
+		result: z.array(zD1DatabaseResponse).optional(),
+		result_info: z
+			.object({
+				count: z.number().optional(),
+				page: z.number().optional(),
+				per_page: z.number().optional(),
+				total_count: z.number().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zCloudflareD1GetDatabaseData = z.object({
+	body: z.never().optional(),
+	path: z.object({
+		database_id: z.union([zD1DatabaseIdentifier, zD1DatabaseName]),
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Database details response
+ */
+export const zCloudflareD1GetDatabaseResponse = zD1ApiResponseCommon.and(
+	z.object({
+		result: zD1DatabaseDetailsResponse.optional(),
+	})
+);
+
+export const zCloudflareD1RawDatabaseQueryData = z.object({
+	body: zD1BatchQuery,
+	path: z.object({
+		database_id: zD1DatabaseIdentifier,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Raw query response
+ */
+export const zCloudflareD1RawDatabaseQueryResponse = zD1ApiResponseCommon.and(
+	z.object({
+		result: z.array(zD1RawResultResponse).optional(),
+	})
+);
