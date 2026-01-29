@@ -11,7 +11,7 @@ import type { Config } from "../config";
 /**
  * `WRANGLER_C3_COMMAND` can override the command used by `wrangler init` when delegating to C3.
  *
- * By default this will use `create cloudflare@2`.
+ * By default this will use `create cloudflare`.
  *
  * To run against the beta release of C3 use:
  *
