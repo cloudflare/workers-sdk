@@ -61,7 +61,10 @@ export function readConfig(
 		userConfigPath,
 		deployConfigPath,
 		redirected,
-	} = experimental_readRawConfig(args, options);
+	} = experimental_readRawConfig(args, {
+		...options,
+		onWarning: options.hideWarnings ? undefined : (msg) => logger.warn(msg),
+	});
 	if (redirected) {
 		assert(configPath, "Redirected config found without a configPath");
 		assert(
@@ -105,7 +108,10 @@ export function readPagesConfig(
 	let deployConfigPath: string | undefined;
 	try {
 		({ rawConfig, configPath, userConfigPath, deployConfigPath, redirected } =
-			experimental_readRawConfig(args, options));
+			experimental_readRawConfig(args, {
+				...options,
+				onWarning: options.hideWarnings ? undefined : (msg) => logger.warn(msg),
+			}));
 		if (redirected) {
 			assert(configPath, "Redirected config found without a configPath");
 			assert(
