@@ -11,11 +11,13 @@ import {
 	writeJSON,
 } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+import { AGENTS_MD } from "../agents-md";
 import {
 	addWranglerToGitIgnore,
 	deriveCorrelatedArgs,
 	downloadRemoteTemplate,
 	updatePackageName,
+	writeAgentsMd,
 } from "../templates";
 import type { PathLike } from "node:fs";
 import type { C3Args, C3Context } from "types";
@@ -604,5 +606,31 @@ version = "0.1.0"`;
 			expect.stringContaining("pyproject.toml"),
 			expect.stringContaining(`name = "my-project"`),
 		);
+	});
+});
+
+describe("writeAgentsMd", () => {
+	let writeFileMock: Mock;
+
+	beforeEach(() => {
+		vi.resetAllMocks();
+		writeFileMock = vi.mocked(writeFile);
+	});
+
+	test("should write AGENTS.md to the project directory", () => {
+		writeAgentsMd("/path/to/my-project");
+
+		expect(writeFileMock).toHaveBeenCalledWith(
+			"/path/to/my-project/AGENTS.md",
+			AGENTS_MD,
+		);
+	});
+
+	test("AGENTS.md should contain retrieval-led reasoning guidance", () => {
+		expect(AGENTS_MD).toContain("STOP");
+		expect(AGENTS_MD).toContain("retrieve");
+		expect(AGENTS_MD).toContain("https://developers.cloudflare.com/workers/");
+		expect(AGENTS_MD).toContain("wrangler");
+		expect(AGENTS_MD).toContain("nodejs_compat");
 	});
 });

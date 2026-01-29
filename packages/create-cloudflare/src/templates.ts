@@ -50,6 +50,7 @@ import vikeExperimentalTemplate from "templates/vike/experimental-c3";
 import vueTemplate from "templates/vue/c3";
 import wakuTemplate from "templates/waku/c3";
 import wakuExperimentalTemplate from "templates/waku/experimental-c3";
+import { AGENTS_MD } from "./agents-md";
 import { isInsideGitRepo } from "./git";
 import { validateProjectDirectory, validateTemplateUrl } from "./validators";
 import type { Option } from "@cloudflare/cli/interactive";
@@ -775,6 +776,21 @@ export async function copyTemplateFiles(ctx: C3Context) {
 	}
 
 	s.stop(`${brandColor("files")} ${dim("copied to project directory")}`);
+
+	// Write AGENTS.md for Workers templates that don't use a framework CLI
+	// Framework templates may need framework-specific agent guidance
+	if (ctx.template.platform === "workers" && !ctx.template.frameworkCli) {
+		writeAgentsMd(ctx.project.path);
+	}
+}
+
+/**
+ * Writes AGENTS.md to the project directory.
+ * This file provides AI coding agents with retrieval-led guidance for Cloudflare APIs.
+ */
+export function writeAgentsMd(projectPath: string): void {
+	const agentsMdPath = join(projectPath, "AGENTS.md");
+	writeFile(agentsMdPath, AGENTS_MD);
 }
 
 export const processRemoteTemplate = async (args: Partial<C3Args>) => {
