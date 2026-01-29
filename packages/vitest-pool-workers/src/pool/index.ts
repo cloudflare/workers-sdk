@@ -807,6 +807,31 @@ async function getProjectMiniflare(
 		// Otherwise, update the existing instances if options have changed
 		log.info(`Options changed for ${project.relativePath}, updating...`);
 		await forEachMiniflare(project.mf, (mf) => mf.setOptions(mfOptions));
+	} else if (project.mf instanceof Map) {
+		// Check for new test files that don't have Miniflare instances yet
+		// This can happen when running a subset of tests first, then running all tests
+		const newFiles: string[] = [];
+		for (const testFile of project.testFiles) {
+			if (!project.mf.has(testFile)) {
+				newFiles.push(testFile);
+			}
+		}
+		if (newFiles.length > 0) {
+			log.info(
+				`Adding ${newFiles.length} new isolated runtime(s) for ${project.relativePath}...`
+			);
+			for (const testFile of newFiles) {
+				project.mf.set(testFile, new Miniflare(mfOptions));
+			}
+			await Promise.all(
+				newFiles.map((f) => {
+					const newMf = project.mf as Map<string, Miniflare>;
+					return newMf.get(f)?.ready;
+				})
+			);
+		} else {
+			log.debug(`Reusing runtime for ${project.relativePath}...`);
+		}
 	} else {
 		log.debug(`Reusing runtime for ${project.relativePath}...`);
 	}
