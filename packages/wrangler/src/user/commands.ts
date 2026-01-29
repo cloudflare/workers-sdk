@@ -93,15 +93,10 @@ export const loginCommand = createCommand({
 					{ telemetryMessage: "user login invalid scope" }
 				);
 			}
-			await login(config, {
-				scopes: args.scopes,
-				browser: args.browser,
-				callbackHost: args.callbackHost,
-				callbackPort: args.callbackPort,
-			});
-			return;
 		}
+
 		await login(config, {
+			scopes: args.scopes,
 			browser: args.browser,
 			callbackHost: args.callbackHost,
 			callbackPort: args.callbackPort,
