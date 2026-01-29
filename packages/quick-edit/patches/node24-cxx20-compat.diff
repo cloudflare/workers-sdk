@@ -1,0 +1,18 @@
+diff --git a/build/npm/postinstall.js b/build/npm/postinstall.js
+--- a/build/npm/postinstall.js
++++ b/build/npm/postinstall.js
+@@ -131,7 +131,8 @@ for (let dir of dirs) {
+ 	if (dir === 'build') {
+ 		opts = {
+ 			env: {
+ 				...process.env
+ 			},
+ 		}
+ 		if (process.env['CC']) { opts.env['CC'] = 'gcc'; }
+ 		if (process.env['CXX']) { opts.env['CXX'] = 'g++'; }
+-		if (process.env['CXXFLAGS']) { opts.env['CXXFLAGS'] = ''; }
++		// Node.js 24+ requires C++20 for V8 headers
++		opts.env['CXXFLAGS'] = '-std=c++20';
+ 		if (process.env['LDFLAGS']) { opts.env['LDFLAGS'] = ''; }
+ 
+ 		setNpmrcConfig('build', opts.env);
