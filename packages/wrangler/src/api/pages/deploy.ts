@@ -6,6 +6,8 @@ import { cwd } from "node:process";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
+	ParseError,
+	parseJSON,
 } from "@cloudflare/workers-utils";
 import { FormData } from "undici";
 import { fetchResult } from "../../cfetch";
@@ -376,7 +378,7 @@ export async function deploy({
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
 			try {
-				const routesCustomJSON = JSON.parse(_routesCustom);
+				const routesCustomJSON = parseJSON(_routesCustom, join(directory, "_routes.json"));
 				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
 
 				formData.append(
@@ -387,7 +389,7 @@ export async function deploy({
 			} catch (err) {
 				if (err instanceof FatalError) {
 					throw err;
-				} else if (err instanceof SyntaxError) {
+				} else if (err instanceof ParseError) {
 					throw new FatalError(
 						`Malformed JSON in _routes.json at ${join(directory, "_routes.json")}: ${err.message}`,
 						1
@@ -421,7 +423,7 @@ export async function deploy({
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
 			try {
-				const routesCustomJSON = JSON.parse(_routesCustom);
+				const routesCustomJSON = parseJSON(_routesCustom, join(directory, "_routes.json"));
 				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
 
 				formData.append(
@@ -432,7 +434,7 @@ export async function deploy({
 			} catch (err) {
 				if (err instanceof FatalError) {
 					throw err;
-				} else if (err instanceof SyntaxError) {
+				} else if (err instanceof ParseError) {
 					throw new FatalError(
 						`Malformed JSON in _routes.json at ${join(directory, "_routes.json")}: ${err.message}`,
 						1
