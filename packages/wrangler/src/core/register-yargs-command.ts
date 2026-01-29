@@ -36,6 +36,7 @@ import type {
 } from "./types";
 import type { PositionalOptions } from "yargs";
 
+
 /**
  * Creates a function for registering commands using Yargs.
  */
@@ -127,15 +128,10 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 		addBreadcrumb(def.command);
 
 		try {
-			const shouldPrintBanner = def.behaviour?.printBanner;
+			const shouldPrintBanner = def.behaviour?.printBanner ?? true;
 
 			if (
-				/* No default behaviour override: show the banner */
-				shouldPrintBanner === undefined ||
-				/* Explicit opt in: show the banner */
-				(typeof shouldPrintBanner === "boolean" &&
-					shouldPrintBanner !== false) ||
-				/* Hook resolves to true */
+				shouldPrintBanner === true ||
 				(typeof shouldPrintBanner === "function" &&
 					shouldPrintBanner(args) === true)
 			) {
