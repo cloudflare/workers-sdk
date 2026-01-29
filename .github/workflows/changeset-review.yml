@@ -13,7 +13,6 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
-  id-token: write
 
 jobs:
   review-changesets:
@@ -43,6 +42,7 @@ jobs:
         uses: anthropics/claude-code-action@v1.0.22
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           allowed_bots: "devin-ai-integration[bot]"
           use_sticky_comment: true
           show_full_output: true
