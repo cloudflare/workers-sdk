@@ -374,6 +374,7 @@ describe("createReporter", () => {
 					durationMs: 1234,
 					durationSeconds: 1234 / 1000,
 					durationMinutes: 1234 / 1000 / 60,
+
 					error: {
 						message: "test error",
 						stack: expect.any(String),

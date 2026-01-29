@@ -18,6 +18,7 @@ import {
 	readMetricsConfig,
 	writeMetricsConfig,
 } from "./metrics-config";
+import type { CommandDefinition } from "../core/types";
 import type { MetricsConfigOptions } from "./metrics-config";
 import type { CommonEventProperties, Events } from "./types";
 
@@ -84,34 +85,27 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		},
 
 		/**
-		 * Dispatches `wrangler command started / completed / errored` events
+		 * Posts events to telemetry when a command is started, has completed, or has errored.
 		 *
-		 * This happens on every command execution. When all commands use defineCommand,
-		 * we should use that to provide the dispatcher on all handlers, and change all
-		 * `sendEvent` calls to use this method.
+		 * @param name The name of the event to send
+		 * @param properties The properties specific to this event
+		 * @param cmdBehaviour The behavior of the command being executed. Might not been provided for unrecognized commands.
 		 */
 		sendCommandEvent<EventName extends Events["name"]>(
 			name: EventName,
 			properties: Omit<
 				Extract<Events, { name: EventName }>["properties"],
 				keyof CommonEventProperties
-			> & { argsUsed: string[] }
-		) {
+			> & { argsUsed: string[] },
+			cmdBehaviour?: CommandDefinition["behaviour"]
+		): void {
+			if (cmdBehaviour?.sendMetrics === false) {
+				return;
+			}
+
 			try {
-				// Don't send metrics for telemetry/metrics disable commands
-				if (
-					properties.sanitizedCommand === "telemetry disable" ||
-					properties.sanitizedCommand === "metrics disable"
-				) {
-					return;
-				}
-				// Show metrics banner for certain commands
-				if (
-					properties.sanitizedCommand === "deploy" ||
-					properties.sanitizedCommand === "dev" ||
-					// for testing purposes
-					properties.sanitizedCommand === "docs"
-				) {
+				if (cmdBehaviour?.printMetricsBanner === true) {
+					// printMetricsBanner can throw
 					printMetricsBanner();
 				}
 
@@ -141,11 +135,20 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					agent,
 				};
 
+				const durationMs =
+					"durationMs" in properties ? properties.durationMs : undefined;
+
 				dispatch({
 					name,
 					properties: {
 						...commonEventProperties,
 						...properties,
+						...(typeof durationMs === "number"
+							? {
+									durationSeconds: durationMs / 1000,
+									durationMinutes: durationMs / 1000 / 60,
+								}
+							: {}),
 					},
 				});
 			} catch (err) {
@@ -216,6 +219,9 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		pendingRequests.add(request);
 	}
 
+	/**
+	 * Note that this function can throw if writing to the config file fails.
+	 */
 	function printMetricsBanner() {
 		const metricsConfig = readMetricsConfig();
 		if (
