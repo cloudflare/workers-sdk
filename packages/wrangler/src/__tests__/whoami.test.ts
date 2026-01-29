@@ -308,6 +308,8 @@ describe("whoami", () => {
 			  - zone:read
 			  - ssl_certs:write
 			  - ai:write
+			  - ai-search:write
+			  - ai-search:run
 			  - queues:write
 			  - pipelines:write
 			  - secrets_store:write
@@ -368,6 +370,8 @@ describe("whoami", () => {
 			  - zone:read
 			  - ssl_certs:write
 			  - ai:write
+			  - ai-search:write
+			  - ai-search:run
 			  - queues:write
 			  - pipelines:write
 			  - secrets_store:write
