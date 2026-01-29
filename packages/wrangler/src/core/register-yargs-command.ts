@@ -36,7 +36,6 @@ import type {
 } from "./types";
 import type { PositionalOptions } from "yargs";
 
-
 /**
  * Creates a function for registering commands using Yargs.
  */
@@ -232,11 +231,15 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				);
 				const argsUsed = Object.keys(argsWithSanitizedKeys).sort();
 
-				dispatcher.sendCommandEvent("wrangler command started", {
-					sanitizedCommand,
-					sanitizedArgs,
-					argsUsed,
-				});
+				dispatcher.sendCommandEvent(
+					"wrangler command started",
+					{
+						sanitizedCommand,
+						sanitizedArgs,
+						argsUsed,
+					},
+					def.behaviour
+				);
 
 				try {
 					const result = await def.handler(args, {
@@ -248,14 +251,18 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					});
 
 					const durationMs = Date.now() - startTime;
-					dispatcher.sendCommandEvent("wrangler command completed", {
-						sanitizedCommand,
-						sanitizedArgs,
-						argsUsed,
-						durationMs,
-						durationSeconds: durationMs / 1000,
-						durationMinutes: durationMs / 1000 / 60,
-					});
+					dispatcher.sendCommandEvent(
+						"wrangler command completed",
+						{
+							sanitizedCommand,
+							sanitizedArgs,
+							argsUsed,
+							durationMs,
+							durationSeconds: durationMs / 1000,
+							durationMinutes: durationMs / 1000 / 60,
+						},
+						def.behaviour
+					);
 
 					return result;
 				} catch (err) {
@@ -266,19 +273,23 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					}
 
 					const durationMs = Date.now() - startTime;
-					dispatcher.sendCommandEvent("wrangler command errored", {
-						sanitizedCommand,
-						sanitizedArgs,
-						argsUsed,
-						durationMs,
-						durationSeconds: durationMs / 1000,
-						durationMinutes: durationMs / 1000 / 60,
-						errorType: getErrorType(err),
-						errorMessage:
-							err instanceof UserError || err instanceof ContainersUserError
-								? err.telemetryMessage
-								: undefined,
-					});
+					dispatcher.sendCommandEvent(
+						"wrangler command errored",
+						{
+							sanitizedCommand,
+							sanitizedArgs,
+							argsUsed,
+							durationMs,
+							durationSeconds: durationMs / 1000,
+							durationMinutes: durationMs / 1000 / 60,
+							errorType: getErrorType(err),
+							errorMessage:
+								err instanceof UserError || err instanceof ContainersUserError
+									? err.telemetryMessage
+									: undefined,
+						},
+						def.behaviour
+					);
 
 					await handleError(err, args, argv);
 

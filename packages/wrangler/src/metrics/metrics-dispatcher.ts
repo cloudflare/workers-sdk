@@ -18,6 +18,7 @@ import {
 	readMetricsConfig,
 	writeMetricsConfig,
 } from "./metrics-config";
+import type { CommandDefinition } from "../core/types";
 import type { MetricsConfigOptions } from "./metrics-config";
 import type { CommonEventProperties, Events } from "./types";
 
@@ -84,63 +85,59 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		},
 
 		/**
-		 * Dispatches `wrangler command started / completed / errored` events
+		 * Posts events to telemetry when a command is started, has completed, or has errored.
 		 *
 		 * This happens on every command execution. When all commands use defineCommand,
 		 * we should use that to provide the dispatcher on all handlers, and change all
 		 * `sendEvent` calls to use this method.
+		 *
+		 * @param name The name of the event to send
+		 * @param properties The properties specific to this event
+		 * @param cmdBehaviour The behavior of the command being executed. Might not been provided for unrecognized commands.
 		 */
 		sendCommandEvent<EventName extends Events["name"]>(
 			name: EventName,
 			properties: Omit<
 				Extract<Events, { name: EventName }>["properties"],
 				keyof CommonEventProperties
-			> & { argsUsed: string[] }
-		) {
+			> & { argsUsed: string[] },
+			cmdBehaviour?: CommandDefinition["behaviour"]
+		): void {
+			if (cmdBehaviour?.sendMetrics === false) {
+				return;
+			}
+
+			if (cmdBehaviour?.printMetricsBanner !== true) {
+				printMetricsBanner();
+			}
+
+			const argsUsed = properties.argsUsed;
+			const argsCombination = argsUsed.join(", ");
+
+			const commonEventProperties: CommonEventProperties = {
+				amplitude_session_id,
+				amplitude_event_id: amplitude_event_id++,
+				wranglerVersion,
+				wranglerMajorVersion,
+				wranglerMinorVersion,
+				wranglerPatchVersion,
+				osPlatform: getPlatform(),
+				osVersion: getOSVersion(),
+				nodeVersion: getNodeVersion(),
+				packageManager: sniffUserAgent(),
+				isFirstUsage: readMetricsConfig().permission === undefined,
+				configFileType: configFormat(options.configPath),
+				isCI: CI.isCI(),
+				isPagesCI: isPagesCI(),
+				isWorkersCI: isWorkersCI(),
+				isInteractive: isInteractive(),
+				hasAssets: options.hasAssets ?? false,
+				argsUsed,
+				argsCombination,
+				agent,
+			};
+
 			try {
-				// Don't send metrics for telemetry/metrics disable commands
-				if (
-					properties.sanitizedCommand === "telemetry disable" ||
-					properties.sanitizedCommand === "metrics disable"
-				) {
-					return;
-				}
-				// Show metrics banner for certain commands
-				if (
-					properties.sanitizedCommand === "deploy" ||
-					properties.sanitizedCommand === "dev" ||
-					// for testing purposes
-					properties.sanitizedCommand === "docs"
-				) {
-					printMetricsBanner();
-				}
-
-				const argsUsed = properties.argsUsed;
-				const argsCombination = argsUsed.join(", ");
-
-				const commonEventProperties: CommonEventProperties = {
-					amplitude_session_id,
-					amplitude_event_id: amplitude_event_id++,
-					wranglerVersion,
-					wranglerMajorVersion,
-					wranglerMinorVersion,
-					wranglerPatchVersion,
-					osPlatform: getPlatform(),
-					osVersion: getOSVersion(),
-					nodeVersion: getNodeVersion(),
-					packageManager: sniffUserAgent(),
-					isFirstUsage: readMetricsConfig().permission === undefined,
-					configFileType: configFormat(options.configPath),
-					isCI: CI.isCI(),
-					isPagesCI: isPagesCI(),
-					isWorkersCI: isWorkersCI(),
-					isInteractive: isInteractive(),
-					hasAssets: options.hasAssets ?? false,
-					argsUsed,
-					argsCombination,
-					agent,
-				};
-
 				dispatch({
 					name,
 					properties: {

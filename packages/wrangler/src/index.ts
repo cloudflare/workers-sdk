@@ -2008,12 +2008,14 @@ function dispatchGenericCommandErrorEvent(
 	const sanitizedArgs = {};
 
 	// Send "started" event since handler never got to send it.
+	// There is not behaviour to pass to `sendCommandEvent` here since we don't know the command.
 	dispatcher.sendCommandEvent("wrangler command started", {
 		sanitizedCommand,
 		sanitizedArgs,
 		argsUsed: [],
 	});
 
+	// There is not behaviour to pass to `sendCommandEvent` here since we don't know the command.
 	dispatcher.sendCommandEvent("wrangler command errored", {
 		sanitizedCommand,
 		sanitizedArgs,
