@@ -5,16 +5,16 @@ import { reinitialiseAuthTokens } from "../../user";
 
 export function runInTempDir({
 	homedir,
-	disableCaching = true,
+	enableCaching = false,
 }: {
 	homedir?: string;
-	disableCaching?: boolean;
+	enableCaching?: boolean;
 } = {}) {
 	runInTempDirCommon(homedir ? { homedir } : undefined);
 	beforeEach(() => {
 		// Now that we have changed the home directory location, we must reinitialize the user auth state
 		reinitialiseAuthTokens();
-		if (disableCaching) {
+		if (!enableCaching) {
 			disableConfigCache();
 		}
 	});

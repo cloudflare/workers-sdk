@@ -10,7 +10,7 @@ interface PagesConfigCache {
 
 describe("config cache without node_modules", () => {
 	// When no node_modules exists, cache falls back to project-level .wrangler/cache
-	runInTempDir({ disableCaching: false });
+	runInTempDir({ enableCaching: true });
 	mockConsoleMethods();
 	// In this set of tests, we don't create a node_modules folder,
 	// so the cache should fall back to the project-level .wrangler/cache folder
