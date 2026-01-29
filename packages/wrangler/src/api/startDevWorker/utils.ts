@@ -1,19 +1,7 @@
 import assert from "node:assert";
-import { readFile } from "node:fs/promises";
-import type {
-	Binding,
-	File,
-	Hook,
-	HookValues,
-	ServiceFetch,
-	StartDevWorkerOptions,
-} from "./types";
-import type {
-	CfDispatchNamespace,
-	CfWorkerInit,
-	ConfigBindingOptions,
-	WorkerMetadataBinding,
-} from "@cloudflare/workers-utils";
+import type { Binding, Hook, HookValues, StartDevWorkerOptions } from "./types";
+import type { Config } from "@cloudflare/workers-utils";
+import type { Json } from "miniflare";
 
 export function assertNever(_value: never) {}
 
@@ -69,478 +57,463 @@ export function unwrapHook<
 	return typeof hook === "function" ? hook(...args) : hook;
 }
 
-async function getBinaryFileContents(file: File<string | Uint8Array>) {
-	if ("contents" in file) {
-		if (file.contents instanceof Buffer) {
-			return file.contents;
+/**
+ * Options for convertConfigToBindings
+ */
+export interface ConvertBindingsOptions {
+	/**
+	 * When true, uses preview IDs (preview_id, preview_bucket_name, preview_database_id)
+	 * instead of production IDs. Used for local development.
+	 */
+	usePreviewIds?: boolean;
+	/**
+	 * When true, excludes bindings that are not supported in Pages
+	 * (send_email, wasm_modules, text_blobs, data_blobs, dispatch_namespaces, pipelines, logfwdr, assets, unsafe)
+	 */
+	pages?: boolean;
+}
+
+/**
+ * Binding options that can be provided to convertConfigBindingsToStartWorkerBindings.
+ * This is a subset of Config focused only on binding-related fields.
+ */
+export interface ConfigBindingOptions {
+	vars?: Config["vars"];
+	kv_namespaces?: Config["kv_namespaces"];
+	send_email?: Config["send_email"];
+	durable_objects?: Config["durable_objects"];
+	workflows?: Config["workflows"];
+	queues?: Config["queues"];
+	r2_buckets?: Config["r2_buckets"];
+	d1_databases?: Config["d1_databases"];
+	vectorize?: Config["vectorize"];
+	hyperdrive?: Config["hyperdrive"];
+	secrets_store_secrets?: Config["secrets_store_secrets"];
+	unsafe_hello_world?: Config["unsafe_hello_world"];
+	ratelimits?: Config["ratelimits"];
+	vpc_services?: Config["vpc_services"];
+	services?: Config["services"];
+	analytics_engine_datasets?: Config["analytics_engine_datasets"];
+	dispatch_namespaces?: Config["dispatch_namespaces"];
+	mtls_certificates?: Config["mtls_certificates"];
+	pipelines?: Config["pipelines"];
+	worker_loaders?: Config["worker_loaders"];
+	logfwdr?: Config["logfwdr"];
+	wasm_modules?: Config["wasm_modules"];
+	browser?: Config["browser"];
+	ai?: Config["ai"];
+	images?: Config["images"];
+	media?: Config["media"];
+	version_metadata?: Config["version_metadata"];
+	assets?: Config["assets"];
+	text_blobs?: Config["text_blobs"];
+	data_blobs?: Config["data_blobs"];
+	unsafe?: Config["unsafe"];
+}
+
+/**
+ * Convert Config bindings to the flat StartDevWorkerInput["bindings"] format.
+ * This is the canonical conversion function - other converters should delegate to this.
+ */
+export function convertConfigToBindings(
+	config: Config,
+	options?: ConvertBindingsOptions
+): NonNullable<StartDevWorkerOptions["bindings"]> {
+	const { usePreviewIds = false, pages = false } = options ?? {};
+	const output: NonNullable<StartDevWorkerOptions["bindings"]> = {};
+
+	// Helper to get ID with optional preview fallback
+	const getId = <T, K1 extends keyof T, K2 extends keyof T>(
+		item: T,
+		previewField: K1,
+		idField: K2
+	): T[K1] | T[K2] =>
+		usePreviewIds ? item[previewField] ?? item[idField] : item[idField];
+
+	// vars (plain_text and json)
+	for (const [key, value] of Object.entries(config.vars ?? {})) {
+		if (typeof value === "string") {
+			output[key] = { type: "plain_text", value };
+		} else {
+			output[key] = { type: "json", value };
 		}
-		return Buffer.from(file.contents);
 	}
-	return readFile(file.path);
-}
 
-export function convertConfigBindingsToStartWorkerBindings(
-	configBindings: ConfigBindingOptions
-): StartDevWorkerOptions["bindings"] {
-	const { queues, ...bindings } = configBindings;
+	// 2. kv_namespaces
+	for (const kv of config.kv_namespaces ?? []) {
+		const { binding, preview_id: _, ...rest } = kv;
+		output[binding] = {
+			type: "kv_namespace",
+			...rest,
+			id: getId(kv, "preview_id", "id"),
+		};
+	}
 
-	return convertCfWorkerInitBindingsToBindings({
-		...bindings,
-		kv_namespaces: bindings.kv_namespaces.map((kv) => ({
-			...kv,
-			id: kv.preview_id ?? kv.id,
-		})),
-		d1_databases: bindings.d1_databases.map((d1) => ({
-			...d1,
-			database_id: d1.preview_database_id ?? d1.database_id,
-		})),
-		r2_buckets: bindings.r2_buckets.map((r2) => ({
-			...r2,
-			bucket_name: r2.preview_bucket_name ?? r2.bucket_name,
-		})),
-		queues: queues.producers?.map((q) => ({ ...q, queue_name: q.queue })),
-	});
-}
-
-export function convertCfWorkerInitBindingsToBindings(
-	inputBindings: Partial<CfWorkerInit["bindings"]>
-): StartDevWorkerOptions["bindings"] {
-	const output: StartDevWorkerOptions["bindings"] = {};
-
-	// required to retain type information
-	type Entries<T> = { [K in keyof T]: [K, T[K]] }[keyof T][];
-	type BindingsIterable = Entries<Required<typeof inputBindings>>;
-	const bindingsIterable = Object.entries(inputBindings) as BindingsIterable;
-
-	for (const [type, info] of bindingsIterable) {
-		if (info === undefined) {
-			continue;
+	// 3. send_email (pages: exclude)
+	if (!pages) {
+		for (const email of config.send_email ?? []) {
+			const { name, ...rest } = email;
+			output[name] = { type: "send_email", ...rest };
 		}
+	}
 
-		switch (type) {
-			case "vars": {
-				for (const [key, value] of Object.entries(info)) {
-					if (typeof value === "string") {
-						output[key] = { type: "plain_text", value };
-					} else {
-						output[key] = { type: "json", value };
-					}
-				}
-				break;
+	// 4. durable_objects
+	for (const durable of config.durable_objects?.bindings ?? []) {
+		const { name, ...rest } = durable;
+		output[name] = { type: "durable_object_namespace", ...rest };
+	}
+
+	// 5. workflows
+	for (const workflow of config.workflows ?? []) {
+		const { binding, ...rest } = workflow;
+		output[binding] = { type: "workflow", ...rest };
+	}
+
+	// 6. queues (producers)
+	for (const producer of config.queues?.producers ?? []) {
+		output[producer.binding] = {
+			type: "queue",
+			queue_name: producer.queue,
+			...(producer.delivery_delay !== undefined && {
+				delivery_delay: producer.delivery_delay,
+			}),
+		};
+	}
+
+	// 7. r2_buckets
+	for (const r2 of config.r2_buckets ?? []) {
+		const { binding, preview_bucket_name: _, ...rest } = r2;
+		output[binding] = {
+			type: "r2_bucket",
+			...rest,
+			bucket_name: getId(r2, "preview_bucket_name", "bucket_name"),
+		};
+	}
+
+	// 8. d1_databases
+	for (const d1 of config.d1_databases ?? []) {
+		const { binding, preview_database_id: _, ...rest } = d1;
+		output[binding] = {
+			type: "d1",
+			...rest,
+			database_id: getId(d1, "preview_database_id", "database_id"),
+		};
+	}
+
+	// 9. vectorize
+	for (const vectorize of config.vectorize ?? []) {
+		const { binding, ...rest } = vectorize;
+		output[binding] = { type: "vectorize", ...rest };
+	}
+
+	// 10. hyperdrive
+	for (const hyperdrive of config.hyperdrive ?? []) {
+		const { binding, ...rest } = hyperdrive;
+		output[binding] = { type: "hyperdrive", ...rest };
+	}
+
+	// 11. secrets_store_secrets
+	for (const secret of config.secrets_store_secrets ?? []) {
+		const { binding, ...rest } = secret;
+		output[binding] = { type: "secrets_store_secret", ...rest };
+	}
+
+	// 12. unsafe_hello_world (pages: exclude)
+	if (!pages) {
+		for (const helloWorld of config.unsafe_hello_world ?? []) {
+			const { binding, ...rest } = helloWorld;
+			output[binding] = { type: "unsafe_hello_world", ...rest };
+		}
+	}
+
+	// 13. ratelimits
+	for (const ratelimit of config.ratelimits ?? []) {
+		const { name, ...rest } = ratelimit;
+		output[name] = { type: "ratelimit", ...rest };
+	}
+
+	// 14. vpc_services
+	for (const vpc of config.vpc_services ?? []) {
+		const { binding, ...rest } = vpc;
+		output[binding] = { type: "vpc_service", ...rest };
+	}
+
+	// 15. services
+	for (const service of config.services ?? []) {
+		const { binding, ...rest } = service;
+		output[binding] = { type: "service", ...rest };
+	}
+
+	// 16. analytics_engine_datasets
+	for (const dataset of config.analytics_engine_datasets ?? []) {
+		const { binding, ...rest } = dataset;
+		output[binding] = { type: "analytics_engine", ...rest };
+	}
+
+	// 17. dispatch_namespaces (pages: exclude)
+	if (!pages) {
+		for (const dispatch of config.dispatch_namespaces ?? []) {
+			const { binding, ...rest } = dispatch;
+			output[binding] = { type: "dispatch_namespace", ...rest };
+		}
+	}
+
+	// 18. mtls_certificates
+	for (const mtls of config.mtls_certificates ?? []) {
+		const { binding, ...rest } = mtls;
+		output[binding] = { type: "mtls_certificate", ...rest };
+	}
+
+	// 19. pipelines (pages: exclude)
+	if (!pages) {
+		for (const pipeline of config.pipelines ?? []) {
+			const { binding, ...rest } = pipeline;
+			output[binding] = { type: "pipeline", ...rest };
+		}
+	}
+
+	// 20. worker_loaders
+	for (const loader of config.worker_loaders ?? []) {
+		output[loader.binding] = { type: "worker_loader" };
+	}
+
+	// 21. logfwdr (pages: exclude)
+	if (!pages) {
+		for (const logfwdr of config.logfwdr?.bindings ?? []) {
+			const { name, ...rest } = logfwdr;
+			output[name] = { type: "logfwdr", ...rest };
+		}
+	}
+
+	// 22. wasm_modules (pages: exclude)
+	if (!pages) {
+		for (const [key, value] of Object.entries(config.wasm_modules ?? {})) {
+			if (typeof value === "string") {
+				output[key] = { type: "wasm_module", source: { path: value } };
+			} else {
+				output[key] = { type: "wasm_module", source: { contents: value } };
 			}
-			case "kv_namespaces": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "kv_namespace", ...x };
-				}
-				break;
+		}
+	}
+
+	// 23. browser
+	if (config.browser) {
+		const { binding, ...rest } = config.browser;
+		output[binding] = { type: "browser", ...rest };
+	}
+
+	// 24. ai
+	if (config.ai) {
+		const { binding, ...rest } = config.ai;
+		output[binding] = { type: "ai", ...rest };
+	}
+
+	// 25. images
+	if (config.images) {
+		const { binding, ...rest } = config.images;
+		output[binding] = { type: "images", ...rest };
+	}
+
+	// 26. media
+	if (config.media) {
+		const { binding, ...rest } = config.media;
+		output[binding] = { type: "media", ...rest };
+	}
+
+	// 27. version_metadata
+	if (config.version_metadata) {
+		output[config.version_metadata.binding] = { type: "version_metadata" };
+	}
+
+	// 28. assets (pages: exclude)
+	if (!pages && config.assets?.binding) {
+		output[config.assets.binding] = { type: "assets" };
+	}
+
+	// 29. text_blobs (pages: exclude)
+	if (!pages) {
+		for (const [key, value] of Object.entries(config.text_blobs ?? {})) {
+			output[key] = { type: "text_blob", source: { path: value } };
+		}
+	}
+
+	// 30. data_blobs (pages: exclude)
+	if (!pages) {
+		for (const [key, value] of Object.entries(config.data_blobs ?? {})) {
+			if (typeof value === "string") {
+				output[key] = { type: "data_blob", source: { path: value } };
+			} else {
+				output[key] = { type: "data_blob", source: { contents: value } };
 			}
-			case "send_email": {
-				for (const { name, ...x } of info) {
-					output[name] = { type: "send_email", ...x };
-				}
-				break;
-			}
-			case "wasm_modules": {
-				for (const [key, value] of Object.entries(info)) {
-					if (typeof value === "string") {
-						output[key] = { type: "wasm_module", source: { path: value } };
-					} else {
-						output[key] = { type: "wasm_module", source: { contents: value } };
-					}
-				}
-				break;
-			}
-			case "text_blobs": {
-				for (const [key, value] of Object.entries(info)) {
-					output[key] = { type: "text_blob", source: { path: value } };
-				}
-				break;
-			}
-			case "data_blobs": {
-				for (const [key, value] of Object.entries(info)) {
-					if (typeof value === "string") {
-						output[key] = { type: "data_blob", source: { path: value } };
-					} else {
-						output[key] = { type: "data_blob", source: { contents: value } };
-					}
-				}
-				break;
-			}
-			case "browser": {
-				const { binding, ...x } = info;
-				output[binding] = { type: "browser", ...x };
-				break;
-			}
-			case "durable_objects": {
-				for (const { name, ...x } of info.bindings) {
-					output[name] = { type: "durable_object_namespace", ...x };
-				}
-				break;
-			}
-			case "workflows": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "workflow", ...x };
-				}
-				break;
-			}
-			case "queues": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "queue", ...x };
-				}
-				break;
-			}
-			case "r2_buckets": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "r2_bucket", ...x };
-				}
-				break;
-			}
-			case "d1_databases": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "d1", ...x };
-				}
-				break;
-			}
-			case "services": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "service", ...x };
-				}
-				break;
-			}
-			case "analytics_engine_datasets": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "analytics_engine", ...x };
-				}
-				break;
-			}
-			case "dispatch_namespaces": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "dispatch_namespace", ...x };
-				}
-				break;
-			}
-			case "mtls_certificates": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "mtls_certificate", ...x };
-				}
-				break;
-			}
-			case "logfwdr": {
-				for (const { name, ...x } of info.bindings) {
-					output[name] = { type: "logfwdr", ...x };
-				}
-				break;
-			}
-			case "ai": {
-				const { binding, ...x } = info;
-				output[binding] = { type: "ai", ...x };
-				break;
-			}
-			case "images": {
-				const { binding, ...x } = info;
-				output[binding] = { type: "images", ...x };
-				break;
-			}
-			case "version_metadata": {
-				const { binding, ...x } = info;
-				output[binding] = { type: "version_metadata", ...x };
-				break;
-			}
-			case "hyperdrive": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "hyperdrive", ...x };
-				}
-				break;
-			}
-			case "vectorize": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "vectorize", ...x };
-				}
-				break;
-			}
-			case "unsafe": {
-				for (const { type: unsafeType, name, ...data } of info.bindings ?? []) {
-					output[name] = { type: `unsafe_${unsafeType}`, ...data };
-				}
-				break;
-			}
-			case "assets": {
-				output[info["binding"]] = { type: "assets" };
-				break;
-			}
-			case "pipelines": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "pipeline", ...x };
-				}
-				break;
-			}
-			case "secrets_store_secrets": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "secrets_store_secret", ...x };
-				}
-				break;
-			}
-			case "unsafe_hello_world": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "unsafe_hello_world", ...x };
-				}
-				break;
-			}
-			case "ratelimits": {
-				for (const { name, ...x } of info) {
-					output[name] = { type: "ratelimit", ...x };
-				}
-				break;
-			}
-			case "worker_loaders": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "worker_loader", ...x };
-				}
-				break;
-			}
-			case "vpc_services": {
-				for (const { binding, ...x } of info) {
-					output[binding] = { type: "vpc_service", ...x };
-				}
-				break;
-			}
-			case "media": {
-				const { binding, ...x } = info;
-				output[binding] = { type: "media", ...x };
-				break;
-			}
-			default: {
-				assertNever(type);
-			}
+		}
+	}
+
+	// 31. unsafe bindings (pages: exclude)
+	if (!pages) {
+		for (const unsafe of config.unsafe?.bindings ?? []) {
+			const { type: unsafeType, name, ...data } = unsafe;
+			output[name] = { type: `unsafe_${unsafeType}`, ...data } as Binding;
 		}
 	}
 
 	return output;
 }
 
+export function convertConfigBindingsToStartWorkerBindings(
+	configBindings: ConfigBindingOptions
+): StartDevWorkerOptions["bindings"] {
+	return convertConfigToBindings(configBindings as unknown as Config, {
+		usePreviewIds: true,
+	});
+}
+
 /**
- * Convert either StartDevWorkerOptions["bindings"] or WorkerMetadataBinding[] to CfWorkerInit["bindings"]
- * This function is by design temporary, but has lived longer than originally expected.
- * For some context, CfWorkerInit is the in-memory representation of a Worker that Wrangler uses,
- * WorkerMetadataBinding is the representation of bindings that comes from the API, and StartDevWorkerOptions
- * is the "new" in-memory representation of a Worker that's used in Wrangler's dev flow. Over
- * time, all uses of CfWorkerInit should transition to StartDevWorkerOptions, but that's a pretty big refactor.
- * As such, in the meantime we have conversion functions so that different code paths can deal with the format they
- * expect and were written for.
- *
- * WARNING: Using this with WorkerMetadataBinding[] will lose information about certain
- * binding types (i.e. WASM modules, text blobs, and data blobs). These binding types are deprecated
- * but may still be used by some Workers in the wild.
+ * Bindings that can be passed via the StartDevOptions (CLI/API) interface.
+ * This is a subset of all binding types, focused on the most commonly used ones.
  */
-export async function convertBindingsToCfWorkerInitBindings(
-	inputBindings: StartDevWorkerOptions["bindings"] | WorkerMetadataBinding[]
-): Promise<{
-	bindings: CfWorkerInit["bindings"];
-	fetchers: Record<string, ServiceFetch>;
-}> {
-	const bindings: CfWorkerInit["bindings"] = {
-		vars: undefined,
-		kv_namespaces: undefined,
-		send_email: undefined,
-		wasm_modules: undefined,
-		text_blobs: undefined,
-		browser: undefined,
-		ai: undefined,
-		images: undefined,
-		version_metadata: undefined,
-		data_blobs: undefined,
-		durable_objects: undefined,
-		queues: undefined,
-		r2_buckets: undefined,
-		workflows: undefined,
-		d1_databases: undefined,
-		vectorize: undefined,
-		hyperdrive: undefined,
-		secrets_store_secrets: undefined,
-		services: undefined,
-		vpc_services: undefined,
-		analytics_engine_datasets: undefined,
-		dispatch_namespaces: undefined,
-		mtls_certificates: undefined,
-		logfwdr: undefined,
-		unsafe: undefined,
-		assets: undefined,
-		pipelines: undefined,
-		unsafe_hello_world: undefined,
-		ratelimits: undefined,
-		worker_loaders: undefined,
-		media: undefined,
+export interface StartDevOptionsBindings {
+	vars?: Record<string, string | Json>;
+	kv?: {
+		binding: string;
+		id?: string;
+		preview_id?: string;
+	}[];
+	durableObjects?: {
+		name: string;
+		class_name: string;
+		script_name?: string;
+		environment?: string;
+	}[];
+	services?: {
+		binding: string;
+		service: string;
+		environment?: string;
+		entrypoint?: string;
+	}[];
+	r2?: {
+		binding: string;
+		bucket_name?: string;
+		preview_bucket_name?: string;
+		jurisdiction?: string;
+	}[];
+	ai?: {
+		binding: string;
 	};
+	version_metadata?: {
+		binding: string;
+	};
+	d1Databases?: {
+		binding: string;
+		database_id?: string;
+		database_name?: string;
+		database_internal_env?: string;
+		preview_database_id?: string;
+	}[];
+	queueProducers?: {
+		binding: string;
+		queue: string;
+		delivery_delay?: number;
+	}[];
+	hyperdrive?: {
+		binding: string;
+		id: string;
+		localConnectionString?: string;
+	}[];
+}
 
-	const fetchers: Record<string, ServiceFetch> = {};
+/**
+ * Convert StartDevOptions bindings to the flat StartDevWorkerInput["bindings"] format.
+ * Only supports the binding types available in StartDevOptions (the subset that can be
+ * passed via CLI/API).
+ */
+export function convertStartDevOptionsToBindings(
+	inputBindings: StartDevOptionsBindings
+): StartDevWorkerOptions["bindings"] {
+	const output: StartDevWorkerOptions["bindings"] = {};
 
-	const bindingEntries: [string, WorkerMetadataBinding | Binding][] =
-		Array.isArray(inputBindings)
-			? inputBindings.map((b) => [b.name, b])
-			: Object.entries(inputBindings ?? {});
-
-	for (const [name, binding] of bindingEntries) {
-		if (binding.type === "plain_text") {
-			bindings.vars ??= {};
-			bindings.vars[name] = "value" in binding ? binding.value : binding.text;
-		} else if (binding.type === "json") {
-			bindings.vars ??= {};
-			bindings.vars[name] = "value" in binding ? binding.value : binding.json;
-		} else if (binding.type === "kv_namespace") {
-			bindings.kv_namespaces ??= [];
-			bindings.kv_namespaces.push({
-				...omitType(binding),
-				binding: name,
-				id: "namespace_id" in binding ? binding.namespace_id : binding.id,
-			});
-		} else if (binding.type === "send_email") {
-			bindings.send_email ??= [];
-			bindings.send_email.push({ ...omitType(binding), name: name });
-		} else if (binding.type === "wasm_module") {
-			if (!("source" in binding)) {
-				continue;
+	// vars (plain_text and json)
+	if (inputBindings.vars) {
+		for (const [key, value] of Object.entries(inputBindings.vars)) {
+			if (typeof value === "string") {
+				output[key] = { type: "plain_text", value };
+			} else {
+				output[key] = { type: "json", value };
 			}
-			bindings.wasm_modules ??= {};
-			bindings.wasm_modules[name] = await getBinaryFileContents(binding.source);
-		} else if (binding.type === "text_blob") {
-			if (!("source" in binding)) {
-				continue;
-			}
-			bindings.text_blobs ??= {};
-
-			if (typeof binding.source.path === "string") {
-				bindings.text_blobs[name] = binding.source.path;
-			} else if ("contents" in binding.source) {
-				// TODO(maybe): write file contents to disk and set path
-				throw new Error(
-					"Cannot provide text_blob contents directly in CfWorkerInitBindings"
-				);
-			}
-		} else if (binding.type === "data_blob") {
-			if (!("source" in binding)) {
-				continue;
-			}
-			bindings.data_blobs ??= {};
-			bindings.data_blobs[name] = await getBinaryFileContents(binding.source);
-		} else if (binding.type === "browser") {
-			bindings.browser = { ...omitType(binding), binding: name };
-		} else if (binding.type === "ai") {
-			bindings.ai = { ...omitType(binding), binding: name };
-		} else if (binding.type === "images") {
-			bindings.images = { ...omitType(binding), binding: name };
-		} else if (binding.type === "version_metadata") {
-			bindings.version_metadata = { binding: name };
-		} else if (binding.type === "durable_object_namespace") {
-			bindings.durable_objects ??= { bindings: [] };
-			bindings.durable_objects.bindings.push({
-				...omitType(binding),
-				name: name,
-			});
-		} else if (binding.type === "queue") {
-			bindings.queues ??= [];
-			bindings.queues.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "r2_bucket") {
-			bindings.r2_buckets ??= [];
-			bindings.r2_buckets.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "d1") {
-			bindings.d1_databases ??= [];
-			bindings.d1_databases.push({
-				...omitType(binding),
-				binding: name,
-				database_id: "id" in binding ? binding.id : binding.database_id,
-			});
-		} else if (binding.type === "vectorize") {
-			bindings.vectorize ??= [];
-			bindings.vectorize.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "hyperdrive") {
-			bindings.hyperdrive ??= [];
-			bindings.hyperdrive.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "service") {
-			bindings.services ??= [];
-			bindings.services.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "fetcher") {
-			fetchers[name] = binding.fetcher;
-		} else if (binding.type === "analytics_engine") {
-			bindings.analytics_engine_datasets ??= [];
-			bindings.analytics_engine_datasets.push({
-				...omitType(binding),
-				binding: name,
-			});
-		} else if (binding.type === "dispatch_namespace") {
-			bindings.dispatch_namespaces ??= [];
-			const outbound: CfDispatchNamespace["outbound"] =
-				binding.outbound && "worker" in binding.outbound
-					? {
-							service: binding.outbound.worker.service,
-							environment: binding.outbound.worker.environment,
-							parameters: binding.outbound.params?.map((p) => p.name),
-						}
-					: binding.outbound;
-			bindings.dispatch_namespaces.push({
-				...omitType(binding),
-				binding: name,
-				outbound,
-			});
-		} else if (binding.type === "mtls_certificate") {
-			bindings.mtls_certificates ??= [];
-			bindings.mtls_certificates.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "pipeline") {
-			bindings.pipelines ??= [];
-			bindings.pipelines.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "logfwdr") {
-			bindings.logfwdr ??= { bindings: [] };
-			bindings.logfwdr.bindings.push({ ...omitType(binding), name: name });
-		} else if (binding.type === "workflow") {
-			bindings.workflows ??= [];
-			bindings.workflows.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "secrets_store_secret") {
-			bindings.secrets_store_secrets ??= [];
-			bindings.secrets_store_secrets.push({
-				...omitType(binding),
-				binding: name,
-			});
-		} else if (binding.type === "unsafe_hello_world") {
-			bindings.unsafe_hello_world ??= [];
-			bindings.unsafe_hello_world.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "ratelimit") {
-			bindings.ratelimits ??= [];
-			bindings.ratelimits.push({ ...omitType(binding), name: name });
-		} else if (binding.type === "worker_loader") {
-			bindings.worker_loaders ??= [];
-			bindings.worker_loaders.push({ ...omitType(binding), binding: name });
-		} else if (binding.type === "vpc_service") {
-			bindings.vpc_services ??= [];
-			bindings.vpc_services.push({ ...binding, binding: name });
-		} else if (binding.type === "media") {
-			bindings.media = { ...binding, binding: name };
-		} else if (isUnsafeBindingType(binding.type)) {
-			bindings.unsafe ??= {
-				bindings: [],
-				metadata: undefined,
-				capnp: undefined,
-			};
-
-			const { type, ...data } = binding;
-			bindings.unsafe.bindings?.push({
-				type: type.slice("unsafe_".length),
-				name: name,
-				...data,
-			});
 		}
 	}
 
-	return { bindings, fetchers };
-}
+	// kv namespaces
+	if (inputBindings.kv) {
+		for (const kv of inputBindings.kv) {
+			output[kv.binding] = {
+				type: "kv_namespace",
+				id: kv.id,
+			};
+		}
+	}
 
-function isUnsafeBindingType(type: string): type is `unsafe_${string}` {
-	return type.startsWith("unsafe_");
-}
+	// durable objects
+	if (inputBindings.durableObjects) {
+		for (const durable of inputBindings.durableObjects) {
+			output[durable.name] = {
+				type: "durable_object_namespace",
+				class_name: durable.class_name,
+				script_name: durable.script_name,
+				environment: durable.environment,
+			};
+		}
+	}
 
-function omitType<T extends Record<string, unknown>>({
-	type: _,
-	...value
-}: T): Omit<T, "type"> {
-	return value;
+	// services
+	if (inputBindings.services) {
+		for (const service of inputBindings.services) {
+			output[service.binding] = {
+				type: "service",
+				service: service.service,
+				environment: service.environment,
+				entrypoint: service.entrypoint,
+			};
+		}
+	}
+
+	// r2 buckets
+	if (inputBindings.r2) {
+		for (const r2 of inputBindings.r2) {
+			output[r2.binding] = {
+				type: "r2_bucket",
+				bucket_name: r2.bucket_name,
+				jurisdiction: r2.jurisdiction,
+			};
+		}
+	}
+
+	// ai
+	if (inputBindings.ai) {
+		output[inputBindings.ai.binding] = {
+			type: "ai",
+		};
+	}
+
+	// version_metadata
+	if (inputBindings.version_metadata) {
+		output[inputBindings.version_metadata.binding] = {
+			type: "version_metadata",
+		};
+	}
+
+	// d1 databases
+	if (inputBindings.d1Databases) {
+		for (const d1 of inputBindings.d1Databases) {
+			output[d1.binding] = {
+				type: "d1",
+				database_id: d1.database_id,
+				database_name: d1.database_name,
+				database_internal_env: d1.database_internal_env,
+			};
+		}
+	}
+
+	return output;
 }
 
 export function extractBindingsOfType<

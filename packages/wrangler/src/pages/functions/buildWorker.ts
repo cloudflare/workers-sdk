@@ -87,8 +87,7 @@ export function buildWorkerFromFunctions({
 			__FALLBACK_SERVICE__: JSON.stringify(fallbackService),
 		},
 		alias: {},
-		doBindings: [], // Pages functions don't support internal Durable Objects
-		workflowBindings: [], // Pages functions don't support internal Workflows
+		expectedExports: [],
 		external,
 		plugins: [buildNotifierPlugin(onEnd), assetsPlugin(buildOutputDirectory)],
 		isOutfile: !outdir,
@@ -182,8 +181,7 @@ export function buildRawWorker({
 		compatibilityFlags: undefined,
 		define: {},
 		alias: {},
-		doBindings: [], // Pages functions don't support internal Durable Objects
-		workflowBindings: [], // Pages functions don't support internal Workflows
+		expectedExports: [],
 		external,
 		plugins: [
 			...plugins,

@@ -506,3 +506,79 @@ export interface CfWorkerSourceMap {
 	 */
 	content: string | Buffer;
 }
+
+/**
+ * A file reference for bindings.
+ * Either a path to a file, or inline contents with an optional path.
+ */
+export type BindingFile<Contents = string, Path = string> =
+	| { path: Path } // `path` resolved relative to cwd
+	| { contents: Contents; path?: Path }; // `contents` used instead, `path` can be specified if needed e.g. for module resolution
+
+/**
+ * A binary file reference for bindings.
+ */
+export type BinaryBindingFile = BindingFile<Uint8Array>;
+
+/**
+ * Helper types for building bindings - omit the binding/name fields from the Cf* types
+ */
+type BindingOmit<T> = Omit<T, "binding">;
+type NameOmit<T> = Omit<T, "name">;
+
+/**
+ * Service fetch function type for fetcher bindings
+ */
+export type ServiceFetch = (request: Request) => Promise<Response> | Response;
+
+/**
+ * The unified binding type used by StartDevWorkerInput.
+ * Each binding has a `type` field that discriminates the binding kind.
+ * The binding name is provided as the key in the Record<string, Binding>.
+ */
+export type Binding =
+	| { type: "plain_text"; value: string }
+	| { type: "secret_text"; value: string }
+	| { type: "json"; value: Json }
+	| ({ type: "kv_namespace" } & BindingOmit<CfKvNamespace>)
+	| ({ type: "send_email" } & NameOmit<CfSendEmailBindings>)
+	| { type: "wasm_module"; source: BinaryBindingFile }
+	| { type: "text_blob"; source: BindingFile }
+	| ({ type: "browser" } & BindingOmit<CfBrowserBinding>)
+	| ({ type: "ai" } & BindingOmit<CfAIBinding>)
+	| ({ type: "images" } & BindingOmit<CfImagesBinding>)
+	| { type: "version_metadata" }
+	| { type: "data_blob"; source: BinaryBindingFile }
+	| ({ type: "durable_object_namespace" } & NameOmit<CfDurableObject>)
+	| ({ type: "workflow" } & BindingOmit<CfWorkflow>)
+	| ({ type: "queue" } & BindingOmit<CfQueue>)
+	| ({ type: "r2_bucket" } & BindingOmit<CfR2Bucket>)
+	| ({ type: "d1" } & BindingOmit<CfD1Database>)
+	| ({ type: "vectorize" } & BindingOmit<CfVectorize>)
+	| ({ type: "hyperdrive" } & BindingOmit<CfHyperdrive>)
+	| ({ type: "service" } & BindingOmit<CfService>)
+	| { type: "fetcher"; fetcher: ServiceFetch }
+	| ({ type: "analytics_engine" } & BindingOmit<CfAnalyticsEngineDataset>)
+	| ({ type: "dispatch_namespace" } & BindingOmit<CfDispatchNamespace>)
+	| ({ type: "mtls_certificate" } & BindingOmit<CfMTlsCertificate>)
+	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
+	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
+	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
+	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
+	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
+	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
+	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
+	| ({ type: "media" } & BindingOmit<CfMediaBinding>)
+	| { type: `unsafe_${string}` }
+	| { type: "assets" };
+
+/**
+ * A record of binding names to their binding definitions.
+ * This is the format used by StartDevWorkerInput.
+ */
+export type Bindings = Record<string, Binding>;
+
+/**
+ * All possible binding type names (discriminants).
+ */
+export type BindingType = Binding["type"];

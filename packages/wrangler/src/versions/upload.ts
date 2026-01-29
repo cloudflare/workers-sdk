@@ -15,6 +15,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { Response } from "undici";
+import { extractBindingsOfType } from "../api/startDevWorker/utils";
 import {
 	getAssetsOptions,
 	syncAssets,
@@ -22,7 +23,10 @@ import {
 } from "../assets";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
-import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
+import {
+	getBindings,
+	provisionBindingsFromInput,
+} from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
@@ -35,6 +39,7 @@ import {
 import { noBundleWorker } from "../deployment-bundle/no-bundle-worker";
 import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
 import { loadSourceMaps } from "../deployment-bundle/source-maps";
+import { maskVars } from "../dev";
 import { confirm } from "../dialogs";
 import { getMigrationsToUpload } from "../durable";
 import {
@@ -579,6 +584,19 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const uploadSourceMaps =
 			props.uploadSourceMaps ?? config.upload_source_maps;
 
+		const bindings = getBindings({
+			...config,
+			vars: { ...config.vars, ...props.vars },
+		});
+
+		const expectedExports = [
+			...extractBindingsOfType("durable_object_namespace", bindings).filter(
+				(ns) => !ns.script_name
+			),
+			...extractBindingsOfType("workflow", bindings).filter(
+				(ns) => !ns.script_name
+			),
+		];
 		const {
 			modules,
 			dependencies,
@@ -599,8 +617,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 						bundle: true,
 						additionalModules: [],
 						moduleCollector,
-						doBindings: config.durable_objects.bindings,
-						workflowBindings: config.workflows,
+						expectedExports,
 						jsxFactory,
 						jsxFragment,
 						tsconfig: props.tsconfig ?? config.tsconfig,
@@ -676,11 +693,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
-		const bindings = getBindings({
-			...config,
-			vars: { ...config.vars, ...props.vars },
-		});
-
 		const placement = parseConfigPlacement(config);
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
@@ -690,10 +702,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			content: content,
 			type: bundleType,
 		};
-		const worker: CfWorkerInit = {
+		const worker: Omit<CfWorkerInit, "bindings"> = {
 			name: scriptName,
 			main,
-			bindings,
 			migrations,
 			modules,
 			sourceMaps: uploadSourceMaps
@@ -733,28 +744,23 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 
 		// mask anything that was overridden in cli args
 		// so that we don't log potential secrets into the terminal
-		const maskedVars = { ...bindings.vars };
-		for (const key of Object.keys(maskedVars)) {
-			if (maskedVars[key] !== config.vars[key]) {
-				// This means it was overridden in cli args
-				// so let's mask it
-				maskedVars[key] = "(hidden)";
-			}
-		}
+		const maskedBindings = maskVars(bindings, config);
 
 		let workerBundle: FormData;
 
 		if (props.dryRun) {
-			workerBundle = createWorkerUploadForm(worker);
+			workerBundle = createWorkerUploadForm(worker, bindings, {
+				dryRun: true,
+			});
 			printBindings(
-				{ ...bindings, vars: maskedVars },
+				maskedBindings,
 				config.tail_consumers,
 				config.streaming_tail_consumers
 			);
 		} else {
 			assert(accountId, "Missing accountId");
 			if (getFlag("RESOURCES_PROVISION")) {
-				await provisionBindings(
+				await provisionBindingsFromInput(
 					bindings,
 					accountId,
 					scriptName,
@@ -762,7 +768,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.config
 				);
 			}
-			workerBundle = createWorkerUploadForm(worker);
+			workerBundle = createWorkerUploadForm(worker, bindings);
 
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
@@ -786,7 +792,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;
 				printBindings(
-					{ ...bindings, vars: maskedVars },
+					maskedBindings,
 					config.tail_consumers,
 					config.streaming_tail_consumers
 				);
@@ -795,7 +801,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			} catch (err) {
 				if (!bindingsPrinted) {
 					printBindings(
-						{ ...bindings, vars: maskedVars },
+						maskedBindings,
 						config.tail_consumers,
 						config.streaming_tail_consumers
 					);
