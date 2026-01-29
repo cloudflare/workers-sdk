@@ -165,7 +165,6 @@ function isNpm(packageManager: PackageManager) {
 	return packageManager.type === "npm";
 }
 
-
 export async function downloadWorker(accountId: string, workerName: string) {
 	const serviceMetadata = await fetchResult<ServiceMetadataRes>(
 		COMPLIANCE_REGION_CONFIG_UNKNOWN,
