@@ -316,9 +316,10 @@ export function buildMiniflareBindingOptions(
 	);
 	const workerLoaders = extractBindingsOfType("worker_loader", bindings);
 	const sendEmailBindings = extractBindingsOfType("send_email", bindings);
+	// Extract both regular and unsafe ratelimit bindings
+	// Unsafe bindings have type "unsafe_ratelimit" (prefixed with "unsafe_")
 	const ratelimits = [
 		...extractBindingsOfType("ratelimit", bindings),
-		// Also include unsafe ratelimit bindings (from unsafe.bindings config)
 		...extractBindingsOfType("unsafe_ratelimit", bindings),
 	];
 	const aiBindings = extractBindingsOfType("ai", bindings);
@@ -425,9 +426,30 @@ export function buildMiniflareBindingOptions(
 		warnOrError("media", media.remote, "always-remote");
 	}
 
+	// Extract unsafe bindings with dev.plugin configuration for external plugin support
+	// These bindings have a `dev` property with plugin info that miniflare needs
 	const unsafeBindings: WorkerOptionsBindings["unsafeBindings"] = [];
-	// Note: unsafe bindings with dev config are handled differently now
-	// They would need to be extracted from the bindings Record by looking for type: "unsafe_*"
+	if (bindings) {
+		for (const [name, binding] of Object.entries(bindings)) {
+			// Check if this binding has dev.plugin configuration (from unsafe.bindings)
+			const dev = (
+				binding as {
+					dev?: {
+						plugin?: { name: string; package: string };
+						options?: Record<string, Json>;
+					};
+				}
+			).dev;
+			if (dev?.plugin) {
+				unsafeBindings.push({
+					name,
+					type: binding.type,
+					plugin: dev.plugin,
+					options: dev.options ?? {},
+				});
+			}
+		}
+	}
 
 	/**
 	 * The `durableObjects` variable contains all DO bindings. However, this

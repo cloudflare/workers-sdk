@@ -349,6 +349,12 @@ export function convertConfigToBindings(
 	}
 
 	// 31. unsafe bindings (pages: exclude)
+	// Unsafe bindings always get prefixed with "unsafe_" to distinguish them from
+	// regular bindings. This is important because:
+	// 1. Unsafe bindings may have different property structures than regular bindings
+	// 2. Bindings with dev.plugin need special handling by external plugins
+	// Miniflare extraction handles both "type" and "unsafe_type" variants for bindings
+	// that need special processing (like ratelimit).
 	if (!pages) {
 		for (const unsafe of config.unsafe?.bindings ?? []) {
 			const { type: unsafeType, name, ...data } = unsafe;
