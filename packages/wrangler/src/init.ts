@@ -67,10 +67,7 @@ export const init = createCommand({
 
 		const c3CommandParts = shellquote.parse(getC3CommandFromEnv());
 		const c3Arguments = [
-			// Yarn Classic (v1.x) can't handle version specifiers with ^ in yarn create commands
-			...(isYarn(packageManager)
-				? sanitizeC3ArgsForYarn(c3CommandParts)
-				: c3CommandParts),
+			...c3CommandParts,
 			...(name ? [name] : []),
 			...(yesFlag && isNpm(packageManager) ? ["-y"] : []), // --yes arg for npx
 			...(isNpm(packageManager) ? ["--"] : []),
@@ -168,30 +165,6 @@ function isNpm(packageManager: PackageManager) {
 	return packageManager.type === "npm";
 }
 
-function isYarn(packageManager: PackageManager) {
-	return packageManager.type === "yarn";
-}
-
-/**
- * Yarn Classic (v1.x) doesn't properly handle version specifiers with special
- * characters like `^` in `yarn create` commands. It installs the package correctly
- * but fails to find the binary because it looks for a path like
- * `.yarn/bin/create-cloudflare@^2.5.0` instead of `.yarn/bin/create-cloudflare`.
- *
- * This function strips version specifiers from package names when using Yarn.
- * For example, "cloudflare@^2.5.0" becomes "cloudflare".
- *
- * @see https://github.com/cloudflare/workers-sdk/issues/8269
- */
-function sanitizeC3ArgsForYarn(args: (string | object)[]): string[] {
-	return args.map((arg) => {
-		if (typeof arg === "string" && arg.includes("@")) {
-			// Remove version specifier (e.g., "cloudflare@^2.5.0" -> "cloudflare")
-			return arg.replace(/@[\^~]?[\d.]+.*$/, "");
-		}
-		return String(arg);
-	});
-}
 
 export async function downloadWorker(accountId: string, workerName: string) {
 	const serviceMetadata = await fetchResult<ServiceMetadataRes>(

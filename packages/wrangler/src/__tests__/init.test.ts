@@ -67,14 +67,14 @@ describe("init", () => {
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Running \`mockpm create cloudflare@^2.5.0\`...",
+				🌀 Running \`mockpm create cloudflare\`...",
 				  "warn": "",
 				}
 			`);
 
 			expect(execa).toHaveBeenCalledWith(
 				"mockpm",
-				["create", "cloudflare@^2.5.0"],
+				["create", "cloudflare"],
 				{
 					stdio: ["inherit", "pipe", "pipe"],
 				}
@@ -86,7 +86,7 @@ describe("init", () => {
 
 			expect(execa).toHaveBeenCalledWith(
 				"mockpm",
-				["create", "cloudflare@^2.5.0", "--wrangler-defaults"],
+				["create", "cloudflare", "--wrangler-defaults"],
 				{
 					stdio: ["inherit", "pipe", "pipe"],
 				}
@@ -111,17 +111,16 @@ describe("init", () => {
 				});
 			});
 
-			test("strips version specifier from C3 command for yarn", async () => {
+			test("uses C3 command without version specifier for yarn", async () => {
 				await runWrangler("init");
 
-				// Yarn Classic (v1.x) can't handle version specifiers like @^2.5.0
-				// so we strip them when using yarn
+				// No version specifier needed since C3 has auto-update behavior
 				expect(execa).toHaveBeenCalledWith("yarn", ["create", "cloudflare"], {
 					stdio: ["inherit", "pipe", "pipe"],
 				});
 			});
 
-			test("strips version specifier when using --from-dash with yarn", async () => {
+			test("uses C3 command without version specifier when using --from-dash with yarn", async () => {
 				await runWrangler("init --from-dash my-worker");
 
 				expect(execa).toHaveBeenCalledWith(
@@ -204,7 +203,7 @@ describe("init", () => {
 
 			expect(execa).toHaveBeenCalledWith(
 				"mockpm",
-				["create", "cloudflare@^2.5.0"],
+				["create", "cloudflare"],
 				{
 					env: {
 						CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1",
@@ -847,7 +846,7 @@ describe("init", () => {
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Running \`mockpm create cloudflare@^2.5.0 existing-memory-crystal --existing-script existing-memory-crystal\`...",
+				🌀 Running \`mockpm create cloudflare existing-memory-crystal --existing-script existing-memory-crystal\`...",
 				  "warn": "",
 				}
 			`);
@@ -857,7 +856,7 @@ describe("init", () => {
 				"mockpm",
 				[
 					"create",
-					"cloudflare@^2.5.0",
+					"cloudflare",
 					"existing-memory-crystal",
 					"--existing-script",
 					"existing-memory-crystal",
