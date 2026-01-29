@@ -107,6 +107,8 @@ export async function listD1Databases(
 		);
 	}
 
+	const totalCount = databases.length;
+
 	// Paginate
 	const startIndex = (page - 1) * per_page;
 	const endIndex = startIndex + per_page;
@@ -118,7 +120,7 @@ export async function listD1Databases(
 			count: databases.length,
 			page,
 			per_page,
-			total_count: databases.length,
+			total_count: totalCount,
 		},
 	});
 }
