@@ -4,19 +4,16 @@ import { seed } from "@cloudflare/workers-utils/test-helpers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as details from "../../../autoconfig/details";
 import { clearOutputFilePath } from "../../../output";
+import {
+	getPackageManager,
+	NpmPackageManager,
+	PnpmPackageManager,
+} from "../../../package-manager";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import type { Config } from "@cloudflare/workers-utils";
-
-vi.mock("../../../package-manager", () => ({
-	getPackageManager() {
-		return {
-			type: "npm",
-			npx: "npx",
-		};
-	},
-}));
+import type { Mock } from "vitest";
 
 describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	runInTempDir();
@@ -25,6 +22,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 
 	beforeEach(() => {
 		setIsTTY(true);
+		(getPackageManager as Mock).mockResolvedValue(NpmPackageManager);
 	});
 
 	afterEach(() => {
@@ -42,27 +40,34 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 
 	// Check that Astro is detected. We don't want to duplicate the tests of @netlify/build-info
 	// by exhaustively checking every possible combination
-	it("should perform basic framework detection", async () => {
-		await writeFile(
-			"package.json",
-			JSON.stringify({
-				dependencies: {
-					astro: "5",
-				},
-			})
-		);
+	it.each(["npm", "pnpm"] as const)(
+		"should perform basic framework detection (using %s)",
+		async (pm) => {
+			(getPackageManager as Mock).mockResolvedValue(
+				pm === "pnpm" ? PnpmPackageManager : NpmPackageManager
+			);
 
-		await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-			buildCommand: "astro build",
-			configured: false,
-			outputDir: "dist",
-			packageJson: {
-				dependencies: {
-					astro: "5",
+			await writeFile(
+				"package.json",
+				JSON.stringify({
+					dependencies: {
+						astro: "5",
+					},
+				})
+			);
+
+			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
+				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",
+				configured: false,
+				outputDir: "dist",
+				packageJson: {
+					dependencies: {
+						astro: "5",
+					},
 				},
-			},
-		});
-	});
+			});
+		}
+	);
 
 	it("should bail when multiple frameworks are detected", async () => {
 		await writeFile(

@@ -21,6 +21,7 @@ export class Analog extends Framework {
 		if (!dryRun) {
 			await updateViteConfig(projectPath);
 		}
+
 		return {
 			wranglerConfig: {
 				main: "./dist/analog/server/index.mjs",
