@@ -30,6 +30,7 @@ import {
 	produceWorkerBundleForWorkerJSDirectory,
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
+import type { RoutesJSONSpec } from "../../pages/functions/routes-transformation";
 import { upload } from "../../pages/upload";
 import { getPagesTmpDir } from "../../pages/utils";
 import { validate } from "../../pages/validate";
@@ -378,7 +379,7 @@ export async function deploy({
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
 			try {
-				const routesCustomJSON = parseJSON(_routesCustom, join(directory, "_routes.json"));
+				const routesCustomJSON = parseJSON(_routesCustom, join(directory, "_routes.json")) as RoutesJSONSpec;
 				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
 
 				formData.append(
@@ -423,7 +424,7 @@ export async function deploy({
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
 			try {
-				const routesCustomJSON = parseJSON(_routesCustom, join(directory, "_routes.json"));
+				const routesCustomJSON = parseJSON(_routesCustom, join(directory, "_routes.json")) as RoutesJSONSpec;
 				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
 
 				formData.append(
