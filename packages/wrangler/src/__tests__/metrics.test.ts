@@ -287,7 +287,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 
-				const expectedStartReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command started",
 					timestamp: 1733961600000,
@@ -296,11 +296,9 @@ describe("metrics", () => {
 						amplitude_event_id: 0,
 						...reused,
 					},
-				};
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedStartReq)}`
-				);
-				const expectedCompleteReq = {
+				});
+
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command completed",
 					timestamp: 1733961606000,
@@ -309,12 +307,11 @@ describe("metrics", () => {
 						amplitude_event_id: 1,
 						...reused,
 						durationMs: 6000,
+						durationSeconds: 6,
+						durationMinutes: 0.1,
 					},
-				};
-				// command completed
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedCompleteReq)}`
-				);
+				});
+
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -347,7 +344,7 @@ describe("metrics", () => {
 				);
 				expect(requests.count).toBe(2);
 
-				const expectedStartReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command started",
 					timestamp: 1733961600000,
@@ -356,12 +353,9 @@ describe("metrics", () => {
 						amplitude_event_id: 0,
 						...reused,
 					},
-				};
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedStartReq)}`
-				);
+				});
 
-				const expectedErrorReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command errored",
 					timestamp: 1733961606000,
@@ -370,14 +364,12 @@ describe("metrics", () => {
 						amplitude_event_id: 1,
 						...reused,
 						durationMs: 6000,
+						durationSeconds: 6,
+						durationMinutes: 0.1,
 						errorType: "TypeError",
 						errorMessage: undefined,
 					},
-				};
-
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedErrorReq)}`
-				);
+				});
 			});
 
 			it("should mark isCI as true if running in CI", async () => {
@@ -421,8 +413,7 @@ describe("metrics", () => {
 				await runWrangler("docs arg");
 				expect(requests.count).toBe(2);
 
-				// command started
-				const expectedStartReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command started",
 					timestamp: 1733961600000,
@@ -431,13 +422,9 @@ describe("metrics", () => {
 						amplitude_event_id: 0,
 						...{ ...reused, hasAssets: true },
 					},
-				};
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedStartReq)}`
-				);
+				});
 
-				// command completed
-				const expectedCompleteReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command completed",
 					timestamp: 1733961606000,
@@ -446,11 +433,11 @@ describe("metrics", () => {
 						amplitude_event_id: 1,
 						...{ ...reused, hasAssets: true },
 						durationMs: 6000,
+						durationSeconds: 6,
+						durationMinutes: 0.1,
 					},
-				};
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedCompleteReq)}`
-				);
+				});
+
 				expect(std.out).toMatchInlineSnapshot(`
 					"
 					 ⛅️ wrangler x.x.x
@@ -941,4 +928,33 @@ function mockMetricRequest() {
 	);
 
 	return requests;
+}
+
+/**
+ * Finds the posted properties from the log and compare them to expectedProperties.
+ *
+ * @param output The command log
+ * @param expectedProperties The expected properties
+ */
+function expectLogToContainPostedData(
+	output: string,
+	expectedProperties: Record<string, unknown>
+) {
+	const jsonRegexp = /(?<json>{.+})/g;
+
+	// The log contains (possibly multiple times):
+	// - "Metrics dispatcher: Posting data { ... }"
+	// - "\nsearchData: { ... }"
+	// - "\nTypeError: Failed to fetch"
+	//
+	// For the last two "\n" is used as a separator.
+	const foundPropObjects = output
+		.split(/Metrics dispatcher: Posting data|\n/)
+		.map((maybeProperties) => {
+			const match = jsonRegexp.exec(maybeProperties);
+			return match?.groups?.json ? JSON.parse(match.groups.json) : undefined;
+		})
+		.filter((propertiesOrUndefined) => propertiesOrUndefined !== undefined);
+
+	expect(foundPropObjects).toContainEqual(expectedProperties);
 }
