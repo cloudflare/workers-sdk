@@ -25,7 +25,9 @@ export const vectorizeListCommand = createCommand({
 		},
 	},
 	async handler(args, { config }) {
-		logger.log(`📋 Listing Vectorize indexes...`);
+		if (!args.json) {
+			logger.log(`📋 Listing Vectorize indexes...`);
+		}
 		const indexes = await listIndexes(config, args.deprecatedV1);
 
 		if (indexes.length === 0) {
