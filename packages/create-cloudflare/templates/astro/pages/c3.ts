@@ -1,35 +1,28 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
-import { blue, brandColor, dim } from "@cloudflare/cli/colors";
+import { blue } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
 import { transformFile } from "helpers/codemod";
-import { runCommand } from "helpers/command";
 import { usesTypescript } from "helpers/files";
-import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../../src/templates";
 import type { C3Context, PackageJson } from "types";
 
-const { npx } = detectPackageManager();
-
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [ctx.project.name, "--no-install"]);
+	await runFrameworkGenerator(ctx, [
+		ctx.project.name,
+		// c3 will later install the dependencies
+		"--no-install",
+		// c3 will later ask users if they want to use git
+		"--no-git",
+		// add the cloudflare adapter
+		"--add",
+		"cloudflare",
+	]);
 
 	logRaw(""); // newline
 };
 
 const configure = async () => {
-	await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
-		silent: true,
-		startText: "Installing adapter",
-		doneText: `${brandColor("installed")} ${dim(
-			`via \`${npx} astro add cloudflare\``,
-		)}`,
-	});
-
-	updateAstroConfig();
-};
-
-const updateAstroConfig = () => {
 	const filePath = "astro.config.mjs";
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);
