@@ -105,13 +105,7 @@ export const zD1DatabaseVersion = z.string().regex(/^(alpha|beta|production)$/);
  */
 export const zD1DatabaseName = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/);
 
-/**
- * Specifies the timestamp the resource was created as an ISO8601 string.
- */
-export const zD1CreatedAt = z.string().datetime().readonly();
-
 export const zD1DatabaseResponse = z.object({
-	created_at: zD1CreatedAt.optional(),
 	name: zD1DatabaseName.optional(),
 	uuid: zD1DatabaseIdentifier.optional(),
 	version: zD1DatabaseVersion.optional(),

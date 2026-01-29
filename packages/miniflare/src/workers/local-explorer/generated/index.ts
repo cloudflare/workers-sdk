@@ -15,7 +15,6 @@ export type {
 	D1ApiResponseCommon,
 	D1ApiResponseCommonFailure,
 	D1BatchQuery,
-	D1CreatedAt,
 	D1DatabaseIdentifier,
 	D1DatabaseName,
 	D1DatabaseResponse,

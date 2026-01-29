@@ -130,7 +130,6 @@ export type D1Messages = Array<{
 }>;
 
 export type D1DatabaseResponse = {
-	created_at?: D1CreatedAt;
 	name?: D1DatabaseName;
 	uuid?: D1DatabaseIdentifier;
 	version?: D1DatabaseVersion;
@@ -142,11 +141,6 @@ export type D1DatabaseVersion = string;
  * D1 database name.
  */
 export type D1DatabaseName = string;
-
-/**
- * Specifies the timestamp the resource was created as an ISO8601 string.
- */
-export type D1CreatedAt = string;
 
 export type D1ApiResponseCommon = {
 	errors: D1Messages;

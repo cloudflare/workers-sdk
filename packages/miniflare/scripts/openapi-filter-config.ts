@@ -72,6 +72,8 @@ const config = {
 		schemaProperties: {
 			// Namespace response doesn't include supports_url_encoding locally
 			"workers-kv_namespace": ["supports_url_encoding"],
+			// D1 database response doesn't include created_at locally
+			"d1_database-response": ["created_at"],
 		},
 	},
 } satisfies FilterConfig;

@@ -79,9 +79,6 @@ export async function listD1Databases(
 			name: databaseName,
 			uuid: id,
 			version: "production",
-
-			// The following fields are not available locally
-			// created_at: undefined,
 		} satisfies D1DatabaseResponse;
 	});
 

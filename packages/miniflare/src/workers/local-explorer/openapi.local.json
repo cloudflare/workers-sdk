@@ -816,9 +816,6 @@
 			},
 			"d1_database-response": {
 				"properties": {
-					"created_at": {
-						"$ref": "#/components/schemas/d1_created-at"
-					},
 					"name": {
 						"$ref": "#/components/schemas/d1_database-name"
 					},
@@ -840,13 +837,6 @@
 				"description": "D1 database name.",
 				"example": "my-database",
 				"pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$",
-				"type": "string"
-			},
-			"d1_created-at": {
-				"description": "Specifies the timestamp the resource was created as an ISO8601 string.",
-				"example": "2022-11-15T18:25:44.442097Z",
-				"format": "date-time",
-				"readOnly": true,
 				"type": "string"
 			},
 			"d1_api-response-common": {
