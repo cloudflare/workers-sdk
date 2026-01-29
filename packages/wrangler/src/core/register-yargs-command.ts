@@ -258,8 +258,6 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 							sanitizedArgs,
 							argsUsed,
 							durationMs,
-							durationSeconds: durationMs / 1000,
-							durationMinutes: durationMs / 1000 / 60,
 						},
 						def.behaviour
 					);
@@ -280,8 +278,6 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 							sanitizedArgs,
 							argsUsed,
 							durationMs,
-							durationSeconds: durationMs / 1000,
-							durationMinutes: durationMs / 1000 / 60,
 							errorType: getErrorType(err),
 							errorMessage:
 								err instanceof UserError || err instanceof ContainersUserError

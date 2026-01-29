@@ -2021,8 +2021,6 @@ function dispatchGenericCommandErrorEvent(
 		sanitizedArgs,
 		argsUsed: [],
 		durationMs,
-		durationSeconds: durationMs / 1000,
-		durationMinutes: durationMs / 1000 / 60,
 		errorType: getErrorType(error),
 		errorMessage:
 			error instanceof UserError || error instanceof ContainersUserError
