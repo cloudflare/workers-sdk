@@ -43,6 +43,7 @@ describe("wrangler", () => {
 				  wrangler auth                   🔐 Manage authentication
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
+				  wrangler profile                🔀 Manage authentication profiles for multiple accounts [open-beta]
 				  wrangler whoami                 🕵️ Retrieve your user information
 
 				COMPUTE & AI
@@ -85,6 +86,7 @@ describe("wrangler", () => {
 				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help      Show help  [boolean]
+				      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 				  -v, --version   Show version number  [boolean]
 
 				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
@@ -114,6 +116,7 @@ describe("wrangler", () => {
 				  wrangler auth                   🔐 Manage authentication
 				  wrangler login                  🔓 Login to Cloudflare
 				  wrangler logout                 🚪 Logout from Cloudflare
+				  wrangler profile                🔀 Manage authentication profiles for multiple accounts [open-beta]
 				  wrangler whoami                 🕵️ Retrieve your user information
 
 				COMPUTE & AI
@@ -156,6 +159,7 @@ describe("wrangler", () => {
 				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help      Show help  [boolean]
+				      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 				  -v, --version   Show version number  [boolean]
 
 				Please report any issues to https://github.com/cloudflare/workers-sdk/issues/new/choose"
@@ -228,6 +232,7 @@ describe("wrangler", () => {
 				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help      Show help  [boolean]
+				      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 				  -v, --version   Show version number  [boolean]"
 			`);
 		});
@@ -252,6 +257,7 @@ describe("wrangler", () => {
 				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help      Show help  [boolean]
+				      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 				  -v, --version   Show version number  [boolean]"
 			`);
 		});
@@ -276,6 +282,7 @@ describe("wrangler", () => {
 				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help      Show help  [boolean]
+				      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 				  -v, --version   Show version number  [boolean]"
 			`);
 		});
@@ -299,6 +306,7 @@ describe("wrangler", () => {
 				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help      Show help  [boolean]
+				      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 				  -v, --version   Show version number  [boolean]"
 			`);
 		});
@@ -322,6 +330,7 @@ describe("wrangler", () => {
 				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 				  -h, --help      Show help  [boolean]
+				      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 				  -v, --version   Show version number  [boolean]"
 			`);
 		});
