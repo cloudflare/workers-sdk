@@ -107,10 +107,6 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				return;
 			}
 
-			if (cmdBehaviour?.printMetricsBanner === true) {
-				printMetricsBanner();
-			}
-
 			const argsUsed = properties.argsUsed;
 			const argsCombination = argsUsed.join(", ");
 
@@ -137,10 +133,14 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				agent,
 			};
 
-			const durationMs =
-				"durationMs" in properties ? properties.durationMs : undefined;
-
 			try {
+				if (cmdBehaviour?.printMetricsBanner === true) {
+					printMetricsBanner();
+				}
+
+				const durationMs =
+					"durationMs" in properties ? properties.durationMs : undefined;
+
 				dispatch({
 					name,
 					properties: {
@@ -222,6 +222,9 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		pendingRequests.add(request);
 	}
 
+	/**
+	 * Note that this function can throw if writing to the config file fails.
+	 */
 	function printMetricsBanner() {
 		const metricsConfig = readMetricsConfig();
 		if (
