@@ -64,6 +64,14 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
+      # Quick Edit requires Node 22 because it builds native modules (tree-sitter)
+      # that are not compatible with Node 24's C++20 requirement for V8 headers
+      - name: Switch to Node 22 for Quick Edit
+        if: contains(github.event.*.labels.*.name, 'preview:quick-edit')
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Build and Deploy Quick Edit preview
         if: contains(github.event.*.labels.*.name, 'preview:quick-edit')
         run: pnpm --filter quick-edit run preview
