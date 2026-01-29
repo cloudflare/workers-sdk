@@ -1,4 +1,4 @@
-import { existsSync, statSync } from "node:fs";
+import { statSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { spinner, spinnerWhile } from "@cloudflare/cli/interactive";
@@ -83,7 +83,8 @@ export const d1ExportCommand = createCommand({
 			throw new UserError(`You cannot specify both --no-schema and --no-data`);
 		}
 
-		if (existsSync(output) && statSync(output).isDirectory()) {
+		const stats = statSync(output, { throwIfNoEntry: false });
+		if (stats?.isDirectory()) {
 			throw new UserError(
 				`Please specify a file path for --output, not a directory.`
 			);
