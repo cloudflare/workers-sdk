@@ -1,10 +1,13 @@
 import { validator } from "hono/validator";
 import { z } from "zod";
+import type { AppBindings } from "./api.worker";
 import type {
 	WorkersKvApiResponseCommon,
 	WorkersKvMessages,
 } from "./generated/types.gen";
 import type { Context } from "hono";
+
+export type AppContext = Context<AppBindings>;
 
 // ============================================================================
 // Hono middleware Validators
