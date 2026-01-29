@@ -81,17 +81,27 @@ export const gitCommit = async (ctx: C3Context) => {
 	const s = spinner();
 	s.start("Committing new files");
 
-	await runCommand(["git", "add", "."], {
-		silent: true,
-		cwd: ctx.project.path,
-	});
+	try {
+		await runCommand(["git", "add", "."], {
+			silent: true,
+			cwd: ctx.project.path,
+		});
 
-	await runCommand(["git", "commit", "-m", ctx.commitMessage, "--no-verify"], {
-		silent: true,
-		cwd: ctx.project.path,
-	});
+		await runCommand(
+			["git", "commit", "-m", ctx.commitMessage, "--no-verify"],
+			{
+				silent: true,
+				cwd: ctx.project.path,
+			},
+		);
 
-	s.stop(`${brandColor("git")} ${dim(`commit`)}`);
+		s.stop(`${brandColor("git")} ${dim(`commit`)}`);
+	} catch {
+		s.stop(`${brandColor("git")} ${dim(`commit failed`)}`);
+		updateStatus(
+			"Failed to create initial commit. Your changes have been staged but not committed. You can commit manually later.",
+		);
+	}
 };
 
 const createCommitMessage = async (ctx: C3Context) => {
