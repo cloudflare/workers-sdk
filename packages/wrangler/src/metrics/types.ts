@@ -119,8 +119,6 @@ export type Events =
 				 * The time elapsed between the "wrangler command started" and "wrangler command completed" events
 				 */
 				durationMs: number;
-				durationMinutes: number;
-				durationSeconds: number;
 			};
 	  }
 	| {
@@ -130,8 +128,6 @@ export type Events =
 				 * The time elapsed between the "wrangler command started" and "wrangler command errored" events
 				 */
 				durationMs: number;
-				durationMinutes: number;
-				durationSeconds: number;
 				/**
 				 * Type of error, e.g. UserError, APIError. Does not include stack trace or error message.
 				 */

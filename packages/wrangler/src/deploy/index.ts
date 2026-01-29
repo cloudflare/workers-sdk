@@ -253,6 +253,7 @@ export const deployCommand = createCommand({
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		printMetricsBanner: true,
 	},
 	validateArgs(args) {
 		if (args.nodeCompat) {

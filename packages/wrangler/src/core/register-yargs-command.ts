@@ -127,15 +127,10 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 		addBreadcrumb(def.command);
 
 		try {
-			const shouldPrintBanner = def.behaviour?.printBanner;
+			const shouldPrintBanner = def.behaviour?.printBanner ?? true;
 
 			if (
-				/* No default behaviour override: show the banner */
-				shouldPrintBanner === undefined ||
-				/* Explicit opt in: show the banner */
-				(typeof shouldPrintBanner === "boolean" &&
-					shouldPrintBanner !== false) ||
-				/* Hook resolves to true */
+				shouldPrintBanner === true ||
 				(typeof shouldPrintBanner === "function" &&
 					shouldPrintBanner(args) === true)
 			) {
@@ -236,11 +231,15 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 				);
 				const argsUsed = Object.keys(argsWithSanitizedKeys).sort();
 
-				dispatcher.sendCommandEvent("wrangler command started", {
-					sanitizedCommand,
-					sanitizedArgs,
-					argsUsed,
-				});
+				dispatcher.sendCommandEvent(
+					"wrangler command started",
+					{
+						sanitizedCommand,
+						sanitizedArgs,
+						argsUsed,
+					},
+					def.behaviour
+				);
 
 				try {
 					const result = await def.handler(args, {
@@ -252,14 +251,16 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					});
 
 					const durationMs = Date.now() - startTime;
-					dispatcher.sendCommandEvent("wrangler command completed", {
-						sanitizedCommand,
-						sanitizedArgs,
-						argsUsed,
-						durationMs,
-						durationSeconds: durationMs / 1000,
-						durationMinutes: durationMs / 1000 / 60,
-					});
+					dispatcher.sendCommandEvent(
+						"wrangler command completed",
+						{
+							sanitizedCommand,
+							sanitizedArgs,
+							argsUsed,
+							durationMs,
+						},
+						def.behaviour
+					);
 
 					return result;
 				} catch (err) {
@@ -270,19 +271,21 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					}
 
 					const durationMs = Date.now() - startTime;
-					dispatcher.sendCommandEvent("wrangler command errored", {
-						sanitizedCommand,
-						sanitizedArgs,
-						argsUsed,
-						durationMs,
-						durationSeconds: durationMs / 1000,
-						durationMinutes: durationMs / 1000 / 60,
-						errorType: getErrorType(err),
-						errorMessage:
-							err instanceof UserError || err instanceof ContainersUserError
-								? err.telemetryMessage
-								: undefined,
-					});
+					dispatcher.sendCommandEvent(
+						"wrangler command errored",
+						{
+							sanitizedCommand,
+							sanitizedArgs,
+							argsUsed,
+							durationMs,
+							errorType: getErrorType(err),
+							errorMessage:
+								err instanceof UserError || err instanceof ContainersUserError
+									? err.telemetryMessage
+									: undefined,
+						},
+						def.behaviour
+					);
 
 					await handleError(err, args, argv);
 

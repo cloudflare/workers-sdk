@@ -27,6 +27,9 @@ export const telemetryDisableCommand = createCommand({
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
+	behaviour: {
+		sendMetrics: false,
+	},
 	async handler() {
 		updateMetricsPermission(false);
 		logTelemetryStatus(false);

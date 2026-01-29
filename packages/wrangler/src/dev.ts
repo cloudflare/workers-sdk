@@ -42,6 +42,7 @@ export const dev = createCommand({
 			RESOURCES_PROVISION: args.experimentalProvision ?? false,
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
+		printMetricsBanner: true,
 	},
 	metadata: {
 		description: "👂 Start a local server for developing your Worker",

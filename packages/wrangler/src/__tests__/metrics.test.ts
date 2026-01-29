@@ -309,8 +309,6 @@ describe("metrics", () => {
 						amplitude_event_id: 1,
 						...reused,
 						durationMs: 6000,
-						durationSeconds: 6,
-						durationMinutes: 0.1,
 					},
 				};
 				// command completed
@@ -372,8 +370,6 @@ describe("metrics", () => {
 						amplitude_event_id: 1,
 						...reused,
 						durationMs: 6000,
-						durationSeconds: 6,
-						durationMinutes: 0.1,
 						errorType: "TypeError",
 						errorMessage: undefined,
 					},
@@ -450,8 +446,6 @@ describe("metrics", () => {
 						amplitude_event_id: 1,
 						...{ ...reused, hasAssets: true },
 						durationMs: 6000,
-						durationSeconds: 6,
-						durationMinutes: 0.1,
 					},
 				};
 				expect(std.debug).toContain(
