@@ -192,7 +192,6 @@ import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
 import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
 import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
-import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
@@ -330,7 +329,7 @@ import {
 	logoutCommand,
 	whoamiCommand,
 } from "./user/commands";
-import { betaCmdColor, proxy } from "./utils/constants";
+import { proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
@@ -1521,15 +1520,6 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("containers");
 	registry.registerLegacyCommandCategory("containers", "Compute & AI");
 
-	// [PRIVATE BETA] pubsub
-	wrangler.command(
-		"pubsub",
-		`📮 Manage Pub/Sub brokers ${chalk.hex(betaCmdColor)("[private beta]")}`,
-		(pubsubYargs) => {
-			return pubSubCommands(pubsubYargs, subHelp);
-		}
-	);
-
 	registry.define([
 		{
 			command: "wrangler dispatch-namespace",
@@ -1877,8 +1867,6 @@ export function createCLIParser(argv: string[]) {
 
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
-
-	registry.registerLegacyCommandCategory("pubsub", "Compute & AI");
 
 	registry.registerAll();
 

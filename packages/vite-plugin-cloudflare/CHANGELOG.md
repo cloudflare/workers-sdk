@@ -1,5 +1,16 @@
 # @cloudflare/vite-plugin
 
+## 1.22.1
+
+### Patch Changes
+
+- [#12187](https://github.com/cloudflare/workers-sdk/pull/12187) [`0c85b05`](https://github.com/cloudflare/workers-sdk/commit/0c85b059f39ac9151c862943f9c891b091dea566) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use `esmExternalRequirePlugin` to convert external `require` calls in Vite 8.
+
+- Updated dependencies [[`8a210af`](https://github.com/cloudflare/workers-sdk/commit/8a210afbfe6d960098ac3f280071a5282a4dd87b), [`eb8a415`](https://github.com/cloudflare/workers-sdk/commit/eb8a415ce33ff16e04e989a59849d7b8ba981a01), [`3b06b18`](https://github.com/cloudflare/workers-sdk/commit/3b06b18670bd975a6ffc1678b9d9c787f3dcf10a), [`17961bb`](https://github.com/cloudflare/workers-sdk/commit/17961bb6a7cadcad7e1c7f86804267f3a04da2fa), [`52fdfe7`](https://github.com/cloudflare/workers-sdk/commit/52fdfe7d9427dd65d4d8bca8f37c0c753e25bee7), [`6d8d9cd`](https://github.com/cloudflare/workers-sdk/commit/6d8d9cd6c040721037b4ac323699a35eca69f019), [`5f060c9`](https://github.com/cloudflare/workers-sdk/commit/5f060c9c27b9f5d2a00df374ed92f5055f24ea3c), [`cb72c11`](https://github.com/cloudflare/workers-sdk/commit/cb72c1146fdab8af7d071ea0af0ea04c7523ee5b)]:
+  - miniflare@4.20260128.0
+  - wrangler@4.61.1
+  - @cloudflare/unenv-preset@2.12.0
+
 ## 1.22.0
 
 ### Minor Changes

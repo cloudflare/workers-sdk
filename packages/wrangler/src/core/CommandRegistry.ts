@@ -165,7 +165,7 @@ export class CommandRegistry {
 
 	/**
 	 * Registers a category for a legacy command that doesn't use the CommandRegistry.
-	 * This is used for commands like `containers`, `pubsub`, etc, that use the old yargs pattern.
+	 * This is used for commands like `containers`, etc, that use the old yargs pattern.
 	 */
 	registerLegacyCommandCategory(
 		command: string,
