@@ -20,16 +20,7 @@ import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
-import {
-	afterEach,
-	assert,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	test,
-	vi,
-} from "vitest";
+import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { Static } from "../autoconfig/frameworks/static";
 import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packages";
@@ -658,7 +649,7 @@ describe("deploy", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in.
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -702,7 +693,7 @@ describe("deploy", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Attempting to login via OAuth...
-					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 					Successfully logged in.
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -8360,7 +8351,7 @@ addEventListener('fetch', event => {});`
 				      \`\`\`
 				      [[migrations]]
 				      tag = \\"v1\\"
-				      new_classes = [ \\"SomeClass\\" ]
+				      new_sqlite_classes = [ \\"SomeClass\\" ]
 
 				      \`\`\`
 
@@ -9005,6 +8996,31 @@ addEventListener('fetch', event => {});`
 			mockSubDomainRequest();
 			mockUploadWorkerRequest({
 				expectedLimits: { cpu_ms: 15_000 },
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
+
+		it("should allow specifying a subrequests limit", async () => {
+			writeWranglerConfig({
+				limits: { subrequests: 100 },
+			});
+
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedLimits: { subrequests: 100 },
 			});
 
 			await runWrangler("deploy index.js");
@@ -15848,12 +15864,12 @@ export default{
 		});
 	});
 
-	it("should output a deploy output entry to WRANGLER_OUTPUT_FILE_PATH containing a field with the autoconfig summary if autoconfig run", async () => {
+	it("should output a deploy and an autoconfig output entry to WRANGLER_OUTPUT_FILE_PATH if autoconfig run", async () => {
 		const outputFile = "./output.json";
 
 		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
 			configured: false,
-			framework: new Static("static"),
+			framework: new Static({ id: "static", name: "Static" }),
 			workerName: "my-site",
 			projectPath: ".",
 		});
@@ -15884,15 +15900,19 @@ export default{
 			WRANGLER_OUTPUT_FILE_PATH: outputFile,
 		});
 
-		const deployOutputEntry = (await readFile(outputFile, "utf8"))
+		const outputEntries = (await readFile(outputFile, "utf8"))
 			.split("\n")
 			.filter(Boolean)
-			.map((line) => JSON.parse(line))
-			.find((obj) => obj.type === "deploy") as OutputEntry | undefined;
+			.map((line) => JSON.parse(line)) as OutputEntry[];
 
-		assert(deployOutputEntry?.type === "deploy");
+		expect(outputEntries).toContainEqual(
+			expect.objectContaining({ type: "deploy" })
+		);
 
-		expect(deployOutputEntry.autoconfig_summary).toMatchInlineSnapshot(`
+		const autoconfigOutputEntry = outputEntries.find(
+			(obj) => obj.type === "autoconfig"
+		);
+		expect(autoconfigOutputEntry?.summary).toMatchInlineSnapshot(`
 			Object {
 			  "outputDir": "public",
 			  "scripts": Object {
@@ -15908,40 +15928,6 @@ export default{
 			  "wranglerInstall": true,
 			}
 		`);
-	});
-
-	it("should output a deploy output entry to WRANGLER_OUTPUT_FILE_PATH not containing a field with the autoconfig summary if autoconfig didn't run", async () => {
-		const outputFile = "./output.json";
-
-		writeWranglerConfig({
-			name: "worker-name",
-			compatibility_date: "2025-12-02",
-			assets: {
-				directory: ".",
-			},
-		});
-
-		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
-			configured: true,
-			framework: new Static("static"),
-			workerName: "my-worker",
-			projectPath: ".",
-		});
-
-		await runWrangler("deploy --x-autoconfig --dry-run", {
-			...process.env,
-			WRANGLER_OUTPUT_FILE_PATH: outputFile,
-		});
-
-		const deployOutputEntry = (await readFile(outputFile, "utf8"))
-			.split("\n")
-			.filter(Boolean)
-			.map((line) => JSON.parse(line))
-			.find((obj) => obj.type === "deploy") as OutputEntry | undefined;
-
-		assert(deployOutputEntry?.type === "deploy");
-
-		expect(deployOutputEntry.autoconfig_summary).toBeUndefined();
 	});
 
 	describe("open-next delegation", () => {

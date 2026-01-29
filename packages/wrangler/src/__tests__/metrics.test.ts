@@ -18,7 +18,10 @@ import {
 	readMetricsConfig,
 	writeMetricsConfig,
 } from "../metrics/metrics-config";
-import { getMetricsDispatcher } from "../metrics/metrics-dispatcher";
+import {
+	allMetricsDispatchesCompleted,
+	getMetricsDispatcher,
+} from "../metrics/metrics-dispatcher";
 import { sniffUserAgent } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
@@ -79,7 +82,8 @@ describe("metrics", () => {
 			});
 		});
 
-		afterEach(() => {
+		afterEach(async () => {
+			await allMetricsDispatchesCompleted();
 			vi.useRealTimers();
 		});
 
@@ -101,7 +105,7 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1, b: 2 });
-				await Promise.all(dispatcher.requests);
+				await allMetricsDispatchesCompleted();
 				expect(requests.count).toBe(1);
 				expect(std.debug).toMatchInlineSnapshot(
 					`"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"os\\":\\"foo:bar\\",\\"agent\\":null,\\"a\\":1,\\"b\\":2}}"`
@@ -118,7 +122,7 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("version-test");
-				await Promise.all(dispatcher.requests);
+				await allMetricsDispatchesCompleted();
 				expect(requests.count).toBe(1);
 				expect(std.debug).toContain('"wranglerVersion":"1.2.3"');
 				expect(std.debug).toContain('"wranglerMajorVersion":1');
@@ -152,7 +156,7 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1, b: 2 });
-				await Promise.all(dispatcher.requests);
+				await allMetricsDispatchesCompleted();
 
 				expect(std.debug).toMatchInlineSnapshot(`
 					"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"os\\":\\"foo:bar\\",\\"agent\\":null,\\"a\\":1,\\"b\\":2}}
@@ -194,7 +198,7 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1 });
-				await Promise.all(dispatcher.requests);
+				await allMetricsDispatchesCompleted();
 
 				expect(requests.count).toBe(1);
 				expect(std.debug).toContain('"agent":"claude-code"');
@@ -210,32 +214,11 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1 });
-				await Promise.all(dispatcher.requests);
+				await allMetricsDispatchesCompleted();
 
 				expect(requests.count).toBe(1);
 				expect(std.debug).toContain('"agent":null');
 			});
-		});
-
-		it("should keep track of all requests made", async () => {
-			const requests = mockMetricRequest();
-			const dispatcher = getMetricsDispatcher({
-				sendMetrics: true,
-			});
-
-			dispatcher.sendAdhocEvent("some-event", { a: 1, b: 2 });
-			expect(dispatcher.requests.length).toBe(1);
-
-			expect(requests.count).toBe(0);
-			await Promise.allSettled(dispatcher.requests);
-			expect(requests.count).toBe(1);
-
-			dispatcher.sendAdhocEvent("another-event", { c: 3, d: 4 });
-			expect(dispatcher.requests.length).toBe(2);
-
-			expect(requests.count).toBe(1);
-			await Promise.allSettled(dispatcher.requests);
-			expect(requests.count).toBe(2);
 		});
 
 		describe("sendCommandEvent()", () => {
@@ -258,8 +241,8 @@ describe("metrics", () => {
 				argsUsed: [],
 				argsCombination: "",
 				agent: null,
-				command: "wrangler docs",
-				args: {},
+				sanitizedCommand: "docs",
+				sanitizedArgs: {},
 			};
 			beforeEach(() => {
 				// Default: no agent detected
@@ -304,7 +287,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 
-				const expectedStartReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command started",
 					timestamp: 1733961600000,
@@ -313,11 +296,9 @@ describe("metrics", () => {
 						amplitude_event_id: 0,
 						...reused,
 					},
-				};
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedStartReq)}`
-				);
-				const expectedCompleteReq = {
+				});
+
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command completed",
 					timestamp: 1733961606000,
@@ -329,17 +310,14 @@ describe("metrics", () => {
 						durationSeconds: 6,
 						durationMinutes: 0.1,
 					},
-				};
-				// command completed
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedCompleteReq)}`
-				);
+				});
+
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-
 					 ⛅️ wrangler x.x.x
 					──────────────────
+
+					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
 					Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -366,7 +344,7 @@ describe("metrics", () => {
 				);
 				expect(requests.count).toBe(2);
 
-				const expectedStartReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command started",
 					timestamp: 1733961600000,
@@ -375,12 +353,9 @@ describe("metrics", () => {
 						amplitude_event_id: 0,
 						...reused,
 					},
-				};
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedStartReq)}`
-				);
+				});
 
-				const expectedErrorReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command errored",
 					timestamp: 1733961606000,
@@ -394,11 +369,7 @@ describe("metrics", () => {
 						errorType: "TypeError",
 						errorMessage: undefined,
 					},
-				};
-
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedErrorReq)}`
-				);
+				});
 			});
 
 			it("should mark isCI as true if running in CI", async () => {
@@ -442,8 +413,7 @@ describe("metrics", () => {
 				await runWrangler("docs arg");
 				expect(requests.count).toBe(2);
 
-				// command started
-				const expectedStartReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command started",
 					timestamp: 1733961600000,
@@ -452,13 +422,9 @@ describe("metrics", () => {
 						amplitude_event_id: 0,
 						...{ ...reused, hasAssets: true },
 					},
-				};
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedStartReq)}`
-				);
+				});
 
-				// command completed
-				const expectedCompleteReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command completed",
 					timestamp: 1733961606000,
@@ -470,16 +436,14 @@ describe("metrics", () => {
 						durationSeconds: 6,
 						durationMinutes: 0.1,
 					},
-				};
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedCompleteReq)}`
-				);
+				});
+
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-
 					 ⛅️ wrangler x.x.x
 					──────────────────
+
+					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
 					Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -497,7 +461,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 				expect(std.debug).toContain('"argsCombination":""');
-				expect(std.debug).toContain('"command":"wrangler login"');
+				expect(std.debug).toContain('"sanitizedCommand":""');
 			});
 
 			it("should include args provided by the user", async () => {
@@ -581,10 +545,10 @@ describe("metrics", () => {
 					await runWrangler("docs arg");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-
 						 ⛅️ wrangler x.x.x
 						──────────────────
+
+						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
 						Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
 					`);
 
@@ -616,10 +580,10 @@ describe("metrics", () => {
 					await runWrangler("docs arg");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-
 						 ⛅️ wrangler x.x.x
 						──────────────────
+
+						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
 						Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
 					`);
 					expect(requests.count).toBe(2);
@@ -964,4 +928,33 @@ function mockMetricRequest() {
 	);
 
 	return requests;
+}
+
+/**
+ * Finds the posted properties from the log and compare them to expectedProperties.
+ *
+ * @param output The command log
+ * @param expectedProperties The expected properties
+ */
+function expectLogToContainPostedData(
+	output: string,
+	expectedProperties: Record<string, unknown>
+) {
+	const jsonRegexp = /(?<json>{.+})/g;
+
+	// The log contains (possibly multiple times):
+	// - "Metrics dispatcher: Posting data { ... }"
+	// - "\nsearchData: { ... }"
+	// - "\nTypeError: Failed to fetch"
+	//
+	// For the last two "\n" is used as a separator.
+	const foundPropObjects = output
+		.split(/Metrics dispatcher: Posting data|\n/)
+		.map((maybeProperties) => {
+			const match = jsonRegexp.exec(maybeProperties);
+			return match?.groups?.json ? JSON.parse(match.groups.json) : undefined;
+		})
+		.filter((propertiesOrUndefined) => propertiesOrUndefined !== undefined);
+
+	expect(foundPropObjects).toContainEqual(expectedProperties);
 }

@@ -1,6 +1,9 @@
 import assert from "node:assert";
 import * as path from "node:path";
-import { getCloudflarePreset } from "@cloudflare/unenv-preset";
+import {
+	getCloudflarePreset,
+	nonPrefixedNodeModules,
+} from "@cloudflare/unenv-preset";
 import { getNodeCompat } from "miniflare";
 import { resolvePathSync } from "mlly";
 import { defineEnv } from "unenv";
@@ -230,6 +233,10 @@ export function hasNodeJsAls(workerConfig: ResolvedWorkerConfig | undefined) {
 export function isNodeAlsModule(modulePath: string) {
 	return /^(?:node:)?async_hooks$/.test(modulePath);
 }
+
+export const nodeBuiltinsRE = new RegExp(
+	`^(${nonPrefixedNodeModules.join("|")}|node:.+)$`
+);
 
 export function assertHasNodeJsCompat(
 	nodeJsCompat: NodeJsCompat | undefined

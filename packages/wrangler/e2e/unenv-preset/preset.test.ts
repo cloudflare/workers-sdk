@@ -598,6 +598,27 @@ const localTestConfigs: TestConfig[] = [
 		// 	},
 		// },
 	],
+	// node:repl (experimental, no default enable date)
+	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
+		{
+			name: "repl enabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["enable_nodejs_repl_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_repl_module: true,
+			},
+		},
+		{
+			name: "repl disabled by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: ["disable_nodejs_repl_module", "experimental"],
+			expectRuntimeFlags: {
+				enable_nodejs_repl_module: false,
+			},
+		},
+	],
 ].flat() as TestConfig[];
 
 describe.each(localTestConfigs)(

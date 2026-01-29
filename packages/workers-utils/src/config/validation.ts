@@ -1864,6 +1864,15 @@ function normalizeAndValidateEnvironment(
 		configPath
 	);
 
+	// top level 'rawEnv' includes inheritable keys and is validated elsewhere
+	if (envName !== "top level") {
+		validateAdditionalProperties(
+			diagnostics,
+			"env." + envName,
+			Object.keys(rawEnv),
+			Object.keys(environment)
+		);
+	}
 	return environment;
 }
 
@@ -4477,11 +4486,19 @@ function normalizeAndValidateLimits(
 	rawEnv: RawEnvironment
 ): Config["limits"] {
 	if (rawEnv.limits) {
-		validateRequiredProperty(
+		validateOptionalProperty(
 			diagnostics,
 			"limits",
 			"cpu_ms",
 			rawEnv.limits.cpu_ms,
+			"number"
+		);
+
+		validateOptionalProperty(
+			diagnostics,
+			"limits",
+			"subrequests",
+			rawEnv.limits.subrequests,
 			"number"
 		);
 	}
@@ -4832,7 +4849,9 @@ function warnIfDurableObjectsHaveNoMigrations(
 				\`\`\`
 				${formatConfigSnippet(
 					{
-						migrations: [{ tag: "v1", new_classes: durableObjectClassnames }],
+						migrations: [
+							{ tag: "v1", new_sqlite_classes: durableObjectClassnames },
+						],
 					},
 					configPath
 				)}

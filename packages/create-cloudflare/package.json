@@ -1,6 +1,6 @@
 {
 	"name": "create-cloudflare",
-	"version": "2.62.3",
+	"version": "2.62.5",
 	"description": "A CLI for creating and deploying new applications to Cloudflare.",
 	"keywords": [
 		"cloudflare",
@@ -74,7 +74,7 @@
 		"glob": "^10.3.3",
 		"haikunator": "^2.1.2",
 		"indent-string": "^5.0.0",
-		"jsonc-parser": "^3.2.0",
+		"jsonc-parser": "catalog:default",
 		"magic-string": "^0.30.5",
 		"open": "^8.4.0",
 		"recast": "^0.22.0",
