@@ -254,6 +254,97 @@ describe("Profile", () => {
 		});
 	});
 
+	describe("staging environment", () => {
+		it("profileExists should find staging profile in staging env", () => {
+			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
+			writeAuthConfigFile(
+				{
+					oauth_token: "token",
+					refresh_token: "refresh",
+					expiration_time: "2030-01-01T00:00:00Z",
+				},
+				"work"
+			);
+			expect(profileExists("work")).toBe(true);
+			vi.unstubAllEnvs();
+		});
+
+		it("profileExists should not find production profile in staging env", () => {
+			writeAuthConfigFile(
+				{
+					oauth_token: "token",
+					refresh_token: "refresh",
+					expiration_time: "2030-01-01T00:00:00Z",
+				},
+				"work"
+			);
+			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
+			expect(profileExists("work")).toBe(false);
+			vi.unstubAllEnvs();
+		});
+
+		it("listProfiles should list staging profiles by correct name", () => {
+			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
+			writeAuthConfigFile(
+				{
+					oauth_token: "token",
+					refresh_token: "refresh",
+					expiration_time: "2030-01-01T00:00:00Z",
+				},
+				"work"
+			);
+			const profiles = listProfiles();
+			expect(profiles).toContain("default");
+			expect(profiles).toContain("work");
+			vi.unstubAllEnvs();
+		});
+
+		it("listProfiles should not list production profiles in staging env", () => {
+			writeAuthConfigFile(
+				{
+					oauth_token: "token",
+					refresh_token: "refresh",
+					expiration_time: "2030-01-01T00:00:00Z",
+				},
+				"work"
+			);
+			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
+			const profiles = listProfiles();
+			expect(profiles).toEqual(["default"]);
+			vi.unstubAllEnvs();
+		});
+
+		it("deleteProfile should delete staging profile in staging env", () => {
+			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
+			writeAuthConfigFile(
+				{
+					oauth_token: "token",
+					refresh_token: "refresh",
+					expiration_time: "2030-01-01T00:00:00Z",
+				},
+				"work"
+			);
+			expect(profileExists("work")).toBe(true);
+			deleteProfile("work");
+			expect(profileExists("work")).toBe(false);
+			vi.unstubAllEnvs();
+		});
+
+		it("deleteProfile should not find production profile in staging env", () => {
+			writeAuthConfigFile(
+				{
+					oauth_token: "token",
+					refresh_token: "refresh",
+					expiration_time: "2030-01-01T00:00:00Z",
+				},
+				"work"
+			);
+			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
+			expect(() => deleteProfile("work")).toThrow("does not exist");
+			vi.unstubAllEnvs();
+		});
+	});
+
 	describe("CLI commands", () => {
 		describe("wrangler profile list", () => {
 			it("should list default profile when no others exist", async () => {

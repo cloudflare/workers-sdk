@@ -454,8 +454,7 @@ export function profileExists(name: string): boolean {
 		// The default profile always "exists" (it uses the standard config path)
 		return true;
 	}
-	const profilePath = path.join(getProfilesDir(), `${name}.toml`);
-	return existsSync(profilePath);
+	return existsSync(getAuthConfigFilePath(name));
 }
 
 /**
@@ -464,13 +463,21 @@ export function profileExists(name: string): boolean {
  */
 export function listProfiles(): string[] {
 	const profiles: string[] = ["default"];
+	const environment = getCloudflareApiEnvironmentFromEnv();
+	// In production, profile files are "<name>.toml".
+	// In other environments (e.g. staging), files are "<name>-<environment>.toml".
+	// NOTE: A production profile named "foo-staging" would collide with a staging
+	// profile named "foo" since both resolve to "foo-staging.toml". This is a known
+	// limitation of the naming scheme; staging is internal-only so the risk is negligible.
+	const suffix = environment === "production" ? "" : `-${environment}`;
+	const extension = `${suffix}.toml`;
 	try {
 		const profilesDir = getProfilesDir();
 		if (existsSync(profilesDir)) {
 			const files = readdirSync(profilesDir);
 			for (const file of files) {
-				if (file.endsWith(".toml")) {
-					const name = file.slice(0, -5); // remove .toml
+				if (file.endsWith(extension)) {
+					const name = file.slice(0, -extension.length);
 					if (name && PROFILE_NAME_PATTERN.test(name)) {
 						profiles.push(name);
 					}
@@ -514,7 +521,7 @@ export function deleteProfile(name: string): void {
 	}
 	validateProfileName(name);
 
-	const profilePath = path.join(getProfilesDir(), `${name}.toml`);
+	const profilePath = getAuthConfigFilePath(name);
 	if (!existsSync(profilePath)) {
 		throw new UserError(`Profile "${name}" does not exist.`);
 	}
