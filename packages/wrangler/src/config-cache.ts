@@ -3,8 +3,14 @@ import * as path from "node:path";
 import { findUpSync } from "find-up";
 import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
+import { getWranglerHiddenDirPath } from "./paths";
 
 let cacheMessageShown = false;
+
+// Only used internally for disabling caching during tests
+export function disableConfigCache() {
+	__cacheFolder = null;
+}
 
 let __cacheFolder: string | null | undefined;
 function getCacheFolder() {
@@ -15,13 +21,15 @@ function getCacheFolder() {
 	const closestNodeModulesDirectory = findUpSync("node_modules", {
 		type: "directory",
 	});
-	__cacheFolder = closestNodeModulesDirectory
-		? path.join(closestNodeModulesDirectory, ".cache/wrangler")
-		: null;
 
-	if (!__cacheFolder) {
-		logger.debug("No folder available to cache configuration");
+	if (closestNodeModulesDirectory) {
+		__cacheFolder = path.join(closestNodeModulesDirectory, ".cache/wrangler");
+	} else {
+		// Fall back to the project-level .wrangler folder when no node_modules is found
+		// (e.g., when running via npx wrangler)
+		__cacheFolder = path.join(getWranglerHiddenDirPath(undefined), "cache");
 	}
+
 	return __cacheFolder;
 }
 
@@ -84,5 +92,9 @@ export function purgeConfigCaches() {
 	if (cacheFolder) {
 		rmSync(cacheFolder, { recursive: true, force: true });
 	}
-	__cacheFolder = undefined;
+
+	// Only reset to undefined if not explicitly disabled (null)
+	if (__cacheFolder !== null) {
+		__cacheFolder = undefined;
+	}
 }
