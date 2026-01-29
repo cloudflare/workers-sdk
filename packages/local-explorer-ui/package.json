@@ -4,7 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "pnpm generate:api && vite build",
+		"build": "pnpm generate:api && vite build && prettier --write src/routeTree.gen.ts",
 		"check:type": "tsc --build",
 		"dev": "vite",
 		"generate:api": "openapi-ts && prettier --write src/api/generated",
