@@ -9,11 +9,11 @@ interface PagesConfigCache {
 }
 
 describe("config cache without node_modules", () => {
-	// Use a controlled homedir so the global cache fallback works in a predictable location
-	runInTempDir({ homedir: "home", disableCaching: false });
+	// When no node_modules exists, cache falls back to project-level .wrangler/cache
+	runInTempDir({ disableCaching: false });
 	mockConsoleMethods();
 	// In this set of tests, we don't create a node_modules folder,
-	// so the cache should fall back to the global wrangler config directory
+	// so the cache should fall back to the project-level .wrangler/cache folder
 	const pagesConfigCacheFilename = "pages-config-cache.json";
 
 	it("should return an empty config if no file exists", () => {
@@ -22,7 +22,7 @@ describe("config cache without node_modules", () => {
 		).toMatchInlineSnapshot(`Object {}`);
 	});
 
-	it("should fall back to global cache when no node_modules exists", () => {
+	it("should fall back to .wrangler/cache when no node_modules exists", () => {
 		saveToConfigCache<PagesConfigCache>(pagesConfigCacheFilename, {
 			account_id: "some-account-id",
 			pages_project_name: "foo",

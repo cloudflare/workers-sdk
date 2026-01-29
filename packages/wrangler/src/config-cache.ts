@@ -1,9 +1,9 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
-import { getGlobalWranglerConfigPath } from "@cloudflare/workers-utils";
 import { findUpSync } from "find-up";
 import { isNonInteractiveOrCI } from "./is-interactive";
 import { logger } from "./logger";
+import { getWranglerHiddenDirPath } from "./paths";
 
 let cacheMessageShown = false;
 
@@ -25,9 +25,9 @@ function getCacheFolder() {
 	if (closestNodeModulesDirectory) {
 		__cacheFolder = path.join(closestNodeModulesDirectory, ".cache/wrangler");
 	} else {
-		// Fall back to the global wrangler config directory when no node_modules is found
+		// Fall back to the project-level .wrangler folder when no node_modules is found
 		// (e.g., when running via npx wrangler)
-		__cacheFolder = path.join(getGlobalWranglerConfigPath(), "cache");
+		__cacheFolder = path.join(getWranglerHiddenDirPath(undefined), "cache");
 	}
 
 	return __cacheFolder;
