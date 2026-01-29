@@ -153,6 +153,12 @@ export type CommandDefinition<
 		printBanner?: boolean | ((args: HandlerArgs<NamedArgDefs>) => boolean);
 
 		/**
+		 * Opt-in to printing a metrics banner for this command.
+		 * @default false
+		 */
+		printMetricsBanner?: boolean;
+
+		/**
 		 * By default, wrangler will print warnings about the Wrangler configuration file.
 		 * Set this value to `false` to skip printing these warnings.
 		 */
@@ -190,6 +196,12 @@ export type CommandDefinition<
 		 * using the `-e|--env` cli flag, show a warning suggesting that one should instead be specified.
 		 */
 		warnIfMultipleEnvsConfiguredButNoneSpecified?: boolean;
+
+		/**
+		 * Opt out of sending metrics for this command
+		 * @default true
+		 */
+		sendMetrics?: boolean;
 	};
 
 	/**
