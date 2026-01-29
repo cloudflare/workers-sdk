@@ -45,6 +45,10 @@ export function getOutputDirectory(
 
 const postfixRE = /[?#].*$/;
 export function cleanUrl(url: string): string {
+	// Don't strip subpath imports (URLs starting with #)
+	if (url.startsWith("#")) {
+		return url;
+	}
 	return url.replace(postfixRE, "");
 }
 

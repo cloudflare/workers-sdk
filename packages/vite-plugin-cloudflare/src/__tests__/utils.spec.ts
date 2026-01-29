@@ -1,6 +1,28 @@
 import * as path from "node:path";
 import { describe, expect, test } from "vitest";
-import { getOutputDirectory } from "../utils";
+import { cleanUrl, getOutputDirectory } from "../utils";
+
+describe("cleanUrl", () => {
+	test("removes query parameters from URL", () => {
+		expect(cleanUrl("./file.wasm?module")).toBe("./file.wasm");
+	});
+
+	test("removes hash fragments from URL", () => {
+		expect(cleanUrl("./file.js#section")).toBe("./file.js");
+	});
+
+	test("preserves subpath imports that start with #", () => {
+		expect(cleanUrl("#path/to/file.html")).toBe("#path/to/file.html");
+		expect(cleanUrl("#components/template.txt")).toBe(
+			"#components/template.txt"
+		);
+	});
+
+	test("returns unchanged URL when no query or hash present", () => {
+		expect(cleanUrl("./file.html")).toBe("./file.html");
+		expect(cleanUrl("/absolute/path.txt")).toBe("/absolute/path.txt");
+	});
+});
 
 describe("getOutputDirectory", () => {
 	test("returns the correct output if `environments[environmentName].build.outDir` is defined", () => {
