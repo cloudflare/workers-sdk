@@ -134,7 +134,6 @@ export function createReporter() {
 				startTime = Date.now();
 			} else {
 				const ms = Date.now() - startTime;
-
 				additionalProperties["durationMs"] = ms;
 				additionalProperties["durationSeconds"] = ms / 1000;
 				additionalProperties["durationMinutes"] = ms / 1000 / 60;
