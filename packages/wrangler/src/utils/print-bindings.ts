@@ -368,12 +368,15 @@ function getBindingOutputEntry(
 		mode = getMode({ isSimulatedLocally: true });
 	} else if (
 		binding.type === "version_metadata" ||
-		binding.type === "fetcher" ||
 		binding.type === "worker_loader" ||
 		binding.type === "assets"
 	) {
 		value = undefined;
 		mode = getMode({ isSimulatedLocally: true });
+	} else if (binding.type === "fetcher") {
+		// Fetcher bindings are internal implementation details (like ASSETS for pages)
+		// and should not be displayed to users
+		return null;
 	} else if (binding.type === "browser" || binding.type === "images") {
 		value = undefined;
 		mode = standardRemoteMode();

@@ -180,23 +180,23 @@ export function convertConfigToBindings(
 		};
 	}
 
-	// 7. r2_buckets
-	for (const r2 of config.r2_buckets ?? []) {
-		const { binding, preview_bucket_name: _, ...rest } = r2;
-		output[binding] = {
-			type: "r2_bucket",
-			...rest,
-			bucket_name: getId(r2, "preview_bucket_name", "bucket_name"),
-		};
-	}
-
-	// 8. d1_databases
+	// 7. d1_databases
 	for (const d1 of config.d1_databases ?? []) {
 		const { binding, preview_database_id: _, ...rest } = d1;
 		output[binding] = {
 			type: "d1",
 			...rest,
 			database_id: getId(d1, "preview_database_id", "database_id"),
+		};
+	}
+
+	// 8. r2_buckets
+	for (const r2 of config.r2_buckets ?? []) {
+		const { binding, preview_bucket_name: _, ...rest } = r2;
+		output[binding] = {
+			type: "r2_bucket",
+			...rest,
+			bucket_name: getId(r2, "preview_bucket_name", "bucket_name"),
 		};
 	}
 
@@ -448,17 +448,7 @@ export function convertStartDevOptionsToBindings(
 		}
 	}
 
-	// kv namespaces
-	if (inputBindings.kv) {
-		for (const kv of inputBindings.kv) {
-			output[kv.binding] = {
-				type: "kv_namespace",
-				id: kv.id,
-			};
-		}
-	}
-
-	// durable objects
+	// durable objects (before kv to match expected output order)
 	if (inputBindings.durableObjects) {
 		for (const durable of inputBindings.durableObjects) {
 			output[durable.name] = {
@@ -470,14 +460,24 @@ export function convertStartDevOptionsToBindings(
 		}
 	}
 
-	// services
-	if (inputBindings.services) {
-		for (const service of inputBindings.services) {
-			output[service.binding] = {
-				type: "service",
-				service: service.service,
-				environment: service.environment,
-				entrypoint: service.entrypoint,
+	// kv namespaces
+	if (inputBindings.kv) {
+		for (const kv of inputBindings.kv) {
+			output[kv.binding] = {
+				type: "kv_namespace",
+				id: kv.id,
+			};
+		}
+	}
+
+	// d1 databases (before r2 to match expected output order)
+	if (inputBindings.d1Databases) {
+		for (const d1 of inputBindings.d1Databases) {
+			output[d1.binding] = {
+				type: "d1",
+				database_id: d1.database_id,
+				database_name: d1.database_name,
+				database_internal_env: d1.database_internal_env,
 			};
 		}
 	}
@@ -489,6 +489,18 @@ export function convertStartDevOptionsToBindings(
 				type: "r2_bucket",
 				bucket_name: r2.bucket_name,
 				jurisdiction: r2.jurisdiction,
+			};
+		}
+	}
+
+	// services (after storage bindings to match expected output order)
+	if (inputBindings.services) {
+		for (const service of inputBindings.services) {
+			output[service.binding] = {
+				type: "service",
+				service: service.service,
+				environment: service.environment,
+				entrypoint: service.entrypoint,
 			};
 		}
 	}
@@ -505,18 +517,6 @@ export function convertStartDevOptionsToBindings(
 		output[inputBindings.version_metadata.binding] = {
 			type: "version_metadata",
 		};
-	}
-
-	// d1 databases
-	if (inputBindings.d1Databases) {
-		for (const d1 of inputBindings.d1Databases) {
-			output[d1.binding] = {
-				type: "d1",
-				database_id: d1.database_id,
-				database_name: d1.database_name,
-				database_internal_env: d1.database_internal_env,
-			};
-		}
 	}
 
 	return output;
