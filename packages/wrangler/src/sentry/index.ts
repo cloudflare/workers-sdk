@@ -165,7 +165,7 @@ export async function captureGlobalException(e: unknown) {
 				? sendErrorReportsEnvVar
 				: await confirm(
 						"Would you like to report this error to Cloudflare? Wrangler's output and the error details will be shared with the Wrangler team to help us diagnose and fix the issue.",
-						{ fallbackValue: false }
+						{ defaultValue: false, fallbackValue: false }
 					);
 
 		if (!sentryReportingAllowed) {
