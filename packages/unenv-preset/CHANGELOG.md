@@ -1,5 +1,11 @@
 # @cloudflare/unenv-preset
 
+## 2.12.0
+
+### Minor Changes
+
+- [#12007](https://github.com/cloudflare/workers-sdk/pull/12007) [`5f060c9`](https://github.com/cloudflare/workers-sdk/commit/5f060c9c27b9f5d2a00df374ed92f5055f24ea3c) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Add support for native `node:repl` module when the `enable_nodejs_repl_module` and `experimental` compatibility flags are enabled.
+
 ## 2.11.0
 
 ### Minor Changes
