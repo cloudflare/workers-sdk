@@ -4,7 +4,7 @@ import { useDispose } from "../../test-shared";
 
 test("version-metadata: provides id, tag, and timestamp", async () => {
 	const mf = new Miniflare({
-		compatibilityDate: "2025-01-01",
+		compatibilityDate: "2026-01-01",
 		versionMetadata: "CF_VERSION_METADATA",
 		modules: true,
 		script: `
@@ -35,7 +35,7 @@ test("version-metadata: provides id, tag, and timestamp", async () => {
 
 test("version-metadata: works with custom binding name", async () => {
 	const mf = new Miniflare({
-		compatibilityDate: "2025-01-01",
+		compatibilityDate: "2026-01-01",
 		versionMetadata: "MY_VERSION",
 		modules: true,
 		script: `
@@ -66,7 +66,7 @@ test("version-metadata: works with custom binding name", async () => {
 
 test("version-metadata: timestamp is valid ISO date", async () => {
 	const mf = new Miniflare({
-		compatibilityDate: "2025-01-01",
+		compatibilityDate: "2026-01-01",
 		versionMetadata: "CF_VERSION_METADATA",
 		modules: true,
 		script: `
