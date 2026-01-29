@@ -108,7 +108,20 @@ vi.mock("undici", async (importOriginal) => {
 	};
 });
 
-vi.mock("../package-manager");
+vi.mock("../package-manager", async (importOriginal) => {
+	const original = await importOriginal<typeof import("../package-manager")>();
+	const mocked = Object.fromEntries(
+		Object.entries(original).map(([key, value]) => {
+			if (typeof value === "function") {
+				// We want to mock all the functions in the module
+				return [key, vi.fn()];
+			}
+			// Non-function values (such as the constants for the package managers) should not be mocked
+			return [key, value];
+		})
+	);
+	return mocked;
+});
 
 vi.mock("../update-check");
 
