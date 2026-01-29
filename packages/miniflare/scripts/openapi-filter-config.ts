@@ -30,10 +30,6 @@ const config = {
 			methods: ["get"],
 		},
 		{
-			path: "/accounts/{account_id}/d1/database/{database_id}",
-			methods: ["get"],
-		},
-		{
 			path: "/accounts/{account_id}/d1/database/{database_id}/raw",
 			methods: ["post"],
 		},

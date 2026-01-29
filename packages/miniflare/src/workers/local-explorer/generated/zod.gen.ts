@@ -79,54 +79,10 @@ export const zD1BatchQuery = z.union([
 	}),
 ]);
 
-export const zD1DatabaseVersion = z.string().regex(/^(alpha|beta|production)$/);
-
 /**
  * D1 database identifier (UUID).
  */
 export const zD1DatabaseIdentifier = z.string().readonly();
-
-/**
- * The read replication mode for the database. Use 'auto' to create replicas and allow D1 automatically place them around the world, or 'disabled' to not use any database replicas (it can take a few hours for all replicas to be deleted).
- */
-export const zD1ReadReplicationMode = z.enum(["auto", "disabled"]);
-
-/**
- * Configuration for D1 read replication.
- */
-export const zD1ReadReplicationDetails = z.object({
-	mode: zD1ReadReplicationMode,
-});
-
-export const zD1TableCount = z.number();
-
-/**
- * D1 database name.
- */
-export const zD1DatabaseName = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/);
-
-/**
- * The D1 database's size, in bytes.
- */
-export const zD1FileSize = z.number();
-
-/**
- * Specifies the timestamp the resource was created as an ISO8601 string.
- */
-export const zD1CreatedAt = z.string().datetime().readonly();
-
-/**
- * The details of the D1 database.
- */
-export const zD1DatabaseDetailsResponse = z.object({
-	created_at: zD1CreatedAt.optional(),
-	file_size: zD1FileSize.optional(),
-	name: zD1DatabaseName.optional(),
-	num_tables: zD1TableCount.optional(),
-	read_replication: zD1ReadReplicationDetails.optional(),
-	uuid: zD1DatabaseIdentifier.optional(),
-	version: zD1DatabaseVersion.optional(),
-});
 
 export const zD1Messages = z.array(
 	z.object({
@@ -141,6 +97,18 @@ export const zD1ApiResponseCommonFailure = z.object({
 	result: z.unknown(),
 	success: z.literal(false),
 });
+
+export const zD1DatabaseVersion = z.string().regex(/^(alpha|beta|production)$/);
+
+/**
+ * D1 database name.
+ */
+export const zD1DatabaseName = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/);
+
+/**
+ * Specifies the timestamp the resource was created as an ISO8601 string.
+ */
+export const zD1CreatedAt = z.string().datetime().readonly();
 
 export const zD1DatabaseResponse = z.object({
 	created_at: zD1CreatedAt.optional(),
@@ -291,17 +259,6 @@ export const zWorkersKvApiResponseCollection = zWorkersKvApiResponseCommon.and(
 		result_info: zWorkersKvResultInfo.optional(),
 	})
 );
-
-/**
- * The details of the D1 database.
- */
-export const zD1DatabaseDetailsResponseWritable = z.object({
-	file_size: zD1FileSize.optional(),
-	name: zD1DatabaseName.optional(),
-	num_tables: zD1TableCount.optional(),
-	read_replication: zD1ReadReplicationDetails.optional(),
-	version: zD1DatabaseVersion.optional(),
-});
 
 export const zD1DatabaseResponseWritable = z.object({
 	name: zD1DatabaseName.optional(),
@@ -468,23 +425,6 @@ export const zCloudflareD1ListDatabasesResponse = zD1ApiResponseCommon.and(
 				total_count: z.number().optional(),
 			})
 			.optional(),
-	})
-);
-
-export const zCloudflareD1GetDatabaseData = z.object({
-	body: z.never().optional(),
-	path: z.object({
-		database_id: z.union([zD1DatabaseIdentifier, zD1DatabaseName]),
-	}),
-	query: z.never().optional(),
-});
-
-/**
- * Database details response
- */
-export const zCloudflareD1GetDatabaseResponse = zD1ApiResponseCommon.and(
-	z.object({
-		result: zD1DatabaseDetailsResponse.optional(),
 	})
 );
 

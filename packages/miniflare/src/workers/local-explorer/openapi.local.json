@@ -533,64 +533,6 @@
 				"tags": ["D1"]
 			}
 		},
-		"/d1/database/{database_id}": {
-			"get": {
-				"description": "Returns the specified D1 database.",
-				"operationId": "cloudflare-d1-get-database",
-				"parameters": [
-					{
-						"in": "path",
-						"name": "database_id",
-						"required": true,
-						"schema": {
-							"oneOf": [
-								{
-									"$ref": "#/components/schemas/d1_database-identifier"
-								},
-								{
-									"$ref": "#/components/schemas/d1_database-name"
-								}
-							]
-						}
-					}
-				],
-				"responses": {
-					"200": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"allOf": [
-										{
-											"$ref": "#/components/schemas/d1_api-response-common"
-										},
-										{
-											"properties": {
-												"result": {
-													"$ref": "#/components/schemas/d1_database-details-response"
-												}
-											}
-										}
-									]
-								}
-							}
-						},
-						"description": "Database details response"
-					},
-					"4XX": {
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/d1_api-response-common-failure"
-								}
-							}
-						},
-						"description": "Database details response failure"
-					}
-				},
-				"summary": "Get D1 Database",
-				"tags": ["D1"]
-			}
-		},
 		"/d1/database/{database_id}/raw": {
 			"post": {
 				"description": "Returns the query result rows as arrays rather than objects. This is a performance-optimized version of the /query endpoint.",
@@ -809,79 +751,9 @@
 				},
 				"type": "array"
 			},
-			"d1_database-details-response": {
-				"description": "The details of the D1 database.",
-				"properties": {
-					"created_at": {
-						"$ref": "#/components/schemas/d1_created-at"
-					},
-					"file_size": {
-						"$ref": "#/components/schemas/d1_file-size"
-					},
-					"name": {
-						"$ref": "#/components/schemas/d1_database-name"
-					},
-					"num_tables": {
-						"$ref": "#/components/schemas/d1_table-count"
-					},
-					"read_replication": {
-						"$ref": "#/components/schemas/d1_read-replication-details"
-					},
-					"uuid": {
-						"$ref": "#/components/schemas/d1_database-identifier"
-					},
-					"version": {
-						"$ref": "#/components/schemas/d1_database-version"
-					}
-				},
-				"type": "object"
-			},
-			"d1_database-version": {
-				"example": "production",
-				"pattern": "^(alpha|beta|production)$",
-				"type": "string"
-			},
 			"d1_database-identifier": {
 				"description": "D1 database identifier (UUID).",
 				"example": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-				"readOnly": true,
-				"type": "string"
-			},
-			"d1_read-replication-details": {
-				"description": "Configuration for D1 read replication.",
-				"properties": {
-					"mode": {
-						"$ref": "#/components/schemas/d1_read-replication-mode"
-					}
-				},
-				"required": ["mode"],
-				"type": "object"
-			},
-			"d1_read-replication-mode": {
-				"description": "The read replication mode for the database. Use 'auto' to create replicas and allow D1 automatically place them around the world, or 'disabled' to not use any database replicas (it can take a few hours for all replicas to be deleted).",
-				"enum": ["auto", "disabled"],
-				"example": "auto",
-				"type": "string"
-			},
-			"d1_table-count": {
-				"example": 12,
-				"type": "number"
-			},
-			"d1_database-name": {
-				"description": "D1 database name.",
-				"example": "my-database",
-				"pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$",
-				"type": "string"
-			},
-			"d1_file-size": {
-				"description": "The D1 database's size, in bytes.",
-				"example": 12,
-				"type": "number"
-			},
-			"d1_created-at": {
-				"description": "Specifies the timestamp the resource was created as an ISO8601 string.",
-				"example": "2022-11-15T18:25:44.442097Z",
-				"format": "date-time",
 				"readOnly": true,
 				"type": "string"
 			},
@@ -958,6 +830,24 @@
 					}
 				},
 				"type": "object"
+			},
+			"d1_database-version": {
+				"example": "production",
+				"pattern": "^(alpha|beta|production)$",
+				"type": "string"
+			},
+			"d1_database-name": {
+				"description": "D1 database name.",
+				"example": "my-database",
+				"pattern": "^[a-zA-Z0-9][a-zA-Z0-9_-]*$",
+				"type": "string"
+			},
+			"d1_created-at": {
+				"description": "Specifies the timestamp the resource was created as an ISO8601 string.",
+				"example": "2022-11-15T18:25:44.442097Z",
+				"format": "date-time",
+				"readOnly": true,
+				"type": "string"
 			},
 			"d1_api-response-common": {
 				"properties": {

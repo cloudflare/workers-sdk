@@ -110,53 +110,9 @@ export type D1Sql = string;
 export type D1Params = Array<string>;
 
 /**
- * The details of the D1 database.
- */
-export type D1DatabaseDetailsResponse = {
-	created_at?: D1CreatedAt;
-	file_size?: D1FileSize;
-	name?: D1DatabaseName;
-	num_tables?: D1TableCount;
-	read_replication?: D1ReadReplicationDetails;
-	uuid?: D1DatabaseIdentifier;
-	version?: D1DatabaseVersion;
-};
-
-export type D1DatabaseVersion = string;
-
-/**
  * D1 database identifier (UUID).
  */
 export type D1DatabaseIdentifier = string;
-
-/**
- * Configuration for D1 read replication.
- */
-export type D1ReadReplicationDetails = {
-	mode: D1ReadReplicationMode;
-};
-
-/**
- * The read replication mode for the database. Use 'auto' to create replicas and allow D1 automatically place them around the world, or 'disabled' to not use any database replicas (it can take a few hours for all replicas to be deleted).
- */
-export type D1ReadReplicationMode = "auto" | "disabled";
-
-export type D1TableCount = number;
-
-/**
- * D1 database name.
- */
-export type D1DatabaseName = string;
-
-/**
- * The D1 database's size, in bytes.
- */
-export type D1FileSize = number;
-
-/**
- * Specifies the timestamp the resource was created as an ISO8601 string.
- */
-export type D1CreatedAt = string;
 
 export type D1ApiResponseCommonFailure = {
 	errors: D1Messages;
@@ -179,6 +135,18 @@ export type D1DatabaseResponse = {
 	uuid?: D1DatabaseIdentifier;
 	version?: D1DatabaseVersion;
 };
+
+export type D1DatabaseVersion = string;
+
+/**
+ * D1 database name.
+ */
+export type D1DatabaseName = string;
+
+/**
+ * Specifies the timestamp the resource was created as an ISO8601 string.
+ */
+export type D1CreatedAt = string;
 
 export type D1ApiResponseCommon = {
 	errors: D1Messages;
@@ -349,17 +317,6 @@ export type WorkersKvResultInfo = {
 	 * Total results available without any search parameters.
 	 */
 	total_count?: number;
-};
-
-/**
- * The details of the D1 database.
- */
-export type D1DatabaseDetailsResponseWritable = {
-	file_size?: D1FileSize;
-	name?: D1DatabaseName;
-	num_tables?: D1TableCount;
-	read_replication?: D1ReadReplicationDetails;
-	version?: D1DatabaseVersion;
 };
 
 export type D1DatabaseResponseWritable = {
@@ -658,37 +615,6 @@ export type CloudflareD1ListDatabasesResponses = {
 
 export type CloudflareD1ListDatabasesResponse =
 	CloudflareD1ListDatabasesResponses[keyof CloudflareD1ListDatabasesResponses];
-
-export type CloudflareD1GetDatabaseData = {
-	body?: never;
-	path: {
-		database_id: D1DatabaseIdentifier | D1DatabaseName;
-	};
-	query?: never;
-	url: "/d1/database/{database_id}";
-};
-
-export type CloudflareD1GetDatabaseErrors = {
-	/**
-	 * Database details response failure
-	 */
-	"4XX": D1ApiResponseCommonFailure;
-};
-
-export type CloudflareD1GetDatabaseError =
-	CloudflareD1GetDatabaseErrors[keyof CloudflareD1GetDatabaseErrors];
-
-export type CloudflareD1GetDatabaseResponses = {
-	/**
-	 * Database details response
-	 */
-	200: D1ApiResponseCommon & {
-		result?: D1DatabaseDetailsResponse;
-	};
-};
-
-export type CloudflareD1GetDatabaseResponse =
-	CloudflareD1GetDatabaseResponses[keyof CloudflareD1GetDatabaseResponses];
 
 export type CloudflareD1RawDatabaseQueryData = {
 	body: D1BatchQuery;

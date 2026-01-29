@@ -1,14 +1,12 @@
 import { z } from "zod";
 import { errorResponse, wrapResponse } from "../common";
 import {
-	zCloudflareD1GetDatabaseData,
 	zCloudflareD1ListDatabasesData,
 	zCloudflareD1RawDatabaseQueryData,
 } from "../generated/zod.gen";
 import type { Env } from "../api.worker";
 import type { AppContext } from "../common";
 import type {
-	D1DatabaseDetailsResponse,
 	D1DatabaseResponse,
 	D1RawResultResponse,
 	D1SingleQuery,
@@ -39,19 +37,6 @@ function getD1Binding(env: Env, databaseId: string): D1Database | null {
 	}
 
 	return env[bindingName] as D1Database;
-}
-
-/**
- * Retrieves the binding name for a D1 database by its database ID.
- *
- * @param env - The worker environment containing bindings and configuration
- * @param databaseId - The unique identifier of the D1 database
- *
- * @returns The binding name if found, or null if the database ID is not mapped
- */
-function getDatabaseInfo(env: Env, databaseId: string): string | null {
-	const bindingMap = env.LOCAL_EXPLORER_BINDING_MAP.d1;
-	return bindingMap[databaseId] ?? null;
 }
 
 // ============================================================================
@@ -123,53 +108,6 @@ export async function listD1Databases(
 			total_count: totalCount,
 		},
 	});
-}
-
-const _getDatabasePathSchema = zCloudflareD1GetDatabaseData.shape.path;
-type GetDatabasePath = z.output<typeof _getDatabasePathSchema>;
-
-/**
- * Retrieves details for a specific D1 database.
- *
- * Gathers metadata about the database including its name, UUID, and version.
- *
- * Note: Some fields like `created_at`, `file_size`, and `num_tables` are not
- * available in the local development environment.
- *
- * @see https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/get/
- *
- * @param c - The Hono application context
- * @param path - Path parameters containing the database identifier
- * @param path.database_id - The unique identifier of the D1 database to retrieve
- *
- * @returns A JSON response with database details, or a 404 error if not found
- */
-export async function getD1Database(
-	c: AppContext,
-	path: GetDatabasePath
-): Promise<Response> {
-	const { database_id: databaseId } = path;
-
-	const info = getDatabaseInfo(c.env, databaseId);
-	if (!info) {
-		return errorResponse(404, 10000, "Database not found");
-	}
-
-	const databaseName = info.split(":").pop() || info;
-
-	const database = {
-		name: databaseName,
-		uuid: databaseId,
-		version: "production",
-
-		// The following fields are not available locally
-		// created_at: undefined,
-		// file_size: undefined,
-		// num_tables: undefined,
-		// read_replication: undefined,
-	} satisfies D1DatabaseDetailsResponse;
-
-	return c.json(wrapResponse(database));
 }
 
 const _rawDatabaseBodySchema = zCloudflareD1RawDatabaseQueryData.shape.body;

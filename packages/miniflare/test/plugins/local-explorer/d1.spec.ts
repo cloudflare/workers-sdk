@@ -143,44 +143,6 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 		});
 	});
 
-	describe("GET /d1/database/:database_id", () => {
-		it("returns database details for existing database", async () => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/d1/database/test-db-id`
-			);
-
-			expect(response.status).toBe(200);
-			expect(response.headers.get("Content-Type")).toBe("application/json");
-
-			const data = await response.json();
-
-			expect(data).toMatchObject({
-				result: {
-					uuid: "test-db-id",
-					name: "TEST_DB",
-					version: "production",
-				},
-				success: true,
-			});
-		});
-
-		it("returns 404 for non-existent database", async () => {
-			const response = await mf.dispatchFetch(
-				`${BASE_URL}/d1/database/non-existent-id`
-			);
-
-			expect(response.status).toBe(404);
-			expect(response.headers.get("Content-Type")).toBe("application/json");
-
-			const json = await response.json();
-
-			expect(json).toMatchObject({
-				errors: [expect.objectContaining({ message: "Database not found" })],
-				success: false,
-			});
-		});
-	});
-
 	describe("POST /d1/database/:database_id/raw", () => {
 		it("returns results as arrays with column names", async () => {
 			const response = await mf.dispatchFetch(

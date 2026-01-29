@@ -10,7 +10,7 @@ import {
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 } from "./generated/zod.gen";
-import { getD1Database, listD1Databases, rawD1Database } from "./resources/d1";
+import { listD1Databases, rawD1Database } from "./resources/d1";
 import {
 	bulkGetKVValues,
 	deleteKVValue,
@@ -85,10 +85,6 @@ app.get(
 	"/d1/database",
 	validateQuery(zCloudflareD1ListDatabasesData.shape.query.unwrap()),
 	(c) => listD1Databases(c, c.req.valid("query"))
-);
-
-app.get("/d1/database/:database_id", (c) =>
-	getD1Database(c, { database_id: c.req.param("database_id") })
 );
 
 app.post(
