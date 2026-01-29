@@ -32,7 +32,11 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					configured: false,
 					outputDir: "public",
 				},
-				testRawConfig
+				testRawConfig,
+				{
+					build: "npm run build",
+					deploy: "npx wrangler deploy",
+				}
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -51,6 +55,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 
 			expect(summary).toMatchInlineSnapshot(`
 				Object {
+				  "buildCommand": "npm run build",
+				  "deployCommand": "npx wrangler deploy",
+				  "frameworkId": undefined,
 				  "outputDir": "public",
 				  "scripts": Object {},
 				  "wranglerConfig": Object {
@@ -78,7 +85,11 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					configured: false,
 					outputDir: "dist",
 				},
-				testRawConfig
+				testRawConfig,
+				{
+					build: "npm run build",
+					deploy: "npx wrangler deploy",
+				}
 			);
 
 			expect(std.out).toContain(
@@ -90,6 +101,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 
 			expect(summary).toMatchInlineSnapshot(`
 				Object {
+				  "buildCommand": "npm run build",
+				  "deployCommand": "npx wrangler deploy",
+				  "frameworkId": undefined,
 				  "outputDir": "dist",
 				  "scripts": Object {
 				    "deploy": "wrangler deploy",
@@ -122,7 +136,11 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					configured: false,
 					outputDir: "out",
 				},
-				testRawConfig
+				testRawConfig,
+				{
+					build: "npm run build",
+					deploy: "npx wrangler deploy",
+				}
 			);
 
 			expect(std.out).toContain(
@@ -134,6 +152,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 
 			expect(summary).toMatchInlineSnapshot(`
 				Object {
+				  "buildCommand": "npm run build",
+				  "deployCommand": "npx wrangler deploy",
+				  "frameworkId": undefined,
 				  "outputDir": "out",
 				  "scripts": Object {
 				    "deploy": "wrangler deploy",
@@ -157,11 +178,15 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				{
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
-					framework: new Astro(),
+					framework: new Astro({ id: "astro", name: "Astro" }),
 					configured: false,
 					outputDir: "dist",
 				},
-				testRawConfig
+				testRawConfig,
+				{
+					build: "npm run build",
+					deploy: "npx wrangler deploy",
+				}
 			);
 
 			expect(std.out).toContain(
@@ -171,6 +196,8 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			expect(summary.frameworkConfiguration).toBe(
 				'Configuring project for Astro with "astro add cloudflare"'
 			);
+
+			expect(summary.frameworkId).toBe("astro");
 		});
 
 		test("doesn't show the framework specific configuration step for the Static framework", async () => {
@@ -178,11 +205,15 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				{
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
-					framework: new Static("static"),
+					framework: new Static({ id: "static", name: "Static" }),
 					configured: false,
 					outputDir: "public",
 				},
-				testRawConfig
+				testRawConfig,
+				{
+					build: "npm run build",
+					deploy: "npx wrangler deploy",
+				}
 			);
 
 			expect(std.out).not.toContain("🛠️  Configuring project for");
