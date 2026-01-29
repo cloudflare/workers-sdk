@@ -127,7 +127,7 @@ async function exportLocal(
 
 	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
 
-	// TODO: should we allow customizing persistence path?
+	// TODO: should we allow customising persistence path?
 	// Should it be --persist-to for consistency (even though this isn't persisting anything)?
 	const persistencePath = getLocalPersistencePath(undefined, config);
 	const d1Persist = path.join(persistencePath, "v3", "d1");
