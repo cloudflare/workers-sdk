@@ -169,6 +169,7 @@ describe("wrangler setup", () => {
 			    "deploy": "wrangler deploy",
 			    "preview": "wrangler dev",
 			  },
+			  "versionCommand": "npx wrangler versions upload",
 			  "wranglerConfig": Object {
 			    "$schema": "node_modules/wrangler/config-schema.json",
 			    "assets": Object {

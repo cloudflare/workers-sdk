@@ -54,6 +54,7 @@ export class NextJs extends Framework {
 			},
 			buildCommandOverride: `${npx} @opennextjs/cloudflare build`,
 			deployCommandOverride: `${npx} @opennextjs/cloudflare deploy`,
+			versionCommandOverride: `${npx} @opennextjs/cloudflare upload`,
 		};
 	}
 
