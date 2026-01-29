@@ -7,6 +7,23 @@ import {
 import { validateUrl } from "./validateURL";
 import type { HeadersRule, InvalidHeadersRule, ParsedHeaders } from "./types";
 
+const SPLAT_PLACEHOLDER_REGEX = /:splat\b/i;
+
+function validateWildcards(path: string): string | undefined {
+	const wildcardCount = (path.match(/\*/g) || []).length;
+	const hasSplatPlaceholder = SPLAT_PLACEHOLDER_REGEX.test(path);
+
+	if (wildcardCount > 1) {
+		return "Multiple wildcards (*) are not supported in a single rule. Use a single wildcard or create separate rules.";
+	}
+
+	if (wildcardCount > 0 && hasSplatPlaceholder) {
+		return "Cannot combine wildcard (*) with :splat placeholder. The wildcard already captures as :splat.";
+	}
+
+	return undefined;
+}
+
 // Not strictly necessary to check for all protocols-like beginnings, since _technically_ that could be a legit header (e.g. name=http, value=://I'm a value).
 // But we're checking here since some people might be caught out and it'll help 99.9% of people who get it wrong.
 // We do the proper validation in `validateUrl` anyway :)
@@ -72,6 +89,17 @@ export function parseHeaders(
 					line,
 					lineNumber: i + 1,
 					message: pathError,
+				});
+				rule = undefined;
+				continue;
+			}
+
+			const wildcardError = validateWildcards(path as string);
+			if (wildcardError) {
+				invalid.push({
+					line,
+					lineNumber: i + 1,
+					message: wildcardError,
 				});
 				rule = undefined;
 				continue;

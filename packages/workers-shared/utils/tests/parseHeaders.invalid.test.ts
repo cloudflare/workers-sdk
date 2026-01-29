@@ -1,6 +1,103 @@
 import { expect, test } from "vitest";
 import { parseHeaders } from "../configuration/parseHeaders";
 
+test("parseHeaders should reject multiple wildcards", () => {
+	const input = `
+    https://*.pages.dev/*
+      X-Robots-Tag: noindex
+  `;
+	const result = parseHeaders(input);
+	expect(result).toEqual({
+		rules: [],
+		invalid: [
+			{
+				line: "https://*.pages.dev/*",
+				lineNumber: 2,
+				message:
+					"Multiple wildcards (*) are not supported in a single rule. Use a single wildcard or create separate rules.",
+			},
+			{
+				line: "X-Robots-Tag: noindex",
+				lineNumber: 3,
+				message: "Path should come before header (x-robots-tag: noindex)",
+			},
+		],
+	});
+});
+
+test("parseHeaders should reject wildcard combined with :splat placeholder", () => {
+	const input = `
+    https://*.pages.dev/:splat
+      Test: value
+  `;
+	const result = parseHeaders(input);
+	expect(result).toEqual({
+		rules: [],
+		invalid: [
+			{
+				line: "https://*.pages.dev/:splat",
+				lineNumber: 2,
+				message:
+					"Cannot combine wildcard (*) with :splat placeholder. The wildcard already captures as :splat.",
+			},
+			{
+				line: "Test: value",
+				lineNumber: 3,
+				message: "Path should come before header (test: value)",
+			},
+		],
+	});
+});
+
+test("parseHeaders should accept valid single wildcard rules", () => {
+	const input = `
+    /static/*
+      Cache-Control: public
+    https://*.example.com/
+      X-Frame-Options: DENY
+  `;
+	const result = parseHeaders(input);
+	expect(result).toEqual({
+		rules: [
+			{
+				path: "/static/*",
+				headers: { "cache-control": "public" },
+				unsetHeaders: [],
+			},
+			{
+				path: "https://*.example.com/",
+				headers: { "x-frame-options": "DENY" },
+				unsetHeaders: [],
+			},
+		],
+		invalid: [],
+	});
+});
+
+test("parseHeaders should reject rules with three or more wildcards", () => {
+	const input = `
+    /a/*/b/*/c/*
+      Test: value
+  `;
+	const result = parseHeaders(input);
+	expect(result).toEqual({
+		rules: [],
+		invalid: [
+			{
+				line: "/a/*/b/*/c/*",
+				lineNumber: 2,
+				message:
+					"Multiple wildcards (*) are not supported in a single rule. Use a single wildcard or create separate rules.",
+			},
+			{
+				line: "Test: value",
+				lineNumber: 3,
+				message: "Path should come before header (test: value)",
+			},
+		],
+	});
+});
+
 test("parseHeaders should reject malformed initial lines", () => {
 	const input = `
     # A single token before a path
