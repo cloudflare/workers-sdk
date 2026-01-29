@@ -115,18 +115,6 @@ export function printBindings(
 		}
 	}
 
-	// Handle unsafe.metadata entries (these are printed as "Unsafe Metadata" bindings)
-	if (context.unsafeMetadata !== undefined) {
-		for (const [key, value] of Object.entries(context.unsafeMetadata)) {
-			output.push({
-				name: key,
-				type: getBindingTypeFriendlyName("unsafe_"),
-				value: JSON.stringify(value),
-				mode: getMode({ isSimulatedLocally: false }),
-			});
-		}
-	}
-
 	if (output.length === 0) {
 		if (context.warnIfNoBindings) {
 			if (context.name && isMultiWorker) {
@@ -264,14 +252,19 @@ export function printBindings(
 			containersTitle = `The following containers are available from ${chalk.blue(context.name)}:`;
 		}
 
-		logger.log(
+		log(
 			`${containersTitle}\n${containers
 				.map((c) => {
 					return `- ${c.name} (${c.image})`;
 				})
 				.join("\n")}`
 		);
-		logger.log();
+		log("");
+	}
+
+	if (context.unsafeMetadata !== undefined) {
+		log("The following unsafe metadata will be attached to your Worker:");
+		log(JSON.stringify(context.unsafeMetadata, null, 2));
 	}
 
 	if (hasConnectionStatus && !isConnectedStatusExplained) {
@@ -309,453 +302,204 @@ function getBindingOutputEntry(
 	hasConnectionStatus?: boolean;
 } | null {
 	const friendlyName = getBindingTypeFriendlyName(binding.type);
+	let value: string | undefined | symbol;
+	let mode: string | undefined;
+	let hasConnectionStatus: boolean | undefined;
 
-	switch (binding.type) {
-		case "plain_text":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: `"${truncate(binding.value)}"`,
-				mode: getMode({ isSimulatedLocally: true }),
-			};
+	// Helper for standard remote check pattern
+	const standardRemoteMode = () =>
+		getMode({
+			isSimulatedLocally:
+				context.remoteBindingsDisabled ||
+				!("remote" in binding && binding.remote),
+		});
+	// Helper for remote-default pattern (undefined when not explicitly remote)
+	const remoteDefaultMode = () =>
+		getMode({
+			isSimulatedLocally:
+				"remote" in binding && binding.remote && !context.remoteBindingsDisabled
+					? false
+					: undefined,
+		});
 
-		case "json":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: truncate(JSON.stringify(binding.value)),
-				mode: getMode({ isSimulatedLocally: true }),
-			};
-
-		case "kv_namespace":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: binding.id,
-				mode: getMode({
-					isSimulatedLocally: context.remoteBindingsDisabled || !binding.remote,
-				}),
-			};
-
-		case "send_email": {
-			const destination_address =
-				"destination_address" in binding
-					? (binding.destination_address as string | undefined)
+	// Compute value and mode based on binding type
+	if (binding.type === "plain_text") {
+		value = truncate(binding.value);
+		mode = getMode({ isSimulatedLocally: true });
+	} else if (binding.type === "json") {
+		value = truncate(JSON.stringify(binding.value));
+		mode = getMode({ isSimulatedLocally: true });
+	} else if (binding.type === "secret_text") {
+		value = truncate(binding.value);
+		mode = getMode({ isSimulatedLocally: true });
+	} else if (binding.type === "kv_namespace") {
+		value = binding.id;
+		mode = standardRemoteMode();
+	} else if (binding.type === "send_email") {
+		const dest =
+			("destination_address" in binding
+				? (binding.destination_address as string)
+				: null) ||
+			("allowed_destination_addresses" in binding
+				? (binding.allowed_destination_addresses as string[])?.join(", ")
+				: null) ||
+			"unrestricted";
+		const senders =
+			"allowed_sender_addresses" in binding
+				? (binding.allowed_sender_addresses as string[])
+				: null;
+		value = senders ? `${dest} - senders: ${senders.join(", ")}` : dest;
+		mode = standardRemoteMode();
+	} else if (binding.type === "wasm_module") {
+		const path = "path" in binding.source ? binding.source.path : undefined;
+		value = path ? truncate(path) : "<Wasm>";
+		mode = getMode({ isSimulatedLocally: true });
+	} else if (binding.type === "text_blob") {
+		value =
+			"contents" in binding.source
+				? truncate(binding.source.contents)
+				: "path" in binding.source
+					? truncate(binding.source.path)
 					: undefined;
-			const allowed_destination_addresses =
-				"allowed_destination_addresses" in binding
-					? (binding.allowed_destination_addresses as string[] | undefined)
+		mode = getMode({ isSimulatedLocally: true });
+	} else if (binding.type === "data_blob") {
+		const path = "path" in binding.source ? binding.source.path : undefined;
+		value = path ? truncate(path) : "<Buffer>";
+		mode = getMode({ isSimulatedLocally: true });
+	} else if (
+		binding.type === "version_metadata" ||
+		binding.type === "fetcher" ||
+		binding.type === "worker_loader" ||
+		binding.type === "assets"
+	) {
+		value = undefined;
+		mode = getMode({ isSimulatedLocally: true });
+	} else if (binding.type === "browser" || binding.type === "images") {
+		value = undefined;
+		mode = standardRemoteMode();
+	} else if (binding.type === "ai" || binding.type === "media") {
+		value = binding.type === "ai" && binding.staging ? "staging" : undefined;
+		mode = getMode({
+			isSimulatedLocally:
+				(binding.remote === true || binding.remote === undefined) &&
+				!context.remoteBindingsDisabled
+					? false
+					: undefined,
+		});
+	} else if (binding.type === "queue") {
+		value = binding.queue_name;
+		mode = standardRemoteMode();
+	} else if (binding.type === "r2_bucket") {
+		value =
+			typeof binding.bucket_name === "symbol"
+				? binding.bucket_name
+				: binding.bucket_name
+					? `${binding.bucket_name}${binding.jurisdiction ? ` (${binding.jurisdiction})` : ""}`
 					: undefined;
-			const allowed_sender_addresses =
-				"allowed_sender_addresses" in binding
-					? (binding.allowed_sender_addresses as string[] | undefined)
-					: undefined;
-			let value =
-				destination_address ||
-				allowed_destination_addresses?.join(", ") ||
-				"unrestricted";
-
-			if (allowed_sender_addresses) {
-				value += ` - senders: ${allowed_sender_addresses.join(", ")}`;
-			}
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value,
-				mode: getMode({
-					isSimulatedLocally: context.remoteBindingsDisabled || !binding.remote,
-				}),
-			};
-		}
-
-		case "wasm_module": {
-			const path = "path" in binding.source ? binding.source.path : undefined;
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: path ? truncate(path) : "<Wasm>",
-				mode: getMode({ isSimulatedLocally: true }),
-			};
-		}
-
-		case "text_blob":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value:
-					"contents" in binding.source
-						? truncate(binding.source.contents)
-						: "path" in binding.source
-							? truncate(binding.source.path)
-							: undefined,
-				mode: getMode({ isSimulatedLocally: true }),
-			};
-
-		case "browser":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: undefined,
-				mode: getMode({
-					isSimulatedLocally: context.remoteBindingsDisabled || !binding.remote,
-				}),
-			};
-
-		case "ai":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: binding.staging ? `staging` : undefined,
-				mode: getMode({
-					isSimulatedLocally:
-						(binding.remote === true || binding.remote === undefined) &&
-						!context.remoteBindingsDisabled
-							? false
-							: undefined,
-				}),
-			};
-
-		case "images":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: undefined,
-				mode: getMode({
-					isSimulatedLocally: context.remoteBindingsDisabled || !binding.remote,
-				}),
-			};
-
-		case "version_metadata":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: undefined,
-				mode: getMode({ isSimulatedLocally: true }),
-			};
-
-		case "data_blob": {
-			const path = "path" in binding.source ? binding.source.path : undefined;
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: path ? truncate(path) : "<Buffer>",
-				mode: getMode({ isSimulatedLocally: true }),
-			};
-		}
-
-		case "durable_object_namespace": {
-			let value = binding.class_name;
-			let mode = undefined;
-			let hasConnectionStatus = false;
-
-			if (binding.script_name) {
-				if (context.local && context.registry !== null) {
-					const registryDefinition = context.registry?.[binding.script_name];
-
-					hasConnectionStatus = true;
-					if (
-						registryDefinition &&
-						registryDefinition.durableObjects.some(
-							(d) => d.className === binding.class_name
-						)
-					) {
-						value += `, defined in ${binding.script_name}`;
-						mode = getMode({ isSimulatedLocally: true, connected: true });
-					} else {
-						value += `, defined in ${binding.script_name}`;
-						mode = getMode({ isSimulatedLocally: true, connected: false });
-					}
-				} else {
-					value += `, defined in ${binding.script_name}`;
-					mode = getMode({ isSimulatedLocally: true });
-				}
+		mode = standardRemoteMode();
+	} else if (binding.type === "d1") {
+		value =
+			typeof binding.database_id === "symbol"
+				? binding.database_id
+				: binding.preview_database_id ??
+					binding.database_name ??
+					binding.database_id;
+		mode = standardRemoteMode();
+	} else if (binding.type === "hyperdrive") {
+		value = binding.id;
+		mode = getMode({ isSimulatedLocally: true });
+	} else if (binding.type === "analytics_engine") {
+		value = binding.dataset ?? bindingName;
+		mode = getMode({ isSimulatedLocally: true });
+	} else if (binding.type === "secrets_store_secret") {
+		value = `${binding.store_id}/${binding.secret_name}`;
+		mode = getMode({ isSimulatedLocally: true });
+	} else if (binding.type === "ratelimit") {
+		value = `${binding.simple.limit} requests/${binding.simple.period}s`;
+		mode = getMode({ isSimulatedLocally: true });
+	} else if (binding.type === "unsafe_hello_world") {
+		const enableTimer =
+			"enable_timer" in binding ? binding.enable_timer : false;
+		value = enableTimer ? "Timer enabled" : "Timer disabled";
+		mode = getMode({ isSimulatedLocally: true });
+	} else if (binding.type === "pipeline") {
+		value = binding.pipeline;
+		mode = standardRemoteMode();
+	} else if (binding.type === "vectorize") {
+		value = binding.index_name;
+		mode = remoteDefaultMode();
+	} else if (binding.type === "dispatch_namespace") {
+		value = binding.outbound
+			? `${binding.namespace} (outbound -> ${binding.outbound.service})`
+			: binding.namespace;
+		mode = remoteDefaultMode();
+	} else if (binding.type === "mtls_certificate") {
+		value = binding.certificate_id;
+		mode = remoteDefaultMode();
+	} else if (binding.type === "vpc_service") {
+		value = binding.service_id;
+		mode = remoteDefaultMode();
+	} else if (binding.type === "logfwdr") {
+		value = binding.destination;
+		mode = getMode();
+	} else if (binding.type === "workflow") {
+		value = binding.script_name
+			? `${binding.class_name} (defined in ${binding.script_name})`
+			: binding.class_name;
+		mode = getMode({
+			isSimulatedLocally:
+				binding.script_name && !context.remoteBindingsDisabled
+					? !binding.remote
+					: true,
+		});
+	} else if (binding.type === "durable_object_namespace") {
+		value = binding.class_name;
+		if (binding.script_name) {
+			value += `, defined in ${binding.script_name}`;
+			if (context.local && context.registry !== null) {
+				const reg = context.registry?.[binding.script_name];
+				hasConnectionStatus = true;
+				const connected =
+					reg?.durableObjects.some((d) => d.className === binding.class_name) ??
+					false;
+				mode = getMode({ isSimulatedLocally: true, connected });
 			} else {
 				mode = getMode({ isSimulatedLocally: true });
 			}
-
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value,
-				mode,
-				hasConnectionStatus,
-			};
+		} else {
+			mode = getMode({ isSimulatedLocally: true });
 		}
-
-		case "workflow": {
-			let value = binding.class_name;
-			if (binding.script_name) {
-				value += ` (defined in ${binding.script_name})`;
-			}
-
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value,
-				mode: getMode({
-					isSimulatedLocally:
-						binding.script_name && !context.remoteBindingsDisabled
-							? !binding.remote
-							: true,
-				}),
-			};
+	} else if (binding.type === "service") {
+		value = binding.entrypoint
+			? `${binding.service}#${binding.entrypoint}`
+			: binding.service;
+		if (binding.remote) {
+			mode = getMode({ isSimulatedLocally: false });
+		} else if (context.local && context.registry !== null) {
+			hasConnectionStatus = true;
+			const isSelf = binding.service === context.name;
+			const reg = context.registry?.[binding.service];
+			const connected =
+				isSelf ||
+				(reg !== undefined &&
+					(!binding.entrypoint ||
+						!!reg.entrypointAddresses?.[binding.entrypoint]));
+			mode = getMode({ isSimulatedLocally: true, connected });
 		}
-
-		case "queue":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: binding.queue_name,
-				mode: getMode({
-					isSimulatedLocally: context.remoteBindingsDisabled || !binding.remote,
-				}),
-			};
-
-		case "r2_bucket": {
-			const value =
-				typeof binding.bucket_name === "symbol"
-					? binding.bucket_name
-					: binding.bucket_name
-						? `${binding.bucket_name}${binding.jurisdiction ? ` (${binding.jurisdiction})` : ""}`
-						: undefined;
-
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value,
-				mode: getMode({
-					isSimulatedLocally: context.remoteBindingsDisabled || !binding.remote,
-				}),
-			};
-		}
-
-		case "d1": {
-			const value =
-				typeof binding.database_id === "symbol"
-					? binding.database_id
-					: binding.preview_database_id ??
-						binding.database_name ??
-						binding.database_id;
-
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value,
-				mode: getMode({
-					isSimulatedLocally: context.remoteBindingsDisabled || !binding.remote,
-				}),
-			};
-		}
-
-		case "vectorize":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: binding.index_name,
-				mode: getMode({
-					isSimulatedLocally:
-						binding.remote && !context.remoteBindingsDisabled
-							? false
-							: undefined,
-				}),
-			};
-
-		case "hyperdrive":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: binding.id,
-				mode: getMode({ isSimulatedLocally: true }),
-			};
-
-		case "service": {
-			let value = binding.service;
-			let mode = undefined;
-			let hasConnectionStatus = false;
-
-			if (binding.entrypoint) {
-				value += `#${binding.entrypoint}`;
-			}
-
-			if (binding.remote) {
-				mode = getMode({ isSimulatedLocally: false });
-			} else if (context.local && context.registry !== null) {
-				const isSelfBinding = binding.service === context.name;
-
-				if (isSelfBinding) {
-					hasConnectionStatus = true;
-					mode = getMode({ isSimulatedLocally: true, connected: true });
-				} else {
-					const registryDefinition = context.registry?.[binding.service];
-					hasConnectionStatus = true;
-
-					if (
-						registryDefinition &&
-						(!binding.entrypoint ||
-							registryDefinition.entrypointAddresses?.[binding.entrypoint])
-					) {
-						mode = getMode({ isSimulatedLocally: true, connected: true });
-					} else {
-						mode = getMode({ isSimulatedLocally: true, connected: false });
-					}
-				}
-			}
-
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value,
-				mode,
-				hasConnectionStatus,
-			};
-		}
-
-		case "fetcher":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: undefined,
-				mode: getMode({ isSimulatedLocally: true }),
-			};
-
-		case "analytics_engine":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: binding.dataset ?? bindingName,
-				mode: getMode({ isSimulatedLocally: true }),
-			};
-
-		case "dispatch_namespace":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: binding.outbound
-					? `${binding.namespace} (outbound -> ${binding.outbound.service})`
-					: binding.namespace,
-				mode: getMode({
-					isSimulatedLocally:
-						binding.remote && !context.remoteBindingsDisabled
-							? false
-							: undefined,
-				}),
-			};
-
-		case "mtls_certificate":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: binding.certificate_id,
-				mode: getMode({
-					isSimulatedLocally:
-						binding.remote && !context.remoteBindingsDisabled
-							? false
-							: undefined,
-				}),
-			};
-
-		case "pipeline":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: binding.pipeline,
-				mode: getMode({
-					isSimulatedLocally: context.remoteBindingsDisabled || !binding.remote,
-				}),
-			};
-
-		case "secrets_store_secret":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: `${binding.store_id}/${binding.secret_name}`,
-				mode: getMode({ isSimulatedLocally: true }),
-			};
-
-		case "logfwdr":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: binding.destination,
-				mode: getMode(),
-			};
-
-		case "unsafe_hello_world": {
-			const enableTimer =
-				"enable_timer" in binding ? binding.enable_timer : false;
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: enableTimer ? `Timer enabled` : `Timer disabled`,
-				mode: getMode({ isSimulatedLocally: true }),
-			};
-		}
-
-		case "ratelimit":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: `${binding.simple.limit} requests/${binding.simple.period}s`,
-				mode: getMode({ isSimulatedLocally: true }),
-			};
-
-		case "worker_loader":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: undefined,
-				mode: getMode({ isSimulatedLocally: true }),
-			};
-
-		case "vpc_service":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: binding.service_id,
-				mode: getMode({
-					isSimulatedLocally:
-						binding.remote && !context.remoteBindingsDisabled
-							? false
-							: undefined,
-				}),
-			};
-
-		case "media":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: undefined,
-				mode: getMode({
-					isSimulatedLocally:
-						(binding.remote === true || binding.remote === undefined) &&
-						!context.remoteBindingsDisabled
-							? false
-							: undefined,
-				}),
-			};
-
-		case "assets":
-			return {
-				name: bindingName,
-				type: friendlyName,
-				value: undefined,
-				mode: getMode({ isSimulatedLocally: true }),
-			};
-
-		default:
-			// Handle unsafe_* bindings and any other unknown types
-			if (binding.type.startsWith("unsafe_")) {
-				// Strip the "unsafe_" prefix to show the original type name
-				const originalType = binding.type.slice("unsafe_".length);
-				return {
-					name: bindingName,
-					type: friendlyName,
-					value: originalType,
-					mode: getMode({ isSimulatedLocally: false }),
-				};
-			}
-			return null;
+	} else if (binding.type.startsWith("unsafe_")) {
+		value = binding.type.slice("unsafe_".length);
+		mode = getMode({ isSimulatedLocally: false });
+	} else {
+		return null;
 	}
+
+	return {
+		name: bindingName,
+		type: friendlyName,
+		value,
+		mode,
+		...(hasConnectionStatus !== undefined && { hasConnectionStatus }),
+	};
 }
 
 /**

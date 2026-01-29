@@ -107,8 +107,8 @@ describe("resource provisioning", () => {
 			Your Worker has access to the following bindings:
 			Binding                 Resource
 			env.KV (inherited)      KV Namespace
-			env.D1 (inherited)      D1 Database
 			env.R2 (inherited)      R2 Bucket
+			env.D1 (inherited)      D1 Database
 
 			Uploaded test-name (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
@@ -194,8 +194,8 @@ describe("resource provisioning", () => {
 				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
 				env.KV         KV Namespace
-				env.D1         D1 Database
 				env.R2         R2 Bucket
+				env.D1         D1 Database
 
 
 				Provisioning KV (KV Namespace)...
@@ -214,8 +214,8 @@ describe("resource provisioning", () => {
 				Your Worker has access to the following bindings:
 				Binding                            Resource
 				env.KV (existing-kv-id)            KV Namespace
-				env.D1 (existing-d1-id)            D1 Database
 				env.R2 (existing-bucket-name)      R2 Bucket
+				env.D1 (existing-d1-id)            D1 Database
 
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -315,8 +315,8 @@ describe("resource provisioning", () => {
 				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
 				env.KV         KV Namespace
-				env.D1         D1 Database
 				env.R2         R2 Bucket
+				env.D1         D1 Database
 
 
 				Provisioning KV (KV Namespace)...
@@ -335,8 +335,8 @@ describe("resource provisioning", () => {
 				Your Worker has access to the following bindings:
 				Binding                         Resource
 				env.KV (existing-kv-id-1)       KV Namespace
-				env.D1 (existing-d1-id-1)       D1 Database
 				env.R2 (existing-bucket-1)      R2 Bucket
+				env.D1 (existing-d1-id-1)       D1 Database
 
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -446,8 +446,8 @@ describe("resource provisioning", () => {
 				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
 				env.KV         KV Namespace
-				env.D1         D1 Database
 				env.R2         R2 Bucket
+				env.D1         D1 Database
 
 
 				Provisioning KV (KV Namespace)...
@@ -469,8 +469,8 @@ describe("resource provisioning", () => {
 				Your Worker has access to the following bindings:
 				Binding                 Resource
 				env.KV (new-kv-id)      KV Namespace
-				env.D1 (new-d1-id)      D1 Database
 				env.R2 (new-r2)         R2 Bucket
+				env.D1 (new-d1-id)      D1 Database
 
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -607,8 +607,8 @@ describe("resource provisioning", () => {
 				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
 				env.KV         KV Namespace
-				env.D1         D1 Database
 				env.R2         R2 Bucket
+				env.D1         D1 Database
 
 
 				Provisioning KV (KV Namespace)...
@@ -630,8 +630,8 @@ describe("resource provisioning", () => {
 				Your Worker has access to the following bindings:
 				Binding                 Resource
 				env.KV (new-kv-id)      KV Namespace
-				env.D1 (new-d1-id)      D1 Database
 				env.R2 (new-r2)         R2 Bucket
+				env.D1 (new-d1-id)      D1 Database
 
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
@@ -756,8 +756,8 @@ describe("resource provisioning", () => {
 				Binding                 Resource
 				env.KV                  KV Namespace
 				env.PLATFORM_KV         KV Namespace
-				env.D1                  D1 Database
 				env.R2                  R2 Bucket
+				env.D1                  D1 Database
 
 
 				Provisioning KV (KV Namespace)...
@@ -784,8 +784,8 @@ describe("resource provisioning", () => {
 				Binding                                         Resource
 				env.KV (test-name-kv-id)                        KV Namespace
 				env.PLATFORM_KV (test-name-platform-kv-id)      KV Namespace
-				env.D1 (test-name-d1-id)                        D1 Database
 				env.R2 (test-name-r2)                           R2 Bucket
+				env.D1 (test-name-d1-id)                        D1 Database
 
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)

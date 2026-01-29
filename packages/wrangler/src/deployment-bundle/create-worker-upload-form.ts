@@ -50,7 +50,7 @@ export function fromMimeType(mimeType: string): CfModuleType {
  * Bindings are in the flat `StartDevWorkerInput["bindings"]` format (Record<string, Binding>).
  */
 export function createWorkerUploadForm(
-	worker: Omit<CfWorkerInit, "bindings">,
+	worker: Omit<CfWorkerInit, "bindings" | "rawBindings">,
 	bindings: StartDevWorkerInput["bindings"],
 	options?: {
 		dryRun?: true;
@@ -61,7 +61,6 @@ export function createWorkerUploadForm(
 	const {
 		main,
 		sourceMaps,
-		rawBindings,
 		migrations,
 		compatibility_date,
 		compatibility_flags,
@@ -105,7 +104,7 @@ export function createWorkerUploadForm(
 	}
 
 	let { modules } = worker;
-	const metadataBindings: WorkerMetadataBinding[] = rawBindings ?? [];
+	const metadataBindings: WorkerMetadataBinding[] = [];
 
 	// Process flat bindings format
 	for (const [name, binding] of Object.entries(bindings ?? {})) {

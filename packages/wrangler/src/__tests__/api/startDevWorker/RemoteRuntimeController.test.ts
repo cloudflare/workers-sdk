@@ -28,7 +28,7 @@ vi.mock("../../../dev/create-worker-preview", () => ({
 
 vi.mock("../../../dev/remote", () => ({
 	getWorkerAccountAndContext: vi.fn(),
-	createRemoteWorkerInitFromInput: vi.fn(),
+	createRemoteWorkerInit: vi.fn(),
 	handlePreviewSessionCreationError: vi.fn(),
 	handlePreviewSessionUploadError: vi.fn(),
 }));

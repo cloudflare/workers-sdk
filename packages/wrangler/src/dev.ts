@@ -6,6 +6,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { isWebContainer } from "@webcontainer/env";
+import chalk from "chalk";
 import { convertConfigToBindings } from "./api/startDevWorker/utils";
 import { getAssetsOptions } from "./assets";
 import { createCommand } from "./core/create-command";
@@ -378,7 +379,10 @@ export function maskVars(
 		if (binding.type === "plain_text") {
 			// Compare against config.vars - if different, it was overridden in .dev.vars
 			if (binding.value !== configParam.vars[key]) {
-				maskedBindings[key] = { type: "plain_text", value: "(hidden)" };
+				maskedBindings[key] = {
+					type: "plain_text",
+					value: chalk.italic("(hidden)"),
+				};
 			} else {
 				maskedBindings[key] = binding;
 			}

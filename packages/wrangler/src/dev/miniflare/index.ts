@@ -655,7 +655,7 @@ export function buildMiniflareBindingOptions(
 		),
 		vpcServices: Object.fromEntries(
 			vpcServices.map((vpc) => {
-				warnOrError("vpc_services", vpc.remote, "always-remote");
+				warnOrError("vpc_service", vpc.remote, "always-remote");
 				return [
 					vpc.binding,
 					{
@@ -671,7 +671,7 @@ export function buildMiniflareBindingOptions(
 
 		dispatchNamespaces: Object.fromEntries(
 			dispatchNamespaces.map((dispatchNamespace) => {
-				warnOrError("dispatch_namespaces", dispatchNamespace.remote, "remote");
+				warnOrError("dispatch_namespace", dispatchNamespace.remote, "remote");
 				if (!remoteProxyConnectionString || !dispatchNamespace.remote) {
 					return [
 						dispatchNamespace.binding,
@@ -719,7 +719,7 @@ export function buildMiniflareBindingOptions(
 
 		mtlsCertificates: Object.fromEntries(
 			mtlsCertificates.map((mtlsCertificate) => {
-				warnOrError("mtls_certificates", mtlsCertificate.remote, "remote");
+				warnOrError("mtls_certificate", mtlsCertificate.remote, "remote");
 				return [
 					mtlsCertificate.binding,
 					{
