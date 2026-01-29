@@ -87,10 +87,6 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		/**
 		 * Posts events to telemetry when a command is started, has completed, or has errored.
 		 *
-		 * This happens on every command execution. When all commands use defineCommand,
-		 * we should use that to provide the dispatcher on all handlers, and change all
-		 * `sendEvent` calls to use this method.
-		 *
 		 * @param name The name of the event to send
 		 * @param properties The properties specific to this event
 		 * @param cmdBehaviour The behavior of the command being executed. Might not been provided for unrecognized commands.
