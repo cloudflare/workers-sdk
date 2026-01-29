@@ -3534,7 +3534,7 @@ const validateQueueBinding: ValidatorFn = (diagnostics, field, value) => {
 	) {
 		diagnostics.warnings.push(
 			`The "delivery_delay" field in "${field}" is deprecated and has no effect. ` +
-				`Queue-level settings should be configured using "wrangler queues update" instead. ` +
+				`Queue settings should be configured using "wrangler queues update" instead. ` +
 				`This setting will be removed in a future version.`
 		);
 	}
