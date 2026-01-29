@@ -316,7 +316,11 @@ export function buildMiniflareBindingOptions(
 	);
 	const workerLoaders = extractBindingsOfType("worker_loader", bindings);
 	const sendEmailBindings = extractBindingsOfType("send_email", bindings);
-	const ratelimits = extractBindingsOfType("ratelimit", bindings);
+	const ratelimits = [
+		...extractBindingsOfType("ratelimit", bindings),
+		// Also include unsafe ratelimit bindings (from unsafe.bindings config)
+		...extractBindingsOfType("unsafe_ratelimit", bindings),
+	];
 	const aiBindings = extractBindingsOfType("ai", bindings);
 	const imagesBindings = extractBindingsOfType("images", bindings);
 	const mediaBindings = extractBindingsOfType("media", bindings);

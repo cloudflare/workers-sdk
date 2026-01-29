@@ -503,10 +503,18 @@ export function getBindings(
 		env
 	);
 	for (const [name, value] of Object.entries(vars)) {
-		bindings[name] =
-			typeof value === "string"
-				? { type: "plain_text", value }
-				: { type: "json", value };
+		// Only override plain_text/json vars, not other binding types like kv_namespace
+		const existingBinding = bindings[name];
+		if (
+			!existingBinding ||
+			existingBinding.type === "plain_text" ||
+			existingBinding.type === "json"
+		) {
+			bindings[name] =
+				typeof value === "string"
+					? { type: "plain_text", value }
+					: { type: "json", value };
+		}
 	}
 
 	// Merge input bindings on top (overrides config bindings by name)
