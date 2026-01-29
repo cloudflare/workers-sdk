@@ -99,7 +99,7 @@ export const gitCommit = async (ctx: C3Context) => {
 	} catch {
 		s.stop(`${brandColor("git")} ${dim(`commit failed`)}`);
 		updateStatus(
-			"Failed to create initial commit. Your changes have been staged but not committed. You can commit manually later.",
+			"Failed to create initial commit. You can commit manually later.",
 		);
 	}
 };
