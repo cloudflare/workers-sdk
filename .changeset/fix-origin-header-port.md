@@ -4,6 +4,6 @@
 
 Preserve port in Origin and Referer headers when using `--host` flag
 
-Previously, when using `wrangler dev --host <hostname>`, the port was stripped from the `Origin` and `Referer` headers, causing issues with CORS validation and authentication workflows that rely on accurate origin headers. For example, `Origin: http://localhost:4000` would become `Origin: http://localhost`.
+Previously, when using `wrangler dev --host <hostname:port>`, the port was not correctly handled, causing issues with CORS validation and response header rewriting. For example, `--host localhost:4000` would not properly preserve the port in request/response headers.
 
-This fix removes the explicit port clearing logic, allowing the port from the original request URL to be preserved correctly.
+This fix adds support for parsing the port from the `--host` and `--local-upstream` flags, ensuring that the worker sees the correct URL with the specified port and that response headers are correctly rewritten back to the local proxy address.

@@ -187,7 +187,7 @@ export interface StartDevWorkerInput {
 			httpsCertPath?: string;
 		};
 		/** Controls what request.url looks like inside the worker. */
-		origin?: { hostname?: string; secure?: boolean }; // hostname: --host (remote)/--local-upstream (local), port: doesn't make sense in remote/=== server.port in local, secure: --upstream-protocol
+		origin?: { hostname?: string; port?: string; secure?: boolean }; // hostname: --host (remote)/--local-upstream (local), port: parsed from --host/--local-upstream if non-default, secure: --upstream-protocol
 		/** A hook for outbound fetch calls from within the worker. */
 		outboundService?: ServiceFetch;
 		/** An undici MockAgent to declaratively mock fetch calls to particular resources. */
