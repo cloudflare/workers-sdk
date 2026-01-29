@@ -87,7 +87,7 @@ export async function listD1Databases(
 	const d1BindingMap = c.env.LOCAL_EXPLORER_BINDING_MAP.d1;
 	let databases = Object.entries(d1BindingMap).map(([id, bindingName]) => {
 		// Use the binding name as the database name since we don't have
-		// the actual name locally. The ID is the database_id or generated from binding.
+		// the actual name locally. The ID is the `database_id` or generated from binding.
 		const databaseName = bindingName.split(":").pop() || bindingName;
 
 		return {
@@ -107,8 +107,6 @@ export async function listD1Databases(
 		);
 	}
 
-	const totalCount = databases.length;
-
 	// Paginate
 	const startIndex = (page - 1) * per_page;
 	const endIndex = startIndex + per_page;
@@ -120,7 +118,7 @@ export async function listD1Databases(
 			count: databases.length,
 			page,
 			per_page,
-			total_count: totalCount,
+			total_count: databases.length,
 		},
 	});
 }
@@ -148,9 +146,9 @@ export async function getD1Database(
 	c: AppContext,
 	path: GetDatabasePath
 ): Promise<Response> {
-	const { database_id } = path;
+	const { database_id: databaseId } = path;
 
-	const info = getDatabaseInfo(c.env, database_id);
+	const info = getDatabaseInfo(c.env, databaseId);
 	if (!info) {
 		return errorResponse(404, 10000, "Database not found");
 	}
@@ -159,7 +157,7 @@ export async function getD1Database(
 
 	const database = {
 		name: databaseName,
-		uuid: database_id,
+		uuid: databaseId,
 		version: "production",
 
 		// The following fields are not available locally
@@ -185,7 +183,7 @@ type RawDatabaseBody = z.output<typeof _rawDatabaseBodySchema>;
  *
  * @see https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/raw/
  *
- * @param c - The Hono application context (database_id is extracted from the request path)
+ * @param c - The Hono application context (`database_id` is extracted from the request path)
  * @param body - The request body containing the SQL query or batch of queries
  * @param body.sql - The SQL statement to execute (for single queries)
  * @param body.params - Optional array of parameters for the SQL statement
@@ -198,9 +196,9 @@ export async function rawD1Database(
 	c: AppContext,
 	body: RawDatabaseBody
 ): Promise<Response> {
-	const database_id = c.req.param("database_id");
+	const databaseId = c.req.param("database_id");
 
-	const db = getD1Binding(c.env, database_id);
+	const db = getD1Binding(c.env, databaseId);
 	if (!db) {
 		return errorResponse(404, 10000, "Database not found");
 	}
