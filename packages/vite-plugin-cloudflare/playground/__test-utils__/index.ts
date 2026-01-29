@@ -11,9 +11,6 @@ export function satisfiesViteVersion(minVersion: string): boolean {
 	return semverGte(viteVersion, minVersion);
 }
 
-// TODO: remove when all tests are passing with Vite 8
-export const isVite8 = viteVersion.split(".")[0] === "8";
-
 /** Common options to use with `vi.waitFor()` */
 export const WAIT_FOR_OPTIONS = {
 	timeout: isWindows ? 10_000 : 5_000,
