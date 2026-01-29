@@ -49,6 +49,38 @@ export const ANALYTICS_VERSION = 1;
 // We're not confident in browser support for all of these additional attributes, so we'll wait until we have that information before proceeding further.
 const ALLOWED_EARLY_HINT_LINK_ATTRIBUTES = ["rel", "as", "href"];
 
+/**
+ * Decodes HTML entities in a string.
+ * HTMLRewriter's getAttribute() returns raw attribute values without decoding
+ * HTML entities like &amp;, &lt;, etc. This function decodes them to their
+ * actual characters.
+ */
+export function decodeHtmlEntities(str: string): string {
+	const namedEntities: Record<string, string> = {
+		"&amp;": "&",
+		"&lt;": "<",
+		"&gt;": ">",
+		"&quot;": '"',
+		"&#39;": "'",
+		"&apos;": "'",
+	};
+
+	return (
+		str
+			// Handle named entities (case-insensitive)
+			.replace(
+				/&(amp|lt|gt|quot|apos|#39);/gi,
+				(match) => namedEntities[match.toLowerCase()] || match
+			)
+			// Handle decimal numeric entities like &#38;
+			.replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+			// Handle hexadecimal numeric entities like &#x26;
+			.replace(/&#x([0-9a-f]+);/gi, (_, hex) =>
+				String.fromCharCode(parseInt(hex, 16))
+			)
+	);
+}
+
 // Takes metadata headers and "normalise" them
 // to the latest version
 export function normaliseHeaders(
@@ -420,7 +452,11 @@ export async function generateHandler<
 													}
 												}
 
-												const href = element.getAttribute("href") || undefined;
+												const rawHref =
+													element.getAttribute("href") || undefined;
+												const href = rawHref
+													? decodeHtmlEntities(rawHref)
+													: undefined;
 												const rel = element.getAttribute("rel") || undefined;
 												const as = element.getAttribute("as") || undefined;
 												if (href && !href.startsWith("data:") && rel) {

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
 	CACHE_PRESERVATION_WRITE_FREQUENCY,
+	decodeHtmlEntities,
 	generateHandler,
 	isPreservationCacheResponseExpiring,
 } from "../../asset-server/handler";
@@ -628,6 +629,128 @@ describe("asset-server handler", () => {
 			// I couldn't figure out a way to make HTMLRewriter error out
 		}
 	);
+
+	test("early hints should decode HTML entities in href attributes", async () => {
+		const deploymentId = "deployment-" + Math.random();
+		const metadata = createMetadataObject({ deploymentId }) as Metadata;
+
+		const findAssetEntryForPath = async (path: string) => {
+			if (path === "/index.html") {
+				return "asset-key-index.html";
+			}
+
+			return null;
+		};
+		const fetchAsset = () =>
+			Promise.resolve(
+				Object.assign(
+					new Response(`
+					<!DOCTYPE html>
+					<html>
+						<body>
+							<link rel="preload" as="script" href="/script.js?a=1&amp;b=2" />
+							<link rel="preload" as="style" href="/style.css?foo=bar&lt;baz&gt;" />
+							<link rel="modulepreload" href="/module.js?x=1&#38;y=2" />
+							<link rel="preconnect" href="https://example.com?q=test&#x26;r=value" />
+						</body>
+					</html>`),
+					{ contentType: "text/html" }
+				)
+			);
+
+		const { response, spies } = await getTestResponse({
+			request: new Request("https://example.com/"),
+			metadata,
+			findAssetEntryForPath,
+			caches,
+			fetchAsset,
+		});
+
+		expect(response.status).toBe(200);
+		await Promise.all(spies.waitUntil);
+
+		const earlyHintsCache = await caches.open(`eh:${deploymentId}`);
+		const earlyHintsRes = await earlyHintsCache.match(
+			"https://example.com/asset-key-index.html"
+		);
+
+		if (!earlyHintsRes) {
+			throw new Error(
+				"Did not match early hints cache on https://example.com/asset-key-index.html"
+			);
+		}
+
+		// Verify that HTML entities are decoded in the Link header
+		const linkHeader = earlyHintsRes.headers.get("link");
+		expect(linkHeader).toContain("</script.js?a=1&b=2>"); // &amp; -> &
+		expect(linkHeader).toContain("</style.css?foo=bar<baz>>"); // &lt; -> < and &gt; -> >
+		expect(linkHeader).toContain("</module.js?x=1&y=2>"); // &#38; -> &
+		expect(linkHeader).toContain("<https://example.com?q=test&r=value>"); // &#x26; -> &
+	});
+
+	describe("decodeHtmlEntities", () => {
+		test("decodes named entities", () => {
+			expect(decodeHtmlEntities("foo&amp;bar")).toBe("foo&bar");
+			expect(decodeHtmlEntities("a&lt;b&gt;c")).toBe("a<b>c");
+			expect(decodeHtmlEntities("&quot;quoted&quot;")).toBe('"quoted"');
+			expect(decodeHtmlEntities("it&#39;s")).toBe("it's");
+			expect(decodeHtmlEntities("it&apos;s")).toBe("it's");
+		});
+
+		test("decodes decimal numeric entities", () => {
+			expect(decodeHtmlEntities("&#38;")).toBe("&");
+			expect(decodeHtmlEntities("&#60;")).toBe("<");
+			expect(decodeHtmlEntities("&#62;")).toBe(">");
+			expect(decodeHtmlEntities("&#34;")).toBe('"');
+			expect(decodeHtmlEntities("&#39;")).toBe("'");
+		});
+
+		test("decodes hexadecimal numeric entities", () => {
+			expect(decodeHtmlEntities("&#x26;")).toBe("&");
+			expect(decodeHtmlEntities("&#x3C;")).toBe("<");
+			expect(decodeHtmlEntities("&#x3E;")).toBe(">");
+			expect(decodeHtmlEntities("&#x22;")).toBe('"');
+			expect(decodeHtmlEntities("&#X27;")).toBe("'"); // uppercase X
+		});
+
+		test("handles URLs with query parameters", () => {
+			expect(decodeHtmlEntities("/script.js?a=1&amp;b=2")).toBe(
+				"/script.js?a=1&b=2"
+			);
+			expect(
+				decodeHtmlEntities("https://example.com?foo=1&amp;bar=2&amp;baz=3")
+			).toBe("https://example.com?foo=1&bar=2&baz=3");
+		});
+
+		test("handles multiple different entities", () => {
+			expect(
+				decodeHtmlEntities("&lt;a href=&quot;test&amp;x=1&quot;&gt;")
+			).toBe('<a href="test&x=1">');
+		});
+
+		test("preserves strings without entities", () => {
+			expect(decodeHtmlEntities("/normal/path.js")).toBe("/normal/path.js");
+			expect(decodeHtmlEntities("https://example.com")).toBe(
+				"https://example.com"
+			);
+		});
+
+		test("preserves already percent-encoded URLs", () => {
+			expect(decodeHtmlEntities("/path%20with%20spaces.js")).toBe(
+				"/path%20with%20spaces.js"
+			);
+			expect(decodeHtmlEntities("/path%20with%20spaces.js?a=1&amp;b=2")).toBe(
+				"/path%20with%20spaces.js?a=1&b=2"
+			);
+		});
+
+		test("is case-insensitive for named entities", () => {
+			expect(decodeHtmlEntities("&AMP;")).toBe("&");
+			expect(decodeHtmlEntities("&Amp;")).toBe("&");
+			expect(decodeHtmlEntities("&LT;")).toBe("<");
+			expect(decodeHtmlEntities("&GT;")).toBe(">");
+		});
+	});
 
 	describe("should serve deleted assets from preservation cache", async () => {
 		beforeEach(() => {
