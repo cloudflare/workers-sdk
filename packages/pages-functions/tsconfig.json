@@ -1,0 +1,10 @@
+{
+	"extends": "@cloudflare/workers-tsconfig",
+	"compilerOptions": {
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"types": ["node"]
+	},
+	"include": ["src/**/*.ts", "__tests__/**/*.ts", "vitest.config.ts"],
+	"exclude": ["node_modules", "dist", "__tests__/fixtures", "__tests__/runtime"]
+}

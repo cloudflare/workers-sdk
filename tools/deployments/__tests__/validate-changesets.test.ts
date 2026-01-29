@@ -23,6 +23,7 @@ describe("findPackageNames()", () => {
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli",
 				"@cloudflare/kv-asset-handler",
+				"@cloudflare/pages-functions",
 				"@cloudflare/pages-shared",
 				"@cloudflare/quick-edit",
 				"@cloudflare/unenv-preset",

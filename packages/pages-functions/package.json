@@ -1,0 +1,70 @@
+{
+	"name": "@cloudflare/pages-functions",
+	"version": "0.0.1",
+	"description": "Compile a Pages functions directory into a deployable worker",
+	"keywords": [
+		"cloudflare",
+		"workers",
+		"pages",
+		"functions"
+	],
+	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/pages-functions#readme",
+	"bugs": {
+		"url": "https://github.com/cloudflare/workers-sdk/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/cloudflare/workers-sdk.git",
+		"directory": "packages/pages-functions"
+	},
+	"license": "MIT OR Apache-2.0",
+	"author": "wrangler@cloudflare.com",
+	"type": "module",
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"bin": {
+		"pages-functions": "./dist/cli.js"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"check:lint": "eslint . --max-warnings=0",
+		"check:type": "tsc --noEmit",
+		"test": "vitest run",
+		"test:ci": "vitest run && vitest run -c vitest.config.runtime.mts",
+		"test:runtime": "vitest run -c vitest.config.runtime.mts",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"esbuild": "catalog:default"
+	},
+	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
+		"@cloudflare/vitest-pool-workers": "catalog:default",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-types": "catalog:default",
+		"@types/node": "catalog:default",
+		"eslint": "catalog:default",
+		"path-to-regexp": "^6.3.0",
+		"typescript": "catalog:default",
+		"vitest": "catalog:default"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"volta": {
+		"extends": "../../package.json"
+	},
+	"workers-sdk": {
+		"prerelease": true
+	}
+}

@@ -1,0 +1,6 @@
+{
+	"name": "pages-functions-runtime-test",
+	"main": "./worker.ts",
+	"compatibility_date": "2026-01-20",
+	"compatibility_flags": ["nodejs_compat"],
+}
