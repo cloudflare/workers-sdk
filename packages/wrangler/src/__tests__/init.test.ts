@@ -93,6 +93,53 @@ describe("init", () => {
 			);
 		});
 
+		describe("with yarn package manager", () => {
+			beforeEach(() => {
+				mockPackageManager = {
+					type: "yarn",
+					npx: "yarn",
+					dlx: ["yarn", "dlx"],
+				};
+				(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
+
+				// Update the mock to handle "yarn" for these tests
+				(execa as Mock).mockImplementation((command: string) => {
+					if (command === "yarn" || command === "mockpm") {
+						return Promise.resolve();
+					}
+					return Promise.reject(new Error(`Unexpected command: ${command}`));
+				});
+			});
+
+			test("strips version specifier from C3 command for yarn", async () => {
+				await runWrangler("init");
+
+				// Yarn Classic (v1.x) can't handle version specifiers like @^2.5.0
+				// so we strip them when using yarn
+				expect(execa).toHaveBeenCalledWith("yarn", ["create", "cloudflare"], {
+					stdio: ["inherit", "pipe", "pipe"],
+				});
+			});
+
+			test("strips version specifier when using --from-dash with yarn", async () => {
+				await runWrangler("init --from-dash my-worker");
+
+				expect(execa).toHaveBeenCalledWith(
+					"yarn",
+					[
+						"create",
+						"cloudflare",
+						"my-worker",
+						"--existing-script",
+						"my-worker",
+					],
+					{
+						stdio: ["inherit", "pipe", "pipe"],
+					}
+				);
+			});
+		});
+
 		describe("with custom C3 command", () => {
 			beforeEach(() => {
 				vi.stubEnv("WRANGLER_C3_COMMAND", "run create-cloudflare");
