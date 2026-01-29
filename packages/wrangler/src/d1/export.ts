@@ -82,6 +82,19 @@ export const d1ExportCommand = createCommand({
 			throw new UserError(`You cannot specify both --no-schema and --no-data`);
 		}
 
+		try {
+			const stats = await fs.stat(output);
+			if (stats.isDirectory()) {
+				throw new UserError(
+					`Please specify a file path for --output, not a directory.`
+				);
+			}
+		} catch (e) {
+			if (e instanceof UserError) {
+				throw e;
+			}
+		}
+
 		// Allow multiple --table x --table y flags or none
 		const tables: string[] = table
 			? Array.isArray(table)
@@ -116,7 +129,7 @@ async function exportLocal(
 
 	const id = localDB.previewDatabaseUuid ?? localDB.uuid;
 
-	// TODO: should we allow customising persistence path?
+	// TODO: should we allow customizing persistence path?
 	// Should it be --persist-to for consistency (even though this isn't persisting anything)?
 	const persistencePath = getLocalPersistencePath(undefined, config);
 	const d1Persist = path.join(persistencePath, "v3", "d1");
