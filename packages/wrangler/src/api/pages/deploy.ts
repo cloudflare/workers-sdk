@@ -387,6 +387,16 @@ export async function deploy({
 			} catch (err) {
 				if (err instanceof FatalError) {
 					throw err;
+				} else if (err instanceof SyntaxError) {
+					throw new FatalError(
+						`Malformed JSON in _routes.json at ${join(directory, "_routes.json")}: ${err.message}`,
+						1
+					);
+				} else {
+					throw new FatalError(
+						`Could not process _routes.json at ${join(directory, "_routes.json")}: ${err}`,
+						1
+					);
 				}
 			}
 		}
@@ -422,6 +432,16 @@ export async function deploy({
 			} catch (err) {
 				if (err instanceof FatalError) {
 					throw err;
+				} else if (err instanceof SyntaxError) {
+					throw new FatalError(
+						`Malformed JSON in _routes.json at ${join(directory, "_routes.json")}: ${err.message}`,
+						1
+					);
+				} else {
+					throw new FatalError(
+						`Could not process _routes.json at ${join(directory, "_routes.json")}: ${err}`,
+						1
+					);
 				}
 			}
 		} else if (routesOutputPath) {
