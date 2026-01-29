@@ -43,9 +43,6 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
-        with:
-          # Use Node 24 to test C++20 compatibility fix for native modules (tree-sitter)
-          node-version: 24
 
       - name: Build tools and libraries
         run: pnpm run build
