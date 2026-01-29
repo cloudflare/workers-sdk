@@ -287,8 +287,7 @@ export default {
 			  worker_default as default
 			};
 
-			------formdata-undici-0.test--
-			"
+			------formdata-undici-0.test--"
 		`);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
@@ -445,8 +444,7 @@ export default {
 			  worker_default as default
 			};
 
-			------formdata-undici-0.test--
-			"
+			------formdata-undici-0.test--"
 		`);
 
 		expect(std.err).toMatchInlineSnapshot(`""`);
@@ -795,8 +793,7 @@ export default {
 			  worker_default as default
 			};
 
-			------formdata-undici-0.test--
-			"
+			------formdata-undici-0.test--"
 		`);
 		const buildMetadataContents = readFileSync("build-metadata.json", "utf-8");
 		expect(buildMetadataContents).toMatchInlineSnapshot(
@@ -972,8 +969,7 @@ export default {
 			  worker_default as default
 			};
 
-			------formdata-undici-0.test--
-			"
+			------formdata-undici-0.test--"
 		`);
 		const buildMetadataExists = existsSync("build-metadata.json");
 		// build-metadata should not exist
@@ -1147,8 +1143,7 @@ export default {
 			  worker_default as default
 			};
 
-			------formdata-undici-0.test--
-			"
+			------formdata-undici-0.test--"
 		`);
 		const buildMetadataExists = existsSync("build-metadata.json");
 		// build-metadata should not exist
@@ -1241,8 +1236,7 @@ export default {
 			  worker_default as default
 			};
 
-			------formdata-undici-0.test--
-			"
+			------formdata-undici-0.test--"
 		`);
 		const buildMetadataExists = existsSync("build-metadata.json");
 		// build-metadata should not exist

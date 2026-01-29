@@ -46,7 +46,12 @@ describe("experimental_getWranglerCommands", () => {
 			    "hidden": true,
 			    "type": "boolean",
 			  },
-			  "v": {
+			  "profile": Object {
+			    "describe": "Authentication profile to use for this command (allows multiple Cloudflare accounts)",
+			    "requiresArg": true,
+			    "type": "string",
+			  },
+			  "v": Object {
 			    "alias": "version",
 			    "describe": "Show version number",
 			    "type": "boolean",

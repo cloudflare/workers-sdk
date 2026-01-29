@@ -45,6 +45,7 @@ describe("cloudchamber image", () => {
 			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
+			      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 			  -v, --version   Show version number  [boolean]"
 		`);
 	});
@@ -192,6 +193,7 @@ describe("cloudchamber image list", () => {
 			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
+			      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 			  -v, --version   Show version number  [boolean]
 
 			OPTIONS
@@ -447,6 +449,7 @@ describe("cloudchamber image delete", () => {
 			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
 			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
 			  -h, --help      Show help  [boolean]
+			      --profile   Authentication profile to use for this command (allows multiple Cloudflare accounts)  [string]
 			  -v, --version   Show version number  [boolean]"
 		`);
 	});
