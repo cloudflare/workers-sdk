@@ -7,7 +7,7 @@
 		"build": "pnpm generate:api && vite build",
 		"check:type": "tsc --build",
 		"dev": "vite",
-		"generate:api": "openapi-ts",
+		"generate:api": "openapi-ts && prettier --write src/api/generated",
 		"preview": "vite preview"
 	},
 	"dependencies": {
