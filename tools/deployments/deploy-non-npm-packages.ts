@@ -120,26 +120,10 @@ export function deployPackage(
 	deploymentErrors: Map<string, string>
 ) {
 	try {
-		// quick-edit requires Node 22 because it builds native modules (tree-sitter)
-		// that are not compatible with Node 24's C++20 requirement for V8 headers
-		if (pkgName === "@cloudflare/quick-edit") {
-			spawnSync(
-				`bash`,
-				[
-					`-c`,
-					`source $HOME/.nvm/nvm.sh && nvm install 22 && nvm use 22 && pnpm -F ${pkgName} run deploy`,
-				],
-				{
-					env: process.env,
-					stdio: "inherit",
-				}
-			);
-		} else {
-			spawnSync(`pnpm`, [`-F`, pkgName, `run`, `deploy`], {
-				env: process.env,
-				stdio: "inherit",
-			});
-		}
+		spawnSync(`pnpm`, [`-F`, pkgName, `run`, `deploy`], {
+			env: process.env,
+			stdio: "inherit",
+		});
 	} catch (e) {
 		console.error(`::error::Failed to deploy "${pkgName}".`);
 		console.error(

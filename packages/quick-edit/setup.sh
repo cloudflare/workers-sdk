@@ -30,6 +30,14 @@ git config user.name "Workers DevProd"
 
 git apply ../../packages/quick-edit/patches/*.diff
 
+# Node 24+ requires C++20 for V8 headers, which breaks native module
+# compilation for tree-sitter. Switch to Node 22 for npm install in CI.
+if [ -n "${CI:-}" ]; then
+    source $HOME/.nvm/nvm.sh
+    nvm install 22
+    nvm use 22
+fi
+
 npm install
 cd ../../packages/quick-edit
 pnpm exec tsx bundle-dts.ts

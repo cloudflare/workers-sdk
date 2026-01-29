@@ -43,6 +43,9 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
+        with:
+          # Use Node 24 to test nvm fallback to Node 22 for quick-edit native module compilation
+          node-version: 24
 
       - name: Build tools and libraries
         run: pnpm run build
