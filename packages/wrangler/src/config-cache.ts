@@ -92,5 +92,9 @@ export function purgeConfigCaches() {
 	if (cacheFolder) {
 		rmSync(cacheFolder, { recursive: true, force: true });
 	}
-	__cacheFolder = undefined;
+
+	// Only reset to undefined if not explicitly disabled (null)
+	if (__cacheFolder !== null) {
+		__cacheFolder = undefined;
+	}
 }
