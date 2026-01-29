@@ -45,6 +45,7 @@
 		"reinitialise",
 		"scandir",
 		"selfsigned",
+		"subrequests",
 		"textfile",
 		"tsbuildinfo",
 		"turborepo",

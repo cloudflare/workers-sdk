@@ -4486,11 +4486,19 @@ function normalizeAndValidateLimits(
 	rawEnv: RawEnvironment
 ): Config["limits"] {
 	if (rawEnv.limits) {
-		validateRequiredProperty(
+		validateOptionalProperty(
 			diagnostics,
 			"limits",
 			"cpu_ms",
 			rawEnv.limits.cpu_ms,
+			"number"
+		);
+
+		validateOptionalProperty(
+			diagnostics,
+			"limits",
+			"subrequests",
+			rawEnv.limits.subrequests,
 			"number"
 		);
 	}
