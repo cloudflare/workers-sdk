@@ -6,6 +6,7 @@ import { logger } from "../../logger";
 import { getBasePath } from "../../paths";
 import { startWorker } from "../startDevWorker";
 import type { StartDevWorkerInput, Worker } from "../startDevWorker";
+import type { ErrorEvent } from "../startDevWorker/events";
 import type { Config } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString } from "miniflare";
 
@@ -15,6 +16,46 @@ export type StartRemoteProxySessionOptions = {
 	/** If running in a non-public compliance region, set this here. */
 	complianceRegion?: Config["compliance_region"];
 };
+
+function isErrorEvent(error: unknown): error is ErrorEvent {
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"type" in error &&
+		(error as { type?: string }).type === "error" &&
+		"reason" in error &&
+		"cause" in error
+	);
+}
+
+function getErrorMessage(error: unknown): string | undefined {
+	if (error instanceof Error) {
+		return getErrorMessage(error.cause) ?? error.message;
+	}
+
+	if (typeof error === "string") {
+		return error;
+	}
+
+	if (typeof error === "object" && error !== null) {
+		const maybeMessage = (error as { message?: unknown }).message;
+		if (typeof maybeMessage === "string") {
+			const maybeCause = (error as { cause?: unknown }).cause;
+			return getErrorMessage(maybeCause) ?? maybeMessage;
+		}
+	}
+
+	return undefined;
+}
+
+function formatRemoteProxySessionError(error: unknown): string | undefined {
+	if (isErrorEvent(error)) {
+		const causeMessage = getErrorMessage(error.cause);
+		return causeMessage ? `${error.reason}: ${causeMessage}` : error.reason;
+	}
+
+	return getErrorMessage(error);
+}
 
 export async function startRemoteProxySession(
 	bindings: StartDevWorkerInput["bindings"],
@@ -78,8 +119,11 @@ export async function startRemoteProxySession(
 	]);
 
 	if (maybeError && maybeError.error) {
+		const details = formatRemoteProxySessionError(maybeError.error);
 		throw new Error(
-			"Failed to start the remote proxy session. There is likely additional logging output above.",
+			details
+				? `Failed to start the remote proxy session. ${details}`
+				: "Failed to start the remote proxy session. There is likely additional logging output above.",
 			{
 				cause: maybeError.error,
 			}

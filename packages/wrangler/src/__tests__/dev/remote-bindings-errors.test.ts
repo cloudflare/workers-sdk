@@ -85,7 +85,7 @@ describe("errors during dev with remote bindings", () => {
 		assert(thrownError);
 
 		expect(thrownError).toMatchInlineSnapshot(
-			`[Error: Failed to start the remote proxy session. There is likely additional logging output above.]`
+			`[Error: Failed to start the remote proxy session. Failed to obtain a preview token: The remote worker preview failed.]`
 		);
 
 		expect(thrownError.cause).toMatchInlineSnapshot(`
