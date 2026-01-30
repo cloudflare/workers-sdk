@@ -72,7 +72,7 @@ export function seed(
 			}
 		);
 		debuglog("Installed node modules");
-	}, 200_000);
+	}, 300_000);
 
 	afterAll(async () => {
 		if (!process.env.CLOUDFLARE_VITE_E2E_KEEP_TEMP_DIRS) {
