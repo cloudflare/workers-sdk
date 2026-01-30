@@ -602,32 +602,21 @@ export function buildMiniflareBindingOptions(
 		),
 		email: {
 			send_email: sendEmailBindings.map((b) => {
-				// Cast to access union properties and exclude type/binding fields added by extractBindingsOfType
-				const sendEmail = b as {
+				// Spread the binding properties (excluding type/binding added by extractBindingsOfType)
+				// This preserves destination_address, allowed_destination_addresses, etc. as-is
+				const { type, binding, name, ...rest } = b as {
+					type: string;
+					binding: string;
 					name: string;
 					remote?: boolean;
 					destination_address?: string;
 					allowed_destination_addresses?: string[];
 				};
-				// Return a properly typed email binding
-				if (sendEmail.destination_address) {
-					return {
-						name: sendEmail.name,
-						remote: sendEmail.remote,
-						destination_address: sendEmail.destination_address,
-						remoteProxyConnectionString:
-							sendEmail.remote && remoteProxyConnectionString
-								? remoteProxyConnectionString
-								: undefined,
-					};
-				}
 				return {
-					name: sendEmail.name,
-					remote: sendEmail.remote,
-					allowed_destination_addresses:
-						sendEmail.allowed_destination_addresses,
+					name,
+					...rest,
 					remoteProxyConnectionString:
-						sendEmail.remote && remoteProxyConnectionString
+						rest.remote && remoteProxyConnectionString
 							? remoteProxyConnectionString
 							: undefined,
 				};
