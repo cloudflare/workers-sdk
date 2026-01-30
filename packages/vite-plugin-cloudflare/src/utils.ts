@@ -43,26 +43,9 @@ export function getOutputDirectory(
 	);
 }
 
-const postfixRE = /[?#].*$/;
+// Removes query parameters (?...) and hash fragments (#...), but preserves the leading # in subpath imports
+const postfixRE = /(?<!^#[^?#]*)[?#].*$/;
 export function cleanUrl(url: string): string {
-	if (url.startsWith("#")) {
-		// For subpath imports, find the first query param (?) or hash fragment after the subpath
-		// and remove everything from there
-		const queryIndex = url.indexOf("?");
-		const hashIndex = url.indexOf("#", 1); // Start search from index 1 to skip the leading #
-		
-		if (queryIndex === -1 && hashIndex === -1) {
-			// No query params or hash fragments to remove
-			return url;
-		}
-		
-		// Find the first occurrence of either ? or # (after position 0)
-		const cutIndex = queryIndex !== -1 && (hashIndex === -1 || queryIndex < hashIndex)
-			? queryIndex
-			: hashIndex;
-		
-		return url.substring(0, cutIndex);
-	}
 	return url.replace(postfixRE, "");
 }
 
