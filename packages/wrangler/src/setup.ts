@@ -1,6 +1,10 @@
 import { brandColor } from "@cloudflare/cli/colors";
 import { getDetailsForAutoConfig } from "./autoconfig/details";
 import { runAutoConfig } from "./autoconfig/run";
+import {
+	sendAutoConfigProcessEndedMetricsEvent,
+	sendAutoConfigProcessStartedMetricsEvent,
+} from "./autoconfig/telemetry-utils";
 import { createCommand } from "./core/create-command";
 import { logger } from "./logger";
 import { writeOutput } from "./output";
@@ -46,6 +50,8 @@ export const setupCommand = createCommand({
 	},
 
 	async handler(args, { config }) {
+		sendAutoConfigProcessStartedMetricsEvent("wrangler setup");
+
 		const details = await getDetailsForAutoConfig({
 			wranglerConfig: config,
 		});
@@ -63,6 +69,12 @@ export const setupCommand = createCommand({
 				skipConfirmations: args.yes,
 				dryRun: args.dryRun,
 				enableWranglerInstallation: args.installWrangler,
+			}).catch((e) => {
+				sendAutoConfigProcessEndedMetricsEvent({
+					success: false,
+					error: `${e}`,
+				});
+				throw e;
 			});
 			writeOutput({
 				type: "autoconfig",
@@ -80,6 +92,11 @@ export const setupCommand = createCommand({
 				"🎉 Your project is already setup to deploy to Cloudflare"
 			);
 		}
+
+		sendAutoConfigProcessEndedMetricsEvent({
+			success: true,
+		});
+
 		if (!args.dryRun) {
 			const { type } = await getPackageManager();
 			logCompletionMessage(

@@ -12,10 +12,16 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
+import isCI from "is-ci";
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
+import { sendMetricsEvent } from "../metrics";
 import { getPackageManager } from "../package-manager";
 import { getFramework } from "./frameworks/get-framework";
+import {
+	getAutoConfigAppId,
+	getAutoConfigTriggerCommand,
+} from "./telemetry-utils";
 import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
@@ -122,6 +128,16 @@ export async function getDetailsForAutoConfig({
 } = {}): Promise<AutoConfigDetails> {
 	logger.debug(`Running autoconfig detection in ${projectPath}...`);
 
+	sendMetricsEvent(
+		"autoconfig_detection_started",
+		{
+			appId: getAutoConfigAppId(),
+			isCI,
+			command: getAutoConfigTriggerCommand(),
+		},
+		{}
+	);
+
 	// If a real Wrangler config has been found & used, don't run autoconfig
 	if (wranglerConfig?.configPath) {
 		return {
@@ -163,9 +179,23 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
+	const configured = framework.isConfigured(projectPath) ?? false;
+
+	sendMetricsEvent(
+		"autoconfig_detection_completed",
+		{
+			appId: getAutoConfigAppId(),
+			isCI,
+			framework: framework.id,
+			configured,
+			success: true,
+		},
+		{}
+	);
+
 	return {
-		projectPath: projectPath,
-		configured: framework.isConfigured(projectPath) ?? false,
+		projectPath,
+		configured,
 		framework,
 		packageJson,
 		...(detectedFramework
