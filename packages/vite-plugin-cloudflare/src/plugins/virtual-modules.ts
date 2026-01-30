@@ -149,17 +149,25 @@ export const virtualClientFallbackPlugin = createPlugin(
 			resolveId: {
 				filter: { id: virtualClientFallbackResolveRE },
 				handler(source) {
-					if (source === VIRTUAL_CLIENT_FALLBACK_ENTRY) {
-						return `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`;
+					// Fallback for when filter is not applied
+					// TODO: remove when we drop support for Vite 6
+					if (!virtualClientFallbackResolveRE.test(source)) {
+						return;
 					}
+
+					return `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`;
 				},
 			},
 			load: {
 				filter: { id: virtualClientFallbackLoadRE },
 				handler(id) {
-					if (id === `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`) {
-						return ``;
+					// Fallback for when filter is not applied
+					// TODO: remove when we drop support for Vite 6
+					if (!virtualClientFallbackLoadRE.test(id)) {
+						return;
 					}
+
+					return "";
 				},
 			},
 		};
