@@ -54,6 +54,10 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 				ctx.setResolvedPluginConfig(
 					resolvePluginConfig(pluginConfig, userConfig, env)
 				);
+
+				if (env.command === "build") {
+					process.env.CLOUDFLARE_VITE_BUILD = "true";
+				}
 			},
 			async configureServer(viteDevServer) {
 				// Patch the `server.restart` method to track whether the server is restarting or not.

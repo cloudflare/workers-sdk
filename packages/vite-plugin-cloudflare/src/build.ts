@@ -63,7 +63,11 @@ export function createBuildApp(
 
 		if (hasClientEntry) {
 			await builder.build(clientEnvironment);
-		} else if (importedAssetPaths.size || getHasPublicAssets(builder.config)) {
+		} else if (
+			importedAssetPaths.size ||
+			getHasPublicAssets(builder.config) ||
+			resolvedPluginConfig.prerenderWorkerEnvironmentName
+		) {
 			await fallbackBuild(builder, clientEnvironment);
 		} else {
 			// In Vite 7 and above we do this in the `buildApp` hook
