@@ -2855,6 +2855,6 @@ describe("--host flag with Origin header preservation", () => {
 		
 		// Verify that ports are NOT stripped (this was the bug)
 		expect(text).not.toContain("Origin: http://localhost\n"); // without port
-		expect(text).not.toContain("Referer: https://localhost/"); // without port
+		expect(text).not.toContain("Referer: http://localhost/"); // without port
 	});
 });
