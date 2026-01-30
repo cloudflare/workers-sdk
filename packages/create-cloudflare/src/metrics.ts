@@ -126,17 +126,14 @@ export function createReporter() {
 			"started" | "cancelled" | "errored" | "completed"
 		>,
 	>(eventPrefix: Prefix, props: EventProperties<`${Prefix} started`>) {
-		let startTime: number | null = null;
+		let startTimeMs: number | null = null;
 		const additionalProperties: Record<string, unknown> = {};
 
 		function submitEvent(name: Event["name"]) {
-			if (!startTime) {
-				startTime = Date.now();
+			if (!startTimeMs) {
+				startTimeMs = Date.now();
 			} else {
-				const ms = Date.now() - startTime;
-				additionalProperties["durationMs"] = ms;
-				additionalProperties["durationSeconds"] = ms / 1000;
-				additionalProperties["durationMinutes"] = ms / 1000 / 60;
+				additionalProperties["durationMs"] = Date.now() - startTimeMs;
 			}
 
 			sendEvent(name, {
