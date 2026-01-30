@@ -1,5 +1,13 @@
 # create-cloudflare
 
+## 2.62.6
+
+### Patch Changes
+
+- [#12269](https://github.com/cloudflare/workers-sdk/pull/12269) [`a1450ca`](https://github.com/cloudflare/workers-sdk/commit/a1450cadf0ce0319220a5fb3ebd4ee4cb4de5c96) Thanks [@penalosa](https://github.com/penalosa)! - Handle git commit failures gracefully
+
+  When creating the initial commit fails (for example, when GPG signing is cancelled or misconfigured), the setup process now continues instead of crashing. A message is displayed informing the user that the commit was skipped and they can commit manually later.
+
 ## 2.62.5
 
 ### Patch Changes
