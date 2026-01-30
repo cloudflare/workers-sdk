@@ -1,15 +1,7 @@
 import path from "path";
 import { D1Database, R2Bucket } from "@cloudflare/workers-types";
 import { toMatchImageSnapshot } from "jest-image-snapshot";
-import {
-	afterEach,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	MockInstance,
-	vi,
-} from "vitest";
+import { beforeEach, describe, expect, it, MockInstance, vi } from "vitest";
 import { getPlatformProxy } from "./shared";
 import type {
 	Fetcher,
@@ -18,7 +10,6 @@ import type {
 	KVNamespace,
 	Workflow,
 } from "@cloudflare/workers-types";
-import type { Unstable_DevWorker } from "wrangler";
 
 type Env = {
 	MY_VAR: string;
@@ -39,7 +30,6 @@ type Env = {
 const wranglerConfigFilePath = path.join(__dirname, "..", "wrangler.jsonc");
 
 describe("getPlatformProxy - env", () => {
-	let devWorkers: Unstable_DevWorker[];
 	let warn = {} as MockInstance<typeof console.warn>;
 
 	beforeEach(() => {
