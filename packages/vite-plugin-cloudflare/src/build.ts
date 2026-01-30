@@ -40,7 +40,10 @@ export function createBuildApp(
 		if (resolvedPluginConfig.type === "assets-only") {
 			if (hasClientEntry) {
 				await builder.build(clientEnvironment);
-			} else if (getHasPublicAssets(builder.config)) {
+			} else if (
+				getHasPublicAssets(builder.config) ||
+				resolvedPluginConfig.prerenderWorkerEnvironmentName
+			) {
 				await fallbackBuild(builder, clientEnvironment);
 			}
 
