@@ -143,7 +143,7 @@ export class PluginContext {
 	}
 
 	isChildEnvironment(environmentName: string): boolean {
-		if (this.resolvedPluginConfig.type !== "workers") {
+		if (this.resolvedPluginConfig.type === "preview") {
 			return false;
 		}
 
