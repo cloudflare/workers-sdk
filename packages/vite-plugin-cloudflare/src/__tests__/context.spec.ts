@@ -118,5 +118,44 @@ describe("PluginContext", () => {
 			expect(methodCompleted).toBe(true);
 			expect(readySpy).toHaveBeenCalled();
 		});
+
+		test("dispatchFetch works immediately after startOrUpdateMiniflare completes", async () => {
+			// This test verifies that after startOrUpdateMiniflare completes,
+			// dispatchFetch can be called immediately without additional waiting.
+			// This proves the fix works: without awaiting ready in startOrUpdateMiniflare,
+			// dispatchFetch would have to wait for initialization, potentially causing timeouts.
+
+			const workerScript = `
+				export default {
+					fetch() {
+						return new Response("Hello from worker");
+					}
+				}
+			`;
+
+			// Create a real Miniflare instance through PluginContext
+			await ctx.startOrUpdateMiniflare({
+				workers: [{ modules: true, script: workerScript }],
+			});
+
+			// After startOrUpdateMiniflare completes, dispatchFetch should work immediately
+			// because we've already awaited ready
+			const startTime = Date.now();
+			const response = await ctx.miniflare.dispatchFetch(
+				"http://localhost:8787/"
+			);
+			const elapsed = Date.now() - startTime;
+
+			expect(response.status).toBe(200);
+			expect(await response.text()).toBe("Hello from worker");
+
+			// dispatchFetch should be fast (< 1 second) because Miniflare is already ready
+			// If we hadn't awaited ready in startOrUpdateMiniflare, this would take longer
+			// as dispatchFetch would have to wait for initialization
+			expect(elapsed).toBeLessThan(1000);
+
+			// Clean up
+			await ctx.disposeMiniflare();
+		});
 	});
 });
