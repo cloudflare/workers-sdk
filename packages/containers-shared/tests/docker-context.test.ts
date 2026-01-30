@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
+import { UserError } from "@cloudflare/workers-utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { UserError } from "../src/error";
 import { resolveDockerHost } from "../src/utils";
 
 vi.mock("node:child_process");

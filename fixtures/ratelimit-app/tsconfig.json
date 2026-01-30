@@ -6,7 +6,7 @@
 		"lib": ["esnext"],
 		"types": ["node"],
 		"skipLibCheck": true,
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"noEmit": true
 	},
 	"include": ["tests"]

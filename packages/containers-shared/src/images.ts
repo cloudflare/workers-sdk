@@ -1,6 +1,6 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { buildImage } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
-import { UserError } from "./error";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginImageRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { displayAutoConfigDetails } from "../../../autoconfig/details";
 import { mockConsoleMethods } from "../../helpers/mock-console";
+import type { Framework } from "../../../autoconfig/frameworks";
 
 vi.mock("../../../package-manager", () => ({
 	getPackageManager() {
@@ -37,8 +38,12 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			workerName: "my-astro-app",
 			framework: {
 				name: "Astro",
+				id: "astro",
 				isConfigured: () => false,
-				configure: () => ({ wranglerConfig: {} }),
+				configure: () =>
+					({
+						wranglerConfig: {},
+					}) satisfies ReturnType<Framework["configure"]>,
 				autoConfigSupported: true,
 			},
 			buildCommand: "astro build",

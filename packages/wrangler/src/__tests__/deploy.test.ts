@@ -9011,6 +9011,31 @@ addEventListener('fetch', event => {});`
 				Current Version ID: Galaxy-Class"
 			`);
 		});
+
+		it("should allow specifying a subrequests limit", async () => {
+			writeWranglerConfig({
+				limits: { subrequests: 100 },
+			});
+
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedLimits: { subrequests: 100 },
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
 	});
 
 	describe("bindings", () => {
@@ -15844,7 +15869,7 @@ export default{
 
 		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
 			configured: false,
-			framework: new Static("static"),
+			framework: new Static({ id: "static", name: "Static" }),
 			workerName: "my-site",
 			projectPath: ".",
 		});

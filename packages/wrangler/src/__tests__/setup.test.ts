@@ -162,6 +162,8 @@ describe("wrangler setup", () => {
 
 		expect(autoconfigOutputEntry.summary).toMatchInlineSnapshot(`
 			Object {
+			  "deployCommand": "npx wrangler deploy",
+			  "frameworkId": "static",
 			  "outputDir": "public",
 			  "scripts": Object {
 			    "deploy": "wrangler deploy",
