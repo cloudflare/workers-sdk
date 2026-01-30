@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
 import { getLocalExplorerEnabledFromEnv } from "@cloudflare/workers-utils";
@@ -411,6 +410,7 @@ type WorkerOptionsBindings = Pick<
 	| "unsafeBindings"
 	| "additionalUnboundDurableObjects"
 	| "media"
+	| "versionMetadata"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -582,11 +582,8 @@ export function buildMiniflareBindingOptions(
 	const bindingOptions: WorkerOptionsBindings = {
 		bindings: {
 			...bindings.vars,
-			// emulate version_metadata binding via a JSON var
-			...(bindings.version_metadata
-				? { [bindings.version_metadata.binding]: { id: randomUUID(), tag: "" } }
-				: undefined),
 		},
+		versionMetadata: bindings.version_metadata?.binding,
 		textBlobBindings,
 		dataBlobBindings,
 		wasmBindings,
