@@ -113,8 +113,8 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 			env.HYPERDRIVE (test-hyperdrive-id)        Hyperdrive Config
 			env.IMAGES                                 Images
 			env.KV (test-kv-id)                        KV Namespace
-			env.RATE_LIMITER (1 requests/60s)          Rate Limit
 			env.HELLO_WORLD (Timer disabled)           Hello World
+			env.RATE_LIMITER (ratelimit)               Unsafe Metadata
 			"
 		`);
 	});
@@ -177,8 +177,8 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 			env.HYPERDRIVE (test-hyperdrive-id)        Hyperdrive Config
 			env.IMAGES                                 Images
 			env.KV (test-kv-id)                        KV Namespace
-			env.RATE_LIMITER (1 requests/60s)          Rate Limit
 			env.HELLO_WORLD (Timer disabled)           Hello World
+			env.RATE_LIMITER (ratelimit)               Unsafe Metadata
 
 			auxiliary-worker has access to the following bindings:
 			Binding                           Resource
