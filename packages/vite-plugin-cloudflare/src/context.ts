@@ -50,6 +50,7 @@ export class PluginContext {
 			debuglog("Updating the existing Miniflare instance");
 			await this.#sharedContext.miniflare.setOptions(options);
 		}
+		await this.#sharedContext.miniflare.ready;
 		debuglog("Miniflare is ready");
 	}
 
