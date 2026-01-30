@@ -43,9 +43,6 @@ jobs:
 
       - name: Install Dependencies
         uses: ./.github/actions/install-dependencies
-        with:
-          # Use Node 24 to test nvm fallback to Node 22 for quick-edit native module compilation
-          node-version: 24
 
       - name: Build tools and libraries
         run: pnpm run build
@@ -63,14 +60,6 @@ jobs:
           echo "VITE_DEVTOOLS_PREVIEW_URL=$url" >> $GITHUB_ENV
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
-      # Quick Edit requires Node 22 because it builds native modules (tree-sitter)
-      # that are not compatible with Node 24's C++20 requirement for V8 headers
-      - name: Switch to Node 22 for Quick Edit
-        if: contains(github.event.*.labels.*.name, 'preview:quick-edit')
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
 
       - name: Build and Deploy Quick Edit preview
         if: contains(github.event.*.labels.*.name, 'preview:quick-edit')
