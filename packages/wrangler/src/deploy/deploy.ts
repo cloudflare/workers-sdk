@@ -11,7 +11,6 @@ import {
 	formatCompatibilityDate,
 	formatConfigSnippet,
 	getDockerPath,
-	ParseError,
 	parseNonHyphenedUuid,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -22,6 +21,7 @@ import { fetchListResult, fetchResult } from "../cfetch";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { deployContainers } from "../containers/deploy";
+import { isAuthenticationError } from "../core/handle-errors";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
@@ -1392,11 +1392,6 @@ async function publishRoutesFallback(
 	}
 
 	return deployedRoutes;
-}
-
-export function isAuthenticationError(e: unknown): e is ParseError {
-	// TODO: don't want to report these
-	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
 export async function updateQueueConsumers(

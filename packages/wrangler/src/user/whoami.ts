@@ -1,7 +1,7 @@
 import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
-import { isAuthenticationError } from "../deploy/deploy";
+import { isAuthenticationError } from "../core/handle-errors";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
 import { fetchMembershipRoles } from "./membership";
