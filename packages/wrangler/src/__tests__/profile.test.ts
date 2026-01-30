@@ -209,6 +209,29 @@ describe("Profile", () => {
 			clearProfileOverride();
 			expect(getActiveProfile()).toBe("work");
 		});
+
+		it("should reject invalid WRANGLER_PROFILE values", () => {
+			vi.stubEnv("WRANGLER_PROFILE", "../../../etc/passwd");
+			expect(() => getActiveProfile()).toThrow(
+				"Only letters, numbers, hyphens, and underscores"
+			);
+			vi.unstubAllEnvs();
+		});
+
+		it("should reject invalid active_profile in profiles.toml", () => {
+			const configDir = path.join(
+				getGlobalWranglerConfigPath(),
+				"config"
+			);
+			mkdirSync(configDir, { recursive: true });
+			writeFileSync(
+				path.join(configDir, "profiles.toml"),
+				TOML.stringify({ active_profile: "foo/bar" })
+			);
+			expect(() => getActiveProfile()).toThrow(
+				"Only letters, numbers, hyphens, and underscores"
+			);
+		});
 	});
 
 	describe("setActiveProfile", () => {
