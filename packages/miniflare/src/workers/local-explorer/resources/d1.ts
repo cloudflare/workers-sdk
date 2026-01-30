@@ -82,14 +82,14 @@ export async function listD1Databases(
 		} satisfies D1DatabaseResponse;
 	});
 
+	const totalCount = databases.length;
+
 	// Filter by name if provided
 	if (name) {
 		databases = databases.filter((db) =>
 			db.name?.toLowerCase().includes(name.toLowerCase())
 		);
 	}
-
-	const totalCount = databases.length;
 
 	// Paginate
 	const startIndex = (page - 1) * per_page;
