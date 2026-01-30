@@ -373,6 +373,7 @@ export function setProfileOverride(profile: string): void {
  */
 export function clearProfileOverride(): void {
 	_profileOverride = undefined;
+	reinitialiseAuthTokens();
 }
 
 /**
@@ -411,9 +412,11 @@ export function getActiveProfile(): string {
 
 	const envProfile = getWranglerProfileFromEnv();
 	if (envProfile) {
+		validateProfileName(envProfile);
 		return envProfile;
 	}
 
+	let activeProfileFromConfig: string | undefined;
 	try {
 		const profilesConfigPath = path.join(
 			getGlobalWranglerConfigPath(),
@@ -427,10 +430,15 @@ export function getActiveProfile(): string {
 			profilesConfig.active_profile &&
 			profilesConfig.active_profile !== "default"
 		) {
-			return profilesConfig.active_profile;
+			activeProfileFromConfig = profilesConfig.active_profile;
 		}
 	} catch {
 		// profiles.toml doesn't exist; that's fine
+	}
+
+	if (activeProfileFromConfig) {
+		validateProfileName(activeProfileFromConfig);
+		return activeProfileFromConfig;
 	}
 
 	return "default";
