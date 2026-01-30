@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { ApiError } from "@cloudflare/containers-shared";
-import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import {
 	APIError,
 	CommandLineArgsError,
@@ -245,6 +244,19 @@ function isNetworkFetchFailedError(e: unknown): boolean {
 	}
 
 	return false;
+}
+
+/**
+ * Is this a Containers/Cloudchamber-based auth error?
+ *
+ * Containers uses custom OpenAPI-based generated client that throws an error that has a different structure to standard cfetch auth errors.
+ */
+function isContainersAuthenticationError(e: unknown): e is UserError {
+	return (
+		e instanceof UserError &&
+		e.cause instanceof ApiError &&
+		e.cause.status === 403
+	);
 }
 
 /**
@@ -566,10 +578,7 @@ export async function handleError(
 			logger.debug(loggableException.stack);
 		}
 
-		if (
-			!(loggableException instanceof UserError) &&
-			!(loggableException instanceof ContainersUserError)
-		) {
+		if (!(loggableException instanceof UserError)) {
 			await logPossibleBugMessage();
 		}
 	}
@@ -579,23 +588,9 @@ export async function handleError(
 		mayReport &&
 		// ...and it's not a user error
 		!(loggableException instanceof UserError) &&
-		!(loggableException instanceof ContainersUserError) &&
 		// ...and it's not an un-reportable API error
 		!(loggableException instanceof APIError && !loggableException.reportable)
 	) {
 		await captureGlobalException(loggableException);
 	}
-}
-
-/**
- * Is this a Containers/Cloudchamber-based auth error?
- *
- * Containers uses custom OpenAPI-based generated client that throws an error that has a different structure to standard cfetch auth errors.
- */
-function isContainersAuthenticationError(e: unknown): e is UserError {
-	return (
-		e instanceof UserError &&
-		e.cause instanceof ApiError &&
-		e.cause.status === 403
-	);
 }
