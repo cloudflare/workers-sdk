@@ -30,12 +30,12 @@ import {
 	produceWorkerBundleForWorkerJSDirectory,
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
-import type { RoutesJSONSpec } from "../../pages/functions/routes-transformation";
 import { upload } from "../../pages/upload";
 import { getPagesTmpDir } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
+import type { RoutesJSONSpec } from "../../pages/functions/routes-transformation";
 import type { Deployment, Project } from "@cloudflare/types";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -379,7 +379,10 @@ export async function deploy({
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
 			try {
-				const routesCustomJSON = parseJSON(_routesCustom, join(directory, "_routes.json")) as RoutesJSONSpec;
+				const routesCustomJSON = parseJSON(
+					_routesCustom,
+					join(directory, "_routes.json")
+				) as RoutesJSONSpec;
 				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
 
 				formData.append(
@@ -424,7 +427,10 @@ export async function deploy({
 		if (_routesCustom) {
 			// user provided a custom _routes.json file
 			try {
-				const routesCustomJSON = parseJSON(_routesCustom, join(directory, "_routes.json")) as RoutesJSONSpec;
+				const routesCustomJSON = parseJSON(
+					_routesCustom,
+					join(directory, "_routes.json")
+				) as RoutesJSONSpec;
 				validateRoutes(routesCustomJSON, join(directory, "_routes.json"));
 
 				formData.append(
