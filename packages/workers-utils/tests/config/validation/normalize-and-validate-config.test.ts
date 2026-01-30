@@ -3355,8 +3355,8 @@ describe("normalizeAndValidateConfig()", () => {
 				);
 
 				expect(config.queues.producers).toHaveLength(2);
-				expect(config.queues.producers?.[1]).toEqual(
-					expect.objectContaining({ delivery_delay: 60 })
+				expect(config.queues.producers?.[1]).toMatchObject(
+					{ delivery_delay: 60 }
 				);
 				expect(diagnostics.hasErrors()).toBe(false);
 				expect(diagnostics.hasWarnings()).toBe(true);
