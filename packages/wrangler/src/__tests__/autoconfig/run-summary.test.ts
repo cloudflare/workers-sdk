@@ -36,6 +36,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				{
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
+					version: "npx wrangler versions upload",
 				}
 			);
 
@@ -60,6 +61,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				  "frameworkId": undefined,
 				  "outputDir": "public",
 				  "scripts": Object {},
+				  "versionCommand": "npx wrangler versions upload",
 				  "wranglerConfig": Object {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
@@ -89,6 +91,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				{
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
+					version: "npx wrangler versions upload",
 				}
 			);
 
@@ -109,6 +112,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
 				  },
+				  "versionCommand": "npx wrangler versions upload",
 				  "wranglerConfig": Object {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
@@ -140,6 +144,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				{
 					build: "npm run build",
 					deploy: "npx wrangler deploy",
+					version: "npx wrangler versions upload",
 				}
 			);
 
@@ -160,6 +165,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
 				  },
+				  "versionCommand": "npx wrangler versions upload",
 				  "wranglerConfig": Object {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",

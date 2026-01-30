@@ -48,4 +48,5 @@ export type AutoConfigSummary = {
 	frameworkId?: string;
 	buildCommand?: string;
 	deployCommand?: string;
+	versionCommand?: string;
 };

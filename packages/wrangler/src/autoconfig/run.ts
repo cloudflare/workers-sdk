@@ -124,6 +124,9 @@ export async function runAutoConfig(
 			deploy:
 				dryRunConfigurationResults?.deployCommandOverride ??
 				`${npx} wrangler deploy`,
+			version:
+				dryRunConfigurationResults?.versionCommandOverride ??
+				`${npx} wrangler versions upload`,
 		},
 		dryRunConfigurationResults?.packageJsonScriptsOverrides
 	);
@@ -283,6 +286,7 @@ export async function buildOperationsSummary(
 	projectCommands: {
 		build?: string;
 		deploy: string;
+		version?: string;
 	},
 	packageJsonScriptsOverrides?: PackageJsonScriptsOverrides
 ): Promise<AutoConfigSummary> {
@@ -296,6 +300,7 @@ export async function buildOperationsSummary(
 		frameworkId: autoConfigDetails.framework?.id,
 		buildCommand: projectCommands.build,
 		deployCommand: projectCommands.deploy,
+		versionCommand: projectCommands.version,
 	};
 
 	if (autoConfigDetails.packageJson) {

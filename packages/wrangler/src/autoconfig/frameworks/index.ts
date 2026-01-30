@@ -23,6 +23,8 @@ export type ConfigurationResults = {
 	buildCommandOverride?: string;
 	// Deploy command to override the standard one (`npx wrangler deploy`)
 	deployCommandOverride?: string;
+	// Version command to override the standard one (`npx wrangler versions upload`)
+	versionCommandOverride?: string;
 };
 
 export abstract class Framework {
