@@ -83,6 +83,7 @@ export function* dumpSql(
 
 		const select = `SELECT ${columns.map((c) => escapeId(c.name)).join(", ")} FROM ${escapeId(table)};`;
 		const rows_cursor = db.exec(select);
+		const columnNames = columns.map((c) => escapeId(c.name)).join(",");
 		for (const dataRow of rows_cursor.raw()) {
 			const formattedCells = dataRow.map((cell: unknown, i: number) => {
 				const colType = columns[i].type;
@@ -109,7 +110,7 @@ export function* dumpSql(
 				}
 			});
 
-			yield `INSERT INTO ${escapeId(table)} VALUES(${formattedCells.join(",")});`;
+			yield `INSERT INTO ${escapeId(table)} (${columnNames}) VALUES(${formattedCells.join(",")});`;
 		}
 		if (stats) {
 			stats.rows_read += rows_cursor.rowsRead;
