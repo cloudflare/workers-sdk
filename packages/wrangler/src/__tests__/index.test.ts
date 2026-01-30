@@ -55,7 +55,6 @@ describe("wrangler", () => {
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
-				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler queues                 📬 Manage Workers Queues
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
@@ -127,7 +126,6 @@ describe("wrangler", () => {
 				  wrangler dispatch-namespace     🏗️ Manage dispatch namespaces
 				  wrangler init [name]            📥 Initialize a basic Worker
 				  wrangler pages                  ⚡️ Configure Cloudflare Pages
-				  wrangler pubsub                 📮 Manage Pub/Sub brokers [private beta]
 				  wrangler queues                 📬 Manage Workers Queues
 				  wrangler rollback [version-id]  🔙 Rollback a deployment for a Worker
 				  wrangler secret                 🤫 Generate a secret that can be referenced in a Worker
@@ -167,6 +165,40 @@ describe("wrangler", () => {
 
 			        "
 		      `);
+		});
+
+		it("should display an error even with --help flag", async () => {
+			await expect(
+				runWrangler("invalid-command --help")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown argument: invalid-command]`
+			);
+
+			expect(std.err).toContain("Unknown argument: invalid-command");
+
+			// Make sure the root help menu being rendered by checking for command category titles
+			expect(std.out).toContain("wrangler");
+			expect(std.out).toContain("COMMANDS");
+			expect(std.out).toContain("ACCOUNT");
+		});
+	});
+
+	describe("invalid flag on valid command", () => {
+		it("should display command-specific help for unknown flag", async () => {
+			await expect(
+				runWrangler("types --invalid-flag-xyz")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown arguments: invalid-flag-xyz, invalidFlagXyz]`
+			);
+
+			expect(std.err).toContain("Unknown arguments: invalid-flag-xyz");
+
+			// Make sure the command-level help menu being rendered by checking command category titles don't exist
+			expect(std.out).toContain("wrangler types");
+			expect(std.out).toContain(
+				"Generate types from your Worker configuration"
+			);
+			expect(std.out).not.toContain("ACCOUNT");
 		});
 	});
 

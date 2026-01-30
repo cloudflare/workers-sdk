@@ -1,10 +1,11 @@
 import assert from "node:assert";
+import fs from "node:fs";
 import path from "node:path";
-import { isDockerfile } from "@cloudflare/containers-shared";
 import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/validators";
 import { dedent } from "ts-dedent";
 import { getCloudflareEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
+import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
 import { Diagnostics } from "./diagnostics";
 import {
@@ -1864,6 +1865,15 @@ function normalizeAndValidateEnvironment(
 		configPath
 	);
 
+	// top level 'rawEnv' includes inheritable keys and is validated elsewhere
+	if (envName !== "top level") {
+		validateAdditionalProperties(
+			diagnostics,
+			"env." + envName,
+			Object.keys(rawEnv),
+			Object.keys(environment)
+		);
+	}
 	return environment;
 }
 
@@ -4477,11 +4487,19 @@ function normalizeAndValidateLimits(
 	rawEnv: RawEnvironment
 ): Config["limits"] {
 	if (rawEnv.limits) {
-		validateRequiredProperty(
+		validateOptionalProperty(
 			diagnostics,
 			"limits",
 			"cpu_ms",
 			rawEnv.limits.cpu_ms,
+			"number"
+		);
+
+		validateOptionalProperty(
+			diagnostics,
+			"limits",
+			"subrequests",
+			rawEnv.limits.subrequests,
 			"number"
 		);
 	}
@@ -4832,7 +4850,9 @@ function warnIfDurableObjectsHaveNoMigrations(
 				\`\`\`
 				${formatConfigSnippet(
 					{
-						migrations: [{ tag: "v1", new_classes: durableObjectClassnames }],
+						migrations: [
+							{ tag: "v1", new_sqlite_classes: durableObjectClassnames },
+						],
 					},
 					configPath
 				)}
@@ -4890,4 +4910,54 @@ function isRemoteValid(
 	}
 
 	return true;
+}
+
+/**
+ * Returns whether the provided `imagePath` is a path to a Dockerfile.
+ *
+ * @param imagePath path to Dockerfile or image registry path
+ * @param configPath path to the wrangler config file, if any
+ * @returns `true` if it is a dockerfile, `false` if it is a registry link, throws if neither
+ */
+export function isDockerfile(
+	imagePath: string,
+	configPath: string | undefined
+): boolean {
+	const baseDir = configPath ? path.dirname(configPath) : process.cwd();
+	const maybeDockerfile = path.resolve(baseDir, imagePath);
+	if (fs.existsSync(maybeDockerfile)) {
+		if (isDirectory(maybeDockerfile)) {
+			throw new UserError(
+				`${imagePath} is a directory, you should specify a path to the Dockerfile`
+			);
+		}
+		return true;
+	}
+
+	const errorPrefix = `The image "${imagePath}" does not appear to be a valid path to a Dockerfile, or a valid image registry path:\n`;
+	// not found, not a dockerfile, let's try parsing the image ref as an URL?
+	try {
+		new URL(`https://${imagePath}`);
+	} catch (e) {
+		if (e instanceof Error) {
+			throw new UserError(errorPrefix + e.message);
+		}
+		throw e;
+	}
+	const imageParts = imagePath.split("/");
+
+	if (!imageParts[imageParts.length - 1]?.includes(":")) {
+		throw new UserError(
+			errorPrefix +
+				`If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)`
+		);
+	}
+	// validate URL
+	if (imagePath.includes("://")) {
+		throw new UserError(
+			errorPrefix +
+				`Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`
+		);
+	}
+	return false;
 }

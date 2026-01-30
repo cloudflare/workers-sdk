@@ -37,12 +37,12 @@ describe("containers registries configure", () => {
 			📦 Manage Containers [open beta]
 
 			COMMANDS
-			  wrangler containers build PATH  Build a container image
-			  wrangler containers push TAG    Push a tagged image to a Cloudflare managed registry
-			  wrangler containers images      Perform operations on images in your Cloudflare managed registry
-			  wrangler containers info ID     Get information about a specific container
-			  wrangler containers list        List containers
-			  wrangler containers delete ID   Delete a container
+			  wrangler containers list          List containers [open beta]
+			  wrangler containers info <ID>     Get information about a specific container [open beta]
+			  wrangler containers delete <ID>   Delete a container [open beta]
+			  wrangler containers build <PATH>  Build a container image [open beta]
+			  wrangler containers push <TAG>    Push a local image to the Cloudflare managed registry [open beta]
+			  wrangler containers images        Manage images in the Cloudflare managed registry [open beta]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -501,7 +501,10 @@ describe("containers registries delete", () => {
 			"
 		`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"? Are you sure you want to delete the registry credentials for 123456789012.dkr.ecr.us-west-2.amazonaws.com? This action cannot be undone.
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			? Are you sure you want to delete the registry credentials for 123456789012.dkr.ecr.us-west-2.amazonaws.com? This action cannot be undone.
 			🤖 Using fallback value in non-interactive context: yes"
 		`);
 	});

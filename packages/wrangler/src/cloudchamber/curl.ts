@@ -3,7 +3,9 @@ import { logRaw } from "@cloudflare/cli";
 import { bold, brandColor, cyanBright, yellow } from "@cloudflare/cli/colors";
 import { ApiError, OpenAPI } from "@cloudflare/containers-shared";
 import { request } from "@cloudflare/containers-shared/src/client/core/request";
+import { createCommand } from "../core/create-command";
 import formatLabelledValues from "../utils/render-labelled-values";
+import { cloudchamberScope, fillOpenAPIConfiguration } from "./common";
 import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterface,
@@ -163,3 +165,59 @@ async function requestFromCmd(
 		}
 	}
 }
+
+export const cloudchamberCurlCommand = createCommand({
+	metadata: {
+		description: "Send a request to an arbitrary Cloudchamber endpoint",
+		status: "alpha",
+		owner: "Product: Cloudchamber",
+		hidden: false,
+	},
+	args: {
+		path: {
+			type: "string",
+			default: "/",
+			demandOption: true,
+		},
+		header: {
+			type: "array",
+			alias: "H",
+			describe: "Add headers in the form of --header <name>:<value>",
+		},
+		data: {
+			type: "string",
+			describe: "Add a JSON body to the request",
+			alias: "d",
+		},
+		"data-deprecated": {
+			type: "string",
+			hidden: true,
+			alias: "D",
+		},
+		method: {
+			type: "string",
+			alias: "X",
+			default: "GET",
+		},
+		silent: {
+			describe: "Only output response",
+			type: "boolean",
+			alias: "s",
+		},
+		verbose: {
+			describe: "Print everything, like request id, or headers",
+			type: "boolean",
+			alias: "v",
+		},
+		"use-stdin": {
+			describe: "Equivalent of using --data-binary @- in curl",
+			type: "boolean",
+			alias: "stdin",
+		},
+	},
+	positionalArgs: ["path"],
+	async handler(args, { config }) {
+		await fillOpenAPIConfiguration(config, cloudchamberScope);
+		await curlCommand(args, config);
+	},
+});

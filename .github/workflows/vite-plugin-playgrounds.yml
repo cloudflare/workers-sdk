@@ -1,6 +1,7 @@
 name: Vite plugin playgrounds
 
 on:
+  merge_group:
   pull_request:
 
 permissions:
@@ -26,8 +27,8 @@ jobs:
         include:
           - os: ubuntu-latest
             vite: "vite-6"
-          # - os: ubuntu-latest
-          #   vite: vite-8-beta
+          - os: ubuntu-latest
+            vite: vite-8-beta
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo

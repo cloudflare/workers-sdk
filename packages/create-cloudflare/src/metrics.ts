@@ -126,18 +126,14 @@ export function createReporter() {
 			"started" | "cancelled" | "errored" | "completed"
 		>,
 	>(eventPrefix: Prefix, props: EventProperties<`${Prefix} started`>) {
-		let startTime: number | null = null;
+		let startTimeMs: number | null = null;
 		const additionalProperties: Record<string, unknown> = {};
 
 		function submitEvent(name: Event["name"]) {
-			if (!startTime) {
-				startTime = Date.now();
+			if (!startTimeMs) {
+				startTimeMs = Date.now();
 			} else {
-				const ms = Date.now() - startTime;
-
-				additionalProperties["durationMs"] = ms;
-				additionalProperties["durationSeconds"] = ms / 1000;
-				additionalProperties["durationMinutes"] = ms / 1000 / 60;
+				additionalProperties["durationMs"] = Date.now() - startTimeMs;
 			}
 
 			sendEvent(name, {
@@ -173,7 +169,7 @@ export function createReporter() {
 	}
 
 	// Collect metrics for an async function
-	// This tracks each stages of the async function and sends the corresonding event to sparrow
+	// This tracks each stages of the async function and sends the corresponding event to sparrow
 	async function collectAsyncMetrics<
 		Prefix extends EventPrefix<
 			"started" | "cancelled" | "errored" | "completed"
@@ -283,7 +279,7 @@ export function getC3Permission(config = readMetricsConfig() ?? {}) {
 }
 
 // To update the c3permission property in the metrics config
-export function updateC3Pemission(enabled: boolean) {
+function updateC3Permission(enabled: boolean) {
 	const config = readMetricsConfig();
 
 	if (config.c3permission?.enabled === enabled) {
@@ -296,17 +292,17 @@ export function updateC3Pemission(enabled: boolean) {
 	writeMetricsConfig(config);
 }
 
+function logTelemetryStatus(enabled: boolean) {
+	logRaw(`Status: ${enabled ? "Enabled" : "Disabled"}`);
+	logRaw("");
+}
+
 export const runTelemetryCommand = (
 	action: "status" | "enable" | "disable",
 ) => {
-	const logTelemetryStatus = (enabled: boolean) => {
-		logRaw(`Status: ${enabled ? "Enabled" : "Disabled"}`);
-		logRaw("");
-	};
-
 	switch (action) {
 		case "enable": {
-			updateC3Pemission(true);
+			updateC3Permission(true);
 			logTelemetryStatus(true);
 			logRaw(
 				"Create-Cloudflare is now collecting telemetry about your usage. Thank you for helping us improve the experience!",
@@ -314,7 +310,7 @@ export const runTelemetryCommand = (
 			break;
 		}
 		case "disable": {
-			updateC3Pemission(false);
+			updateC3Permission(false);
 			logTelemetryStatus(false);
 			logRaw("Create-Cloudflare is no longer collecting telemetry");
 			break;

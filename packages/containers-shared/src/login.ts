@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
+import { UserError } from "@cloudflare/workers-utils";
 import { ImageRegistriesService, ImageRegistryPermissions } from "./client";
-import { UserError } from "./error";
 
 /**
  * Gets push and pull credentials for a configured image registry

@@ -18,47 +18,29 @@ import {
 	readMetricsConfig,
 	writeMetricsConfig,
 } from "./metrics-config";
-import {
-	ALLOW,
-	getAllowedArgs,
-	sanitizeArgKeys,
-	sanitizeArgValues,
-} from "./sanitization";
+import type { CommandDefinition } from "../core/types";
 import type { MetricsConfigOptions } from "./metrics-config";
-import type { AllowList } from "./sanitization";
 import type { CommonEventProperties, Events } from "./types";
 
 const SPARROW_URL = "https://sparrow.cloudflare.com";
 
+// Module-level Set to track all pending requests across all dispatchers.
+// Promises are automatically removed from this Set once they settle.
+const pendingRequests = new Set<Promise<void>>();
+
 /**
- * A list of all the command args that can be included in the event.
+ * Returns a promise that resolves when all pending metrics requests have completed.
  *
- * The "*" command applies to all sub commands at this level.
- * Specific commands can override or add to the allow list.
- *
- * Each arg can have one of three values:
- * - an array of strings: only those specific values are allowed
- * - REDACT: the arg value will always be redacted
- * - ALLOW: all values for that arg are allowed
+ * The returned promise should be awaited before the process exits to ensure we don't drop any metrics.
  */
-const COMMAND_ARG_ALLOW_LIST: AllowList = {
-	// * applies to all sub commands
-	"wrangler *": {
-		format: ALLOW,
-		logLevel: ALLOW,
-	},
-	"wrangler tail": { status: ALLOW },
-	"wrangler types": {
-		xIncludeRuntime: [".wrangler/types/runtime.d.ts"],
-		path: ["worker-configuration.d.ts"],
-	},
-};
+export function allMetricsDispatchesCompleted(): Promise<void> {
+	return Promise.allSettled(pendingRequests).then(() => {});
+}
 
 export function getMetricsDispatcher(options: MetricsConfigOptions) {
 	// The SPARROW_SOURCE_KEY will be provided at build time through esbuild's `define` option
 	// No events will be sent if the env `SPARROW_SOURCE_KEY` is not provided and the value will be set to an empty string instead.
 	const SPARROW_SOURCE_KEY = process.env.SPARROW_SOURCE_KEY ?? "";
-	const requests: Array<Promise<void>> = [];
 	const wranglerVersion = getWranglerVersion();
 	const [wranglerMajorVersion, wranglerMinorVersion, wranglerPatchVersion] =
 		wranglerVersion.split(".").map((v) => parseInt(v, 10));
@@ -103,41 +85,33 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		},
 
 		/**
-		 * Dispatches `wrangler command started / completed / errored` events
+		 * Posts events to telemetry when a command is started, has completed, or has errored.
 		 *
-		 * This happens on every command execution. When all commands use defineCommand,
-		 * we should use that to provide the dispatcher on all handlers, and change all
-		 * `sendEvent` calls to use this method.
+		 * @param name The name of the event to send
+		 * @param properties The properties specific to this event
+		 * @param cmdBehaviour The behavior of the command being executed. Might not been provided for unrecognized commands.
 		 */
 		sendCommandEvent<EventName extends Events["name"]>(
 			name: EventName,
 			properties: Omit<
 				Extract<Events, { name: EventName }>["properties"],
 				keyof CommonEventProperties
-			>,
-			argv?: string[]
-		) {
+			> & { argsUsed: string[] },
+			cmdBehaviour?: CommandDefinition["behaviour"]
+		): void {
+			if (cmdBehaviour?.sendMetrics === false) {
+				return;
+			}
+
 			try {
-				if (properties.command?.startsWith("wrangler login")) {
-					properties.command = "wrangler login";
-				}
-				if (
-					properties.command === "wrangler telemetry disable" ||
-					properties.command === "wrangler metrics disable"
-				) {
-					return;
-				}
-				if (
-					properties.command === "wrangler deploy" ||
-					properties.command === "wrangler dev" ||
-					// for testing purposes
-					properties.command === "wrangler docs"
-				) {
+				if (cmdBehaviour?.printMetricsBanner === true) {
+					// printMetricsBanner can throw
 					printMetricsBanner();
 				}
 
-				const sanitizedArgs = sanitizeArgKeys(properties.args ?? {}, argv);
-				const sanitizedArgsKeys = Object.keys(sanitizedArgs).sort();
+				const argsUsed = properties.argsUsed;
+				const argsCombination = argsUsed.join(", ");
+
 				const commonEventProperties: CommonEventProperties = {
 					amplitude_session_id,
 					amplitude_event_id: amplitude_event_id++,
@@ -156,17 +130,10 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					isWorkersCI: isWorkersCI(),
 					isInteractive: isInteractive(),
 					hasAssets: options.hasAssets ?? false,
-					argsUsed: sanitizedArgsKeys,
-					argsCombination: sanitizedArgsKeys.join(", "),
+					argsUsed,
+					argsCombination,
 					agent,
 				};
-
-				// get the args where we don't want to redact their values
-				const allowedArgs = getAllowedArgs(
-					COMMAND_ARG_ALLOW_LIST,
-					properties.command ?? "wrangler"
-				);
-				properties.args = sanitizeArgValues(sanitizedArgs, allowedArgs);
 
 				dispatch({
 					name,
@@ -178,10 +145,6 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			} catch (err) {
 				logger.debug("Error sending metrics event", err);
 			}
-		},
-
-		get requests() {
-			return requests;
 		},
 	};
 
@@ -239,11 +202,17 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					"Metrics dispatcher: Failed to send request:",
 					(e as Error).message
 				);
+			})
+			.finally(() => {
+				pendingRequests.delete(request);
 			});
 
-		requests.push(request);
+		pendingRequests.add(request);
 	}
 
+	/**
+	 * Note that this function can throw if writing to the config file fails.
+	 */
 	function printMetricsBanner() {
 		const metricsConfig = readMetricsConfig();
 		if (

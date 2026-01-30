@@ -1,14 +1,15 @@
 import assert from "node:assert";
 import { nonPrefixedNodeModules } from "@cloudflare/unenv-preset";
+import * as vite from "vite";
 import {
 	assertHasNodeJsCompat,
 	hasNodeJsAls,
 	isNodeAlsModule,
+	nodeBuiltinsRE,
 	NodeJsCompatWarnings,
 } from "../nodejs-compat";
 import { createPlugin, isRolldown } from "../utils";
 import type { ResolvedWorkerConfig } from "../plugin-config";
-import type * as vite from "vite";
 
 /**
  * Plugin to support the `nodejs_als` compatibility flag
@@ -44,6 +45,22 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 					resolve: {
 						builtins: [...nodeJsCompat.externals],
 					},
+					...(isRolldown
+						? ({
+								build: {
+									rolldownOptions: {
+										plugins: [
+											// In Vite 8, `require` calls are not automatically replaced when the format is ESM and `platform` is `neutral`
+											// @ts-expect-error: added in Vite 8
+											vite.esmExternalRequirePlugin({
+												external: [...nodeJsCompat.externals],
+												skipDuplicateCheck: true,
+											}),
+										],
+									},
+								},
+							} as vite.BuildOptions)
+						: {}),
 					optimizeDeps: {
 						// This is a list of module specifiers that the dependency optimizer should not follow when doing import analysis.
 						// In this case we provide a list of all the Node.js modules, both those built-in to workerd and those that will be polyfilled.
@@ -62,6 +79,20 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 								"node:test/reporters",
 							],
 						],
+						...(isRolldown
+							? {
+									rolldownOptions: {
+										plugins: [
+											// In Vite 8, `require` calls are not automatically replaced when the format is ESM and `platform` is `neutral`
+											// @ts-expect-error: added in Vite 8
+											vite.esmExternalRequirePlugin({
+												external: [nodeBuiltinsRE],
+												skipDuplicateCheck: true,
+											}),
+										],
+									},
+								}
+							: {}),
 					},
 				};
 			}
@@ -74,46 +105,40 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 		// resolver will try to externalize the Node.js module imports (e.g. `perf_hooks` and `node:tty`)
 		// rather than allowing the resolve hook here to alias them to polyfills.
 		enforce: "pre",
-		async resolveId(source, importer, options) {
-			const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
-			assertHasNodeJsCompat(nodeJsCompat);
+		resolveId: {
+			filter: {
+				id: [nodeBuiltinsRE, /^unenv\//, /^@cloudflare\/unenv-preset\//],
+			},
+			async handler(source, importer, options) {
+				const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
+				assertHasNodeJsCompat(nodeJsCompat);
 
-			if (nodeJsCompat.isGlobalVirtualModule(source)) {
-				return source;
-			}
+				// See if we can map the `source` to a Node.js compat alias.
+				const result = nodeJsCompat.resolveNodeJsImport(source);
 
-			// See if we can map the `source` to a Node.js compat alias.
-			const result = nodeJsCompat.resolveNodeJsImport(source);
+				if (!result) {
+					return;
+				}
 
-			if (!result) {
-				// The source is not a Node.js compat alias so just pass it through
-				return this.resolve(source, importer, options);
-			}
+				if (this.environment.mode === "dev") {
+					assert(
+						this.environment.depsOptimizer,
+						"depsOptimizer is required in dev mode"
+					);
+					// We are in dev mode (rather than build).
+					// So let's pre-bundle this polyfill entry-point using the dependency optimizer.
+					const { id } = this.environment.depsOptimizer.registerMissingImport(
+						result.unresolved,
+						result.resolved
+					);
+					// We use the unresolved path to the polyfill and let the dependency optimizer's
+					// resolver find the resolved path to the bundled version.
+					return this.resolve(id, importer, options);
+				}
 
-			if (this.environment.mode === "dev") {
-				assert(
-					this.environment.depsOptimizer,
-					"depsOptimizer is required in dev mode"
-				);
-				// We are in dev mode (rather than build).
-				// So let's pre-bundle this polyfill entry-point using the dependency optimizer.
-				const { id } = this.environment.depsOptimizer.registerMissingImport(
-					result.unresolved,
-					result.resolved
-				);
-				// We use the unresolved path to the polyfill and let the dependency optimizer's
-				// resolver find the resolved path to the bundled version.
-				return this.resolve(id, importer, options);
-			}
-
-			// We are in build mode so return the absolute path to the polyfill.
-			return this.resolve(result.resolved, importer, options);
-		},
-		load(id) {
-			const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
-			assertHasNodeJsCompat(nodeJsCompat);
-
-			return nodeJsCompat.getGlobalVirtualModule(id);
+				// We are in build mode so return the absolute path to the polyfill.
+				return this.resolve(result.resolved, importer, options);
+			},
 		},
 		async configureServer(viteDevServer) {
 			// Pre-optimize Node.js compat library entry-points for those environments that need it.
@@ -180,6 +205,12 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 			source: string,
 			importer?: string
 		) {
+			// Fallback for when filter is not applied
+			// TODO: remove when we drop support for Vite 6
+			if (!nodeBuiltinsRE.test(source)) {
+				return;
+			}
+
 			const workerConfig = ctx.getWorkerConfig(environmentName);
 			const nodeJsCompat = ctx.getNodeJsCompat(environmentName);
 
@@ -190,20 +221,14 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 				}
 
 				const nodeJsCompatWarnings = nodeJsCompatWarningsMap.get(workerConfig);
+				nodeJsCompatWarnings?.registerImport(source, importer);
 
-				if (
-					source.startsWith("node:") ||
-					nonPrefixedNodeModules.includes(source)
-				) {
-					nodeJsCompatWarnings?.registerImport(source, importer);
-
-					// Mark this path as external to avoid messy unwanted resolve errors.
-					// It will fail at runtime but we will log warnings to the user.
-					return {
-						id: source,
-						external: true,
-					};
-				}
+				// Mark this path as external to avoid messy unwanted resolve errors.
+				// It will fail at runtime but we will log warnings to the user.
+				return {
+					id: source,
+					external: true,
+				};
 			}
 		}
 
@@ -224,8 +249,15 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 											plugins: [
 												{
 													name: "vite-plugin-cloudflare:nodejs-compat-warnings-resolver",
-													resolveId(source: string, importer?: string) {
-														return resolveId(environmentName, source, importer);
+													resolveId: {
+														filter: { id: nodeBuiltinsRE },
+														handler(source: string, importer?: string) {
+															return resolveId(
+																environmentName,
+																source,
+																importer
+															);
+														},
 													},
 												},
 											],
@@ -238,11 +270,7 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 													name: "vite-plugin-cloudflare:nodejs-compat-warnings-resolver",
 													setup(build) {
 														build.onResolve(
-															{
-																filter: new RegExp(
-																	`^(${nonPrefixedNodeModules.join("|")}|node:.+)$`
-																),
-															},
+															{ filter: nodeBuiltinsRE },
 															({ path, importer }) => {
 																if (
 																	hasNodeJsAls(workerConfig) &&
@@ -293,8 +321,11 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 					!ctx.getNodeJsCompat(environment.name)
 				);
 			},
-			async resolveId(source, importer) {
-				return resolveId(this.environment.name, source, importer);
+			resolveId: {
+				filter: { id: nodeBuiltinsRE },
+				handler(source, importer) {
+					return resolveId(this.environment.name, source, importer);
+				},
 			},
 		};
 	}
