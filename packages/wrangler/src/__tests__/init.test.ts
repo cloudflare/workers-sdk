@@ -72,13 +72,9 @@ describe("init", () => {
 				}
 			`);
 
-			expect(execa).toHaveBeenCalledWith(
-				"mockpm",
-				["create", "cloudflare"],
-				{
-					stdio: ["inherit", "pipe", "pipe"],
-				}
-			);
+			expect(execa).toHaveBeenCalledWith("mockpm", ["create", "cloudflare"], {
+				stdio: ["inherit", "pipe", "pipe"],
+			});
 		});
 
 		it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
@@ -201,16 +197,12 @@ describe("init", () => {
 			});
 			await runWrangler("init");
 
-			expect(execa).toHaveBeenCalledWith(
-				"mockpm",
-				["create", "cloudflare"],
-				{
-					env: {
-						CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1",
-					},
-					stdio: ["inherit", "pipe", "pipe"],
-				}
-			);
+			expect(execa).toHaveBeenCalledWith("mockpm", ["create", "cloudflare"], {
+				env: {
+					CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1",
+				},
+				stdio: ["inherit", "pipe", "pipe"],
+			});
 		});
 	});
 
