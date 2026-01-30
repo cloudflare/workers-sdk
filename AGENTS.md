@@ -130,5 +130,5 @@ Every change to package code requires a changeset or it will not trigger a relea
 
 **Changeset Format:**
 
-- Do not use conventional commit prefixes (e.g., `fix:`, `feat:`) in changeset descriptions
-- Start with a capital letter and describe the change directly (e.g., "Remove unused option" not "fix: remove unused option")
+The changeset descriptions can either use conventional commit prefixes (e.g., `fix:`, `feat:`) or
+start with a capital letter and describe the change directly (e.g., "Remove unused option" not "fix: remove unused option").
