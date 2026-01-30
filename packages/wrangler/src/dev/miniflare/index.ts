@@ -92,6 +92,8 @@ export interface ConfigBundle {
 	containerBuildId: string | undefined;
 	containerEngine: ContainerEngine | undefined;
 	enableContainers: boolean;
+	// Zone to use for the CF-Worker header in outbound fetches
+	zone: string | undefined;
 }
 
 export class WranglerLog extends Log {
@@ -892,6 +894,7 @@ export async function buildMiniflareOptions(
 					proxy: true,
 				})),
 				containerEngine: config.containerEngine,
+				zone: config.zone,
 			},
 			...externalWorkers,
 		],
