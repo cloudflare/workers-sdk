@@ -1650,13 +1650,13 @@ describe.sequential("wrangler dev", () => {
 				Using vars defined in .dev.vars
 				Your Worker has access to the following bindings:
 				Binding                                      Resource                  Mode
+				env.EMPTY ((hidden))                         Environment Variable      local
+				env.UNQUOTED ((hidden))                      Environment Variable      local
 				env.VAR_1 ((hidden))                         Environment Variable      local
 				env.VAR_2 (original value 2)                 Environment Variable      local
 				env.VAR_3 ((hidden))                         Environment Variable      local
 				env.VAR_MULTI_LINE_1 ((hidden))              Environment Variable      local
 				env.VAR_MULTI_LINE_2 ((hidden))              Environment Variable      local
-				env.EMPTY ((hidden))                         Environment Variable      local
-				env.UNQUOTED ((hidden))                      Environment Variable      local
 
 				"
 			`);
@@ -2123,8 +2123,8 @@ describe.sequential("wrangler dev", () => {
 				──────────────────
 				Your Worker has access to the following bindings:
 				Binding                                 Resource      Mode
-				env.SELF (my-worker)                    Worker        local [connected]
 				env.NAMED (my-worker#MyEntrypoint)      Worker        local [connected]
+				env.SELF (my-worker)                    Worker        local [connected]
 
 				"
 			`);

@@ -83,23 +83,23 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				"Total Upload: xx KiB / gzip: xx KiB
 				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
-				env.KV         KV Namespace
 				env.D1         D1 Database
+				env.KV         KV Namespace
 				env.R2         R2 Bucket
-				Provisioning KV (KV Namespace)...
-				🌀 Creating new KV Namespace "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-kv"...
-				✨ KV provisioned 🎉
 				Provisioning D1 (D1 Database)...
 				🌀 Creating new D1 Database "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-d1"...
 				✨ D1 provisioned 🎉
+				Provisioning KV (KV Namespace)...
+				🌀 Creating new KV Namespace "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-kv"...
+				✨ KV provisioned 🎉
 				Provisioning R2 (R2 Bucket)...
 				🌀 Creating new R2 Bucket "tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2"...
 				✨ R2 provisioned 🎉
 				🎉 All resources provisioned, continuing with deployment...
 				Your Worker has access to the following bindings:
 				Binding                                                                        Resource
-				env.KV (00000000000000000000000000000000)                                      KV Namespace
 				env.D1 (00000000-0000-0000-0000-000000000000)                                  D1 Database
+				env.KV (00000000000000000000000000000000)                                      KV Namespace
 				env.R2 (tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2)                R2 Bucket
 				env.R2_WITH_NAME (does-not-exist)                                              R2 Bucket
 				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
@@ -138,8 +138,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				"Total Upload: xx KiB / gzip: xx KiB
 				Your Worker has access to the following bindings:
 				Binding                                Resource
-				env.KV (inherited)                     KV Namespace
 				env.D1 (inherited)                     D1 Database
+				env.KV (inherited)                     KV Namespace
 				env.R2 (inherited)                     R2 Bucket
 				env.R2_WITH_NAME (does-not-exist)      R2 Bucket
 				Uploaded tmp-e2e-worker-00000000-0000-0000-0000-000000000000 (TIMINGS)
@@ -176,8 +176,8 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)(
 				Compatibility Date:  2023-01-01
 				Your Worker has access to the following bindings:
 				Binding                                                                        Resource
-				env.KV (00000000000000000000000000000000)                                      KV Namespace
 				env.D1 (00000000-0000-0000-0000-000000000000)                                  D1 Database
+				env.KV (00000000000000000000000000000000)                                      KV Namespace
 				env.R2 (tmp-e2e-worker-00000000-0000-0000-0000-000000000000-r2)                R2 Bucket
 				env.R2_WITH_NAME (does-not-exist)                                              R2 Bucket"
 			`);

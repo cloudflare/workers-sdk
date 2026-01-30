@@ -70,8 +70,15 @@ export function printBindings(
 	if (bindings) {
 		// Check if bindings is an array (WorkerMetadataBinding[]) or a record (StartDevWorkerInput["bindings"])
 		if (Array.isArray(bindings)) {
-			// WorkerMetadataBinding[] format
-			for (const binding of bindings) {
+			// WorkerMetadataBinding[] format - sort by type, then by name for consistent output
+			const sortedBindings = [...bindings].sort((a, b) => {
+				const typeCompare = a.type.localeCompare(b.type);
+				if (typeCompare !== 0) {
+					return typeCompare;
+				}
+				return a.name.localeCompare(b.name);
+			});
+			for (const binding of sortedBindings) {
 				const entry = getMetadataBindingOutputEntry(
 					binding,
 					truncate,
@@ -91,8 +98,15 @@ export function printBindings(
 				}
 			}
 		} else {
-			// Record<string, Binding> format
-			for (const [bindingName, binding] of Object.entries(bindings)) {
+			// Record<string, Binding> format - sort by type, then by name for consistent output
+			const sortedEntries = Object.entries(bindings).sort((a, b) => {
+				const typeCompare = a[1].type.localeCompare(b[1].type);
+				if (typeCompare !== 0) {
+					return typeCompare;
+				}
+				return a[0].localeCompare(b[0]);
+			});
+			for (const [bindingName, binding] of sortedEntries) {
 				const entry = getBindingOutputEntry(
 					bindingName,
 					binding,

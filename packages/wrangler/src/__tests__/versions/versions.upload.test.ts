@@ -147,9 +147,9 @@ describe("versions upload", () => {
 			Worker Startup Time: 500 ms
 			Your Worker has access to the following bindings:
 			Binding                                   Resource
-			env.TEST (test-string)                    Environment Variable
 			env.JSON ({\\"abc\\":\\"def\\",\\"bool\\":true})      Environment Variable
 			env.KV (xxxx-xxxx-xxxx-xxxx)              KV Namespace
+			env.TEST (test-string)                    Environment Variable
 
 			Uploaded test-name (TIMINGS)
 			Worker Version ID: 51e4886e-2db7-4900-8d38-fbfecfeab993"
