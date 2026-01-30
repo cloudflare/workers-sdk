@@ -175,6 +175,8 @@ describe("wrangler", () => {
 			);
 
 			expect(std.err).toContain("Unknown argument: invalid-command");
+
+			// Make sure the root help menu being rendered by checking for command category titles
 			expect(std.out).toContain("wrangler");
 			expect(std.out).toContain("COMMANDS");
 			expect(std.out).toContain("ACCOUNT");
@@ -190,6 +192,8 @@ describe("wrangler", () => {
 			);
 
 			expect(std.err).toContain("Unknown arguments: invalid-flag-xyz");
+
+			// Make sure the command-level help menu being rendered by checking command category titles don't exist
 			expect(std.out).toContain("wrangler types");
 			expect(std.out).toContain(
 				"Generate types from your Worker configuration"
