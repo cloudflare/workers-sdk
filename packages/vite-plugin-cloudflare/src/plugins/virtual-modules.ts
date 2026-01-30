@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { assertHasNodeJsCompat } from "../nodejs-compat";
 import {
 	VIRTUAL_EXPORT_TYPES,
 	VIRTUAL_WORKER_ENTRY,
@@ -8,6 +9,10 @@ import { createPlugin } from "../utils";
 
 export const VIRTUAL_USER_ENTRY = `${virtualPrefix}user-entry`;
 export const VIRTUAL_CLIENT_FALLBACK_ENTRY = `${virtualPrefix}client-fallback-entry`;
+export const VIRTUAL_NODEJS_GLOBAL_INJECT_PREFIX = `${virtualPrefix}nodejs-global-inject/`;
+
+const virtualCloudflareResolveRE = /^virtual:cloudflare\//;
+const virtualCloudflareLoadRE = /^\0virtual:cloudflare\//;
 
 /**
  * Plugin to provide virtual modules
@@ -20,28 +25,39 @@ export const virtualModulesPlugin = createPlugin("virtual-modules", (ctx) => {
 				ctx.getWorkerConfig(environment.name) !== undefined
 			);
 		},
-		async resolveId(source) {
-			if (source === VIRTUAL_WORKER_ENTRY || source === VIRTUAL_EXPORT_TYPES) {
-				return `\0${source}`;
-			}
-
-			if (source === VIRTUAL_USER_ENTRY) {
-				const workerConfig = ctx.getWorkerConfig(this.environment.name);
-				assert(workerConfig, "Expected `workerConfig` to be defined");
-				const main = await this.resolve(workerConfig.main);
-				if (!main) {
-					throw new Error(
-						`Failed to resolve main entry file "${workerConfig.main}" for environment "${this.environment.name}"`
-					);
+		resolveId: {
+			filter: { id: virtualCloudflareResolveRE },
+			async handler(source) {
+				// Fallback for when filter is not applied
+				// TODO: remove when we drop support for Vite 6
+				if (!virtualCloudflareResolveRE.test(source)) {
+					return;
 				}
-				return main;
-			}
-		},
-		load(id) {
-			if (id === `\0${VIRTUAL_WORKER_ENTRY}`) {
-				const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
 
-				return `
+				if (source === VIRTUAL_USER_ENTRY) {
+					const workerConfig = ctx.getWorkerConfig(this.environment.name);
+					assert(workerConfig, "Expected `workerConfig` to be defined");
+					const main = await this.resolve(workerConfig.main);
+
+					if (!main) {
+						throw new Error(
+							`Failed to resolve main entry file "${workerConfig.main}" for environment "${this.environment.name}"`
+						);
+					}
+
+					return main;
+				}
+
+				return `\0${source}`;
+			},
+		},
+		load: {
+			filter: { id: virtualCloudflareLoadRE },
+			handler(id) {
+				if (id === `\0${VIRTUAL_WORKER_ENTRY}`) {
+					const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
+
+					return `
 ${nodeJsCompat ? nodeJsCompat.injectGlobalCode() : ""}
 import { getExportTypes } from "${VIRTUAL_EXPORT_TYPES}";
 import * as mod from "${VIRTUAL_USER_ENTRY}";
@@ -53,11 +69,11 @@ if (import.meta.hot) {
 		import.meta.hot.send("vite-plugin-cloudflare:worker-export-types", exportTypes);
 	});
 }
-				`;
-			}
+					`;
+				}
 
-			if (id === `\0${VIRTUAL_EXPORT_TYPES}`) {
-				return `
+				if (id === `\0${VIRTUAL_EXPORT_TYPES}`) {
+					return `
 import {
 	WorkerEntrypoint,
 	DurableObject,
@@ -100,11 +116,24 @@ export function getExportTypes(module) {
 
 	return exportTypes;
 }
-				`;
-			}
+					`;
+				}
+
+				if (id.startsWith(`\0${VIRTUAL_NODEJS_GLOBAL_INJECT_PREFIX}`)) {
+					const nodeJsCompat = ctx.getNodeJsCompat(this.environment.name);
+					assertHasNodeJsCompat(nodeJsCompat);
+
+					return nodeJsCompat.getGlobalVirtualModule(id.slice(1));
+				}
+			},
 		},
 	};
 });
+
+const virtualClientFallbackResolveRE =
+	/^virtual:cloudflare\/client-fallback-entry$/;
+const virtualClientFallbackLoadRE =
+	/^\0virtual:cloudflare\/client-fallback-entry$/;
 
 /**
  * Plugin to provide a virtual fallback entry file for the `client` environment.
@@ -117,15 +146,29 @@ export const virtualClientFallbackPlugin = createPlugin(
 			applyToEnvironment(environment) {
 				return environment.name === "client";
 			},
-			resolveId(source) {
-				if (source === VIRTUAL_CLIENT_FALLBACK_ENTRY) {
+			resolveId: {
+				filter: { id: virtualClientFallbackResolveRE },
+				handler(source) {
+					// Fallback for when filter is not applied
+					// TODO: remove when we drop support for Vite 6
+					if (!virtualClientFallbackResolveRE.test(source)) {
+						return;
+					}
+
 					return `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`;
-				}
+				},
 			},
-			load(id) {
-				if (id === `\0${VIRTUAL_CLIENT_FALLBACK_ENTRY}`) {
-					return ``;
-				}
+			load: {
+				filter: { id: virtualClientFallbackLoadRE },
+				handler(id) {
+					// Fallback for when filter is not applied
+					// TODO: remove when we drop support for Vite 6
+					if (!virtualClientFallbackLoadRE.test(id)) {
+						return;
+					}
+
+					return "";
+				},
 			},
 		};
 	}
