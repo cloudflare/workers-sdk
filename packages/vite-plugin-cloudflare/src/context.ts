@@ -46,11 +46,11 @@ export class PluginContext {
 		if (!this.#sharedContext.miniflare) {
 			debuglog("Creating new Miniflare instance");
 			this.#sharedContext.miniflare = new Miniflare(options);
-			await this.#sharedContext.miniflare.ready;
 		} else {
 			debuglog("Updating the existing Miniflare instance");
 			await this.#sharedContext.miniflare.setOptions(options);
 		}
+		await this.#sharedContext.miniflare.ready;
 		debuglog("Miniflare is ready");
 	}
 
