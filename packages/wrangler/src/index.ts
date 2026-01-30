@@ -1,7 +1,6 @@
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
-import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import {
 	CommandLineArgsError,
 	experimental_readRawConfig,
@@ -2023,8 +2022,6 @@ function dispatchGenericCommandErrorEvent(
 		durationMs,
 		errorType: getErrorType(error),
 		errorMessage:
-			error instanceof UserError || error instanceof ContainersUserError
-				? error.telemetryMessage
-				: undefined,
+			error instanceof UserError ? error.telemetryMessage : undefined,
 	});
 }
