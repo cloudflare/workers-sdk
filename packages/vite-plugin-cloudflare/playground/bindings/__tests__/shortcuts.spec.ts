@@ -109,12 +109,12 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 			"
 			Your Worker has access to the following bindings:
 			Binding                                    Resource
-			env.KV (test-kv-id)                        KV Namespace
-			env.HYPERDRIVE (test-hyperdrive-id)        Hyperdrive Config
-			env.HELLO_WORLD (Timer disabled)           Hello World
 			env.WAE (test)                             Analytics Engine Dataset
+			env.HYPERDRIVE (test-hyperdrive-id)        Hyperdrive Config
 			env.IMAGES                                 Images
-			env.RATE_LIMITER (ratelimit)               Unsafe Metadata
+			env.KV (test-kv-id)                        KV Namespace
+			env.RATE_LIMITER (1 requests/60s)          Rate Limit
+			env.HELLO_WORLD (Timer disabled)           Hello World
 			"
 		`);
 	});
@@ -173,12 +173,12 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 			"
 			primary-worker has access to the following bindings:
 			Binding                                    Resource
-			env.KV (test-kv-id)                        KV Namespace
-			env.HYPERDRIVE (test-hyperdrive-id)        Hyperdrive Config
-			env.HELLO_WORLD (Timer disabled)           Hello World
 			env.WAE (test)                             Analytics Engine Dataset
+			env.HYPERDRIVE (test-hyperdrive-id)        Hyperdrive Config
 			env.IMAGES                                 Images
-			env.RATE_LIMITER (ratelimit)               Unsafe Metadata
+			env.KV (test-kv-id)                        KV Namespace
+			env.RATE_LIMITER (1 requests/60s)          Rate Limit
+			env.HELLO_WORLD (Timer disabled)           Hello World
 
 			auxiliary-worker has access to the following bindings:
 			Binding                           Resource
