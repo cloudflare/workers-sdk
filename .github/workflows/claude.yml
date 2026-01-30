@@ -29,8 +29,29 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install
+
       - name: Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@beta
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          allowed_tools: "Bash(pnpm check),Bash(pnpm test:ci*)"
+          custom_instructions: |
+            When running tests, ALWAYS use the --filter flag to run tests for a specific package only.
+            Never run `pnpm test:ci` without a filter - this would run tests across the entire monorepo and take too long.
+
+            Correct usage: `pnpm test:ci --filter <package-name>`
+            Example: `pnpm test:ci --filter wrangler`
+
+            You can also run a specific test by pattern: `pnpm test:ci --filter <package-name> "test pattern"`
