@@ -45,4 +45,7 @@ export type AutoConfigSummary = {
 	wranglerConfig: RawConfig;
 	frameworkConfiguration?: string;
 	outputDir: string;
+	frameworkId?: string;
+	buildCommand?: string;
+	deployCommand?: string;
 };

@@ -1581,7 +1581,7 @@ describe.sequential("wrangler dev", () => {
 				      \`\`\`
 				      [[migrations]]
 				      tag = \\"v1\\"
-				      new_classes = [ \\"CLASS_1\\", \\"CLASS_3\\" ]
+				      new_sqlite_classes = [ \\"CLASS_1\\", \\"CLASS_3\\" ]
 
 				      \`\`\`
 

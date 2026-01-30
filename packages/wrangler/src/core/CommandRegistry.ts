@@ -68,6 +68,12 @@ export class CommandRegistry {
 	#categories: CategoryMap;
 
 	/**
+	 * Set of legacy command names registered outside the `CommandRegistry` class.
+	 * Used to track commands like `containers`, `pubsub`, etc.
+	 */
+	#legacyCommands: Set<string>;
+
+	/**
 	 * Initializes the command registry with the given command registration function.
 	 */
 	constructor(registerCommand: RegisterCommand) {
@@ -76,6 +82,7 @@ export class CommandRegistry {
 		this.#registerCommand = registerCommand;
 		this.#tree = this.#DefinitionTreeRoot.subtree;
 		this.#categories = new Map();
+		this.#legacyCommands = new Set<string>();
 	}
 
 	/**
@@ -135,6 +142,19 @@ export class CommandRegistry {
 	}
 
 	/**
+	 * Get a set of all top-level command names.
+	 *
+	 * Includes both registry-defined commands & legacy commands.
+	 */
+	get topLevelCommands(): Set<string> {
+		const commands = new Set(this.#tree.keys());
+		for (const legacyCmd of this.#legacyCommands) {
+			commands.add(legacyCmd);
+		}
+		return commands;
+	}
+
+	/**
 	 * Returns the map of categories to command segments, ordered according to
 	 * the category order. Commands within each category are sorted alphabetically.
 	 * Used for grouping commands in the help output.
@@ -164,13 +184,24 @@ export class CommandRegistry {
 	}
 
 	/**
+	 * Registers a legacy command that doesn't use the `CommandRegistry` class.
+	 * This is used for hidden commands like `cloudchamber` that use the old yargs pattern.
+	 */
+	registerLegacyCommand(command: string): void {
+		this.#legacyCommands.add(command);
+	}
+
+	/**
 	 * Registers a category for a legacy command that doesn't use the CommandRegistry.
-	 * This is used for commands like `containers`, `pubsub`, etc, that use the old yargs pattern.
+	 * This is used for commands like `containers`, etc, that use the old yargs pattern.
 	 */
 	registerLegacyCommandCategory(
 		command: string,
 		category: MetadataCategory
 	): void {
+		// Track as a legacy command for `topLevelCommands` getter
+		this.#legacyCommands.add(command);
+
 		const existing = this.#categories.get(category) ?? [];
 		if (existing.includes(command)) {
 			return;

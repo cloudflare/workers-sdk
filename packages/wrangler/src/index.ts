@@ -1,7 +1,6 @@
 import { resolve } from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
-import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import {
 	CommandLineArgsError,
 	experimental_readRawConfig,
@@ -192,7 +191,6 @@ import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
 import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
 import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
-import { pubSubCommands } from "./pubsub/pubsub-commands";
 import { queuesNamespace } from "./queues/cli/commands";
 import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
@@ -318,7 +316,7 @@ import {
 	secretsStoreStoreDeleteCommand,
 	secretsStoreStoreListCommand,
 } from "./secrets-store/commands";
-import { addBreadcrumb, closeSentry, setupSentry } from "./sentry";
+import { closeSentry, setupSentry } from "./sentry";
 import { setupCommand } from "./setup";
 import { tailCommand } from "./tail";
 import { triggersDeployCommand, triggersNamespace } from "./triggers";
@@ -330,7 +328,7 @@ import {
 	logoutCommand,
 	whoamiCommand,
 } from "./user/commands";
-import { betaCmdColor, proxy } from "./utils/constants";
+import { proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
 import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
@@ -1521,15 +1519,6 @@ export function createCLIParser(argv: string[]) {
 	registry.registerNamespace("containers");
 	registry.registerLegacyCommandCategory("containers", "Compute & AI");
 
-	// [PRIVATE BETA] pubsub
-	wrangler.command(
-		"pubsub",
-		`📮 Manage Pub/Sub brokers ${chalk.hex(betaCmdColor)("[private beta]")}`,
-		(pubsubYargs) => {
-			return pubSubCommands(pubsubYargs, subHelp);
-		}
-	);
-
 	registry.define([
 		{
 			command: "wrangler dispatch-namespace",
@@ -1878,8 +1867,6 @@ export function createCLIParser(argv: string[]) {
 	// This set to false to allow overwrite of default behaviour
 	wrangler.version(false);
 
-	registry.registerLegacyCommandCategory("pubsub", "Compute & AI");
-
 	registry.registerAll();
 
 	wrangler.help("help", "Show help").alias("h", "help");
@@ -1896,20 +1883,35 @@ export async function main(argv: string[]): Promise<void> {
 
 	// Check if this is a root-level help request (--help or -h with no subcommand)
 	// In this case, we use our custom help formatter to show command categories
-	const isRootHelpRequest =
-		(argv.includes("--help") || argv.includes("-h")) &&
-		argv.filter((arg) => !arg.startsWith("-")).length === 0;
+	const hasHelpFlag = argv.includes("--help") || argv.includes("-h");
+	const nonFlagArgs = argv.filter((arg) => !arg.startsWith("-"));
+	const isRootHelpRequest = hasHelpFlag && nonFlagArgs.length === 0;
 
-	const { wrangler, showHelpWithCategories } = createCLIParser(argv);
+	const { wrangler, registry, showHelpWithCategories } = createCLIParser(argv);
 
 	if (isRootHelpRequest) {
 		await showHelpWithCategories();
 		return;
 	}
 
-	// Register Yargs middleware to record command as Sentry breadcrumb and set logger level
-	let recordedCommand = false;
-	const wranglerWithMiddleware = wrangler.middleware((args) => {
+	// Check for unknown command with a `--help` flag
+	const [subCommand] = nonFlagArgs;
+	if (hasHelpFlag && subCommand) {
+		const knownCommands = registry.topLevelCommands;
+		if (!knownCommands.has(subCommand)) {
+			logger.info("");
+			logger.error(`Unknown argument: ${subCommand}`);
+			await showHelpWithCategories();
+			throw new CommandLineArgsError(`Unknown argument: ${subCommand}`);
+		}
+	}
+
+	const startTime = Date.now();
+	let configArgs: ReadConfigCommandArgs = {};
+	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
+
+	// Register middleware to set logger level and capture fallback telemetry info
+	wrangler.middleware((args) => {
 		// Update logger level, before we do any logging
 		if (Object.keys(LOGGER_LEVELS).includes(args.logLevel as string)) {
 			logger.loggerLevel = args.logLevel as LoggerLevel;
@@ -1917,27 +1919,6 @@ export async function main(argv: string[]): Promise<void> {
 		// Also set the CLI package log level to match
 		setLogLevel(logger.loggerLevel);
 
-		// Middleware called for each sub-command, but only want to record once
-		if (recordedCommand) {
-			return;
-		}
-		recordedCommand = true;
-
-		// Record command as Sentry breadcrumb
-		const command = `wrangler ${args._.join(" ")}`;
-		addBreadcrumb(command);
-	}, /* applyBeforeValidation */ true);
-
-	const startTime = Date.now();
-	let command: string | undefined;
-	let configArgs: ReadConfigCommandArgs = {};
-	let dispatcher: ReturnType<typeof getMetricsDispatcher> | undefined;
-
-	// Register middleware to capture command info for fallback telemetry
-	const wranglerWithTelemetry = wranglerWithMiddleware.middleware((args) => {
-		// Capture command and args for potential fallback telemetry
-		// (used when yargs validation errors occur before handler runs)
-		command = `wrangler ${args._.join(" ")}`;
 		configArgs = args;
 
 		try {
@@ -1957,7 +1938,7 @@ export async function main(argv: string[]): Promise<void> {
 
 	let cliHandlerThrew = false;
 	try {
-		await wranglerWithTelemetry.parse();
+		await wrangler.parse();
 	} catch (e) {
 		cliHandlerThrew = true;
 
@@ -1970,14 +1951,8 @@ export async function main(argv: string[]): Promise<void> {
 			// The error occurred before Command handler ran
 			// (e.g., yargs validation errors like unknown commands or invalid arguments).
 			// So we need to handle telemetry and error reporting here.
-			if (dispatcher && command) {
-				dispatchGenericCommandErrorEvent(
-					dispatcher,
-					command,
-					configArgs,
-					startTime,
-					e
-				);
+			if (dispatcher) {
+				dispatchGenericCommandErrorEvent(dispatcher, startTime, e);
 			}
 			await handleError(e, configArgs, argv);
 			throw e;
@@ -2021,29 +1996,32 @@ export async function main(argv: string[]): Promise<void> {
  */
 function dispatchGenericCommandErrorEvent(
 	dispatcher: ReturnType<typeof getMetricsDispatcher>,
-	command: string,
-	configArgs: ReadConfigCommandArgs,
 	startTime: number,
 	error: unknown
 ) {
 	const durationMs = Date.now() - startTime;
 
+	// We cannot safely derive sanitized command or args from `args._` since it may contain
+	// sensitive user-supplied positional arguments. So we send empty values.
+	const sanitizedCommand = "";
+	const sanitizedArgs = {};
+
 	// Send "started" event since handler never got to send it.
+	// There is no behaviour to pass to `sendCommandEvent` here since we don't know the command.
 	dispatcher.sendCommandEvent("wrangler command started", {
-		command,
-		args: configArgs,
+		sanitizedCommand,
+		sanitizedArgs,
+		argsUsed: [],
 	});
 
+	// There is no behaviour to pass to `sendCommandEvent` here since we don't know the command.
 	dispatcher.sendCommandEvent("wrangler command errored", {
-		command,
-		args: configArgs,
+		sanitizedCommand,
+		sanitizedArgs,
+		argsUsed: [],
 		durationMs,
-		durationSeconds: durationMs / 1000,
-		durationMinutes: durationMs / 1000 / 60,
 		errorType: getErrorType(error),
 		errorMessage:
-			error instanceof UserError || error instanceof ContainersUserError
-				? error.telemetryMessage
-				: undefined,
+			error instanceof UserError ? error.telemetryMessage : undefined,
 	});
 }

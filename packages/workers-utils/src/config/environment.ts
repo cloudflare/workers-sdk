@@ -1359,7 +1359,9 @@ export interface DispatchNamespaceOutbound {
 
 export interface UserLimits {
 	/** Maximum allowed CPU time for a Worker's invocation in milliseconds */
-	cpu_ms: number;
+	cpu_ms?: number;
+	/** Maximum allowed number of fetch requests that a Worker's invocation can execute */
+	subrequests?: number;
 }
 
 export type Assets = {

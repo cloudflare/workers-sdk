@@ -1,10 +1,13 @@
+import { readFile } from "node:fs/promises";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, assert, describe, expect, test, vi } from "vitest";
 import * as c3 from "../autoconfig/c3-vendor/packages";
 import * as run from "../autoconfig/run";
+import { clearOutputFilePath } from "../output";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
+import type { OutputEntry } from "../output";
 
 vi.mock("../package-manager", () => ({
 	getPackageManager() {
@@ -18,6 +21,10 @@ vi.mock("../package-manager", () => ({
 describe("wrangler setup", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
+
+	afterEach(() => {
+		clearOutputFilePath();
+	});
 
 	test("--help", async () => {
 		await runWrangler("setup --help");
@@ -119,6 +126,63 @@ describe("wrangler setup", () => {
 		expect(runSpy).toHaveBeenCalled();
 
 		expect(installSpy).not.toHaveBeenCalled();
+	});
+
+	test("should output an autoconfig output entry to WRANGLER_OUTPUT_FILE_PATH", async () => {
+		const outputFile = "./output.json";
+
+		await seed({
+			"public/index.html": `<h1>Hello World</h1>`,
+			"package.json": JSON.stringify({}),
+		});
+
+		await runWrangler("setup --dry-run", {
+			...process.env,
+			WRANGLER_OUTPUT_FILE_PATH: outputFile,
+		});
+
+		const outputEntries = (await readFile(outputFile, "utf8"))
+			.split("\n")
+			.filter(Boolean)
+			.map((line) => JSON.parse(line)) as OutputEntry[];
+
+		const autoconfigOutputEntry = outputEntries.find(
+			(obj) => obj.type === "autoconfig"
+		);
+
+		assert(autoconfigOutputEntry);
+
+		if (autoconfigOutputEntry.summary?.wranglerConfig) {
+			// Let's normalize the wrangler config values that are
+			// randomly generated or change over time
+			autoconfigOutputEntry.summary.wranglerConfig.name = "test-name";
+			autoconfigOutputEntry.summary.wranglerConfig.compatibility_date =
+				"YYYY-MM-DD";
+		}
+
+		expect(autoconfigOutputEntry.summary).toMatchInlineSnapshot(`
+			Object {
+			  "deployCommand": "npx wrangler deploy",
+			  "frameworkId": "static",
+			  "outputDir": "public",
+			  "scripts": Object {
+			    "deploy": "wrangler deploy",
+			    "preview": "wrangler dev",
+			  },
+			  "wranglerConfig": Object {
+			    "$schema": "node_modules/wrangler/config-schema.json",
+			    "assets": Object {
+			      "directory": "public",
+			    },
+			    "compatibility_date": "YYYY-MM-DD",
+			    "name": "test-name",
+			    "observability": Object {
+			      "enabled": true,
+			    },
+			  },
+			  "wranglerInstall": true,
+			}
+		`);
 	});
 
 	describe("--dry-run", () => {

@@ -7,6 +7,10 @@
 		{
 			"binding": "KV",
 		},
+		{
+			"binding": "KV_WITH_ID",
+			"id": "some-kv-id",
+		},
 	],
 	"d1_databases": [
 		{

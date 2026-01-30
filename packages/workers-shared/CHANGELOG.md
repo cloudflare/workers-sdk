@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.18.10
+
+### Patch Changes
+
+- [#11920](https://github.com/cloudflare/workers-sdk/pull/11920) [`09a8829`](https://github.com/cloudflare/workers-sdk/commit/09a8829d0bf5dbb5f94f5ad4d6d7aaacb940241e) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - The asset-worker now uses a shorter 10-second TTL for cached assets, down from 60 seconds. This ensures that asset updates are reflected more quickly during development and deployment, reducing the window where stale assets might be served.
+
 ## 0.18.9
 
 ### Patch Changes

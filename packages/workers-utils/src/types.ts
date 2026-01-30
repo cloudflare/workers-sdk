@@ -203,6 +203,7 @@ export type ServiceMetadataRes = {
 			usage_model: "bundled" | "unbound";
 			limits: {
 				cpu_ms: number;
+				subrequests: number;
 			};
 			compatibility_date: string;
 			compatibility_flags: string[];

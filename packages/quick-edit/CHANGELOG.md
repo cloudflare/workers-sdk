@@ -1,5 +1,13 @@
 # @cloudflare/quick-edit
 
+## 0.4.5
+
+### Patch Changes
+
+- [#12154](https://github.com/cloudflare/workers-sdk/pull/12154) [`e36c0c9`](https://github.com/cloudflare/workers-sdk/commit/e36c0c9f70041bea4abc4ee4e4e462e2dc11e9cc) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Use `X-Forwarded-Host` header for extension authority when behind a proxy
+
+  When Quick Edit is accessed through a proxy, the `X-Forwarded-Host` header is now used to determine the authority for loading builtin extensions. This ensures extensions load correctly when the Worker is behind a reverse proxy. The header value is only used if it matches `*.devprod.cloudflare.dev` for security.
+
 ## 0.4.4
 
 ### Patch Changes

@@ -46,7 +46,9 @@ export const d1MigrationsCreateCommand = createCommand({
 			);
 		}
 
-		const databaseInfo = getDatabaseInfoFromConfig(config, database);
+		const databaseInfo = getDatabaseInfoFromConfig(config, database, {
+			requireDatabaseId: false,
+		});
 		if (!databaseInfo) {
 			throw new UserError(
 				`Couldn't find a D1 DB with the name or binding '${database}' in your ${configFileName(config.configPath)} file.`

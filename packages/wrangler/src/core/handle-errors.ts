@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import { ApiError } from "@cloudflare/containers-shared";
-import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import {
 	APIError,
 	CommandLineArgsError,
@@ -248,6 +247,19 @@ function isNetworkFetchFailedError(e: unknown): boolean {
 }
 
 /**
+ * Is this a Containers/Cloudchamber-based auth error?
+ *
+ * Containers uses custom OpenAPI-based generated client that throws an error that has a different structure to standard cfetch auth errors.
+ */
+function isContainersAuthenticationError(e: unknown): e is UserError {
+	return (
+		e instanceof UserError &&
+		e.cause instanceof ApiError &&
+		e.cause.status === 403
+	);
+}
+
+/**
  * Determines the error type for telemetry purposes, or `undefined` if it cannot be determined.
  */
 export function getErrorType(e: unknown): string | undefined {
@@ -446,19 +458,33 @@ export async function handleError(
 		// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
 		// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
 
-		// Check if this is a root-level error (unknown argument at root level)
-		// by looking at the error message - if it says "Unknown argument" or "Unknown command",
-		// and there's only one non-flag argument, show the categorized root help
 		const nonFlagArgs = subCommandParts.filter(
 			(arg) => !arg.startsWith("-") && arg !== ""
 		);
-		const isRootLevelError =
-			nonFlagArgs.length <= 1 &&
-			(e.message.includes("Unknown argument") ||
-				e.message.includes("Unknown command"));
+
+		const isUnknownArgOrCommand =
+			e.message.includes("Unknown argument") ||
+			e.message.includes("Unknown command");
+
+		const unknownArgsMatch = e.message.match(
+			/Unknown (?:arguments?|command): (.+)/
+		);
+		const unknownArgs = unknownArgsMatch
+			? unknownArgsMatch[1].split(",").map((a) => a.trim())
+			: [];
+
+		// Check if any of the unknown args match the first non-flag argument
+		// If so, it's an unknown command (not an unknown flag on a valid command)
+		// Note: we check !arg.startsWith("-") to exclude flag-like args,
+		// but command names can contain dashes (e.g., "dispatch-namespace")
+		const isUnknownCommand = unknownArgs.some(
+			(arg) => arg === nonFlagArgs[0] && !arg.startsWith("-")
+		);
+
+		const isRootLevelError = isUnknownArgOrCommand && isUnknownCommand;
 
 		const { wrangler, showHelpWithCategories } = createCLIParser([
-			...(isRootLevelError ? [] : subCommandParts),
+			...(isRootLevelError ? [] : nonFlagArgs),
 			"--help",
 		]);
 
@@ -566,10 +592,7 @@ export async function handleError(
 			logger.debug(loggableException.stack);
 		}
 
-		if (
-			!(loggableException instanceof UserError) &&
-			!(loggableException instanceof ContainersUserError)
-		) {
+		if (!(loggableException instanceof UserError)) {
 			await logPossibleBugMessage();
 		}
 	}
@@ -579,23 +602,9 @@ export async function handleError(
 		mayReport &&
 		// ...and it's not a user error
 		!(loggableException instanceof UserError) &&
-		!(loggableException instanceof ContainersUserError) &&
 		// ...and it's not an un-reportable API error
 		!(loggableException instanceof APIError && !loggableException.reportable)
 	) {
 		await captureGlobalException(loggableException);
 	}
-}
-
-/**
- * Is this a Containers/Cloudchamber-based auth error?
- *
- * Containers uses custom OpenAPI-based generated client that throws an error that has a different structure to standard cfetch auth errors.
- */
-function isContainersAuthenticationError(e: unknown): e is UserError {
-	return (
-		e instanceof UserError &&
-		e.cause instanceof ApiError &&
-		e.cause.status === 403
-	);
 }

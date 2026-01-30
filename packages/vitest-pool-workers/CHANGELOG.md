@@ -1,5 +1,48 @@
 # @cloudflare/vitest-pool-workers
 
+## 0.12.8
+
+### Patch Changes
+
+- Updated dependencies [[`8a210af`](https://github.com/cloudflare/workers-sdk/commit/8a210afbfe6d960098ac3f280071a5282a4dd87b), [`eb8a415`](https://github.com/cloudflare/workers-sdk/commit/eb8a415ce33ff16e04e989a59849d7b8ba981a01), [`3b06b18`](https://github.com/cloudflare/workers-sdk/commit/3b06b18670bd975a6ffc1678b9d9c787f3dcf10a), [`17961bb`](https://github.com/cloudflare/workers-sdk/commit/17961bb6a7cadcad7e1c7f86804267f3a04da2fa), [`52fdfe7`](https://github.com/cloudflare/workers-sdk/commit/52fdfe7d9427dd65d4d8bca8f37c0c753e25bee7), [`6d8d9cd`](https://github.com/cloudflare/workers-sdk/commit/6d8d9cd6c040721037b4ac323699a35eca69f019), [`cb72c11`](https://github.com/cloudflare/workers-sdk/commit/cb72c1146fdab8af7d071ea0af0ea04c7523ee5b)]:
+  - miniflare@4.20260128.0
+  - wrangler@4.61.1
+
+## 0.12.7
+
+### Patch Changes
+
+- [#12056](https://github.com/cloudflare/workers-sdk/pull/12056) [`6d5f69f`](https://github.com/cloudflare/workers-sdk/commit/6d5f69fa0c86eed05875603ac31a9f32a4a2bfbd) Thanks [@edmundhung](https://github.com/edmundhung)! - fix: allow Vite query parameters like `?raw` on `.sql` file imports
+
+  Importing `.sql` files with Vite query parameters (e.g., `import sql from "./query.sql?raw"`) would fail with "No such module" errors in vitest-pool-workers 0.12.x. Both import styles now work:
+
+  - `import sql from "./query.sql?raw"` (Vite handles the `?raw` transform)
+  - `import sql from "./query.sql"` (loaded as Text module)
+
+- [#11917](https://github.com/cloudflare/workers-sdk/pull/11917) [`7b40ceb`](https://github.com/cloudflare/workers-sdk/commit/7b40ceb8a54964a2be93a2897fbcabc0b0b27eae) Thanks [@ksawaneh](https://github.com/ksawaneh)! - Fix CommonJS `require()` of `.json` files in the module fallback service (avoids `SyntaxError: Unexpected token ':'`).
+
+- [#11897](https://github.com/cloudflare/workers-sdk/pull/11897) [`bbd8a5e`](https://github.com/cloudflare/workers-sdk/commit/bbd8a5e98cbe3048d80652ecf74368b9c26bd2ff) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Bundle the `zod` dependency to reduce supply chain attack surface
+
+  In order to prevent possible npm vulnerability attacks, the team's policy is to bundle
+  dependencies in our packages where possible. This helps ensure that only trusted code
+  runs on the user's system, even if compromised packages are later published to npm.
+
+  This change bundles `zod` (a pure JavaScript validation library with no native dependencies)
+  into miniflare and @cloudflare/vitest-pool-workers.
+
+  Other dependencies remain external for technical reasons:
+
+  - `sharp`: Native binary with platform-specific builds
+  - `undici`: Dynamically required at runtime in worker threads
+  - `ws`: Has optional native bindings for performance
+  - `workerd`: Native binary (Cloudflare's JavaScript runtime)
+  - `@cspotcode/source-map-support`: Uses require.cache manipulation at runtime
+  - `youch`: Dynamically required for lazy loading
+
+- Updated dependencies [[`a0a9ef6`](https://github.com/cloudflare/workers-sdk/commit/a0a9ef6cd36dc6a3aac01a576c7c41bbcd90f33c), [`ad4666c`](https://github.com/cloudflare/workers-sdk/commit/ad4666cf86db5fe08de7f798b0c8d17fdd5b10fd), [`014e7aa`](https://github.com/cloudflare/workers-sdk/commit/014e7aa2074d3464e012876b70e22af44fa26e5d), [`e414f05`](https://github.com/cloudflare/workers-sdk/commit/e414f05271887ed43a9a0a660d66565e9847c489), [`77e82d2`](https://github.com/cloudflare/workers-sdk/commit/77e82d25e13800d34426ba6774def3fcc2c7de21), [`f08ef21`](https://github.com/cloudflare/workers-sdk/commit/f08ef210b7215921e00e8aa890d25df334a08bbe), [`0641e6c`](https://github.com/cloudflare/workers-sdk/commit/0641e6ca0708d7bc73d04c0a619676cc5fde7a4e), [`eacedba`](https://github.com/cloudflare/workers-sdk/commit/eacedbaf56a9687f1bac31dd14985334263e2f0d), [`05714f8`](https://github.com/cloudflare/workers-sdk/commit/05714f871022e998dfbd7005f795d2fa3b9aee56), [`e8b2ef5`](https://github.com/cloudflare/workers-sdk/commit/e8b2ef5b855129699c4bdbb5fbd4fcbe85323769), [`bbd8a5e`](https://github.com/cloudflare/workers-sdk/commit/bbd8a5e98cbe3048d80652ecf74368b9c26bd2ff)]:
+  - wrangler@4.61.0
+  - miniflare@4.20260124.0
+
 ## 0.12.6
 
 ### Patch Changes

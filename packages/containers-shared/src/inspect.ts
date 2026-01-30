@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { UserError } from "./error";
+import { UserError } from "@cloudflare/workers-utils";
 
 export async function dockerImageInspect(
 	dockerPath: string,

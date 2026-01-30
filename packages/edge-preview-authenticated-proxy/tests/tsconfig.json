@@ -1,19 +1,17 @@
 {
 	"compilerOptions": {
-		"target": "esnext" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
-		"lib": [
-			"esnext"
-		] /* Specify a set of bundled library declaration files that describe the target runtime environment. */,
-		"module": "es2022" /* Specify what module code is generated. */,
-		"moduleResolution": "node" /* Specify how TypeScript looks up a file from a given module specifier. */,
-		"allowJs": true /* Allow JavaScript files to be a part of your program. Use the `checkJS` option to get errors from these files. */,
-		"checkJs": false /* Enable error reporting in type-checked JavaScript files. */,
-		"noEmit": true /* Disable emitting files from a compilation. */,
-		"isolatedModules": true /* Ensure that each file can be safely transpiled without relying on other imports. */,
-		"allowSyntheticDefaultImports": true /* Allow 'import x from y' when a module doesn't have a default export. */,
-		"forceConsistentCasingInFileNames": true /* Ensure that casing is correct in imports. */,
-		"strict": true /* Enable all strict type-checking options. */,
-		"skipLibCheck": true /* Skip type checking all .d.ts files. */
+		"target": "esnext",
+		"lib": ["esnext"],
+		"module": "es2022",
+		"moduleResolution": "bundler",
+		"allowJs": true,
+		"checkJs": false,
+		"noEmit": true,
+		"isolatedModules": true,
+		"allowSyntheticDefaultImports": true,
+		"forceConsistentCasingInFileNames": true,
+		"strict": true,
+		"skipLibCheck": true
 	},
 	"include": ["**/*.test.ts"]
 }

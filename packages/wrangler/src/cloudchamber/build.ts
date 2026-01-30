@@ -6,7 +6,6 @@ import {
 	dockerImageInspect,
 	dockerLoginImageRegistry,
 	getCloudflareContainerRegistry,
-	isDir,
 	resolveImageName,
 	runDockerCmd,
 	runDockerCmdWithOutput,
@@ -14,6 +13,7 @@ import {
 import {
 	getCIOverrideNetworkModeHost,
 	getDockerPath,
+	isDirectory,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { createCommand } from "../core/create-command";
@@ -258,7 +258,7 @@ export async function buildCommand(
 	args: StrictYargsOptionsToInterface<typeof buildYargs>
 ) {
 	// TODO: merge args with Wrangler config if available
-	if (existsSync(args.PATH) && !isDir(args.PATH)) {
+	if (existsSync(args.PATH) && !isDirectory(args.PATH)) {
 		throw new UserError(
 			`${args.PATH} is not a directory. Please specify a valid directory path.`
 		);

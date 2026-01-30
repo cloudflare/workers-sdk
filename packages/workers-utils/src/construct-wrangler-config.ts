@@ -40,7 +40,7 @@ interface APIWorkerConfig {
 	assets?: AssetConfig;
 	bindings: WorkerMetadata["bindings"];
 	observability: Cloudflare.Workers.Beta.Worker.Observability | undefined;
-	limits: { cpu_ms: number } | undefined;
+	limits: { cpu_ms?: number; subrequests?: number } | undefined;
 	placement: Cloudflare.Workers.Beta.Workers.Version.Placement | undefined;
 	subdomain: {
 		enabled: boolean;

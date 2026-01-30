@@ -1077,6 +1077,25 @@ export function getGlobalServices({
 	];
 
 	if (sharedOptions.unsafeLocalExplorer) {
+		// Build binding ID map from proxyBindings
+		// Maps binding names to their actual namespace/bucket IDs
+		const IDToBindingName: { kv: Record<string, string> } = { kv: {} };
+
+		for (const binding of proxyBindings) {
+			// KV bindings: name = "MINIFLARE_PROXY:kv:worker:BINDING", kvNamespace.name = "kv:ns:ID"
+			if (
+				binding.name?.startsWith(
+					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:kv:`
+				) &&
+				"kvNamespace" in binding &&
+				binding.kvNamespace?.name?.startsWith("kv:ns:")
+			) {
+				// Extract ID from service name "kv:ns:ID"
+				const namespaceId = binding.kvNamespace.name.replace(/^kv:ns:/, "");
+				IDToBindingName.kv[namespaceId] = binding.name;
+			}
+		}
+
 		services.push({
 			name: SERVICE_LOCAL_EXPLORER,
 			worker: {
@@ -1088,7 +1107,13 @@ export function getGlobalServices({
 						esModule: SCRIPT_LOCAL_EXPLORER_API(),
 					},
 				],
-				bindings: [...proxyBindings],
+				bindings: [
+					...proxyBindings,
+					{
+						name: CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP,
+						json: JSON.stringify(IDToBindingName),
+					},
+				],
 			},
 		});
 	}

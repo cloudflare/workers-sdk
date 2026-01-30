@@ -1,8 +1,7 @@
 import assert from "node:assert";
-import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { getDevContainerImageName } from "@cloudflare/containers-shared";
-import { getLocalExplorerFromEnv } from "@cloudflare/workers-utils";
+import { getLocalExplorerEnabledFromEnv } from "@cloudflare/workers-utils";
 import { Log, LogLevel } from "miniflare";
 import { extractBindingsOfType } from "../../api/startDevWorker/utils";
 import { ModuleTypeToRuleType } from "../../deployment-bundle/module-collection";
@@ -248,6 +247,7 @@ type WorkerOptionsBindings = Pick<
 	| "unsafeBindings"
 	| "additionalUnboundDurableObjects"
 	| "media"
+	| "versionMetadata"
 >;
 
 type MiniflareBindingsConfig = Pick<
@@ -490,13 +490,10 @@ export function buildMiniflareBindingOptions(
 	for (const binding of jsonBindings) {
 		vars[binding.binding] = binding.value as Json;
 	}
-	// emulate version_metadata binding via a JSON var
-	for (const binding of versionMetadataBindings) {
-		vars[binding.binding] = { id: randomUUID(), tag: "" };
-	}
 
 	const bindingOptions: WorkerOptionsBindings = {
 		bindings: vars,
+		versionMetadata: versionMetadataBindings[0]?.binding,
 		textBlobBindings,
 		dataBlobBindings,
 		wasmBindings,
@@ -841,7 +838,7 @@ export async function buildMiniflareOptions(
 		unsafeHandleDevRegistryUpdate: onDevRegistryUpdate,
 		unsafeProxySharedSecret: proxyToUserWorkerAuthenticationSecret,
 		unsafeTriggerHandlers: true,
-		unsafeLocalExplorer: getLocalExplorerFromEnv(),
+		unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 		// The way we run Miniflare instances with wrangler dev is that there are two:
 		//  - one holding the proxy worker,
 		//  - and one holding the user worker.
