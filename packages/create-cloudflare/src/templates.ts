@@ -50,7 +50,7 @@ import vikeExperimentalTemplate from "templates/vike/experimental-c3";
 import vueTemplate from "templates/vue/c3";
 import wakuTemplate from "templates/waku/c3";
 import wakuExperimentalTemplate from "templates/waku/experimental-c3";
-import { AGENTS_MD } from "./agents-md";
+import { getAgentsMd } from "./agents-md";
 import { isInsideGitRepo } from "./git";
 import { validateProjectDirectory, validateTemplateUrl } from "./validators";
 import type { Option } from "@cloudflare/cli/interactive";
@@ -790,7 +790,7 @@ export async function copyTemplateFiles(ctx: C3Context) {
  */
 export function writeAgentsMd(projectPath: string): void {
 	const agentsMdPath = join(projectPath, "AGENTS.md");
-	writeFile(agentsMdPath, AGENTS_MD);
+	writeFile(agentsMdPath, getAgentsMd());
 }
 
 export const processRemoteTemplate = async (args: Partial<C3Args>) => {

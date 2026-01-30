@@ -5,7 +5,15 @@
  * to provide AI coding agents with retrieval-led guidance for Cloudflare APIs.
  */
 
-export const AGENTS_MD = `# Cloudflare Workers
+const getCurrentDate = (): string => {
+	const now = new Date();
+	const year = now.getFullYear();
+	const month = String(now.getMonth() + 1).padStart(2, "0");
+	const day = String(now.getDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
+};
+
+export const getAgentsMd = (): string => `# Cloudflare Workers
 
 STOP. Your knowledge of Cloudflare Workers APIs and limits may be outdated. Always retrieve current documentation before any Workers, KV, R2, D1, Durable Objects, Queues, Vectorize, AI, or Agents SDK task.
 
@@ -33,7 +41,7 @@ If you encounter \`Dynamic require of "X" is not supported\` or missing Node.js 
 \`\`\`jsonc
 {
   "compatibility_flags": ["nodejs_compat"],
-  "compatibility_date": "2024-09-23"
+  "compatibility_date": "${getCurrentDate()}"
 }
 \`\`\`
 

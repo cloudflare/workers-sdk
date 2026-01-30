@@ -11,7 +11,7 @@ import {
 	writeJSON,
 } from "helpers/files";
 import { beforeEach, describe, expect, test, vi } from "vitest";
-import { AGENTS_MD } from "../agents-md";
+import { getAgentsMd } from "../agents-md";
 import {
 	addWranglerToGitIgnore,
 	deriveCorrelatedArgs,
@@ -622,15 +622,16 @@ describe("writeAgentsMd", () => {
 
 		expect(writeFileMock).toHaveBeenCalledWith(
 			"/path/to/my-project/AGENTS.md",
-			AGENTS_MD,
+			getAgentsMd(),
 		);
 	});
 
 	test("AGENTS.md should contain retrieval-led reasoning guidance", () => {
-		expect(AGENTS_MD).toContain("STOP");
-		expect(AGENTS_MD).toContain("retrieve");
-		expect(AGENTS_MD).toContain("https://developers.cloudflare.com/workers/");
-		expect(AGENTS_MD).toContain("wrangler");
-		expect(AGENTS_MD).toContain("nodejs_compat");
+		const agentsMd = getAgentsMd();
+		expect(agentsMd).toContain("STOP");
+		expect(agentsMd).toContain("retrieve");
+		expect(agentsMd).toContain("https://developers.cloudflare.com/workers/");
+		expect(agentsMd).toContain("wrangler");
+		expect(agentsMd).toContain("nodejs_compat");
 	});
 });
