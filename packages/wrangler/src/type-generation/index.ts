@@ -15,7 +15,7 @@ import { getNodeCompat } from "miniflare";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
-import { parseRules, DEFAULT_MODULE_RULES } from "../deployment-bundle/rules";
+import { DEFAULT_MODULE_RULES } from "../deployment-bundle/rules";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
@@ -629,13 +629,13 @@ async function generateSimpleEnvTypes(
 	}
 
 	// Separate user rules from default rules
-	const { userRules, defaultRules } = separateUserAndDefaultRules(config.rules);
-	
-	// Generate module declarations for user-defined rules (for console)
-	const userModulesTypeStructure = generateModuleDeclarations(userRules);
-	
+	const { userRulesOnly, allRules } = separateUserAndDefaultRules(config.rules);
+
+	// Generate module declarations for user-only rules (for console output)
+	const userModulesTypeStructure = generateModuleDeclarations(userRulesOnly);
+
 	// Generate module declarations for all rules (user + default, for file)
-	const allModulesTypeStructure = generateModuleDeclarations([...userRules, ...defaultRules]);
+	const allModulesTypeStructure = generateModuleDeclarations(allRules);
 
 	const typesHaveBeenFound =
 		envTypeStructure.length > 0 || allModulesTypeStructure.length > 0;
@@ -1023,13 +1023,16 @@ async function generatePerEnvironmentTypes(
 	}
 
 	// Separate user rules from default rules
-	const { userRules: userRulesForEnv, defaultRules: defaultRulesForEnv } = separateUserAndDefaultRules(config.rules);
-	
-	// Generate module declarations for user-defined rules (for console)
-	const userModulesTypeStructureForEnv = generateModuleDeclarations(userRulesForEnv);
-	
+	const { userRulesOnly: userRulesOnlyForEnv, allRules: allRulesForEnv } =
+		separateUserAndDefaultRules(config.rules);
+
+	// Generate module declarations for user-only rules (for console output)
+	const userModulesTypeStructureForEnv =
+		generateModuleDeclarations(userRulesOnlyForEnv);
+
 	// Generate module declarations for all rules (user + default, for file)
-	const allModulesTypeStructureForEnv = generateModuleDeclarations([...userRulesForEnv, ...defaultRulesForEnv]);
+	const allModulesTypeStructureForEnv =
+		generateModuleDeclarations(allRulesForEnv);
 
 	const { consoleOutput, fileContent } = generatePerEnvTypeStrings(
 		entrypointFormat,
@@ -1064,11 +1067,59 @@ async function generatePerEnvironmentTypes(
 
 /**
  * Separates user-defined rules from default rules.
+ *
+ * Returns:
+ * - userRulesOnly: User rules that are NOT overlapping with default rules (for console output)
+ * - allRules: Combined user rules + default rules without duplicates (for file output)
  */
 function separateUserAndDefaultRules(userRules: Rule[] = []) {
+	// Build a set of default globs for quick lookup
+	const defaultGlobSet = new Set<string>();
+	for (const rule of DEFAULT_MODULE_RULES) {
+		for (const glob of rule.globs) {
+			defaultGlobSet.add(glob);
+		}
+	}
+
+	// User rules that don't overlap with default rules (shown in console)
+	const userRulesOnly: Rule[] = [];
+	// Track which globs we've already added (from user rules)
+	const addedGlobs = new Set<string>();
+
+	for (const rule of userRules) {
+		const nonDefaultGlobs = rule.globs.filter(
+			(glob) => !defaultGlobSet.has(glob)
+		);
+		if (nonDefaultGlobs.length > 0) {
+			userRulesOnly.push({
+				...rule,
+				globs: nonDefaultGlobs,
+			});
+		}
+		// Track all globs from user rules
+		for (const glob of rule.globs) {
+			addedGlobs.add(glob);
+		}
+	}
+
+	// For the file output, we need all user rules + default rules that aren't already covered
+	const allRules: Rule[] = [...userRules];
+
+	for (const defaultRule of DEFAULT_MODULE_RULES) {
+		const missingGlobs = defaultRule.globs.filter(
+			(glob) => !addedGlobs.has(glob)
+		);
+		if (missingGlobs.length > 0) {
+			allRules.push({
+				...defaultRule,
+				globs: missingGlobs,
+			});
+		}
+	}
+
 	return {
-		userRules: userRules,
-		defaultRules: DEFAULT_MODULE_RULES
+		userRulesOnly,
+		allRules,
 	};
 }
 
@@ -1169,8 +1220,12 @@ function generatePerEnvTypeStrings(
 	const fileModulesContent = fileModulesTypeStructure.join("\n");
 
 	return {
-		consoleOutput: consoleModulesContent ? `${baseContent}\n${consoleModulesContent}` : baseContent,
-		fileContent: fileModulesContent ? `${baseContent}\n${fileModulesContent}` : baseContent,
+		consoleOutput: consoleModulesContent
+			? `${baseContent}\n${consoleModulesContent}`
+			: baseContent,
+		fileContent: fileModulesContent
+			? `${baseContent}\n${fileModulesContent}`
+			: baseContent,
 	};
 }
 
@@ -1258,8 +1313,12 @@ function generateTypeStrings(
 	const fileModulesContent = fileModulesTypeStructure.join("\n");
 
 	return {
-		fileContent: fileModulesContent ? `${baseContent}\n${fileModulesContent}` : baseContent,
-		consoleOutput: consoleModulesContent ? `${baseContent}\n${consoleModulesContent}` : baseContent,
+		fileContent: fileModulesContent
+			? `${baseContent}\n${fileModulesContent}`
+			: baseContent,
+		consoleOutput: consoleModulesContent
+			? `${baseContent}\n${consoleModulesContent}`
+			: baseContent,
 	};
 }
 
