@@ -106,8 +106,8 @@ describe("resource provisioning", () => {
 			Worker Startup Time: 100 ms
 			Your Worker has access to the following bindings:
 			Binding                 Resource
-			env.KV (inherited)      KV Namespace
 			env.D1 (inherited)      D1 Database
+			env.KV (inherited)      KV Namespace
 			env.R2 (inherited)      R2 Bucket
 
 			Uploaded test-name (TIMINGS)
@@ -193,8 +193,8 @@ describe("resource provisioning", () => {
 
 				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
-				env.KV         KV Namespace
 				env.D1         D1 Database
+				env.KV         KV Namespace
 				env.R2         R2 Bucket
 
 
@@ -213,8 +213,8 @@ describe("resource provisioning", () => {
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
 				Binding                            Resource
-				env.KV (existing-kv-id)            KV Namespace
 				env.D1 (existing-d1-id)            D1 Database
+				env.KV (existing-kv-id)            KV Namespace
 				env.R2 (existing-bucket-name)      R2 Bucket
 
 				Uploaded test-name (TIMINGS)
@@ -314,8 +314,8 @@ describe("resource provisioning", () => {
 
 				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
-				env.KV         KV Namespace
 				env.D1         D1 Database
+				env.KV         KV Namespace
 				env.R2         R2 Bucket
 
 
@@ -334,8 +334,8 @@ describe("resource provisioning", () => {
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
 				Binding                         Resource
-				env.KV (existing-kv-id-1)       KV Namespace
 				env.D1 (existing-d1-id-1)       D1 Database
+				env.KV (existing-kv-id-1)       KV Namespace
 				env.R2 (existing-bucket-1)      R2 Bucket
 
 				Uploaded test-name (TIMINGS)
@@ -445,8 +445,8 @@ describe("resource provisioning", () => {
 
 				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
-				env.KV         KV Namespace
 				env.D1         D1 Database
+				env.KV         KV Namespace
 				env.R2         R2 Bucket
 
 
@@ -468,8 +468,8 @@ describe("resource provisioning", () => {
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
 				Binding                 Resource
-				env.KV (new-kv-id)      KV Namespace
 				env.D1 (new-d1-id)      D1 Database
+				env.KV (new-kv-id)      KV Namespace
 				env.R2 (new-r2)         R2 Bucket
 
 				Uploaded test-name (TIMINGS)
@@ -606,8 +606,8 @@ describe("resource provisioning", () => {
 
 				Experimental: The following bindings need to be provisioned:
 				Binding        Resource
-				env.KV         KV Namespace
 				env.D1         D1 Database
+				env.KV         KV Namespace
 				env.R2         R2 Bucket
 
 
@@ -629,8 +629,8 @@ describe("resource provisioning", () => {
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
 				Binding                 Resource
-				env.KV (new-kv-id)      KV Namespace
 				env.D1 (new-d1-id)      D1 Database
+				env.KV (new-kv-id)      KV Namespace
 				env.R2 (new-r2)         R2 Bucket
 
 				Uploaded test-name (TIMINGS)
@@ -754,9 +754,9 @@ describe("resource provisioning", () => {
 
 				Experimental: The following bindings need to be provisioned:
 				Binding                 Resource
+				env.D1                  D1 Database
 				env.KV                  KV Namespace
 				env.PLATFORM_KV         KV Namespace
-				env.D1                  D1 Database
 				env.R2                  R2 Bucket
 
 
@@ -782,9 +782,9 @@ describe("resource provisioning", () => {
 				Worker Startup Time: 100 ms
 				Your Worker has access to the following bindings:
 				Binding                                         Resource
+				env.D1 (test-name-d1-id)                        D1 Database
 				env.KV (test-name-kv-id)                        KV Namespace
 				env.PLATFORM_KV (test-name-platform-kv-id)      KV Namespace
-				env.D1 (test-name-d1-id)                        D1 Database
 				env.R2 (test-name-r2)                           R2 Bucket
 
 				Uploaded test-name (TIMINGS)
@@ -863,8 +863,8 @@ describe("resource provisioning", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
-				Binding        Resource
-				env.D1         D1 Database
+				Binding                         Resource
+				env.D1 (prefilled-d1-name)      D1 Database
 
 
 				Provisioning D1 (D1 Database)...
@@ -992,8 +992,8 @@ describe("resource provisioning", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
-				Binding        Resource
-				env.D1         D1 Database
+				Binding                   Resource
+				env.D1 (new-d1-name)      D1 Database
 
 
 				Provisioning D1 (D1 Database)...
@@ -1071,8 +1071,8 @@ describe("resource provisioning", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
-				Binding            Resource
-				env.BUCKET         R2 Bucket
+				Binding                                  Resource
+				env.BUCKET (prefilled-r2-name (eu))      R2 Bucket
 
 
 				Provisioning BUCKET (R2 Bucket)...
@@ -1267,8 +1267,8 @@ describe("resource provisioning", () => {
 				Total Upload: xx KiB / gzip: xx KiB
 
 				Experimental: The following bindings need to be provisioned:
-				Binding            Resource
-				env.BUCKET         R2 Bucket
+				Binding                                     Resource
+				env.BUCKET (existing-bucket-name (eu))      R2 Bucket
 
 
 				Provisioning BUCKET (R2 Bucket)...

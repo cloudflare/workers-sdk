@@ -44,9 +44,13 @@ export {
 } from "./parse";
 export {
 	friendlyBindingNames,
+	bindingTypeFriendlyNames,
+	getBindingTypeFriendlyName,
+	extractBindingType,
 	isPagesConfig,
 	normalizeAndValidateConfig,
 	type NormalizeAndValidateConfigArgs,
+	type ConfigBindingFieldName,
 	isValidR2BucketName,
 	bucketFormatMessage,
 } from "./config/validation";

@@ -36,7 +36,7 @@ import {
 	validateUniqueNameProperty,
 } from "./validation-helpers";
 import { configFileName, formatConfigSnippet } from ".";
-import type { CfWorkerInit } from "../worker";
+import type { Binding } from "../worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
 	Assets,
@@ -66,10 +66,48 @@ export function isValidR2BucketName(name: string | undefined): name is string {
 
 export const bucketFormatMessage = `Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.`;
 
-export const friendlyBindingNames: Record<
-	keyof CfWorkerInit["bindings"],
-	string
-> = {
+/**
+ * Config field names for bindings (e.g., "kv_namespaces", "d1_databases").
+ * These are the keys used in wrangler.toml configuration.
+ */
+export type ConfigBindingFieldName =
+	| "data_blobs"
+	| "durable_objects"
+	| "kv_namespaces"
+	| "send_email"
+	| "queues"
+	| "d1_databases"
+	| "vectorize"
+	| "hyperdrive"
+	| "r2_buckets"
+	| "logfwdr"
+	| "services"
+	| "analytics_engine_datasets"
+	| "text_blobs"
+	| "browser"
+	| "ai"
+	| "images"
+	| "media"
+	| "version_metadata"
+	| "unsafe"
+	| "vars"
+	| "wasm_modules"
+	| "dispatch_namespaces"
+	| "mtls_certificates"
+	| "workflows"
+	| "pipelines"
+	| "secrets_store_secrets"
+	| "ratelimits"
+	| "assets"
+	| "unsafe_hello_world"
+	| "worker_loaders"
+	| "vpc_services";
+
+/**
+ * Friendly names for config field names (used for config validation and error messages)
+ * @deprecated Use `bindingTypeFriendlyNames` for new code that works with `Binding` types
+ */
+export const friendlyBindingNames: Record<ConfigBindingFieldName, string> = {
 	data_blobs: "Data Blob",
 	durable_objects: "Durable Object",
 	kv_namespaces: "KV Namespace",
@@ -102,6 +140,74 @@ export const friendlyBindingNames: Record<
 	worker_loaders: "Worker Loader",
 	vpc_services: "VPC Service",
 } as const;
+
+/**
+ * Friendly names for binding types (keyed by Binding["type"] discriminator).
+ * Use this for new code that works with the flat StartDevWorkerInput["bindings"] format.
+ */
+export const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
+	plain_text: "Environment Variable",
+	secret_text: "Secret",
+	json: "Environment Variable",
+	kv_namespace: "KV Namespace",
+	send_email: "Send Email",
+	wasm_module: "Wasm Module",
+	text_blob: "Text Blob",
+	browser: "Browser",
+	ai: "AI",
+	images: "Images",
+	version_metadata: "Worker Version Metadata",
+	data_blob: "Data Blob",
+	durable_object_namespace: "Durable Object",
+	workflow: "Workflow",
+	queue: "Queue",
+	r2_bucket: "R2 Bucket",
+	d1: "D1 Database",
+	vectorize: "Vectorize Index",
+	hyperdrive: "Hyperdrive Config",
+	service: "Worker",
+	fetcher: "Service Binding",
+	analytics_engine: "Analytics Engine Dataset",
+	dispatch_namespace: "Dispatch Namespace",
+	mtls_certificate: "mTLS Certificate",
+	pipeline: "Pipeline",
+	secrets_store_secret: "Secrets Store Secret",
+	logfwdr: "logfwdr",
+	unsafe_hello_world: "Hello World",
+	ratelimit: "Rate Limit",
+	worker_loader: "Worker Loader",
+	vpc_service: "VPC Service",
+	media: "Media",
+	assets: "Assets",
+} as const;
+
+/**
+ * Get a friendly name for a binding type.
+ * This function handles the mapping from Binding type discriminants to user-friendly names.
+ * @param bindingType The binding type (e.g., "kv_namespace", "plain_text")
+ * @returns The friendly name for the binding type
+ */
+export function getBindingTypeFriendlyName(bindingType: string): string {
+	// Check for exact match first
+	if (bindingType in bindingTypeFriendlyNames) {
+		return bindingTypeFriendlyNames[bindingType as Binding["type"]];
+	}
+
+	// Handle unsafe_* bindings
+	if (bindingType.startsWith("unsafe_")) {
+		return "Unsafe Metadata";
+	}
+
+	// Fallback for unknown types
+	return bindingType;
+}
+
+/**
+ * Extract the binding type from a Binding object
+ */
+export function extractBindingType(binding: Binding): string {
+	return binding.type;
+}
 
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;
@@ -3801,7 +3907,7 @@ const validateBindingsHaveUniqueNames = (
 	let hasDuplicates = false;
 
 	const bindingNamesArray = Object.entries(friendlyBindingNames) as [
-		keyof CfWorkerInit["bindings"],
+		ConfigBindingFieldName,
 		string,
 	][];
 

@@ -18,20 +18,19 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { useTeardown } from "../../helpers/teardown";
 import { unusable } from "../../helpers/unusable";
-import type { Bundle, File, StartDevWorkerOptions } from "../../../api";
-import type { Config, Rule } from "@cloudflare/workers-utils";
+import type { Bundle, StartDevWorkerOptions } from "../../../api";
+import type { BindingFile, Config, Rule } from "@cloudflare/workers-utils";
 
-export type Module<ModuleType extends Rule["type"] = Rule["type"]> = File<
-	string | Uint8Array
-> & {
-	/** Name of the module, used for module resolution, path may be undefined if this is a virtual module */
-	name: string;
-	/** How this module should be interpreted */
-	type: ModuleType;
-};
+export type Module<ModuleType extends Rule["type"] = Rule["type"]> =
+	BindingFile<string | Uint8Array> & {
+		/** Name of the module, used for module resolution, path may be undefined if this is a virtual module */
+		name: string;
+		/** How this module should be interpreted */
+		type: ModuleType;
+	};
 
 const isWindows = process.platform === "win32";
-function getTextFileContents(file: File<string | Uint8Array>) {
+function getTextFileContents(file: BindingFile<string | Uint8Array>) {
 	if ("contents" in file) {
 		if (typeof file.contents === "string") {
 			return file.contents;
@@ -59,7 +58,7 @@ type TestBundle =
 			| {
 					type: "service-worker";
 					/** Service worker style entrypoint */
-					serviceWorker: File;
+					serviceWorker: BindingFile;
 					/** Additional modules to add as global variables */
 					modules?: Module<"Text" | "Data" | "CompiledWasm">[];
 			  }

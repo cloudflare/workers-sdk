@@ -1649,14 +1649,14 @@ describe.sequential("wrangler dev", () => {
 				──────────────────
 				Using vars defined in .dev.vars
 				Your Worker has access to the following bindings:
-				Binding                                        Resource                  Mode
-				env.VAR_1 (\\"(hidden)\\")                         Environment Variable      local
-				env.VAR_2 (\\"original value 2\\")                 Environment Variable      local
-				env.VAR_3 (\\"(hidden)\\")                         Environment Variable      local
-				env.VAR_MULTI_LINE_1 (\\"(hidden)\\")              Environment Variable      local
-				env.VAR_MULTI_LINE_2 (\\"(hidden)\\")              Environment Variable      local
-				env.EMPTY (\\"(hidden)\\")                         Environment Variable      local
-				env.UNQUOTED (\\"(hidden)\\")                      Environment Variable      local
+				Binding                                      Resource                  Mode
+				env.EMPTY ((hidden))                         Environment Variable      local
+				env.UNQUOTED ((hidden))                      Environment Variable      local
+				env.VAR_1 ((hidden))                         Environment Variable      local
+				env.VAR_2 (original value 2)                 Environment Variable      local
+				env.VAR_3 ((hidden))                         Environment Variable      local
+				env.VAR_MULTI_LINE_1 ((hidden))              Environment Variable      local
+				env.VAR_MULTI_LINE_2 ((hidden))              Environment Variable      local
 
 				"
 			`);
@@ -1687,8 +1687,8 @@ describe.sequential("wrangler dev", () => {
 				──────────────────
 				Using vars defined in .dev.vars.custom
 				Your Worker has access to the following bindings:
-				Binding                          Resource                  Mode
-				env.CUSTOM_VAR (\\"(hidden)\\")      Environment Variable      local
+				Binding                        Resource                  Mode
+				env.CUSTOM_VAR ((hidden))      Environment Variable      local
 
 				"
 			`);
@@ -1761,10 +1761,10 @@ describe.sequential("wrangler dev", () => {
 				Using vars defined in .env.local"
 			`);
 			expect(extractBindings(out)).toMatchInlineSnapshot(`
-				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
-				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
-				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
-				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL (\\"(hidden)\\")      Environment Variable      local"
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 ((hidden))          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_2 ((hidden))          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 ((hidden))          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL ((hidden))      Environment Variable      local"
 			`);
 		});
 
@@ -1782,8 +1782,8 @@ describe.sequential("wrangler dev", () => {
 				"Using vars defined in .dev.vars"
 			`);
 			expect(extractBindings(out)).toMatchInlineSnapshot(`
-				"env.__DOT_DEV_DOT_VARS_LOCAL_DEV_VAR_1 (\\"(hidden)\\")      Environment Variable      local
-				env.__DOT_DEV_DOT_VARS_LOCAL_DEV_VAR_2 (\\"(hidden)\\")      Environment Variable      local"
+				"env.__DOT_DEV_DOT_VARS_LOCAL_DEV_VAR_1 ((hidden))      Environment Variable      local
+				env.__DOT_DEV_DOT_VARS_LOCAL_DEV_VAR_2 ((hidden))      Environment Variable      local"
 			`);
 		});
 
@@ -1806,10 +1806,10 @@ describe.sequential("wrangler dev", () => {
 				Using vars defined in .env.local"
 			`);
 			expect(extractBindings(out)).toMatchInlineSnapshot(`
-				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
-				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
-				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
-				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL (\\"(hidden)\\")      Environment Variable      local"
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 ((hidden))          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_2 ((hidden))          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 ((hidden))          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL ((hidden))      Environment Variable      local"
 			`);
 		});
 
@@ -1821,10 +1821,10 @@ describe.sequential("wrangler dev", () => {
 				Using vars defined in .env.local"
 			`);
 			expect(extractBindings(out)).toMatchInlineSnapshot(`
-				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
-				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
-				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
-				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL (\\"(hidden)\\")      Environment Variable      local"
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 ((hidden))          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_2 ((hidden))          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 ((hidden))          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL ((hidden))      Environment Variable      local"
 			`);
 		});
 
@@ -1843,7 +1843,7 @@ describe.sequential("wrangler dev", () => {
 			// We could dump out all the bindings but that would be a lot of noise, and also may change between OSes and runs.
 			// Instead, we know that the `CLOUDFLARE_INCLUDE_PROCESS_ENV` variable should be present, so we just check for that.
 			expect(extractBindings(out)).contains(
-				'env.CLOUDFLARE_INCLUDE_PROCESS_ENV ("(hidden)")'
+				"env.CLOUDFLARE_INCLUDE_PROCESS_ENV ((hidden))"
 			);
 		});
 
@@ -1871,8 +1871,8 @@ describe.sequential("wrangler dev", () => {
 				`"Using vars defined in other/.env"`
 			);
 			expect(extractBindings(out)).toMatchInlineSnapshot(`
-				"env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")      Environment Variable      local
-				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")      Environment Variable      local"
+				"env.__DOT_ENV_LOCAL_DEV_VAR_2 ((hidden))      Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 ((hidden))      Environment Variable      local"
 			`);
 		});
 
@@ -1903,10 +1903,10 @@ describe.sequential("wrangler dev", () => {
 				Using vars defined in other/.env.local"
 			`);
 			expect(extractBindings(out)).toMatchInlineSnapshot(`
-				"env.__DOT_ENV_LOCAL_DEV_VAR_1 (\\"(hidden)\\")          Environment Variable      local
-				env.__DOT_ENV_LOCAL_DEV_VAR_2 (\\"(hidden)\\")          Environment Variable      local
-				env.__DOT_ENV_LOCAL_DEV_VAR_3 (\\"(hidden)\\")          Environment Variable      local
-				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL (\\"(hidden)\\")      Environment Variable      local"
+				"env.__DOT_ENV_LOCAL_DEV_VAR_1 ((hidden))          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_2 ((hidden))          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_3 ((hidden))          Environment Variable      local
+				env.__DOT_ENV_LOCAL_DEV_VAR_LOCAL ((hidden))      Environment Variable      local"
 			`);
 		});
 	});
@@ -2123,8 +2123,8 @@ describe.sequential("wrangler dev", () => {
 				──────────────────
 				Your Worker has access to the following bindings:
 				Binding                                 Resource      Mode
-				env.SELF (my-worker)                    Worker        local [connected]
 				env.NAMED (my-worker#MyEntrypoint)      Worker        local [connected]
+				env.SELF (my-worker)                    Worker        local [connected]
 
 				"
 			`);
@@ -2178,10 +2178,10 @@ describe.sequential("wrangler dev", () => {
 				──────────────────
 				Using vars defined in .dev.vars
 				Your Worker has access to the following bindings:
-				Binding                         Resource                  Mode
-				env.variable (123)              Environment Variable      local
-				env.overriden (\\"(hidden)\\")      Environment Variable      local
-				env.SECRET (\\"(hidden)\\")         Environment Variable      local
+				Binding                       Resource                  Mode
+				env.variable (123)            Environment Variable      local
+				env.overriden ((hidden))      Environment Variable      local
+				env.SECRET ((hidden))         Environment Variable      local
 
 				"
 			`);

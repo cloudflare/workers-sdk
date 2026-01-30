@@ -1,9 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
-import {
-	convertBindingsToCfWorkerInitBindings,
-	unwrapHook,
-} from "../../../api/startDevWorker/utils";
+import { unwrapHook } from "../../../api/startDevWorker/utils";
 // Import the mocked functions so we can set their behavior
 import {
 	createPreviewSession,
@@ -22,7 +19,6 @@ import type {
 	PreviewTokenExpiredEvent,
 	StartDevWorkerOptions,
 } from "../../../api";
-import type { CfWorkerInit } from "@cloudflare/workers-utils";
 
 // Mock the API modules
 vi.mock("../../../dev/create-worker-preview", () => ({
@@ -43,7 +39,6 @@ vi.mock("../../../user/access", () => ({
 }));
 
 vi.mock("../../../api/startDevWorker/utils", () => ({
-	convertBindingsToCfWorkerInitBindings: vi.fn(),
 	unwrapHook: vi.fn(),
 }));
 
@@ -144,8 +139,8 @@ describe("RemoteRuntimeController", () => {
 				type: "esm",
 				content: "export default { fetch() { return new Response('hello'); } }",
 			},
+			bindings: undefined,
 			modules: [],
-			bindings: {} as CfWorkerInit["bindings"],
 			migrations: undefined,
 			compatibility_date: "2025-11-11",
 			compatibility_flags: [],
@@ -168,11 +163,6 @@ describe("RemoteRuntimeController", () => {
 		});
 
 		vi.mocked(getAccessToken).mockResolvedValue(undefined);
-
-		vi.mocked(convertBindingsToCfWorkerInitBindings).mockResolvedValue({
-			bindings: {} as CfWorkerInit["bindings"],
-			fetchers: {},
-		});
 	});
 
 	describe("preview token refresh", () => {
@@ -240,7 +230,7 @@ describe("RemoteRuntimeController", () => {
 			// Wait for refresh to complete
 			await bus.waitFor("reloadComplete");
 
-			// Verify createRemoteWorkerInit was called with the stored bundle
+			// Verify createRemoteWorkerInitFromInput was called with the stored bundle
 			expect(createRemoteWorkerInit).toHaveBeenCalledTimes(1);
 			expect(createRemoteWorkerInit).toHaveBeenCalledWith(
 				expect.objectContaining({

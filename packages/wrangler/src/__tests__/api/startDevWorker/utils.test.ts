@@ -110,7 +110,6 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 				type: "kv_namespace",
 			},
 			MY_QUEUE_PRODUCER: {
-				queue: "my-queue",
 				queue_name: "my-queue",
 				type: "queue",
 			},
