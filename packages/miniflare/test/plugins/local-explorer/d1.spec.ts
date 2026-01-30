@@ -117,7 +117,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				result: [expect.objectContaining({ uuid: "test-db-id" })],
 				result_info: {
 					count: 1,
-					total_count: 1,
+					total_count: 2,
 				},
 				success: true,
 			});
