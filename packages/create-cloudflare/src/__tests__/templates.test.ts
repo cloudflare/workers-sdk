@@ -1,4 +1,5 @@
 import { existsSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { spinner } from "@cloudflare/cli/interactive";
 import degit from "degit";
 import { mockSpinner } from "helpers/__tests__/mocks";
@@ -618,10 +619,11 @@ describe("writeAgentsMd", () => {
 	});
 
 	test("should write AGENTS.md to the project directory", () => {
-		writeAgentsMd("/path/to/my-project");
+		const projectPath = join("/path", "to", "my-project");
+		writeAgentsMd(projectPath);
 
 		expect(writeFileMock).toHaveBeenCalledWith(
-			"/path/to/my-project/AGENTS.md",
+			join(projectPath, "AGENTS.md"),
 			getAgentsMd(),
 		);
 	});
