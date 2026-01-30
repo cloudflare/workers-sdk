@@ -458,7 +458,7 @@ export async function handleError(
 			/Unknown (?:arguments?|command): (.+)/
 		);
 		const unknownArgs = unknownArgsMatch
-			? unknownArgsMatch[1].split(", ").map((a) => a.trim())
+			? unknownArgsMatch[1].split(",").map((a) => a.trim())
 			: [];
 
 		// Check if any of the unknown args match the first non-flag argument
