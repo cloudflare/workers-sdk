@@ -133,7 +133,7 @@ jobs:
         # We are running the package tests first be able to get early feedback on changes.
         # There is no point in running the fixtures if a package is broken.
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*"
+        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*" ${{ matrix.os == 'windows-latest' && '--filter="!./packages/vitest-pool-workers"' || '' }}
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
