@@ -2841,18 +2841,18 @@ describe("--host flag with Origin header preservation", () => {
 		// Make a request with Origin and Referer headers that include ports
 		const response = await fetch(url, {
 			headers: {
-				"Origin": "http://localhost:8787",
-				"Referer": "http://localhost:8787/some/path"
-			}
+				Origin: "http://localhost:8787",
+				Referer: "http://localhost:8787/some/path",
+			},
 		});
 
 		const text = await response.text();
-		
+
 		// Verify that the Origin and Referer headers preserve their ports
 		expect(text).toContain("Host: localhost:4000");
 		expect(text).toContain("Origin: http://localhost:8787");
 		expect(text).toContain("Referer: http://localhost:8787/some/path");
-		
+
 		// Verify that ports are NOT stripped (this was the bug)
 		expect(text).not.toContain("Origin: http://localhost\n"); // without port
 		expect(text).not.toContain("Referer: http://localhost/"); // without port
