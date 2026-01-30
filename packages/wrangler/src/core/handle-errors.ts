@@ -446,19 +446,33 @@ export async function handleError(
 		// The workaround is to re-run the parsing with an additional `--help` flag, which will result in the correct help message being displayed.
 		// The `wrangler` object is "frozen"; we cannot reuse that with different args, so we must create a new CLI parser to generate the help message.
 
-		// Check if this is a root-level error (unknown argument at root level)
-		// by looking at the error message - if it says "Unknown argument" or "Unknown command",
-		// and there's only one non-flag argument, show the categorized root help
 		const nonFlagArgs = subCommandParts.filter(
 			(arg) => !arg.startsWith("-") && arg !== ""
 		);
-		const isRootLevelError =
-			nonFlagArgs.length <= 1 &&
-			(e.message.includes("Unknown argument") ||
-				e.message.includes("Unknown command"));
+
+		const isUnknownArgOrCommand =
+			e.message.includes("Unknown argument") ||
+			e.message.includes("Unknown command");
+
+		const unknownArgsMatch = e.message.match(
+			/Unknown (?:arguments?|command): (.+)/
+		);
+		const unknownArgs = unknownArgsMatch
+			? unknownArgsMatch[1].split(",").map((a) => a.trim())
+			: [];
+
+		// Check if any of the unknown args match the first non-flag argument
+		// If so, it's an unknown command (not an unknown flag on a valid command)
+		// Note: we check !arg.startsWith("-") to exclude flag-like args,
+		// but command names can contain dashes (e.g., "dispatch-namespace")
+		const isUnknownCommand = unknownArgs.some(
+			(arg) => arg === nonFlagArgs[0] && !arg.startsWith("-")
+		);
+
+		const isRootLevelError = isUnknownArgOrCommand && isUnknownCommand;
 
 		const { wrangler, showHelpWithCategories } = createCLIParser([
-			...(isRootLevelError ? [] : subCommandParts),
+			...(isRootLevelError ? [] : nonFlagArgs),
 			"--help",
 		]);
 
