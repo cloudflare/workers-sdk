@@ -90,7 +90,6 @@ export interface ResolvedWorkerConfig extends ResolvedAssetsOnlyConfig {
 export interface Worker {
 	config: ResolvedWorkerConfig;
 	nodeJsCompat: NodeJsCompat | undefined;
-	isPrerender: boolean;
 }
 
 interface BaseResolvedConfig {
@@ -349,7 +348,7 @@ export function resolvePluginConfig(
 
 		environmentNameToWorkerMap.set(
 			prerenderWorkerEnvironmentName,
-			resolveWorker(workerResolvedConfig.config as ResolvedWorkerConfig, true)
+			resolveWorker(workerResolvedConfig.config as ResolvedWorkerConfig)
 		);
 
 		const prerenderWorkerChildEnvironments =
@@ -506,15 +505,11 @@ function createEnvironmentNameValidator() {
 	};
 }
 
-function resolveWorker(
-	workerConfig: ResolvedWorkerConfig,
-	isPrerender = false
-) {
+function resolveWorker(workerConfig: ResolvedWorkerConfig): Worker {
 	return {
 		config: workerConfig,
 		nodeJsCompat: hasNodeJsCompat(workerConfig)
 			? new NodeJsCompat(workerConfig)
 			: undefined,
-		isPrerender,
 	};
 }
