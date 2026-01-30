@@ -59,7 +59,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		configResolved(resolvedViteConfig) {
 			ctx.setResolvedViteConfig(resolvedViteConfig);
 
-			if (ctx.resolvedPluginConfig.type === "workers") {
+			if (ctx.resolvedPluginConfig.type !== "preview") {
 				validateWorkerEnvironmentOptions(
 					ctx.resolvedPluginConfig,
 					ctx.resolvedViteConfig
@@ -146,17 +146,17 @@ function getEnvironmentsConfig(
 	userConfig: UserConfig,
 	mode: string
 ): Record<string, EnvironmentOptions> | undefined {
-	if (ctx.resolvedPluginConfig.type !== "workers") {
-		return undefined;
+	assertIsNotPreview(ctx);
+
+	if (!ctx.resolvedPluginConfig.environmentNameToWorkerMap.size) {
+		return;
 	}
 
-	const workersConfig = ctx.resolvedPluginConfig;
-
 	const workerEnvironments = Object.fromEntries(
-		[...workersConfig.environmentNameToWorkerMap].flatMap(
+		[...ctx.resolvedPluginConfig.environmentNameToWorkerMap].flatMap(
 			([environmentName, worker]) => {
 				const childEnvironmentNames =
-					workersConfig.environmentNameToChildEnvironmentNamesMap.get(
+					ctx.resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap.get(
 						environmentName
 					) ?? [];
 
@@ -167,13 +167,19 @@ function getEnvironmentsConfig(
 					hasNodeJsCompat: ctx.getNodeJsCompat(environmentName) !== undefined,
 				};
 
+				const isEntryWorker =
+					environmentName ===
+						ctx.resolvedPluginConfig.prerenderWorkerEnvironmentName ||
+					(ctx.resolvedPluginConfig.type === "workers" &&
+						environmentName ===
+							ctx.resolvedPluginConfig.entryWorkerEnvironmentName);
+
 				const parentConfig = [
 					environmentName,
 					createCloudflareEnvironmentOptions({
 						...sharedOptions,
 						environmentName,
-						isEntryWorker:
-							environmentName === workersConfig.entryWorkerEnvironmentName,
+						isEntryWorker,
 						isParentEnvironment: true,
 					}),
 				] as const;

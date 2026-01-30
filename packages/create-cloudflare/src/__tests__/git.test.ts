@@ -351,5 +351,28 @@ describe("git helpers", () => {
 
 			expect(ctx.commitMessage).toBeDefined();
 		});
+
+		test("commit failure is handled gracefully", async () => {
+			const ctx = createTestContext("test", { projectName: "test" });
+			ctx.args.git = true;
+
+			// Note: beforeEach already sets up git --version mock via mockGitInstalled(true)
+			// So we only need to mock git add and git commit
+			vi.mocked(runCommand)
+				.mockResolvedValueOnce("") // git add
+				.mockRejectedValueOnce(
+					new Error("gpg: signing failed: Operation cancelled"),
+				);
+
+			// Should not throw
+			await expect(gitCommit(ctx)).resolves.not.toThrow();
+
+			expect(spinner.start).toHaveBeenCalledOnce();
+			expect(spinner.stop).toHaveBeenCalledOnce();
+			expect(updateStatus).toHaveBeenCalledWith(
+				expect.stringContaining("Failed to create initial commit"),
+			);
+			expect(ctx.commitMessage).toBeDefined();
+		});
 	});
 });

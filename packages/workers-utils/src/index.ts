@@ -87,3 +87,7 @@ export {
 	isCompatDate,
 } from "./compatibility-date";
 export type { CompatDate } from "./compatibility-date";
+
+export { isDockerfile } from "./config/validation";
+
+export { isDirectory } from "./fs-helpers";
