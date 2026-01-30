@@ -688,6 +688,15 @@ importers:
         specifier: workspace:*
         version: link:../../packages/wrangler
 
+  fixtures/pages-functions-test:
+    devDependencies:
+      '@cloudflare/pages-functions':
+        specifier: workspace:*
+        version: link:../../packages/pages-functions
+      wrangler:
+        specifier: workspace:*
+        version: link:../../packages/wrangler
+
   fixtures/pages-functions-unenv-alias:
     devDependencies:
       '@cloudflare/workers-tsconfig':
@@ -2129,6 +2138,40 @@ importers:
       verdaccio:
         specifier: ^6.0.5
         version: 6.0.5(encoding@0.1.13)(typanion@3.14.0)
+
+  packages/pages-functions:
+    dependencies:
+      esbuild:
+        specifier: catalog:default
+        version: 0.27.0
+    devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../eslint-config-shared
+      '@cloudflare/vitest-pool-workers':
+        specifier: catalog:default
+        version: 0.10.15(@cloudflare/workers-types@4.20260123.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@3.2.3)
+      '@cloudflare/workers-tsconfig':
+        specifier: workspace:*
+        version: link:../workers-tsconfig
+      '@cloudflare/workers-types':
+        specifier: catalog:default
+        version: 4.20260123.0
+      '@types/node':
+        specifier: ^20.19.9
+        version: 20.19.9
+      eslint:
+        specifier: catalog:default
+        version: 9.39.1(jiti@2.6.0)
+      path-to-regexp:
+        specifier: ^6.3.0
+        version: 6.3.0
+      typescript:
+        specifier: catalog:default
+        version: 5.8.3
+      vitest:
+        specifier: catalog:default
+        version: 3.2.3(@types/debug@4.1.12)(@types/node@20.19.9)(@vitest/ui@3.2.3)(jiti@2.6.0)(lightningcss@1.30.2)(msw@2.12.0(@types/node@20.19.9)(typescript@5.8.3))(supports-color@9.2.2)(yaml@2.8.1)
 
   packages/pages-shared:
     dependencies:

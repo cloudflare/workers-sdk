@@ -1,0 +1,10 @@
+{
+	"$schema": "http://turbo.build/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"dependsOn": ["@cloudflare/pages-functions#build"],
+			"outputs": ["dist/**"]
+		}
+	}
+}
