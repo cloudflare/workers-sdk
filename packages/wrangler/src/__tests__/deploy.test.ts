@@ -15909,6 +15909,18 @@ export default{
 		async function mockOpenNextLikeProject() {
 			vi.mocked(getInstalledPackageVersion).mockReturnValue("1.14.4");
 
+			// Remove any existing config files first to ensure we only have wrangler.jsonc
+			// This avoids warnings about multiple config files
+			for (const configFile of [
+				"./wrangler.toml",
+				"./wrangler.json",
+				"./wrangler.jsonc",
+			]) {
+				if (fs.existsSync(configFile)) {
+					fs.rmSync(configFile);
+				}
+			}
+
 			fs.mkdirSync("./.open-next/assets", { recursive: true });
 			fs.writeFileSync(
 				"./.open-next/worker.js",
