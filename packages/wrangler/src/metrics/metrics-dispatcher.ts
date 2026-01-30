@@ -135,20 +135,11 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 					agent,
 				};
 
-				const durationMs =
-					"durationMs" in properties ? properties.durationMs : undefined;
-
 				dispatch({
 					name,
 					properties: {
 						...commonEventProperties,
 						...properties,
-						...(typeof durationMs === "number"
-							? {
-									durationSeconds: durationMs / 1000,
-									durationMinutes: durationMs / 1000 / 60,
-								}
-							: {}),
 					},
 				});
 			} catch (err) {
