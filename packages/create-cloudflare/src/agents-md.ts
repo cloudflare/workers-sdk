@@ -6,11 +6,8 @@
  */
 
 const getCurrentDate = (): string => {
-	const now = new Date();
-	const year = now.getFullYear();
-	const month = String(now.getMonth() + 1).padStart(2, "0");
-	const day = String(now.getDate()).padStart(2, "0");
-	return `${year}-${month}-${day}`;
+	// This gets the user's local timezone and converts their date to YYYY-MM-DD to make sure we're not ahead of the user if using UTC
+	return new Date().toLocaleDateString("sv-SE");
 };
 
 export const getAgentsMd = (): string => `# Cloudflare Workers
