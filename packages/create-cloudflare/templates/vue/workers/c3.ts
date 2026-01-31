@@ -66,13 +66,6 @@ const config: TemplateConfig = {
 	displayName: "Vue",
 	path: "templates/vue/workers",
 	copyFiles: {
-		async selectVariant(ctx) {
-			// Note: this `selectVariant` function should not be needed
-			//       this is just a quick workaround until
-			//       https://github.com/cloudflare/workers-sdk/issues/7495
-			//       is resolved
-			return usesTypescript(ctx) ? "ts" : "js";
-		},
 		variants: {
 			ts: {
 				path: "./ts",
