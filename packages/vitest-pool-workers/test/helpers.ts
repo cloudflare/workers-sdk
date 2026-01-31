@@ -124,22 +124,30 @@ export const test = baseTest.extend<{
 		const tmpPoolInstallationPath = inject("tmpPoolInstallationPath");
 		const processes: childProcess.ChildProcess[] = [];
 
-		await use(({ flags = [], maxBuffer } = {}) => {
-			const proc = childProcess.exec(
-				`pnpm exec vitest dev --root="${tmpPath}" ` + flags.join(" "),
-				{
-					cwd: tmpPoolInstallationPath,
-					env: getNoCIEnv(),
-					maxBuffer,
+		try {
+			await use(({ flags = [], maxBuffer } = {}) => {
+				const proc = childProcess.exec(
+					`pnpm exec vitest dev --root="${tmpPath}" ` + flags.join(" "),
+					{
+						cwd: tmpPoolInstallationPath,
+						env: getNoCIEnv(),
+						maxBuffer,
+					}
+				);
+				processes.push(proc);
+				return wrap(proc);
+			});
+			// In case this process stops unexpectedly, kill all child processes
+			process.on("exit", () => {
+				for (const proc of processes) {
+					proc.kill();
 				}
-			);
-			processes.push(proc);
-			return wrap(proc);
-		});
-
-		// Kill all processes after the test
-		for (const proc of processes) {
-			proc.kill();
+			});
+		} finally {
+			// Kill all processes after the test
+			for (const proc of processes) {
+				proc.kill();
+			}
 		}
 	},
 });
