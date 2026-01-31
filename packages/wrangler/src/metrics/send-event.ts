@@ -71,7 +71,8 @@ export type EventNames =
 	| "show pipeline"
 	| "provision resources"
 	| "autoconfig detected"
-	| "autoconfig accepted";
+	| "autoconfig accepted"
+	| "wrangler devtools action";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.

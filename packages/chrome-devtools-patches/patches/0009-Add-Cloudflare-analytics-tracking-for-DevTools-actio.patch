@@ -1,0 +1,133 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Workers DevProd <workers-devprod@cloudflare.com>
+Date: Thu, 09 Jan 2026 00:00:00 +0000
+Subject: [PATCH 9/9] Add Cloudflare analytics tracking for DevTools actions
+
+Track critical user actions in DevTools and send them to Cloudflare's
+Sparrow analytics endpoint when telemetry is enabled via URL params
+from wrangler.
+
+Tracked events (all sent as "wrangler devtools action" with type property):
+- breakpoint_set: User set a breakpoint
+- console_evaluated: User evaluated code in console
+- console_command: User executed a command in console panel
+- stack_frame_restarted: User restarted a stack frame
+- panel_shown: User opened sources, network, or console panel
+
+The telemetry respects the user's wrangler telemetry preferences, which
+are passed via URL query parameters when DevTools is opened.
+---
+ front_end/entrypoints/js_app/js_app.ts | 82 ++++++++++++++++++++++++++
+ 1 file changed, 82 insertions(+)
+
+diff --git a/front_end/entrypoints/js_app/js_app.ts b/front_end/entrypoints/js_app/js_app.ts
+index 937e646ab5..xxxxxxxxxxxx 100644
+--- a/front_end/entrypoints/js_app/js_app.ts
++++ b/front_end/entrypoints/js_app/js_app.ts
+@@ -18,6 +18,100 @@ import * as Main from '../main/main.js';
+ const str_ = i18n.i18n.registerUIStrings('entrypoints/js_app/js_app.ts', UIStrings);
+ const i18nLazyString = i18n.i18n.getLazilyComputedLocalizedString.bind(undefined, str_);
+ 
++// =============================================================================
++// Cloudflare Analytics Integration
++// =============================================================================
++// Tracks critical DevTools user actions and sends them to Cloudflare's Sparrow
++// analytics endpoint when telemetry is enabled via URL params from wrangler.
++
++const SPARROW_URL = 'https://sparrow.cloudflare.com/api/v1/event';
++
++interface CloudflareAnalyticsConfig {
++  enabled: boolean;
++  deviceId: string | null;
++  wranglerVersion: string | null;
++  workerName: string | null;
++  sourceKey: string;
++}
++
++function getAnalyticsConfig(): CloudflareAnalyticsConfig {
++  const query = new URLSearchParams(location.search);
++  return {
++    enabled: query.get('telemetry') === 'true',
++    deviceId: query.get('deviceId'),
++    wranglerVersion: query.get('wranglerVersion'),
++    workerName: query.get('domain'),
++    sourceKey: query.get('sourceKey') ?? '',
++  };
++}
++
++const analyticsConfig = getAnalyticsConfig();
++
++// Critical action codes from Host.UserMetrics.Action enum
++const CRITICAL_ACTIONS: Record<number, string> = {
++  3: 'breakpoint_set',           // ScriptsBreakpointSet
++  8: 'console_evaluated',        // ConsoleEvaluated
++  15: 'console_command',         // CommandEvaluatedInConsolePanel
++  56: 'stack_frame_restarted',   // StackFrameRestarted
++};
++
++// Critical panels to track
++const CRITICAL_PANELS = new Set(['sources', 'network', 'console', 'console-view']);
++
++function sendDevToolsAnalytics(type: string, properties: Record<string, unknown> = {}): void {
++  if (!analyticsConfig.enabled || !analyticsConfig.deviceId || !analyticsConfig.sourceKey) {
++    return;
++  }
++
++  const body = JSON.stringify({
++    deviceId: analyticsConfig.deviceId,
++    event: 'wrangler devtools action',
++    timestamp: Date.now(),
++    properties: {
++      type,
++      category: 'Workers',
++      wranglerVersion: analyticsConfig.wranglerVersion,
++      workerName: analyticsConfig.workerName,
++      os: navigator.platform,
++      ...properties,
++    },
++  });
++
++  // Use sendBeacon for non-blocking request that survives page unload
++  const blob = new Blob([body], { type: 'application/json' });
++  navigator.sendBeacon(`${SPARROW_URL}?key=${analyticsConfig.sourceKey}`, blob);
++}
++
++function setupAnalyticsHooks(): void {
++  if (!analyticsConfig.enabled) {
++    return;
++  }
++
++  // Hook into actionTaken to capture critical actions
++  const originalActionTaken = Host.userMetrics.actionTaken.bind(Host.userMetrics);
++  Host.userMetrics.actionTaken = function(action: Host.UserMetrics.Action): void {
++    originalActionTaken(action);
++    const actionType = CRITICAL_ACTIONS[action];
++    if (actionType) {
++      sendDevToolsAnalytics(actionType, { actionCode: action });
++    }
++  };
++
++  // Hook into panelShown to capture critical panel views
++  const originalPanelShown = Host.userMetrics.panelShown.bind(Host.userMetrics);
++  Host.userMetrics.panelShown = function(panelName: string, isLaunching?: boolean): void {
++    originalPanelShown(panelName, isLaunching);
++    if (CRITICAL_PANELS.has(panelName)) {
++      sendDevToolsAnalytics('panel_shown', { panel: panelName, isLaunching });
++    }
++  };
++}
++
+ // This is not supported in Firefox: https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollIntoView
+ Element.prototype.scrollIntoViewIfNeeded = Element.prototype.scrollIntoView;
+ export class JsMainImpl implements Common.Runnable.Runnable {
+@@ -33,6 +127,7 @@ export class JsMainImpl implements Common.Runnable.Runnable {
+ 
+   async run(): Promise<void> {
+     Host.userMetrics.actionTaken(Host.UserMetrics.Action.ConnectToNodeJSDirectly);
++    setupAnalyticsHooks();
+     void SDK.Connections.initMainConnection(async () => {
+       const target = SDK.TargetManager.TargetManager.instance().createTarget(
+           'main', i18nString(UIStrings.main), SDK.Target.Type.CLOUDFLARE, null);
+-- 
+2.39.5 (Apple Git-154)
+

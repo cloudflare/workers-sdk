@@ -29,8 +29,13 @@ Telemetry in Wrangler allows us to better identify bugs and gain visibility on u
 - Whether the command was executed by an AI coding agent (e.g. Claude Code, Cursor, GitHub Copilot), and if so, which agent
 - Error _type_ (e.g. `APIError` or `UserError`), and sanitised error messages that will not include user information like filepaths or stack traces (e.g. `Asset too large`).
 - General machine information such as OS and OS Version
+- When using DevTools (opened via pressing `d` during `wrangler dev`), we track high-level debugging actions:
+  - Panel views (when you open the Sources, Network, or Console panels)
+  - Breakpoint usage (when you set a breakpoint)
+  - Console interactions (when you evaluate code or run commands in the console)
+  - Stack frame restarts (when you restart a call frame during debugging)
 
-Cloudflare will receive the IP address associated with your machine and such information is handled in accordance with Cloudflare’s [Privacy Policy](https://www.cloudflare.com/privacypolicy/).
+Cloudflare will receive the IP address associated with your machine and such information is handled in accordance with Cloudflare's [Privacy Policy](https://www.cloudflare.com/privacypolicy/).
 
 **Note**: This list is regularly audited to ensure its accuracy.
 
