@@ -619,6 +619,7 @@ describe("writeAgentsMd", () => {
 	});
 
 	test("should write AGENTS.md to the project directory", () => {
+		vi.mocked(existsSync).mockReturnValue(false);
 		const projectPath = join("/path", "to", "my-project");
 		writeAgentsMd(projectPath);
 
@@ -626,6 +627,14 @@ describe("writeAgentsMd", () => {
 			join(projectPath, "AGENTS.md"),
 			getAgentsMd(),
 		);
+	});
+
+	test("should not overwrite existing AGENTS.md", () => {
+		vi.mocked(existsSync).mockReturnValue(true);
+		const projectPath = join("/path", "to", "my-project");
+		writeAgentsMd(projectPath);
+
+		expect(writeFileMock).not.toHaveBeenCalled();
 	});
 
 	test("AGENTS.md should contain retrieval-led reasoning guidance", () => {

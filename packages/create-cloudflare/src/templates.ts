@@ -785,11 +785,15 @@ export async function copyTemplateFiles(ctx: C3Context) {
 }
 
 /**
- * Writes AGENTS.md to the project directory.
+ * Writes AGENTS.md to the project directory if one doesn't already exist.
  * This file provides AI coding agents with retrieval-led guidance for Cloudflare APIs.
+ * Remote templates may include their own AGENTS.md with custom guidance, which we preserve.
  */
 export function writeAgentsMd(projectPath: string): void {
 	const agentsMdPath = join(projectPath, "AGENTS.md");
+	if (existsSync(agentsMdPath)) {
+		return;
+	}
 	writeFile(agentsMdPath, getAgentsMd());
 }
 
