@@ -49,7 +49,10 @@ test.runIf(isBuild)(
 	"emits .assetsignore file in client output directory",
 	() => {
 		expect(
-			fs.existsSync(path.join(rootDir, "dist", "client", ".assetsignore"))
-		).toBe(true);
+			fs.readFileSync(
+				path.join(rootDir, "dist", "client", ".assetsignore"),
+				"utf-8"
+			)
+		).toBe(`wrangler.json\n.dev.vars\n`);
 	}
 );
