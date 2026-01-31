@@ -12,7 +12,7 @@ import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
 import type { PluginContext } from "../context";
-import type { EnvironmentOptions, UserConfig } from "vite";
+import type { ConfigEnv, EnvironmentOptions, UserConfig } from "vite";
 
 /**
  * Plugin to handle configuration and config file watching
@@ -48,7 +48,12 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						deny: [...defaultDeniedFiles, ".dev.vars", ".dev.vars.*"],
 					},
 				},
-				environments: getEnvironmentsConfig(ctx, userConfig, env.mode),
+				environments: getEnvironmentsConfig(
+					ctx,
+					userConfig,
+					env.mode,
+					env.command
+				),
 				builder: {
 					buildApp:
 						userConfig.builder?.buildApp ??
@@ -144,7 +149,8 @@ export const configPlugin = createPlugin("config", (ctx) => {
 function getEnvironmentsConfig(
 	ctx: PluginContext,
 	userConfig: UserConfig,
-	mode: string
+	mode: ConfigEnv["mode"],
+	command: ConfigEnv["command"]
 ): Record<string, EnvironmentOptions> | undefined {
 	assertIsNotPreview(ctx);
 
@@ -164,6 +170,7 @@ function getEnvironmentsConfig(
 					workerConfig: worker.config,
 					userConfig,
 					mode,
+					command,
 					hasNodeJsCompat: ctx.getNodeJsCompat(environmentName) !== undefined,
 				};
 
