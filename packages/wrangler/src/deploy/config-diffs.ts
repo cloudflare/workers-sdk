@@ -37,7 +37,7 @@ export function getRemoteConfigDiff(
 		normalizeLocalResolvedConfigAsRemote(localResolvedConfig);
 	const normalizedRemoteConfig = normalizeRemoteConfigAsResolvedLocal(
 		remoteConfig,
-		localResolvedConfig
+		normalizedLocalConfig
 	);
 
 	const diff = diffJsonObjects(
@@ -245,19 +245,19 @@ function normalizeObservability(
  *  - removing from the remote config all the default values that in the local config are either not present or undefined
  *
  * @param remoteConfig The remote config object to normalize
- * @param localResolvedConfig The target/local (resolved) config object
+ * @param localConfig The target/local (resolved) config object
  * @returns The remote config object normalized and ready to be compared with the local one
  */
 function normalizeRemoteConfigAsResolvedLocal(
 	remoteConfig: RawConfig,
-	localResolvedConfig: Config
+	localConfig: Config
 ): Config {
 	let normalizedRemote = {} as Config;
 
 	// We start by adding all the local configs to the normalized remote config object
 	// in this way we can make sure that local-only configurations are not shown as
 	// differences between local and remote configs
-	Object.entries(localResolvedConfig).forEach(([key, value]) => {
+	Object.entries(localConfig).forEach(([key, value]) => {
 		if (
 			// We want to skip observability since it has a remote default behavior
 			// different from that of wrangler
@@ -287,8 +287,160 @@ function normalizeRemoteConfigAsResolvedLocal(
 	// the configuration options in the same order as their config file)
 	normalizedRemote = orderObjectFields(
 		normalizedRemote as unknown as Record<string, unknown>,
-		localResolvedConfig as unknown as Record<string, unknown>
+		localConfig as unknown as Record<string, unknown>
 	) as unknown as Config;
+
+	// Reorder binding arrays to match local's order so the diff is intuitive.
+	// Binding array order doesn't matter semantically, but positional diffing
+	// would show spurious changes if the same elements appear in different order.
+	const getBindingKey = (obj: unknown): string =>
+		JSON.stringify(obj, (_, v) =>
+			v && typeof v === "object" && !Array.isArray(v)
+				? Object.fromEntries(
+						Object.keys(v)
+							.sort()
+							.map((k) => [k, v[k]])
+					)
+				: v
+		);
+
+	const reorderBindings = <T>(r: T[], l: T[]): T[] => {
+		const remoteByKey = new Map(r.map((el) => [getBindingKey(el), el]));
+		const used = new Set<string>();
+		const result: T[] = [];
+		for (const el of l) {
+			const key = getBindingKey(el);
+			const remoteEl = remoteByKey.get(key);
+			if (remoteEl !== undefined) {
+				result.push(remoteEl);
+				used.add(key);
+			}
+		}
+		for (const el of r) {
+			if (!used.has(getBindingKey(el))) {
+				result.push(el);
+			}
+		}
+		return result;
+	};
+
+	if (normalizedRemote.kv_namespaces && localConfig.kv_namespaces) {
+		normalizedRemote.kv_namespaces = reorderBindings(
+			normalizedRemote.kv_namespaces,
+			localConfig.kv_namespaces
+		);
+	}
+	if (normalizedRemote.r2_buckets && localConfig.r2_buckets) {
+		normalizedRemote.r2_buckets = reorderBindings(
+			normalizedRemote.r2_buckets,
+			localConfig.r2_buckets
+		);
+	}
+	if (normalizedRemote.d1_databases && localConfig.d1_databases) {
+		normalizedRemote.d1_databases = reorderBindings(
+			normalizedRemote.d1_databases,
+			localConfig.d1_databases
+		);
+	}
+	if (normalizedRemote.services && localConfig.services) {
+		normalizedRemote.services = reorderBindings(
+			normalizedRemote.services,
+			localConfig.services
+		);
+	}
+	if (normalizedRemote.vpc_services && localConfig.vpc_services) {
+		normalizedRemote.vpc_services = reorderBindings(
+			normalizedRemote.vpc_services,
+			localConfig.vpc_services
+		);
+	}
+	if (normalizedRemote.workflows && localConfig.workflows) {
+		normalizedRemote.workflows = reorderBindings(
+			normalizedRemote.workflows,
+			localConfig.workflows
+		);
+	}
+	if (normalizedRemote.dispatch_namespaces && localConfig.dispatch_namespaces) {
+		normalizedRemote.dispatch_namespaces = reorderBindings(
+			normalizedRemote.dispatch_namespaces,
+			localConfig.dispatch_namespaces
+		);
+	}
+	if (normalizedRemote.mtls_certificates && localConfig.mtls_certificates) {
+		normalizedRemote.mtls_certificates = reorderBindings(
+			normalizedRemote.mtls_certificates,
+			localConfig.mtls_certificates
+		);
+	}
+	if (normalizedRemote.pipelines && localConfig.pipelines) {
+		normalizedRemote.pipelines = reorderBindings(
+			normalizedRemote.pipelines,
+			localConfig.pipelines
+		);
+	}
+	if (normalizedRemote.vectorize && localConfig.vectorize) {
+		normalizedRemote.vectorize = reorderBindings(
+			normalizedRemote.vectorize,
+			localConfig.vectorize
+		);
+	}
+	if (normalizedRemote.send_email && localConfig.send_email) {
+		normalizedRemote.send_email = reorderBindings(
+			normalizedRemote.send_email,
+			localConfig.send_email
+		);
+	}
+	if (
+		normalizedRemote.analytics_engine_datasets &&
+		localConfig.analytics_engine_datasets
+	) {
+		normalizedRemote.analytics_engine_datasets = reorderBindings(
+			normalizedRemote.analytics_engine_datasets,
+			localConfig.analytics_engine_datasets
+		);
+	}
+	if (normalizedRemote.hyperdrive && localConfig.hyperdrive) {
+		normalizedRemote.hyperdrive = reorderBindings(
+			normalizedRemote.hyperdrive,
+			localConfig.hyperdrive
+		);
+	}
+	if (
+		normalizedRemote.secrets_store_secrets &&
+		localConfig.secrets_store_secrets
+	) {
+		normalizedRemote.secrets_store_secrets = reorderBindings(
+			normalizedRemote.secrets_store_secrets,
+			localConfig.secrets_store_secrets
+		);
+	}
+	if (normalizedRemote.ratelimits && localConfig.ratelimits) {
+		normalizedRemote.ratelimits = reorderBindings(
+			normalizedRemote.ratelimits,
+			localConfig.ratelimits
+		);
+	}
+	if (normalizedRemote.queues?.producers && localConfig.queues?.producers) {
+		normalizedRemote.queues.producers = reorderBindings(
+			normalizedRemote.queues.producers,
+			localConfig.queues.producers
+		);
+	}
+	if (
+		normalizedRemote.durable_objects?.bindings &&
+		localConfig.durable_objects?.bindings
+	) {
+		normalizedRemote.durable_objects.bindings = reorderBindings(
+			normalizedRemote.durable_objects.bindings,
+			localConfig.durable_objects.bindings
+		);
+	}
+	if (normalizedRemote.logfwdr?.bindings && localConfig.logfwdr?.bindings) {
+		normalizedRemote.logfwdr.bindings = reorderBindings(
+			normalizedRemote.logfwdr.bindings,
+			localConfig.logfwdr.bindings
+		);
+	}
 
 	return normalizedRemote;
 }
