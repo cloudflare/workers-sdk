@@ -21,7 +21,7 @@
 		"check:type": "dotenv -- turbo check:type type:tests",
 		"dev": "dotenv -- turbo dev",
 		"fix": "dotenv -- turbo check:lint -- --fix && pnpm run prettify",
-		"prettify": "prettier . --write --ignore-unknown",
+		"prettify": "prettier . --write --ignore-unknown --cache",
 		"test": "dotenv -- turbo test",
 		"test:ci": "dotenv -- turbo test:ci",
 		"test:e2e": "dotenv -- turbo test:e2e",

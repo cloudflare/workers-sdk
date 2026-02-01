@@ -39,7 +39,7 @@
 	],
 	"scripts": {
 		"build": "unbuild",
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc --noEmit"
 	},
 	"devDependencies": {

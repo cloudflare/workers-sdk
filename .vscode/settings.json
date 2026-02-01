@@ -95,5 +95,6 @@
 			"mode": "auto"
 		}
 	],
-	"editor.formatOnSave": true
+	"editor.formatOnSave": true,
+	"vitest.disableWorkspaceWarning": true
 }
