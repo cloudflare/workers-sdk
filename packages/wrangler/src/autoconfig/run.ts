@@ -14,7 +14,11 @@ import { getPackageManager } from "../package-manager";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
-import { confirmAutoConfigDetails, displayAutoConfigDetails } from "./details";
+import {
+	assertNonConfigured,
+	confirmAutoConfigDetails,
+	displayAutoConfigDetails,
+} from "./details";
 import { Static } from "./frameworks/static";
 import { usesTypescript } from "./uses-typescript";
 import type {
@@ -23,6 +27,7 @@ import type {
 } from "./frameworks";
 import type {
 	AutoConfigDetails,
+	AutoConfigDetailsForNonConfiguredProject,
 	AutoConfigOptions,
 	AutoConfigSummary,
 } from "./types";
@@ -46,10 +51,12 @@ export async function runAutoConfig(
 	const enableWranglerInstallation =
 		autoConfigOptions.enableWranglerInstallation ?? true;
 
+	assertNonConfigured(autoConfigDetails);
+
 	const detected: AutoConfigMetrics = {
 		buildCommand: autoConfigDetails.buildCommand,
 		outputDir: autoConfigDetails.outputDir,
-		framework: autoConfigDetails.framework?.name,
+		framework: autoConfigDetails.framework.name,
 	};
 	sendMetricsEvent(
 		"autoconfig detected",
@@ -72,6 +79,7 @@ export async function runAutoConfig(
 	}
 
 	autoConfigDetails = updatedAutoConfigDetails;
+	assertNonConfigured(autoConfigDetails);
 
 	if (!autoConfigDetails.outputDir) {
 		throw new FatalError(
@@ -79,10 +87,7 @@ export async function runAutoConfig(
 		);
 	}
 
-	if (
-		autoConfigDetails.framework &&
-		!autoConfigDetails.framework?.autoConfigSupported
-	) {
+	if (!autoConfigDetails.framework.autoConfigSupported) {
 		throw new FatalError(
 			`The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
 		);
@@ -102,7 +107,7 @@ export async function runAutoConfig(
 	} satisfies RawConfig;
 
 	const dryRunConfigurationResults =
-		await autoConfigDetails.framework?.configure({
+		await autoConfigDetails.framework.configure({
 			outputDir: autoConfigDetails.outputDir,
 			projectPath: autoConfigDetails.projectPath,
 			workerName: autoConfigDetails.workerName,
@@ -115,17 +120,17 @@ export async function runAutoConfig(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
 		{
 			...wranglerConfig,
-			...dryRunConfigurationResults?.wranglerConfig,
+			...dryRunConfigurationResults.wranglerConfig,
 		},
 		{
 			build:
-				dryRunConfigurationResults?.buildCommandOverride ??
+				dryRunConfigurationResults.buildCommandOverride ??
 				autoConfigDetails.buildCommand,
 			deploy:
-				dryRunConfigurationResults?.deployCommandOverride ??
+				dryRunConfigurationResults.deployCommandOverride ??
 				`${npx} wrangler deploy`,
 		},
-		dryRunConfigurationResults?.packageJsonScriptsOverrides
+		dryRunConfigurationResults.packageJsonScriptsOverrides
 	);
 
 	if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
@@ -148,7 +153,7 @@ export async function runAutoConfig(
 		await installWrangler();
 	}
 
-	const configurationResults = await autoConfigDetails.framework?.configure({
+	const configurationResults = await autoConfigDetails.framework.configure({
 		outputDir: autoConfigDetails.outputDir,
 		projectPath: autoConfigDetails.projectPath,
 		workerName: autoConfigDetails.workerName,
@@ -193,7 +198,7 @@ export async function runAutoConfig(
 	await saveWranglerJsonc(
 		autoConfigDetails.projectPath,
 		wranglerConfig,
-		configurationResults?.wranglerConfig
+		configurationResults.wranglerConfig
 	);
 
 	addWranglerToGitIgnore(autoConfigDetails.projectPath);
@@ -204,8 +209,7 @@ export async function runAutoConfig(
 	}
 
 	const buildCommand =
-		configurationResults?.buildCommandOverride ??
-		autoConfigDetails.buildCommand;
+		configurationResults.buildCommandOverride ?? autoConfigDetails.buildCommand;
 
 	if (buildCommand && runBuild) {
 		await runCommand(buildCommand, autoConfigDetails.projectPath, "[build]");
@@ -214,7 +218,7 @@ export async function runAutoConfig(
 	const used: AutoConfigMetrics = {
 		buildCommand,
 		outputDir: autoConfigDetails.outputDir,
-		framework: autoConfigDetails.framework?.name,
+		framework: autoConfigDetails.framework.name,
 	};
 
 	sendMetricsEvent(
@@ -276,7 +280,7 @@ async function saveWranglerJsonc(
 }
 
 export async function buildOperationsSummary(
-	autoConfigDetails: Omit<AutoConfigDetails, "outputDir"> & {
+	autoConfigDetails: AutoConfigDetailsForNonConfiguredProject & {
 		outputDir: NonNullable<AutoConfigDetails["outputDir"]>;
 	},
 	wranglerConfigToWrite: RawConfig,
@@ -293,7 +297,7 @@ export async function buildOperationsSummary(
 		scripts: {},
 		wranglerConfig: wranglerConfigToWrite,
 		outputDir: autoConfigDetails.outputDir,
-		frameworkId: autoConfigDetails.framework?.id,
+		frameworkId: autoConfigDetails.framework.id,
 		buildCommand: projectCommands.build,
 		deployCommand: projectCommands.deploy,
 	};
@@ -320,10 +324,8 @@ export async function buildOperationsSummary(
 		};
 
 		const containsServerSideCode =
-			// If wranglerConfigToWrite is null we don't know whether there is server side code, we default to assume that there is
-			wranglerConfigToWrite === null ||
 			// If there is an entrypoint then we know that there is server side code
-			!!wranglerConfigToWrite?.main;
+			!!wranglerConfigToWrite.main;
 
 		if (
 			// If there is no server side code, then there is no need to add the cf-typegen script

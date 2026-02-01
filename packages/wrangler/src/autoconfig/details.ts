@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { basename, join, relative, resolve } from "node:path";
@@ -15,9 +16,26 @@ import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import { getPackageManager } from "../package-manager";
 import { getFramework } from "./frameworks/get-framework";
-import type { AutoConfigDetails } from "./types";
+import type {
+	AutoConfigDetails,
+	AutoConfigDetailsForNonConfiguredProject,
+} from "./types";
 import type { Config, PackageJSON } from "@cloudflare/workers-utils";
 import type { Settings } from "@netlify/build-info";
+
+/**
+ * Asserts that the current project being targeted for autoconfig is not already configured.
+ *
+ * @param details The details detected for the project.
+ */
+export function assertNonConfigured(
+	details: AutoConfigDetails
+): asserts details is AutoConfigDetailsForNonConfiguredProject {
+	assert(
+		details.configured === false,
+		"Error: expected the current project not to be already configured"
+	);
+}
 
 class MultipleFrameworksError extends FatalError {
 	constructor(frameworks: string[]) {
@@ -125,11 +143,11 @@ export async function getDetailsForAutoConfig({
 	const buildSettings = await project.getBuildSettings();
 
 	// If we've detected multiple frameworks, it's too complex for us to try and configure—let's just bail
-	if (buildSettings && buildSettings?.length > 1) {
+	if (buildSettings.length > 1) {
 		throw new MultipleFrameworksError(buildSettings.map((b) => b.name));
 	}
 
-	const detectedFramework: Settings | undefined = buildSettings?.[0];
+	const detectedFramework = buildSettings[0] as Settings | undefined;
 
 	const framework = getFramework(detectedFramework?.framework);
 	const packageJsonPath = resolve(projectPath, "package.json");
@@ -147,10 +165,14 @@ export async function getDetailsForAutoConfig({
 
 	return {
 		projectPath: projectPath,
-		configured: framework?.isConfigured(projectPath) ?? false,
+		configured: framework.isConfigured(projectPath) ?? false,
 		framework,
 		packageJson,
-		buildCommand: await getProjectBuildCommand(detectedFramework),
+		...(detectedFramework
+			? {
+					buildCommand: await getProjectBuildCommand(detectedFramework),
+				}
+			: {}),
 		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
@@ -166,7 +188,7 @@ export async function getDetailsForAutoConfig({
 async function getProjectBuildCommand(
 	detectedFramework: Settings
 ): Promise<string | undefined> {
-	if (!detectedFramework?.buildCommand) {
+	if (!detectedFramework.buildCommand) {
 		return undefined;
 	}
 

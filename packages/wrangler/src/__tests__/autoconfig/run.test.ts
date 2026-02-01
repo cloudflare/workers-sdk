@@ -105,6 +105,7 @@ describe("autoconfig (deploy)", () => {
 					configured: false,
 					projectPath: process.cwd(),
 					workerName: "my-worker",
+					framework: new Static({ id: "static", name: "Static" }),
 				})
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
@@ -345,6 +346,7 @@ describe("autoconfig (deploy)", () => {
 				workerName: "my-worker",
 				configured: false,
 				outputDir: process.cwd(),
+				framework: new Static({ id: "static", name: "Static" }),
 			});
 
 			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`

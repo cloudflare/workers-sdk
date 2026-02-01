@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { displayAutoConfigDetails } from "../../../autoconfig/details";
+import { Static } from "../../../autoconfig/frameworks/static";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import type { Framework } from "../../../autoconfig/frameworks";
 
@@ -20,12 +21,14 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 			configured: false,
 			projectPath: process.cwd(),
 			workerName: "my-project",
+			framework: new Static({ id: "static", name: "Static" }),
 		});
 		expect(std.out).toMatchInlineSnapshot(
 			`
 			"
 			Detected Project Settings:
 			 - Worker Name: my-project
+			 - Framework: Static
 			"
 		`
 		);
@@ -60,35 +63,19 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 		`);
 	});
 
-	it("should omit the framework entry when they it is not part of the details object", () => {
-		displayAutoConfigDetails({
-			configured: false,
-			projectPath: process.cwd(),
-			workerName: "my-app",
-			buildCommand: "npm run build",
-			outputDir: "dist",
-		});
-		expect(std.out).toMatchInlineSnapshot(`
-			"
-			Detected Project Settings:
-			 - Worker Name: my-app
-			 - Build Command: npm run build
-			 - Output Directory: dist
-			"
-		`);
-	});
-
 	it("should omit the framework and build command entries when they are not part of the details object", () => {
 		displayAutoConfigDetails({
 			configured: false,
 			projectPath: process.cwd(),
 			workerName: "my-site",
 			outputDir: "dist",
+			framework: new Static({ id: "static", name: "Static" }),
 		});
 		expect(std.out).toMatchInlineSnapshot(`
 			"
 			Detected Project Settings:
 			 - Worker Name: my-site
+			 - Framework: Static
 			 - Output Directory: dist
 			"
 		`);
