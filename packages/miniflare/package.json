@@ -32,7 +32,7 @@
 	"scripts": {
 		"build": "node scripts/build.mjs && pnpm run types:build",
 		"capnp:workerd": "capnp-es node_modules/workerd/workerd.capnp -ots:src/runtime/config/generated --src-prefix=node_modules/workerd",
-		"check:lint": "eslint --max-warnings=0 \"{src,test}/**/*.ts\" \"types/**/*.ts\"",
+		"check:lint": "eslint --max-warnings=0 --cache \"{src,test}/**/*.ts\" \"types/**/*.ts\"",
 		"check:type": "tsc",
 		"clean": "rimraf ./dist ./dist-types",
 		"dev": "concurrently -n esbuild,typechk,typewrk -c yellow,blue,blue.dim \"node scripts/build.mjs watch\" \"node scripts/types.mjs tsconfig.json watch\" \"node scripts/types.mjs src/workers/tsconfig.json watch\"",

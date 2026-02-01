@@ -29,7 +29,7 @@
 	],
 	"scripts": {
 		"build": "tsup",
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"prepack": "npm run build",
 		"pretest": "npm run build",

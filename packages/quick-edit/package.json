@@ -10,7 +10,7 @@
 	"license": "BSD-3-Clause",
 	"author": "workers-devprod@cloudflare.com",
 	"scripts": {
-		"check:lint": "eslint --max-warnings=0",
+		"check:lint": "eslint --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"custom:build": "./build.sh",
 		"deploy": "pnpm run setup && pnpm run custom:build && CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 pnpm wrangler deploy",
