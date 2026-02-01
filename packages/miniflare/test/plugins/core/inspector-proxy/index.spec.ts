@@ -410,7 +410,7 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 
 	await testDebuggingWorkerOn(initialInspectorPort);
 
-	mf.setOptions({ ...options, inspectorPort: await getPort() });
+	await mf.setOptions({ ...options, inspectorPort: await getPort() });
 
 	const newInspectorPort = await getInspectorPortReady(mf);
 
