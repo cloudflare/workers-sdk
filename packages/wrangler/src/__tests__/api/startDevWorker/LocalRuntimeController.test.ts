@@ -12,7 +12,7 @@ import { createPostgresEchoHandler } from "../../../../e2e/helpers/postgres-echo
 import { LocalRuntimeController } from "../../../api/startDevWorker/LocalRuntimeController";
 import { urlFromParts } from "../../../api/startDevWorker/utils";
 import { RuleTypeToModuleType } from "../../../deployment-bundle/module-collection";
-import { usingLocalSecretsStoreSecretAPI } from "../../../secrets-store/commands";
+import { usingLocalSecretsStoreSecretAPI } from "../../../commands/secrets-store/commands";
 import { FakeBus } from "../../helpers/fake-bus";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { runInTempDir } from "../../helpers/run-in-tmp";

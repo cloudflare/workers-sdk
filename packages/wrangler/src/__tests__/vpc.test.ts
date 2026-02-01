@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ServiceType } from "../vpc/index";
+import { ServiceType } from "../commands/vpc/index";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -12,7 +12,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type {
 	ConnectivityService,
 	ConnectivityServiceRequest,
-} from "../vpc/index";
+} from "../commands/vpc/index";
 
 describe("vpc help", () => {
 	const std = mockConsoleMethods();

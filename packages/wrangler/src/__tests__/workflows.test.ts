@@ -16,7 +16,7 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import type { Instance, Workflow } from "../workflows/types";
+import type { Instance, Workflow } from "../commands/workflows/types";
 
 describe("wrangler workflows", () => {
 	const std = mockConsoleMethods();

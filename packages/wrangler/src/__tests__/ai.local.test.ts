@@ -2,7 +2,7 @@ import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { Request } from "miniflare";
 import { Headers, Response } from "undici";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getAIFetcher } from "../ai/fetcher";
+import { getAIFetcher } from "../commands/ai/fetcher";
 import * as internal from "../cfetch/internal";
 import * as user from "../user";
 

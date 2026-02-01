@@ -11,7 +11,9 @@ import {
 import { watch } from "chokidar";
 import { getWorkerRegistry } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
-import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
+import { fillOpenAPIConfiguration } from "../../commands/cloudchamber/common";
+import { containersScope } from "../../commands/containers";
+import { getNormalizedContainerOptions } from "../../commands/containers/config";
 import {
 	getBindings,
 	getHostAndRoutes,
@@ -20,8 +22,6 @@ import {
 } from "../../commands/dev";
 import { checkTypesDiff } from "../../commands/types/helpers";
 import { readConfig } from "../../config";
-import { containersScope } from "../../containers";
-import { getNormalizedContainerOptions } from "../../containers/config";
 import { getEntry } from "../../deployment-bundle/entry";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";

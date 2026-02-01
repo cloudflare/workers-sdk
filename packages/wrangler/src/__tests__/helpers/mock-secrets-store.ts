@@ -4,7 +4,7 @@ import type {
 	CreateSecret,
 	CreateStore,
 	Store,
-} from "../../secrets-store/client";
+} from "../../commands/secrets-store/client";
 
 /** Create a mock handler for Secrets Store API GET /stores with custom stores */
 export function mockListSecretStores(stores: Store[]) {
