@@ -4,16 +4,16 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-import { createCommand, createNamespace } from "../core/create-command";
-import { logger } from "../logger";
-import * as metrics from "../metrics";
-import { requireAuth } from "../user";
+import { createCommand, createNamespace } from "../../core/create-command";
+import { logger } from "../../logger";
+import * as metrics from "../../metrics";
+import { requireAuth } from "../../user";
 import {
 	createdResourceConfig,
 	sharedResourceCreationArgs,
-} from "../utils/add-created-resource-config";
-import { getValidBindingName } from "../utils/getValidBindingName";
-import formatLabelledValues from "../utils/render-labelled-values";
+} from "../../utils/add-created-resource-config";
+import { getValidBindingName } from "../../utils/getValidBindingName";
+import formatLabelledValues from "../../utils/render-labelled-values";
 import { LOCATION_CHOICES } from "./constants";
 import {
 	createR2Bucket,

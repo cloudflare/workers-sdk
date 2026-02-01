@@ -5,7 +5,7 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import prettyBytes from "pretty-bytes";
-import { logger } from "../../logger";
+import { logger } from "../../../logger";
 import { MAX_UPLOAD_SIZE_BYTES } from "../constants";
 
 /**

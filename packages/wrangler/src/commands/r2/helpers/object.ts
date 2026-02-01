@@ -6,9 +6,9 @@ import {
 } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import prettyBytes from "pretty-bytes";
-import { fetchR2Objects } from "../../cfetch/internal";
-import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
-import { getDefaultPersistRoot } from "../../dev/miniflare";
+import { fetchR2Objects } from "../../../cfetch/internal";
+import { getLocalPersistencePath } from "../../../dev/get-local-persistence-path";
+import { getDefaultPersistRoot } from "../../../dev/miniflare";
 import { MAX_UPLOAD_SIZE_BYTES } from "../constants";
 import type { R2Bucket } from "@cloudflare/workers-types/experimental";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";

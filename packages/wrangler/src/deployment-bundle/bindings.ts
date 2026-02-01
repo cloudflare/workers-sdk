@@ -12,15 +12,15 @@ import { createD1Database } from "../commands/d1/create";
 import { listDatabases } from "../commands/d1/list";
 import { getDatabaseInfoFromIdOrName } from "../commands/d1/utils";
 import { createKVNamespace, listKVNamespaces } from "../commands/kv/helpers";
-import { prompt, select } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
-import { logger } from "../logger";
-import * as metrics from "../metrics";
 import {
 	createR2Bucket,
 	getR2Bucket,
 	listR2Buckets,
-} from "../r2/helpers/bucket";
+} from "../commands/r2/helpers/bucket";
+import { prompt, select } from "../dialogs";
+import { isNonInteractiveOrCI } from "../is-interactive";
+import { logger } from "../logger";
+import * as metrics from "../metrics";
 import { printBindings } from "../utils/print-bindings";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import type {

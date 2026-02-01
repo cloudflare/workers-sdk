@@ -1,10 +1,10 @@
 import { ParseError, readFileSync, UserError } from "@cloudflare/workers-utils";
-import { createCommand, createNamespace } from "../core/create-command";
-import { confirm, prompt } from "../dialogs";
-import { isNonInteractiveOrCI } from "../is-interactive";
-import { logger } from "../logger";
-import { requireAuth } from "../user";
-import formatLabelledValues from "../utils/render-labelled-values";
+import { createCommand, createNamespace } from "../../core/create-command";
+import { confirm, prompt } from "../../dialogs";
+import { isNonInteractiveOrCI } from "../../is-interactive";
+import { logger } from "../../logger";
+import { requireAuth } from "../../user";
+import formatLabelledValues from "../../utils/render-labelled-values";
 import {
 	getBucketLockRules,
 	putBucketLockRules,

@@ -1,4 +1,4 @@
-import { fetchResult } from "../../cfetch";
+import { fetchResult } from "../../../cfetch";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { HeadersInit } from "undici";
 

@@ -2,13 +2,13 @@ import { spinner } from "@cloudflare/cli/interactive";
 import { APIError, parseJSON, UserError } from "@cloudflare/workers-utils";
 import prettyBytes from "pretty-bytes";
 import { fetch } from "undici";
-import { truncate } from "../cfetch/internal";
-import { createCommand, createNamespace } from "../core/create-command";
-import { logger } from "../logger";
+import { truncate } from "../../cfetch/internal";
+import { createCommand, createNamespace } from "../../core/create-command";
+import { logger } from "../../logger";
 import {
 	getCloudflareAPITokenFromEnv,
 	getWranglerR2SqlAuthToken,
-} from "../user/auth-variables";
+} from "../../user/auth-variables";
 
 interface SqlQueryResponse {
 	result?: {

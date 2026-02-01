@@ -1,10 +1,10 @@
 import path from "node:path";
 import { parseJSON, readFileSync, UserError } from "@cloudflare/workers-utils";
-import { createCommand, createNamespace } from "../core/create-command";
-import { confirm } from "../dialogs";
-import { logger } from "../logger";
-import { requireAuth } from "../user";
-import formatLabelledValues from "../utils/render-labelled-values";
+import { createCommand, createNamespace } from "../../core/create-command";
+import { confirm } from "../../dialogs";
+import { logger } from "../../logger";
+import { requireAuth } from "../../user";
+import formatLabelledValues from "../../utils/render-labelled-values";
 import {
 	deleteCORSPolicy,
 	getCORSPolicy,

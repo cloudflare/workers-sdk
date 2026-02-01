@@ -10,7 +10,7 @@ import { fetchResult } from "../cfetch";
 import { logger } from "../logger";
 import openInBrowser from "../open-in-browser";
 import { requireAuth } from "../user";
-import type { R2BucketInfo } from "../r2/helpers/bucket";
+import type { R2BucketInfo } from "../commands/r2/helpers/bucket";
 import type {
 	CreatePipelineRequest,
 	CreateSinkRequest,

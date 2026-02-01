@@ -1,8 +1,8 @@
-import { createCommand, createNamespace } from "../core/create-command";
-import { confirm } from "../dialogs";
-import { logger } from "../logger";
-import { requireAuth } from "../user";
-import formatLabelledValues from "../utils/render-labelled-values";
+import { createCommand, createNamespace } from "../../core/create-command";
+import { confirm } from "../../dialogs";
+import { logger } from "../../logger";
+import { requireAuth } from "../../user";
+import formatLabelledValues from "../../utils/render-labelled-values";
 import {
 	attachCustomDomainToBucket,
 	configureCustomDomainSettings,

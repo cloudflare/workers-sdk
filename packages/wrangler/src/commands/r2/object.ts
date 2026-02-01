@@ -10,11 +10,11 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
-import { readConfig } from "../config";
-import { createCommand, createNamespace } from "../core/create-command";
-import { logger } from "../logger";
-import { requireAuth } from "../user";
-import { isLocal } from "../utils/is-local";
+import { readConfig } from "../../config";
+import { createCommand, createNamespace } from "../../core/create-command";
+import { logger } from "../../logger";
+import { requireAuth } from "../../user";
+import { isLocal } from "../../utils/is-local";
 import { logBulkProgress, validateBulkPutFile } from "./helpers/bulk";
 import {
 	deleteR2Object,

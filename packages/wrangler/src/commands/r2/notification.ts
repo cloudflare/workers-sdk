@@ -2,10 +2,10 @@ import {
 	createAlias,
 	createCommand,
 	createNamespace,
-} from "../core/create-command";
-import { logger } from "../logger";
-import { requireApiToken, requireAuth } from "../user";
-import formatLabelledValues from "../utils/render-labelled-values";
+} from "../../core/create-command";
+import { logger } from "../../logger";
+import { requireApiToken, requireAuth } from "../../user";
+import formatLabelledValues from "../../utils/render-labelled-values";
 import {
 	actionsForEventCategories,
 	deleteEventNotificationConfig,

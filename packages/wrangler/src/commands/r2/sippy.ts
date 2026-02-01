@@ -1,8 +1,8 @@
 import { APIError, readFileSync, UserError } from "@cloudflare/workers-utils";
-import { createCommand, createNamespace } from "../core/create-command";
-import { prompt } from "../dialogs";
-import { logger } from "../logger";
-import { requireAuth } from "../user";
+import { createCommand, createNamespace } from "../../core/create-command";
+import { prompt } from "../../dialogs";
+import { logger } from "../../logger";
+import { requireAuth } from "../../user";
 import { deleteR2Sippy, getR2Sippy, putR2Sippy } from "./helpers/sippy";
 import type { SippyPutParams } from "./helpers/sippy";
 

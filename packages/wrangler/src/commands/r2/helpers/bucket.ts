@@ -1,5 +1,5 @@
 import prettyBytes from "pretty-bytes";
-import { fetchGraphqlResult, fetchResult } from "../../cfetch";
+import { fetchGraphqlResult, fetchResult } from "../../../cfetch";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { HeadersInit } from "undici";
 

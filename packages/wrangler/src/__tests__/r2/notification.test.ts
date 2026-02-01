@@ -3,10 +3,10 @@ import { logger } from "../../logger";
 import {
 	eventNotificationHeaders,
 	tableFromNotificationGetResponse,
-} from "../../r2/helpers/notification";
+} from "../../commands/r2/helpers/notification";
 import formatLabelledValues from "../../utils/render-labelled-values";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import type { GetNotificationConfigResponse } from "../../r2/helpers/notification";
+import type { GetNotificationConfigResponse } from "../../commands/r2/helpers/notification";
 import type { ApiCredentials } from "../../user";
 
 describe("event notifications", () => {

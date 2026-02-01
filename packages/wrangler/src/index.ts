@@ -84,6 +84,90 @@ import {
 	kvNamespaceNamespace,
 	kvNamespaceRenameCommand,
 } from "./commands/kv";
+import { r2Namespace } from "./commands/r2";
+import {
+	r2BucketCreateCommand,
+	r2BucketDeleteCommand,
+	r2BucketInfoCommand,
+	r2BucketListCommand,
+	r2BucketNamespace,
+	r2BucketUpdateNamespace,
+	r2BucketUpdateStorageClassCommand,
+} from "./commands/r2/bucket";
+import {
+	r2BucketCatalogCompactionDisableCommand,
+	r2BucketCatalogCompactionEnableCommand,
+	r2BucketCatalogCompactionNamespace,
+	r2BucketCatalogDisableCommand,
+	r2BucketCatalogEnableCommand,
+	r2BucketCatalogGetCommand,
+	r2BucketCatalogNamespace,
+	r2BucketCatalogSnapshotExpirationDisableCommand,
+	r2BucketCatalogSnapshotExpirationEnableCommand,
+	r2BucketCatalogSnapshotExpirationNamespace,
+} from "./commands/r2/catalog";
+import {
+	r2BucketCORSDeleteCommand,
+	r2BucketCORSListCommand,
+	r2BucketCORSNamespace,
+	r2BucketCORSSetCommand,
+} from "./commands/r2/cors";
+import {
+	r2BucketDomainAddCommand,
+	r2BucketDomainGetCommand,
+	r2BucketDomainListCommand,
+	r2BucketDomainNamespace,
+	r2BucketDomainRemoveCommand,
+	r2BucketDomainUpdateCommand,
+} from "./commands/r2/domain";
+import {
+	r2BucketLifecycleAddCommand,
+	r2BucketLifecycleListCommand,
+	r2BucketLifecycleNamespace,
+	r2BucketLifecycleRemoveCommand,
+	r2BucketLifecycleSetCommand,
+} from "./commands/r2/lifecycle";
+import {
+	r2BucketLocalUploadsDisableCommand,
+	r2BucketLocalUploadsEnableCommand,
+	r2BucketLocalUploadsGetConfigCommand,
+	r2BucketLocalUploadsNamespace,
+} from "./commands/r2/local-uploads";
+import {
+	r2BucketLockAddCommand,
+	r2BucketLockListCommand,
+	r2BucketLockNamespace,
+	r2BucketLockRemoveCommand,
+	r2BucketLockSetCommand,
+} from "./commands/r2/lock";
+import {
+	r2BucketNotificationCreateCommand,
+	r2BucketNotificationDeleteCommand,
+	r2BucketNotificationGetAlias,
+	r2BucketNotificationListCommand,
+	r2BucketNotificationNamespace,
+} from "./commands/r2/notification";
+import {
+	r2BulkNamespace,
+	r2BulkPutCommand,
+	r2ObjectDeleteCommand,
+	r2ObjectGetCommand,
+	r2ObjectNamespace,
+	r2ObjectPutCommand,
+} from "./commands/r2/object";
+import {
+	r2BucketDevUrlDisableCommand,
+	r2BucketDevUrlEnableCommand,
+	r2BucketDevUrlGetCommand,
+	r2BucketDevUrlNamespace,
+} from "./commands/r2/public-dev-url";
+import {
+	r2BucketSippyDisableCommand,
+	r2BucketSippyEnableCommand,
+	r2BucketSippyGetCommand,
+	r2BucketSippyNamespace,
+} from "./commands/r2/sippy";
+import { r2SqlNamespace, r2SqlQueryCommand } from "./commands/r2/sql";
 import {
 	secretBulkCommand,
 	secretDeleteCommand,
@@ -248,90 +332,6 @@ import { queuesSubscriptionGetCommand } from "./queues/cli/commands/subscription
 import { queuesSubscriptionListCommand } from "./queues/cli/commands/subscription/list";
 import { queuesSubscriptionUpdateCommand } from "./queues/cli/commands/subscription/update";
 import { queuesUpdateCommand } from "./queues/cli/commands/update";
-import { r2Namespace } from "./r2";
-import {
-	r2BucketCreateCommand,
-	r2BucketDeleteCommand,
-	r2BucketInfoCommand,
-	r2BucketListCommand,
-	r2BucketNamespace,
-	r2BucketUpdateNamespace,
-	r2BucketUpdateStorageClassCommand,
-} from "./r2/bucket";
-import {
-	r2BucketCatalogCompactionDisableCommand,
-	r2BucketCatalogCompactionEnableCommand,
-	r2BucketCatalogCompactionNamespace,
-	r2BucketCatalogDisableCommand,
-	r2BucketCatalogEnableCommand,
-	r2BucketCatalogGetCommand,
-	r2BucketCatalogNamespace,
-	r2BucketCatalogSnapshotExpirationDisableCommand,
-	r2BucketCatalogSnapshotExpirationEnableCommand,
-	r2BucketCatalogSnapshotExpirationNamespace,
-} from "./r2/catalog";
-import {
-	r2BucketCORSDeleteCommand,
-	r2BucketCORSListCommand,
-	r2BucketCORSNamespace,
-	r2BucketCORSSetCommand,
-} from "./r2/cors";
-import {
-	r2BucketDomainAddCommand,
-	r2BucketDomainGetCommand,
-	r2BucketDomainListCommand,
-	r2BucketDomainNamespace,
-	r2BucketDomainRemoveCommand,
-	r2BucketDomainUpdateCommand,
-} from "./r2/domain";
-import {
-	r2BucketLifecycleAddCommand,
-	r2BucketLifecycleListCommand,
-	r2BucketLifecycleNamespace,
-	r2BucketLifecycleRemoveCommand,
-	r2BucketLifecycleSetCommand,
-} from "./r2/lifecycle";
-import {
-	r2BucketLocalUploadsDisableCommand,
-	r2BucketLocalUploadsEnableCommand,
-	r2BucketLocalUploadsGetConfigCommand,
-	r2BucketLocalUploadsNamespace,
-} from "./r2/local-uploads";
-import {
-	r2BucketLockAddCommand,
-	r2BucketLockListCommand,
-	r2BucketLockNamespace,
-	r2BucketLockRemoveCommand,
-	r2BucketLockSetCommand,
-} from "./r2/lock";
-import {
-	r2BucketNotificationCreateCommand,
-	r2BucketNotificationDeleteCommand,
-	r2BucketNotificationGetAlias,
-	r2BucketNotificationListCommand,
-	r2BucketNotificationNamespace,
-} from "./r2/notification";
-import {
-	r2BulkNamespace,
-	r2BulkPutCommand,
-	r2ObjectDeleteCommand,
-	r2ObjectGetCommand,
-	r2ObjectNamespace,
-	r2ObjectPutCommand,
-} from "./r2/object";
-import {
-	r2BucketDevUrlDisableCommand,
-	r2BucketDevUrlEnableCommand,
-	r2BucketDevUrlGetCommand,
-	r2BucketDevUrlNamespace,
-} from "./r2/public-dev-url";
-import {
-	r2BucketSippyDisableCommand,
-	r2BucketSippyEnableCommand,
-	r2BucketSippyGetCommand,
-	r2BucketSippyNamespace,
-} from "./r2/sippy";
-import { r2SqlNamespace, r2SqlQueryCommand } from "./r2/sql";
 import {
 	secretsStoreNamespace,
 	secretsStoreSecretNamespace,
