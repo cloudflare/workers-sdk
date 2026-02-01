@@ -1,8 +1,8 @@
 import { URLSearchParams } from "node:url";
 import { UserError } from "@cloudflare/workers-utils";
-import { fetchPagedListResult, fetchResult } from "../cfetch";
-import { logger } from "../logger";
-import { requireAuth } from "../user";
+import { fetchPagedListResult, fetchResult } from "../../cfetch";
+import { logger } from "../../logger";
+import { requireAuth } from "../../user";
 import type {
 	CreateEventSubscriptionRequest,
 	EventSubscription,

@@ -1,5 +1,5 @@
-import { createCommand } from "../../../../../core/create-command";
-import { logger } from "../../../../../logger";
+import { createCommand } from "../../../../../../core/create-command";
+import { logger } from "../../../../../../logger";
 import { deletePullConsumer } from "../../../../client";
 
 export const queuesConsumerHttpRemoveCommand = createCommand({

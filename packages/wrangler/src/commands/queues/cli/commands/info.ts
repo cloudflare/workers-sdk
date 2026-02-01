@@ -1,6 +1,6 @@
-import { createCommand } from "../../../core/create-command";
-import { logger } from "../../../logger";
-import { requireAuth } from "../../../user";
+import { createCommand } from "../../../../core/create-command";
+import { logger } from "../../../../logger";
+import { requireAuth } from "../../../../user";
 import { getQueue } from "../../client";
 import type { Consumer, Producer, QueueResponse } from "../../client";
 

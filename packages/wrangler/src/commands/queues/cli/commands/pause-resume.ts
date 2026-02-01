@@ -1,5 +1,5 @@
-import { createCommand } from "../../../core/create-command";
-import { logger } from "../../../logger";
+import { createCommand } from "../../../../core/create-command";
+import { logger } from "../../../../logger";
 import { getQueue, updateQueue } from "../../client";
 import { handleFetchError } from "../../utils";
 import type { PostQueueBody } from "../../client";

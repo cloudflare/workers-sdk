@@ -1,6 +1,6 @@
-import { createCommand } from "../../../../core/create-command";
-import { logger } from "../../../../logger";
-import formatLabelledValues from "../../../../utils/render-labelled-values";
+import { createCommand } from "../../../../../core/create-command";
+import { logger } from "../../../../../logger";
+import formatLabelledValues from "../../../../../utils/render-labelled-values";
 import { getEventSubscriptionForQueue } from "../../../client";
 import { getSourceResource, getSourceType } from "./utils";
 

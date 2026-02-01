@@ -1,8 +1,8 @@
 import { FatalError } from "@cloudflare/workers-utils";
-import { createCommand } from "../../../core/create-command";
-import { prompt } from "../../../dialogs";
-import isInteractive from "../../../is-interactive";
-import { logger } from "../../../logger";
+import { createCommand } from "../../../../core/create-command";
+import { prompt } from "../../../../dialogs";
+import isInteractive from "../../../../is-interactive";
+import { logger } from "../../../../logger";
 import { purgeQueue } from "../../client";
 
 export const queuesPurgeCommand = createCommand({

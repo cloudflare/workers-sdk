@@ -1,8 +1,8 @@
 import { createNamespace } from "../../../../../core/create-command";
 
-export const queuesConsumerWorkerNamespace = createNamespace({
+export const queuesSubscriptionNamespace = createNamespace({
 	metadata: {
-		description: "Configure Queue Worker Consumers",
+		description: "Manage event subscriptions for a queue",
 		owner: "Product: Queues",
 		status: "stable",
 	},

@@ -76,9 +76,12 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { AssetManifest } from "../assets";
+import type {
+	PostTypedConsumerBody,
+	QueueResponse,
+} from "../commands/queues/client";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type { OutputEntry } from "../output";
-import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
 import type {
 	Config,
 	ServiceMetadataRes,

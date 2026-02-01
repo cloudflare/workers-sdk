@@ -84,6 +84,30 @@ import {
 	kvNamespaceNamespace,
 	kvNamespaceRenameCommand,
 } from "./commands/kv";
+import { queuesNamespace } from "./commands/queues/cli/commands";
+import { queuesConsumerNamespace } from "./commands/queues/cli/commands/consumer";
+import { queuesConsumerHttpNamespace } from "./commands/queues/cli/commands/consumer/http-pull";
+import { queuesConsumerHttpAddCommand } from "./commands/queues/cli/commands/consumer/http-pull/add";
+import { queuesConsumerHttpRemoveCommand } from "./commands/queues/cli/commands/consumer/http-pull/remove";
+import { queuesConsumerWorkerNamespace } from "./commands/queues/cli/commands/consumer/worker";
+import { queuesConsumerAddCommand } from "./commands/queues/cli/commands/consumer/worker/add";
+import { queuesConsumerRemoveCommand } from "./commands/queues/cli/commands/consumer/worker/remove";
+import { queuesCreateCommand } from "./commands/queues/cli/commands/create";
+import { queuesDeleteCommand } from "./commands/queues/cli/commands/delete";
+import { queuesInfoCommand } from "./commands/queues/cli/commands/info";
+import { queuesListCommand } from "./commands/queues/cli/commands/list";
+import {
+	queuesPauseCommand,
+	queuesResumeCommand,
+} from "./commands/queues/cli/commands/pause-resume";
+import { queuesPurgeCommand } from "./commands/queues/cli/commands/purge";
+import { queuesSubscriptionNamespace } from "./commands/queues/cli/commands/subscription";
+import { queuesSubscriptionCreateCommand } from "./commands/queues/cli/commands/subscription/create";
+import { queuesSubscriptionDeleteCommand } from "./commands/queues/cli/commands/subscription/delete";
+import { queuesSubscriptionGetCommand } from "./commands/queues/cli/commands/subscription/get";
+import { queuesSubscriptionListCommand } from "./commands/queues/cli/commands/subscription/list";
+import { queuesSubscriptionUpdateCommand } from "./commands/queues/cli/commands/subscription/update";
+import { queuesUpdateCommand } from "./commands/queues/cli/commands/update";
 import { r2Namespace } from "./commands/r2";
 import {
 	r2BucketCreateCommand,
@@ -308,30 +332,6 @@ import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
 import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
 import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
 import { pipelinesUpdateCommand } from "./pipelines/cli/update";
-import { queuesNamespace } from "./queues/cli/commands";
-import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
-import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
-import { queuesConsumerHttpAddCommand } from "./queues/cli/commands/consumer/http-pull/add";
-import { queuesConsumerHttpRemoveCommand } from "./queues/cli/commands/consumer/http-pull/remove";
-import { queuesConsumerWorkerNamespace } from "./queues/cli/commands/consumer/worker";
-import { queuesConsumerAddCommand } from "./queues/cli/commands/consumer/worker/add";
-import { queuesConsumerRemoveCommand } from "./queues/cli/commands/consumer/worker/remove";
-import { queuesCreateCommand } from "./queues/cli/commands/create";
-import { queuesDeleteCommand } from "./queues/cli/commands/delete";
-import { queuesInfoCommand } from "./queues/cli/commands/info";
-import { queuesListCommand } from "./queues/cli/commands/list";
-import {
-	queuesPauseCommand,
-	queuesResumeCommand,
-} from "./queues/cli/commands/pause-resume";
-import { queuesPurgeCommand } from "./queues/cli/commands/purge";
-import { queuesSubscriptionNamespace } from "./queues/cli/commands/subscription";
-import { queuesSubscriptionCreateCommand } from "./queues/cli/commands/subscription/create";
-import { queuesSubscriptionDeleteCommand } from "./queues/cli/commands/subscription/delete";
-import { queuesSubscriptionGetCommand } from "./queues/cli/commands/subscription/get";
-import { queuesSubscriptionListCommand } from "./queues/cli/commands/subscription/list";
-import { queuesSubscriptionUpdateCommand } from "./queues/cli/commands/subscription/update";
-import { queuesUpdateCommand } from "./queues/cli/commands/update";
 import {
 	secretsStoreNamespace,
 	secretsStoreSecretNamespace,

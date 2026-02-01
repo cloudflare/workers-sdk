@@ -18,6 +18,13 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
+import {
+	ensureQueuesExistByConfig,
+	getQueue,
+	postConsumer,
+	putConsumer,
+	putConsumerById,
+} from "../commands/queues/client";
 import triggersDeploy from "../commands/triggers/deploy";
 import {
 	createDeployment,
@@ -53,13 +60,6 @@ import { logger } from "../logger";
 import { getMetricsUsageHeaders } from "../metrics";
 import { isNavigatorDefined } from "../navigator-user-agent";
 import { getWranglerTmpDir } from "../paths";
-import {
-	ensureQueuesExistByConfig,
-	getQueue,
-	postConsumer,
-	putConsumer,
-	putConsumerById,
-} from "../queues/client";
 import { syncWorkersSite } from "../sites";
 import {
 	getSourceMappedString,
@@ -75,13 +75,13 @@ import { getZoneForRoute } from "../zones";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { AssetsOptions } from "../assets";
+import type { PostTypedConsumerBody } from "../commands/queues/client";
 import type {
 	ApiVersion,
 	Percentage,
 	VersionId,
 } from "../commands/versions/types";
 import type { Entry } from "../deployment-bundle/entry";
-import type { PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type {

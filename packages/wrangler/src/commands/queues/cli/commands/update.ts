@@ -1,6 +1,6 @@
 import { CommandLineArgsError } from "@cloudflare/workers-utils";
-import { createCommand } from "../../../core/create-command";
-import { logger } from "../../../logger";
+import { createCommand } from "../../../../core/create-command";
+import { logger } from "../../../../logger";
 import { getQueue, updateQueue } from "../../client";
 import {
 	MAX_DELIVERY_DELAY_SECS,

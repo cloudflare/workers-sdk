@@ -15,10 +15,10 @@ import {
 } from "../../deploy/deploy";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
-import { ensureQueuesExistByConfig } from "../../queues/client";
 import { getWorkersDevSubdomain } from "../../routes";
 import { retryOnAPIFailure } from "../../utils/retry";
 import { getZoneForRoute } from "../../zones";
+import { ensureQueuesExistByConfig } from "../queues/client";
 import type { AssetsOptions } from "../../assets";
 import type { RouteObject } from "../../deploy/deploy";
 import type { Config, Route } from "@cloudflare/workers-utils";

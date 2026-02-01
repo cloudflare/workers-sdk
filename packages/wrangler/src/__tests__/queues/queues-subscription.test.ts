@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EventSourceType } from "../../queues/subscription-types";
+import { EventSourceType } from "../../commands/queues/subscription-types";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { mockConfirm } from "../helpers/mock-dialogs";
@@ -17,7 +17,7 @@ import {
 import type {
 	CreateEventSubscriptionRequest,
 	EventSubscription,
-} from "../../queues/subscription-types";
+} from "../../commands/queues/subscription-types";
 
 describe("queues subscription", () => {
 	mockAccountId();

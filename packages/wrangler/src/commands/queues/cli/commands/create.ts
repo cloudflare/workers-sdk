@@ -3,9 +3,9 @@ import {
 	formatConfigSnippet,
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-import { createCommand } from "../../../core/create-command";
-import { logger } from "../../../logger";
-import { getValidBindingName } from "../../../utils/getValidBindingName";
+import { createCommand } from "../../../../core/create-command";
+import { logger } from "../../../../logger";
+import { getValidBindingName } from "../../../../utils/getValidBindingName";
 import { createQueue } from "../../client";
 import {
 	MAX_DELIVERY_DELAY_SECS,

@@ -1,6 +1,6 @@
 import { CommandLineArgsError } from "@cloudflare/workers-utils";
-import { createCommand } from "../../../../../core/create-command";
-import { logger } from "../../../../../logger";
+import { createCommand } from "../../../../../../core/create-command";
+import { logger } from "../../../../../../logger";
 import { postConsumer } from "../../../../client";
 import type { PostTypedConsumerBody } from "../../../../client";
 

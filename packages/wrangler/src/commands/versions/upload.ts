@@ -53,7 +53,6 @@ import * as metrics from "../../metrics";
 import { isNavigatorDefined } from "../../navigator-user-agent";
 import { writeOutput } from "../../output";
 import { getWranglerTmpDir } from "../../paths";
-import { ensureQueuesExistByConfig } from "../../queues/client";
 import { getWorkersDevSubdomain } from "../../routes";
 import {
 	getSourceMappedString,
@@ -69,6 +68,7 @@ import { printBindings } from "../../utils/print-bindings";
 import { retryOnAPIFailure } from "../../utils/retry";
 import { useServiceEnvironments } from "../../utils/useServiceEnvironments";
 import { isWorkerNotFoundError } from "../../utils/worker-not-found-error";
+import { ensureQueuesExistByConfig } from "../queues/client";
 import { patchNonVersionedScriptSettings } from "./api";
 import type { AssetsOptions } from "../../assets";
 import type { Entry } from "../../deployment-bundle/entry";
