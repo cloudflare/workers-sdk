@@ -196,16 +196,6 @@ export function runBuild(
 		// trigger "builds" when any change
 		if (noBundle) {
 			const watching = [path.resolve(entry.moduleRoot)];
-			// Check whether we need to watch a Python cf-requirements.txt file.
-			const watchPythonRequirements =
-				getBundleType(entry.format, entry.file) === "python"
-					? path.resolve(entry.projectRoot, "cf-requirements.txt")
-					: undefined;
-
-			if (watchPythonRequirements) {
-				watching.push(watchPythonRequirements);
-			}
-
 			const watcher = watch(watching, {
 				persistent: true,
 				ignored: [".git", "node_modules"],
