@@ -15,18 +15,18 @@ import {
 	getCloudflareComplianceRegion,
 	UserError,
 } from "@cloudflare/workers-utils";
-import {
-	fillOpenAPIConfiguration,
-	promiseSpinner,
-} from "../cloudchamber/common";
 import { createCommand, createNamespace } from "../../core/create-command";
 import { confirm, prompt } from "../../dialogs";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
-import { createSecret, createStore, listStores } from "../secrets-store/client";
-import { validateSecretName } from "../secrets-store/commands";
 import { getAccountId } from "../../user";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
+import {
+	fillOpenAPIConfiguration,
+	promiseSpinner,
+} from "../cloudchamber/common";
+import { createSecret, createStore, listStores } from "../secrets-store/client";
+import { validateSecretName } from "../secrets-store/commands";
 import { formatError } from "./deploy";
 import { containersScope } from ".";
 import type {

@@ -13,12 +13,12 @@ import {
 	handleFailure,
 	promiseSpinner,
 } from "../common";
-import type { containersScope } from "../../containers";
 import type {
 	CommonYargsArgv,
 	CommonYargsArgvSanitized,
 	StrictYargsOptionsToInterface,
 } from "../../../yargs-types";
+import type { containersScope } from "../../containers";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";
 

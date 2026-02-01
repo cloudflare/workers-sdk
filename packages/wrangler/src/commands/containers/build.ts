@@ -1,11 +1,11 @@
+import { createCommand } from "../../core/create-command";
+import { logger } from "../../logger";
 import {
 	buildAndMaybePush,
 	buildCommand,
 	pushCommand,
 } from "../cloudchamber/build";
 import { fillOpenAPIConfiguration } from "../cloudchamber/common";
-import { createCommand } from "../../core/create-command";
-import { logger } from "../../logger";
 import { containersScope } from ".";
 import type { ImageRef } from "../cloudchamber/build";
 import type {

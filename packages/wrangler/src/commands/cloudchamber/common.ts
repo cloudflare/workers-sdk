@@ -16,15 +16,20 @@ import { readConfig } from "../../config";
 import { constructStatusMessage } from "../../core/CommandRegistry";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
-import { getScopes, printScopes, requireApiToken, requireAuth } from "../../user";
+import {
+	getScopes,
+	printScopes,
+	requireApiToken,
+	requireAuth,
+} from "../../user";
 import { printWranglerBanner } from "../../wrangler-banner";
 import { wrap } from "./helpers/wrap";
 import { idToLocationName } from "./locations";
-import type { containersScope } from "../containers";
 import type {
 	CommonYargsOptions,
 	StrictYargsOptionsToInterface,
 } from "../../yargs-types";
+import type { containersScope } from "../containers";
 import type { Arg } from "@cloudflare/cli/interactive";
 import type {
 	CompleteAccountCustomer,

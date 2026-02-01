@@ -3,14 +3,14 @@ import {
 	ImageRegistriesService,
 } from "@cloudflare/containers-shared";
 import { fetch } from "undici";
-import {
-	fillOpenAPIConfiguration,
-	promiseSpinner,
-} from "../cloudchamber/common";
 import { createCommand, createNamespace } from "../../core/create-command";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
 import { getAccountId } from "../../user";
+import {
+	fillOpenAPIConfiguration,
+	promiseSpinner,
+} from "../cloudchamber/common";
 import { containersScope } from ".";
 import type { ImageRegistryPermissions } from "@cloudflare/containers-shared";
 import type { Config } from "@cloudflare/workers-utils";

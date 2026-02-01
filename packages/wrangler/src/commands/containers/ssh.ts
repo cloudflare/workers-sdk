@@ -5,12 +5,12 @@ import { bold } from "@cloudflare/cli/colors";
 import { ApiError, DeploymentsService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { WebSocket } from "ws";
+import { createCommand } from "../../core/create-command";
+import { logger } from "../../logger";
 import {
 	fillOpenAPIConfiguration,
 	promiseSpinner,
 } from "../cloudchamber/common";
-import { createCommand } from "../../core/create-command";
-import { logger } from "../../logger";
 import { containersScope } from "./index";
 import type {
 	CommonYargsArgv,

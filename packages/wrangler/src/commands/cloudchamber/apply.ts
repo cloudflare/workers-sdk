@@ -28,7 +28,6 @@ import {
 	formatConfigSnippet,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { configRolloutStepsToAPI } from "../containers/deploy";
 import { createCommand } from "../../core/create-command";
 import { getAccountId } from "../../user";
 import { Diff } from "../../utils/diff";
@@ -36,6 +35,7 @@ import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../../utils/sortObjectRecursive";
+import { configRolloutStepsToAPI } from "../containers/deploy";
 import {
 	cloudchamberScope,
 	fillOpenAPIConfiguration,

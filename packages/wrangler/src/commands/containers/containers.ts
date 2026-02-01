@@ -11,11 +11,11 @@ import { inputPrompt, spinner } from "@cloudflare/cli/interactive";
 import { ApiError, ApplicationsService } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import YAML from "yaml";
-import { fillOpenAPIConfiguration } from "../cloudchamber/common";
-import { wrap } from "../cloudchamber/helpers/wrap";
 import { createCommand } from "../../core/create-command";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
+import { fillOpenAPIConfiguration } from "../cloudchamber/common";
+import { wrap } from "../cloudchamber/helpers/wrap";
 import { containersScope } from "./index";
 import type {
 	CommonYargsArgv,

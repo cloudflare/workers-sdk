@@ -47,6 +47,22 @@ import {
 	cloudchamberSshNamespace,
 } from "./commands/cloudchamber";
 import { completionsCommand } from "./commands/complete";
+import {
+	containersBuildCommand,
+	containersDeleteCommand,
+	containersImagesDeleteCommand,
+	containersImagesListCommand,
+	containersImagesNamespace,
+	containersInfoCommand,
+	containersListCommand,
+	containersNamespace,
+	containersPushCommand,
+	containersRegistriesConfigureCommand,
+	containersRegistriesDeleteCommand,
+	containersRegistriesListCommand,
+	containersRegistriesNamespace,
+	containersSshCommand,
+} from "./commands/containers";
 import { d1Namespace } from "./commands/d1";
 import { d1CreateCommand } from "./commands/d1/create";
 import { d1DeleteCommand } from "./commands/d1/delete";
@@ -66,6 +82,17 @@ import { deleteCommand } from "./commands/delete";
 import { deployCommand } from "./commands/deploy";
 import { dev } from "./commands/dev";
 import { docs } from "./commands/docs";
+import {
+	helloWorldGetCommand,
+	helloWorldNamespace,
+	helloWorldSetCommand,
+} from "./commands/hello-world";
+import { hyperdriveCreateCommand } from "./commands/hyperdrive/create";
+import { hyperdriveDeleteCommand } from "./commands/hyperdrive/delete";
+import { hyperdriveGetCommand } from "./commands/hyperdrive/get";
+import { hyperdriveNamespace } from "./commands/hyperdrive/index";
+import { hyperdriveListCommand } from "./commands/hyperdrive/list";
+import { hyperdriveUpdateCommand } from "./commands/hyperdrive/update";
 import { init } from "./commands/init";
 import {
 	kvBulkDeleteCommand,
@@ -84,6 +111,12 @@ import {
 	kvNamespaceNamespace,
 	kvNamespaceRenameCommand,
 } from "./commands/kv";
+import {
+	mTlsCertificateDeleteCommand,
+	mTlsCertificateListCommand,
+	mTlsCertificateNamespace,
+	mTlsCertificateUploadCommand,
+} from "./commands/mtls-certificate/cli";
 import {
 	pagesDeploymentNamespace,
 	pagesDownloadNamespace,
@@ -117,6 +150,23 @@ import {
 } from "./commands/pages/secret";
 import { pagesProjectUploadCommand } from "./commands/pages/upload";
 import { pagesProjectValidateCommand } from "./commands/pages/validate";
+import { pipelinesNamespace } from "./commands/pipelines";
+import { pipelinesCreateCommand } from "./commands/pipelines/cli/create";
+import { pipelinesDeleteCommand } from "./commands/pipelines/cli/delete";
+import { pipelinesGetCommand } from "./commands/pipelines/cli/get";
+import { pipelinesListCommand } from "./commands/pipelines/cli/list";
+import { pipelinesSetupCommand } from "./commands/pipelines/cli/setup";
+import { pipelinesSinksNamespace } from "./commands/pipelines/cli/sinks";
+import { pipelinesSinksCreateCommand } from "./commands/pipelines/cli/sinks/create";
+import { pipelinesSinksDeleteCommand } from "./commands/pipelines/cli/sinks/delete";
+import { pipelinesSinksGetCommand } from "./commands/pipelines/cli/sinks/get";
+import { pipelinesSinksListCommand } from "./commands/pipelines/cli/sinks/list";
+import { pipelinesStreamsNamespace } from "./commands/pipelines/cli/streams";
+import { pipelinesStreamsCreateCommand } from "./commands/pipelines/cli/streams/create";
+import { pipelinesStreamsDeleteCommand } from "./commands/pipelines/cli/streams/delete";
+import { pipelinesStreamsGetCommand } from "./commands/pipelines/cli/streams/get";
+import { pipelinesStreamsListCommand } from "./commands/pipelines/cli/streams/list";
+import { pipelinesUpdateCommand } from "./commands/pipelines/cli/update";
 import { queuesNamespace } from "./commands/queues/cli/commands";
 import { queuesConsumerNamespace } from "./commands/queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./commands/queues/cli/commands/consumer/http-pull";
@@ -232,6 +282,22 @@ import {
 	secretNamespace,
 	secretPutCommand,
 } from "./commands/secret";
+import {
+	secretsStoreNamespace,
+	secretsStoreSecretNamespace,
+	secretsStoreStoreNamespace,
+} from "./commands/secrets-store";
+import {
+	secretsStoreSecretCreateCommand,
+	secretsStoreSecretDeleteCommand,
+	secretsStoreSecretDuplicateCommand,
+	secretsStoreSecretGetCommand,
+	secretsStoreSecretListCommand,
+	secretsStoreSecretUpdateCommand,
+	secretsStoreStoreCreateCommand,
+	secretsStoreStoreDeleteCommand,
+	secretsStoreStoreListCommand,
+} from "./commands/secrets-store/commands";
 import { setupCommand } from "./commands/setup";
 import { tailCommand } from "./commands/tail";
 import {
@@ -280,23 +346,29 @@ import { versionsSecretsListCommand } from "./commands/versions/secrets/list";
 import { versionsSecretPutCommand } from "./commands/versions/secrets/put";
 import { versionsUploadCommand } from "./commands/versions/upload";
 import { versionsViewCommand } from "./commands/versions/view";
-import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
+import { vpcServiceCreateCommand } from "./commands/vpc/create";
+import { vpcServiceDeleteCommand } from "./commands/vpc/delete";
+import { vpcServiceGetCommand } from "./commands/vpc/get";
+import { vpcNamespace, vpcServiceNamespace } from "./commands/vpc/index";
+import { vpcServiceListCommand } from "./commands/vpc/list";
+import { vpcServiceUpdateCommand } from "./commands/vpc/update";
 import {
-	containersBuildCommand,
-	containersDeleteCommand,
-	containersImagesDeleteCommand,
-	containersImagesListCommand,
-	containersImagesNamespace,
-	containersInfoCommand,
-	containersListCommand,
-	containersNamespace,
-	containersPushCommand,
-	containersRegistriesConfigureCommand,
-	containersRegistriesDeleteCommand,
-	containersRegistriesListCommand,
-	containersRegistriesNamespace,
-	containersSshCommand,
-} from "./commands/containers";
+	workflowsInstanceNamespace,
+	workflowsNamespace,
+} from "./commands/workflows";
+import { workflowsDeleteCommand } from "./commands/workflows/commands/delete";
+import { workflowsDescribeCommand } from "./commands/workflows/commands/describe";
+import { workflowsInstancesDescribeCommand } from "./commands/workflows/commands/instances/describe";
+import { workflowsInstancesListCommand } from "./commands/workflows/commands/instances/list";
+import { workflowsInstancesPauseCommand } from "./commands/workflows/commands/instances/pause";
+import { workflowsInstancesRestartCommand } from "./commands/workflows/commands/instances/restart";
+import { workflowsInstancesResumeCommand } from "./commands/workflows/commands/instances/resume";
+import { workflowsInstancesSendEventCommand } from "./commands/workflows/commands/instances/send-event";
+import { workflowsInstancesTerminateCommand } from "./commands/workflows/commands/instances/terminate";
+import { workflowsInstancesTerminateAllCommand } from "./commands/workflows/commands/instances/terminate-all";
+import { workflowsListCommand } from "./commands/workflows/commands/list";
+import { workflowsTriggerCommand } from "./commands/workflows/commands/trigger";
+import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import { demandSingleValue } from "./core";
 import { CommandHandledError } from "./core/CommandHandledError";
 import { CommandRegistry } from "./core/CommandRegistry";
@@ -310,81 +382,12 @@ import {
 	dispatchNamespaceNamespace,
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
-import {
-	helloWorldGetCommand,
-	helloWorldNamespace,
-	helloWorldSetCommand,
-} from "./commands/hello-world";
-import { hyperdriveCreateCommand } from "./commands/hyperdrive/create";
-import { hyperdriveDeleteCommand } from "./commands/hyperdrive/delete";
-import { hyperdriveGetCommand } from "./commands/hyperdrive/get";
-import { hyperdriveNamespace } from "./commands/hyperdrive/index";
-import { hyperdriveListCommand } from "./commands/hyperdrive/list";
-import { hyperdriveUpdateCommand } from "./commands/hyperdrive/update";
 import { logger, LOGGER_LEVELS } from "./logger";
 import { allMetricsDispatchesCompleted, getMetricsDispatcher } from "./metrics";
-import {
-	mTlsCertificateDeleteCommand,
-	mTlsCertificateListCommand,
-	mTlsCertificateNamespace,
-	mTlsCertificateUploadCommand,
-} from "./commands/mtls-certificate/cli";
 import { writeOutput } from "./output";
-import { pipelinesNamespace } from "./commands/pipelines";
-import { pipelinesCreateCommand } from "./commands/pipelines/cli/create";
-import { pipelinesDeleteCommand } from "./commands/pipelines/cli/delete";
-import { pipelinesGetCommand } from "./commands/pipelines/cli/get";
-import { pipelinesListCommand } from "./commands/pipelines/cli/list";
-import { pipelinesSetupCommand } from "./commands/pipelines/cli/setup";
-import { pipelinesSinksNamespace } from "./commands/pipelines/cli/sinks";
-import { pipelinesSinksCreateCommand } from "./commands/pipelines/cli/sinks/create";
-import { pipelinesSinksDeleteCommand } from "./commands/pipelines/cli/sinks/delete";
-import { pipelinesSinksGetCommand } from "./commands/pipelines/cli/sinks/get";
-import { pipelinesSinksListCommand } from "./commands/pipelines/cli/sinks/list";
-import { pipelinesStreamsNamespace } from "./commands/pipelines/cli/streams";
-import { pipelinesStreamsCreateCommand } from "./commands/pipelines/cli/streams/create";
-import { pipelinesStreamsDeleteCommand } from "./commands/pipelines/cli/streams/delete";
-import { pipelinesStreamsGetCommand } from "./commands/pipelines/cli/streams/get";
-import { pipelinesStreamsListCommand } from "./commands/pipelines/cli/streams/list";
-import { pipelinesUpdateCommand } from "./commands/pipelines/cli/update";
-import {
-	secretsStoreNamespace,
-	secretsStoreSecretNamespace,
-	secretsStoreStoreNamespace,
-} from "./commands/secrets-store";
-import {
-	secretsStoreSecretCreateCommand,
-	secretsStoreSecretDeleteCommand,
-	secretsStoreSecretDuplicateCommand,
-	secretsStoreSecretGetCommand,
-	secretsStoreSecretListCommand,
-	secretsStoreSecretUpdateCommand,
-	secretsStoreStoreCreateCommand,
-	secretsStoreStoreDeleteCommand,
-	secretsStoreStoreListCommand,
-} from "./commands/secrets-store/commands";
 import { closeSentry, setupSentry } from "./sentry";
 import { proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
-import { vpcServiceCreateCommand } from "./commands/vpc/create";
-import { vpcServiceDeleteCommand } from "./commands/vpc/delete";
-import { vpcServiceGetCommand } from "./commands/vpc/get";
-import { vpcNamespace, vpcServiceNamespace } from "./commands/vpc/index";
-import { vpcServiceListCommand } from "./commands/vpc/list";
-import { vpcServiceUpdateCommand } from "./commands/vpc/update";
-import { workflowsInstanceNamespace, workflowsNamespace } from "./commands/workflows";
-import { workflowsDeleteCommand } from "./commands/workflows/commands/delete";
-import { workflowsDescribeCommand } from "./commands/workflows/commands/describe";
-import { workflowsInstancesDescribeCommand } from "./commands/workflows/commands/instances/describe";
-import { workflowsInstancesListCommand } from "./commands/workflows/commands/instances/list";
-import { workflowsInstancesPauseCommand } from "./commands/workflows/commands/instances/pause";
-import { workflowsInstancesRestartCommand } from "./commands/workflows/commands/instances/restart";
-import { workflowsInstancesResumeCommand } from "./commands/workflows/commands/instances/resume";
-import { workflowsInstancesSendEventCommand } from "./commands/workflows/commands/instances/send-event";
-import { workflowsInstancesTerminateCommand } from "./commands/workflows/commands/instances/terminate";
-import { workflowsInstancesTerminateAllCommand } from "./commands/workflows/commands/instances/terminate-all";
-import { workflowsListCommand } from "./commands/workflows/commands/list";
-import { workflowsTriggerCommand } from "./commands/workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
 import type { ReadConfigCommandArgs } from "./config";
 import type { LoggerLevel } from "./logger";

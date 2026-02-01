@@ -27,22 +27,22 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { fetchResult } from "../../cfetch";
-import {
-	fillOpenAPIConfiguration,
-	promiseSpinner,
-} from "../cloudchamber/common";
-import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
 import { fetchVersion } from "../../commands/versions/api";
-import { buildContainer } from "./build";
 import { getAccountId } from "../../user";
 import { Diff } from "../../utils/diff";
 import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../../utils/sortObjectRecursive";
+import {
+	fillOpenAPIConfiguration,
+	promiseSpinner,
+} from "../cloudchamber/common";
+import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
+import { buildContainer } from "./build";
 import { containersScope } from ".";
-import type { ImageRef } from "../cloudchamber/build";
 import type { ApiVersion } from "../../commands/versions/types";
+import type { ImageRef } from "../cloudchamber/build";
 import type {
 	Application,
 	ApplicationID,

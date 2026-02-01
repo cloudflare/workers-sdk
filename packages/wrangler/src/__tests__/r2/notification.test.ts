@@ -1,9 +1,9 @@
 import { describe, expect, test } from "vitest";
-import { logger } from "../../logger";
 import {
 	eventNotificationHeaders,
 	tableFromNotificationGetResponse,
 } from "../../commands/r2/helpers/notification";
+import { logger } from "../../logger";
 import formatLabelledValues from "../../utils/render-labelled-values";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import type { GetNotificationConfigResponse } from "../../commands/r2/helpers/notification";

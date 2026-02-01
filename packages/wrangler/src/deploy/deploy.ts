@@ -18,6 +18,9 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
+import { buildContainer } from "../commands/containers/build";
+import { getNormalizedContainerOptions } from "../commands/containers/config";
+import { deployContainers } from "../commands/containers/deploy";
 import {
 	ensureQueuesExistByConfig,
 	getQueue,
@@ -31,9 +34,6 @@ import {
 	patchNonVersionedScriptSettings,
 } from "../commands/versions/api";
 import { confirmLatestDeploymentOverwrite } from "../commands/versions/deploy";
-import { buildContainer } from "../commands/containers/build";
-import { getNormalizedContainerOptions } from "../commands/containers/config";
-import { deployContainers } from "../commands/containers/deploy";
 import { isAuthenticationError } from "../core/handle-errors";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
