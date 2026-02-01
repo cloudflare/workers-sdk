@@ -14,7 +14,7 @@
 		"check": "pnpm check:fixtures && pnpm check:private-packages && pnpm check:package-deps && pnpm check:deployments && node lint-turbo.mjs && dotenv -- turbo check:lint check:type check:format type:tests",
 		"check:deployments": "node -r esbuild-register tools/deployments/deploy-non-npm-packages.ts check",
 		"check:fixtures": "node -r esbuild-register tools/deployments/validate-fixtures.ts",
-		"check:format": "prettier . --check --ignore-unknown",
+		"check:format": "prettier . --check --ignore-unknown --cache",
 		"check:lint": "dotenv -- turbo check:lint",
 		"check:package-deps": "node -r esbuild-register tools/deployments/validate-package-dependencies.ts",
 		"check:private-packages": "node -r esbuild-register tools/deployments/validate-private-packages.ts",
