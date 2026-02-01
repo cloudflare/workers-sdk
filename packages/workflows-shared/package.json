@@ -25,7 +25,7 @@
 	],
 	"scripts": {
 		"build": "esbuild ./src/local-binding-worker.ts --format=esm --bundle --outfile=dist/local-binding-worker.mjs --sourcemap=external --external:cloudflare:*",
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"clean": "rimraf dist",
 		"deploy": "echo 'no deploy'",

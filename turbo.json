@@ -34,9 +34,7 @@
 			"persistent": true,
 			"cache": false
 		},
-		"check:lint": {
-			"dependsOn": ["^check:lint"]
-		},
+		"check:lint": {},
 		"check:type": {
 			"dependsOn": ["build"]
 		},
