@@ -13,7 +13,7 @@ import {
 	constructTypeKey,
 	generateImportSpecifier,
 	isValidIdentifier,
-} from "../type-generation";
+} from "../commands/types";
 import {
 	ENV_HEADER_COMMENT_PREFIX,
 	getEnvHeader,
@@ -22,8 +22,8 @@ import {
 	TOP_LEVEL_ENV_NAME,
 	toPascalCase,
 	validateEnvInterfaceNames,
-} from "../type-generation/helpers";
-import * as generateRuntime from "../type-generation/runtime";
+} from "../commands/types/helpers";
+import * as generateRuntime from "../commands/types/runtime";
 import { dedent } from "../utils/dedent";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";

@@ -28,8 +28,8 @@ import { isJwtExpired } from "./pages/upload";
 import { getBasePath } from "./paths";
 import { dedent } from "./utils/dedent";
 import type { StartDevWorkerOptions } from "./api";
-import type { DeployArgs } from "./deploy";
-import type { StartDevOptions } from "./dev";
+import type { DeployArgs } from "./commands/deploy";
+import type { StartDevOptions } from "./commands/dev";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 

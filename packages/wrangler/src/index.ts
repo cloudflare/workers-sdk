@@ -46,7 +46,52 @@ import {
 	cloudchamberSshListCommand,
 	cloudchamberSshNamespace,
 } from "./cloudchamber";
-import { completionsCommand } from "./complete";
+import { completionsCommand } from "./commands/complete";
+import { deleteCommand } from "./commands/delete";
+import { deployCommand } from "./commands/deploy";
+import { dev } from "./commands/dev";
+import { docs } from "./commands/docs";
+import { init } from "./commands/init";
+import {
+	secretBulkCommand,
+	secretDeleteCommand,
+	secretListCommand,
+	secretNamespace,
+	secretPutCommand,
+} from "./commands/secret";
+import { setupCommand } from "./commands/setup";
+import { tailCommand } from "./commands/tail";
+import {
+	metricsAlias,
+	telemetryDisableCommand,
+	telemetryEnableCommand,
+	telemetryNamespace,
+	telemetryStatusCommand,
+} from "./commands/telemetry";
+import { triggersDeployCommand, triggersNamespace } from "./commands/triggers";
+import { typesCommand } from "./commands/types";
+import {
+	authNamespace,
+	authTokenCommand,
+	loginCommand,
+	logoutCommand,
+	whoamiCommand,
+} from "./commands/user";
+import { versionsNamespace } from "./commands/versions";
+import { versionsDeployCommand } from "./commands/versions/deploy";
+import { deploymentsNamespace } from "./commands/versions/deployments";
+import { deploymentsListCommand } from "./commands/versions/deployments/list";
+import { deploymentsStatusCommand } from "./commands/versions/deployments/status";
+import { deploymentsViewCommand } from "./commands/versions/deployments/view";
+import { versionsListCommand } from "./commands/versions/list";
+import { versionsRollbackCommand } from "./commands/versions/rollback";
+import { versionsSecretNamespace } from "./commands/versions/secrets";
+import { versionsSecretBulkCommand } from "./commands/versions/secrets/bulk";
+import { versionsSecretDeleteCommand } from "./commands/versions/secrets/delete";
+import { versionsSecretsListCommand } from "./commands/versions/secrets/list";
+import { versionsSecretPutCommand } from "./commands/versions/secrets/put";
+import { versionsUploadCommand } from "./commands/versions/upload";
+import { versionsViewCommand } from "./commands/versions/view";
 import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
 import {
 	containersBuildCommand,
@@ -84,9 +129,6 @@ import { d1MigrationsListCommand } from "./d1/migrations/list";
 import { d1TimeTravelNamespace } from "./d1/timeTravel";
 import { d1TimeTravelInfoCommand } from "./d1/timeTravel/info";
 import { d1TimeTravelRestoreCommand } from "./d1/timeTravel/restore";
-import { deleteCommand } from "./delete";
-import { deployCommand } from "./deploy";
-import { dev } from "./dev";
 import {
 	dispatchNamespaceCreateCommand,
 	dispatchNamespaceDeleteCommand,
@@ -95,7 +137,6 @@ import {
 	dispatchNamespaceNamespace,
 	dispatchNamespaceRenameCommand,
 } from "./dispatch-namespace";
-import { docs } from "./docs";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
@@ -107,7 +148,6 @@ import { hyperdriveGetCommand } from "./hyperdrive/get";
 import { hyperdriveNamespace } from "./hyperdrive/index";
 import { hyperdriveListCommand } from "./hyperdrive/list";
 import { hyperdriveUpdateCommand } from "./hyperdrive/update";
-import { init } from "./init";
 import {
 	kvBulkDeleteCommand,
 	kvBulkGetCommand,
@@ -127,13 +167,6 @@ import {
 } from "./kv";
 import { logger, LOGGER_LEVELS } from "./logger";
 import { allMetricsDispatchesCompleted, getMetricsDispatcher } from "./metrics";
-import {
-	metricsAlias,
-	telemetryDisableCommand,
-	telemetryEnableCommand,
-	telemetryNamespace,
-	telemetryStatusCommand,
-} from "./metrics/commands";
 import {
 	mTlsCertificateDeleteCommand,
 	mTlsCertificateListCommand,
@@ -300,13 +333,6 @@ import {
 } from "./r2/sippy";
 import { r2SqlNamespace, r2SqlQueryCommand } from "./r2/sql";
 import {
-	secretBulkCommand,
-	secretDeleteCommand,
-	secretListCommand,
-	secretNamespace,
-	secretPutCommand,
-} from "./secret";
-import {
 	secretsStoreNamespace,
 	secretsStoreSecretNamespace,
 	secretsStoreStoreNamespace,
@@ -323,17 +349,6 @@ import {
 	secretsStoreStoreListCommand,
 } from "./secrets-store/commands";
 import { closeSentry, setupSentry } from "./sentry";
-import { setupCommand } from "./setup";
-import { tailCommand } from "./tail";
-import { triggersDeployCommand, triggersNamespace } from "./triggers";
-import { typesCommand } from "./type-generation";
-import {
-	authNamespace,
-	authTokenCommand,
-	loginCommand,
-	logoutCommand,
-	whoamiCommand,
-} from "./user/commands";
 import { proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
 import { vectorizeCreateCommand } from "./vectorize/create";
@@ -351,21 +366,6 @@ import { vectorizeListMetadataIndexCommand } from "./vectorize/listMetadataIndex
 import { vectorizeListVectorsCommand } from "./vectorize/listVectors";
 import { vectorizeQueryCommand } from "./vectorize/query";
 import { vectorizeUpsertCommand } from "./vectorize/upsert";
-import { versionsNamespace } from "./versions";
-import { versionsDeployCommand } from "./versions/deploy";
-import { deploymentsNamespace } from "./versions/deployments";
-import { deploymentsListCommand } from "./versions/deployments/list";
-import { deploymentsStatusCommand } from "./versions/deployments/status";
-import { deploymentsViewCommand } from "./versions/deployments/view";
-import { versionsListCommand } from "./versions/list";
-import { versionsRollbackCommand } from "./versions/rollback";
-import { versionsSecretNamespace } from "./versions/secrets";
-import { versionsSecretBulkCommand } from "./versions/secrets/bulk";
-import { versionsSecretDeleteCommand } from "./versions/secrets/delete";
-import { versionsSecretsListCommand } from "./versions/secrets/list";
-import { versionsSecretPutCommand } from "./versions/secrets/put";
-import { versionsUploadCommand } from "./versions/upload";
-import { versionsViewCommand } from "./versions/view";
 import { vpcServiceCreateCommand } from "./vpc/create";
 import { vpcServiceDeleteCommand } from "./vpc/delete";
 import { vpcServiceGetCommand } from "./vpc/get";

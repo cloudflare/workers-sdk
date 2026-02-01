@@ -6,6 +6,7 @@ import {
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchResult } from "../../cfetch";
+import { parseBulkInputToObject } from "../../commands/secret";
 import { readPagesConfig } from "../../config";
 import { getConfigCache } from "../../config-cache";
 import { createCommand, createNamespace } from "../../core/create-command";
@@ -13,7 +14,6 @@ import { confirm, prompt } from "../../dialogs";
 import isInteractive from "../../is-interactive";
 import { logger } from "../../logger";
 import * as metrics from "../../metrics";
-import { parseBulkInputToObject } from "../../secret";
 import { requireAuth } from "../../user";
 import { readFromStdin, trimTrailingWhitespace } from "../../utils/std";
 import { PAGES_CONFIG_CACHE_FILENAME } from "../constants";

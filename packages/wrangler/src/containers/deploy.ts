@@ -32,6 +32,7 @@ import {
 	promiseSpinner,
 } from "../cloudchamber/common";
 import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
+import { fetchVersion } from "../commands/versions/api";
 import { buildContainer } from "../containers/build";
 import { getAccountId } from "../user";
 import { Diff } from "../utils/diff";
@@ -39,10 +40,9 @@ import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../utils/sortObjectRecursive";
-import { fetchVersion } from "../versions/api";
 import { containersScope } from ".";
 import type { ImageRef } from "../cloudchamber/build";
-import type { ApiVersion } from "../versions/types";
+import type { ApiVersion } from "../commands/versions/types";
 import type {
 	Application,
 	ApplicationID,

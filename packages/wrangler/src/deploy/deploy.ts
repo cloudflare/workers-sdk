@@ -18,6 +18,12 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
+import triggersDeploy from "../commands/triggers/deploy";
+import {
+	createDeployment,
+	patchNonVersionedScriptSettings,
+} from "../commands/versions/api";
+import { confirmLatestDeploymentOverwrite } from "../commands/versions/deploy";
 import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { deployContainers } from "../containers/deploy";
@@ -59,27 +65,25 @@ import {
 	getSourceMappedString,
 	maybeRetrieveFileSourceMap,
 } from "../sourcemap";
-import triggersDeploy from "../triggers/deploy";
 import { downloadWorkerConfig } from "../utils/download-worker-config";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
 import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
-import {
-	createDeployment,
-	patchNonVersionedScriptSettings,
-} from "../versions/api";
-import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
 import type { AssetsOptions } from "../assets";
+import type {
+	ApiVersion,
+	Percentage,
+	VersionId,
+} from "../commands/versions/types";
 import type { Entry } from "../deployment-bundle/entry";
 import type { PostTypedConsumerBody } from "../queues/client";
 import type { LegacyAssetPaths } from "../sites";
 import type { RetrieveSourceMapFunction } from "../sourcemap";
-import type { ApiVersion, Percentage, VersionId } from "../versions/types";
 import type {
 	CfModule,
 	CfWorkerInit,

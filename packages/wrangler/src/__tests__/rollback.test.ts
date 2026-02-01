@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, test } from "vitest";
-import { CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE } from "../versions/rollback";
+import { CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE } from "../commands/versions/rollback";
 import { collectCLIOutput } from "./helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -8,7 +8,7 @@ import { mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw } from "./helpers/msw";
 import { runWrangler } from "./helpers/run-wrangler";
-import type { ApiDeployment } from "../versions/types";
+import type { ApiDeployment } from "../commands/versions/types";
 
 describe("rollback", () => {
 	mockConsoleMethods();

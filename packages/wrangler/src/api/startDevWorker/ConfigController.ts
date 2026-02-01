@@ -12,20 +12,20 @@ import { watch } from "chokidar";
 import { getWorkerRegistry } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
-import { readConfig } from "../../config";
-import { containersScope } from "../../containers";
-import { getNormalizedContainerOptions } from "../../containers/config";
-import { getEntry } from "../../deployment-bundle/entry";
 import {
 	getBindings,
 	getHostAndRoutes,
 	getInferredHost,
 	maskVars,
-} from "../../dev";
+} from "../../commands/dev";
+import { checkTypesDiff } from "../../commands/types/helpers";
+import { readConfig } from "../../config";
+import { containersScope } from "../../containers";
+import { getNormalizedContainerOptions } from "../../containers/config";
+import { getEntry } from "../../deployment-bundle/entry";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../dev/class-names-sqlite";
 import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
 import { logger, runWithLogLevel } from "../../logger";
-import { checkTypesDiff } from "../../type-generation/helpers";
 import {
 	loginOrRefreshIfRequired,
 	requireApiToken,

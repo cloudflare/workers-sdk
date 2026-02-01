@@ -5,7 +5,7 @@ import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../secret";
+import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../commands/secret";
 import {
 	WORKER_NOT_FOUND_ERR_CODE,
 	workerNotFoundErrorMessage,

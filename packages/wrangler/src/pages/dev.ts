@@ -35,7 +35,7 @@ import {
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
-import type { AdditionalDevProps } from "../dev";
+import type { AdditionalDevProps } from "../commands/dev";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
 import type {
 	CfModule,

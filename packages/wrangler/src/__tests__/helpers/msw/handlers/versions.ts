@@ -1,6 +1,9 @@
 import { http, HttpResponse } from "msw";
 import { createFetchResult } from "../index";
-import type { ApiDeployment, ApiVersion } from "../../../../versions/types";
+import type {
+	ApiDeployment,
+	ApiVersion,
+} from "../../../../commands/versions/types";
 
 export const mswListNewDeploymentsLatestFull = [
 	http.get(

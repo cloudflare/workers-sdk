@@ -4,7 +4,7 @@ import { expect } from "vitest";
 import {
 	getSubdomainValues,
 	getSubdomainValuesAPIMock,
-} from "../../triggers/deploy";
+} from "../../commands/triggers/deploy";
 import {
 	mockGetWorkerSubdomain,
 	mockUpdateWorkerSubdomain,
@@ -12,7 +12,7 @@ import {
 import { createFetchResult, msw } from "./msw";
 import { serialize, toString } from "./serialize-form-data-entry";
 import { readWranglerConfig } from "./write-wrangler-config";
-import type { NonVersionedScriptSettings } from "../../versions/api";
+import type { NonVersionedScriptSettings } from "../../commands/versions/api";
 import type {
 	AssetConfigMetadata,
 	CfWorkerInit,
