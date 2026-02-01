@@ -1,3 +1,4 @@
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect
 import { expect } from "vitest";
 import { z } from "zod";
 

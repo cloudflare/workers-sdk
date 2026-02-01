@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { LogLevel, Miniflare } from "miniflare";
 import dedent from "ts-dedent";
-import { expect, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import { TestLog, useDispose } from "../../test-shared";
 
 const SEND_EMAIL_WORKER = dedent/* javascript */ `
@@ -39,7 +39,7 @@ const REPLY_EMAIL_WORKER = (email = "message.raw") => dedent/* javascript */ `
 	};
 `;
 
-test("Unbound send_email binding works", async () => {
+test("Unbound send_email binding works", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -97,7 +97,7 @@ test("Unbound send_email binding works", async () => {
 	);
 });
 
-test("Invalid email throws", async () => {
+test("Invalid email throws", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: SEND_EMAIL_WORKER,
@@ -125,7 +125,9 @@ test("Invalid email throws", async () => {
 	expect(res.status).toBe(500);
 });
 
-test("Single allowed destination send_email binding works", async () => {
+test("Single allowed destination send_email binding works", async ({
+	expect,
+}) => {
 	const log = new TestLog();
 
 	const mf = new Miniflare({
@@ -189,7 +191,9 @@ test("Single allowed destination send_email binding works", async () => {
 	);
 });
 
-test("Single allowed destination send_email binding throws if destination is not equal", async () => {
+test("Single allowed destination send_email binding throws if destination is not equal", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: SEND_EMAIL_WORKER,
@@ -230,7 +234,9 @@ This is a random email body.
 	expect(res.status).toBe(500);
 });
 
-test("Multiple allowed destination send_email binding works", async () => {
+test("Multiple allowed destination send_email binding works", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: SEND_EMAIL_WORKER,
@@ -273,7 +279,9 @@ This is a random email body.
 	expect(res.status).toBe(200);
 });
 
-test("Multiple allowed senders send_email binding works", async () => {
+test("Multiple allowed senders send_email binding works", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: SEND_EMAIL_WORKER,
@@ -316,7 +324,9 @@ This is a random email body.
 	expect(res.status).toBe(200);
 });
 
-test("Sending email from a sender not in the allowed list does not work", async () => {
+test("Sending email from a sender not in the allowed list does not work", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: SEND_EMAIL_WORKER,
@@ -363,7 +373,9 @@ This is a random email body.
 	expect(res.status).toBe(500);
 });
 
-test("Multiple allowed send_email binding throws if destination is not equal", async () => {
+test("Multiple allowed send_email binding throws if destination is not equal", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: SEND_EMAIL_WORKER,
@@ -410,7 +422,7 @@ This is a random email body.
 	expect(res.status).toBe(500);
 });
 
-test("reply validation: x-auto-response-suppress", async () => {
+test("reply validation: x-auto-response-suppress", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -447,7 +459,7 @@ test("reply validation: x-auto-response-suppress", async () => {
 	expect((await res.text()).includes("Original email is not replyable"));
 });
 
-test("reply validation: Auto-Submitted", async () => {
+test("reply validation: Auto-Submitted", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -484,7 +496,7 @@ test("reply validation: Auto-Submitted", async () => {
 	expect((await res.text()).includes("Original email is not replyable"));
 });
 
-test("reply validation: only In-Reply-To", async () => {
+test("reply validation: only In-Reply-To", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -521,7 +533,7 @@ test("reply validation: only In-Reply-To", async () => {
 	expect((await res.text()).includes("Original email is not replyable"));
 });
 
-test("reply validation: only References", async () => {
+test("reply validation: only References", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -558,7 +570,7 @@ test("reply validation: only References", async () => {
 	expect((await res.text()).includes("Original email is not replyable"));
 });
 
-test("reply validation: >100 References", async () => {
+test("reply validation: >100 References", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -600,7 +612,7 @@ test("reply validation: >100 References", async () => {
 	);
 });
 
-test("reply: mismatched From: header", async () => {
+test("reply: mismatched From: header", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -637,7 +649,7 @@ test("reply: mismatched From: header", async () => {
 	expect((await res.text()).includes("From: header does not match mail from"));
 });
 
-test("reply: unparseable", async () => {
+test("reply: unparseable", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -674,7 +686,7 @@ test("reply: unparseable", async () => {
 	expect((await res.text()).includes("could not parse email"));
 });
 
-test("reply: no message id", async () => {
+test("reply: no message id", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -719,7 +731,7 @@ test("reply: no message id", async () => {
 	expect((await res.text()).includes("invalid message-id"));
 });
 
-test("reply: disallowed header", async () => {
+test("reply: disallowed header", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -766,7 +778,7 @@ test("reply: disallowed header", async () => {
 	expect((await res.text()).includes("invalid headers set"));
 });
 
-test("reply: missing In-Reply-To", async () => {
+test("reply: missing In-Reply-To", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -814,7 +826,7 @@ test("reply: missing In-Reply-To", async () => {
 	);
 });
 
-test("reply: wrong In-Reply-To", async () => {
+test("reply: wrong In-Reply-To", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -865,7 +877,7 @@ test("reply: wrong In-Reply-To", async () => {
 	);
 });
 
-test("reply: invalid references", async () => {
+test("reply: invalid references", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -912,7 +924,7 @@ test("reply: invalid references", async () => {
 	expect((await res.text()).includes("provided References header is invalid"));
 });
 
-test("reply: references generated correctly", async () => {
+test("reply: references generated correctly", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -982,7 +994,7 @@ const MESSAGE_BUILDER_WORKER = dedent/* javascript */ `
 	};
 `;
 
-test("MessageBuilder with text only", async () => {
+test("MessageBuilder with text only", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -1034,7 +1046,7 @@ test("MessageBuilder with text only", async () => {
 	);
 });
 
-test("MessageBuilder with HTML only", async () => {
+test("MessageBuilder with HTML only", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
@@ -1060,7 +1072,7 @@ test("MessageBuilder with HTML only", async () => {
 	expect(res.status).toBe(200);
 });
 
-test("MessageBuilder with both text and HTML", async () => {
+test("MessageBuilder with both text and HTML", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
@@ -1087,7 +1099,7 @@ test("MessageBuilder with both text and HTML", async () => {
 	expect(res.status).toBe(200);
 });
 
-test("MessageBuilder with attachments", async () => {
+test("MessageBuilder with attachments", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -1141,7 +1153,7 @@ test("MessageBuilder with attachments", async () => {
 	);
 });
 
-test("MessageBuilder log output format snapshot", async () => {
+test("MessageBuilder log output format snapshot", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -1226,7 +1238,7 @@ test("MessageBuilder log output format snapshot", async () => {
 	);
 });
 
-test("MessageBuilder with inline attachment", async () => {
+test("MessageBuilder with inline attachment", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
@@ -1261,7 +1273,7 @@ test("MessageBuilder with inline attachment", async () => {
 	expect(res.status).toBe(200);
 });
 
-test("MessageBuilder with EmailAddress objects", async () => {
+test("MessageBuilder with EmailAddress objects", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -1309,7 +1321,7 @@ test("MessageBuilder with EmailAddress objects", async () => {
 	);
 });
 
-test("MessageBuilder with multiple recipients", async () => {
+test("MessageBuilder with multiple recipients", async ({ expect }) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
@@ -1361,7 +1373,7 @@ test("MessageBuilder with multiple recipients", async () => {
 	);
 });
 
-test("MessageBuilder with custom headers", async () => {
+test("MessageBuilder with custom headers", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
@@ -1390,7 +1402,9 @@ test("MessageBuilder with custom headers", async () => {
 	expect(res.status).toBe(200);
 });
 
-test("MessageBuilder respects allowed_destination_addresses", async () => {
+test("MessageBuilder respects allowed_destination_addresses", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
@@ -1422,7 +1436,7 @@ test("MessageBuilder respects allowed_destination_addresses", async () => {
 	expect(error).toContain("not allowed");
 });
 
-test("MessageBuilder respects allowed_sender_addresses", async () => {
+test("MessageBuilder respects allowed_sender_addresses", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: MESSAGE_BUILDER_WORKER,
@@ -1454,7 +1468,9 @@ test("MessageBuilder respects allowed_sender_addresses", async () => {
 	expect(error).toContain("not allowed");
 });
 
-test("MessageBuilder backward compatibility - old EmailMessage API still works", async () => {
+test("MessageBuilder backward compatibility - old EmailMessage API still works", async ({
+	expect,
+}) => {
 	const log = new TestLog();
 	const mf = new Miniflare({
 		log,
