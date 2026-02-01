@@ -84,6 +84,39 @@ import {
 	kvNamespaceNamespace,
 	kvNamespaceRenameCommand,
 } from "./commands/kv";
+import {
+	pagesDeploymentNamespace,
+	pagesDownloadNamespace,
+	pagesFunctionsNamespace,
+	pagesNamespace,
+	pagesProjectNamespace,
+} from "./commands/pages";
+import { pagesFunctionsBuildCommand } from "./commands/pages/build";
+import { pagesFunctionsBuildEnvCommand } from "./commands/pages/build-env";
+import {
+	pagesDeployCommand,
+	pagesDeploymentCreateCommand,
+	pagesPublishCommand,
+} from "./commands/pages/deploy";
+import { pagesDeploymentTailCommand } from "./commands/pages/deployment-tails";
+import { pagesDeploymentListCommand } from "./commands/pages/deployments";
+import { pagesDevCommand } from "./commands/pages/dev";
+import { pagesDownloadConfigCommand } from "./commands/pages/download-config";
+import { pagesFunctionsOptimizeRoutesCommand } from "./commands/pages/functions";
+import {
+	pagesProjectCreateCommand,
+	pagesProjectDeleteCommand,
+	pagesProjectListCommand,
+} from "./commands/pages/projects";
+import {
+	pagesSecretBulkCommand,
+	pagesSecretDeleteCommand,
+	pagesSecretListCommand,
+	pagesSecretNamespace,
+	pagesSecretPutCommand,
+} from "./commands/pages/secret";
+import { pagesProjectUploadCommand } from "./commands/pages/upload";
+import { pagesProjectValidateCommand } from "./commands/pages/validate";
 import { queuesNamespace } from "./commands/queues/cli/commands";
 import { queuesConsumerNamespace } from "./commands/queues/cli/commands/consumer";
 import { queuesConsumerHttpNamespace } from "./commands/queues/cli/commands/consumer/http-pull";
@@ -282,39 +315,6 @@ import {
 	mTlsCertificateUploadCommand,
 } from "./mtls-certificate/cli";
 import { writeOutput } from "./output";
-import {
-	pagesDeploymentNamespace,
-	pagesDownloadNamespace,
-	pagesFunctionsNamespace,
-	pagesNamespace,
-	pagesProjectNamespace,
-} from "./pages";
-import { pagesFunctionsBuildCommand } from "./pages/build";
-import { pagesFunctionsBuildEnvCommand } from "./pages/build-env";
-import {
-	pagesDeployCommand,
-	pagesDeploymentCreateCommand,
-	pagesPublishCommand,
-} from "./pages/deploy";
-import { pagesDeploymentTailCommand } from "./pages/deployment-tails";
-import { pagesDeploymentListCommand } from "./pages/deployments";
-import { pagesDevCommand } from "./pages/dev";
-import { pagesDownloadConfigCommand } from "./pages/download-config";
-import { pagesFunctionsOptimizeRoutesCommand } from "./pages/functions";
-import {
-	pagesProjectCreateCommand,
-	pagesProjectDeleteCommand,
-	pagesProjectListCommand,
-} from "./pages/projects";
-import {
-	pagesSecretBulkCommand,
-	pagesSecretDeleteCommand,
-	pagesSecretListCommand,
-	pagesSecretNamespace,
-	pagesSecretPutCommand,
-} from "./pages/secret";
-import { pagesProjectUploadCommand } from "./pages/upload";
-import { pagesProjectValidateCommand } from "./pages/validate";
 import { pipelinesNamespace } from "./pipelines";
 import { pipelinesCreateCommand } from "./pipelines/cli/create";
 import { pipelinesDeleteCommand } from "./pipelines/cli/delete";

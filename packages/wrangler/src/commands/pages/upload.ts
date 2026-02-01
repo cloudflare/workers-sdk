@@ -7,10 +7,10 @@ import {
 	FatalError,
 } from "@cloudflare/workers-utils";
 import PQueue from "p-queue";
-import { fetchResult } from "../cfetch";
-import { createCommand } from "../core/create-command";
-import isInteractive from "../is-interactive";
-import { logger } from "../logger";
+import { fetchResult } from "../../cfetch";
+import { createCommand } from "../../core/create-command";
+import isInteractive from "../../is-interactive";
+import { logger } from "../../logger";
 import {
 	BULK_UPLOAD_CONCURRENCY,
 	MAX_ASSET_COUNT_DEFAULT,

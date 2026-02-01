@@ -4,7 +4,7 @@ import { FatalError } from "@cloudflare/workers-utils";
 import { getType } from "mime";
 import { Minimatch } from "minimatch";
 import prettyBytes from "pretty-bytes";
-import { createCommand } from "../core/create-command";
+import { createCommand } from "../../core/create-command";
 import { MAX_ASSET_COUNT_DEFAULT, MAX_ASSET_SIZE } from "./constants";
 import { hashFile } from "./hash";
 import { maxFileCountAllowedFromClaims } from "./upload";

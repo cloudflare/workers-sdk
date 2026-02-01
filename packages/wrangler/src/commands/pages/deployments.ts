@@ -3,12 +3,12 @@ import {
 	FatalError,
 } from "@cloudflare/workers-utils";
 import { format as timeagoFormat } from "timeago.js";
-import { fetchResult } from "../cfetch";
-import { getConfigCache, saveToConfigCache } from "../config-cache";
-import { createCommand } from "../core/create-command";
-import { logger } from "../logger";
-import * as metrics from "../metrics";
-import { requireAuth } from "../user";
+import { fetchResult } from "../../cfetch";
+import { getConfigCache, saveToConfigCache } from "../../config-cache";
+import { createCommand } from "../../core/create-command";
+import { logger } from "../../logger";
+import * as metrics from "../../metrics";
+import { requireAuth } from "../../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import type { PagesConfigCache } from "./types";

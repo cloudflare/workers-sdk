@@ -5,9 +5,9 @@ import {
 	FatalError,
 	findWranglerConfig,
 } from "@cloudflare/workers-utils";
-import { readPagesConfig } from "../config";
-import { createCommand } from "../core/create-command";
-import { logger } from "../logger";
+import { readPagesConfig } from "../../config";
+import { createCommand } from "../../core/create-command";
+import { logger } from "../../logger";
 import {
 	EXIT_CODE_INVALID_PAGES_CONFIG,
 	EXIT_CODE_NO_CONFIG_FOUND,

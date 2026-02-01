@@ -7,9 +7,9 @@ import TOML from "smol-toml";
 import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { version } from "../../../package.json";
-import { ROUTES_SPEC_VERSION } from "../../pages/constants";
-import { ApiErrorCodes } from "../../pages/errors";
-import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
+import { ROUTES_SPEC_VERSION } from "../../commands/pages/constants";
+import { ApiErrorCodes } from "../../commands/pages/errors";
+import { isRoutesJSONSpec } from "../../commands/pages/functions/routes-validation";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -25,7 +25,7 @@ import {
 	formDataToObject,
 	toString,
 } from "../helpers/serialize-form-data-entry";
-import type { Project, UploadPayloadFile } from "../../pages/types";
+import type { Project, UploadPayloadFile } from "../../commands/pages/types";
 import type { StrictRequest } from "msw";
 import type { FormDataEntryValue } from "undici";
 

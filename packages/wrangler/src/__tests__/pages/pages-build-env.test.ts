@@ -8,7 +8,7 @@ import { logger } from "../../logger";
 import {
 	EXIT_CODE_INVALID_PAGES_CONFIG,
 	EXIT_CODE_NO_CONFIG_FOUND,
-} from "../../pages/errors";
+} from "../../commands/pages/errors";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";

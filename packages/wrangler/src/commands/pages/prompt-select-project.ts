@@ -1,4 +1,4 @@
-import { select } from "../dialogs";
+import { select } from "../../dialogs";
 import { listProjects } from "./projects";
 
 export async function promptSelectProject({

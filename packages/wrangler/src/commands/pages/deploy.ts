@@ -9,17 +9,17 @@ import {
 	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { deploy } from "../api/pages/deploy";
-import { fetchResult } from "../cfetch";
-import { readPagesConfig } from "../config";
-import { getConfigCache, saveToConfigCache } from "../config-cache";
-import { createAlias, createCommand } from "../core/create-command";
-import { prompt, select } from "../dialogs";
-import { logger } from "../logger";
-import * as metrics from "../metrics";
-import { writeOutput } from "../output";
-import { requireAuth } from "../user";
-import { diagnoseStartupError } from "../utils/friendly-validator-errors";
+import { deploy } from "../../api/pages/deploy";
+import { fetchResult } from "../../cfetch";
+import { readPagesConfig } from "../../config";
+import { getConfigCache, saveToConfigCache } from "../../config-cache";
+import { createAlias, createCommand } from "../../core/create-command";
+import { prompt, select } from "../../dialogs";
+import { logger } from "../../logger";
+import * as metrics from "../../metrics";
+import { writeOutput } from "../../output";
+import { requireAuth } from "../../user";
+import { diagnoseStartupError } from "../../utils/friendly-validator-errors";
 import {
 	MAX_DEPLOYMENT_STATUS_ATTEMPTS,
 	PAGES_CONFIG_CACHE_FILENAME,

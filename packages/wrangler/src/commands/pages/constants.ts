@@ -1,4 +1,4 @@
-import { version as wranglerVersion } from "../../package.json";
+import { version as wranglerVersion } from "../../../package.json";
 
 const isWindows = process.platform === "win32";
 

@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { FatalError } from "@cloudflare/workers-utils";
-import { toUrlPath } from "../paths";
+import { toUrlPath } from "../../paths";
 import { FunctionsNoRoutesError } from "./errors";
 import { buildPluginFromFunctions } from "./functions/buildPlugin";
 import { buildWorkerFromFunctions } from "./functions/buildWorker";
@@ -9,7 +9,7 @@ import { generateConfigFromFileTree } from "./functions/filepath-routing";
 import { writeRoutesModule } from "./functions/routes";
 import { convertRoutesToRoutesJSONSpec } from "./functions/routes-transformation";
 import { getPagesTmpDir, RUNNING_BUILDERS } from "./utils";
-import type { BundleResult } from "../deployment-bundle/bundle";
+import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { pagesFunctionsBuildCommand } from "./build";
 import type { Config } from "./functions/routes";
 import type { NodeJSCompatMode } from "miniflare";

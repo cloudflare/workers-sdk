@@ -4,20 +4,20 @@ import {
 	FatalError,
 } from "@cloudflare/workers-utils";
 import onExit from "signal-exit";
-import { fetchResult } from "../cfetch";
+import { fetchResult } from "../../cfetch";
 import {
 	createPagesTail,
 	jsonPrintLogs,
 	prettyPrintLogs,
-} from "../commands/tail/createTail";
-import { translateCLICommandToFilterMessage } from "../commands/tail/filters";
-import { readConfig } from "../config";
-import { getConfigCache } from "../config-cache";
-import { createCommand } from "../core/create-command";
-import isInteractive, { isNonInteractiveOrCI } from "../is-interactive";
-import { logger } from "../logger";
-import * as metrics from "../metrics";
-import { requireAuth } from "../user";
+} from "../../commands/tail/createTail";
+import { translateCLICommandToFilterMessage } from "../../commands/tail/filters";
+import { readConfig } from "../../config";
+import { getConfigCache } from "../../config-cache";
+import { createCommand } from "../../core/create-command";
+import isInteractive, { isNonInteractiveOrCI } from "../../is-interactive";
+import { logger } from "../../logger";
+import * as metrics from "../../metrics";
+import { requireAuth } from "../../user";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import { promptSelectProject } from "./prompt-select-project";
 import { isUrl } from "./utils";

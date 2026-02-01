@@ -11,20 +11,20 @@ import {
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
-import { readConfig } from "../config";
-import { createCommand } from "../core/create-command";
-import { isBuildFailure } from "../deployment-bundle/build-failures";
-import { shouldCheckFetch } from "../deployment-bundle/bundle";
-import { esbuildAliasExternalPlugin } from "../deployment-bundle/esbuild-plugins/alias-external";
-import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
-import { startDev } from "../dev/start-dev";
-import { run } from "../experimental-flags";
-import { logger } from "../logger";
-import * as metrics from "../metrics";
-import { isNavigatorDefined } from "../navigator-user-agent";
-import { getBasePath } from "../paths";
-import { debounce } from "../utils/debounce";
-import * as shellquote from "../utils/shell-quote";
+import { readConfig } from "../../config";
+import { createCommand } from "../../core/create-command";
+import { isBuildFailure } from "../../deployment-bundle/build-failures";
+import { shouldCheckFetch } from "../../deployment-bundle/bundle";
+import { esbuildAliasExternalPlugin } from "../../deployment-bundle/esbuild-plugins/alias-external";
+import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
+import { startDev } from "../../dev/start-dev";
+import { run } from "../../experimental-flags";
+import { logger } from "../../logger";
+import * as metrics from "../../metrics";
+import { isNavigatorDefined } from "../../navigator-user-agent";
+import { getBasePath } from "../../paths";
+import { debounce } from "../../utils/debounce";
+import * as shellquote from "../../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
 import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
@@ -35,7 +35,7 @@ import {
 } from "./functions/buildWorker";
 import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
-import type { AdditionalDevProps } from "../commands/dev";
+import type { AdditionalDevProps } from "../../commands/dev";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
 import type {
 	CfModule,

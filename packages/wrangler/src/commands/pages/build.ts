@@ -12,15 +12,15 @@ import {
 	findWranglerConfig,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { createUploadWorkerBundleContents } from "../api/pages/create-worker-bundle-contents";
-import { readPagesConfig } from "../config";
-import { createCommand } from "../core/create-command";
-import { shouldCheckFetch } from "../deployment-bundle/bundle";
-import { writeAdditionalModules } from "../deployment-bundle/find-additional-modules";
-import { validateNodeCompatMode } from "../deployment-bundle/node-compat";
-import { logger } from "../logger";
-import * as metrics from "../metrics";
-import { isNavigatorDefined } from "../navigator-user-agent";
+import { createUploadWorkerBundleContents } from "../../api/pages/create-worker-bundle-contents";
+import { readPagesConfig } from "../../config";
+import { createCommand } from "../../core/create-command";
+import { shouldCheckFetch } from "../../deployment-bundle/bundle";
+import { writeAdditionalModules } from "../../deployment-bundle/find-additional-modules";
+import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
+import { logger } from "../../logger";
+import * as metrics from "../../metrics";
+import { isNavigatorDefined } from "../../navigator-user-agent";
 import { buildFunctions } from "./buildFunctions";
 import {
 	EXIT_CODE_FUNCTIONS_NO_ROUTES_ERROR,
@@ -33,7 +33,7 @@ import {
 	buildRawWorker,
 	produceWorkerBundleForWorkerJSDirectory,
 } from "./functions/buildWorker";
-import type { BundleResult } from "../deployment-bundle/bundle";
+import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Config } from "@cloudflare/workers-utils";
 import type { NodeJSCompatMode } from "miniflare";
 

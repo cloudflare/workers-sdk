@@ -1,7 +1,7 @@
 import { existsSync, lstatSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { FatalError } from "@cloudflare/workers-utils";
-import { createCommand } from "../core/create-command";
+import { createCommand } from "../../core/create-command";
 import { optimizeRoutesJSONSpec } from "./functions/routes-transformation";
 import { validateRoutes } from "./functions/routes-validation";
 

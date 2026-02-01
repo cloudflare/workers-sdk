@@ -4,14 +4,14 @@ import {
 	FatalError,
 } from "@cloudflare/workers-utils";
 import { format as timeagoFormat } from "timeago.js";
-import { fetchResult } from "../cfetch";
-import { getConfigCache, saveToConfigCache } from "../config-cache";
-import { createCommand } from "../core/create-command";
-import { confirm, prompt } from "../dialogs";
-import { logger } from "../logger";
-import * as metrics from "../metrics";
-import { requireAuth } from "../user";
-import { getCloudflareAccountIdFromEnv } from "../user/auth-variables";
+import { fetchResult } from "../../cfetch";
+import { getConfigCache, saveToConfigCache } from "../../config-cache";
+import { createCommand } from "../../core/create-command";
+import { confirm, prompt } from "../../dialogs";
+import { logger } from "../../logger";
+import * as metrics from "../../metrics";
+import { requireAuth } from "../../user";
+import { getCloudflareAccountIdFromEnv } from "../../user/auth-variables";
 import { PAGES_CONFIG_CACHE_FILENAME } from "./constants";
 import type { PagesConfigCache, Project } from "./types";
 

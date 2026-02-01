@@ -1,15 +1,15 @@
 // /* eslint-disable no-shadow */
 import { writeFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { validate } from "../../pages/validate";
+import { validate } from "../../commands/pages/validate";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 
-vi.mock("../../pages/constants", async (importActual) => ({
+vi.mock("../../commands/pages/constants", async (importActual) => ({
 	// eslint-disable-next-line @typescript-eslint/consistent-type-imports
-	...(await importActual<typeof import("../../pages/constants")>()),
+	...(await importActual<typeof import("../../commands/pages/constants")>()),
 	MAX_ASSET_SIZE: 1 * 1024 * 1024,
 	MAX_ASSET_COUNT_DEFAULT: 10,
 }));

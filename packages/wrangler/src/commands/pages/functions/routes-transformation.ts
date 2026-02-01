@@ -1,5 +1,5 @@
 import { join as pathJoin } from "node:path";
-import { toUrlPath } from "../../paths";
+import { toUrlPath } from "../../../paths";
 import {
 	MAX_FUNCTIONS_ROUTES_RULES,
 	ROUTES_SPEC_DESCRIPTION,

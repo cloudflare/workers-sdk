@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	consolidateRoutes,
 	shortenRoute,
-} from "../../pages/functions/routes-consolidation";
+} from "../../commands/pages/functions/routes-consolidation";
 
 describe("route-consolidation", () => {
 	const maxRuleLength = 100; // from constants.MAX_FUNCTIONS_ROUTES_RULE_LENGTH

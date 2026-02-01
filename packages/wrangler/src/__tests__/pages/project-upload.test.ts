@@ -2,7 +2,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { maxFileCountAllowedFromClaims } from "../../pages/upload";
+import { maxFileCountAllowedFromClaims } from "../../commands/pages/upload";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -12,7 +12,7 @@ import { msw } from "../helpers/msw";
 import { normalizeProgressSteps } from "../helpers/normalize-progress";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import type { UploadPayloadFile } from "../../pages/types";
+import type { UploadPayloadFile } from "../../commands/pages/types";
 import type { StrictRequest } from "msw";
 
 describe("pages project upload", () => {
