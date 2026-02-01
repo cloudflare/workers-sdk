@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { convertTimestampToISO } from "../../d1/timeTravel/utils";
+import { convertTimestampToISO } from "../../commands/d1/timeTravel/utils";
 
 describe("convertTimestampToISO", () => {
 	beforeAll(() => {

@@ -47,6 +47,21 @@ import {
 	cloudchamberSshNamespace,
 } from "./cloudchamber";
 import { completionsCommand } from "./commands/complete";
+import { d1Namespace } from "./commands/d1";
+import { d1CreateCommand } from "./commands/d1/create";
+import { d1DeleteCommand } from "./commands/d1/delete";
+import { d1ExecuteCommand } from "./commands/d1/execute";
+import { d1ExportCommand } from "./commands/d1/export";
+import { d1InfoCommand } from "./commands/d1/info";
+import { d1InsightsCommand } from "./commands/d1/insights";
+import { d1ListCommand } from "./commands/d1/list";
+import { d1MigrationsNamespace } from "./commands/d1/migrations";
+import { d1MigrationsApplyCommand } from "./commands/d1/migrations/apply";
+import { d1MigrationsCreateCommand } from "./commands/d1/migrations/create";
+import { d1MigrationsListCommand } from "./commands/d1/migrations/list";
+import { d1TimeTravelNamespace } from "./commands/d1/timeTravel";
+import { d1TimeTravelInfoCommand } from "./commands/d1/timeTravel/info";
+import { d1TimeTravelRestoreCommand } from "./commands/d1/timeTravel/restore";
 import { deleteCommand } from "./commands/delete";
 import { deployCommand } from "./commands/deploy";
 import { dev } from "./commands/dev";
@@ -131,21 +146,6 @@ import { CommandHandledError } from "./core/CommandHandledError";
 import { CommandRegistry } from "./core/CommandRegistry";
 import { getErrorType, handleError } from "./core/handle-errors";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
-import { d1Namespace } from "./d1";
-import { d1CreateCommand } from "./d1/create";
-import { d1DeleteCommand } from "./d1/delete";
-import { d1ExecuteCommand } from "./d1/execute";
-import { d1ExportCommand } from "./d1/export";
-import { d1InfoCommand } from "./d1/info";
-import { d1InsightsCommand } from "./d1/insights";
-import { d1ListCommand } from "./d1/list";
-import { d1MigrationsNamespace } from "./d1/migrations";
-import { d1MigrationsApplyCommand } from "./d1/migrations/apply";
-import { d1MigrationsCreateCommand } from "./d1/migrations/create";
-import { d1MigrationsListCommand } from "./d1/migrations/list";
-import { d1TimeTravelNamespace } from "./d1/timeTravel";
-import { d1TimeTravelInfoCommand } from "./d1/timeTravel/info";
-import { d1TimeTravelRestoreCommand } from "./d1/timeTravel/restore";
 import {
 	dispatchNamespaceCreateCommand,
 	dispatchNamespaceDeleteCommand,

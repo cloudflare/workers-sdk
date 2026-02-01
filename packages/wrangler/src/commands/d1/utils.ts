@@ -1,5 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { fetchResult } from "../cfetch";
+import { fetchResult } from "../../cfetch";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "./constants";
 import { listDatabases } from "./list";
 import type { Database, DatabaseInfo } from "./types";

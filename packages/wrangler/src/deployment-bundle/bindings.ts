@@ -8,10 +8,10 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
+import { createD1Database } from "../commands/d1/create";
+import { listDatabases } from "../commands/d1/list";
+import { getDatabaseInfoFromIdOrName } from "../commands/d1/utils";
 import { createKVNamespace, listKVNamespaces } from "../commands/kv/helpers";
-import { createD1Database } from "../d1/create";
-import { listDatabases } from "../d1/list";
-import { getDatabaseInfoFromIdOrName } from "../d1/utils";
 import { prompt, select } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";

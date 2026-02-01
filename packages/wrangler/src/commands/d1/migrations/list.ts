@@ -1,9 +1,9 @@
 import path from "node:path";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
-import { createCommand } from "../../core/create-command";
-import { logger } from "../../logger";
-import { requireAuth } from "../../user";
-import { isLocal } from "../../utils/is-local";
+import { createCommand } from "../../../core/create-command";
+import { logger } from "../../../logger";
+import { requireAuth } from "../../../user";
+import { isLocal } from "../../../utils/is-local";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { getDatabaseInfoFromConfig } from "../utils";
 import {

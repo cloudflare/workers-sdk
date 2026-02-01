@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { configFileName, UserError } from "@cloudflare/workers-utils";
-import { confirm } from "../../dialogs";
-import { isNonInteractiveOrCI } from "../../is-interactive";
-import { logger } from "../../logger";
+import { confirm } from "../../../dialogs";
+import { isNonInteractiveOrCI } from "../../../is-interactive";
+import { logger } from "../../../logger";
 import { DEFAULT_MIGRATION_PATH } from "../constants";
 import { executeSql } from "../execute";
 import type { QueryResult } from "../execute";

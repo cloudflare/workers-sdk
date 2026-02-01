@@ -1,8 +1,8 @@
 import prettyBytes from "pretty-bytes";
-import { fetchGraphqlResult } from "../cfetch";
-import { createCommand } from "../core/create-command";
-import { logger } from "../logger";
-import { requireAuth } from "../user";
+import { fetchGraphqlResult } from "../../cfetch";
+import { createCommand } from "../../core/create-command";
+import { logger } from "../../logger";
+import { requireAuth } from "../../user";
 import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromIdOrName,

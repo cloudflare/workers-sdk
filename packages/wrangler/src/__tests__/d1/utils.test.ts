@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
 	getDatabaseByNameOrBinding,
 	getDatabaseInfoFromConfig,
-} from "../../d1/utils";
+} from "../../commands/d1/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockGetMemberships } from "../helpers/mock-oauth-flow";
 import { msw } from "../helpers/msw";

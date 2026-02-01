@@ -1,11 +1,11 @@
 import { UserError } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-import { fetchResult } from "../../cfetch";
-import { createCommand } from "../../core/create-command";
-import { confirm } from "../../dialogs";
-import { logger } from "../../logger";
-import { requireAuth } from "../../user";
-import { printResourceLocation } from "../../utils/is-local";
+import { fetchResult } from "../../../cfetch";
+import { createCommand } from "../../../core/create-command";
+import { confirm } from "../../../dialogs";
+import { logger } from "../../../logger";
+import { requireAuth } from "../../../user";
+import { printResourceLocation } from "../../../utils/is-local";
 import { getDatabaseByNameOrBinding } from "../utils";
 import { getBookmarkIdFromTimestamp, throwIfDatabaseIsAlpha } from "./utils";
 import type { RestoreBookmarkResponse } from "./types";

@@ -1,5 +1,5 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { fetchResult } from "../../cfetch";
+import { fetchResult } from "../../../cfetch";
 import { getDatabaseInfoFromIdOrName } from "../utils";
 import type { BookmarkResponse } from "./types";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";

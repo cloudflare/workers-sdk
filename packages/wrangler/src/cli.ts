@@ -38,7 +38,7 @@ export { printBindings as unstable_printBindings } from "./utils/print-bindings"
 export * from "./api/integrations";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
-export { default as unstable_splitSqlQuery } from "./d1/splitter";
+export { default as unstable_splitSqlQuery } from "./commands/d1/splitter";
 
 // `miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
 // `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`

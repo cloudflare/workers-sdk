@@ -3,15 +3,15 @@ import {
 	UserError,
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-import { fetchResult } from "../cfetch";
-import { createCommand } from "../core/create-command";
-import { logger } from "../logger";
-import { requireAuth } from "../user";
+import { fetchResult } from "../../cfetch";
+import { createCommand } from "../../core/create-command";
+import { logger } from "../../logger";
+import { requireAuth } from "../../user";
 import {
 	createdResourceConfig,
 	sharedResourceCreationArgs,
-} from "../utils/add-created-resource-config";
-import { getValidBindingName } from "../utils/getValidBindingName";
+} from "../../utils/add-created-resource-config";
+import { getValidBindingName } from "../../utils/getValidBindingName";
 import { JURISDICTION_CHOICES, LOCATION_CHOICES } from "./constants";
 import type { DatabaseCreationResult } from "./types";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";

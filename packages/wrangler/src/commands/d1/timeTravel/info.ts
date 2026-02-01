@@ -1,8 +1,8 @@
 import dedent from "ts-dedent";
-import { createCommand } from "../../core/create-command";
-import { logger } from "../../logger";
-import { requireAuth } from "../../user";
-import { printResourceLocation } from "../../utils/is-local";
+import { createCommand } from "../../../core/create-command";
+import { logger } from "../../../logger";
+import { requireAuth } from "../../../user";
+import { printResourceLocation } from "../../../utils/is-local";
 import { getDatabaseByNameOrBinding } from "../utils";
 import { getBookmarkIdFromTimestamp, throwIfDatabaseIsAlpha } from "./utils";
 

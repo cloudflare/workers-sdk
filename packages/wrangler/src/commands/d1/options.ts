@@ -1,4 +1,4 @@
-import type { CommonYargsArgv } from "../yargs-types";
+import type { CommonYargsArgv } from "../../yargs-types";
 
 export function Name(yargs: CommonYargsArgv) {
 	return yargs.positional("name", {
