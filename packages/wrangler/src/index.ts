@@ -250,6 +250,21 @@ import {
 	logoutCommand,
 	whoamiCommand,
 } from "./commands/user";
+import { vectorizeCreateCommand } from "./commands/vectorize/create";
+import { vectorizeCreateMetadataIndexCommand } from "./commands/vectorize/createMetadataIndex";
+import { vectorizeDeleteCommand } from "./commands/vectorize/delete";
+import { vectorizeDeleteVectorsCommand } from "./commands/vectorize/deleteByIds";
+import { vectorizeDeleteMetadataIndexCommand } from "./commands/vectorize/deleteMetadataIndex";
+import { vectorizeGetCommand } from "./commands/vectorize/get";
+import { vectorizeGetVectorsCommand } from "./commands/vectorize/getByIds";
+import { vectorizeNamespace } from "./commands/vectorize/index";
+import { vectorizeInfoCommand } from "./commands/vectorize/info";
+import { vectorizeInsertCommand } from "./commands/vectorize/insert";
+import { vectorizeListCommand } from "./commands/vectorize/list";
+import { vectorizeListMetadataIndexCommand } from "./commands/vectorize/listMetadataIndex";
+import { vectorizeListVectorsCommand } from "./commands/vectorize/listVectors";
+import { vectorizeQueryCommand } from "./commands/vectorize/query";
+import { vectorizeUpsertCommand } from "./commands/vectorize/upsert";
 import { versionsNamespace } from "./commands/versions";
 import { versionsDeployCommand } from "./commands/versions/deploy";
 import { deploymentsNamespace } from "./commands/versions/deployments";
@@ -351,21 +366,6 @@ import {
 import { closeSentry, setupSentry } from "./sentry";
 import { proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
-import { vectorizeCreateCommand } from "./vectorize/create";
-import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
-import { vectorizeDeleteCommand } from "./vectorize/delete";
-import { vectorizeDeleteVectorsCommand } from "./vectorize/deleteByIds";
-import { vectorizeDeleteMetadataIndexCommand } from "./vectorize/deleteMetadataIndex";
-import { vectorizeGetCommand } from "./vectorize/get";
-import { vectorizeGetVectorsCommand } from "./vectorize/getByIds";
-import { vectorizeNamespace } from "./vectorize/index";
-import { vectorizeInfoCommand } from "./vectorize/info";
-import { vectorizeInsertCommand } from "./vectorize/insert";
-import { vectorizeListCommand } from "./vectorize/list";
-import { vectorizeListMetadataIndexCommand } from "./vectorize/listMetadataIndex";
-import { vectorizeListVectorsCommand } from "./vectorize/listVectors";
-import { vectorizeQueryCommand } from "./vectorize/query";
-import { vectorizeUpsertCommand } from "./vectorize/upsert";
 import { vpcServiceCreateCommand } from "./vpc/create";
 import { vpcServiceDeleteCommand } from "./vpc/delete";
 import { vpcServiceGetCommand } from "./vpc/get";

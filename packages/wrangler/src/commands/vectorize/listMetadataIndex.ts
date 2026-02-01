@@ -1,5 +1,5 @@
-import { createCommand } from "../core/create-command";
-import { logger } from "../logger";
+import { createCommand } from "../../core/create-command";
+import { logger } from "../../logger";
 import { listMetadataIndex } from "./client";
 
 export const vectorizeListMetadataIndexCommand = createCommand({

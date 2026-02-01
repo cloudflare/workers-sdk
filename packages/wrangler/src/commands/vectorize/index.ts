@@ -1,4 +1,4 @@
-import { createNamespace } from "../core/create-command";
+import { createNamespace } from "../../core/create-command";
 
 export const vectorizeNamespace = createNamespace({
 	metadata: {

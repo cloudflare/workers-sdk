@@ -1,11 +1,11 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { createCommand } from "../core/create-command";
-import { logger } from "../logger";
+import { createCommand } from "../../core/create-command";
+import { logger } from "../../logger";
 import {
 	createdResourceConfig,
 	sharedResourceCreationArgs,
-} from "../utils/add-created-resource-config";
-import { getValidBindingName } from "../utils/getValidBindingName";
+} from "../../utils/add-created-resource-config";
+import { getValidBindingName } from "../../utils/getValidBindingName";
 import { createIndex } from "./client";
 import { deprecatedV1DefaultFlag } from "./common";
 import type { VectorizeDistanceMetric } from "./types";

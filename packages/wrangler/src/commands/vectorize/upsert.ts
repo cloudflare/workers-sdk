@@ -2,8 +2,8 @@ import { createReadStream } from "node:fs";
 import { createInterface } from "node:readline";
 import { UserError } from "@cloudflare/workers-utils";
 import { FormData } from "undici";
-import { createCommand } from "../core/create-command";
-import { logger } from "../logger";
+import { createCommand } from "../../core/create-command";
+import { logger } from "../../logger";
 import { upsertIntoIndex } from "./client";
 import {
 	getBatchFromFile,

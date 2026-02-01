@@ -1,5 +1,5 @@
-import { createCommand } from "../core/create-command";
-import { logger } from "../logger";
+import { createCommand } from "../../core/create-command";
+import { logger } from "../../logger";
 import { listIndexes } from "./client";
 import { deprecatedV1DefaultFlag } from "./common";
 

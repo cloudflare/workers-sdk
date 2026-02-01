@@ -1,6 +1,6 @@
 import { UserError } from "@cloudflare/workers-utils";
-import { createCommand } from "../core/create-command";
-import { logger } from "../logger";
+import { createCommand } from "../../core/create-command";
+import { logger } from "../../logger";
 import { deleteByIds } from "./client";
 import type { VectorizeVectorIds } from "./types";
 

@@ -1,5 +1,5 @@
 import { access, constants, stat } from "node:fs/promises";
-import { logger } from "../logger";
+import { logger } from "../../logger";
 import type { Interface as RLInterface } from "node:readline";
 
 export const deprecatedV1DefaultFlag = false;

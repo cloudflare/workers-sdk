@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { validateQueryFilter } from "../../vectorize/query";
+import { validateQueryFilter } from "../../commands/vectorize/query";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -9,7 +9,7 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import type { VectorizeQueryOptions } from "../../vectorize/types";
+import type { VectorizeQueryOptions } from "../../commands/vectorize/types";
 
 describe("vectorize help", () => {
 	const std = mockConsoleMethods();

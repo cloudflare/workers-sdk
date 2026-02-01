@@ -1,5 +1,5 @@
-import { fetchListResult, fetchResult } from "../cfetch";
-import { requireAuth } from "../user";
+import { fetchListResult, fetchResult } from "../../cfetch";
+import { requireAuth } from "../../user";
 import type {
 	VectorFloatArray,
 	VectorizeAsyncMutation,
