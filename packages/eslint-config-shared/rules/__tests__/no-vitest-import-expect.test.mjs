@@ -80,5 +80,3 @@ ruleTester.run("no-vitest-import-expect", rule, {
 		},
 	],
 });
-
-console.log("✅ All tests passed!");
