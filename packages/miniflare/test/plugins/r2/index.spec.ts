@@ -12,6 +12,7 @@ import {
 	R2_PLUGIN_NAME,
 	ReplaceWorkersTypes,
 } from "miniflare";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect
 import { beforeEach, expect, onTestFinished, test } from "vitest";
 import {
 	FIXTURES_PATH,

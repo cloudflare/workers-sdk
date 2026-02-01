@@ -7,6 +7,7 @@ import unusedImports from "eslint-plugin-unused-imports";
 import { defineConfig, globalIgnores } from "eslint/config";
 import tseslint from "typescript-eslint";
 import noUnsafeCommandExecution from "./rules/no-unsafe-command-execution.mjs";
+import noVitestImportExpect from "./rules/no-vitest-import-expect.mjs";
 
 export default defineConfig(
 	globalIgnores([
@@ -34,6 +35,7 @@ export default defineConfig(
 			"workers-sdk": {
 				rules: {
 					"no-unsafe-command-execution": noUnsafeCommandExecution,
+					"no-vitest-import-expect": noVitestImportExpect,
 				},
 			},
 		},

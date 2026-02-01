@@ -1,3 +1,4 @@
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
 	CACHE_PRESERVATION_WRITE_FREQUENCY,

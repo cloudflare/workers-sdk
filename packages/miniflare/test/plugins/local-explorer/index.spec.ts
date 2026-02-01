@@ -1,5 +1,5 @@
 import { Miniflare } from "miniflare";
-import { afterAll, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, beforeAll, describe, test } from "vitest";
 import { disposeWithRetry } from "../../test-shared";
 
 const BASE_URL = "http://localhost/cdn-cgi/explorer/api";
@@ -25,7 +25,9 @@ describe("Local Explorer API validation", () => {
 	});
 
 	describe("query parameter validation", () => {
-		test("uses default values when optional params not provided", async () => {
+		test("uses default values when optional params not provided", async ({
+			expect,
+		}) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces`
 			);
@@ -39,7 +41,9 @@ describe("Local Explorer API validation", () => {
 				},
 			});
 		});
-		test("returns 400 for invalid type in query parameter", async () => {
+		test("returns 400 for invalid type in query parameter", async ({
+			expect,
+		}) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces?page=not-a-number`
 			);
@@ -57,7 +61,9 @@ describe("Local Explorer API validation", () => {
 			});
 		});
 
-		test("returns 400 for invalid value (number out of range)", async () => {
+		test("returns 400 for invalid value (number out of range)", async ({
+			expect,
+		}) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces?page=-1`
 			);
@@ -74,7 +80,7 @@ describe("Local Explorer API validation", () => {
 			});
 		});
 
-		test("returns 400 for per_page exceeding maximum", async () => {
+		test("returns 400 for per_page exceeding maximum", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces?per_page=1001`
 			);
@@ -93,7 +99,7 @@ describe("Local Explorer API validation", () => {
 	});
 
 	describe("request body validation", () => {
-		test("returns 400 for invalid body type", async () => {
+		test("returns 400 for invalid body type", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/get`,
 				{
@@ -115,7 +121,7 @@ describe("Local Explorer API validation", () => {
 			});
 		});
 
-		test("returns 400 for missing required keys field", async () => {
+		test("returns 400 for missing required keys field", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/test-kv-id/bulk/get`,
 				{
@@ -139,7 +145,9 @@ describe("Local Explorer API validation", () => {
 	});
 
 	describe("error response format", () => {
-		test("validation error responses follow Cloudflare API format", async () => {
+		test("validation error responses follow Cloudflare API format", async ({
+			expect,
+		}) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces?page=invalid`
 			);
@@ -159,7 +167,9 @@ describe("Local Explorer API validation", () => {
 			});
 		});
 
-		test("not found responses follow Cloudflare API format", async () => {
+		test("not found responses follow Cloudflare API format", async ({
+			expect,
+		}) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/storage/kv/namespaces/non-existent-id/keys`
 			);

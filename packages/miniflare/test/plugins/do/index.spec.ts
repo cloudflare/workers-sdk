@@ -10,7 +10,7 @@ import {
 	MiniflareOptions,
 	RequestInit,
 } from "miniflare";
-import { describe, expect, onTestFinished, test } from "vitest";
+import { describe, onTestFinished, test } from "vitest";
 import { disposeWithRetry, useDispose, useTmp } from "../../test-shared";
 
 const COUNTER_SCRIPT = (responsePrefix = "") => `export class Counter {
@@ -53,7 +53,9 @@ const STATEFUL_SCRIPT = (responsePrefix = "") => `
   }
 `;
 
-test("persists Durable Object data in-memory between options reloads", async () => {
+test("persists Durable Object data in-memory between options reloads", async ({
+	expect,
+}) => {
 	const opts: MiniflareOptions = {
 		modules: true,
 		script: COUNTER_SCRIPT("Options #1: "),
@@ -104,7 +106,7 @@ test("persists Durable Object data in-memory between options reloads", async () 
 	expect(await res.text()).toBe("Options #6: 1");
 });
 
-test("persists Durable Object data on file-system", async () => {
+test("persists Durable Object data on file-system", async ({ expect }) => {
 	const tmp = await useTmp();
 	const opts: MiniflareOptions = {
 		name: "worker",
@@ -148,7 +150,7 @@ test("persists Durable Object data on file-system", async () => {
 	expect(await res.text()).toBe("2");
 });
 
-test("multiple Workers access same Durable Object data", async () => {
+test("multiple Workers access same Durable Object data", async ({ expect }) => {
 	const tmp = await useTmp();
 	const mf = new Miniflare({
 		durableObjectsPersist: tmp,
@@ -218,7 +220,9 @@ test("multiple Workers access same Durable Object data", async () => {
 	expect(await res.text()).toBe("via B: b: 2");
 });
 
-test("can use Durable Object ID from one object in another", async () => {
+test("can use Durable Object ID from one object in another", async ({
+	expect,
+}) => {
 	const mf1 = new Miniflare({
 		name: "a",
 		routes: ["*/id"],
@@ -271,7 +275,7 @@ test("can use Durable Object ID from one object in another", async () => {
 	expect(await res.text()).toBe(`id:${id}`);
 });
 
-test("proxies Durable Object methods", async () => {
+test("proxies Durable Object methods", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: COUNTER_SCRIPT(""),
@@ -335,7 +339,7 @@ test("proxies Durable Object methods", async () => {
 });
 
 describe("evictions", { concurrent: true }, () => {
-	test("Durable Object eviction", async ({ onTestFinished }) => {
+	test("Durable Object eviction", async ({ expect, onTestFinished }) => {
 		// this test requires testing over a 10 second timeout
 		// first set unsafePreventEviction to undefined
 		const mf = new Miniflare({
@@ -359,7 +363,10 @@ describe("evictions", { concurrent: true }, () => {
 		expect(await res.text()).not.toBe(original);
 	});
 
-	test("prevent Durable Object eviction", async ({ onTestFinished }) => {
+	test("prevent Durable Object eviction", async ({
+		expect,
+		onTestFinished,
+	}) => {
 		// this test requires testing over a 10 second timeout
 		// first set unsafePreventEviction to true
 		const mf = new Miniflare({
@@ -418,7 +425,9 @@ const MINIFLARE_WITH_SQLITE = (useSQLite: boolean) =>
 		},
 	});
 
-test("SQLite is available in SQLite backed Durable Objects", async () => {
+test("SQLite is available in SQLite backed Durable Objects", async ({
+	expect,
+}) => {
 	const mf = MINIFLARE_WITH_SQLITE(true);
 	useDispose(mf);
 
@@ -432,7 +441,9 @@ test("SQLite is available in SQLite backed Durable Objects", async () => {
 	expect(await res.text()).toBe("4096");
 });
 
-test("SQLite is not available in default Durable Objects", async () => {
+test("SQLite is not available in default Durable Objects", async ({
+	expect,
+}) => {
 	const mf = MINIFLARE_WITH_SQLITE(false);
 	useDispose(mf);
 
@@ -454,7 +465,7 @@ test("SQLite is not available in default Durable Objects", async () => {
 	).toBe(true);
 });
 
-test("colo-local actors", async () => {
+test("colo-local actors", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `export class TestObject {
@@ -485,7 +496,9 @@ test("colo-local actors", async () => {
 	expect(await res.text()).toBe("body:thing2");
 });
 
-test("multiple workers with DO conflicting useSQLite booleans cause options error", async () => {
+test("multiple workers with DO conflicting useSQLite booleans cause options error", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -550,7 +563,9 @@ test("multiple workers with DO conflicting useSQLite booleans cause options erro
 	);
 });
 
-test("multiple workers with DO useSQLite true and undefined does not cause options error", async () => {
+test("multiple workers with DO useSQLite true and undefined does not cause options error", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -627,7 +642,9 @@ export default {
 }
 `;
 
-test("Durable Object RPC calls do not block Node.js event loop", async () => {
+test("Durable Object RPC calls do not block Node.js event loop", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		durableObjects: { BLOCKING_DO: "BlockingDO" },
 		modules: true,
@@ -654,7 +671,7 @@ test("Durable Object RPC calls do not block Node.js event loop", async () => {
 	expect(raced).toEqual({ type: "timeout" });
 });
 
-test("Durable Object RPC calls complete when unblocked", async () => {
+test("Durable Object RPC calls complete when unblocked", async ({ expect }) => {
 	const mf = new Miniflare({
 		durableObjects: { BLOCKING_DO: "BlockingDO" },
 		modules: true,

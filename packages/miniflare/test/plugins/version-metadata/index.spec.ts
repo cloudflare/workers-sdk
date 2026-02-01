@@ -1,8 +1,10 @@
 import { Miniflare } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { useDispose } from "../../test-shared";
 
-test("version-metadata: provides id, tag, and timestamp", async () => {
+test("version-metadata: provides id, tag, and timestamp", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		compatibilityDate: "2026-01-01",
 		versionMetadata: "CF_VERSION_METADATA",
@@ -33,7 +35,7 @@ test("version-metadata: provides id, tag, and timestamp", async () => {
 	expect(response.status).toBe(200);
 });
 
-test("version-metadata: works with custom binding name", async () => {
+test("version-metadata: works with custom binding name", async ({ expect }) => {
 	const mf = new Miniflare({
 		compatibilityDate: "2026-01-01",
 		versionMetadata: "MY_VERSION",
@@ -64,7 +66,7 @@ test("version-metadata: works with custom binding name", async () => {
 	expect(response.status).toBe(200);
 });
 
-test("version-metadata: timestamp is valid ISO date", async () => {
+test("version-metadata: timestamp is valid ISO date", async ({ expect }) => {
 	const mf = new Miniflare({
 		compatibilityDate: "2026-01-01",
 		versionMetadata: "CF_VERSION_METADATA",

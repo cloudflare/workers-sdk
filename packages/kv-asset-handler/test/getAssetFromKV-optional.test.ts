@@ -1,8 +1,10 @@
-import { expect, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import { getAssetFromKV } from "../src/index";
 import { getEvent, mockGlobalScope, mockRequestScope } from "./mocks";
 
-test("getAssetFromKV return correct val from KV without manifest", async () => {
+test("getAssetFromKV return correct val from KV without manifest", async ({
+	expect,
+}) => {
 	mockRequestScope();
 	mockGlobalScope();
 	// manually reset manifest global, to test optional behaviour

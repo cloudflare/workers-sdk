@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { createMetadataObject } from "../..//metadata-generator/createMetadataObject";
 import type {
 	HeadersRule,
@@ -41,7 +41,9 @@ const homeHeadersRule: HeadersRule = {
 	unsetHeaders: [],
 };
 
-test("createMetadataObject should return no redirects or headers entry for no valid rules", () => {
+test("createMetadataObject should return no redirects or headers entry for no valid rules", ({
+	expect,
+}) => {
 	{
 		const metadata = createMetadataObject({
 			redirects: {
@@ -63,7 +65,7 @@ test("createMetadataObject should return no redirects or headers entry for no va
 	}
 });
 
-test("createMetadataObject should add Version", () => {
+test("createMetadataObject should add Version", ({ expect }) => {
 	const metadata = createMetadataObject({
 		redirects: {
 			rules: [homeRedirectRule],
@@ -78,7 +80,9 @@ test("createMetadataObject should add Version", () => {
 	expect(metadata.headers?.version).toEqual(2);
 });
 
-test("createMetadataObject should construct mapping of from to to/status", () => {
+test("createMetadataObject should construct mapping of from to to/status", ({
+	expect,
+}) => {
 	const metadata = createMetadataObject({
 		redirects: {
 			rules: [
@@ -112,7 +116,9 @@ test("createMetadataObject should construct mapping of from to to/status", () =>
 	});
 });
 
-test("createMetadataObject should construct mapping of path to headers", () => {
+test("createMetadataObject should construct mapping of path to headers", ({
+	expect,
+}) => {
 	const metadata = createMetadataObject({
 		headers: {
 			rules: [homeHeadersRule],
@@ -129,14 +135,16 @@ test("createMetadataObject should construct mapping of path to headers", () => {
 	});
 });
 
-test("createMetadataObject should return no analytics entry for null", () => {
+test("createMetadataObject should return no analytics entry for null", ({
+	expect,
+}) => {
 	{
 		const metadata = createMetadataObject({});
 		expect(metadata.analytics).toEqual(undefined);
 	}
 });
 
-test("createMetadataObject should pass through the token", () => {
+test("createMetadataObject should pass through the token", ({ expect }) => {
 	const metadata = createMetadataObject({
 		webAnalyticsToken: "secret_token_1234",
 	});
@@ -146,7 +154,7 @@ test("createMetadataObject should pass through the token", () => {
 	});
 });
 
-test("createMetadataObject should parse a realistic result", () => {
+test("createMetadataObject should parse a realistic result", ({ expect }) => {
 	const metadata = createMetadataObject({
 		redirects: {
 			invalid: [
@@ -259,7 +267,7 @@ test("createMetadataObject should parse a realistic result", () => {
 	});
 });
 
-test("createMetadataObject should include unset", () => {
+test("createMetadataObject should include unset", ({ expect }) => {
 	const metadata = createMetadataObject({
 		headers: {
 			invalid: [],

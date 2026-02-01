@@ -12,6 +12,7 @@ import {
 	RequestInit,
 	Response,
 } from "miniflare";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect
 import { beforeEach, expect, onTestFinished, test } from "vitest";
 import {
 	MiniflareDurableObjectControlStub,
