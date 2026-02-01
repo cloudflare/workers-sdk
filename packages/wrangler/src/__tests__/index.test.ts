@@ -166,6 +166,40 @@ describe("wrangler", () => {
 			        "
 		      `);
 		});
+
+		it("should display an error even with --help flag", async () => {
+			await expect(
+				runWrangler("invalid-command --help")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown argument: invalid-command]`
+			);
+
+			expect(std.err).toContain("Unknown argument: invalid-command");
+
+			// Make sure the root help menu being rendered by checking for command category titles
+			expect(std.out).toContain("wrangler");
+			expect(std.out).toContain("COMMANDS");
+			expect(std.out).toContain("ACCOUNT");
+		});
+	});
+
+	describe("invalid flag on valid command", () => {
+		it("should display command-specific help for unknown flag", async () => {
+			await expect(
+				runWrangler("types --invalid-flag-xyz")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Unknown arguments: invalid-flag-xyz, invalidFlagXyz]`
+			);
+
+			expect(std.err).toContain("Unknown arguments: invalid-flag-xyz");
+
+			// Make sure the command-level help menu being rendered by checking command category titles don't exist
+			expect(std.out).toContain("wrangler types");
+			expect(std.out).toContain(
+				"Generate types from your Worker configuration"
+			);
+			expect(std.out).not.toContain("ACCOUNT");
+		});
 	});
 
 	describe("global options", () => {

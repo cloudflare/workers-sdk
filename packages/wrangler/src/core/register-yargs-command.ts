@@ -1,4 +1,3 @@
-import { UserError as ContainersUserError } from "@cloudflare/containers-shared/src/error";
 import {
 	defaultWranglerConfig,
 	FatalError,
@@ -280,9 +279,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 							durationMs,
 							errorType: getErrorType(err),
 							errorMessage:
-								err instanceof UserError || err instanceof ContainersUserError
-									? err.telemetryMessage
-									: undefined,
+								err instanceof UserError ? err.telemetryMessage : undefined,
 						},
 						def.behaviour
 					);
