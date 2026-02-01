@@ -147,7 +147,7 @@ export async function getDetailsForAutoConfig({
 		throw new MultipleFrameworksError(buildSettings.map((b) => b.name));
 	}
 
-	const detectedFramework = buildSettings[0] as Settings | undefined;
+	const detectedFramework = buildSettings.at(0);
 
 	const framework = getFramework(detectedFramework?.framework);
 	const packageJsonPath = resolve(projectPath, "package.json");
