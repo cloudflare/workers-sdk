@@ -1,6 +1,7 @@
 {
 	"name": "<WORKER_NAME>",
 	"compatibility_date": "<COMPATIBILITY_DATE>",
+	"compatibility_flags": ["nodejs_compat"],
 	"main": "server/index.js",
 	"assets": {
 		"not_found_handling": "single-page-application",
