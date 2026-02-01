@@ -15,9 +15,9 @@ import {
 	listKVNamespaces,
 	putKVBulkKeyValue,
 	putKVKeyValue,
-} from "./kv/helpers";
+} from "./commands/kv/helpers";
 import { logger, LOGGER_LEVELS } from "./logger";
-import type { KeyValue } from "./kv/helpers";
+import type { KeyValue } from "./commands/kv/helpers";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 import type { XXHashAPI } from "xxhash-wasm";
 

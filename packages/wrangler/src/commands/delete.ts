@@ -3,11 +3,11 @@ import { configFileName, UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
-import { deleteKVNamespace, listKVNamespaces } from "../kv/helpers";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
 import { getScriptName } from "../utils/getScriptName";
+import { deleteKVNamespace, listKVNamespaces } from "./kv/helpers";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
 // Types returned by the /script/{name}/references API

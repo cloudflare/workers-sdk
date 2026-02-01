@@ -12,19 +12,19 @@ import {
 import chalk from "chalk";
 import { Cloudflare } from "cloudflare";
 import dedent from "ts-dedent";
-import { readConfig } from "../config";
-import { demandOneOfOption } from "../core";
-import { createCommand, createNamespace } from "../core/create-command";
-import { confirm } from "../dialogs";
-import { logger } from "../logger";
-import * as metrics from "../metrics";
-import { requireAuth } from "../user";
+import { readConfig } from "../../config";
+import { demandOneOfOption } from "../../core";
+import { createCommand, createNamespace } from "../../core/create-command";
+import { confirm } from "../../dialogs";
+import { logger } from "../../logger";
+import * as metrics from "../../metrics";
+import { requireAuth } from "../../user";
 import {
 	createdResourceConfig,
 	sharedResourceCreationArgs,
-} from "../utils/add-created-resource-config";
-import { getValidBindingName } from "../utils/getValidBindingName";
-import { isLocal, printResourceLocation } from "../utils/is-local";
+} from "../../utils/add-created-resource-config";
+import { getValidBindingName } from "../../utils/getValidBindingName";
+import { isLocal, printResourceLocation } from "../../utils/is-local";
 import {
 	BATCH_MAX_ERRORS_WARNINGS,
 	deleteKVBulkKeyValue,
@@ -42,7 +42,7 @@ import {
 	updateKVNamespace,
 	usingLocalNamespace,
 } from "./helpers";
-import type { EventNames } from "../metrics";
+import type { EventNames } from "../../metrics";
 import type { KeyValue, NamespaceKeyInfo } from "./helpers";
 
 export const kvNamespace = createNamespace({

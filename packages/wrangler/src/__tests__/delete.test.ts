@@ -9,7 +9,7 @@ import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { ServiceReferenceResponse, Tail } from "../commands/delete";
-import type { KVNamespaceInfo } from "../kv/helpers";
+import type { KVNamespaceInfo } from "../commands/kv/helpers";
 
 describe("delete", () => {
 	mockAccountId();

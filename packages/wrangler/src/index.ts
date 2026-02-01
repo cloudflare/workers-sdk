@@ -53,6 +53,23 @@ import { dev } from "./commands/dev";
 import { docs } from "./commands/docs";
 import { init } from "./commands/init";
 import {
+	kvBulkDeleteCommand,
+	kvBulkGetCommand,
+	kvBulkNamespace,
+	kvBulkPutCommand,
+	kvKeyDeleteCommand,
+	kvKeyGetCommand,
+	kvKeyListCommand,
+	kvKeyNamespace,
+	kvKeyPutCommand,
+	kvNamespace,
+	kvNamespaceCreateCommand,
+	kvNamespaceDeleteCommand,
+	kvNamespaceListCommand,
+	kvNamespaceNamespace,
+	kvNamespaceRenameCommand,
+} from "./commands/kv";
+import {
 	secretBulkCommand,
 	secretDeleteCommand,
 	secretListCommand,
@@ -148,23 +165,6 @@ import { hyperdriveGetCommand } from "./hyperdrive/get";
 import { hyperdriveNamespace } from "./hyperdrive/index";
 import { hyperdriveListCommand } from "./hyperdrive/list";
 import { hyperdriveUpdateCommand } from "./hyperdrive/update";
-import {
-	kvBulkDeleteCommand,
-	kvBulkGetCommand,
-	kvBulkNamespace,
-	kvBulkPutCommand,
-	kvKeyDeleteCommand,
-	kvKeyGetCommand,
-	kvKeyListCommand,
-	kvKeyNamespace,
-	kvKeyPutCommand,
-	kvNamespace,
-	kvNamespaceCreateCommand,
-	kvNamespaceDeleteCommand,
-	kvNamespaceListCommand,
-	kvNamespaceNamespace,
-	kvNamespaceRenameCommand,
-} from "./kv";
 import { logger, LOGGER_LEVELS } from "./logger";
 import { allMetricsDispatchesCompleted, getMetricsDispatcher } from "./metrics";
 import {

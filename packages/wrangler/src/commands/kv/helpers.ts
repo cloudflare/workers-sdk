@@ -9,13 +9,13 @@ import {
 } from "@cloudflare/workers-utils";
 import { Miniflare } from "miniflare";
 import { FormData } from "undici";
-import { fetchKVGetValue, fetchListResult, fetchResult } from "../cfetch";
-import { getSettings } from "../deployment-bundle/bindings";
-import { getLocalPersistencePath } from "../dev/get-local-persistence-path";
-import { getDefaultPersistRoot } from "../dev/miniflare";
-import { getFlag } from "../experimental-flags";
-import { logger } from "../logger";
-import { requireAuth } from "../user";
+import { fetchKVGetValue, fetchListResult, fetchResult } from "../../cfetch";
+import { getSettings } from "../../deployment-bundle/bindings";
+import { getLocalPersistencePath } from "../../dev/get-local-persistence-path";
+import { getDefaultPersistRoot } from "../../dev/miniflare";
+import { getFlag } from "../../experimental-flags";
+import { logger } from "../../logger";
+import { requireAuth } from "../../user";
 import type { ComplianceConfig, Config } from "@cloudflare/workers-utils";
 import type { ReplaceWorkersTypes } from "miniflare";
 
