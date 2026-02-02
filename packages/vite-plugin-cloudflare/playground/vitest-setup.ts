@@ -107,22 +107,21 @@ beforeAll(async (s) => {
 	const testModule = await import(testPath);
 	const needsBrowser = testModule.browserMode === true;
 
-	const wsEndpoint = inject("wsEndpoint");
-	if (!wsEndpoint) {
-		throw new Error("wsEndpoint not found");
-	}
-
 	const logLabel = "bootup: " + testName;
 
 	console.time(logLabel);
 
-	// Only launch browser if test requires it
+	// Only connect to browser and create a page if test requires it
 	if (needsBrowser) {
-		console.timeLog(logLabel, "Starting browser connect to", wsEndpoint);
+		const wsEndpoint = inject("wsEndpoint");
+		if (!wsEndpoint) {
+			throw new Error("wsEndpoint not found");
+		}
+		console.timeLog(logLabel, "Connecting to browser at", wsEndpoint);
 		browser = await chromium.connect(wsEndpoint);
 		// `@vitejs/plugin-basic-ssl` requires a manual confirmation step in the browser so we enable `ignoreHTTPSErrors` to bypass this
 		page = await browser.newPage({ ignoreHTTPSErrors: true });
-		console.timeLog(logLabel, `Browser connected`);
+		console.timeLog(logLabel, "Browser page created");
 	} else {
 		console.timeLog(logLabel, "Skipping browser (browserMode not set)");
 	}
