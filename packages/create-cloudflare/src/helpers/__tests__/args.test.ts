@@ -1,3 +1,4 @@
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- test.each pattern
 import { assert, describe, expect, test, vi } from "vitest";
 import { parseArgs } from "../args";
 

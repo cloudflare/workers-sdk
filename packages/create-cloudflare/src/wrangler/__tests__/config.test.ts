@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { mockWorkersTypesDirectory } from "helpers/__tests__/mocks";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
 import { updateWranglerConfig } from "../config";
 
@@ -28,7 +28,7 @@ describe("update wrangler config", () => {
 		);
 	});
 
-	test("placeholder replacement `<TBD>`", async () => {
+	test("placeholder replacement `<TBD>`", async ({ expect }) => {
 		const toml = [
 			`name = "<TBD>"`,
 			`main = "src/index.ts"`,
@@ -84,7 +84,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("placeholder replacement", async () => {
+	test("placeholder replacement", async ({ expect }) => {
 		const toml = [
 			`name = "<WORKER_NAME>"`,
 			`main = "src/index.ts"`,
@@ -140,7 +140,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("placeholder replacement `<TBD>` (json)", async () => {
+	test("placeholder replacement `<TBD>` (json)", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
 			(f as string).endsWith(".json"),
 		);
@@ -206,7 +206,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("placeholder replacement (json)", async () => {
+	test("placeholder replacement (json)", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
 			(f as string).endsWith(".json"),
 		);
@@ -272,7 +272,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("string literal replacement", async () => {
+	test("string literal replacement", async ({ expect }) => {
 		const toml = [`name = "my-cool-worker"`, `main = "src/index.ts"`].join(
 			"\n",
 		);
@@ -325,7 +325,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("missing name and compat date", async () => {
+	test("missing name and compat date", async ({ expect }) => {
 		const toml = `main = "src/index.ts"`;
 		vi.mocked(readFile).mockReturnValue(toml);
 
@@ -376,7 +376,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("dont replace valid existing compatibility date", async () => {
+	test("dont replace valid existing compatibility date", async ({ expect }) => {
 		const toml = [
 			`name = "super-old-worker"`,
 			`compatibility_date = "2001-10-12"`,
@@ -429,7 +429,7 @@ describe("update wrangler config", () => {
 		`);
 	});
 
-	test("placeholder replacement with Workflows (json)", async () => {
+	test("placeholder replacement with Workflows (json)", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
 			(f as string).endsWith(".json"),
 		);
