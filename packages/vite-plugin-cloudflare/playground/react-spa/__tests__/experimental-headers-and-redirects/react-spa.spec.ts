@@ -9,6 +9,8 @@ import {
 	WAIT_FOR_OPTIONS,
 } from "../../../__test-utils__";
 
+export const browserMode = true;
+
 describe(
 	"react-spa (with experimental support)",
 	{ sequential: true, concurrent: false },

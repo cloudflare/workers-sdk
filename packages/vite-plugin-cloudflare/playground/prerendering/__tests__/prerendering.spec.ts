@@ -7,6 +7,8 @@ import {
 	viteTestUrl,
 } from "../../__test-utils__";
 
+export const browserMode = true;
+
 test("returns the server rendered route at /", async () => {
 	expect(await getTextResponse()).toEqual("Hello world");
 });

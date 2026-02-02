@@ -10,7 +10,7 @@ import {
 
 test("fetches public directory asset", async () => {
 	const response = await getResponse("/public-image.svg");
-	const contentType = await response.headerValue("content-type");
+	const contentType = response.headers.get("content-type");
 	expect(contentType).toBe("image/svg+xml");
 });
 

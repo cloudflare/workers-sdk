@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { failsIf, isBuild, page, viteTestUrl } from "../../__test-utils__";
 
+export const browserMode = true;
+
 describe("react-spa", () => {
 	test("returns the correct home page", async () => {
 		const content = await page.textContent("h1");
