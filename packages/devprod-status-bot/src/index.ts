@@ -52,12 +52,16 @@ async function isWranglerTeamMember(
 	}
 }
 
+type RequiredStatusChecksResult =
+	| { success: true; checks: string[] }
+	| { success: false; error: string };
+
 async function getRequiredStatusChecks(
 	pat: string,
 	owner: string,
 	repo: string,
 	branch: string
-): Promise<string[]> {
+): Promise<RequiredStatusChecksResult> {
 	try {
 		const response = await fetch(
 			`https://api.github.com/repos/${owner}/${repo}/branches/${branch}/protection/required_status_checks`,
@@ -70,14 +74,16 @@ async function getRequiredStatusChecks(
 			}
 		);
 		if (!response.ok) {
+			const errorText =
+				response.status === 429 ? "Rate limited" : `HTTP ${response.status}`;
 			console.error("Failed to fetch required status checks:", response.status);
-			return [];
+			return { success: false, error: errorText };
 		}
 		const data = await response.json<{ contexts: string[] }>();
-		return data.contexts || [];
+		return { success: true, checks: data.contexts || [] };
 	} catch (error) {
 		console.error("Error fetching required status checks:", error);
-		return [];
+		return { success: false, error: String(error) };
 	}
 }
 
@@ -577,6 +583,42 @@ async function sendVPCIFailureAlert(
 	);
 }
 
+async function sendGitHubAPIFailureAlert(
+	webhookUrl: string,
+	error: string,
+	context: string
+) {
+	return sendMessage(
+		webhookUrl,
+		{
+			cardsV2: [
+				{
+					cardId: "github-api-failure",
+					card: {
+						header: {
+							title: "⚠️ GitHub API Request Failed",
+							subtitle: context,
+						},
+						sections: [
+							{
+								collapsible: false,
+								widgets: [
+									{
+										textParagraph: {
+											text: `<b>Error:</b> ${error}\n\nThis may affect the bot's ability to filter alerts correctly. Please investigate.`,
+										},
+									},
+								],
+							},
+						],
+					},
+				},
+			],
+		},
+		"-github-api-failure"
+	);
+}
+
 async function sendUpcomingMeetingMessage(webhookUrl: string, ai: Ai) {
 	const message = await getBotMessage(
 		ai,
@@ -760,18 +802,27 @@ export default {
 			const maybeVPFailure = isVersionPackagesPRCheckRun(body);
 			if (maybeVPFailure) {
 				// Fetch required status checks from branch protection
-				const requiredChecks = await getRequiredStatusChecks(
+				const requiredChecksResult = await getRequiredStatusChecks(
 					env.GITHUB_PAT,
 					"cloudflare",
 					"workers-sdk",
 					"main"
 				);
 
-				// Only alert if this check is a required check (or if we couldn't fetch the list)
-				if (
-					requiredChecks.length === 0 ||
-					requiredChecks.includes(maybeVPFailure.checkRun.name)
+				if (!requiredChecksResult.success) {
+					// Alert about the API failure
+					await sendGitHubAPIFailureAlert(
+						env.ALERTS_WEBHOOK,
+						requiredChecksResult.error,
+						"Fetching required status checks for Version Packages PR"
+					);
+					// Still send the CI failure alert since we can't filter
+					await sendVPCIFailureAlert(env.ALERTS_WEBHOOK, maybeVPFailure);
+				} else if (
+					requiredChecksResult.checks.length === 0 ||
+					requiredChecksResult.checks.includes(maybeVPFailure.checkRun.name)
 				) {
+					// Only alert if this check is a required check (or if there are no required checks)
 					await sendVPCIFailureAlert(env.ALERTS_WEBHOOK, maybeVPFailure);
 				}
 			}
