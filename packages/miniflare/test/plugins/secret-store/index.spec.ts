@@ -1,8 +1,8 @@
 import { Miniflare } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { useDispose } from "../../test-shared";
 
-test("single secret-store", async () => {
+test("single secret-store", async ({ expect }) => {
 	const mf = new Miniflare({
 		compatibilityDate: "2025-01-01",
 		secretsStoreSecrets: {
@@ -43,7 +43,7 @@ test("single secret-store", async () => {
 	expect(response2.status).toBe(200);
 });
 
-test("multiple secret-store", async () => {
+test("multiple secret-store", async ({ expect }) => {
 	const mf = new Miniflare({
 		compatibilityDate: "2025-01-01",
 		secretsStoreSecrets: {

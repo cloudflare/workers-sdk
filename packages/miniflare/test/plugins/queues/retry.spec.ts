@@ -1,5 +1,5 @@
 import { Miniflare, QUEUES_PLUGIN_NAME, Response } from "miniflare";
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, test } from "vitest";
 import { z } from "zod";
 import { MiniflareDurableObjectControlStub, TestLog } from "../../test-shared";
 
@@ -67,7 +67,7 @@ describe.sequential("Queues: retry", () => {
 
 	afterEach(() => mf.dispose());
 
-	test("respects retry delays", async () => {
+	test("respects retry delays", async ({ expect }) => {
 		await mf.dispatchFetch("http://localhost/send", {
 			method: "POST",
 			body: "some-message",
@@ -94,7 +94,7 @@ describe.sequential("Queues: retry", () => {
 		expect(batches.length).toBe(3);
 	});
 
-	test("respects max retries", async () => {
+	test("respects max retries", async ({ expect }) => {
 		await mf.dispatchFetch("http://localhost/send", {
 			method: "POST",
 			body: "some-message",

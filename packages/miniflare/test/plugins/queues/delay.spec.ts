@@ -1,5 +1,5 @@
 import { Miniflare, QUEUES_PLUGIN_NAME, Response } from "miniflare";
-import { afterEach, beforeEach, expect, test } from "vitest";
+import { afterEach, beforeEach, test } from "vitest";
 import { z } from "zod";
 import { MiniflareDurableObjectControlStub, TestLog } from "../../test-shared";
 
@@ -85,7 +85,7 @@ beforeEach(async () => {
 
 afterEach(() => mf.dispose());
 
-test(".send() respects default delay", async () => {
+test(".send() respects default delay", async ({ expect }) => {
 	await mf.dispatchFetch("http://localhost/send", {
 		method: "POST",
 		body: JSON.stringify("default"),
@@ -102,7 +102,7 @@ test(".send() respects default delay", async () => {
 	expect(batches.length).toBe(1);
 });
 
-test(".send() respects per-message delay", async () => {
+test(".send() respects per-message delay", async ({ expect }) => {
 	// Send 10 messages.
 	for (let i = 1; i <= 10; i++) {
 		await mf.dispatchFetch("http://localhost/send", {
@@ -122,7 +122,7 @@ test(".send() respects per-message delay", async () => {
 	}
 });
 
-test(".sendBatch() respects default delay", async () => {
+test(".sendBatch() respects default delay", async ({ expect }) => {
 	await mf.dispatchFetch("http://localhost/batch", {
 		method: "POST",
 		body: JSON.stringify([{ body: "msg1" }, { body: "msg2" }]),
@@ -139,7 +139,7 @@ test(".sendBatch() respects default delay", async () => {
 	expect(batches.length).toBe(2);
 });
 
-test(".sendBatch() respects per-batch delay", async () => {
+test(".sendBatch() respects per-batch delay", async ({ expect }) => {
 	await mf.dispatchFetch("http://localhost/batch", {
 		method: "POST",
 		headers: { "X-Msg-Delay-Secs": "3" },
@@ -162,7 +162,7 @@ test(".sendBatch() respects per-batch delay", async () => {
 	expect(batches.length).toBe(2);
 });
 
-test(".sendBatch() respects per-message delay", async () => {
+test(".sendBatch() respects per-message delay", async ({ expect }) => {
 	await mf.dispatchFetch("http://localhost/batch", {
 		method: "POST",
 		headers: { "X-Msg-Delay-Secs": "1" },

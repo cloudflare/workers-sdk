@@ -14,7 +14,6 @@ import dedent from "ts-dedent";
 import { createCLIParser } from "..";
 import { renderError } from "../cfetch";
 import { readConfig } from "../config";
-import { isAuthenticationError } from "../deploy/deploy";
 import {
 	isBuildFailure,
 	isBuildFailureFromCause,
@@ -257,6 +256,13 @@ function isContainersAuthenticationError(e: unknown): e is UserError {
 		e.cause instanceof ApiError &&
 		e.cause.status === 403
 	);
+}
+
+/**
+ * @returns whether `e` is a standard Cloudflare API authentication error
+ */
+export function isAuthenticationError(e: unknown): e is ParseError {
+	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
 /**

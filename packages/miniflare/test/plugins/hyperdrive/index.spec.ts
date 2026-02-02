@@ -1,9 +1,9 @@
 import { Miniflare, MiniflareOptions } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { useDispose } from "../../test-shared";
 import type { Hyperdrive } from "@cloudflare/workers-types/experimental";
 
-test("fields match expected", async () => {
+test("fields match expected", async ({ expect }) => {
 	const connectionString = `postgresql://user:password@localhost:5432/database`;
 	const mf = new Miniflare({
 		modules: true,
@@ -36,7 +36,7 @@ test("fields match expected", async () => {
 	expect(hyperdrive.port).toBe(5432);
 });
 
-test("fields in binding proxy match expected", async () => {
+test("fields in binding proxy match expected", async ({ expect }) => {
 	const connectionString = "postgresql://user:password@localhost:5432/database";
 	const mf = new Miniflare({
 		modules: true,
@@ -60,7 +60,7 @@ test("fields in binding proxy match expected", async () => {
 	expect(HYPERDRIVE.host).toBe("localhost");
 });
 
-test("validates config", async () => {
+test("validates config", async ({ expect }) => {
 	const opts: MiniflareOptions = { modules: true, script: "" };
 	const mf = new Miniflare(opts);
 	useDispose(mf);
@@ -112,7 +112,7 @@ test("validates config", async () => {
 	).rejects.toThrow(/You must provide a password/);
 });
 
-test("sets default port based on protocol", async () => {
+test("sets default port based on protocol", async ({ expect }) => {
 	// Check defaults port to 5432 for Postgres
 	const opts = {
 		modules: true,

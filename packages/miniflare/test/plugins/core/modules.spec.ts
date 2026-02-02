@@ -2,12 +2,12 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Miniflare, MiniflareCoreError, stripAnsi } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { useCwd, useDispose, useTmp, utf8Encode } from "../../test-shared";
 
 const ROOT = path.resolve(__dirname, "../../fixtures/modules");
 
-test("Miniflare: accepts manually defined modules", async () => {
+test("Miniflare: accepts manually defined modules", async ({ expect }) => {
 	// Check with just `path`
 	const mf = new Miniflare({
 		compatibilityDate: "2023-08-01",
@@ -98,7 +98,7 @@ test("Miniflare: accepts manually defined modules", async () => {
 		number: -1,
 	});
 });
-test("Miniflare: automatically collects modules", async () => {
+test("Miniflare: automatically collects modules", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		modulesRoot: ROOT,
@@ -136,7 +136,9 @@ test("Miniflare: automatically collects modules", async () => {
 	expect(error).toBeInstanceOf(MiniflareCoreError);
 	expect(error?.code).toBe("ERR_VALIDATION");
 });
-test("Miniflare: automatically collects modules with cycles", async () => {
+test("Miniflare: automatically collects modules with cycles", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		compatibilityDate: "2023-08-01",
@@ -146,7 +148,9 @@ test("Miniflare: automatically collects modules with cycles", async () => {
 	const res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("pong");
 });
-test("Miniflare: includes location in parse errors when automatically collecting modules", async () => {
+test("Miniflare: includes location in parse errors when automatically collecting modules", async ({
+	expect,
+}) => {
 	const scriptPath = path.join(ROOT, "syntax-error", "index.mjs");
 	const mf = new Miniflare({
 		modules: true,
@@ -163,7 +167,9 @@ test("Miniflare: includes location in parse errors when automatically collecting
 		)
 	);
 });
-test("Miniflare: cannot automatically collect modules without script path", async () => {
+test("Miniflare: cannot automatically collect modules without script path", async ({
+	expect,
+}) => {
 	const script = `export default {
     async fetch() {
       return new Response("body");
@@ -194,7 +200,9 @@ test("Miniflare: cannot automatically collect modules without script path", asyn
 		)
 	);
 });
-test("Miniflare: cannot automatically collect modules from dynamic import expressions", async () => {
+test("Miniflare: cannot automatically collect modules from dynamic import expressions", async ({
+	expect,
+}) => {
 	// Check with dynamic import
 	const scriptPath = path.join(ROOT, "index-dynamic.mjs");
 	let mf = new Miniflare({
@@ -273,7 +281,9 @@ You must manually define your modules when constructing Miniflare:
   })
     at ${depPath}:2:8`);
 });
-test("Miniflare: collects modules outside of working directory", async () => {
+test("Miniflare: collects modules outside of working directory", async ({
+	expect,
+}) => {
 	// https://github.com/cloudflare/workers-sdk/issues/4721
 	const tmp = await useTmp();
 	const child = path.join(tmp, "child");
@@ -294,7 +304,7 @@ test("Miniflare: collects modules outside of working directory", async () => {
 	const res = await mf.dispatchFetch("http://localhost");
 	expect(await res.text()).toBe("body");
 });
-test("Miniflare: suggests bundling on unknown module", async () => {
+test("Miniflare: suggests bundling on unknown module", async ({ expect }) => {
 	// Try with npm-package-like import
 	// (please don't try bundle `miniflare` into a Worker script, you'll hurt its feelings)
 	let mf = new Miniflare({

@@ -1,7 +1,9 @@
 import { Response, WebSocketPair } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 
-test("Response: static methods return correctly typed values", async () => {
+test("Response: static methods return correctly typed values", async ({
+	expect,
+}) => {
 	const error = Response.error();
 	expect(error).toBeInstanceOf(Response);
 
@@ -17,13 +19,17 @@ test("Response: static methods return correctly typed values", async () => {
 	expect(await json.json()).toEqual({ testing: true });
 });
 
-test("Response: requires status 101 for WebSocket handshakes response", () => {
+test("Response: requires status 101 for WebSocket handshakes response", ({
+	expect,
+}) => {
 	const pair = new WebSocketPair();
 	expect(() => new Response(null, { webSocket: pair["0"] })).toThrow(
 		new RangeError("Responses with a WebSocket must have status code 101.")
 	);
 });
-test("Response: only allows status 101 for WebSocket response", () => {
+test("Response: only allows status 101 for WebSocket response", ({
+	expect,
+}) => {
 	expect(() => new Response(null, { status: 101 })).toThrow(
 		new RangeError(
 			'init["status"] must be in the range of 200 to 599, inclusive.'
@@ -31,7 +37,7 @@ test("Response: only allows status 101 for WebSocket response", () => {
 	);
 });
 
-test("Response: clone: returns correctly typed value", async () => {
+test("Response: clone: returns correctly typed value", async ({ expect }) => {
 	const response = new Response("text");
 	const clone1 = response.clone();
 	const clone2 = clone1.clone(); // Test cloning a clone
@@ -42,7 +48,7 @@ test("Response: clone: returns correctly typed value", async () => {
 	expect(await clone1.text()).toBe("text");
 	expect(await clone2.text()).toBe("text");
 });
-test("Response: clone: fails on WebSocket handshake response", () => {
+test("Response: clone: fails on WebSocket handshake response", ({ expect }) => {
 	const pair = new WebSocketPair();
 	const res = new Response(null, {
 		status: 101,

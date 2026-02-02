@@ -20,7 +20,7 @@
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "pnpm run check:type:tests && tsc",
 		"check:type:tests": "tsc -p ./asset-worker/tests/tsconfig.json && tsc -p ./router-worker/tests/tsconfig.json",
 		"deploy": "pnpm run generate-sourcemaps && pnpm run deploy:router-worker && pnpm run deploy:asset-worker && pnpm run upload-sourcemaps",

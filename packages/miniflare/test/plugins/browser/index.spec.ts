@@ -1,5 +1,5 @@
 import { Miniflare, MiniflareOptions } from "miniflare";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { useDispose } from "../../test-shared";
 import type { WebSocket } from "undici";
 
@@ -74,7 +74,7 @@ describe.sequential("browser rendering", { timeout: 20_000 }, () => {
 		vi.restoreAllMocks();
 	});
 
-	test("it creates a browser session", { retry: 3 }, async () => {
+	test("it creates a browser session", { retry: 3 }, async ({ expect }) => {
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -111,7 +111,7 @@ export default {
 };
 `;
 
-	test("it closes a browser session", { retry: 3 }, async () => {
+	test("it closes a browser session", { retry: 3 }, async ({ expect }) => {
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -154,7 +154,7 @@ export default {
 };
 `;
 
-	test("it reuses a browser session", { retry: 3 }, async () => {
+	test("it reuses a browser session", { retry: 3 }, async ({ expect }) => {
 		const opts: MiniflareOptions = {
 			name: "worker",
 			compatibilityDate: "2024-11-20",
@@ -197,7 +197,7 @@ export default {
 
 	test.skipIf(process.platform === "win32")(
 		"fails if browser session already in use",
-		async () => {
+		async ({ expect }) => {
 			const opts: MiniflareOptions = {
 				name: "worker",
 				compatibilityDate: "2024-11-20",
@@ -245,7 +245,7 @@ export default {
 	test(
 		"gets sessions while acquiring and closing session",
 		{ retry: 3 },
-		async () => {
+		async ({ expect }) => {
 			const opts: MiniflareOptions = {
 				name: "worker",
 				compatibilityDate: "2024-11-20",
@@ -297,7 +297,7 @@ export default {
 	test(
 		"gets sessions while connecting and disconnecting session",
 		{ retry: 3 },
-		async () => {
+		async ({ expect }) => {
 			const opts: MiniflareOptions = {
 				name: "worker",
 				compatibilityDate: "2024-11-20",
