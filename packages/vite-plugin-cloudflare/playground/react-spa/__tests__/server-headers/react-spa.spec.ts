@@ -6,7 +6,7 @@ describe.runIf(!isBuild)(
 	() => {
 		test("adds headers to HTML responses", async () => {
 			const response = await getResponse();
-			const headers = Object.fromEntries(response.headers.entries());
+			const headers = await response.allHeaders();
 			expect(headers).toMatchObject({
 				"custom-string": "string-value",
 				"custom-string-array": "one, two, three",
@@ -16,7 +16,7 @@ describe.runIf(!isBuild)(
 
 		test("adds headers to non-HTML responses", async () => {
 			const response = await getResponse("/vite.svg");
-			const headers = Object.fromEntries(response.headers.entries());
+			const headers = await response.allHeaders();
 			expect(headers).toMatchObject({
 				"custom-string": "string-value",
 				"custom-string-array": "one, two, three",

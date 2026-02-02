@@ -2,8 +2,6 @@ import { expect, test } from "vitest";
 import { getResponse, page, viteTestUrl } from "../../__test-utils__";
 import "./base-tests";
 
-export const browserMode = true;
-
 test("fetches transformed HTML asset", async () => {
 	await page.goto(`${viteTestUrl}/transformed-html-asset`);
 	const content = await page.textContent("h1");
@@ -12,8 +10,8 @@ test("fetches transformed HTML asset", async () => {
 
 test("fetches original public directory asset if requested directly", async () => {
 	const response = await getResponse("/public-image.svg");
-	const contentType = response.headers.get("content-type");
-	const additionalHeader = response.headers.get("additional-header");
+	const contentType = await response.headerValue("content-type");
+	const additionalHeader = await response.headerValue("additional-header");
 	expect(contentType).toBe("image/svg+xml");
 	expect(additionalHeader).toBe(null);
 });
