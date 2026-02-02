@@ -77,20 +77,7 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 						});
 					}
 				}
-			} else if (
-				ctx.resolvedPluginConfig.type === "assets-only" &&
-				this.environment.name === "client"
-			) {
-				const inputAssetsOnlyConfig = ctx.resolvedPluginConfig.config;
-
-				outputConfig = {
-					...inputAssetsOnlyConfig,
-					assets: {
-						...inputAssetsOnlyConfig.assets,
-						directory: ".",
-					},
-				};
-
+			} else if (this.environment.name === "client") {
 				const filesToAssetsIgnore = ["wrangler.json", ".dev.vars"];
 
 				this.emitFile({
@@ -98,6 +85,19 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 					fileName: ".assetsignore",
 					source: `${filesToAssetsIgnore.join("\n")}\n`,
 				});
+
+				// For assets only projects the `wrangler.json` file is emitted in the client output directory
+				if (ctx.resolvedPluginConfig.type === "assets-only") {
+					const inputAssetsOnlyConfig = ctx.resolvedPluginConfig.config;
+
+					outputConfig = {
+						...inputAssetsOnlyConfig,
+						assets: {
+							...inputAssetsOnlyConfig.assets,
+							directory: ".",
+						},
+					};
+				}
 			}
 
 			if (!outputConfig) {
