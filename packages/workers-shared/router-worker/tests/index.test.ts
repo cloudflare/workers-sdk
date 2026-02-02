@@ -1,4 +1,5 @@
 import { createExecutionContext } from "cloudflare:test";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { describe, expect, it } from "vitest";
 import worker from "../src/worker";
 import type { Env } from "../src/worker";

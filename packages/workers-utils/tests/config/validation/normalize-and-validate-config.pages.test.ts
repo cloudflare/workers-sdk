@@ -1,5 +1,6 @@
 import path from "node:path";
 import { normalizeAndValidateConfig } from "@cloudflare/workers-utils";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RawConfig, RawEnvironment } from "@cloudflare/workers-utils";
 

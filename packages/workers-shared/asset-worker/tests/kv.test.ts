@@ -1,3 +1,4 @@
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAssetWithMetadataFromKV } from "../src/utils/kv";
 import type { AssetMetadata } from "../src/utils/kv";

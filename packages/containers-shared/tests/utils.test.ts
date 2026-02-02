@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { checkExposedPorts } from "./../src/utils";
 import type { ContainerDevOptions } from "../src/types";
 
@@ -21,14 +21,16 @@ describe("checkExposedPorts", () => {
 		docketImageInspectResult = "1";
 	});
 
-	it("should not error when some ports are exported", async () => {
+	it("should not error when some ports are exported", async ({ expect }) => {
 		docketImageInspectResult = "1";
 		await expect(
 			checkExposedPorts("docker", containerConfig)
 		).resolves.toBeUndefined();
 	});
 
-	it("should error, with an appropriate message when no ports are exported", async () => {
+	it("should error, with an appropriate message when no ports are exported", async ({
+		expect,
+	}) => {
 		docketImageInspectResult = "0";
 		await expect(checkExposedPorts("docker", containerConfig)).rejects
 			.toThrowErrorMatchingInlineSnapshot(`
