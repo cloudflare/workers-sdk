@@ -127,10 +127,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      # TEMPORARY: timeout increased from 15 to 45 for flaky test reproduction (50 iterations)
       - name: Run Vite plugin E2E tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
-        timeout-minutes: 15
+        timeout-minutes: 45
         env:
           NODE_DEBUG: "vite-plugin:test"
           # The remote-binding tests need to connect to Cloudflare

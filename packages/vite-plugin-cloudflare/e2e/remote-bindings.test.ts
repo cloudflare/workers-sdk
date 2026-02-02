@@ -13,6 +13,9 @@ import {
 
 const commands = ["dev", "buildAndPreview"] as const;
 
+// TEMPORARY: Array of iteration numbers for flaky test repetition
+const FLAKY_TEST_ITERATIONS = Array.from({ length: 50 }, (_, i) => i + 1);
+
 if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 	describe.skip("Skipping remote bindings tests without account credentials.");
 } else {
@@ -53,8 +56,11 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 			}, 35_000);
 
 			describe.each(commands)('with "%s" command', (command) => {
-				test.skipIf(isBuildAndPreviewOnWindows(command))(
-					"can fetch from both local (/auxiliary) and remote workers",
+				// TEMPORARY: Run multiple times to check for flakiness - each iteration is independent
+				test
+					.skipIf(isBuildAndPreviewOnWindows(command))
+					.each(FLAKY_TEST_ITERATIONS)(
+					"can fetch from both local (/auxiliary) and remote workers (run %i)",
 					async () => {
 						const proc = await runLongLived("pnpm", command, projectPath);
 						const url = await waitForReady(proc);
@@ -67,21 +73,18 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 					}
 				);
 
-				// This test checks that wrapped bindings (e.g. AI) which rely on additional workers with an authed connection to the CF API work
-				test.skipIf(isBuildAndPreviewOnWindows(command))(
-					"Wrapped bindings (e.g. Workers AI) can serve a request",
-					async () => {
-						const proc = await runLongLived("pnpm", command, projectPath);
-						const url = await waitForReady(proc);
+				// TEMPORARY: Skipped to focus on flaky test
+				test.skip("Wrapped bindings (e.g. Workers AI) can serve a request", async () => {
+					const proc = await runLongLived("pnpm", command, projectPath);
+					const url = await waitForReady(proc);
 
-						expect(await fetchJson(url + "/ai/")).toEqual({
-							response: expect.stringContaining("Workers AI"),
-						});
-					}
-				);
+					expect(await fetchJson(url + "/ai/")).toEqual({
+						response: expect.stringContaining("Workers AI"),
+					});
+				});
 			});
 
-			test("reflects changes applied during dev", async () => {
+			test.skip("reflects changes applied during dev", async () => {
 				const proc = await runLongLived("pnpm", "dev", projectPath);
 				const url = await waitForReady(proc);
 				expect(await fetchJson(url)).toEqual({
