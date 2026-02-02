@@ -180,11 +180,8 @@ export async function rawD1Database(
 			results.push({
 				meta: {
 					changed_db: false,
-					changes: 0,
 					duration: duration,
-					last_row_id: 0,
 					rows_read: rows.length,
-					rows_written: 0,
 				},
 				results: {
 					columns,

@@ -647,24 +647,12 @@
 						"description": "Denotes if the database has been altered in some way, like deleting rows.",
 						"type": "boolean"
 					},
-					"changes": {
-						"description": "Rough indication of how many rows were modified by the query, as provided by SQLite's `sqlite3_total_changes()`.",
-						"type": "number"
-					},
 					"duration": {
 						"description": "The duration of the SQL query execution inside the database. Does not include any network communication.",
 						"type": "number"
 					},
-					"last_row_id": {
-						"description": "The row ID of the last inserted row in a table with an `INTEGER PRIMARY KEY` as provided by SQLite. Tables created with `WITHOUT ROWID` do not populate this.",
-						"type": "number"
-					},
 					"rows_read": {
 						"description": "Number of rows read during the SQL query execution, including indices (not all rows are necessarily returned).",
-						"type": "number"
-					},
-					"rows_written": {
-						"description": "Number of rows written during the SQL query execution, including indices.",
 						"type": "number"
 					},
 					"size_after": {

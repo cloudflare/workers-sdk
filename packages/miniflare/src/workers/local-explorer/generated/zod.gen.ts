@@ -4,11 +4,8 @@ import { z } from "zod";
 
 export const zD1QueryMeta = z.object({
 	changed_db: z.boolean().optional(),
-	changes: z.number().optional(),
 	duration: z.number().optional(),
-	last_row_id: z.number().optional(),
 	rows_read: z.number().optional(),
-	rows_written: z.number().optional(),
 	size_after: z.number().optional(),
 	timings: z
 		.object({
