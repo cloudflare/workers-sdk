@@ -1,5 +1,5 @@
 import { Miniflare } from "miniflare";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { disposeWithRetry } from "../../test-shared";
 
 const BASE_URL = "http://localhost/cdn-cgi/explorer/api";
@@ -46,7 +46,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 	});
 
 	describe("GET /d1/database", () => {
-		it("lists available D1 databases with default pagination", async () => {
+		it("lists available D1 databases with default pagination", async ({ expect }) => {
 			const response = await mf.dispatchFetch(`${BASE_URL}/d1/database`);
 
 			expect(response.status).toBe(200);
@@ -81,7 +81,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			});
 		});
 
-		it("pagination works", async () => {
+		it("pagination works", async ({ expect }) => {
 			// D1 has per_page minimum of 10, so use 10 as smallest page size
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database?per_page=10&page=1`
@@ -103,7 +103,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			});
 		});
 
-		it("name filter works", async () => {
+		it("name filter works", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database?name=TEST`
 			);
@@ -123,7 +123,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			});
 		});
 
-		it("returns empty result for page beyond total", async () => {
+		it("returns empty result for page beyond total", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database?page=100`
 			);
@@ -144,7 +144,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 	});
 
 	describe("POST /d1/database/:database_id/raw", () => {
-		it("returns results as arrays with column names", async () => {
+		it("returns results as arrays with column names", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database/test-db-id/raw`,
 				{
@@ -183,7 +183,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			});
 		});
 
-		it("handles query with parameters", async () => {
+		it("handles query with parameters", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database/test-db-id/raw`,
 				{
@@ -217,7 +217,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			});
 		});
 
-		it("handles batch queries", async () => {
+		it("handles batch queries", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database/test-db-id/raw`,
 				{
@@ -260,7 +260,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			});
 		});
 
-		it("returns 404 for non-existent database", async () => {
+		it("returns 404 for non-existent database", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database/non-existent-id/raw`,
 				{
@@ -285,7 +285,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			});
 		});
 
-		it("returns error for invalid SQL", async () => {
+		it("returns error for invalid SQL", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database/test-db-id/raw`,
 				{
@@ -312,7 +312,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 	});
 
 	describe("validation", () => {
-		it("returns 400 for invalid query parameters", async () => {
+		it("returns 400 for invalid query parameters", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database?page=invalid`
 			);
@@ -333,7 +333,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			});
 		});
 
-		it("returns 400 for invalid batch item", async () => {
+		it("returns 400 for invalid batch item", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database/test-db-id/raw`,
 				{
@@ -358,7 +358,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			});
 		});
 
-		it("returns 400 for empty object body", async () => {
+		it("returns 400 for empty object body", async ({ expect }) => {
 			const response = await mf.dispatchFetch(
 				`${BASE_URL}/d1/database/test-db-id/raw`,
 				{
