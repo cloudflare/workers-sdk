@@ -16,6 +16,11 @@ export default {
 				await env.KV.put(keyToSet, val);
 				return new Response("OK");
 			}
+			case "/kv/delete": {
+				const keyToDelete = url.searchParams.get("key") ?? "default";
+				await env.KV.delete(keyToDelete);
+				return new Response(`Deleted key ${keyToDelete} from KV`);
+			}
 			case "/kv/seed": {
 				await Promise.all(SEED_DATA.map(([k, v]) => env.KV.put(k, v)));
 				return new Response(`Seeded ${SEED_DATA.length} KV entries`);

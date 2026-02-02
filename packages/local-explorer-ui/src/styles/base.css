@@ -191,3 +191,7 @@ body {
 	white-space: nowrap;
 	border: 0;
 }
+
+.text-muted {
+	color: var(--color-text-secondary);
+}
