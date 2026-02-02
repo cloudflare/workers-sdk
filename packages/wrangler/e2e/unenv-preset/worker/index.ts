@@ -956,9 +956,9 @@ export const WorkerdTests: Record<string, () => void> = {
 	async testWorkerThreads() {
 		const workerThreads = await import("node:worker_threads");
 
-		// Detect if we're using native workerd implementation by checking if
-		// MessageChannel is exported (unenv exports it, workerd doesn't)
-		const isNative = typeof workerThreads.MessageChannel !== "function";
+		// Check if native workerd implementation is enabled via the compatibility flag
+		const isNative =
+			getRuntimeFlagValue("enable_nodejs_worker_threads_module") === true;
 
 		// Common exports available in both unenv stub and native workerd
 		for (const target of [workerThreads, workerThreads.default]) {
@@ -973,6 +973,12 @@ export const WorkerdTests: Record<string, () => void> = {
 				receiveMessageOnPort: "function",
 				setEnvironmentData: "function",
 				postMessageToThread: "function",
+				// Both workerd and unenv export these
+				BroadcastChannel: "function",
+				MessageChannel: "function",
+				MessagePort: "function",
+				Worker: "function",
+				isInternalThread: "boolean",
 			});
 
 			// These are values, not functions
@@ -989,22 +995,11 @@ export const WorkerdTests: Record<string, () => void> = {
 				true,
 				"isMainThread should be true"
 			);
-
-			if (!isNative) {
-				// unenv stub exports these as functions
-				assertTypeOfProperties(target, {
-					BroadcastChannel: "function",
-					MessageChannel: "function",
-					MessagePort: "function",
-					Worker: "function",
-					isInternalThread: "boolean",
-				});
-				assert.strictEqual(
-					(target as Record<string, unknown>).isInternalThread,
-					false,
-					"isInternalThread should be false"
-				);
-			}
+			assert.strictEqual(
+				(target as Record<string, unknown>).isInternalThread,
+				false,
+				"isInternalThread should be false"
+			);
 		}
 
 		// Test SHARE_ENV symbol value
@@ -1022,14 +1017,26 @@ export const WorkerdTests: Record<string, () => void> = {
 			"getEnvironmentData should return the set value"
 		);
 
-		if (!isNative) {
-			// unenv stub: Test MessageChannel creates ports
-			const channel = new workerThreads.MessageChannel();
-			assert.ok(channel.port1, "MessageChannel should have port1");
-			assert.ok(channel.port2, "MessageChannel should have port2");
+		// Test MessageChannel creates ports (both implementations support this)
+		const channel = new workerThreads.MessageChannel();
+		assert.ok(channel.port1, "MessageChannel should have port1");
+		assert.ok(channel.port2, "MessageChannel should have port2");
+
+		// Test behavioral differences between native workerd and unenv stub
+		if (isNative) {
+			// Native workerd: Worker and BroadcastChannel constructors throw
+			assert.throws(
+				() => new workerThreads.Worker("test.js"),
+				/ERR_METHOD_NOT_IMPLEMENTED/,
+				"Worker constructor should throw ERR_METHOD_NOT_IMPLEMENTED"
+			);
+			assert.throws(
+				() => new workerThreads.BroadcastChannel("test"),
+				/ERR_METHOD_NOT_IMPLEMENTED/,
+				"BroadcastChannel constructor should throw ERR_METHOD_NOT_IMPLEMENTED"
+			);
 		}
-		// Note: Native workerd worker_threads doesn't export MessageChannel
-		// (it's a Web API available separately, not part of the worker_threads module)
+		// Note: unenv stub Worker and BroadcastChannel are no-op stubs that don't throw
 	},
 };
 
