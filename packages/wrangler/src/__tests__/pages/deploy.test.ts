@@ -1,9 +1,9 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import TOML from "smol-toml";
+import { x } from "tinyexec";
 import dedent from "ts-dedent";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- test.each */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -1771,7 +1771,7 @@ describe("pages deploy", () => {
 	it("should not error when deploying a new project with a new repo", async () => {
 		vi.stubEnv("CI", "false");
 		setIsTTY(true);
-		await execa("git", ["init"]);
+		await x("git", ["init"]);
 		writeFileSync("logo.png", "foobar");
 		mockGetUploadTokenRequest(
 			"<<funfetti-auth-jwt>>",

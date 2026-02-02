@@ -68,7 +68,6 @@
 		"dotenv": "^16.0.0",
 		"esbuild": "catalog:default",
 		"eslint": "catalog:default",
-		"execa": "^7.1.1",
 		"exit-hook": "2.2.1",
 		"get-port": "^7.1.0",
 		"glob": "^10.3.3",

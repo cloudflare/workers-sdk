@@ -216,14 +216,12 @@ vi.mock("prompts", () => {
 	};
 });
 
-vi.mock("execa", async (importOriginal) => {
-	const realModule = await importOriginal<typeof import("execa")>();
+vi.mock("tinyexec", async (importOriginal) => {
+	const realModule = await importOriginal<typeof import("tinyexec")>();
 	return {
 		...realModule,
-		execa: vi.fn((...args: Parameters<typeof realModule.execa>) => {
-			return args[0] === "mockpm"
-				? Promise.resolve()
-				: realModule.execa(...args);
+		x: vi.fn((...args: Parameters<typeof realModule.x>) => {
+			return args[0] === "mockpm" ? Promise.resolve() : realModule.x(...args);
 		}),
 	};
 });

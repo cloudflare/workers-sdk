@@ -6,7 +6,7 @@ import {
 	getC3CommandFromEnv,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { execa } from "execa";
+import { x } from "tinyexec";
 import { fetchResult } from "./cfetch";
 import { fetchWorkerDefinitionFromDash } from "./cfetch/internal";
 import { createCommand } from "./core/create-command";
@@ -20,8 +20,8 @@ import * as shellquote from "./utils/shell-quote";
 import { isWorkerNotFoundError } from "./utils/worker-not-found-error";
 import type { PackageManager } from "./package-manager";
 import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
-import type { ExecaError } from "execa";
 import type { ReadableStream } from "node:stream/web";
+import type { NonZeroExitError } from "tinyexec";
 
 export const init = createCommand({
 	metadata: {
@@ -136,25 +136,28 @@ export const init = createCommand({
 			// if telemetry is disabled in wrangler, prevent c3 from sending metrics too
 			const metricsConfig = readMetricsConfig();
 			try {
-				const childProcess = execa(packageManager.type, c3Arguments, {
-					// Note: we need to pipe stdout and stderr otherwise execa won't include
-					//       those in the command's result/error, but we want it to so that we
-					//       can include those in the error Sentry receives
-					stdio: ["inherit", "pipe", "pipe"],
-					...(metricsConfig.permission?.enabled === false && {
-						env: { CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1" },
-					}),
+				const childProcess = x(packageManager.type, c3Arguments, {
+					nodeOptions: {
+						// Note: we need to pipe stdout and stderr otherwise they won't be included
+						//       in the command's result/error, but we want it to so that we
+						//       can include those in the error Sentry receives
+						stdio: ["inherit", "pipe", "pipe"],
+						...(metricsConfig.permission?.enabled === false && {
+							env: { CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1" },
+						}),
+					},
+					throwOnError: true,
 				});
-				childProcess.stdout?.pipe(process.stdout);
-				childProcess.stderr?.pipe(process.stderr);
+				childProcess.process?.stdout?.pipe(process.stdout);
+				childProcess.process?.stderr?.pipe(process.stderr);
 				await childProcess;
 			} catch (e: unknown) {
-				const execaError = e as ExecaError;
-				throw new Error(execaError.shortMessage, {
-					// We include the execaError as the cause, in this way this
+				const procError = e as NonZeroExitError;
+				throw new Error(procError.message, {
+					// We include the process error as the cause, in this way this
 					// will be reflected in Sentry allowing us to better monitor
 					// C3 errors
-					cause: execaError,
+					cause: procError,
 				});
 			}
 		}

@@ -1,6 +1,6 @@
 import { env } from "node:process";
 import { UserError } from "@cloudflare/workers-utils";
-import { execaCommandSync } from "execa";
+import { x } from "tinyexec";
 import { logger } from "./logger";
 
 export interface PackageManager {
@@ -102,7 +102,10 @@ export const BunPackageManager: PackageManager = {
 
 async function supports(name: string): Promise<boolean> {
 	try {
-		execaCommandSync(`${name} --version`, { stdio: "ignore" });
+		await x(name, ["--version"], {
+			nodeOptions: { stdio: "ignore" },
+			throwOnError: true,
+		});
 		return true;
 	} catch {
 		return false;
