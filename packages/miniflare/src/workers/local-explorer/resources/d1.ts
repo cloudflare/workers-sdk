@@ -170,7 +170,7 @@ export async function rawD1Database(
 			>;
 
 			// For raw queries, we construct basic metadata
-			// Note: D1's raw() doesn't return full metadata like all() does
+			// Note: D1's `statement.raw()` doesn't return full metadata like `statement.all()` does
 			results.push({
 				meta: {
 					changed_db: false,
