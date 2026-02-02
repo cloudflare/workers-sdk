@@ -860,6 +860,61 @@ export const WorkerdTests: Record<string, () => void> = {
 			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
 		);
 	},
+
+	async testV8() {
+		const v8 = await import("node:v8");
+
+		// Common exports (both unenv stub and native workerd)
+		assertTypeOfProperties(v8, {
+			cachedDataVersionTag: "number",
+			getHeapSnapshot: "function",
+			getHeapStatistics: "function",
+			getHeapSpaceStatistics: "function",
+			getHeapCodeStatistics: "function",
+			setFlagsFromString: "function",
+			Serializer: "function",
+			Deserializer: "function",
+			DefaultSerializer: "function",
+			DefaultDeserializer: "function",
+			deserialize: "function",
+			takeCoverage: "function",
+			stopCoverage: "function",
+			serialize: "function",
+			writeHeapSnapshot: "function",
+			promiseHooks: "object",
+			startupSnapshot: "object",
+			setHeapSnapshotNearHeapLimit: "function",
+			GCProfiler: "function",
+		});
+
+		assertTypeOfProperties(v8.default, {
+			cachedDataVersionTag: "number",
+			getHeapSnapshot: "function",
+			getHeapStatistics: "function",
+			getHeapSpaceStatistics: "function",
+			getHeapCodeStatistics: "function",
+			setFlagsFromString: "function",
+			Serializer: "function",
+			Deserializer: "function",
+			DefaultSerializer: "function",
+			DefaultDeserializer: "function",
+			deserialize: "function",
+			takeCoverage: "function",
+			stopCoverage: "function",
+			serialize: "function",
+			writeHeapSnapshot: "function",
+			promiseHooks: "object",
+			startupSnapshot: "object",
+			setHeapSnapshotNearHeapLimit: "function",
+			GCProfiler: "function",
+		});
+
+		// Both implementations throw when calling serialize()
+		assert.throws(
+			() => v8.serialize({}),
+			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
+		);
+	},
 };
 
 /**
