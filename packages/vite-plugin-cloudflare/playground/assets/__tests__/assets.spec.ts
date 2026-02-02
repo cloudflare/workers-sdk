@@ -2,6 +2,8 @@ import { expect, test } from "vitest";
 import { getResponse, page, viteTestUrl } from "../../__test-utils__";
 import "./base-tests";
 
+export const browserMode = true;
+
 test("fetches transformed HTML asset", async () => {
 	await page.goto(`${viteTestUrl}/transformed-html-asset`);
 	const content = await page.textContent("h1");

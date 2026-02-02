@@ -8,6 +8,8 @@ import {
 } from "../../../__test-utils__";
 import "../base-tests";
 
+export const browserMode = true;
+
 test("returns the home page directly without invoking the Worker", async () => {
 	const response = await getResponse();
 	expect(response.headers.get("content-type")).toContain("text/html");

@@ -6,6 +6,8 @@ import {
 	viteTestUrl,
 } from "../../__test-utils__";
 
+export const browserMode = true;
+
 test("supports Data modules with a '.bin' extension", async () => {
 	const result = await getJsonResponse("/bin");
 	expect(result).toEqual({ byteLength: 342936 });

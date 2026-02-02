@@ -1,6 +1,8 @@
 import { expect, test, vi } from "vitest";
 import { page, viteTestUrl, WAIT_FOR_OPTIONS } from "../../__test-utils__";
 
+export const browserMode = true;
+
 async function openWebSocket() {
 	await page.goto(viteTestUrl);
 	const openButton = page.getByRole("button", { name: "Open WebSocket" });
