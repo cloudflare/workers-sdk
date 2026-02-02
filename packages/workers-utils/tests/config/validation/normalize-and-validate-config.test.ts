@@ -1,5 +1,6 @@
 import path from "node:path";
 import TOML from "smol-toml";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { describe, expect, it, test, vi } from "vitest";
 import { normalizeAndValidateConfig } from "../../../src/config/validation";
 import { normalizeString } from "../../../src/test-helpers";
