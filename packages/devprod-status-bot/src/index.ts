@@ -1,5 +1,6 @@
 import dedent from "ts-dedent";
 import type {
+	CheckRunCompletedEvent,
 	IssueCommentEvent,
 	IssuesEvent,
 	Schema,
@@ -48,6 +49,35 @@ async function isWranglerTeamMember(
 		// If there's an error checking membership, default to false
 		console.error("Error checking team membership:", error);
 		return false;
+	}
+}
+
+async function getRequiredStatusChecks(
+	pat: string,
+	owner: string,
+	repo: string,
+	branch: string
+): Promise<string[]> {
+	try {
+		const response = await fetch(
+			`https://api.github.com/repos/${owner}/${repo}/branches/${branch}/protection/required_status_checks`,
+			{
+				headers: {
+					"User-Agent": "Cloudflare ANT Status bot",
+					Authorization: `Bearer ${pat}`,
+					Accept: "application/vnd.github+json",
+				},
+			}
+		);
+		if (!response.ok) {
+			console.error("Failed to fetch required status checks:", response.status);
+			return [];
+		}
+		const data = await response.json<{ contexts: string[] }>();
+		return data.contexts || [];
+	} catch (error) {
+		console.error("Error fetching required status checks:", error);
+		return [];
 	}
 }
 
@@ -298,6 +328,48 @@ function isRepositoryAdvisoryEvent(
 	return null;
 }
 
+function isVersionPackagesPRCheckRun(message: WebhookEvent): {
+	checkRun: CheckRunCompletedEvent["check_run"];
+	prNumber: number;
+	repoFullName: string;
+} | null {
+	if (
+		!("action" in message) ||
+		message.action !== "completed" ||
+		!("check_run" in message)
+	) {
+		return null;
+	}
+
+	const event = message as CheckRunCompletedEvent;
+	const checkRun = event.check_run;
+
+	// Only process failures and timeouts (not cancelled)
+	if (
+		checkRun.conclusion !== "failure" &&
+		checkRun.conclusion !== "timed_out"
+	) {
+		return null;
+	}
+
+	// Check if this is from the changeset-release/main branch
+	if (checkRun.check_suite.head_branch !== "changeset-release/main") {
+		return null;
+	}
+
+	// Get the PR number from pull_requests array
+	const pr = checkRun.pull_requests[0];
+	if (!pr) {
+		return null;
+	}
+
+	return {
+		checkRun,
+		prNumber: pr.number,
+		repoFullName: event.repository.full_name,
+	};
+}
+
 async function sendSecurityAlert(
 	webhookUrl: string,
 	{
@@ -424,6 +496,84 @@ async function sendRepositoryAdvisoryAlert(
 			],
 		},
 		"-repository-advisory-" + advisory.ghsa_id
+	);
+}
+
+function formatDuration(startedAt: string, completedAt: string): string {
+	const start = new Date(startedAt).getTime();
+	const end = new Date(completedAt).getTime();
+	const durationMs = end - start;
+	const minutes = Math.floor(durationMs / 60000);
+	const seconds = Math.floor((durationMs % 60000) / 1000);
+	return `${minutes}m ${seconds}s`;
+}
+
+async function sendVPCIFailureAlert(
+	webhookUrl: string,
+	{
+		checkRun,
+		prNumber,
+		repoFullName,
+	}: {
+		checkRun: CheckRunCompletedEvent["check_run"];
+		prNumber: number;
+		repoFullName: string;
+	}
+) {
+	const conclusionEmoji = checkRun.conclusion === "timed_out" ? "⏱️" : "❌";
+	const conclusionText =
+		checkRun.conclusion === "timed_out" ? "Timed out" : "Failed";
+
+	return sendMessage(
+		webhookUrl,
+		{
+			cardsV2: [
+				{
+					cardId: `vp-ci-failure-${checkRun.id}`,
+					card: {
+						header: {
+							title: `${conclusionEmoji} CI Check ${conclusionText} on Version Packages PR`,
+							subtitle: `PR #${prNumber} in ${repoFullName}`,
+						},
+						sections: [
+							{
+								collapsible: false,
+								widgets: [
+									{
+										textParagraph: {
+											text: `<b>Check:</b> ${checkRun.name}\n<b>Conclusion:</b> ${conclusionText}\n<b>Duration:</b> ${formatDuration(checkRun.started_at, checkRun.completed_at)}`,
+										},
+									},
+									{
+										buttonList: {
+											buttons: [
+												{
+													text: "View Check Run",
+													onClick: {
+														openLink: {
+															url: checkRun.html_url,
+														},
+													},
+												},
+												{
+													text: "View PR",
+													onClick: {
+														openLink: {
+															url: `https://github.com/${repoFullName}/pull/${prNumber}`,
+														},
+													},
+												},
+											],
+										},
+									},
+								],
+							},
+						],
+					},
+				},
+			],
+		},
+		`-vp-ci-failure-pr-${prNumber}`
 	);
 }
 
@@ -605,6 +755,25 @@ export default {
 					env.ALERTS_WEBHOOK,
 					maybeRepositoryAdvisory
 				);
+			}
+			// Notifies when a required CI check fails on the Version Packages PR
+			const maybeVPFailure = isVersionPackagesPRCheckRun(body);
+			if (maybeVPFailure) {
+				// Fetch required status checks from branch protection
+				const requiredChecks = await getRequiredStatusChecks(
+					env.GITHUB_PAT,
+					"cloudflare",
+					"workers-sdk",
+					"main"
+				);
+
+				// Only alert if this check is a required check (or if we couldn't fetch the list)
+				if (
+					requiredChecks.length === 0 ||
+					requiredChecks.includes(maybeVPFailure.checkRun.name)
+				) {
+					await sendVPCIFailureAlert(env.ALERTS_WEBHOOK, maybeVPFailure);
+				}
 			}
 		}
 
