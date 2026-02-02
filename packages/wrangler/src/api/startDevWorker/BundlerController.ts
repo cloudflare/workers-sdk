@@ -2,6 +2,7 @@ import assert from "node:assert";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { watch } from "chokidar";
+import { getAssetChangeMessage } from "../../commands/dev";
 import { bundleWorker, shouldCheckFetch } from "../../deployment-bundle/bundle";
 import { getBundleType } from "../../deployment-bundle/bundle-type";
 import {
@@ -10,7 +11,6 @@ import {
 } from "../../deployment-bundle/module-collection";
 import { noBundleWorker } from "../../deployment-bundle/no-bundle-worker";
 import { runCustomBuild } from "../../deployment-bundle/run-custom-build";
-import { getAssetChangeMessage } from "../../dev";
 import { runBuild } from "../../dev/use-esbuild";
 import { logger } from "../../logger";
 import { isNavigatorDefined } from "../../navigator-user-agent";

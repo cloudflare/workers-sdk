@@ -10,7 +10,7 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { wranglerKVConfig } from "./constant";
-import type { KVNamespaceInfo } from "../../kv/helpers";
+import type { KVNamespaceInfo } from "../../commands/kv/helpers";
 
 describe("kv", () => {
 	mockAccountId();

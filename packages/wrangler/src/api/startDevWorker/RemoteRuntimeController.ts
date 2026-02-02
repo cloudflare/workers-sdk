@@ -3,6 +3,8 @@ import chalk from "chalk";
 import { Mutex } from "miniflare";
 import { WebSocket } from "ws";
 import { version as packageVersion } from "../../../package.json";
+import { TRACE_VERSION } from "../../commands/tail/createTail";
+import { realishPrintLogs } from "../../commands/tail/printing";
 import {
 	createPreviewSession,
 	createWorkerPreview,
@@ -14,8 +16,6 @@ import {
 	handlePreviewSessionUploadError,
 } from "../../dev/remote";
 import { logger } from "../../logger";
-import { TRACE_VERSION } from "../../tail/createTail";
-import { realishPrintLogs } from "../../tail/printing";
 import { getAccessToken } from "../../user/access";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";

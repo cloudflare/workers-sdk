@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
-import { actionsForEventCategories } from "../../r2/helpers/notification";
+import { actionsForEventCategories } from "../../commands/r2/helpers/notification";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -11,12 +11,12 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { createFetchResult, msw, mswR2handlers } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import type { BucketLockRule } from "../../r2/helpers/bucket";
+import type { BucketLockRule } from "../../commands/r2/helpers/bucket";
 import type {
 	PutNotificationRequestBody,
 	R2EventableOperation,
 	R2EventType,
-} from "../../r2/helpers/notification";
+} from "../../commands/r2/helpers/notification";
 
 function mockBucketLockPutNew(bucketName: string, rules: BucketLockRule[]) {
 	mockBucketLockPutWithExistingRules(bucketName, [], rules);

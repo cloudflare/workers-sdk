@@ -13,7 +13,7 @@ import type {
 	CreateUpdateHyperdriveBody,
 	HyperdriveConfig,
 	PatchHyperdriveBody,
-} from "../hyperdrive/client";
+} from "../commands/hyperdrive/client";
 
 describe("hyperdrive help", () => {
 	const std = mockConsoleMethods();

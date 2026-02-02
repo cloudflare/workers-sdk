@@ -4,7 +4,7 @@ import { fetch, Request } from "undici";
 import { startDev } from "../dev/start-dev";
 import { run } from "../experimental-flags";
 import { logger } from "../logger";
-import type { StartDevOptions } from "../dev";
+import type { StartDevOptions } from "../commands/dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { CfModule, Environment, Rule } from "@cloudflare/workers-utils";
 import type { Json } from "miniflare";

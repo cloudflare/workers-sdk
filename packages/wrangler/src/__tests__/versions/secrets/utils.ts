@@ -2,7 +2,10 @@ import { http, HttpResponse } from "msw";
 import { FormData } from "undici";
 import { expect } from "vitest";
 import { createFetchResult, msw } from "../../helpers/msw";
-import type { VersionDetails, WorkerVersion } from "../../../versions/secrets";
+import type {
+	VersionDetails,
+	WorkerVersion,
+} from "../../../commands/versions/secrets";
 import type { WorkerMetadata } from "@cloudflare/workers-utils";
 
 function mockGetVersions() {

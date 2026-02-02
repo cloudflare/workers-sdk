@@ -11,7 +11,7 @@ import { useMockStdin } from "../helpers/mock-stdin";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import type { PagesProject } from "../../pages/download-config";
+import type { PagesProject } from "../../commands/pages/download-config";
 import type { Interface } from "node:readline";
 
 export function mockGetMemberships(

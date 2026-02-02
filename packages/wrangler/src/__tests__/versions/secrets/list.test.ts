@@ -7,7 +7,10 @@ import { mockConsoleMethods } from "../../helpers/mock-console";
 import { createFetchResult, msw } from "../../helpers/msw";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import { runWrangler } from "../../helpers/run-wrangler";
-import type { ApiDeployment, ApiVersion } from "../../../versions/types";
+import type {
+	ApiDeployment,
+	ApiVersion,
+} from "../../../commands/versions/types";
 
 describe("versions secret list", () => {
 	runInTempDir();

@@ -10,8 +10,8 @@ import {
 	validatePagesConfig,
 } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
+import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../commands/pages/errors";
 import { logger } from "../logger";
-import { EXIT_CODE_INVALID_PAGES_CONFIG } from "../pages/errors";
 import type {
 	Config,
 	NormalizeAndValidateConfigArgs,

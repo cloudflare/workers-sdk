@@ -1,7 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { BATCH_MAX_ERRORS_WARNINGS } from "../../kv/helpers";
+import { BATCH_MAX_ERRORS_WARNINGS } from "../../commands/kv/helpers";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm } from "../helpers/mock-dialogs";
@@ -9,7 +9,7 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import type { KeyValue } from "../../kv/helpers";
+import type { KeyValue } from "../../commands/kv/helpers";
 
 describe("kv", () => {
 	mockAccountId();

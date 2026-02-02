@@ -4,14 +4,14 @@ import {
 	MAX_FUNCTIONS_ROUTES_RULE_LENGTH,
 	MAX_FUNCTIONS_ROUTES_RULES,
 	ROUTES_SPEC_VERSION,
-} from "../../pages/constants";
-import { getRoutesValidationErrorMessage } from "../../pages/errors";
+} from "../../commands/pages/constants";
+import { getRoutesValidationErrorMessage } from "../../commands/pages/errors";
 import {
 	isRoutesJSONSpec,
 	RoutesValidationError,
 	validateRoutes,
-} from "../../pages/functions/routes-validation";
-import type { RoutesJSONSpec } from "../../pages/functions/routes-transformation";
+} from "../../commands/pages/functions/routes-validation";
+import type { RoutesJSONSpec } from "../../commands/pages/functions/routes-transformation";
 
 describe("routes-validation", () => {
 	describe("isRoutesJSONSpec", () => {

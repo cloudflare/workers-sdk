@@ -25,9 +25,9 @@ import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { Static } from "../autoconfig/frameworks/static";
 import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packages";
 import { runAutoConfig } from "../autoconfig/run";
+import { getSubdomainValues } from "../commands/triggers/deploy";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
-import { getSubdomainValues } from "../triggers/deploy";
 import { writeAuthConfigFile } from "../user";
 import { fetchSecrets } from "../utils/fetch-secrets";
 import { diagnoseScriptSizeError } from "../utils/friendly-validator-errors";
@@ -76,9 +76,12 @@ import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
 import type { AssetManifest } from "../assets";
+import type {
+	PostTypedConsumerBody,
+	QueueResponse,
+} from "../commands/queues/client";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type { OutputEntry } from "../output";
-import type { PostTypedConsumerBody, QueueResponse } from "../queues/client";
 import type {
 	Config,
 	ServiceMetadataRes,
@@ -88,7 +91,7 @@ import type { FormData } from "undici";
 import type { Mock, MockInstance } from "vitest";
 
 vi.mock("command-exists");
-vi.mock("../check/commands", async (importOriginal) => {
+vi.mock("../commands/check/commands", async (importOriginal) => {
 	return {
 		...(await importOriginal()),
 		analyseBundle() {

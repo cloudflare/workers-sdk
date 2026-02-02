@@ -8,7 +8,7 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { toString } from "../helpers/serialize-form-data-entry";
-import type { VectorizeVector } from "../../vectorize/types";
+import type { VectorizeVector } from "../../commands/vectorize/types";
 
 describe("dataset upsert", () => {
 	const std = mockConsoleMethods();

@@ -9,28 +9,28 @@ import {
 } from "@cloudflare/workers-utils";
 import { FormData } from "undici";
 import { fetchResult } from "../../cfetch";
-import { readPagesConfig } from "../../config";
-import { shouldCheckFetch } from "../../deployment-bundle/bundle";
-import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
-import { logger } from "../../logger";
-import { isNavigatorDefined } from "../../navigator-user-agent";
-import { buildFunctions } from "../../pages/buildFunctions";
-import { MAX_DEPLOYMENT_ATTEMPTS } from "../../pages/constants";
+import { buildFunctions } from "../../commands/pages/buildFunctions";
+import { MAX_DEPLOYMENT_ATTEMPTS } from "../../commands/pages/constants";
 import {
 	ApiErrorCodes,
 	EXIT_CODE_INVALID_PAGES_CONFIG,
 	FunctionsNoRoutesError,
 	getFunctionsNoRoutesWarning,
-} from "../../pages/errors";
+} from "../../commands/pages/errors";
 import {
 	buildRawWorker,
 	checkRawWorker,
 	produceWorkerBundleForWorkerJSDirectory,
-} from "../../pages/functions/buildWorker";
-import { validateRoutes } from "../../pages/functions/routes-validation";
-import { upload } from "../../pages/upload";
-import { getPagesTmpDir } from "../../pages/utils";
-import { validate } from "../../pages/validate";
+} from "../../commands/pages/functions/buildWorker";
+import { validateRoutes } from "../../commands/pages/functions/routes-validation";
+import { upload } from "../../commands/pages/upload";
+import { getPagesTmpDir } from "../../commands/pages/utils";
+import { validate } from "../../commands/pages/validate";
+import { readPagesConfig } from "../../config";
+import { shouldCheckFetch } from "../../deployment-bundle/bundle";
+import { validateNodeCompatMode } from "../../deployment-bundle/node-compat";
+import { logger } from "../../logger";
+import { isNavigatorDefined } from "../../navigator-user-agent";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
 import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Deployment, Project } from "@cloudflare/types";

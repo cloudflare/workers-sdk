@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
-import { MAX_UPLOAD_SIZE_BYTES } from "../../r2/constants";
+import { MAX_UPLOAD_SIZE_BYTES } from "../../commands/r2/constants";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";

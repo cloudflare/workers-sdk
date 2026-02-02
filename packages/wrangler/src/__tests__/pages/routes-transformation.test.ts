@@ -3,13 +3,13 @@ import {
 	MAX_FUNCTIONS_ROUTES_RULES,
 	ROUTES_SPEC_DESCRIPTION,
 	ROUTES_SPEC_VERSION,
-} from "../../pages/constants";
+} from "../../commands/pages/constants";
 import {
 	compareRoutes,
 	convertRoutesToGlobPatterns,
 	convertRoutesToRoutesJSONSpec,
 	optimizeRoutesJSONSpec,
-} from "../../pages/functions/routes-transformation";
+} from "../../commands/pages/functions/routes-transformation";
 import { toUrlPath } from "../../paths";
 
 // TODO: make a convenience function for creating a list

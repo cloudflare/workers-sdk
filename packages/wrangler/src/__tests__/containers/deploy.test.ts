@@ -11,7 +11,7 @@ import { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-sh
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { clearCachedAccount } from "../../cloudchamber/locations";
+import { clearCachedAccount } from "../../commands/cloudchamber/locations";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-cli-output";

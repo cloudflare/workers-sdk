@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	ensureContainerLimits,
 	ensureImageFitsLimits,
-} from "../../cloudchamber/limits";
+} from "../../commands/cloudchamber/limits";
 import type {
 	CompleteAccountCustomer,
 	ContainerNormalizedConfig,

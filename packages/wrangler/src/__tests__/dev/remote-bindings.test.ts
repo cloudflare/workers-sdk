@@ -21,7 +21,7 @@ import {
 } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import type { StartDevOptions } from "../../dev";
+import type { StartDevOptions } from "../../commands/dev";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { RemoteProxyConnectionString, WorkerOptions } from "miniflare";
 

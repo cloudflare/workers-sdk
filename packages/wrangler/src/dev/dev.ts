@@ -1,7 +1,7 @@
 import type { DevEnv, ProxyData } from "../api";
 import type { AssetsOptions } from "../assets";
+import type { StartDevOptions } from "../commands/dev";
 import type { Entry } from "../deployment-bundle/entry";
-import type { StartDevOptions } from "../dev";
 import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/types";
 import type { LegacyAssetPaths } from "../sites";
 import type {

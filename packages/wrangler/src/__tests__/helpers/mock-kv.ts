@@ -1,7 +1,10 @@
 import { http, HttpResponse } from "msw";
 import { expect } from "vitest";
 import { createFetchResult, msw } from "./msw";
-import type { KVNamespaceInfo, NamespaceKeyInfo } from "../../kv/helpers";
+import type {
+	KVNamespaceInfo,
+	NamespaceKeyInfo,
+} from "../../commands/kv/helpers";
 
 export function mockKeyListRequest(
 	expectedNamespaceId: string,

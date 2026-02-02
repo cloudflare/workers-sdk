@@ -2,13 +2,13 @@ import { ParseError } from "@cloudflare/workers-utils";
 import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { FormData } from "undici";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import * as checkCommands from "../check/commands";
+import * as checkCommands from "../commands/check/commands";
 import { logger } from "../logger";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
-vi.mock("../check/commands", () => ({ analyseBundle: vi.fn() }));
+vi.mock("../commands/check/commands", () => ({ analyseBundle: vi.fn() }));
 const mockAnalyseBundle = vi.mocked(checkCommands.analyseBundle);
 
 describe("helpIfErrorIsSizeOrScriptStartup", () => {

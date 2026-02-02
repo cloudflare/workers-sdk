@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import splitSqlQuery, { mayContainMultipleStatements } from "../../d1/splitter";
+import splitSqlQuery, {
+	mayContainMultipleStatements,
+} from "../../commands/d1/splitter";
 
 describe("mayContainMultipleStatements()", () => {
 	it("should return false if there is only a semi-colon at the end", () => {

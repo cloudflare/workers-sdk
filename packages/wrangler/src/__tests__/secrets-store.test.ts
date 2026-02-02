@@ -16,7 +16,7 @@ import type {
 	CreateSecret,
 	CreateStore,
 	UpdateSecret,
-} from "../secrets-store/client";
+} from "../commands/secrets-store/client";
 
 describe("secrets-store help", () => {
 	const std = mockConsoleMethods();

@@ -6,7 +6,7 @@ import { mockAccountId, mockApiToken } from "./../helpers/mock-account-id";
 import { msw } from "./../helpers/msw";
 import { runInTempDir } from "./../helpers/run-in-tmp";
 import { runWrangler } from "./../helpers/run-wrangler";
-import type { Project } from "./../../pages/types";
+import type { Project } from "../../commands/pages/types";
 
 describe("pages project list", () => {
 	runInTempDir();

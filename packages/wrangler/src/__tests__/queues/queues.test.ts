@@ -9,7 +9,10 @@ import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { mockGetQueueByNameRequest } from "./mock-utils";
-import type { PostTypedConsumerBody, QueueResponse } from "../../queues/client";
+import type {
+	PostTypedConsumerBody,
+	QueueResponse,
+} from "../../commands/queues/client";
 
 describe("wrangler", () => {
 	mockAccountId();

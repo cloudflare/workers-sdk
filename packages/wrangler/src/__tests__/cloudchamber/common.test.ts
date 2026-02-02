@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseImageName } from "../../cloudchamber/common";
+import { parseImageName } from "../../commands/cloudchamber/common";
 
 describe("parseImageName", () => {
 	it("works", () => {

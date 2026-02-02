@@ -10,11 +10,11 @@ import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
 import makeCLI from "yargs";
 import { version as wranglerVersion } from "../package.json";
-import { aiFineTuneNamespace, aiNamespace } from "./ai";
-import { aiFineTuneCreateCommand } from "./ai/createFinetune";
-import { aiModelsCommand } from "./ai/listCatalog";
-import { aiFineTuneListCommand } from "./ai/listFinetune";
-import { buildCommand } from "./build";
+import { aiFineTuneNamespace, aiNamespace } from "./commands/ai";
+import { aiFineTuneCreateCommand } from "./commands/ai/createFinetune";
+import { aiModelsCommand } from "./commands/ai/listCatalog";
+import { aiFineTuneListCommand } from "./commands/ai/listFinetune";
+import { buildCommand } from "./commands/build";
 import {
 	certDeleteCommand,
 	certListCommand,
@@ -22,8 +22,8 @@ import {
 	certUploadCaCertCommand,
 	certUploadMtlsCommand,
 	certUploadNamespace,
-} from "./cert/cert";
-import { checkNamespace, checkStartupCommand } from "./check/commands";
+} from "./commands/cert/cert";
+import { checkNamespace, checkStartupCommand } from "./commands/check/commands";
 import {
 	cloudchamberApplyCommand,
 	cloudchamberBuildCommand,
@@ -45,9 +45,8 @@ import {
 	cloudchamberSshCreateCommand,
 	cloudchamberSshListCommand,
 	cloudchamberSshNamespace,
-} from "./cloudchamber";
-import { completionsCommand } from "./complete";
-import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
+} from "./commands/cloudchamber";
+import { completionsCommand } from "./commands/complete";
 import {
 	containersBuildCommand,
 	containersDeleteCommand,
@@ -63,51 +62,38 @@ import {
 	containersRegistriesListCommand,
 	containersRegistriesNamespace,
 	containersSshCommand,
-} from "./containers";
-import { demandSingleValue } from "./core";
-import { CommandHandledError } from "./core/CommandHandledError";
-import { CommandRegistry } from "./core/CommandRegistry";
-import { getErrorType, handleError } from "./core/handle-errors";
-import { createRegisterYargsCommand } from "./core/register-yargs-command";
-import { d1Namespace } from "./d1";
-import { d1CreateCommand } from "./d1/create";
-import { d1DeleteCommand } from "./d1/delete";
-import { d1ExecuteCommand } from "./d1/execute";
-import { d1ExportCommand } from "./d1/export";
-import { d1InfoCommand } from "./d1/info";
-import { d1InsightsCommand } from "./d1/insights";
-import { d1ListCommand } from "./d1/list";
-import { d1MigrationsNamespace } from "./d1/migrations";
-import { d1MigrationsApplyCommand } from "./d1/migrations/apply";
-import { d1MigrationsCreateCommand } from "./d1/migrations/create";
-import { d1MigrationsListCommand } from "./d1/migrations/list";
-import { d1TimeTravelNamespace } from "./d1/timeTravel";
-import { d1TimeTravelInfoCommand } from "./d1/timeTravel/info";
-import { d1TimeTravelRestoreCommand } from "./d1/timeTravel/restore";
-import { deleteCommand } from "./delete";
-import { deployCommand } from "./deploy";
-import { dev } from "./dev";
-import {
-	dispatchNamespaceCreateCommand,
-	dispatchNamespaceDeleteCommand,
-	dispatchNamespaceGetCommand,
-	dispatchNamespaceListCommand,
-	dispatchNamespaceNamespace,
-	dispatchNamespaceRenameCommand,
-} from "./dispatch-namespace";
-import { docs } from "./docs";
+} from "./commands/containers";
+import { d1Namespace } from "./commands/d1";
+import { d1CreateCommand } from "./commands/d1/create";
+import { d1DeleteCommand } from "./commands/d1/delete";
+import { d1ExecuteCommand } from "./commands/d1/execute";
+import { d1ExportCommand } from "./commands/d1/export";
+import { d1InfoCommand } from "./commands/d1/info";
+import { d1InsightsCommand } from "./commands/d1/insights";
+import { d1ListCommand } from "./commands/d1/list";
+import { d1MigrationsNamespace } from "./commands/d1/migrations";
+import { d1MigrationsApplyCommand } from "./commands/d1/migrations/apply";
+import { d1MigrationsCreateCommand } from "./commands/d1/migrations/create";
+import { d1MigrationsListCommand } from "./commands/d1/migrations/list";
+import { d1TimeTravelNamespace } from "./commands/d1/timeTravel";
+import { d1TimeTravelInfoCommand } from "./commands/d1/timeTravel/info";
+import { d1TimeTravelRestoreCommand } from "./commands/d1/timeTravel/restore";
+import { deleteCommand } from "./commands/delete";
+import { deployCommand } from "./commands/deploy";
+import { dev } from "./commands/dev";
+import { docs } from "./commands/docs";
 import {
 	helloWorldGetCommand,
 	helloWorldNamespace,
 	helloWorldSetCommand,
-} from "./hello-world";
-import { hyperdriveCreateCommand } from "./hyperdrive/create";
-import { hyperdriveDeleteCommand } from "./hyperdrive/delete";
-import { hyperdriveGetCommand } from "./hyperdrive/get";
-import { hyperdriveNamespace } from "./hyperdrive/index";
-import { hyperdriveListCommand } from "./hyperdrive/list";
-import { hyperdriveUpdateCommand } from "./hyperdrive/update";
-import { init } from "./init";
+} from "./commands/hello-world";
+import { hyperdriveCreateCommand } from "./commands/hyperdrive/create";
+import { hyperdriveDeleteCommand } from "./commands/hyperdrive/delete";
+import { hyperdriveGetCommand } from "./commands/hyperdrive/get";
+import { hyperdriveNamespace } from "./commands/hyperdrive/index";
+import { hyperdriveListCommand } from "./commands/hyperdrive/list";
+import { hyperdriveUpdateCommand } from "./commands/hyperdrive/update";
+import { init } from "./commands/init";
 import {
 	kvBulkDeleteCommand,
 	kvBulkGetCommand,
@@ -124,98 +110,88 @@ import {
 	kvNamespaceListCommand,
 	kvNamespaceNamespace,
 	kvNamespaceRenameCommand,
-} from "./kv";
-import { logger, LOGGER_LEVELS } from "./logger";
-import { allMetricsDispatchesCompleted, getMetricsDispatcher } from "./metrics";
-import {
-	metricsAlias,
-	telemetryDisableCommand,
-	telemetryEnableCommand,
-	telemetryNamespace,
-	telemetryStatusCommand,
-} from "./metrics/commands";
+} from "./commands/kv";
 import {
 	mTlsCertificateDeleteCommand,
 	mTlsCertificateListCommand,
 	mTlsCertificateNamespace,
 	mTlsCertificateUploadCommand,
-} from "./mtls-certificate/cli";
-import { writeOutput } from "./output";
+} from "./commands/mtls-certificate/cli";
 import {
 	pagesDeploymentNamespace,
 	pagesDownloadNamespace,
 	pagesFunctionsNamespace,
 	pagesNamespace,
 	pagesProjectNamespace,
-} from "./pages";
-import { pagesFunctionsBuildCommand } from "./pages/build";
-import { pagesFunctionsBuildEnvCommand } from "./pages/build-env";
+} from "./commands/pages";
+import { pagesFunctionsBuildCommand } from "./commands/pages/build";
+import { pagesFunctionsBuildEnvCommand } from "./commands/pages/build-env";
 import {
 	pagesDeployCommand,
 	pagesDeploymentCreateCommand,
 	pagesPublishCommand,
-} from "./pages/deploy";
-import { pagesDeploymentTailCommand } from "./pages/deployment-tails";
-import { pagesDeploymentListCommand } from "./pages/deployments";
-import { pagesDevCommand } from "./pages/dev";
-import { pagesDownloadConfigCommand } from "./pages/download-config";
-import { pagesFunctionsOptimizeRoutesCommand } from "./pages/functions";
+} from "./commands/pages/deploy";
+import { pagesDeploymentTailCommand } from "./commands/pages/deployment-tails";
+import { pagesDeploymentListCommand } from "./commands/pages/deployments";
+import { pagesDevCommand } from "./commands/pages/dev";
+import { pagesDownloadConfigCommand } from "./commands/pages/download-config";
+import { pagesFunctionsOptimizeRoutesCommand } from "./commands/pages/functions";
 import {
 	pagesProjectCreateCommand,
 	pagesProjectDeleteCommand,
 	pagesProjectListCommand,
-} from "./pages/projects";
+} from "./commands/pages/projects";
 import {
 	pagesSecretBulkCommand,
 	pagesSecretDeleteCommand,
 	pagesSecretListCommand,
 	pagesSecretNamespace,
 	pagesSecretPutCommand,
-} from "./pages/secret";
-import { pagesProjectUploadCommand } from "./pages/upload";
-import { pagesProjectValidateCommand } from "./pages/validate";
-import { pipelinesNamespace } from "./pipelines";
-import { pipelinesCreateCommand } from "./pipelines/cli/create";
-import { pipelinesDeleteCommand } from "./pipelines/cli/delete";
-import { pipelinesGetCommand } from "./pipelines/cli/get";
-import { pipelinesListCommand } from "./pipelines/cli/list";
-import { pipelinesSetupCommand } from "./pipelines/cli/setup";
-import { pipelinesSinksNamespace } from "./pipelines/cli/sinks";
-import { pipelinesSinksCreateCommand } from "./pipelines/cli/sinks/create";
-import { pipelinesSinksDeleteCommand } from "./pipelines/cli/sinks/delete";
-import { pipelinesSinksGetCommand } from "./pipelines/cli/sinks/get";
-import { pipelinesSinksListCommand } from "./pipelines/cli/sinks/list";
-import { pipelinesStreamsNamespace } from "./pipelines/cli/streams";
-import { pipelinesStreamsCreateCommand } from "./pipelines/cli/streams/create";
-import { pipelinesStreamsDeleteCommand } from "./pipelines/cli/streams/delete";
-import { pipelinesStreamsGetCommand } from "./pipelines/cli/streams/get";
-import { pipelinesStreamsListCommand } from "./pipelines/cli/streams/list";
-import { pipelinesUpdateCommand } from "./pipelines/cli/update";
-import { queuesNamespace } from "./queues/cli/commands";
-import { queuesConsumerNamespace } from "./queues/cli/commands/consumer";
-import { queuesConsumerHttpNamespace } from "./queues/cli/commands/consumer/http-pull";
-import { queuesConsumerHttpAddCommand } from "./queues/cli/commands/consumer/http-pull/add";
-import { queuesConsumerHttpRemoveCommand } from "./queues/cli/commands/consumer/http-pull/remove";
-import { queuesConsumerWorkerNamespace } from "./queues/cli/commands/consumer/worker";
-import { queuesConsumerAddCommand } from "./queues/cli/commands/consumer/worker/add";
-import { queuesConsumerRemoveCommand } from "./queues/cli/commands/consumer/worker/remove";
-import { queuesCreateCommand } from "./queues/cli/commands/create";
-import { queuesDeleteCommand } from "./queues/cli/commands/delete";
-import { queuesInfoCommand } from "./queues/cli/commands/info";
-import { queuesListCommand } from "./queues/cli/commands/list";
+} from "./commands/pages/secret";
+import { pagesProjectUploadCommand } from "./commands/pages/upload";
+import { pagesProjectValidateCommand } from "./commands/pages/validate";
+import { pipelinesNamespace } from "./commands/pipelines";
+import { pipelinesCreateCommand } from "./commands/pipelines/cli/create";
+import { pipelinesDeleteCommand } from "./commands/pipelines/cli/delete";
+import { pipelinesGetCommand } from "./commands/pipelines/cli/get";
+import { pipelinesListCommand } from "./commands/pipelines/cli/list";
+import { pipelinesSetupCommand } from "./commands/pipelines/cli/setup";
+import { pipelinesSinksNamespace } from "./commands/pipelines/cli/sinks";
+import { pipelinesSinksCreateCommand } from "./commands/pipelines/cli/sinks/create";
+import { pipelinesSinksDeleteCommand } from "./commands/pipelines/cli/sinks/delete";
+import { pipelinesSinksGetCommand } from "./commands/pipelines/cli/sinks/get";
+import { pipelinesSinksListCommand } from "./commands/pipelines/cli/sinks/list";
+import { pipelinesStreamsNamespace } from "./commands/pipelines/cli/streams";
+import { pipelinesStreamsCreateCommand } from "./commands/pipelines/cli/streams/create";
+import { pipelinesStreamsDeleteCommand } from "./commands/pipelines/cli/streams/delete";
+import { pipelinesStreamsGetCommand } from "./commands/pipelines/cli/streams/get";
+import { pipelinesStreamsListCommand } from "./commands/pipelines/cli/streams/list";
+import { pipelinesUpdateCommand } from "./commands/pipelines/cli/update";
+import { queuesNamespace } from "./commands/queues/cli/commands";
+import { queuesConsumerNamespace } from "./commands/queues/cli/commands/consumer";
+import { queuesConsumerHttpNamespace } from "./commands/queues/cli/commands/consumer/http-pull";
+import { queuesConsumerHttpAddCommand } from "./commands/queues/cli/commands/consumer/http-pull/add";
+import { queuesConsumerHttpRemoveCommand } from "./commands/queues/cli/commands/consumer/http-pull/remove";
+import { queuesConsumerWorkerNamespace } from "./commands/queues/cli/commands/consumer/worker";
+import { queuesConsumerAddCommand } from "./commands/queues/cli/commands/consumer/worker/add";
+import { queuesConsumerRemoveCommand } from "./commands/queues/cli/commands/consumer/worker/remove";
+import { queuesCreateCommand } from "./commands/queues/cli/commands/create";
+import { queuesDeleteCommand } from "./commands/queues/cli/commands/delete";
+import { queuesInfoCommand } from "./commands/queues/cli/commands/info";
+import { queuesListCommand } from "./commands/queues/cli/commands/list";
 import {
 	queuesPauseCommand,
 	queuesResumeCommand,
-} from "./queues/cli/commands/pause-resume";
-import { queuesPurgeCommand } from "./queues/cli/commands/purge";
-import { queuesSubscriptionNamespace } from "./queues/cli/commands/subscription";
-import { queuesSubscriptionCreateCommand } from "./queues/cli/commands/subscription/create";
-import { queuesSubscriptionDeleteCommand } from "./queues/cli/commands/subscription/delete";
-import { queuesSubscriptionGetCommand } from "./queues/cli/commands/subscription/get";
-import { queuesSubscriptionListCommand } from "./queues/cli/commands/subscription/list";
-import { queuesSubscriptionUpdateCommand } from "./queues/cli/commands/subscription/update";
-import { queuesUpdateCommand } from "./queues/cli/commands/update";
-import { r2Namespace } from "./r2";
+} from "./commands/queues/cli/commands/pause-resume";
+import { queuesPurgeCommand } from "./commands/queues/cli/commands/purge";
+import { queuesSubscriptionNamespace } from "./commands/queues/cli/commands/subscription";
+import { queuesSubscriptionCreateCommand } from "./commands/queues/cli/commands/subscription/create";
+import { queuesSubscriptionDeleteCommand } from "./commands/queues/cli/commands/subscription/delete";
+import { queuesSubscriptionGetCommand } from "./commands/queues/cli/commands/subscription/get";
+import { queuesSubscriptionListCommand } from "./commands/queues/cli/commands/subscription/list";
+import { queuesSubscriptionUpdateCommand } from "./commands/queues/cli/commands/subscription/update";
+import { queuesUpdateCommand } from "./commands/queues/cli/commands/update";
+import { r2Namespace } from "./commands/r2";
 import {
 	r2BucketCreateCommand,
 	r2BucketDeleteCommand,
@@ -224,7 +200,7 @@ import {
 	r2BucketNamespace,
 	r2BucketUpdateNamespace,
 	r2BucketUpdateStorageClassCommand,
-} from "./r2/bucket";
+} from "./commands/r2/bucket";
 import {
 	r2BucketCatalogCompactionDisableCommand,
 	r2BucketCatalogCompactionEnableCommand,
@@ -236,13 +212,13 @@ import {
 	r2BucketCatalogSnapshotExpirationDisableCommand,
 	r2BucketCatalogSnapshotExpirationEnableCommand,
 	r2BucketCatalogSnapshotExpirationNamespace,
-} from "./r2/catalog";
+} from "./commands/r2/catalog";
 import {
 	r2BucketCORSDeleteCommand,
 	r2BucketCORSListCommand,
 	r2BucketCORSNamespace,
 	r2BucketCORSSetCommand,
-} from "./r2/cors";
+} from "./commands/r2/cors";
 import {
 	r2BucketDomainAddCommand,
 	r2BucketDomainGetCommand,
@@ -250,34 +226,34 @@ import {
 	r2BucketDomainNamespace,
 	r2BucketDomainRemoveCommand,
 	r2BucketDomainUpdateCommand,
-} from "./r2/domain";
+} from "./commands/r2/domain";
 import {
 	r2BucketLifecycleAddCommand,
 	r2BucketLifecycleListCommand,
 	r2BucketLifecycleNamespace,
 	r2BucketLifecycleRemoveCommand,
 	r2BucketLifecycleSetCommand,
-} from "./r2/lifecycle";
+} from "./commands/r2/lifecycle";
 import {
 	r2BucketLocalUploadsDisableCommand,
 	r2BucketLocalUploadsEnableCommand,
 	r2BucketLocalUploadsGetConfigCommand,
 	r2BucketLocalUploadsNamespace,
-} from "./r2/local-uploads";
+} from "./commands/r2/local-uploads";
 import {
 	r2BucketLockAddCommand,
 	r2BucketLockListCommand,
 	r2BucketLockNamespace,
 	r2BucketLockRemoveCommand,
 	r2BucketLockSetCommand,
-} from "./r2/lock";
+} from "./commands/r2/lock";
 import {
 	r2BucketNotificationCreateCommand,
 	r2BucketNotificationDeleteCommand,
 	r2BucketNotificationGetAlias,
 	r2BucketNotificationListCommand,
 	r2BucketNotificationNamespace,
-} from "./r2/notification";
+} from "./commands/r2/notification";
 import {
 	r2BulkNamespace,
 	r2BulkPutCommand,
@@ -285,32 +261,32 @@ import {
 	r2ObjectGetCommand,
 	r2ObjectNamespace,
 	r2ObjectPutCommand,
-} from "./r2/object";
+} from "./commands/r2/object";
 import {
 	r2BucketDevUrlDisableCommand,
 	r2BucketDevUrlEnableCommand,
 	r2BucketDevUrlGetCommand,
 	r2BucketDevUrlNamespace,
-} from "./r2/public-dev-url";
+} from "./commands/r2/public-dev-url";
 import {
 	r2BucketSippyDisableCommand,
 	r2BucketSippyEnableCommand,
 	r2BucketSippyGetCommand,
 	r2BucketSippyNamespace,
-} from "./r2/sippy";
-import { r2SqlNamespace, r2SqlQueryCommand } from "./r2/sql";
+} from "./commands/r2/sippy";
+import { r2SqlNamespace, r2SqlQueryCommand } from "./commands/r2/sql";
 import {
 	secretBulkCommand,
 	secretDeleteCommand,
 	secretListCommand,
 	secretNamespace,
 	secretPutCommand,
-} from "./secret";
+} from "./commands/secret";
 import {
 	secretsStoreNamespace,
 	secretsStoreSecretNamespace,
 	secretsStoreStoreNamespace,
-} from "./secrets-store";
+} from "./commands/secrets-store";
 import {
 	secretsStoreSecretCreateCommand,
 	secretsStoreSecretDeleteCommand,
@@ -321,70 +297,97 @@ import {
 	secretsStoreStoreCreateCommand,
 	secretsStoreStoreDeleteCommand,
 	secretsStoreStoreListCommand,
-} from "./secrets-store/commands";
-import { closeSentry, setupSentry } from "./sentry";
-import { setupCommand } from "./setup";
-import { tailCommand } from "./tail";
-import { triggersDeployCommand, triggersNamespace } from "./triggers";
-import { typesCommand } from "./type-generation";
+} from "./commands/secrets-store/commands";
+import { setupCommand } from "./commands/setup";
+import { tailCommand } from "./commands/tail";
+import {
+	metricsAlias,
+	telemetryDisableCommand,
+	telemetryEnableCommand,
+	telemetryNamespace,
+	telemetryStatusCommand,
+} from "./commands/telemetry";
+import { triggersDeployCommand, triggersNamespace } from "./commands/triggers";
+import { typesCommand } from "./commands/types";
 import {
 	authNamespace,
 	authTokenCommand,
 	loginCommand,
 	logoutCommand,
 	whoamiCommand,
-} from "./user/commands";
+} from "./commands/user";
+import { vectorizeCreateCommand } from "./commands/vectorize/create";
+import { vectorizeCreateMetadataIndexCommand } from "./commands/vectorize/createMetadataIndex";
+import { vectorizeDeleteCommand } from "./commands/vectorize/delete";
+import { vectorizeDeleteVectorsCommand } from "./commands/vectorize/deleteByIds";
+import { vectorizeDeleteMetadataIndexCommand } from "./commands/vectorize/deleteMetadataIndex";
+import { vectorizeGetCommand } from "./commands/vectorize/get";
+import { vectorizeGetVectorsCommand } from "./commands/vectorize/getByIds";
+import { vectorizeNamespace } from "./commands/vectorize/index";
+import { vectorizeInfoCommand } from "./commands/vectorize/info";
+import { vectorizeInsertCommand } from "./commands/vectorize/insert";
+import { vectorizeListCommand } from "./commands/vectorize/list";
+import { vectorizeListMetadataIndexCommand } from "./commands/vectorize/listMetadataIndex";
+import { vectorizeListVectorsCommand } from "./commands/vectorize/listVectors";
+import { vectorizeQueryCommand } from "./commands/vectorize/query";
+import { vectorizeUpsertCommand } from "./commands/vectorize/upsert";
+import { versionsNamespace } from "./commands/versions";
+import { versionsDeployCommand } from "./commands/versions/deploy";
+import { deploymentsNamespace } from "./commands/versions/deployments";
+import { deploymentsListCommand } from "./commands/versions/deployments/list";
+import { deploymentsStatusCommand } from "./commands/versions/deployments/status";
+import { deploymentsViewCommand } from "./commands/versions/deployments/view";
+import { versionsListCommand } from "./commands/versions/list";
+import { versionsRollbackCommand } from "./commands/versions/rollback";
+import { versionsSecretNamespace } from "./commands/versions/secrets";
+import { versionsSecretBulkCommand } from "./commands/versions/secrets/bulk";
+import { versionsSecretDeleteCommand } from "./commands/versions/secrets/delete";
+import { versionsSecretsListCommand } from "./commands/versions/secrets/list";
+import { versionsSecretPutCommand } from "./commands/versions/secrets/put";
+import { versionsUploadCommand } from "./commands/versions/upload";
+import { versionsViewCommand } from "./commands/versions/view";
+import { vpcServiceCreateCommand } from "./commands/vpc/create";
+import { vpcServiceDeleteCommand } from "./commands/vpc/delete";
+import { vpcServiceGetCommand } from "./commands/vpc/get";
+import { vpcNamespace, vpcServiceNamespace } from "./commands/vpc/index";
+import { vpcServiceListCommand } from "./commands/vpc/list";
+import { vpcServiceUpdateCommand } from "./commands/vpc/update";
+import {
+	workflowsInstanceNamespace,
+	workflowsNamespace,
+} from "./commands/workflows";
+import { workflowsDeleteCommand } from "./commands/workflows/commands/delete";
+import { workflowsDescribeCommand } from "./commands/workflows/commands/describe";
+import { workflowsInstancesDescribeCommand } from "./commands/workflows/commands/instances/describe";
+import { workflowsInstancesListCommand } from "./commands/workflows/commands/instances/list";
+import { workflowsInstancesPauseCommand } from "./commands/workflows/commands/instances/pause";
+import { workflowsInstancesRestartCommand } from "./commands/workflows/commands/instances/restart";
+import { workflowsInstancesResumeCommand } from "./commands/workflows/commands/instances/resume";
+import { workflowsInstancesSendEventCommand } from "./commands/workflows/commands/instances/send-event";
+import { workflowsInstancesTerminateCommand } from "./commands/workflows/commands/instances/terminate";
+import { workflowsInstancesTerminateAllCommand } from "./commands/workflows/commands/instances/terminate-all";
+import { workflowsListCommand } from "./commands/workflows/commands/list";
+import { workflowsTriggerCommand } from "./commands/workflows/commands/trigger";
+import { getDefaultEnvFiles, loadDotEnv } from "./config/dot-env";
+import { demandSingleValue } from "./core";
+import { CommandHandledError } from "./core/CommandHandledError";
+import { CommandRegistry } from "./core/CommandRegistry";
+import { getErrorType, handleError } from "./core/handle-errors";
+import { createRegisterYargsCommand } from "./core/register-yargs-command";
+import {
+	dispatchNamespaceCreateCommand,
+	dispatchNamespaceDeleteCommand,
+	dispatchNamespaceGetCommand,
+	dispatchNamespaceListCommand,
+	dispatchNamespaceNamespace,
+	dispatchNamespaceRenameCommand,
+} from "./dispatch-namespace";
+import { logger, LOGGER_LEVELS } from "./logger";
+import { allMetricsDispatchesCompleted, getMetricsDispatcher } from "./metrics";
+import { writeOutput } from "./output";
+import { closeSentry, setupSentry } from "./sentry";
 import { proxy } from "./utils/constants";
 import { debugLogFilepath } from "./utils/log-file";
-import { vectorizeCreateCommand } from "./vectorize/create";
-import { vectorizeCreateMetadataIndexCommand } from "./vectorize/createMetadataIndex";
-import { vectorizeDeleteCommand } from "./vectorize/delete";
-import { vectorizeDeleteVectorsCommand } from "./vectorize/deleteByIds";
-import { vectorizeDeleteMetadataIndexCommand } from "./vectorize/deleteMetadataIndex";
-import { vectorizeGetCommand } from "./vectorize/get";
-import { vectorizeGetVectorsCommand } from "./vectorize/getByIds";
-import { vectorizeNamespace } from "./vectorize/index";
-import { vectorizeInfoCommand } from "./vectorize/info";
-import { vectorizeInsertCommand } from "./vectorize/insert";
-import { vectorizeListCommand } from "./vectorize/list";
-import { vectorizeListMetadataIndexCommand } from "./vectorize/listMetadataIndex";
-import { vectorizeListVectorsCommand } from "./vectorize/listVectors";
-import { vectorizeQueryCommand } from "./vectorize/query";
-import { vectorizeUpsertCommand } from "./vectorize/upsert";
-import { versionsNamespace } from "./versions";
-import { versionsDeployCommand } from "./versions/deploy";
-import { deploymentsNamespace } from "./versions/deployments";
-import { deploymentsListCommand } from "./versions/deployments/list";
-import { deploymentsStatusCommand } from "./versions/deployments/status";
-import { deploymentsViewCommand } from "./versions/deployments/view";
-import { versionsListCommand } from "./versions/list";
-import { versionsRollbackCommand } from "./versions/rollback";
-import { versionsSecretNamespace } from "./versions/secrets";
-import { versionsSecretBulkCommand } from "./versions/secrets/bulk";
-import { versionsSecretDeleteCommand } from "./versions/secrets/delete";
-import { versionsSecretsListCommand } from "./versions/secrets/list";
-import { versionsSecretPutCommand } from "./versions/secrets/put";
-import { versionsUploadCommand } from "./versions/upload";
-import { versionsViewCommand } from "./versions/view";
-import { vpcServiceCreateCommand } from "./vpc/create";
-import { vpcServiceDeleteCommand } from "./vpc/delete";
-import { vpcServiceGetCommand } from "./vpc/get";
-import { vpcNamespace, vpcServiceNamespace } from "./vpc/index";
-import { vpcServiceListCommand } from "./vpc/list";
-import { vpcServiceUpdateCommand } from "./vpc/update";
-import { workflowsInstanceNamespace, workflowsNamespace } from "./workflows";
-import { workflowsDeleteCommand } from "./workflows/commands/delete";
-import { workflowsDescribeCommand } from "./workflows/commands/describe";
-import { workflowsInstancesDescribeCommand } from "./workflows/commands/instances/describe";
-import { workflowsInstancesListCommand } from "./workflows/commands/instances/list";
-import { workflowsInstancesPauseCommand } from "./workflows/commands/instances/pause";
-import { workflowsInstancesRestartCommand } from "./workflows/commands/instances/restart";
-import { workflowsInstancesResumeCommand } from "./workflows/commands/instances/resume";
-import { workflowsInstancesSendEventCommand } from "./workflows/commands/instances/send-event";
-import { workflowsInstancesTerminateCommand } from "./workflows/commands/instances/terminate";
-import { workflowsInstancesTerminateAllCommand } from "./workflows/commands/instances/terminate-all";
-import { workflowsListCommand } from "./workflows/commands/list";
-import { workflowsTriggerCommand } from "./workflows/commands/trigger";
 import { printWranglerBanner } from "./wrangler-banner";
 import type { ReadConfigCommandArgs } from "./config";
 import type { LoggerLevel } from "./logger";

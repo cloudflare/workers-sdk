@@ -3,7 +3,7 @@ import path from "node:path";
 import { getCloudflareContainerRegistry } from "@cloudflare/containers-shared";
 import { UserError } from "@cloudflare/workers-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getNormalizedContainerOptions } from "../../containers/config";
+import { getNormalizedContainerOptions } from "../../commands/containers/config";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import type { Config } from "@cloudflare/workers-utils";

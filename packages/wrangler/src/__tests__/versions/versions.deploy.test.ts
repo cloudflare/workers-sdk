@@ -6,7 +6,7 @@ import {
 	parseVersionSpecs,
 	summariseVersionTraffic,
 	validateTrafficSubtotal,
-} from "../../versions/deploy";
+} from "../../commands/versions/deploy";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
