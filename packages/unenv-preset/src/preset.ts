@@ -1039,9 +1039,9 @@ function getWorkerThreadsOverrides({
 		"disable_nodejs_worker_threads_module"
 	);
 
-	const enabledByFlag = compatibilityFlags.includes(
-		"enable_nodejs_worker_threads_module"
-	);
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_worker_threads_module") &&
+		compatibilityFlags.includes("experimental");
 
 	// worker_threads is experimental, no default enable date
 	const enabled = enabledByFlag && !disabledByFlag;
