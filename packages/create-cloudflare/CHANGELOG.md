@@ -1,5 +1,65 @@
 # create-cloudflare
 
+## 2.62.6
+
+### Patch Changes
+
+- [#12269](https://github.com/cloudflare/workers-sdk/pull/12269) [`a1450ca`](https://github.com/cloudflare/workers-sdk/commit/a1450cadf0ce0319220a5fb3ebd4ee4cb4de5c96) Thanks [@penalosa](https://github.com/penalosa)! - Handle git commit failures gracefully
+
+  When creating the initial commit fails (for example, when GPG signing is cancelled or misconfigured), the setup process now continues instead of crashing. A message is displayed informing the user that the commit was skipped and they can commit manually later.
+
+- [#12339](https://github.com/cloudflare/workers-sdk/pull/12339) [`ff3bf9d`](https://github.com/cloudflare/workers-sdk/commit/ff3bf9db1dc9335a37303c7ae2c93c194c95a14e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency    | From  | To    |
+  | ------------- | ----- | ----- |
+  | create-analog | 2.2.2 | 2.2.3 |
+
+- [#12340](https://github.com/cloudflare/workers-sdk/pull/12340) [`1d12aef`](https://github.com/cloudflare/workers-sdk/commit/1d12aef47576ad70a2d77aba1d9ba69f4853571a) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.19.0 | 3.20.0 |
+
+- [#12341](https://github.com/cloudflare/workers-sdk/pull/12341) [`4a563bd`](https://github.com/cloudflare/workers-sdk/commit/4a563bd581b0199e60ed046741a799bcaad65c16) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From   | To     |
+  | ----------- | ------ | ------ |
+  | create-qwik | 1.18.0 | 1.19.0 |
+
+- [#12342](https://github.com/cloudflare/workers-sdk/pull/12342) [`6d79ade`](https://github.com/cloudflare/workers-sdk/commit/6d79ade70d11c0f1d3e796785d9c3b25b94c552b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | sv         | 0.11.3 | 0.11.4 |
+
+- [#12343](https://github.com/cloudflare/workers-sdk/pull/12343) [`10eb094`](https://github.com/cloudflare/workers-sdk/commit/10eb094cb21ac0ef2e8ccc677ac45eaa9554059e) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From    | To      |
+  | ----------- | ------- | ------- |
+  | create-vike | 0.0.566 | 0.0.572 |
+
+- [#12344](https://github.com/cloudflare/workers-sdk/pull/12344) [`8a01a1c`](https://github.com/cloudflare/workers-sdk/commit/8a01a1c20fea55852913ce07512cf738ecb8c7c4) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency  | From                   | To                     |
+  | ----------- | ---------------------- | ---------------------- |
+  | create-waku | 0.12.5-1.0.0-alpha.2-0 | 0.12.5-1.0.0-alpha.3-0 |
+
+- [#12291](https://github.com/cloudflare/workers-sdk/pull/12291) [`75062fe`](https://github.com/cloudflare/workers-sdk/commit/75062fe733f0a2af2b52417c424ab8a4aa7b7fe6) Thanks [@vicb](https://github.com/vicb)! - Simplify creating a new Astro app
+
+  The Astro CLI should not ask users whether they want to use git as create-cloudflare handles that already
+
 ## 2.62.5
 
 ### Patch Changes
