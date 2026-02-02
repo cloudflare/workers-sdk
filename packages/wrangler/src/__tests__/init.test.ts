@@ -78,6 +78,7 @@ describe("init", () => {
 				nodeOptions: {
 					stdio: ["inherit", "pipe", "pipe"],
 				},
+				throwOnError: true,
 			});
 		});
 
@@ -91,6 +92,7 @@ describe("init", () => {
 					nodeOptions: {
 						stdio: ["inherit", "pipe", "pipe"],
 					},
+					throwOnError: true,
 				}
 			);
 		});
@@ -105,7 +107,7 @@ describe("init", () => {
 				(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
 
 				// Update the mock to handle "yarn" for these tests
-				(execa as Mock).mockImplementation((command: string) => {
+				(x as Mock).mockImplementation((command: string) => {
 					if (command === "yarn" || command === "mockpm") {
 						return Promise.resolve();
 					}
@@ -117,15 +119,18 @@ describe("init", () => {
 				await runWrangler("init");
 
 				// No version specifier needed since C3 has auto-update behavior
-				expect(execa).toHaveBeenCalledWith("yarn", ["create", "cloudflare"], {
-					stdio: ["inherit", "pipe", "pipe"],
+				expect(x).toHaveBeenCalledWith("yarn", ["create", "cloudflare"], {
+					nodeOptions: {
+						stdio: ["inherit", "pipe", "pipe"],
+					},
+					throwOnError: true,
 				});
 			});
 
 			test("uses C3 command without version specifier when using --from-dash with yarn", async () => {
 				await runWrangler("init --from-dash my-worker");
 
-				expect(execa).toHaveBeenCalledWith(
+				expect(x).toHaveBeenCalledWith(
 					"yarn",
 					[
 						"create",
@@ -135,7 +140,10 @@ describe("init", () => {
 						"my-worker",
 					],
 					{
-						stdio: ["inherit", "pipe", "pipe"],
+						nodeOptions: {
+							stdio: ["inherit", "pipe", "pipe"],
+						},
+						throwOnError: true,
 					}
 				);
 			});
@@ -176,6 +184,7 @@ describe("init", () => {
 					nodeOptions: {
 						stdio: ["inherit", "pipe", "pipe"],
 					},
+					throwOnError: true,
 				});
 			});
 
@@ -189,6 +198,7 @@ describe("init", () => {
 						nodeOptions: {
 							stdio: ["inherit", "pipe", "pipe"],
 						},
+						throwOnError: true,
 					}
 				);
 			});
@@ -210,6 +220,7 @@ describe("init", () => {
 					},
 					stdio: ["inherit", "pipe", "pipe"],
 				},
+				throwOnError: true,
 			});
 		});
 	});
@@ -865,6 +876,7 @@ describe("init", () => {
 					nodeOptions: {
 						stdio: ["inherit", "pipe", "pipe"],
 					},
+					throwOnError: true,
 				}
 			);
 		});
