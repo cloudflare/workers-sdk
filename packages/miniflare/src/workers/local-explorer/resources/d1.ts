@@ -145,6 +145,13 @@ export async function rawD1Database(
 	const queries: D1SingleQuery[] =
 		"batch" in body && body.batch ? body.batch : [body as D1SingleQuery];
 
+	// Validate that each query has a sql property
+	for (const query of queries) {
+		if (!query.sql) {
+			return errorResponse(400, 10002, "Missing required 'sql' field in query");
+		}
+	}
+
 	const results = new Array<D1RawResultResponse>();
 
 	try {
