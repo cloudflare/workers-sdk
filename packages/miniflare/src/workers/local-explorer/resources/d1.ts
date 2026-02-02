@@ -43,9 +43,9 @@ function getD1Binding(env: Env, databaseId: string): D1Database | null {
 // API Handlers
 // ============================================================================
 
-const _listDatabasesQuerySchema =
-	zCloudflareD1ListDatabasesData.shape.query.unwrap();
-type ListDatabasesQuery = z.output<typeof _listDatabasesQuerySchema>;
+type ListDatabasesQuery = z.output<
+	ReturnType<typeof zCloudflareD1ListDatabasesData.shape.query.unwrap>
+>;
 
 /**
  * Lists all D1 databases available in the local environment.
@@ -107,8 +107,9 @@ export async function listD1Databases(
 	});
 }
 
-const _rawDatabaseBodySchema = zCloudflareD1RawDatabaseQueryData.shape.body;
-type RawDatabaseBody = z.output<typeof _rawDatabaseBodySchema>;
+type RawDatabaseBody = z.output<
+	typeof zCloudflareD1RawDatabaseQueryData.shape.body
+>;
 
 /**
  * Executes raw SQL queries against a D1 database.
