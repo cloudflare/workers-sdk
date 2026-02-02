@@ -6,6 +6,8 @@ import {
 	serverLogs,
 } from "../../__test-utils__";
 
+export const browserMode = true;
+
 test("returns the index.html page", async () => {
 	const content = await page.textContent("h1");
 	expect(content).toBe("HTML page");

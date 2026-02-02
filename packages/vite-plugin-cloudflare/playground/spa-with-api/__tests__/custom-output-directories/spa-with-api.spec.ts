@@ -4,6 +4,8 @@ import { describe, expect, test, vi } from "vitest";
 import { isBuild, rootDir, WAIT_FOR_OPTIONS } from "../../../__test-utils__";
 import "../base-tests";
 
+export const browserMode = true;
+
 describe.runIf(isBuild)("output directories", () => {
 	test("creates the correct output directories", async () => {
 		await vi.waitFor(() => {
