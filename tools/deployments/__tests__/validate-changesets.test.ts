@@ -20,6 +20,7 @@ describe("findPackageNames()", () => {
 	it("should return all the private packages which contain deploy scripts", () => {
 		expect(new Set(findPackages().keys())).toEqual(
 			new Set([
+				"@cloudflare/local-explorer-ui",
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli",
 				"@cloudflare/kv-asset-handler",

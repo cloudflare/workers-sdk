@@ -7,6 +7,7 @@
 		"build": "pnpm generate:api && vite build && prettier --write src/routeTree.gen.ts",
 		"check:lint": "eslint src --max-warnings=0",
 		"check:type": "tsc --build",
+		"deploy": "echo 'no deploy'",
 		"dev": "concurrently -n ui,worker -c blue,orange \"vite\" \"pnpm --filter @fixture/worker-with-resources start\"",
 		"dev:ui": "vite",
 		"generate:api": "openapi-ts && prettier --write src/api/generated",
