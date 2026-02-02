@@ -2,7 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import esbuild from "esbuild";
 import { Miniflare } from "miniflare";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { expect } from "vitest";
 import { useDispose } from "./miniflare";
 import { useTmp } from "./storage";
