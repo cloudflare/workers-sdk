@@ -974,6 +974,11 @@ export const WorkerdTests: Record<string, () => void> = {
 				setEnvironmentData: "function",
 				postMessageToThread: "function",
 				isInternalThread: "boolean",
+				// MessageChannel and MessagePort are native Web APIs always available in workerd
+				MessageChannel: "function",
+				MessagePort: "function",
+				BroadcastChannel: "function",
+				Worker: "function",
 			});
 
 			// These are values, not functions
@@ -995,24 +1000,6 @@ export const WorkerdTests: Record<string, () => void> = {
 				false,
 				"isInternalThread should be false"
 			);
-
-			if (isNative) {
-				// Native workerd: MessageChannel/MessagePort/BroadcastChannel/Worker
-				// are exported as globalThis references which may be undefined
-				// Worker and BroadcastChannel constructors throw when called
-				assertTypeOfProperties(target, {
-					Worker: "function",
-					BroadcastChannel: "function",
-				});
-			} else {
-				// unenv stub: exports all as function stubs
-				assertTypeOfProperties(target, {
-					BroadcastChannel: "function",
-					MessageChannel: "function",
-					MessagePort: "function",
-					Worker: "function",
-				});
-			}
 		}
 
 		// Test SHARE_ENV symbol value
@@ -1030,6 +1017,11 @@ export const WorkerdTests: Record<string, () => void> = {
 			"getEnvironmentData should return the set value"
 		);
 
+		// Test MessageChannel creates ports (both implementations support this)
+		const channel = new workerThreads.MessageChannel();
+		assert.ok(channel.port1, "MessageChannel should have port1");
+		assert.ok(channel.port2, "MessageChannel should have port2");
+
 		// Test behavioral differences between native workerd and unenv stub
 		if (isNative) {
 			// Native workerd: Worker and BroadcastChannel constructors throw
@@ -1043,11 +1035,6 @@ export const WorkerdTests: Record<string, () => void> = {
 				/ERR_METHOD_NOT_IMPLEMENTED/,
 				"BroadcastChannel constructor should throw ERR_METHOD_NOT_IMPLEMENTED"
 			);
-		} else {
-			// unenv stub: Test MessageChannel creates ports
-			const channel = new workerThreads.MessageChannel();
-			assert.ok(channel.port1, "MessageChannel should have port1");
-			assert.ok(channel.port2, "MessageChannel should have port2");
 		}
 	},
 };
