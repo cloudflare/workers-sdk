@@ -614,9 +614,9 @@ const localTestConfigs: TestConfig[] = [
 		},
 	],
 	// node:worker_threads (experimental - no default enable date)
-	// Note: expectRuntimeFlags not checked because the flag may not be exposed
-	// by all workerd versions yet
 	[
+		// TODO: add test for disabled by date (no date defined yet)
+		// TODO: add test for enabled by date (no date defined yet)
 		{
 			name: "worker_threads disabled by default",
 			compatibilityDate: "2024-09-23",
