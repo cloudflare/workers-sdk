@@ -696,6 +696,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			bindings,
 			migrations,
 			modules,
+			containers: config.containers,
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,

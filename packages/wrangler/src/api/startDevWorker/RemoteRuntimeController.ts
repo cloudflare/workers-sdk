@@ -154,6 +154,7 @@ export class RemoteRuntimeController extends RuntimeController {
 				bindings: props.bindings,
 				compatibilityDate: props.compatibilityDate,
 				compatibilityFlags: props.compatibilityFlags,
+				containers: props.containers,
 			});
 
 			// If we received a new `bundleComplete` event before we were able to
@@ -290,6 +291,7 @@ export class RemoteRuntimeController extends RuntimeController {
 			bindings: bindings,
 			compatibilityDate: config.compatibilityDate,
 			compatibilityFlags: config.compatibilityFlags,
+			containers: config.containers,
 			routes,
 			host: config.dev.origin?.hostname,
 			sendMetrics: config.sendMetrics,
