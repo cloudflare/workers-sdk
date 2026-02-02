@@ -1015,10 +1015,12 @@ export const WorkerdTests: Record<string, () => void> = {
 		);
 
 		// Test MessageChannel creates ports using native Web API
-		// (MessageChannel is a native Web API always available in workerd)
-		const channel = new MessageChannel();
-		assert.ok(channel.port1, "MessageChannel should have port1");
-		assert.ok(channel.port2, "MessageChannel should have port2");
+		// (MessageChannel is a native Web API available in workerd with recent compatibility dates)
+		if (typeof MessageChannel !== "undefined") {
+			const channel = new MessageChannel();
+			assert.ok(channel.port1, "MessageChannel should have port1");
+			assert.ok(channel.port2, "MessageChannel should have port2");
+		}
 
 		// Test behavioral differences between native workerd and unenv stub
 		if (isNative) {
