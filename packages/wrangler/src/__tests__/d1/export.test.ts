@@ -24,6 +24,16 @@ describe("export", () => {
 		);
 	});
 
+	it("should throw if output is a directory", async () => {
+		fs.mkdirSync("test-dir");
+
+		await expect(
+			runWrangler("d1 export db --output test-dir")
+		).rejects.toThrowError(
+			`Please specify a file path for --output, not a directory.`
+		);
+	});
+
 	it("should throw if local and remote are both set", async () => {
 		await expect(
 			runWrangler("d1 export db --local --remote --output test-local.sql")
