@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from "vitest";
+import { beforeEach, test } from "vitest";
 import { serveSinglePageApp } from "../src/index";
 import { mockGlobalScope, mockRequestScope } from "./mocks";
 
@@ -15,7 +15,9 @@ function testRequest(path: string) {
 	return request;
 }
 
-test("serveSinglePageApp returns root asset path when request path ends in .html", async () => {
+test("serveSinglePageApp returns root asset path when request path ends in .html", async ({
+	expect,
+}) => {
 	const path = "/foo/thing.html";
 	const request = testRequest(path);
 
@@ -25,7 +27,9 @@ test("serveSinglePageApp returns root asset path when request path ends in .html
 	expect(expected_request.url).toEqual(actual_request.url);
 });
 
-test("serveSinglePageApp returns root asset path when request path does not have extension", async () => {
+test("serveSinglePageApp returns root asset path when request path does not have extension", async ({
+	expect,
+}) => {
 	const path = "/foo/thing";
 	const request = testRequest(path);
 
@@ -35,7 +39,9 @@ test("serveSinglePageApp returns root asset path when request path does not have
 	expect(expected_request.url).toEqual(actual_request.url);
 });
 
-test("serveSinglePageApp returns requested asset when request path has non-html extension", async () => {
+test("serveSinglePageApp returns requested asset when request path has non-html extension", async ({
+	expect,
+}) => {
 	const path = "/foo/thing.js";
 	const request = testRequest(path);
 

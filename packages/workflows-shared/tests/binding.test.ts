@@ -3,7 +3,7 @@ import {
 	env,
 	runInDurableObject,
 } from "cloudflare:test";
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import { WorkflowBinding } from "../src/binding";
 import type { Engine } from "../src/engine";
 import type { ProvidedEnv } from "cloudflare:test";
@@ -34,7 +34,9 @@ async function setWorkflowEntrypoint(
 }
 
 describe("WorkflowBinding", () => {
-	it("should not call dispose when sending an event to an instance", async () => {
+	it("should not call dispose when sending an event to an instance", async ({
+		expect,
+	}) => {
 		const instanceId = "test-instance-with-event";
 		const ctx = createExecutionContext();
 

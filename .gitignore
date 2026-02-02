@@ -90,6 +90,9 @@ web_modules/
 # Optional eslint cache
 .eslintcache
 
+# Optional prettier cache
+.prettiercache
+
 # Optional stylelint cache
 .stylelintcache
 

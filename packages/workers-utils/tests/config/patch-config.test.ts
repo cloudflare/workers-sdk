@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { experimental_patchConfig } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { describe, expect, it } from "vitest";
 import { runInTempDir, writeWranglerConfig } from "../../src/test-helpers";
 import type { RawConfig } from "@cloudflare/workers-utils";

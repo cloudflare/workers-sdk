@@ -1,3 +1,4 @@
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { expect, test } from "vitest";
 import { parseRedirects } from "../configuration/parseRedirects";
 

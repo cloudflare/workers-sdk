@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { Unstable_DevWorker } from "wrangler";

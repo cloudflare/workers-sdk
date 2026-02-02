@@ -29,7 +29,7 @@
 	"scripts": {
 		"build": "node -r esbuild-register scripts/build.ts",
 		"dev:codemod": "node -r esbuild-register scripts/codemodDev.ts",
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"test:e2e": "vitest run --config ./vitest-e2e.config.mts",
 		"test:unit": "vitest run --config ./vitest.config.mts",

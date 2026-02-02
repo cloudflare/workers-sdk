@@ -1,7 +1,7 @@
 import { Request } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 
-test("Request: clone: returns correctly typed value", async () => {
+test("Request: clone: returns correctly typed value", async ({ expect }) => {
 	const request = new Request("http://localhost/", {
 		method: "POST",
 		body: "text",

@@ -1,7 +1,7 @@
 import { mergeWorkerOptions } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 
-test("merges options", () => {
+test("merges options", ({ expect }) => {
 	// Check options in `a` but not `b`
 	// Check options in `b` but not `a`
 	const a = { compatibilityDate: "2024-01-01" };

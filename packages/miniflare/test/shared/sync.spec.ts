@@ -1,8 +1,10 @@
 import { setTimeout } from "node:timers/promises";
 import { DeferredPromise, Mutex, WaitGroup } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 
-test("DeferredPromise: waits for resolve/reject callbacks", async () => {
+test("DeferredPromise: waits for resolve/reject callbacks", async ({
+	expect,
+}) => {
 	// Check resolves with regular value
 	let promise = new DeferredPromise<number>();
 	promise.resolve(42);
@@ -19,7 +21,7 @@ test("DeferredPromise: waits for resolve/reject callbacks", async () => {
 	await expect(promise).rejects.toThrow(new Error("🤯"));
 });
 
-test("Mutex: runs closures exclusively", async () => {
+test("Mutex: runs closures exclusively", async ({ expect }) => {
 	const mutex = new Mutex();
 	const events: number[] = [];
 	await Promise.all([
@@ -34,13 +36,13 @@ test("Mutex: runs closures exclusively", async () => {
 	]);
 	expect(events).toEqual(events[0] === 1 ? [1, 2, 3] : [3, 1, 2]);
 });
-test("Mutex: lock can be acquired synchronously", () => {
+test("Mutex: lock can be acquired synchronously", ({ expect }) => {
 	const mutex = new Mutex();
 	let acquired = false;
 	mutex.runWith(() => (acquired = true));
 	expect(acquired).toBe(true);
 });
-test("Mutex: maintains separate drain queue", async () => {
+test("Mutex: maintains separate drain queue", async ({ expect }) => {
 	const mutex = new Mutex();
 	const deferred1 = new DeferredPromise<void>();
 	void mutex.runWith(() => deferred1);
@@ -75,7 +77,7 @@ test("Mutex: maintains separate drain queue", async () => {
 	expect(drained).toBe(true);
 });
 
-test("WaitGroup: waits for all tasks to complete", async () => {
+test("WaitGroup: waits for all tasks to complete", async ({ expect }) => {
 	const group = new WaitGroup();
 
 	// Check doesn't wait if no tasks added
