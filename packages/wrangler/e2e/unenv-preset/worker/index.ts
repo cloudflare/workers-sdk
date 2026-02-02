@@ -881,9 +881,6 @@ export const WorkerdTests: Record<string, () => void> = {
 				setEnvironmentData: "function",
 				postMessageToThread: "function",
 				isInternalThread: "boolean",
-				// MessageChannel and MessagePort are native Web APIs always available in workerd
-				MessageChannel: "function",
-				MessagePort: "function",
 				BroadcastChannel: "function",
 				Worker: "function",
 			});
@@ -924,8 +921,9 @@ export const WorkerdTests: Record<string, () => void> = {
 			"getEnvironmentData should return the set value"
 		);
 
-		// Test MessageChannel creates ports (both implementations support this)
-		const channel = new workerThreads.MessageChannel();
+		// Test MessageChannel creates ports using native Web API
+		// (MessageChannel is a native Web API always available in workerd)
+		const channel = new MessageChannel();
 		assert.ok(channel.port1, "MessageChannel should have port1");
 		assert.ok(channel.port2, "MessageChannel should have port2");
 
