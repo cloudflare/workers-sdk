@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Miniflare } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { FIXTURES_PATH, useDispose, useTmp } from "../../test-shared";
 // Import suite tests - this registers the tests with vitest
 import "./suite";
@@ -11,7 +11,7 @@ import { setupTest } from "./test";
 // from the fixture, and no prefix on the binding name
 setupTest("DB", "worker.mjs", (mf) => mf.getD1Database("DB"));
 
-test("migrates database to new location", async () => {
+test("migrates database to new location", async ({ expect }) => {
 	// Copy legacy data to temporary directory
 	const tmp = await useTmp();
 	const persistFixture = path.join(FIXTURES_PATH, "migrations", "3.20230821.0");
