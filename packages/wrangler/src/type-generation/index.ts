@@ -28,6 +28,7 @@ import {
 	TOP_LEVEL_ENV_NAME,
 	validateEnvInterfaceNames,
 } from "./helpers";
+import { fetchPipelineTypes } from "./pipeline-schema";
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Entry } from "../deployment-bundle/entry";
@@ -442,6 +443,7 @@ async function generateSimpleEnvTypes(
 	const collectedUnsafeBindings = collectAllUnsafeBindings(collectionArgs);
 	const collectedVars = collectAllVars(collectionArgs);
 	const collectedWorkflows = collectAllWorkflows(collectionArgs);
+	const collectedPipelines = collectAllPipelines(collectionArgs);
 
 	const entrypointFormat = entrypoint?.format ?? "modules";
 	const fullOutputPath = resolve(outputPath);
@@ -456,6 +458,16 @@ async function generateSimpleEnvTypes(
 			key: constructTypeKey(binding.name),
 			type: binding.type,
 		});
+	}
+
+	if (collectedPipelines.length > 0) {
+		const pipelineTypes = await fetchPipelineTypes(config, collectedPipelines);
+		for (const pipelineType of pipelineTypes) {
+			envTypeStructure.push({
+				key: constructTypeKey(pipelineType.binding),
+				type: pipelineType.type,
+			});
+		}
 	}
 
 	if (collectedVars) {
@@ -733,6 +745,7 @@ async function generatePerEnvironmentTypes(
 	const servicesPerEnv = collectServicesPerEnvironment(collectionArgs);
 	const workflowsPerEnv = collectWorkflowsPerEnvironment(collectionArgs);
 	const unsafePerEnv = collectUnsafeBindingsPerEnvironment(collectionArgs);
+	const pipelinesPerEnv = collectPipelinesPerEnvironment(collectionArgs);
 
 	// Track all binding names and their types across all environments for aggregation
 	const aggregatedBindings = new Map<
@@ -921,6 +934,18 @@ async function generatePerEnvironmentTypes(
 			trackBinding(unsafe.name, type, envName);
 		}
 
+		const envPipelines = pipelinesPerEnv.get(envName) ?? [];
+		if (envPipelines.length > 0) {
+			const pipelineTypes = await fetchPipelineTypes(config, envPipelines);
+			for (const pipelineType of pipelineTypes) {
+				envBindings.push({
+					key: constructTypeKey(pipelineType.binding),
+					value: pipelineType.type,
+				});
+				trackBinding(pipelineType.binding, pipelineType.type, envName);
+			}
+		}
+
 		if (envBindings.length > 0) {
 			const bindingLines = envBindings
 				.map(({ key, value }) => `\t\t${key}: ${value};`)
@@ -974,6 +999,14 @@ async function generatePerEnvironmentTypes(
 	for (const unsafe of topLevelUnsafe) {
 		const type = unsafe.type === "ratelimit" ? "RateLimit" : "any";
 		trackBinding(unsafe.name, type, TOP_LEVEL_ENV_NAME);
+	}
+
+	const topLevelPipelines = pipelinesPerEnv.get(TOP_LEVEL_ENV_NAME) ?? [];
+	if (topLevelPipelines.length > 0) {
+		const pipelineTypes = await fetchPipelineTypes(config, topLevelPipelines);
+		for (const pipelineType of pipelineTypes) {
+			trackBinding(pipelineType.binding, pipelineType.type, TOP_LEVEL_ENV_NAME);
+		}
 	}
 
 	const aggregatedEnvBindings = new Array<{
@@ -1702,25 +1735,7 @@ function collectCoreBindings(
 			addBinding(vpcService.binding, "Fetcher", "vpc_services", envName);
 		}
 
-		for (const [index, pipeline] of (env.pipelines ?? []).entries()) {
-			if (!pipeline.binding) {
-				throwMissingBindingError({
-					binding: pipeline,
-					bindingType: "pipelines",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-					index,
-				});
-			}
-
-			addBinding(
-				pipeline.binding,
-				'import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>',
-				"pipelines",
-				envName
-			);
-		}
+		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
 			addBinding("LOGFWDR_SCHEMA", "any", "logfwdr", envName);
@@ -2105,6 +2120,76 @@ function collectAllUnsafeBindings(
 	}
 
 	return Array.from(unsafeMap.values());
+}
+
+/**
+ * Collects pipeline bindings across environments.
+ *
+ * This is separate from collectCoreBindings because pipelines need async
+ * schema fetching for typed bindings.
+ *
+ * @param args - All the CLI arguments passed to the `types` command
+ *
+ * @returns An array of collected pipeline bindings with their names and pipeline IDs.
+ */
+function collectAllPipelines(
+	args: Partial<(typeof typesCommand)["args"]>
+): Array<{
+	binding: string;
+	pipeline: string;
+}> {
+	const pipelinesMap = new Map<
+		string,
+		{
+			binding: string;
+			pipeline: string;
+		}
+	>();
+
+	function collectEnvironmentPipelines(
+		env: RawEnvironment | undefined,
+		envName: string
+	) {
+		if (!env?.pipelines) {
+			return;
+		}
+
+		for (const [index, pipeline] of env.pipelines.entries()) {
+			if (!pipeline.binding) {
+				throwMissingBindingError({
+					binding: pipeline,
+					bindingType: "pipelines",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			if (pipelinesMap.has(pipeline.binding)) {
+				continue;
+			}
+
+			pipelinesMap.set(pipeline.binding, {
+				binding: pipeline.binding,
+				pipeline: pipeline.pipeline,
+			});
+		}
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	if (args.env) {
+		const envConfig = getEnvConfig(args.env, rawConfig);
+		collectEnvironmentPipelines(envConfig, args.env);
+	} else {
+		collectEnvironmentPipelines(rawConfig, TOP_LEVEL_ENV_NAME);
+		for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+			collectEnvironmentPipelines(env, envName);
+		}
+	}
+
+	return Array.from(pipelinesMap.values());
 }
 
 const logHorizontalRule = () => {
@@ -2496,24 +2581,7 @@ function collectCoreBindingsPerEnvironment(
 			});
 		}
 
-		for (const [index, pipeline] of (env.pipelines ?? []).entries()) {
-			if (!pipeline.binding) {
-				throwMissingBindingError({
-					binding: pipeline,
-					bindingType: "pipelines",
-					configPath: args.config,
-					envName,
-					fieldName: "binding",
-					index,
-				});
-			}
-
-			bindings.push({
-				bindingCategory: "pipelines",
-				name: pipeline.binding,
-				type: 'import("cloudflare:pipelines").Pipeline<import("cloudflare:pipelines").PipelineRecord>',
-			});
-		}
+		// Pipelines handled separately for async schema fetching
 
 		if (env.logfwdr?.bindings?.length) {
 			bindings.push({
@@ -2975,6 +3043,90 @@ function collectUnsafeBindingsPerEnvironment(
 		const envUnsafe = collectEnvironmentUnsafe(env, envName);
 		if (envUnsafe.length > 0) {
 			result.set(envName, envUnsafe);
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Collects pipeline bindings per environment.
+ *
+ * This is separate from collectCoreBindingsPerEnvironment because pipelines
+ * need async schema fetching for typed bindings.
+ *
+ * @param args - CLI arguments passed to the `types` command
+ *
+ * @returns A map of environment name to array of pipeline bindings
+ */
+function collectPipelinesPerEnvironment(
+	args: Partial<(typeof typesCommand)["args"]>
+): Map<
+	string,
+	Array<{
+		binding: string;
+		pipeline: string;
+	}>
+> {
+	const result = new Map<
+		string,
+		Array<{
+			binding: string;
+			pipeline: string;
+		}>
+	>();
+
+	function collectEnvironmentPipelines(
+		env: RawEnvironment | undefined,
+		envName: string
+	): Array<{
+		binding: string;
+		pipeline: string;
+	}> {
+		const pipelines = new Array<{
+			binding: string;
+			pipeline: string;
+		}>();
+
+		if (!env?.pipelines) {
+			return pipelines;
+		}
+
+		for (const [index, pipeline] of env.pipelines.entries()) {
+			if (!pipeline.binding) {
+				throwMissingBindingError({
+					binding: pipeline,
+					bindingType: "pipelines",
+					configPath: args.config,
+					envName,
+					fieldName: "binding",
+					index,
+				});
+			}
+
+			pipelines.push({
+				binding: pipeline.binding,
+				pipeline: pipeline.pipeline,
+			});
+		}
+
+		return pipelines;
+	}
+
+	const { rawConfig } = experimental_readRawConfig(args);
+
+	const topLevelPipelines = collectEnvironmentPipelines(
+		rawConfig,
+		TOP_LEVEL_ENV_NAME
+	);
+	if (topLevelPipelines.length > 0) {
+		result.set(TOP_LEVEL_ENV_NAME, topLevelPipelines);
+	}
+
+	for (const [envName, env] of Object.entries(rawConfig.env ?? {})) {
+		const envPipelines = collectEnvironmentPipelines(env, envName);
+		if (envPipelines.length > 0) {
+			result.set(envName, envPipelines);
 		}
 	}
 

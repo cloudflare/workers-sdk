@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { http, HttpResponse } from "msw";
 import {
 	afterAll,
 	beforeAll,
@@ -25,7 +26,9 @@ import {
 } from "../type-generation/helpers";
 import * as generateRuntime from "../type-generation/runtime";
 import { dedent } from "../utils/dedent";
+import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { createFetchResult, msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import type { EnvironmentNonInheritable } from "@cloudflare/workers-utils";
@@ -721,7 +724,6 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -729,6 +731,7 @@ describe("generate types", () => {
 					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
+					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 					SOMETHING: \\"asdasdfasdf\\";
 					ANOTHER: \\"thing\\";
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
@@ -831,7 +834,6 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -839,6 +841,7 @@ describe("generate types", () => {
 					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
+					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 					SOMETHING: \\"asdasdfasdf\\";
 					ANOTHER: \\"thing\\";
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
@@ -1006,7 +1009,6 @@ describe("generate types", () => {
 					RATE_LIMITER: RateLimit;
 					WORKER_LOADER_BINDING: WorkerLoader;
 					VPC_SERVICE_BINDING: Fetcher;
-					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 					LOGFWDR_SCHEMA: any;
 					BROWSER_BINDING: Fetcher;
 					AI_BINDING: Ai;
@@ -1014,6 +1016,7 @@ describe("generate types", () => {
 					MEDIA_BINDING: MediaBinding;
 					VERSION_METADATA_BINDING: WorkerVersionMetadata;
 					ASSETS_BINDING: Fetcher;
+					PIPELINE: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
 					SOMETHING: \\"asdasdfasdf\\";
 					ANOTHER: \\"thing\\";
 					OBJECT_VAR: {\\"enterprise\\":\\"1701-D\\",\\"activeDuty\\":true,\\"captain\\":\\"Picard\\"};
@@ -2693,6 +2696,393 @@ describe("generate types", () => {
 				interface Env {
 					VPC_API: Fetcher;
 					VPC_DATABASE: Fetcher;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+});
+
+describe("pipeline schema type generation", () => {
+	const std = mockConsoleMethods();
+	const originalColumns = process.stdout.columns;
+	runInTempDir();
+	mockAccountId();
+	mockApiToken();
+
+	beforeAll(() => {
+		process.stdout.columns = 60;
+	});
+
+	afterAll(() => {
+		process.stdout.columns = originalColumns;
+	});
+
+	beforeEach(() => {
+		vi.spyOn(generateRuntime, "generateRuntimeTypes").mockImplementation(
+			async () => ({
+				runtimeHeader: "// Runtime types generated with workerd@",
+				runtimeTypes: "<runtime types go here>",
+			})
+		);
+	});
+
+	it("should generate typed pipeline bindings when API returns schema", async () => {
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/pipelines/v1/streams/:streamId",
+				({ params }) => {
+					const { streamId } = params;
+					if (streamId === "analytics-stream-id") {
+						return HttpResponse.json(
+							createFetchResult({
+								id: "analytics-stream-id",
+								name: "analytics_stream",
+								version: 1,
+								created_at: "2026-02-02T02:57:23.583Z",
+								modified_at: "2026-02-02T02:57:23.583Z",
+								format: { type: "json" },
+								schema: {
+									fields: [
+										{
+											name: "session_duration_ms",
+											type: "int64",
+											required: true,
+										},
+										{
+											name: "message_count",
+											type: "int32",
+											required: true,
+										},
+										{
+											name: "had_cf_auth",
+											type: "bool",
+											required: true,
+										},
+										{
+											name: "workflow_step_types",
+											type: "list",
+											items: { type: "string" },
+											required: false,
+										},
+										{
+											name: "timestamp",
+											type: "timestamp",
+											required: true,
+										},
+									],
+								},
+								http: { enabled: false, authentication: false, cors: {} },
+								worker_binding: { enabled: true },
+							})
+						);
+					}
+					return HttpResponse.json(
+						{ success: false, errors: [], messages: [], result: null },
+						{ status: 404 }
+					);
+				}
+			)
+		);
+
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				name: "test-worker",
+				main: "./index.ts",
+				compatibility_date: "2024-01-01",
+				pipelines: [{ binding: "ANALYTICS", pipeline: "analytics-stream-id" }],
+			})
+		);
+		fs.writeFileSync("./index.ts", "export default { fetch() {} }");
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import(\\"./index\\");
+				}
+				interface Env {
+					ANALYTICS: import(\\"cloudflare:pipelines\\").Pipeline<{ session_duration_ms: number; message_count: number; had_cf_auth: boolean; workflow_step_types?: Array<string>; timestamp: string | number }>;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should fall back to generic type when API returns unstructured stream", async () => {
+		msw.use(
+			http.get("*/accounts/:accountId/pipelines/v1/streams/:streamId", () => {
+				return HttpResponse.json(
+					createFetchResult({
+						id: "unstructured-stream-id",
+						name: "unstructured_stream",
+						version: 1,
+						format: { type: "json", unstructured: true },
+						schema: null,
+						http: { enabled: false, authentication: false },
+						worker_binding: { enabled: true },
+					})
+				);
+			})
+		);
+
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				name: "test-worker",
+				main: "./index.ts",
+				compatibility_date: "2024-01-01",
+				pipelines: [{ binding: "LOGS", pipeline: "unstructured-stream-id" }],
+			})
+		);
+		fs.writeFileSync("./index.ts", "export default { fetch() {} }");
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import(\\"./index\\");
+				}
+				interface Env {
+					LOGS: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should fall back to generic type when API call fails", async () => {
+		msw.use(
+			http.get("*/accounts/:accountId/pipelines/v1/streams/:streamId", () => {
+				return HttpResponse.json(
+					{
+						success: false,
+						errors: [{ message: "Stream not found" }],
+						messages: [],
+						result: null,
+					},
+					{ status: 404 }
+				);
+			})
+		);
+
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				name: "test-worker",
+				main: "./index.ts",
+				compatibility_date: "2024-01-01",
+				pipelines: [{ binding: "MISSING", pipeline: "non-existent-stream" }],
+			})
+		);
+		fs.writeFileSync("./index.ts", "export default { fetch() {} }");
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import(\\"./index\\");
+				}
+				interface Env {
+					MISSING: import(\\"cloudflare:pipelines\\").Pipeline<import(\\"cloudflare:pipelines\\").PipelineRecord>;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should handle multiple pipelines with different schemas", async () => {
+		msw.use(
+			http.get(
+				"*/accounts/:accountId/pipelines/v1/streams/:streamId",
+				({ params }) => {
+					const { streamId } = params;
+					if (streamId === "events-stream") {
+						return HttpResponse.json(
+							createFetchResult({
+								id: "events-stream",
+								name: "events",
+								version: 1,
+								schema: {
+									fields: [
+										{ name: "event_type", type: "string", required: true },
+										{ name: "payload", type: "json", required: false },
+									],
+								},
+								http: { enabled: false, authentication: false },
+								worker_binding: { enabled: true },
+							})
+						);
+					}
+					if (streamId === "metrics-stream") {
+						return HttpResponse.json(
+							createFetchResult({
+								id: "metrics-stream",
+								name: "metrics",
+								version: 1,
+								schema: {
+									fields: [
+										{ name: "metric_name", type: "string", required: true },
+										{ name: "value", type: "float64", required: true },
+										{
+											name: "tags",
+											type: "list",
+											items: { type: "string" },
+											required: false,
+										},
+									],
+								},
+								http: { enabled: false, authentication: false },
+								worker_binding: { enabled: true },
+							})
+						);
+					}
+					return HttpResponse.json(
+						{ success: false, errors: [], messages: [], result: null },
+						{ status: 404 }
+					);
+				}
+			)
+		);
+
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				name: "test-worker",
+				main: "./index.ts",
+				compatibility_date: "2024-01-01",
+				pipelines: [
+					{ binding: "EVENTS", pipeline: "events-stream" },
+					{ binding: "METRICS", pipeline: "metrics-stream" },
+				],
+			})
+		);
+		fs.writeFileSync("./index.ts", "export default { fetch() {} }");
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import(\\"./index\\");
+				}
+				interface Env {
+					EVENTS: import(\\"cloudflare:pipelines\\").Pipeline<{ event_type: string; payload?: Record<string, unknown> }>;
+					METRICS: import(\\"cloudflare:pipelines\\").Pipeline<{ metric_name: string; value: number; tags?: Array<string> }>;
+				}
+			}
+			interface Env extends Cloudflare.Env {}
+
+			────────────────────────────────────────────────────────────
+			✨ Types written to worker-configuration.d.ts
+
+			📣 Remember to rerun 'wrangler types' after you change your wrangler.json file.
+			"
+		`);
+	});
+
+	it("should handle nested struct types in schema", async () => {
+		msw.use(
+			http.get("*/accounts/:accountId/pipelines/v1/streams/:streamId", () => {
+				return HttpResponse.json(
+					createFetchResult({
+						id: "nested-stream",
+						name: "nested",
+						version: 1,
+						schema: {
+							fields: [
+								{ name: "user_id", type: "string", required: true },
+								{
+									name: "metadata",
+									type: "struct",
+									required: false,
+									fields: [
+										{ name: "source", type: "string", required: false },
+										{ name: "priority", type: "int32", required: true },
+									],
+								},
+							],
+						},
+						http: { enabled: false, authentication: false },
+						worker_binding: { enabled: true },
+					})
+				);
+			})
+		);
+
+		fs.writeFileSync(
+			"./wrangler.json",
+			JSON.stringify({
+				name: "test-worker",
+				main: "./index.ts",
+				compatibility_date: "2024-01-01",
+				pipelines: [{ binding: "NESTED", pipeline: "nested-stream" }],
+			})
+		);
+		fs.writeFileSync("./index.ts", "export default { fetch() {} }");
+
+		await runWrangler("types --include-runtime=false");
+
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Generating project types...
+
+			declare namespace Cloudflare {
+				interface GlobalProps {
+					mainModule: typeof import(\\"./index\\");
+				}
+				interface Env {
+					NESTED: import(\\"cloudflare:pipelines\\").Pipeline<{ user_id: string; metadata?: { source?: string; priority: number } }>;
 				}
 			}
 			interface Env extends Cloudflare.Env {}
