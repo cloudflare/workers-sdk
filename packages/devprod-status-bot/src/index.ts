@@ -79,8 +79,15 @@ async function getRequiredStatusChecks(
 			console.error("Failed to fetch required status checks:", response.status);
 			return { success: false, error: errorText };
 		}
-		const data = await response.json<{ contexts: string[] }>();
-		return { success: true, checks: data.contexts || [] };
+		const data = await response.json<{
+			// `contexts` is deprecated in favor of `checks` array
+			contexts?: string[];
+			checks?: { context: string; app_id?: number | null }[];
+		}>();
+		return {
+			success: true,
+			checks: data.checks?.map((c) => c.context) || data.contexts || [],
+		};
 	} catch (error) {
 		console.error("Error fetching required status checks:", error);
 		return { success: false, error: String(error) };
