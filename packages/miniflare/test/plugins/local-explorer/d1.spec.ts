@@ -46,7 +46,9 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 	});
 
 	describe("GET /d1/database", () => {
-		it("lists available D1 databases with default pagination", async ({ expect }) => {
+		it("lists available D1 databases with default pagination", async ({
+			expect,
+		}) => {
 			const response = await mf.dispatchFetch(`${BASE_URL}/d1/database`);
 
 			expect(response.status).toBe(200);
