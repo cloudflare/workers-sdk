@@ -1,5 +1,5 @@
 import { env } from "cloudflare:test";
-import { beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { beforeAll, beforeEach, describe, test } from "vitest";
 
 // Illustrative example for `isolatedStorage` option
 
@@ -17,13 +17,13 @@ async function append(item: string) {
 beforeAll(() => append("all"));
 beforeEach(() => append("each"));
 
-test("one", async () => {
+test("one", async ({ expect }) => {
 	// Each test gets its own storage environment copied from the parent
 	await append("one");
 	expect(await get()).toStrictEqual(["all", "each", "one"]);
 });
 // `append("each")` and `append("one")` undone
-test("two", async () => {
+test("two", async ({ expect }) => {
 	await append("two");
 	expect(await get()).toStrictEqual(["all", "each", "two"]);
 });
@@ -33,7 +33,7 @@ describe("describe", async () => {
 	beforeAll(() => append("describe all"));
 	beforeEach(() => append("describe each"));
 
-	test("three", async () => {
+	test("three", async ({ expect }) => {
 		await append("three");
 		expect(await get()).toStrictEqual([
 			// All `beforeAll()`s run before `beforeEach()`s
@@ -45,7 +45,7 @@ describe("describe", async () => {
 		]);
 	});
 	// `append("each")`, `append("describe each")` and `append("three")` undone
-	test("four", async () => {
+	test("four", async ({ expect }) => {
 		await append("four");
 		expect(await get()).toStrictEqual([
 			"all",

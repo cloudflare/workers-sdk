@@ -6,6 +6,7 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@fixture/shared": "workspace:*",
 		"undici": "catalog:default",
 		"vitest": "catalog:default"

@@ -1,7 +1,7 @@
 import { SELF } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { it } from "vitest";
 
-it("enables SQL API with migrations", async () => {
+it("enables SQL API with migrations", async ({ expect }) => {
 	const response = await SELF.fetch("https://example.com/sql");
 	expect(await response.text()).toBe("4096");
 });

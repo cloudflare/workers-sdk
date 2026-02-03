@@ -2,7 +2,7 @@ import Worker from "@cloudflare/workers-shared/asset-worker";
 import { normalizeConfiguration } from "@cloudflare/workers-shared/asset-worker/src/configuration";
 import { getAssetWithMetadataFromKV } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 import { SELF } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it, Mock, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import type { AssetMetadata } from "@cloudflare/workers-shared/asset-worker/src/utils/kv";
 
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
@@ -50,7 +50,7 @@ describe("[Asset Worker] `test slash normalization`", () => {
 		}));
 	});
 
-	it("returns 200 leading encoded double slash", async () => {
+	it("returns 200 leading encoded double slash", async ({ expect }) => {
 		const files = ["/blog/index.html"];
 		const requestPath = "/%2fblog/index.html";
 
@@ -60,7 +60,7 @@ describe("[Asset Worker] `test slash normalization`", () => {
 		expect(response.status).toBe(200);
 	});
 
-	it("returns 200 leading non encoded double slash", async () => {
+	it("returns 200 leading non encoded double slash", async ({ expect }) => {
 		const files = ["/blog/index.html"];
 		const requestPath = "//blog/index.html";
 
@@ -70,7 +70,7 @@ describe("[Asset Worker] `test slash normalization`", () => {
 		expect(response.status).toBe(200);
 	});
 
-	it("returns 404 for non matched url", async () => {
+	it("returns 404 for non matched url", async ({ expect }) => {
 		const files = ["/blog/index.html"];
 		const requestPath = "/%2fexample.com/";
 

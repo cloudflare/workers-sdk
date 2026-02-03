@@ -1,6 +1,6 @@
 import { resolve } from "node:path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerPagesDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Pages Functions", async () => {
@@ -18,13 +18,13 @@ describe("Pages Functions", async () => {
 		await stop?.();
 	});
 
-	it("renders static pages", async () => {
+	it("renders static pages", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/`);
 		const text = await response.text();
 		expect(text).toContain("Hello, world!");
 	});
 
-	it("doesn't escape out of the build output directory", async () => {
+	it("doesn't escape out of the build output directory", async ({ expect }) => {
 		let response = await fetch(`http://${ip}:${port}/..%2fpackage.json`);
 		let text = await response.text();
 		expect(text).toContain("Hello, world!");
@@ -36,7 +36,7 @@ describe("Pages Functions", async () => {
 		expect(text).toContain("Hello, world!");
 	});
 
-	it("doesn't redirect to protocol-less URLs", async () => {
+	it("doesn't redirect to protocol-less URLs", async ({ expect }) => {
 		{
 			const response = await fetch(
 				`http://${ip}:${port}/%2Fwww.example.com/index/`,
