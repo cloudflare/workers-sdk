@@ -29,7 +29,7 @@ async function getBotMessage(ai: Ai, prompt: string) {
 }
 
 async function isWranglerTeamMember(
-	pat: string,
+	apiToken: string,
 	username: string
 ): Promise<boolean> {
 	try {
@@ -38,7 +38,7 @@ async function isWranglerTeamMember(
 			{
 				headers: {
 					"User-Agent": "Cloudflare ANT Status bot",
-					Authorization: `Bearer ${pat}`,
+					Authorization: `Bearer ${apiToken}`,
 					Accept: "application/vnd.github+json",
 				},
 			}
@@ -57,7 +57,7 @@ type RequiredStatusChecksResult =
 	| { success: false; error: string };
 
 async function getRequiredStatusChecks(
-	pat: string,
+	apiToken: string,
 	owner: string,
 	repo: string,
 	branch: string
@@ -68,7 +68,7 @@ async function getRequiredStatusChecks(
 			{
 				headers: {
 					"User-Agent": "Cloudflare ANT Status bot",
-					Authorization: `Bearer ${pat}`,
+					Authorization: `Bearer ${apiToken}`,
 					Accept: "application/vnd.github+json",
 				},
 			}
@@ -94,7 +94,7 @@ async function getRequiredStatusChecks(
 
 async function checkForSecurityIssue(
 	ai: Ai,
-	pat: string,
+	apiToken: string,
 	message: Schema
 ): Promise<null | {
 	type: "issue" | "pr";
@@ -106,7 +106,7 @@ async function checkForSecurityIssue(
 		return null;
 	}
 
-	if (await isWranglerTeamMember(pat, result.event.issue.user.login)) {
+	if (await isWranglerTeamMember(apiToken, result.event.issue.user.login)) {
 		return null;
 	}
 
@@ -196,11 +196,11 @@ type ProjectGQLResponse = {
 		};
 	};
 };
-async function getProjectId(pat: string) {
+async function getProjectId(apiToken: string) {
 	const data = await fetch("https://api.github.com/graphql", {
 		headers: {
 			"User-Agent": "Cloudflare ANT Status bot",
-			Authorization: `Bearer ${pat}`,
+			Authorization: `Bearer ${apiToken}`,
 		},
 		method: "POST",
 		body: JSON.stringify({
@@ -219,11 +219,11 @@ type PRGQLResponse = {
 		};
 	};
 };
-async function getPRId(pat: string, repo: string, number: string) {
+async function getPRId(apiToken: string, repo: string, number: string) {
 	const data = await fetch("https://api.github.com/graphql", {
 		headers: {
 			"User-Agent": "Cloudflare ANT Status bot",
-			Authorization: `Bearer ${pat}`,
+			Authorization: `Bearer ${apiToken}`,
 		},
 		method: "POST",
 		body: JSON.stringify({
@@ -240,13 +240,13 @@ async function getPRId(pat: string, repo: string, number: string) {
 	return data.data.repository.pullRequest.id;
 }
 
-async function addPRToProject(pat: string, repo: string, number: string) {
-	const projectId = await getProjectId(pat);
-	const prId = await getPRId(pat, repo, number);
+async function addPRToProject(apiToken: string, repo: string, number: string) {
+	const projectId = await getProjectId(apiToken);
+	const prId = await getPRId(apiToken, repo, number);
 	return await fetch("https://api.github.com/graphql", {
 		headers: {
 			"User-Agent": "Cloudflare ANT Status bot",
-			Authorization: `Bearer ${pat}`,
+			Authorization: `Bearer ${apiToken}`,
 		},
 		method: "POST",
 		body: JSON.stringify({
