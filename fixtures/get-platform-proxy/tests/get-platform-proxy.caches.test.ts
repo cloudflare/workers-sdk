@@ -11,7 +11,18 @@ describe("getPlatformProxy - caches", () => {
 					cacheType === "default"
 						? caches.default
 						: await caches.open("my-cache");
-				testNoOpCache(cache);
+
+				let match = await cache.match("http://0.0.0.0/test");
+				expect(match).toBeUndefined();
+
+				const req = new Request("http://0.0.0.0/test");
+				await cache.put(req, new Response("test"));
+
+				const resp = await cache.match(req);
+				expect(resp).toBeUndefined();
+
+				const deleted = await cache.delete(req);
+				expect(deleted).toBe(false);
 			} finally {
 				await dispose();
 			}
@@ -58,24 +69,3 @@ describe("getPlatformProxy - caches", () => {
 		}
 	});
 });
-
-async function testNoOpCache(
-	cache: Awaited<ReturnType<typeof getPlatformProxy>>["caches"]["default"]
-) {
-	let match = await cache.match("http://0.0.0.0/test");
-	// Note: we cannot use expect here since it's not in the test context
-	if (match !== undefined) {
-		throw new Error("Expected match to be undefined");
-	}
-
-	const req = new Request("http://0.0.0.0/test");
-	await cache.put(req, new Response("test"));
-	const resp = await cache.match(req);
-	if (resp !== undefined) {
-		throw new Error("Expected resp to be undefined");
-	}
-	const deleted = await cache.delete(req);
-	if (deleted !== false) {
-		throw new Error("Expected deleted to be false");
-	}
-}
