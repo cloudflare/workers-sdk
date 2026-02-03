@@ -136,10 +136,15 @@ export function validationHook(
 	result: { success: false; error: z.ZodError },
 	c: Context
 ): Response {
-	const errors = result.error.errors.map((e) => ({
-		code: 10001,
-		message: `${e.path.join(".")}: ${e.message}`,
-	}));
+	const errors = result.error.errors.map((e) => {
+		const message =
+			e.path.length > 0 ? `${e.path.join(".")}: ${e.message}` : e.message;
+
+		return {
+			code: 10001,
+			message,
+		};
+	});
 	return c.json({ success: false, errors, messages: [], result: null }, 400);
 }
 
