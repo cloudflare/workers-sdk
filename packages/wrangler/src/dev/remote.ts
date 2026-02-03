@@ -97,7 +97,6 @@ export async function createRemoteWorkerInit(props: {
 	bindings: CfWorkerInit["bindings"];
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
-	containers: CfWorkerInit["containers"];
 	minimal_mode?: boolean;
 }) {
 	const { entrypointSource: content, modules } = withSourceURLs(
@@ -179,7 +178,7 @@ export async function createRemoteWorkerInit(props: {
 		keepSecrets: true,
 		logpush: false,
 		sourceMaps: undefined,
-		containers: props.containers,
+		containers: undefined, // Containers are not supported in remote dev mode
 		assets:
 			props.assets && assetsJwt
 				? {

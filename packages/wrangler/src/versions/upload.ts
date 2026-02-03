@@ -727,6 +727,12 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			observability: undefined,
 		};
 
+		if (config.containers && config.containers.length > 0) {
+			logger.warn(
+				`Your Worker has Containers configured. Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions. These changes will only take effect after running \`wrangler deploy\`.`
+			);
+		}
+
 		await printBundleSize(
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
