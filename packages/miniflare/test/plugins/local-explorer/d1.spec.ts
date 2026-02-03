@@ -1,6 +1,11 @@
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
+import {
+	zCloudflareD1ListDatabasesResponse,
+	zCloudflareD1RawDatabaseQueryResponse,
+} from "../../../src/workers/local-explorer/generated/zod.gen";
 import { disposeWithRetry } from "../../test-shared";
+import { expectValidResponse } from "./helpers";
 
 const BASE_URL = "http://localhost/cdn-cgi/explorer/api";
 
@@ -51,19 +56,12 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 		}) => {
 			const response = await mf.dispatchFetch(`${BASE_URL}/d1/database`);
 
-			expect(response.status).toBe(200);
 			expect(response.headers.get("Content-Type")).toBe("application/json");
 
-			const data = (await response.json()) as {
-				success: boolean;
-				result: Array<{ uuid: string; name: string }>;
-				result_info: {
-					count: number;
-					page: number;
-					per_page: number;
-					total_count: number;
-				};
-			};
+			const data = await expectValidResponse(
+				response,
+				zCloudflareD1ListDatabasesResponse
+			);
 
 			expect(data.success).toBe(true);
 			expect(data.result).toEqual(
@@ -89,12 +87,14 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				`${BASE_URL}/d1/database?per_page=10&page=1`
 			);
 
-			expect(response.status).toBe(200);
 			expect(response.headers.get("Content-Type")).toBe("application/json");
 
-			const json = await response.json();
+			const data = await expectValidResponse(
+				response,
+				zCloudflareD1ListDatabasesResponse
+			);
 
-			expect(json).toMatchObject({
+			expect(data).toMatchObject({
 				result_info: {
 					count: 2,
 					page: 1,
@@ -110,12 +110,14 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				`${BASE_URL}/d1/database?name=TEST`
 			);
 
-			expect(response.status).toBe(200);
 			expect(response.headers.get("Content-Type")).toBe("application/json");
 
-			const json = await response.json();
+			const data = await expectValidResponse(
+				response,
+				zCloudflareD1ListDatabasesResponse
+			);
 
-			expect(json).toMatchObject({
+			expect(data).toMatchObject({
 				result: [expect.objectContaining({ uuid: "test-db-id" })],
 				result_info: {
 					count: 1,
@@ -130,17 +132,21 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				`${BASE_URL}/d1/database?page=100`
 			);
 
-			expect(response.status).toBe(200);
 			expect(response.headers.get("Content-Type")).toBe("application/json");
 
-			const json = await response.json();
-			expect(json).toMatchObject({
+			const data = await expectValidResponse(
+				response,
+				zCloudflareD1ListDatabasesResponse
+			);
+
+			expect(data).toMatchObject({
 				result: [],
 				result_info: {
 					count: 0,
 					page: 100,
 					total_count: 2,
 				},
+				success: true,
 			});
 		});
 	});
@@ -160,19 +166,12 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				}
 			);
 
-			expect(response.status).toBe(200);
 			expect(response.headers.get("Content-Type")).toBe("application/json");
 
-			const data = (await response.json()) as {
-				result: Array<{
-					results: {
-						columns: string[];
-						rows: unknown[][];
-					};
-					success: boolean;
-				}>;
-				success: boolean;
-			};
+			const data = await expectValidResponse(
+				response,
+				zCloudflareD1RawDatabaseQueryResponse
+			);
 
 			expect(data.success).toBe(true);
 			expect(data.result).toHaveLength(1);
@@ -200,12 +199,14 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				}
 			);
 
-			expect(response.status).toBe(200);
 			expect(response.headers.get("Content-Type")).toBe("application/json");
 
-			const json = await response.json();
+			const data = await expectValidResponse(
+				response,
+				zCloudflareD1RawDatabaseQueryResponse
+			);
 
-			expect(json).toMatchObject({
+			expect(data).toMatchObject({
 				result: [
 					{
 						results: {
@@ -236,12 +237,14 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				}
 			);
 
-			expect(response.status).toBe(200);
 			expect(response.headers.get("Content-Type")).toBe("application/json");
 
-			const json = await response.json();
+			const data = await expectValidResponse(
+				response,
+				zCloudflareD1RawDatabaseQueryResponse
+			);
 
-			expect(json).toMatchObject({
+			expect(data).toMatchObject({
 				result: [
 					{
 						results: {
@@ -276,12 +279,15 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				}
 			);
 
-			expect(response.status).toBe(404);
 			expect(response.headers.get("Content-Type")).toBe("application/json");
 
-			const json = await response.json();
+			const data = await expectValidResponse(
+				response,
+				zCloudflareD1RawDatabaseQueryResponse,
+				404
+			);
 
-			expect(json).toMatchObject({
+			expect(data).toMatchObject({
 				errors: [expect.objectContaining({ message: "Database not found" })],
 				success: false,
 			});
@@ -301,12 +307,15 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				}
 			);
 
-			expect(response.status).toBe(500);
 			expect(response.headers.get("Content-Type")).toBe("application/json");
 
-			const json = await response.json();
+			const data = await expectValidResponse(
+				response,
+				zCloudflareD1RawDatabaseQueryResponse,
+				500
+			);
 
-			expect(json).toMatchObject({
+			expect(data).toMatchObject({
 				errors: [expect.objectContaining({ code: 10001 })],
 				success: false,
 			});
@@ -319,12 +328,15 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				`${BASE_URL}/d1/database?page=invalid`
 			);
 
-			expect(response.status).toBe(400);
 			expect(response.headers.get("Content-Type")).toBe("application/json");
 
-			const json = await response.json();
+			const data = await expectValidResponse(
+				response,
+				zCloudflareD1ListDatabasesResponse,
+				400
+			);
 
-			expect(json).toMatchObject({
+			expect(data).toMatchObject({
 				errors: [
 					expect.objectContaining({
 						code: 10001,
@@ -349,12 +361,15 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				}
 			);
 
-			expect(response.status).toBe(400);
 			expect(response.headers.get("Content-Type")).toBe("application/json");
 
-			const json = await response.json();
+			const data = await expectValidResponse(
+				response,
+				zCloudflareD1RawDatabaseQueryResponse,
+				400
+			);
 
-			expect(json).toMatchObject({
+			expect(data).toMatchObject({
 				errors: [expect.objectContaining({ code: 10001 })],
 				success: false,
 			});
@@ -372,12 +387,15 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 				}
 			);
 
-			expect(response.status).toBe(400);
 			expect(response.headers.get("Content-Type")).toBe("application/json");
 
-			const json = await response.json();
+			const data = await expectValidResponse(
+				response,
+				zCloudflareD1RawDatabaseQueryResponse,
+				400
+			);
 
-			expect(json).toMatchObject({
+			expect(data).toMatchObject({
 				errors: [
 					expect.objectContaining({
 						code: 10001,
