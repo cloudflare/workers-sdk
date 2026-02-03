@@ -36,6 +36,29 @@ import type { BundleResult } from "../../deployment-bundle/bundle";
 import type { Deployment, Project } from "@cloudflare/types";
 import type { Config } from "@cloudflare/workers-utils";
 
+const MAX_COMMIT_MESSAGE_BYTES = 384;
+
+export function truncateUtf8Bytes(str: string, maxBytes: number): string {
+	const bytes = Buffer.byteLength(str, "utf8");
+	if (bytes <= maxBytes) {
+		return str;
+	}
+
+	let result = "";
+	let byteCount = 0;
+
+	for (const char of str) {
+		const charBytes = Buffer.byteLength(char, "utf8");
+		if (byteCount + charBytes > maxBytes) {
+			break;
+		}
+		result += char;
+		byteCount += charBytes;
+	}
+
+	return result;
+}
+
 interface PagesDeployOptions {
 	/**
 	 * Path to static assets to deploy to Pages
@@ -265,7 +288,10 @@ export async function deploy({
 	}
 
 	if (commitMessage) {
-		formData.append("commit_message", commitMessage);
+		formData.append(
+			"commit_message",
+			truncateUtf8Bytes(commitMessage, MAX_COMMIT_MESSAGE_BYTES)
+		);
 	}
 
 	if (commitHash) {
