@@ -78,15 +78,17 @@ export async function runAutoConfig(
 		autoConfigDetails = updatedAutoConfigDetails;
 		assertNonConfigured(autoConfigDetails);
 
-		if (!autoConfigDetails.outputDir) {
+		if (!autoConfigDetails.framework.autoConfigSupported) {
 			throw new FatalError(
-				"Cannot configure project without an output directory"
+				autoConfigDetails.framework.id === "cloudflare-pages"
+					? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to a Workers one is not yet supported.`
+					: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
 			);
 		}
 
-		if (!autoConfigDetails.framework.autoConfigSupported) {
+		if (!autoConfigDetails.outputDir) {
 			throw new FatalError(
-				`The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+				"Cannot configure project without an output directory"
 			);
 		}
 

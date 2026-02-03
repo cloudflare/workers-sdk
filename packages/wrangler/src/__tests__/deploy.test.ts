@@ -579,6 +579,41 @@ describe("deploy", () => {
 		);
 	});
 
+	it("should attempt to run the autoconfig flow when pages_build_output_dir and (--x-autoconfig is used)", async () => {
+		writeWranglerConfig({
+			pages_build_output_dir: "public",
+			name: "test-name",
+		});
+
+		const getDetailsForAutoConfigSpy = vi
+			.spyOn(await import("../autoconfig/details"), "getDetailsForAutoConfig")
+			.mockResolvedValue({
+				configured: false,
+				projectPath: process.cwd(),
+				workerName: "test-name",
+				framework: {
+					id: "cloudflare-pages",
+					name: "Cloudflare Pages",
+					autoConfigSupported: false,
+					configure: async () => ({ wranglerConfig: {} }),
+					isConfigured: () => false,
+				},
+			});
+
+		mockConfirm({
+			text: "Are you sure that you want to proceed?",
+			result: false,
+		});
+
+		await runWrangler("deploy --x-autoconfig");
+
+		expect(getDetailsForAutoConfigSpy).toHaveBeenCalled();
+
+		expect(std.warn).toContain(
+			"It seems that you have run `wrangler deploy` on a Pages project"
+		);
+	});
+
 	describe("output additional script information", () => {
 		it("for first party workers, it should print worker information at log level", async () => {
 			setIsTTY(false);
