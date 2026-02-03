@@ -74,10 +74,8 @@ async function getRequiredStatusChecks(
 			}
 		);
 		if (!response.ok) {
-			const errorText =
-				response.status === 429 ? "Rate limited" : `HTTP ${response.status}`;
 			console.error("Failed to fetch required status checks:", response.status);
-			return { success: false, error: errorText };
+			return { success: false, error: `HTTP ${response.status}` };
 		}
 		const data = await response.json<{
 			// `contexts` is deprecated in favor of `checks` array
@@ -341,21 +339,30 @@ function isRepositoryAdvisoryEvent(
 	return null;
 }
 
+function isCheckRunCompleted(
+	message: WebhookEvent
+): message is CheckRunCompletedEvent {
+	return (
+		"action" in message &&
+		message.action === "completed" &&
+		"check_run" in message
+	);
+}
+
+/**
+ * Returns information about a failed Version Packages PR check run, or null if the event is not relevant.
+ */
 function isVersionPackagesPRCheckRun(message: WebhookEvent): {
 	checkRun: CheckRunCompletedEvent["check_run"];
 	prNumber: number;
-	repoFullName: string;
+	owner: string;
+	repo: string;
 } | null {
-	if (
-		!("action" in message) ||
-		message.action !== "completed" ||
-		!("check_run" in message)
-	) {
+	if (!isCheckRunCompleted(message)) {
 		return null;
 	}
 
-	const event = message as CheckRunCompletedEvent;
-	const checkRun = event.check_run;
+	const checkRun = message.check_run;
 
 	// Only process failures and timeouts (not cancelled)
 	if (
@@ -379,7 +386,8 @@ function isVersionPackagesPRCheckRun(message: WebhookEvent): {
 	return {
 		checkRun,
 		prNumber: pr.number,
-		repoFullName: event.repository.full_name,
+		owner: message.repository.owner.login,
+		repo: message.repository.name,
 	};
 }
 
@@ -512,6 +520,9 @@ async function sendRepositoryAdvisoryAlert(
 	);
 }
 
+/**
+ * Formats a duration given start and end timestamps as a string in "Mins Secs" format.
+ */
 function formatDuration(startedAt: string, completedAt: string): string {
 	const start = new Date(startedAt).getTime();
 	const end = new Date(completedAt).getTime();
@@ -521,16 +532,18 @@ function formatDuration(startedAt: string, completedAt: string): string {
 	return `${minutes}m ${seconds}s`;
 }
 
-async function sendVPCIFailureAlert(
+async function sendVersionPackagesCIFailureAlert(
 	webhookUrl: string,
 	{
 		checkRun,
 		prNumber,
-		repoFullName,
+		owner,
+		repo,
 	}: {
 		checkRun: CheckRunCompletedEvent["check_run"];
 		prNumber: number;
-		repoFullName: string;
+		owner: string;
+		repo: string;
 	}
 ) {
 	const conclusionEmoji = checkRun.conclusion === "timed_out" ? "⏱️" : "❌";
@@ -546,7 +559,7 @@ async function sendVPCIFailureAlert(
 					card: {
 						header: {
 							title: `${conclusionEmoji} CI Check ${conclusionText} on Version Packages PR`,
-							subtitle: `PR #${prNumber} in ${repoFullName}`,
+							subtitle: `PR #${prNumber} in ${owner}/${repo}`,
 						},
 						sections: [
 							{
@@ -572,7 +585,7 @@ async function sendVPCIFailureAlert(
 													text: "View PR",
 													onClick: {
 														openLink: {
-															url: `https://github.com/${repoFullName}/pull/${prNumber}`,
+															url: `https://github.com/${owner}/${repo}/pull/${prNumber}`,
 														},
 													},
 												},
@@ -593,7 +606,7 @@ async function sendVPCIFailureAlert(
 async function sendGitHubAPIFailureAlert(
 	webhookUrl: string,
 	error: string,
-	context: string
+	additionalInfo: string
 ) {
 	return sendMessage(
 		webhookUrl,
@@ -604,7 +617,7 @@ async function sendGitHubAPIFailureAlert(
 					card: {
 						header: {
 							title: "⚠️ GitHub API Request Failed",
-							subtitle: context,
+							subtitle: additionalInfo,
 						},
 						sections: [
 							{
@@ -806,8 +819,8 @@ export default {
 				);
 			}
 			// Notifies when a required CI check fails on the Version Packages PR
-			const maybeVPFailure = isVersionPackagesPRCheckRun(body);
-			if (maybeVPFailure) {
+			const maybeVersionPackagesFailure = isVersionPackagesPRCheckRun(body);
+			if (maybeVersionPackagesFailure) {
 				// Fetch required status checks from branch protection
 				const requiredChecksResult = await getRequiredStatusChecks(
 					env.GITHUB_PAT,
@@ -824,13 +837,21 @@ export default {
 						"Fetching required status checks for Version Packages PR"
 					);
 					// Still send the CI failure alert since we can't filter
-					await sendVPCIFailureAlert(env.ALERTS_WEBHOOK, maybeVPFailure);
+					await sendVersionPackagesCIFailureAlert(
+						env.ALERTS_WEBHOOK,
+						maybeVersionPackagesFailure
+					);
 				} else if (
 					requiredChecksResult.checks.length === 0 ||
-					requiredChecksResult.checks.includes(maybeVPFailure.checkRun.name)
+					requiredChecksResult.checks.includes(
+						maybeVersionPackagesFailure.checkRun.name
+					)
 				) {
 					// Only alert if this check is a required check (or if there are no required checks)
-					await sendVPCIFailureAlert(env.ALERTS_WEBHOOK, maybeVPFailure);
+					await sendVersionPackagesCIFailureAlert(
+						env.ALERTS_WEBHOOK,
+						maybeVersionPackagesFailure
+					);
 				}
 			}
 		}
