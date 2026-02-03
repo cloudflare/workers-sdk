@@ -123,9 +123,6 @@ export type D1DatabaseName = string;
 export type D1ApiResponseCommon = {
 	errors: D1Messages;
 	messages: D1Messages;
-	result: {
-		[key: string]: unknown;
-	};
 	/**
 	 * Whether the API call was successful
 	 */

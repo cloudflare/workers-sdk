@@ -94,7 +94,6 @@ export const zD1DatabaseResponse = z.object({
 export const zD1ApiResponseCommon = z.object({
 	errors: zD1Messages,
 	messages: zD1Messages,
-	result: z.record(z.unknown()),
 	success: z.literal(true),
 });
 
