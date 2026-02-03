@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, test } from "vitest";
 import {
 	zCloudflareD1ListDatabasesResponse,
 	zCloudflareD1RawDatabaseQueryResponse,
+	zD1ApiResponseCommonFailure,
 } from "../../../src/workers/local-explorer/generated/zod.gen";
 import { disposeWithRetry } from "../../test-shared";
 import { expectValidResponse } from "./helpers";
@@ -283,7 +284,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zCloudflareD1RawDatabaseQueryResponse,
+				zD1ApiResponseCommonFailure,
 				404
 			);
 
@@ -311,7 +312,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zCloudflareD1RawDatabaseQueryResponse,
+				zD1ApiResponseCommonFailure,
 				500
 			);
 
@@ -332,7 +333,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zCloudflareD1ListDatabasesResponse,
+				zD1ApiResponseCommonFailure,
 				400
 			);
 
@@ -365,7 +366,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zCloudflareD1RawDatabaseQueryResponse,
+				zD1ApiResponseCommonFailure,
 				400
 			);
 
@@ -391,7 +392,7 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 
 			const data = await expectValidResponse(
 				response,
-				zCloudflareD1RawDatabaseQueryResponse,
+				zD1ApiResponseCommonFailure,
 				400
 			);
 
