@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { Worker_Binding } from "../../runtime";
 import { Plugin } from "../shared";
 

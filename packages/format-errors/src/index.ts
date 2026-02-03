@@ -1,6 +1,6 @@
 import prom from "promjs";
 import { Toucan } from "toucan-js";
-import { z } from "zod";
+import * as z from "zod/v4";
 import Youch from "./Youch";
 
 export interface Env {

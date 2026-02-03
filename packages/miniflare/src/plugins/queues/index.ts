@@ -1,5 +1,5 @@
 import SCRIPT_QUEUE_BROKER_OBJECT from "worker:queues/broker";
-import { z } from "zod";
+import * as z from "zod/v4";
 import {
 	kVoid,
 	Service,
@@ -26,6 +26,7 @@ export const QueuesOptionsSchema = z.object({
 	queueProducers: z
 		.union([
 			z.record(
+				z.string(),
 				QueueProducerOptionsSchema.merge(
 					z.object({
 						remoteProxyConnectionString: z
@@ -35,11 +36,14 @@ export const QueuesOptionsSchema = z.object({
 				)
 			),
 			z.string().array(),
-			z.record(z.string()),
+			z.record(z.string(), z.string()),
 		])
 		.optional(),
 	queueConsumers: z
-		.union([z.record(QueueConsumerOptionsSchema), z.string().array()])
+		.union([
+			z.record(z.string(), QueueConsumerOptionsSchema),
+			z.string().array(),
+		])
 		.optional(),
 });
 

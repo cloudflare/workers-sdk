@@ -2,13 +2,13 @@
 
 import { z } from "zod";
 
-export const zWorkersKvAny: z.ZodTypeAny = z.union([
+export const zWorkersKvAny = z.union([
 	z.string(),
 	z.number(),
-	z.number().int(),
+	z.int(),
 	z.boolean(),
-	z.union([z.record(z.unknown()), z.null()]),
-	z.array(z.lazy(() => zWorkersKvAny)),
+	z.union([z.record(z.string(), z.unknown()), z.null()]),
+	z.array(z.lazy((): any => zWorkersKvAny)),
 ]);
 
 /**
@@ -17,32 +17,34 @@ export const zWorkersKvAny: z.ZodTypeAny = z.union([
 export const zWorkersKvExpiration = z.number();
 
 export const zWorkersKvBulkGetResultWithMetadata = z.object({
-	values: z
-		.record(
+	values: z.optional(
+		z.record(
+			z.string(),
 			z.union([
 				z.object({
-					expiration: zWorkersKvExpiration.optional(),
+					expiration: z.optional(zWorkersKvExpiration),
 					metadata: zWorkersKvAny.and(z.unknown()),
 					value: zWorkersKvAny.and(z.unknown()),
 				}),
 				z.null(),
 			])
 		)
-		.optional(),
+	),
 });
 
 export const zWorkersKvBulkGetResult = z.object({
-	values: z
-		.record(
+	values: z.optional(
+		z.record(
+			z.string(),
 			z.union([
 				z.string(),
 				z.number(),
 				z.boolean(),
-				z.record(z.unknown()),
+				z.record(z.string(), z.unknown()),
 				z.null(),
 			])
 		)
-		.optional(),
+	),
 });
 
 /**
@@ -52,7 +54,7 @@ export const zWorkersKvKeyNameBulk = z.string().max(512);
 
 export const zWorkersKvMessages = z.array(
 	z.object({
-		code: z.number().int().gte(1000),
+		code: z.int().gte(1000),
 		message: z.string(),
 	})
 );
@@ -66,7 +68,9 @@ export const zWorkersKvApiResponseCommon = z.object({
 export const zWorkersKvApiResponseCommonNoResult =
 	zWorkersKvApiResponseCommon.and(
 		z.object({
-			result: z.union([z.record(z.unknown()), z.null()]).optional(),
+			result: z.optional(
+				z.union([z.record(z.string(), z.unknown()), z.null()])
+			),
 		})
 	);
 
@@ -93,8 +97,8 @@ export const zWorkersKvListMetadata = zWorkersKvAny.and(z.unknown());
  * A name for a value. A value stored under a given key may be retrieved via the same key.
  */
 export const zWorkersKvKey = z.object({
-	expiration: z.number().optional(),
-	metadata: zWorkersKvListMetadata.optional(),
+	expiration: z.optional(z.number()),
+	metadata: z.optional(zWorkersKvListMetadata),
 	name: zWorkersKvKeyName,
 });
 
@@ -106,7 +110,7 @@ export const zWorkersKvNamespaceIdentifier = z.string().max(32).readonly();
 export const zWorkersKvApiResponseCommonFailure = z.object({
 	errors: zWorkersKvMessages,
 	messages: zWorkersKvMessages,
-	result: z.union([z.record(z.unknown()), z.null()]),
+	result: z.union([z.record(z.string(), z.unknown()), z.null()]),
 	success: z.literal(false),
 });
 
@@ -121,25 +125,25 @@ export const zWorkersKvNamespace = z.object({
 });
 
 export const zWorkersKvResultInfo = z.object({
-	count: z.number().optional(),
-	page: z.number().optional(),
-	per_page: z.number().optional(),
-	total_count: z.number().optional(),
+	count: z.optional(z.number()),
+	page: z.optional(z.number()),
+	per_page: z.optional(z.number()),
+	total_count: z.optional(z.number()),
 });
 
 export const zWorkersKvApiResponseCollection = zWorkersKvApiResponseCommon.and(
 	z.object({
-		result_info: zWorkersKvResultInfo.optional(),
+		result_info: z.optional(zWorkersKvResultInfo),
 	})
 );
 
-export const zWorkersKvAnyWritable: z.ZodTypeAny = z.union([
+export const zWorkersKvAnyWritable = z.union([
 	z.string(),
 	z.number(),
-	z.number().int(),
+	z.int(),
 	z.boolean(),
-	z.union([z.record(z.unknown()), z.null()]),
-	z.array(z.lazy(() => zWorkersKvAnyWritable)),
+	z.union([z.record(z.string(), z.unknown()), z.null()]),
+	z.array(z.lazy((): any => zWorkersKvAnyWritable)),
 ]);
 
 export const zWorkersKvMetadataWritable = zWorkersKvAnyWritable.and(
@@ -155,16 +159,16 @@ export const zWorkersKvNamespaceWritable = z.object({
 });
 
 export const zWorkersKvNamespaceListNamespacesData = z.object({
-	body: z.never().optional(),
-	path: z.never().optional(),
-	query: z
-		.object({
-			page: z.number().gte(1).optional().default(1),
-			per_page: z.number().gte(1).lte(1000).optional().default(20),
-			order: z.enum(["id", "title"]).optional(),
-			direction: z.enum(["asc", "desc"]).optional(),
+	body: z.optional(z.never()),
+	path: z.optional(z.never()),
+	query: z.optional(
+		z.object({
+			page: z.optional(z.number().gte(1)).default(1),
+			per_page: z.optional(z.number().gte(1).lte(1000)).default(20),
+			order: z.optional(z.enum(["id", "title"])),
+			direction: z.optional(z.enum(["asc", "desc"])),
 		})
-		.optional(),
+	),
 });
 
 /**
@@ -173,21 +177,21 @@ export const zWorkersKvNamespaceListNamespacesData = z.object({
 export const zWorkersKvNamespaceListNamespacesResponse =
 	zWorkersKvApiResponseCollection.and(
 		z.object({
-			result: z.array(zWorkersKvNamespace).optional(),
+			result: z.optional(z.array(zWorkersKvNamespace)),
 		})
 	);
 
 export const zWorkersKvNamespaceListANamespaceSKeysData = z.object({
-	body: z.never().optional(),
+	body: z.optional(z.never()),
 	path: z.object({
 		namespace_id: zWorkersKvNamespaceIdentifier,
 	}),
-	query: z
-		.object({
-			limit: z.number().gte(10).lte(1000).optional().default(1000),
-			cursor: z.string().optional(),
+	query: z.optional(
+		z.object({
+			limit: z.optional(z.number().gte(10).lte(1000)).default(1000),
+			cursor: z.optional(z.string()),
 		})
-		.optional(),
+	),
 });
 
 /**
@@ -196,13 +200,13 @@ export const zWorkersKvNamespaceListANamespaceSKeysData = z.object({
 export const zWorkersKvNamespaceListANamespaceSKeysResponse =
 	zWorkersKvApiResponseCommon.and(
 		z.object({
-			result: z.array(zWorkersKvKey).optional(),
-			result_info: z
-				.object({
-					count: z.number().optional(),
-					cursor: zWorkersKvCursor.optional(),
+			result: z.optional(z.array(zWorkersKvKey)),
+			result_info: z.optional(
+				z.object({
+					count: z.optional(z.number()),
+					cursor: z.optional(zWorkersKvCursor),
 				})
-				.optional(),
+			),
 		})
 	);
 
@@ -212,7 +216,7 @@ export const zWorkersKvNamespaceDeleteKeyValuePairData = z.object({
 		key_name: zWorkersKvKeyName,
 		namespace_id: zWorkersKvNamespaceIdentifier,
 	}),
-	query: z.never().optional(),
+	query: z.optional(z.never()),
 });
 
 /**
@@ -222,12 +226,12 @@ export const zWorkersKvNamespaceDeleteKeyValuePairResponse =
 	zWorkersKvApiResponseCommonNoResult;
 
 export const zWorkersKvNamespaceReadKeyValuePairData = z.object({
-	body: z.never().optional(),
+	body: z.optional(z.never()),
 	path: z.object({
 		key_name: zWorkersKvKeyName,
 		namespace_id: zWorkersKvNamespaceIdentifier,
 	}),
-	query: z.never().optional(),
+	query: z.optional(z.never()),
 });
 
 /**
@@ -241,7 +245,7 @@ export const zWorkersKvNamespaceWriteKeyValuePairWithMetadataData = z.object({
 		key_name: zWorkersKvKeyName,
 		namespace_id: zWorkersKvNamespaceIdentifier,
 	}),
-	query: z.never().optional(),
+	query: z.optional(z.never()),
 });
 
 /**
@@ -257,7 +261,7 @@ export const zWorkersKvNamespaceGetMultipleKeyValuePairsData = z.object({
 	path: z.object({
 		namespace_id: zWorkersKvNamespaceIdentifier,
 	}),
-	query: z.never().optional(),
+	query: z.optional(z.never()),
 });
 
 /**
@@ -266,8 +270,8 @@ export const zWorkersKvNamespaceGetMultipleKeyValuePairsData = z.object({
 export const zWorkersKvNamespaceGetMultipleKeyValuePairsResponse =
 	zWorkersKvApiResponseCommonNoResult.and(
 		z.object({
-			result: z
-				.union([zWorkersKvBulkGetResult, zWorkersKvBulkGetResultWithMetadata])
-				.optional(),
+			result: z.optional(
+				z.union([zWorkersKvBulkGetResult, zWorkersKvBulkGetResultWithMetadata])
+			),
 		})
 	);

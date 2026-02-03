@@ -1,5 +1,5 @@
 import fs from "node:fs/promises";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { CORE_PLUGIN } from "../plugins";
 import { HttpOptions, Socket_Https } from "../runtime";
 import { Awaitable } from "../workers";

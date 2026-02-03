@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { Request, Response } from "../../../http";
 import { Log, processStackTrace } from "../../../shared";
 import { maybeParseURL } from "../../shared";

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod/v4";
 
 const InternalConfigSchema = z.object({
 	account_id: z.number().optional(),

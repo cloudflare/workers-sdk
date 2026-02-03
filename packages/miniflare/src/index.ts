@@ -24,7 +24,7 @@ import {
 import SCRIPT_MINIFLARE_SHARED from "worker:shared/index";
 import SCRIPT_MINIFLARE_ZOD from "worker:shared/zod";
 import { WebSocketServer } from "ws";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { fallbackCf, setupCf } from "./cf";
 import {
 	coupleWebSocket,

@@ -9,7 +9,7 @@ import { $ as $colors, red } from "kleur/colors";
 import workerdPath, {
 	compatibilityDate as supportedCompatibilityDate,
 } from "workerd";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { MiniflareCoreError } from "../shared";
 import { Awaitable } from "../workers";

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import SCRIPT_CACHE_OBJECT from "worker:cache/cache";
 import SCRIPT_CACHE_ENTRY from "worker:cache/cache-entry";
 import SCRIPT_CACHE_ENTRY_NOOP from "worker:cache/cache-entry-noop";
-import { z } from "zod";
+import * as z from "zod/v4";
 import {
 	Service,
 	Worker,

@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import BINDING_SCRIPT from "worker:hello-world/binding";
 import OBJECT_SCRIPT from "worker:hello-world/object";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { Service, Worker_Binding } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import {

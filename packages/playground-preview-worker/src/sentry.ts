@@ -1,10 +1,10 @@
 import { Toucan } from "toucan-js";
-import { ZodError } from "zod";
+import { $ZodError } from "zod/v4/core";
 import { HttpError, ZodSchemaError } from "./errors";
 
 export function handleException(e: unknown, sentry: Toucan): Response {
 	console.error(e);
-	if (e instanceof ZodError) {
+	if (e instanceof $ZodError) {
 		e = new ZodSchemaError(e.issues);
 	}
 

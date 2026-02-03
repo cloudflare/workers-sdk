@@ -37,7 +37,7 @@ import SCRIPT_ASSETS from "worker:assets/assets";
 import SCRIPT_ASSETS_KV from "worker:assets/assets-kv";
 import SCRIPT_ROUTER from "worker:assets/router";
 import SCRIPT_RPC_PROXY from "worker:assets/rpc-proxy";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { Service } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import { getUserServiceName } from "../core";

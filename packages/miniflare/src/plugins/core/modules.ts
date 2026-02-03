@@ -7,7 +7,7 @@ import { TextDecoder, TextEncoder } from "node:util";
 import { parse } from "acorn";
 import { simple } from "acorn-walk";
 import { dim } from "kleur/colors";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { Worker_Module } from "../../runtime";
 import { globsToRegExps, MiniflareCoreError, PathSchema } from "../../shared";
 import { MatcherRegExps, testRegExps } from "../../workers";

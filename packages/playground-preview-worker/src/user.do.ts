@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { Buffer } from "node:buffer";
-import z from "zod";
+import * as z from "zod/v4";
 import { BadUpload, ServiceWorkerNotSupported, WorkerTimeout } from "./errors";
 import { constructMiddleware } from "./inject-middleware";
 import { doUpload, setupTokens } from "./realish";

@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { z } from "zod";
+import * as z from "zod/v4";
 import {
 	Extension,
 	Service,
@@ -131,7 +131,7 @@ export type Plugin<
  */
 export async function loadExternalPlugins(
 	packageName: string
-): Promise<Record<string, Plugin<z.AnyZodObject>>> {
+): Promise<Record<string, Plugin<z.ZodObject>>> {
 	let pluginModule;
 	try {
 		const pluginPath = require.resolve(packageName);

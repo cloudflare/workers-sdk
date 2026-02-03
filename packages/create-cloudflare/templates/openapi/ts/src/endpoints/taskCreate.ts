@@ -1,5 +1,5 @@
 import { Bool, OpenAPIRoute } from "chanfana";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { type AppContext, Task } from "../types";
 
 export class TaskCreate extends OpenAPIRoute {

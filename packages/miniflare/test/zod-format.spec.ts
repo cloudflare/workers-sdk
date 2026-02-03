@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { _forceColour, formatZodError } from "miniflare";
 import { describe, test } from "vitest";
-import { z } from "zod";
+import * as z from "zod/v4";
 
 function formatZodErrorForTest(
 	schema: z.ZodTypeAny,

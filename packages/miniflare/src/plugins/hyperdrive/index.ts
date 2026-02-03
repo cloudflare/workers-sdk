@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { Worker_Binding } from "../../runtime";
 import { Plugin, ProxyNodeBinding } from "../shared";
 

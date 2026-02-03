@@ -8,13 +8,13 @@ import {
 	parseWithRootPath,
 	PLUGINS,
 } from "miniflare";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { getProjectPath, getRelativeProjectPath } from "./helpers";
 import type { ModuleRule, WorkerOptions } from "miniflare";
 import type { ProvidedContext } from "vitest";
 import type { WorkspaceProject } from "vitest/node";
 import type { Binding, RemoteProxySession } from "wrangler";
-import type { ParseParams, ZodError } from "zod";
+import type { $ZodError } from "zod/v4/core";
 
 export interface WorkersConfigPluginAPI {
 	setMain(newMain?: string): void;
@@ -104,9 +104,7 @@ export type WorkersPoolOptionsWithDefines = WorkersPoolOptions & {
 	defines?: Record<string, string>;
 };
 
-type PathParseParams = Pick<ParseParams, "path">;
-
-function isZodErrorLike(value: unknown): value is ZodError {
+function isZodErrorLike(value: unknown): value is $ZodError {
 	return (
 		typeof value === "object" &&
 		value !== null &&
@@ -115,7 +113,7 @@ function isZodErrorLike(value: unknown): value is ZodError {
 	);
 }
 
-type ZodErrorRef = { value?: ZodError };
+type ZodErrorRef = { value?: $ZodError };
 function coalesceZodErrors(ref: ZodErrorRef, thrown: unknown) {
 	if (!isZodErrorLike(thrown)) {
 		throw thrown;
@@ -131,7 +129,7 @@ function parseWorkerOptions(
 	rootPath: string,
 	value: Record<string, unknown>,
 	withoutScript: boolean,
-	opts: PathParseParams
+	opts: { path: (string | number)[] }
 ): WorkerOptions {
 	// If this worker shouldn't have a configurable script, remove all script data
 	// and replace it with an empty `script` that will pass validation
@@ -210,7 +208,7 @@ const remoteProxySessionsDataMap = new Map<
 async function parseCustomPoolOptions(
 	rootPath: string,
 	value: unknown,
-	opts: PathParseParams
+	opts: { path: (string | number)[] }
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Try to parse pool specific options
 	const options = WorkersPoolOptionsSchema.parse(

@@ -1,6 +1,6 @@
 import { Miniflare, QUEUES_PLUGIN_NAME, Response } from "miniflare";
 import { afterEach, beforeEach, test } from "vitest";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { MiniflareDurableObjectControlStub, TestLog } from "../../test-shared";
 
 const StringArraySchema = z.string().array();

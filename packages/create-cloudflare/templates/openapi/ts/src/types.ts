@@ -1,6 +1,6 @@
 import { DateTime, Str } from "chanfana";
 import type { Context } from "hono";
-import { z } from "zod";
+import * as z from "zod/v4";
 
 export type AppContext = Context<{ Bindings: Env }>;
 

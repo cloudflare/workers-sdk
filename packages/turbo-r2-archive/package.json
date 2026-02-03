@@ -20,7 +20,7 @@
 	"dependencies": {
 		"@hono/zod-validator": "^0.4.2",
 		"hono": "^4.7.0",
-		"zod": "^3.22.3"
+		"zod": "^4.3.6"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",

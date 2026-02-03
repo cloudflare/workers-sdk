@@ -12,7 +12,7 @@ import {
 // into functions that load the transpiled Workers as JS
 import BINDING_WORKER from "worker:binding.worker";
 import OBJECT_WORKER from "worker:object.worker";
-import { z } from "zod";
+import * as z from "zod/v4";
 import type { Service, Worker_Binding } from "miniflare";
 
 export const UNSAFE_PLUGIN_NAME = "unsafe-plugin";

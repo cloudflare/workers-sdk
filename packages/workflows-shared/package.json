@@ -37,7 +37,7 @@
 		"heap-js": "^2.5.0",
 		"itty-time": "^2.0.2",
 		"mime": "^3.0.0",
-		"zod": "^3.22.3"
+		"zod": "^4.3.6"
 	},
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",

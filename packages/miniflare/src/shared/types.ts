@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
-import { ParseParams, z } from "zod";
+import * as z from "zod/v4";
 
 export function zAwaitable<T extends z.ZodTypeAny>(
 	type: T
@@ -21,7 +21,11 @@ export const LiteralSchema = z.union([
 export type Literal = z.infer<typeof LiteralSchema>;
 export type Json = Literal | { [key: string]: Json } | Json[];
 export const JsonSchema: z.ZodType<Json> = z.lazy(() =>
-	z.union([LiteralSchema, z.array(JsonSchema), z.record(JsonSchema)])
+	z.union([
+		LiteralSchema,
+		z.array(JsonSchema),
+		z.record(z.string(), JsonSchema),
+	])
 );
 
 let rootPath: string | undefined;
@@ -29,11 +33,21 @@ export function parseWithRootPath<Z extends z.ZodTypeAny>(
 	newRootPath: string,
 	schema: Z,
 	data: unknown,
-	params?: Partial<ParseParams>
+	params?: { path?: (string | number)[] }
 ): z.infer<Z> {
 	rootPath = newRootPath;
 	try {
-		return schema.parse(data, params);
+		const result = schema.safeParse(data);
+		if (result.success) {
+			return result.data;
+		}
+		if (params?.path) {
+			result.error.issues = result.error.issues.map((issue) => ({
+				...issue,
+				path: [...(params?.path ?? []), ...issue.path],
+			}));
+		}
+		throw result.error;
 	} finally {
 		rootPath = undefined;
 	}

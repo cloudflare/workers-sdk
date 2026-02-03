@@ -8,7 +8,7 @@ import {
 	Response,
 } from "miniflare";
 import { test } from "vitest";
-import { z } from "zod";
+import * as z from "zod/v4";
 import {
 	LogEntry,
 	MiniflareDurableObjectControlStub,

@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { bearerAuth } from "hono/bearer-auth";
 import { cors } from "hono/cors";
 import { HTTPException } from "hono/http-exception";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { bustOldCache } from "./autoCacheBust";
 
 export const router = new Hono<{ Bindings: Env }>();

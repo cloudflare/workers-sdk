@@ -1,5 +1,5 @@
 import { Bool, OpenAPIRoute, Str } from "chanfana";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { type AppContext, Task } from "../types";
 
 export class TaskDelete extends OpenAPIRoute {

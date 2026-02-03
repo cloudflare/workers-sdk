@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod/v4";
 import {
 	getUserBindingServiceName,
 	Plugin,
@@ -15,7 +15,7 @@ const VectorizeSchema = z.object({
 });
 
 export const VectorizeOptionsSchema = z.object({
-	vectorize: z.record(VectorizeSchema).optional(),
+	vectorize: z.record(z.string(), VectorizeSchema).optional(),
 });
 
 export const VECTORIZE_PLUGIN_NAME = "vectorize";

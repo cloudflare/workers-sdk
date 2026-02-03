@@ -12,7 +12,7 @@ import {
 } from "@puppeteer/browsers";
 import { dim } from "kleur/colors";
 import BROWSER_RENDERING_WORKER from "worker:browser-rendering/binding";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { kVoid } from "../../runtime";
 import { Log } from "../../shared";
 import { getGlobalWranglerCachePath } from "../../shared/wrangler";

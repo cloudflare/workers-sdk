@@ -1,5 +1,5 @@
 import SCRIPT_RATELIMIT_OBJECT from "worker:ratelimit/ratelimit";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { Worker_Binding } from "../../runtime";
 import { Plugin, ProxyNodeBinding } from "../shared";
 

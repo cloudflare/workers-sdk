@@ -1,5 +1,5 @@
 import BINDING from "worker:media/binding";
-import { z } from "zod";
+import * as z from "zod/v4";
 import {
 	getUserBindingServiceName,
 	Plugin,

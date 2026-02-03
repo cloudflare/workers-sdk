@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import SCRIPT_WORKFLOWS_BINDING from "worker:workflows/binding";
 import SCRIPT_WORKFLOWS_WRAPPED_BINDING from "worker:workflows/wrapped-binding";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { Service } from "../../runtime";
 import { getUserServiceName } from "../core";
 import {
@@ -16,6 +16,7 @@ import {
 export const WorkflowsOptionsSchema = z.object({
 	workflows: z
 		.record(
+			z.string(),
 			z.object({
 				name: z.string(),
 				className: z.string(),

@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import fs from "node:fs/promises";
 import SCRIPT_D1_DATABASE_OBJECT from "worker:d1/database";
-import { z } from "zod";
+import * as z from "zod/v4";
 import {
 	Service,
 	Worker_Binding,

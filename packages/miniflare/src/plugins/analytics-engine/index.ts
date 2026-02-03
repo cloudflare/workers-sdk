@@ -1,5 +1,5 @@
 import ANALYTICS_ENGINE from "worker:analytics-engine/analytics-engine";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { Worker_Binding } from "../../runtime";
 import { PersistenceSchema, Plugin, ProxyNodeBinding } from "../shared";
 

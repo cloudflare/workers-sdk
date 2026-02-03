@@ -1,5 +1,5 @@
 import { validator } from "hono/validator";
-import { z } from "zod";
+import * as z from "zod/v4";
 import type {
 	WorkersKvApiResponseCommon,
 	WorkersKvMessages,

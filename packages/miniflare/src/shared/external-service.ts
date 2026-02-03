@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import http from "node:http";
-import { z } from "zod";
+import * as z from "zod/v4";
 import {
 	getUserServiceName,
 	kCurrentWorker,

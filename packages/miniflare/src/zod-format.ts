@@ -15,7 +15,7 @@ import {
 	red,
 	yellow,
 } from "kleur/colors";
-import type { z } from "zod";
+import type * as z from "zod/v4";
 
 // This file contains a `formatZodError(error, input)` function for formatting
 // a Zod `error` that came from parsing a specific `input`. This works by
@@ -318,7 +318,7 @@ function annotate(
 	groupCounts: GroupCountsMap,
 	annotated: Annotated,
 	input: unknown,
-	issue: z.ZodIssue,
+	issue: z.core.$ZodIssue,
 	path: (string | number)[],
 	groupId?: number
 ): Annotated {
@@ -327,7 +327,7 @@ function annotate(
 
 		// If this is an `invalid_union` error, make sure we include all sub-issues
 		if (issue.code === "invalid_union") {
-			const unionIssues = issue.unionErrors.flatMap(({ issues }) => issues);
+			const unionIssues = issue.errors.flat();
 
 			// If the `input` is an object/array with multiple distinct messages,
 			// annotate it as a group
@@ -344,7 +344,9 @@ function annotate(
 			}
 
 			for (const unionIssue of unionIssues) {
-				const unionPath = unionIssue.path.slice(issue.path.length);
+				const unionPath = unionIssue.path
+					.slice(issue.path.length)
+					.filter((e) => typeof e !== "symbol");
 				// If we have multiple distinct messages at deeper levels, and this
 				// issue is for the current path, skip it, so we don't end up annotating
 				// the current path and sub-paths
@@ -524,7 +526,13 @@ export function formatZodError(error: z.ZodError, input: unknown): string {
 	let annotated: Annotated;
 	const groupCounts = new GroupCountsMap();
 	for (const issue of sortedIssues) {
-		annotated = annotate(groupCounts, annotated, input, issue, issue.path);
+		annotated = annotate(
+			groupCounts,
+			annotated,
+			input,
+			issue,
+			issue.path.filter((e) => typeof e !== "symbol")
+		);
 	}
 
 	// Print to pretty string

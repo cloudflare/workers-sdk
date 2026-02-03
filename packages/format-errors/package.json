@@ -18,7 +18,7 @@
 		"toucan-js": "4.0.0",
 		"tsconfig": "*",
 		"wrangler": "workspace:*",
-		"zod": "^3.22.3"
+		"zod": "^4.3.6"
 	},
 	"volta": {
 		"extends": "../../package.json"

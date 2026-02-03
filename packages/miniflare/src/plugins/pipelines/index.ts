@@ -1,5 +1,5 @@
 import SCRIPT_PIPELINE_OBJECT from "worker:pipelines/pipeline";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { Service } from "../../runtime";
 import {
 	namespaceKeys,

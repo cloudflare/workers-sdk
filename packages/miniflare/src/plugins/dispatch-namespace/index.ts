@@ -1,5 +1,5 @@
 import LOCAL_DISPATCH_NAMESPACE from "worker:dispatch-namespace/dispatch-namespace";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { Worker_Binding } from "../../runtime";
 import {
 	Plugin,
@@ -10,6 +10,7 @@ import {
 export const DispatchNamespaceOptionsSchema = z.object({
 	dispatchNamespaces: z
 		.record(
+			z.string(),
 			z.object({
 				namespace: z.string(),
 				remoteProxyConnectionString: z

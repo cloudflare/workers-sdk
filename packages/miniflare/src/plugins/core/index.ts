@@ -10,7 +10,7 @@ import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
 import SCRIPT_LOCAL_EXPLORER_API from "worker:local-explorer/api";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { fetch } from "../../http";
 import {
 	Extension,
@@ -111,18 +111,18 @@ export function createFetchMock() {
 const WrappedBindingSchema = z.object({
 	scriptName: z.string(),
 	entrypoint: z.string().optional(),
-	bindings: z.record(JsonSchema).optional(),
+	bindings: z.record(z.string(), JsonSchema).optional(),
 });
 
 // Validate as string, but don't include in parsed output
 const UnusableStringSchema = z.string().transform(() => undefined);
 
 export const UnsafeDirectSocketSchema = z.object({
-	host: z.ostring(),
-	port: z.onumber(),
-	serviceName: z.ostring(),
-	entrypoint: z.ostring(),
-	proxy: z.oboolean(),
+	host: z.string().optional(),
+	port: z.number().optional(),
+	serviceName: z.string().optional(),
+	entrypoint: z.string().optional(),
+	proxy: z.boolean().optional(),
 });
 
 export const ExternalPluginSpecifier = z.object({
@@ -143,17 +143,17 @@ const CoreOptionsSchemaInput = z.intersection(
 
 		routes: z.string().array().optional(),
 
-		bindings: z.record(JsonSchema).optional(),
+		bindings: z.record(z.string(), JsonSchema).optional(),
 		wasmBindings: z
-			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
+			.record(z.string(), z.union([PathSchema, z.instanceof(Uint8Array)]))
 			.optional(),
-		textBlobBindings: z.record(PathSchema).optional(),
+		textBlobBindings: z.record(z.string(), PathSchema).optional(),
 		dataBlobBindings: z
-			.record(z.union([PathSchema, z.instanceof(Uint8Array)]))
+			.record(z.string(), z.union([PathSchema, z.instanceof(Uint8Array)]))
 			.optional(),
-		serviceBindings: z.record(ServiceDesignatorSchema).optional(),
+		serviceBindings: z.record(z.string(), ServiceDesignatorSchema).optional(),
 		wrappedBindings: z
-			.record(z.union([z.string(), WrappedBindingSchema]))
+			.record(z.string(), z.union([z.string(), WrappedBindingSchema]))
 			.optional(),
 
 		outboundService: ServiceDesignatorSchema.optional(),
@@ -198,7 +198,7 @@ const CoreOptionsSchemaInput = z.intersection(
 					name: z.string(),
 					type: z.string(),
 					plugin: ExternalPluginSpecifier,
-					options: z.record(JsonSchema),
+					options: z.record(z.string(), JsonSchema),
 				})
 			)
 			.optional(),
@@ -251,17 +251,18 @@ export const CoreSharedOptionsSchema = z
 
 		log: z.instanceof(Log).optional(),
 		handleRuntimeStdio: z
-			.function(z.tuple([z.instanceof(Readable), z.instanceof(Readable)]))
+			.function({ input: [z.instanceof(Readable), z.instanceof(Readable)] })
 			.optional(),
 
 		handleStructuredLogs: z
-			.function(z.tuple([WorkerdStructuredLogSchema]))
-			.returns(z.void())
+			.function({ input: [WorkerdStructuredLogSchema], output: z.void() })
 			.optional(),
 
 		upstream: z.string().optional(),
 		// TODO: add back validation of cf object
-		cf: z.union([z.boolean(), z.string(), z.record(z.any())]).optional(),
+		cf: z
+			.union([z.boolean(), z.string(), z.record(z.string(), z.any())])
+			.optional(),
 
 		liveReload: z.boolean().optional(),
 
@@ -271,7 +272,7 @@ export const CoreSharedOptionsSchema = z
 		unsafeDevRegistryDurableObjectProxy: z.boolean().default(false),
 		// Called when external workers this instance depends on are updated in the dev registry
 		unsafeHandleDevRegistryUpdate: z
-			.function(z.tuple([z.custom<WorkerRegistry>()]))
+			.function({ input: [z.custom<WorkerRegistry>()] })
 			.optional(),
 		// This is a shared secret between a proxy server and miniflare that can be
 		// passed in a header to prove that the request came from the proxy and not

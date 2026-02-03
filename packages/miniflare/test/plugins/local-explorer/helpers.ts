@@ -1,6 +1,6 @@
 // eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { expect } from "vitest";
-import { z } from "zod";
+import * as z from "zod/v4";
 
 /**
  * Validates a response body against a Zod schema and returns typed data.

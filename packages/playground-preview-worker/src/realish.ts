@@ -1,4 +1,4 @@
-import { z } from "zod";
+import * as z from "zod/v4";
 import { PreviewError } from "./errors";
 
 const APIResponse = <T extends z.ZodTypeAny>(resultSchema: T) =>

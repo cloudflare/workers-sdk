@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import SCRIPT_KV_NAMESPACE_OBJECT from "worker:kv/namespace";
 import SCRIPT_SECRETS_STORE_SECRET from "worker:secrets-store/secret";
-import { z } from "zod";
+import * as z from "zod/v4";
 import { Service, Worker_Binding } from "../../runtime";
 import { SharedBindings } from "../../workers";
 import { KV_NAMESPACE_OBJECT_CLASS_NAME } from "../kv";
@@ -17,6 +17,7 @@ import {
 } from "../shared";
 
 const SecretsStoreSecretsSchema = z.record(
+	z.string(),
 	z.object({
 		store_id: z.string(),
 		secret_name: z.string(),

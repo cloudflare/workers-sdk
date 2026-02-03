@@ -106,7 +106,7 @@
 		"vitest": "catalog:default",
 		"which": "^2.0.2",
 		"xdg-app-paths": "^8.3.0",
-		"zod": "^3.25.76"
+		"zod": "^4.3.6"
 	},
 	"engines": {
 		"node": ">=18.0.0"

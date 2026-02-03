@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import SCRIPT_R2_BUCKET_OBJECT from "worker:r2/bucket";
-import { z } from "zod";
+import * as z from "zod/v4";
 import {
 	Service,
 	Worker_Binding,
@@ -26,8 +26,9 @@ import {
 export const R2OptionsSchema = z.object({
 	r2Buckets: z
 		.union([
-			z.record(z.string()),
+			z.record(z.string(), z.string()),
 			z.record(
+				z.string(),
 				z.object({
 					id: z.string(),
 					remoteProxyConnectionString: z
