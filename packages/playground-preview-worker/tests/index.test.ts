@@ -1,4 +1,5 @@
 import { fetch } from "undici";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { beforeAll, describe, expect, it } from "vitest";
 
 const REMOTE = "https://playground-testing.devprod.cloudflare.dev";

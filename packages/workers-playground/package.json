@@ -7,7 +7,7 @@
 		"build": "tsc && vite build",
 		"build:testing": "tsc && vite build -m development",
 		"check": "pnpm exec tsx ./generate-default-hashes.ts check",
-		"check:lint": "eslint src --max-warnings=0",
+		"check:lint": "eslint src --max-warnings=0 --cache",
 		"check:type": "tsc",
 		"deploy": "CLOUDFLARE_ACCOUNT_ID=e35fd947284363a46fd7061634477114 wrangler pages deploy --project-name workers-playground ./dist",
 		"dev": "vite",

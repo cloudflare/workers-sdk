@@ -85,7 +85,7 @@ function mockModifyApplication(
 describe("cloudchamber apply", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockCLIOutput();
-	mockConsoleMethods();
+	const console = mockConsoleMethods();
 
 	mockAccountId();
 	mockApiToken();
@@ -94,6 +94,30 @@ describe("cloudchamber apply", () => {
 	afterEach(() => {
 		patchConsole(() => {});
 		msw.resetHandlers();
+	});
+
+	test("should show deprecation warning when running cloudchamber apply", async () => {
+		setIsTTY(false);
+		mockGetApplications([]);
+		mockCreateApplication({ id: "test-abc" });
+
+		await writeWranglerConfig({
+			name: "test-container",
+			containers: [
+				{
+					name: "test-app",
+					class_name: "TestDurableObject",
+					image: "registry.cloudflare.com/test:latest",
+					instances: 1,
+				},
+			],
+		});
+
+		await runWrangler("cloudchamber apply");
+
+		expect(console.warn).toContain("deprecated");
+		expect(console.warn).toContain("wrangler deploy");
+		expect(console.warn).toContain("next major version");
 	});
 
 	test("can apply a simple application", async () => {

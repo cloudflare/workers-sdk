@@ -12,8 +12,10 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+
+import { beforeEach, describe, test, vi } from "vitest";
 import { getAgentsMd } from "../agents-md";
+
 import {
 	addWranglerToGitIgnore,
 	deriveCorrelatedArgs,
@@ -53,7 +55,9 @@ describe("addWranglerToGitIgnore", () => {
 		);
 	});
 
-	test("should append the wrangler section to a standard gitignore file", () => {
+	test("should append the wrangler section to a standard gitignore file", ({
+		expect,
+	}) => {
 		mockGitIgnore(
 			"my-project/.gitignore",
 			`
@@ -81,7 +85,9 @@ describe("addWranglerToGitIgnore", () => {
 			]
 		`);
 	});
-	test("should not touch the gitignore file if it already contains all wrangler files", () => {
+	test("should not touch the gitignore file if it already contains all wrangler files", ({
+		expect,
+	}) => {
 		mockGitIgnore(
 			"my-project/.gitignore",
 			`
@@ -101,7 +107,9 @@ describe("addWranglerToGitIgnore", () => {
 		expect(appendFileMock).not.toHaveBeenCalled();
 	});
 
-	test("should not touch the gitignore file if contains all wrangler files (and can cope with comments)", () => {
+	test("should not touch the gitignore file if contains all wrangler files (and can cope with comments)", ({
+		expect,
+	}) => {
 		mockGitIgnore(
 			"my-project/.gitignore",
 			`
@@ -121,7 +129,9 @@ describe("addWranglerToGitIgnore", () => {
 		expect(appendFileMock).not.toHaveBeenCalled();
 	});
 
-	test("should append to the gitignore file the missing wrangler files when some are already present (should add the section heading if including .wrangler and some others)", () => {
+	test("should append to the gitignore file the missing wrangler files when some are already present (should add the section heading if including .wrangler and some others)", ({
+		expect,
+	}) => {
 		mockGitIgnore(
 			"my-project/.gitignore",
 			`
@@ -150,7 +160,9 @@ describe("addWranglerToGitIgnore", () => {
 		`);
 	});
 
-	test("should append to the gitignore file the missing wrangler files when some are already present (should not add the section heading if .wrangler already exists)", () => {
+	test("should append to the gitignore file the missing wrangler files when some are already present (should not add the section heading if .wrangler already exists)", ({
+		expect,
+	}) => {
 		mockGitIgnore(
 			"my-project/.gitignore",
 			`
@@ -178,7 +190,9 @@ describe("addWranglerToGitIgnore", () => {
 		`);
 	});
 
-	test("should append to the gitignore file the missing wrangler files when some are already present (should not add the section heading if only adding .wrangler)", () => {
+	test("should append to the gitignore file the missing wrangler files when some are already present (should not add the section heading if only adding .wrangler)", ({
+		expect,
+	}) => {
 		mockGitIgnore(
 			"my-project/.gitignore",
 			`
@@ -206,7 +220,9 @@ describe("addWranglerToGitIgnore", () => {
 		`);
 	});
 
-	test("when it appends to the gitignore file it doesn't include an empty line only if there was one already", () => {
+	test("when it appends to the gitignore file it doesn't include an empty line only if there was one already", ({
+		expect,
+	}) => {
 		mockGitIgnore(
 			"my-project/.gitignore",
 			`
@@ -235,7 +251,9 @@ describe("addWranglerToGitIgnore", () => {
 		`);
 	});
 
-	test("should create the gitignore file if it didn't exist already", () => {
+	test("should create the gitignore file if it didn't exist already", ({
+		expect,
+	}) => {
 		// let's mock a gitignore file to be read by readFile
 		mockGitIgnore("my-project/.gitignore", "");
 		// but let's pretend that it doesn't exist
@@ -276,7 +294,9 @@ describe("addWranglerToGitIgnore", () => {
 		`);
 	});
 
-	test("should not create the gitignore file the project doesn't use git", () => {
+	test("should not create the gitignore file the project doesn't use git", ({
+		expect,
+	}) => {
 		// no .gitignore file exists
 		vi.mocked(existsSync).mockImplementation(() => false);
 		// neither a .git directory does
@@ -289,7 +309,9 @@ describe("addWranglerToGitIgnore", () => {
 		expect(writeFileMock).not.toHaveBeenCalled();
 	});
 
-	test("should add the wildcard .dev.vars* entry even if a .dev.vars is already included", () => {
+	test("should add the wildcard .dev.vars* entry even if a .dev.vars is already included", ({
+		expect,
+	}) => {
 		mockGitIgnore(
 			"my-project/.gitignore",
 			`
@@ -319,7 +341,9 @@ describe("addWranglerToGitIgnore", () => {
 		`);
 	});
 
-	test("should not add the .env entries if some form of .env entries are already included", () => {
+	test("should not add the .env entries if some form of .env entries are already included", ({
+		expect,
+	}) => {
 		mockGitIgnore(
 			"my-project/.gitignore",
 			`
@@ -347,7 +371,9 @@ describe("addWranglerToGitIgnore", () => {
 		`);
 	});
 
-	test("should not add the .wrangler entry if a .wrangler/ is already included)", () => {
+	test("should not add the .wrangler entry if a .wrangler/ is already included)", ({
+		expect,
+	}) => {
 		mockGitIgnore(
 			"my-project/.gitignore",
 			`
@@ -394,14 +420,14 @@ describe("downloadRemoteTemplate", () => {
 		} as unknown as ReturnType<typeof degit>);
 	});
 
-	test("should download template using degit", async () => {
+	test("should download template using degit", async ({ expect }) => {
 		await downloadRemoteTemplate("cloudflare/workers-sdk");
 
 		expect(degit).toHaveBeenCalled();
 		expect(cloneMock).toHaveBeenCalled();
 	});
 
-	test("should not use a spinner", async () => {
+	test("should not use a spinner", async ({ expect }) => {
 		// Degit runs `git clone` internally which might prompt for credentials
 		// A spinner will suppress the prompt and keep the CLI waiting in the cloning stage
 		await downloadRemoteTemplate("cloudflare/workers-sdk");
@@ -409,7 +435,9 @@ describe("downloadRemoteTemplate", () => {
 		expect(spinner).not.toHaveBeenCalled();
 	});
 
-	test("should call degit with a mode of undefined if not specified", async () => {
+	test("should call degit with a mode of undefined if not specified", async ({
+		expect,
+	}) => {
 		await downloadRemoteTemplate("cloudflare/workers-sdk");
 
 		expect(degit).toHaveBeenCalledWith("cloudflare/workers-sdk", {
@@ -420,7 +448,9 @@ describe("downloadRemoteTemplate", () => {
 		});
 	});
 
-	test("should call degit with a mode of 'git' if specified", async () => {
+	test("should call degit with a mode of 'git' if specified", async ({
+		expect,
+	}) => {
 		await downloadRemoteTemplate("cloudflare/workers-sdk", { mode: "git" });
 
 		expect(degit).toHaveBeenCalledWith("cloudflare/workers-sdk", {
@@ -431,7 +461,7 @@ describe("downloadRemoteTemplate", () => {
 		});
 	});
 
-	test("should clone into the passed folder", async () => {
+	test("should clone into the passed folder", async ({ expect }) => {
 		await downloadRemoteTemplate("cloudflare/workers-sdk", {
 			intoFolder: "/path/to/clone",
 		});
@@ -439,7 +469,9 @@ describe("downloadRemoteTemplate", () => {
 		expect(cloneMock).toHaveBeenCalledWith("/path/to/clone");
 	});
 
-	test("should transform GitHub URL without path to degit format", async () => {
+	test("should transform GitHub URL without path to degit format", async ({
+		expect,
+	}) => {
 		await downloadRemoteTemplate(
 			"https://github.com/cloudflare/workers-graphql-server",
 		);
@@ -450,7 +482,9 @@ describe("downloadRemoteTemplate", () => {
 		);
 	});
 
-	test("should transform GitHub URL with trailing slash to degit format", async () => {
+	test("should transform GitHub URL with trailing slash to degit format", async ({
+		expect,
+	}) => {
 		await downloadRemoteTemplate("https://github.com/cloudflare/workers-sdk/");
 
 		expect(degit).toHaveBeenCalledWith(
@@ -459,7 +493,9 @@ describe("downloadRemoteTemplate", () => {
 		);
 	});
 
-	test("should transform GitHub URL with subdirectory to degit format", async () => {
+	test("should transform GitHub URL with subdirectory to degit format", async ({
+		expect,
+	}) => {
 		await downloadRemoteTemplate(
 			"https://github.com/cloudflare/workers-sdk/templates/worker-r2",
 		);
@@ -470,7 +506,9 @@ describe("downloadRemoteTemplate", () => {
 		);
 	});
 
-	test("should transform GitHub URL with tree/main to degit format", async () => {
+	test("should transform GitHub URL with tree/main to degit format", async ({
+		expect,
+	}) => {
 		await downloadRemoteTemplate(
 			"https://github.com/cloudflare/workers-sdk/tree/main",
 		);
@@ -481,7 +519,9 @@ describe("downloadRemoteTemplate", () => {
 		);
 	});
 
-	test("should transform GitHub URL with tree/main/subdirectory to degit format", async () => {
+	test("should transform GitHub URL with tree/main/subdirectory to degit format", async ({
+		expect,
+	}) => {
 		await downloadRemoteTemplate(
 			"https://github.com/cloudflare/workers-sdk/tree/main/templates",
 		);
@@ -492,7 +532,9 @@ describe("downloadRemoteTemplate", () => {
 		);
 	});
 
-	test("should throw error when using a branch other than main", async () => {
+	test("should throw error when using a branch other than main", async ({
+		expect,
+	}) => {
 		await expect(
 			downloadRemoteTemplate(
 				"https://github.com/cloudflare/workers-sdk/tree/dev",
@@ -504,7 +546,9 @@ describe("downloadRemoteTemplate", () => {
 });
 
 describe("deriveCorrelatedArgs", () => {
-	test("should derive the lang as TypeScript if `--ts` is specified", () => {
+	test("should derive the lang as TypeScript if `--ts` is specified", ({
+		expect,
+	}) => {
 		const args: Partial<C3Args> = {
 			ts: true,
 		};
@@ -514,7 +558,9 @@ describe("deriveCorrelatedArgs", () => {
 		expect(args.lang).toBe("ts");
 	});
 
-	test("should derive the lang as JavaScript if `--ts=false` is specified", () => {
+	test("should derive the lang as JavaScript if `--ts=false` is specified", ({
+		expect,
+	}) => {
 		const args: Partial<C3Args> = {
 			ts: false,
 		};
@@ -524,7 +570,9 @@ describe("deriveCorrelatedArgs", () => {
 		expect(args.lang).toBe("js");
 	});
 
-	test("should crash if both the lang and ts arguments are specified", () => {
+	test("should crash if both the lang and ts arguments are specified", ({
+		expect,
+	}) => {
 		expect(() =>
 			deriveCorrelatedArgs({
 				lang: "ts",
@@ -553,7 +601,7 @@ describe("updatePackageName", () => {
 		vi.mocked(readFile).mockReturnValue("");
 	});
 
-	test('should update the "name" field in package.json', () => {
+	test('should update the "name" field in package.json', ({ expect }) => {
 		const ctx = {
 			project: { path: "my-project", name: "my-project" },
 			args: {},
@@ -575,7 +623,7 @@ describe("updatePackageName", () => {
 		);
 	});
 
-	test("it should update pyproject.toml if it exists", () => {
+	test("it should update pyproject.toml if it exists", ({ expect }) => {
 		const ctx = {
 			project: { path: "my-project", name: "my-project" },
 			args: {},
@@ -622,7 +670,7 @@ describe("writeAgentsMd", () => {
 		vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(mockCompatDate);
 	});
 
-	test("should write AGENTS.md to the project directory", () => {
+	test("should write AGENTS.md to the project directory", ({ expect }) => {
 		vi.mocked(existsSync).mockReturnValue(false);
 		const projectPath = join("/path", "to", "my-project");
 		writeAgentsMd(projectPath);
@@ -634,7 +682,7 @@ describe("writeAgentsMd", () => {
 		);
 	});
 
-	test("should not overwrite existing AGENTS.md", () => {
+	test("should not overwrite existing AGENTS.md", ({ expect }) => {
 		vi.mocked(existsSync).mockReturnValue(true);
 		const projectPath = join("/path", "to", "my-project");
 		writeAgentsMd(projectPath);
@@ -642,7 +690,7 @@ describe("writeAgentsMd", () => {
 		expect(writeFileMock).not.toHaveBeenCalled();
 	});
 
-	test("AGENTS.md should contain retrieval-led reasoning guidance", () => {
+	test("AGENTS.md should contain retrieval-led reasoning guidance", ({ expect }) => {
 		const agentsMd = getAgentsMd(mockCompatDate);
 		expect(agentsMd).toContain("STOP");
 		expect(agentsMd).toContain("retrieve");

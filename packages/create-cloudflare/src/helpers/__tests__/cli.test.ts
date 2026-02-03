@@ -1,6 +1,6 @@
 import { SemVer } from "semver";
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { version as currentVersion } from "../../../package.json";
 import { isUpdateAvailable } from "../cli";
 import { mockSpinner } from "./mocks";
@@ -28,7 +28,7 @@ describe("isUpdateAvailable", () => {
 		setGlobalDispatcher(originalDispatcher);
 	});
 
-	test("is not available if fetch fails", async () => {
+	test("is not available if fetch fails", async ({ expect }) => {
 		agent
 			.get("https://registry.npmjs.org")
 			.intercept({ path: "/create-cloudflare" })
@@ -36,21 +36,27 @@ describe("isUpdateAvailable", () => {
 		expect(await isUpdateAvailable()).toBe(false);
 	});
 
-	test("is not available if fetched latest version is older by a minor", async () => {
+	test("is not available if fetched latest version is older by a minor", async ({
+		expect,
+	}) => {
 		const latestVersion = new SemVer(currentVersion);
 		latestVersion.minor--;
 		replyWithLatest(latestVersion);
 		expect(await isUpdateAvailable()).toBe(false);
 	});
 
-	test("is available if fetched latest version is newer by a minor", async () => {
+	test("is available if fetched latest version is newer by a minor", async ({
+		expect,
+	}) => {
 		const latestVersion = new SemVer(currentVersion);
 		latestVersion.minor++;
 		replyWithLatest(latestVersion);
 		expect(await isUpdateAvailable()).toBe(true);
 	});
 
-	test("is not available if fetched latest version is newer by a major", async () => {
+	test("is not available if fetched latest version is newer by a major", async ({
+		expect,
+	}) => {
 		const latestVersion = new SemVer(currentVersion);
 		latestVersion.major++;
 		replyWithLatest(latestVersion);

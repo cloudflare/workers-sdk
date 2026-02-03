@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/vite-plugin",
-	"version": "1.22.1",
+	"version": "1.23.0",
 	"description": "Cloudflare plugin for Vite",
 	"keywords": [
 		"cloudflare",
@@ -34,7 +34,7 @@
 	],
 	"scripts": {
 		"build": "tsdown",
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc --build",
 		"dev": "tsdown --watch",
 		"test": "vitest run",

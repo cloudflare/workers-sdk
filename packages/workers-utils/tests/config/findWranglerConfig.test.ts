@@ -1,4 +1,5 @@
 import path from "node:path";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { describe, expect, it } from "vitest";
 import { findWranglerConfig } from "../../src/config/config-helpers";
 import {

@@ -1,5 +1,5 @@
 import { fetchMock, SELF } from "cloudflare:test";
-import { afterEach, beforeAll, expect, it } from "vitest";
+import { afterEach, beforeAll, it } from "vitest";
 
 beforeAll(() => {
 	// Enable outbound request mocking...
@@ -11,7 +11,7 @@ beforeAll(() => {
 // Ensure we matched every mock we defined
 afterEach(() => fetchMock.assertNoPendingInterceptors());
 
-it("mocks GET requests", async () => {
+it("mocks GET requests", async ({ expect }) => {
 	fetchMock
 		.get("https://cloudflare.com")
 		.intercept({ path: "/once" })
@@ -41,7 +41,7 @@ it("mocks GET requests", async () => {
 	}
 });
 
-it("mocks POST requests", async () => {
+it("mocks POST requests", async ({ expect }) => {
 	fetchMock
 		.get("https://cloudflare.com")
 		.intercept({ method: "POST", path: "/path", body: "✨" })

@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { isDockerfile } from "../../../src/config/validation";
 import { runInTempDir } from "../../../src/test-helpers";
 
@@ -14,23 +14,29 @@ describe("isDockerfile", () => {
 		writeFileSync("./container-context/Dockerfile", dockerfile);
 	});
 
-	it("should return true if given a valid dockerfile path", async () => {
+	it("should return true if given a valid dockerfile path", async ({
+		expect,
+	}) => {
 		expect(isDockerfile("./container-context/Dockerfile", undefined)).toBe(
 			true
 		);
 	});
 
-	it("should find a dockerfile relative to the wrangler config path", async () => {
+	it("should find a dockerfile relative to the wrangler config path", async ({
+		expect,
+	}) => {
 		expect(
 			isDockerfile("./Dockerfile", "./container-context/wrangler.json")
 		).toBe(true);
 	});
 
-	it("should return false if given a valid image registry path", async () => {
+	it("should return false if given a valid image registry path", async ({
+		expect,
+	}) => {
 		expect(isDockerfile("docker.io/httpd:1", undefined)).toBe(false);
 	});
 
-	it("should error if given a non existent dockerfile", async () => {
+	it("should error if given a non existent dockerfile", async ({ expect }) => {
 		expect(() => isDockerfile("./FakeDockerfile", undefined))
 			.toThrowErrorMatchingInlineSnapshot(`
 				[Error: The image "./FakeDockerfile" does not appear to be a valid path to a Dockerfile, or a valid image registry path:
@@ -38,14 +44,18 @@ describe("isDockerfile", () => {
 			`);
 	});
 
-	it("should error if given a directory instead of a dockerfile", async () => {
+	it("should error if given a directory instead of a dockerfile", async ({
+		expect,
+	}) => {
 		expect(() => isDockerfile("./container-context", undefined))
 			.toThrowErrorMatchingInlineSnapshot(`
 			[Error: ./container-context is a directory, you should specify a path to the Dockerfile]
 		`);
 	});
 
-	it("should error if image registry reference contains the protocol part", async () => {
+	it("should error if image registry reference contains the protocol part", async ({
+		expect,
+	}) => {
 		expect(() =>
 			isDockerfile("http://registry.cloudflare.com/image:tag", undefined)
 		).toThrowErrorMatchingInlineSnapshot(`
@@ -54,7 +64,9 @@ describe("isDockerfile", () => {
 		`);
 	});
 
-	it("should error if image registry reference does not contain a tag", async () => {
+	it("should error if image registry reference does not contain a tag", async ({
+		expect,
+	}) => {
 		expect(() => isDockerfile("docker.io/httpd", undefined))
 			.toThrowErrorMatchingInlineSnapshot(`
 				[Error: The image "docker.io/httpd" does not appear to be a valid path to a Dockerfile, or a valid image registry path:

@@ -34,4 +34,10 @@ export default defineConfig([
 			},
 		},
 	},
+	{
+		files: ["test/**/*.test.ts"],
+		rules: {
+			"workers-sdk/no-vitest-import-expect": "error",
+		},
+	},
 ]);

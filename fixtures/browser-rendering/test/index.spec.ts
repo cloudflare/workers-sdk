@@ -1,7 +1,7 @@
 // test/index.spec.ts
 import { rm } from "node:fs/promises";
 import { resolve } from "path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe.sequential("Local Browser", () => {
@@ -39,13 +39,15 @@ describe.sequential("Local Browser", () => {
 
 	for (const lib of ["puppeteer", "playwright"]) {
 		describe(`using @cloudflare/${lib}`, () => {
-			it("Doesn't run a browser, just testing that the worker is running!", async () => {
+			it("Doesn't run a browser, just testing that the worker is running!", async ({
+				expect,
+			}) => {
 				await expect(
 					fetchText(`http://${ip}:${port}/?lib=${lib}`)
 				).resolves.toEqual("Please add an ?url=https://example.com/ parameter");
 			});
 
-			it("Run a browser, and check h1 text content", async () => {
+			it("Run a browser, and check h1 text content", async ({ expect }) => {
 				await expect(
 					fetchText(
 						`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=select`
@@ -53,7 +55,7 @@ describe.sequential("Local Browser", () => {
 				).resolves.toEqual("Example Domain");
 			});
 
-			it("Run a browser, and check p text content", async () => {
+			it("Run a browser, and check p text content", async ({ expect }) => {
 				await expect(
 					fetchText(
 						`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=alter`
@@ -63,7 +65,9 @@ describe.sequential("Local Browser", () => {
 				);
 			});
 
-			it("Disconnect a browser, and check its session connection status", async () => {
+			it("Disconnect a browser, and check its session connection status", async ({
+				expect,
+			}) => {
 				await expect(
 					fetchText(
 						`http://${ip}:${port}/?lib=${lib}&url=https://example.com&action=disconnect`

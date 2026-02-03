@@ -1,9 +1,12 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { expect, test } from "vitest";
 import {
 	getResponse,
 	getTextResponse,
 	isBuild,
 	page,
+	rootDir,
 	viteTestUrl,
 } from "../../__test-utils__";
 import "./base-tests";
@@ -39,5 +42,17 @@ test.runIf(!isBuild)(
 	async () => {
 		const text = await getTextResponse("/api/some-file.txt");
 		expect(text).toBe(`Some file content.\n`);
+	}
+);
+
+test.runIf(isBuild)(
+	"emits .assetsignore file in client output directory",
+	() => {
+		expect(
+			fs.readFileSync(
+				path.join(rootDir, "dist", "client", ".assetsignore"),
+				"utf-8"
+			)
+		).toBe(`wrangler.json\n.dev.vars\n`);
 	}
 );

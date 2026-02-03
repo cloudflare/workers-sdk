@@ -1,5 +1,26 @@
 # @cloudflare/vite-plugin
 
+## 1.23.0
+
+### Minor Changes
+
+- [#11697](https://github.com/cloudflare/workers-sdk/pull/11697) [`67a4ab1`](https://github.com/cloudflare/workers-sdk/commit/67a4ab15fb58e35d08e99afa50dca3a3b713149e) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Add `experimental.prerenderWorker` option to the plugin config.
+
+  This enables configuring a dedicated Worker for prerendering at build time. This is an experimental feature and may change or be removed at any time.
+
+- [#12214](https://github.com/cloudflare/workers-sdk/pull/12214) [`4db3864`](https://github.com/cloudflare/workers-sdk/commit/4db3864576e072c7d06f3526334d2e863383846b) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Use [Hook Filters](https://vite.dev/guide/api-plugin#hook-filters) to optimize plugin performance with Vite 8. This skips unnecessary Rust-to-JS calls with Rolldown powered Vite.
+
+### Patch Changes
+
+- [#12358](https://github.com/cloudflare/workers-sdk/pull/12358) [`4340c42`](https://github.com/cloudflare/workers-sdk/commit/4340c42ab38ca549f62db8e423dda3ef5b673fb7) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Always emit a `.assetsignore` file in the client output directory.
+
+  Previously, we would emit a `.assetsignore` file in the client output directory only if the client output included a `wrangler.json` file.
+  We now always emit it, which prevents a `wrangler.json` file being deployed as an asset if it is copied into this directory by mistake.
+
+- Updated dependencies [[`964a39d`](https://github.com/cloudflare/workers-sdk/commit/964a39d188af5c7d18b6397fb209b6d69408f702), [`253a85d`](https://github.com/cloudflare/workers-sdk/commit/253a85de5e86a51c7067d0f5e455ecd89693277d), [`ce736b9`](https://github.com/cloudflare/workers-sdk/commit/ce736b904b4d65e15df65cc9b1e7441b7c37e429), [`0c9625a`](https://github.com/cloudflare/workers-sdk/commit/0c9625a422895925b7ae89f3f371043e96ee5e87), [`47944d1`](https://github.com/cloudflare/workers-sdk/commit/47944d1b1b4710aec2aea6d9cefd9c4cb50b41d7), [`4c4d5a5`](https://github.com/cloudflare/workers-sdk/commit/4c4d5a578b0b66423b6abd553480d3935005246c), [`b05b919`](https://github.com/cloudflare/workers-sdk/commit/b05b919b22a421a85a07fb8daccf9e22219dac53), [`0aaf080`](https://github.com/cloudflare/workers-sdk/commit/0aaf080e993dfbba7e49408df5c4afc39bed3c0f), [`b981db5`](https://github.com/cloudflare/workers-sdk/commit/b981db579ed438e2ebbad18dd6a58e6989d2188b), [`a113c0d`](https://github.com/cloudflare/workers-sdk/commit/a113c0dca6c475baac3897f9c310aed851fdfa38), [`fdd7a9f`](https://github.com/cloudflare/workers-sdk/commit/fdd7a9fa429b48d1a4a2e28a20de7e2039a726b1), [`a5fca2c`](https://github.com/cloudflare/workers-sdk/commit/a5fca2c18001eea80c53b73a377a1ba2a83cb142), [`1bd1488`](https://github.com/cloudflare/workers-sdk/commit/1bd1488b1eb1d88aa854e8938acc88cdc0ce7f29), [`f7aa8c7`](https://github.com/cloudflare/workers-sdk/commit/f7aa8c78c3245c5e277d07398fa9d8a8b16c9280)]:
+  - wrangler@4.62.0
+  - miniflare@4.20260131.0
+
 ## 1.22.1
 
 ### Patch Changes

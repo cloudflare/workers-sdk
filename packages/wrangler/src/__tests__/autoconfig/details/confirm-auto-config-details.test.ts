@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 import { confirmAutoConfigDetails } from "../../../autoconfig/details";
+import { Static } from "../../../autoconfig/frameworks/static";
 import { mockConfirm, mockPrompt } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 import type { Framework } from "../../../autoconfig/frameworks";
@@ -29,12 +30,19 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				buildCommand: "npm run build",
 				projectPath: "<PROJECT_PATH>",
 				configured: false,
+				framework: new Static({ id: "static", name: "Static" }),
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
 				Object {
 				  "buildCommand": "npm run build",
 				  "configured": false,
+				  "framework": Static {
+				    "autoConfigSupported": true,
+				    "configurationDescription": undefined,
+				    "id": "static",
+				    "name": "Static",
+				  },
 				  "projectPath": "<PROJECT_PATH>",
 				  "workerName": "worker-name",
 				}
@@ -67,11 +75,18 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				outputDir: "<OUTPUT_DIR>",
 				projectPath: "<PROJECT_PATH>",
 				configured: false,
+				framework: new Static({ id: "static", name: "Static" }),
 			});
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
 				Object {
 				  "buildCommand": "npm run app:build",
 				  "configured": false,
+				  "framework": Static {
+				    "autoConfigSupported": true,
+				    "configurationDescription": undefined,
+				    "id": "static",
+				    "name": "Static",
+				  },
 				  "outputDir": "./_public_",
 				  "projectPath": "<PROJECT_PATH>",
 				  "workerName": "new-name",
@@ -144,12 +159,19 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				buildCommand: "npm run build",
 				projectPath: "<PROJECT_PATH>",
 				configured: false,
+				framework: new Static({ id: "static", name: "Static" }),
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
 				Object {
 				  "buildCommand": "npm run build",
 				  "configured": false,
+				  "framework": Static {
+				    "autoConfigSupported": true,
+				    "configurationDescription": undefined,
+				    "id": "static",
+				    "name": "Static",
+				  },
 				  "projectPath": "<PROJECT_PATH>",
 				  "workerName": "worker-name",
 				}

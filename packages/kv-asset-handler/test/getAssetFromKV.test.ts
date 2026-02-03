@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from "vitest";
+import { beforeEach, test } from "vitest";
 import { getAssetFromKV, mapRequestToAsset } from "../src/index";
 import {
 	getEvent,
@@ -14,7 +14,9 @@ beforeEach(async () => {
 	mockRequestScope();
 });
 
-test("getAssetFromKV return correct val from KV and default caching", async () => {
+test("getAssetFromKV return correct val from KV and default caching", async ({
+	expect,
+}) => {
 	const event = getEvent(new Request("https://blah.com/key1.txt"));
 	const res = await getAssetFromKV(event);
 
@@ -27,20 +29,26 @@ test("getAssetFromKV return correct val from KV and default caching", async () =
 		expect.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV evaluated the file matching the extensionless path first /client/ -> client", async () => {
+test("getAssetFromKV evaluated the file matching the extensionless path first /client/ -> client", async ({
+	expect,
+}) => {
 	const event = getEvent(new Request(`https://foo.com/client/`));
 	const res = await getAssetFromKV(event);
 	expect(await res.text()).toBe("important file");
 	expect(res.headers.get("content-type")).toContain("text");
 });
-test("getAssetFromKV evaluated the file matching the extensionless path first /client -> client", async () => {
+test("getAssetFromKV evaluated the file matching the extensionless path first /client -> client", async ({
+	expect,
+}) => {
 	const event = getEvent(new Request(`https://foo.com/client`));
 	const res = await getAssetFromKV(event);
 	expect(await res.text()).toBe("important file");
 	expect(res.headers.get("content-type")).toContain("text");
 });
 
-test("getAssetFromKV if not in asset manifest still returns nohash.txt", async () => {
+test("getAssetFromKV if not in asset manifest still returns nohash.txt", async ({
+	expect,
+}) => {
 	const event = getEvent(new Request("https://blah.com/nohash.txt"));
 	const res = await getAssetFromKV(event);
 
@@ -52,14 +60,16 @@ test("getAssetFromKV if not in asset manifest still returns nohash.txt", async (
 	}
 });
 
-test("getAssetFromKV if no asset manifest /client -> client fails", async () => {
+test("getAssetFromKV if no asset manifest /client -> client fails", async ({
+	expect,
+}) => {
 	const event = getEvent(new Request(`https://foo.com/client`));
 	await expect(() =>
 		getAssetFromKV(event, { ASSET_MANIFEST: {} })
 	).rejects.toThrowError(expect.objectContaining({ status: 404 }));
 });
 
-test("getAssetFromKV if sub/ -> sub/index.html served", async () => {
+test("getAssetFromKV if sub/ -> sub/index.html served", async ({ expect }) => {
 	const event = getEvent(new Request(`https://foo.com/sub`));
 	const res = await getAssetFromKV(event);
 	if (res) {
@@ -69,7 +79,9 @@ test("getAssetFromKV if sub/ -> sub/index.html served", async () => {
 	}
 });
 
-test("getAssetFromKV gets index.html by default for / requests", async () => {
+test("getAssetFromKV gets index.html by default for / requests", async ({
+	expect,
+}) => {
 	const event = getEvent(new Request("https://blah.com/"));
 	const res = await getAssetFromKV(event);
 
@@ -81,7 +93,7 @@ test("getAssetFromKV gets index.html by default for / requests", async () => {
 	}
 });
 
-test("getAssetFromKV non ASCII path support", async () => {
+test("getAssetFromKV non ASCII path support", async ({ expect }) => {
 	const event = getEvent(new Request("https://blah.com/测试.html"));
 	const res = await getAssetFromKV(event);
 
@@ -92,7 +104,9 @@ test("getAssetFromKV non ASCII path support", async () => {
 	}
 });
 
-test("getAssetFromKV supports browser percent encoded URLs", async () => {
+test("getAssetFromKV supports browser percent encoded URLs", async ({
+	expect,
+}) => {
 	const event = getEvent(
 		new Request("https://example.com/%not-really-percent-encoded.html")
 	);
@@ -105,7 +119,9 @@ test("getAssetFromKV supports browser percent encoded URLs", async () => {
 	}
 });
 
-test("getAssetFromKV supports user percent encoded URLs", async () => {
+test("getAssetFromKV supports user percent encoded URLs", async ({
+	expect,
+}) => {
 	const event = getEvent(new Request("https://blah.com/%2F.html"));
 	const res = await getAssetFromKV(event);
 
@@ -116,7 +132,7 @@ test("getAssetFromKV supports user percent encoded URLs", async () => {
 	}
 });
 
-test("getAssetFromKV only decode URL when necessary", async () => {
+test("getAssetFromKV only decode URL when necessary", async ({ expect }) => {
 	const event1 = getEvent(
 		new Request("https://blah.com/%E4%BD%A0%E5%A5%BD.html")
 	);
@@ -132,7 +148,7 @@ test("getAssetFromKV only decode URL when necessary", async () => {
 	}
 });
 
-test("getAssetFromKV Support for user decode url path", async () => {
+test("getAssetFromKV Support for user decode url path", async ({ expect }) => {
 	const event1 = getEvent(new Request("https://blah.com/%E4%BD%A0%E5%A5%BD/"));
 	const event2 = getEvent(new Request("https://blah.com/你好/"));
 	const res1 = await getAssetFromKV(event1);
@@ -146,7 +162,7 @@ test("getAssetFromKV Support for user decode url path", async () => {
 	}
 });
 
-test("getAssetFromKV custom key modifier", async () => {
+test("getAssetFromKV custom key modifier", async ({ expect }) => {
 	const event = getEvent(new Request("https://blah.com/docs/sub/blah.png"));
 
 	const customRequestMapper = (request: Request) => {
@@ -168,7 +184,9 @@ test("getAssetFromKV custom key modifier", async () => {
 	}
 });
 
-test("getAssetFromKV request override with existing manifest file", async () => {
+test("getAssetFromKV request override with existing manifest file", async ({
+	expect,
+}) => {
 	// see https://github.com/cloudflare/kv-asset-handler/pull/159 for more info
 	const event = getEvent(new Request("https://blah.com/image.png")); // real file in manifest
 
@@ -191,7 +209,7 @@ test("getAssetFromKV request override with existing manifest file", async () => 
 	}
 });
 
-test("getAssetFromKV when setting browser caching", async () => {
+test("getAssetFromKV when setting browser caching", async ({ expect }) => {
 	const event = getEvent(new Request("https://blah.com/"));
 
 	const res = await getAssetFromKV(event, { cacheControl: { browserTTL: 22 } });
@@ -203,7 +221,7 @@ test("getAssetFromKV when setting browser caching", async () => {
 	}
 });
 
-test("getAssetFromKV when setting custom cache setting", async () => {
+test("getAssetFromKV when setting custom cache setting", async ({ expect }) => {
 	const event1 = getEvent(new Request("https://blah.com/"));
 	const event2 = getEvent(new Request("https://blah.com/key1.png?blah=34"));
 	const cacheOnlyPngs = (req: Request) => {
@@ -231,7 +249,7 @@ test("getAssetFromKV when setting custom cache setting", async () => {
 		expect.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV caches on two sequential requests", async () => {
+test("getAssetFromKV caches on two sequential requests", async ({ expect }) => {
 	const resourceKey = "cache.html";
 	const resourceVersion = JSON.parse(mockManifest())[resourceKey];
 	const event1 = getEvent(new Request(`https://blah.com/${resourceKey}`));
@@ -257,7 +275,9 @@ test("getAssetFromKV caches on two sequential requests", async () => {
 		expect.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV does not store max-age on two sequential requests", async () => {
+test("getAssetFromKV does not store max-age on two sequential requests", async ({
+	expect,
+}) => {
 	const resourceKey = "cache.html";
 	const resourceVersion = JSON.parse(mockManifest())[resourceKey];
 	const event1 = getEvent(new Request(`https://blah.com/${resourceKey}`));
@@ -283,7 +303,9 @@ test("getAssetFromKV does not store max-age on two sequential requests", async (
 	}
 });
 
-test("getAssetFromKV does not cache on Cloudflare when bypass cache set", async () => {
+test("getAssetFromKV does not cache on Cloudflare when bypass cache set", async ({
+	expect,
+}) => {
 	const event = getEvent(new Request("https://blah.com/"));
 
 	const res = await getAssetFromKV(event, {
@@ -298,7 +320,7 @@ test("getAssetFromKV does not cache on Cloudflare when bypass cache set", async 
 	}
 });
 
-test("getAssetFromKV with no trailing slash on root", async () => {
+test("getAssetFromKV with no trailing slash on root", async ({ expect }) => {
 	const event = getEvent(new Request("https://blah.com"));
 	const res = await getAssetFromKV(event);
 	if (res) {
@@ -308,7 +330,9 @@ test("getAssetFromKV with no trailing slash on root", async () => {
 	}
 });
 
-test("getAssetFromKV with no trailing slash on a subdirectory", async () => {
+test("getAssetFromKV with no trailing slash on a subdirectory", async ({
+	expect,
+}) => {
 	const event = getEvent(new Request("https://blah.com/sub/blah.png"));
 	const res = await getAssetFromKV(event);
 	if (res) {
@@ -318,13 +342,15 @@ test("getAssetFromKV with no trailing slash on a subdirectory", async () => {
 	}
 });
 
-test("getAssetFromKV no result throws an error", async () => {
+test("getAssetFromKV no result throws an error", async ({ expect }) => {
 	const event = getEvent(new Request("https://blah.com/random"));
 	await expect(getAssetFromKV(event)).rejects.toThrow(
 		expect.objectContaining({ status: 404 })
 	);
 });
-test("getAssetFromKV TTls set to null should not cache on browser or edge", async () => {
+test("getAssetFromKV TTls set to null should not cache on browser or edge", async ({
+	expect,
+}) => {
 	const event = getEvent(new Request("https://blah.com/"));
 
 	const res1 = await getAssetFromKV(event, {
@@ -344,7 +370,9 @@ test("getAssetFromKV TTls set to null should not cache on browser or edge", asyn
 		expect.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV passing in a custom NAMESPACE serves correct asset", async () => {
+test("getAssetFromKV passing in a custom NAMESPACE serves correct asset", async ({
+	expect,
+}) => {
 	const CUSTOM_NAMESPACE = mockKV({
 		"key1.123HASHBROWN.txt": "val1",
 	});
@@ -358,7 +386,9 @@ test("getAssetFromKV passing in a custom NAMESPACE serves correct asset", async 
 		expect.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV when custom namespace without the asset should fail", async () => {
+test("getAssetFromKV when custom namespace without the asset should fail", async ({
+	expect,
+}) => {
 	const CUSTOM_NAMESPACE = mockKV({
 		"key5.123HASHBROWN.txt": "customvalu",
 	});
@@ -368,7 +398,7 @@ test("getAssetFromKV when custom namespace without the asset should fail", async
 		getAssetFromKV(event, { ASSET_NAMESPACE: CUSTOM_NAMESPACE })
 	).rejects.toThrow(expect.objectContaining({ status: 404 }));
 });
-test("getAssetFromKV when namespace not bound fails", async () => {
+test("getAssetFromKV when namespace not bound fails", async ({ expect }) => {
 	const MY_CUSTOM_NAMESPACE: KVNamespace = undefined;
 	Object.assign(globalThis, { MY_CUSTOM_NAMESPACE });
 
@@ -378,7 +408,9 @@ test("getAssetFromKV when namespace not bound fails", async () => {
 	).rejects.toThrow(expect.objectContaining({ status: 500 }));
 });
 
-test("getAssetFromKV when if-none-match === active resource version, should revalidate", async () => {
+test("getAssetFromKV when if-none-match === active resource version, should revalidate", async ({
+	expect,
+}) => {
 	const resourceKey = "key1.png";
 	const resourceVersion = JSON.parse(mockManifest())[resourceKey];
 	const event1 = getEvent(new Request(`https://blah.com/${resourceKey}`));
@@ -402,7 +434,9 @@ test("getAssetFromKV when if-none-match === active resource version, should reva
 	}
 });
 
-test("getAssetFromKV when if-none-match equals etag of stale resource then should bypass cache", async () => {
+test("getAssetFromKV when if-none-match equals etag of stale resource then should bypass cache", async ({
+	expect,
+}) => {
 	const resourceKey = "key1.png";
 	const resourceVersion = JSON.parse(mockManifest())[resourceKey];
 	const req1 = new Request(`https://blah.com/${resourceKey}`, {
@@ -434,7 +468,9 @@ test("getAssetFromKV when if-none-match equals etag of stale resource then shoul
 		expect.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV when resource in cache, etag should be weakened before returned to eyeball", async () => {
+test("getAssetFromKV when resource in cache, etag should be weakened before returned to eyeball", async ({
+	expect,
+}) => {
 	const resourceKey = "key1.png";
 	const resourceVersion = JSON.parse(mockManifest())[resourceKey];
 	const req1 = new Request(`https://blah.com/${resourceKey}`, {
@@ -454,7 +490,9 @@ test("getAssetFromKV when resource in cache, etag should be weakened before retu
 		expect.fail("Response was undefined");
 	}
 });
-test("getAssetFromKV should support weak etag override of resource", async () => {
+test("getAssetFromKV should support weak etag override of resource", async ({
+	expect,
+}) => {
 	const resourceKey = "key1.png";
 	const resourceVersion = JSON.parse(mockManifest())[resourceKey];
 	const req1 = new Request(`https://blah-weak.com/${resourceKey}`, {
@@ -494,7 +532,9 @@ test("getAssetFromKV should support weak etag override of resource", async () =>
 	}
 });
 
-test("getAssetFromKV if-none-match not sent but resource in cache, should return cache hit 200 OK", async () => {
+test("getAssetFromKV if-none-match not sent but resource in cache, should return cache hit 200 OK", async ({
+	expect,
+}) => {
 	const resourceKey = "cache.html";
 	const event = getEvent(new Request(`https://blah.com/${resourceKey}`));
 	const res1 = await getAssetFromKV(event, { cacheControl: { edgeTTL: 720 } });
@@ -510,7 +550,9 @@ test("getAssetFromKV if-none-match not sent but resource in cache, should return
 	}
 });
 
-test("getAssetFromKV if range request submitted and resource in cache, request fulfilled", async () => {
+test("getAssetFromKV if range request submitted and resource in cache, request fulfilled", async ({
+	expect,
+}) => {
 	const resourceKey = "cache.html";
 	const event1 = getEvent(new Request(`https://blah.com/${resourceKey}`));
 	const event2 = getEvent(

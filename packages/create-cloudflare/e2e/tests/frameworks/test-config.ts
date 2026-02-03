@@ -59,15 +59,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "C3_TEST",
 			},
 			nodeCompat: true,
-			flags: [
-				"--skip-houston",
-				"--no-install",
-				"--no-git",
-				"--template",
-				"blog",
-				"--typescript",
-				"strict",
-			],
+			flags: ["--skip-houston", "--template", "blog", "--typescript", "strict"],
 		},
 		{
 			name: "astro:workers",
@@ -84,15 +76,7 @@ function getFrameworkTestConfig(pm: string): NamedFrameworkTestConfig[] {
 				expectedText: "C3_TEST",
 			},
 			nodeCompat: true,
-			flags: [
-				"--skip-houston",
-				"--no-install",
-				"--no-git",
-				"--template",
-				"blog",
-				"--typescript",
-				"strict",
-			],
+			flags: ["--skip-houston", "--template", "blog", "--typescript", "strict"],
 		},
 		{
 			name: "docusaurus:pages",

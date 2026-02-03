@@ -1,5 +1,25 @@
 # @cloudflare/workers-utils
 
+## 0.9.0
+
+### Minor Changes
+
+- [#11803](https://github.com/cloudflare/workers-sdk/pull/11803) [`1bd1488`](https://github.com/cloudflare/workers-sdk/commit/1bd1488b1eb1d88aa854e8938acc88cdc0ce7f29) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add a new `subrequests` limit to the `limits` field of the Wrangler configuration file
+
+  Before only the `cpu_ms` limit was supported in the `limits` field of the Wrangler configuration file, now a `subrequests` limit can be specified as well which enables the user to limit the number of fetch requests that a Worker's invocation can make.
+
+  Example:
+
+  ```json
+  {
+  	"$schema": "./node_modules/wrangler/config-schema.json",
+  	"limits": {
+  		"cpu_ms": 1000,
+  		"subrequests": 150 // newly added field
+  	}
+  }
+  ```
+
 ## 0.8.1
 
 ### Patch Changes

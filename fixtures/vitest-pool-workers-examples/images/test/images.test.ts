@@ -1,5 +1,5 @@
 import { SELF } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { it } from "vitest";
 
 const TINY_PNG = new Uint8Array([
 	137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 18, 0,
@@ -88,7 +88,7 @@ const TINY_PNG = new Uint8Array([
 	78, 68, 174, 66, 96, 130,
 ]);
 
-it("can return image info", async () => {
+it("can return image info", async ({ expect }) => {
 	const resp = (await (
 		await SELF.fetch("https://example.com/", {
 			method: "POST",

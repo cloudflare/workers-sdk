@@ -1,8 +1,8 @@
 import { Miniflare } from "miniflare";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { useDispose } from "../../test-shared";
 
-test("hello-world", async () => {
+test("hello-world", async ({ expect }) => {
 	const mf = new Miniflare({
 		compatibilityDate: "2025-01-01",
 		helloWorld: {

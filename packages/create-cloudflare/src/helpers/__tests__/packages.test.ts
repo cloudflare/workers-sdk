@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { runCommand } from "helpers/command";
 import { installPackages, installWrangler, npmInstall } from "helpers/packages";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- test.each pattern
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import { createTestContext } from "../../__tests__/helpers";

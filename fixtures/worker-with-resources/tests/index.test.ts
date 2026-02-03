@@ -1,5 +1,5 @@
 import { resolve } from "path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("local explorer", () => {
@@ -20,7 +20,9 @@ describe("local explorer", () => {
 			await stop?.();
 		});
 
-		it("returns local explorer API response for /cdn-cgi/explorer/api", async () => {
+		it("returns local explorer API response for /cdn-cgi/explorer/api", async ({
+			expect,
+		}) => {
 			const response = await fetch(
 				`http://${ip}:${port}/cdn-cgi/explorer/api/storage/kv/namespaces`
 			);
@@ -49,7 +51,7 @@ describe("local explorer", () => {
 			});
 		});
 
-		it("returns worker response for normal requests", async () => {
+		it("returns worker response for normal requests", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/`);
 			const text = await response.text();
 			expect(text).toBe("Hello World!");
@@ -72,13 +74,15 @@ describe("local explorer", () => {
 			await stop?.();
 		});
 
-		it("returns worker response for /cdn-cgi/explorer/api", async () => {
+		it("returns worker response for /cdn-cgi/explorer/api", async ({
+			expect,
+		}) => {
 			const response = await fetch(`http://${ip}:${port}/cdn-cgi/explorer/api`);
 			const text = await response.text();
 			expect(text).toBe("Hello World!");
 		});
 
-		it("returns worker response for normal requests", async () => {
+		it("returns worker response for normal requests", async ({ expect }) => {
 			const response = await fetch(`http://${ip}:${port}/`);
 			const text = await response.text();
 			expect(text).toBe("Hello World!");

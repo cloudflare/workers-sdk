@@ -1,5 +1,5 @@
 import path from "path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { Unstable_DevWorker } from "wrangler";
 
@@ -41,7 +41,7 @@ describe("multiple workers", () => {
 		await Promise.all(workers.map(async (worker) => await worker.stop()));
 	});
 
-	it.concurrent("all workers should be fetchable", async () => {
+	it.concurrent("all workers should be fetchable", async ({ expect }) => {
 		const responses = await Promise.all(
 			workers.map(async (worker) => await worker.fetch())
 		);
