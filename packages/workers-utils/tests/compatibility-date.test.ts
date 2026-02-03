@@ -1,5 +1,6 @@
 import module from "node:module";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { beforeEach, describe, it, vi } from "vitest";
 import { getLocalWorkerdCompatibilityDate } from "../src/compatibility-date";
 

@@ -40,7 +40,7 @@ export function getLocalWorkerdCompatibilityDate({
 		const projectRequire = module.createRequire(
 			path.join(projectPath, "package.json")
 		);
-		const miniflareEntry = projectRequire.resolve("miniflare");
+		const miniflareEntry = projectRequire.resolve("miniflare/package.json");
 		const miniflareRequire = module.createRequire(miniflareEntry);
 		const miniflareWorkerd = miniflareRequire("workerd") as {
 			compatibilityDate: string;
