@@ -155,39 +155,41 @@ export async function rawD1Database(
 
 	try {
 		for (const query of queries) {
-			const startTime = performance.now();
-
 			let statement = db.prepare(query.sql);
 			if (query.params && query.params.length > 0) {
 				statement = statement.bind(...query.params);
 			}
 
-			// Get column names & raw results
-			const rawResults = await statement.raw({
-				columnNames: true,
-			});
-			const endTime = performance.now();
-			const duration = endTime - startTime;
+			// Note: We use `.all()` here instead of `.raw()` so we can get the full
+			// query metadata back. As such we then need to transform the data to match
+			// the required raw request format.
+			const allResults = await statement.all();
 
-			// First row contains column names when `columnNames: true`
-			const columns = rawResults.length > 0 ? (rawResults[0] as string[]) : [];
-			const rows = rawResults.slice(1) as Array<
-				Array<number | string | Record<string, unknown>>
-			>;
+			const columns =
+				allResults.results.length > 0 ? Object.keys(allResults.results[0]) : [];
 
-			// For raw queries, we construct basic metadata
-			// Note: D1's `statement.raw()` doesn't return full metadata like `statement.all()` does
+			const rows = allResults.results.map((row) =>
+				columns.map(
+					(col) => row[col] as number | string | Record<string, unknown>
+				)
+			);
+
 			results.push({
 				meta: {
-					changed_db: false,
-					duration: duration,
-					rows_read: rows.length,
+					changed_db: allResults.meta.changed_db,
+					changes: allResults.meta.changes,
+					duration: allResults.meta.duration,
+					last_row_id: allResults.meta.last_row_id,
+					rows_read: allResults.meta.rows_read,
+					rows_written: allResults.meta.rows_written,
+					size_after: allResults.meta.size_after,
+					timings: allResults.meta.timings,
 				},
 				results: {
 					columns,
 					rows,
 				},
-				success: true,
+				success: allResults.success,
 			} satisfies D1RawResultResponse);
 		}
 	} catch (error) {
