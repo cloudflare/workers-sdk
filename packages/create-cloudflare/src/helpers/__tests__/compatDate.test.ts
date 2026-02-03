@@ -1,4 +1,4 @@
-import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
+import { createRequire } from "node:module";
 import {
 	getLatestTypesEntrypoint,
 	getWorkerdCompatibilityDate,
@@ -10,7 +10,7 @@ import { mockSpinner, mockWorkersTypesDirectory } from "./mocks";
 vi.mock("helpers/files");
 vi.mock("fs");
 vi.mock("@cloudflare/cli/interactive");
-vi.mock("@cloudflare/workers-utils");
+vi.mock("node:module");
 
 describe("Compatibility Date Helpers", () => {
 	let spinner: ReturnType<typeof mockSpinner>;
@@ -25,10 +25,12 @@ describe("Compatibility Date Helpers", () => {
 
 	describe("getWorkerdCompatibilityDate()", () => {
 		test("normal flow", async ({ expect }) => {
-			vi.mocked(getLocalWorkerdCompatibilityDate).mockReturnValue({
-				date: "2025-01-10",
-				source: "workerd",
-			});
+			const mockWrangler = {
+				getLocalWorkerdCompatibilityDate: () => "2025-01-10",
+			};
+			vi.mocked(createRequire).mockReturnValue(
+				(() => mockWrangler) as unknown as NodeJS.Require,
+			);
 
 			const date = getWorkerdCompatibilityDate("./my-app");
 
@@ -40,15 +42,14 @@ describe("Compatibility Date Helpers", () => {
 			);
 		});
 
-		test("fallback result", async ({ expect }) => {
-			vi.mocked(getLocalWorkerdCompatibilityDate).mockReturnValue({
-				date: "2025-09-27",
-				source: "fallback",
-			});
+		test("fallback on error", async ({ expect }) => {
+			vi.mocked(createRequire).mockReturnValue((() => {
+				throw new Error("Cannot find module 'wrangler'");
+			}) as unknown as NodeJS.Require);
 
 			const date = getWorkerdCompatibilityDate("./my-app");
 
-			const fallbackDate = "2025-09-27";
+			const fallbackDate = "2026-02-04";
 			expect(date).toBe(fallbackDate);
 			expect(spinner.start).toHaveBeenCalled();
 			expect(spinner.stop).toHaveBeenCalledWith(

@@ -1,7 +1,7 @@
 import * as path from "node:path";
 import { parseStaticRouting } from "@cloudflare/workers-shared/utils/configuration/parseStaticRouting";
-import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import { defu } from "defu";
+import { getLocalWorkerdCompatibilityDate } from "miniflare";
 import * as vite from "vite";
 import * as wrangler from "wrangler";
 import { getWorkerConfigs } from "./deploy-config";
@@ -243,9 +243,7 @@ function resolveWorkerConfig(
 					configCustomizer: options.configCustomizer,
 				});
 
-	const { date } = getLocalWorkerdCompatibilityDate({
-		projectPath: options.root,
-	});
+	const date = getLocalWorkerdCompatibilityDate();
 
 	workerConfig.compatibility_date ??= date;
 

@@ -3,10 +3,9 @@ import { writeFile } from "node:fs/promises";
 import {
 	COMPLIANCE_REGION_CONFIG_PUBLIC,
 	FatalError,
-	formatCompatibilityDate,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
-import { supportedCompatibilityDate } from "miniflare";
+import { formatCompatibilityDate, supportedCompatibilityDate } from "miniflare";
 import TOML from "smol-toml";
 import { fetchResult } from "../cfetch";
 import { getConfigCache } from "../config-cache";

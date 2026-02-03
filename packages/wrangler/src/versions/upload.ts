@@ -6,7 +6,6 @@ import path from "node:path";
 import { blue, gray } from "@cloudflare/cli/colors";
 import {
 	configFileName,
-	formatCompatibilityDate,
 	formatConfigSnippet,
 	getCIGeneratePreviewAlias,
 	getCIOverrideName,
@@ -14,6 +13,7 @@ import {
 	ParseError,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { formatCompatibilityDate } from "miniflare";
 import { Response } from "undici";
 import {
 	getAssetsOptions,

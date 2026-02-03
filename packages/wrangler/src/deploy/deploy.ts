@@ -8,12 +8,12 @@ import {
 	APIError,
 	configFileName,
 	experimental_patchConfig,
-	formatCompatibilityDate,
 	formatConfigSnippet,
 	getDockerPath,
 	parseNonHyphenedUuid,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { formatCompatibilityDate } from "miniflare";
 import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";

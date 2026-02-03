@@ -1,10 +1,7 @@
 import { resolveDockerHost } from "@cloudflare/containers-shared";
-import {
-	getDockerPath,
-	getLocalWorkerdCompatibilityDate,
-	getRegistryPath,
-} from "@cloudflare/workers-utils";
+import { getDockerPath, getRegistryPath } from "@cloudflare/workers-utils";
 import { kCurrentWorker, Miniflare } from "miniflare";
+import * as miniflareModule from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
@@ -46,13 +43,20 @@ export { readConfig as unstable_readConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
 
 /**
- * @deprecated use `getLocalWorkerdCompatibilityDate` from "@cloudflare/workers-utils" instead.
+ * @deprecated use `getLocalWorkerdCompatibilityDate` instead.
  *
  * We're keeping this function only not to break the vite plugin that relies on it, we should remove it as soon as possible.
  */
 export function unstable_getDevCompatibilityDate() {
-	return getLocalWorkerdCompatibilityDate().date;
+	return miniflareModule.getLocalWorkerdCompatibilityDate();
 }
+
+export {
+	getLocalWorkerdCompatibilityDate,
+	isCompatDate,
+	formatCompatibilityDate,
+} from "miniflare";
+export type { CompatDate } from "miniflare";
 
 export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
 export type {

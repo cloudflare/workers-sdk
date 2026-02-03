@@ -1,31 +1,39 @@
 import { readdirSync } from "node:fs";
-import { resolve } from "node:path";
+import { createRequire } from "node:module";
+import { join, resolve } from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { spinner } from "@cloudflare/cli/interactive";
-import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import type { C3Context } from "types";
+import type { CompatDate } from "wrangler";
 
 /**
  * Retrieves the latest workerd compatibility date
  *
  * @returns The latest compatibility date for workerd in the form "YYYY-MM-DD"
  */
-export function getWorkerdCompatibilityDate(projectPath: string) {
+export function getWorkerdCompatibilityDate(projectPath: string): CompatDate {
 	const s = spinner();
 	s.start("Retrieving current workerd compatibility date");
 
-	const { date, source } = getLocalWorkerdCompatibilityDate({ projectPath });
-
-	if (source === "fallback") {
+	try {
+		const projectRequire = createRequire(join(projectPath, "package.json"));
+		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+		const wrangler: Awaited<typeof import("wrangler")> =
+			projectRequire("wrangler");
+		const date = wrangler.getLocalWorkerdCompatibilityDate();
+		s.stop(`${brandColor("compatibility date")} ${dim(date)}`);
+		return date;
+	} catch {
+		// Note: this fallback date doesn't have any special meaning, it's simply the latest compatibility date at the time of writing
+		//       (source: https://github.com/cloudflare/workerd/blob/main/src/workerd/io/supported-compatibility-date.txt)
+		const fallbackDate = "2026-02-04";
 		s.stop(
 			`${brandColor("compatibility date")} ${dim(
-				` Could not find workerd date, falling back to ${date}`,
+				`Could not find workerd date, falling back to "${fallbackDate}"`,
 			)}`,
 		);
-	} else {
-		s.stop(`${brandColor("compatibility date")} ${dim(date)}`);
+		return fallbackDate;
 	}
-	return date;
 }
 
 /**
