@@ -380,8 +380,8 @@ INSERT INTO users (name, email) VALUES ('Bob', 'bob@example.com');
 			expect(json).toMatchObject({
 				errors: [
 					expect.objectContaining({
-						code: 10002,
-						message: "Missing required 'sql' field in query",
+						code: 10001,
+						message: "Invalid input",
 					}),
 				],
 				success: false,

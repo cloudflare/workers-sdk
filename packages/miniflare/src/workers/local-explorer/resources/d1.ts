@@ -141,12 +141,6 @@ export async function rawD1Database(
 		return errorResponse(404, 10000, "Database not found");
 	}
 
-	// Note: The generate request body schema for this request handler is a union union that allows
-	// for an empty object to pass through, since `sql is required it falls back to the `batch` object
-	// which is optional so it allows it. As such we need to manually check for this invalid request body.
-	if (!("sql" in body) && !("batch" in body))
-		return errorResponse(400, 10002, "Missing required 'sql' field in query");
-
 	// Normalize to array of queries
 	const queries: D1SingleQuery[] =
 		"batch" in body && body.batch ? body.batch : [body as D1SingleQuery];
