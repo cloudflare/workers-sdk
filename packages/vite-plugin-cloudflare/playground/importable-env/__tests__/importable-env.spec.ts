@@ -1,9 +1,7 @@
 import { expect, test } from "vitest";
-import { getJsonResponse, getResponse, serverLogs } from "../../__test-utils__";
+import { getJsonResponse, serverLogs } from "../../__test-utils__";
 
 test("the importable env is accessible from outside the request handler", async () => {
-	await getResponse();
-
 	expect(serverLogs.info.join()).toMatch(
 		/outside of request handler: importedEnv\["importable-env_VAR"\] === "my importable env variable"/
 	);

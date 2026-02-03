@@ -1,9 +1,12 @@
 {
-	"name": "@cloudflare/vite-plugin-e2e-nodejs-compat-warnings",
+	"name": "@cloudflare/vite-plugin-e2e-nodejs-compat-warnings-dependency",
 	"private": true,
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev"
+	},
+	"dependencies": {
+		"path-exists": "5.0.0"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "*",
