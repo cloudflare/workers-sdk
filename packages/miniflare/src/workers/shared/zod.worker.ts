@@ -13,4 +13,4 @@ export const Base64DataSchema = z
 	.regex(BASE64_REGEXP)
 	.transform((base64) => Buffer.from(base64, "base64"));
 
-export { z } from "zod";
+export { z };

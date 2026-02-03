@@ -24,9 +24,9 @@ function switchRemote(url: URL, remote: string) {
 }
 
 const UploadedMetadata = z.object({
-	body_part: z.ostring(),
-	main_module: z.ostring(),
-	compatibility_date: z.ostring(),
+	body_part: z.string().optional(),
+	main_module: z.string().optional(),
+	compatibility_date: z.string().optional(),
 	compatibility_flags: z.array(z.string()).optional(),
 });
 
