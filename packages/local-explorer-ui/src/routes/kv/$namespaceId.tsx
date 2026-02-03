@@ -1,5 +1,5 @@
-import { AlertDialog } from "@base-ui-components/react/alert-dialog";
-import { Button } from "@base-ui-components/react/button";
+import { AlertDialog } from "@base-ui/react/alert-dialog";
+import { Button } from "@base-ui/react/button";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {

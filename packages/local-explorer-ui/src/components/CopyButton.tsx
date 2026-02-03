@@ -1,5 +1,4 @@
-import { Button } from "@base-ui-components/react/button";
-import { Tooltip } from "@base-ui-components/react/tooltip";
+import { Button } from "@base-ui/react/button";
 import { useState } from "react";
 import CheckIcon from "../assets/icons/check.svg?react";
 import CopyIcon from "../assets/icons/copy.svg?react";
@@ -18,24 +17,12 @@ export function CopyButton({ text }: CopyButtonProps) {
 	};
 
 	return (
-		<Tooltip.Root>
-			<Tooltip.Trigger
-				render={
-					<Button
-						className={`copy-btn ${copied ? "copied" : ""}`}
-						onClick={handleCopy}
-					>
-						{copied ? <CheckIcon /> : <CopyIcon />}
-					</Button>
-				}
-			/>
-			<Tooltip.Portal>
-				<Tooltip.Positioner sideOffset={4}>
-					<Tooltip.Popup className="tooltip">
-						{copied ? "Copied!" : "Copy to clipboard"}
-					</Tooltip.Popup>
-				</Tooltip.Positioner>
-			</Tooltip.Portal>
-		</Tooltip.Root>
+		<Button
+			className={`copy-btn ${copied ? "copied" : ""}`}
+			onClick={handleCopy}
+			aria-label={copied ? "Copied" : "Copy to clipboard"}
+		>
+			{copied ? <CheckIcon /> : <CopyIcon />}
+		</Button>
 	);
 }

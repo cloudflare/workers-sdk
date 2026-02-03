@@ -1,6 +1,6 @@
-import { Button } from "@base-ui-components/react/button";
-import { Field } from "@base-ui-components/react/field";
-import { Input } from "@base-ui-components/react/input";
+import { Button } from "@base-ui/react/button";
+import { Field } from "@base-ui/react/field";
+import { Input } from "@base-ui/react/input";
 import { useState } from "react";
 
 interface AddKVFormProps {

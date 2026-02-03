@@ -1,6 +1,6 @@
-import { Button } from "@base-ui-components/react/button";
-import { Input } from "@base-ui-components/react/input";
-import { Menu } from "@base-ui-components/react/menu";
+import { Button } from "@base-ui/react/button";
+import { Input } from "@base-ui/react/input";
+import { Menu } from "@base-ui/react/menu";
 import { useState } from "react";
 import DotsIcon from "../assets/icons/dots.svg?react";
 import { CopyButton } from "./CopyButton";
@@ -72,10 +72,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 	};
 
 	const handleSave = async () => {
-		if (!editing) {
-			return;
-		}
-		if (!editing.key.trim()) {
+		if (!editing || !editing.key.trim()) {
 			return;
 		}
 
