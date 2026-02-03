@@ -159,11 +159,11 @@ function getMissingEntryPointMessage(
 	}
 
 	return dedent`
-		 		The entry-point file at "${relativeEntryPointPath}" was not found.
+			The entry-point file at "${relativeEntryPointPath}" was not found.
 
-		 		This might mean that your entry-point file needs to be generated (which is the general case when a framework is being used).
-		 		If that's the case please run your project's build command and try again.
-		 	`;
+			This might mean that your entry-point file needs to be generated (which is the general case when a framework is being used).
+			If that's the case please run your project's build command and try again.
+		`;
 }
 
 /**
