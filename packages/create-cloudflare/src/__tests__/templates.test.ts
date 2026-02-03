@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { spinner } from "@cloudflare/cli/interactive";
 import degit from "degit";
 import { mockSpinner } from "helpers/__tests__/mocks";
+import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import {
 	appendFile,
 	directoryExists,
@@ -27,6 +28,7 @@ import type { Mock } from "vitest";
 vi.mock("degit");
 vi.mock("fs");
 vi.mock("helpers/files");
+vi.mock("helpers/compatDate");
 vi.mock("@cloudflare/cli/interactive");
 
 describe("addWranglerToGitIgnore", () => {
@@ -612,10 +614,12 @@ version = "0.1.0"`;
 
 describe("writeAgentsMd", () => {
 	let writeFileMock: Mock;
+	const mockCompatDate = "2025-01-15";
 
 	beforeEach(() => {
 		vi.resetAllMocks();
 		writeFileMock = vi.mocked(writeFile);
+		vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(mockCompatDate);
 	});
 
 	test("should write AGENTS.md to the project directory", () => {
@@ -623,9 +627,10 @@ describe("writeAgentsMd", () => {
 		const projectPath = join("/path", "to", "my-project");
 		writeAgentsMd(projectPath);
 
+		expect(getWorkerdCompatibilityDate).toHaveBeenCalledWith(projectPath);
 		expect(writeFileMock).toHaveBeenCalledWith(
 			join(projectPath, "AGENTS.md"),
-			getAgentsMd(),
+			getAgentsMd(mockCompatDate),
 		);
 	});
 
@@ -638,11 +643,12 @@ describe("writeAgentsMd", () => {
 	});
 
 	test("AGENTS.md should contain retrieval-led reasoning guidance", () => {
-		const agentsMd = getAgentsMd();
+		const agentsMd = getAgentsMd(mockCompatDate);
 		expect(agentsMd).toContain("STOP");
 		expect(agentsMd).toContain("retrieve");
 		expect(agentsMd).toContain("https://developers.cloudflare.com/workers/");
 		expect(agentsMd).toContain("wrangler");
 		expect(agentsMd).toContain("nodejs_compat");
+		expect(agentsMd).toContain(mockCompatDate);
 	});
 });

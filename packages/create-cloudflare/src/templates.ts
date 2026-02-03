@@ -9,6 +9,7 @@ import deepmerge from "deepmerge";
 import degit from "degit";
 import { processArgument } from "helpers/args";
 import { C3_DEFAULTS } from "helpers/cli";
+import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import {
 	appendFile,
 	directoryExists,
@@ -776,25 +777,25 @@ export async function copyTemplateFiles(ctx: C3Context) {
 	}
 
 	s.stop(`${brandColor("files")} ${dim("copied to project directory")}`);
-
-	// Write AGENTS.md for Workers templates that don't use a framework CLI
-	// Framework templates may need framework-specific agent guidance
-	if (ctx.template.platform === "workers" && !ctx.template.frameworkCli) {
-		writeAgentsMd(ctx.project.path);
-	}
 }
 
 /**
  * Writes AGENTS.md to the project directory if one doesn't already exist.
  * This file provides AI coding agents with retrieval-led guidance for Cloudflare APIs.
  * Remote templates may include their own AGENTS.md with custom guidance, which we preserve.
+ *
+ * Note: This function should be called after npm install, as it retrieves the
+ * compatibility date from the locally installed workerd package.
+ *
+ * @param projectPath - The path to the project directory
  */
 export function writeAgentsMd(projectPath: string): void {
 	const agentsMdPath = join(projectPath, "AGENTS.md");
 	if (existsSync(agentsMdPath)) {
 		return;
 	}
-	writeFile(agentsMdPath, getAgentsMd());
+	const compatibilityDate = getWorkerdCompatibilityDate(projectPath);
+	writeFile(agentsMdPath, getAgentsMd(compatibilityDate));
 }
 
 export const processRemoteTemplate = async (args: Partial<C3Args>) => {

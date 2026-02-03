@@ -1,16 +1,15 @@
 /**
- * AGENTS.md content for Cloudflare Workers projects.
+ * Generates AGENTS.md content for Cloudflare Workers projects.
  *
  * This file is injected into new Workers projects created via create-cloudflare
  * to provide AI coding agents with retrieval-led guidance for Cloudflare APIs.
+ *
+ * @param compatibilityDate - The workerd compatibility date in YYYY-MM-DD format
+ * @returns The AGENTS.md content as a string
  */
-
-const getCurrentDate = (): string => {
-	// This gets the user's local timezone and converts their date to YYYY-MM-DD to make sure we're not ahead of the user if using UTC
-	return new Date().toLocaleDateString("sv-SE");
-};
-
-export const getAgentsMd = (): string => `# Cloudflare Workers
+export const getAgentsMd = (
+	compatibilityDate: string,
+): string => `# Cloudflare Workers
 
 STOP. Your knowledge of Cloudflare Workers APIs and limits may be outdated. Always retrieve current documentation before any Workers, KV, R2, D1, Durable Objects, Queues, Vectorize, AI, or Agents SDK task.
 
@@ -38,7 +37,7 @@ If you encounter \`Dynamic require of "X" is not supported\` or missing Node.js 
 \`\`\`jsonc
 {
   "compatibility_flags": ["nodejs_compat"],
-  "compatibility_date": "${getCurrentDate()}"
+  "compatibility_date": "${compatibilityDate}"
 }
 \`\`\`
 
