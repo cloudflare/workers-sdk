@@ -1117,8 +1117,8 @@ describe("kv", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`one\`: \`1\`
-						  \`two\`: \`2\`]
+						  \`(redacted)\`: \`1\`
+						  \`(redacted)\`: \`2\`]
 					`);
 				});
 
@@ -1134,8 +1134,8 @@ describe("kv", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`one\`: \`1\`
-						  \`two\`: \`2\`]
+						  \`(redacted)\`: \`1\`
+						  \`(redacted)\`: \`2\`]
 					`);
 				});
 
@@ -1177,8 +1177,8 @@ describe("kv", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`one\`: \`1\`
-						  \`two\`: \`2\`]
+						  \`(redacted)\`: \`1\`
+						  \`(redacted)\`: \`2\`]
 					`);
 				});
 			});
