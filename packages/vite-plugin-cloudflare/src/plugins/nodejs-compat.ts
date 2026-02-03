@@ -1,5 +1,4 @@
 import assert from "node:assert";
-import { nonPrefixedNodeModules } from "@cloudflare/unenv-preset";
 import * as vite from "vite";
 import {
 	assertHasNodeJsCompat,
@@ -61,39 +60,6 @@ export const nodeJsCompatPlugin = createPlugin("nodejs-compat", (ctx) => {
 								},
 							} as vite.BuildOptions)
 						: {}),
-					optimizeDeps: {
-						// This is a list of module specifiers that the dependency optimizer should not follow when doing import analysis.
-						// In this case we provide a list of all the Node.js modules, both those built-in to workerd and those that will be polyfilled.
-						// Obviously we don't want/need the optimizer to try to process modules that are built-in;
-						// But also we want to avoid following the ones that are polyfilled since the dependency-optimizer import analyzer does not
-						// resolve these imports using our `resolveId()` hook causing the optimization step to fail.
-						exclude: [
-							// The `node:` prefix is optional for older built-in modules.
-							...nonPrefixedNodeModules,
-							...nonPrefixedNodeModules.map((module) => `node:${module}`),
-							// New Node.js built-in modules are only published with the `node:` prefix.
-							...[
-								"node:sea",
-								"node:sqlite",
-								"node:test",
-								"node:test/reporters",
-							],
-						],
-						...(isRolldown
-							? {
-									rolldownOptions: {
-										plugins: [
-											// In Vite 8, `require` calls are not automatically replaced when the format is ESM and `platform` is `neutral`
-											// @ts-expect-error: added in Vite 8
-											vite.esmExternalRequirePlugin({
-												external: [nodeBuiltinsRE],
-												skipDuplicateCheck: true,
-											}),
-										],
-									},
-								}
-							: {}),
-					},
 				};
 			}
 		},
@@ -200,106 +166,10 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 			}
 		};
 
-		function resolveId(
-			environmentName: string,
-			source: string,
-			importer?: string
-		) {
-			// Fallback for when filter is not applied
-			// TODO: remove when we drop support for Vite 6
-			if (!nodeBuiltinsRE.test(source)) {
-				return;
-			}
-
-			const workerConfig = ctx.getWorkerConfig(environmentName);
-			const nodeJsCompat = ctx.getNodeJsCompat(environmentName);
-
-			if (workerConfig && !nodeJsCompat) {
-				if (hasNodeJsAls(workerConfig) && isNodeAlsModule(source)) {
-					// Skip if this is just async_hooks and Node.js ALS support is on.
-					return;
-				}
-
-				const nodeJsCompatWarnings = nodeJsCompatWarningsMap.get(workerConfig);
-				nodeJsCompatWarnings?.registerImport(source, importer);
-
-				// Mark this path as external to avoid messy unwanted resolve errors.
-				// It will fail at runtime but we will log warnings to the user.
-				return {
-					id: source,
-					external: true,
-				};
-			}
-		}
-
 		return {
 			// We must ensure that the `resolveId` hook runs before the built-in ones.
 			// Otherwise we never see the Node.js built-in imports since they get handled by default Vite behavior.
 			enforce: "pre",
-			configEnvironment(environmentName) {
-				const workerConfig = ctx.getWorkerConfig(environmentName);
-				const nodeJsCompat = ctx.getNodeJsCompat(environmentName);
-
-				if (workerConfig && !nodeJsCompat) {
-					return {
-						optimizeDeps: {
-							...(isRolldown
-								? {
-										rolldownOptions: {
-											plugins: [
-												{
-													name: "vite-plugin-cloudflare:nodejs-compat-warnings-resolver",
-													resolveId: {
-														filter: { id: nodeBuiltinsRE },
-														handler(source: string, importer?: string) {
-															return resolveId(
-																environmentName,
-																source,
-																importer
-															);
-														},
-													},
-												},
-											],
-										},
-									}
-								: {
-										esbuildOptions: {
-											plugins: [
-												{
-													name: "vite-plugin-cloudflare:nodejs-compat-warnings-resolver",
-													setup(build) {
-														build.onResolve(
-															{ filter: nodeBuiltinsRE },
-															({ path, importer }) => {
-																if (
-																	hasNodeJsAls(workerConfig) &&
-																	isNodeAlsModule(path)
-																) {
-																	// Skip if this is just async_hooks and Node.js ALS support is on.
-																	return;
-																}
-
-																const nodeJsCompatWarnings =
-																	nodeJsCompatWarningsMap.get(workerConfig);
-																nodeJsCompatWarnings?.registerImport(
-																	path,
-																	importer
-																);
-																// Mark this path as external to avoid messy unwanted resolve errors.
-																// It will fail at runtime but we will log warnings to the user.
-																return { path, external: true };
-															}
-														);
-													},
-												},
-											],
-										},
-									}),
-						} as vite.DepOptimizationOptions, // `rolldownOptions` added in Vite 8
-					};
-				}
-			},
 			configResolved(resolvedViteConfig) {
 				for (const environmentName of Object.keys(
 					resolvedViteConfig.environments
@@ -324,7 +194,30 @@ export const nodeJsCompatWarningsPlugin = createPlugin(
 			resolveId: {
 				filter: { id: nodeBuiltinsRE },
 				handler(source, importer) {
-					return resolveId(this.environment.name, source, importer);
+					// Fallback for when filter is not applied
+					// TODO: remove when we drop support for Vite 6
+					if (!nodeBuiltinsRE.test(source)) {
+						return;
+					}
+
+					const workerConfig = ctx.getWorkerConfig(this.environment.name);
+					assert(workerConfig, `expected workerConfig to be defined`);
+
+					if (hasNodeJsAls(workerConfig) && isNodeAlsModule(source)) {
+						// Skip if this is just async_hooks and Node.js ALS support is on.
+						return;
+					}
+
+					const nodeJsCompatWarnings =
+						nodeJsCompatWarningsMap.get(workerConfig);
+					nodeJsCompatWarnings?.registerImport(source, importer);
+
+					// Mark this path as external to avoid messy unwanted resolve errors.
+					// It will fail at runtime but we will log warnings to the user.
+					return {
+						id: source,
+						external: true,
+					};
 				},
 			},
 		};

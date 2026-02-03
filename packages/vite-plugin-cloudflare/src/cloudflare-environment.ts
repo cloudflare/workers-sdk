@@ -1,6 +1,8 @@
 import assert from "node:assert";
+import { nonPrefixedNodeModules } from "@cloudflare/unenv-preset";
 import { CoreHeaders } from "miniflare";
 import * as vite from "vite";
+import { nodeBuiltinsRE } from "./nodejs-compat";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import {
 	ENVIRONMENT_NAME_HEADER,
@@ -265,7 +267,13 @@ export function createCloudflareEnvironmentOptions({
 			ignoreOutdatedRequests: true,
 			// We need to normalize the path as it is treated as a glob and backslashes are therefore treated as escape characters.
 			entries: vite.normalizePath(workerConfig.main),
-			exclude: [...cloudflareBuiltInModules],
+			exclude: [
+				...cloudflareBuiltInModules,
+				...nonPrefixedNodeModules,
+				...nonPrefixedNodeModules.map((module) => `node:${module}`),
+				// New Node.js built-in modules are only published with the `node:` prefix.
+				...["node:sea", "node:sqlite", "node:test", "node:test/reporters"],
+			],
 			...(isRolldown
 				? {
 						rolldownOptions: {
@@ -278,6 +286,14 @@ export function createCloudflareEnvironmentOptions({
 								target,
 								define,
 							},
+							plugins: [
+								// In Vite 8, `require` calls are not automatically replaced when the format is ESM and `platform` is `neutral`
+								// @ts-expect-error: added in Vite 8
+								vite.esmExternalRequirePlugin({
+									external: [nodeBuiltinsRE],
+									skipDuplicateCheck: true,
+								}),
+							],
 						},
 					}
 				: {
