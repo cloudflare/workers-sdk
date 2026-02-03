@@ -1,5 +1,5 @@
 {
-	"name": "@cloudflare/vite-plugin-e2e-nodejs-compat-warnings",
+	"name": "@cloudflare/vite-plugin-e2e-nodejs-compat-warnings-direct",
 	"private": true,
 	"type": "module",
 	"scripts": {
