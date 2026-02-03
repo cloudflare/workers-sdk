@@ -70,6 +70,7 @@
 		"tree-kill": "^1.2.2",
 		"tsdown": "0.16.3",
 		"typescript": "catalog:default",
+		"update-check": "^1.5.4",
 		"vite": "catalog:vite-plugin",
 		"vitest": "catalog:default"
 	},
