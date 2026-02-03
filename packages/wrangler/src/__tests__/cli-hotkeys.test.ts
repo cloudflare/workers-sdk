@@ -144,6 +144,30 @@ describe("Hot Keys", () => {
 			expect(handlerD).not.toHaveBeenCalled();
 		});
 
+		it("respects dynamic disabled function", async () => {
+			let isDisabled = false;
+			const handlerE = vi.fn();
+
+			registerHotKeys([
+				{
+					keys: ["e"],
+					label: "dynamic option",
+					disabled: () => isDisabled,
+					handler: handlerE,
+				},
+			]);
+
+			// Initially not disabled
+			writeToMockedStdin("e");
+			expect(handlerE).toHaveBeenCalled();
+			handlerE.mockClear();
+
+			// Now disable it
+			isDisabled = true;
+			writeToMockedStdin("e");
+			expect(handlerE).not.toHaveBeenCalled();
+		});
+
 		it("calls handler if any additional key bindings are pressed", async () => {
 			const handlerA = vi.fn();
 			const options = [
@@ -270,6 +294,31 @@ describe("Hot Keys", () => {
 			} finally {
 				process.stdout.columns = originalColumns;
 			}
+		});
+
+		it("hides options with dynamic disabled function returning true", async () => {
+			const handlerA = vi.fn();
+			const handlerB = vi.fn();
+
+			registerHotKeys([
+				{
+					keys: ["a"],
+					label: "visible option",
+					handler: handlerA,
+				},
+				{
+					keys: ["b"],
+					label: "hidden option",
+					disabled: () => true,
+					handler: handlerB,
+				},
+			]);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"╭──────────────────────╮
+				│  [a] visible option │
+				╰──────────────────────╯"
+			`);
 		});
 	});
 });
