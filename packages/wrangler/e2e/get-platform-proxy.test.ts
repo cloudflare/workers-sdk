@@ -375,7 +375,7 @@ describe("getPlatformProxy()", () => {
 	});
 
 	describe.each(HYPERDRIVE_DATABASES)(
-		"Hyperdrive ($name)",
+		"Hyperdrive ($scheme)",
 		({ scheme, defaultPort }) => {
 			let root: string;
 			let port: number = defaultPort;

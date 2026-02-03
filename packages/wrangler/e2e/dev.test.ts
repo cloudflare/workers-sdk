@@ -737,7 +737,7 @@ describe.each([{ cmd: "wrangler dev" }])(
 );
 
 describe.each(HYPERDRIVE_DATABASES)(
-	"hyperdrive dev tests ($name)",
+	"hyperdrive dev tests ($scheme)",
 	({ scheme, defaultPort, envVar }) => {
 		let server: nodeNet.Server;
 
