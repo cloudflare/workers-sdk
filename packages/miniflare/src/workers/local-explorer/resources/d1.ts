@@ -7,6 +7,7 @@ import {
 import type { Env } from "../api.worker";
 import type { AppContext } from "../common";
 import type {
+	CloudflareD1ListDatabasesResponse,
 	D1DatabaseResponse,
 	D1RawResultResponse,
 	D1SingleQuery,
@@ -66,7 +67,7 @@ type ListDatabasesQuery = z.output<
 export async function listD1Databases(
 	c: AppContext,
 	query: ListDatabasesQuery
-) {
+): Promise<Response> {
 	const { page, per_page, name } = query;
 
 	const d1BindingMap = c.env.LOCAL_EXPLORER_BINDING_MAP.d1;
@@ -104,6 +105,8 @@ export async function listD1Databases(
 			per_page,
 			total_count: totalCount,
 		},
+	} satisfies Omit<CloudflareD1ListDatabasesResponse, "result"> & {
+		result: D1DatabaseResponse[];
 	});
 }
 
