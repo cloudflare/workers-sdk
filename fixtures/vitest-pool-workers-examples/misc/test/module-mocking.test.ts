@@ -1,5 +1,5 @@
 import { jwtVerify, JWTVerifyResult } from "jose";
-import { expect, it, vi } from "vitest";
+import { it, vi } from "vitest";
 
 vi.mock("jose", () => {
 	const jwtVerify = async (): Promise<JWTVerifyResult<unknown>> => {
@@ -8,7 +8,7 @@ vi.mock("jose", () => {
 	return { jwtVerify };
 });
 
-it("uses mocked module", async () => {
+it("uses mocked module", async ({ expect }) => {
 	const result = await jwtVerify("", new Uint8Array());
 	expect(result.payload).toStrictEqual({ mock: true });
 });
