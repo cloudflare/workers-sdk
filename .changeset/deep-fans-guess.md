@@ -1,5 +1,5 @@
 ---
-"@cloudflare/devprod-status-bot": patch
+"@cloudflare/devprod-status-bot": minor
 ---
 
 Send alert to ANT: Alerts chat on failed CI checks in Version Packages PRs
