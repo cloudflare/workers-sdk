@@ -1,7 +1,12 @@
 import assert from "node:assert";
+import { supportedCompatibilityDate } from "miniflare";
 import { Request } from "undici";
 import { describe, expect, it } from "vitest";
 import { parseRequestInput } from "../api/dev";
+import {
+	getSupportedCompatibilityDate,
+	unstable_getDevCompatibilityDate,
+} from "../api/integrations/platform";
 
 describe("parseRequestInput for fetch on unstable dev", () => {
 	it("should allow no input to be passed in", () => {
@@ -101,5 +106,23 @@ describe("parseRequestInput for fetch on unstable dev", () => {
 		const [input, _] = parseRequestInput("0.0.0.0", 8080, "/test", {});
 
 		expect(input).toMatchInlineSnapshot(`"http://0.0.0.0:8080/test"`);
+	});
+});
+
+describe("getSupportedCompatibilityDate", () => {
+	it("should return a valid compatibility date format (YYYY-MM-DD)", () => {
+		const date = getSupportedCompatibilityDate();
+		expect(date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+	});
+
+	it("should return the same value as miniflare's supportedCompatibilityDate", () => {
+		const date = getSupportedCompatibilityDate();
+		expect(date).toBe(supportedCompatibilityDate);
+	});
+
+	it("should return the same value as the deprecated unstable_getDevCompatibilityDate", () => {
+		const date = getSupportedCompatibilityDate();
+		const deprecatedDate = unstable_getDevCompatibilityDate();
+		expect(date).toBe(deprecatedDate);
 	});
 });

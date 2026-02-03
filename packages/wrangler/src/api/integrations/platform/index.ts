@@ -1,10 +1,15 @@
+import assert from "node:assert";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import {
 	getDockerPath,
-	getLocalWorkerdCompatibilityDate,
 	getRegistryPath,
+	isCompatDate,
 } from "@cloudflare/workers-utils";
-import { kCurrentWorker, Miniflare } from "miniflare";
+import {
+	kCurrentWorker,
+	Miniflare,
+	supportedCompatibilityDate,
+} from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
@@ -33,6 +38,7 @@ import type {
 import type { AssetsOptions } from "../../../assets";
 import type { RemoteProxySession } from "../../remoteBindings";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
+import type { CompatDate } from "@cloudflare/workers-utils";
 import type {
 	MiniflareOptions,
 	ModuleRule,
@@ -45,12 +51,22 @@ export { readConfig as unstable_readConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
 
 /**
- * @deprecated use `getLocalWorkerdCompatibilityDate` from "@cloudflare/workers-utils" instead.
+ * @deprecated import `getSupportedCompatibilityDate` directly instead.
  *
  * We're keeping this function only not to break the vite plugin that relies on it, we should remove it as soon as possible.
  */
 export function unstable_getDevCompatibilityDate() {
-	return getLocalWorkerdCompatibilityDate().date;
+	return supportedCompatibilityDate;
+}
+
+/**
+ * Gets the latest compatibility date supported by Miniflare/workerd.
+ *
+ * @returns The latest supported compatibility date.
+ */
+export function getSupportedCompatibilityDate(): CompatDate {
+	assert(isCompatDate(supportedCompatibilityDate));
+	return supportedCompatibilityDate;
 }
 
 export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
