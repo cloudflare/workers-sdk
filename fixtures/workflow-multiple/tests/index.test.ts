@@ -1,7 +1,7 @@
 import { rm } from "fs/promises";
 import { resolve } from "path";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, it, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Workflows", () => {
@@ -41,7 +41,9 @@ describe("Workflows", () => {
 		}
 	}
 
-	it("creates two instances with same id in two different workflows", async () => {
+	it("creates two instances with same id in two different workflows", async ({
+		expect,
+	}) => {
 		// Create both workflow instances
 		// Note: We don't assert the intermediate "running" status because the workflow
 		// may complete before we can observe it, causing flaky tests on fast CI machines

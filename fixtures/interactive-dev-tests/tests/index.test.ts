@@ -8,6 +8,7 @@ import stream from "node:stream";
 import { setTimeout } from "node:timers/promises";
 import { stripVTControlCharacters } from "node:util";
 import { fetch } from "undici";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- complex test with .each patterns */
 import {
 	afterAll,
 	afterEach,
@@ -17,6 +18,7 @@ import {
 	it,
 	vi,
 } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
 import type pty from "@cdktf/node-pty-prebuilt-multiarch";
 

@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import { toMatchImageSnapshot } from "jest-image-snapshot";
 import { Browser, chromium } from "playwright-chromium";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("Workers + Assets + SPA", () => {
@@ -30,7 +30,7 @@ describe("Workers + Assets + SPA", () => {
 		await browser?.close();
 	});
 
-	it("renders the homepage in a browser correctly", async () => {
+	it("renders the homepage in a browser correctly", async ({ expect }) => {
 		expect.extend({ toMatchImageSnapshot });
 
 		if (!browser) {
@@ -64,7 +64,7 @@ describe("Workers + Assets + SPA", () => {
 		);
 	});
 
-	it("navigates soft page navigations correctly", async () => {
+	it("navigates soft page navigations correctly", async ({ expect }) => {
 		if (!browser) {
 			throw new Error("Browser couldn't be initialized");
 		}
@@ -153,7 +153,7 @@ describe("Workers + Assets + SPA", () => {
 		await mathHeader.waitFor({ state: "attached" });
 	});
 
-	it("navigates hard navigations correctly", async () => {
+	it("navigates hard navigations correctly", async ({ expect }) => {
 		if (!browser) {
 			throw new Error("Browser couldn't be initialized");
 		}
@@ -246,7 +246,7 @@ describe("Workers + Assets + SPA", () => {
 		await mathHeader.waitFor({ state: "attached" });
 	});
 
-	it("direct fetches don't look like SPA requests", async () => {
+	it("direct fetches don't look like SPA requests", async ({ expect }) => {
 		const homepageResponse = await fetch(`http://${ip}:${port}/`);
 		expect(await homepageResponse.text()).toContain("Homepage");
 

@@ -158,6 +158,9 @@ importers:
 
   fixtures/additional-modules:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -179,6 +182,9 @@ importers:
 
   fixtures/browser-rendering:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/playwright':
         specifier: ^0.0.10
         version: 0.0.10
@@ -221,6 +227,9 @@ importers:
 
   fixtures/d1-read-replication-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -242,6 +251,9 @@ importers:
 
   fixtures/d1-worker-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -263,6 +275,9 @@ importers:
 
   fixtures/dev-registry:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/vite-plugin':
         specifier: workspace:*
         version: link:../../packages/vite-plugin-cloudflare
@@ -287,6 +302,9 @@ importers:
 
   fixtures/durable-objects-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -302,6 +320,9 @@ importers:
 
   fixtures/dynamic-worker-loading:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -335,6 +356,9 @@ importers:
 
   fixtures/entrypoints-rpc-tests:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -356,6 +380,9 @@ importers:
 
   fixtures/get-platform-proxy:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -383,6 +410,9 @@ importers:
 
   fixtures/get-platform-proxy-remote-bindings:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -410,6 +440,9 @@ importers:
         specifier: workspace:^
         version: link:../import-wasm-static
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -434,6 +467,9 @@ importers:
         specifier: 0.10.2
         version: 0.10.2
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@fixture/shared':
         specifier: workspace:*
         version: link:../shared
@@ -450,6 +486,9 @@ importers:
 
   fixtures/local-mode-tests:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -495,6 +534,9 @@ importers:
 
   fixtures/no-bundle-import:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       get-port:
         specifier: ^7.0.0
         version: 7.0.0
@@ -511,6 +553,9 @@ importers:
         specifier: ^9.1.0
         version: 9.16.0
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -539,6 +584,9 @@ importers:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -569,6 +617,9 @@ importers:
 
   fixtures/nodejs-als-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -587,6 +638,9 @@ importers:
 
   fixtures/nodejs-hybrid-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -620,6 +674,9 @@ importers:
 
   fixtures/pages-d1-shim:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -641,6 +698,9 @@ importers:
 
   fixtures/pages-dev-proxy-with-script:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -666,6 +726,9 @@ importers:
         specifier: ^3.0.1
         version: 3.0.1
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -690,6 +753,9 @@ importers:
 
   fixtures/pages-functions-unenv-alias:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -711,6 +777,9 @@ importers:
 
   fixtures/pages-functions-wasm-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -729,6 +798,9 @@ importers:
 
   fixtures/pages-functions-with-config-file-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -750,6 +822,9 @@ importers:
 
   fixtures/pages-functions-with-routes-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -771,6 +846,9 @@ importers:
 
   fixtures/pages-nodejs-v2-compat:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -808,6 +886,9 @@ importers:
         specifier: ^3.0.1
         version: 3.0.1
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -832,6 +913,9 @@ importers:
 
   fixtures/pages-proxy-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -853,6 +937,9 @@ importers:
 
   fixtures/pages-redirected-config:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -868,6 +955,9 @@ importers:
 
   fixtures/pages-simple-assets:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -889,6 +979,9 @@ importers:
 
   fixtures/pages-workerjs-and-functions-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -910,6 +1003,9 @@ importers:
 
   fixtures/pages-workerjs-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -928,6 +1024,9 @@ importers:
 
   fixtures/pages-workerjs-directory:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -946,6 +1045,9 @@ importers:
 
   fixtures/pages-workerjs-wasm-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -964,6 +1066,9 @@ importers:
 
   fixtures/pages-workerjs-with-config-file-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -982,6 +1087,9 @@ importers:
 
   fixtures/pages-workerjs-with-routes-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -1000,6 +1108,9 @@ importers:
 
   fixtures/pages-ws-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -1021,6 +1132,9 @@ importers:
 
   fixtures/ratelimit-app:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -1039,6 +1153,9 @@ importers:
 
   fixtures/redirected-config-worker:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -1054,6 +1171,9 @@ importers:
 
   fixtures/redirected-config-worker-with-environments:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -1126,6 +1246,9 @@ importers:
 
   fixtures/unbound-durable-object:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -1171,6 +1294,9 @@ importers:
       '@cloudflare/containers':
         specifier: ^0.0.25
         version: 0.0.25
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: workspace:*
         version: link:../../packages/vitest-pool-workers
@@ -1222,6 +1348,9 @@ importers:
 
   fixtures/vitest-pool-workers-remote-bindings:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: workspace:*
         version: link:../../packages/vitest-pool-workers
@@ -1239,6 +1368,9 @@ importers:
 
   fixtures/wildcard-modules:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -1261,6 +1393,9 @@ importers:
         specifier: ^0.6.0
         version: 0.6.0
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -1279,6 +1414,9 @@ importers:
 
   fixtures/worker-logs:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -1303,6 +1441,9 @@ importers:
 
   fixtures/worker-with-resources:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:^
         version: link:../../packages/workers-tsconfig
@@ -1321,6 +1462,9 @@ importers:
 
   fixtures/worker-with-unsafe-external-plugin:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: workspace:*
         version: link:../../packages/vitest-pool-workers
@@ -1342,6 +1486,9 @@ importers:
 
   fixtures/workers-shared-asset-config:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/vitest-pool-workers':
         specifier: workspace:*
         version: link:../../packages/vitest-pool-workers
@@ -1372,6 +1519,9 @@ importers:
 
   fixtures/workers-with-assets:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -1393,6 +1543,9 @@ importers:
 
   fixtures/workers-with-assets-and-service-bindings:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -1414,6 +1567,9 @@ importers:
 
   fixtures/workers-with-assets-only:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -1435,6 +1591,9 @@ importers:
 
   fixtures/workers-with-assets-run-worker-first:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -1456,6 +1615,9 @@ importers:
 
   fixtures/workers-with-assets-spa:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -1489,6 +1651,9 @@ importers:
 
   fixtures/workers-with-assets-static-routing:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -1513,6 +1678,9 @@ importers:
 
   fixtures/workflow:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-tsconfig':
         specifier: workspace:*
         version: link:../../packages/workers-tsconfig
@@ -1534,6 +1702,9 @@ importers:
 
   fixtures/workflow-multiple:
     devDependencies:
+      '@cloudflare/eslint-config-shared':
+        specifier: workspace:*
+        version: link:../../packages/eslint-config-shared
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20260131.0

@@ -4,7 +4,7 @@ import path from "node:path";
 import { Miniflare } from "miniflare";
 import dedent from "ts-dedent";
 import { Agent, fetch, setGlobalDispatcher } from "undici";
-import { test as baseTest, describe, expect, onTestFinished, vi } from "vitest";
+import { test as baseTest, describe, onTestFinished, vi } from "vitest";
 import {
 	runWranglerDev,
 	runWranglerPagesDev,
@@ -95,7 +95,7 @@ const test = baseTest.extend<{
 	},
 });
 describe("entrypoints", () => {
-	test("should support binding to the same worker", async ({ dev }) => {
+	test("should support binding to the same worker", async ({ dev, expect }) => {
 		const { url } = await dev({
 			"wrangler.toml": dedent`
 			name = "entry"
@@ -132,6 +132,7 @@ describe("entrypoints", () => {
 
 	test("should support default ExportedHandler entrypoints", async ({
 		dev,
+		expect,
 	}) => {
 		await dev({
 			"wrangler.toml": dedent`
@@ -178,6 +179,7 @@ describe("entrypoints", () => {
 
 	test("should support default WorkerEntrypoint entrypoints", async ({
 		dev,
+		expect,
 	}) => {
 		await dev({
 			"wrangler.toml": dedent`
@@ -232,6 +234,7 @@ describe("entrypoints", () => {
 
 	test("should support middleware with default WorkerEntrypoint entrypoints", async ({
 		dev,
+		expect,
 	}) => {
 		const files: Record<string, string> = {
 			"wrangler.toml": dedent`
@@ -280,6 +283,7 @@ describe("entrypoints", () => {
 
 	test("should support named ExportedHandler entrypoints to itself", async ({
 		dev,
+		expect,
 	}) => {
 		const { url } = await dev({
 			"wrangler.toml": dedent`
@@ -319,7 +323,10 @@ describe("entrypoints", () => {
 		);
 	});
 
-	test("should support named ExportedHandler entrypoints", async ({ dev }) => {
+	test("should support named ExportedHandler entrypoints", async ({
+		dev,
+		expect,
+	}) => {
 		await dev({
 			"wrangler.toml": dedent`
 			name = "bound"
@@ -365,7 +372,10 @@ describe("entrypoints", () => {
 		});
 	});
 
-	test("should support named WorkerEntrypoint entrypoints", async ({ dev }) => {
+	test("should support named WorkerEntrypoint entrypoints", async ({
+		dev,
+		expect,
+	}) => {
 		await dev({
 			"wrangler.toml": dedent`
 			name = "bound"
@@ -418,7 +428,10 @@ describe("entrypoints", () => {
 		});
 	});
 
-	test("should support named entrypoints in pages dev", async ({ dev }) => {
+	test("should support named entrypoints in pages dev", async ({
+		dev,
+		expect,
+	}) => {
 		await dev({
 			"wrangler.toml": dedent`
 			name = "bound"
@@ -455,7 +468,7 @@ describe("entrypoints", () => {
 		});
 	});
 
-	test("should support co-dependent services", async ({ dev }) => {
+	test("should support co-dependent services", async ({ dev, expect }) => {
 		const { url } = await dev({
 			"wrangler.toml": dedent`
 			name = "a"
@@ -512,6 +525,7 @@ describe("entrypoints", () => {
 
 	test("should support binding to Durable Object in another worker", async ({
 		dev,
+		expect,
 	}) => {
 		// RPC isn't supported in this case yet :(
 
@@ -594,6 +608,7 @@ describe("entrypoints", () => {
 
 	test("should support binding to Durable Object in same worker", async ({
 		dev,
+		expect,
 	}) => {
 		// RPC is supported here though :)
 
@@ -630,6 +645,7 @@ describe("entrypoints", () => {
 
 	test("should support binding to Durable Object in same worker with explicit script_name", async ({
 		dev,
+		expect,
 	}) => {
 		const { url } = await dev({
 			"wrangler.toml": dedent`
@@ -665,6 +681,7 @@ describe("entrypoints", () => {
 	test("should throw if binding to named entrypoint exported by version of wrangler without entrypoints support", async ({
 		dev,
 		isolatedDevRegistryPath,
+		expect,
 	}) => {
 		// Start entry worker first, so the server starts with a stubbed service not
 		// found binding
@@ -717,6 +734,7 @@ describe("entrypoints", () => {
 
 	test("should throw if wrangler session doesn't export expected entrypoint", async ({
 		dev,
+		expect,
 	}) => {
 		// Start entry worker first, so the server starts with a stubbed service not
 		// found binding
@@ -771,6 +789,7 @@ describe("entrypoints", () => {
 
 	test("should support binding to wrangler session listening on HTTPS", async ({
 		dev,
+		expect,
 	}) => {
 		// Start entry worker first, so the server starts with a stubbed service not
 		// found binding
@@ -822,6 +841,7 @@ describe("entrypoints", () => {
 	test("should support binding to version of wrangler without entrypoints support over HTTPS", async ({
 		dev,
 		isolatedDevRegistryPath,
+		expect,
 	}) => {
 		// Start entry worker first, so the server starts with a stubbed service not
 		// found binding
@@ -872,6 +892,7 @@ describe("entrypoints", () => {
 
 	test("should throw if performing RPC with session that hasn't started", async ({
 		dev,
+		expect,
 	}) => {
 		const { url } = await dev({
 			"wrangler.toml": dedent`

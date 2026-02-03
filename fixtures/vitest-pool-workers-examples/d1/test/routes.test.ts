@@ -1,8 +1,8 @@
 import { env, SELF } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { it } from "vitest";
 import { upsertPost } from "../src";
 
-it("should create and read post", async () => {
+it("should create and read post", async ({ expect }) => {
 	let response = await SELF.fetch("https://example.com/hello", {
 		method: "PUT",
 		body: "👋",
@@ -14,7 +14,7 @@ it("should create and read post", async () => {
 	expect(await response.text()).toBe("👋");
 });
 
-it("should list posts", async () => {
+it("should list posts", async ({ expect }) => {
 	await upsertPost(env, "/one", "1");
 	await upsertPost(env, "/two", "2");
 	await upsertPost(env, "/three", "3");
@@ -35,7 +35,7 @@ it("should list posts", async () => {
 	`);
 });
 
-it("should reject invalid method", async () => {
+it("should reject invalid method", async ({ expect }) => {
 	const response = await SELF.fetch("https://example.com/hello", {
 		method: "POST",
 		body: "👋",
@@ -43,12 +43,12 @@ it("should reject invalid method", async () => {
 	expect(response.status).toBe(405);
 });
 
-it("should respond with not found for invalid slugs", async () => {
+it("should respond with not found for invalid slugs", async ({ expect }) => {
 	const response = await SELF.fetch("https://example.com/bad");
 	expect(response.status).toBe(404);
 });
 
-it("shouldn't allow creating post at root", async () => {
+it("shouldn't allow creating post at root", async ({ expect }) => {
 	const response = await SELF.fetch("https://example.com/", {
 		method: "PUT",
 		body: "👋",
