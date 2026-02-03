@@ -2,6 +2,101 @@
 
 import { z } from "zod";
 
+export const zD1QueryMeta = z.object({
+	changed_db: z.boolean().optional(),
+	changes: z.number().optional(),
+	duration: z.number().optional(),
+	last_row_id: z.number().optional(),
+	rows_read: z.number().optional(),
+	rows_written: z.number().optional(),
+	size_after: z.number().optional(),
+	timings: z
+		.object({
+			sql_duration_ms: z.number().optional(),
+		})
+		.optional(),
+});
+
+export const zD1RawResultResponse = z.object({
+	meta: zD1QueryMeta.optional(),
+	results: z
+		.object({
+			columns: z.array(z.string()).optional(),
+			rows: z
+				.array(
+					z.array(z.union([z.number(), z.string(), z.record(z.unknown())]))
+				)
+				.optional(),
+		})
+		.optional(),
+	success: z.boolean().optional(),
+});
+
+/**
+ * Your SQL query. Supports multiple statements, joined by semicolons, which will be executed as a batch.
+ */
+export const zD1Sql = z.string();
+
+export const zD1Params = z.array(z.string());
+
+/**
+ * single query
+ *
+ * A single query with or without parameters
+ */
+export const zD1SingleQuery = z.object({
+	params: zD1Params.optional(),
+	sql: zD1Sql,
+});
+
+/**
+ * A single query object or a batch query object
+ */
+export const zD1BatchQuery = z.union([
+	zD1SingleQuery,
+	z.object({
+		batch: z.array(zD1SingleQuery),
+	}),
+]);
+
+/**
+ * D1 database identifier (UUID).
+ */
+export const zD1DatabaseIdentifier = z.string().readonly();
+
+export const zD1Messages = z.array(
+	z.object({
+		code: z.number().int().gte(1000),
+		message: z.string(),
+	})
+);
+
+export const zD1ApiResponseCommonFailure = z.object({
+	errors: zD1Messages,
+	messages: zD1Messages,
+	result: z.unknown(),
+	success: z.literal(false),
+});
+
+export const zD1DatabaseVersion = z.string().regex(/^(alpha|beta|production)$/);
+
+/**
+ * D1 database name.
+ */
+export const zD1DatabaseName = z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/);
+
+export const zD1DatabaseResponse = z.object({
+	name: zD1DatabaseName.optional(),
+	uuid: zD1DatabaseIdentifier.optional(),
+	version: zD1DatabaseVersion.optional(),
+});
+
+export const zD1ApiResponseCommon = z.object({
+	errors: zD1Messages,
+	messages: zD1Messages,
+	success: z.literal(true),
+});
+
 export const zWorkersKvAny: z.ZodTypeAny = z.union([
 	z.string(),
 	z.number(),
@@ -87,6 +182,11 @@ export const zWorkersKvKeyName = z.string().max(512);
  */
 export const zWorkersKvCursor = z.string();
 
+export const zWorkersKvCursorResultInfo = z.object({
+	count: z.number().optional(),
+	cursor: zWorkersKvCursor.optional(),
+});
+
 export const zWorkersKvListMetadata = zWorkersKvAny.and(z.unknown());
 
 /**
@@ -132,6 +232,11 @@ export const zWorkersKvApiResponseCollection = zWorkersKvApiResponseCommon.and(
 		result_info: zWorkersKvResultInfo.optional(),
 	})
 );
+
+export const zD1DatabaseResponseWritable = z.object({
+	name: zD1DatabaseName.optional(),
+	version: zD1DatabaseVersion.optional(),
+});
 
 export const zWorkersKvAnyWritable: z.ZodTypeAny = z.union([
 	z.string(),
@@ -197,12 +302,7 @@ export const zWorkersKvNamespaceListANamespaceSKeysResponse =
 	zWorkersKvApiResponseCommon.and(
 		z.object({
 			result: z.array(zWorkersKvKey).optional(),
-			result_info: z
-				.object({
-					count: z.number().optional(),
-					cursor: zWorkersKvCursor.optional(),
-				})
-				.optional(),
+			result_info: zWorkersKvCursorResultInfo.optional(),
 		})
 	);
 
@@ -271,3 +371,49 @@ export const zWorkersKvNamespaceGetMultipleKeyValuePairsResponse =
 				.optional(),
 		})
 	);
+
+export const zCloudflareD1ListDatabasesData = z.object({
+	body: z.never().optional(),
+	path: z.never().optional(),
+	query: z
+		.object({
+			name: z.string().optional(),
+			page: z.number().gte(1).optional().default(1),
+			per_page: z.number().gte(10).lte(10000).optional().default(1000),
+		})
+		.optional(),
+});
+
+/**
+ * List D1 databases response
+ */
+export const zCloudflareD1ListDatabasesResponse = zD1ApiResponseCommon.and(
+	z.object({
+		result: z.array(zD1DatabaseResponse).optional(),
+		result_info: z
+			.object({
+				count: z.number().optional(),
+				page: z.number().optional(),
+				per_page: z.number().optional(),
+				total_count: z.number().optional(),
+			})
+			.optional(),
+	})
+);
+
+export const zCloudflareD1RawDatabaseQueryData = z.object({
+	body: zD1BatchQuery,
+	path: z.object({
+		database_id: zD1DatabaseIdentifier,
+	}),
+	query: z.never().optional(),
+});
+
+/**
+ * Raw query response
+ */
+export const zCloudflareD1RawDatabaseQueryResponse = zD1ApiResponseCommon.and(
+	z.object({
+		result: z.array(zD1RawResultResponse).optional(),
+	})
+);
