@@ -74,8 +74,7 @@ const config = {
 			"workers-kv_namespace": ["supports_url_encoding"],
 			// D1 database response doesn't include created_at locally
 			"d1_database-response": ["created_at"],
-			// D1 query meta doesn't include served_by fields locally and\
-			// returns hardcoded values for changes, last_row_id, rows_written
+			// D1 query meta doesn't include served_by fields locally
 			"d1_query-meta": [
 				"d1_served-by-colo",
 				"d1_served-by-region",
