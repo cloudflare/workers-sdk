@@ -34,8 +34,9 @@ import {
 export const KVOptionsSchema = z.object({
 	kvNamespaces: z
 		.union([
-			z.record(z.string()),
+			z.record(z.string(), z.string()),
 			z.record(
+				z.string(),
 				z.object({
 					id: z.string(),
 					remoteProxyConnectionString: z

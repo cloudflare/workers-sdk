@@ -1637,6 +1637,8 @@ export class Miniflare {
 
 			for (const [key, plugin] of this.#mergedPluginEntries) {
 				const pluginBindings = await plugin.getBindings(
+					// TODO: investigate
+					// @ts-expect-error something is wrong with zod 4
 					this.#getWorkerOptsForPlugin(key, workerOpts),
 					i
 				);
@@ -2505,6 +2507,8 @@ export class Miniflare {
 		// Populate bindings from each plugin
 		for (const [key, plugin] of this.#mergedPluginEntries) {
 			const pluginBindings = await plugin.getNodeBindings(
+				// TODO: investigate
+				// @ts-expect-error something is wrong with zod 4
 				this.#getWorkerOptsForPlugin(key, workerOpts)
 			);
 			for (const [name, binding] of Object.entries(pluginBindings)) {

@@ -17,9 +17,9 @@ import type { Context } from "hono";
  *
  * If the whole query param is optional, you need to unwrap it before passing to this function.
  */
-export function validateQuery<T extends z.ZodTypeAny>(schema: T) {
+export function validateQuery<T extends z.ZodType>(schema: T) {
 	return validator("query", async (value, c) => {
-		let result: z.SafeParseReturnType<z.input<T>, z.output<T>>;
+		let result: z.ZodSafeParseResult<z.output<T>>;
 		try {
 			const coerced = coerceValue(schema, value);
 			result = await schema.safeParseAsync(coerced);
@@ -60,14 +60,14 @@ export function validateRequestBody<T extends z.ZodTypeAny>(schema: T) {
  * 3. Arrays/Objects: We need to recursively coerce nested values
  */
 export function coerceValue(
-	schema: z.ZodTypeAny,
+	schema: z.core.$ZodType,
 	value: unknown,
 	path: (string | number)[] = []
 ): unknown {
 	// Unwrap optional/default to get inner type
 	if (schema instanceof z.ZodOptional || schema instanceof z.ZodDefault) {
 		if (value === undefined) return value;
-		return coerceValue(schema._def.innerType, value, path);
+		return coerceValue(schema.def.innerType, value, path);
 	}
 
 	if (schema instanceof z.ZodNumber && typeof value === "string") {
@@ -75,9 +75,9 @@ export function coerceValue(
 		if (isNaN(num)) {
 			throw new z.ZodError([
 				{
-					code: z.ZodIssueCode.invalid_type,
+					code: "invalid_type",
 					expected: "number",
-					received: "string",
+					input: value,
 					path,
 					message: `Expected query param to be number but received "${value}"`,
 				},
@@ -91,9 +91,9 @@ export function coerceValue(
 		if (value === "false") return false;
 		throw new z.ZodError([
 			{
-				code: z.ZodIssueCode.invalid_type,
+				code: "invalid_type",
 				expected: "boolean",
-				received: "string",
+				input: value,
 				path,
 				message: `Expected query param to be 'true' or 'false' but received "${value}"`,
 			},
@@ -133,7 +133,7 @@ export function validationHook(
 	result: { success: false; error: z.ZodError },
 	c: Context
 ): Response {
-	const errors = result.error.errors.map((e) => ({
+	const errors = result.error.issues.map((e) => ({
 		code: 10001,
 		message: `${e.path.join(".")}: ${e.message}`,
 	}));

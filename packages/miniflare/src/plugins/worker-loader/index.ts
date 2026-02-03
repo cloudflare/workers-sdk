@@ -4,7 +4,7 @@ import { Plugin } from "../shared";
 
 export const WorkerLoaderConfigSchema = z.object({});
 export const WorkerLoaderOptionsSchema = z.object({
-	workerLoaders: z.record(WorkerLoaderConfigSchema).optional(),
+	workerLoaders: z.record(z.string(), WorkerLoaderConfigSchema).optional(),
 });
 
 export const WORKER_LOADER_PLUGIN_NAME = "worker-loader";

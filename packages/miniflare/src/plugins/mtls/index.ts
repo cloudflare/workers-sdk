@@ -15,7 +15,7 @@ const MtlsSchema = z.object({
 });
 
 export const MtlsOptionsSchema = z.object({
-	mtlsCertificates: z.record(MtlsSchema).optional(),
+	mtlsCertificates: z.record(z.string(), MtlsSchema).optional(),
 });
 
 export const MTLS_PLUGIN_NAME = "mtls";

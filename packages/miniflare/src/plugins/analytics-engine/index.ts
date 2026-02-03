@@ -4,6 +4,7 @@ import { Worker_Binding } from "../../runtime";
 import { PersistenceSchema, Plugin, ProxyNodeBinding } from "../shared";
 
 const AnalyticsEngineSchema = z.record(
+	z.string(),
 	z.object({
 		dataset: z.string(),
 	})
