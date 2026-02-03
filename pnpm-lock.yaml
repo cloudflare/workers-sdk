@@ -2423,6 +2423,9 @@ importers:
       typescript:
         specifier: catalog:default
         version: 5.8.3
+      update-check:
+        specifier: ^1.5.4
+        version: 1.5.4
       vite:
         specifier: catalog:default
         version: 8.0.1(@types/node@22.15.17)(esbuild@0.27.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.1)
