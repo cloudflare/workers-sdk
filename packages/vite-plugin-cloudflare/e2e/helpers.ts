@@ -3,6 +3,7 @@ import childProcess from "node:child_process";
 import events from "node:events";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { setTimeout } from "node:timers/promises";
 import util from "node:util";
 import { stripAnsi } from "miniflare";
 import kill from "tree-kill";
@@ -98,7 +99,7 @@ export async function runLongLived(
 	customEnv: Record<string, string | undefined> = {}
 ) {
 	debuglog(`starting \`${command}\` for ${projectPath}`);
-	const process = childProcess.exec(`${pm} run ${command}`, {
+	const proc = childProcess.exec(`${pm} run ${command}`, {
 		cwd: projectPath,
 		env: {
 			...testEnv,
@@ -106,29 +107,42 @@ export async function runLongLived(
 		},
 	});
 
+	// Create a promise that resolves when the process actually exits
+	const closePromise = events.once(proc, "close");
+
 	onTestFinished(async () => {
 		debuglog(`Closing down process`);
-		const result = await new Promise<number | undefined>((resolve) => {
-			const pid = process?.pid;
-			if (!pid) {
-				resolve(undefined);
-			} else {
-				debuglog(`Killing process, id:${pid}`);
-				kill(pid, "SIGKILL", (error) => {
-					if (error) {
-						debuglog("Error killing process", error);
-					}
-					resolve(pid);
-				});
-			}
-		});
-		if (result) {
-			debuglog("Killed process", result);
-		} else {
+		const pid = proc.pid;
+		if (!pid) {
 			debuglog("Process had no pid");
+			return;
 		}
+
+		debuglog(`Killing process tree, pid:${pid}`);
+
+		// Send kill signal to process tree
+		await new Promise<void>((resolve) => {
+			kill(pid, "SIGKILL", (error) => {
+				if (error) {
+					debuglog("Error sending kill signal:", error);
+				} else {
+					debuglog(`Kill signal sent for pid:${pid}`);
+				}
+				resolve();
+			});
+		});
+
+		// Wait for the process to actually exit, not just the kill signal to be sent
+		debuglog(`Waiting for process ${pid} to fully exit...`);
+		await closePromise;
+		debuglog(`Process ${pid} has exited`);
+
+		// Small delay to ensure OS resources (ports, file handles) are fully released
+		await setTimeout(100);
+		debuglog(`Cleanup complete for pid:${pid}`);
 	});
-	return wrap(process);
+
+	return wrap(proc);
 }
 
 export interface Process {
