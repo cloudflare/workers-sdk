@@ -6,9 +6,7 @@ import path from "node:path";
 import rl from "node:readline";
 import { Readable, Transform } from "node:stream";
 import { $ as $colors, red } from "kleur/colors";
-import workerdPath, {
-	compatibilityDate as workerdCompatibilityDate,
-} from "workerd";
+import workerdPath from "workerd";
 import { z } from "zod";
 import { SERVICE_LOOPBACK, SOCKET_ENTRY } from "../plugins";
 import { MiniflareCoreError } from "../shared";
@@ -350,17 +348,4 @@ export class Runtime {
 
 export * from "./config";
 
-/**
- * Gets a safe compatibility date from workerd. If the workerd compatibility
- * date is in the future, returns today's date instead. This handles the case
- * where workerd releases set their compatibility date up to 7 days in the future.
- */
-function getSafeCompatibilityDate(): string {
-	const today = new Date().toISOString().slice(0, 10);
-	if (workerdCompatibilityDate > today) {
-		return today;
-	}
-	return workerdCompatibilityDate;
-}
-
-export const supportedCompatibilityDate = getSafeCompatibilityDate();
+export * from "./compatibility-date";

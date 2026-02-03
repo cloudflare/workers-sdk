@@ -2,7 +2,6 @@ import * as fs from "node:fs";
 import {
 	COMPLIANCE_REGION_CONFIG_UNKNOWN,
 	FatalError,
-	getLocalWorkerdCompatibilityDate,
 } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import ci from "ci-info";
@@ -46,6 +45,8 @@ import type {
 } from "../api";
 import type { RawConfig } from "@cloudflare/workers-utils";
 import type { Mock, MockInstance } from "vitest";
+
+import { supportedCompatibilityDate } from "../api";
 
 vi.mock("../api/startDevWorker/ConfigController", (importOriginal) =>
 	importOriginal()
@@ -278,11 +279,7 @@ describe.sequential("wrangler dev", () => {
 			fs.writeFileSync("index.js", `export default {};`);
 			await runWranglerUntilConfig("dev");
 
-			// Use getLocalWorkerdCompatibilityDate() which applies the same safe date
-			// conversion as wrangler does (converting future dates to today's date)
-			const { date: currentDate } = getLocalWorkerdCompatibilityDate();
-
-			expect(std.warn.replaceAll(currentDate, "<current-date>"))
+			expect(std.warn.replaceAll(supportedCompatibilityDate, "<current-date>"))
 				.toMatchInlineSnapshot(`
 					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mNo compatibility_date was specified. Using the installed Workers runtime's latest supported date: <current-date>.[0m
 
@@ -1662,7 +1659,7 @@ describe.sequential("wrangler dev", () => {
 							binding
 						): binding is [
 							string,
-							Extract<Binding, { type: "plain_text" | "secret_text" }>,
+							Extract<Binding, { type: "plain_text" | "secret_text" }>
 						] =>
 							binding[1].type === "plain_text" ||
 							binding[1].type === "secret_text"
@@ -1712,7 +1709,7 @@ describe.sequential("wrangler dev", () => {
 							binding
 						): binding is [
 							string,
-							Extract<Binding, { type: "plain_text" | "secret_text" }>,
+							Extract<Binding, { type: "plain_text" | "secret_text" }>
 						] =>
 							binding[1].type === "plain_text" ||
 							binding[1].type === "secret_text"

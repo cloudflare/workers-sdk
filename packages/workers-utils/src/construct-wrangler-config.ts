@@ -1,4 +1,3 @@
-import { formatCompatibilityDate } from "./compatibility-date";
 import { ENVIRONMENT_TAG_PREFIX, SERVICE_TAG_PREFIX } from "./constants";
 import { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 import type { RawConfig } from "./config";
@@ -79,7 +78,7 @@ function convertWorkerToWranglerConfig(config: APIWorkerConfig): RawConfig {
 		workers_dev: config.subdomain.enabled,
 		preview_urls: config.subdomain.previews_enabled,
 		compatibility_date:
-			config.compatibility_date ?? formatCompatibilityDate(new Date()),
+			config.compatibility_date ?? new Date().toISOString().slice(0, 10),
 		compatibility_flags: config.compatibility_flags,
 		...(allRoutes.length ? { routes: allRoutes } : {}),
 		placement:

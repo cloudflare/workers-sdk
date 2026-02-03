@@ -1,6 +1,5 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import { isCompatDate } from "@cloudflare/workers-utils";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile, writeJSON } from "helpers/files";
 import {
@@ -14,6 +13,7 @@ import TOML from "smol-toml";
 import type { CommentObject, Reviver } from "comment-json";
 import type { TomlTable } from "smol-toml";
 import type { C3Context } from "types";
+import type { CompatDate } from "wrangler";
 
 /**
  * Update the `wrangler.(toml|json|jsonc)` file for this project by:
@@ -216,11 +216,14 @@ export const addVscodeConfig = (ctx: C3Context) => {
 async function getCompatibilityDate(
 	tentativeDate: unknown,
 	projectPath: string
-): Promise<string> {
-	if (typeof tentativeDate === "string" && isCompatDate(tentativeDate)) {
+): Promise<CompatDate> {
+	if (
+		typeof tentativeDate === "string" &&
+		/^\d{4}-\d{2}-\d{2}$/.test(tentativeDate)
+	) {
 		// Use the tentative date when it is valid.
 		// It may be there for a specific compat reason
-		return tentativeDate;
+		return tentativeDate as CompatDate;
 	}
 	// Fallback to the latest workerd date
 	return getWorkerdCompatibilityDate(projectPath);

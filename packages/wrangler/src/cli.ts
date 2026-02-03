@@ -85,6 +85,9 @@ export type {
 	Unstable_MiniflareWorkerOptions,
 };
 
+export { supportedCompatibilityDate, isCompatDate } from "./api";
+export type { CompatDate } from "./api";
+
 export { printBindings as unstable_printBindings } from "./utils/print-bindings";
 
 // Export internal APIs required by the Vitest integration as `unstable_`

@@ -1,10 +1,10 @@
 import path from "node:path";
 import {
 	configFileName,
-	formatCompatibilityDate,
 	formatConfigSnippet,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { formatCompatibilityDate } from "miniflare";
 import dedent from "ts-dedent";
 import { sniffUserAgent } from "../package-manager";
 import { guessWorkerFormat } from "./guess-worker-format";
