@@ -17,8 +17,11 @@ interface KVTableProps {
 }
 
 function formatValue(value: string | null, maxLength = 100): string {
-	if (!value) {
-		return "(null)";
+	if (value === "") {
+		return "(empty)";
+	}
+	if (value === null) {
+		return JSON.stringify(value);
 	}
 	if (value.length > maxLength) {
 		return value.slice(0, maxLength) + "...";

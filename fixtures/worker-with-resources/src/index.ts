@@ -195,6 +195,7 @@ const SEED_DATA: [string, string][] = [
 	],
 	["emoji-key-🔑", "value with emoji in key"],
 	["empty-value", ""],
+	["null-value", null],
 	["boolean-true", "true"],
 	["boolean-false", "false"],
 	["number-integer", "42"],
