@@ -1,3 +1,4 @@
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- test.each pattern
 import { describe, expect, test } from "vitest";
 import {
 	isAllowedExistingFile,

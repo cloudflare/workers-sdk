@@ -103,28 +103,19 @@ beforeAll(async (s) => {
 		testDir = path.resolve(workspaceRoot, "playground", testName);
 	}
 
-	// Check if test file exports browserMode = true
-	const testModule = await import(testPath);
-	const needsBrowser = testModule.browserMode === true;
+	const wsEndpoint = inject("wsEndpoint");
+	if (!wsEndpoint) {
+		throw new Error("wsEndpoint not found");
+	}
 
 	const logLabel = "bootup: " + testName;
 
 	console.time(logLabel);
-
-	// Only connect to browser and create a page if test requires it
-	if (needsBrowser) {
-		const wsEndpoint = inject("wsEndpoint");
-		if (!wsEndpoint) {
-			throw new Error("wsEndpoint not found");
-		}
-		console.timeLog(logLabel, "Connecting to browser at", wsEndpoint);
-		browser = await chromium.connect(wsEndpoint);
-		// `@vitejs/plugin-basic-ssl` requires a manual confirmation step in the browser so we enable `ignoreHTTPSErrors` to bypass this
-		page = await browser.newPage({ ignoreHTTPSErrors: true });
-		console.timeLog(logLabel, "Browser page created");
-	} else {
-		console.timeLog(logLabel, "Skipping browser (browserMode not set)");
-	}
+	console.timeLog(logLabel, "Starting browser connect to", wsEndpoint);
+	browser = await chromium.connect(wsEndpoint);
+	// `@vitejs/plugin-basic-ssl` requires a manual confirmation step in the browser so we enable `ignoreHTTPSErrors` to bypass this
+	page = await browser.newPage({ ignoreHTTPSErrors: true });
+	console.timeLog(logLabel, `Browser connected`);
 
 	const globalConsole = console;
 	const warn = globalConsole.warn;
@@ -136,25 +127,23 @@ beforeAll(async (s) => {
 	};
 
 	try {
-		if (needsBrowser) {
-			page.on("console", (msg) => {
-				console.timeLog(logLabel, `BROWSER LOG [${msg.type()}]: ${msg.text()}`);
-				// ignore favicon requests in headed browser
-				if (
-					// eslint-disable-next-line turbo/no-undeclared-env-vars
-					process.env.VITE_DEBUG_SERVE &&
-					msg.text().includes("Failed to load resource:") &&
-					msg.location().url.includes("favicon.ico")
-				) {
-					return;
-				}
-				browserLogs.push(msg.text());
-			});
-			page.on("pageerror", (error) => {
-				console.timeLog(logLabel, `BROWSER ERROR: ${error.message}`);
-				browserErrors.push(error);
-			});
-		}
+		page.on("console", (msg) => {
+			console.timeLog(logLabel, `BROWSER LOG [${msg.type()}]: ${msg.text()}`);
+			// ignore favicon requests in headed browser
+			if (
+				// eslint-disable-next-line turbo/no-undeclared-env-vars
+				process.env.VITE_DEBUG_SERVE &&
+				msg.text().includes("Failed to load resource:") &&
+				msg.location().url.includes("favicon.ico")
+			) {
+				return;
+			}
+			browserLogs.push(msg.text());
+		});
+		page.on("pageerror", (error) => {
+			console.timeLog(logLabel, `BROWSER ERROR: ${error.message}`);
+			browserErrors.push(error);
+		});
 
 		// if this is a test placed under playground/xxx/__tests__
 		// start a vite server in that directory.
@@ -195,12 +184,6 @@ beforeAll(async (s) => {
 				server = await startDefaultServe();
 			}
 			console.timeLog(logLabel, "Started test server...");
-
-			// Navigate to the test URL if browser is needed
-			if (needsBrowser) {
-				await page.goto(viteTestUrl);
-			}
-
 			console.timeEnd(logLabel);
 		}
 	} catch (e) {
@@ -208,7 +191,7 @@ beforeAll(async (s) => {
 		// when building the playground should skip further tests.
 		// If the page remains open, a command like `await page.click(...)` produces
 		// a timeout with an exception that hides the real error in the console.
-		await page?.close();
+		await page.close();
 		await server?.close();
 		throw e;
 	}
@@ -302,6 +285,7 @@ export async function startDefaultServe(): Promise<
 		if (viteServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
 		}
+		await page.goto(viteTestUrl);
 		return viteServer;
 	} else {
 		// eslint-disable-next-line turbo/no-undeclared-env-vars
@@ -350,6 +334,7 @@ export async function startDefaultServe(): Promise<
 		if (previewServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
 		}
+		await page.goto(viteTestUrl);
 		return previewServer;
 	}
 }

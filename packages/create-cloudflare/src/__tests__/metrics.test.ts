@@ -1,7 +1,7 @@
 import { CancelError } from "@cloudflare/cli/error";
 import { detectPackageManager } from "helpers/packageManagers";
 import { hasSparrowSourceKey, sendEvent } from "helpers/sparrow";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, test, vi } from "vitest";
 import { collectCLIOutput, normalizeOutput } from "../../../cli/test-util";
 import { version as c3Version } from "../../package.json";
 import {
@@ -43,7 +43,9 @@ describe("createReporter", () => {
 		vi.unstubAllEnvs();
 	});
 
-	test("sends started and completed event to sparrow if the promise resolves", async () => {
+	test("sends started and completed event to sparrow if the promise resolves", async ({
+		expect,
+	}) => {
 		const deferred = promiseWithResolvers<string>();
 		const reporter = createReporter();
 		const operation = reporter.collectAsyncMetrics({
@@ -106,7 +108,9 @@ describe("createReporter", () => {
 		expect(sendEvent).toBeCalledTimes(2);
 	});
 
-	test("sends event with logs enabled if CREATE_CLOUDFLARE_TELEMETRY_DEBUG is set to `1`", async () => {
+	test("sends event with logs enabled if CREATE_CLOUDFLARE_TELEMETRY_DEBUG is set to `1`", async ({
+		expect,
+	}) => {
 		vi.stubEnv("CREATE_CLOUDFLARE_TELEMETRY_DEBUG", "1");
 
 		const deferred = promiseWithResolvers<string>();
@@ -171,7 +175,7 @@ describe("createReporter", () => {
 		expect(sendEvent).toBeCalledTimes(2);
 	});
 
-	test("sends no event if no sparrow source key", async () => {
+	test("sends no event if no sparrow source key", async ({ expect }) => {
 		vi.mocked(hasSparrowSourceKey).mockReturnValue(false);
 
 		const deferred = promiseWithResolvers<string>();
@@ -196,7 +200,9 @@ describe("createReporter", () => {
 		expect(sendEvent).toBeCalledTimes(0);
 	});
 
-	test("sends no event if the c3 permission is disabled", async () => {
+	test("sends no event if the c3 permission is disabled", async ({
+		expect,
+	}) => {
 		vi.mocked(readMetricsConfig).mockReturnValueOnce({
 			c3permission: {
 				enabled: false,
@@ -226,7 +232,9 @@ describe("createReporter", () => {
 		expect(sendEvent).toBeCalledTimes(0);
 	});
 
-	test("sends no event if the CREATE_CLOUDFLARE_TELEMETRY_DISABLED env is set to '1'", async () => {
+	test("sends no event if the CREATE_CLOUDFLARE_TELEMETRY_DISABLED env is set to '1'", async ({
+		expect,
+	}) => {
 		vi.stubEnv("CREATE_CLOUDFLARE_TELEMETRY_DISABLED", "1");
 
 		const deferred = promiseWithResolvers<string>();
@@ -251,7 +259,9 @@ describe("createReporter", () => {
 		expect(sendEvent).toBeCalledTimes(0);
 	});
 
-	test("sends started and cancelled event to sparrow if the promise reject with a CancelError", async () => {
+	test("sends started and cancelled event to sparrow if the promise reject with a CancelError", async ({
+		expect,
+	}) => {
 		const deferred = promiseWithResolvers<string>();
 		const reporter = createReporter();
 		const operation = reporter.collectAsyncMetrics({
@@ -313,7 +323,9 @@ describe("createReporter", () => {
 		expect(sendEvent).toBeCalledTimes(2);
 	});
 
-	test("sends started and errored event to sparrow if the promise reject with a non CancelError", async () => {
+	test("sends started and errored event to sparrow if the promise reject with a non CancelError", async ({
+		expect,
+	}) => {
 		const deferred = promiseWithResolvers<string>();
 		const reporter = createReporter();
 		const process = reporter.collectAsyncMetrics({
@@ -378,7 +390,9 @@ describe("createReporter", () => {
 		expect(sendEvent).toBeCalledTimes(2);
 	});
 
-	test("sends cancelled event if a SIGINT signal is received", async () => {
+	test("sends cancelled event if a SIGINT signal is received", async ({
+		expect,
+	}) => {
 		const deferred = promiseWithResolvers<string>();
 		const reporter = createReporter();
 
@@ -442,7 +456,9 @@ describe("createReporter", () => {
 		expect(sendEvent).toBeCalledTimes(2);
 	});
 
-	test("sends cancelled event if a SIGTERM signal is received", async () => {
+	test("sends cancelled event if a SIGTERM signal is received", async ({
+		expect,
+	}) => {
 		const deferred = promiseWithResolvers<string>();
 		const reporter = createReporter();
 		const run = reporter.collectAsyncMetrics({
@@ -517,7 +533,9 @@ describe("runTelemetryCommand", () => {
 		vi.useRealTimers();
 	});
 
-	test("run telemetry status when c3permission is disabled", async () => {
+	test("run telemetry status when c3permission is disabled", async ({
+		expect,
+	}) => {
 		vi.mocked(readMetricsConfig).mockReturnValueOnce({
 			c3permission: {
 				enabled: false,
@@ -534,7 +552,9 @@ describe("runTelemetryCommand", () => {
 		`);
 	});
 
-	test("run telemetry status when c3permission is enabled", async () => {
+	test("run telemetry status when c3permission is enabled", async ({
+		expect,
+	}) => {
 		vi.mocked(readMetricsConfig).mockReturnValueOnce({
 			c3permission: {
 				enabled: true,
@@ -551,7 +571,9 @@ describe("runTelemetryCommand", () => {
 		`);
 	});
 
-	test("run telemetry enable when c3permission is disabled", async () => {
+	test("run telemetry enable when c3permission is disabled", async ({
+		expect,
+	}) => {
 		vi.mocked(readMetricsConfig).mockReturnValueOnce({
 			c3permission: {
 				enabled: false,
@@ -575,7 +597,9 @@ describe("runTelemetryCommand", () => {
 		`);
 	});
 
-	test("run telemetry enable when c3permission is enabled", async () => {
+	test("run telemetry enable when c3permission is enabled", async ({
+		expect,
+	}) => {
 		vi.mocked(readMetricsConfig).mockReturnValueOnce({
 			c3permission: {
 				enabled: true,
@@ -594,7 +618,9 @@ describe("runTelemetryCommand", () => {
 		`);
 	});
 
-	test("run telemetry disable when c3permission is enabled", async () => {
+	test("run telemetry disable when c3permission is enabled", async ({
+		expect,
+	}) => {
 		vi.mocked(readMetricsConfig).mockReturnValueOnce({
 			c3permission: {
 				enabled: true,
@@ -618,7 +644,9 @@ describe("runTelemetryCommand", () => {
 		`);
 	});
 
-	test("run telemetry disable when c3permission is disabled", async () => {
+	test("run telemetry disable when c3permission is disabled", async ({
+		expect,
+	}) => {
 		vi.mocked(readMetricsConfig).mockReturnValueOnce({
 			c3permission: {
 				enabled: false,
