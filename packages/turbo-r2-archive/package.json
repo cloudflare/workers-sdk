@@ -18,7 +18,7 @@
 		"type:check": "tsc"
 	},
 	"dependencies": {
-		"@hono/zod-validator": "^0.4.2",
+		"@hono/zod-validator": "^0.7.6",
 		"hono": "^4.7.0",
 		"zod": "^4.3.6"
 	},
