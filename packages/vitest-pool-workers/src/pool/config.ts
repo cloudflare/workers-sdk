@@ -35,7 +35,7 @@ const WorkersPoolOptionsSchema = z.object({
 	 * `module` instance as is used internally for the `SELF` and Durable Object
 	 * bindings.
 	 */
-	main: z.ostring(),
+	main: z.string().optional(),
 	/**
 	 * Enables per-test isolated storage. If enabled, any writes to storage
 	 * performed in a test will be undone at the end of the test. The test storage
@@ -83,7 +83,10 @@ const WorkersPoolOptionsSchema = z.object({
 		.passthrough()
 		.optional(),
 	wrangler: z
-		.object({ configPath: z.ostring(), environment: z.ostring() })
+		.object({
+			configPath: z.string().optional(),
+			environment: z.string().optional(),
+		})
 		.optional(),
 });
 export type SourcelessWorkerOptions = Omit<
@@ -211,10 +214,17 @@ async function parseCustomPoolOptions(
 	opts: { path: (string | number)[] }
 ): Promise<WorkersPoolOptionsWithDefines> {
 	// Try to parse pool specific options
-	const options = WorkersPoolOptionsSchema.parse(
-		value,
-		opts
-	) as WorkersPoolOptionsWithDefines;
+	const result = WorkersPoolOptionsSchema.safeParse(value);
+	if (!result.success) {
+		if (opts?.path) {
+			result.error.issues = result.error.issues.map((issue) => ({
+				...issue,
+				path: [...(opts?.path ?? []), ...issue.path],
+			}));
+		}
+		throw result.error;
+	}
+	const options = result.data as WorkersPoolOptionsWithDefines;
 	options.miniflare ??= {};
 
 	// Try to parse runner worker options, coalescing all errors

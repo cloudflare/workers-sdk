@@ -511,7 +511,10 @@ function print(
 	return "";
 }
 
-export function formatZodError(error: z.ZodError, input: unknown): string {
+export function formatZodError(
+	error: z.core.$ZodError,
+	input: unknown
+): string {
 	// Shallow copy and sort array, with `invalid_union` errors first, so we don't
 	// annotate the input with an `invalid_type` error instead
 	const sortedIssues = Array.from(error.issues).sort((a, b) => {
