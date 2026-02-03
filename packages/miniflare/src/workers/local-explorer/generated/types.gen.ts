@@ -27,13 +27,25 @@ export type D1QueryMeta = {
 	 */
 	changed_db?: boolean;
 	/**
+	 * Rough indication of how many rows were modified by the query, as provided by SQLite's `sqlite3_total_changes()`.
+	 */
+	changes?: number;
+	/**
 	 * The duration of the SQL query execution inside the database. Does not include any network communication.
 	 */
 	duration?: number;
 	/**
+	 * The row ID of the last inserted row in a table with an `INTEGER PRIMARY KEY` as provided by SQLite. Tables created with `WITHOUT ROWID` do not populate this.
+	 */
+	last_row_id?: number;
+	/**
 	 * Number of rows read during the SQL query execution, including indices (not all rows are necessarily returned).
 	 */
 	rows_read?: number;
+	/**
+	 * Number of rows written during the SQL query execution, including indices.
+	 */
+	rows_written?: number;
 	/**
 	 * Size of the database after the query committed, in bytes.
 	 */

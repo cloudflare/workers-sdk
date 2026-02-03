@@ -77,11 +77,8 @@ const config = {
 			// D1 query meta doesn't include served_by fields locally and\
 			// returns hardcoded values for changes, last_row_id, rows_written
 			"d1_query-meta": [
-				"changes",
 				"d1_served-by-colo",
 				"d1_served-by-region",
-				"last_row_id",
-				"rows_written",
 				"served_by_colo",
 				"served_by_primary",
 				"served_by_region",
