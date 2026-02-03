@@ -120,6 +120,12 @@ function NamespaceView() {
 		void fetchEntries();
 	}, [fetchEntries]);
 
+	useEffect(() => {
+		setDeleteTarget(null);
+		setOverwriteConfirm(null);
+		setError(null);
+	}, [namespaceId]);
+
 	const handleLoadMore = () => {
 		if (cursor && !loadingMore) {
 			void fetchEntries(cursor);
