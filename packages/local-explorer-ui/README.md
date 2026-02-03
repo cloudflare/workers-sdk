@@ -16,4 +16,4 @@ The API client is generated from the OpenAPI spec in `packages/miniflare/src/wor
 Or to run a specific worker against the UI:
 
 1. Run a worker (`fixtures/worker-with-resources`) using Wrangler or Vite, making sure it is running at `localhost:8787`.
-2. Run this package with `pnpm run dev`, which will spin up a dev server using vite.
+2. Run this package with `pnpm run dev:ui`, which will spin up a dev server for just the UI using Vite.

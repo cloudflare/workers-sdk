@@ -1,14 +1,18 @@
 import { Button } from "@base-ui/react/button";
-import { Input } from "@base-ui/react/input";
 import { Menu } from "@base-ui/react/menu";
 import { useState } from "react";
 import DotsIcon from "../assets/icons/dots.svg?react";
+import { validateKey } from "../utils/kv-validation";
 import { CopyButton } from "./CopyButton";
 import type { KVEntry } from "../api";
 
 interface KVTableProps {
 	entries: KVEntry[];
-	onSave: (originalKey: string, newKey: string, value: string) => Promise<void>;
+	onSave: (
+		originalKey: string,
+		newKey: string,
+		value: string
+	) => Promise<boolean>;
 	onDelete: (keyName: string) => void;
 }
 
@@ -57,38 +61,62 @@ interface EditingState {
 	originalKey: string;
 	key: string;
 	value: string;
+	keyError: string | null;
 }
 
 export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
-	const [editing, setEditing] = useState<EditingState | null>(null);
+	const [editData, setEditData] = useState<EditingState | null>(null);
 	const [saving, setSaving] = useState(false);
 
 	const handleStartEdit = (entry: KVEntry) => {
-		setEditing({
+		setEditData({
 			originalKey: entry.key.name,
 			key: entry.key.name,
 			value: entry.value ?? "",
+			keyError: null,
+		});
+	};
+
+	const handleKeyChange = (newKey: string) => {
+		if (!editData) {
+			return;
+		}
+		setEditData({
+			...editData,
+			key: newKey,
+			keyError: newKey.trim() ? validateKey(newKey) : null,
 		});
 	};
 
 	const handleSave = async () => {
-		if (!editing || !editing.key.trim()) {
+		if (!editData) {
+			return;
+		}
+		const validationError = validateKey(editData.key);
+		if (validationError) {
+			setEditData({ ...editData, keyError: validationError });
 			return;
 		}
 
 		try {
 			setSaving(true);
-			await onSave(editing.originalKey, editing.key, editing.value);
-			setEditing(null);
-		} catch {
-			// Error handling done by parent
+			// onSave will set errors on the parent if something fails
+			// see `error` in $namespaceId.tsx
+			const completed = await onSave(
+				editData.originalKey,
+				editData.key,
+				editData.value
+			);
+			if (completed) {
+				setEditData(null);
+			}
 		} finally {
 			setSaving(false);
 		}
 	};
 
 	const handleCancel = () => {
-		setEditing(null);
+		setEditData(null);
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -98,6 +126,8 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 			void handleSave();
 		}
 	};
+
+	const isKeyInvalid = editData ? !!validateKey(editData.key) : false;
 
 	return (
 		<table className="table">
@@ -110,21 +140,31 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 			</thead>
 			<tbody>
 				{entries.map((entry) => {
-					const isEditing = editing?.originalKey === entry.key.name;
+					const isEditing = editData?.originalKey === entry.key.name;
 					return (
 						<tr key={entry.key.name}>
 							<td className="key-cell">
-								{isEditing && editing ? (
-									<Input
-										className="inline-edit-input"
-										value={editing.key}
-										onChange={(e) =>
-											setEditing({ ...editing, key: e.target.value })
-										}
-										onKeyDown={handleKeyDown}
-										disabled={saving}
-										autoFocus
-									/>
+								{isEditing && editData ? (
+									<div className="kv-field">
+										<label
+											className="sr-only"
+											htmlFor={`edit-key-${entry.key.name}`}
+										>
+											Key
+										</label>
+										<input
+											id={`edit-key-${entry.key.name}`}
+											className={`kv-input kv-input--edit${editData.keyError ? " kv-input--invalid" : ""}`}
+											value={editData.key}
+											onChange={(e) => handleKeyChange(e.target.value)}
+											onKeyDown={handleKeyDown}
+											disabled={saving}
+											autoFocus
+										/>
+										{editData.keyError && (
+											<span className="field-error">{editData.keyError}</span>
+										)}
+									</div>
 								) : (
 									<div className="cell-with-copy">
 										<code>{entry.key.name}</code>
@@ -133,13 +173,20 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 								)}
 							</td>
 							<td className="value-cell">
-								{isEditing && editing ? (
+								{isEditing && editData ? (
 									<div className="inline-edit-cell">
+										<label
+											className="sr-only"
+											htmlFor={`edit-value-${entry.key.name}`}
+										>
+											Value
+										</label>
 										<textarea
-											className="inline-edit-textarea"
-											value={editing.value}
+											id={`edit-value-${entry.key.name}`}
+											className="kv-input kv-input--edit kv-input--textarea"
+											value={editData.value}
 											onChange={(e) =>
-												setEditing({ ...editing, value: e.target.value })
+												setEditData({ ...editData, value: e.target.value })
 											}
 											onKeyDown={handleKeyDown}
 											disabled={saving}
@@ -155,7 +202,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 											<Button
 												className="btn btn-primary"
 												onClick={handleSave}
-												disabled={saving || !editing.key.trim()}
+												disabled={saving || isKeyInvalid}
 												focusableWhenDisabled
 											>
 												{saving ? "Saving..." : "Save"}

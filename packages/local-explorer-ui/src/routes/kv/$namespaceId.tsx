@@ -41,6 +41,9 @@ function NamespaceView() {
 	const { namespaceId } = Route.useParams();
 	const [entries, setEntries] = useState<KVEntry[]>([]);
 	const [loading, setLoading] = useState(true);
+	// Global (not individal validation) errors like fetch failures, shown in a
+	// banner. Set by fetchEntries, handleAdd, handleEditSave,
+	// handleConfirmOverwrite, handleConfirmDelete
 	const [error, setError] = useState<string | null>(null);
 	const [cursor, setCursor] = useState<string | null>(null);
 	const [hasMore, setHasMore] = useState(false);
@@ -54,6 +57,8 @@ function NamespaceView() {
 		originalKey?: string; // undefined for add, set for edit
 	} | null>(null);
 	const [overwriting, setOverwriting] = useState(false);
+	// Signal to clear AddKVForm after successful overwrite
+	const [clearAddForm, setClearAddForm] = useState(0);
 
 	const fetchEntries = useCallback(
 		async (nextCursor?: string) => {
@@ -132,17 +137,27 @@ function NamespaceView() {
 		}
 	};
 
-	const handleAdd = async (key: string, value: string) => {
-		const exists = await checkKeyExists(key);
-		if (exists) {
-			setOverwriteConfirm({ key, value });
-			return;
+	/**
+	 *
+	 * @returns whether we should clear the add form
+	 */
+	const handleAdd = async (key: string, value: string): Promise<boolean> => {
+		try {
+			const exists = await checkKeyExists(key);
+			if (exists) {
+				setOverwriteConfirm({ key, value });
+				return false;
+			}
+			await executeAdd(key, value);
+			return true;
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Failed to add entry");
+			return false;
 		}
-		await doAdd(key, value);
 	};
 
 	/** Execute add operation (called directly or after overwrite confirmation) */
-	const doAdd = async (
+	const executeAdd = async (
 		key: string,
 		value: string,
 		isOverwrite: boolean = false
@@ -174,19 +189,25 @@ function NamespaceView() {
 		originalKey: string,
 		newKey: string,
 		value: string
-	) => {
-		if (originalKey !== newKey) {
-			const exists = await checkKeyExists(newKey);
-			if (exists) {
-				setOverwriteConfirm({ key: newKey, value, originalKey });
-				return;
+	): Promise<boolean> => {
+		try {
+			if (originalKey !== newKey) {
+				const exists = await checkKeyExists(newKey);
+				if (exists) {
+					setOverwriteConfirm({ key: newKey, value, originalKey });
+					return false;
+				}
 			}
+			await executeEditSave(originalKey, newKey, value);
+			return true;
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Failed to save entry");
+			return false;
 		}
-		await doEditSave(originalKey, newKey, value);
 	};
 
 	// Execute save operation (called directly or after overwrite confirmation)
-	const doEditSave = async (
+	const executeEditSave = async (
 		originalKey: string,
 		newKey: string,
 		value: string,
@@ -237,10 +258,12 @@ function NamespaceView() {
 			setOverwriting(true);
 			if (originalKey) {
 				// Edit mode - pass isOverwrite=true since we confirmed overwriting existing key
-				await doEditSave(originalKey, key, value, true);
+				await executeEditSave(originalKey, key, value, true);
 			} else {
 				// Add mode - pass isOverwrite=true since we confirmed overwriting existing key
-				await doAdd(key, value, true);
+				await executeAdd(key, value, true);
+				// Signal AddKVForm to clear its fields
+				setClearAddForm((c) => c + 1);
 			}
 			setOverwriteConfirm(null);
 		} catch (err) {
@@ -282,7 +305,7 @@ function NamespaceView() {
 				<span className="breadcrumb-item current">{namespaceId}</span>
 			</div>
 
-			<AddKVForm onAdd={handleAdd} />
+			<AddKVForm onAdd={handleAdd} clearSignal={clearAddForm} />
 
 			{error && <div className="error">{error}</div>}
 

@@ -1,3 +1,7 @@
+/* ==========================================================================
+   Table
+   ========================================================================== */
+
 .table-wrapper {
 	border-radius: 8px;
 }
@@ -87,11 +91,9 @@
 	text-align: right;
 }
 
-/* Action dropdown menu */
-.action-menu {
-	position: relative;
-	display: inline-block;
-}
+/* ==========================================================================
+   Action Menu
+   ========================================================================== */
 
 .action-menu-trigger {
 	display: flex;
@@ -146,10 +148,7 @@
 	transition: background-color 0.15s;
 }
 
-.action-menu-item:hover {
-	background-color: var(--color-bg-secondary);
-}
-
+.action-menu-item:hover,
 .action-menu-item[data-highlighted] {
 	background-color: var(--color-bg-secondary);
 }
@@ -168,52 +167,134 @@
 	margin: 4px 0;
 }
 
-.form-group {
-	margin-bottom: 16px;
-}
+/* ==========================================================================
+   KV Input - Base styles shared by add and edit forms
+   ========================================================================== */
 
-.form-label {
-	display: block;
-	font-size: 14px;
-	font-weight: 500;
-	margin-bottom: 4px;
-}
-
-.form-input,
-.form-textarea {
+.kv-input {
 	width: 100%;
-	padding: 8px 12px;
-	font-size: 14px;
-	border: 1px solid var(--color-border);
-	border-radius: 6px;
+	font-family: monospace;
 	background-color: var(--color-bg);
 	color: var(--color-text);
 }
 
-.form-input:focus,
-.form-textarea:focus {
+.kv-input:focus {
 	outline: none;
-	border-color: var(--color-primary);
-	box-shadow: 0 0 0 3px rgba(255, 72, 1, 0.15);
 }
 
-.form-input:disabled {
+.kv-input:disabled {
 	background-color: var(--color-bg-secondary);
 	color: var(--color-text-secondary);
 }
 
-.form-textarea {
-	min-height: 120px;
-	resize: vertical;
-	font-family: monospace;
+/* Add form variant - larger padding, subtle border */
+.kv-input--add {
+	padding: 8px 12px;
+	font-size: 14px;
+	border: 1px solid var(--color-border);
+	border-radius: 6px;
 }
 
-.load-more {
-	text-align: center;
-	padding: 16px;
+.kv-input--add:focus {
+	border-color: var(--color-primary);
+	box-shadow: 0 0 0 3px rgba(255, 72, 1, 0.15);
 }
 
-/* Copy button */
+/* Edit form variant - compact, active border */
+.kv-input--edit {
+	min-height: 32px;
+	padding: 6px 8px;
+	font-size: 13px;
+	border: 1px solid var(--color-primary);
+	border-radius: 4px;
+}
+
+.kv-input--edit:focus {
+	box-shadow: 0 0 0 2px rgba(255, 72, 1, 0.15);
+}
+
+/* Textarea-specific styles */
+.kv-input--textarea {
+	max-height: 200px;
+	resize: none;
+	overflow-y: auto;
+	field-sizing: content;
+}
+
+/* Invalid state */
+.kv-input--invalid {
+	border-color: var(--color-danger);
+}
+
+.kv-input--invalid:focus {
+	box-shadow: 0 0 0 2px rgba(251, 44, 54, 0.15);
+}
+
+/* ==========================================================================
+   KV Field Wrappers
+   ========================================================================== */
+
+.kv-field {
+	display: flex;
+	flex-direction: column;
+}
+
+.field-error {
+	color: var(--color-danger);
+	font-size: 12px;
+	margin-top: 4px;
+}
+
+/* ==========================================================================
+   Add Entry Form
+   ========================================================================== */
+
+.add-entry-form {
+	display: flex;
+	gap: 8px;
+	margin-bottom: 16px;
+	align-items: flex-start;
+}
+
+.add-entry-form .kv-field:first-child {
+	width: 200px;
+	flex-shrink: 0;
+}
+
+.add-entry-form .kv-field:nth-child(2) {
+	flex: 1;
+	min-width: 200px;
+}
+
+.add-entry-form .btn {
+	flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Inline Edit (Table Row)
+   ========================================================================== */
+
+.inline-edit-cell {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.inline-edit-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 6px;
+}
+
+.inline-edit-actions .btn {
+	padding: 4px 10px;
+	font-size: 12px;
+}
+
+/* ==========================================================================
+   Copy Button
+   ========================================================================== */
+
 .cell-with-copy {
 	display: flex;
 	align-items: center;
@@ -254,123 +335,11 @@
 	color: #16a34a;
 }
 
-/* Inline edit */
-.inline-edit-cell {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
+/* ==========================================================================
+   Misc
+   ========================================================================== */
 
-.inline-edit-input {
-	width: 100%;
-	min-height: 32px;
-	padding: 6px 8px;
-	font-size: 13px;
-	font-family: monospace;
-	border: 1px solid var(--color-primary);
-	border-radius: 4px;
-	background-color: var(--color-bg);
-	color: var(--color-text);
-}
-
-.inline-edit-input:focus {
-	outline: none;
-	box-shadow: 0 0 0 2px rgba(255, 72, 1, 0.15);
-}
-
-.inline-edit-textarea {
-	width: 100%;
-	min-height: 32px;
-	max-height: 200px;
-	padding: 6px 8px;
-	font-size: 13px;
-	font-family: monospace;
-	border: 1px solid var(--color-primary);
-	border-radius: 4px;
-	background-color: var(--color-bg);
-	color: var(--color-text);
-	resize: none;
-	overflow-y: auto;
-	field-sizing: content;
-}
-
-.inline-edit-textarea:focus {
-	outline: none;
-	box-shadow: 0 0 0 2px rgba(255, 72, 1, 0.15);
-}
-
-.inline-edit-actions {
-	display: flex;
-	justify-content: flex-end;
-	gap: 6px;
-}
-
-.inline-edit-actions .btn {
-	padding: 4px 10px;
-	font-size: 12px;
-}
-
-/* Inline add form */
-.add-entry-form {
-	display: flex;
-	gap: 8px;
-	margin-bottom: 16px;
-	align-items: flex-start;
-}
-
-.add-entry-form .form-input {
-	padding: 8px 12px;
-	font-size: 14px;
-}
-
-.add-entry-form .key-input {
-	width: 200px;
-	flex-shrink: 0;
-}
-
-.add-entry-form .value-input {
-	flex: 1;
-	min-width: 200px;
-}
-
-.add-entry-form .btn {
-	flex-shrink: 0;
-}
-
-.add-entry-error {
-	color: var(--color-danger);
-	font-size: 12px;
-	margin-top: 4px;
-}
-
-/* Add entry form field layout */
-.add-entry-field {
-	display: flex;
-	flex-direction: column;
-}
-
-.add-entry-field .key-input {
-	width: 200px;
-}
-
-.add-entry-field-value {
-	flex: 1;
-	min-width: 200px;
-}
-
-/* Base UI Tooltip */
-.tooltip {
-	background-color: var(--color-text);
-	color: var(--color-bg);
-	padding: 4px 8px;
-	border-radius: 4px;
-	font-size: 12px;
-	box-shadow: 0 2px 8px rgba(82, 16, 0, 0.15);
-}
-
-/* Base UI Field validation error */
-.field-error {
-	color: var(--color-danger);
-	font-size: 12px;
-	margin-top: 4px;
+.load-more {
+	text-align: center;
+	padding: 16px;
 }
