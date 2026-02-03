@@ -699,6 +699,7 @@
 								"type": "array"
 							}
 						},
+						"required": ["batch"],
 						"title": "multiple queries",
 						"type": "object"
 					}

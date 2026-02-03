@@ -55,7 +55,7 @@ export const zD1SingleQuery = z.object({
 export const zD1BatchQuery = z.union([
 	zD1SingleQuery,
 	z.object({
-		batch: z.array(zD1SingleQuery).optional(),
+		batch: z.array(zD1SingleQuery),
 	}),
 ]);
 

@@ -67,7 +67,7 @@ export type D1QueryMeta = {
 export type D1BatchQuery =
 	| D1SingleQuery
 	| {
-			batch?: Array<D1SingleQuery>;
+			batch: Array<D1SingleQuery>;
 	  };
 
 /**
