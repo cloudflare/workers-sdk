@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import fs, { readFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { detectPackageManager } from "helpers/packageManagers";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- e2e test with complex patterns
 import { beforeAll, describe, expect } from "vitest";
 import { version } from "../../../package.json";
 import {
