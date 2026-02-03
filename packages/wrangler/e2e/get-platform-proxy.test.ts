@@ -518,9 +518,7 @@ describe("getPlatformProxy()", () => {
 				await runInNodeAsSpawnChildProcess("index.mjs", root);
 
 				// Check that we received the expected data
-				expect(receivedData).toMatchInlineSnapshot(
-					`"test string sent using getPlatformProxy"`
-				);
+				expect(receivedData).toBe("test string sent using getPlatformProxy");
 			});
 
 			// PostgreSQL-specific sslmode tests
@@ -576,9 +574,7 @@ describe("getPlatformProxy()", () => {
 					await runInNodeAsSpawnChildProcess("index.mjs", root);
 
 					// Check that we received the expected data
-					expect(receivedData).toMatchInlineSnapshot(
-						`"test string sent using getPlatformProxy"`
-					);
+					expect(receivedData).toBe("test string sent using getPlatformProxy");
 				}
 			);
 
