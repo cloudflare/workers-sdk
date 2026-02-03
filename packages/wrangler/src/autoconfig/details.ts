@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { statSync } from "node:fs";
+import { existsSync, statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { basename, join, relative, resolve } from "node:path";
 import { brandColor } from "@cloudflare/cli/colors";
@@ -12,11 +12,13 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
+import { getCacheFolder } from "../config-cache";
 import { getErrorType } from "../core/handle-errors";
 import { confirm, prompt, select } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import { getPackageManager } from "../package-manager";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../pages/constants";
 import { allKnownFrameworks, getFramework } from "./frameworks/get-framework";
 import {
 	getAutoConfigId,
@@ -27,7 +29,6 @@ import type {
 	AutoConfigDetailsForNonConfiguredProject,
 } from "./types";
 import type { Config, PackageJSON } from "@cloudflare/workers-utils";
-import type { Settings } from "@netlify/build-info";
 
 /**
  * Asserts that the current project being targeted for autoconfig is not already configured.
@@ -91,6 +92,86 @@ function getWorkerName(projectOrWorkerName = "", projectPath: string): string {
 	return toValidWorkerName(rawName);
 }
 
+type DetectedFramework = {
+	framework: {
+		name: string;
+		id: string;
+	};
+	buildCommand?: string | undefined;
+	dist?: string;
+};
+
+async function isPagesProject(
+	projectPath: string,
+	wranglerConfig: Config | undefined,
+	detectedFramework?: DetectedFramework | undefined
+): Promise<boolean> {
+	if (wranglerConfig?.pages_build_output_dir) {
+		// The `pages_build_output_dir` is set only for Pages projects
+		return true;
+	}
+
+	const cacheFolder = getCacheFolder();
+	if (cacheFolder) {
+		const pagesConfigCache = join(cacheFolder, PAGES_CONFIG_CACHE_FILENAME);
+		if (existsSync(pagesConfigCache)) {
+			// If there is a cached pages.json we can safely assume that the project
+			// is a Pages one
+			return true;
+		}
+	}
+
+	if (detectedFramework === undefined) {
+		const functionsPath = join(projectPath, "functions");
+		if (existsSync(functionsPath)) {
+			const functionsStat = statSync(functionsPath);
+			if (functionsStat.isDirectory()) {
+				const pagesConfirmed = await confirm(
+					"We have identified a `functions` directory in this project, which might indicate you have an active Cloudflare Pages deployment. Is this correct?"
+				);
+				return pagesConfirmed;
+			}
+		}
+	}
+
+	return false;
+}
+
+async function detectFramework(
+	projectPath: string,
+	wranglerConfig?: Config
+): Promise<DetectedFramework | undefined> {
+	const fs = new NodeFS();
+
+	fs.logger = logger;
+	const project = new Project(fs, projectPath, projectPath)
+		.setEnvironment(process.env)
+		.setNodeVersion(process.version)
+		.setReportFn((err) => {
+			captureException(err);
+		});
+
+	const buildSettings = await project.getBuildSettings();
+
+	// If we've detected multiple frameworks, it's too complex for us to try and configure—let's just bail
+	if (buildSettings && buildSettings?.length > 1) {
+		throw new MultipleFrameworksError(buildSettings.map((b) => b.name));
+	}
+
+	const detectedFramework: DetectedFramework | undefined = buildSettings[0];
+
+	if (await isPagesProject(projectPath, wranglerConfig, detectedFramework)) {
+		return {
+			framework: {
+				name: "Cloudflare Pages",
+				id: "cloudflare-pages",
+			},
+		};
+	}
+
+	return detectedFramework;
+}
+
 /**
  * Derives a valid worker name from a project directory.
  *
@@ -139,32 +220,20 @@ export async function getDetailsForAutoConfig({
 		{}
 	);
 
-	// If a real Wrangler config has been found & used, don't run autoconfig
-	if (wranglerConfig?.configPath) {
+	if (
+		// If a real Wrangler config has been found the project is already configured for Workers
+		wranglerConfig?.configPath &&
+		// Unless `pages_build_output_dir` is set, since that indicates that the project is a Pages one instead
+		!wranglerConfig.pages_build_output_dir
+	) {
 		return {
 			configured: true,
 			projectPath,
 			workerName: getWorkerName(wranglerConfig.name, projectPath),
 		};
 	}
-	const fs = new NodeFS();
 
-	fs.logger = logger;
-	const project = new Project(fs, projectPath, projectPath)
-		.setEnvironment(process.env)
-		.setNodeVersion(process.version)
-		.setReportFn((err) => {
-			captureException(err);
-		});
-
-	const buildSettings = await project.getBuildSettings();
-
-	// If we've detected multiple frameworks, it's too complex for us to try and configure—let's just bail
-	if (buildSettings.length > 1) {
-		throw new MultipleFrameworksError(buildSettings.map((b) => b.name));
-	}
-
-	const detectedFramework = buildSettings.at(0);
+	const detectedFramework = await detectFramework(projectPath, wranglerConfig);
 
 	const framework = getFramework(detectedFramework?.framework?.id);
 	const packageJsonPath = resolve(projectPath, "package.json");
@@ -275,7 +344,7 @@ export async function getDetailsForAutoConfig({
  * @returns A runnable command for the build process if detected, undefined otherwise
  */
 async function getProjectBuildCommand(
-	detectedFramework: Settings
+	detectedFramework: DetectedFramework
 ): Promise<string | undefined> {
 	if (!detectedFramework.buildCommand) {
 		return undefined;
