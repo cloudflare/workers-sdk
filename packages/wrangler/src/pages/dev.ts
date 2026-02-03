@@ -6,11 +6,11 @@ import { setTimeout } from "node:timers/promises";
 import {
 	configFileName,
 	FatalError,
-	formatCompatibilityDate,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
+import { formatCompatibilityDate } from "miniflare";
 import { readConfig } from "../config";
 import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";

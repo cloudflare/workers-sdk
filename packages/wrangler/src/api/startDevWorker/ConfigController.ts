@@ -5,11 +5,10 @@ import {
 	configFileName,
 	getDisableConfigWatching,
 	getDockerPath,
-	getLocalWorkerdCompatibilityDate,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
-import { getWorkerRegistry } from "miniflare";
+import { getLocalWorkerdCompatibilityDate, getWorkerRegistry } from "miniflare";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../../assets";
 import { fillOpenAPIConfiguration } from "../../cloudchamber/common";
 import { readConfig } from "../../config";
@@ -475,9 +474,7 @@ function getDevCompatibilityDate(
 	config: Config | undefined,
 	compatibilityDate = config?.compatibility_date
 ): string {
-	const { date: workerdDate } = getLocalWorkerdCompatibilityDate({
-		projectPath,
-	});
+	const workerdDate = getLocalWorkerdCompatibilityDate();
 
 	if (config?.configPath && compatibilityDate === undefined) {
 		logger.warn(

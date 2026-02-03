@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { formatCompatibilityDate } from "@cloudflare/workers-utils";
 import getPort from "get-port";
+import { formatCompatibilityDate } from "miniflare";
 import dedent from "ts-dedent";
 import { fetch } from "undici";
 import { describe, expect, it } from "vitest";

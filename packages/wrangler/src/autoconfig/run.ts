@@ -2,11 +2,8 @@ import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import {
-	FatalError,
-	getLocalWorkerdCompatibilityDate,
-	parseJSONC,
-} from "@cloudflare/workers-utils";
+import { FatalError, parseJSONC } from "@cloudflare/workers-utils";
+import { getLocalWorkerdCompatibilityDate } from "../api/integrations";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -88,9 +85,7 @@ export async function runAutoConfig(
 			"The Output Directory is unexpectedly missing"
 		);
 
-		const { date: compatibilityDate } = getLocalWorkerdCompatibilityDate({
-			projectPath: autoConfigDetails.projectPath,
-		});
+		const compatibilityDate = getLocalWorkerdCompatibilityDate();
 
 		const wranglerConfig: RawConfig = {
 			$schema: "node_modules/wrangler/config-schema.json",

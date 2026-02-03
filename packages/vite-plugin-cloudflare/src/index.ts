@@ -1,3 +1,4 @@
+import { getLocalWorkerdCompatibilityDate as miniflareGetLocalWorkerdCompatibilityDate } from "miniflare";
 import { assertWranglerVersion } from "./assert-wrangler-version";
 import { PluginContext } from "./context";
 import { resolvePluginConfig } from "./plugin-config";
@@ -23,9 +24,27 @@ import { wasmHelperPlugin } from "./plugins/wasm";
 import { debuglog } from "./utils";
 import type { SharedContext } from "./context";
 import type { PluginConfig } from "./plugin-config";
+import type { CompatDate } from "miniflare";
 import type * as vite from "vite";
 
-export { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
+/**
+ * Gets the compatibility date from the local workerd version.
+ *
+ * Note: the function's signature is as is because it needs to be backward compatibly with
+ *       a previous iteration of this, it will be simplified in the next major version of this package.
+ *
+ * @param _projectPath Unused argument (present only for backward compatibility)
+ * @returns Object containing the compatibility date (this is not the date directly for backward compatibility)
+ */
+export function getLocalWorkerdCompatibilityDate(_projectPath: string): {
+	date: CompatDate;
+	source: "workerd";
+} {
+	return {
+		date: miniflareGetLocalWorkerdCompatibilityDate(),
+		source: "workerd",
+	};
+}
 
 export type { PluginConfig } from "./plugin-config";
 export type { WorkerConfig } from "./workers-configs";

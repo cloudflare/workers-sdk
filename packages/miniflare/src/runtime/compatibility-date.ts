@@ -1,61 +1,22 @@
 import assert from "node:assert";
-import module from "node:module";
-import path from "node:path";
+import { compatibilityDate as workerdCompatibilityDate } from "workerd";
 
-type YYYY = `${number}${number}${number}${number}`;
-type MM = `${number}${number}`;
-type DD = `${number}${number}`;
+export type YYYY = `${number}${number}${number}${number}`;
+export type MM = `${number}${number}`;
+export type DD = `${number}${number}`;
 
 /**
  * Represents a valid compatibility date, a string such as `2025-09-27`
  */
 export type CompatDate = `${YYYY}-${MM}-${DD}`;
 
-type GetCompatDateOptions = {
-	projectPath?: string;
-};
-
-type GetCompatDateResult = {
-	date: CompatDate;
-	source: "workerd" | "fallback";
-};
-
 /**
  * Gets the compatibility date of the locally installed workerd package.
  *
- * If the package is not found the fallback date of 2025-09-27 is returned instead.
- *
- * Additionally, if the workerd date is set to the future then the current date is returned instead.
- *
- * @param options.projectPath the path to the project
- * @returns an object including the compatibility date and its source
+ * @returns The latest compatibility date supported by the local workerd package
  */
-export function getLocalWorkerdCompatibilityDate({
-	projectPath = process.cwd(),
-}: GetCompatDateOptions = {}): GetCompatDateResult {
-	try {
-		// Note: createRequire expects a filename, not a directory. When given a directory,
-		// Node.js looks for node_modules in the parent directory instead of the given directory.
-		// Appending package.json ensures resolution starts from the correct location.
-		const projectRequire = module.createRequire(
-			path.join(projectPath, "package.json")
-		);
-		const miniflareEntry = projectRequire.resolve("miniflare");
-		const miniflareRequire = module.createRequire(miniflareEntry);
-		const miniflareWorkerd = miniflareRequire("workerd") as {
-			compatibilityDate: string;
-		};
-		const workerdDate = miniflareWorkerd.compatibilityDate;
-		return {
-			date: toSafeCompatibilityDate(new Date(workerdDate)),
-			source: "workerd",
-		};
-	} catch {}
-
-	return {
-		date: "2025-09-27",
-		source: "fallback",
-	};
+export function getLocalWorkerdCompatibilityDate(): CompatDate {
+	return toSafeCompatibilityDate(new Date(supportedCompatibilityDate));
 }
 
 /**
@@ -90,6 +51,15 @@ export function isCompatDate(str: string): str is CompatDate {
 }
 
 /**
+ * Asserts that a string represents a compatibility date (`YYYY-MM-DD`)
+ *
+ * @param str The target string
+ */
+export function assertCompatDate(str: string): asserts str is CompatDate {
+	assert(isCompatDate(str));
+}
+
+/**
  * Returns the date formatted as a compatibility date
  *
  * @param date The target date to convert
@@ -100,3 +70,20 @@ export function formatCompatibilityDate(date: Date): CompatDate {
 	assert(isCompatDate(compatDate));
 	return compatDate;
 }
+
+/**
+ * Gets a safe compatibility date from workerd. If the workerd compatibility
+ * date is in the future, returns today's date instead. This handles the case
+ * where workerd releases set their compatibility date up to 7 days in the future.
+ */
+function getSafeCompatibilityDate(): string {
+	const today = new Date().toISOString().slice(0, 10);
+	if (workerdCompatibilityDate > today) {
+		return today;
+	}
+	return workerdCompatibilityDate;
+}
+
+const supportedCompatibilityDate = getSafeCompatibilityDate();
+
+export { supportedCompatibilityDate };
