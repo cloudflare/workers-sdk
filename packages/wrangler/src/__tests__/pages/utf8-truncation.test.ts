@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { truncateUtf8Bytes } from "../../api/pages/deploy";
+import { truncateUtf8Bytes } from "../../pages/utils";
 
 describe("truncateUtf8Bytes", () => {
 	test("should not truncate strings under the limit", () => {
