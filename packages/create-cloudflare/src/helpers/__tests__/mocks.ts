@@ -1,5 +1,6 @@
 import { readdirSync } from "node:fs";
 import { spinner } from "@cloudflare/cli/interactive";
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- helper module with expect at module scope
 import { expect, vi } from "vitest";
 import whichPMRuns from "which-pm-runs";
 import type { Dirent } from "node:fs";
