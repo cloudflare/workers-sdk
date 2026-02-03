@@ -189,8 +189,10 @@ async function printMembershipInfo(
 		if (!membershipRoles) {
 			return;
 		}
+		const redactFields = isNonInteractiveOrCI();
+		const accountName = redactFields ? "(redacted)" : selectedAccount.name;
 		logger.log(
-			`🎢 Membership roles in "${selectedAccount.name}": Contact account super admin to change your permissions.`
+			`🎢 Membership roles in "${accountName}": Contact account super admin to change your permissions.`
 		);
 		for (const role of membershipRoles) {
 			logger.log(`- ${role}`);
