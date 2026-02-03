@@ -1,7 +1,7 @@
 import { resolve } from "path";
 import { setTimeout } from "timers/promises";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, it, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
 describe("'wrangler dev' correctly renders pages", () => {
@@ -26,7 +26,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		await stop?.();
 	});
 
-	it("renders ", async () => {
+	it("renders ", async ({ expect }) => {
 		await vi.waitFor(
 			async () => {
 				// Note that the local protocol defaults to http
@@ -79,7 +79,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(output).toContain("more text with    at in the middle");
 	});
 
-	it("renders pretty error after logging", async () => {
+	it("renders pretty error after logging", async ({ expect }) => {
 		// Regression test for https://github.com/cloudflare/workers-sdk/issues/4715
 		const response = await fetch(`http://${ip}:${port}/error`);
 		const text = await response.text();
@@ -89,13 +89,13 @@ describe("'wrangler dev' correctly renders pages", () => {
 		);
 	});
 
-	it("uses `workerd` condition when bundling", async () => {
+	it("uses `workerd` condition when bundling", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/random`);
 		const text = await response.text();
 		expect(text).toMatch(/[0-9a-f]{16}/); // 8 hex bytes
 	});
 
-	it("passes through URL unchanged", async () => {
+	it("passes through URL unchanged", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}//thing?a=1`, {
 			headers: { "X-Test-URL": "true" },
 		});
@@ -103,7 +103,9 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(text).toBe(`https://prod.example.org//thing?a=1`);
 	});
 
-	it("rewrites the Host and Origin headers appropriately", async () => {
+	it("rewrites the Host and Origin headers appropriately", async ({
+		expect,
+	}) => {
 		const response = await fetch(`http://${ip}:${port}/test`, {
 			// Pass in an Origin header to trigger the rewriting
 			headers: { Origin: `http://${ip}:${port}` },
@@ -113,14 +115,18 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(text).toContain(`ORIGIN:https://prod.example.org`);
 	});
 
-	it("does not rewrite Origin header if one is not passed by the client", async () => {
+	it("does not rewrite Origin header if one is not passed by the client", async ({
+		expect,
+	}) => {
 		const response = await fetch(`http://${ip}:${port}/test`, {});
 		const text = await response.text();
 		expect(text).toContain(`HOST:prod.example.org`);
 		expect(text).toContain(`ORIGIN:null`);
 	});
 
-	it("does not rewrite Origin header if it not the same origin as the proxy Worker", async () => {
+	it("does not rewrite Origin header if it not the same origin as the proxy Worker", async ({
+		expect,
+	}) => {
 		const response = await fetch(`http://${ip}:${port}/test`, {
 			headers: { Origin: `http://foo.com` },
 		});
@@ -129,7 +135,9 @@ describe("'wrangler dev' correctly renders pages", () => {
 		expect(text).toContain(`ORIGIN:http://foo.com`);
 	});
 
-	it("rewrites response headers containing the emulated host", async () => {
+	it("rewrites response headers containing the emulated host", async ({
+		expect,
+	}) => {
 		// This /redirect request will add a Location header that points to prod.example.com/foo
 		// But we should rewrite this back to that of the proxy.
 		const response = await fetch(`http://${ip}:${port}/redirect`, {
@@ -142,7 +150,9 @@ describe("'wrangler dev' correctly renders pages", () => {
 		);
 	});
 
-	it("rewrites set-cookie headers to the hostname, not host", async () => {
+	it("rewrites set-cookie headers to the hostname, not host", async ({
+		expect,
+	}) => {
 		const response = await fetch(`http://${ip}:${port}/cookie`);
 
 		expect(response.headers.getSetCookie()).toStrictEqual([
@@ -151,7 +161,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		]);
 	});
 
-	it("has access to version_metadata binding", async () => {
+	it("has access to version_metadata binding", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/version_metadata`);
 
 		await expect(response.json()).resolves.toMatchObject({
@@ -160,7 +170,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		});
 	});
 
-	it("passes through client content encoding", async () => {
+	it("passes through client content encoding", async ({ expect }) => {
 		// https://github.com/cloudflare/workers-sdk/issues/5246
 		const response = await fetch(`http://${ip}:${port}/content-encoding`, {
 			headers: { "Accept-Encoding": "hello" },
@@ -171,14 +181,14 @@ describe("'wrangler dev' correctly renders pages", () => {
 		});
 	});
 
-	it("supports encoded responses", async () => {
+	it("supports encoded responses", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/content-encoding/gzip`, {
 			headers: { "Accept-Encoding": "gzip" },
 		});
 		expect(await response.text()).toEqual("x".repeat(100));
 	});
 
-	it("uses explicit resource management", async () => {
+	it("uses explicit resource management", async ({ expect }) => {
 		const response = await fetch(
 			`http://${ip}:${port}/explicit-resource-management`
 		);
@@ -194,7 +204,7 @@ describe("'wrangler dev' correctly renders pages", () => {
 		`);
 	});
 
-	it("reads local dev vars from the .env file", async () => {
+	it("reads local dev vars from the .env file", async ({ expect }) => {
 		const response = await fetch(`http://${ip}:${port}/env`);
 		const env = await response.text();
 		expect(env).toBe(`"bar"`);

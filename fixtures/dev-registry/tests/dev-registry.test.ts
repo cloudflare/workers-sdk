@@ -2,6 +2,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { resolve } from "node:path";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- uses expect in module-scope helper functions */
 import {
 	describe,
 	expect,
@@ -10,6 +11,7 @@ import {
 	test,
 	vi,
 } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import {
 	runLongLived,
 	waitForReady,

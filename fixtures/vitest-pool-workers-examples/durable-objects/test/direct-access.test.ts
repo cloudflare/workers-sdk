@@ -4,10 +4,12 @@ import {
 	runInDurableObject,
 	SELF,
 } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { it } from "vitest";
 import { Counter } from "../src/";
 
-it("increments count and allows direct access to instance/storage", async () => {
+it("increments count and allows direct access to instance/storage", async ({
+	expect,
+}) => {
 	// Check access through `fetch()` handler
 	let response = await SELF.fetch("https://example.com/path");
 	expect(await response.text()).toBe("1");
@@ -34,7 +36,7 @@ it("increments count and allows direct access to instance/storage", async () => 
 	expect(ids[0].equals(id)).toBe(true);
 });
 
-it("uses isolated storage for each test", async () => {
+it("uses isolated storage for each test", async ({ expect }) => {
 	// Check Durable Object from previous test removed
 	const ids = await listDurableObjectIds(env.COUNTER);
 	expect(ids.length).toBe(0);
