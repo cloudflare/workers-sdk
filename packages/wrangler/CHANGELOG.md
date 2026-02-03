@@ -1,5 +1,121 @@
 # wrangler
 
+## 4.62.0
+
+### Minor Changes
+
+- [#12064](https://github.com/cloudflare/workers-sdk/pull/12064) [`964a39d`](https://github.com/cloudflare/workers-sdk/commit/964a39d188af5c7d18b6397fb209b6d69408f702) Thanks [@G4brym](https://github.com/G4brym)! - Add AI Search OAuth scopes to login
+
+  Adds `ai-search:write` and `ai-search:run` OAuth scopes to the default login scopes, enabling wrangler to authenticate with AI Search APIs.
+
+- [#11867](https://github.com/cloudflare/workers-sdk/pull/11867) [`253a85d`](https://github.com/cloudflare/workers-sdk/commit/253a85de5e86a51c7067d0f5e455ecd89693277d) Thanks [@rahulsuresh-git](https://github.com/rahulsuresh-git)! - Add `wrangler r2 bucket local-uploads` command to manage local uploads for R2 buckets
+
+  When enabled, object data is written to the nearest region first, then asynchronously replicated to the bucket's primary region.
+
+  Docs: https://developers.cloudflare.com/r2/buckets/local-uploads
+
+  ```bash
+  # Get local uploads status
+  wrangler r2 bucket local-uploads get my-bucket
+
+  # Enable local uploads (will prompt for confirmation)
+  wrangler r2 bucket local-uploads enable my-bucket
+
+  # Enable without confirmation prompt
+  wrangler r2 bucket local-uploads enable my-bucket --force
+
+  # Disable local uploads
+  wrangler r2 bucket local-uploads disable my-bucket
+  ```
+
+- [#11803](https://github.com/cloudflare/workers-sdk/pull/11803) [`1bd1488`](https://github.com/cloudflare/workers-sdk/commit/1bd1488b1eb1d88aa854e8938acc88cdc0ce7f29) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add a new `subrequests` limit to the `limits` field of the Wrangler configuration file
+
+  Before only the `cpu_ms` limit was supported in the `limits` field of the Wrangler configuration file, now a `subrequests` limit can be specified as well which enables the user to limit the number of fetch requests that a Worker's invocation can make.
+
+  Example:
+
+  ```json
+  {
+  	"$schema": "./node_modules/wrangler/config-schema.json",
+  	"limits": {
+  		"cpu_ms": 1000,
+  		"subrequests": 150 // newly added field
+  	}
+  }
+  ```
+
+- [#12185](https://github.com/cloudflare/workers-sdk/pull/12185) [`f7aa8c7`](https://github.com/cloudflare/workers-sdk/commit/f7aa8c78c3245c5e277d07398fa9d8a8b16c9280) Thanks [@penalosa](https://github.com/penalosa)! - Add `timestamp` field to the version metadata binding in local development. The version metadata binding now includes `id`, `tag`, and `timestamp` fields, making it easier to test version-aware logic locally.
+
+### Patch Changes
+
+- [#12190](https://github.com/cloudflare/workers-sdk/pull/12190) [`ce736b9`](https://github.com/cloudflare/workers-sdk/commit/ce736b904b4d65e15df65cc9b1e7441b7c37e429) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Update autoconfig logic to handle Next.js projects by using the new `@opennextjs/cloudflare migrate` command
+
+- [#12065](https://github.com/cloudflare/workers-sdk/pull/12065) [`47944d1`](https://github.com/cloudflare/workers-sdk/commit/47944d1b1b4710aec2aea6d9cefd9c4cb50b41d7) Thanks [@langningchen](https://github.com/langningchen)! - Improve error message when `d1 export --output` points to a directory
+
+- [#12292](https://github.com/cloudflare/workers-sdk/pull/12292) [`4c4d5a5`](https://github.com/cloudflare/workers-sdk/commit/4c4d5a578b0b66423b6abd553480d3935005246c) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add `versionCommand` to the `autoconfig_summary` field in the autoconfig output entry
+
+  Add the version upload command to the output being printed by `wrangler deploy` to `WRANGLER_OUTPUT_FILE_DIRECTORY`/`WRANGLER_OUTPUT_FILE_PATH`. This complements the existing `buildCommand` and `deployCommand` fields and allows CI systems to know how to upload new versions of Workers.
+
+  For example, for a standard npm project this would be:
+
+  - Version command: `npx wrangler versions upload`
+
+  While for a Next.js project it would be:
+
+  - Version command: `npx @opennextjs/cloudflare upload`
+
+- [#12050](https://github.com/cloudflare/workers-sdk/pull/12050) [`b05b919`](https://github.com/cloudflare/workers-sdk/commit/b05b919b22a421a85a07fb8daccf9e22219dac53) Thanks [@NuroDev](https://github.com/NuroDev)! - Fixed Wrangler's error handling for both invalid commands with and without the `--help` flag, ensuring consistent and clear error messages.
+
+  Additionally, it also ensures that if you provide an invalid argument to a valid command, Wrangler will now correctly display that specific commands help menu.
+
+- [#12289](https://github.com/cloudflare/workers-sdk/pull/12289) [`0aaf080`](https://github.com/cloudflare/workers-sdk/commit/0aaf080e993dfbba7e49408df5c4afc39bed3c0f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260128.0 | 1.20260129.0 |
+
+- [#12295](https://github.com/cloudflare/workers-sdk/pull/12295) [`b981db5`](https://github.com/cloudflare/workers-sdk/commit/b981db579ed438e2ebbad18dd6a58e6989d2188b) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260129.0 | 1.20260130.0 |
+
+- [#12355](https://github.com/cloudflare/workers-sdk/pull/12355) [`a113c0d`](https://github.com/cloudflare/workers-sdk/commit/a113c0dca6c475baac3897f9c310aed851fdfa38) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260130.0 | 1.20260131.0 |
+
+- [#11971](https://github.com/cloudflare/workers-sdk/pull/11971) [`fdd7a9f`](https://github.com/cloudflare/workers-sdk/commit/fdd7a9fa429b48d1a4a2e28a20de7e2039a726b1) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add framework id, build command, and deploy command to the `autoconfig_summary` field in the deploy output entry
+
+  Add the framework id alongside the commands to build and deploy the project to the output being printed by `wrangler deploy` to `WRANGLER_OUTPUT_FILE_DIRECTORY` or `WRANGLER_OUTPUT_FILE_PATH`.
+
+  For example for an npm Astro project these would be:
+
+  - Framework id: `astro`
+  - Build command: `npm run build`
+  - Deploy command: `npx wrangler deploy`
+
+  While for a Next.js project they would instead be:
+
+  - Framework id: `next`
+  - Build command: `npx @opennextjs/cloudflare build`
+  - Deploy command: `npx @opennextjs/cloudflare deploy`
+
+- [#12211](https://github.com/cloudflare/workers-sdk/pull/12211) [`a5fca2c`](https://github.com/cloudflare/workers-sdk/commit/a5fca2c18001eea80c53b73a377a1ba2a83cb142) Thanks [@elithrar](https://github.com/elithrar)! - Remove the 'pubsub' sub-command and related functionality
+
+  The Pub/Sub product was never made publicly available and has been discontinued. This removes the `wrangler pubsub` command and all associated functionality.
+
+- Updated dependencies [[`0c9625a`](https://github.com/cloudflare/workers-sdk/commit/0c9625a422895925b7ae89f3f371043e96ee5e87), [`0aaf080`](https://github.com/cloudflare/workers-sdk/commit/0aaf080e993dfbba7e49408df5c4afc39bed3c0f), [`b981db5`](https://github.com/cloudflare/workers-sdk/commit/b981db579ed438e2ebbad18dd6a58e6989d2188b), [`a113c0d`](https://github.com/cloudflare/workers-sdk/commit/a113c0dca6c475baac3897f9c310aed851fdfa38), [`f7aa8c7`](https://github.com/cloudflare/workers-sdk/commit/f7aa8c78c3245c5e277d07398fa9d8a8b16c9280)]:
+  - miniflare@4.20260131.0
+  - @cloudflare/kv-asset-handler@0.4.2
+
 ## 4.61.1
 
 ### Patch Changes

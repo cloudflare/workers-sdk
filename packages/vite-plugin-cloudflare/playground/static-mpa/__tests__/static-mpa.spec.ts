@@ -10,8 +10,6 @@ import {
 	viteTestUrl,
 } from "../../__test-utils__";
 
-export const browserMode = true;
-
 test("returns the correct home page", async () => {
 	const content = await page.textContent("h1");
 	expect(content).toBe("Home");
@@ -68,13 +66,13 @@ test("worker configs warnings are not present in the terminal", async () => {
 describe.runIf(isBuild)("_headers", () => {
 	test("applies exact headers", async () => {
 		const response = await getResponse("/contact");
-		const header = response.headers.get("X-Header");
+		const header = await response.headerValue("X-Header");
 		expect(header).toBe("exact-header");
 	});
 
 	test("applies splat headers", async () => {
 		const response = await getResponse("/vite.svg");
-		const header = response.headers.get("X-Header");
+		const header = await response.headerValue("X-Header");
 		expect(header).toBe("splat-header");
 	});
 });
