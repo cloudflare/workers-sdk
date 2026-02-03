@@ -40,7 +40,7 @@ describe("Pages project with `_worker.js` and `/functions` directory", () => {
 		response = await fetch(`http://${ip}:${port}/date`);
 		text = await response.text();
 		expect(text).toEqual(
-			"Yesterday is history, tomorrow is a mystery, but today is a gift. That's why it is called the present."
+			"Yesterday is history, tomorrow is a mystery, but today is a gift. That’s why it is called the present."
 		);
 
 		response = await fetch(`http://${ip}:${port}/party`);
