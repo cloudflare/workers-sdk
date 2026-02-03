@@ -8,12 +8,10 @@ import {
 } from "../../../__test-utils__";
 import "../base-tests";
 
-export const browserMode = true;
-
 test("returns the home page directly without invoking the Worker", async () => {
 	const response = await getResponse();
-	expect(response.headers.get("content-type")).toContain("text/html");
-	expect(response.headers.get("is-worker-response")).toBe(null);
+	expect(await response.headerValue("content-type")).toContain("text/html");
+	expect(await response.headerValue("is-worker-response")).toBe(null);
 });
 
 test("returns the Worker API response for positive `run_worker_first` rule on navigation request ('sec-fetch-mode: navigate' header included)", async () => {
