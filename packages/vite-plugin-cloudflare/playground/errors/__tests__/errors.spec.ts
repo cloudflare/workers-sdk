@@ -1,8 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { isBuild, page, viteTestUrl } from "../../__test-utils__";
 
-export const browserMode = true;
-
 describe.runIf(!isBuild)(
 	"error thrown in the default export of the entry Worker",
 	async () => {
