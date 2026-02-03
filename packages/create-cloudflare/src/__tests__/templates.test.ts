@@ -12,10 +12,8 @@ import {
 	writeFile,
 	writeJSON,
 } from "helpers/files";
-
 import { beforeEach, describe, test, vi } from "vitest";
 import { getAgentsMd } from "../agents-md";
-
 import {
 	addWranglerToGitIgnore,
 	deriveCorrelatedArgs,
@@ -690,7 +688,9 @@ describe("writeAgentsMd", () => {
 		expect(writeFileMock).not.toHaveBeenCalled();
 	});
 
-	test("AGENTS.md should contain retrieval-led reasoning guidance", ({ expect }) => {
+	test("AGENTS.md should contain retrieval-led reasoning guidance", ({
+		expect,
+	}) => {
 		const agentsMd = getAgentsMd(mockCompatDate);
 		expect(agentsMd).toContain("STOP");
 		expect(agentsMd).toContain("retrieve");
