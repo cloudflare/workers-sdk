@@ -111,7 +111,11 @@ if (process.platform === "win32") {
 	});
 
 	const readyRegexp = /Ready on (http:\/\/[a-z0-9.]+:[0-9]+)/;
-	async function startWranglerDev(args: string[], skipWaitingForReady = false) {
+	async function startWranglerDev(
+		args: string[],
+		skipWaitingForReady = false,
+		env?: Record<string, string>
+	) {
 		const stdoutStream = new stream.PassThrough();
 		const stdoutInterface = rl.createInterface(stdoutStream);
 
@@ -119,6 +123,11 @@ if (process.platform === "win32") {
 		const exitPromise = new Promise<number>(
 			(resolve) => (exitResolve = resolve)
 		);
+
+		const ptyOptionsWithEnv = {
+			...ptyOptions,
+			env: env ?? (process.env as Record<string, string>),
+		} satisfies pty.IPtyForkOptions;
 
 		const pty = await import("@cdktf/node-pty-prebuilt-multiarch");
 		const ptyProcess = pty.spawn(
@@ -130,7 +139,7 @@ if (process.platform === "win32") {
 				"--port=0",
 				"--inspector-port=0",
 			],
-			ptyOptions
+			ptyOptionsWithEnv
 		);
 		const result: PtyProcess = {
 			pty: ptyProcess,
@@ -269,6 +278,19 @@ if (process.platform === "win32") {
 				expect(wrangler.stdout).not.toContain("clear console");
 				expect(wrangler.stdout).not.toContain("to exit");
 				expect(wrangler.stdout).not.toContain("rebuild container");
+			});
+			it("should not show local explorer hotkey by default", async () => {
+				const wrangler = await startWranglerDev(args);
+				wrangler.pty.kill();
+				expect(wrangler.stdout).not.toContain("open local explorer");
+			});
+			it("should show local explorer hotkey when X_LOCAL_EXPLORER=true", async () => {
+				const wrangler = await startWranglerDev(args, false, {
+					...(process.env as Record<string, string>),
+					X_LOCAL_EXPLORER: "true",
+				});
+				wrangler.pty.kill();
+				expect(wrangler.stdout).toContain("open local explorer");
 			});
 		});
 	});

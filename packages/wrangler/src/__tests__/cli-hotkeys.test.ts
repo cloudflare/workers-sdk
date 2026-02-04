@@ -271,5 +271,30 @@ describe("Hot Keys", () => {
 				process.stdout.columns = originalColumns;
 			}
 		});
+
+		it("hides options with disabled property enabled", async () => {
+			const handlerA = vi.fn();
+			const handlerB = vi.fn();
+
+			registerHotKeys([
+				{
+					keys: ["a"],
+					label: "visible option",
+					handler: handlerA,
+				},
+				{
+					keys: ["b"],
+					label: "hidden option",
+					disabled: true,
+					handler: handlerB,
+				},
+			]);
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"╭──────────────────────╮
+				│  [a] visible option │
+				╰──────────────────────╯"
+			`);
+		});
 	});
 });
