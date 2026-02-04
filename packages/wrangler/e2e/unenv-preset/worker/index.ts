@@ -896,6 +896,64 @@ export const WorkerdTests: Record<string, () => void> = {
 			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
 		);
 	},
+
+	async testV8() {
+		const v8 = await import("node:v8");
+
+		// Common exports (both unenv stub and native workerd)
+		// Note: cachedDataVersionTag differs between implementations:
+		// - unenv polyfill: function that returns a number
+		// - native workerd: number directly
+		assertTypeOfProperties(v8, {
+			getHeapSnapshot: "function",
+			getHeapStatistics: "function",
+			getHeapSpaceStatistics: "function",
+			getHeapCodeStatistics: "function",
+			setFlagsFromString: "function",
+			Serializer: "function",
+			Deserializer: "function",
+			DefaultSerializer: "function",
+			DefaultDeserializer: "function",
+			deserialize: "function",
+			takeCoverage: "function",
+			stopCoverage: "function",
+			serialize: "function",
+			writeHeapSnapshot: "function",
+			promiseHooks: "object",
+			startupSnapshot: "object",
+			setHeapSnapshotNearHeapLimit: "function",
+			GCProfiler: "function",
+		});
+
+		assertTypeOfProperties(v8.default, {
+			getHeapSnapshot: "function",
+			getHeapStatistics: "function",
+			getHeapSpaceStatistics: "function",
+			getHeapCodeStatistics: "function",
+			setFlagsFromString: "function",
+			Serializer: "function",
+			Deserializer: "function",
+			DefaultSerializer: "function",
+			DefaultDeserializer: "function",
+			deserialize: "function",
+			takeCoverage: "function",
+			stopCoverage: "function",
+			serialize: "function",
+			writeHeapSnapshot: "function",
+			promiseHooks: "object",
+			startupSnapshot: "object",
+			setHeapSnapshotNearHeapLimit: "function",
+			GCProfiler: "function",
+		});
+
+		// cachedDataVersionTag: unenv exports as function, workerd exports as number
+		const cachedDataVersionTagType = typeof v8.cachedDataVersionTag;
+		assert.ok(
+			cachedDataVersionTagType === "function" ||
+				cachedDataVersionTagType === "number",
+			`cachedDataVersionTag should be function or number, got ${cachedDataVersionTagType}`
+		);
+	},
 };
 
 /**
