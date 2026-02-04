@@ -5,8 +5,10 @@ import {
 	FatalError,
 	getLocalWorkerdCompatibilityDate,
 	parseJSONC,
+	UserError,
 } from "@cloudflare/workers-utils";
 import isCI from "is-ci";
+import { getErrorType } from "../core/handle-errors";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -214,7 +216,7 @@ export async function runAutoConfig(
 		if (buildCommand && runBuild) {
 			await runCommand(buildCommand, autoConfigDetails.projectPath, "[build]");
 		}
-	} catch (e) {
+	} catch (error) {
 		sendMetricsEvent(
 			"autoconfig_configuration_completed",
 			{
@@ -222,7 +224,9 @@ export async function runAutoConfig(
 				isCI,
 				framework: autoConfigDetails.framework?.id,
 				success: false,
-				error: `${e}`,
+				errorType: getErrorType(error),
+				errorMessage:
+					error instanceof UserError ? error.telemetryMessage : undefined,
 			},
 			{}
 		);
