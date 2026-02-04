@@ -326,8 +326,8 @@ function generateHintsAsTomlComments(wranglerConfig: TomlTable): string {
 
 /**
  * Adds the `nodejs_compat` flag to the `compatibility_flags` array in a JSON wrangler config.
- * If the array doesn't exist, it will be created. If `nodejs_compat` or `nodejs_compat_v2`
- * is already present, no changes are made.
+ * If the array doesn't exist, it will be created. If `nodejs_compat`, `nodejs_compat_v2`,
+ * or `no_nodejs_compat` is already present, no changes are made.
  *
  * @param wranglerConfig The wrangler JSON configuration object.
  * @returns The updated configuration object.
@@ -339,7 +339,8 @@ function addNodejsCompatFlag(wranglerConfig: CommentObject): CommentObject {
 
 	if (
 		existingFlags.includes("nodejs_compat") ||
-		existingFlags.includes("nodejs_compat_v2")
+		existingFlags.includes("nodejs_compat_v2") ||
+		existingFlags.includes("no_nodejs_compat")
 	) {
 		return wranglerConfig;
 	}
@@ -352,8 +353,8 @@ function addNodejsCompatFlag(wranglerConfig: CommentObject): CommentObject {
 
 /**
  * Adds the `nodejs_compat` flag to the `compatibility_flags` array in a TOML wrangler config.
- * If the array doesn't exist, it will be created. If `nodejs_compat` or `nodejs_compat_v2`
- * is already present, no changes are made.
+ * If the array doesn't exist, it will be created. If `nodejs_compat`, `nodejs_compat_v2`,
+ * or `no_nodejs_compat` is already present, no changes are made.
  *
  * @param wranglerConfig The wrangler TOML configuration object.
  */
@@ -364,7 +365,8 @@ function addNodejsCompatFlagToToml(wranglerConfig: TomlTable): void {
 
 	if (
 		existingFlags.includes("nodejs_compat") ||
-		existingFlags.includes("nodejs_compat_v2")
+		existingFlags.includes("nodejs_compat_v2") ||
+		existingFlags.includes("no_nodejs_compat")
 	) {
 		return;
 	}

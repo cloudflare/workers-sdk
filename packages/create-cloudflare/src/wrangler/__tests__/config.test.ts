@@ -621,4 +621,41 @@ describe("update wrangler config", () => {
 		expect(newConfig).toContain("nodejs_compat");
 		expect(newConfig).toContain("some_other_flag");
 	});
+
+	test("does not add nodejs_compat if no_nodejs_compat is present (toml)", async ({
+		expect,
+	}) => {
+		const toml = [
+			`name = "my-worker"`,
+			`main = "src/index.ts"`,
+			`compatibility_flags = ["no_nodejs_compat"]`,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toContain('compatibility_flags = [ "no_nodejs_compat" ]');
+		expect(newToml).not.toContain('"nodejs_compat"');
+	});
+
+	test("does not add nodejs_compat if no_nodejs_compat is present (json)", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const json = JSON.stringify({
+			name: "my-worker",
+			main: "src/index.ts",
+			compatibility_flags: ["no_nodejs_compat"],
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(ctx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).toContain("no_nodejs_compat");
+		expect(newConfig).not.toContain('"nodejs_compat"');
+	});
 });
