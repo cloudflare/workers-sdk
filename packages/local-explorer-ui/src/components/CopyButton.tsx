@@ -1,7 +1,6 @@
 import { Button } from "@base-ui/react/button";
+import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { useState } from "react";
-import CheckIcon from "../assets/icons/check.svg?react";
-import CopyIcon from "../assets/icons/copy.svg?react";
 
 interface CopyButtonProps {
 	text: string;
@@ -22,7 +21,7 @@ export function CopyButton({ text }: CopyButtonProps) {
 			onClick={handleCopy}
 			aria-label={copied ? "Copied" : "Copy to clipboard"}
 		>
-			{copied ? <CheckIcon /> : <CopyIcon />}
+			{copied ? <CheckIcon size={14} weight="bold" /> : <CopyIcon size={14} />}
 		</Button>
 	);
 }

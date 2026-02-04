@@ -15,6 +15,7 @@
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.1.0",
+		"@phosphor-icons/react": "^2.1.10",
 		"@tanstack/react-router": "^1.158.0",
 		"react": "^19.2.0",
 		"react-dom": "^19.2.0"
