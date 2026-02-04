@@ -113,13 +113,20 @@ export function createRegisterYargsCommand(
 	};
 }
 
+/**
+ * Creates the yargs handler function for a command.
+ *
+ * @param def The yargs command definition.
+ * @param argv The full `argv` array passed to wrangler.
+ * @returns The yargs handler function.
+ */
 function createHandler(def: InternalCommandDefinition, argv: string[]) {
 	// Strip "wrangler " prefix to get just the command (e.g., "wrangler dev" -> "dev").
 	// What is left is safe to use in metrics and sentry messages as the parts of the command are taken directly from the command definition.
 	const sanitizedCommand = def.command.replace(/^wrangler\s+/, "");
 
 	return async function handler(args: HandlerArgs<NamedArgDefinitions>) {
-		const startTime = Date.now();
+		const startTimeMs = Date.now();
 
 		// The command definition's `command` string is safe to use in sentry messages.
 		// Sentry breadcrumbs expect the `wrangler` prefix.
@@ -223,7 +230,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 					COMMAND_ARG_ALLOW_LIST,
 					sanitizedCommand
 				);
-				const argsWithSanitizedKeys = sanitizeArgKeys(args, argv);
+				const argsWithSanitizedKeys = sanitizeArgKeys(def.args, args, argv);
 				const sanitizedArgs = sanitizeArgValues(
 					argsWithSanitizedKeys,
 					allowedArgs
@@ -249,7 +256,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						fetchResult,
 					});
 
-					const durationMs = Date.now() - startTime;
+					const durationMs = Date.now() - startTimeMs;
 					dispatcher.sendCommandEvent(
 						"wrangler command completed",
 						{
@@ -269,7 +276,7 @@ function createHandler(def: InternalCommandDefinition, argv: string[]) {
 						throw err;
 					}
 
-					const durationMs = Date.now() - startTime;
+					const durationMs = Date.now() - startTimeMs;
 					dispatcher.sendCommandEvent(
 						"wrangler command errored",
 						{
