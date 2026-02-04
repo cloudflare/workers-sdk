@@ -131,7 +131,7 @@ jobs:
       - name: Run Vite plugin E2E tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
-        timeout-minutes: 15
+        timeout-minutes: 20
         env:
           NODE_DEBUG: "vite-plugin:test"
           # The remote-binding tests need to connect to Cloudflare
