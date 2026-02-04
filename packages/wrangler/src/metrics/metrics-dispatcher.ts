@@ -121,7 +121,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			name: EventName,
 			properties: Omit<
 				Extract<Events, { name: EventName }>["properties"],
-				keyof CommonEventProperties
+				keyof CommonCommandEventProperties
 			> & { argsUsed: string[] },
 			cmdBehaviour?: CommandDefinition["behaviour"]
 		): void {
