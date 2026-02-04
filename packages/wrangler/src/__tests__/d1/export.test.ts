@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { setTimeout } from "node:timers/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -18,13 +18,13 @@ describe("export", () => {
 	runInTempDir();
 	const { setIsTTY } = useMockIsTTY();
 
-	it("should throw if output is missing", async () => {
+	it("should throw if output is missing", async ({ expect }) => {
 		await expect(runWrangler("d1 export db")).rejects.toThrowError(
 			`Missing required argument: output`
 		);
 	});
 
-	it("should throw if output is a directory", async () => {
+	it("should throw if output is a directory", async ({ expect }) => {
 		fs.mkdirSync("test-dir");
 
 		await expect(
@@ -34,13 +34,13 @@ describe("export", () => {
 		);
 	});
 
-	it("should throw if local and remote are both set", async () => {
+	it("should throw if local and remote are both set", async ({ expect }) => {
 		await expect(
 			runWrangler("d1 export db --local --remote --output test-local.sql")
 		).rejects.toThrowError("Arguments local and remote are mutually exclusive");
 	});
 
-	it("should handle local", async () => {
+	it("should handle local", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -113,7 +113,7 @@ describe("export", () => {
 		);
 	});
 
-	it("should handle remote", async () => {
+	it("should handle remote", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -137,7 +137,7 @@ describe("export", () => {
 		expect(fs.readFileSync("test-remote.sql", "utf8")).toBe(mockSqlContent);
 	});
 
-	it("should handle remote presigned URL errors", async () => {
+	it("should handle remote presigned URL errors", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -166,7 +166,7 @@ describe("export", () => {
 		);
 	});
 
-	it("should export locally without database_id", async () => {
+	it("should export locally without database_id", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [{ binding: "D1", database_name: "D1" }],
@@ -176,7 +176,7 @@ describe("export", () => {
 		expect(std.out).toContain("Exporting SQL to test-remote.sql...");
 	});
 
-	it("should not export remotely without database_id", async () => {
+	it("should not export remotely without database_id", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [{ binding: "D1", database_name: "D1" }],
