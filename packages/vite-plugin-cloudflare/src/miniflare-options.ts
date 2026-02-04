@@ -672,12 +672,9 @@ class ViteMiniflareLogger extends Log {
 				if (maybeNewVersion === undefined) {
 					return;
 				}
-				message += [
-					"",
-					"Features enabled by your requested compatibility date may not be available.",
-					`Upgrade to \`@cloudflare/vite-plugin@${maybeNewVersion}\` to remove this warning.`,
-				].join("\n");
-				this.logger.warn(message);
+				this.logger.warn(
+					`${message}\nFeatures enabled by your requested compatibility date may not be available. Upgrade to \`@cloudflare/vite-plugin@${maybeNewVersion}\` to remove this warning.`
+				);
 			});
 		}
 		this.logger.warn(message);
