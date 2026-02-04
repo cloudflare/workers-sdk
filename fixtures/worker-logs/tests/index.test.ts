@@ -327,7 +327,7 @@ describe("'wrangler dev' correctly displays logs", () => {
 				// Those flags are needed to enable the new process.v2 implementation
 				// See `getProcessOverrides` in `packages/unenv-preset/src/preset.ts`
 				"--compatibility-flags=fetch_iterable_type_support",
-				"--compatibility-flags=stream_iterable_type_support_override_adjustment",
+				"--compatibility-flags=fetch_iterable_type_support_override_adjustment",
 			]);
 			await vi.waitFor(() =>
 				expect(getOutput()).toEqual([
