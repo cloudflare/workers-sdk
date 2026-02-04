@@ -272,7 +272,7 @@ describe("Hot Keys", () => {
 			}
 		});
 
-		it("hides options with dynamic disabled function returning true", async () => {
+		it("hides options with disabled property enabled", async () => {
 			const handlerA = vi.fn();
 			const handlerB = vi.fn();
 
@@ -285,7 +285,7 @@ describe("Hot Keys", () => {
 				{
 					keys: ["b"],
 					label: "hidden option",
-					disabled: () => true,
+					disabled: true,
 					handler: handlerB,
 				},
 			]);
