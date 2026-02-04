@@ -312,9 +312,20 @@ async function registryDeleteCommand(
 	}
 
 	try {
-		await promiseSpinner(
+		const res = await promiseSpinner(
 			ImageRegistriesService.deleteImageRegistry(deleteArgs.DOMAIN)
 		);
+
+		if (res.secrets_store_ref) {
+			startSection("Warning: A dangling secret was left behind.");
+			const yes = await confirm(`Delete the secret ${res.secrets_store_ref}?`);
+
+			if (yes) {
+				// TODO: Delete the associated secret.
+			} else {
+				endSection("The secret was not deleted.");
+			}
+		}
 	} catch (e) {
 		if (e instanceof ApiError) {
 			if (e.status === 404) {
