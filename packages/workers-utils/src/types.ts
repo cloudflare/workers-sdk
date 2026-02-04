@@ -174,6 +174,7 @@ type WorkerMetadataPut = {
 		config?: AssetConfigMetadata;
 	};
 	observability?: Observability | undefined;
+	containers?: { class_name: string }[];
 	// Allow unsafe.metadata to add arbitrary properties at runtime
 	[key: string]: unknown;
 };

@@ -125,6 +125,7 @@ async function createDraftWorker({
 				tail_consumers: undefined,
 				limits: undefined,
 				assets: undefined,
+				containers: undefined,
 				observability: undefined,
 			}),
 		}

@@ -907,6 +907,91 @@ describe("versions upload", () => {
 			);
 		});
 	});
+
+	describe("containers", () => {
+		beforeEach(() => {
+			mockGetScript();
+			mockGetWorkerSubdomain({ enabled: true, previews_enabled: false });
+			writeWorkerSource();
+			setIsTTY(false);
+		});
+
+		test("should preserve containers config in metadata", async () => {
+			msw.use(
+				http.get(
+					"*/accounts/:accountId/workers/scripts",
+					() => {
+						return HttpResponse.json({
+							success: true,
+							errors: [],
+							messages: [],
+							result: [{ id: "test-name", migration_tag: "v1" }],
+						});
+					},
+					{ once: true }
+				)
+			);
+
+			const mockUploadVersionCapture = captureRequestsFrom(
+				http.post(
+					`*/accounts/:accountId/workers/scripts/:scriptName/versions`,
+					async () => {
+						return HttpResponse.json(
+							createFetchResult({
+								id: "version-id",
+								startup_time_ms: 500,
+								metadata: {
+									has_preview: false,
+								},
+							})
+						);
+					}
+				)
+			)();
+
+			writeWorkerSource({ durableObjects: ["MyDurableObject"] });
+
+			writeWranglerConfig({
+				name: "test-name",
+				main: "./index.js",
+				durable_objects: {
+					bindings: [
+						{
+							name: "MY_DO",
+							class_name: "MyDurableObject",
+						},
+					],
+				},
+				migrations: [
+					{
+						tag: "v1",
+						new_sqlite_classes: ["MyDurableObject"],
+					},
+				],
+				containers: [
+					{
+						class_name: "MyDurableObject",
+						image: "registry.cloudflare.com/my-image:latest",
+						max_instances: 5,
+					},
+				],
+			});
+
+			await runWrangler("versions upload");
+
+			const request = mockUploadVersionCapture.requests[0];
+			const formBody = await request.clone().formData();
+			const metadata = JSON.parse(
+				await toString(formBody.get("metadata"))
+			) as WorkerMetadata;
+
+			expect(metadata.containers).toEqual([{ class_name: "MyDurableObject" }]);
+
+			expect(std.warn).toContain(
+				"Container configuration changes (such as image, max_instances, etc.) will not be gradually rolled out with versions"
+			);
+		});
+	});
 });
 
 const mockExecSync = vi.fn();
