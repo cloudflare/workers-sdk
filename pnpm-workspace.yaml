@@ -42,7 +42,6 @@ catalog:
   # ultimately included in vitest-pool-workers (through Wrangler), causing a circular dependency.
   "@cloudflare/vitest-pool-workers": "^0.10.11"
   "capnp-es": "^0.0.14"
-  premove: "^4.0.0"
 
 catalogs:
   vite-plugin:

@@ -42,9 +42,6 @@ catalogs:
     playwright-chromium:
       specifier: ^1.56.1
       version: 1.56.1
-    premove:
-      specifier: ^4.0.0
-      version: 4.0.0
     smol-toml:
       specifier: ^1.5.2
       version: 1.5.2
@@ -2295,9 +2292,6 @@ importers:
       postal-mime:
         specifier: ^2.4.3
         version: 2.4.3(patch_hash=ngwql2fj2dlex3jjynq4iizhk4)
-      premove:
-        specifier: catalog:default
-        version: 4.0.0
       pretty-bytes:
         specifier: ^6.0.0
         version: 6.1.1
@@ -4080,9 +4074,6 @@ importers:
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.1)
-      premove:
-        specifier: catalog:default
-        version: 4.0.0
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4337,9 +4328,6 @@ importers:
       patch-console:
         specifier: ^1.0.0
         version: 1.0.0
-      premove:
-        specifier: catalog:default
-        version: 4.0.0
       pretty-bytes:
         specifier: ^6.0.0
         version: 6.1.1
@@ -12813,11 +12801,6 @@ packages:
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
-
-  premove@4.0.0:
-    resolution: {integrity: sha512-zim/Hr4+FVdCIM7zL9b9Z0Wfd5Ya3mnKtiuDv7L5lzYzanSq6cOcVJ7EFcgK4I0pt28l8H0jX/x3nyog380XgQ==}
-    engines: {node: '>=6'}
-    hasBin: true
 
   prettier-linter-helpers@1.0.0:
     resolution: {integrity: sha512-GbK2cP9nraSSUF9N2XwUwqfzlAFlMNYYl+ShE/V+H8a9uNl/oUqB1w2EL54Jh0OlyRSd8RfWYJ3coVS4TROP2w==}
@@ -24127,8 +24110,6 @@ snapshots:
     optional: true
 
   prelude-ls@1.2.1: {}
-
-  premove@4.0.0: {}
 
   prettier-linter-helpers@1.0.0:
     dependencies:
