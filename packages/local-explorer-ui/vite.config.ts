@@ -15,11 +15,12 @@ export default defineConfig({
 	build: {
 		outDir: "dist",
 	},
+	base: "/cdn-cgi/explorer/",
 	server: {
-		// lets us develop this package separately from miniflare without CORS issues.
+		// lets us develop this package separately from Miniflare without CORS issues.
 		proxy: {
 			"/cdn-cgi/explorer/api": {
-				// you worker will need to be running on localhost:8787 for this to work
+				// your worker will need to be running on localhost:8787 for this to work
 				target: "http://localhost:8787",
 				changeOrigin: true,
 			},

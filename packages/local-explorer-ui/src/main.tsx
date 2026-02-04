@@ -6,7 +6,7 @@ import "./styles/layout.css";
 import "./styles/kv.css";
 import { routeTree } from "./routeTree.gen";
 
-const router = createRouter({ routeTree });
+const router = createRouter({ routeTree, basepath: "/cdn-cgi/explorer" });
 
 declare module "@tanstack/react-router" {
 	interface Register {

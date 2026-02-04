@@ -410,11 +410,8 @@ export default <ExportedHandler<Env>>{
 
 		try {
 			if (env[CoreBindings.SERVICE_LOCAL_EXPLORER]) {
-				if (url.pathname.startsWith("/cdn-cgi/explorer/api")) {
+				if (url.pathname.startsWith("/cdn-cgi/explorer")) {
 					return await env[CoreBindings.SERVICE_LOCAL_EXPLORER].fetch(request);
-				} else if (url.pathname.startsWith("/cdn-cgi/explorer")) {
-					return new Response("Pretend this is an asset");
-					// TODO: serve assets using disk service
 				}
 			}
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {

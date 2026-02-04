@@ -28,7 +28,7 @@ type BindingIdMap = {
 export type Env = {
 	[key: string]: unknown;
 	LOCAL_EXPLORER_BINDING_MAP: BindingIdMap;
-	MINIFLARE_EXPLORER_ASSETS: Fetcher;
+	MINIFLARE_EXPLORER_DISK: Fetcher;
 };
 
 export type AppBindings = { Bindings: Env };
@@ -74,7 +74,7 @@ app.get("/*", async (c, next) => {
 	}
 
 	// Try to fetch the requested asset
-	const response = await c.env.MINIFLARE_EXPLORER_ASSETS.fetch(
+	const response = await c.env.MINIFLARE_EXPLORER_DISK.fetch(
 		new URL(assetPath, "http://placeholder")
 	);
 
@@ -86,7 +86,7 @@ app.get("/*", async (c, next) => {
 	}
 
 	// SPA fallback - serve index.html for unmatched routes
-	const indexResponse = await c.env.MINIFLARE_EXPLORER_ASSETS.fetch(
+	const indexResponse = await c.env.MINIFLARE_EXPLORER_DISK.fetch(
 		new URL("index.html", "http://placeholder")
 	);
 
@@ -147,13 +147,13 @@ app.post(
 // ============================================================================
 
 app.get(
-	"/d1/database",
+	"/api/d1/database",
 	validateQuery(zCloudflareD1ListDatabasesData.shape.query.unwrap()),
 	(c) => listD1Databases(c, c.req.valid("query"))
 );
 
 app.post(
-	"/d1/database/:database_id/raw",
+	"/api/d1/database/:database_id/raw",
 	validateRequestBody(zCloudflareD1RawDatabaseQueryData.shape.body),
 	(c) => rawD1Database(c, c.req.valid("json"))
 );

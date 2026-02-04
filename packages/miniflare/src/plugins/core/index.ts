@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -55,6 +55,7 @@ import {
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
 	getUserServiceName,
+	LOCAL_EXPLORER_DISK,
 	SERVICE_ENTRY,
 	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
@@ -1131,6 +1132,25 @@ export function getGlobalServices({
 			}
 		}
 
+		// Disk service for serving local-explorer-ui assets
+		// The UI dist is copied to miniflare's dist/local-explorer-ui at build time.
+		// In the bundled CJS output, __dirname is dist/src/ so we need ../local-explorer-ui
+		const distPath = path.join(__dirname, "../local-explorer-ui");
+		if (existsSync(distPath)) {
+			services.push({
+				name: LOCAL_EXPLORER_DISK,
+				disk: {
+					path: distPath,
+					writable: false,
+				},
+			});
+		} else {
+			throw new MiniflareCoreError(
+				"ERR_MISSING_EXPLORER_UI",
+				`Local Explorer UI assets not found at expected path: ${distPath}`
+			);
+		}
+
 		services.push({
 			name: SERVICE_LOCAL_EXPLORER,
 			worker: {
@@ -1147,6 +1167,10 @@ export function getGlobalServices({
 					{
 						name: CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP,
 						json: JSON.stringify(IDToBindingName),
+					},
+					{
+						name: CoreBindings.EXPLORER_DISK,
+						service: { name: LOCAL_EXPLORER_DISK },
 					},
 				],
 			},

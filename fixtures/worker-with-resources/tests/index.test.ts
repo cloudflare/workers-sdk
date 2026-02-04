@@ -56,6 +56,53 @@ describe("local explorer", () => {
 			const text = await response.text();
 			expect(text).toBe("Hello World!");
 		});
+
+		it("serves UI index.html at /cdn-cgi/explorer", async ({ expect }) => {
+			const response = await fetch(`http://${ip}:${port}/cdn-cgi/explorer`);
+			expect(response.status).toBe(200);
+			expect(response.headers.get("Content-Type")).toBe(
+				"text/html; charset=utf-8"
+			);
+			const text = await response.text();
+			expect(text).toContain("<!doctype html>");
+			expect(text).toContain("Cloudflare Local Explorer");
+		});
+
+		it("serves UI assets at /cdn-cgi/explorer/assets/*", async ({ expect }) => {
+			// First get index.html to find the actual asset paths
+			const indexResponse = await fetch(
+				`http://${ip}:${port}/cdn-cgi/explorer`
+			);
+			const html = await indexResponse.text();
+
+			// Extract JS asset path from the HTML
+			// The HTML looks like: <script type="module" crossorigin src="/cdn-cgi/explorer/assets/index-xxx.js">
+			const jsMatch = html.match(/assets\/index-[^"]+\.js/);
+			expect(jsMatch).not.toBeNull();
+			const jsPath = jsMatch![0];
+
+			// Fetch the JS asset
+			const jsResponse = await fetch(
+				`http://${ip}:${port}/cdn-cgi/explorer/${jsPath}`
+			);
+			expect(jsResponse.status).toBe(200);
+			expect(jsResponse.headers.get("Content-Type")).toMatch(
+				/^application\/javascript/
+			);
+		});
+
+		it("serves UI with SPA fallback for unknown routes", async ({ expect }) => {
+			// Request a route that doesn't exist as a file but should be handled by the SPA
+			const response = await fetch(
+				`http://${ip}:${port}/cdn-cgi/explorer/kv/some-namespace`
+			);
+			expect(response.status).toBe(200);
+			expect(response.headers.get("Content-Type")).toBe(
+				"text/html; charset=utf-8"
+			);
+			const text = await response.text();
+			expect(text).toContain("<!doctype html>");
+		});
 	});
 
 	describe("without X_LOCAL_EXPLORER (default)", () => {
