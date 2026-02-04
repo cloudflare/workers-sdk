@@ -1,6 +1,16 @@
 import checkForUpdate from "update-check";
 import type { Result } from "update-check";
 
+/**
+ * Checks if a newer version of the vite-plugin-cloudflare package is available.
+ *
+ * This function dynamically imports the package.json to get the current version,
+ * then uses the `update-check` library to query npm for the latest version.
+ * The dist tag used for comparison depends on the current version - "beta" for
+ * pre-release versions (0.0.0-*) and "latest" for stable versions.
+ *
+ * @returns The latest available version string if an update is available, or `undefined` if the package is up-to-date or the check fails
+ */
 async function doUpdateCheck(): Promise<string | undefined> {
 	let update: Result | null = null;
 	// Use dynamic import with JSON assertion to avoid bundler issues
