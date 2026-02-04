@@ -1,6 +1,6 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -17,19 +17,19 @@ describe("create", () => {
 	const std = mockConsoleMethods();
 	const { setIsTTY } = useMockIsTTY();
 
-	it("should throw if local flag is provided", async () => {
+	it("should throw if local flag is provided", async ({ expect }) => {
 		await expect(runWrangler("d1 create test --local")).rejects.toThrowError(
 			`Unknown argument: local`
 		);
 	});
 
-	it("should throw if remote flag is provided", async () => {
+	it("should throw if remote flag is provided", async ({ expect }) => {
 		await expect(runWrangler("d1 create test --remote")).rejects.toThrowError(
 			`Unknown argument: remote`
 		);
 	});
 
-	it("should throw if location flag isn't in the list", async () => {
+	it("should throw if location flag isn't in the list", async ({ expect }) => {
 		setIsTTY(false);
 		mockGetMemberships([
 			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
@@ -41,7 +41,9 @@ describe("create", () => {
 		`);
 	});
 
-	it("should try send a request to the API for a valid input", async () => {
+	it("should try send a request to the API for a valid input", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(false);
@@ -84,7 +86,9 @@ describe("create", () => {
 		`);
 	});
 
-	it("should fail if the jurisdiction provided is not supported", async () => {
+	it("should fail if the jurisdiction provided is not supported", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		await expect(runWrangler("d1 create test --jurisdiction something")).rejects
@@ -94,7 +98,9 @@ describe("create", () => {
 		`);
 	});
 
-	it("should try send jurisdiction to the API if it is a valid input", async () => {
+	it("should try send jurisdiction to the API if it is a valid input", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(false);
