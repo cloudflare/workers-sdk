@@ -484,7 +484,7 @@ export const containersRegistriesDeleteCommand = createCommand({
 		},
 		"skip-confirmation": {
 			type: "boolean",
-			description: "Skip confirmation prompt",
+			description: "Skip confirmation prompts for registry and secret deletion",
 			alias: "y",
 			default: false,
 		},
