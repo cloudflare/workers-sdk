@@ -1,0 +1,36 @@
+{
+	"name": "@cloudflare/local-explorer-ui",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "pnpm generate:api && vite build && prettier --write src/routeTree.gen.ts",
+		"check:lint": "eslint src --max-warnings=0",
+		"check:type": "tsc --build",
+		"deploy": "echo 'no deploy'",
+		"dev": "concurrently -n ui,worker -c blue,orange \"vite\" \"pnpm --filter @fixture/worker-with-resources start\"",
+		"dev:ui": "vite",
+		"generate:api": "openapi-ts && prettier --write src/api/generated",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"@base-ui/react": "^1.1.0",
+		"@tanstack/react-router": "^1.158.0",
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0"
+	},
+	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
+		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@hey-api/openapi-ts": "^0.91.1",
+		"@tanstack/react-router-devtools": "^1.158.0",
+		"@tanstack/router-plugin": "^1.158.0",
+		"@types/react": "^19.2.0",
+		"@types/react-dom": "^19.2.0",
+		"@vitejs/plugin-react": "^4.4.1",
+		"concurrently": "^9.0.0",
+		"typescript": "catalog:default",
+		"vite": "catalog:default",
+		"vite-plugin-svgr": "^4.3.0"
+	}
+}
