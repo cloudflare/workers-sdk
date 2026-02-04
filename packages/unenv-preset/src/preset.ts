@@ -856,7 +856,7 @@ function getProcessOverrides({
 }
 
 /**
- * Workerd fixes to iterable request/response bodies when both these compatibility flags are used:
+ * Workerd fixes iterable request/response bodies when both these compatibility flags are used:
  * - `fetch_iterable_type_support`
  * - `fetch_iterable_type_support_override_adjustment`
  *
@@ -879,6 +879,7 @@ function hasFetchIterableFixes({
 	);
 
 	// TODO: add `supportEnabledByDate` when workerd adds the date for it
+	// @see https://github.com/cloudflare/workerd/pull/6006
 	const supportEnabled = supportEnabledByFlag && !supportDisabledByFlag;
 
 	if (!supportEnabled) {
