@@ -230,7 +230,7 @@ export async function runAutoConfig(
 			{}
 		);
 
-		throw e;
+		throw error;
 	}
 
 	sendMetricsEvent(
