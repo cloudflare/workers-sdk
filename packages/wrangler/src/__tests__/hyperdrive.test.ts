@@ -221,7 +221,7 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle creating a hyperdrive config for postgres without a port specified", async () => {
+	it("should handle creating a hyperdrive config for mysql without a port specified", async () => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='mysql://test:password@example.com/neondb'"
