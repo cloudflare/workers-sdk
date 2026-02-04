@@ -52,7 +52,7 @@ export default function registerDevHotKeys(
 			{
 				keys: ["e"],
 				label: "open local explorer",
-				disabled: () => !getLocalExplorerEnabledFromEnv(),
+				disabled: !getLocalExplorerEnabledFromEnv(),
 				handler: async () => {
 					const { url } = await primaryDevEnv.proxy.ready.promise;
 					const explorerUrl = new URL("/cdn-cgi/explorer", url);
