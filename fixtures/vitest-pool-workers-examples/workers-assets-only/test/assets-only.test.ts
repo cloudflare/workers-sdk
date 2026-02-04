@@ -1,8 +1,8 @@
 import { env, SELF } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 
 // There is no Worker so we can't import one and unit test
-it("can test asset serving (integration style)", async () => {
+it("can test asset serving (integration style)", async ({ expect }) => {
 	let response = await SELF.fetch("http://example.com/index.html");
 	expect(await response.text()).toContain("Asset index.html");
 

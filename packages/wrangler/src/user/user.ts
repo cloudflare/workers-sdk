@@ -1287,12 +1287,18 @@ export async function getAccountId(
 	} catch (e) {
 		// Did we try to select an account in CI or a non-interactive terminal?
 		if (e instanceof NoDefaultValueProvided) {
+			// Redact account names (which may contain email addresses) in non-interactive mode
+			// to avoid leaking sensitive information in CI logs
+			const redactAccountName = isNonInteractiveOrCI();
 			throw new UserError(
 				`More than one account available but unable to select one in non-interactive mode.
 Please set the appropriate \`account_id\` in your ${configFileName(undefined)} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
-	.map((account) => `  \`${account.name}\`: \`${account.id}\``)
+	.map(
+		(account) =>
+			`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${account.id}\``
+	)
 	.join("\n")}`
 			);
 		}

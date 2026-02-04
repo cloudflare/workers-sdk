@@ -158,6 +158,7 @@ describe("RemoteRuntimeController", () => {
 			tail_consumers: undefined,
 			limits: undefined,
 			observability: undefined,
+			containers: undefined,
 		});
 
 		vi.mocked(createWorkerPreview).mockResolvedValue({

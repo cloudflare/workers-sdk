@@ -31,6 +31,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					projectPath: "<PROJECT_PATH>",
 					configured: false,
 					outputDir: "public",
+					framework: new Static({ id: "static", name: "Static" }),
 				},
 				testRawConfig,
 				{
@@ -58,7 +59,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				Object {
 				  "buildCommand": "npm run build",
 				  "deployCommand": "npx wrangler deploy",
-				  "frameworkId": undefined,
+				  "frameworkId": "static",
 				  "outputDir": "public",
 				  "scripts": Object {},
 				  "versionCommand": "npx wrangler versions upload",
@@ -86,6 +87,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					},
 					configured: false,
 					outputDir: "dist",
+					framework: new Static({ id: "static", name: "Static" }),
 				},
 				testRawConfig,
 				{
@@ -106,7 +108,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				Object {
 				  "buildCommand": "npm run build",
 				  "deployCommand": "npx wrangler deploy",
-				  "frameworkId": undefined,
+				  "frameworkId": "static",
 				  "outputDir": "dist",
 				  "scripts": Object {
 				    "deploy": "wrangler deploy",
@@ -139,6 +141,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					},
 					configured: false,
 					outputDir: "out",
+					framework: new Static({ id: "static", name: "Static" }),
 				},
 				testRawConfig,
 				{
@@ -159,7 +162,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 				Object {
 				  "buildCommand": "npm run build",
 				  "deployCommand": "npx wrangler deploy",
-				  "frameworkId": undefined,
+				  "frameworkId": "static",
 				  "outputDir": "out",
 				  "scripts": Object {
 				    "deploy": "wrangler deploy",

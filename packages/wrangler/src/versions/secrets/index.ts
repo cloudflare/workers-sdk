@@ -167,6 +167,7 @@ export async function copyWorkerVersionWithNewSecrets({
 		} as CfWorkerInit["bindings"], // handled in rawBindings
 		rawBindings: bindings,
 		modules,
+		containers: config.containers,
 		sourceMaps: sourceMaps,
 		migrations: undefined,
 		compatibility_date: versionInfo.resources.script_runtime.compatibility_date,

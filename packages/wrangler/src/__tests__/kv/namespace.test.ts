@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- test.each */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";

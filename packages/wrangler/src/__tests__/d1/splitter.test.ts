@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import splitSqlQuery, { mayContainMultipleStatements } from "../../d1/splitter";
 
 describe("mayContainMultipleStatements()", () => {
-	it("should return false if there is only a semi-colon at the end", () => {
+	it("should return false if there is only a semi-colon at the end", ({
+		expect,
+	}) => {
 		expect(mayContainMultipleStatements(`SELECT * FROM my_table`)).toBe(false);
 		expect(
 			mayContainMultipleStatements(`SELECT * FROM my_table WHERE id = 42;`)
@@ -12,7 +14,9 @@ describe("mayContainMultipleStatements()", () => {
 		).toBe(false);
 	});
 
-	it("should return true if there is a semi-colon before the end of the string", () => {
+	it("should return true if there is a semi-colon before the end of the string", ({
+		expect,
+	}) => {
 		expect(
 			mayContainMultipleStatements(
 				`SELECT * FROM my_table WHERE val = "foo;bar";`
@@ -20,7 +24,7 @@ describe("mayContainMultipleStatements()", () => {
 		).toBe(true);
 	});
 
-	it("should return true if there is more than one statement", () => {
+	it("should return true if there is more than one statement", ({ expect }) => {
 		expect(
 			mayContainMultipleStatements(
 				`
@@ -33,7 +37,7 @@ describe("mayContainMultipleStatements()", () => {
 });
 
 describe("splitSqlQuery()", () => {
-	it("should trim a regular old sqlite dump", () => {
+	it("should trim a regular old sqlite dump", ({ expect }) => {
 		expect(
 			splitSqlQuery(`PRAGMA foreign_keys=OFF;
 		BEGIN TRANSACTION;
@@ -56,7 +60,9 @@ describe("splitSqlQuery()", () => {
 		]
 	`);
 	});
-	it("should return original SQL if there are no real statements", () => {
+	it("should return original SQL if there are no real statements", ({
+		expect,
+	}) => {
 		expect(splitSqlQuery(`;;;`)).toMatchInlineSnapshot(`
 		Array [
 		  ";;;",
@@ -64,7 +70,7 @@ describe("splitSqlQuery()", () => {
 	`);
 	});
 
-	it("should not split single statements", () => {
+	it("should not split single statements", ({ expect }) => {
 		expect(splitSqlQuery(`SELECT * FROM my_table`)).toMatchInlineSnapshot(`
 		Array [
 		  "SELECT * FROM my_table",
@@ -91,7 +97,7 @@ describe("splitSqlQuery()", () => {
 	`);
 	});
 
-	it("should handle strings", () => {
+	it("should handle strings", ({ expect }) => {
 		expect(
 			splitSqlQuery(
 				`
@@ -105,7 +111,7 @@ describe("splitSqlQuery()", () => {
 	`);
 	});
 
-	it("should handle inline comments", () => {
+	it("should handle inline comments", ({ expect }) => {
 		expect(
 			splitSqlQuery(
 				`SELECT * FROM my_table -- semicolons; in; comments; don't count;
@@ -121,7 +127,7 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
-	it("should handle block comments", () => {
+	it("should handle block comments", ({ expect }) => {
 		expect(
 			splitSqlQuery(
 				`/****
@@ -138,7 +144,7 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
-	it("should split multiple statements", () => {
+	it("should split multiple statements", ({ expect }) => {
 		expect(
 			splitSqlQuery(
 				`
@@ -154,7 +160,7 @@ describe("splitSqlQuery()", () => {
 	`);
 	});
 
-	it("should ignore comment at the end", () => {
+	it("should ignore comment at the end", ({ expect }) => {
 		expect(
 			splitSqlQuery(
 				`
@@ -170,7 +176,7 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
-	it("should handle whitespace between statements", () => {
+	it("should handle whitespace between statements", ({ expect }) => {
 		expect(
 			splitSqlQuery(`
         CREATE DOMAIN custom_types.email AS TEXT CHECK (VALUE ~ '^.+@.+$');
@@ -218,7 +224,7 @@ describe("splitSqlQuery()", () => {
 	`);
 	});
 
-	it("should handle $...$ style string markers", () => {
+	it("should handle $...$ style string markers", ({ expect }) => {
 		expect(
 			splitSqlQuery(`
           CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -254,7 +260,7 @@ describe("splitSqlQuery()", () => {
 	`);
 	});
 
-	it("should handle compound statements for BEGINs", () => {
+	it("should handle compound statements for BEGINs", ({ expect }) => {
 		expect(
 			splitSqlQuery(`
     CREATE TRIGGER IF NOT EXISTS update_trigger AFTER UPDATE ON items
@@ -322,7 +328,7 @@ describe("splitSqlQuery()", () => {
 		`);
 	});
 
-	it("should handle compound statements for CASEs", () => {
+	it("should handle compound statements for CASEs", ({ expect }) => {
 		expect(
 			splitSqlQuery(`
 				CREATE TRIGGER test_after_insert_trigger AFTER

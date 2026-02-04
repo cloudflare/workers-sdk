@@ -3,7 +3,7 @@ import {
 	env,
 	waitOnExecutionContext,
 } from "cloudflare:test";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, it, vi } from "vitest";
 import worker from "../src/index";
 
 // This will improve in the next major version of `@cloudflare/workers-types`,
@@ -15,7 +15,7 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-it("produces queue message with mocked send", async () => {
+it("produces queue message with mocked send", async ({ expect }) => {
 	// Intercept calls to `QUEUE_PRODUCER.send()`
 	const sendSpy = vi
 		.spyOn(env.QUEUE_PRODUCER, "send")
@@ -38,7 +38,7 @@ it("produces queue message with mocked send", async () => {
 	expect(sendSpy).toBeCalledWith({ key: "/key", value: "value" });
 });
 
-it("produces queue message with mocked consumer", async () => {
+it("produces queue message with mocked consumer", async ({ expect }) => {
 	// Intercept calls to `worker.queue()`. Note the runner worker has a queue
 	// consumer configured that gets its handler from the `main` option in
 	// `vitest.config.mts`. Importantly, this uses the exact `worker` instance

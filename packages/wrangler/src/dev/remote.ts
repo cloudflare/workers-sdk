@@ -178,6 +178,7 @@ export async function createRemoteWorkerInit(props: {
 		keepSecrets: true,
 		logpush: false,
 		sourceMaps: undefined,
+		containers: undefined, // Containers are not supported in remote dev mode
 		assets:
 			props.assets && assetsJwt
 				? {

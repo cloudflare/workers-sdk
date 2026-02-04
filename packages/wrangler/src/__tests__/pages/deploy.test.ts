@@ -5,7 +5,9 @@ import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import TOML from "smol-toml";
 import dedent from "ts-dedent";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- test.each */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { version } from "../../../package.json";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";
 import { ApiErrorCodes } from "../../pages/errors";

@@ -1,6 +1,8 @@
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { BATCH_MAX_ERRORS_WARNINGS } from "../../kv/helpers";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -124,17 +126,17 @@ describe("kv", () => {
 						`kv bulk put --remote --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-					[Error: Unexpected JSON input from "keys.json".
-					Expected an array of key-value objects but got type "object".]
-				`);
+				[Error: Unexpected JSON input from "keys.json".
+				Expected an array of key-value objects but got type "object".]
+			`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Resource location: remote
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Resource location: remote
 
-					"
-				`);
+				"
+			`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
@@ -483,18 +485,18 @@ describe("kv", () => {
 						`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-					[Error: Unexpected JSON input from "keys.json".
-					Expected an array of strings but got:
-					12354]
-				`);
+				[Error: Unexpected JSON input from "keys.json".
+				Expected an array of strings but got:
+				12354]
+			`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Resource location: remote
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Resource location: remote
 
-					"
-				`);
+				"
+			`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 
@@ -510,20 +512,20 @@ describe("kv", () => {
 						`kv bulk delete --remote --namespace-id some-namespace-id keys.json`
 					)
 				).rejects.toThrowErrorMatchingInlineSnapshot(`
-					[Error: Unexpected JSON input from "keys.json".
-					Expected an array of strings or objects with a "name" key.
-					The item at index 1 is type: "number" - 12354
-					The item at index 2 is type: "object" - {"key":"someKey"}
-					The item at index 3 is type: "object" - null]
-				`);
+				[Error: Unexpected JSON input from "keys.json".
+				Expected an array of strings or objects with a "name" key.
+				The item at index 1 is type: "number" - 12354
+				The item at index 2 is type: "object" - {"key":"someKey"}
+				The item at index 3 is type: "object" - null]
+			`);
 				expect(std.out).toMatchInlineSnapshot(`
-					"
-					 ⛅️ wrangler x.x.x
-					──────────────────
-					Resource location: remote
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Resource location: remote
 
-					"
-				`);
+				"
+			`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 			});
 		});

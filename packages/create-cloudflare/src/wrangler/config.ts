@@ -21,6 +21,7 @@ import type { C3Context } from "types";
  * - setting the `name` to the passed project name
  * - adding the latest compatibility date when no valid one is present
  * - enabling observability
+ * - adding `nodejs_compat` to the compatibility flags (if not already present)
  * - adding comments with links to documentation for common configuration options
  * - substituting placeholders with actual values
  *   - `<WORKER_NAME>` with the project name
@@ -67,6 +68,10 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		wranglerJson = appendJSONProperty(wranglerJson, "observability", {
 			enabled: true,
 		});
+		// Skip adding nodejs_compat for Python projects since it's not compatible with Python workers
+		if (ctx.args.lang !== "python") {
+			wranglerJson = addNodejsCompatFlag(wranglerJson);
+		}
 
 		addHintsAsJsonComments(wranglerJson);
 
@@ -86,6 +91,10 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			ctx.project.path,
 		);
 		wranglerToml.observability ??= { enabled: true };
+		// Skip adding nodejs_compat for Python projects since it's not compatible with Python workers
+		if (ctx.args.lang !== "python") {
+			addNodejsCompatFlagToToml(wranglerToml);
+		}
 
 		writeWranglerToml(
 			ctx,
@@ -319,4 +328,54 @@ function generateHintsAsTomlComments(wranglerConfig: TomlTable): string {
 	}
 
 	return commentLines.join("\n");
+}
+
+/**
+ * Adds the `nodejs_compat` flag to the `compatibility_flags` array in a JSON wrangler config.
+ * If the array doesn't exist, it will be created. If `nodejs_compat`, `nodejs_compat_v2`,
+ * or `no_nodejs_compat` is already present, no changes are made.
+ *
+ * @param wranglerConfig The wrangler JSON configuration object.
+ * @returns The updated configuration object.
+ */
+function addNodejsCompatFlag(wranglerConfig: CommentObject): CommentObject {
+	const existingFlags = Array.isArray(wranglerConfig.compatibility_flags)
+		? (wranglerConfig.compatibility_flags as string[])
+		: [];
+
+	if (
+		existingFlags.includes("nodejs_compat") ||
+		existingFlags.includes("nodejs_compat_v2") ||
+		existingFlags.includes("no_nodejs_compat")
+	) {
+		return wranglerConfig;
+	}
+
+	return appendJSONProperty(wranglerConfig, "compatibility_flags", [
+		"nodejs_compat",
+		...existingFlags,
+	]);
+}
+
+/**
+ * Adds the `nodejs_compat` flag to the `compatibility_flags` array in a TOML wrangler config.
+ * If the array doesn't exist, it will be created. If `nodejs_compat`, `nodejs_compat_v2`,
+ * or `no_nodejs_compat` is already present, no changes are made.
+ *
+ * @param wranglerConfig The wrangler TOML configuration object.
+ */
+function addNodejsCompatFlagToToml(wranglerConfig: TomlTable): void {
+	const existingFlags = Array.isArray(wranglerConfig.compatibility_flags)
+		? (wranglerConfig.compatibility_flags as string[])
+		: [];
+
+	if (
+		existingFlags.includes("nodejs_compat") ||
+		existingFlags.includes("nodejs_compat_v2") ||
+		existingFlags.includes("no_nodejs_compat")
+	) {
+		return;
+	}
+
+	wranglerConfig.compatibility_flags = ["nodejs_compat", ...existingFlags];
 }

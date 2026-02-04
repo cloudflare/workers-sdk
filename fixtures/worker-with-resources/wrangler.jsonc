@@ -16,6 +16,10 @@
 		{
 			"binding": "DB",
 		},
+		{
+			"binding": "BACKUP_DB",
+			"database_id": "some-db-id",
+		},
 	],
 	"durable_objects": {
 		"bindings": [
@@ -25,4 +29,10 @@
 			},
 		],
 	},
+	"migrations": [
+		{
+			"new_sqlite_classes": ["MyDurableObject"],
+			"tag": "v1",
+		},
+	],
 }

@@ -72,6 +72,7 @@ function createWorkerBundleFormData(
 		tail_consumers: undefined,
 		limits: config?.limits,
 		assets: undefined,
+		containers: undefined, // containers are not supported in Pages
 		observability: undefined,
 	});
 }

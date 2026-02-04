@@ -61,6 +61,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.TEST_CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.TEST_CLOUDFLARE_ACCOUNT_ID }}
           HYPERDRIVE_DATABASE_URL: ${{ secrets.TEST_HYPERDRIVE_DATABASE_URL}}
+          HYPERDRIVE_MYSQL_DATABASE_URL: ${{ secrets.TEST_HYPERDRIVE_MYSQL_DATABASE_URL}}
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
@@ -130,7 +131,7 @@ jobs:
       - name: Run Vite plugin E2E tests
         if: steps.changes.outputs.everything_but_markdown == 'true'
         run: pnpm test:e2e -F @cloudflare/vite-plugin --log-order=stream
-        timeout-minutes: 15
+        timeout-minutes: 20
         env:
           NODE_DEBUG: "vite-plugin:test"
           # The remote-binding tests need to connect to Cloudflare

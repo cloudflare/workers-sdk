@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { UserError } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -20,7 +20,7 @@ describe("execute", () => {
 	// We turn on SENTRY reporting so that we can prove that Wrangler will not attempt to report user errors.
 	useSentry();
 
-	it("should require login when running against prod", async () => {
+	it("should require login when running against prod", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -35,7 +35,7 @@ describe("execute", () => {
 		);
 	});
 
-	it("should expect either --command or --file", async () => {
+	it("should expect either --command or --file", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -48,7 +48,7 @@ describe("execute", () => {
 		);
 	});
 
-	it("should reject use of both --command and --file", async () => {
+	it("should reject use of both --command and --file", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -68,7 +68,7 @@ describe("execute", () => {
 		);
 	});
 
-	it("should reject the use of --remote with --local", async () => {
+	it("should reject the use of --remote with --local", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -83,7 +83,7 @@ describe("execute", () => {
 		);
 	});
 
-	it("should reject the use of --preview with --local", async () => {
+	it("should reject the use of --preview with --local", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -96,7 +96,9 @@ describe("execute", () => {
 		).rejects.toThrowError(`Error: can't use --preview without --remote`);
 	});
 
-	it("should reject the use of --preview with --local with --json", async () => {
+	it("should reject the use of --preview with --local with --json", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -119,7 +121,7 @@ describe("execute", () => {
 		);
 	});
 
-	it("should reject a binary SQLite DB", async () => {
+	it("should reject a binary SQLite DB", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -144,7 +146,7 @@ describe("execute", () => {
 		);
 	});
 
-	it("should throw a UserError if file does not exist", async () => {
+	it("should throw a UserError if file does not exist", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -162,7 +164,9 @@ describe("execute", () => {
 		`);
 	});
 
-	it("should treat SQLite constraint errors as UserErrors", async () => {
+	it("should treat SQLite constraint errors as UserErrors", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -187,7 +191,7 @@ describe("execute", () => {
 		).rejects.toThrow(UserError);
 	});
 
-	it("should show banner by default", async () => {
+	it("should show banner by default", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -199,7 +203,7 @@ describe("execute", () => {
 		expect(std.out).toContain("⛅️ wrangler x.x.x");
 	});
 
-	it("should execute locally without database_id", async () => {
+	it("should execute locally without database_id", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [{ binding: "D1", database_name: "D1" }],
@@ -209,7 +213,7 @@ describe("execute", () => {
 		expect(std.out).toContain("1 command executed successfully");
 	});
 
-	it("should not show banner if --json=true", async () => {
+	it("should not show banner if --json=true", async ({ expect }) => {
 		setIsTTY(false);
 		writeWranglerConfig({
 			d1_databases: [
@@ -225,7 +229,9 @@ describe("execute", () => {
 		mockAccountId({ accountId: "some-account-id" });
 		mockApiToken();
 
-		it("should format duration to 2 decimal places in milliseconds for remote execution", async () => {
+		it("should format duration to 2 decimal places in milliseconds for remote execution", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			writeWranglerConfig({
 				d1_databases: [
@@ -268,7 +274,9 @@ describe("execute", () => {
 			expect(std.out).toMatch("🚣 Executed 1 command in 123.46ms");
 		});
 
-		it("should format batch execution duration with 2 decimal places", async () => {
+		it("should format batch execution duration with 2 decimal places", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			writeWranglerConfig({
 				d1_databases: [

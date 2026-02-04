@@ -5,11 +5,13 @@ import {
 	SELF,
 } from "cloudflare:test";
 import { RpcStub } from "cloudflare:workers";
-import { describe, expect, it, onTestFinished } from "vitest";
+import { describe, it, onTestFinished } from "vitest";
 import { Counter, TestObject } from "../src";
 
 describe("named entrypoints", () => {
-	it("dispatches fetch request to named ExportedHandler", async () => {
+	it("dispatches fetch request to named ExportedHandler", async ({
+		expect,
+	}) => {
 		const response = await env.TEST_NAMED_HANDLER.fetch("https://example.com");
 		expect(await response.json()).toMatchInlineSnapshot(`
 			{
@@ -26,7 +28,9 @@ describe("named entrypoints", () => {
 			}
 		`);
 	});
-	it("dispatches fetch request to named WorkerEntrypoint", async () => {
+	it("dispatches fetch request to named WorkerEntrypoint", async ({
+		expect,
+	}) => {
 		const response = await env.TEST_NAMED_ENTRYPOINT.fetch(
 			"https://example.com"
 		);
@@ -45,12 +49,12 @@ describe("named entrypoints", () => {
 			}
 		`);
 	});
-	it("calls method with rpc", async () => {
+	it("calls method with rpc", async ({ expect }) => {
 		const result = await env.TEST_NAMED_ENTRYPOINT.ping();
 		expect(result).toBe("pong");
 	});
 
-	it("receives RpcTarget over RPC", async () => {
+	it("receives RpcTarget over RPC", async ({ expect }) => {
 		const result = await env.TEST_NAMED_ENTRYPOINT.getCounter();
 		expect(await result.value).toBe(0);
 		result.increment();
@@ -62,7 +66,7 @@ describe("named entrypoints", () => {
 		expect(await result.value).toBe(2);
 	});
 
-	it("receives plain objects over RPC", async () => {
+	it("receives plain objects over RPC", async ({ expect }) => {
 		const result = await env.TEST_NAMED_ENTRYPOINT.getCounter();
 		result.increment();
 		expect(await result.asObject()).toMatchObject({ val: 1 });
@@ -70,7 +74,7 @@ describe("named entrypoints", () => {
 });
 
 describe("Durable Object", () => {
-	it("dispatches fetch request", async () => {
+	it("dispatches fetch request", async ({ expect }) => {
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
 		const response = await stub.fetch("https://example.com");
@@ -89,7 +93,9 @@ describe("Durable Object", () => {
 			}
 		`);
 	});
-	it("increments count and allows direct/rpc access to instance/storage", async () => {
+	it("increments count and allows direct/rpc access to instance/storage", async ({
+		expect,
+	}) => {
 		// Check sending request directly to instance
 		const id = env.TEST_OBJECT.idFromName("/path");
 		const stub = env.TEST_OBJECT.get(id);
@@ -111,7 +117,7 @@ describe("Durable Object", () => {
 		// Check accessing property over RPC
 		expect(await stub.value).toBe(4);
 	});
-	it("immediately executes alarm", async () => {
+	it("immediately executes alarm", async ({ expect }) => {
 		// Schedule alarm by directly calling method over RPC
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
@@ -128,7 +134,7 @@ describe("Durable Object", () => {
 		// Check counter value was reset
 		expect(await stub.value).toBe(0);
 	});
-	it("cannot access instance properties or methods", async () => {
+	it("cannot access instance properties or methods", async ({ expect }) => {
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
 		await expect(async () => await stub.instanceProperty).rejects
@@ -139,7 +145,7 @@ describe("Durable Object", () => {
 			and methods are declared like \`instanceProperty() { ... }\` instead of \`instanceProperty = () => { ... }\`.]
 		`);
 	});
-	it("cannot access non-existent properties or methods", async () => {
+	it("cannot access non-existent properties or methods", async ({ expect }) => {
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
 		await expect(
@@ -149,7 +155,7 @@ describe("Durable Object", () => {
 			`[TypeError: The RPC receiver does not implement "nonExistentProperty".]`
 		);
 	});
-	it("receives RpcTarget over RPC", async () => {
+	it("receives RpcTarget over RPC", async ({ expect }) => {
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
 		using result = await stub.getCounter();
@@ -164,7 +170,7 @@ describe("Durable Object", () => {
 		expect(await result.value).toBe(2);
 	});
 
-	it("receives plain objects over RPC", async () => {
+	it("receives plain objects over RPC", async ({ expect }) => {
 		const id = env.TEST_OBJECT.newUniqueId();
 		const stub = env.TEST_OBJECT.get(id);
 		using result = await stub.getObject();
@@ -173,19 +179,19 @@ describe("Durable Object", () => {
 });
 
 describe("counter", () => {
-	it("increments count", () => {
+	it("increments count", ({ expect }) => {
 		const counter = new Counter(3);
 		expect(counter.increment()).toBe(4);
 		expect(counter.increment(2)).toBe(6);
 		expect(counter.value).toBe(6);
 	});
-	it("clones counters", () => {
+	it("clones counters", ({ expect }) => {
 		const counter = new Counter(3);
 		const clone = counter.clone();
 		expect(counter.increment()).toBe(4);
 		expect(clone.value).toBe(3);
 	});
-	it("calls methods with loopback rpc and pipelining", async () => {
+	it("calls methods with loopback rpc and pipelining", async ({ expect }) => {
 		const stub = new RpcStub(new Counter(1));
 		// TODO(soon): replace with `using` when supported
 		onTestFinished(() => stub[Symbol.dispose]());
