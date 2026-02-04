@@ -878,9 +878,10 @@ function hasFetchIterableFixes({
 		"no_fetch_iterable_type_support"
 	);
 
-	// TODO: add `supportEnabledByDate` when workerd adds the date for it
-	// @see https://github.com/cloudflare/workerd/pull/6006
-	const supportEnabled = supportEnabledByFlag && !supportDisabledByFlag;
+	const supportEnabledByDate = compatibilityDate >= "2026-02-19";
+
+	const supportEnabled =
+		(supportEnabledByDate || supportEnabledByFlag) && !supportDisabledByFlag;
 
 	if (!supportEnabled) {
 		return false;
