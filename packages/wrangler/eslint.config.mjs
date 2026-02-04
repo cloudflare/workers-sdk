@@ -44,4 +44,13 @@ export default defineConfig([
 			"workers-sdk/no-vitest-import-expect": "error",
 		},
 	},
+	// Bucket 2: r2, cloudchamber, containers, vectorize
+	{
+		files: [
+			"src/__tests__/{r2,cloudchamber,containers,vectorize}/**/*.test.ts",
+		],
+		rules: {
+			"workers-sdk/no-vitest-import-expect": "error",
+		},
+	},
 ]);
