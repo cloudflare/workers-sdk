@@ -42,9 +42,6 @@ catalogs:
     playwright-chromium:
       specifier: ^1.56.1
       version: 1.56.1
-    rimraf:
-      specifier: ^6.0.1
-      version: 6.0.1
     smol-toml:
       specifier: ^1.5.2
       version: 1.5.2
@@ -393,8 +390,8 @@ importers:
         specifier: ^6.4.0
         version: 6.4.0
       jest-image-snapshot:
-        specifier: ^6.4.0
-        version: 6.4.0
+        specifier: ^6.5.1
+        version: 6.5.1
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -1631,8 +1628,8 @@ importers:
         specifier: ^20.19.9
         version: 20.19.9
       jest-image-snapshot:
-        specifier: ^6.4.0
-        version: 6.4.0
+        specifier: ^6.5.1
+        version: 6.5.1
       playwright-chromium:
         specifier: catalog:default
         version: 1.56.1
@@ -2298,9 +2295,6 @@ importers:
       pretty-bytes:
         specifier: ^6.0.0
         version: 6.1.1
-      rimraf:
-        specifier: catalog:default
-        version: 6.0.1
       source-map:
         specifier: ^0.6.1
         version: 0.6.1
@@ -2389,9 +2383,6 @@ importers:
       html-rewriter-wasm:
         specifier: ^0.4.1
         version: 0.4.1
-      rimraf:
-        specifier: catalog:default
-        version: 6.0.1
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -3975,9 +3966,6 @@ importers:
       mime:
         specifier: ^4.0.7
         version: 4.0.7
-      rimraf:
-        specifier: catalog:default
-        version: 6.0.1
       toucan-js:
         specifier: 4.0.0
         version: 4.0.0(patch_hash=qxsfpdzvzbhq2ecirbu5xq4vlq)
@@ -4086,9 +4074,6 @@ importers:
       eslint:
         specifier: catalog:default
         version: 9.39.1(jiti@2.6.1)
-      rimraf:
-        specifier: catalog:default
-        version: 6.0.1
       typescript:
         specifier: catalog:default
         version: 5.8.3
@@ -4355,9 +4340,6 @@ importers:
       resolve:
         specifier: ^1.22.8
         version: 1.22.8
-      rimraf:
-        specifier: catalog:default
-        version: 6.0.1
       semiver:
         specifier: ^1.1.0
         version: 1.1.0
@@ -11355,8 +11337,8 @@ packages:
     resolution: {integrity: sha512-zrteXnqYxfQh7l5FHyL38jL39di8H8rHoecLH3JNxH3BwOrBsNeabdap5e0I23lD4HHI8W5VFBZqG4Eaq5LNcw==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
 
-  jest-image-snapshot@6.4.0:
-    resolution: {integrity: sha512-IWGtSOnelwaVPd09STbJuLmnAwlBC/roJtTLGLb8M3TA0vfku3MRNEXmljTa1EMXqdRbA0oIWiqHFB1ttTGazQ==}
+  jest-image-snapshot@6.5.1:
+    resolution: {integrity: sha512-xlJFufgfY2Z4DsRsjcnTwxuynvo1bKdhf4OfcEftNuUAK+BwSCUtPmwlBGJhQ0XJXfm9JMAi/4BhQiHbaV8HrA==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
     peerDependencies:
       jest: '>=20 <=29'
@@ -12307,9 +12289,6 @@ packages:
   package-json-from-dist@1.0.0:
     resolution: {integrity: sha512-dATvCeZN/8wQsGywez1mzHtTlP22H8OEfPrVMLNr4/eGa+ijtLn/6M5f0dY8UKNrC2O9UCU6SSoG3qRKnt7STw==}
 
-  package-json-from-dist@1.0.1:
-    resolution: {integrity: sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw==}
-
   package-json@10.0.1:
     resolution: {integrity: sha512-ua1L4OgXSBdsu1FPb7F3tYH0F48a6kxvod4pLUlGY9COeJAJQNX/sNH2IiEmsxw7lqYiAwrdHMjz1FctOsyDQg==}
     engines: {node: '>=18'}
@@ -13231,16 +13210,6 @@ packages:
   reusify@1.0.4:
     resolution: {integrity: sha512-U9nH88a3fc/ekCF1l0/UP1IosiuIjyTh7hBvXVMHYgVcfGvt897Xguj2UOLDeI5BG2m7/uwyaLVT6fbtCwTyzw==}
     engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
-
-  rimraf@2.7.1:
-    resolution: {integrity: sha512-uWjbaKIK3T1OSVptzX7Nl6PvQ3qAGtKEtVRjRuazjfL3Bx5eI409VZSqgND+4UNnmzLVdPj9FqFJNPqBZFve4w==}
-    deprecated: Rimraf versions prior to v4 are no longer supported
-    hasBin: true
-
-  rimraf@6.0.1:
-    resolution: {integrity: sha512-9dkvaxAsk/xNXSJzMgFqqMCuFgt2+KsOFek3TMLfo8NCPfWpBmqwyNn5Y+NX56QUYfCtsyhF3ayiboEoUmJk/A==}
-    engines: {node: 20 || >=22}
-    hasBin: true
 
   rolldown-plugin-dts@0.16.12:
     resolution: {integrity: sha512-9dGjm5oqtKcbZNhpzyBgb8KrYiU616A7IqcFWG7Msp1RKAXQ/hapjivRg+g5IYWSiFhnk3OKYV5T4Ft1t8Cczg==}
@@ -22744,7 +22713,7 @@ snapshots:
 
   jest-get-type@29.6.3: {}
 
-  jest-image-snapshot@6.4.0:
+  jest-image-snapshot@6.5.1:
     dependencies:
       chalk: 4.1.2
       get-stdin: 5.0.1
@@ -22752,7 +22721,6 @@ snapshots:
       lodash: 4.17.21
       pixelmatch: 5.3.0
       pngjs: 3.4.0
-      rimraf: 2.7.1
       ssim.js: 3.5.0
 
   jest-matcher-utils@29.7.0:
@@ -23686,8 +23654,6 @@ snapshots:
 
   package-json-from-dist@1.0.0: {}
 
-  package-json-from-dist@1.0.1: {}
-
   package-json@10.0.1:
     dependencies:
       ky: 1.7.5
@@ -24607,15 +24573,6 @@ snapshots:
   rettime@0.7.0: {}
 
   reusify@1.0.4: {}
-
-  rimraf@2.7.1:
-    dependencies:
-      glob: 7.2.3
-
-  rimraf@6.0.1:
-    dependencies:
-      glob: 11.0.3
-      package-json-from-dist: 1.0.1
 
   rolldown-plugin-dts@0.16.12(rolldown@1.0.0-beta.44)(typescript@5.8.3):
     dependencies:

@@ -35,7 +35,6 @@
 		"eslint": "catalog:default",
 		"glob": "^10.4.5",
 		"html-rewriter-wasm": "^0.4.1",
-		"rimraf": "catalog:default",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default"
 	},
