@@ -1,7 +1,7 @@
 import { Button } from "@base-ui/react/button";
 import { Menu } from "@base-ui/react/menu";
+import { DotsThreeIcon } from "@phosphor-icons/react";
 import { useState } from "react";
-import DotsIcon from "../assets/icons/dots.svg?react";
 import { validateKey } from "../utils/kv-validation";
 import { CopyButton } from "./CopyButton";
 import type { KVEntry } from "../api";
@@ -38,7 +38,7 @@ function ActionMenu({ onEdit, onDelete }: ActionMenuProps) {
 	return (
 		<Menu.Root>
 			<Menu.Trigger className="action-menu-trigger" aria-label="Actions">
-				<DotsIcon />
+				<DotsThreeIcon size={16} weight="bold" />
 			</Menu.Trigger>
 			<Menu.Portal>
 				<Menu.Positioner sideOffset={4} align="end">
