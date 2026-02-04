@@ -211,7 +211,7 @@ export const d1InsightsCommand = createCommand({
 		if (json) {
 			logger.log(JSON.stringify(output, null, 2));
 		} else {
-			logger.log(JSON.stringify(output, null, 2));
+			logger.table(output);
 		}
 	},
 });
