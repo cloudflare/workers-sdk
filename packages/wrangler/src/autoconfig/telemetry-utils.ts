@@ -35,7 +35,7 @@ const autoConfigLocalState: Partial<AutoConfigLocalState> = {};
 function setAutoConfigTriggerCommand(
 	command: NonNullable<AutoConfigWranglerTriggerCommand>
 ) {
-	if ("trigger" in autoConfigLocalState) {
+	if (autoConfigLocalState.triggerCommand) {
 		throw new Error('Trying to set "trigger" in the autoconfig state again');
 	}
 	autoConfigLocalState.triggerCommand = command;
