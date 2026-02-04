@@ -350,7 +350,6 @@ export const containersRegistriesNamespace = createNamespace({
 		description: "Configure and manage non-Cloudflare registries",
 		status: "open beta",
 		owner: "Product: Cloudchamber",
-		hidden: true,
 	},
 });
 
@@ -360,7 +359,6 @@ export const containersRegistriesConfigureCommand = createCommand({
 			"Configure credentials for a non-Cloudflare container registry",
 		status: "open beta",
 		owner: "Product: Cloudchamber",
-		hidden: true,
 	},
 	args: {
 		DOMAIN: {
