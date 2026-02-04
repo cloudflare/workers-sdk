@@ -800,12 +800,13 @@ function getReplOverrides({
 }
 
 /**
- * Returns the overrides for `node:process` and `node:fs/promises`
+ * Returns the overrides for `node:process` (unenv or workerd)
  *
  * The native process v2 implementation:
  * - is enabled starting from 2025-09-15
  * - can be enabled with the "enable_nodejs_process_v2" flag
  * - can be disabled with the "disable_nodejs_process_v2" flag
+ * - can only be used when the fixes for iterable request/response bodies are enabled
  */
 function getProcessOverrides({
 	compatibilityDate,
