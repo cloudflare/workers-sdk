@@ -9,7 +9,7 @@ import { bold } from "kleur/colors";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
-import SCRIPT_LOCAL_EXPLORER_API from "worker:local-explorer/api";
+import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import { z } from "zod";
 import { fetch } from "../../http";
 import {
@@ -1138,8 +1138,8 @@ export function getGlobalServices({
 				compatibilityFlags: ["nodejs_compat"],
 				modules: [
 					{
-						name: "api.worker.js",
-						esModule: SCRIPT_LOCAL_EXPLORER_API(),
+						name: "explorer.worker.js",
+						esModule: SCRIPT_LOCAL_EXPLORER(),
 					},
 				],
 				bindings: [
