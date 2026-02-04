@@ -1,5 +1,6 @@
 import dedent from "ts-dedent";
 import type {
+	CheckRunCompletedEvent,
 	IssueCommentEvent,
 	IssuesEvent,
 	Schema,
@@ -28,7 +29,7 @@ async function getBotMessage(ai: Ai, prompt: string) {
 }
 
 async function isWranglerTeamMember(
-	pat: string,
+	apiToken: string,
 	username: string
 ): Promise<boolean> {
 	try {
@@ -37,7 +38,7 @@ async function isWranglerTeamMember(
 			{
 				headers: {
 					"User-Agent": "Cloudflare ANT Status bot",
-					Authorization: `Bearer ${pat}`,
+					Authorization: `Bearer ${apiToken}`,
 					Accept: "application/vnd.github+json",
 				},
 			}
@@ -51,9 +52,49 @@ async function isWranglerTeamMember(
 	}
 }
 
+type RequiredStatusChecksResult =
+	| { success: true; checks: string[] }
+	| { success: false; error: string };
+
+async function getRequiredStatusChecks(
+	apiToken: string,
+	owner: string,
+	repo: string,
+	branch: string
+): Promise<RequiredStatusChecksResult> {
+	try {
+		const response = await fetch(
+			`https://api.github.com/repos/${owner}/${repo}/branches/${branch}/protection/required_status_checks`,
+			{
+				headers: {
+					"User-Agent": "Cloudflare ANT Status bot",
+					Authorization: `Bearer ${apiToken}`,
+					Accept: "application/vnd.github+json",
+				},
+			}
+		);
+		if (!response.ok) {
+			console.error("Failed to fetch required status checks:", response.status);
+			return { success: false, error: `HTTP ${response.status}` };
+		}
+		const data = await response.json<{
+			// `contexts` is deprecated in favor of `checks` array
+			contexts?: string[];
+			checks?: { context: string; app_id?: number | null }[];
+		}>();
+		return {
+			success: true,
+			checks: data.checks?.map((c) => c.context) || data.contexts || [],
+		};
+	} catch (error) {
+		console.error("Error fetching required status checks:", error);
+		return { success: false, error: String(error) };
+	}
+}
+
 async function checkForSecurityIssue(
 	ai: Ai,
-	pat: string,
+	apiToken: string,
 	message: Schema
 ): Promise<null | {
 	type: "issue" | "pr";
@@ -65,7 +106,7 @@ async function checkForSecurityIssue(
 		return null;
 	}
 
-	if (await isWranglerTeamMember(pat, result.event.issue.user.login)) {
+	if (await isWranglerTeamMember(apiToken, result.event.issue.user.login)) {
 		return null;
 	}
 
@@ -155,11 +196,11 @@ type ProjectGQLResponse = {
 		};
 	};
 };
-async function getProjectId(pat: string) {
+async function getProjectId(apiToken: string) {
 	const data = await fetch("https://api.github.com/graphql", {
 		headers: {
 			"User-Agent": "Cloudflare ANT Status bot",
-			Authorization: `Bearer ${pat}`,
+			Authorization: `Bearer ${apiToken}`,
 		},
 		method: "POST",
 		body: JSON.stringify({
@@ -178,11 +219,11 @@ type PRGQLResponse = {
 		};
 	};
 };
-async function getPRId(pat: string, repo: string, number: string) {
+async function getPRId(apiToken: string, repo: string, number: string) {
 	const data = await fetch("https://api.github.com/graphql", {
 		headers: {
 			"User-Agent": "Cloudflare ANT Status bot",
-			Authorization: `Bearer ${pat}`,
+			Authorization: `Bearer ${apiToken}`,
 		},
 		method: "POST",
 		body: JSON.stringify({
@@ -199,13 +240,13 @@ async function getPRId(pat: string, repo: string, number: string) {
 	return data.data.repository.pullRequest.id;
 }
 
-async function addPRToProject(pat: string, repo: string, number: string) {
-	const projectId = await getProjectId(pat);
-	const prId = await getPRId(pat, repo, number);
+async function addPRToProject(apiToken: string, repo: string, number: string) {
+	const projectId = await getProjectId(apiToken);
+	const prId = await getPRId(apiToken, repo, number);
 	return await fetch("https://api.github.com/graphql", {
 		headers: {
 			"User-Agent": "Cloudflare ANT Status bot",
-			Authorization: `Bearer ${pat}`,
+			Authorization: `Bearer ${apiToken}`,
 		},
 		method: "POST",
 		body: JSON.stringify({
@@ -296,6 +337,58 @@ function isRepositoryAdvisoryEvent(
 		return message as RepositoryAdvisoryEvent;
 	}
 	return null;
+}
+
+function isCheckRunCompleted(
+	message: WebhookEvent
+): message is CheckRunCompletedEvent {
+	return (
+		"action" in message &&
+		message.action === "completed" &&
+		"check_run" in message
+	);
+}
+
+/**
+ * Returns information about a failed Version Packages PR check run, or null if the event is not relevant.
+ */
+function isVersionPackagesPRCheckRun(message: WebhookEvent): {
+	checkRun: CheckRunCompletedEvent["check_run"];
+	prNumber: number;
+	owner: string;
+	repo: string;
+} | null {
+	if (!isCheckRunCompleted(message)) {
+		return null;
+	}
+
+	const checkRun = message.check_run;
+
+	// Only process failures and timeouts (not cancelled)
+	if (
+		checkRun.conclusion !== "failure" &&
+		checkRun.conclusion !== "timed_out"
+	) {
+		return null;
+	}
+
+	// Check if this is from the changeset-release/main branch
+	if (checkRun.check_suite.head_branch !== "changeset-release/main") {
+		return null;
+	}
+
+	// Get the PR number from pull_requests array
+	const pr = checkRun.pull_requests[0];
+	if (!pr) {
+		return null;
+	}
+
+	return {
+		checkRun,
+		prNumber: pr.number,
+		owner: message.repository.owner.login,
+		repo: message.repository.name,
+	};
 }
 
 async function sendSecurityAlert(
@@ -424,6 +517,125 @@ async function sendRepositoryAdvisoryAlert(
 			],
 		},
 		"-repository-advisory-" + advisory.ghsa_id
+	);
+}
+
+/**
+ * Formats a duration given start and end timestamps as a string in "Mins Secs" format.
+ */
+function formatDuration(startedAt: string, completedAt: string): string {
+	const start = new Date(startedAt).getTime();
+	const end = new Date(completedAt).getTime();
+	const durationMs = end - start;
+	const minutes = Math.floor(durationMs / 60000);
+	const seconds = Math.floor((durationMs % 60000) / 1000);
+	return `${minutes}m ${seconds}s`;
+}
+
+async function sendVersionPackagesCIFailureAlert(
+	webhookUrl: string,
+	{
+		checkRun,
+		prNumber,
+		owner,
+		repo,
+	}: {
+		checkRun: CheckRunCompletedEvent["check_run"];
+		prNumber: number;
+		owner: string;
+		repo: string;
+	}
+) {
+	const conclusionEmoji = checkRun.conclusion === "timed_out" ? "⏱️" : "❌";
+	const conclusionText =
+		checkRun.conclusion === "timed_out" ? "Timed out" : "Failed";
+
+	return sendMessage(
+		webhookUrl,
+		{
+			cardsV2: [
+				{
+					cardId: `vp-ci-failure-${checkRun.id}`,
+					card: {
+						header: {
+							title: `${conclusionEmoji} CI Check ${conclusionText} on Version Packages PR`,
+							subtitle: `PR #${prNumber} in ${owner}/${repo}`,
+						},
+						sections: [
+							{
+								collapsible: false,
+								widgets: [
+									{
+										textParagraph: {
+											text: `<b>Check:</b> ${checkRun.name}\n<b>Conclusion:</b> ${conclusionText}\n<b>Duration:</b> ${formatDuration(checkRun.started_at, checkRun.completed_at)}`,
+										},
+									},
+									{
+										buttonList: {
+											buttons: [
+												{
+													text: "View Check Run",
+													onClick: {
+														openLink: {
+															url: checkRun.html_url,
+														},
+													},
+												},
+												{
+													text: "View PR",
+													onClick: {
+														openLink: {
+															url: `https://github.com/${owner}/${repo}/pull/${prNumber}`,
+														},
+													},
+												},
+											],
+										},
+									},
+								],
+							},
+						],
+					},
+				},
+			],
+		},
+		`-vp-ci-failure-pr-${prNumber}`
+	);
+}
+
+async function sendGitHubAPIFailureAlert(
+	webhookUrl: string,
+	error: string,
+	additionalInfo: string
+) {
+	return sendMessage(
+		webhookUrl,
+		{
+			cardsV2: [
+				{
+					cardId: "github-api-failure",
+					card: {
+						header: {
+							title: "⚠️ GitHub API Request Failed",
+							subtitle: additionalInfo,
+						},
+						sections: [
+							{
+								collapsible: false,
+								widgets: [
+									{
+										textParagraph: {
+											text: `<b>Error:</b> ${error}\n\nThis may affect the bot's ability to filter alerts correctly. Please investigate.`,
+										},
+									},
+								],
+							},
+						],
+					},
+				},
+			],
+		},
+		"-github-api-failure"
 	);
 }
 
@@ -605,6 +817,42 @@ export default {
 					env.ALERTS_WEBHOOK,
 					maybeRepositoryAdvisory
 				);
+			}
+			// Notifies when a required CI check fails on the Version Packages PR
+			const maybeVersionPackagesFailure = isVersionPackagesPRCheckRun(body);
+			if (maybeVersionPackagesFailure) {
+				// Fetch required status checks from branch protection
+				const requiredChecksResult = await getRequiredStatusChecks(
+					env.GITHUB_PAT,
+					"cloudflare",
+					"workers-sdk",
+					"main"
+				);
+
+				if (!requiredChecksResult.success) {
+					// Alert about the API failure
+					await sendGitHubAPIFailureAlert(
+						env.ALERTS_WEBHOOK,
+						requiredChecksResult.error,
+						"Fetching required status checks for Version Packages PR"
+					);
+					// Still send the CI failure alert since we can't filter
+					await sendVersionPackagesCIFailureAlert(
+						env.ALERTS_WEBHOOK,
+						maybeVersionPackagesFailure
+					);
+				} else if (
+					requiredChecksResult.checks.length === 0 ||
+					requiredChecksResult.checks.includes(
+						maybeVersionPackagesFailure.checkRun.name
+					)
+				) {
+					// Only alert if this check is a required check (or if there are no required checks)
+					await sendVersionPackagesCIFailureAlert(
+						env.ALERTS_WEBHOOK,
+						maybeVersionPackagesFailure
+					);
+				}
 			}
 		}
 

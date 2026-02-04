@@ -10,7 +10,7 @@ it("dispatches fetch event", { timeout: 10_000 }, async ({ expect }) => {
 		Call /lb to test load balancing"
 	`);
 	// however if you attempt to start a container, you should expect an error
-	await expect(() =>
+	await expect(
 		SELF.fetch("http://example.com/container/hello")
 	).rejects.toThrow();
 });

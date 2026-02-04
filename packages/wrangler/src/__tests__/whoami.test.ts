@@ -323,6 +323,69 @@ describe("whoami", () => {
 		`);
 	});
 
+	it("should redact email and account names in non-interactive mode", async () => {
+		setIsTTY(false);
+		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
+		msw.use(
+			http.get(
+				"*/memberships",
+				() =>
+					HttpResponse.json(
+						createFetchResult([
+							{ account: { id: "account-2" }, roles: ["Test role"] },
+						])
+					),
+				{ once: true }
+			)
+		);
+		await runWrangler(`whoami --account "account-2"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Getting User settings...
+			👋 You are logged in with an OAuth Token, associated with the email (redacted).
+			┌─┬─┐
+			│ Account Name │ Account ID │
+			├─┼─┤
+			│ (redacted) │ account-1 │
+			├─┼─┤
+			│ (redacted) │ account-2 │
+			├─┼─┤
+			│ (redacted) │ account-3 │
+			└─┴─┘
+			🔓 Token Permissions:
+			Scope (Access)
+
+			[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mWrangler is missing some expected Oauth scopes. To fix this, run \`wrangler login\` to refresh your token. The missing scopes are:[0m
+
+			  - account:read
+			  - user:read
+			  - workers:write
+			  - workers_kv:write
+			  - workers_routes:write
+			  - workers_scripts:write
+			  - workers_tail:read
+			  - d1:write
+			  - pages:write
+			  - zone:read
+			  - ssl_certs:write
+			  - ai:write
+			  - ai-search:write
+			  - ai-search:run
+			  - queues:write
+			  - pipelines:write
+			  - secrets_store:write
+			  - containers:write
+			  - cloudchamber:write
+			  - connectivity:admin
+
+
+			🎢 Membership roles in \\"(redacted)\\": Contact account super admin to change your permissions.
+			- Test role"
+		`);
+	});
+
 	it("should display membership error on authentication error 10000", async () => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		msw.use(
