@@ -1,5 +1,5 @@
 import { APIError } from "@cloudflare/workers-utils";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import { logger } from "../../logger";
 import { retryOnAPIFailure } from "../../utils/retry";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -13,7 +13,9 @@ describe("retryOnAPIFailure", () => {
 		return () => (logger.loggerLevel = level);
 	});
 
-	it("should retry 5xx errors and succeed if the 3rd try succeeds", async () => {
+	it("should retry 5xx errors and succeed if the 3rd try succeeds", async ({
+		expect,
+	}) => {
 		let attempts = 0;
 
 		await retryOnAPIFailure(() => {
@@ -33,7 +35,7 @@ describe("retryOnAPIFailure", () => {
 		`);
 	});
 
-	it("should throw 5xx error after all retries fail", async () => {
+	it("should throw 5xx error after all retries fail", async ({ expect }) => {
 		let attempts = 0;
 
 		await expect(() =>
@@ -55,7 +57,7 @@ describe("retryOnAPIFailure", () => {
 		`);
 	});
 
-	it("should not retry non-5xx errors", async () => {
+	it("should not retry non-5xx errors", async ({ expect }) => {
 		let attempts = 0;
 
 		await expect(() =>
@@ -68,7 +70,7 @@ describe("retryOnAPIFailure", () => {
 		expect(getRetryAndErrorLogs(std.debug)).toMatchInlineSnapshot(`Array []`);
 	});
 
-	it("should retry TypeError", async () => {
+	it("should retry TypeError", async ({ expect }) => {
 		let attempts = 0;
 
 		await expect(() =>
@@ -87,7 +89,7 @@ describe("retryOnAPIFailure", () => {
 		`);
 	});
 
-	it("should not retry other errors", async () => {
+	it("should not retry other errors", async ({ expect }) => {
 		let attempts = 0;
 
 		await expect(() =>
@@ -100,7 +102,9 @@ describe("retryOnAPIFailure", () => {
 		expect(getRetryAndErrorLogs(std.debug)).toMatchInlineSnapshot(`Array []`);
 	});
 
-	it("should retry custom APIError implementation with non-5xx error", async () => {
+	it("should retry custom APIError implementation with non-5xx error", async ({
+		expect,
+	}) => {
 		let checkedCustomIsRetryable = false;
 		class CustomAPIError extends APIError {
 			isRetryable(): boolean {

@@ -2,7 +2,9 @@ import { writeFile } from "node:fs/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import { FormData } from "undici";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in mockPostVersion callback */
 import { afterEach, describe, expect, it, test } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../../helpers/mock-account-id";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { clearDialogs, mockPrompt } from "../../helpers/mock-dialogs";
