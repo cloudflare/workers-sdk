@@ -6,6 +6,6 @@
  * Response body after deleting an image registry.
  */
 export type DeleteImageRegistryResponse = {
-	deleted: boolean;
+	domain: string;
 	secrets_store_ref?: string;
 };

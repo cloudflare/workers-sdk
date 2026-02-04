@@ -23,7 +23,13 @@ import { createCommand, createNamespace } from "../core/create-command";
 import { confirm, prompt } from "../dialogs";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
-import { createSecret, createStore, listStores } from "../secrets-store/client";
+import {
+	createSecret,
+	createStore,
+	deleteSecret,
+	getSecretByName,
+	listStores,
+} from "../secrets-store/client";
 import { validateSecretName } from "../secrets-store/commands";
 import { getAccountId } from "../user";
 import { readFromStdin, trimTrailingWhitespace } from "../utils/std";
@@ -33,6 +39,7 @@ import type {
 	CommonYargsArgv,
 	StrictYargsOptionsToInterface,
 } from "../yargs-types";
+import type { DeleteImageRegistryResponse } from "@cloudflare/containers-shared";
 import type { ImageRegistryAuth } from "@cloudflare/containers-shared/src/client/models/ImageRegistryAuth";
 import type { Config } from "@cloudflare/workers-utils";
 
@@ -297,7 +304,8 @@ const _registryDeleteYargs = (yargs: CommonYargsArgv) => {
 		});
 };
 async function registryDeleteCommand(
-	deleteArgs: StrictYargsOptionsToInterface<typeof _registryDeleteYargs>
+	deleteArgs: StrictYargsOptionsToInterface<typeof _registryDeleteYargs>,
+	config: Config
 ) {
 	startSection(`Delete registry ${deleteArgs.DOMAIN}`);
 
@@ -311,21 +319,12 @@ async function registryDeleteCommand(
 		}
 	}
 
+	let res: DeleteImageRegistryResponse;
+
 	try {
-		const res = await promiseSpinner(
+		res = await promiseSpinner(
 			ImageRegistriesService.deleteImageRegistry(deleteArgs.DOMAIN)
 		);
-
-		if (res.secrets_store_ref) {
-			startSection("Warning: A dangling secret was left behind.");
-			const yes = await confirm(`Delete the secret ${res.secrets_store_ref}?`);
-
-			if (yes) {
-				// TODO: Delete the associated secret.
-			} else {
-				endSection("The secret was not deleted.");
-			}
-		}
 	} catch (e) {
 		if (e instanceof ApiError) {
 			if (e.status === 404) {
@@ -343,6 +342,51 @@ async function registryDeleteCommand(
 	}
 
 	endSection(`Deleted registry ${deleteArgs.DOMAIN}\n`);
+
+	if (res.secrets_store_ref) {
+		// returned as "store-id:secret-name"
+		const [storeId, secretName] = res.secrets_store_ref.split(":");
+
+		startSection("Warning: A dangling secret was left behind.");
+		if (!deleteArgs.skipConfirmation) {
+			const yes = await confirm(
+				`Do you want to delete the secret "${secretName}"? (Store ID: ${storeId})`
+			);
+
+			if (!yes) {
+				endSection("The secret was not deleted.");
+				return;
+			}
+		}
+
+		const accountId = await getAccountId(config);
+
+		try {
+			const secretId = await promiseSpinner(
+				getSecretByName(config, accountId, storeId, secretName)
+			);
+
+			if (!secretId) {
+				endSection(
+					`Secret "${secretName}" not found in store. It may have already been deleted.`
+				);
+				return;
+			}
+
+			await promiseSpinner(deleteSecret(config, accountId, storeId, secretId));
+		} catch (e) {
+			if (e instanceof ApiError) {
+				throw new APIError({
+					status: e.status,
+					text: `Error deleting secret:\n` + formatError(e),
+				});
+			} else {
+				throw e;
+			}
+		}
+
+		endSection(`Deleted secret ${res.secrets_store_ref}`);
+	}
 }
 
 export const containersRegistriesNamespace = createNamespace({
@@ -448,6 +492,6 @@ export const containersRegistriesDeleteCommand = createCommand({
 	positionalArgs: ["DOMAIN"],
 	async handler(args, { config }) {
 		await fillOpenAPIConfiguration(config, containersScope);
-		await registryDeleteCommand(args);
+		await registryDeleteCommand(args, config);
 	},
 });

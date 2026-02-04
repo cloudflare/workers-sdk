@@ -56,6 +56,7 @@ export type { CreateSSHPublicKeyError } from "./models/CreateSSHPublicKeyError";
 export type { CreateSSHPublicKeyRequestBody } from "./models/CreateSSHPublicKeyRequestBody";
 export type { CustomerImageRegistry } from "./models/CustomerImageRegistry";
 export type { DeleteDeploymentError } from "./models/DeleteDeploymentError";
+export type { DeleteImageRegistryResponse } from "./models/DeleteImageRegistryResponse";
 export type { DeploymentAlreadyExists } from "./models/DeploymentAlreadyExists";
 export type { DeploymentCheck } from "./models/DeploymentCheck";
 export type { DeploymentCheckHTTP } from "./models/DeploymentCheckHTTP";
