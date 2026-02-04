@@ -185,7 +185,6 @@ export async function getDetailsForAutoConfig({
 		"autoconfig_detection_completed",
 		{
 			appId: getAutoConfigAppId(),
-			isCI,
 			framework: framework.id,
 			configured,
 			success: true,

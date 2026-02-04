@@ -20,7 +20,11 @@ import {
 } from "./metrics-config";
 import type { CommandDefinition } from "../core/types";
 import type { MetricsConfigOptions } from "./metrics-config";
-import type { CommonEventProperties, Events } from "./types";
+import type {
+	CommonCommandEventProperties,
+	CommonEventProperties,
+	Events,
+} from "./types";
 
 const SPARROW_URL = "https://sparrow.cloudflare.com";
 
@@ -60,6 +64,27 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 		// Silent failure - agent remains null
 	}
 
+	const commonEventProperties: CommonEventProperties = {
+		amplitude_session_id,
+		amplitude_event_id: amplitude_event_id++,
+		wranglerVersion,
+		wranglerMajorVersion,
+		wranglerMinorVersion,
+		wranglerPatchVersion,
+		osPlatform: getPlatform(),
+		osVersion: getOSVersion(),
+		nodeVersion: getNodeVersion(),
+		packageManager: sniffUserAgent(),
+		isFirstUsage: readMetricsConfig().permission === undefined,
+		configFileType: configFormat(options.configPath),
+		isCI: CI.isCI(),
+		isPagesCI: isPagesCI(),
+		isWorkersCI: isWorkersCI(),
+		isInteractive: isInteractive(),
+		hasAssets: options.hasAssets ?? false,
+		agent,
+	};
+
 	return {
 		/**
 		 * This doesn't have a session id and is not tied to the command events.
@@ -72,6 +97,7 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			dispatch({
 				name,
 				properties: {
+					...commonEventProperties,
 					category: "Workers",
 					wranglerVersion,
 					wranglerMajorVersion,
@@ -112,33 +138,16 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 				const argsUsed = properties.argsUsed;
 				const argsCombination = argsUsed.join(", ");
 
-				const commonEventProperties: CommonEventProperties = {
-					amplitude_session_id,
-					amplitude_event_id: amplitude_event_id++,
-					wranglerVersion,
-					wranglerMajorVersion,
-					wranglerMinorVersion,
-					wranglerPatchVersion,
-					osPlatform: getPlatform(),
-					osVersion: getOSVersion(),
-					nodeVersion: getNodeVersion(),
-					packageManager: sniffUserAgent(),
-					isFirstUsage: readMetricsConfig().permission === undefined,
-					configFileType: configFormat(options.configPath),
-					isCI: CI.isCI(),
-					isPagesCI: isPagesCI(),
-					isWorkersCI: isWorkersCI(),
-					isInteractive: isInteractive(),
-					hasAssets: options.hasAssets ?? false,
+				const commonCommandEventProperties: CommonCommandEventProperties = {
+					...commonEventProperties,
 					argsUsed,
 					argsCombination,
-					agent,
 				};
 
 				dispatch({
 					name,
 					properties: {
-						...commonEventProperties,
+						...commonCommandEventProperties,
 						...properties,
 					},
 				});

@@ -221,7 +221,6 @@ export async function runAutoConfig(
 			"autoconfig_configuration_completed",
 			{
 				appId: getAutoConfigAppId(),
-				isCI,
 				framework: autoConfigDetails.framework?.id,
 				success: false,
 				errorType: getErrorType(error),
@@ -238,7 +237,6 @@ export async function runAutoConfig(
 		"autoconfig_configuration_completed",
 		{
 			appId: getAutoConfigAppId(),
-			isCI,
 			framework: autoConfigDetails.framework?.id,
 			success: true,
 		},
