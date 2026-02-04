@@ -658,4 +658,42 @@ describe("update wrangler config", () => {
 		expect(newConfig).toContain("no_nodejs_compat");
 		expect(newConfig).not.toContain('"nodejs_compat"');
 	});
+
+	test("does not add nodejs_compat for Python projects (toml)", async ({
+		expect,
+	}) => {
+		const pythonCtx = createTestContext("test", {
+			...ctx.args,
+			lang: "python",
+		});
+		const toml = [`name = "my-worker"`, `main = "src/index.py"`].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(pythonCtx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).not.toContain("nodejs_compat");
+	});
+
+	test("does not add nodejs_compat for Python projects (json)", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const pythonCtx = createTestContext("test", {
+			...ctx.args,
+			lang: "python",
+		});
+		const json = JSON.stringify({
+			name: "my-worker",
+			main: "src/index.py",
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(pythonCtx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).not.toContain("nodejs_compat");
+	});
 });

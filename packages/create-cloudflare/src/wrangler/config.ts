@@ -68,7 +68,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 		wranglerJson = appendJSONProperty(wranglerJson, "observability", {
 			enabled: true,
 		});
-		wranglerJson = addNodejsCompatFlag(wranglerJson);
+		wranglerJson = addNodejsCompatFlag(wranglerJson, ctx);
 
 		addHintsAsJsonComments(wranglerJson);
 
@@ -88,7 +88,7 @@ export const updateWranglerConfig = async (ctx: C3Context) => {
 			ctx.project.path,
 		);
 		wranglerToml.observability ??= { enabled: true };
-		addNodejsCompatFlagToToml(wranglerToml);
+		addNodejsCompatFlagToToml(wranglerToml, ctx);
 
 		writeWranglerToml(
 			ctx,
@@ -328,11 +328,21 @@ function generateHintsAsTomlComments(wranglerConfig: TomlTable): string {
  * Adds the `nodejs_compat` flag to the `compatibility_flags` array in a JSON wrangler config.
  * If the array doesn't exist, it will be created. If `nodejs_compat`, `nodejs_compat_v2`,
  * or `no_nodejs_compat` is already present, no changes are made.
+ * For Python projects, no changes are made since nodejs_compat is not compatible with Python workers.
  *
  * @param wranglerConfig The wrangler JSON configuration object.
+ * @param ctx The C3 context.
  * @returns The updated configuration object.
  */
-function addNodejsCompatFlag(wranglerConfig: CommentObject): CommentObject {
+function addNodejsCompatFlag(
+	wranglerConfig: CommentObject,
+	ctx: C3Context,
+): CommentObject {
+	// Skip adding nodejs_compat for Python projects
+	if (ctx.args.lang === "python") {
+		return wranglerConfig;
+	}
+
 	const existingFlags = Array.isArray(wranglerConfig.compatibility_flags)
 		? (wranglerConfig.compatibility_flags as string[])
 		: [];
@@ -355,10 +365,20 @@ function addNodejsCompatFlag(wranglerConfig: CommentObject): CommentObject {
  * Adds the `nodejs_compat` flag to the `compatibility_flags` array in a TOML wrangler config.
  * If the array doesn't exist, it will be created. If `nodejs_compat`, `nodejs_compat_v2`,
  * or `no_nodejs_compat` is already present, no changes are made.
+ * For Python projects, no changes are made since nodejs_compat is not compatible with Python workers.
  *
  * @param wranglerConfig The wrangler TOML configuration object.
+ * @param ctx The C3 context.
  */
-function addNodejsCompatFlagToToml(wranglerConfig: TomlTable): void {
+function addNodejsCompatFlagToToml(
+	wranglerConfig: TomlTable,
+	ctx: C3Context,
+): void {
+	// Skip adding nodejs_compat for Python projects
+	if (ctx.args.lang === "python") {
+		return;
+	}
+
 	const existingFlags = Array.isArray(wranglerConfig.compatibility_flags)
 		? (wranglerConfig.compatibility_flags as string[])
 		: [];
