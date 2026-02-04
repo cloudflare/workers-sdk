@@ -11,6 +11,8 @@
 	"devDependencies": {
 		"@actions/core": "^1.10.1",
 		"@actions/github": "^6.0.0",
+		"@changesets/parse": "^0.4.1",
+		"@changesets/types": "^6.1.0",
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@octokit/webhooks-types": "^7.6.1",

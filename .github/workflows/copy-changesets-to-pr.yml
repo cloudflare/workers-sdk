@@ -1,0 +1,54 @@
+name: Copy Changesets to PR
+
+on:
+  pull_request:
+    types: [opened]
+    paths:
+      - ".changeset/*.md"
+
+jobs:
+  copy-changesets:
+    # Don't run on the Version Packages PR
+    if: github.head_ref != 'changeset-release/main'
+    runs-on: ubuntu-slim
+
+    permissions:
+      pull-requests: write
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get added changeset files
+        id: changesets
+        uses: dorny/paths-filter@v3
+        with:
+          list-files: json
+          filters: |
+            added:
+              - added: '.changeset/*.md'
+              - '!.changeset/README.md'
+
+      - name: Setup Node.js
+        if: steps.changesets.outputs.added == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install pnpm
+        if: steps.changesets.outputs.added == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - name: Install Dependencies
+        if: steps.changesets.outputs.added == 'true'
+        run: pnpm i -F tools --frozen-lockfile
+
+      - name: Copy changesets to PR description
+        if: steps.changesets.outputs.added == 'true'
+        run: node -r esbuild-register tools/github-workflow-helpers/copy-changesets-to-pr.ts
+        env:
+          INPUT_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ADDED_CHANGESETS: ${{ steps.changesets.outputs.added_files }}
