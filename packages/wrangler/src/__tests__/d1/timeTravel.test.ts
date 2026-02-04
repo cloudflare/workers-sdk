@@ -1,7 +1,7 @@
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { throwIfDatabaseIsAlpha } from "../../d1/timeTravel/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -19,7 +19,9 @@ describe("time-travel", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	describe("restore", () => {
-		it("should reject the use of --timestamp with --bookmark", async () => {
+		it("should reject the use of --timestamp with --bookmark", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 			writeWranglerConfig({
 				d1_databases: [
@@ -38,7 +40,7 @@ describe("time-travel", () => {
 	});
 
 	describe("throwIfDatabaseIsAlpha", () => {
-		it("should throw for alpha dbs", async () => {
+		it("should throw for alpha dbs", async ({ expect }) => {
 			writeWranglerConfig({
 				d1_databases: [
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
@@ -78,7 +80,7 @@ describe("time-travel", () => {
 				"Time travel is not available for alpha D1 databases. You will need to migrate to a new database for access to this feature."
 			);
 		});
-		it("should not throw for non-alpha dbs", async () => {
+		it("should not throw for non-alpha dbs", async ({ expect }) => {
 			writeWranglerConfig({
 				d1_databases: [
 					{ binding: "DATABASE", database_name: "db", database_id: "xxxx" },
@@ -173,7 +175,9 @@ describe("time-travel", () => {
 			vi.useRealTimers();
 		});
 		describe("restore", () => {
-			it("should print as json, without wrangler banner", async () => {
+			it("should print as json, without wrangler banner", async ({
+				expect,
+			}) => {
 				await runWrangler(
 					`d1 time-travel restore db --timestamp=2011-09-05T14:48:00.000Z --json`
 				);
@@ -184,7 +188,7 @@ describe("time-travel", () => {
 				`);
 			});
 
-			it("should pretty print by default", async () => {
+			it("should pretty print by default", async ({ expect }) => {
 				await runWrangler(
 					`d1 time-travel restore db --timestamp=2011-09-05T14:48:00.000Z"`
 				);
@@ -209,7 +213,9 @@ describe("time-travel", () => {
 			});
 		});
 		describe("info", () => {
-			it("should print as json, without wrangler banner", async () => {
+			it("should print as json, without wrangler banner", async ({
+				expect,
+			}) => {
 				await runWrangler(
 					`d1 time-travel info db --timestamp=2011-09-05T14:48:00.000Z --json`
 				);
@@ -225,7 +231,7 @@ describe("time-travel", () => {
 					}"
 				`);
 			});
-			it("should pretty print by default", async () => {
+			it("should pretty print by default", async ({ expect }) => {
 				await runWrangler(
 					`d1 time-travel info db --timestamp=2011-09-05T14:48:00.000Z"`
 				);

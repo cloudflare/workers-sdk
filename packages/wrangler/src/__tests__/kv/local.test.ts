@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -11,7 +11,7 @@ describe("kv", () => {
 	const std = mockConsoleMethods();
 
 	describe("local", () => {
-		it("should put local kv storage", async () => {
+		it("should put local kv storage", async ({ expect }) => {
 			await runWrangler(
 				`kv key get val --namespace-id some-namespace-id  --text`
 			);
@@ -37,7 +37,7 @@ describe("kv", () => {
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`"value"`);
 		});
 
-		it("should list local kv storage", async () => {
+		it("should list local kv storage", async ({ expect }) => {
 			await runWrangler(`kv key list --namespace-id some-namespace-id`);
 			expect(std.out).toMatchInlineSnapshot(`"[]"`);
 			const keyValues = [
@@ -121,7 +121,7 @@ describe("kv", () => {
 			`);
 		});
 
-		it("should delete local kv storage", async () => {
+		it("should delete local kv storage", async ({ expect }) => {
 			await runWrangler(
 				`kv key put val value --namespace-id some-namespace-id`
 			);
@@ -157,7 +157,7 @@ describe("kv", () => {
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`"Value not found"`);
 		});
 
-		it("should put local bulk kv storage", async () => {
+		it("should put local bulk kv storage", async ({ expect }) => {
 			await runWrangler(`kv key list --namespace-id bulk-namespace-id`);
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`"[]"`);
 
@@ -217,7 +217,7 @@ describe("kv", () => {
 			`);
 		});
 
-		it("should delete local bulk kv storage", async () => {
+		it("should delete local bulk kv storage", async ({ expect }) => {
 			const keyValues = [
 				{
 					key: "hello",
@@ -271,7 +271,7 @@ describe("kv", () => {
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`"[]"`);
 		});
 
-		it("should delete local bulk kv storage ({ name })", async () => {
+		it("should delete local bulk kv storage ({ name })", async ({ expect }) => {
 			const keyValues = [
 				{
 					key: "hello",
@@ -332,7 +332,7 @@ describe("kv", () => {
 			expect(std.getAndClearOut()).toMatchInlineSnapshot(`"[]"`);
 		});
 
-		it("should get local bulk kv storage", async () => {
+		it("should get local bulk kv storage", async ({ expect }) => {
 			const keyValues = [
 				{
 					key: "hello",
@@ -385,7 +385,7 @@ describe("kv", () => {
 			`);
 		});
 
-		it("should follow persist-to for local kv storage", async () => {
+		it("should follow persist-to for local kv storage", async ({ expect }) => {
 			await runWrangler(
 				`kv key put val value --namespace-id some-namespace-id`
 			);
