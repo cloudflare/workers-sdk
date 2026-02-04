@@ -142,6 +142,17 @@ export async function runAutoConfig(
 				`✋  ${"Autoconfig process run in dry-run mode, existing now."}`
 			);
 			logger.log("");
+
+			sendMetricsEvent(
+				"autoconfig_configuration_completed",
+				{
+					appId: getAutoConfigAppId(),
+					framework: autoConfigDetails.framework?.id,
+					success: true,
+				},
+				{}
+			);
+
 			return autoConfigSummary;
 		}
 
