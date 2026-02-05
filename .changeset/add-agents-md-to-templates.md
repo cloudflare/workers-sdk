@@ -10,5 +10,4 @@ The file includes:
 
 - Links to Cloudflare documentation and MCP servers
 - Essential wrangler commands (`dev`, `deploy`, `types`)
-- Node.js compatibility flag configuration for common errors
 - Pointers to product-specific documentation for limits and APIs
