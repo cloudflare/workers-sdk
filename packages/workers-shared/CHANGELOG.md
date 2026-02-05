@@ -1,5 +1,11 @@
 # @cloudflare/workers-shared
 
+## 0.18.11
+
+### Patch Changes
+
+- [#12416](https://github.com/cloudflare/workers-sdk/pull/12416) [`38ad241`](https://github.com/cloudflare/workers-sdk/commit/38ad2416ca2bb357857038991401cf07fd3820e1) Thanks [@WillTaylorDev](https://github.com/WillTaylorDev)! - Revert reduced cache TTL. Restore 60-second TTL for KV asset fetches.
+
 ## 0.18.10
 
 ### Patch Changes

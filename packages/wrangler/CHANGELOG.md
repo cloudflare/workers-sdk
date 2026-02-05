@@ -1,5 +1,50 @@
 # wrangler
 
+## 4.63.0
+
+### Minor Changes
+
+- [#12386](https://github.com/cloudflare/workers-sdk/pull/12386) [`447daa3`](https://github.com/cloudflare/workers-sdk/commit/447daa3b0b56b916df4906b25a659ed58c28888e) Thanks [@NuroDev](https://github.com/NuroDev)! - Added new "open local explorer" hotkey for experimental/WIP local resource explorer
+
+  When running `wrangler dev` with the experimental local explorer feature enabled, you can now press the `e` hotkey to open the local resource explorer UI in your browser.
+
+### Patch Changes
+
+- [#11350](https://github.com/cloudflare/workers-sdk/pull/11350) [`ee9b81f`](https://github.com/cloudflare/workers-sdk/commit/ee9b81fb0cf4aa9812a0b043082076e4c4d8359e) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - fix: improve error message when the entrypoint is incorrect
+
+  Error messages for incorrect entrypoint configuration have been improved to provide clearer and more actionable feedback. The updated messages help users understand what went wrong and how to fix their configuration.
+
+- [#12402](https://github.com/cloudflare/workers-sdk/pull/12402) [`63f1adb`](https://github.com/cloudflare/workers-sdk/commit/63f1adbef0dde3cc6fced41b2aa973eedcb8356f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260131.0 | 1.20260203.0 |
+
+- [#12418](https://github.com/cloudflare/workers-sdk/pull/12418) [`ba13de9`](https://github.com/cloudflare/workers-sdk/commit/ba13de92c9b9f1b51ff6085234cb9b7ced6def34) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260203.0 | 1.20260205.0 |
+
+- [#12216](https://github.com/cloudflare/workers-sdk/pull/12216) [`fe3af35`](https://github.com/cloudflare/workers-sdk/commit/fe3af359e9466afbf9df83c51e43a923e547cfbe) Thanks [@ichernetsky-cf](https://github.com/ichernetsky-cf)! - Deprecate 'wrangler cloudchamber apply' in favor of 'wrangler deploy'
+
+- [#12368](https://github.com/cloudflare/workers-sdk/pull/12368) [`bd4bb98`](https://github.com/cloudflare/workers-sdk/commit/bd4bb98677f065f19872bbf05024b6ad13284a89) Thanks [@KianNH](https://github.com/KianNH)! - Preserve Containers configuration when using `versions` commands
+
+  Previously, commands like `wrangler versions upload` would inadvertently disable Containers on associated Durable Object namespaces because the `containers` property was being omitted from the API request body.
+
+- [#12396](https://github.com/cloudflare/workers-sdk/pull/12396) [`dab4bc9`](https://github.com/cloudflare/workers-sdk/commit/dab4bc90e9085d25cdd2596070470cfe4f681e21) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - fix: redact email addresses and account names in non-interactive mode
+
+  To prevent sensitive information from being exposed in public CI logs, email addresses and account names are now redacted when running in non-interactive mode (e.g., CI environments). Account IDs remain visible to aid debugging.
+
+- [#12378](https://github.com/cloudflare/workers-sdk/pull/12378) [`18c0784`](https://github.com/cloudflare/workers-sdk/commit/18c07842374657bc4914c9b4d872273c70db0545) Thanks [@X6TXY](https://github.com/X6TXY)! - Truncate Pages commit messages at UTF-8 boundaries to avoid invalid UTF-8
+
+- Updated dependencies [[`63f1adb`](https://github.com/cloudflare/workers-sdk/commit/63f1adbef0dde3cc6fced41b2aa973eedcb8356f), [`ba13de9`](https://github.com/cloudflare/workers-sdk/commit/ba13de92c9b9f1b51ff6085234cb9b7ced6def34), [`83adb2c`](https://github.com/cloudflare/workers-sdk/commit/83adb2cb7f909857d79208474b78cdb7ac4e0638)]:
+  - miniflare@4.20260205.0
+
 ## 4.62.0
 
 ### Minor Changes

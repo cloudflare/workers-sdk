@@ -1,5 +1,34 @@
 # miniflare
 
+## 4.20260205.0
+
+### Minor Changes
+
+- [#12267](https://github.com/cloudflare/workers-sdk/pull/12267) [`83adb2c`](https://github.com/cloudflare/workers-sdk/commit/83adb2cb7f909857d79208474b78cdb7ac4e0638) Thanks [@NuroDev](https://github.com/NuroDev)! - Implement local D1 API for experimental/WIP local resource explorer
+
+  The following APIs have been implemented:
+
+  - `GET /d1/database` - Returns a list of D1 databases.
+  - `POST /d1/database/{database_id}/raw` - Returns the query result rows as arrays rather than objects.
+
+### Patch Changes
+
+- [#12402](https://github.com/cloudflare/workers-sdk/pull/12402) [`63f1adb`](https://github.com/cloudflare/workers-sdk/commit/63f1adbef0dde3cc6fced41b2aa973eedcb8356f) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260131.0 | 1.20260203.0 |
+
+- [#12418](https://github.com/cloudflare/workers-sdk/pull/12418) [`ba13de9`](https://github.com/cloudflare/workers-sdk/commit/ba13de92c9b9f1b51ff6085234cb9b7ced6def34) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260203.0 | 1.20260205.0 |
+
 ## 4.20260131.0
 
 ### Minor Changes
