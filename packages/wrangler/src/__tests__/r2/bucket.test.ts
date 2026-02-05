@@ -1,7 +1,9 @@
 import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers and module-level helpers */
 import { beforeEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { actionsForEventCategories } from "../../r2/helpers/notification";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
