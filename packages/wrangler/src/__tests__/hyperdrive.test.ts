@@ -1,6 +1,6 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -19,7 +19,9 @@ describe("hyperdrive help", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	it("should show help text when no arguments are passed", async () => {
+	it("should show help text when no arguments are passed", async ({
+		expect,
+	}) => {
 		await runWrangler("hyperdrive");
 		await endEventLoop();
 
@@ -46,7 +48,9 @@ describe("hyperdrive help", () => {
 		`);
 	});
 
-	it("should show help when an invalid argument is pased", async () => {
+	it("should show help when an invalid argument is pased", async ({
+		expect,
+	}) => {
 		await expect(() => runWrangler("hyperdrive qwer")).rejects.toThrow(
 			"Unknown argument: qwer"
 		);
@@ -100,7 +104,7 @@ describe("hyperdrive commands", () => {
 		clearDialogs();
 	});
 
-	it("should handle creating a hyperdrive config", async () => {
+	it("should handle creating a hyperdrive config", async ({ expect }) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb'"
@@ -138,7 +142,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should not include remote option in hyperdrive config output (hyperdrive does not support remote bindings)", async () => {
+	it("should not include remote option in hyperdrive config output (hyperdrive does not support remote bindings)", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb'"
@@ -149,7 +155,9 @@ describe("hyperdrive commands", () => {
 		expect(std.out).not.toContain("remote");
 	});
 
-	it("should handle creating a hyperdrive and printing a TOML snipped", async () => {
+	it("should handle creating a hyperdrive and printing a TOML snipped", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		writeWranglerConfig();
 		await runWrangler(
@@ -184,7 +192,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle creating a hyperdrive config for postgres without a port specified", async () => {
+	it("should handle creating a hyperdrive config for postgres without a port specified", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com/neondb'"
@@ -221,7 +231,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle creating a hyperdrive config for mysql without a port specified", async () => {
+	it("should handle creating a hyperdrive config for mysql without a port specified", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='mysql://test:password@example.com/neondb'"
@@ -258,7 +270,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle creating a hyperdrive config with caching options", async () => {
+	it("should handle creating a hyperdrive config with caching options", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb' --max-age=30 --swr=15"
@@ -299,7 +313,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle creating a hyperdrive config with origin_connection_limit", async () => {
+	it("should handle creating a hyperdrive config with origin_connection_limit", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com:12345/neondb' --origin-connection-limit=50"
@@ -337,7 +353,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle creating a hyperdrive config if the user is URL encoded", async () => {
+	it("should handle creating a hyperdrive config if the user is URL encoded", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://user%3Aname:password@example.com/neondb'"
@@ -374,7 +392,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle creating a hyperdrive config if the password is URL encoded", async () => {
+	it("should handle creating a hyperdrive config if the password is URL encoded", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:a%23%3F81n%287@example.com/neondb'"
@@ -411,7 +431,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle creating a hyperdrive config if the database name is URL encoded", async () => {
+	it("should handle creating a hyperdrive config if the database name is URL encoded", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --connection-string='postgresql://test:password@example.com/%22weird%22%20dbname'"
@@ -448,7 +470,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should create a hyperdrive config given individual params instead of a connection string without a scheme set", async () => {
+	it("should create a hyperdrive config given individual params instead of a connection string without a scheme set", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=5432"
@@ -485,7 +509,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should create a hyperdrive config given individual params instead of a connection string", async () => {
+	it("should create a hyperdrive config given individual params instead of a connection string", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234"
@@ -522,7 +548,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should create a hyperdrive config given individual params instead of a connection string", async () => {
+	it("should create a hyperdrive config given individual params instead of a connection string", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --origin-scheme=mysql"
@@ -559,7 +587,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should reject a create hyperdrive command if individual params are empty strings", async () => {
+	it("should reject a create hyperdrive command if individual params are empty strings", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler(
 				"hyperdrive create test123 --host='' --port=5432 --database=foo --user=test --password=foo"
@@ -572,7 +602,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should reject a create hyperdrive command if an unexpected origin-scheme is provided", async () => {
+	it("should reject a create hyperdrive command if an unexpected origin-scheme is provided", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler(
 				"hyperdrive create test123 --host=example.com --port=5432 --database=foo --user=test --password=foo  --origin-scheme=mongodb"
@@ -587,7 +619,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should reject a create hyperdrive command if both connection string and individual origin params are provided", async () => {
+	it("should reject a create hyperdrive command if both connection string and individual origin params are provided", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler(
 				"hyperdrive create test123 --connection-string='postgresql://test:password@example.com/neondb' --host=example.com --port=5432 --database=neondb --user=test --password=foo"
@@ -600,7 +634,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should create a hyperdrive over access config given the right params", async () => {
+	it("should create a hyperdrive over access config given the right params", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --access-client-id=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access --access-client-secret=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -637,7 +673,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should create a hyperdrive over access config with a path in the host", async () => {
+	it("should create a hyperdrive over access config with a path in the host", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com/database --database=neondb --user=test --password=password --access-client-id=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access --access-client-secret=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -674,7 +712,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should reject a create hyperdrive over access command if access client ID is set but not access client secret", async () => {
+	it("should reject a create hyperdrive over access command if access client ID is set but not access client secret", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler(
 				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --access-client-id='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access'"
@@ -689,7 +729,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should reject a create hyperdrive over access command if access client secret is set but not access client ID", async () => {
+	it("should reject a create hyperdrive over access command if access client secret is set but not access client ID", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler(
 				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --access-client-secret=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -702,7 +744,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should successfully create a hyperdrive with mtls config and sslmode=verify-full", async () => {
+	it("should successfully create a hyperdrive with mtls config and sslmode=verify-full", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --ca-certificate-id=12345 --mtls-certificate-id=1234 --sslmode=verify-full"
@@ -743,7 +787,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should successfully create a hyperdrive with mtls config and sslmode=require", async () => {
+	it("should successfully create a hyperdrive with mtls config and sslmode=require", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveCreate();
 		await runWrangler(
 			"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=require"
@@ -783,7 +829,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should error on create hyperdrive with mtls config sslmode=require and CA flag set", async () => {
+	it("should error on create hyperdrive with mtls config sslmode=require and CA flag set", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler(
 				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --ca-certificate-id=1234 --sslmode=require"
@@ -796,7 +844,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should error on create hyperdrive with mtls config sslmode=verify-ca missing CA", async () => {
+	it("should error on create hyperdrive with mtls config sslmode=verify-ca missing CA", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler(
 				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=verify-ca"
@@ -809,7 +859,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should error on create hyperdrive with mtls config sslmode=verify-full missing CA", async () => {
+	it("should error on create hyperdrive with mtls config sslmode=verify-full missing CA", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler(
 				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=verify-full"
@@ -822,7 +874,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should error on create hyperdrive with mtls config sslmode=random", async () => {
+	it("should error on create hyperdrive with mtls config sslmode=random", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler(
 				"hyperdrive create test123 --host=example.com --database=neondb --user=test --password=password --port=1234 --mtls-certificate-id=1234 --sslmode=random"
@@ -837,7 +891,7 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle listing configs", async () => {
+	it("should handle listing configs", async ({ expect }) => {
 		mockHyperdriveGetListOrDelete();
 		await runWrangler("hyperdrive list");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -857,7 +911,7 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle displaying a config", async () => {
+	it("should handle displaying a config", async ({ expect }) => {
 		mockHyperdriveGetListOrDelete();
 		await runWrangler("hyperdrive get xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -879,7 +933,7 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle deleting a config", async () => {
+	it("should handle deleting a config", async ({ expect }) => {
 		mockHyperdriveGetListOrDelete();
 		await runWrangler("hyperdrive delete xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx");
 		expect(std.out).toMatchInlineSnapshot(`
@@ -891,7 +945,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle updating a hyperdrive config's origin", async () => {
+	it("should handle updating a hyperdrive config's origin", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveUpdate();
 		await runWrangler(
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-host=example.com --origin-port=1234"
@@ -925,7 +981,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle updating a hyperdrive config's user", async () => {
+	it("should handle updating a hyperdrive config's user", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveUpdate();
 		await runWrangler(
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-user=newuser --origin-password='passw0rd!'"
@@ -959,7 +1017,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should throw an exception when creating a hyperdrive config but not all fields are set", async () => {
+	it("should throw an exception when creating a hyperdrive config but not all fields are set", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler(
 				"hyperdrive create test123 --origin-port=1234 --database=mydb --origin-user=newuser"
@@ -978,7 +1038,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should throw an exception when updating a hyperdrive config's origin but not all fields are set", async () => {
+	it("should throw an exception when updating a hyperdrive config's origin but not all fields are set", async ({
+		expect,
+	}) => {
 		const _ = mockHyperdriveUpdate();
 		await expect(() =>
 			runWrangler(
@@ -992,7 +1054,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle updating a hyperdrive config's caching settings", async () => {
+	it("should handle updating a hyperdrive config's caching settings", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveUpdate();
 		await runWrangler(
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --max-age=30 --swr=15"
@@ -1030,7 +1094,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle disabling caching for a hyperdrive config", async () => {
+	it("should handle disabling caching for a hyperdrive config", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveUpdate();
 		await runWrangler(
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --caching-disabled=true"
@@ -1067,7 +1133,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle updating a hyperdrive config's origin_connection_limit", async () => {
+	it("should handle updating a hyperdrive config's origin_connection_limit", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveUpdate();
 		await runWrangler(
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-connection-limit=100"
@@ -1099,7 +1167,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle updating a hyperdrive config's name", async () => {
+	it("should handle updating a hyperdrive config's name", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveUpdate();
 		await runWrangler(
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --name='new-name'"
@@ -1131,7 +1201,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle updating a hyperdrive to a hyperdrive over access config given the right parameters", async () => {
+	it("should handle updating a hyperdrive to a hyperdrive over access config given the right parameters", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveUpdate();
 		await runWrangler(
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-host=example.com --database=mydb --origin-user=newuser --origin-password='passw0rd!' --access-client-id='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access' --access-client-secret='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'"
@@ -1170,7 +1242,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should throw an exception when updating a hyperdrive config's origin but neither port nor access credentials are provided", async () => {
+	it("should throw an exception when updating a hyperdrive config's origin but neither port nor access credentials are provided", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler(
 				"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-host=example.com --database=mydb --origin-user=newuser --origin-password='passw0rd!'"
@@ -1189,7 +1263,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should throw an exception when updating a hyperdrive config's origin with access credentials but no other origin fields", async () => {
+	it("should throw an exception when updating a hyperdrive config's origin with access credentials but no other origin fields", async ({
+		expect,
+	}) => {
 		const _ = mockHyperdriveUpdate();
 		await expect(() =>
 			runWrangler(
@@ -1209,7 +1285,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should reject an update command if the access client ID is provided but not the access client secret", async () => {
+	it("should reject an update command if the access client ID is provided but not the access client secret", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler(
 				"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-host=example.com --database=mydb --origin-user=newuser --origin-password='passw0rd!' --access-client-id='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.access'"
@@ -1224,7 +1302,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should reject an update command if the access client secret is provided but not the access client ID", async () => {
+	it("should reject an update command if the access client secret is provided but not the access client ID", async ({
+		expect,
+	}) => {
 		await expect(() =>
 			runWrangler(
 				"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --origin-host=example.com --database=mydb --origin-user=newuser --origin-password='passw0rd!' --access-client-secret='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'"
@@ -1237,7 +1317,9 @@ describe("hyperdrive commands", () => {
 		`);
 	});
 
-	it("should handle updating a hyperdrive config's mtls configuration", async () => {
+	it("should handle updating a hyperdrive config's mtls configuration", async ({
+		expect,
+	}) => {
 		const reqProm = mockHyperdriveUpdate();
 		await runWrangler(
 			"hyperdrive update xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx --ca-certificate-id=2345 --mtls-certificate-id=234 --sslmode=verify-full"

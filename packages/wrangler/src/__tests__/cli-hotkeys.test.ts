@@ -1,5 +1,5 @@
 import { setTimeout } from "node:timers/promises";
-import { beforeEach, describe, expect, it, vi, vitest } from "vitest";
+import { beforeEach, describe, it, vi, vitest } from "vitest";
 import registerHotKeys from "../cli-hotkeys";
 import { logger } from "../logger";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -37,7 +37,7 @@ describe("Hot Keys", () => {
 	});
 
 	describe("callbacks", () => {
-		it("calls handlers when a key is pressed", async () => {
+		it("calls handlers when a key is pressed", async ({ expect }) => {
 			const handlerA = vi.fn();
 			const handlerB = vi.fn();
 			const handlerC = vi.fn();
@@ -68,7 +68,7 @@ describe("Hot Keys", () => {
 			handlerC.mockClear();
 		});
 
-		it("handles CAPSLOCK", async () => {
+		it("handles CAPSLOCK", async ({ expect }) => {
 			const handlerA = vi.fn();
 			const options = [
 				{ keys: ["a"], label: "first option", handler: handlerA },
@@ -85,7 +85,7 @@ describe("Hot Keys", () => {
 			handlerA.mockClear();
 		});
 
-		it("handles meta keys", async () => {
+		it("handles meta keys", async ({ expect }) => {
 			const handlerCtrl = vi.fn();
 			const handlerMeta = vi.fn();
 			const handlerShift = vi.fn();
@@ -113,7 +113,7 @@ describe("Hot Keys", () => {
 			handlerShift.mockClear();
 		});
 
-		it("ignores missing key names", async () => {
+		it("ignores missing key names", async ({ expect }) => {
 			const handlerA = vi.fn();
 			const options = [
 				{ keys: ["a"], label: "first option", handler: handlerA },
@@ -127,7 +127,7 @@ describe("Hot Keys", () => {
 			expect(handlerA).not.toHaveBeenCalled();
 		});
 
-		it("ignores unbound keys", async () => {
+		it("ignores unbound keys", async ({ expect }) => {
 			const handlerA = vi.fn();
 			const handlerD = vi.fn();
 			const options = [
@@ -144,7 +144,9 @@ describe("Hot Keys", () => {
 			expect(handlerD).not.toHaveBeenCalled();
 		});
 
-		it("calls handler if any additional key bindings are pressed", async () => {
+		it("calls handler if any additional key bindings are pressed", async ({
+			expect,
+		}) => {
 			const handlerA = vi.fn();
 			const options = [
 				{ keys: ["a", "b", "c"], label: "first option", handler: handlerA },
@@ -165,7 +167,7 @@ describe("Hot Keys", () => {
 			handlerA.mockClear();
 		});
 
-		it("surfaces errors in handlers", async () => {
+		it("surfaces errors in handlers", async ({ expect }) => {
 			const handlerA = vi.fn().mockImplementation(() => {
 				throw new Error("sync error");
 			});
@@ -198,7 +200,9 @@ describe("Hot Keys", () => {
 	});
 
 	describe("instructions", () => {
-		it("provides formatted instructions to Wrangler's & Miniflare's logger implementations", async () => {
+		it("provides formatted instructions to Wrangler's & Miniflare's logger implementations", async ({
+			expect,
+		}) => {
 			const handlerA = vi.fn();
 			const handlerB = vi.fn();
 			const handlerC = vi.fn();
@@ -240,7 +244,9 @@ describe("Hot Keys", () => {
 			`);
 		});
 
-		it("provides stacked formatted instructions in narrow views", async () => {
+		it("provides stacked formatted instructions in narrow views", async ({
+			expect,
+		}) => {
 			const originalColumns = process.stdout.columns;
 			try {
 				process.stdout.columns = 30;
@@ -272,7 +278,7 @@ describe("Hot Keys", () => {
 			}
 		});
 
-		it("hides options with disabled property enabled", async () => {
+		it("hides options with disabled property enabled", async ({ expect }) => {
 			const handlerA = vi.fn();
 			const handlerB = vi.fn();
 

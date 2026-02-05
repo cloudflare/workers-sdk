@@ -7,7 +7,7 @@ import {
 	writeWranglerConfig,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { CI } from "../is-ci";
 import {
 	getAccountFromCache,
@@ -52,7 +52,9 @@ describe("User", () => {
 	});
 
 	describe("login", () => {
-		it("should login a user when `wrangler login` is run", async () => {
+		it("should login a user when `wrangler login` is run", async ({
+			expect,
+		}) => {
 			mockOAuthServerCallback("success");
 
 			let counter = 0;
@@ -93,7 +95,9 @@ describe("User", () => {
 			});
 		});
 
-		it("should login a user when `wrangler login` is run with an ip address for custom callback-host", async () => {
+		it("should login a user when `wrangler login` is run with an ip address for custom callback-host", async ({
+			expect,
+		}) => {
 			mockOAuthServerCallback("success");
 
 			let counter = 0;
@@ -137,7 +141,9 @@ describe("User", () => {
 			});
 		});
 
-		it("should login a user when `wrangler login` is run with a domain name for custom callback-host", async () => {
+		it("should login a user when `wrangler login` is run with a domain name for custom callback-host", async ({
+			expect,
+		}) => {
 			mockOAuthServerCallback("success");
 
 			let counter = 0;
@@ -181,7 +187,9 @@ describe("User", () => {
 			});
 		});
 
-		it("should login a user when `wrangler login` is run with custom callbackPort param", async () => {
+		it("should login a user when `wrangler login` is run with custom callbackPort param", async ({
+			expect,
+		}) => {
 			mockOAuthServerCallback("success");
 
 			let counter = 0;
@@ -225,7 +233,7 @@ describe("User", () => {
 			});
 		});
 
-		it("login works in a different environment", async () => {
+		it("login works in a different environment", async ({ expect }) => {
 			vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 			mockOAuthServerCallback("success");
 
@@ -271,7 +279,9 @@ describe("User", () => {
 			});
 		});
 
-		it('should error if the compliance region is not "public"', async () => {
+		it('should error if the compliance region is not "public"', async ({
+			expect,
+		}) => {
 			vi.stubEnv("CLOUDFLARE_COMPLIANCE_REGION", "fedramp_high");
 			await expect(runWrangler("login")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
@@ -281,7 +291,9 @@ describe("User", () => {
 		});
 	});
 
-	it("should handle errors for failed token refresh in a non-interactive environment", async () => {
+	it("should handle errors for failed token refresh in a non-interactive environment", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeAuthConfigFile({
 			oauth_token: "hunter2",
@@ -297,7 +309,9 @@ describe("User", () => {
 		);
 	});
 
-	it("should confirm no error message when refresh is successful", async () => {
+	it("should confirm no error message when refresh is successful", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeAuthConfigFile({
 			oauth_token: "hunter2",
@@ -309,14 +323,16 @@ describe("User", () => {
 		expect(std.err).toContain("");
 	});
 
-	it("should revert to non-interactive mode if in CI", async () => {
+	it("should revert to non-interactive mode if in CI", async ({ expect }) => {
 		isCISpy.mockReturnValue(true);
 		await expect(
 			loginOrRefreshIfRequired(COMPLIANCE_REGION_CONFIG_UNKNOWN)
 		).resolves.toEqual(false);
 	});
 
-	it("should revert to non-interactive mode if isTTY throws an error", async () => {
+	it("should revert to non-interactive mode if isTTY throws an error", async ({
+		expect,
+	}) => {
 		setIsTTY({
 			stdin() {
 				throw new Error("stdin is not tty");
@@ -328,7 +344,7 @@ describe("User", () => {
 		).resolves.toEqual(false);
 	});
 
-	it("should have auth per environment", async () => {
+	it("should have auth per environment", async ({ expect }) => {
 		setIsTTY(false);
 		vi.stubEnv("WRANGLER_API_ENVIRONMENT", "staging");
 
@@ -342,7 +358,9 @@ describe("User", () => {
 		);
 	});
 
-	it("should not warn on invalid wrangler.toml when logging in", async () => {
+	it("should not warn on invalid wrangler.toml when logging in", async ({
+		expect,
+	}) => {
 		mockOAuthServerCallback("success");
 
 		let counter = 0;
@@ -389,7 +407,9 @@ describe("User", () => {
 	});
 
 	describe("auth token", () => {
-		it("should output the OAuth token when logged in with a valid token", async () => {
+		it("should output the OAuth token when logged in with a valid token", async ({
+			expect,
+		}) => {
 			// Set up a valid, non-expired token
 			const futureDate = new Date(Date.now() + 100000 * 1000).toISOString();
 			writeAuthConfigFile({
@@ -404,7 +424,9 @@ describe("User", () => {
 			expect(std.out).toContain("test-access-token");
 		});
 
-		it("should refresh and output the token when the token is expired", async () => {
+		it("should refresh and output the token when the token is expired", async ({
+			expect,
+		}) => {
 			// Set up an expired token
 			const pastDate = new Date(Date.now() - 100000 * 1000).toISOString();
 			writeAuthConfigFile({
@@ -422,13 +444,15 @@ describe("User", () => {
 			expect(std.out).toContain("access_token_success_mock");
 		});
 
-		it("should error when not logged in", async () => {
+		it("should error when not logged in", async ({ expect }) => {
 			await expect(runWrangler("auth token")).rejects.toThrowError(
 				"Not logged in. Please run `wrangler login` to authenticate."
 			);
 		});
 
-		it("should output the API token from environment variable", async () => {
+		it("should output the API token from environment variable", async ({
+			expect,
+		}) => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-api-token");
 
 			await runWrangler("auth token");
@@ -436,7 +460,9 @@ describe("User", () => {
 			expect(std.out).toContain("env-api-token");
 		});
 
-		it("should error when using global auth key/email without --json", async () => {
+		it("should error when using global auth key/email without --json", async ({
+			expect,
+		}) => {
 			vi.stubEnv("CLOUDFLARE_API_KEY", "test-api-key");
 			vi.stubEnv("CLOUDFLARE_EMAIL", "test@example.com");
 
@@ -445,7 +471,9 @@ describe("User", () => {
 			);
 		});
 
-		it("should output JSON with key and email when using global auth key/email with --json", async () => {
+		it("should output JSON with key and email when using global auth key/email with --json", async ({
+			expect,
+		}) => {
 			vi.stubEnv("CLOUDFLARE_API_KEY", "test-api-key");
 			vi.stubEnv("CLOUDFLARE_EMAIL", "test@example.com");
 
@@ -459,7 +487,9 @@ describe("User", () => {
 			});
 		});
 
-		it("should output JSON with oauth type when logged in with --json", async () => {
+		it("should output JSON with oauth type when logged in with --json", async ({
+			expect,
+		}) => {
 			const futureDate = new Date(Date.now() + 100000 * 1000).toISOString();
 			writeAuthConfigFile({
 				oauth_token: "test-access-token",
@@ -477,7 +507,9 @@ describe("User", () => {
 			});
 		});
 
-		it("should output JSON with api_token type when using CLOUDFLARE_API_TOKEN with --json", async () => {
+		it("should output JSON with api_token type when using CLOUDFLARE_API_TOKEN with --json", async ({
+			expect,
+		}) => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "env-api-token");
 
 			await runWrangler("auth token --json");
@@ -489,7 +521,9 @@ describe("User", () => {
 			});
 		});
 
-		it("should error when token refresh fails and user is not logged in", async () => {
+		it("should error when token refresh fails and user is not logged in", async ({
+			expect,
+		}) => {
 			// Set up an expired token with a refresh token that will fail
 			const pastDate = new Date(Date.now() - 100000 * 1000).toISOString();
 			writeAuthConfigFile({
@@ -508,12 +542,14 @@ describe("User", () => {
 	});
 
 	describe("getOAuthTokenFromLocalState", () => {
-		it("should return undefined when not logged in", async () => {
+		it("should return undefined when not logged in", async ({ expect }) => {
 			const token = await getOAuthTokenFromLocalState();
 			expect(token).toBeUndefined();
 		});
 
-		it("should return the OAuth token when logged in with a valid token", async () => {
+		it("should return the OAuth token when logged in with a valid token", async ({
+			expect,
+		}) => {
 			const futureDate = new Date(Date.now() + 100000 * 1000).toISOString();
 			writeAuthConfigFile({
 				oauth_token: "test-oauth-token",
@@ -526,7 +562,9 @@ describe("User", () => {
 			expect(token).toBe("test-oauth-token");
 		});
 
-		it("should refresh and return the token when expired", async () => {
+		it("should refresh and return the token when expired", async ({
+			expect,
+		}) => {
 			const pastDate = new Date(Date.now() - 100000 * 1000).toISOString();
 			writeAuthConfigFile({
 				oauth_token: "expired-token",
@@ -542,7 +580,9 @@ describe("User", () => {
 			expect(token).toBe("access_token_success_mock");
 		});
 
-		it("should return undefined when token refresh fails", async () => {
+		it("should return undefined when token refresh fails", async ({
+			expect,
+		}) => {
 			const pastDate = new Date(Date.now() - 100000 * 1000).toISOString();
 			writeAuthConfigFile({
 				oauth_token: "expired-token",
@@ -563,7 +603,9 @@ describe("User", () => {
 			vi.stubEnv("CLOUDFLARE_API_TOKEN", "test-api-token");
 		});
 
-		it("should only prompt for account selection once when getAccountId is called multiple times", async () => {
+		it("should only prompt for account selection once when getAccountId is called multiple times", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			// Mock the memberships API to return multiple accounts
@@ -606,7 +648,9 @@ describe("User", () => {
 			// we only set up one expectation and prompts mock throws on unexpected calls
 		});
 
-		it("should use account_id from config without prompting", async () => {
+		it("should use account_id from config without prompting", async ({
+			expect,
+		}) => {
 			// When config has account_id, it should be used directly without prompting
 			const accountId = await getAccountId({ account_id: "config-account-id" });
 			expect(accountId).toBe("config-account-id");
@@ -616,7 +660,9 @@ describe("User", () => {
 			expect(cachedAccount).toBeUndefined();
 		});
 
-		it("should cache account when only one account is available (no prompt needed)", async () => {
+		it("should cache account when only one account is available (no prompt needed)", async ({
+			expect,
+		}) => {
 			// Mock single account - no prompt needed
 			mockGetMemberships([
 				{

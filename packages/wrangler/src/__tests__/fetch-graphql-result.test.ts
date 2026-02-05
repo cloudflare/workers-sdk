@@ -1,6 +1,6 @@
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { fetchGraphqlResult } from "../cfetch";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { msw } from "./helpers/msw";
@@ -9,7 +9,9 @@ describe("fetchGraphqlResult", () => {
 	mockAccountId({ accountId: null });
 	mockApiToken();
 
-	it("should make a request against the graphql endpoint by default", async () => {
+	it("should make a request against the graphql endpoint by default", async ({
+		expect,
+	}) => {
 		msw.use(
 			http.post("*/graphql", async () => {
 				return HttpResponse.json(
@@ -38,7 +40,9 @@ describe("fetchGraphqlResult", () => {
 		).toEqual({ data: { viewer: { __typename: "viewer" } }, errors: null });
 	});
 
-	it("should accept a request with no init, but return no data", async () => {
+	it("should accept a request with no init, but return no data", async ({
+		expect,
+	}) => {
 		const now = new Date().toISOString();
 		msw.use(
 			http.post("*/graphql", async () => {
