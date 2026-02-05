@@ -4,8 +4,8 @@ import {
 	zCloudflareD1ListDatabasesData,
 	zCloudflareD1RawDatabaseQueryData,
 } from "../generated/zod.gen";
-import type { Env } from "../api.worker";
 import type { AppContext } from "../common";
+import type { Env } from "../explorer.worker";
 import type {
 	CloudflareD1ListDatabasesResponse,
 	D1DatabaseResponse,

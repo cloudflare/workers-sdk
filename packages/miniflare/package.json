@@ -27,6 +27,7 @@
 	},
 	"files": [
 		"dist/src",
+		"dist/local-explorer-ui",
 		"bootstrap.js"
 	],
 	"scripts": {
@@ -58,6 +59,7 @@
 		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/kv-asset-handler": "workspace:*",
+		"@cloudflare/local-explorer-ui": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@cloudflare/workflows-shared": "workspace:*",
