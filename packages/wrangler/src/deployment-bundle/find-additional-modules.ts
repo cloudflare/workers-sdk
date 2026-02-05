@@ -56,12 +56,12 @@ function removePythonVendorModules(
 	if (!isPythonEntrypoint) {
 		return modules;
 	}
-	return modules.filter((m) => !m.name.startsWith("python_modules" + path.sep));
+	return modules.filter((m) => !m.name.startsWith("python_modules/"));
 }
 
 function getPythonVendorModulesSize(modules: CfModule[]): number {
 	const vendorModules = modules.filter((m) =>
-		m.name.startsWith("python_modules" + path.sep)
+		m.name.startsWith("python_modules/")
 	);
 	return vendorModules.reduce((total, m) => total + m.content.length, 0);
 }
@@ -187,7 +187,10 @@ export async function findAdditionalModules(
 					return true; // Include this file
 				})
 				.map((m) => {
-					const prefixedPath = path.join("python_modules", m.name);
+					// Always use forward slashes for module names, regardless of platform.
+					// path.join() uses backslashes on Windows, but module names must use
+					// forward slashes for proper directory structure when deployed.
+					const prefixedPath = `python_modules/${m.name}`;
 					return {
 						...m,
 						name: prefixedPath,
