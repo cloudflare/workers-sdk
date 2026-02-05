@@ -4,7 +4,7 @@
 import { Hono } from "hono/tiny";
 import mime from "mime";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
-import { LOCAL_EXPLORER_BASE_PATH } from "./constants";
+import { LOCAL_EXPLORER_API_PATH, LOCAL_EXPLORER_BASE_PATH } from "./constants";
 import {
 	zCloudflareD1ListDatabasesData,
 	zCloudflareD1RawDatabaseQueryData,
@@ -57,7 +57,7 @@ function getContentType(filePath: string): string {
 }
 
 app.get("/*", async (c, next) => {
-	if (c.req.path.startsWith(`${LOCAL_EXPLORER_BASE_PATH}/api`)) {
+	if (c.req.path.startsWith(LOCAL_EXPLORER_API_PATH)) {
 		// continue on to API routes
 		return next();
 	}
