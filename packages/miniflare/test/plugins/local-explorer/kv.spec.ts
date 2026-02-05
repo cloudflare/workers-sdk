@@ -1,5 +1,6 @@
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
+import { LOCAL_EXPLORER_API_PATH } from "../../../src/workers/local-explorer/constants";
 import {
 	zWorkersKvNamespaceDeleteKeyValuePairResponse,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsResponse,
@@ -10,7 +11,7 @@ import {
 import { disposeWithRetry } from "../../test-shared";
 import { expectValidResponse } from "./helpers";
 
-const BASE_URL = "http://localhost/cdn-cgi/explorer/api";
+const BASE_URL = `http://localhost${LOCAL_EXPLORER_API_PATH}`;
 
 describe("KV API", () => {
 	let mf: Miniflare;
