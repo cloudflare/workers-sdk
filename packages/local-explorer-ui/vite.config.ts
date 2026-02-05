@@ -13,6 +13,11 @@ export default defineConfig({
 		react(),
 		svgr(),
 	],
+	resolve: {
+		alias: {
+			"react/jsx-runtime.js": "react/jsx-runtime",
+		},
+	},
 	build: {
 		outDir: "dist",
 	},
