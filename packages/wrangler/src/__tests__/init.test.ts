@@ -69,18 +69,14 @@ describe("init", () => {
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Running \`mockpm create cloudflare@^2.5.0\`...",
+				🌀 Running \`mockpm create cloudflare\`...",
 				  "warn": "",
 				}
 			`);
 
-			expect(execa).toHaveBeenCalledWith(
-				"mockpm",
-				["create", "cloudflare@^2.5.0"],
-				{
-					stdio: ["inherit", "pipe", "pipe"],
-				}
-			);
+			expect(execa).toHaveBeenCalledWith("mockpm", ["create", "cloudflare"], {
+				stdio: ["inherit", "pipe", "pipe"],
+			});
 		});
 
 		it("if `-y` is used, delegate to c3 with --wrangler-defaults", async () => {
@@ -88,11 +84,57 @@ describe("init", () => {
 
 			expect(execa).toHaveBeenCalledWith(
 				"mockpm",
-				["create", "cloudflare@^2.5.0", "--wrangler-defaults"],
+				["create", "cloudflare", "--wrangler-defaults"],
 				{
 					stdio: ["inherit", "pipe", "pipe"],
 				}
 			);
+		});
+
+		describe("with yarn package manager", () => {
+			beforeEach(() => {
+				mockPackageManager = {
+					type: "yarn",
+					npx: "yarn",
+					dlx: ["yarn", "dlx"],
+				};
+				(getPackageManager as Mock).mockResolvedValue(mockPackageManager);
+
+				// Update the mock to handle "yarn" for these tests
+				(execa as Mock).mockImplementation((command: string) => {
+					if (command === "yarn" || command === "mockpm") {
+						return Promise.resolve();
+					}
+					return Promise.reject(new Error(`Unexpected command: ${command}`));
+				});
+			});
+
+			test("uses C3 command without version specifier for yarn", async () => {
+				await runWrangler("init");
+
+				// No version specifier needed since C3 has auto-update behavior
+				expect(execa).toHaveBeenCalledWith("yarn", ["create", "cloudflare"], {
+					stdio: ["inherit", "pipe", "pipe"],
+				});
+			});
+
+			test("uses C3 command without version specifier when using --from-dash with yarn", async () => {
+				await runWrangler("init --from-dash my-worker");
+
+				expect(execa).toHaveBeenCalledWith(
+					"yarn",
+					[
+						"create",
+						"cloudflare",
+						"my-worker",
+						"--existing-script",
+						"my-worker",
+					],
+					{
+						stdio: ["inherit", "pipe", "pipe"],
+					}
+				);
+			});
 		});
 
 		describe("with custom C3 command", () => {
@@ -157,16 +199,12 @@ describe("init", () => {
 			});
 			await runWrangler("init");
 
-			expect(execa).toHaveBeenCalledWith(
-				"mockpm",
-				["create", "cloudflare@^2.5.0"],
-				{
-					env: {
-						CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1",
-					},
-					stdio: ["inherit", "pipe", "pipe"],
-				}
-			);
+			expect(execa).toHaveBeenCalledWith("mockpm", ["create", "cloudflare"], {
+				env: {
+					CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1",
+				},
+				stdio: ["inherit", "pipe", "pipe"],
+			});
 		});
 	});
 
@@ -802,7 +840,7 @@ describe("init", () => {
 				  "out": "
 				 ⛅️ wrangler x.x.x
 				──────────────────
-				🌀 Running \`mockpm create cloudflare@^2.5.0 existing-memory-crystal --existing-script existing-memory-crystal\`...",
+				🌀 Running \`mockpm create cloudflare existing-memory-crystal --existing-script existing-memory-crystal\`...",
 				  "warn": "",
 				}
 			`);
@@ -812,7 +850,7 @@ describe("init", () => {
 				"mockpm",
 				[
 					"create",
-					"cloudflare@^2.5.0",
+					"cloudflare",
 					"existing-memory-crystal",
 					"--existing-script",
 					"existing-memory-crystal",
