@@ -1,11 +1,13 @@
 import { Collapsible } from "@base-ui/react/collapsible";
+import { DatabaseIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import CloudflareLogo from "../assets/icons/cloudflare-logo.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
-import type { WorkersKvNamespace } from "../api";
+import type { D1DatabaseResponse, WorkersKvNamespace } from "../api";
 
 interface SidebarProps {
 	namespaces: WorkersKvNamespace[];
+	databases: D1DatabaseResponse[];
 	loading: boolean;
 	error: string | null;
 	currentPath: string;
@@ -21,6 +23,7 @@ function ChevronIcon(props: React.ComponentProps<"svg">) {
 
 export function Sidebar({
 	namespaces,
+	databases,
 	loading,
 	error,
 	currentPath,
@@ -34,6 +37,7 @@ export function Sidebar({
 					<span className="sidebar-logo-subtitle">Wrangler Dev Tools</span>
 				</div>
 			</div>
+
 			<Collapsible.Root defaultOpen className="sidebar-section">
 				<Collapsible.Trigger className="sidebar-section-trigger">
 					<ChevronIcon className="sidebar-section-icon" />
@@ -68,6 +72,43 @@ export function Sidebar({
 							<li className="sidebar-item sidebar-item--muted">
 								No namespaces
 							</li>
+						)}
+					</ul>
+				</Collapsible.Panel>
+			</Collapsible.Root>
+
+			<Collapsible.Root defaultOpen className="sidebar-section">
+				<Collapsible.Trigger className="sidebar-section-trigger">
+					<ChevronIcon className="sidebar-section-icon" />
+					<DatabaseIcon className="sidebar-section-type-icon" />
+					D1 Databases
+				</Collapsible.Trigger>
+				<Collapsible.Panel className="sidebar-section-panel">
+					<ul className="sidebar-list">
+						{loading && (
+							<li className="sidebar-item sidebar-item--muted">Loading...</li>
+						)}
+						{error && (
+							<li className="sidebar-item sidebar-item--error">{error}</li>
+						)}
+						{!loading &&
+							!error &&
+							databases.map((db) => {
+								const isActive = currentPath === `/d1/${db.uuid}`;
+								return (
+									<li key={db.uuid}>
+										<Link
+											to="/d1/$databaseId"
+											params={{ databaseId: db.uuid as string }}
+											className={`sidebar-item ${isActive ? "active" : ""}`}
+										>
+											{db.name}
+										</Link>
+									</li>
+								);
+							})}
+						{!loading && !error && databases.length === 0 && (
+							<li className="sidebar-item sidebar-item--muted">No databases</li>
 						)}
 					</ul>
 				</Collapsible.Panel>

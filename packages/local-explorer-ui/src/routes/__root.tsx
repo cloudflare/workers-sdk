@@ -4,9 +4,12 @@ import {
 	useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { workersKvNamespaceListNamespaces } from "../api";
+import {
+	cloudflareD1ListDatabases,
+	workersKvNamespaceListNamespaces,
+} from "../api";
 import { Sidebar } from "../components/Sidebar";
-import type { WorkersKvNamespace } from "../api";
+import type { D1DatabaseResponse, WorkersKvNamespace } from "../api";
 
 export const Route = createRootRoute({
 	component: RootLayout,
@@ -14,6 +17,7 @@ export const Route = createRootRoute({
 
 function RootLayout() {
 	const [namespaces, setNamespaces] = useState<WorkersKvNamespace[]>([]);
+	const [databases, setDatabases] = useState<D1DatabaseResponse[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -21,25 +25,28 @@ function RootLayout() {
 	const currentPath = routerState.location.pathname;
 
 	useEffect(() => {
-		async function fetchNamespaces() {
+		async function fetchData() {
 			try {
-				const response = await workersKvNamespaceListNamespaces();
-				setNamespaces(response.data?.result ?? []);
+				const [kvResponse, d1Response] = await Promise.all([
+					workersKvNamespaceListNamespaces(),
+					cloudflareD1ListDatabases(),
+				]);
+				setNamespaces(kvResponse.data?.result ?? []);
+				setDatabases(d1Response.data?.result ?? []);
 			} catch (err) {
-				setError(
-					err instanceof Error ? err.message : "Failed to fetch namespaces"
-				);
+				setError(err instanceof Error ? err.message : "Failed to fetch data");
 			} finally {
 				setLoading(false);
 			}
 		}
-		void fetchNamespaces();
+		void fetchData();
 	}, []);
 
 	return (
 		<div className="layout">
 			<Sidebar
 				namespaces={namespaces}
+				databases={databases}
 				loading={loading}
 				error={error}
 				currentPath={currentPath}
