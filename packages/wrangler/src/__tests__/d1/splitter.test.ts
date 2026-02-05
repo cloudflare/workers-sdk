@@ -120,7 +120,7 @@ describe("splitSqlQuery()", () => {
 			)
 		).toMatchInlineSnapshot(`
 			Array [
-			  "SELECT * FROM my_table
+			  "SELECT * FROM my_table 
 			        WHERE val = 'foo;bar'
 			        AND \\"col;name\\" = \`other;col\`",
 			]
@@ -138,7 +138,7 @@ describe("splitSqlQuery()", () => {
 			)
 		).toMatchInlineSnapshot(`
 			Array [
-			  "SELECT * FROM my_table
+			  "SELECT * FROM my_table 
 			        WHERE val = 'foo;bar' AND count / 2 > 0",
 			]
 		`);
