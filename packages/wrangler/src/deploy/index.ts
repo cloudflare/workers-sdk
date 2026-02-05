@@ -285,7 +285,10 @@ export const deployCommand = createCommand({
 			!args.assets;
 
 		if (shouldRunAutoConfig) {
-			sendAutoConfigProcessStartedMetricsEvent("wrangler deploy");
+			sendAutoConfigProcessStartedMetricsEvent({
+				command: "wrangler deploy",
+				dryRun: !!args.dryRun,
+			});
 
 			try {
 				const details = await getDetailsForAutoConfig({
@@ -311,13 +314,19 @@ export const deployCommand = createCommand({
 				}
 			} catch (error) {
 				sendAutoConfigProcessEndedMetricsEvent({
+					command: "wrangler deploy",
+					dryRun: !!args.dryRun,
 					success: false,
 					error,
 				});
 				throw error;
 			}
 
-			sendAutoConfigProcessEndedMetricsEvent({ success: true });
+			sendAutoConfigProcessEndedMetricsEvent({
+				success: true,
+				command: "wrangler deploy",
+				dryRun: !!args.dryRun,
+			});
 		}
 
 		// Note: the open-next delegation should happen after we run the auto-config logic so that we

@@ -69,11 +69,16 @@ export function getAutoConfigAppId(): string {
  * This should be called at the beginning of the autoconfig flow, before any
  * detection or configuration occurs.
  *
- * @param command The Wrangler command that initiated the autoconfig process
+ * @param options.command The Wrangler command that initiated the autoconfig process
+ * @param options.dryRun Whether the command triggering autoconfig was run in dry-run mode
  */
-export function sendAutoConfigProcessStartedMetricsEvent(
-	command: NonNullable<AutoConfigWranglerTriggerCommand>
-): void {
+export function sendAutoConfigProcessStartedMetricsEvent({
+	command,
+	dryRun,
+}: {
+	command: NonNullable<AutoConfigWranglerTriggerCommand>;
+	dryRun: boolean;
+}): void {
 	setAutoConfigTriggerCommand(command);
 	sendMetricsEvent(
 		"autoconfig_process_started",
@@ -81,6 +86,7 @@ export function sendAutoConfigProcessStartedMetricsEvent(
 			appId: getAutoConfigAppId(),
 			isCI,
 			command,
+			dryRun,
 		},
 		{}
 	);
@@ -93,18 +99,27 @@ export function sendAutoConfigProcessStartedMetricsEvent(
  *
  * @param options.success Whether the autoconfig process completed successfully
  * @param options.error An error message if the process failed
+ * @param options.command The Wrangler command that initiated the autoconfig process
+ * @param options.dryRun Whether the command triggering autoconfig was run in dry-run mode
+ *
  */
 export function sendAutoConfigProcessEndedMetricsEvent({
 	success,
 	error,
+	command,
+	dryRun,
 }: {
 	success: boolean;
 	error?: unknown | undefined;
+	command: NonNullable<AutoConfigWranglerTriggerCommand>;
+	dryRun: boolean;
 }): void {
 	sendMetricsEvent(
 		"autoconfig_process_ended",
 		{
 			appId: getAutoConfigAppId(),
+			command,
+			dryRun,
 			isCI,
 			success,
 			...(error

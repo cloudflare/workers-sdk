@@ -54,6 +54,7 @@ export async function runAutoConfig(
 			appId: getAutoConfigAppId(),
 			isCI,
 			framework: autoConfigDetails.framework?.id,
+			dryRun,
 		},
 		{}
 	);
@@ -149,6 +150,7 @@ export async function runAutoConfig(
 					appId: getAutoConfigAppId(),
 					framework: autoConfigDetails.framework?.id,
 					success: true,
+					dryRun,
 				},
 				{}
 			);
@@ -233,6 +235,7 @@ export async function runAutoConfig(
 			{
 				appId: getAutoConfigAppId(),
 				framework: autoConfigDetails.framework?.id,
+				dryRun,
 				success: false,
 				errorType: getErrorType(error),
 				errorMessage:
@@ -250,6 +253,7 @@ export async function runAutoConfig(
 			appId: getAutoConfigAppId(),
 			framework: autoConfigDetails.framework?.id,
 			success: true,
+			dryRun,
 		},
 		{}
 	);

@@ -50,7 +50,10 @@ export const setupCommand = createCommand({
 	},
 
 	async handler(args, { config }) {
-		sendAutoConfigProcessStartedMetricsEvent("wrangler setup");
+		sendAutoConfigProcessStartedMetricsEvent({
+			command: "wrangler setup",
+			dryRun: !!args.dryRun,
+		});
 
 		const details = await getDetailsForAutoConfig({
 			wranglerConfig: config,
@@ -71,6 +74,8 @@ export const setupCommand = createCommand({
 				enableWranglerInstallation: args.installWrangler,
 			}).catch((error) => {
 				sendAutoConfigProcessEndedMetricsEvent({
+					command: "wrangler setup",
+					dryRun: !!args.dryRun,
 					success: false,
 					error,
 				});
@@ -94,6 +99,8 @@ export const setupCommand = createCommand({
 		}
 
 		sendAutoConfigProcessEndedMetricsEvent({
+			command: "wrangler setup",
+			dryRun: !!args.dryRun,
 			success: true,
 		});
 
