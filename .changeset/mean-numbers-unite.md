@@ -4,8 +4,10 @@
 
 Use the native `node:process` v2 when it is available
 
-Note that we only use v2 if workerd uses fixes for fetch iterable support.
-See <https://github.com/cloudflare/workers-sdk/issues/12379> for details.
+Note that we only enable this if all of the following conditions are met:
+
+- compatibility_date >= 2025-09-15 or process v2 enabled by flag (enable_nodejs_process_v2)
+- `fetch_iterable_type_support` and `fetch_iterable_type_support_override_adjustment` are active (explicitly specified or implied by date or other flags).
 
 Note that EventEmitters (`on`, `off`, `addListener`, `removeListener`, ...) used to be available on the import while they should not have been. They are now only available on the global process:
 
