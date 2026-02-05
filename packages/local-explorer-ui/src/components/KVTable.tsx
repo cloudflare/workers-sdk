@@ -37,18 +37,24 @@ interface ActionMenuProps {
 function ActionMenu({ onEdit, onDelete }: ActionMenuProps) {
 	return (
 		<Menu.Root>
-			<Menu.Trigger className="action-menu-trigger" aria-label="Actions">
+			<Menu.Trigger
+				className="flex items-center justify-center w-7 h-7 border-none rounded-md bg-transparent text-text-secondary cursor-pointer transition-[background-color,color] hover:bg-border hover:text-text"
+				aria-label="Actions"
+			>
 				<DotsThreeIcon size={16} weight="bold" />
 			</Menu.Trigger>
 			<Menu.Portal>
 				<Menu.Positioner sideOffset={4} align="end">
 					<Menu.Popup className="action-menu-dropdown">
-						<Menu.Item className="action-menu-item" onClick={onEdit}>
+						<Menu.Item
+							className="action-menu-item block w-full py-2 px-3 border-none bg-transparent text-left text-sm text-text cursor-pointer transition-colors hover:bg-bg-secondary"
+							onClick={onEdit}
+						>
 							Edit
 						</Menu.Item>
-						<Menu.Separator className="action-menu-separator" />
+						<Menu.Separator className="h-px bg-border my-1" />
 						<Menu.Item
-							className="action-menu-item action-menu-item-danger"
+							className="action-menu-item block w-full py-2 px-3 border-none bg-transparent text-left text-sm text-danger cursor-pointer transition-colors hover:bg-danger/8"
 							onClick={onDelete}
 						>
 							Delete
@@ -133,22 +139,29 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 	const isKeyInvalid = editData ? !!validateKey(editData.key) : false;
 
 	return (
-		<table className="table">
+		<table className="w-full border-separate border-spacing-0 bg-bg border border-border rounded-lg">
 			<thead>
 				<tr>
-					<th>Key</th>
-					<th>Value</th>
-					<th></th>
+					<th className="py-2.5 px-3 text-left bg-bg font-semibold text-xs uppercase tracking-wide text-text-secondary border-b border-border first:rounded-tl-[7px]">
+						Key
+					</th>
+					<th className="py-2.5 px-3 text-left bg-bg font-semibold text-xs uppercase tracking-wide text-text-secondary border-b border-border">
+						Value
+					</th>
+					<th className="py-2.5 px-3 text-left bg-bg font-semibold text-xs uppercase tracking-wide text-text-secondary border-b border-border w-12 last:rounded-tr-[7px]"></th>
 				</tr>
 			</thead>
 			<tbody>
-				{entries.map((entry) => {
+				{entries.map((entry, index) => {
 					const isEditing = editData?.originalKey === entry.key.name;
+					const isLast = index === entries.length - 1;
 					return (
-						<tr key={entry.key.name}>
-							<td className="key-cell">
+						<tr key={entry.key.name} className="table-row hover:bg-bg-tertiary">
+							<td
+								className={`py-2 px-3 text-left align-top ${isLast ? "border-b-0 first:rounded-bl-[7px]" : "border-b border-border"}`}
+							>
 								{isEditing && editData ? (
-									<div className="kv-field">
+									<div className="flex flex-col">
 										<label
 											className="sr-only"
 											htmlFor={`edit-key-${entry.key.name}`}
@@ -157,7 +170,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 										</label>
 										<input
 											id={`edit-key-${entry.key.name}`}
-											className={`kv-input kv-input--edit${editData.keyError ? " kv-input--invalid" : ""}`}
+											className={`w-full font-mono bg-bg text-text min-h-8 py-1.5 px-2 text-[13px] border border-primary rounded focus:outline-none focus:shadow-[0_0_0_2px_rgba(255,72,1,0.15)] disabled:bg-bg-secondary disabled:text-text-secondary ${editData.keyError ? "border-danger focus:shadow-[0_0_0_2px_rgba(251,44,54,0.15)]" : ""}`}
 											value={editData.key}
 											onChange={(e) => handleKeyChange(e.target.value)}
 											onKeyDown={handleKeyDown}
@@ -165,19 +178,25 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 											autoFocus
 										/>
 										{editData.keyError && (
-											<span className="field-error">{editData.keyError}</span>
+											<span className="text-danger text-xs mt-1">
+												{editData.keyError}
+											</span>
 										)}
 									</div>
 								) : (
-									<div className="cell-with-copy">
-										<code>{entry.key.name}</code>
+									<div className="flex items-center gap-1.5">
+										<code className="text-primary font-medium">
+											{entry.key.name}
+										</code>
 										<CopyButton text={entry.key.name} />
 									</div>
 								)}
 							</td>
-							<td className="value-cell">
+							<td
+								className={`py-2 px-3 text-left max-w-[400px] font-mono text-[13px] ${isLast ? "border-b-0" : "border-b border-border"}`}
+							>
 								{isEditing && editData ? (
-									<div className="inline-edit-cell">
+									<div className="flex flex-col gap-2">
 										<label
 											className="sr-only"
 											htmlFor={`edit-value-${entry.key.name}`}
@@ -186,7 +205,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 										</label>
 										<textarea
 											id={`edit-value-${entry.key.name}`}
-											className="kv-input kv-input--edit kv-input--textarea"
+											className="w-full font-mono bg-bg text-text min-h-8 py-1.5 px-2 text-[13px] border border-primary rounded focus:outline-none focus:shadow-[0_0_0_2px_rgba(255,72,1,0.15)] disabled:bg-bg-secondary disabled:text-text-secondary max-h-[200px] resize-none overflow-y-auto [field-sizing:content]"
 											value={editData.value}
 											onChange={(e) =>
 												setEditData({ ...editData, value: e.target.value })
@@ -194,16 +213,16 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 											onKeyDown={handleKeyDown}
 											disabled={saving}
 										/>
-										<div className="inline-edit-actions">
+										<div className="flex justify-end gap-1.5">
 											<Button
-												className="btn btn-secondary"
+												className="btn inline-flex items-center justify-center py-1 px-2.5 text-xs font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border"
 												onClick={handleCancel}
 												disabled={saving}
 											>
 												Cancel
 											</Button>
 											<Button
-												className="btn btn-primary"
+												className="btn inline-flex items-center justify-center py-1 px-2.5 text-xs font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-bg-tertiary hover:bg-primary-hover"
 												onClick={handleSave}
 												disabled={saving || isKeyInvalid}
 												focusableWhenDisabled
@@ -213,15 +232,19 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 										</div>
 									</div>
 								) : (
-									<div className="cell-with-copy">
-										<span className={!entry.value ? "text-muted" : ""}>
+									<div className="flex items-center gap-1.5 min-w-0">
+										<span
+											className={`overflow-hidden text-ellipsis whitespace-nowrap min-w-0 ${!entry.value ? "text-text-secondary" : ""}`}
+										>
 											{formatValue(entry.value)}
 										</span>
 										{entry.value && <CopyButton text={entry.value} />}
 									</div>
 								)}
 							</td>
-							<td className="actions-cell">
+							<td
+								className={`py-2 px-3 whitespace-nowrap text-right ${isLast ? "border-b-0 last:rounded-br-[7px]" : "border-b border-border"}`}
+							>
 								{!isEditing && (
 									<ActionMenu
 										onEdit={() => handleStartEdit(entry)}
