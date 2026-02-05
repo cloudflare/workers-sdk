@@ -5,8 +5,8 @@ import {
 	zWorkersKvNamespaceListANamespaceSKeysData,
 	zWorkersKvNamespaceListNamespacesData,
 } from "../generated/zod.gen";
-import type { Env } from "../api.worker";
 import type { AppContext } from "../common";
+import type { Env } from "../explorer.worker";
 
 /**
  * Get a KV binding by namespace ID

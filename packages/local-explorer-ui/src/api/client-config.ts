@@ -1,7 +1,8 @@
+import { LOCAL_EXPLORER_BASE_PATH } from "../constants";
 import type { CreateClientConfig } from "./generated/client.gen";
 
 export const createClientConfig: CreateClientConfig = (config) => ({
 	...config,
-	baseUrl: "/cdn-cgi/explorer/api",
+	baseUrl: `${LOCAL_EXPLORER_BASE_PATH}/api`,
 	throwOnError: true,
 });

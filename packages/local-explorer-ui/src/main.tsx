@@ -4,9 +4,10 @@ import { createRoot } from "react-dom/client";
 import "./styles/base.css";
 import "./styles/layout.css";
 import "./styles/kv.css";
+import { LOCAL_EXPLORER_BASE_PATH } from "./constants";
 import { routeTree } from "./routeTree.gen";
 
-const router = createRouter({ routeTree });
+const router = createRouter({ routeTree, basepath: LOCAL_EXPLORER_BASE_PATH });
 
 declare module "@tanstack/react-router" {
 	interface Register {
