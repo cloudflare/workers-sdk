@@ -1,6 +1,6 @@
 {
 	"name": "worker-logs",
-	"compatibility_date": "2025-09-06",
+	"compatibility_date": "2026-01-01",
 	"main": "src/module.js",
 	"compatibility_flags": ["nodejs_compat"],
 }
