@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { UserError } from "@cloudflare/workers-utils";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { runCustomBuild } from "../deployment-bundle/run-custom-build";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -9,7 +9,9 @@ describe("Custom Builds", () => {
 	runInTempDir();
 	mockConsoleMethods();
 
-	it("runCustomBuild throws UserError when a command fails", async () => {
+	it("runCustomBuild throws UserError when a command fails", async ({
+		expect,
+	}) => {
 		try {
 			await runCustomBuild(
 				"/",

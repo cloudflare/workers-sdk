@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, test } from "vitest";
 import { Astro } from "../../autoconfig/frameworks/astro";
 import { Static } from "../../autoconfig/frameworks/static";
 import { buildOperationsSummary } from "../../autoconfig/run";
@@ -24,7 +24,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 	});
 
 	describe("interactive mode", () => {
-		test("presents a summary for a simple project where only a wrangler.jsonc file needs to be created", async () => {
+		test("presents a summary for a simple project where only a wrangler.jsonc file needs to be created", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
@@ -76,7 +78,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			`);
 		});
 
-		test("shows that wrangler will be added as a devDependency when not already installed as such", async () => {
+		test("shows that wrangler will be added as a devDependency when not already installed as such", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
@@ -128,7 +132,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			`);
 		});
 
-		test("when a package.json is present wrangler@latest will be unconditionally installed (even if already present)", async () => {
+		test("when a package.json is present wrangler@latest will be unconditionally installed (even if already present)", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
@@ -182,7 +188,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			`);
 		});
 
-		test("shows that when needed a framework specific configuration will be run", async () => {
+		test("shows that when needed a framework specific configuration will be run", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
@@ -209,7 +217,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			expect(summary.frameworkId).toBe("astro");
 		});
 
-		test("doesn't show the framework specific configuration step for the Static framework", async () => {
+		test("doesn't show the framework specific configuration step for the Static framework", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",

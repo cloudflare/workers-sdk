@@ -4,7 +4,9 @@ import readline from "node:readline";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../secret";
 import {
 	WORKER_NOT_FOUND_ERR_CODE,

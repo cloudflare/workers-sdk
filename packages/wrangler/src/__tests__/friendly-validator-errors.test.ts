@@ -1,7 +1,9 @@
 import { ParseError } from "@cloudflare/workers-utils";
 import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
 import { FormData } from "undici";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- helper functions with expect */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import * as checkCommands from "../check/commands";
 import { logger } from "../logger";
 import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-errors";

@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file with .each */
 import {
 	afterAll,
 	beforeAll,
@@ -8,6 +9,7 @@ import {
 	it,
 	vi,
 } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import {
 	constructTSModuleGlob,
 	constructTypeKey,

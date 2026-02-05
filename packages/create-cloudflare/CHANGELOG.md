@@ -1,5 +1,21 @@
 # create-cloudflare
 
+## 2.63.0
+
+### Minor Changes
+
+- [#8310](https://github.com/cloudflare/workers-sdk/pull/8310) [`fed18f9`](https://github.com/cloudflare/workers-sdk/commit/fed18f9d72fbc35c8270591ca8b8829e1524416b) Thanks [@irvinebroque](https://github.com/irvinebroque)! - Enable `nodejs_compat` by default for new projects
+
+  New projects created with C3 will now have the `nodejs_compat` compatibility flag automatically enabled. This makes it easier to get started with Workers, as many npm packages require Node.js compatibility to work correctly.
+
+  If you don't want `nodejs_compat` enabled, you can remove it from your `wrangler.json` or `wrangler.toml` configuration file:
+
+  ```json
+  {
+  	"compatibility_flags": []
+  }
+  ```
+
 ## 2.62.6
 
 ### Patch Changes

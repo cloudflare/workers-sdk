@@ -1,3 +1,4 @@
+import { cpSync, existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import esbuild from "esbuild";
@@ -142,6 +143,26 @@ const embedWorkersPlugin = {
 	},
 };
 
+/**
+ * Copy the local-explorer-ui dist to Miniflare's dist folder.
+ * This allows the explorer worker to serve the UI assets via a disk service.
+ * @param {string} outPath miniflare dist output path
+ * @param {string} pkgRoot miniflare package root path
+ */
+function copyLocalExplorerUi(outPath, pkgRoot) {
+	const localExplorerUiSrc = path.join(pkgRoot, "../local-explorer-ui/dist");
+	const localExplorerUiDest = path.join(outPath, "local-explorer-ui");
+
+	if (existsSync(localExplorerUiSrc)) {
+		cpSync(localExplorerUiSrc, localExplorerUiDest, { recursive: true });
+		console.log("Copied local-explorer-ui dist to", localExplorerUiDest);
+	} else {
+		throw new Error(
+			"Expected local-explorer-ui to be at " + localExplorerUiSrc
+		);
+	}
+}
+
 async function buildPackage() {
 	const pkg = getPackage(pkgRoot);
 
@@ -188,6 +209,8 @@ async function buildPackage() {
 	} else {
 		await esbuild.build(buildOptions);
 	}
+
+	copyLocalExplorerUi(outPath, pkgRoot);
 }
 
 buildPackage().catch((e) => {

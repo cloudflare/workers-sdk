@@ -37,18 +37,9 @@ export default defineConfig([
 			],
 		},
 	},
-	// Bucket 1: pages, d1, kv, queues
+	// Enforce using expect from test context for concurrency safety
 	{
-		files: ["src/__tests__/{pages,d1,kv,queues}/**/*.test.ts"],
-		rules: {
-			"workers-sdk/no-vitest-import-expect": "error",
-		},
-	},
-	// Bucket 2: r2, cloudchamber, containers, vectorize
-	{
-		files: [
-			"src/__tests__/{r2,cloudchamber,containers,vectorize}/**/*.test.ts",
-		],
+		files: ["src/__tests__/**/*.test.ts"],
 		rules: {
 			"workers-sdk/no-vitest-import-expect": "error",
 		},

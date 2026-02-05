@@ -34,7 +34,7 @@ export function Sidebar({
 				<CloudflareLogo style={{ color: "var(--color-primary)" }} />
 				<div className="sidebar-logo-text">
 					<span className="sidebar-logo-title">Local Explorer</span>
-					<span className="sidebar-logo-subtitle">Wrangler Dev Tools</span>
+					<span className="sidebar-logo-subtitle">Cloudflare Dev Tools</span>
 				</div>
 			</div>
 

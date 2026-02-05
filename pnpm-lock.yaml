@@ -2175,6 +2175,9 @@ importers:
       '@cloudflare/kv-asset-handler':
         specifier: workspace:*
         version: link:../kv-asset-handler
+      '@cloudflare/local-explorer-ui':
+        specifier: workspace:*
+        version: link:../local-explorer-ui
       '@cloudflare/workers-shared':
         specifier: workspace:*
         version: link:../workers-shared

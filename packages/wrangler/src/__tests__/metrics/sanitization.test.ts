@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import {
 	ALLOW,
 	getAllowedArgs,
@@ -9,7 +9,7 @@ import {
 import type { AllowedArgs, AllowList } from "../../../src/metrics/sanitization";
 
 describe("sanitizeArgKeys", () => {
-	it("should sanitize arg keys based on argv", () => {
+	it("should sanitize arg keys based on argv", ({ expect }) => {
 		const args = {
 			config: "wrangler.toml",
 			env: "production",
@@ -43,7 +43,9 @@ describe("sanitizeArgKeys", () => {
 });
 
 describe("sanitizeArgValues", () => {
-	it("should redact and allow arg values based on allowedArgs", () => {
+	it("should redact and allow arg values based on allowedArgs", ({
+		expect,
+	}) => {
 		const sanitizedArgs = {
 			config: "wrangler.toml",
 			env: "production",
@@ -65,7 +67,7 @@ describe("sanitizeArgValues", () => {
 });
 
 describe("getAllowedArgs", () => {
-	it("should return allowed args for a given command", () => {
+	it("should return allowed args for a given command", ({ expect }) => {
 		const commandArgAllowList: AllowList = {
 			deploy: {
 				config: REDACT,
@@ -97,7 +99,9 @@ describe("getAllowedArgs", () => {
 		});
 	});
 
-	it("should allow more specific command rules to override less specific ones", () => {
+	it("should allow more specific command rules to override less specific ones", ({
+		expect,
+	}) => {
 		const commandArgAllowList: AllowList = {
 			"*": { global: ALLOW, sharedArg: REDACT },
 			"r2 bucket create": { sharedArg: REDACT, createOnly: ALLOW },
