@@ -19,7 +19,7 @@ describe("isProcessEnvPopulated", () => {
 		expect(isProcessEnvPopulated("2025-04-01", ["nodejs_compat"])).toBe(true);
 	});
 
-	test("old date, but with flag", () => {
+	test("old date, but with flag", ({ expect }) => {
 		expect(
 			isProcessEnvPopulated("2000-01-01", [
 				"nodejs_compat",
@@ -28,7 +28,7 @@ describe("isProcessEnvPopulated", () => {
 		).toBe(true);
 	});
 
-	test("old date, with disable flag", () => {
+	test("old date, with disable flag", ({ expect }) => {
 		expect(
 			isProcessEnvPopulated("2000-01-01", [
 				"nodejs_compat",
@@ -37,7 +37,7 @@ describe("isProcessEnvPopulated", () => {
 		).toBe(false);
 	});
 
-	test("future date, but with disable flag", () => {
+	test("future date, but with disable flag", ({ expect }) => {
 		expect(
 			isProcessEnvPopulated("2026-01-01", [
 				"nodejs_compat",
@@ -46,7 +46,7 @@ describe("isProcessEnvPopulated", () => {
 		).toBe(false);
 	});
 
-	test("future date, with enable flag", () => {
+	test("future date, with enable flag", ({ expect }) => {
 		expect(
 			isProcessEnvPopulated("2026-01-01", [
 				"nodejs_compat",
@@ -59,7 +59,9 @@ describe("isProcessEnvPopulated", () => {
 		expect(isProcessEnvPopulated("2026-01-01")).toBe(false);
 	});
 
-	test("future date, with enable flag but without nodejs_compat", () => {
+	test("future date, with enable flag but without nodejs_compat", ({
+		expect,
+	}) => {
 		expect(
 			isProcessEnvPopulated("2026-01-01", [
 				"nodejs_compat_populate_process_env",

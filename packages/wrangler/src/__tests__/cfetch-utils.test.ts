@@ -56,7 +56,9 @@ describe("throwFetchError", () => {
 	runInTempDir();
 	const std = mockConsoleMethods();
 
-	it("should include api errors, messages and documentation_url in error", async () => {
+	it("should include api errors, messages and documentation_url in error", async ({
+		expect,
+	}) => {
 		msw.use(
 			http.get("*/user", () => {
 				return HttpResponse.json(

@@ -82,7 +82,9 @@ describe("guess worker format", () => {
 		expect(guess.format).toBe("service-worker");
 	});
 
-	it("logs a warning when a worker has exports, but not a default one", async () => {
+	it("logs a warning when a worker has exports, but not a default one", async ({
+		expect,
+	}) => {
 		await writeFile("./index.ts", "export const foo = 1;");
 		const guess = await guessWorkerFormat(
 			path.join(process.cwd(), "./index.ts"),

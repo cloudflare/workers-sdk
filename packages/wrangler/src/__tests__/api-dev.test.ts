@@ -167,7 +167,9 @@ describe("unstable dev fetch input parsing", () => {
 		await worker.stop();
 	});
 
-	it("should allow full url passed in string, and stripped back to pathname", async () => {
+	it("should allow full url passed in string, and stripped back to pathname", async ({
+		expect,
+	}) => {
 		const scriptContent = `
 	export default {
 		fetch(request, env, ctx) {

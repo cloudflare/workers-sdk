@@ -45,23 +45,23 @@ describe("isNavigatorDefined", () => {
 		expect(isNavigatorDefined("2022-03-20")).toBe(false);
 	});
 
-	test("old date, but with flag", () => {
+	test("old date, but with flag", ({ expect }) => {
 		expect(isNavigatorDefined("2000-01-01", ["global_navigator"])).toBe(true);
 	});
 
-	test("old date, with disable flag", () => {
+	test("old date, with disable flag", ({ expect }) => {
 		expect(isNavigatorDefined("2000-01-01", ["no_global_navigator"])).toBe(
 			false
 		);
 	});
 
-	test("new date, but with disable flag", () => {
+	test("new date, but with disable flag", ({ expect }) => {
 		expect(isNavigatorDefined("2024-01-01", ["no_global_navigator"])).toBe(
 			false
 		);
 	});
 
-	test("new date, with enable flag", () => {
+	test("new date, with enable flag", ({ expect }) => {
 		expect(isNavigatorDefined("2024-01-01", ["global_navigator"])).toBe(true);
 	});
 

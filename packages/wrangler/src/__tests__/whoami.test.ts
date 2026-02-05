@@ -186,7 +186,9 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 		});
 	});
 
-	it("should return undefined only a Global API Key, but not Email, is set", async () => {
+	it("should return undefined only a Global API Key, but not Email, is set", async ({
+		expect,
+	}) => {
 		vi.stubEnv("CLOUDFLARE_API_KEY", "123456789");
 		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo).toEqual(undefined);

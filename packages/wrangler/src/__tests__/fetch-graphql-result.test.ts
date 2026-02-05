@@ -40,7 +40,9 @@ describe("fetchGraphqlResult", () => {
 		).toEqual({ data: { viewer: { __typename: "viewer" } }, errors: null });
 	});
 
-	it("should accept a request with no init, but return no data", async () => {
+	it("should accept a request with no init, but return no data", async ({
+		expect,
+	}) => {
 		const now = new Date().toISOString();
 		msw.use(
 			http.post("*/graphql", async () => {

@@ -1,5 +1,7 @@
 import { http, HttpResponse } from "msw";
-import { describe, test } from "vitest";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
+import { describe, expect, test } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE } from "../versions/rollback";
 import { collectCLIOutput } from "./helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -114,7 +116,7 @@ describe("rollback", () => {
 		);
 	}
 
-	test("can rollback to an earlier version", async ({ expect }) => {
+	test("can rollback to an earlier version", async () => {
 		mockGetDeployments();
 		mockGetVersion("version-id-1");
 		mockGetVersion("rollback-version");
@@ -138,9 +140,7 @@ describe("rollback", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("rolling back with changed secrets prompts confirmation", async ({
-		expect,
-	}) => {
+	test("rolling back with changed secrets prompts confirmation", async () => {
 		mockGetDeployments();
 		mockGetVersion("version-id-1");
 		mockGetVersion("rollback-version");
@@ -197,9 +197,7 @@ describe("rollback", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("rolling back with changed secrets (non-interactive)", async ({
-		expect,
-	}) => {
+	test("rolling back with changed secrets (non-interactive)", async () => {
 		setIsTTY(false);
 		mockGetDeployments();
 		mockGetVersion("version-id-1");
