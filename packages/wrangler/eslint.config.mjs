@@ -53,4 +53,13 @@ export default defineConfig([
 			"workers-sdk/no-vitest-import-expect": "error",
 		},
 	},
+	// Bucket 3: versions, autoconfig, api, deploy, dev, config, utils, core, metrics
+	{
+		files: [
+			"src/__tests__/{versions,autoconfig,api,deploy,dev,config,utils,core,metrics}/**/*.test.ts",
+		],
+		rules: {
+			"workers-sdk/no-vitest-import-expect": "error",
+		},
+	},
 ]);

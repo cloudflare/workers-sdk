@@ -1,5 +1,5 @@
 import { writeFile } from "node:fs/promises";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, it } from "vitest";
 import {
 	checkIfViteConfigUsesCloudflarePlugin,
 	transformViteConfig,
@@ -17,7 +17,9 @@ describe("vite-config utils", () => {
 	});
 
 	describe("checkIfViteConfigUsesCloudflarePlugin", () => {
-		it("should handle vite config with function-based defineConfig", async () => {
+		it("should handle vite config with function-based defineConfig", async ({
+			expect,
+		}) => {
 			await writeFile(
 				"vite.config.ts",
 				`
@@ -34,7 +36,9 @@ export default defineConfig(() => ({
 			expect(std.debug).toContain("Vite config uses a non-object expression");
 		});
 
-		it("should handle vite config without plugins array", async () => {
+		it("should handle vite config without plugins array", async ({
+			expect,
+		}) => {
 			await writeFile(
 				"vite.config.ts",
 				`
@@ -53,7 +57,7 @@ export default defineConfig({
 			);
 		});
 
-		it("should detect cloudflare plugin correctly", async () => {
+		it("should detect cloudflare plugin correctly", async ({ expect }) => {
 			await writeFile(
 				"vite.config.ts",
 				`
@@ -72,7 +76,9 @@ export default defineConfig({
 	});
 
 	describe("transformViteConfig", () => {
-		it("should throw UserError for function-based defineConfig", async () => {
+		it("should throw UserError for function-based defineConfig", async ({
+			expect,
+		}) => {
 			await writeFile(
 				"vite.config.ts",
 				`
@@ -89,7 +95,9 @@ export default defineConfig(() => ({
 			);
 		});
 
-		it("should throw UserError when plugins array is missing", async () => {
+		it("should throw UserError when plugins array is missing", async ({
+			expect,
+		}) => {
 			await writeFile(
 				"vite.config.ts",
 				`
@@ -106,7 +114,9 @@ export default defineConfig({
 			);
 		});
 
-		it("should successfully transform valid vite config", async () => {
+		it("should successfully transform valid vite config", async ({
+			expect,
+		}) => {
 			await writeFile(
 				"vite.config.ts",
 				`

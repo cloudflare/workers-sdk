@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, test, vi } from "vitest";
 import { confirmAutoConfigDetails } from "../../../autoconfig/details";
 import { Static } from "../../../autoconfig/frameworks/static";
 import { mockConfirm, mockPrompt } from "../../helpers/mock-dialogs";
@@ -18,7 +18,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	describe("interactive mode", () => {
-		test("no modifications applied", async () => {
+		test("no modifications applied", async ({ expect }) => {
 			setIsTTY(true);
 
 			mockConfirm({
@@ -49,7 +49,9 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			`);
 		});
 
-		test("settings can be updated in a plain static site without a framework nor a build script", async () => {
+		test("settings can be updated in a plain static site without a framework nor a build script", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockConfirm({
@@ -94,7 +96,9 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			`);
 		});
 
-		test("settings can be updated in a static app using a framework", async () => {
+		test("settings can be updated in a static app using a framework", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockConfirm({
@@ -151,7 +155,9 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 	});
 
 	describe("non-interactive mode", () => {
-		test("no modifications are applied in non-interactive", async () => {
+		test("no modifications are applied in non-interactive", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			const updatedAutoConfigDetails = await confirmAutoConfigDetails({

@@ -1,4 +1,6 @@
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in vi.waitFor callbacks */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { RemoteRuntimeController } from "../../../api/startDevWorker/RemoteRuntimeController";
 import {
 	convertBindingsToCfWorkerInitBindings,
