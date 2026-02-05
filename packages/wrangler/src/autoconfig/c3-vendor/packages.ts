@@ -3,8 +3,8 @@ import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { parsePackageJSON, readFileSync } from "@cloudflare/workers-utils";
-import { getPackageManager } from "../../package-manager";
 import { runCommand } from "./command";
+import type { PackageManager } from "../../package-manager";
 
 type InstallConfig = {
 	startText?: string;
@@ -16,6 +16,7 @@ type InstallConfig = {
 /**
  * Install a list of packages to the local project directory and add it to `package.json`
  *
+ * @param packageManager - The package manager to use for installation
  * @param packages - An array of package specifiers to be installed
  * @param config.dev - Add packages as `devDependencies`
  * @param config.startText - Spinner start text
@@ -23,14 +24,14 @@ type InstallConfig = {
  * @param config.force - Whether to install with `--force` or not
  */
 export const installPackages = async (
+	packageManager: PackageManager,
 	packages: string[],
 	config: InstallConfig = {}
 ) => {
+	const { type } = packageManager;
 	const { force, dev, startText, doneText } = config;
 
 	if (packages.length === 0) {
-		const { type } = await getPackageManager();
-
 		let cmd;
 		switch (type) {
 			case "yarn":
@@ -58,8 +59,6 @@ export const installPackages = async (
 		);
 		return;
 	}
-
-	const { type } = await getPackageManager();
 
 	let saveFlag;
 	let cmd;
@@ -117,11 +116,11 @@ export const installPackages = async (
 /**
  *  Installs the latest version of wrangler in the project directory if it isn't already.
  */
-export const installWrangler = async () => {
-	const { type } = await getPackageManager();
+export const installWrangler = async (packageManager: PackageManager) => {
+	const { type } = packageManager;
 
 	// Even if Wrangler is already installed, make sure we install the latest version, as some framework CLIs are pinned to an older version
-	await installPackages([`wrangler@latest`], {
+	await installPackages(packageManager, [`wrangler@latest`], {
 		dev: true,
 		startText: `Installing wrangler ${dim(
 			"A command line tool for building Cloudflare Workers"

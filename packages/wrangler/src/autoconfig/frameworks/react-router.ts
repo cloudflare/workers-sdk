@@ -146,10 +146,11 @@ export class ReactRouter extends Framework {
 	async configure({
 		dryRun,
 		projectPath,
+		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		const viteEnvironmentKey = configPropertyName(projectPath);
 		if (!dryRun) {
-			await installPackages(["@cloudflare/vite-plugin"], {
+			await installPackages(packageManager, ["@cloudflare/vite-plugin"], {
 				dev: true,
 				startText: "Installing the Cloudflare Vite plugin",
 				doneText: `${brandColor(`installed`)} ${dim("@cloudflare/vite-plugin")}`,
@@ -186,7 +187,7 @@ export class ReactRouter extends Framework {
 				`
 			);
 
-			await installPackages(["isbot"], {
+			await installPackages(packageManager, ["isbot"], {
 				dev: true,
 				startText: "Installing the isbot package",
 				doneText: `${brandColor(`installed`)} ${dim("isbot")}`,
