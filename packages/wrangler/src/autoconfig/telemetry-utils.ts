@@ -1,4 +1,6 @@
+import { UserError } from "@cloudflare/workers-utils";
 import isCI from "is-ci";
+import { getErrorType } from "../core/handle-errors";
 import { sendMetricsEvent } from "../metrics";
 
 /**
@@ -97,7 +99,7 @@ export function sendAutoConfigProcessEndedMetricsEvent({
 	error,
 }: {
 	success: boolean;
-	error?: string | undefined;
+	error?: unknown | undefined;
 }): void {
 	sendMetricsEvent(
 		"autoconfig_process_ended",
@@ -105,7 +107,13 @@ export function sendAutoConfigProcessEndedMetricsEvent({
 			appId: getAutoConfigAppId(),
 			isCI,
 			success,
-			error,
+			...(error
+				? {
+						errorType: getErrorType(error),
+						errorMessage:
+							error instanceof UserError ? error.telemetryMessage : undefined,
+					}
+				: {}),
 		},
 		{}
 	);

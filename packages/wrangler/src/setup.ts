@@ -69,12 +69,12 @@ export const setupCommand = createCommand({
 				skipConfirmations: args.yes,
 				dryRun: args.dryRun,
 				enableWranglerInstallation: args.installWrangler,
-			}).catch((e) => {
+			}).catch((error) => {
 				sendAutoConfigProcessEndedMetricsEvent({
 					success: false,
-					error: `${e}`,
+					error,
 				});
-				throw e;
+				throw error;
 			});
 			writeOutput({
 				type: "autoconfig",

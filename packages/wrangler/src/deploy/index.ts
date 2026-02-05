@@ -309,12 +309,12 @@ export const deployCommand = createCommand({
 						useRedirectIfAvailable: true,
 					});
 				}
-			} catch (e) {
+			} catch (error) {
 				sendAutoConfigProcessEndedMetricsEvent({
 					success: false,
-					error: `${e}`,
+					error,
 				});
-				throw e;
+				throw error;
 			}
 
 			sendAutoConfigProcessEndedMetricsEvent({ success: true });
