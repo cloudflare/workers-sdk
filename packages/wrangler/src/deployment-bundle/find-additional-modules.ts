@@ -49,6 +49,16 @@ function isValidPythonPackageName(name: string): boolean {
 	return regex.test(name);
 }
 
+/**
+ * Checks if a given module name is a Python vendor module.
+ * @param moduleName The module name to check
+ */
+function isPythonVendorModule(moduleName: string): boolean {
+	// separator should be forward slash, as we always use forward slash for module names
+	// see `getFiles()` for more details
+	return moduleName.startsWith("python_modules/");
+}
+
 function removePythonVendorModules(
 	isPythonEntrypoint: boolean,
 	modules: CfModule[]
@@ -56,17 +66,11 @@ function removePythonVendorModules(
 	if (!isPythonEntrypoint) {
 		return modules;
 	}
-	// separator should be forward slash, as we always use forward slash for module names
-	// see `getFiles()` for more details
-	return modules.filter((m) => !m.name.startsWith("python_modules/"));
+	return modules.filter((m) => !isPythonVendorModule(m.name));
 }
 
 function getPythonVendorModulesSize(modules: CfModule[]): number {
-	const vendorModules = modules.filter((m) =>
-		// separator should be forward slash, as we always use forward slash for module names
-		// see `getFiles()` for more details
-		m.name.startsWith("python_modules/")
-	);
+	const vendorModules = modules.filter((m) => isPythonVendorModule(m.name));
 	return vendorModules.reduce((total, m) => total + m.content.length, 0);
 }
 
