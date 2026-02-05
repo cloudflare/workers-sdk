@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE } from "../versions/rollback";
 import { collectCLIOutput } from "./helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
@@ -114,7 +114,7 @@ describe("rollback", () => {
 		);
 	}
 
-	test("can rollback to an earlier version", async () => {
+	test("can rollback to an earlier version", async ({ expect }) => {
 		mockGetDeployments();
 		mockGetVersion("version-id-1");
 		mockGetVersion("rollback-version");
@@ -138,7 +138,9 @@ describe("rollback", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("rolling back with changed secrets prompts confirmation", async () => {
+	test("rolling back with changed secrets prompts confirmation", async ({
+		expect,
+	}) => {
 		mockGetDeployments();
 		mockGetVersion("version-id-1");
 		mockGetVersion("rollback-version");
@@ -195,7 +197,9 @@ describe("rollback", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
-	test("rolling back with changed secrets (non-interactive)", async () => {
+	test("rolling back with changed secrets (non-interactive)", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		mockGetDeployments();
 		mockGetVersion("version-id-1");

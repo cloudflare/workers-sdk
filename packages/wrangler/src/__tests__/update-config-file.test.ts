@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, it } from "vitest";
 import { createdResourceConfig } from "../utils/add-created-resource-config";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -23,7 +23,7 @@ describe("createdResourceConfig()", () => {
 		clearDialogs();
 	});
 
-	it("non interactive: no prompts and no file update", async () => {
+	it("non interactive: no prompts and no file update", async ({ expect }) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		await createdResourceConfig(
@@ -55,7 +55,7 @@ describe("createdResourceConfig()", () => {
 		);
 	});
 
-	it("interactive: no file update after answering no", async () => {
+	it("interactive: no file update after answering no", async ({ expect }) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(true);
@@ -91,7 +91,7 @@ describe("createdResourceConfig()", () => {
 		);
 	});
 
-	it("interactive: file update after answering yes", async () => {
+	it("interactive: file update after answering yes", async ({ expect }) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(true);
@@ -141,7 +141,9 @@ describe("createdResourceConfig()", () => {
 		);
 	});
 
-	it("interactive: file update in env after answering yes", async () => {
+	it("interactive: file update in env after answering yes", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(true);
@@ -196,7 +198,7 @@ describe("createdResourceConfig()", () => {
 		);
 	});
 
-	it("interactive: file update after answering yes-but", async () => {
+	it("interactive: file update after answering yes-but", async ({ expect }) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		setIsTTY(true);
@@ -247,7 +249,9 @@ describe("createdResourceConfig()", () => {
 		);
 	});
 
-	it("interactive: no prompts & no file update for toml", async () => {
+	it("interactive: no prompts & no file update for toml", async ({
+		expect,
+	}) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.toml");
 
 		setIsTTY(true);
@@ -274,7 +278,9 @@ describe("createdResourceConfig()", () => {
 		);
 	});
 
-	it("interactive: no prompts & no file update for no config file", async () => {
+	it("interactive: no prompts & no file update for no config file", async ({
+		expect,
+	}) => {
 		setIsTTY(true);
 
 		await createdResourceConfig(
@@ -299,7 +305,7 @@ describe("createdResourceConfig()", () => {
 		);
 	});
 
-	it("logs correct binding type", async () => {
+	it("logs correct binding type", async ({ expect }) => {
 		writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 		await createdResourceConfig(
@@ -327,7 +333,7 @@ describe("createdResourceConfig()", () => {
 	});
 
 	describe("defaults", () => {
-		it("no prompts if all defaults provided", async () => {
+		it("no prompts if all defaults provided", async ({ expect }) => {
 			writeWranglerConfig({ name: "worker" }, "wrangler.json");
 
 			setIsTTY(true);

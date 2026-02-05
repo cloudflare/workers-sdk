@@ -1,6 +1,6 @@
 import { COMPLIANCE_REGION_CONFIG_UNKNOWN } from "@cloudflare/workers-utils";
 import { http, HttpResponse } from "msw";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { writeAuthConfigFile } from "../user";
 import { getUserInfo } from "../user/whoami";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -24,18 +24,24 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 		setIsTTY(true);
 	});
 
-	it("should return undefined if there is no config file", async () => {
+	it("should return undefined if there is no config file", async ({
+		expect,
+	}) => {
 		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo).toBeUndefined();
 	});
 
-	it("should return undefined if there is an empty config file", async () => {
+	it("should return undefined if there is an empty config file", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({});
 		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo).toBeUndefined();
 	});
 
-	it("should return undefined for email if the user settings API request fails with 9109", async () => {
+	it("should return undefined for email if the user settings API request fails with 9109", async ({
+		expect,
+	}) => {
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 		msw.use(
 			http.get(
@@ -78,7 +84,9 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 		expect(userInfo?.email).toBeUndefined();
 	});
-	it("should say it's using a user API token when one is set", async () => {
+	it("should say it's using a user API token when one is set", async ({
+		expect,
+	}) => {
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 
 		msw.use(
@@ -104,7 +112,9 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 		});
 	});
 
-	it("should say it's using an account API token when one is set", async () => {
+	it("should say it's using an account API token when one is set", async ({
+		expect,
+	}) => {
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
 
 		msw.use(
@@ -137,7 +147,9 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 		});
 	});
 
-	it("should say it's using a Global API Key when one is set", async () => {
+	it("should say it's using a Global API Key when one is set", async ({
+		expect,
+	}) => {
 		vi.stubEnv("CLOUDFLARE_API_KEY", "123456789");
 		vi.stubEnv("CLOUDFLARE_EMAIL", "user@example.com");
 
@@ -154,7 +166,9 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 		});
 	});
 
-	it("should use a Global API Key in preference to an API token", async () => {
+	it("should use a Global API Key in preference to an API token", async ({
+		expect,
+	}) => {
 		vi.stubEnv("CLOUDFLARE_API_KEY", "123456789");
 		vi.stubEnv("CLOUDFLARE_EMAIL", "user@example.com");
 		vi.stubEnv("CLOUDFLARE_API_TOKEN", "123456789");
@@ -178,7 +192,9 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 		expect(userInfo).toEqual(undefined);
 	});
 
-	it("should return the user's email and accounts if authenticated via config token", async () => {
+	it("should return the user's email and accounts if authenticated via config token", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		const userInfo = await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 
@@ -194,7 +210,9 @@ describe("getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN)", () => {
 		});
 	});
 
-	it("should display a warning message if the config file contains a legacy api_token field", async () => {
+	it("should display a warning message if the config file contains a legacy api_token field", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({ api_token: "API_TOKEN" });
 		await getUserInfo(COMPLIANCE_REGION_CONFIG_UNKNOWN);
 
@@ -225,7 +243,9 @@ describe("whoami", () => {
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
 	});
 
-	it("should display a warning when account_id in config does not match authenticated accounts", async () => {
+	it("should display a warning when account_id in config does not match authenticated accounts", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		const { whoami } = await import("../user/whoami");
 		await whoami(
@@ -239,7 +259,9 @@ describe("whoami", () => {
 		expect(std.out).toContain("This may be causing the authentication error.");
 	});
 
-	it("should not display a warning when account_id matches an authenticated account", async () => {
+	it("should not display a warning when account_id matches an authenticated account", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		const { whoami } = await import("../user/whoami");
 		await whoami(COMPLIANCE_REGION_CONFIG_UNKNOWN, "account-1", "account-1");
@@ -248,7 +270,9 @@ describe("whoami", () => {
 		);
 	});
 
-	it("should not display a warning when accountFilter and configAccountId don't match", async () => {
+	it("should not display a warning when accountFilter and configAccountId don't match", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		const { whoami } = await import("../user/whoami");
 		await whoami(
@@ -261,7 +285,9 @@ describe("whoami", () => {
 		);
 	});
 
-	it("should display membership roles if --account flag is given", async () => {
+	it("should display membership roles if --account flag is given", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		msw.use(
 			http.get(
@@ -323,7 +349,9 @@ describe("whoami", () => {
 		`);
 	});
 
-	it("should redact email and account names in non-interactive mode", async () => {
+	it("should redact email and account names in non-interactive mode", async ({
+		expect,
+	}) => {
 		setIsTTY(false);
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		msw.use(
@@ -386,7 +414,9 @@ describe("whoami", () => {
 		`);
 	});
 
-	it("should display membership error on authentication error 10000", async () => {
+	it("should display membership error on authentication error 10000", async ({
+		expect,
+	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		msw.use(
 			http.get(

@@ -1,21 +1,21 @@
 import assert from "node:assert";
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { isProcessEnvPopulated } from "../process-env";
 
 describe("isProcessEnvPopulated", () => {
-	test("default", () => {
+	test("default", ({ expect }) => {
 		expect(isProcessEnvPopulated(undefined, ["nodejs_compat"])).toBe(false);
 	});
 
-	test("future date", () => {
+	test("future date", ({ expect }) => {
 		expect(isProcessEnvPopulated("2026-01-01", ["nodejs_compat"])).toBe(true);
 	});
 
-	test("old date", () => {
+	test("old date", ({ expect }) => {
 		expect(isProcessEnvPopulated("2000-01-01", ["nodejs_compat"])).toBe(false);
 	});
 
-	test("switch date", () => {
+	test("switch date", ({ expect }) => {
 		expect(isProcessEnvPopulated("2025-04-01", ["nodejs_compat"])).toBe(true);
 	});
 
@@ -55,7 +55,7 @@ describe("isProcessEnvPopulated", () => {
 		).toBe(true);
 	});
 
-	test("future date without nodejs_compat", () => {
+	test("future date without nodejs_compat", ({ expect }) => {
 		expect(isProcessEnvPopulated("2026-01-01")).toBe(false);
 	});
 
@@ -67,7 +67,7 @@ describe("isProcessEnvPopulated", () => {
 		).toBe(false);
 	});
 
-	test("errors with disable and enable flags specified", () => {
+	test("errors with disable and enable flags specified", ({ expect }) => {
 		try {
 			isProcessEnvPopulated("2024-01-01", [
 				"nodejs_compat_populate_process_env",
