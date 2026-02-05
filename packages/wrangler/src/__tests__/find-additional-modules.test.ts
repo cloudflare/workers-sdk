@@ -322,3 +322,68 @@ describe("traverse module graph", () => {
 		);
 	});
 });
+
+describe("Python modules", () => {
+	runInTempDir();
+	mockConsoleMethods();
+
+	it("should find python_modules with forward slashes (for cross-platform deploy)", async () => {
+		await mkdir("./python_modules/pkg/subpkg", { recursive: true });
+		await writeFile("./index.py", "def fetch(request): pass");
+		await writeFile("./python_modules/pkg/__init__.py", "");
+		await writeFile("./python_modules/pkg/subpkg/mod.py", "x = 1");
+
+		const modules = await findAdditionalModules(
+			{
+				file: path.join(process.cwd(), "./index.py"),
+				projectRoot: process.cwd(),
+				configPath: undefined,
+				format: "modules",
+				moduleRoot: process.cwd(),
+				exports: [],
+			},
+			[]
+		);
+
+		const pythonModules = modules.filter((m) =>
+			m.name.startsWith("python_modules/")
+		);
+		expect(pythonModules.map((m) => m.name)).toEqual(
+			expect.arrayContaining([
+				"python_modules/pkg/__init__.py",
+				"python_modules/pkg/subpkg/mod.py",
+			])
+		);
+		// This assertion catches Windows path.join() regression
+		pythonModules.forEach((m) => {
+			expect(m.name).not.toContain("\\");
+		});
+	});
+
+	it("should exclude files matching pythonModulesExcludes patterns", async () => {
+		await mkdir("./python_modules", { recursive: true });
+		await writeFile("./index.py", "def fetch(request): pass");
+		await writeFile("./python_modules/module.py", "x = 1");
+		await writeFile("./python_modules/module.pyc", "compiled");
+		await writeFile("./python_modules/test_module.py", "def test(): pass");
+
+		const modules = await findAdditionalModules(
+			{
+				file: path.join(process.cwd(), "./index.py"),
+				projectRoot: process.cwd(),
+				configPath: undefined,
+				format: "modules",
+				moduleRoot: process.cwd(),
+				exports: [],
+			},
+			[],
+			false,
+			["**/*.pyc", "**/test_*.py"]
+		);
+
+		const moduleNames = modules.map((m) => m.name);
+		expect(moduleNames).toContain("python_modules/module.py");
+		expect(moduleNames).not.toContain("python_modules/module.pyc");
+		expect(moduleNames).not.toContain("python_modules/test_module.py");
+	});
+});
