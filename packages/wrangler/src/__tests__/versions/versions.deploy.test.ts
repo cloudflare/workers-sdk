@@ -1,5 +1,7 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- uses test.each patterns */
 import { beforeEach, describe, expect, it, test } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import {
 	assignAndDistributePercentages,

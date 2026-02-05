@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import { displayAutoConfigDetails } from "../../../autoconfig/details";
 import { Static } from "../../../autoconfig/frameworks/static";
 import { mockConsoleMethods } from "../../helpers/mock-console";
@@ -16,7 +16,9 @@ vi.mock("../../../package-manager", () => ({
 describe("autoconfig details - displayAutoConfigDetails()", () => {
 	const std = mockConsoleMethods();
 
-	it("should cleanly handle a case in which only the worker name has been detected", () => {
+	it("should cleanly handle a case in which only the worker name has been detected", ({
+		expect,
+	}) => {
 		displayAutoConfigDetails({
 			configured: false,
 			projectPath: process.cwd(),
@@ -34,7 +36,9 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 		);
 	});
 
-	it("should display all the project settings provided by the details object", () => {
+	it("should display all the project settings provided by the details object", ({
+		expect,
+	}) => {
 		displayAutoConfigDetails({
 			configured: false,
 			projectPath: process.cwd(),
@@ -63,7 +67,9 @@ describe("autoconfig details - displayAutoConfigDetails()", () => {
 		`);
 	});
 
-	it("should omit the framework and build command entries when they are not part of the details object", () => {
+	it("should omit the framework and build command entries when they are not part of the details object", ({
+		expect,
+	}) => {
 		displayAutoConfigDetails({
 			configured: false,
 			projectPath: process.cwd(),
