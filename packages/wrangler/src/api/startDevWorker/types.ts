@@ -289,6 +289,7 @@ type BindingOmit<T> = Omit<T, "binding">;
 type NameOmit<T> = Omit<T, "name">;
 export type Binding =
 	| { type: "plain_text"; value: string }
+	| { type: "secret_text"; value: string }
 	| { type: "json"; value: Json }
 	| ({ type: "kv_namespace" } & BindingOmit<CfKvNamespace>)
 	| ({ type: "send_email" } & NameOmit<CfSendEmailBindings>)
