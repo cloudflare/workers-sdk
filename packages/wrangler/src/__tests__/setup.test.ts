@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
-import { afterEach, assert, describe, expect, test, vi } from "vitest";
+import { afterEach, assert, describe, test, vi } from "vitest";
 import * as c3 from "../autoconfig/c3-vendor/packages";
 import * as run from "../autoconfig/run";
 import { clearOutputFilePath } from "../output";
@@ -26,7 +26,7 @@ describe("wrangler setup", () => {
 		clearOutputFilePath();
 	});
 
-	test("--help", async () => {
+	test("--help", async ({ expect }) => {
 		await runWrangler("setup --help");
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler setup
@@ -48,7 +48,9 @@ describe("wrangler setup", () => {
 		`);
 	});
 
-	test("should skip autoconfig when project is already configured", async () => {
+	test("should skip autoconfig when project is already configured", async ({
+		expect,
+	}) => {
 		await seed({
 			"wrangler.jsonc": JSON.stringify({ name: "my-worker" }),
 		});
@@ -65,7 +67,9 @@ describe("wrangler setup", () => {
 		);
 	});
 
-	test("should run autoconfig when project is not configured", async () => {
+	test("should run autoconfig when project is not configured", async ({
+		expect,
+	}) => {
 		await seed({
 			"public/index.html": `<h1>Hello World</h1>`,
 			"package.json": JSON.stringify({}),
@@ -90,7 +94,9 @@ describe("wrangler setup", () => {
 		);
 	});
 
-	test("should not display completion message when disabled", async () => {
+	test("should not display completion message when disabled", async ({
+		expect,
+	}) => {
 		await seed({
 			"public/index.html": `<h1>Hello World</h1>`,
 		});
@@ -108,7 +114,7 @@ describe("wrangler setup", () => {
 		expect(std.out).not.toContain("🎉 Your project");
 	});
 
-	test("should not install Wrangler when skipped", async () => {
+	test("should not install Wrangler when skipped", async ({ expect }) => {
 		await seed({
 			"public/index.html": `<h1>Hello World</h1>`,
 			"package.json": JSON.stringify({}),
@@ -128,7 +134,9 @@ describe("wrangler setup", () => {
 		expect(installSpy).not.toHaveBeenCalled();
 	});
 
-	test("should output an autoconfig output entry to WRANGLER_OUTPUT_FILE_PATH", async () => {
+	test("should output an autoconfig output entry to WRANGLER_OUTPUT_FILE_PATH", async ({
+		expect,
+	}) => {
 		const outputFile = "./output.json";
 
 		await seed({
@@ -187,7 +195,9 @@ describe("wrangler setup", () => {
 	});
 
 	describe("--dry-run", () => {
-		test("should stop before running autoconfig when project is already configured", async () => {
+		test("should stop before running autoconfig when project is already configured", async ({
+			expect,
+		}) => {
 			await seed({
 				"wrangler.jsonc": JSON.stringify({ name: "my-worker" }),
 			});
@@ -204,7 +214,9 @@ describe("wrangler setup", () => {
 			);
 		});
 
-		test("should run autoconfig when project is not configured and stop at the summary step", async () => {
+		test("should run autoconfig when project is not configured and stop at the summary step", async ({
+			expect,
+		}) => {
 			await seed({
 				"public/index.html": `<h1>Hello World</h1>`,
 			});

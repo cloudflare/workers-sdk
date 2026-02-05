@@ -1,5 +1,5 @@
 import * as fs from "node:fs";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, it, vi } from "vitest";
 import { unstable_dev } from "../api";
 import { runInTempDir } from "./helpers/run-in-tmp";
 
@@ -37,7 +37,9 @@ describe("run scheduled events with middleware", () => {
 			fs.writeFileSync("only-scheduled.js", scheduledScriptContent);
 		});
 
-		it("should not intercept when middleware is not enabled", async () => {
+		it("should not intercept when middleware is not enabled", async ({
+			expect,
+		}) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -55,7 +57,7 @@ describe("run scheduled events with middleware", () => {
 			await worker.stop();
 		});
 
-		it("should intercept when middleware is enabled", async () => {
+		it("should intercept when middleware is enabled", async ({ expect }) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -74,7 +76,9 @@ describe("run scheduled events with middleware", () => {
 			await worker.stop();
 		});
 
-		it("should not trigger scheduled event on wrong route", async () => {
+		it("should not trigger scheduled event on wrong route", async ({
+			expect,
+		}) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -93,7 +97,7 @@ describe("run scheduled events with middleware", () => {
 			await worker.stop();
 		});
 
-		it("should respond with 404 for favicons", async () => {
+		it("should respond with 404 for favicons", async ({ expect }) => {
 			const worker = await unstable_dev("only-scheduled.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -112,7 +116,9 @@ describe("run scheduled events with middleware", () => {
 			expect(resp.status).toEqual(404);
 			await worker.stop();
 		});
-		it("should not respond with 404 for favicons if user-worker has a response", async () => {
+		it("should not respond with 404 for favicons if user-worker has a response", async ({
+			expect,
+		}) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -161,7 +167,9 @@ describe("run scheduled events with middleware", () => {
 			fs.writeFileSync("only-scheduled.js", scheduledScriptContent);
 		});
 
-		it("should not intercept when middleware is not enabled", async () => {
+		it("should not intercept when middleware is not enabled", async ({
+			expect,
+		}) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -179,7 +187,7 @@ describe("run scheduled events with middleware", () => {
 			await worker.stop();
 		});
 
-		it("should intercept when middleware is enabled", async () => {
+		it("should intercept when middleware is enabled", async ({ expect }) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -198,7 +206,9 @@ describe("run scheduled events with middleware", () => {
 			await worker.stop();
 		});
 
-		it("should not trigger scheduled event on wrong route", async () => {
+		it("should not trigger scheduled event on wrong route", async ({
+			expect,
+		}) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -217,7 +227,7 @@ describe("run scheduled events with middleware", () => {
 			await worker.stop();
 		});
 
-		it("should respond with 404 for favicons", async () => {
+		it("should respond with 404 for favicons", async ({ expect }) => {
 			const worker = await unstable_dev("only-scheduled.js", {
 				ip: "127.0.0.1",
 				experimental: {
@@ -236,7 +246,9 @@ describe("run scheduled events with middleware", () => {
 			expect(resp.status).toEqual(404);
 			await worker.stop();
 		});
-		it("should not respond with 404 for favicons if user-worker has a response", async () => {
+		it("should not respond with 404 for favicons if user-worker has a response", async ({
+			expect,
+		}) => {
 			const worker = await unstable_dev("index.js", {
 				ip: "127.0.0.1",
 				experimental: {
