@@ -31,7 +31,7 @@
 		"bootstrap.js"
 	],
 	"scripts": {
-		"build": "node scripts/build.mjs && pnpm run types:build",
+		"build": "node scripts/build.mjs && pnpm run generate:types && pnpm run types:build",
 		"capnp:workerd": "capnp-es node_modules/workerd/workerd.capnp -ots:src/runtime/config/generated --src-prefix=node_modules/workerd",
 		"check:lint": "eslint --max-warnings=0 --cache \"{src,test}/**/*.ts\" \"types/**/*.ts\"",
 		"check:type": "tsc",
