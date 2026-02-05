@@ -9,7 +9,37 @@ import "cloudflare/shims/web";
 import process from "node:process";
 import { FatalError } from "@cloudflare/workers-utils";
 import { hideBin } from "yargs/helpers";
+import {
+	convertConfigBindingsToStartWorkerBindings,
+	DevEnv,
+	getPlatformProxy,
+	maybeStartOrUpdateRemoteProxySession,
+	startRemoteProxySession,
+	startWorker,
+	unstable_dev,
+	unstable_getDevCompatibilityDate,
+	unstable_getDurableObjectClassNameToUseSQLiteMap,
+	unstable_getMiniflareWorkerOptions,
+	unstable_getVarsForDev,
+	unstable_getWorkerNameFromProject,
+	unstable_pages,
+	unstable_readConfig,
+} from "./api";
 import { main } from "./index";
+import type {
+	Binding,
+	GetPlatformProxyOptions,
+	PlatformProxy,
+	RemoteProxySession,
+	SourcelessWorkerOptions,
+	StartRemoteProxySessionOptions,
+	Unstable_Config,
+	Unstable_DevOptions,
+	Unstable_DevWorker,
+	Unstable_MiniflareWorkerOptions,
+	Unstable_RawConfig,
+	Unstable_RawEnvironment,
+} from "./api";
 import type { Logger } from "./logger";
 import type { Request, Response } from "miniflare";
 
@@ -43,7 +73,7 @@ export {
 	unstable_getWorkerNameFromProject,
 	getPlatformProxy,
 	unstable_getMiniflareWorkerOptions,
-} from "./api";
+};
 
 export type {
 	Unstable_DevWorker,
@@ -55,7 +85,7 @@ export type {
 	PlatformProxy,
 	SourcelessWorkerOptions,
 	Unstable_MiniflareWorkerOptions,
-} from "./api";
+};
 
 export { printBindings as unstable_printBindings } from "./utils/print-bindings";
 
@@ -93,12 +123,10 @@ export { experimental_patchConfig } from "@cloudflare/workers-utils";
 
 export {
 	startRemoteProxySession,
-	type StartRemoteProxySessionOptions,
 	maybeStartOrUpdateRemoteProxySession,
-	type Binding,
-	type RemoteProxySession,
 	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
-} from "./api";
+};
+export type { StartRemoteProxySessionOptions, Binding, RemoteProxySession };
 
 export { getDetailsForAutoConfig as experimental_getDetailsForAutoConfig } from "./autoconfig/details";
 export { runAutoConfig as experimental_runAutoConfig } from "./autoconfig/run";
