@@ -1,5 +1,6 @@
-// The polyfill is only used with the process v1 native implementation
+// This polyfill is only used with the process v1 native implementation since
 // process v2 implements all the APIs from workerd v1.20250924.0
+// Therefore there is no need to conditionally export items from this file.
 
 import { hrtime as UnenvHrTime } from "unenv/node/internal/process/hrtime";
 import { Process as UnenvProcess } from "unenv/node/internal/process/process";
