@@ -1,11 +1,21 @@
 import { runInTempDir as runInTempDirCommon } from "@cloudflare/workers-utils/test-helpers";
 import { beforeEach } from "vitest";
+import { disableConfigCache } from "../../config-cache";
 import { reinitialiseAuthTokens } from "../../user";
 
-export function runInTempDir(options?: { homedir: string }) {
-	runInTempDirCommon(options);
+export function runInTempDir({
+	homedir,
+	enableCaching = false,
+}: {
+	homedir?: string;
+	enableCaching?: boolean;
+} = {}) {
+	runInTempDirCommon(homedir ? { homedir } : undefined);
 	beforeEach(() => {
 		// Now that we have changed the home directory location, we must reinitialize the user auth state
 		reinitialiseAuthTokens();
+		if (!enableCaching) {
+			disableConfigCache();
+		}
 	});
 }
