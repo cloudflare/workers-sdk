@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+@theme {
+	/* Cloudflare Workers brand colors */
+	--color-bg: #fffdfb;
+	--color-bg-secondary: #fef7ed;
+	--color-bg-tertiary: #fffbf5;
+	--color-text: #521000;
+	--color-text-secondary: #521000b3;
+	--color-border: #ebd5c1;
+	--color-primary: #ff4801;
+	--color-primary-hover: #ff7038;
+	--color-danger: #fb2c36;
+	--color-danger-hover: #dc2626;
+	--color-success: #16a34a;
+
+	/* Custom sizing */
+	--width-sidebar: 240px;
+}
+
+@layer base {
+	body {
+		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+			Ubuntu, sans-serif;
+		@apply text-sm leading-normal text-text bg-bg-secondary;
+	}
+}
+
+/* Base UI component animations - these require data-attribute selectors */
+@layer components {
+	/* Dialog backdrop */
+	.dialog-backdrop {
+		@apply fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] transition-opacity duration-150;
+	}
+	.dialog-backdrop[data-starting-style],
+	.dialog-backdrop[data-ending-style] {
+		@apply opacity-0;
+	}
+
+	/* Dialog popup */
+	.dialog {
+		@apply fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001] bg-bg rounded-xl p-6 w-full max-w-[500px] shadow-[0_4px_24px_rgba(82,16,0,0.1),0_0_0_1px_var(--color-border)] transition-[opacity,transform] duration-150;
+	}
+	.dialog[data-starting-style],
+	.dialog[data-ending-style] {
+		@apply opacity-0 scale-95;
+	}
+
+	/* Collapsible panel (sidebar sections) */
+	.sidebar-section-panel {
+		@apply overflow-hidden transition-[height,opacity] duration-200 ease-out;
+	}
+	.sidebar-section-panel[data-starting-style],
+	.sidebar-section-panel[data-ending-style] {
+		@apply h-0 opacity-0;
+	}
+
+	/* Sidebar section trigger icon rotation */
+	.sidebar-section-trigger[data-panel-open] .sidebar-section-icon {
+		@apply rotate-90;
+	}
+
+	/* Action menu dropdown */
+	.action-menu-dropdown {
+		@apply min-w-[120px] bg-bg border border-border rounded-lg shadow-[0_4px_12px_rgba(82,16,0,0.1)] z-[100] overflow-hidden transition-[opacity,transform] duration-150;
+	}
+	.action-menu-dropdown[data-starting-style],
+	.action-menu-dropdown[data-ending-style] {
+		@apply opacity-0 -translate-y-1;
+	}
+
+	/* Action menu item highlighted state */
+	.action-menu-item[data-highlighted] {
+		@apply bg-bg-secondary;
+	}
+
+	/* Button disabled state via Base UI */
+	.btn[data-disabled] {
+		@apply opacity-60 cursor-not-allowed;
+	}
+	.btn[data-disabled]:active {
+		@apply translate-y-0;
+	}
+
+	/* Copy button visibility on table row hover */
+	.table-row:hover .copy-btn {
+		@apply opacity-100;
+	}
+}
