@@ -77,3 +77,16 @@ test.runIf(!isBuild)(
 		}, WAIT_FOR_OPTIONS);
 	}
 );
+
+test.runIf(isBuild)(
+	"does not set `upload_source_maps` when `build.sourcemap` is disabled",
+	() => {
+		const wranglerConfig = JSON.parse(
+			fs.readFileSync(
+				path.join(rootDir, "dist", "worker", "wrangler.json"),
+				"utf-8"
+			)
+		);
+		expect(wranglerConfig.upload_source_maps).toBeUndefined();
+	}
+);
