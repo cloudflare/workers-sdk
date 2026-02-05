@@ -79,7 +79,7 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 			expect(spy).toHaveBeenCalledTimes(2);
 		});
 
-		it("should retry on 404 with short cache ttl", async () => {
+		it("should retry on 404 and cache with shorter ttl", async () => {
 			let attempts = 0;
 			spy.mockImplementation(() => {
 				if (attempts++ === 0) {
