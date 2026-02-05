@@ -1,5 +1,5 @@
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, test } from "vitest";
 import { normalizeOutput } from "../../../e2e/helpers/normalize";
 import { collectCLIOutput } from "../helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -22,7 +22,7 @@ describe("versions list", () => {
 	});
 
 	describe("without wrangler.toml", () => {
-		test("fails with no args", async () => {
+		test("fails with no args", async ({ expect }) => {
 			const result = runWrangler("versions list --json");
 
 			await expect(result).rejects.toMatchInlineSnapshot(
@@ -34,7 +34,7 @@ describe("versions list", () => {
 			expect(normalizeOutput(std.err)).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints versions to stdout", async () => {
+		test("prints versions to stdout", async ({ expect }) => {
 			const result = runWrangler("versions list --name test-name");
 
 			await expect(result).resolves.toBeUndefined();
@@ -76,7 +76,7 @@ describe("versions list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints versions to stdout as --json", async () => {
+		test("prints versions to stdout as --json", async ({ expect }) => {
 			const result = runWrangler("versions list --name test-name --json");
 
 			await expect(result).resolves.toBeUndefined();
@@ -156,7 +156,7 @@ describe("versions list", () => {
 	describe("with wrangler.toml", () => {
 		beforeEach(() => writeWranglerConfig());
 
-		test("prints versions to stdout", async () => {
+		test("prints versions to stdout", async ({ expect }) => {
 			const result = runWrangler("versions list");
 
 			await expect(result).resolves.toBeUndefined();
@@ -196,7 +196,7 @@ describe("versions list", () => {
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
-		test("prints versions to as --json", async () => {
+		test("prints versions to as --json", async ({ expect }) => {
 			const result = runWrangler("versions list --json");
 
 			await expect(result).resolves.toBeUndefined();

@@ -302,29 +302,35 @@ function NamespaceView() {
 
 	return (
 		<div>
-			<div className="breadcrumb-bar">
-				<span className="breadcrumb-item">
+			<div className="flex items-center gap-2 py-4 px-6 -mx-6 mb-6 min-h-[67px] box-border bg-bg-secondary border-b border-border text-sm">
+				<span className="flex items-center gap-1.5 text-text-secondary">
 					<KVIcon />
 					KV
 				</span>
-				<span className="breadcrumb-separator">&gt;</span>
-				<span className="breadcrumb-item current">{namespaceId}</span>
+				<span className="text-text-secondary text-xs">&gt;</span>
+				<span className="flex items-center gap-1.5 text-text font-medium">
+					{namespaceId}
+				</span>
 			</div>
 
 			<AddKVForm onAdd={handleAdd} clearSignal={clearAddForm} />
 
-			{error && <div className="error">{error}</div>}
+			{error && (
+				<div className="text-danger p-4 bg-danger/8 border border-danger/20 rounded-md mb-4">
+					{error}
+				</div>
+			)}
 
 			{loading ? (
-				<div className="loading">Loading...</div>
+				<div className="text-center p-12 text-text-secondary">Loading...</div>
 			) : entries.length === 0 ? (
-				<div className="empty-state">
+				<div className="text-center p-12 text-text-secondary">
 					<p>No keys in this namespace.</p>
 					<p>Add an entry using the form above.</p>
 				</div>
 			) : (
 				<>
-					<div className="table-wrapper">
+					<div className="rounded-lg">
 						<KVTable
 							entries={entries}
 							onSave={handleEditSave}
@@ -332,9 +338,9 @@ function NamespaceView() {
 						/>
 					</div>
 					{hasMore && (
-						<div className="load-more">
+						<div className="text-center p-4">
 							<Button
-								className="btn btn-secondary"
+								className="btn inline-flex items-center justify-center py-2 px-4 text-sm font-medium rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border"
 								onClick={handleLoadMore}
 								disabled={loadingMore}
 								focusableWhenDisabled
@@ -353,22 +359,24 @@ function NamespaceView() {
 				<AlertDialog.Portal>
 					<AlertDialog.Backdrop className="dialog-backdrop" />
 					<AlertDialog.Popup className="dialog">
-						<AlertDialog.Title className="dialog-title">
+						<AlertDialog.Title className="text-lg font-semibold mb-4">
 							Delete key?
 						</AlertDialog.Title>
-						<AlertDialog.Description className="dialog-description">
+						<AlertDialog.Description className="text-text-secondary mb-2">
 							Are you sure you want to delete &ldquo;{deleteTarget}&rdquo;? This
 							cannot be undone.
 						</AlertDialog.Description>
-						<div className="dialog-actions">
+						<div className="flex justify-end gap-2 mt-6">
 							<AlertDialog.Close
-								render={<Button className="btn btn-secondary" />}
+								render={
+									<Button className="btn inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border" />
+								}
 								disabled={deleting}
 							>
 								Cancel
 							</AlertDialog.Close>
 							<Button
-								className="btn btn-danger"
+								className="btn inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-danger text-bg-tertiary hover:bg-danger-hover"
 								onClick={handleConfirmDelete}
 								disabled={deleting}
 								focusableWhenDisabled
@@ -387,22 +395,24 @@ function NamespaceView() {
 				<AlertDialog.Portal>
 					<AlertDialog.Backdrop className="dialog-backdrop" />
 					<AlertDialog.Popup className="dialog">
-						<AlertDialog.Title className="dialog-title">
+						<AlertDialog.Title className="text-lg font-semibold mb-4">
 							Overwrite key?
 						</AlertDialog.Title>
-						<AlertDialog.Description className="dialog-description">
+						<AlertDialog.Description className="text-text-secondary mb-2">
 							Key &ldquo;{overwriteConfirm?.key}&rdquo; already exists. Do you
 							want to overwrite its value?
 						</AlertDialog.Description>
-						<div className="dialog-actions">
+						<div className="flex justify-end gap-2 mt-6">
 							<AlertDialog.Close
-								render={<Button className="btn btn-secondary" />}
+								render={
+									<Button className="btn inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border" />
+								}
 								disabled={overwriting}
 							>
 								Cancel
 							</AlertDialog.Close>
 							<Button
-								className="btn btn-primary"
+								className="btn inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-bg-tertiary hover:bg-primary-hover"
 								onClick={handleConfirmOverwrite}
 								disabled={overwriting}
 								focusableWhenDisabled

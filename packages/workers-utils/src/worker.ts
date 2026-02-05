@@ -438,7 +438,7 @@ export interface CfWorkerInit {
 		media: CfMediaBinding | undefined;
 	};
 
-	containers?: { class_name: string }[];
+	containers: { class_name: string }[] | undefined;
 
 	/**
 	 * The raw bindings - this is basically never provided and it'll be the bindings above

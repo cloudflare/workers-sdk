@@ -15,7 +15,7 @@
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/jest-image-snapshot": "^6.4.0",
 		"@types/node": "catalog:default",
-		"jest-image-snapshot": "^6.4.0",
+		"jest-image-snapshot": "^6.5.1",
 		"playwright-chromium": "catalog:default",
 		"typescript": "catalog:default",
 		"undici": "catalog:default",

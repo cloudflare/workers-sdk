@@ -1,7 +1,9 @@
 import * as fs from "node:fs";
 import { experimental_readRawConfig } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- describe.each pattern */
 import { describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { readConfig } from "../../config";
 import { runInTempDir } from "../helpers/run-in-tmp";
 

@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { parseImageName } from "../../cloudchamber/common";
 
 describe("parseImageName", () => {
-	it("works", () => {
+	it("works", ({ expect }) => {
 		type TestCase = [
 			input: string,
 			expected: { name?: string; tag?: string; digest?: string; err?: boolean },

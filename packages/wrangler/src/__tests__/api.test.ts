@@ -1,22 +1,24 @@
 import assert from "node:assert";
 import { Request } from "undici";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { parseRequestInput } from "../api/dev";
 
 describe("parseRequestInput for fetch on unstable dev", () => {
-	it("should allow no input to be passed in", () => {
+	it("should allow no input to be passed in", ({ expect }) => {
 		const [input, _] = parseRequestInput("0.0.0.0", 8080);
 
 		expect(input).toMatchInlineSnapshot(`"http://0.0.0.0:8080/"`);
 	});
 
-	it("should allow string of pathname to be passed in", () => {
+	it("should allow string of pathname to be passed in", ({ expect }) => {
 		const [input, _] = parseRequestInput("0.0.0.0", 8080, "/test");
 
 		expect(input).toMatchInlineSnapshot(`"http://0.0.0.0:8080/test"`);
 	});
 
-	it("should allow string of pathname and querystring to be passed in", () => {
+	it("should allow string of pathname and querystring to be passed in", ({
+		expect,
+	}) => {
 		const [input, _] = parseRequestInput("0.0.0.0", 8080, "/test?q=testparam");
 
 		expect(input).toMatchInlineSnapshot(
@@ -24,7 +26,9 @@ describe("parseRequestInput for fetch on unstable dev", () => {
 		);
 	});
 
-	it("should allow full url to be passed in as string and stripped", () => {
+	it("should allow full url to be passed in as string and stripped", ({
+		expect,
+	}) => {
 		const [input, _] = parseRequestInput(
 			"0.0.0.0",
 			8080,
@@ -36,7 +40,9 @@ describe("parseRequestInput for fetch on unstable dev", () => {
 		);
 	});
 
-	it("should allow URL object without pathname to be passed in and stripped", () => {
+	it("should allow URL object without pathname to be passed in and stripped", ({
+		expect,
+	}) => {
 		const [input, _] = parseRequestInput(
 			"0.0.0.0",
 			8080,
@@ -46,7 +52,9 @@ describe("parseRequestInput for fetch on unstable dev", () => {
 		expect(input).toMatchInlineSnapshot(`"http://0.0.0.0:8080/"`);
 	});
 
-	it("should allow URL object with pathname to be passed in and stripped", () => {
+	it("should allow URL object with pathname to be passed in and stripped", ({
+		expect,
+	}) => {
 		const [input, _] = parseRequestInput(
 			"0.0.0.0",
 			8080,
@@ -56,7 +64,9 @@ describe("parseRequestInput for fetch on unstable dev", () => {
 		expect(input).toMatchInlineSnapshot(`"http://0.0.0.0:8080/test"`);
 	});
 
-	it("should allow URL object with pathname and querystring to be passed in and stripped", () => {
+	it("should allow URL object with pathname and querystring to be passed in and stripped", ({
+		expect,
+	}) => {
 		const [input, _] = parseRequestInput(
 			"0.0.0.0",
 			8080,
@@ -68,7 +78,7 @@ describe("parseRequestInput for fetch on unstable dev", () => {
 		);
 	});
 
-	it("should allow request object to be passed in", () => {
+	it("should allow request object to be passed in", ({ expect }) => {
 		const [input, init] = parseRequestInput(
 			"0.0.0.0",
 			8080,
@@ -85,19 +95,25 @@ describe("parseRequestInput for fetch on unstable dev", () => {
 		);
 	});
 
-	it("should parse to give https url with localProtocol = https", () => {
+	it("should parse to give https url with localProtocol = https", ({
+		expect,
+	}) => {
 		const [input, _] = parseRequestInput("0.0.0.0", 8080, "/test", {}, "https");
 
 		expect(input).toMatchInlineSnapshot(`"https://0.0.0.0:8080/test"`);
 	});
 
-	it("should parse to give http url with localProtocol = http", () => {
+	it("should parse to give http url with localProtocol = http", ({
+		expect,
+	}) => {
 		const [input, _] = parseRequestInput("0.0.0.0", 8080, "/test", {}, "http");
 
 		expect(input).toMatchInlineSnapshot(`"http://0.0.0.0:8080/test"`);
 	});
 
-	it("should parse to give http url with localProtocol not set", () => {
+	it("should parse to give http url with localProtocol not set", ({
+		expect,
+	}) => {
 		const [input, _] = parseRequestInput("0.0.0.0", 8080, "/test", {});
 
 		expect(input).toMatchInlineSnapshot(`"http://0.0.0.0:8080/test"`);

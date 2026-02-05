@@ -1,5 +1,7 @@
 import { execSync } from "node:child_process";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- uses describe.each */
 import { describe, expect, test } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";

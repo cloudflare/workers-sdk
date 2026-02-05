@@ -6,14 +6,30 @@ export function writeWorkerSource({
 	basePath = ".",
 	format = "js",
 	type = "esm",
+	durableObjects = [],
 }: {
 	basePath?: string;
 	format?: "js" | "ts" | "jsx" | "tsx" | "mjs" | "py";
 	type?: "esm" | "sw" | "python";
+	durableObjects?: string[];
 } = {}) {
 	if (basePath !== ".") {
 		fs.mkdirSync(basePath, { recursive: true });
 	}
+
+	const doClasses = durableObjects
+		.map(
+			(className) => /* javascript */ dedent`
+			export class ${className} {
+				constructor(state, env) {
+					this.state = state;
+				}
+				async fetch(request) {
+					return new Response("Hello from ${className}");
+				}
+			}`
+		)
+		.join("\n\n");
 
 	let workerContent;
 
@@ -21,6 +37,7 @@ export function writeWorkerSource({
 		case "esm":
 			workerContent = /* javascript */ dedent`
 				import { foo } from "./another";
+				${doClasses ? doClasses + "\n" : ""}
 				export default {
 					async fetch(request) {
 					return new Response('Hello' + foo);

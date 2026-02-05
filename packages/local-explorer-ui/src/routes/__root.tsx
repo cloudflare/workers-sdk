@@ -37,14 +37,14 @@ function RootLayout() {
 	}, []);
 
 	return (
-		<div className="layout">
+		<div className="flex min-h-screen">
 			<Sidebar
 				namespaces={namespaces}
 				loading={loading}
 				error={error}
 				currentPath={currentPath}
 			/>
-			<main className="main-content">
+			<main className="flex-1 px-6 pb-6 overflow-y-auto flex flex-col">
 				<Outlet />
 			</main>
 		</div>

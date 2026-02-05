@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- it.each patterns */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import * as details from "../../../autoconfig/details";
 import { clearOutputFilePath } from "../../../output";
 import {

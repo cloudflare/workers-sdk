@@ -75,3 +75,24 @@ export function getPagesTmpDir(): string {
 	tmpDirCacheProjectRoot = projectRoot;
 	return tmpDirCache;
 }
+
+export function truncateUtf8Bytes(str: string, maxBytes: number): string {
+	const bytes = Buffer.byteLength(str, "utf8");
+	if (bytes <= maxBytes) {
+		return str;
+	}
+
+	const chars: string[] = [];
+	let byteCount = 0;
+
+	for (const char of str) {
+		const charBytes = Buffer.byteLength(char, "utf8");
+		if (byteCount + charBytes > maxBytes) {
+			break;
+		}
+		chars.push(char);
+		byteCount += charBytes;
+	}
+
+	return chars.join("");
+}

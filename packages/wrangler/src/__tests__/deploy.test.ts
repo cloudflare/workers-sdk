@@ -20,7 +20,9 @@ import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file with .each and custom matchers */
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { Static } from "../autoconfig/frameworks/static";
 import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packages";
@@ -13951,9 +13953,8 @@ export default{
 			const expectedModules = {
 				"index.py": mainPython,
 				"helper.py": "# Helper module\ndef helper(): pass",
-				[`python_modules${path.sep}module1.so`]: "binary content for module 1",
-				[`python_modules${path.sep}module2.py`]:
-					"# Python vendor module 2\nprint('hello')",
+				"python_modules/module1.so": "binary content for module 1",
+				"python_modules/module2.py": "# Python vendor module 2\nprint('hello')",
 			};
 
 			mockSubDomainRequest();
@@ -13961,8 +13962,8 @@ export default{
 				expectedMainModule: "index.py",
 				expectedModules,
 				excludedModules: [
-					`python_modules${path.sep}test.pyc`,
-					`python_modules${path.sep}other${path.sep}test.pyc`,
+					"python_modules/test.pyc",
+					"python_modules/other/test.pyc",
 				],
 			});
 

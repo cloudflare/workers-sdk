@@ -1,5 +1,13 @@
 # @cloudflare/workers-utils
 
+## 0.9.1
+
+### Patch Changes
+
+- [#12368](https://github.com/cloudflare/workers-sdk/pull/12368) [`bd4bb98`](https://github.com/cloudflare/workers-sdk/commit/bd4bb98677f065f19872bbf05024b6ad13284a89) Thanks [@KianNH](https://github.com/KianNH)! - Preserve Containers configuration when using `versions` commands
+
+  Previously, commands like `wrangler versions upload` would inadvertently disable Containers on associated Durable Object namespaces because the `containers` property was being omitted from the API request body.
+
 ## 0.9.0
 
 ### Minor Changes

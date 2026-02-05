@@ -3,6 +3,12 @@
 import { client } from "./client.gen";
 import type { Client, Options as Options2, TDataShape } from "./client";
 import type {
+	CloudflareD1ListDatabasesData,
+	CloudflareD1ListDatabasesErrors,
+	CloudflareD1ListDatabasesResponses,
+	CloudflareD1RawDatabaseQueryData,
+	CloudflareD1RawDatabaseQueryErrors,
+	CloudflareD1RawDatabaseQueryResponses,
 	WorkersKvNamespaceDeleteKeyValuePairData,
 	WorkersKvNamespaceDeleteKeyValuePairErrors,
 	WorkersKvNamespaceDeleteKeyValuePairResponses,
@@ -157,6 +163,43 @@ export const workersKvNamespaceGetMultipleKeyValuePairs = <
 		ThrowOnError
 	>({
 		url: "/storage/kv/namespaces/{namespace_id}/bulk/get",
+		...options,
+		headers: {
+			"Content-Type": "application/json",
+			...options.headers,
+		},
+	});
+
+/**
+ * List D1 Databases
+ *
+ * Returns a list of D1 databases.
+ */
+export const cloudflareD1ListDatabases = <ThrowOnError extends boolean = false>(
+	options?: Options<CloudflareD1ListDatabasesData, ThrowOnError>
+) =>
+	(options?.client ?? client).get<
+		CloudflareD1ListDatabasesResponses,
+		CloudflareD1ListDatabasesErrors,
+		ThrowOnError
+	>({ url: "/d1/database", ...options });
+
+/**
+ * Raw D1 Database query
+ *
+ * Returns the query result rows as arrays rather than objects. This is a performance-optimized version of the /query endpoint.
+ */
+export const cloudflareD1RawDatabaseQuery = <
+	ThrowOnError extends boolean = false,
+>(
+	options: Options<CloudflareD1RawDatabaseQueryData, ThrowOnError>
+) =>
+	(options.client ?? client).post<
+		CloudflareD1RawDatabaseQueryResponses,
+		CloudflareD1RawDatabaseQueryErrors,
+		ThrowOnError
+	>({
+		url: "/d1/database/{database_id}/raw",
 		...options,
 		headers: {
 			"Content-Type": "application/json",

@@ -9,7 +9,9 @@ import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import getPort from "get-port";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines with .each */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../api/startDevWorker/utils";
 import { getWorkerAccountAndContext } from "../dev/remote";

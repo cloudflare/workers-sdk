@@ -1,5 +1,7 @@
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
 import { describe, expect, test } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { CANNOT_ROLLBACK_WITH_MODIFIED_SECERT_CODE } from "../versions/rollback";
 import { collectCLIOutput } from "./helpers/collect-cli-output";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";

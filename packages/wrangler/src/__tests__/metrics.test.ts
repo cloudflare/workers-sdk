@@ -2,7 +2,9 @@ import * as fs from "node:fs";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { detectAgenticEnvironment } from "am-i-vibing";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file with .each */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";

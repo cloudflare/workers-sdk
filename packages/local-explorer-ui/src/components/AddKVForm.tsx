@@ -52,28 +52,30 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 	const isKeyInvalid = !!validateKey(key);
 
 	return (
-		<form className="add-entry-form" onSubmit={handleSubmit}>
-			<div className="kv-field">
+		<form className="flex gap-2 mb-4 items-start" onSubmit={handleSubmit}>
+			<div className="flex flex-col w-[200px] shrink-0">
 				<label className="sr-only" htmlFor="add-key">
 					Key
 				</label>
 				<input
 					id="add-key"
-					className={`kv-input kv-input--add${keyError ? " kv-input--invalid" : ""}`}
+					className={`w-full font-mono bg-bg text-text py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_rgba(255,72,1,0.15)] disabled:bg-bg-secondary disabled:text-text-secondary ${keyError ? "border-danger focus:shadow-[0_0_0_3px_rgba(251,44,54,0.15)]" : ""}`}
 					placeholder="Key"
 					value={key}
 					onChange={handleKeyChange}
 					disabled={saving}
 				/>
-				{keyError && <span className="field-error">{keyError}</span>}
+				{keyError && (
+					<span className="text-danger text-xs mt-1">{keyError}</span>
+				)}
 			</div>
-			<div className="kv-field">
+			<div className="flex flex-col flex-1 min-w-[200px]">
 				<label className="sr-only" htmlFor="add-value">
 					Value
 				</label>
 				<textarea
 					id="add-value"
-					className="kv-input kv-input--add kv-input--textarea"
+					className="w-full font-mono bg-bg text-text py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_rgba(255,72,1,0.15)] disabled:bg-bg-secondary disabled:text-text-secondary max-h-[200px] resize-none overflow-y-auto [field-sizing:content]"
 					placeholder="Value"
 					value={value}
 					onChange={(e) => setValue(e.target.value)}
@@ -82,7 +84,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 			</div>
 			<Button
 				type="submit"
-				className="btn btn-primary"
+				className="btn shrink-0 inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-bg-tertiary hover:bg-primary-hover"
 				disabled={saving || isKeyInvalid}
 				focusableWhenDisabled
 			>

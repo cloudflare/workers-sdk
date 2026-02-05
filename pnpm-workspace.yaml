@@ -22,8 +22,6 @@ catalog:
   "@vitest/runner": ~3.2.0
   "@vitest/snapshot": ~3.2.0
   "@vitest/ui": ~3.2.0
-  # rimraf@6 requires node 20 or >=22
-  rimraf: "^6.0.1"
   typescript: "~5.8.3"
   undici: "7.18.2"
   # Override undici-types from @types/node so that the Cloudflare SDK typings match our installed
@@ -34,8 +32,8 @@ catalog:
   "ws": "8.18.0"
   esbuild: "0.27.0"
   playwright-chromium: "^1.56.1"
-  "@cloudflare/workers-types": "^4.20260203.0"
-  workerd: "1.20260203.0"
+  "@cloudflare/workers-types": "^4.20260205.0"
+  workerd: "1.20260205.0"
   eslint: "^9.39.1"
   jsonc-parser: "^3.2.0"
   smol-toml: "^1.5.2"
