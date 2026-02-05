@@ -1,6 +1,6 @@
 import { validator } from "hono/validator";
 import { z } from "zod";
-import type { AppBindings } from "./api.worker";
+import type { AppBindings } from "./explorer.worker";
 import type {
 	WorkersKvApiResponseCommon,
 	WorkersKvMessages,
