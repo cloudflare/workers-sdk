@@ -75,6 +75,15 @@ export interface PluginConfig extends EntryWorkerConfig {
 	inspectorPort?: number | false;
 	remoteBindings?: boolean;
 	experimental?: Experimental;
+	/**
+	 * Specifies the file path for generating the worker .d.ts file.
+	 * Works like `wrangler types` but automatically when the wrangler config changes.
+	 *
+	 * @see https://developers.cloudflare.com/workers/languages/typescript
+	 *
+	 * @default false
+	 */
+	dts?: boolean | string
 }
 
 export interface ResolvedAssetsOnlyConfig extends WorkerConfig {
@@ -97,6 +106,7 @@ interface BaseResolvedConfig {
 	inspectorPort: number | false | undefined;
 	experimental: Pick<Experimental, "headersAndRedirectsDevModeSupport">;
 	remoteBindings: boolean;
+	dts: boolean | string;
 }
 
 interface NonPreviewResolvedConfig extends BaseResolvedConfig {
@@ -276,8 +286,7 @@ export function resolvePluginConfig(
 		experimental: {
 			headersAndRedirectsDevModeSupport:
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,
-		},
-	};
+		},		dts: pluginConfig.dts ?? false,	};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 	const prefixedEnv = vite.loadEnv(viteEnv.mode, root, [
 		"CLOUDFLARE_",
