@@ -56,11 +56,15 @@ function removePythonVendorModules(
 	if (!isPythonEntrypoint) {
 		return modules;
 	}
+	// separator should be forward slash, as we always use forward slash for module names
+	// see `getFiles()` for more details
 	return modules.filter((m) => !m.name.startsWith("python_modules/"));
 }
 
 function getPythonVendorModulesSize(modules: CfModule[]): number {
 	const vendorModules = modules.filter((m) =>
+		// separator should be forward slash, as we always use forward slash for module names
+		// see `getFiles()` for more details
 		m.name.startsWith("python_modules/")
 	);
 	return vendorModules.reduce((total, m) => total + m.content.length, 0);
