@@ -146,8 +146,10 @@ const embedWorkersPlugin = {
 /**
  * Copy the local-explorer-ui dist to Miniflare's dist folder.
  * This allows the explorer worker to serve the UI assets via a disk service.
+ * @param {string} outPath miniflare dist output path
+ * @param {string} pkgRoot miniflare package root path
  */
-async function copyLocalExplorerUi(outPath) {
+function copyLocalExplorerUi(outPath, pkgRoot) {
 	const localExplorerUiSrc = path.join(pkgRoot, "../local-explorer-ui/dist");
 	const localExplorerUiDest = path.join(outPath, "local-explorer-ui");
 
@@ -208,7 +210,7 @@ async function buildPackage() {
 		await esbuild.build(buildOptions);
 	}
 
-	await copyLocalExplorerUi(outPath);
+	copyLocalExplorerUi(outPath, pkgRoot);
 }
 
 buildPackage().catch((e) => {

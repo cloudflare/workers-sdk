@@ -4,6 +4,7 @@
 import { Hono } from "hono/tiny";
 import mime from "mime";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
+import { LOCAL_EXPLORER_BASE_PATH } from "./constants";
 import {
 	zCloudflareD1ListDatabasesData,
 	zCloudflareD1RawDatabaseQueryData,
@@ -33,9 +34,7 @@ export type Env = {
 
 export type AppBindings = { Bindings: Env };
 
-const BASE_PATH = "/cdn-cgi/explorer";
-
-const app = new Hono<AppBindings>().basePath(BASE_PATH);
+const app = new Hono<AppBindings>().basePath(LOCAL_EXPLORER_BASE_PATH);
 
 // Global error handler - catches all uncaught errors and wraps them in an error response
 app.onError((err) => {
@@ -51,24 +50,21 @@ app.onError((err) => {
  */
 function getContentType(filePath: string): string {
 	let contentType = mime.getType(filePath);
-	if (
-		contentType &&
-		contentType.startsWith("text/") &&
-		!contentType.includes("charset")
-	) {
+	if (contentType?.startsWith("text/") && !contentType.includes("charset")) {
 		contentType = `${contentType}; charset=utf-8`;
 	}
 	return contentType || "application/octet-stream";
 }
 
 app.get("/*", async (c, next) => {
-	if (c.req.path.startsWith(`${BASE_PATH}/api`)) {
+	if (c.req.path.startsWith(`${LOCAL_EXPLORER_BASE_PATH}/api`)) {
 		// continue on to API routes
 		return next();
 	}
 
 	// Some simple asset path handling...
-	let assetPath = c.req.path.replace(BASE_PATH, "") || "/index.html";
+	let assetPath =
+		c.req.path.replace(LOCAL_EXPLORER_BASE_PATH, "") || "/index.html";
 	if (assetPath === "/") {
 		assetPath = "/index.html";
 	}
