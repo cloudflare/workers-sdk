@@ -83,7 +83,7 @@ export interface PluginConfig extends EntryWorkerConfig {
 	 *
 	 * @default false
 	 */
-	dts?: boolean | string
+	dts?: boolean | string;
 }
 
 export interface ResolvedAssetsOnlyConfig extends WorkerConfig {
@@ -286,7 +286,9 @@ export function resolvePluginConfig(
 		experimental: {
 			headersAndRedirectsDevModeSupport:
 				pluginConfig.experimental?.headersAndRedirectsDevModeSupport,
-		},		dts: pluginConfig.dts ?? false,	};
+		},
+		dts: pluginConfig.dts ?? false,
+	};
 	const root = userConfig.root ? path.resolve(userConfig.root) : process.cwd();
 	const prefixedEnv = vite.loadEnv(viteEnv.mode, root, [
 		"CLOUDFLARE_",
