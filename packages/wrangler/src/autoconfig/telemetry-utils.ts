@@ -19,7 +19,7 @@ type AutoConfigLocalState = {
 	/** The command that triggered the autoconfig flow */
 	triggerCommand: AutoConfigWranglerTriggerCommand;
 	/** A unique identifier for this autoconfig session */
-	appId: string;
+	autoConfigId: string;
 };
 
 /**
@@ -29,10 +29,8 @@ const autoConfigLocalState: Partial<AutoConfigLocalState> = {};
 
 /**
  * Sets the Wrangler command that triggered the autoconfig flow.
- * Can only be called once per session, subsequent calls will throw an error.
  *
  * @param command The Wrangler command that initiated autoconfig
- * @throws Error if the trigger command has already been set
  */
 function setAutoConfigTriggerCommand(
 	command: NonNullable<AutoConfigWranglerTriggerCommand>
@@ -43,25 +41,27 @@ function setAutoConfigTriggerCommand(
 /**
  * Returns the Wrangler command that triggered the autoconfig flow.
  *
- * @returns The trigger command, or `undefined` if not yet set (if the programmatic API was used)
+ * @returns The trigger command, or `undefined` if not set (if the programmatic API was used)
  */
 export function getAutoConfigTriggerCommand(): AutoConfigWranglerTriggerCommand {
 	return autoConfigLocalState.triggerCommand;
 }
 
 /**
- * Returns a unique identifier for the current autoconfig session.
- * Generates a new UUID on first call and returns the same ID for subsequent calls.
+ * Sets a randomly generated autoConfigId associated to the current autoconfig session.
+ */
+function setAutoConfigId() {
+	autoConfigLocalState.autoConfigId = crypto.randomUUID();
+}
+
+/**
+ * Returns the unique identifier for the current autoconfig session.
  * This ID is used to correlate all telemetry events within a single autoconfig process.
  *
- * @returns A UUID string identifying the current autoconfig session
+ * @returns A unique string identifying the current autoconfig session or `undefined` if not set (if the programmatic API was used)
  */
-export function getAutoConfigAppId(): string {
-	if (autoConfigLocalState.appId) {
-		return autoConfigLocalState.appId;
-	}
-	autoConfigLocalState.appId = crypto.randomUUID();
-	return autoConfigLocalState.appId;
+export function getAutoConfigId(): string | undefined {
+	return autoConfigLocalState.autoConfigId;
 }
 
 /**
@@ -80,10 +80,11 @@ export function sendAutoConfigProcessStartedMetricsEvent({
 	dryRun: boolean;
 }): void {
 	setAutoConfigTriggerCommand(command);
+	setAutoConfigId();
 	sendMetricsEvent(
 		"autoconfig_process_started",
 		{
-			appId: getAutoConfigAppId(),
+			autoConfigId: getAutoConfigId(),
 			isCI,
 			command,
 			dryRun,
@@ -117,7 +118,7 @@ export function sendAutoConfigProcessEndedMetricsEvent({
 	sendMetricsEvent(
 		"autoconfig_process_ended",
 		{
-			appId: getAutoConfigAppId(),
+			autoConfigId: getAutoConfigId(),
 			command,
 			dryRun,
 			isCI,

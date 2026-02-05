@@ -23,7 +23,7 @@ import {
 	displayAutoConfigDetails,
 } from "./details";
 import { Static } from "./frameworks/static";
-import { getAutoConfigAppId } from "./telemetry-utils";
+import { getAutoConfigId } from "./telemetry-utils";
 import { usesTypescript } from "./uses-typescript";
 import type {
 	ConfigurationResults,
@@ -48,10 +48,12 @@ export async function runAutoConfig(
 	const enableWranglerInstallation =
 		autoConfigOptions.enableWranglerInstallation ?? true;
 
+	const autoConfigId = getAutoConfigId();
+
 	sendMetricsEvent(
 		"autoconfig_configuration_started",
 		{
-			appId: getAutoConfigAppId(),
+			...(autoConfigId ? { autoConfigId } : {}),
 			isCI,
 			framework: autoConfigDetails.framework?.id,
 			dryRun,
@@ -147,7 +149,7 @@ export async function runAutoConfig(
 			sendMetricsEvent(
 				"autoconfig_configuration_completed",
 				{
-					appId: getAutoConfigAppId(),
+					...(autoConfigId ? { autoConfigId } : {}),
 					framework: autoConfigDetails.framework?.id,
 					success: true,
 					dryRun,
@@ -233,7 +235,8 @@ export async function runAutoConfig(
 		sendMetricsEvent(
 			"autoconfig_configuration_completed",
 			{
-				appId: getAutoConfigAppId(),
+				...(autoConfigId ? { autoConfigId } : {}),
+
 				framework: autoConfigDetails.framework?.id,
 				dryRun,
 				success: false,
@@ -250,7 +253,7 @@ export async function runAutoConfig(
 	sendMetricsEvent(
 		"autoconfig_configuration_completed",
 		{
-			appId: getAutoConfigAppId(),
+			...(autoConfigId ? { autoConfigId } : {}),
 			framework: autoConfigDetails.framework?.id,
 			success: true,
 			dryRun,

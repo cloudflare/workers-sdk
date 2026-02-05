@@ -19,7 +19,7 @@ import { sendMetricsEvent } from "../metrics";
 import { getPackageManager } from "../package-manager";
 import { getFramework } from "./frameworks/get-framework";
 import {
-	getAutoConfigAppId,
+	getAutoConfigId,
 	getAutoConfigTriggerCommand,
 } from "./telemetry-utils";
 import type {
@@ -128,10 +128,12 @@ export async function getDetailsForAutoConfig({
 } = {}): Promise<AutoConfigDetails> {
 	logger.debug(`Running autoconfig detection in ${projectPath}...`);
 
+	const autoConfigId = getAutoConfigId();
+
 	sendMetricsEvent(
 		"autoconfig_detection_started",
 		{
-			appId: getAutoConfigAppId(),
+			...(autoConfigId ? { autoConfigId } : {}),
 			isCI,
 			command: getAutoConfigTriggerCommand(),
 		},
@@ -184,7 +186,7 @@ export async function getDetailsForAutoConfig({
 	sendMetricsEvent(
 		"autoconfig_detection_completed",
 		{
-			appId: getAutoConfigAppId(),
+			...(autoConfigId ? { autoConfigId } : {}),
 			framework: framework.id,
 			configured,
 			success: true,
