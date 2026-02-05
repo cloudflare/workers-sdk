@@ -49,6 +49,16 @@ function isValidPythonPackageName(name: string): boolean {
 	return regex.test(name);
 }
 
+/**
+ * Checks if a given module name is a Python vendor module.
+ * @param moduleName The module name to check
+ */
+function isPythonVendorModule(moduleName: string): boolean {
+	// separator should be forward slash, as we always use forward slash for module names
+	// see `getFiles()` for more details
+	return moduleName.startsWith("python_modules/");
+}
+
 function removePythonVendorModules(
 	isPythonEntrypoint: boolean,
 	modules: CfModule[]
@@ -56,13 +66,11 @@ function removePythonVendorModules(
 	if (!isPythonEntrypoint) {
 		return modules;
 	}
-	return modules.filter((m) => !m.name.startsWith("python_modules" + path.sep));
+	return modules.filter((m) => !isPythonVendorModule(m.name));
 }
 
 function getPythonVendorModulesSize(modules: CfModule[]): number {
-	const vendorModules = modules.filter((m) =>
-		m.name.startsWith("python_modules" + path.sep)
-	);
+	const vendorModules = modules.filter((m) => isPythonVendorModule(m.name));
 	return vendorModules.reduce((total, m) => total + m.content.length, 0);
 }
 
@@ -187,7 +195,10 @@ export async function findAdditionalModules(
 					return true; // Include this file
 				})
 				.map((m) => {
-					const prefixedPath = path.join("python_modules", m.name);
+					// Always use forward slashes for module names, regardless of platform.
+					// path.join() uses backslashes on Windows, but module names must use
+					// forward slashes for proper directory structure when deployed.
+					const prefixedPath = `python_modules/${m.name}`;
 					return {
 						...m,
 						name: prefixedPath,

@@ -13951,9 +13951,8 @@ export default{
 			const expectedModules = {
 				"index.py": mainPython,
 				"helper.py": "# Helper module\ndef helper(): pass",
-				[`python_modules${path.sep}module1.so`]: "binary content for module 1",
-				[`python_modules${path.sep}module2.py`]:
-					"# Python vendor module 2\nprint('hello')",
+				"python_modules/module1.so": "binary content for module 1",
+				"python_modules/module2.py": "# Python vendor module 2\nprint('hello')",
 			};
 
 			mockSubDomainRequest();
@@ -13961,8 +13960,8 @@ export default{
 				expectedMainModule: "index.py",
 				expectedModules,
 				excludedModules: [
-					`python_modules${path.sep}test.pyc`,
-					`python_modules${path.sep}other${path.sep}test.pyc`,
+					"python_modules/test.pyc",
+					"python_modules/other/test.pyc",
 				],
 			});
 
