@@ -10,7 +10,6 @@ import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
-import { getPackageManager } from "../package-manager";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
 import { installWrangler } from "./c3-vendor/packages";
@@ -106,15 +105,18 @@ export async function runAutoConfig(
 		},
 	} satisfies RawConfig;
 
+	const { packageManager } = autoConfigDetails;
+
 	const dryRunConfigurationResults =
 		await autoConfigDetails.framework.configure({
 			outputDir: autoConfigDetails.outputDir,
 			projectPath: autoConfigDetails.projectPath,
 			workerName: autoConfigDetails.workerName,
 			dryRun: true,
+			packageManager,
 		});
 
-	const { npx } = await getPackageManager();
+	const { npx } = packageManager;
 
 	const autoConfigSummary = await buildOperationsSummary(
 		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
@@ -153,7 +155,7 @@ export async function runAutoConfig(
 	);
 
 	if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
-		await installWrangler();
+		await installWrangler(packageManager);
 	}
 
 	const configurationResults = await autoConfigDetails.framework.configure({
@@ -161,6 +163,7 @@ export async function runAutoConfig(
 		projectPath: autoConfigDetails.projectPath,
 		workerName: autoConfigDetails.workerName,
 		dryRun: false,
+		packageManager,
 	});
 
 	if (autoConfigDetails.packageJson) {

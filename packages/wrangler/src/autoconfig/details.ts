@@ -14,14 +14,47 @@ import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
-import { getPackageManager } from "../package-manager";
+import {
+	BunPackageManager,
+	NpmPackageManager,
+	PnpmPackageManager,
+	YarnPackageManager,
+} from "../package-manager";
 import { getFramework } from "./frameworks/get-framework";
+import type { PackageManager } from "../package-manager";
 import type {
 	AutoConfigDetails,
 	AutoConfigDetailsForNonConfiguredProject,
 } from "./types";
 import type { Config, PackageJSON } from "@cloudflare/workers-utils";
 import type { Settings } from "@netlify/build-info";
+
+/**
+ * Converts the package manager detected by @netlify/build-info to our PackageManager type.
+ * Falls back to npm if no package manager was detected.
+ *
+ * @param pkgManager The package manager detected by @netlify/build-info (from project.packageManager)
+ * @returns A PackageManager object compatible with wrangler's package manager utilities
+ */
+function convertDetectedPackageManager(
+	pkgManager: { name: string } | null | undefined
+): PackageManager {
+	if (!pkgManager) {
+		return NpmPackageManager;
+	}
+
+	switch (pkgManager.name) {
+		case "pnpm":
+			return PnpmPackageManager;
+		case "yarn":
+			return YarnPackageManager;
+		case "bun":
+			return BunPackageManager;
+		case "npm":
+		default:
+			return NpmPackageManager;
+	}
+}
 
 /**
  * Asserts that the current project being targeted for autoconfig is not already configured.
@@ -128,6 +161,8 @@ export async function getDetailsForAutoConfig({
 			configured: true,
 			projectPath,
 			workerName: getWorkerName(wranglerConfig.name, projectPath),
+			// Fall back to npm when already configured since we don't need to run package manager commands
+			packageManager: NpmPackageManager,
 		};
 	}
 	const fs = new NodeFS();
@@ -152,6 +187,10 @@ export async function getDetailsForAutoConfig({
 	const framework = getFramework(detectedFramework?.framework);
 	const packageJsonPath = resolve(projectPath, "package.json");
 
+	// Convert the package manager detected by @netlify/build-info to our PackageManager type.
+	// This is populated after getBuildSettings() runs, which triggers the full detection chain.
+	const packageManager = convertDetectedPackageManager(project.packageManager);
+
 	let packageJson: PackageJSON | undefined;
 
 	try {
@@ -168,9 +207,13 @@ export async function getDetailsForAutoConfig({
 		configured: framework.isConfigured(projectPath) ?? false,
 		framework,
 		packageJson,
+		packageManager,
 		...(detectedFramework
 			? {
-					buildCommand: await getProjectBuildCommand(detectedFramework),
+					buildCommand: getProjectBuildCommand(
+						detectedFramework,
+						packageManager
+					),
 				}
 			: {}),
 		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
@@ -183,16 +226,18 @@ export async function getDetailsForAutoConfig({
  * (such as `npm run build` or `npx astro build`). If no build command is detected `undefined` is returned instead.
  *
  * @param detectedFramework The detected framework (or settings) for the project
+ * @param packageManager The package manager to use for command prefixes
  * @returns A runnable command for the build process if detected, undefined otherwise
  */
-async function getProjectBuildCommand(
-	detectedFramework: Settings
-): Promise<string | undefined> {
+function getProjectBuildCommand(
+	detectedFramework: Settings,
+	packageManager: PackageManager
+): string | undefined {
 	if (!detectedFramework.buildCommand) {
 		return undefined;
 	}
 
-	const { type, dlx, npx } = await getPackageManager();
+	const { type, dlx, npx } = packageManager;
 
 	for (const packageManagerCommandPrefix of [type, dlx.join(" "), npx]) {
 		if (
