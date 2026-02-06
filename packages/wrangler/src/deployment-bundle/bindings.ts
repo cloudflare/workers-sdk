@@ -7,6 +7,7 @@ import {
 	PatchConfigError,
 	UserError,
 } from "@cloudflare/workers-utils";
+import { convertConfigToBindings } from "../api/startDevWorker/utils";
 import { fetchResult } from "../cfetch";
 import { createD1Database } from "../d1/create";
 import { listDatabases } from "../d1/list";
@@ -23,11 +24,11 @@ import {
 } from "../r2/helpers/bucket";
 import { printBindings } from "../utils/print-bindings";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
+import type { Binding, StartDevWorkerInput } from "../api/startDevWorker/types";
 import type {
 	CfD1Database,
 	CfKvNamespace,
 	CfR2Bucket,
-	CfWorkerInit,
 	ComplianceConfig,
 	Config,
 	RawConfig,
@@ -39,54 +40,14 @@ export function getBindings(
 	options?: {
 		pages?: boolean;
 	}
-): CfWorkerInit["bindings"] {
-	return {
-		kv_namespaces: config?.kv_namespaces,
-		send_email: options?.pages ? undefined : config?.send_email,
-		vars: config?.vars,
-		wasm_modules: options?.pages ? undefined : config?.wasm_modules,
-		browser: config?.browser,
-		ai: config?.ai,
-		images: config?.images,
-		version_metadata: config?.version_metadata,
-		text_blobs: options?.pages ? undefined : config?.text_blobs,
-		data_blobs: options?.pages ? undefined : config?.data_blobs,
-		durable_objects: config?.durable_objects,
-		workflows: config?.workflows,
-		queues: config?.queues.producers?.map((producer) => {
-			return { binding: producer.binding, queue_name: producer.queue };
-		}),
-		r2_buckets: config?.r2_buckets,
-		d1_databases: config?.d1_databases,
-		vectorize: config?.vectorize,
-		hyperdrive: config?.hyperdrive,
-		secrets_store_secrets: config?.secrets_store_secrets,
-		services: config?.services,
-		analytics_engine_datasets: config?.analytics_engine_datasets,
-		dispatch_namespaces: options?.pages
-			? undefined
-			: config?.dispatch_namespaces,
-		mtls_certificates: config?.mtls_certificates,
-		pipelines: options?.pages ? undefined : config?.pipelines,
-		logfwdr: options?.pages ? undefined : config?.logfwdr,
-		assets: options?.pages
-			? undefined
-			: config?.assets?.binding
-				? { binding: config?.assets?.binding }
-				: undefined,
-		unsafe: options?.pages
-			? undefined
-			: {
-					bindings: config?.unsafe.bindings,
-					metadata: config?.unsafe.metadata,
-					capnp: config?.unsafe.capnp,
-				},
-		unsafe_hello_world: options?.pages ? undefined : config?.unsafe_hello_world,
-		ratelimits: config?.ratelimits,
-		worker_loaders: config?.worker_loaders,
-		vpc_services: config?.vpc_services,
-		media: config?.media,
-	};
+): NonNullable<StartDevWorkerInput["bindings"]> {
+	if (!config) {
+		return {};
+	}
+	return convertConfigToBindings(config, {
+		usePreviewIds: false,
+		pages: options?.pages,
+	});
 }
 
 export type Settings = {
@@ -408,13 +369,36 @@ type PendingResource = {
 	handler: KVHandler | D1Handler | R2Handler;
 };
 
-async function collectPendingResources(
+/**
+ * Maps StartDevWorkerInput binding types to config field names for provisionable resources
+ */
+const BINDING_TYPE_TO_RESOURCE_TYPE = {
+	kv_namespace: "kv_namespaces",
+	r2_bucket: "r2_buckets",
+	d1: "d1_databases",
+} as const;
+
+type ProvisionableBindingType = keyof typeof BINDING_TYPE_TO_RESOURCE_TYPE;
+
+function isProvisionableBinding(
+	binding: Binding
+): binding is Binding & { type: ProvisionableBindingType } {
+	return binding.type in BINDING_TYPE_TO_RESOURCE_TYPE;
+}
+
+/**
+ * Collect pending resources that need provisioning from flat bindings format.
+ */
+async function collectPendingResourcesFromBindings(
 	complianceConfig: ComplianceConfig,
 	accountId: string,
 	scriptName: string,
-	bindings: CfWorkerInit["bindings"],
+	bindings: StartDevWorkerInput["bindings"],
 	requireRemote: boolean
-): Promise<PendingResource[]> {
+): Promise<{
+	pendingResources: PendingResource[];
+	updatedBindings: NonNullable<StartDevWorkerInput["bindings"]>;
+}> {
 	let settings: Settings | undefined;
 
 	try {
@@ -424,51 +408,113 @@ async function collectPendingResources(
 	}
 
 	const pendingResources: PendingResource[] = [];
+	// Create a shallow copy of bindings that we'll update with inherited/connected IDs
+	const updatedBindings: NonNullable<StartDevWorkerInput["bindings"]> = {
+		...bindings,
+	};
 
-	for (const resourceType of Object.keys(
-		HANDLERS
-	) as (keyof typeof HANDLERS)[]) {
-		for (const resource of bindings[resourceType] ?? []) {
-			if (requireRemote && !resource.remote) {
-				continue;
-			}
-			const h = new HANDLERS[resourceType].Handler(
-				resource,
-				complianceConfig,
-				accountId
-			);
+	for (const [bindingName, binding] of Object.entries(bindings ?? {})) {
+		if (!isProvisionableBinding(binding)) {
+			continue;
+		}
 
-			if (await h.shouldProvision(settings)) {
-				pendingResources.push({
-					binding: resource.binding,
-					resourceType,
-					handler: h,
-				});
+		if (requireRemote && !("remote" in binding && binding.remote)) {
+			continue;
+		}
+
+		const resourceType = BINDING_TYPE_TO_RESOURCE_TYPE[binding.type];
+
+		// Reconstruct the Cf* binding format that handlers expect
+		// by adding the binding name back
+		let cfBinding: CfKvNamespace | CfR2Bucket | CfD1Database;
+
+		if (binding.type === "kv_namespace") {
+			cfBinding = {
+				binding: bindingName,
+				id: binding.id,
+			} as CfKvNamespace;
+		} else if (binding.type === "r2_bucket") {
+			cfBinding = {
+				binding: bindingName,
+				bucket_name: binding.bucket_name,
+				jurisdiction: binding.jurisdiction,
+			} as CfR2Bucket;
+		} else {
+			// d1
+			cfBinding = {
+				binding: bindingName,
+				database_id: binding.database_id,
+				database_name: binding.database_name,
+			} as CfD1Database;
+		}
+
+		const h = new HANDLERS[resourceType].Handler(
+			cfBinding,
+			complianceConfig,
+			accountId
+		);
+
+		if (await h.shouldProvision(settings)) {
+			pendingResources.push({
+				binding: bindingName,
+				resourceType,
+				handler: h,
+			});
+		} else {
+			// The binding can be inherited or is already connected to an existing resource.
+			// Update the binding with the resolved ID (might be INHERIT_SYMBOL or an actual ID)
+			if (binding.type === "kv_namespace") {
+				updatedBindings[bindingName] = {
+					...binding,
+					id: (cfBinding as CfKvNamespace).id,
+				};
+			} else if (binding.type === "r2_bucket") {
+				updatedBindings[bindingName] = {
+					...binding,
+					bucket_name: (cfBinding as CfR2Bucket).bucket_name,
+				};
+			} else {
+				updatedBindings[bindingName] = {
+					...binding,
+					database_id: (cfBinding as CfD1Database).database_id,
+				};
 			}
 		}
 	}
 
-	return pendingResources.sort(
-		(a, b) => HANDLERS[a.resourceType].sort - HANDLERS[b.resourceType].sort
-	);
+	return {
+		pendingResources: pendingResources.sort(
+			(a, b) => HANDLERS[a.resourceType].sort - HANDLERS[b.resourceType].sort
+		),
+		updatedBindings,
+	};
 }
 
-export async function provisionBindings(
-	bindings: CfWorkerInit["bindings"],
+/**
+ * Provision bindings and resolve their IDs.
+ * Returns updated bindings with resolved IDs (either inherited via INHERIT_SYMBOL,
+ * connected to existing resources, or newly provisioned).
+ */
+export async function provisionBindingsFromInput(
+	bindings: StartDevWorkerInput["bindings"],
 	accountId: string,
 	scriptName: string,
 	autoCreate: boolean,
 	config: Config,
 	requireRemote = false
-): Promise<void> {
+): Promise<NonNullable<StartDevWorkerInput["bindings"]>> {
 	const configPath = config.userConfigPath ?? config.configPath;
-	const pendingResources = await collectPendingResources(
-		config,
-		accountId,
-		scriptName,
-		bindings,
-		requireRemote
-	);
+	const { pendingResources, updatedBindings } =
+		await collectPendingResourcesFromBindings(
+			config,
+			accountId,
+			scriptName,
+			bindings,
+			requireRemote
+		);
+
+	// Start with bindings that have been updated with inherited/connected IDs
+	let finalBindings = updatedBindings;
 
 	if (pendingResources.length > 0) {
 		assert(
@@ -482,14 +528,22 @@ export async function provisionBindings(
 			);
 		}
 		logger.log();
-		const printable: Record<string, { binding: string }[]> = {};
+		// Filter bindings to only show the ones that need provisioning
+		// Create minimal bindings for display - only include the type (not IDs/names)
+		// This matches original behavior where pending resources only show their type
+		const bindingsToProvision: StartDevWorkerInput["bindings"] = {};
 		for (const resource of pendingResources) {
-			printable[resource.resourceType] ??= [];
-			printable[resource.resourceType].push({ binding: resource.binding });
+			const binding = bindings?.[resource.binding];
+			if (binding) {
+				// Create a minimal binding with just the type for display
+				bindingsToProvision[resource.binding] = {
+					type: binding.type,
+				} as Binding;
+			}
 		}
 
 		printBindings(
-			printable,
+			bindingsToProvision,
 			config.tail_consumers,
 			config.streaming_tail_consumers,
 			config.containers,
@@ -522,6 +576,30 @@ export async function provisionBindings(
 			allChanges.set(resource.binding, resource.handler.binding);
 		}
 
+		// Apply provisioned IDs to the final bindings
+		finalBindings = { ...finalBindings };
+		for (const [bindingName, cfBinding] of allChanges) {
+			const binding = finalBindings?.[bindingName];
+			if (binding) {
+				if (binding.type === "kv_namespace") {
+					finalBindings[bindingName] = {
+						...binding,
+						id: (cfBinding as CfKvNamespace).id,
+					};
+				} else if (binding.type === "r2_bucket") {
+					finalBindings[bindingName] = {
+						...binding,
+						bucket_name: (cfBinding as CfR2Bucket).bucket_name,
+					};
+				} else if (binding.type === "d1") {
+					finalBindings[bindingName] = {
+						...binding,
+						database_id: (cfBinding as CfD1Database).database_id,
+					};
+				}
+			}
+		}
+
 		const existingBindingNames = new Set<string>();
 
 		const isUsingRedirectedConfig =
@@ -544,35 +622,51 @@ export async function provisionBindings(
 				}
 			}
 		}
-		for (const resourceType of Object.keys(
-			HANDLERS
-		) as (keyof typeof HANDLERS)[]) {
-			for (const binding of bindings[resourceType] ?? []) {
-				// See above for why we skip writing back some bindings to the config file
-				if (
-					isUsingRedirectedConfig &&
-					!existingBindingNames.has(binding.binding)
-				) {
-					continue;
-				}
-				patch[resourceType] ??= [];
 
-				const bindingToWrite = allChanges.has(binding.binding)
-					? // Gated by Map.has()
-						// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-						allChanges.get(binding.binding)!
-					: binding;
-
-				patch[resourceType].push(
-					Object.fromEntries(
-						Object.entries(bindingToWrite).filter(
-							// Make sure all the values are JSON serialisable.
-							// Otherwise we end up with "undefined" in the config
-							([_, value]) => typeof value === "string"
-						)
-					) as NonNullable<(typeof patch)[typeof resourceType]>[number]
-				);
+		// Write the provisioned IDs back to config
+		for (const [bindingName, binding] of Object.entries(finalBindings ?? {})) {
+			if (!isProvisionableBinding(binding)) {
+				continue;
 			}
+
+			// See above for why we skip writing back some bindings to the config file
+			if (isUsingRedirectedConfig && !existingBindingNames.has(bindingName)) {
+				continue;
+			}
+
+			const resourceType = BINDING_TYPE_TO_RESOURCE_TYPE[binding.type];
+			patch[resourceType] ??= [];
+
+			// Reconstruct the binding with binding name for config patching
+			let bindingToWrite: CfKvNamespace | CfR2Bucket | CfD1Database;
+			if (allChanges.has(bindingName)) {
+				// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+				bindingToWrite = allChanges.get(bindingName)!;
+			} else if (binding.type === "kv_namespace") {
+				bindingToWrite = { binding: bindingName, id: binding.id };
+			} else if (binding.type === "r2_bucket") {
+				bindingToWrite = {
+					binding: bindingName,
+					bucket_name: binding.bucket_name,
+					jurisdiction: binding.jurisdiction,
+				};
+			} else {
+				bindingToWrite = {
+					binding: bindingName,
+					database_id: binding.database_id,
+					database_name: binding.database_name,
+				};
+			}
+
+			patch[resourceType].push(
+				Object.fromEntries(
+					Object.entries(bindingToWrite).filter(
+						// Make sure all the values are JSON serialisable.
+						// Otherwise we end up with "undefined" in the config
+						([_, value]) => typeof value === "string"
+					)
+				) as NonNullable<(typeof patch)[typeof resourceType]>[number]
+			);
 		}
 
 		// If the user is performing an interactive deploy, write the provisioned IDs back to the config file.
@@ -606,6 +700,8 @@ export async function provisionBindings(
 			sendMetrics: config.send_metrics,
 		});
 	}
+
+	return finalBindings;
 }
 
 export function getSettings(

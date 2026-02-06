@@ -22,7 +22,10 @@ import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
 import { deployContainers } from "../containers/deploy";
 import { isAuthenticationError } from "../core/handle-errors";
-import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
+import {
+	getBindings,
+	provisionBindingsFromInput,
+} from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
@@ -74,6 +77,7 @@ import { confirmLatestDeploymentOverwrite } from "../versions/deploy";
 import { getZoneForRoute } from "../zones";
 import { checkRemoteSecretsOverride } from "./check-remote-secrets-override";
 import { getConfigPatch, getRemoteConfigDiff } from "./config-diffs";
+import type { StartDevWorkerInput } from "../api/startDevWorker/types";
 import type { AssetsOptions } from "../assets";
 import type { Entry } from "../deployment-bundle/entry";
 import type { PostTypedConsumerBody } from "../queues/client";
@@ -82,6 +86,7 @@ import type { RetrieveSourceMapFunction } from "../sourcemap";
 import type { ApiVersion, Percentage, VersionId } from "../versions/types";
 import type {
 	CfModule,
+	CfScriptFormat,
 	CfWorkerInit,
 	ComplianceConfig,
 	Config,
@@ -362,6 +367,37 @@ Update them to point to this script instead?`;
 	return domains.map((domain) => renderRoute(domain));
 }
 
+/**
+ * Inject bindings into the Worker to support Workers Sites. These are injected at the last minute so that
+ * they don't display in the output of `printBindings()`
+ */
+function addWorkersSitesBindings(
+	bindings: NonNullable<StartDevWorkerInput["bindings"]>,
+	namespace: string | undefined,
+	manifest:
+		| {
+				[filePath: string]: string;
+		  }
+		| undefined,
+	format: CfScriptFormat
+) {
+	const withSites = { ...bindings };
+	if (namespace) {
+		withSites["__STATIC_CONTENT"] = {
+			type: "kv_namespace",
+			id: namespace,
+		};
+	}
+
+	if (manifest && format === "service-worker") {
+		withSites["__STATIC_CONTENT_MANIFEST"] = {
+			type: "text_blob",
+			source: { contents: "__STATIC_CONTENT_MANIFEST" },
+		};
+	}
+	return withSites;
+}
+
 export default async function deploy(props: Props): Promise<{
 	sourceMapSize?: number;
 	versionId: string | null;
@@ -383,7 +419,7 @@ export default async function deploy(props: Props): Promise<{
 		custom_domain: true,
 	}));
 	const routes =
-		props.routes ?? config.routes ?? (config.route ? [config.route] : []) ?? [];
+		props.routes ?? config.routes ?? (config.route ? [config.route] : []);
 	const allDeploymentRoutes = [...routes, ...domainRoutes];
 
 	if (!props.dispatchNamespace && accountId) {
@@ -762,22 +798,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			props.oldAssetTtl
 		);
 
-		const bindings = getBindings({
-			...config,
-			kv_namespaces: config.kv_namespaces.concat(
-				workersSitesAssets.namespace
-					? { binding: "__STATIC_CONTENT", id: workersSitesAssets.namespace }
-					: []
-			),
-			vars: { ...config.vars, ...props.vars },
-			text_blobs: {
-				...config.text_blobs,
-				...(workersSitesAssets.manifest &&
-					format === "service-worker" && {
-						__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
-					}),
-			},
-		});
+		let bindings = getBindings(config);
+
+		for (const [key, value] of Object.entries(props.vars ?? [])) {
+			bindings[key] = {
+				type: "secret_text",
+				value: value,
+			};
+		}
 
 		if (workersSitesAssets.manifest) {
 			modules.push({
@@ -800,7 +828,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main,
-			bindings,
 			migrations,
 			modules,
 			containers: config.containers,
@@ -839,23 +866,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			{ name: path.basename(resolvedEntryPointPath), content: content },
 			modules
 		);
-
-		const withoutStaticAssets = {
-			...bindings,
-			kv_namespaces: config.kv_namespaces,
-			text_blobs: config.text_blobs,
-		};
-
-		// mask anything that was overridden in cli args
-		// so that we don't log potential secrets into the terminal
-		const maskedVars = { ...withoutStaticAssets.vars };
-		for (const key of Object.keys(maskedVars)) {
-			if (maskedVars[key] !== config.vars[key]) {
-				// This means it was overridden in cli args
-				// so let's mask it
-				maskedVars[key] = "(hidden)";
-			}
-		}
 
 		// We can use the new versions/deployments APIs if we:
 		// * are uploading a worker that already exists
@@ -905,19 +915,33 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				}
 			}
 
-			workerBundle = createWorkerUploadForm(worker, { dryRun: true });
+			workerBundle = createWorkerUploadForm(
+				worker,
+				addWorkersSitesBindings(
+					bindings,
+					workersSitesAssets.namespace,
+					workersSitesAssets.manifest,
+					format
+				),
+				{
+					dryRun: true,
+					unsafe: config.unsafe,
+				}
+			);
+
 			printBindings(
-				{ ...withoutStaticAssets, vars: maskedVars },
+				bindings,
 				config.tail_consumers,
 				config.streaming_tail_consumers,
 				config.containers,
-				{ warnIfNoBindings: true }
+				{ warnIfNoBindings: true, unsafeMetadata: config.unsafe?.metadata }
 			);
 		} else {
 			assert(accountId, "Missing accountId");
 
 			if (getFlag("RESOURCES_PROVISION")) {
-				await provisionBindings(
+				// Provision only user-facing bindings
+				bindings = await provisionBindingsFromInput(
 					bindings,
 					accountId,
 					scriptName,
@@ -926,7 +950,18 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				);
 			}
 
-			workerBundle = createWorkerUploadForm(worker);
+			workerBundle = createWorkerUploadForm(
+				worker,
+				addWorkersSitesBindings(
+					bindings,
+					workersSitesAssets.namespace,
+					workersSitesAssets.manifest,
+					format
+				),
+				{
+					unsafe: config.unsafe,
+				}
+			);
 
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
@@ -1048,10 +1083,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				bindingsPrinted = true;
 
 				printBindings(
-					{ ...withoutStaticAssets, vars: maskedVars },
+					bindings,
 					config.tail_consumers,
 					config.streaming_tail_consumers,
-					config.containers
+					config.containers,
+					{ unsafeMetadata: config.unsafe?.metadata }
 				);
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);
@@ -1079,10 +1115,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			} catch (err) {
 				if (!bindingsPrinted) {
 					printBindings(
-						{ ...withoutStaticAssets, vars: maskedVars },
+						bindings,
 						config.tail_consumers,
 						config.streaming_tail_consumers,
-						config.containers
+						config.containers,
+						{ unsafeMetadata: config.unsafe?.metadata }
 					);
 				}
 				const message = await helpIfErrorIsSizeOrScriptStartup(

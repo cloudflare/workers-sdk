@@ -482,6 +482,7 @@ export async function bundleWorker(
 	}
 
 	const entryPoint = getEntryPointFromMetafile(entryFile, result.metafile);
+
 	const notExportedDOs = doBindings
 		.filter((x) => !x.script_name && !entryPoint.exports.includes(x.class_name))
 		.map((x) => x.class_name);

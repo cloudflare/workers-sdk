@@ -1,6 +1,6 @@
 import type { Observability, Route } from "./config/environment";
 import type { INHERIT_SYMBOL } from "./constants";
-import type { Json, WorkerMetadata, WorkerMetadataBinding } from "./types";
+import type { Json, WorkerMetadata } from "./types";
 import type { AssetConfig, RouterConfig } from "@cloudflare/workers-shared";
 
 /**
@@ -401,51 +401,8 @@ export interface CfWorkerInit {
 	 * The list of source maps to include on upload.
 	 */
 	sourceMaps: CfWorkerSourceMap[] | undefined;
-	/**
-	 * All the bindings
-	 */
-	bindings: {
-		vars: CfVars | undefined;
-		kv_namespaces: CfKvNamespace[] | undefined;
-		send_email: CfSendEmailBindings[] | undefined;
-		wasm_modules: CfWasmModuleBindings | undefined;
-		text_blobs: CfTextBlobBindings | undefined;
-		browser: CfBrowserBinding | undefined;
-		ai: CfAIBinding | undefined;
-		images: CfImagesBinding | undefined;
-		version_metadata: CfVersionMetadataBinding | undefined;
-		data_blobs: CfDataBlobBindings | undefined;
-		durable_objects: { bindings: CfDurableObject[] } | undefined;
-		workflows: CfWorkflow[] | undefined;
-		queues: CfQueue[] | undefined;
-		r2_buckets: CfR2Bucket[] | undefined;
-		d1_databases: CfD1Database[] | undefined;
-		vectorize: CfVectorize[] | undefined;
-		hyperdrive: CfHyperdrive[] | undefined;
-		secrets_store_secrets: CfSecretsStoreSecrets[] | undefined;
-		services: CfService[] | undefined;
-		vpc_services: CfVpcService[] | undefined;
-		analytics_engine_datasets: CfAnalyticsEngineDataset[] | undefined;
-		dispatch_namespaces: CfDispatchNamespace[] | undefined;
-		mtls_certificates: CfMTlsCertificate[] | undefined;
-		logfwdr: CfLogfwdr | undefined;
-		pipelines: CfPipeline[] | undefined;
-		unsafe: CfUnsafe | undefined;
-		assets: CfAssetsBinding | undefined;
-		unsafe_hello_world: CfHelloWorld[] | undefined;
-		ratelimits: CfRateLimit[] | undefined;
-		worker_loaders: CfWorkerLoader[] | undefined;
-		media: CfMediaBinding | undefined;
-	};
 
 	containers: { class_name: string }[] | undefined;
-
-	/**
-	 * The raw bindings - this is basically never provided and it'll be the bindings above
-	 * but if we're just taking from the api and re-putting then this is how we can do that
-	 * without going between the different types
-	 */
-	rawBindings?: WorkerMetadataBinding[];
 
 	migrations: CfDurableObjectMigrations | undefined;
 	compatibility_date: string | undefined;

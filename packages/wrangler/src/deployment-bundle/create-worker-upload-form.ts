@@ -4,8 +4,10 @@ import path from "node:path";
 import { INHERIT_SYMBOL, UserError } from "@cloudflare/workers-utils";
 import { FormData } from "undici";
 import { handleUnsafeCapnp } from "./capnp";
+import type { Binding, StartDevWorkerInput } from "../api/startDevWorker/types";
 import type {
 	AssetConfigMetadata,
+	CfCapnp,
 	CfModuleType,
 	CfWorkerInit,
 	WorkerMetadata,
@@ -45,18 +47,21 @@ export function fromMimeType(mimeType: string): CfModuleType {
 }
 
 /**
- * Creates a `FormData` upload from a `CfWorkerInit`.
+ * Creates a `FormData` upload from worker data and bindings.
+ * Bindings are in the flat `StartDevWorkerInput["bindings"]` format (Record<string, Binding>).
  */
 export function createWorkerUploadForm(
-	worker: CfWorkerInit,
-	options?: { dryRun: true }
+	worker: Omit<CfWorkerInit, "bindings" | "rawBindings">,
+	bindings: StartDevWorkerInput["bindings"],
+	options?: {
+		dryRun?: true;
+		unsafe?: { metadata?: Record<string, unknown>; capnp?: CfCapnp };
+	}
 ): FormData {
 	const formData = new FormData();
 	const {
 		main,
 		sourceMaps,
-		bindings,
-		rawBindings,
 		migrations,
 		compatibility_date,
 		compatibility_flags,
@@ -100,386 +105,424 @@ export function createWorkerUploadForm(
 	}
 	let { modules } = worker;
 
-	const metadataBindings: WorkerMetadataBinding[] = rawBindings ?? [];
+	const metadataBindings: WorkerMetadataBinding[] = [];
 
-	Object.entries(bindings.vars || {})?.forEach(([key, value]) => {
-		if (typeof value === "string") {
-			metadataBindings.push({ name: key, type: "plain_text", text: value });
-		} else {
-			metadataBindings.push({ name: key, type: "json", json: value });
-		}
-	});
-
-	bindings.kv_namespaces?.forEach(({ id, binding, raw }) => {
-		// If we're doing a dry run there's no way to know whether or not a KV namespace
-		// is inheritable or requires provisioning (since that would require hitting the API).
-		// As such, _assume_ any undefined IDs are inheritable when doing a dry run.
-		// When this Worker is actually deployed, some may be provisioned at the point of deploy
-		if (options?.dryRun) {
-			id ??= INHERIT_SYMBOL;
-		}
-
-		if (id === undefined) {
-			throw new UserError(`${binding} bindings must have an "id" field`);
-		}
-
-		if (id === INHERIT_SYMBOL) {
-			metadataBindings.push({
-				name: binding,
-				type: "inherit",
-			});
-		} else {
-			metadataBindings.push({
-				name: binding,
-				type: "kv_namespace",
-				namespace_id: id,
-				raw,
-			});
-		}
-	});
-
-	bindings.send_email?.forEach((emailBinding) => {
-		const destination_address =
-			"destination_address" in emailBinding
-				? emailBinding.destination_address
-				: undefined;
-		const allowed_destination_addresses =
-			"allowed_destination_addresses" in emailBinding
-				? emailBinding.allowed_destination_addresses
-				: undefined;
-		const allowed_sender_addresses =
-			"allowed_sender_addresses" in emailBinding
-				? emailBinding.allowed_sender_addresses
-				: undefined;
-		metadataBindings.push({
-			name: emailBinding.name,
-			type: "send_email",
-			destination_address,
-			allowed_destination_addresses,
-			allowed_sender_addresses,
-		});
-	});
-
-	bindings.durable_objects?.bindings.forEach(
-		({ name, class_name, script_name, environment }) => {
-			metadataBindings.push({
-				name,
-				type: "durable_object_namespace",
-				class_name: class_name,
-				...(script_name && { script_name }),
-				...(environment && { environment }),
-			});
-		}
-	);
-
-	bindings.workflows?.forEach(
-		({ binding, name, class_name, script_name, raw }) => {
-			metadataBindings.push({
-				type: "workflow",
-				name: binding,
-				workflow_name: name,
-				class_name,
-				script_name,
-				raw,
-			});
-		}
-	);
-
-	bindings.queues?.forEach(({ binding, queue_name, delivery_delay, raw }) => {
-		metadataBindings.push({
-			type: "queue",
-			name: binding,
-			queue_name,
-			delivery_delay,
-			raw,
-		});
-	});
-
-	bindings.r2_buckets?.forEach(
-		({ binding, bucket_name, jurisdiction, raw }) => {
-			if (options?.dryRun) {
-				bucket_name ??= INHERIT_SYMBOL;
-			}
-			if (bucket_name === undefined) {
-				throw new UserError(
-					`${binding} bindings must have a "bucket_name" field`
-				);
-			}
-
-			if (bucket_name === INHERIT_SYMBOL) {
+	for (const [binding, config] of Object.entries(bindings ?? {})) {
+		switch (config.type) {
+			case "plain_text": {
 				metadataBindings.push({
 					name: binding,
-					type: "inherit",
+					type: "plain_text",
+					text: config.value,
 				});
-			} else {
+				break;
+			}
+			case "secret_text": {
 				metadataBindings.push({
 					name: binding,
-					type: "r2_bucket",
-					bucket_name,
-					jurisdiction,
-					raw,
+					type: "secret_text",
+					text: config.value,
 				});
+				break;
 			}
-		}
-	);
-
-	bindings.d1_databases?.forEach(
-		({ binding, database_id, database_internal_env, raw }) => {
-			if (options?.dryRun) {
-				database_id ??= INHERIT_SYMBOL;
-			}
-			if (database_id === undefined) {
-				throw new UserError(
-					`${binding} bindings must have a "database_id" field`
-				);
-			}
-
-			if (database_id === INHERIT_SYMBOL) {
+			case "json": {
 				metadataBindings.push({
 					name: binding,
-					type: "inherit",
+					type: "json",
+					json: config.value,
 				});
-			} else {
-				metadataBindings.push({
-					name: binding,
-					type: "d1",
-					id: database_id,
-					internalEnv: database_internal_env,
-					raw,
-				});
+				break;
 			}
-		}
-	);
-
-	bindings.vectorize?.forEach(({ binding, index_name, raw }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "vectorize",
-			index_name: index_name,
-			raw,
-		});
-	});
-
-	bindings.hyperdrive?.forEach(({ binding, id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "hyperdrive",
-			id: id,
-		});
-	});
-
-	bindings.secrets_store_secrets?.forEach(
-		({ binding, store_id, secret_name }) => {
-			metadataBindings.push({
-				name: binding,
-				type: "secrets_store_secret",
-				store_id,
-				secret_name,
-			});
-		}
-	);
-
-	bindings.unsafe_hello_world?.forEach(({ binding, enable_timer }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "unsafe_hello_world",
-			enable_timer,
-		});
-	});
-
-	bindings.ratelimits?.forEach(({ name, namespace_id, simple }) => {
-		metadataBindings.push({
-			name,
-			type: "ratelimit",
-			namespace_id,
-			simple,
-		});
-	});
-
-	bindings.vpc_services?.forEach(({ binding, service_id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "vpc_service",
-			service_id,
-		});
-	});
-
-	bindings.services?.forEach(
-		({
-			binding,
-			service,
-			environment,
-			entrypoint,
-			props,
-			cross_account_grant,
-		}) => {
-			metadataBindings.push({
-				name: binding,
-				type: "service",
-				service,
-				cross_account_grant,
-				...(environment && { environment }),
-				...(entrypoint && { entrypoint }),
-				...(props && { props }),
-			});
-		}
-	);
-
-	bindings.analytics_engine_datasets?.forEach(({ binding, dataset }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "analytics_engine",
-			dataset,
-		});
-	});
-
-	bindings.dispatch_namespaces?.forEach(({ binding, namespace, outbound }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "dispatch_namespace",
-			namespace,
-			...(outbound && {
-				outbound: {
-					worker: {
-						service: outbound.service,
-						environment: outbound.environment,
-					},
-					params: outbound.parameters?.map((p) => ({ name: p })),
-				},
-			}),
-		});
-	});
-
-	bindings.mtls_certificates?.forEach(({ binding, certificate_id }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "mtls_certificate",
-			certificate_id,
-		});
-	});
-
-	bindings.pipelines?.forEach(({ binding, pipeline }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "pipelines",
-			pipeline: pipeline,
-		});
-	});
-
-	bindings.worker_loaders?.forEach(({ binding }) => {
-		metadataBindings.push({
-			name: binding,
-			type: "worker_loader",
-		});
-	});
-
-	bindings.logfwdr?.bindings.forEach(({ name, destination }) => {
-		metadataBindings.push({
-			name: name,
-			type: "logfwdr",
-			destination,
-		});
-	});
-
-	for (const [name, source] of Object.entries(bindings.wasm_modules || {})) {
-		metadataBindings.push({
-			name,
-			type: "wasm_module",
-			part: name,
-		});
-
-		formData.set(
-			name,
-			new File(
-				[typeof source === "string" ? readFileSync(source) : source],
-				typeof source === "string" ? source : name,
-				{
-					type: "application/wasm",
+			case "kv_namespace": {
+				let id = config.id;
+				// If we're doing a dry run there's no way to know whether or not a KV namespace
+				// is inheritable or requires provisioning (since that would require hitting the API).
+				// As such, _assume_ any undefined IDs are inheritable when doing a dry run.
+				// When this Worker is actually deployed, some may be provisioned at the point of deploy
+				if (options?.dryRun) {
+					id ??= INHERIT_SYMBOL;
 				}
-			)
-		);
-	}
 
-	if (bindings.browser !== undefined) {
-		metadataBindings.push({
-			name: bindings.browser.binding,
-			type: "browser",
-			raw: bindings.browser.raw,
-		});
-	}
-
-	if (bindings.ai !== undefined) {
-		metadataBindings.push({
-			name: bindings.ai.binding,
-			staging: bindings.ai.staging,
-			type: "ai",
-			raw: bindings.ai.raw,
-		});
-	}
-
-	if (bindings.images !== undefined) {
-		metadataBindings.push({
-			name: bindings.images.binding,
-			type: "images",
-			raw: bindings.images.raw,
-		});
-	}
-
-	if (bindings.media !== undefined) {
-		metadataBindings.push({
-			name: bindings.media.binding,
-			type: "media",
-		});
-	}
-
-	if (bindings.version_metadata !== undefined) {
-		metadataBindings.push({
-			name: bindings.version_metadata.binding,
-			type: "version_metadata",
-		});
-	}
-
-	if (bindings.assets !== undefined) {
-		metadataBindings.push({
-			name: bindings.assets.binding,
-			type: "assets",
-		});
-	}
-
-	for (const [name, filePath] of Object.entries(bindings.text_blobs || {})) {
-		metadataBindings.push({
-			name,
-			type: "text_blob",
-			part: name,
-		});
-
-		if (name !== "__STATIC_CONTENT_MANIFEST") {
-			formData.set(
-				name,
-				new File([readFileSync(filePath)], filePath, {
-					type: "text/plain",
-				})
-			);
-		}
-	}
-
-	for (const [name, source] of Object.entries(bindings.data_blobs || {})) {
-		metadataBindings.push({
-			name,
-			type: "data_blob",
-			part: name,
-		});
-
-		formData.set(
-			name,
-			new File(
-				[typeof source === "string" ? readFileSync(source) : source],
-				typeof source === "string" ? source : name,
-				{
-					type: "application/octet-stream",
+				if (id === undefined) {
+					throw new UserError(`${binding} bindings must have an "id" field`);
 				}
-			)
-		);
+
+				if (id === INHERIT_SYMBOL) {
+					metadataBindings.push({
+						name: binding,
+						type: "inherit",
+					});
+				} else {
+					metadataBindings.push({
+						name: binding,
+						type: "kv_namespace",
+						namespace_id: id,
+						raw: config.raw,
+					});
+				}
+				break;
+			}
+			case "send_email": {
+				const destination_address =
+					"destination_address" in config
+						? (config.destination_address as string | undefined)
+						: undefined;
+				const allowed_destination_addresses =
+					"allowed_destination_addresses" in config
+						? (config.allowed_destination_addresses as string[] | undefined)
+						: undefined;
+				const allowed_sender_addresses =
+					"allowed_sender_addresses" in config
+						? (config.allowed_sender_addresses as string[] | undefined)
+						: undefined;
+				metadataBindings.push({
+					name: binding,
+					type: "send_email",
+					destination_address,
+					allowed_destination_addresses,
+					allowed_sender_addresses,
+				});
+				break;
+			}
+			case "durable_object_namespace": {
+				metadataBindings.push({
+					name: binding,
+					type: "durable_object_namespace",
+					class_name: config.class_name,
+					...(config.script_name && { script_name: config.script_name }),
+					...(config.environment && { environment: config.environment }),
+				});
+				break;
+			}
+			case "workflow": {
+				metadataBindings.push({
+					type: "workflow",
+					name: binding,
+					workflow_name: config.name,
+					class_name: config.class_name,
+					script_name: config.script_name,
+					raw: config.raw,
+				});
+				break;
+			}
+			case "queue": {
+				metadataBindings.push({
+					type: "queue",
+					name: binding,
+					queue_name: config.queue_name,
+					delivery_delay: config.delivery_delay,
+					raw: config.raw,
+				});
+				break;
+			}
+			case "r2_bucket": {
+				let bucketName = config.bucket_name;
+				if (options?.dryRun) {
+					bucketName ??= INHERIT_SYMBOL;
+				}
+				if (bucketName === undefined) {
+					throw new UserError(
+						`${binding} bindings must have a "bucket_name" field`
+					);
+				}
+				if (bucketName === INHERIT_SYMBOL) {
+					metadataBindings.push({
+						name: binding,
+						type: "inherit",
+					});
+				} else {
+					metadataBindings.push({
+						name: binding,
+						type: "r2_bucket",
+						bucket_name: bucketName,
+						jurisdiction: config.jurisdiction,
+						raw: config.raw,
+					});
+				}
+				break;
+			}
+			case "d1": {
+				let databaseId = config.database_id;
+				if (options?.dryRun) {
+					databaseId ??= INHERIT_SYMBOL;
+				}
+				if (databaseId === undefined) {
+					throw new UserError(
+						`${binding} bindings must have a "database_id" field`
+					);
+				}
+				if (databaseId === INHERIT_SYMBOL) {
+					metadataBindings.push({
+						name: binding,
+						type: "inherit",
+					});
+				} else {
+					metadataBindings.push({
+						name: binding,
+						type: "d1",
+						id: databaseId,
+						internalEnv: config.database_internal_env,
+						raw: config.raw,
+					});
+				}
+				break;
+			}
+			case "vectorize": {
+				metadataBindings.push({
+					name: binding,
+					type: "vectorize",
+					index_name: config.index_name,
+					raw: config.raw,
+				});
+				break;
+			}
+			case "hyperdrive": {
+				metadataBindings.push({
+					name: binding,
+					type: "hyperdrive",
+					id: config.id,
+				});
+				break;
+			}
+			case "secrets_store_secret": {
+				metadataBindings.push({
+					name: binding,
+					type: "secrets_store_secret",
+					store_id: config.store_id,
+					secret_name: config.secret_name,
+				});
+				break;
+			}
+			case "unsafe_hello_world": {
+				// The binding type overlaps with `unsafe_${string}`, so we need to cast
+				const helloWorldBinding = config as Extract<
+					Binding,
+					{ type: "unsafe_hello_world" }
+				>;
+				metadataBindings.push({
+					name: binding,
+					type: "unsafe_hello_world",
+					enable_timer: helloWorldBinding.enable_timer,
+				});
+				break;
+			}
+			case "ratelimit": {
+				metadataBindings.push({
+					name: binding,
+					type: "ratelimit",
+					namespace_id: config.namespace_id,
+					simple: config.simple,
+				});
+				break;
+			}
+			case "vpc_service": {
+				metadataBindings.push({
+					name: binding,
+					type: "vpc_service",
+					service_id: config.service_id,
+				});
+				break;
+			}
+			case "service": {
+				metadataBindings.push({
+					name: binding,
+					type: "service",
+					service: config.service,
+					cross_account_grant: config.cross_account_grant,
+					...(config.environment && { environment: config.environment }),
+					...(config.entrypoint && { entrypoint: config.entrypoint }),
+					...(config.props && { props: config.props }),
+				});
+				break;
+			}
+			case "analytics_engine": {
+				metadataBindings.push({
+					name: binding,
+					type: "analytics_engine",
+					dataset: config.dataset,
+				});
+				break;
+			}
+			case "dispatch_namespace": {
+				metadataBindings.push({
+					name: binding,
+					type: "dispatch_namespace",
+					namespace: config.namespace,
+					...(config.outbound && {
+						outbound: {
+							worker: {
+								service: config.outbound.service,
+								environment: config.outbound.environment,
+							},
+							params: config.outbound.parameters?.map((p) => ({ name: p })),
+						},
+					}),
+				});
+				break;
+			}
+			case "mtls_certificate": {
+				metadataBindings.push({
+					name: binding,
+					type: "mtls_certificate",
+					certificate_id: config.certificate_id,
+				});
+				break;
+			}
+			case "pipeline": {
+				metadataBindings.push({
+					name: binding,
+					type: "pipelines",
+					pipeline: config.pipeline,
+				});
+				break;
+			}
+			case "worker_loader": {
+				metadataBindings.push({
+					name: binding,
+					type: "worker_loader",
+				});
+				break;
+			}
+			case "logfwdr": {
+				metadataBindings.push({
+					name: binding,
+					type: "logfwdr",
+					destination: config.destination,
+				});
+				break;
+			}
+			case "wasm_module": {
+				metadataBindings.push({
+					name: binding,
+					type: "wasm_module",
+					part: binding,
+				});
+				const source = config.source;
+				const content =
+					"contents" in source
+						? source.contents
+						: readFileSync(source.path as string);
+				formData.set(
+					binding,
+					new File(
+						[content],
+						"path" in source ? source.path ?? binding : binding,
+						{
+							type: "application/wasm",
+						}
+					)
+				);
+				break;
+			}
+			case "browser": {
+				metadataBindings.push({
+					name: binding,
+					type: "browser",
+					raw: config.raw,
+				});
+				break;
+			}
+			case "ai": {
+				metadataBindings.push({
+					name: binding,
+					staging: config.staging,
+					type: "ai",
+					raw: config.raw,
+				});
+				break;
+			}
+			case "images": {
+				metadataBindings.push({
+					name: binding,
+					type: "images",
+					raw: config.raw,
+				});
+				break;
+			}
+			case "media": {
+				metadataBindings.push({
+					name: binding,
+					type: "media",
+				});
+				break;
+			}
+			case "version_metadata": {
+				metadataBindings.push({
+					name: binding,
+					type: "version_metadata",
+				});
+				break;
+			}
+			case "assets": {
+				metadataBindings.push({
+					name: binding,
+					type: "assets",
+				});
+				break;
+			}
+			case "text_blob": {
+				metadataBindings.push({
+					name: binding,
+					type: "text_blob",
+					part: binding,
+				});
+				const source = config.source;
+				if (binding !== "__STATIC_CONTENT_MANIFEST") {
+					if ("contents" in source) {
+						formData.set(
+							binding,
+							new File([source.contents], source.path ?? binding, {
+								type: "text/plain",
+							})
+						);
+					} else {
+						formData.set(
+							binding,
+							new File([readFileSync(source.path)], source.path, {
+								type: "text/plain",
+							})
+						);
+					}
+				}
+				break;
+			}
+			case "data_blob": {
+				metadataBindings.push({
+					name: binding,
+					type: "data_blob",
+					part: binding,
+				});
+				const source = config.source;
+				const content =
+					"contents" in source
+						? source.contents
+						: readFileSync(source.path as string);
+				formData.set(
+					binding,
+					new File(
+						[content],
+						"path" in source ? source.path ?? binding : binding,
+						{
+							type: "application/octet-stream",
+						}
+					)
+				);
+				break;
+			}
+
+			default: {
+				// Handle unsafe_* bindings (excluding unsafe_hello_world which is handled above)
+				if (config.type.startsWith("unsafe_")) {
+					const { type, ...data } = config;
+					metadataBindings.push({
+						name: binding,
+						type: type.slice("unsafe_".length),
+						...data,
+					} as WorkerMetadataBinding);
+				}
+				break;
+			}
+		}
 	}
 
 	const manifestModuleName = "__STATIC_CONTENT_MANIFEST";
@@ -582,14 +625,9 @@ export function createWorkerUploadForm(
 		}
 	}
 
-	if (bindings.unsafe?.bindings) {
-		// @ts-expect-error unsafe bindings don't need to match a specific type here
-		metadataBindings.push(...bindings.unsafe.bindings);
-	}
-
 	let capnpSchemaOutputFile: string | undefined;
-	if (bindings.unsafe?.capnp) {
-		const capnpOutput = handleUnsafeCapnp(bindings.unsafe.capnp);
+	if (options?.unsafe?.capnp) {
+		const capnpOutput = handleUnsafeCapnp(options.unsafe.capnp);
 		capnpSchemaOutputFile = `./capnp-${Date.now()}.compiled`;
 		formData.set(
 			capnpSchemaOutputFile,
@@ -646,9 +684,9 @@ export function createWorkerUploadForm(
 		...(observability && { observability }),
 	};
 
-	if (bindings.unsafe?.metadata !== undefined) {
-		for (const key of Object.keys(bindings.unsafe.metadata)) {
-			metadata[key] = bindings.unsafe.metadata[key];
+	if (options?.unsafe?.metadata !== undefined) {
+		for (const key of Object.keys(options.unsafe.metadata)) {
+			metadata[key] = options.unsafe.metadata[key];
 		}
 	}
 

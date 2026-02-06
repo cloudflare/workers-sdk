@@ -22,7 +22,10 @@ import {
 } from "../assets";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
-import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
+import {
+	getBindings,
+	provisionBindingsFromInput,
+} from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
@@ -579,6 +582,22 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const uploadSourceMaps =
 			props.uploadSourceMaps ?? config.upload_source_maps;
 
+		let bindings = getBindings({
+			...config,
+			vars: { ...config.vars, ...props.vars },
+		});
+
+		// Mark CLI vars (props.vars) as secret_text for display purposes
+		// These are user-provided overrides that shouldn't be logged
+		if (props.vars && bindings) {
+			for (const key of Object.keys(props.vars)) {
+				const binding = bindings[key];
+				if (binding && binding.type === "plain_text") {
+					bindings[key] = { type: "secret_text", value: binding.value };
+				}
+			}
+		}
+
 		const {
 			modules,
 			dependencies,
@@ -676,11 +695,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
-		const bindings = getBindings({
-			...config,
-			vars: { ...config.vars, ...props.vars },
-		});
-
 		const placement = parseConfigPlacement(config);
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
@@ -690,10 +704,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			content: content,
 			type: bundleType,
 		};
-		const worker: CfWorkerInit = {
+		const worker: Omit<CfWorkerInit, "bindings"> = {
 			name: scriptName,
 			main,
-			bindings,
 			migrations,
 			modules,
 			containers: config.containers,
@@ -738,30 +751,21 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			modules
 		);
 
-		// mask anything that was overridden in cli args
-		// so that we don't log potential secrets into the terminal
-		const maskedVars = { ...bindings.vars };
-		for (const key of Object.keys(maskedVars)) {
-			if (maskedVars[key] !== config.vars[key]) {
-				// This means it was overridden in cli args
-				// so let's mask it
-				maskedVars[key] = "(hidden)";
-			}
-		}
-
 		let workerBundle: FormData;
 
 		if (props.dryRun) {
-			workerBundle = createWorkerUploadForm(worker);
+			workerBundle = createWorkerUploadForm(worker, bindings, {
+				dryRun: true,
+			});
 			printBindings(
-				{ ...bindings, vars: maskedVars },
+				bindings,
 				config.tail_consumers,
 				config.streaming_tail_consumers
 			);
 		} else {
 			assert(accountId, "Missing accountId");
 			if (getFlag("RESOURCES_PROVISION")) {
-				await provisionBindings(
+				bindings = await provisionBindingsFromInput(
 					bindings,
 					accountId,
 					scriptName,
@@ -769,7 +773,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.config
 				);
 			}
-			workerBundle = createWorkerUploadForm(worker);
+			workerBundle = createWorkerUploadForm(worker, bindings);
 
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
@@ -793,7 +797,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;
 				printBindings(
-					{ ...bindings, vars: maskedVars },
+					bindings,
 					config.tail_consumers,
 					config.streaming_tail_consumers
 				);
@@ -802,7 +806,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			} catch (err) {
 				if (!bindingsPrinted) {
 					printBindings(
-						{ ...bindings, vars: maskedVars },
+						bindings,
 						config.tail_consumers,
 						config.streaming_tail_consumers
 					);
