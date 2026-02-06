@@ -2155,6 +2155,9 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.158.0
         version: 1.158.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
       immer:
         specifier: ^10.0.0
         version: 10.2.0
@@ -2170,6 +2173,9 @@ importers:
       react-split-pane:
         specifier: ^0.1.92
         version: 0.1.92(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      tailwind-merge:
+        specifier: ^3.4.0
+        version: 3.4.0
       tailwindcss:
         specifier: ^4.0.15
         version: 4.0.15
