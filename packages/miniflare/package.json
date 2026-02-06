@@ -36,7 +36,7 @@
 		"check:lint": "eslint --max-warnings=0 --cache \"{src,test}/**/*.ts\" \"types/**/*.ts\"",
 		"check:type": "tsc",
 		"clean": "node -r esbuild-register ../../tools/clean/clean.ts ./dist ./dist-types",
-		"dev": "concurrently -n esbuild,typechk,typewrk -c yellow,blue,blue.dim \"node scripts/build.mjs watch\" \"node scripts/types.mjs tsconfig.json watch\" \"node scripts/types.mjs src/workers/tsconfig.json watch\"",
+		"dev": "concurrently -n esbuild,typechk,typewrk -c yellow,blue,blue.dim \"node scripts/build.mjs watch\" \"node scripts/types.mjs tsconfig.json --bundle watch\" \"node scripts/types.mjs src/workers/tsconfig.json watch\"",
 		"generate:api": "pnpm generate:openapi && pnpm generate:types",
 		"generate:openapi": "node -r esbuild-register scripts/filter-openapi.ts -i $OPENAPI_INPUT_PATH",
 		"generate:types": "openapi-ts && prettier --write src/workers/local-explorer/openapi.local.json src/workers/local-explorer/generated",
@@ -44,7 +44,7 @@
 		"test": "vitest run",
 		"posttest": "node -r esbuild-register ../../tools/clean/clean.ts ./.tmp",
 		"test:ci": "pnpm run test",
-		"types:build": "node scripts/types.mjs tsconfig.json && node scripts/types.mjs src/workers/tsconfig.json"
+		"types:build": "node scripts/types.mjs tsconfig.json --bundle && node scripts/types.mjs src/workers/tsconfig.json"
 	},
 	"dependencies": {
 		"@cspotcode/source-map-support": "0.8.1",
