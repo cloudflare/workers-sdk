@@ -26,11 +26,12 @@ The generated code includes:
 
 ### When does generation run?
 
-| Command       | Behavior                                                         |
-| ------------- | ---------------------------------------------------------------- |
-| `pnpm build`  | Runs `generate:api` before building                              |
-| `pnpm dev`    | Runs `openapi-ts` once at startup, then watches for spec changes |
-| `pnpm dev:ui` | Same as `dev` - generates then watches                           |
+| Command        | Behavior                                               |
+| -------------- | ------------------------------------------------------ |
+| `pnpm install` | Runs `openapi-ts` in `postinstall` to generate types   |
+| `pnpm build`   | Runs `generate:api` before building                    |
+| `pnpm dev`     | Watches for spec changes and regenerates automatically |
+| `pnpm dev:ui`  | Same as `dev` - watches for spec changes               |
 
 In development, the `openapi-ts --watch` process runs concurrently with Vite, automatically regenerating the client when the OpenAPI spec changes.
 
