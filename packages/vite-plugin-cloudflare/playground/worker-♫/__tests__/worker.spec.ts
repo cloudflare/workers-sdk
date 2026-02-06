@@ -53,6 +53,13 @@ test("receives the Vite server host as the `x-forwarded-host` header if the `x-f
 	);
 });
 
+test("receives the original Host header", async () => {
+	const testUrl = new URL(viteTestUrl);
+	await vi.waitFor(async () => {
+		expect(await getTextResponse("/host-header")).toBe(testUrl.host);
+	}, WAIT_FOR_OPTIONS);
+});
+
 test("does not cause unhandled rejection", async () => {
 	expect(serverLogs.errors.join()).not.toContain("__unhandled rejection__");
 });
@@ -68,5 +75,18 @@ test.runIf(!isBuild)(
 		await vi.waitFor(() => {
 			expect(serverLogs.info.join()).toContain("[vite] hot updated");
 		}, WAIT_FOR_OPTIONS);
+	}
+);
+
+test.runIf(isBuild)(
+	"does not set `upload_source_maps` when `build.sourcemap` is disabled",
+	() => {
+		const wranglerConfig = JSON.parse(
+			fs.readFileSync(
+				path.join(rootDir, "dist", "worker", "wrangler.json"),
+				"utf-8"
+			)
+		);
+		expect(wranglerConfig.upload_source_maps).toBeUndefined();
 	}
 );
