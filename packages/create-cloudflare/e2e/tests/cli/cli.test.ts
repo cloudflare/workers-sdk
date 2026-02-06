@@ -696,7 +696,7 @@ describe("Create Cloudflare CLI", () => {
 					  --git, --no-git
 					    Initialize a local git repository for your application
 					  --agents, --no-agents
-					    Add an AGENTS.md file to provide AI coding agents with guidance for Cloudflare APIs
+					    Add an AGENTS.md file to provide AI coding agents with guidance for the Cloudflare platform
 					  --open, --no-open
 					    Opens the deployed application in your browser (this option is ignored if the application is not deployed)
 					  --existing-script=<value>

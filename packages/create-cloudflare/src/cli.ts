@@ -154,7 +154,7 @@ const create = async (ctx: C3Context) => {
 	await npmInstall(ctx);
 	await rectifyPmMismatch(ctx);
 
-	// Offer AGENTS.md for Workers templates that don't use a framework CLI
+	// Offer AGENTS.md for Workers templates that don't use a framework
 	// Framework templates may need framework-specific agent guidance
 	if (ctx.template.platform === "workers" && !ctx.template.frameworkCli) {
 		await offerAgentsMd(ctx);
