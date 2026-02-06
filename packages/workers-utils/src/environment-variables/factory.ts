@@ -93,7 +93,7 @@ type VariableNames =
 
 	// ## CI-specific Variables (Internal Use)
 
-	/** Override command used by `wrangler init` (default: "create cloudflare@^2.5.0"). */
+	/** Override command used by `wrangler init` (default: "create cloudflare"). */
 	| "WRANGLER_C3_COMMAND"
 	/** Enable/disable telemetry data collection. */
 	| "WRANGLER_SEND_METRICS"

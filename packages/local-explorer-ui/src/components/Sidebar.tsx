@@ -29,28 +29,35 @@ export function Sidebar({
 	currentPath,
 }: SidebarProps) {
 	return (
-		<aside className="sidebar">
-			<div className="sidebar-logo">
-				<CloudflareLogo style={{ color: "var(--color-primary)" }} />
-				<div className="sidebar-logo-text">
-					<span className="sidebar-logo-title">Local Explorer</span>
-					<span className="sidebar-logo-subtitle">Cloudflare Dev Tools</span>
+		<aside className="w-sidebar bg-bg-secondary border-r border-border flex flex-col">
+			<div className="flex items-center gap-2.5 p-4 border-b border-border min-h-[67px] box-border">
+				<CloudflareLogo className="shrink-0 text-primary" />
+				<div className="flex flex-col gap-px">
+					<span className="text-sm font-semibold text-text leading-tight">
+						Local Explorer
+					</span>
+					<span className="text-[10px] font-medium text-text-secondary uppercase tracking-wide">
+						Cloudflare Dev Tools
+					</span>
 				</div>
 			</div>
-
-			<Collapsible.Root defaultOpen className="sidebar-section">
-				<Collapsible.Trigger className="sidebar-section-trigger">
-					<ChevronIcon className="sidebar-section-icon" />
-					<KVIcon className="sidebar-section-type-icon" />
+			<Collapsible.Root defaultOpen>
+				<Collapsible.Trigger className="sidebar-section-trigger flex items-center gap-2 w-full py-3 px-4 border-0 border-b border-border bg-transparent font-semibold text-[11px] uppercase tracking-wide text-text-secondary cursor-pointer transition-colors hover:bg-border">
+					<ChevronIcon className="sidebar-section-icon transition-transform duration-200" />
+					<KVIcon className="w-3.5 h-3.5" />
 					KV Namespaces
 				</Collapsible.Trigger>
 				<Collapsible.Panel className="sidebar-section-panel">
-					<ul className="sidebar-list">
+					<ul className="list-none flex-1 overflow-y-auto">
 						{loading && (
-							<li className="sidebar-item sidebar-item--muted">Loading...</li>
+							<li className="block py-2.5 px-4 text-text-secondary border-b border-border">
+								Loading...
+							</li>
 						)}
 						{error && (
-							<li className="sidebar-item sidebar-item--error">{error}</li>
+							<li className="block py-2.5 px-4 text-danger border-b border-border">
+								{error}
+							</li>
 						)}
 						{!loading &&
 							!error &&
@@ -61,7 +68,7 @@ export function Sidebar({
 										<Link
 											to="/kv/$namespaceId"
 											params={{ namespaceId: ns.id }}
-											className={`sidebar-item ${isActive ? "active" : ""}`}
+											className={`block py-2.5 px-4 text-text no-underline border-b border-border cursor-pointer transition-colors hover:bg-border ${isActive ? "bg-primary/8 text-primary border-l-3 border-l-primary pl-[13px]" : ""}`}
 										>
 											{ns.title}
 										</Link>
@@ -69,7 +76,7 @@ export function Sidebar({
 								);
 							})}
 						{!loading && !error && namespaces.length === 0 && (
-							<li className="sidebar-item sidebar-item--muted">
+							<li className="block py-2.5 px-4 text-text-secondary border-b border-border">
 								No namespaces
 							</li>
 						)}

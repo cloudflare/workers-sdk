@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { getJsonResponse, isBuild, testDir } from "../../__test-utils__";
 
 const expectedVars = {
@@ -8,14 +8,16 @@ const expectedVars = {
 	MY_DEV_VAR_C: "my .env variable C",
 };
 
-test("reading variables from a standard .env file", async () => {
+test("reading variables from a standard .env file", async ({ expect }) => {
 	expect(await getJsonResponse()).toEqual({
 		"variables loaded from .env": expectedVars,
 	});
 });
 
 describe.runIf(isBuild)("build output files", () => {
-	test("the .dev.vars file has been created in the build directory", async () => {
+	test("the .dev.vars file has been created in the build directory", async ({
+		expect,
+	}) => {
 		const distDevVarsPath = `${testDir}/dist/worker/.dev.vars`;
 		const distDevVarsExists = fs.existsSync(distDevVarsPath);
 		expect(distDevVarsExists).toBe(true);
@@ -30,7 +32,9 @@ describe.runIf(isBuild)("build output files", () => {
 		`);
 	});
 
-	test("secrets from .env haven't been inlined in the js output file", async () => {
+	test("secrets from .env haven't been inlined in the js output file", async ({
+		expect,
+	}) => {
 		const distIndexPath = `${testDir}/dist/worker/index.js`;
 
 		const distIndexContent = fs.readFileSync(distIndexPath, "utf-8");

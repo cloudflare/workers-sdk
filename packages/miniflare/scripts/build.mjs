@@ -151,9 +151,9 @@ const embedWorkersPlugin = {
  */
 function copyLocalExplorerUi(outPath, pkgRoot) {
 	const localExplorerUiSrc = path.join(pkgRoot, "../local-explorer-ui/dist");
-	const localExplorerUiDest = path.join(outPath, "local-explorer-ui");
 
 	if (existsSync(localExplorerUiSrc)) {
+		const localExplorerUiDest = path.join(outPath, "local-explorer-ui");
 		cpSync(localExplorerUiSrc, localExplorerUiDest, { recursive: true });
 		console.log("Copied local-explorer-ui dist to", localExplorerUiDest);
 	} else {

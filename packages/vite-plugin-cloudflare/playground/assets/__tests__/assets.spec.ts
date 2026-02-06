@@ -1,14 +1,16 @@
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { getResponse, page, viteTestUrl } from "../../__test-utils__";
 import "./base-tests";
 
-test("fetches transformed HTML asset", async () => {
+test("fetches transformed HTML asset", async ({ expect }) => {
 	await page.goto(`${viteTestUrl}/transformed-html-asset`);
 	const content = await page.textContent("h1");
 	expect(content).toBe("Modified content");
 });
 
-test("fetches original public directory asset if requested directly", async () => {
+test("fetches original public directory asset if requested directly", async ({
+	expect,
+}) => {
 	const response = await getResponse("/public-image.svg");
 	const contentType = await response.headerValue("content-type");
 	const additionalHeader = await response.headerValue("additional-header");
@@ -16,7 +18,9 @@ test("fetches original public directory asset if requested directly", async () =
 	expect(additionalHeader).toBe(null);
 });
 
-test("fetches original HTML asset if requested directly", async () => {
+test("fetches original HTML asset if requested directly", async ({
+	expect,
+}) => {
 	await page.goto(`${viteTestUrl}/html-page`);
 	const content = await page.textContent("h1");
 	expect(content).toBe("Original content");

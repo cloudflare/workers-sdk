@@ -1,8 +1,12 @@
+import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
-import { LOCAL_EXPLORER_BASE_PATH } from "./src/constants";
+import {
+	LOCAL_EXPLORER_API_PATH,
+	LOCAL_EXPLORER_BASE_PATH,
+} from "./src/constants";
 
 export default defineConfig({
 	plugins: [
@@ -12,6 +16,7 @@ export default defineConfig({
 		}),
 		react(),
 		svgr(),
+		tailwindcss(),
 	],
 	resolve: {
 		alias: {
@@ -25,7 +30,7 @@ export default defineConfig({
 	server: {
 		// lets us develop this package separately from Miniflare without CORS issues.
 		proxy: {
-			[`${LOCAL_EXPLORER_BASE_PATH}/api`]: {
+			[LOCAL_EXPLORER_API_PATH]: {
 				// your worker will need to be running on localhost:8787 for this to work
 				target: "http://localhost:8787",
 				changeOrigin: true,

@@ -50,7 +50,7 @@
 		"@cspotcode/source-map-support": "0.8.1",
 		"sharp": "^0.34.5",
 		"undici": "catalog:default",
-		"workerd": "1.20260205.0",
+		"workerd": "1.20260206.0",
 		"ws": "catalog:default",
 		"youch": "4.1.0-beta.10"
 	},
@@ -85,9 +85,6 @@
 		"devtools-protocol": "^0.0.1182435",
 		"esbuild": "catalog:default",
 		"eslint": "catalog:default",
-		"eslint-config-prettier": "^9.0.0",
-		"eslint-plugin-es": "^4.1.0",
-		"eslint-plugin-prettier": "^5.0.1",
 		"exit-hook": "2.2.1",
 		"expect-type": "^0.15.0",
 		"get-port": "^7.1.0",
