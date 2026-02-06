@@ -44,13 +44,13 @@ import type { Config, PackageJSON } from "@cloudflare/workers-utils";
  * @returns A PackageManager object compatible with wrangler's package manager utilities
  */
 function convertDetectedPackageManager(
-	pkgManager: { name: string } | null | undefined
+	pkgManager: { name: string } | null
 ): PackageManager {
 	if (!pkgManager) {
 		return NpmPackageManager;
 	}
 
-	switch (pkgManager.name) {
+	switch (pkgManager?.name) {
 		case "pnpm":
 			return PnpmPackageManager;
 		case "yarn":
