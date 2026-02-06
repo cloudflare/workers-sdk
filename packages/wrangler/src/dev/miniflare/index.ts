@@ -727,9 +727,8 @@ export function buildMiniflareBindingOptions(
 			workerLoaders.map(({ binding }) => [binding, {}])
 		),
 		email: {
-			send_email: sendEmailBindings.map(({ name, type: _type, ...b }) => {
+			send_email: sendEmailBindings.map(({ type: _type, ...b }) => {
 				return {
-					name,
 					...b,
 					remoteProxyConnectionString:
 						b.remote && remoteProxyConnectionString
