@@ -102,6 +102,7 @@ export async function startDev(args: StartDevOptions) {
 							proxyFactory: (d) => new NoOpProxyController(d),
 						});
 						return setupDevEnv(auxDevEnv, c, authHook, {
+              env: args.env,
 							disableDevRegistry: args.disableDevRegistry,
 							multiworkerPrimary: false,
 						});
