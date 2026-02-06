@@ -38,7 +38,7 @@ export const queuesCreateCommand = createCommand({
 			type: "number",
 			describe:
 				"How long to retain a message in the queue, in seconds. Must be between 60 and 1209600",
-			default: 345600,
+			default: 86400,
 		},
 	},
 	positionalArgs: ["name"],
