@@ -53,7 +53,7 @@ test("receives the Vite server host as the `x-forwarded-host` header if the `x-f
 	);
 });
 
-test("receives the original Host header like in wrangler dev", async () => {
+test("receives the original Host header", async () => {
 	const testUrl = new URL(viteTestUrl);
 	await vi.waitFor(async () => {
 		expect(await getTextResponse("/host-header")).toBe(testUrl.host);

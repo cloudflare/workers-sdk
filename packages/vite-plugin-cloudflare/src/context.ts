@@ -46,7 +46,6 @@ export class PluginContext {
 
 	/** Creates a new Miniflare instance or updates the existing instance */
 	async startOrUpdateMiniflare(options: MiniflareOptions): Promise<void> {
-		options.unsafeProxySharedSecret = this.#proxySharedSecret;
 		if (!this.#sharedContext.miniflare) {
 			debuglog("Creating new Miniflare instance");
 			this.#sharedContext.miniflare = new Miniflare(options);
