@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { describe, expect, test, vi } from "vitest";
+import { describe, test, vi } from "vitest";
 import {
 	getJsonResponse,
 	isBuild,
@@ -7,7 +7,7 @@ import {
 	WAIT_FOR_OPTIONS,
 } from "../../__test-utils__";
 
-test("reading variables from a standard .dev.vars file", async () => {
+test("reading variables from a standard .dev.vars file", async ({ expect }) => {
 	await vi.waitFor(
 		async () =>
 			expect(await getJsonResponse()).toEqual({
@@ -22,7 +22,7 @@ test("reading variables from a standard .dev.vars file", async () => {
 });
 
 describe.runIf(isBuild)("build output files", () => {
-	test("the .dev.vars file has been copied over", async () => {
+	test("the .dev.vars file has been copied over", async ({ expect }) => {
 		const srcDevVarsPath = `${testDir}/.dev.vars`;
 		const distDevVarsPath = `${testDir}/dist/worker/.dev.vars`;
 
@@ -34,7 +34,9 @@ describe.runIf(isBuild)("build output files", () => {
 		expect(distDevVarsContent).toEqual(srcDevVarsContent);
 	});
 
-	test("secrets from .dev.vars haven't been inlined in the js output file", async () => {
+	test("secrets from .dev.vars haven't been inlined in the js output file", async ({
+		expect,
+	}) => {
 		const distIndexPath = `${testDir}/dist/worker/index.js`;
 
 		const distIndexContent = fs.readFileSync(distIndexPath, "utf-8");

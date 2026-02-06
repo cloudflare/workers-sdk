@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { runLongLived, seed } from "./helpers";
 
 describe("nodejs_compat warnings - Node.js built-ins imported directly", () => {
@@ -6,7 +6,9 @@ describe("nodejs_compat warnings - Node.js built-ins imported directly", () => {
 		pm: "pnpm",
 	});
 
-	test("displays warnings if Node.js built-ins are imported and the `nodejs_compat` flag is not enabled", async () => {
+	test("displays warnings if Node.js built-ins are imported and the `nodejs_compat` flag is not enabled", async ({
+		expect,
+	}) => {
 		const proc = await runLongLived("pnpm", "dev", projectPath);
 		expect(await proc.exitCode).not.toBe(0);
 		const errorLogs = proc.stderr.replaceAll("\\", "/");
@@ -23,7 +25,9 @@ describe("nodejs_compat warnings - Node.js built-ins imported via dependency", (
 		pm: "pnpm",
 	});
 
-	test("displays warnings if Node.js built-ins are imported and the `nodejs_compat` flag is not enabled", async () => {
+	test("displays warnings if Node.js built-ins are imported and the `nodejs_compat` flag is not enabled", async ({
+		expect,
+	}) => {
 		const proc = await runLongLived("pnpm", "dev", projectPath);
 		expect(await proc.exitCode).not.toBe(0);
 		const errorLogs = proc.stderr.replaceAll("\\", "/");
