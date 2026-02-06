@@ -3,8 +3,11 @@
 
 import { Hono } from "hono/tiny";
 import mime from "mime";
+import {
+	LOCAL_EXPLORER_API_PATH,
+	LOCAL_EXPLORER_BASE_PATH,
+} from "../../plugins/core/constants";
 import { errorResponse, validateQuery, validateRequestBody } from "./common";
-import { LOCAL_EXPLORER_API_PATH, LOCAL_EXPLORER_BASE_PATH } from "./constants";
 import {
 	zCloudflareD1ListDatabasesData,
 	zCloudflareD1RawDatabaseQueryData,
