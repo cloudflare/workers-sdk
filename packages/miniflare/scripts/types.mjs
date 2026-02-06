@@ -3,24 +3,24 @@
  * single rolled-up declaration file using API Extractor.
  *
  * Usage:
- *   node scripts/types.mjs <tsconfig> [--bundle] [watch]
+ *   node scripts/types.mjs <tsconfig> [--bundle] [--watch]
  *
  * Arguments:
  *   <tsconfig>  Path to a tsconfig.json file (relative to the package root).
  *   --bundle    After emitting declarations, run API Extractor to roll up all
  *               .d.ts files into a single dist/src/index.d.ts. Only meaningful
  *               when the tsconfig emits declarations (emitDeclarationOnly).
- *   watch       Re-run on file changes (uses the TS compiler watch API).
+ *   --watch     Re-run on file changes (uses the TS compiler watch API).
  *
  * Examples:
  *   # Build: emit .d.ts to dist-types/, then bundle into dist/src/index.d.ts
  *   node scripts/types.mjs tsconfig.json --bundle
  *
  *   # Dev: emit + bundle in watch mode
- *   node scripts/types.mjs tsconfig.json --bundle watch
+ *   node scripts/types.mjs tsconfig.json --bundle --watch
  *
  *   # Dev: type-check workers in watch mode (no emit, no bundle)
- *   node scripts/types.mjs src/workers/tsconfig.json watch
+ *   node scripts/types.mjs src/workers/tsconfig.json --watch
  *
  * How it works:
  *   1. Reads the given tsconfig and creates a TypeScript program.
@@ -48,7 +48,7 @@ const configName = argv[0];
 /** When set, run API Extractor after emitting declarations. */
 const bundle = argv.includes("--bundle");
 /** When set, use the TS watch API to re-run on file changes. */
-const watch = argv.includes("watch");
+const watch = argv.includes("--watch");
 
 // --- Diagnostics formatting ---
 

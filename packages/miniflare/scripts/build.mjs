@@ -5,10 +5,10 @@
  * It does NOT handle type declarations (.d.ts) — see types.mjs for that.
  *
  * Usage:
- *   node scripts/build.mjs [watch]
+ *   node scripts/build.mjs [--watch]
  *
  * Arguments:
- *   watch   Re-build on file changes (uses esbuild's watch API).
+ *   --watch   Re-build on file changes (uses esbuild's watch API).
  *
  * What it does:
  *   1. Bundles the main entry points (src/index.ts, dev-registry worker,
@@ -39,7 +39,7 @@ import { getPackage, pkgRoot } from "./common.mjs";
 // --- CLI argument parsing ---
 
 const argv = process.argv.slice(2);
-const watch = argv[0] === "watch";
+const watch = argv[0] === "--watch";
 
 // --- Helpers ---
 
