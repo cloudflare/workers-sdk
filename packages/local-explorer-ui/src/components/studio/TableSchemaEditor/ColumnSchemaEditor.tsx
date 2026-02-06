@@ -18,7 +18,8 @@ import {
 } from "@phosphor-icons/react";
 import { produce } from "immer";
 import { useCallback, useState } from "react";
-import { Drawer, useModal } from "../../../utils/studio/stubs";
+import { useModal } from "../../../utils/studio/stubs/modal";
+import { Drawer } from "../../../utils/studio/stubs/ui/Drawer";
 import type {
 	StudioTableColumn,
 	StudioTableConstraintChange,
