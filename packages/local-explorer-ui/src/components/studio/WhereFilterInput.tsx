@@ -164,7 +164,7 @@ export function StudioWhereFilterInput({
 				placeholder="eg: id = 10"
 				onEnterPressed={onExternalApply}
 			/>
-			<Tooltip content={parsingError}>
+			<Tooltip content={parsingError} asChild>
 				<Button
 					size="sm"
 					style={{ marginLeft: 5, marginRight: 5 }}
