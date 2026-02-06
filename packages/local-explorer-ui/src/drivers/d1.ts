@@ -79,7 +79,7 @@ export class LocalD1Driver extends StudioSQLiteDriver {
 		const result = await super.schemas();
 
 		// Filter out internal D1 tables
-		const excludeList = new Set(["_cf_KV"]);
+		const excludeList = new Set(["_cf_METADATA"]);
 
 		return Object.fromEntries(
 			Object.entries(result).map(([schemaName, schemaItems]) => [
