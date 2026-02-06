@@ -28,30 +28,12 @@ type AutoConfigLocalState = {
 const autoConfigLocalState: Partial<AutoConfigLocalState> = {};
 
 /**
- * Sets the Wrangler command that triggered the autoconfig flow.
- *
- * @param command The Wrangler command that initiated autoconfig
- */
-function setAutoConfigTriggerCommand(
-	command: NonNullable<AutoConfigWranglerTriggerCommand>
-) {
-	autoConfigLocalState.triggerCommand = command;
-}
-
-/**
  * Returns the Wrangler command that triggered the autoconfig flow.
  *
  * @returns The trigger command, or `undefined` if not set (if the programmatic API was used)
  */
 export function getAutoConfigTriggerCommand(): AutoConfigWranglerTriggerCommand {
 	return autoConfigLocalState.triggerCommand;
-}
-
-/**
- * Sets a randomly generated autoConfigId associated to the current autoconfig session.
- */
-function setAutoConfigId() {
-	autoConfigLocalState.autoConfigId = crypto.randomUUID();
 }
 
 /**
@@ -66,6 +48,8 @@ export function getAutoConfigId(): string | undefined {
 
 /**
  * Sends a telemetry event indicating the autoconfig process has started.
+ * This also initializes the local state for autoconfig.
+ *
  * This should be called at the beginning of the autoconfig flow, before any
  * detection or configuration occurs.
  *
@@ -79,8 +63,9 @@ export function sendAutoConfigProcessStartedMetricsEvent({
 	command: NonNullable<AutoConfigWranglerTriggerCommand>;
 	dryRun: boolean;
 }): void {
-	setAutoConfigTriggerCommand(command);
-	setAutoConfigId();
+	autoConfigLocalState.triggerCommand = command;
+	autoConfigLocalState.autoConfigId = crypto.randomUUID();
+
 	sendMetricsEvent(
 		"autoconfig_process_started",
 		{
