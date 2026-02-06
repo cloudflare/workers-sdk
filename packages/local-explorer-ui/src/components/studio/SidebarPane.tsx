@@ -58,7 +58,7 @@ export function StudioSidebarPane() {
 					}}
 				/> */}
 			</div>
-			<div className="overflow-hidden grow flex mt-2">
+			<div className="overflow-hidden grow flex mt-12.5">
 				{schemas ? (
 					<StudioResourceTreeView schemas={schemas} searchText={searchText} />
 				) : (

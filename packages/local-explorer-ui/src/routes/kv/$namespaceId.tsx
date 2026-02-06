@@ -301,7 +301,7 @@ function NamespaceView() {
 	};
 
 	return (
-		<div>
+		<div className="px-6 pb-6">
 			<div className="flex items-center gap-2 py-4 px-6 -mx-6 mb-6 min-h-[67px] box-border bg-bg-secondary border-b border-border text-sm">
 				<span className="flex items-center gap-1.5 text-text-secondary">
 					<KVIcon />

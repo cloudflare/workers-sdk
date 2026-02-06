@@ -43,8 +43,8 @@ function DatabaseView(): JSX.Element {
 	);
 
 	return (
-		<div>
-			<div className="flex items-center gap-2 py-4 px-6 -mx-6 mb-6 min-h-[67px] box-border bg-bg-secondary border-b border-border text-sm">
+		<div className="flex flex-col h-full">
+			<div className="flex items-center gap-2 py-4 px-6 min-h-[67px] box-border bg-bg-secondary border-b border-border text-sm shrink-0">
 				<span className="flex items-center gap-1.5 text-text-secondary">
 					<DatabaseIcon />
 					D1
@@ -55,13 +55,15 @@ function DatabaseView(): JSX.Element {
 				</span>
 			</div>
 
-			<Studio
-				category="d1"
-				driver={driver}
-				initialTable={searchParams.table}
-				onTableChange={handleTableChange}
-				resource={resource}
-			/>
+			<div className="flex-1 overflow-hidden">
+				<Studio
+					category="d1"
+					driver={driver}
+					initialTable={searchParams.table}
+					onTableChange={handleTableChange}
+					resource={resource}
+				/>
+			</div>
 		</div>
 	);
 }

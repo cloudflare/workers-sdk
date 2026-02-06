@@ -45,13 +45,13 @@ function RootLayout() {
 	return (
 		<div className="flex min-h-screen">
 			<Sidebar
-				namespaces={namespaces}
-				databases={databases}
-				loading={loading}
-				error={error}
 				currentPath={currentPath}
+				databases={databases}
+				error={error}
+				loading={loading}
+				namespaces={namespaces}
 			/>
-			<main className="flex-1 px-6 pb-6 overflow-y-auto flex flex-col">
+			<main className="flex-1 overflow-y-auto flex flex-col">
 				<Outlet />
 			</main>
 		</div>
