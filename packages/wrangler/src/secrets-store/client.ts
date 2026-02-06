@@ -103,6 +103,27 @@ export async function getSecret(
 	);
 }
 
+export async function getSecretByName(
+	complianceConfig: ComplianceConfig,
+	accountId: string,
+	storeId: string,
+	secretName: string
+): Promise<string | undefined> {
+	const urlSearchParams = new URLSearchParams();
+	urlSearchParams.append("search", secretName);
+
+	const secrets: Secret[] = await listSecrets(
+		complianceConfig,
+		accountId,
+		storeId,
+		urlSearchParams
+	);
+
+	const secret = secrets.find((s) => s.name === secretName);
+
+	return secret?.id;
+}
+
 export type CreateSecret = {
 	name: string;
 	value: string;
