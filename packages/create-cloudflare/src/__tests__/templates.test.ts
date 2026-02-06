@@ -666,7 +666,7 @@ describe("writeAgentsMd", () => {
 
 	test("should write AGENTS.md to the project directory", ({ expect }) => {
 		vi.mocked(existsSync).mockReturnValue(false);
-		const projectPath = join("/path", "to", "my-project");
+		const projectPath = join("/path/to/my-project");
 		writeAgentsMd(projectPath);
 
 		expect(writeFileMock).toHaveBeenCalledWith(
