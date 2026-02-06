@@ -677,7 +677,7 @@ describe("writeAgentsMd", () => {
 
 	test("should not overwrite existing AGENTS.md", ({ expect }) => {
 		vi.mocked(existsSync).mockReturnValue(true);
-		const projectPath = join("/path", "to", "my-project");
+		const projectPath = join("/path/to/my-project");
 		writeAgentsMd(projectPath);
 
 		expect(writeFileMock).not.toHaveBeenCalled();
