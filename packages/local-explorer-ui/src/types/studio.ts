@@ -360,7 +360,6 @@ export type StudioSavedQuery = {
 };
 
 export type StudioResource = {
-	type: "d1" | "do" | "wae";
-	accountId: string;
 	databaseId?: string;
+	type: "d1";
 };

@@ -26,6 +26,7 @@ type Props = ModalHandlers & {
 		isRequesting: boolean;
 	}) => ReactNode;
 	simple?: boolean;
+	width?: "narrow" | "wide";
 };
 
 export const ConfirmationModal = ({

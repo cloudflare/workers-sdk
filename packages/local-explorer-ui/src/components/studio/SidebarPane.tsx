@@ -45,9 +45,10 @@ export function StudioSidebarPane() {
 						<MagnifyingGlassIcon size={16} />
 					</InputGroup.Label>
 					<InputGroup.Input
-						value={searchText}
+						label="Search"
 						onValueChange={setSearchText}
 						placeholder="Search"
+						value={searchText}
 					/>
 				</InputGroup>
 

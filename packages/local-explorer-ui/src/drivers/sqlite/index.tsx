@@ -22,16 +22,16 @@ import type {
 import type { Icon } from "@phosphor-icons/react";
 
 export class StudioSQLiteDriver extends StudioDriverCommon {
-	isSupportEditTable = true;
-	isSupportReturningValue = true;
-	isSupportRowid = true;
-	isSupportExplain = true;
+	override isSupportEditTable = true;
+	override isSupportReturningValue = true;
+	override isSupportRowid = true;
+	override isSupportExplain = true;
 
 	escapeId(id: string): string {
 		return `"${id.replace(/"/g, `""`)}"`;
 	}
 
-	getColumnTypeHint(type?: string | null): StudioColumnTypeHint {
+	override getColumnTypeHint(type?: string | null): StudioColumnTypeHint {
 		if (!type) {
 			return null;
 		}
@@ -57,7 +57,9 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 			return "NUMBER";
 		}
 
-		if (type.includes("BLOB")) return "BLOB";
+		if (type.includes("BLOB")) {
+			return "BLOB";
+		}
 
 		// Default to TEXT for unknown types
 		return "TEXT";
@@ -244,7 +246,7 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		const schema = await this.tableSchema(schemaName, tableName);
 		const { limit, offset, orderByColumn, orderByDirection } = options;
 
-		let canInjectRowId =
+		const canInjectRowId =
 			!schema.fts5 &&
 			schema.pk.length === 0 &&
 			!schema.withoutRowId &&
@@ -319,11 +321,13 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		};
 	}
 
-	generateTableSchemaStatement(change: StudioTableSchemaChange): string[] {
+	override generateTableSchemaStatement(
+		change: StudioTableSchemaChange
+	): string[] {
 		return buildSQLiteSchemaDiffStatement(this, change);
 	}
 
-	buildExplainStatement(sql: string): string {
+	override buildExplainStatement(sql: string): string {
 		// Replaces parameter placeholders with benign literals so SQLite can plan
 		// without bindings (no need to provide real values).
 		const sanitizedTokens = tokenizeSQL(sql.trim(), "sqlite")
@@ -349,7 +353,7 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		return eqpSql;
 	}
 
-	getQueryTabOverride(
+	override getQueryTabOverride(
 		statement: string,
 		result: StudioResultSet
 	): { label: string; icon: Icon; component: JSX.Element } | null {

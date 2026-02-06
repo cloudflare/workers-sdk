@@ -139,8 +139,9 @@ export function buildSQLiteSchemaDiffStatement(
 	const lines: string[] = [];
 
 	for (const col of change.columns) {
-		if (col.new === null) lines.push(`DROP COLUMN ${col.old?.name}`);
-		else if (col.old === null) {
+		if (col.new === null) {
+			lines.push(`DROP COLUMN ${col.old?.name}`);
+		} else if (col.old === null) {
 			if (isCreateScript) {
 				lines.push(generateCreateColumn(driver, col.new));
 			} else {
