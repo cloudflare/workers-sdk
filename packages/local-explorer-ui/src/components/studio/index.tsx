@@ -2,12 +2,12 @@ import { BinocularsIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getSavedQueries } from "../../utils/studio/saved-queries-api";
 import { ModalProvider } from "../../utils/studio/stubs/modal";
-// import SplitPane from "../../utils/studio/stubs/SplitPane";
+import SplitPane from "../../utils/studio/stubs/SplitPane";
 import { useLeaveGuard } from "../../utils/studio/stubs/useLeaveGuard";
 import { StudioContextProvider } from "./Context";
 import { StudioContextMenuProvider } from "./ContextMenu";
 import { StudioQueryTab } from "./QueryTab";
-// import { StudioSidebarPane } from "./SidebarPane";
+import { StudioSidebarPane } from "./SidebarPane";
 import { StudioTabDefinitionList } from "./tab-register";
 import { StudioWindowTabPane } from "./WindowTabPane";
 import type {
@@ -375,7 +375,7 @@ export function Studio({
 			<StudioContextMenuProvider>
 				<StudioContextProvider value={contextValues}>
 					<div className="w-full h-full overflow-hidden">
-						{/* <SplitPane
+						<SplitPane
 							defaultSize={300}
 							minSize={50}
 							resizerClassName="!bg-neutral-300 dark:!bg-neutral-800 border-transparent"
@@ -383,9 +383,7 @@ export function Studio({
 						>
 							<StudioSidebarPane />
 							<StudioWindowTabPane />
-						</SplitPane> */}
-
-						<StudioWindowTabPane />
+						</SplitPane>
 					</div>
 				</StudioContextProvider>
 			</StudioContextMenuProvider>
