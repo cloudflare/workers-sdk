@@ -12,6 +12,7 @@
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"@cloudflare/workers-types": "catalog:default",
+		"miniflare": "workspace:*",
 		"typescript": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"
