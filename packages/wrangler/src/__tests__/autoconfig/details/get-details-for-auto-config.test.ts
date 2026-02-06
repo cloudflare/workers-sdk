@@ -107,10 +107,12 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
-	it("outputDir should be empty if nothing can be detected", async () => {
-		await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
-			outputDir: undefined,
-		});
+	it("an error should be thrown is no output dir can be detected", async () => {
+		await expect(
+			details.getDetailsForAutoConfig()
+		).rejects.toThrowErrorMatchingInlineSnapshot(
+			`[Error: Could not detect a directory containing the static (html, css and js) files for the project]`
+		);
 	});
 
 	it("outputDir should be set to cwd if an index.html file exists", async () => {
@@ -177,6 +179,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			const dirname = `project-${randomUUID()}`;
 			await seed({
 				[`./${dirname}/package.json`]: JSON.stringify({ name: projectName }),
+				[`./${dirname}/index.html`]: "<h1>Hello World</h1>",
 			});
 			await expect(
 				details.getDetailsForAutoConfig({
