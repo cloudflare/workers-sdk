@@ -1,24 +1,28 @@
 @import "tailwindcss";
 
 @theme {
-	/* Cloudflare Workers brand colors */
-	--color-bg: #fffdfb;
-	--color-bg-secondary: #fef7ed;
-	--color-bg-tertiary: #fffbf5;
-	--color-text: #521000;
-	--color-text-secondary: #521000b3;
-	--color-border: #ebd5c1;
-	--color-primary: #ff4801;
-	--color-primary-hover: #ff7038;
-	--color-danger: #fb2c36;
-	--color-danger-hover: #dc2626;
-	--color-success: #16a34a;
+	/* Cloudflare Workers brand colors - Light mode (default) */
+	--color-bg: light-dark(#fffdfb, #1a1412);
+	--color-bg-secondary: light-dark(#fef7ed, #0f0c0a);
+	--color-bg-tertiary: light-dark(#fffbf5, #231c18);
+	--color-text: light-dark(#521000, #ffeee6);
+	--color-text-secondary: light-dark(#521000b3, #ffeee6b3);
+	--color-border: light-dark(#ebd5c1, #3d2e24);
+	--color-primary: light-dark(#ff4801, #ff6b33);
+	--color-primary-hover: light-dark(#ff7038, #ff8855);
+	--color-danger: light-dark(#fb2c36, #ff4d55);
+	--color-danger-hover: light-dark(#dc2626, #ef4444);
+	--color-success: light-dark(#16a34a, #22c55e);
 
 	/* Custom sizing */
 	--width-sidebar: 240px;
 }
 
 @layer base {
+	:root {
+		color-scheme: light dark;
+	}
+
 	body {
 		font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
 			Ubuntu, sans-serif;
@@ -39,7 +43,7 @@
 
 	/* Dialog popup */
 	.dialog {
-		@apply fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001] bg-bg rounded-xl p-6 w-full max-w-[500px] shadow-[0_4px_24px_rgba(82,16,0,0.1),0_0_0_1px_var(--color-border)] transition-[opacity,transform] duration-150;
+		@apply fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001] bg-bg rounded-xl p-6 w-full max-w-[500px] shadow-[0_4px_24px_rgba(0,0,0,0.15),0_0_0_1px_var(--color-border)] transition-[opacity,transform] duration-150;
 	}
 	.dialog[data-starting-style],
 	.dialog[data-ending-style] {
@@ -62,7 +66,7 @@
 
 	/* Action menu dropdown */
 	.action-menu-dropdown {
-		@apply min-w-[120px] bg-bg border border-border rounded-lg shadow-[0_4px_12px_rgba(82,16,0,0.1)] z-[100] overflow-hidden transition-[opacity,transform] duration-150;
+		@apply min-w-[120px] bg-bg border border-border rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[100] overflow-hidden transition-[opacity,transform] duration-150;
 	}
 	.action-menu-dropdown[data-starting-style],
 	.action-menu-dropdown[data-ending-style] {
