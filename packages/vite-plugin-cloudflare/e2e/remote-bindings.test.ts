@@ -12,8 +12,17 @@ import {
 } from "./helpers.js";
 
 const commands = ["dev", "buildAndPreview"] as const;
+const isWindows = process.platform === "win32";
 
-if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
+// Remote bindings tests are skipped on Windows due to slow/unreliable remote proxy
+// session initialization times in CI, which causes intermittent timeout failures.
+// See: https://jira.cfdata.org/browse/DEVX-2030
+if (isWindows) {
+	describe.skip("Skipping remote bindings tests on Windows.");
+} else if (
+	!process.env.CLOUDFLARE_ACCOUNT_ID ||
+	!process.env.CLOUDFLARE_API_TOKEN
+) {
 	describe.skip("Skipping remote bindings tests without account credentials.");
 } else {
 	describe
@@ -162,55 +171,43 @@ if (!process.env.CLOUDFLARE_ACCOUNT_ID || !process.env.CLOUDFLARE_API_TOKEN) {
 		});
 	});
 
-	describe("failure to connect to remote bindings", () => {
+	describe.skipIf(isWindows)("failure to connect to remote bindings", () => {
 		const projectPath = seed("remote-bindings-incorrect-r2-config", {
 			pm: "pnpm",
 		});
 
 		describe.each(commands)('with "%s" command', (command) => {
-			// On Windows the path for the miniflare dependency gets pretty long and this fails in node < 22.7
-			// (see: https://github.com/shellscape/jsx-email/issues/225#issuecomment-2420567832), so
-			// we need to skip this on windows since in CI we're using node 20
-			// we should look into re-enable this once we can move to a node a newer version of node
-			test.skipIf(process.platform === "win32")(
-				"exit with a non zero error code and log an error",
-				async ({ expect }) => {
-					const proc = await runLongLived("pnpm", command, projectPath);
+			test("exit with a non zero error code and log an error", async ({
+				expect,
+			}) => {
+				const proc = await runLongLived("pnpm", command, projectPath);
 
-					expect(await proc.exitCode).not.toBe(0);
-					expect(proc.stderr).toContain(
-						"R2 bucket 'non-existent-r2-bucket' not found. Please use a different name and try again. [code: 10085]"
-					);
-					expect(proc.stderr).toContain(
-						"Error: Failed to start the remote proxy session. There is likely additional logging output above."
-					);
-				}
-			);
+				expect(await proc.exitCode).not.toBe(0);
+				expect(proc.stderr).toContain(
+					"R2 bucket 'non-existent-r2-bucket' not found. Please use a different name and try again. [code: 10085]"
+				);
+				expect(proc.stderr).toContain(
+					"Error: Failed to start the remote proxy session. There is likely additional logging output above."
+				);
+			});
 		});
 	});
 }
 
-describe("remote bindings disabled", () => {
+describe.skipIf(isWindows)("remote bindings disabled", () => {
 	const projectPath = seed("remote-bindings-disabled", { pm: "pnpm" });
 
 	describe.each(commands)('with "%s" command', (command) => {
-		// On Windows the path for the miniflare dependency gets pretty long and this fails in node < 22.7
-		// (see: https://github.com/shellscape/jsx-email/issues/225#issuecomment-2420567832), so
-		// we need to skip this on windows since in CI we're using node 20
-		// we should look into re-enable this once we can move to a node a newer version of node
-		test.skipIf(process.platform === "win32")(
-			"cannot connect to remote bindings",
-			async ({ expect }) => {
-				const proc = await runLongLived("pnpm", command, projectPath);
-				const url = await waitForReady(proc);
+		test("cannot connect to remote bindings", async ({ expect }) => {
+			const proc = await runLongLived("pnpm", command, projectPath);
+			const url = await waitForReady(proc);
 
-				const response = await fetch(url);
+			const response = await fetch(url);
 
-				const responseText = await response.text();
+			const responseText = await response.text();
 
-				expect(responseText).toContain("Error");
-				expect(responseText).toContain("Binding AI needs to be run remotely");
-			}
-		);
+			expect(responseText).toContain("Error");
+			expect(responseText).toContain("Binding AI needs to be run remotely");
+		});
 	});
 });
