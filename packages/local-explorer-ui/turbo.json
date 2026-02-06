@@ -3,7 +3,10 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"outputs": ["dist/**"]
+			"outputs": ["dist/**", "src/api/generated/**"]
+		},
+		"check:type": {
+			"dependsOn": ["build"]
 		}
 	}
 }
