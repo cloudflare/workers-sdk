@@ -37,7 +37,7 @@ export function Sidebar({
 						Local Explorer
 					</span>
 					<span className="text-[10px] font-medium text-text-secondary uppercase tracking-wide">
-						Cloudflare Dev Tools
+						Cloudflare DevTools
 					</span>
 				</div>
 			</div>
