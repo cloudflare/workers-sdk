@@ -244,26 +244,41 @@ const localTestConfigs: TestConfig[] = [
 			},
 		},
 		{
-			name: "process v2 by date",
-			compatibilityDate: "2025-09-15",
-			expectRuntimeFlags: {
-				enable_nodejs_process_v2: true,
-			},
-		},
-		{
-			name: "process v2 by flag",
-			compatibilityDate: "2024-09-23",
-			compatibilityFlags: ["enable_nodejs_process_v2"],
-			expectRuntimeFlags: {
-				enable_nodejs_process_v2: true,
-			},
-		},
-		{
 			name: "process v1 by flag",
 			compatibilityDate: "2025-09-15",
 			compatibilityFlags: ["disable_nodejs_process_v2"],
 			expectRuntimeFlags: {
 				enable_nodejs_process_v2: false,
+			},
+		},
+		{
+			name: "process v2 by date",
+			// TODO:
+			// - adjust the date to when `fetch_iterable_type_support` is enabled by default
+			// - remove setting `fetch_iterable_type_support*` flags from this test case
+			compatibilityDate: "2025-09-15",
+			compatibilityFlags: [
+				"fetch_iterable_type_support",
+				"fetch_iterable_type_support_override_adjustment",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_process_v2: true,
+				fetch_iterable_type_support: true,
+				fetch_iterable_type_support_override_adjustment: true,
+			},
+		},
+		{
+			name: "process v2 by flag",
+			compatibilityDate: "2024-09-23",
+			compatibilityFlags: [
+				"enable_nodejs_process_v2",
+				"fetch_iterable_type_support",
+				"fetch_iterable_type_support_override_adjustment",
+			],
+			expectRuntimeFlags: {
+				enable_nodejs_process_v2: true,
+				fetch_iterable_type_support: true,
+				fetch_iterable_type_support_override_adjustment: true,
 			},
 		},
 	],
@@ -705,7 +720,7 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 			await expect(readyResp.text()).resolves.toEqual("pong");
 
 			// Assert runtime flag values
-			for await (const flag of collectEnableFlags(localTestConfigs)) {
+			for await (const flag of collectEnabledFlags(localTestConfigs)) {
 				const flagResp = await fetch(`${url}/flag?name=${flag}`);
 				expect(flagResp.ok).toEqual(true);
 				await expect(flagResp.json(), `flag "${flag}"`).resolves.toEqual(false);
@@ -738,7 +753,7 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 
 		beforeAll(async () => {
 			const helper = new WranglerE2ETestHelper();
-			const flags = collectEnableFlags(localTestConfigs);
+			const flags = collectEnabledFlags(localTestConfigs);
 			await helper.seed({
 				"wrangler.jsonc": JSON.stringify({
 					name: generateResourceName(),
@@ -787,12 +802,16 @@ describe.runIf(Boolean(CLOUDFLARE_ACCOUNT_ID))(
 );
 
 /**
- * Collects all the `enable_...` flags
+ * Collects enabled flags:
+ * - skips "experimental" flag
+ * - `enable_...` flags
+ * - `fetch_iterable_type_support`
+ * - `fetch_iterable_type_support_override_adjustment`
  *
  * @param configs Test configs
- * @returns The list of `enabled_...` flags found in the configs
+ * @returns The list of enabled flags found in the configs
  */
-function collectEnableFlags(configs: TestConfig[]): string[] {
+function collectEnabledFlags(configs: TestConfig[]): string[] {
 	const enableFlags = new Set<string>();
 
 	for (const config of configs) {
@@ -808,6 +827,12 @@ function collectEnableFlags(configs: TestConfig[]): string[] {
 		}
 
 		for (const flag of flags) {
+			// `fetch_iterable_type_support` and `fetch_iterable_type_support_override_adjustment`
+			if (flag.startsWith("fetch_iterable_type_support")) {
+				enableFlags.add(flag);
+				continue;
+			}
+
 			if (flag.startsWith("enable_")) {
 				enableFlags.add(flag);
 			} else if (!flag.startsWith("disable_")) {
