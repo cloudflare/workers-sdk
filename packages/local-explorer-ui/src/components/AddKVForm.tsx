@@ -1,5 +1,6 @@
 import { Button } from "@base-ui/react/button";
 import { useEffect, useState } from "react";
+import { cn } from "../utils/cn";
 import { validateKey } from "../utils/kv-validation";
 
 interface AddKVFormProps {
@@ -84,7 +85,12 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 			</div>
 			<Button
 				type="submit"
-				className="btn shrink-0 inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-bg-tertiary hover:bg-primary-hover"
+				className={cn(
+					"btn shrink-0 inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-bg-tertiary hover:bg-primary-hover",
+					{
+						"cursor-not-allowed": saving || isKeyInvalid,
+					}
+				)}
 				disabled={saving || isKeyInvalid}
 				focusableWhenDisabled
 			>
