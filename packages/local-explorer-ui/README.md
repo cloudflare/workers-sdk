@@ -29,7 +29,7 @@ The generated code includes:
 | Command        | Behavior                                               |
 | -------------- | ------------------------------------------------------ |
 | `pnpm install` | Runs `openapi-ts` in `postinstall` to generate types   |
-| `pnpm build`   | Runs `generate:api` before building                    |
+| `pnpm build`   | Runs `openapi-ts` before building                      |
 | `pnpm dev`     | Watches for spec changes and regenerates automatically |
 | `pnpm dev:ui`  | Same as `dev` - watches for spec changes               |
 
