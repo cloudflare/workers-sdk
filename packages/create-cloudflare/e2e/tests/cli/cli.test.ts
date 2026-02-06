@@ -65,6 +65,10 @@ describe("Create Cloudflare CLI", () => {
 							input: [keys.enter],
 						},
 						{
+							matcher: /Do you want to add an AGENTS\.md file/,
+							input: ["n"],
+						},
+						{
 							matcher: /Do you want to use git for version control/,
 							input: [keys.right, keys.enter],
 						},
@@ -106,6 +110,10 @@ describe("Create Cloudflare CLI", () => {
 						{
 							matcher: /Which language do you want to use\?/,
 							input: [keys.down, keys.enter],
+						},
+						{
+							matcher: /Do you want to add an AGENTS\.md file/,
+							input: ["n"],
 						},
 						{
 							matcher: /Do you want to use git for version control/,
@@ -164,6 +172,10 @@ describe("Create Cloudflare CLI", () => {
 								input: [keys.enter],
 							},
 							{
+								matcher: /Do you want to add an AGENTS\.md file/,
+								input: ["n"],
+							},
+							{
 								matcher: /Do you want to use git for version control/,
 								input: ["n"],
 							},
@@ -195,6 +207,7 @@ describe("Create Cloudflare CLI", () => {
 						"--template=https://github.com/cloudflare/workers-graphql-server",
 						"--no-deploy",
 						"--git=false",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -227,6 +240,7 @@ describe("Create Cloudflare CLI", () => {
 						"--template=cloudflare/templates/multiplayer-globe-template",
 						"--no-deploy",
 						"--git=false",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -264,6 +278,7 @@ describe("Create Cloudflare CLI", () => {
 						"--type=hello-world-python",
 						"--no-deploy",
 						"--git=false",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -286,6 +301,7 @@ describe("Create Cloudflare CLI", () => {
 						"--type=hello-world",
 						"--no-deploy",
 						"--git=false",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -332,7 +348,7 @@ describe("Create Cloudflare CLI", () => {
 			"Selecting template by description",
 			async ({ logStream, project }) => {
 				const { output } = await runC3(
-					[project.path, "--no-deploy", "--git=false"],
+					[project.path, "--no-deploy", "--git=false", "--no-agents"],
 					[
 						{
 							matcher: /What would you like to start with\?/,
@@ -367,7 +383,7 @@ describe("Create Cloudflare CLI", () => {
 			async ({ logStream, project }) => {
 				const testProjectPath = "/test-project-path";
 				const { output } = await runC3(
-					[testProjectPath, "--git=false", "--no-deploy"],
+					[testProjectPath, "--git=false", "--no-deploy", "--no-agents"],
 					[
 						{
 							matcher: /What would you like to start with\?/,
@@ -505,6 +521,7 @@ describe("Create Cloudflare CLI", () => {
 						"--existing-script=existing-script-test-do-not-delete",
 						"--git=false",
 						"--no-deploy",
+						"--no-agents",
 					],
 					[],
 					logStream,
@@ -574,6 +591,8 @@ describe("Create Cloudflare CLI", () => {
 					    Deploy your application after it has been created
 					  --git, --no-git
 					    Initialize a local git repository for your application
+					  --agents, --no-agents
+					    Add an AGENTS.md file to provide AI coding agents with guidance for the Cloudflare platform
 					  --open, --no-open
 					    Opens the deployed application in your browser (this option is ignored if the application is not deployed)
 					  --existing-script=<value>
@@ -678,6 +697,8 @@ describe("Create Cloudflare CLI", () => {
 					    Deploy your application after it has been created
 					  --git, --no-git
 					    Initialize a local git repository for your application
+					  --agents, --no-agents
+					    Add an AGENTS.md file to provide AI coding agents with guidance for the Cloudflare platform
 					  --open, --no-open
 					    Opens the deployed application in your browser (this option is ignored if the application is not deployed)
 					  --existing-script=<value>
