@@ -2,8 +2,8 @@
 // It’s intentionally small and limited in scope.
 // For broader functionality, consider switching to a full library such as sql-formatter.
 
-import { sqliteBuiltinFunctionList } from "../../components/studio/SQLEditor/SQLiteDialect";
-import { waeBuiltinFunctionList } from "../../components/studio/SQLEditor/WAEDialect";
+import { sqliteBuiltinFunctionList } from "../../components/Studio/SQLEditor/SQLiteDialect";
+import { waeBuiltinFunctionList } from "../../components/Studio/SQLEditor/WAEDialect";
 import { tokenizeSQL } from "./index";
 import type { StudioDialect, StudioSQLToken } from "../../types/studio";
 

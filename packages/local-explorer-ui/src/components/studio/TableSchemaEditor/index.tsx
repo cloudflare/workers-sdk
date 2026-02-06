@@ -5,8 +5,8 @@ import { produce } from "immer";
 import { isEqual } from "lodash";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useModal } from "../../../utils/studio/stubs/modal";
+import { StudioCommitConfirmation } from "../CommitConfirmation";
 import { StudioSQLEditor } from "../SQLEditor";
-import { StudioCommitConfirmation } from "./../CommitConfirmation";
 import {
 	StudioColumnEditiorDrawer,
 	StudioColumnSchemaEditor,
