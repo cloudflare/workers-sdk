@@ -12,7 +12,6 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
-import isCI from "is-ci";
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
@@ -134,7 +133,6 @@ export async function getDetailsForAutoConfig({
 		"autoconfig_detection_started",
 		{
 			autoConfigId,
-			isCI,
 			command: getAutoConfigTriggerCommand(),
 		},
 		{}

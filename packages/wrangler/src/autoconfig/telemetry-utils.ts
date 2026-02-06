@@ -1,4 +1,3 @@
-import isCI from "is-ci";
 import { sendMetricsEvent } from "../metrics";
 import { sanitizeError } from "../metrics/sanitization";
 
@@ -69,7 +68,6 @@ export function sendAutoConfigProcessStartedMetricsEvent({
 		"autoconfig_process_started",
 		{
 			autoConfigId: getAutoConfigId(),
-			isCI,
 			command,
 			dryRun,
 		},
@@ -105,7 +103,6 @@ export function sendAutoConfigProcessEndedMetricsEvent({
 			autoConfigId: getAutoConfigId(),
 			command,
 			dryRun,
-			isCI,
 			success,
 			...sanitizeError(error),
 		},

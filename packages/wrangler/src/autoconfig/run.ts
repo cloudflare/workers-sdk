@@ -6,7 +6,6 @@ import {
 	getLocalWorkerdCompatibilityDate,
 	parseJSONC,
 } from "@cloudflare/workers-utils";
-import isCI from "is-ci";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
@@ -53,7 +52,6 @@ export async function runAutoConfig(
 		"autoconfig_configuration_started",
 		{
 			autoConfigId,
-			isCI,
 			framework: autoConfigDetails.framework?.id,
 			dryRun,
 		},
