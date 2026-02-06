@@ -504,6 +504,8 @@ export function buildMiniflareBindingOptions(
 	for (const blob of textBlobs) {
 		if ("path" in blob.source && blob.source.path) {
 			textBlobBindings[blob.binding] = blob.source.path;
+		} else if ("contents" in blob.source) {
+			textBlobBindings[blob.binding] = blob.source.contents;
 		}
 	}
 
