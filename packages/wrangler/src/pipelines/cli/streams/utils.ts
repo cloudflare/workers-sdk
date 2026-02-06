@@ -1,3 +1,4 @@
+import chalk from "chalk";
 import { logger } from "../../../logger";
 import { createdResourceConfig } from "../../../utils/add-created-resource-config";
 import formatLabelledValues from "../../../utils/render-labelled-values";
@@ -212,11 +213,7 @@ export async function displayUsageExamples(
 ) {
 	const bindingName = generateStreamBindingName(stream.name);
 	const exampleData = generateExampleData(stream);
-
-	logger.log(`\nSend your first event to stream '${stream.name}':`);
-
-	// Worker binding example (always shown since worker_binding is always enabled)
-	logger.log("\nWorker Integration:");
+	const compactData = JSON.stringify(JSON.parse(exampleData));
 
 	await createdResourceConfig(
 		"pipelines",
@@ -229,12 +226,11 @@ export async function displayUsageExamples(
 		{ updateConfig: false }
 	);
 
-	logger.log("\nIn your Worker:");
-	logger.log(`await env.${bindingName}.send([${exampleData}]);`);
+	logger.log("\nThen send events:\n");
+	logger.log(`  await env.${bindingName}.send([${compactData}]);\n`);
 
-	// HTTP endpoint example (only if HTTP is enabled)
 	if (stream.http.enabled) {
-		logger.log("\nHTTP Endpoint:");
+		logger.log("Or via HTTP:\n");
 
 		const curlCommand = [
 			`curl -X POST ${stream.endpoint}`,
@@ -242,23 +238,19 @@ export async function displayUsageExamples(
 				? `-H "Authorization: Bearer YOUR_API_TOKEN"`
 				: null,
 			`-H "Content-Type: application/json"`,
-			`-d '[${exampleData}]'`,
+			`-d '[${compactData}]'`,
 		]
 			.filter(Boolean)
 			.join(" \\\n     ");
 
-		logger.log(curlCommand);
+		logger.log(`  ${curlCommand}\n`);
 
 		if (stream.http.authentication) {
-			logger.log("(Replace YOUR_API_TOKEN with your Cloudflare API token)");
-		}
-
-		if (
-			stream.http.cors &&
-			stream.http.cors.origins &&
-			!stream.http.cors.origins.includes("*")
-		) {
-			logger.log(`CORS origins: ${stream.http.cors.origins.join(", ")}`);
+			logger.log(
+				chalk.dim("  (Replace YOUR_API_TOKEN with your Cloudflare API token)")
+			);
 		}
 	}
+
+	logger.log(chalk.dim("Docs: https://developers.cloudflare.com/pipelines/\n"));
 }
