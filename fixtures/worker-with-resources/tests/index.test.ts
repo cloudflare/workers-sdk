@@ -1,9 +1,7 @@
 import { resolve } from "path";
+import { LOCAL_EXPLORER_API_PATH, LOCAL_EXPLORER_BASE_PATH } from "miniflare";
 import { afterAll, beforeAll, describe, it } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
-
-const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/explorer";
-const LOCAL_EXPLORER_API_PATH = `${LOCAL_EXPLORER_BASE_PATH}/api`;
 
 describe("local explorer", () => {
 	describe("with X_LOCAL_EXPLORER=true", () => {

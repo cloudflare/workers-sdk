@@ -1,12 +1,13 @@
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { LOCAL_EXPLORER_BASE_PATH } from "./constants";
 import "./styles/tailwind.css";
 import { routeTree } from "./routeTree.gen";
 
-const router = createRouter({ routeTree, basepath: LOCAL_EXPLORER_BASE_PATH });
+// eslint-disable-next-line turbo/no-undeclared-env-vars -- replaced at build time
+const router = createRouter({ routeTree, basepath: import.meta.env.BASE_URL });
 
+// See https://tanstack.com/router/latest/docs/framework/react/guide/creating-a-router#router-type-safety
 declare module "@tanstack/react-router" {
 	interface Register {
 		router: typeof router;
