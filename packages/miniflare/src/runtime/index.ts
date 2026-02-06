@@ -328,3 +328,5 @@ export class Runtime {
 
 export * from "./config";
 export { supportedCompatibilityDate };
+
+export * from "./compatibility-date";
