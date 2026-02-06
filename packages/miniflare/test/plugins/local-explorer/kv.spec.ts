@@ -1,6 +1,6 @@
 import { Miniflare } from "miniflare";
 import { afterAll, beforeAll, describe, test } from "vitest";
-import { LOCAL_EXPLORER_API_PATH } from "../../../src/workers/local-explorer/constants";
+import { LOCAL_EXPLORER_API_PATH } from "../../../src/plugins/core/constants";
 import {
 	zWorkersKvNamespaceDeleteKeyValuePairResponse,
 	zWorkersKvNamespaceGetMultipleKeyValuePairsResponse,
