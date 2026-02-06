@@ -2,6 +2,7 @@ import { describe, test, vi } from "vitest";
 import { confirmAutoConfigDetails } from "../../../autoconfig/details";
 import { Astro } from "../../../autoconfig/frameworks/astro";
 import { Static } from "../../../autoconfig/frameworks/static";
+import { NpmPackageManager } from "../../../package-manager";
 import {
 	mockConfirm,
 	mockPrompt,
@@ -9,7 +10,8 @@ import {
 } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 
-vi.mock("../../../package-manager", () => ({
+vi.mock("../../../package-manager", async (importOriginal) => ({
+	...(await importOriginal()),
 	getPackageManager() {
 		return {
 			type: "npm",
@@ -36,6 +38,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				configured: false,
 				framework: new Static({ id: "static", name: "Static" }),
 				outputDir: "./public",
+				packageManager: NpmPackageManager,
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
@@ -49,6 +52,13 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				    "name": "Static",
 				  },
 				  "outputDir": "./public",
+				  "packageManager": Object {
+				    "dlx": Array [
+				      "npx",
+				    ],
+				    "npx": "npx",
+				    "type": "npm",
+				  },
 				  "projectPath": "<PROJECT_PATH>",
 				  "workerName": "worker-name",
 				}
@@ -88,6 +98,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				projectPath: "<PROJECT_PATH>",
 				configured: false,
 				framework: new Static({ id: "static", name: "Static" }),
+				packageManager: NpmPackageManager,
 			});
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
 				Object {
@@ -100,6 +111,13 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				    "name": "Static",
 				  },
 				  "outputDir": "./_public_",
+				  "packageManager": Object {
+				    "dlx": Array [
+				      "npx",
+				    ],
+				    "npx": "npx",
+				    "type": "npm",
+				  },
 				  "projectPath": "<PROJECT_PATH>",
 				  "workerName": "new-name",
 				}
@@ -139,6 +157,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				outputDir: "<OUTPUT_DIR>",
 				projectPath: "<PROJECT_PATH>",
 				configured: false,
+				packageManager: NpmPackageManager,
 			});
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
 				Object {
@@ -151,6 +170,13 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				    "name": "Astro",
 				  },
 				  "outputDir": "",
+				  "packageManager": Object {
+				    "dlx": Array [
+				      "npx",
+				    ],
+				    "npx": "npx",
+				    "type": "npm",
+				  },
 				  "projectPath": "<PROJECT_PATH>",
 				  "workerName": "my-astro-worker",
 				}
@@ -190,6 +216,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				outputDir: "<OUTPUT_DIR>",
 				projectPath: "<PROJECT_PATH>",
 				configured: false,
+				packageManager: NpmPackageManager,
 			});
 
 			expect(updatedAutoConfigDetails.framework?.id).toBe("nuxt");
@@ -210,6 +237,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				configured: false,
 				framework: new Static({ id: "static", name: "Static" }),
 				outputDir: "./public",
+				packageManager: NpmPackageManager,
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
@@ -223,6 +251,13 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				    "name": "Static",
 				  },
 				  "outputDir": "./public",
+				  "packageManager": Object {
+				    "dlx": Array [
+				      "npx",
+				    ],
+				    "npx": "npx",
+				    "type": "npm",
+				  },
 				  "projectPath": "<PROJECT_PATH>",
 				  "workerName": "worker-name",
 				}

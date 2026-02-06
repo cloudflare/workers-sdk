@@ -10,7 +10,7 @@ import { runWrangler } from "./helpers/run-wrangler";
 import type { OutputEntry } from "../output";
 
 vi.mock("../package-manager", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("../package-manager")>();
+	const actual = (await importOriginal()) as Record<string, unknown>;
 	return {
 		...actual,
 		getPackageManager() {
