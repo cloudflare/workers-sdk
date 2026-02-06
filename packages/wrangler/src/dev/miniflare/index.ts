@@ -727,17 +727,16 @@ export function buildMiniflareBindingOptions(
 			workerLoaders.map(({ binding }) => [binding, {}])
 		),
 		email: {
-			send_email: sendEmailBindings.map(
-				({ binding: _binding, type: _type, ...b }) => {
-					return {
-						...b,
-						remoteProxyConnectionString:
-							b.remote && remoteProxyConnectionString
-								? remoteProxyConnectionString
-								: undefined,
-					};
-				}
-			),
+			send_email: sendEmailBindings.map(({ name, type: _type, ...b }) => {
+				return {
+					name,
+					...b,
+					remoteProxyConnectionString:
+						b.remote && remoteProxyConnectionString
+							? remoteProxyConnectionString
+							: undefined,
+				};
+			}),
 		},
 		images:
 			imagesBindings.length > 0

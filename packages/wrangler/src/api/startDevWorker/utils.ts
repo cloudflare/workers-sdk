@@ -550,6 +550,7 @@ const nameBindings = [
 	"durable_object_namespace",
 	"logfwdr",
 	"ratelimit",
+	"unsafe_ratelimit",
 	"send_email",
 ] as const;
 function getBindingKey(type: Binding["type"]) {
