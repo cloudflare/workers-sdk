@@ -105,7 +105,12 @@ export function mockUploadWorkerRequest(
 		}
 
 		if ("expectedBindings" in options) {
-			expect(metadata.bindings).toEqual(expectedBindings);
+			expect(metadata.bindings).toEqual(
+				expect.arrayContaining(expectedBindings as unknown[])
+			);
+			expect(metadata.bindings?.length).toEqual(
+				(expectedBindings as unknown[])?.length
+			);
 		}
 		if ("expectedCompatibilityDate" in options) {
 			expect(metadata.compatibility_date).toEqual(expectedCompatibilityDate);

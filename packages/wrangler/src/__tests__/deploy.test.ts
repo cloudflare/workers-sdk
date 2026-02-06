@@ -9279,9 +9279,12 @@ addEventListener('fetch', event => {});`
 				env.ENV_VAR_TWO (\\"Hello, I'm an environment variable\\")                                       Environment Variable
 				env.WASM_MODULE_ONE (some_wasm.wasm)                                                         Wasm Module
 				env.WASM_MODULE_TWO (more_wasm.wasm)                                                         Wasm Module
-				env.extra_data (\\"interesting value\\")                                                         Unsafe Metadata
-				env.more_data (\\"dubious value\\")                                                              Unsafe Metadata
 
+				The following unsafe metadata will be attached to your Worker:
+				{
+				  \\"extra_data\\": \\"interesting value\\",
+				  \\"more_data\\": \\"dubious value\\"
+				}
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -11045,12 +11048,14 @@ addEventListener('fetch', event => {});`
 						──────────────────
 						Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
-						Your Worker has access to the following bindings:
-						Binding                               Resource
-						env.stringify (true)                  Unsafe Metadata
-						env.something (\\"else\\")                Unsafe Metadata
-						env.nested ({\\"stuff\\":\\"here\\"})         Unsafe Metadata
-
+						The following unsafe metadata will be attached to your Worker:
+						{
+						  \\"stringify\\": true,
+						  \\"something\\": \\"else\\",
+						  \\"nested\\": {
+						    \\"stuff\\": \\"here\\"
+						  }
+						}
 						Uploaded test-name (TIMINGS)
 						Deployed test-name triggers (TIMINGS)
 						  https://test-name.test-sub-domain.workers.dev

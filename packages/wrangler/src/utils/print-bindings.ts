@@ -612,17 +612,6 @@ export function printBindings(
 		);
 	}
 
-	if (unsafe?.metadata !== undefined) {
-		output.push(
-			...Object.entries(unsafe.metadata).map(([key, value]) => ({
-				name: key,
-				type: friendlyBindingNames.unsafe,
-				value: JSON.stringify(value),
-				mode: getMode({ isSimulatedLocally: false }),
-			}))
-		);
-	}
-
 	if (output.length === 0) {
 		if (context.warnIfNoBindings) {
 			if (context.name && isMultiWorker) {
@@ -768,6 +757,11 @@ export function printBindings(
 				.join("\n")}`
 		);
 		logger.log();
+	}
+
+	if (unsafe?.metadata !== undefined) {
+		log("The following unsafe metadata will be attached to your Worker:");
+		log(JSON.stringify(unsafe.metadata, null, 2));
 	}
 
 	if (hasConnectionStatus && !isConnectedStatusExplained) {
