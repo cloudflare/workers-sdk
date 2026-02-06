@@ -1,7 +1,6 @@
-import { UserError } from "@cloudflare/workers-utils";
 import isCI from "is-ci";
-import { getErrorType } from "../core/handle-errors";
 import { sendMetricsEvent } from "../metrics";
+import { sanitizeError } from "../metrics/sanitization";
 
 /**
  * The Wrangler command that triggered the autoconfig flow.
@@ -108,13 +107,7 @@ export function sendAutoConfigProcessEndedMetricsEvent({
 			dryRun,
 			isCI,
 			success,
-			...(error
-				? {
-						errorType: getErrorType(error),
-						errorMessage:
-							error instanceof UserError ? error.telemetryMessage : undefined,
-					}
-				: {}),
+			...sanitizeError(error),
 		},
 		{}
 	);

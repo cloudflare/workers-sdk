@@ -5,14 +5,13 @@ import {
 	FatalError,
 	getLocalWorkerdCompatibilityDate,
 	parseJSONC,
-	UserError,
 } from "@cloudflare/workers-utils";
 import isCI from "is-ci";
-import { getErrorType } from "../core/handle-errors";
 import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
+import { sanitizeError } from "../metrics/sanitization";
 import { getPackageManager } from "../package-manager";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
@@ -240,9 +239,7 @@ export async function runAutoConfig(
 				framework: autoConfigDetails.framework?.id,
 				dryRun,
 				success: false,
-				errorType: getErrorType(error),
-				errorMessage:
-					error instanceof UserError ? error.telemetryMessage : undefined,
+				...sanitizeError(error),
 			},
 			{}
 		);
