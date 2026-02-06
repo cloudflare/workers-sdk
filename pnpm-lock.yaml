@@ -1447,6 +1447,9 @@ importers:
       '@cloudflare/workers-types':
         specifier: catalog:default
         version: 4.20260206.0
+      miniflare:
+        specifier: workspace:*
+        version: link:../../packages/miniflare
       typescript:
         specifier: catalog:default
         version: 5.8.3
