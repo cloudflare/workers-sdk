@@ -37,8 +37,8 @@ export const queuesCreateCommand = createCommand({
 		"message-retention-period-secs": {
 			type: "number",
 			describe:
-				"How long to retain a message in the queue, in seconds. Must be between 60 and 1209600",
-			default: 86400,
+				"How long to retain a message in the queue, in seconds. Must be between 60 and 86400 if on free tier, otherwise must be between 60 and 1209600",
+			default: 72000,
 		},
 	},
 	positionalArgs: ["name"],
