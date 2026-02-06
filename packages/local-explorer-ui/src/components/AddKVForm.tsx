@@ -1,6 +1,6 @@
 import { Button } from "@base-ui/react/button";
+import { cn } from "@cloudflare/kumo";
 import { useEffect, useState } from "react";
-import { cn } from "../utils/cn";
 import { validateKey } from "../utils/kv-validation";
 
 interface AddKVFormProps {

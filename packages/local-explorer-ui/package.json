@@ -35,13 +35,11 @@
 		"@phosphor-icons/react": "^2.1.10",
 		"@tailwindcss/vite": "^4.0.15",
 		"@tanstack/react-router": "^1.158.0",
-		"clsx": "^2.1.1",
 		"immer": "^10.0.0",
 		"lodash": "^4.17.0",
 		"react": "^19.2.0",
 		"react-dom": "^19.2.0",
 		"react-split-pane": "^0.1.92",
-		"tailwind-merge": "^3.4.0",
 		"tailwindcss": "^4.0.15"
 	},
 	"devDependencies": {
