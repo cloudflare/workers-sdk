@@ -2095,6 +2095,57 @@ importers:
       '@base-ui/react':
         specifier: ^1.1.0
         version: 1.1.0(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@cloudflare/kumo':
+        specifier: ^1.0.0
+        version: 1.0.0(@phosphor-icons/react@2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(zod@3.25.76)
+      '@cloudflare/style-const':
+        specifier: ^6.1.3
+        version: 6.1.3(react@19.2.1)
+      '@cloudflare/util-http':
+        specifier: ^2.0.18
+        version: 2.0.18
+      '@cloudflare/util-routes':
+        specifier: ^5.3.0
+        version: 5.3.0(react@19.2.1)
+      '@cloudflare/workers-editor-shared':
+        specifier: ^0.1.1
+        version: 0.1.1(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@codemirror/autocomplete':
+        specifier: ^6.18.0
+        version: 6.20.0
+      '@codemirror/commands':
+        specifier: ^6.6.0
+        version: 6.10.1
+      '@codemirror/lang-sql':
+        specifier: ^6.7.0
+        version: 6.10.0
+      '@codemirror/language':
+        specifier: ^6.10.0
+        version: 6.12.1
+      '@codemirror/state':
+        specifier: ^6.4.0
+        version: 6.5.4
+      '@codemirror/view':
+        specifier: ^6.33.0
+        version: 6.39.12
+      '@dnd-kit/core':
+        specifier: ^6.3.1
+        version: 6.3.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@dnd-kit/sortable':
+        specifier: ^10.0.0
+        version: 10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(react@19.2.1)
+      '@dnd-kit/utilities':
+        specifier: ^3.2.2
+        version: 3.2.2(react@19.2.1)
+      '@floating-ui/react':
+        specifier: ^0.26.3
+        version: 0.26.28(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@lezer/common':
+        specifier: ^1.2.0
+        version: 1.5.1
+      '@lezer/highlight':
+        specifier: ^1.2.0
+        version: 1.2.3
       '@phosphor-icons/react':
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -2116,6 +2167,9 @@ importers:
       react-dom:
         specifier: ^19.2.0
         version: 19.2.1(react@19.2.1)
+      react-split-pane:
+        specifier: ^0.1.92
+        version: 0.1.92(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       tailwindcss:
         specifier: ^4.0.15
         version: 4.0.15
@@ -5005,13 +5059,6 @@ packages:
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
-  '@cloudflare/component-box@5.1.2':
-    resolution: {integrity: sha512-7xEr1Q3+eeXxWZJAkzEpGJdMq0s7aur/vGbjk/x0esX6n+NhkUTCRzfTdz135zoXu0nHe4yN4FWHuug9ARZliw==}
-    peerDependencies:
-      '@cloudflare/style-const': ^6.0.0
-      '@cloudflare/style-container': ^8.0.0
-      react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
-
   '@cloudflare/component-button@7.0.17':
     resolution: {integrity: sha512-V30x19fuxVSjKvSy7Fw8e6GTrYOA9b5NU9QEh5SmVC5NB9qzJ/D41y3O6yJUYL5Ry3+988pzl8FJRuKAqwdyjw==}
     peerDependencies:
@@ -5020,29 +5067,12 @@ packages:
       '@cloudflare/style-container': ^7.10.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
-  '@cloudflare/component-button@9.5.2':
-    resolution: {integrity: sha512-G/fKA3Vi0x37CP8F5UYUtpUYkQ6VLr1oINp0FbkhPQl+A+ROKaObGEkWVeUJ9MJXa+AZ7A764HcF9yjf/ZDi5A==}
-    peerDependencies:
-      '@cloudflare/component-icon': ^13.15.0
-      '@cloudflare/style-const': ^6.0.0
-      '@cloudflare/style-container': ^8.0.0
-      react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
-
   '@cloudflare/component-code-block@4.2.8':
     resolution: {integrity: sha512-1Xm917tLOyGDTQDbxPODkWsTO8pZ/93AFoBZOOQc/f2VtbKRmSEL5Vw8qB2CMAKfdzZo9yikT8OOyWqyHSymfg==}
     peerDependencies:
       '@cloudflare/component-icon': ^11.0.0
       '@cloudflare/style-const': ^5.7.2
       '@cloudflare/style-container': ^7.10.0
-      react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
-      react-dom: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
-
-  '@cloudflare/component-code-block@6.0.34':
-    resolution: {integrity: sha512-prAlu7pJA+NIhOBdYWmu04spilYR8LrMRxeMLLNg7f+oOQBqv59KCQCN0JbElkkMRasdDM+f7uW0I0unDAdvNw==}
-    peerDependencies:
-      '@cloudflare/component-icon': ^13.0.0
-      '@cloudflare/style-const': ^6.0.0
-      '@cloudflare/style-container': ^8.0.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
       react-dom: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
@@ -5065,13 +5095,6 @@ packages:
     peerDependencies:
       '@cloudflare/style-const': ^5.7.2
       '@cloudflare/style-container': ^7.10.0
-      react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
-
-  '@cloudflare/component-input@9.0.7':
-    resolution: {integrity: sha512-1B4Q5MMn16FYnNqJVOf7BOPSwa5TqzTfsZR4uCK79+clBtS/fEZU+wNq22dU2CvO2ckSG0bV9X7w6OoOFFFAVw==}
-    peerDependencies:
-      '@cloudflare/style-const': ^6.0.0
-      '@cloudflare/style-container': ^8.0.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/component-listbox@1.10.6':
@@ -5120,26 +5143,11 @@ packages:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
       react-dom: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
-  '@cloudflare/component-tooltip@6.0.6':
-    resolution: {integrity: sha512-RAjTFWTEhMIQZb3/dcSqIUG7IimRCcq7rFbj1fdnA0MavTIJ9qZ3nruqP7xD/hehU+0tLjNRFqthzGKmRr7VxA==}
-    peerDependencies:
-      '@cloudflare/style-const': ^6.0.0
-      '@cloudflare/style-container': ^8.0.0
-      react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
-      react-dom: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
-
   '@cloudflare/component-visually-hidden@1.0.86':
     resolution: {integrity: sha512-F7g5P8sowjgbfdfCH+6rL6SqMPtGsO+YuBEetwRJ4M7zzb5/96Sv4Uea5f2V9S+Y0QAYf7iUaQHDy3JtexBwHw==}
     peerDependencies:
       '@cloudflare/style-const': ^5.7.2
       '@cloudflare/style-container': ^7.10.0
-      react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
-
-  '@cloudflare/component-visually-hidden@2.0.6':
-    resolution: {integrity: sha512-e7hlkJW3K/4k4jNqDXUM4wva1lYlxMaegytXBeFZmPy87o8NbI7LBS1R045HHysadAYVAm4JlKiJtREQ6vlKUw==}
-    peerDependencies:
-      '@cloudflare/style-const': ^6.0.0
-      '@cloudflare/style-container': ^8.0.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/containers@0.0.25':
@@ -5150,13 +5158,6 @@ packages:
     peerDependencies:
       '@cloudflare/style-const': ^5.7.2
       '@cloudflare/style-container': ^7.10.0
-      react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
-
-  '@cloudflare/elements@4.0.6':
-    resolution: {integrity: sha512-X/Ok7DAKTLliMKIG7PJi6CjgyZ1jlChQS1OIMe8xBCF7kQa7P7xt+W2UwjOvYGT4geo22Ck8IE36HFTOFFAn8w==}
-    peerDependencies:
-      '@cloudflare/style-const': ^6.0.0
-      '@cloudflare/style-container': ^8.0.0
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
   '@cloudflare/intl-core@1.15.0':
@@ -5358,6 +5359,14 @@ packages:
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
+
+  '@cloudflare/workers-editor-shared@0.1.1':
+    resolution: {integrity: sha512-tk7dZ3rj61o8oPL2JIfJbjAldBOJZNHHIWlkfY5X5ftw7QhAIccACz4zW7LFcMyw6HHexmHhIPlcdENqqnp28w==}
+    peerDependencies:
+      '@cloudflare/style-const': ^5.7.2
+      '@cloudflare/style-container': ^7.12.1
+      react: ^17.0.2 || ^18.2.21
+      react-dom: ^17.0.2 || ^18.2.21
 
   '@cloudflare/workers-types@4.20260206.0':
     resolution: {integrity: sha512-rHbE1XM3mfwzoyOiKm1oFRTp00Cv4U5UiuMDQwmu/pc79yOA3nDiOC0lue8aOpobBrP4tPHQqsPcWG606Zrw/w==}
@@ -16010,16 +16019,6 @@ snapshots:
       prop-types: 15.8.1
       react: 18.3.1
 
-  '@cloudflare/component-box@5.1.2(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)':
-    dependencies:
-      '@cloudflare/style-const': 6.1.3(react@19.2.1)
-      '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1)
-      '@cloudflare/types': 6.23.6(react@19.2.1)
-      fela: 11.7.0
-      polished: 4.2.2
-      prop-types: 15.8.1
-      react: 19.2.1
-
   '@cloudflare/component-button@7.0.17(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@cloudflare/component-icon': 11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
@@ -16028,15 +16027,6 @@ snapshots:
       polished: 4.2.2
       prop-types: 15.8.1
       react: 18.3.1
-
-  '@cloudflare/component-button@9.5.2(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1))(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)':
-    dependencies:
-      '@cloudflare/component-icon': 11.8.0(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)
-      '@cloudflare/style-const': 6.1.3(react@19.2.1)
-      '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1)
-      polished: 4.2.2
-      prop-types: 15.8.1
-      react: 19.2.1
 
   '@cloudflare/component-code-block@4.2.8(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)':
     dependencies:
@@ -16058,26 +16048,6 @@ snapshots:
       - '@types/react-dom'
       - regenerator-runtime
 
-  '@cloudflare/component-code-block@6.0.34(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1))(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
-    dependencies:
-      '@cloudflare/component-button': 9.5.2(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1))(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)
-      '@cloudflare/component-icon': 11.8.0(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)
-      '@cloudflare/component-tooltip': 6.0.6(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@cloudflare/component-visually-hidden': 2.0.6(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)
-      '@cloudflare/elements': 4.0.6(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)
-      '@cloudflare/intl-react': 1.12.5(react@19.2.1)
-      '@cloudflare/style-const': 6.1.3(react@19.2.1)
-      '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-scroll-area': 1.0.4(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      clsx: 1.2.1
-      prism-react-renderer: 1.3.5(react@19.2.1)
-      react: 19.2.1
-      react-dom: 19.2.1(react@19.2.1)
-    transitivePeerDependencies:
-      - '@types/react'
-      - '@types/react-dom'
-      - regenerator-runtime
-
   '@cloudflare/component-heading@4.0.6(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@cloudflare/style-const': 5.7.3(react@18.3.1)
@@ -16091,12 +16061,6 @@ snapshots:
       '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
       react: 18.3.1
 
-  '@cloudflare/component-icon@11.8.0(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)':
-    dependencies:
-      '@cloudflare/style-const': 6.1.3(react@19.2.1)
-      '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1)
-      react: 19.2.1
-
   '@cloudflare/component-input@8.1.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@cloudflare/component-box': 4.0.2(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
@@ -16104,14 +16068,6 @@ snapshots:
       '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
       prop-types: 15.8.1
       react: 18.3.1
-
-  '@cloudflare/component-input@9.0.7(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)':
-    dependencies:
-      '@cloudflare/component-box': 5.1.2(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)
-      '@cloudflare/style-const': 6.1.3(react@19.2.1)
-      '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1)
-      prop-types: 15.8.1
-      react: 19.2.1
 
   '@cloudflare/component-listbox@1.10.6(patch_hash=r2d7tqjujhdts7e7zxsa3stjki)(@cloudflare/component-icon@11.8.0(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(@cloudflare/style-provider@3.1.1(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)':
     dependencies:
@@ -16180,17 +16136,6 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
       react-tooltip: 3.11.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
 
-  '@cloudflare/component-tooltip@6.0.6(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
-    dependencies:
-      '@cloudflare/elements': 4.0.6(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)
-      '@cloudflare/style-const': 6.1.3(react@19.2.1)
-      '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1)
-      lodash.uniqueid: 4.0.1
-      prop-types: 15.8.1
-      react: 19.2.1
-      react-dom: 19.2.1(react@19.2.1)
-      react-tooltip: 3.11.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-
   '@cloudflare/component-visually-hidden@1.0.86(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)(regenerator-runtime@0.14.1)':
     dependencies:
       '@cloudflare/elements': 3.0.3(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)
@@ -16202,17 +16147,6 @@ snapshots:
     transitivePeerDependencies:
       - regenerator-runtime
 
-  '@cloudflare/component-visually-hidden@2.0.6(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)':
-    dependencies:
-      '@cloudflare/elements': 4.0.6(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)
-      '@cloudflare/intl-react': 1.12.5(react@19.2.1)
-      '@cloudflare/style-const': 6.1.3(react@19.2.1)
-      '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1)
-      prop-types: 15.8.1
-      react: 19.2.1
-    transitivePeerDependencies:
-      - regenerator-runtime
-
   '@cloudflare/containers@0.0.25': {}
 
   '@cloudflare/elements@3.0.3(@cloudflare/style-const@5.7.3(react@18.3.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1))(react@18.3.1)':
@@ -16221,14 +16155,6 @@ snapshots:
       '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@5.7.3(react@18.3.1))(react@18.3.1)
       '@cloudflare/types': 6.23.6(react@18.3.1)
       react: 18.3.1
-      styled-system: 5.1.5
-
-  '@cloudflare/elements@4.0.6(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react@19.2.1)':
-    dependencies:
-      '@cloudflare/style-const': 6.1.3(react@19.2.1)
-      '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1)
-      '@cloudflare/types': 6.23.6(react@19.2.1)
-      react: 19.2.1
       styled-system: 5.1.5
 
   '@cloudflare/intl-core@1.15.0(react@18.3.1)(regenerator-runtime@0.14.1)':
@@ -16243,17 +16169,6 @@ snapshots:
     transitivePeerDependencies:
       - react
 
-  '@cloudflare/intl-core@1.15.0(react@19.2.1)':
-    dependencies:
-      '@cloudflare/intl-types': 1.5.1(react@19.2.1)
-      '@cloudflare/util-markdown': 1.2.15
-      '@types/lodash': 4.17.23
-      '@types/node-polyglot': 2.4.2
-      lodash: 4.17.21
-      node-polyglot: 2.5.0
-    transitivePeerDependencies:
-      - react
-
   '@cloudflare/intl-react@1.12.5(react@18.3.1)(regenerator-runtime@0.14.1)':
     dependencies:
       '@cloudflare/intl-core': 1.15.0(react@18.3.1)(regenerator-runtime@0.14.1)
@@ -16262,17 +16177,6 @@ snapshots:
       dompurify: 2.5.8
       lodash: 4.17.21
       react: 18.3.1
-    transitivePeerDependencies:
-      - regenerator-runtime
-
-  '@cloudflare/intl-react@1.12.5(react@19.2.1)':
-    dependencies:
-      '@cloudflare/intl-core': 1.15.0(react@19.2.1)
-      '@cloudflare/types': 6.23.6(react@19.2.1)
-      '@cloudflare/util-markdown': 1.2.15
-      dompurify: 2.5.8
-      lodash: 4.17.21
-      react: 19.2.1
     transitivePeerDependencies:
       - regenerator-runtime
 
@@ -16428,6 +16332,13 @@ snapshots:
       lodash.memoize: 4.1.2
       marked: 0.3.19
 
+  '@cloudflare/util-routes@5.3.0(react@19.2.1)':
+    dependencies:
+      '@cloudflare/types': 6.23.6(react@19.2.1)
+      path-to-regexp: 3.3.0
+    transitivePeerDependencies:
+      - react
+
   '@cloudflare/vitest-pool-workers@0.10.15(@cloudflare/workers-types@4.20260206.0)(@vitest/runner@3.2.3)(@vitest/snapshot@3.2.3)(vitest@2.1.9)':
     dependencies:
       '@vitest/runner': 3.2.3
@@ -16506,6 +16417,14 @@ snapshots:
 
   '@cloudflare/workerd-windows-64@1.20260206.0':
     optional: true
+
+  '@cloudflare/workers-editor-shared@0.1.1(@cloudflare/style-const@6.1.3(react@19.2.1))(@cloudflare/style-container@7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+    dependencies:
+      '@cloudflare/style-const': 6.1.3(react@19.2.1)
+      '@cloudflare/style-container': 7.12.2(@cloudflare/style-const@6.1.3(react@19.2.1))(react@19.2.1)
+      react: 19.2.1
+      react-dom: 19.2.1(react@19.2.1)
+      react-split-pane: 0.1.92(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
 
   '@cloudflare/workers-types@4.20260206.0': {}
 
@@ -18092,13 +18011,6 @@ snapshots:
     optionalDependencies:
       '@types/react': 18.3.3
 
-  '@radix-ui/react-compose-refs@1.0.1(@types/react@19.2.10)(react@19.2.1)':
-    dependencies:
-      '@babel/runtime': 7.28.6
-      react: 19.2.1
-    optionalDependencies:
-      '@types/react': 19.2.10
-
   '@radix-ui/react-context@1.0.1(@types/react@18.3.3)(react@18.3.1)':
     dependencies:
       '@babel/runtime': 7.28.6
@@ -18106,26 +18018,12 @@ snapshots:
     optionalDependencies:
       '@types/react': 18.3.3
 
-  '@radix-ui/react-context@1.0.1(@types/react@19.2.10)(react@19.2.1)':
-    dependencies:
-      '@babel/runtime': 7.28.6
-      react: 19.2.1
-    optionalDependencies:
-      '@types/react': 19.2.10
-
   '@radix-ui/react-direction@1.0.1(@types/react@18.3.3)(react@18.3.1)':
     dependencies:
       '@babel/runtime': 7.28.6
       react: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.3
-
-  '@radix-ui/react-direction@1.0.1(@types/react@19.2.10)(react@19.2.1)':
-    dependencies:
-      '@babel/runtime': 7.28.6
-      react: 19.2.1
-    optionalDependencies:
-      '@types/react': 19.2.10
 
   '@radix-ui/react-presence@1.0.1(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
@@ -18138,17 +18036,6 @@ snapshots:
       '@types/react': 18.3.3
       '@types/react-dom': 18.2.0
 
-  '@radix-ui/react-presence@1.0.1(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
-    dependencies:
-      '@babel/runtime': 7.28.6
-      '@radix-ui/react-compose-refs': 1.0.1(@types/react@19.2.10)(react@19.2.1)
-      '@radix-ui/react-use-layout-effect': 1.0.1(@types/react@19.2.10)(react@19.2.1)
-      react: 19.2.1
-      react-dom: 19.2.1(react@19.2.1)
-    optionalDependencies:
-      '@types/react': 19.2.10
-      '@types/react-dom': 19.2.3(@types/react@19.2.10)
-
   '@radix-ui/react-primitive@1.0.3(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@babel/runtime': 7.28.6
@@ -18158,16 +18045,6 @@ snapshots:
     optionalDependencies:
       '@types/react': 18.3.3
       '@types/react-dom': 18.2.0
-
-  '@radix-ui/react-primitive@1.0.3(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
-    dependencies:
-      '@babel/runtime': 7.28.6
-      '@radix-ui/react-slot': 1.0.2(@types/react@19.2.10)(react@19.2.1)
-      react: 19.2.1
-      react-dom: 19.2.1(react@19.2.1)
-    optionalDependencies:
-      '@types/react': 19.2.10
-      '@types/react-dom': 19.2.3(@types/react@19.2.10)
 
   '@radix-ui/react-scroll-area@1.0.4(@types/react-dom@18.2.0)(@types/react@18.3.3)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
@@ -18187,24 +18064,6 @@ snapshots:
       '@types/react': 18.3.3
       '@types/react-dom': 18.2.0
 
-  '@radix-ui/react-scroll-area@1.0.4(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
-    dependencies:
-      '@babel/runtime': 7.28.6
-      '@radix-ui/number': 1.0.1
-      '@radix-ui/primitive': 1.0.1
-      '@radix-ui/react-compose-refs': 1.0.1(@types/react@19.2.10)(react@19.2.1)
-      '@radix-ui/react-context': 1.0.1(@types/react@19.2.10)(react@19.2.1)
-      '@radix-ui/react-direction': 1.0.1(@types/react@19.2.10)(react@19.2.1)
-      '@radix-ui/react-presence': 1.0.1(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-primitive': 1.0.3(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-use-callback-ref': 1.0.1(@types/react@19.2.10)(react@19.2.1)
-      '@radix-ui/react-use-layout-effect': 1.0.1(@types/react@19.2.10)(react@19.2.1)
-      react: 19.2.1
-      react-dom: 19.2.1(react@19.2.1)
-    optionalDependencies:
-      '@types/react': 19.2.10
-      '@types/react-dom': 19.2.3(@types/react@19.2.10)
-
   '@radix-ui/react-slot@1.0.2(@types/react@18.3.3)(react@18.3.1)':
     dependencies:
       '@babel/runtime': 7.28.6
@@ -18213,27 +18072,12 @@ snapshots:
     optionalDependencies:
       '@types/react': 18.3.3
 
-  '@radix-ui/react-slot@1.0.2(@types/react@19.2.10)(react@19.2.1)':
-    dependencies:
-      '@babel/runtime': 7.28.6
-      '@radix-ui/react-compose-refs': 1.0.1(@types/react@19.2.10)(react@19.2.1)
-      react: 19.2.1
-    optionalDependencies:
-      '@types/react': 19.2.10
-
   '@radix-ui/react-use-callback-ref@1.0.1(@types/react@18.3.3)(react@18.3.1)':
     dependencies:
       '@babel/runtime': 7.28.6
       react: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.3
-
-  '@radix-ui/react-use-callback-ref@1.0.1(@types/react@19.2.10)(react@19.2.1)':
-    dependencies:
-      '@babel/runtime': 7.28.6
-      react: 19.2.1
-    optionalDependencies:
-      '@types/react': 19.2.10
 
   '@radix-ui/react-use-layout-effect@1.0.1(@types/react@18.3.3)(react@18.3.1)':
     dependencies:
@@ -22246,7 +22090,7 @@ snapshots:
   fela@11.7.0:
     dependencies:
       css-in-js-utils: 3.1.0
-      csstype: 3.1.2
+      csstype: 3.2.3
       fast-loops: 1.1.4
       fela-utils: 11.7.0
       isobject: 3.0.1
@@ -24507,10 +24351,6 @@ snapshots:
     dependencies:
       react: 18.3.1
 
-  prism-react-renderer@1.3.5(react@19.2.1):
-    dependencies:
-      react: 19.2.1
-
   prisma@7.0.1(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(typescript@5.8.3):
     dependencies:
       '@prisma/config': 7.0.1
@@ -24780,12 +24620,6 @@ snapshots:
       prop-types: 15.8.1
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-
-  react-tooltip@3.11.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1):
-    dependencies:
-      prop-types: 15.8.1
-      react: 19.2.1
-      react-dom: 19.2.1(react@19.2.1)
 
   react-use-websocket@4.13.0: {}
 
