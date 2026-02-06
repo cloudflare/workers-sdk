@@ -122,8 +122,9 @@ export const r2BucketCORSSetCommand = createCommand({
 
         // 3. Detect AWS S3 individual rule format (AllowedOrigins, AllowedMethods, AllowedHeaders)
         const hasS3Keys = (rules as Record<string, unknown>[]).some((rule) =>
-            "AllowedOrigins" in rule || "AllowedMethods" in rule || "AllowedHeaders" in rule
-        );
+			rule && typeof rule === "object" && !Array.isArray(rule) &&
+			("AllowedOrigins" in rule || "AllowedMethods" in rule || "AllowedHeaders" in rule)
+);
 
         if (hasS3Keys) {
             throw new UserError(
