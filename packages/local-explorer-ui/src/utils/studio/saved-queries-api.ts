@@ -1,14 +1,12 @@
-import useGate from "./stubs/useGate";
 import type { StudioResource, StudioSavedQuery } from "../../types/studio";
 
 const baseUrl = "https://dashboard-enhancements.outerbase.workers.dev";
 // const baseUrl = 'http://localhost:8787'
 
-const getHeaders = (resource: StudioResource) => {
+const getHeaders = (_resource: StudioResource) => {
 	return {
 		"Content-Type": "application/json",
 		"x-user-id": "123",
-		"x-account-id": resource.accountId,
 	};
 };
 
@@ -79,7 +77,3 @@ export async function createSavedQuery(
 		}),
 	}).then((res) => res.json());
 }
-
-export const useSavedQueries = () => {
-	return !!useGate("data-dx-saved-queries");
-};

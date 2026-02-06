@@ -1,19 +1,14 @@
 import { BinocularsIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-	getSavedQueries,
-	useSavedQueries,
-} from "../../utils/studio/saved-queries-api";
+import { getSavedQueries } from "../../utils/studio/saved-queries-api";
 import { ModalProvider } from "../../utils/studio/stubs/modal";
-import sparrow from "../../utils/studio/stubs/sparrow";
-import SplitPane from "../../utils/studio/stubs/SplitPane";
+// import SplitPane from "../../utils/studio/stubs/SplitPane";
 import { useLeaveGuard } from "../../utils/studio/stubs/useLeaveGuard";
 import { StudioContextProvider } from "./Context";
 import { StudioContextMenuProvider } from "./ContextMenu";
 import { StudioQueryTab } from "./QueryTab";
-import { StudioSidebarPane } from "./SidebarPane";
+// import { StudioSidebarPane } from "./SidebarPane";
 import { StudioTabDefinitionList } from "./tab-register";
-import { DATA_STUDIO_TRACKING } from "./tracking";
 import { StudioWindowTabPane } from "./WindowTabPane";
 import type {
 	IStudioDriver,
@@ -39,7 +34,7 @@ interface StudioProps {
 }
 
 export function Studio({
-	category,
+	// category,
 	driver,
 	initialTable,
 	onTableChange,
@@ -69,8 +64,6 @@ export function Studio({
 		() => tabs[0]?.key ?? ""
 	);
 
-	const isSavedQueriesEnabled = useSavedQueries();
-
 	const refreshSchema = useCallback(() => {
 		setLoadingSchema(true);
 
@@ -84,10 +77,6 @@ export function Studio({
 	}, [driver]);
 
 	const refreshSavedQueries = useCallback(() => {
-		if (!isSavedQueriesEnabled) {
-			return;
-		}
-
 		setLoadingSavedQueries(true);
 
 		getSavedQueries(resource)
@@ -96,21 +85,12 @@ export function Studio({
 			.finally(() => {
 				setLoadingSavedQueries(false);
 			});
-	}, [resource, isSavedQueriesEnabled]);
+	}, [resource]);
 
 	useEffect(() => {
 		refreshSchema();
 		refreshSavedQueries();
 	}, [refreshSchema, refreshSavedQueries]);
-
-	// Tracking usage by category
-	useEffect(() => {
-		if (!category) {
-			return;
-		}
-
-		sparrow.sendEvent(DATA_STUDIO_TRACKING.OPEN, { category });
-	}, [category]);
 
 	// Utility to close a tab given its identifier
 	const closeStudioTab = useCallback(
@@ -252,9 +232,9 @@ export function Studio({
 
 		if (tableExists) {
 			openStudioTab({
-				type: "table",
 				schemaName: DEFAULT_SCHEMA_NAME,
 				tableName: initialTable,
+				type: "table",
 			});
 			hasOpenedInitialTable.current = true;
 		} else {
