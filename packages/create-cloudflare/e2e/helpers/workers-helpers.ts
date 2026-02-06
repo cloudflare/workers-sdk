@@ -26,6 +26,7 @@ export async function runC3ForWorkerTest(
 		`${isExperimental}`,
 		"--no-open",
 		"--no-git",
+		"--no-agents",
 		"--deploy",
 		`${runDeployTests}`,
 		...(argv ?? []),

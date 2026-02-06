@@ -9,8 +9,8 @@ import {
 	yellow,
 } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
+import { LOCAL_EXPLORER_BASE_PATH } from "../../plugins/core/constants";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
-import { LOCAL_EXPLORER_BASE_PATH } from "../local-explorer/constants";
 import { CoreBindings, CoreHeaders } from "./constants";
 import { handleEmail } from "./email";
 import { STATUS_CODES } from "./http";

@@ -54,6 +54,7 @@ export const C3_DEFAULTS: C3Args = {
 	autoUpdate: true,
 	deploy: false,
 	git: true,
+	agents: true,
 	open: true,
 	lang: "ts",
 	template:

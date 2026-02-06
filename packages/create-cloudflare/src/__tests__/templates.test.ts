@@ -1,4 +1,5 @@
 import { existsSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { spinner } from "@cloudflare/cli/interactive";
 import degit from "degit";
 import { mockSpinner } from "helpers/__tests__/mocks";
@@ -11,11 +12,13 @@ import {
 	writeJSON,
 } from "helpers/files";
 import { beforeEach, describe, test, vi } from "vitest";
+import { getAgentsMd } from "../agents-md";
 import {
 	addWranglerToGitIgnore,
 	deriveCorrelatedArgs,
 	downloadRemoteTemplate,
 	updatePackageName,
+	writeAgentsMd,
 } from "../templates";
 import type { PathLike } from "node:fs";
 import type { C3Args, C3Context } from "types";
@@ -650,5 +653,33 @@ version = "0.1.0"`;
 			expect.stringContaining("pyproject.toml"),
 			expect.stringContaining(`name = "my-project"`),
 		);
+	});
+});
+
+describe("writeAgentsMd", () => {
+	let writeFileMock: Mock;
+
+	beforeEach(() => {
+		vi.resetAllMocks();
+		writeFileMock = vi.mocked(writeFile);
+	});
+
+	test("should write AGENTS.md to the project directory", ({ expect }) => {
+		vi.mocked(existsSync).mockReturnValue(false);
+		const projectPath = join("/path/to/my-project");
+		writeAgentsMd(projectPath);
+
+		expect(writeFileMock).toHaveBeenCalledWith(
+			join(projectPath, "AGENTS.md"),
+			getAgentsMd(),
+		);
+	});
+
+	test("should not overwrite existing AGENTS.md", ({ expect }) => {
+		vi.mocked(existsSync).mockReturnValue(true);
+		const projectPath = join("/path/to/my-project");
+		writeAgentsMd(projectPath);
+
+		expect(writeFileMock).not.toHaveBeenCalled();
 	});
 });
