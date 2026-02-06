@@ -14,11 +14,7 @@ import * as MF from "../../dev/miniflare";
 import { logger } from "../../logger";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import {
-	convertBindingsToCfWorkerInitBindings,
-	convertCfWorkerInitBindingsToBindings,
-	unwrapHook,
-} from "./utils";
+import { getBinaryFileContents, unwrapHook } from "./utils";
 import type { RemoteProxySession } from "../remoteBindings";
 import type {
 	BundleCompleteEvent,
@@ -31,15 +27,6 @@ import type {
 import type { Binding, File, StartDevWorkerOptions } from "./types";
 import type { ContainerDevOptions } from "@cloudflare/containers-shared";
 
-async function getBinaryFileContents(file: File<string | Uint8Array>) {
-	if ("contents" in file) {
-		if (file.contents instanceof Buffer) {
-			return file.contents;
-		}
-		return Buffer.from(file.contents);
-	}
-	return readFile(file.path);
-}
 async function getTextFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
 		if (typeof file.contents === "string") {
@@ -60,9 +47,7 @@ function getName(config: StartDevWorkerOptions) {
 export async function convertToConfigBundle(
 	event: BundleCompleteEvent
 ): Promise<MF.ConfigBundle> {
-	const { bindings, fetchers } = await convertBindingsToCfWorkerInitBindings(
-		event.config.bindings
-	);
+	const bindings: Record<string, Binding> = { ...event.config.bindings };
 
 	const crons = [];
 	const queueConsumers = [];
@@ -78,20 +63,30 @@ export async function convertToConfigBundle(
 		for (const module of event.bundle.modules ?? []) {
 			const identifier = MF.getIdentifier(module.name);
 			if (module.type === "text") {
-				bindings.vars ??= {};
-				bindings.vars[identifier] = await getTextFileContents({
-					contents: module.content,
-				});
+				bindings[identifier] = {
+					type: "plain_text",
+					value: await getTextFileContents({
+						contents: module.content,
+					}),
+				};
 			} else if (module.type === "buffer") {
-				bindings.data_blobs ??= {};
-				bindings.data_blobs[identifier] = await getBinaryFileContents({
-					contents: module.content,
-				});
+				bindings[identifier] = {
+					type: "data_blob",
+					source: {
+						contents: await getBinaryFileContents({
+							contents: module.content,
+						}),
+					},
+				};
 			} else if (module.type === "compiled-wasm") {
-				bindings.wasm_modules ??= {};
-				bindings.wasm_modules[identifier] = await getBinaryFileContents({
-					contents: module.content,
-				});
+				bindings[identifier] = {
+					type: "wasm_module",
+					source: {
+						contents: await getBinaryFileContents({
+							contents: module.content,
+						}),
+					},
+				};
 			}
 		}
 		event.bundle = { ...event.bundle, modules: [] };
@@ -139,8 +134,6 @@ export async function convertToConfigBundle(
 		httpsKeyPath: event.config.dev?.server?.httpsKeyPath,
 		localUpstream: event.config.dev?.origin?.hostname,
 		upstreamProtocol: event.config.dev?.origin?.secure ? "https" : "http",
-		services: bindings.services,
-		serviceBindings: fetchers,
 		testScheduled: !!event.config.dev.testScheduled,
 		tails: event.config.tailConsumers,
 		streamingTails: event.config.streamingTailConsumers,
@@ -212,9 +205,7 @@ export class LocalRuntimeController extends RuntimeController {
 				const { maybeStartOrUpdateRemoteProxySession, pickRemoteBindings } =
 					await import("../remoteBindings");
 
-				const remoteBindings = pickRemoteBindings(
-					convertCfWorkerInitBindingsToBindings(configBundle.bindings) ?? {}
-				);
+				const remoteBindings = pickRemoteBindings(configBundle.bindings ?? {});
 
 				const auth =
 					Object.keys(remoteBindings).length === 0

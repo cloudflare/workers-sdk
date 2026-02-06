@@ -69,7 +69,7 @@ export function unwrapHook<
 	return typeof hook === "function" ? hook(...args) : hook;
 }
 
-async function getBinaryFileContents(file: File<string | Uint8Array>) {
+export async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
 		if (file.contents instanceof Buffer) {
 			return file.contents;
@@ -532,7 +532,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 	return { bindings, fetchers };
 }
 
-function isUnsafeBindingType(type: string): type is `unsafe_${string}` {
+export function isUnsafeBindingType(type: string): type is `unsafe_${string}` {
 	return type.startsWith("unsafe_");
 }
 
