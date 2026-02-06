@@ -1,9 +1,10 @@
 import { BinocularsIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	getSavedQueries,
 	useSavedQueries,
 } from "../../utils/studio/saved-queries-api";
+import { ModalProvider } from "../../utils/studio/stubs/modal";
 import sparrow from "../../utils/studio/stubs/sparrow";
 import SplitPane from "../../utils/studio/stubs/SplitPane";
 import { useLeaveGuard } from "../../utils/studio/stubs/useLeaveGuard";
@@ -24,13 +25,28 @@ import type { StudioContextValue } from "./Context";
 import type { StudioTabDefinitionMetadata } from "./tab-register";
 import type { StudioWindowTabItem } from "./WindowTab";
 
+/** Default schema name for SQLite/D1 databases */
+const DEFAULT_SCHEMA_NAME = "main";
+
 interface StudioProps {
-	driver: IStudioDriver;
-	resource: StudioResource;
 	category?: string;
+	driver: IStudioDriver;
+	/** Table name to open initially (assumes 'main' schema) */
+	initialTable?: string;
+	/** Callback when the active table changes (for URL sync) */
+	onTableChange?: (tableName: string | null) => void;
+	resource: StudioResource;
 }
 
-export function Studio({ driver, resource, category }: StudioProps) {
+export function Studio({
+	category,
+	driver,
+	initialTable,
+	onTableChange,
+	resource,
+}: StudioProps) {
+	// Track whether we've already opened the initial table
+	const hasOpenedInitialTable = useRef(false);
 	const [schemas, setSchemas] = useState<StudioSchemas>();
 	const [loadingSchema, setLoadingSchema] = useState(true);
 	const [savedQueries, setSavedQueries] = useState<StudioSavedQuery[]>([]);
@@ -38,20 +54,20 @@ export function Studio({ driver, resource, category }: StudioProps) {
 	const [tabs, setTabs] = useState<StudioWindowTabItem[]>(() => {
 		return [
 			{
-				title: "Query",
 				component: <StudioQueryTab />,
 				icon: BinocularsIcon,
 				identifier: "query-1",
 				key: window.crypto.randomUUID(),
+				title: "Query",
 				type: "query",
 			},
 		];
 	});
 
 	// Automatically select the first tab
-	const [selectedTabKey, setSelectedTabKey] = useState(() => {
-		return tabs[0]?.key ?? "";
-	});
+	const [selectedTabKey, setSelectedTabKey] = useState(
+		() => tabs[0]?.key ?? ""
+	);
 
 	const isSavedQueriesEnabled = useSavedQueries();
 
@@ -217,6 +233,61 @@ export function Studio({ driver, resource, category }: StudioProps) {
 		});
 	}, []);
 
+	// Open initial table from URL param after schemas load (only once)
+	useEffect(() => {
+		if (
+			hasOpenedInitialTable.current ||
+			!initialTable ||
+			!schemas ||
+			loadingSchema
+		) {
+			return;
+		}
+
+		// Check if the table exists in the main schema
+		const mainSchema = schemas[DEFAULT_SCHEMA_NAME];
+		const tableExists = mainSchema?.some(
+			(item) => item.type === "table" && item.name === initialTable
+		);
+
+		if (tableExists) {
+			openStudioTab({
+				type: "table",
+				schemaName: DEFAULT_SCHEMA_NAME,
+				tableName: initialTable,
+			});
+			hasOpenedInitialTable.current = true;
+		} else {
+			console.warn(
+				`Table "${initialTable}" not found in schema "${DEFAULT_SCHEMA_NAME}"`
+			);
+			hasOpenedInitialTable.current = true;
+		}
+	}, [initialTable, schemas, loadingSchema, openStudioTab]);
+
+	// Sync selected tab to URL (call onTableChange when active table changes)
+	useEffect(() => {
+		if (!onTableChange) {
+			return;
+		}
+
+		// Find the currently selected tab
+		const selectedTab = tabs.find((tab) => tab.key === selectedTabKey);
+		if (!selectedTab) {
+			return;
+		}
+
+		// Check if the selected tab is a table tab
+		// Table tab identifiers have the format: "table/{schemaName}.{tableName}"
+		const tableMatch = selectedTab.identifier.match(/^table\/[^.]+\.(.+)$/);
+		if (tableMatch) {
+			const tableName = tableMatch[1];
+			onTableChange(tableName ?? null);
+		} else {
+			onTableChange(null);
+		}
+	}, [selectedTabKey, tabs, onTableChange]);
+
 	const replaceStudioTab = useCallback<StudioContextValue["replaceStudioTab"]>(
 		(
 			identifier: string,
@@ -236,20 +307,20 @@ export function Studio({ driver, resource, category }: StudioProps) {
 
 				const newTabValue = options?.withoutReplaceComponent
 					? {
-							key: targetTab.key,
-							identifier: newIdentifier,
 							component: targetTab.component,
 							icon: tabTypeDefinition.icon,
-							title: tabTypeDefinition.makeTitle(data),
+							identifier: newIdentifier,
 							isTemp: options?.isTemp,
+							key: targetTab.key,
+							title: tabTypeDefinition.makeTitle(data),
 						}
 					: {
-							key: newKey,
-							identifier: newIdentifier,
 							component: tabTypeDefinition.makeComponent(data),
 							icon: tabTypeDefinition.icon,
-							title: tabTypeDefinition.makeTitle(data),
+							identifier: newIdentifier,
 							isTemp: options?.isTemp,
+							key: newKey,
+							title: tabTypeDefinition.makeTitle(data),
 						};
 
 				if (!options?.withoutReplaceComponent) {
@@ -281,21 +352,22 @@ export function Studio({ driver, resource, category }: StudioProps) {
 
 	const contextValues = useMemo(() => {
 		return {
-			refreshSchema,
-			loadingSchema,
-			schemas,
+			closeStudioTab,
 			driver,
-			tabs,
-			setStudioTabs: setTabs,
+			loadingSavedQueries,
+			loadingSchema,
+			onTableChange,
+			openStudioTab,
+			refreshSavedQueries,
+			refreshSchema,
+			replaceStudioTab,
+			resource,
+			savedQueries,
+			schemas,
 			selectedTabKey,
 			setSelectedTabKey,
-			closeStudioTab,
-			savedQueries,
-			loadingSavedQueries,
-			refreshSavedQueries,
-			resource,
-			openStudioTab,
-			replaceStudioTab,
+			setStudioTabs: setTabs,
+			tabs,
 			updateStudioTabStatus,
 		};
 	}, [
@@ -315,23 +387,28 @@ export function Studio({ driver, resource, category }: StudioProps) {
 		openStudioTab,
 		replaceStudioTab,
 		updateStudioTabStatus,
+		onTableChange,
 	]);
 
 	return (
-		<StudioContextMenuProvider>
-			<StudioContextProvider value={contextValues}>
-				<div className="w-full h-full overflow-hidden">
-					<SplitPane
-						split="vertical"
-						minSize={50}
-						defaultSize={300}
-						resizerClassName="!bg-neutral-300 dark:!bg-neutral-800 border-transparent"
-					>
-						<StudioSidebarPane />
+		<ModalProvider>
+			<StudioContextMenuProvider>
+				<StudioContextProvider value={contextValues}>
+					<div className="w-full h-full overflow-hidden">
+						{/* <SplitPane
+							defaultSize={300}
+							minSize={50}
+							resizerClassName="!bg-neutral-300 dark:!bg-neutral-800 border-transparent"
+							split="horizontal"
+						>
+							<StudioSidebarPane />
+							<StudioWindowTabPane />
+						</SplitPane> */}
+
 						<StudioWindowTabPane />
-					</SplitPane>
-				</div>
-			</StudioContextProvider>
-		</StudioContextMenuProvider>
+					</div>
+				</StudioContextProvider>
+			</StudioContextMenuProvider>
+		</ModalProvider>
 	);
 }
