@@ -28,7 +28,6 @@ import type {
 	CfPipeline,
 	CfQueue,
 	CfR2Bucket,
-	CfRateLimit,
 	CfScriptFormat,
 	CfWorkflow,
 	Config,
@@ -364,8 +363,8 @@ function dispatchNamespaceEntry(
 	}
 	return [binding, { namespace, remoteProxyConnectionString }];
 }
-function ratelimitEntry(ratelimit: CfRateLimit): [string, CfRateLimit] {
-	return [ratelimit.name, ratelimit as CfRateLimit];
+function ratelimitEntry<T extends { name: string }>(ratelimit: T): [string, T] {
+	return [ratelimit.name, ratelimit];
 }
 type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
 function queueConsumerEntry(consumer: QueueConsumer) {
