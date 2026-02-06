@@ -108,7 +108,11 @@ export function handleFailure<
 	return async (args) => {
 		const isJson = "json" in args ? args.json === true : false;
 		if (!isNonInteractiveOrCI() && !isJson) {
-			await printWranglerBanner();
+			const shouldContinue = await printWranglerBanner();
+			if (!shouldContinue) {
+				// User/agent chose to abort (e.g., to update Wrangler first)
+				return;
+			}
 			const commandStatus = command.includes("cloudchamber")
 				? "alpha"
 				: "open beta";
