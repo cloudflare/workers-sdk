@@ -420,7 +420,7 @@ async function resolveConfig(
 			`This worker is bound to live services: ${services
 				.map(
 					(service) =>
-						`${service.name} (${service.service}${
+						`${service.binding} (${service.service}${
 							service.environment ? `@${service.environment}` : ""
 						}${service.entrypoint ? `#${service.entrypoint}` : ""})`
 				)

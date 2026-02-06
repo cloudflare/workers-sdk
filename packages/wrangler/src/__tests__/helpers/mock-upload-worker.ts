@@ -105,6 +105,7 @@ export function mockUploadWorkerRequest(
 		}
 
 		if ("expectedBindings" in options) {
+			// Compare the provided bindings with the expected bindings, without requireing the order to match
 			expect(metadata.bindings).toEqual(
 				expect.arrayContaining(expectedBindings as unknown[])
 			);

@@ -759,7 +759,7 @@ export function printBindings(
 		logger.log();
 	}
 
-	if (unsafe?.metadata !== undefined) {
+	if (unsafe?.metadata) {
 		log("The following unsafe metadata will be attached to your Worker:");
 		log(JSON.stringify(unsafe.metadata, null, 2));
 	}
