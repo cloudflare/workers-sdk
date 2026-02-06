@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { expect, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import {
 	getJsonResponse,
 	isBuild,
@@ -9,7 +9,7 @@ import {
 
 test.runIf(!isBuild)(
 	"successfully updates when a var is updated in a .env.staging file",
-	async () => {
+	async ({ expect }) => {
 		const originalResponseContent = {
 			"variables loaded from .env and .env.staging": {
 				MY_DEV_VAR_A: "my .env staging variable A",

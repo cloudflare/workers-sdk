@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { readFile, writeFile } from "node:fs/promises";
 import { setTimeout } from "node:timers/promises";
-import { beforeAll, describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, test, vi } from "vitest";
 import {
 	fetchJson,
 	isBuildAndPreviewOnWindows,
@@ -64,7 +64,7 @@ if (isWindows) {
 			describe.each(commands)('with "%s" command', (command) => {
 				test.skipIf(isBuildAndPreviewOnWindows(command))(
 					"can fetch from both local (/auxiliary) and remote workers",
-					async () => {
+					async ({ expect }) => {
 						const proc = await runLongLived("pnpm", command, projectPath);
 						const url = await waitForReady(proc);
 						expect(await fetchJson(url)).toEqual({
@@ -79,7 +79,7 @@ if (isWindows) {
 				// This test checks that wrapped bindings (e.g. AI) which rely on additional workers with an authed connection to the CF API work
 				test.skipIf(isBuildAndPreviewOnWindows(command))(
 					"Wrapped bindings (e.g. Workers AI) can serve a request",
-					async () => {
+					async ({ expect }) => {
 						const proc = await runLongLived("pnpm", command, projectPath);
 						const url = await waitForReady(proc);
 
@@ -90,7 +90,7 @@ if (isWindows) {
 				);
 			});
 
-			test("reflects changes applied during dev", async () => {
+			test("reflects changes applied during dev", async ({ expect }) => {
 				const proc = await runLongLived("pnpm", "dev", projectPath);
 				const url = await waitForReady(proc);
 				expect(await fetchJson(url)).toEqual({
@@ -152,7 +152,9 @@ if (isWindows) {
 			pm: "pnpm",
 		});
 
-		test("for connection to remote bindings during dev the account_id present in the wrangler config file is used", async () => {
+		test("for connection to remote bindings during dev the account_id present in the wrangler config file is used", async ({
+			expect,
+		}) => {
 			const proc = await runLongLived("pnpm", "dev", projectPath);
 			await vi.waitFor(
 				async () => {
@@ -175,7 +177,9 @@ if (isWindows) {
 		});
 
 		describe.each(commands)('with "%s" command', (command) => {
-			test("exit with a non zero error code and log an error", async () => {
+			test("exit with a non zero error code and log an error", async ({
+				expect,
+			}) => {
 				const proc = await runLongLived("pnpm", command, projectPath);
 
 				expect(await proc.exitCode).not.toBe(0);
@@ -194,7 +198,7 @@ describe.skipIf(isWindows)("remote bindings disabled", () => {
 	const projectPath = seed("remote-bindings-disabled", { pm: "pnpm" });
 
 	describe.each(commands)('with "%s" command', (command) => {
-		test("cannot connect to remote bindings", async () => {
+		test("cannot connect to remote bindings", async ({ expect }) => {
 			const proc = await runLongLived("pnpm", command, projectPath);
 			const url = await waitForReady(proc);
 
