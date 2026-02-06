@@ -15872,6 +15872,7 @@ export default{
 			framework: new Static({ id: "static", name: "Static" }),
 			workerName: "my-site",
 			projectPath: ".",
+			outputDir: "./public",
 		});
 
 		vi.mocked(runAutoConfig).mockImplementation(async () => {
