@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { randomUUID } from "node:crypto";
 import { Miniflare } from "miniflare";
 import { getInitialWorkerNameToExportTypesMap } from "./export-types";
 import { debuglog } from "./utils";
@@ -36,9 +37,11 @@ export class PluginContext {
 	#sharedContext: SharedContext;
 	#resolvedPluginConfig?: ResolvedPluginConfig;
 	#resolvedViteConfig?: vite.ResolvedConfig;
+	#proxySharedSecret: string;
 
 	constructor(sharedContext: SharedContext) {
 		this.#sharedContext = sharedContext;
+		this.#proxySharedSecret = randomUUID();
 	}
 
 	/** Creates a new Miniflare instance or updates the existing instance */
@@ -207,6 +210,10 @@ export class PluginContext {
 
 	getNodeJsCompat(environmentName: string): NodeJsCompat | undefined {
 		return this.#getWorker(environmentName)?.nodeJsCompat;
+	}
+
+	get proxySharedSecret(): string {
+		return this.#proxySharedSecret;
 	}
 }
 
