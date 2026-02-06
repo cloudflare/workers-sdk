@@ -481,6 +481,7 @@ export function StudioTableExplorerTab({
 							value={pageLimitInput}
 							onChange={(e) => setPageLimitInput(e.currentTarget.value)}
 							title="Limit"
+							label="Limit"
 							onBlur={onLimitBlur}
 						/>
 						<InputGroup.Input
