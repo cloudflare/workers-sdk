@@ -41,6 +41,7 @@ export function Sidebar({
 					</span>
 				</div>
 			</div>
+
 			<Collapsible.Root defaultOpen>
 				<Collapsible.Trigger className="sidebar-section-trigger flex items-center gap-2 w-full py-3 px-4 border-0 border-b border-border bg-transparent font-semibold text-[11px] uppercase tracking-wide text-text-secondary cursor-pointer transition-colors hover:bg-border">
 					<ChevronIcon className="sidebar-section-icon transition-transform duration-200" />
@@ -84,30 +85,36 @@ export function Sidebar({
 				</Collapsible.Panel>
 			</Collapsible.Root>
 
-			<Collapsible.Root defaultOpen className="sidebar-section">
-				<Collapsible.Trigger className="sidebar-section-trigger">
-					<ChevronIcon className="sidebar-section-icon" />
-					<DatabaseIcon className="sidebar-section-type-icon" />
+			<Collapsible.Root defaultOpen>
+				<Collapsible.Trigger className="sidebar-section-trigger flex items-center gap-2 w-full py-3 px-4 border-0 border-b border-border bg-transparent font-semibold text-[11px] uppercase tracking-wide text-text-secondary cursor-pointer transition-colors hover:bg-border">
+					<ChevronIcon className="sidebar-section-icon transition-transform duration-200" />
+					<DatabaseIcon className="w-3.5 h-3.5" />
 					D1 Databases
 				</Collapsible.Trigger>
+
 				<Collapsible.Panel className="sidebar-section-panel">
-					<ul className="sidebar-list">
+					<ul className="list-none flex-1 overflow-y-auto">
 						{loading && (
-							<li className="sidebar-item sidebar-item--muted">Loading...</li>
+							<li className="block py-2.5 px-4 text-text-secondary border-b border-border">
+								Loading...
+							</li>
 						)}
 						{error && (
-							<li className="sidebar-item sidebar-item--error">{error}</li>
+							<li className="block py-2.5 px-4 text-danger border-b border-border">
+								{error}
+							</li>
 						)}
 						{!loading &&
 							!error &&
 							databases.map((db) => {
-								const isActive = currentPath === `/d1/${db.uuid}`;
+								const isActive = currentPath === `/d1/${db.name}`;
 								return (
 									<li key={db.uuid}>
 										<Link
-											to="/d1/$databaseId"
+											className={`block py-2.5 px-4 text-text no-underline border-b border-border cursor-pointer transition-colors hover:bg-border ${isActive ? "bg-primary/8 text-primary border-l-3 border-l-primary pl-[13px]" : ""}`}
 											params={{ databaseId: db.uuid as string }}
-											className={`sidebar-item ${isActive ? "active" : ""}`}
+											search={{ table: undefined }}
+											to="/d1/$databaseId"
 										>
 											{db.name}
 										</Link>
@@ -115,7 +122,9 @@ export function Sidebar({
 								);
 							})}
 						{!loading && !error && databases.length === 0 && (
-							<li className="sidebar-item sidebar-item--muted">No databases</li>
+							<li className="block py-2.5 px-4 text-text-secondary border-b border-border">
+								No databases
+							</li>
 						)}
 					</ul>
 				</Collapsible.Panel>
