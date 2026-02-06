@@ -63,31 +63,10 @@ const NewTableTab: TabDefinition<{ type: "create-table" }> = {
 	},
 };
 
-const SavedQueryTab: TabDefinition<{
-	type: "saved-query";
-	savedQueryId: string;
-	query: string;
-	name: string;
-}> = {
-	type: "saved-query",
-	icon: BinocularsIcon,
-	makeTitle: ({ name }) => name || "Saved Query",
-	makeIdentifier: (tab) => `saved-query/${tab.savedQueryId}`,
-	makeComponent: ({ savedQueryId, query }) => {
-		return <StudioQueryTab query={query} savedQueryId={savedQueryId} />;
-	},
-};
-
 // -------------------------------------------------------
 // Tab registry
 // --------------------------------------------------------
-const RegisteredTabDefinition = [
-	QueryTab,
-	TableTab,
-	EditTableTab,
-	NewTableTab,
-	SavedQueryTab,
-];
+const RegisteredTabDefinition = [QueryTab, TableTab, EditTableTab, NewTableTab];
 
 // -----------------------------
 // Core tab definition interface

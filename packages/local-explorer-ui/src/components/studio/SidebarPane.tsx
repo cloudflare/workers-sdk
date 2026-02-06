@@ -1,41 +1,24 @@
-import { Button, InputGroup } from "@cloudflare/kumo";
 import {
-	ArrowsClockwiseIcon,
-	BinocularsIcon,
 	CopyIcon,
 	EyeIcon,
 	GearIcon,
-	MagnifyingGlassIcon,
-	PencilSimpleIcon,
-	PlusIcon,
 	TableIcon,
 	TextboxIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useCallback, useMemo, useState } from "react";
-import {
-	dropSavedQuery,
-	updateSavedQuery,
-} from "../../utils/studio/saved-queries-api";
 import { useModal } from "../../utils/studio/stubs/modal";
 import { useStudioContext } from "./Context";
 import { useStudioContextMenu } from "./ContextMenu";
-import { StudioCreateSavedQueryModal } from "./CreateSavedQueryModal";
-import { StudioDropSavedQueryModal } from "./DropSavedQueryModal";
 import { StudioDropTableModal } from "./DropTableModal";
 import { StudioTreeView } from "./TreeView";
-import type {
-	StudioSavedQuery,
-	StudioSchemaItem,
-	StudioSchemas,
-} from "../../types/studio";
+import type { StudioSchemaItem, StudioSchemas } from "../../types/studio";
 import type { StudioTreeViewItem } from "./TreeView";
 import type { DropdownItemBuilderProps } from "@cloudflare/kumo";
 
 export function StudioSidebarPane() {
-	const { schemas, loadingSchema, refreshSchema, openStudioTab, savedQueries } =
-		useStudioContext();
-	const [searchText, setSearchText] = useState("");
+	const { schemas, loadingSchema } = useStudioContext();
+	const [searchText] = useState("");
 
 	return (
 		<div className="flex flex-col h-full w-full overflow-hidden">
@@ -77,11 +60,7 @@ export function StudioSidebarPane() {
 			</div>
 			<div className="overflow-hidden grow flex mt-2">
 				{schemas ? (
-					<StudioResourceTreeView
-						schemas={schemas}
-						savedQueries={savedQueries || []}
-						searchText={searchText}
-					/>
+					<StudioResourceTreeView schemas={schemas} searchText={searchText} />
 				) : (
 					<>
 						{loadingSchema ? (
@@ -117,22 +96,16 @@ function StudioResourceLoadingState() {
 interface StudioResourceTreeViewProps {
 	schemas: StudioSchemas;
 	searchText: string;
-	savedQueries: StudioSavedQuery[];
 }
 
 function StudioResourceTreeView({
 	schemas,
-	savedQueries,
 	searchText,
 }: StudioResourceTreeViewProps) {
 	const {
 		driver,
 		refreshSchema,
 		closeStudioTab,
-		refreshSavedQueries,
-		resource,
-		selectedTabKey,
-		tabs,
 		openStudioTab,
 		updateStudioTabStatus,
 	} = useStudioContext();
@@ -141,25 +114,12 @@ function StudioResourceTreeView({
 	const { openModal } = useModal();
 
 	const items = useMemo(() => {
-		const savedQueryItems: StudioTreeViewItem<StudioSchemaItem>[] =
-			savedQueries.map((savedQuery) => ({
-				key: savedQuery.id,
-				name: savedQuery.name,
-				icon: BinocularsIcon,
-				data: {
-					type: "saved-query",
-					name: savedQuery.name,
-					query: savedQuery.data.query,
-					schemaName: "main",
-				},
-			}));
-
 		// SQLite uses a single default schema named "main", so we flatten it here.
 		// This logic may change in the future when we support databases like MySQL or PostgreSQL,
 		// or when handling multiple attached schemas.
 		const schemaItems = buildTreeItemsFromSchemas(schemas)[0]?.children ?? [];
-		return [...savedQueryItems, ...schemaItems];
-	}, [schemas, savedQueries]);
+		return schemaItems;
+	}, [schemas]);
 
 	const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(
 		() => new Set()
@@ -215,8 +175,6 @@ function StudioResourceTreeView({
 
 	const onContextMenu = useCallback(
 		(item: StudioTreeViewItem<StudioSchemaItem>, event: React.MouseEvent) => {
-			const isSavedQuery = item.data.type === "saved-query";
-
 			const contextMenuList: DropdownItemBuilderProps[] = [
 				{
 					type: "button",
@@ -291,57 +249,6 @@ function StudioResourceTreeView({
 				});
 			}
 
-			if (isSavedQuery) {
-				contextMenuList.push({
-					icon: PencilSimpleIcon,
-					type: "button",
-					label: "Rename",
-					onClick: () => {
-						openModal(StudioCreateSavedQueryModal, {
-							onClose: () => {},
-							onConfirm: async (queryName: string) => {
-								if (!queryName) {
-									throw new Error("Query name is required");
-								}
-
-								await updateSavedQuery(resource, item.key, {
-									name: queryName,
-								});
-								refreshSavedQueries();
-								const activeTab = tabs.find(
-									(tab) => tab.key === selectedTabKey
-								);
-								if (activeTab) {
-									activeTab.title = queryName;
-								}
-							},
-							title: "Rename Saved Query",
-							name: item.data.name,
-							confirmationText: "common.rename",
-						});
-					},
-					destructiveAction: false,
-				});
-
-				contextMenuList.push({
-					icon: TrashIcon,
-					type: "button",
-					label: "Delete",
-					onClick: () => {
-						openModal(StudioDropSavedQueryModal, {
-							onClose: () => {},
-							onConfirm: async () => {
-								await dropSavedQuery(resource, item.key);
-								closeStudioTab(`saved-query/${item.key}`);
-								refreshSavedQueries();
-							},
-							name: item.name,
-						});
-					},
-					destructiveAction: true,
-				});
-			}
-
 			openContextMenu(event, contextMenuList);
 		},
 		[
@@ -350,10 +257,6 @@ function StudioResourceTreeView({
 			openModal,
 			refreshSchema,
 			closeStudioTab,
-			refreshSavedQueries,
-			resource,
-			tabs,
-			selectedTabKey,
 			openStudioTab,
 		]
 	);

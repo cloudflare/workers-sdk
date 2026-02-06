@@ -22,7 +22,6 @@ import type { StudioWindowTabItem } from "./WindowTab";
 
 interface StudioQueryTabProps {
 	query?: string;
-	savedQueryId?: string;
 }
 
 export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {

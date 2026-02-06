@@ -18,8 +18,8 @@ export interface StudioSQLToken {
 export type StudioDialect = "sqlite" | "mysql" | "postgres" | "wae";
 
 interface StudioTableSchemaStats {
-	sizeInByte?: number;
 	estimateRowCount?: number;
+	sizeInByte?: number;
 }
 
 export type StudioSortDirection = "ASC" | "DESC";
@@ -44,69 +44,61 @@ export type StudioForeignKeyAction =
 	| "NO_ACTION";
 
 export interface StoduiForeignKeyClause {
+	columns?: string[];
+	foreignColumns?: string[];
 	foreignSchemaName?: string;
 	foreignTableName?: string;
-	foreignColumns?: string[];
-	columns?: string[];
-	onUpdate?: StudioForeignKeyAction;
 	onDelete?: StudioForeignKeyAction;
+	onUpdate?: StudioForeignKeyAction;
 }
 export interface StudioTableColumnConstraint {
-	name?: string;
-
-	primaryKey?: boolean;
-	primaryColumns?: string[];
-	primaryKeyOrder?: StudioSortDirection;
-	primaryKeyConflict?: StudioColumnConflict;
 	autoIncrement?: boolean;
-
+	checkExpression?: string;
+	collate?: string;
+	defaultExpression?: string;
+	defaultValue?: unknown;
+	foreignKey?: StoduiForeignKeyClause;
+	generatedExpression?: string;
+	generatedType?: "STORED" | "VIRTUAL";
+	name?: string;
 	notNull?: boolean;
 	notNullConflict?: StudioColumnConflict;
-
+	primaryColumns?: string[];
+	primaryKey?: boolean;
+	primaryKeyConflict?: StudioColumnConflict;
+	primaryKeyOrder?: StudioSortDirection;
 	unique?: boolean;
 	uniqueColumns?: string[];
 	uniqueConflict?: StudioColumnConflict;
-
-	checkExpression?: string;
-
-	defaultValue?: unknown;
-	defaultExpression?: string;
-
-	collate?: string;
-
-	generatedExpression?: string;
-	generatedType?: "STORED" | "VIRTUAL";
-
-	foreignKey?: StoduiForeignKeyClause;
 }
 
 export interface StudioTableColumn {
-	name: string;
-	type: string;
-	pk?: boolean;
 	constraint?: StudioTableColumnConstraint;
+	name: string;
+	pk?: boolean;
+	type: string;
 }
 
 export interface StudioTableIndex {
-	type: "KEY" | "UNIQUE";
+	columns: string[];
 	name: string;
 	tableName: string;
-	columns: string[];
+	type: "KEY" | "UNIQUE";
 }
 export interface StudioTableSchema {
-	columns: StudioTableColumn[];
-	pk: string[];
 	autoIncrement: boolean;
-	schemaName: string;
-	tableName?: string;
+	columns: StudioTableColumn[];
 	constraints?: StudioTableColumnConstraint[];
 	createScript?: string;
 	fts5?: StudioTableFTSv5Options;
+	indexes?: StudioTableIndex[];
+	pk: string[];
+	schemaName: string;
+	stats?: StudioTableSchemaStats;
+	strict?: boolean;
+	tableName?: string;
 	type?: "table" | "view";
 	withoutRowId?: boolean;
-	strict?: boolean;
-	stats?: StudioTableSchemaStats;
-	indexes?: StudioTableIndex[];
 }
 
 /*
@@ -115,21 +107,21 @@ export interface StudioTableSchema {
  */
 export interface StudioTableColumnChange {
 	key: string;
-	old: StudioTableColumn | null;
 	new: StudioTableColumn | null;
+	old: StudioTableColumn | null;
 }
 
 export interface StudioTableConstraintChange {
 	key: string;
-	old: StudioTableColumnConstraint | null;
 	new: StudioTableColumnConstraint | null;
+	old: StudioTableColumnConstraint | null;
 }
 export interface StudioTableSchemaChange {
-	schemaName?: string;
-	name: { new: string | null; old: string | null };
 	columns: StudioTableColumnChange[];
 	constraints: StudioTableConstraintChange[];
 	indexes: StudioTableIndex[];
+	name: { new: string | null; old: string | null };
+	schemaName?: string;
 }
 
 /**
@@ -139,50 +131,47 @@ export interface StudioTableSchemaChange {
 export type StudioSchemas = Record<string, StudioSchemaItem[]>;
 
 export interface StudioSchemaItem {
-	type: "table" | "trigger" | "view" | "schema" | "saved-query";
 	name: string;
 	schemaName: string;
 	tableName?: string;
 	tableSchema?: StudioTableSchema;
-	query?: string;
+	type: "table" | "trigger" | "view" | "schema";
 }
 
 export type StudioResultValue<T = unknown> = T | undefined | null;
 export type StudioResultRow = Record<string, unknown>;
 
 export interface StudioResultStat {
+	// Time taken to execute the SQL query on the server (excluding network latency), in milliseconds
+	queryDurationMs: number | null;
+	// Total duration of the API request, including network latency and server processing, in milliseconds
+	requestDurationMs?: number | null;
 	rowsAffected: number;
 	rowsRead: number | null;
 	rowsWritten: number | null;
-
-	// Time taken to execute the SQL query on the server (excluding network latency), in milliseconds
-	queryDurationMs: number | null;
-
-	// Total duration of the API request, including network latency and server processing, in milliseconds
-	requestDurationMs?: number | null;
 }
 
 export interface StudioResultHeader {
-	name: string;
-	displayName: string;
 	columnType?: string;
+	displayName: string;
+	name: string;
 	primaryKey?: boolean;
 }
 
 export interface StudioResultSet {
-	rows: StudioResultRow[];
 	headers: StudioResultHeader[];
-	stat: StudioResultStat;
 	lastInsertRowid?: number;
+	rows: StudioResultRow[];
+	stat: StudioResultStat;
 }
 
 // Represents a request to modify table rows (insert, update, or delete).
 export type StudioTableRowMutationRequest =
 	| {
-			operation: "INSERT";
-			values: Record<string, StudioResultValue>;
 			autoIncrementPkColumn?: string;
+			operation: "INSERT";
 			pk?: string[];
+			values: Record<string, StudioResultValue>;
 	  }
 	| {
 			operation: "UPDATE";
@@ -201,29 +190,29 @@ export interface StudioTableRowMutationResponse {
 }
 
 export interface IStudioConnection {
+	batch?(statements: string[]): Promise<StudioResultSet[]>; // Optimize for connection that support batch
 	query(stmt: string): Promise<StudioResultSet>;
 	transaction(statements: string[]): Promise<StudioResultSet[]>;
-	batch?(statements: string[]): Promise<StudioResultSet[]>; // Optimize for connection that support batch
 }
 
 // Column type hint; null if the type can't be determined
 export type StudioColumnTypeHint = "TEXT" | "NUMBER" | "BLOB" | null;
 
 export interface StudioSelectFromTableOptions {
-	whereRaw?: string;
-	orderByColumn?: string;
-	orderByDirection?: StudioSortDirection;
 	limit: number;
 	offset: number;
+	orderByColumn?: string;
+	orderByDirection?: StudioSortDirection;
+	whereRaw?: string;
 }
 
 export abstract class IStudioDriver {
-	isSupportReturningValue = false;
-	isSupportRowid = false;
+	dialect: StudioDialect = "sqlite";
 	isSupportDropTable = true;
 	isSupportEditTable = true;
 	isSupportExplain = false;
-	dialect: StudioDialect = "sqlite";
+	isSupportReturningValue = false;
+	isSupportRowid = false;
 
 	/**
 	 * Execute a single SQL statement
@@ -347,17 +336,6 @@ export abstract class IStudioDriver {
 		result: StudioResultSet
 	): { label: string; icon: Icon; component: JSX.Element } | null;
 }
-
-export type StudioSavedQuery = {
-	data: {
-		query: string;
-	};
-	id: string;
-	name: string;
-	type: "SQL";
-	createdAt: string;
-	updatedAt: string;
-};
 
 export type StudioResource = {
 	databaseId?: string;

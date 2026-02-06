@@ -1,6 +1,5 @@
 import { BinocularsIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { getSavedQueries } from "../../utils/studio/saved-queries-api";
 import { ModalProvider } from "../../utils/studio/stubs/modal";
 import SplitPane from "../../utils/studio/stubs/SplitPane";
 import { useLeaveGuard } from "../../utils/studio/stubs/useLeaveGuard";
@@ -13,7 +12,6 @@ import { StudioWindowTabPane } from "./WindowTabPane";
 import type {
 	IStudioDriver,
 	StudioResource,
-	StudioSavedQuery,
 	StudioSchemas,
 } from "../../types/studio";
 import type { StudioContextValue } from "./Context";
@@ -44,8 +42,6 @@ export function Studio({
 	const hasOpenedInitialTable = useRef(false);
 	const [schemas, setSchemas] = useState<StudioSchemas>();
 	const [loadingSchema, setLoadingSchema] = useState(true);
-	const [savedQueries, setSavedQueries] = useState<StudioSavedQuery[]>([]);
-	const [loadingSavedQueries, setLoadingSavedQueries] = useState(true);
 	const [tabs, setTabs] = useState<StudioWindowTabItem[]>(() => {
 		return [
 			{
@@ -76,21 +72,9 @@ export function Studio({
 			});
 	}, [driver]);
 
-	const refreshSavedQueries = useCallback(() => {
-		setLoadingSavedQueries(true);
-
-		getSavedQueries(resource)
-			.then(setSavedQueries)
-			.catch(console.error)
-			.finally(() => {
-				setLoadingSavedQueries(false);
-			});
-	}, [resource]);
-
 	useEffect(() => {
 		refreshSchema();
-		refreshSavedQueries();
-	}, [refreshSchema, refreshSavedQueries]);
+	}, [refreshSchema]);
 
 	// Utility to close a tab given its identifier
 	const closeStudioTab = useCallback(
@@ -334,15 +318,12 @@ export function Studio({
 		return {
 			closeStudioTab,
 			driver,
-			loadingSavedQueries,
 			loadingSchema,
 			onTableChange,
 			openStudioTab,
-			refreshSavedQueries,
 			refreshSchema,
 			replaceStudioTab,
 			resource,
-			savedQueries,
 			schemas,
 			selectedTabKey,
 			setSelectedTabKey,
@@ -360,9 +341,6 @@ export function Studio({
 		selectedTabKey,
 		setSelectedTabKey,
 		closeStudioTab,
-		savedQueries,
-		loadingSavedQueries,
-		refreshSavedQueries,
 		resource,
 		openStudioTab,
 		replaceStudioTab,

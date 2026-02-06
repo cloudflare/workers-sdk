@@ -2,7 +2,6 @@ import { createContext, useContext } from "react";
 import type {
 	IStudioDriver,
 	StudioResource,
-	StudioSavedQuery,
 	StudioSchemas,
 } from "../../types/studio";
 import type { StudioTabDefinitionMetadata } from "./tab-register";
@@ -34,10 +33,6 @@ export interface StudioContextValue {
 		identifier: string | StudioTabDefinitionMetadata,
 		status: { isDirty?: boolean; isTemp?: boolean }
 	) => void;
-
-	savedQueries?: StudioSavedQuery[];
-	loadingSavedQueries: boolean;
-	refreshSavedQueries: () => void;
 
 	resource: StudioResource;
 
