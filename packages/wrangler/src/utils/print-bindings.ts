@@ -617,7 +617,7 @@ function printFlatBindings(
 			...unsafe_bindings.map((binding) => {
 				const dev = "dev" in binding ? binding.dev : undefined;
 				// Strip the "unsafe_" prefix to get the original binding type for display
-				const [originalType] = binding.type.slice("unsafe_".length);
+				const originalType = binding.type.slice("unsafe_".length);
 				return {
 					name: binding.name,
 					type: dev
