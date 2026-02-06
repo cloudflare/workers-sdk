@@ -1,6 +1,7 @@
+import { DatabaseIcon } from "@phosphor-icons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
-// import { Studio } from "../../components/studio";
+import { Studio } from "../../components/studio";
 import { LocalD1Driver } from "../../drivers/d1";
 import type { StudioResource } from "../../types/studio";
 
@@ -13,15 +14,15 @@ export const Route = createFileRoute("/d1/$databaseId")({
 
 function DatabaseView(): JSX.Element {
 	const params = Route.useParams();
-	const _searchParams = Route.useSearch();
+	const searchParams = Route.useSearch();
 	const navigate = useNavigate();
 
-	const _driver = useMemo<LocalD1Driver>(
+	const driver = useMemo<LocalD1Driver>(
 		() => new LocalD1Driver(params.databaseId),
 		[params.databaseId]
 	);
 
-	const _resource = useMemo<StudioResource>(
+	const resource = useMemo<StudioResource>(
 		() => ({
 			databaseId: params.databaseId,
 			type: "d1",
@@ -29,7 +30,7 @@ function DatabaseView(): JSX.Element {
 		[params.databaseId]
 	);
 
-	const _handleTableChange = useCallback(
+	const handleTableChange = useCallback(
 		(tableName: string | null) => {
 			void navigate({
 				search: {
@@ -43,18 +44,24 @@ function DatabaseView(): JSX.Element {
 
 	return (
 		<div>
-			<div className="breadcrumb-bar">
-				<span className="breadcrumb-item">D1</span>
-				<span className="breadcrumb-separator">&gt;</span>
-				<span className="breadcrumb-item current">{params.databaseId}</span>
+			<div className="flex items-center gap-2 py-4 px-6 -mx-6 mb-6 min-h-[67px] box-border bg-bg-secondary border-b border-border text-sm">
+				<span className="flex items-center gap-1.5 text-text-secondary">
+					<DatabaseIcon />
+					D1
+				</span>
+				<span className="text-text-secondary text-xs">&gt;</span>
+				<span className="flex items-center gap-1.5 text-text font-medium">
+					{params.databaseId}
+				</span>
 			</div>
-			{/* <Studio
+
+			<Studio
 				category="d1"
 				driver={driver}
 				initialTable={searchParams.table}
 				onTableChange={handleTableChange}
 				resource={resource}
-			/> */}
+			/>
 		</div>
 	);
 }
