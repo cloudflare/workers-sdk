@@ -133,7 +133,7 @@ export async function getDetailsForAutoConfig({
 	sendMetricsEvent(
 		"autoconfig_detection_started",
 		{
-			...(autoConfigId ? { autoConfigId } : {}),
+			autoConfigId,
 			isCI,
 			command: getAutoConfigTriggerCommand(),
 		},
@@ -186,7 +186,7 @@ export async function getDetailsForAutoConfig({
 	sendMetricsEvent(
 		"autoconfig_detection_completed",
 		{
-			...(autoConfigId ? { autoConfigId } : {}),
+			autoConfigId,
 			framework: framework.id,
 			configured,
 			success: true,

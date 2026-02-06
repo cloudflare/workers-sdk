@@ -53,7 +53,7 @@ export async function runAutoConfig(
 	sendMetricsEvent(
 		"autoconfig_configuration_started",
 		{
-			...(autoConfigId ? { autoConfigId } : {}),
+			autoConfigId,
 			isCI,
 			framework: autoConfigDetails.framework?.id,
 			dryRun,
@@ -149,7 +149,7 @@ export async function runAutoConfig(
 			sendMetricsEvent(
 				"autoconfig_configuration_completed",
 				{
-					...(autoConfigId ? { autoConfigId } : {}),
+					autoConfigId,
 					framework: autoConfigDetails.framework?.id,
 					success: true,
 					dryRun,
@@ -235,7 +235,7 @@ export async function runAutoConfig(
 		sendMetricsEvent(
 			"autoconfig_configuration_completed",
 			{
-				...(autoConfigId ? { autoConfigId } : {}),
+				autoConfigId,
 
 				framework: autoConfigDetails.framework?.id,
 				dryRun,
@@ -253,7 +253,7 @@ export async function runAutoConfig(
 	sendMetricsEvent(
 		"autoconfig_configuration_completed",
 		{
-			...(autoConfigId ? { autoConfigId } : {}),
+			autoConfigId,
 			framework: autoConfigDetails.framework?.id,
 			success: true,
 			dryRun,
