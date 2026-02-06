@@ -37,13 +37,13 @@ import type { Settings } from "@netlify/build-info";
  * @returns A PackageManager object compatible with wrangler's package manager utilities
  */
 function convertDetectedPackageManager(
-	pkgManager: { name: string } | null | undefined
+	pkgManager: { name: string } | null
 ): PackageManager {
 	if (!pkgManager) {
 		return NpmPackageManager;
 	}
 
-	switch (pkgManager.name) {
+	switch (pkgManager?.name) {
 		case "pnpm":
 			return PnpmPackageManager;
 		case "yarn":
@@ -186,9 +186,6 @@ export async function getDetailsForAutoConfig({
 
 	const framework = getFramework(detectedFramework?.framework);
 	const packageJsonPath = resolve(projectPath, "package.json");
-
-	// Convert the package manager detected by @netlify/build-info to our PackageManager type.
-	// This is populated after getBuildSettings() runs, which triggers the full detection chain.
 	const packageManager = convertDetectedPackageManager(project.packageManager);
 
 	let packageJson: PackageJSON | undefined;
