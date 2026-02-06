@@ -40,7 +40,7 @@ export function StudioSidebarPane() {
 	return (
 		<div className="flex flex-col h-full w-full overflow-hidden">
 			<div className="px-4 flex gap-2 pt-4">
-				<InputGroup className="w-full h-8">
+				{/* <InputGroup className="w-full h-8">
 					<InputGroup.Label>
 						<MagnifyingGlassIcon size={16} />
 					</InputGroup.Label>
@@ -50,9 +50,9 @@ export function StudioSidebarPane() {
 						placeholder="Search"
 						value={searchText}
 					/>
-				</InputGroup>
+				</InputGroup> */}
 
-				<Button
+				{/* <Button
 					disabled={loadingSchema}
 					shape="square"
 					className="size-8"
@@ -62,9 +62,9 @@ export function StudioSidebarPane() {
 						size={16}
 						className={loadingSchema ? "animate-spin" : ""}
 					/>
-				</Button>
+				</Button> */}
 
-				<Button
+				{/* <Button
 					icon={PlusIcon}
 					shape="square"
 					className="size-8"
@@ -73,7 +73,7 @@ export function StudioSidebarPane() {
 							type: "create-table",
 						});
 					}}
-				/>
+				/> */}
 			</div>
 			<div className="overflow-hidden grow flex mt-2">
 				{schemas ? (
