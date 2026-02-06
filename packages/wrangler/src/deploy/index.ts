@@ -305,7 +305,11 @@ export const deployCommand = createCommand({
 						"It seems that you have run `wrangler deploy` on a Pages project, `wrangler pages deploy` should be used instead. Proceeding will likely produce unwanted results."
 					);
 					const proceedWithPagesProject = await confirm(
-						"Are you sure that you want to proceed?"
+						"Are you sure that you want to proceed?",
+						{
+							defaultValue: false,
+							fallbackValue: true,
+						}
 					);
 
 					if (!proceedWithPagesProject) {
