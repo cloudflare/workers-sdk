@@ -1,20 +1,19 @@
-import { P } from "@cloudflare/elements";
 import { useState } from "react";
 import { DeleteConfirmationModal } from "../../utils/studio/stubs/ui/DeleteConfirmationModal";
 
-type Props = {
-	isOpen: boolean;
-	onConfirm: () => Promise<void>;
+interface StudioDropSavedQueryModalProps {
 	closeModal: () => void;
+	isOpen: boolean;
 	name: string;
-};
+	onConfirm: () => Promise<void>;
+}
 
 export function StudioDropSavedQueryModal({
-	onConfirm,
 	closeModal,
 	isOpen,
 	name,
-}: Props) {
+	onConfirm,
+}: StudioDropSavedQueryModalProps) {
 	const [errorMessage, setErrorMessage] = useState("");
 
 	return (
@@ -25,22 +24,22 @@ export function StudioDropSavedQueryModal({
 			onConfirm={async () => {
 				try {
 					await onConfirm();
-				} catch (e) {
-					if (e instanceof Error) {
-						setErrorMessage(e.message);
+				} catch (err) {
+					if (err instanceof Error) {
+						setErrorMessage(err.message);
 					} else {
-						setErrorMessage(e.toString());
+						setErrorMessage(String(err));
 					}
 
-					throw e; // Rethrow the error to show the failure text
+					throw err; // Rethrow the error to show the failure text
 				}
 			}}
 			failureText={errorMessage || "Unable to drop saved query"}
 			body={
-				<P>
+				<p>
 					This action will permanently delete the saved query{" "}
 					<strong>{name}</strong>.
-				</P>
+				</p>
 			}
 		/>
 	);

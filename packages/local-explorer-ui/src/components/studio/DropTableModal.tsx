@@ -1,21 +1,20 @@
-import { P } from "@cloudflare/elements";
 import { useState } from "react";
 import { DeleteConfirmationModal } from "../../utils/studio/stubs/ui/DeleteConfirmationModal";
 
-type Props = {
+interface StudioDropTableModalProps {
+	closeModal: () => void;
 	isOpen: boolean;
 	onConfirm: () => Promise<void>;
-	closeModal: () => void;
 	schemaName: string;
 	tableName: string;
-};
+}
 
 export function StudioDropTableModal({
-	onConfirm,
 	closeModal,
 	isOpen,
+	onConfirm,
 	tableName,
-}: Props) {
+}: StudioDropTableModalProps) {
 	const [errorMessage, setErrorMessage] = useState("");
 
 	return (
@@ -27,23 +26,23 @@ export function StudioDropTableModal({
 			onConfirm={async () => {
 				try {
 					await onConfirm();
-				} catch (e) {
-					if (e instanceof Error) {
-						setErrorMessage(e.message);
+				} catch (err) {
+					if (err instanceof Error) {
+						setErrorMessage(err.message);
 					} else {
-						setErrorMessage(e.toString());
+						setErrorMessage(String(err));
 					}
 
-					throw e; // Rethrow the error to show the failure text
+					throw err; // Rethrow the error to show the failure text
 				}
 			}}
 			failureText={errorMessage || "Unable to drop table"}
 			body={
-				<P>
+				<p>
 					This action will permanently delete the table{" "}
 					<strong>{tableName}</strong>. To confirm, please type the table name
 					below. This action cannot be undone.
-				</P>
+				</p>
 			}
 		/>
 	);

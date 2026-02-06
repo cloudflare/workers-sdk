@@ -40,7 +40,7 @@ export function StudioContextMenuProvider({
 }: PropsWithChildren<unknown>) {
 	const [position, setPosition] = useState({ x: 0, y: 0 });
 	const [open, setOpen] = useState(false);
-	const [menuItems, setMenuItems] = useState<DropdownItemBuilderProps[]>([]);
+	const [_menuItems, setMenuItems] = useState<DropdownItemBuilderProps[]>([]);
 	const onOpenChange = useRef<Function | undefined>(undefined);
 
 	const openContextMenu = useCallback(
@@ -68,17 +68,19 @@ export function StudioContextMenuProvider({
 					onOpenChange.current?.(isOpen);
 				}}
 			>
-				<DropdownMenu.Trigger asChild>
-					<button
-						style={{
-							position: "fixed",
-							left: position.x + "px",
-							top: position.y + "px",
-							zIndex: 200,
-							visibility: "hidden",
-						}}
-					></button>
-				</DropdownMenu.Trigger>
+				<DropdownMenu.Trigger
+					render={
+						<button
+							style={{
+								left: `${position.x}px`,
+								position: "fixed",
+								top: `${position.y}px`,
+								visibility: "hidden",
+								zIndex: 200,
+							}}
+						/>
+					}
+				/>
 				<DropdownMenu.Content
 					align="start"
 					side="bottom"

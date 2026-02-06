@@ -11,30 +11,29 @@ import {
 import type { Icon } from "@phosphor-icons/react";
 
 export interface StudioWindowTabItem {
-	key: string;
-	identifier: string;
-	title: React.ReactNode;
 	component: JSX.Element;
 	icon: Icon;
-	type?: string;
+	identifier: string;
 	isDirty?: boolean;
 	isTemp?: boolean;
+	key: string;
+	title: React.ReactNode;
+	type?: string;
 }
 
 export interface StudioWindowTabProps {
-	tabs: StudioWindowTabItem[];
-	/** The key of the currently selected (active) tab */
-	selectedTabKey?: string;
+	onDoubleClick?: (tab: StudioWindowTabItem) => void;
+	onNewClicked?: () => void;
+	/** Called when a different tab is selected by the user.*/
+	onSelectedTabChange: (newSelectedKey: string) => void;
 	/**
 	 * Called when the tab list changes — either due to closing a tab
 	 * or reordering tabs via drag-and-drop.
 	 */
 	onTabsChange?: React.Dispatch<React.SetStateAction<StudioWindowTabItem[]>>;
-	/** Called when a different tab is selected by the user.*/
-	onSelectedTabChange: (newSelectedKey: string) => void;
-
-	onNewClicked?: () => void;
-	onDoubleClick?: (tab: StudioWindowTabItem) => void;
+	/** The key of the currently selected (active) tab */
+	selectedTabKey?: string;
+	tabs: StudioWindowTabItem[];
 }
 
 type BeforeTabClosingHandler = (tab: StudioWindowTabItem) => boolean;
@@ -44,13 +43,13 @@ type BeforeTabClosingHandler = (tab: StudioWindowTabItem) => boolean;
  * preserving each tab’s interactive state. Supports tab closing and drag-to-reorder functionality.
  */
 export function StudioWindowTab({
-	tabs,
+	onDoubleClick,
+	onNewClicked,
+	onSelectedTabChange,
 	onTabsChange,
 	selectedTabKey,
-	onSelectedTabChange,
-	onNewClicked,
-	onDoubleClick,
-}: StudioWindowTabProps) {
+	tabs,
+}: StudioWindowTabProps): JSX.Element {
 	const beforeClosingHandlersRef = useRef(
 		new Map<string, BeforeTabClosingHandler>()
 	);
@@ -96,32 +95,32 @@ export function StudioWindowTab({
 
 					return (
 						<StudioWindowTabItemRenderer
-							key={tab.key}
-							tab={tab}
 							index={tabIndex}
-							selected={tab.key === selectedTabKey}
+							key={tab.key}
 							onClick={() => onSelectedTabChange(tab.key)}
 							onClose={onTabsChange ? handleTabClose : undefined}
-							onDoubleClick={() => {
+							onDoubleClick={(): void => {
 								onDoubleClick?.(tab);
 							}}
+							selected={tab.key === selectedTabKey}
+							tab={tab}
 						/>
 					);
 				})}
 				{onNewClicked && <StudioWindowTabMenu onClick={onNewClicked} />}
 				<div
-					style={{ height: 40 }}
 					className="border-neutral-200 dark:border-neutral-800 border-b grow"
-				></div>
+					style={{ height: 40 }}
+				/>
 			</div>
 			<div className="relative grow">
 				{tabs.map((tab) => (
 					<StudioTabContentWrapper
-						key={tab.key}
-						tab={tab}
-						selectedTabKey={selectedTabKey}
-						onTabsChange={onTabsChange}
 						beforeClosingHandlersRef={beforeClosingHandlersRef}
+						key={tab.key}
+						onTabsChange={onTabsChange}
+						selectedTabKey={selectedTabKey}
+						tab={tab}
 					/>
 				))}
 			</div>
@@ -129,25 +128,27 @@ export function StudioWindowTab({
 	);
 }
 
-// Provide per-tab context (dirty state, close handler) to the tab content.
-// Only render the content if the tab is selected.
-function StudioTabContentWrapper({
-	tab,
-	selectedTabKey,
-	onTabsChange,
-	beforeClosingHandlersRef,
-}: {
-	tab: StudioWindowTabItem;
-	selectedTabKey?: string;
-	onTabsChange?: React.Dispatch<React.SetStateAction<StudioWindowTabItem[]>>;
+interface StudioTabContentWrapperProps {
 	beforeClosingHandlersRef: React.MutableRefObject<
 		Map<string, BeforeTabClosingHandler>
 	>;
-}) {
+	onTabsChange?: React.Dispatch<React.SetStateAction<StudioWindowTabItem[]>>;
+	selectedTabKey?: string;
+	tab: StudioWindowTabItem;
+}
+
+// Provide per-tab context (dirty state, close handler) to the tab content.
+// Only render the content if the tab is selected.
+function StudioTabContentWrapper({
+	beforeClosingHandlersRef,
+	onTabsChange,
+	selectedTabKey,
+	tab,
+}: StudioTabContentWrapperProps): JSX.Element {
 	const tabKey = tab.key;
 
 	const setBeforeTabClosingHandler = useCallback(
-		(handler: BeforeTabClosingHandler) => {
+		(handler: BeforeTabClosingHandler): void => {
 			beforeClosingHandlersRef.current.set(tabKey, handler);
 		},
 		[beforeClosingHandlersRef, tabKey]
@@ -155,7 +156,7 @@ function StudioTabContentWrapper({
 
 	// Update the dirty state for this tab, only if it changes.
 	const setDirtyState = useCallback(
-		(newDirtyState) => {
+		(newDirtyState: boolean): void => {
 			if (!onTabsChange) {
 				return;
 			}
@@ -184,8 +185,8 @@ function StudioTabContentWrapper({
 			value={{
 				identifier: tab.identifier,
 				isTabActive: tab.key === selectedTabKey,
-				setDirtyState,
 				setBeforeTabClosingHandler,
+				setDirtyState,
 			}}
 		>
 			<div
@@ -199,15 +200,23 @@ function StudioTabContentWrapper({
 	);
 }
 
-function StudioWindowTabMenu({ onClick }: { onClick: () => void }) {
-	const className = useMemo(() => {
-		return cn(
-			"flex gap-2 relative px-2", // display style
-			"bg-neutral-100 dark:bg-neutral-900", // background color
-			"border-b border-neutral-200 dark:border-neutral-800", // border style
-			"items-center text-left text-xs text-neutral-500" // text style
-		);
-	}, []);
+interface StudioWindowTabMenuProps {
+	onClick: () => void;
+}
+
+function StudioWindowTabMenu({
+	onClick,
+}: StudioWindowTabMenuProps): JSX.Element {
+	const className = useMemo<string>(
+		() =>
+			cn(
+				"flex gap-2 relative px-2", // display style
+				"bg-neutral-100 dark:bg-neutral-900", // background color
+				"border-b border-neutral-200 dark:border-neutral-800", // border style
+				"items-center text-left text-xs text-neutral-500" // text style
+			),
+		[]
+	);
 
 	return (
 		<div
@@ -222,55 +231,60 @@ function StudioWindowTabMenu({ onClick }: { onClick: () => void }) {
 	);
 }
 
-function StudioWindowTabItemRenderer({
-	tab,
-	selected,
-	onClick,
-	onClose,
-	onDoubleClick,
-}: {
-	tab: StudioWindowTabItem;
-	selected?: boolean;
+interface StudioWindowTabItemRendererProps {
 	index: number;
 	onClick: () => void;
 	onClose?: () => void;
 	onDoubleClick?: () => void;
-}) {
+	selected?: boolean;
+	tab: StudioWindowTabItem;
+}
+
+function StudioWindowTabItemRenderer({
+	onClick,
+	onClose,
+	onDoubleClick,
+	selected,
+	tab,
+}: StudioWindowTabItemRendererProps): JSX.Element {
 	const isDirty = tab.isDirty;
 	const isTemp = tab.isTemp;
+
 	const [isHovered, setIsHovered] = useState(false);
 	const [isCloseHovered, setIsCloseHovered] = useState(false);
 
-	const className = useMemo(() => {
-		return cn(
-			"flex gap-2 relative px-2", // display style
-			"border-b border-r border-neutral-200 dark:border-neutral-800", // border style
-			"items-center text-left text-xs ", // text style
-			"cursor-pointer hover:text-black dark:hover:text-white", // hover style
-			"select-none",
-			selected
-				? "border-b-transparent! bg-white dark:bg-black"
-				: "bg-neutral-100 dark:bg-neutral-900 text-neutral-500", // selected style
-			isTemp && "italic",
-			isDirty && "not-italic"
-		);
-	}, [isDirty, selected, isTemp]);
+	const className = useMemo<string>(
+		() =>
+			cn(
+				"flex gap-2 relative px-2", // display style
+				"border-b border-r border-neutral-200 dark:border-neutral-800", // border style
+				"items-center text-left text-xs ", // text style
+				"cursor-pointer hover:text-black dark:hover:text-white", // hover style
+				"select-none",
+				selected
+					? "border-b-transparent! bg-white dark:bg-black"
+					: "bg-neutral-100 dark:bg-neutral-900 text-neutral-500", // selected style
+				isTemp && "italic",
+				isDirty && "not-italic"
+			),
+		[isDirty, selected, isTemp]
+	);
 
 	const shouldShowDirtyIcon = !isCloseHovered && isDirty;
 	const shouldShowCloseIcon = !shouldShowDirtyIcon && (selected || isHovered);
 
 	return (
 		<div
-			style={{
-				maxWidth: 300,
-				minWidth: 170,
-				height: 40,
-			}}
-			onMouseLeave={() => setIsHovered(false)}
-			onMouseEnter={() => setIsHovered(true)}
 			className={className}
 			onClick={onClick}
 			onDoubleClick={onDoubleClick}
+			onMouseEnter={() => setIsHovered(true)}
+			onMouseLeave={() => setIsHovered(false)}
+			style={{
+				height: 40,
+				maxWidth: 300,
+				minWidth: 170,
+			}}
 		>
 			<tab.icon className="w-4 h-4" />
 			<div className={cn("line-clamp-1 grow")}>{tab.title}</div>
@@ -279,20 +293,20 @@ function StudioWindowTabItemRenderer({
 					className={cn(
 						"ml-2 flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
 					)}
-					onMouseLeave={() => setIsCloseHovered(false)}
-					onMouseEnter={() => setIsCloseHovered(true)}
 					onClick={(e) => {
 						e.stopPropagation();
 						onClose?.();
 					}}
+					onMouseEnter={() => setIsCloseHovered(true)}
+					onMouseLeave={() => setIsCloseHovered(false)}
 				>
 					{shouldShowCloseIcon && (
 						<XIcon className={"h-3 w-3 shrink-0 grow-0"} />
 					)}
 					{shouldShowDirtyIcon && (
 						<CircleIcon
-							weight="fill"
 							className={"h-3 w-3 shrink-0 grow-0 text-muted"}
+							weight="fill"
 						/>
 					)}
 				</div>
@@ -301,17 +315,18 @@ function StudioWindowTabItemRenderer({
 	);
 }
 
+interface IStudioCurrentWindowTabContext {
+	identifier: string;
+	isTabActive: boolean;
+	setBeforeTabClosingHandler: (handler: BeforeTabClosingHandler) => void;
+	setDirtyState: (dirtyState: boolean) => void;
+}
+
 const StudioCurrentWindowTabContext = createContext<
-	| {
-			identifier: string;
-			isTabActive: boolean;
-			setDirtyState: (dirtyState: boolean) => void;
-			setBeforeTabClosingHandler: (handler: BeforeTabClosingHandler) => void;
-	  }
-	| undefined
+	IStudioCurrentWindowTabContext | undefined
 >(undefined);
 
-export function useStudioCurrentWindowTab() {
+export function useStudioCurrentWindowTab(): IStudioCurrentWindowTabContext {
 	const context = useContext(StudioCurrentWindowTabContext);
 	if (!context) {
 		throw new Error("Cannot useStudioCurrentWindowTab outside StudioWindowTab");

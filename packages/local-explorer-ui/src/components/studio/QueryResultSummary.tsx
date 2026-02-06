@@ -1,14 +1,16 @@
-import CodeBlock from "@cloudflare/component-code-block";
 import { useEffect, useState } from "react";
+import { CodeBlock } from "./CodeBlock";
 import StudioQueryResultStats from "./QueryResultStats";
 import type { StudioResultStat } from "../../types/studio";
 import type { StudioMultipleQueryProgress } from "../../utils/studio";
 
+interface StudioQueryResultSummaryProps {
+	progress: StudioMultipleQueryProgress;
+}
+
 export function StudioQueryResultSummary({
 	progress,
-}: {
-	progress: StudioMultipleQueryProgress;
-}) {
+}: StudioQueryResultSummaryProps): JSX.Element {
 	const [, setCurrentTime] = useState(() => Date.now());
 
 	useEffect(() => {
@@ -79,18 +81,18 @@ export function StudioQueryResultSummary({
 	);
 }
 
-function formatTimeAgo(ms: number) {
+function formatTimeAgo(ms: number): string {
 	if (ms < 1000) {
 		return `${ms}ms`;
-	} else {
-		return `${(ms / 1000).toLocaleString(undefined, {
-			maximumFractionDigits: 2,
-			minimumFractionDigits: 2,
-		})}s`;
 	}
+
+	return `${(ms / 1000).toLocaleString(undefined, {
+		maximumFractionDigits: 2,
+		minimumFractionDigits: 2,
+	})}s`;
 }
 
-function isEmptyResultStats(stats: StudioResultStat) {
+function isEmptyResultStats(stats: StudioResultStat): boolean {
 	return (
 		!stats.queryDurationMs &&
 		!stats.rowsAffected &&

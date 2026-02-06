@@ -1,24 +1,26 @@
-import { Tooltip } from "@cloudflare/component-tooltip";
 import { QuestionIcon } from "@phosphor-icons/react";
 import { useMemo } from "react";
+import { Tooltip } from "./Tooltip";
 import type { StudioResultStat } from "../../types/studio";
 import type { ReactElement } from "react";
 
-function formatDuration(duration: number) {
+function formatDuration(duration: number): string {
 	if (duration < 1000) {
 		return `${duration.toFixed(1)}ms`;
-	} else if (duration < 60_000) {
-		return `${(duration / 1000).toFixed(2)}s`;
-	} else {
-		return `${(duration / 60_000).toFixed(2)}m`;
 	}
+	if (duration < 60_000) {
+		return `${(duration / 1000).toFixed(2)}s`;
+	}
+	return `${(duration / 60_000).toFixed(2)}m`;
+}
+
+interface StudioQueryResultStatsProps {
+	stats: StudioResultStat;
 }
 
 export default function StudioQueryResultStats({
 	stats,
-}: {
-	stats: StudioResultStat;
-}) {
+}: StudioQueryResultStatsProps): JSX.Element {
 	const statsComponents = useMemo(() => {
 		const content: ReactElement[] = [];
 
@@ -56,7 +58,7 @@ export default function StudioQueryResultStats({
 			);
 		}
 
-		if (!!stats.rowsRead) {
+		if (stats.rowsRead) {
 			content.push(
 				<div className="px-2" key="rows-read">
 					<span className="font-semibold">Rows Read</span>: {stats.rowsRead}
@@ -64,7 +66,7 @@ export default function StudioQueryResultStats({
 			);
 		}
 
-		if (!!stats.rowsWritten) {
+		if (stats.rowsWritten) {
 			content.push(
 				<div className="px-2" key="rows-written">
 					<span className="font-semibold">Rows Written</span>:{" "}
@@ -73,7 +75,7 @@ export default function StudioQueryResultStats({
 			);
 		}
 
-		if (!!stats.rowsAffected) {
+		if (stats.rowsAffected) {
 			content.push(
 				<div className="px-2" key="affected-rows">
 					<span className="font-semibold">Affected Rows</span>:{" "}

@@ -9,63 +9,66 @@ import type { StudioCodeMirrorReference } from "./CodeMirror";
 
 const SQLiteScalarFunctions = [
 	"abs",
-	"lower",
-	"ltrim",
-	"rtrim",
-	"max",
-	"min",
 	"hex",
 	"length",
-	"substr",
-	"upper",
-	"unicode",
+	"lower",
+	"ltrim",
+	"max",
+	"min",
+	"random",
+	"rtrim",
 	"sign",
 	"soundex",
-	"random",
-];
+	"substr",
+	"unicode",
+	"upper",
+] satisfies string[];
 
 const WAEScalarFunctions = [
-	"intdiv",
-	"touint32",
-	"length",
-	"isempty",
-	"tolower",
-	"toupper",
-	"startswith",
 	"endswith",
-	"position",
-	"substring",
-	"format",
-	"todatetime",
-	"now",
-	"tounixtimestamp",
-	"formatdatetime",
-	"tostartofinterval",
 	"extract",
-];
+	"format",
+	"formatdatetime",
+	"intdiv",
+	"isempty",
+	"length",
+	"now",
+	"position",
+	"startswith",
+	"substring",
+	"todatetime",
+	"tolower",
+	"tostartofinterval",
+	"touint32",
+	"tounixtimestamp",
+	"toupper",
+] satisfies string[];
+
+interface StudioWhereFilterInputProps {
+	columnNameList: string[];
+	driver: IStudioDriver;
+	loading?: boolean;
+	onApply: (whereRaw: string) => void;
+	value: string;
+}
 
 export function StudioWhereFilterInput({
 	columnNameList,
+	driver,
+	loading,
 	onApply,
 	value,
-	loading,
-	driver,
-}: {
-	value: string;
-	columnNameList: string[];
-	onApply: (whereRaw: string) => void;
-	loading?: boolean;
-	driver: IStudioDriver;
-}) {
+}: StudioWhereFilterInputProps): JSX.Element {
 	const editorRef = useRef<StudioCodeMirrorReference>(null);
+
 	const [currentValue, setCurrentValue] = useState("");
 	const [parsingError, setParsingError] = useState("");
 
-	const availableFunctionList = useMemo(() => {
-		return driver.dialect === "wae"
-			? WAEScalarFunctions
-			: SQLiteScalarFunctions;
-	}, [driver]);
+	const availableFunctionList = useMemo<string[]>(
+		() =>
+			driver.dialect === "wae" ? WAEScalarFunctions : SQLiteScalarFunctions,
+		[driver]
+	);
 
 	useEffect(() => {
 		if (currentValue.trim() === "") {
@@ -83,14 +86,15 @@ export function StudioWhereFilterInput({
 				}).parse();
 
 				setParsingError("");
-			} catch (e) {
-				setParsingError(e.toString());
+			} catch (err) {
+				setParsingError(String(err));
 			}
-		}, 1000);
+		}, 1_000);
+
 		return () => clearTimeout(timeoutId);
 	}, [currentValue, columnNameList, availableFunctionList]);
 
-	const onExternalApply = useCallback(() => {
+	const onExternalApply = useCallback((): void => {
 		if (editorRef.current) {
 			// Parse again before apply
 			try {
@@ -108,20 +112,20 @@ export function StudioWhereFilterInput({
 
 				setParsingError("");
 				onApply(appliedValue);
-			} catch (e) {
-				alert(e.toString());
-				setParsingError(e.toString());
+			} catch (err) {
+				alert(String(err));
+				setParsingError(String(err));
 			}
 		}
 	}, [onApply, editorRef, columnNameList, availableFunctionList]);
 
-	const onValueChange = useCallback(() => {
+	const onValueChange = useCallback((): void => {
 		if (editorRef.current) {
 			setCurrentValue(editorRef.current.getValue());
 		}
 	}, [editorRef]);
 
-	const applyButtonContent = useMemo(() => {
+	const applyButtonContent = useMemo<JSX.Element>(() => {
 		if (loading) {
 			return (
 				<>
@@ -155,21 +159,21 @@ export function StudioWhereFilterInput({
 	return (
 		<div className="border-border bg-surface-secondary border rounded flex items-center">
 			<StudioSQLWhereEditor
-				ref={editorRef}
-				defaultValue={value}
 				className="w-full p-1"
 				columnNames={columnNameList}
+				defaultValue={value}
 				functionNames={availableFunctionList}
 				onChange={onValueChange}
-				placeholder="eg: id = 10"
 				onEnterPressed={onExternalApply}
+				placeholder="eg: id = 10"
+				ref={editorRef}
 			/>
 			<Tooltip content={parsingError} asChild>
 				<Button
+					disabled={loading || !!parsingError}
+					onClick={onExternalApply}
 					size="sm"
 					style={{ marginLeft: 5, marginRight: 5 }}
-					onClick={onExternalApply}
-					disabled={loading || !!parsingError}
 				>
 					{applyButtonContent}
 				</Button>

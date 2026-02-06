@@ -1,4 +1,3 @@
-import { Input } from "@cloudflare/component-input";
 import { useState } from "react";
 import { DeleteConfirmationModal } from "../../utils/studio/stubs/ui/DeleteConfirmationModal";
 
@@ -32,24 +31,25 @@ export function StudioCreateSavedQueryModal({
 			onConfirm={async () => {
 				try {
 					await onConfirm(queryName);
-				} catch (e) {
-					if (e instanceof Error) {
-						setErrorMessage(e.message);
+				} catch (err) {
+					if (err instanceof Error) {
+						setErrorMessage(err.message);
 					} else {
-						setErrorMessage(e.toString());
+						setErrorMessage(String(err));
 					}
 
-					throw e; // Rethrow the error to show the failure text
+					throw err; // Rethrow the error to show the failure text
 				}
 			}}
 			failureText={errorMessage || "Unable to create saved query"}
 			body={
-				<Input
+				<input
+					className="w-full px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-neutral-800 dark:border-neutral-600"
 					defaultValue={name}
 					name="queryName"
 					onChange={(e) => setQueryName(e.target.value)}
 					placeholder="Query name"
-					width="100%"
+					type="text"
 				/>
 			}
 		/>

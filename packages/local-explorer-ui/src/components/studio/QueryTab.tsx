@@ -20,12 +20,12 @@ import type {
 import type { StudioCodeMirrorReference } from "./CodeMirror";
 import type { StudioWindowTabItem } from "./WindowTab";
 
-export function StudioQueryTab({
-	query,
-}: {
+interface StudioQueryTabProps {
 	query?: string;
 	savedQueryId?: string;
-}) {
+}
+
+export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 	const editorRef = useRef<StudioCodeMirrorReference>(null);
 	const { driver, schemas, refreshSchema } = useStudioContext();
 
@@ -40,7 +40,7 @@ export function StudioQueryTab({
 	const [columnNumber, setColumnNumber] = useState(1);
 
 	const runMultipleStatements = useCallback(
-		(statements: string[]) => {
+		(statements: string[]): void => {
 			setResults(undefined);
 			setProgress(undefined);
 			setLoading(true);
@@ -64,7 +64,7 @@ export function StudioQueryTab({
 		[driver, setProgress, refreshSchema]
 	);
 
-	const onRunAllClicked = useCallback(() => {
+	const onRunAllClicked = useCallback((): void => {
 		const view = editorRef.current?.view;
 		if (!view) {
 			return;
@@ -74,7 +74,7 @@ export function StudioQueryTab({
 		runMultipleStatements(statements.map((statement) => statement.text));
 	}, [editorRef, runMultipleStatements]);
 
-	const onRunCurrentClicked = useCallback(() => {
+	const onRunCurrentClicked = useCallback((): void => {
 		const view = editorRef.current?.view;
 		if (!view) {
 			return;
@@ -89,8 +89,8 @@ export function StudioQueryTab({
 		runMultipleStatements([statement]);
 	}, [editorRef, runMultipleStatements]);
 
-	const keybinding = useMemo(() => {
-		return [
+	const keybinding = useMemo(
+		() => [
 			{
 				key: "Ctrl-Enter",
 				mac: "Cmd-Enter",
@@ -109,12 +109,13 @@ export function StudioQueryTab({
 					return true;
 				},
 			},
-		];
-	}, [onRunAllClicked, onRunCurrentClicked]);
+		],
+		[onRunAllClicked, onRunCurrentClicked]
+	);
 
 	// Update cursor position information
 	const onCursorChange = useCallback(
-		(_: unknown, line: number, col: number) => {
+		(_: unknown, line: number, col: number): void => {
 			setLineNumber(line);
 			setColumnNumber(col + 1);
 		},
@@ -127,13 +128,13 @@ export function StudioQueryTab({
 			return null;
 		}
 
-		const queryTabs: StudioWindowTabItem[] = [];
+		const queryTabItems: StudioWindowTabItem[] = [];
 
 		for (const result of results ?? []) {
 			const customTab = driver.getQueryTabOverride(result.sql, result.result);
 
 			if (customTab) {
-				queryTabs.push({
+				queryTabItems.push({
 					key: `query-${result.order}`,
 					identifier: `query-${result.order}`,
 					component: customTab.component,
@@ -143,7 +144,7 @@ export function StudioQueryTab({
 			} else if (result.result.rows) {
 				const queryTabSizeSuffix = ` • ${result.result.headers.length}\u2006x\u2006${result.result.rows.length}`;
 
-				queryTabs.push({
+				queryTabItems.push({
 					key: `query-${result.order}`,
 					identifier: `query-${result.order}`,
 					component: <StudioQueryResultTab result={result} />,
@@ -153,7 +154,7 @@ export function StudioQueryTab({
 			}
 		}
 
-		queryTabs.push({
+		queryTabItems.push({
 			key: "summary",
 			identifier: "summary",
 			component: <StudioQueryResultSummary progress={progress} />,
@@ -161,11 +162,11 @@ export function StudioQueryTab({
 			title: "Summary",
 		});
 
-		if (queryTabs.length > 0) {
-			setSelectedResultTabKey(queryTabs[0].key);
+		if (queryTabItems.length > 0) {
+			setSelectedResultTabKey(queryTabItems[0].key);
 		}
 
-		return queryTabs;
+		return queryTabItems;
 	}, [progress, results, setSelectedResultTabKey, driver]);
 
 	const autoCompelteSchema = useMemo(() => {
@@ -191,10 +192,10 @@ export function StudioQueryTab({
 					];
 				})
 				.filter(([_, columns]) => columns.length > 0)
-		);
+		) as Record<string, string[]>;
 	}, [schemas]);
 
-	const handleFormat = useCallback(() => {
+	const handleFormat = useCallback((): void => {
 		try {
 			if (!editorRef.current) {
 				return;
@@ -207,7 +208,7 @@ export function StudioQueryTab({
 		}
 	}, [editorRef, driver]);
 
-	const handleExplain = useCallback(() => {
+	const handleExplain = useCallback((): void => {
 		const currentEditor = editorRef.current;
 		if (!currentEditor) {
 			return;
@@ -222,23 +223,23 @@ export function StudioQueryTab({
 
 	return (
 		<SplitPane
-			split="horizontal"
-			minSize={150}
 			defaultSize={250}
+			minSize={150}
 			resizerClassName="!bg-neutral-300 dark:!bg-neutral-800 border-transparent"
+			split="horizontal"
 		>
 			<div className="w-full flex flex-col bg-white dark:bg-black">
 				<div className="grow overflow-hidden">
 					<StudioSQLEditor
-						ref={editorRef}
-						autoFocus
-						dialect={driver.dialect}
-						onCursorChange={onCursorChange}
-						statementHighlight
 						autoCompleteSchema={autoCompelteSchema}
+						autoFocus
 						className="p-2 w-full h-full"
 						defaultValue={query}
+						dialect={driver.dialect}
 						keybinding={keybinding}
+						onCursorChange={onCursorChange}
+						ref={editorRef}
+						statementHighlight
 					/>
 				</div>
 				<div
@@ -250,9 +251,9 @@ export function StudioQueryTab({
 					</div>
 
 					<Button
-						variant="ghost"
 						className="h-8 text-xs"
 						onClick={handleFormat}
+						variant="ghost"
 					>
 						Format ⌥ F
 					</Button>
@@ -260,27 +261,29 @@ export function StudioQueryTab({
 					<div className="flex overflow-hidden">
 						<Button
 							className="h-8 text-xs rounded-r-none !pr-2"
-							variant="primary"
 							icon={<PlayIcon weight="fill" />}
 							loading={loading}
 							onClick={onRunCurrentClicked}
+							variant="primary"
 						>
 							Run
 						</Button>
 
 						<DropdownMenu>
-							<DropdownMenu.Trigger asChild>
-								<Button
-									disabled={loading}
-									variant="primary"
-									className="h-8 text-xs px-2 rounded-r-md rounded-l-none ml-0"
-								>
-									<CaretDownIcon weight="bold" />
-								</Button>
-							</DropdownMenu.Trigger>
+							<DropdownMenu.Trigger
+								render={
+									<Button
+										className="h-8 text-xs px-2 rounded-r-md rounded-l-none ml-0"
+										disabled={loading}
+										variant="primary"
+									>
+										<CaretDownIcon weight="bold" />
+									</Button>
+								}
+							/>
 							<DropdownMenu.Content
-								side="bottom"
 								align="end"
+								side="bottom"
 								style={{ width: 250 }}
 							>
 								<DropdownMenu.Item onSelect={onRunCurrentClicked}>
@@ -309,9 +312,9 @@ export function StudioQueryTab({
 				{queryTabs && queryTabs.length > 0 && (
 					<StudioWindowTab
 						key="main-window-tab"
-						tabs={queryTabs}
 						onSelectedTabChange={setSelectedResultTabKey}
 						selectedTabKey={selectedResultTabKey}
+						tabs={queryTabs}
 					/>
 				)}
 			</div>

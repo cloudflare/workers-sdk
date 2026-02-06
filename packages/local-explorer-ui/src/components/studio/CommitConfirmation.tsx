@@ -1,8 +1,8 @@
-import CodeBlock from "@cloudflare/component-code-block";
 import { Button } from "@cloudflare/kumo";
 import { PlayIcon, SpinnerIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { ConfirmationModal } from "../../utils/studio/stubs/ui/ConfirmationModal";
+import { CodeBlock } from "./CodeBlock";
 
 type Props = {
 	isOpen: boolean;

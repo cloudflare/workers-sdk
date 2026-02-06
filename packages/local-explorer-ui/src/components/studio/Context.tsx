@@ -40,6 +40,11 @@ export interface StudioContextValue {
 	refreshSavedQueries: () => void;
 
 	resource: StudioResource;
+
+	/**
+	 * Callback for when the active table changes (for URL sync)
+	 */
+	onTableChange?: (tableName: string | null) => void;
 }
 
 const StudioContext = createContext<StudioContextValue | undefined>(undefined);
