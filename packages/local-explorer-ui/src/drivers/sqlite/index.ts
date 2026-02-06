@@ -23,9 +23,9 @@ import type { Icon } from "@phosphor-icons/react";
 
 export class StudioSQLiteDriver extends StudioDriverCommon {
 	override isSupportEditTable = true;
+	override isSupportExplain = true;
 	override isSupportReturningValue = true;
 	override isSupportRowid = true;
-	override isSupportExplain = true;
 
 	escapeId(id: string): string {
 		return `"${id.replace(/"/g, `""`)}"`;
@@ -200,14 +200,6 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		}
 	}
 
-	/**
-	 * Fallback method to retrieve the SQLite table schema when parsing
-	 * the CREATE TABLE script fails
-	 *
-	 * @param schemaName
-	 * @param tableName
-	 * @returns
-	 */
 	protected async getFallbackTableSchema(
 		schemaName: string,
 		tableName: string
@@ -362,9 +354,9 @@ export class StudioSQLiteDriver extends StudioDriverCommon {
 		}
 
 		return {
-			label: "Explain",
+			component: StudioSQLiteExplainTab({ data: result }),
 			icon: StethoscopeIcon,
-			component: <StudioSQLiteExplainTab data={result} />,
+			label: "Explain",
 		};
 	}
 }

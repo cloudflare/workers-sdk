@@ -268,7 +268,7 @@ function assertValidRowMutation(
 			}
 			break;
 
-		case "INSERT":
+		case "INSERT": {
 			const firstPrimaryKey = primaryKey[0];
 			if (
 				autoIncrement &&
@@ -285,6 +285,7 @@ function assertValidRowMutation(
 				);
 			}
 			break;
+		}
 	}
 }
 
