@@ -354,6 +354,10 @@ function normalizeRemoteConfigAsResolvedLocal(
 
 		// Handle wrapper objects that contain binding arrays as nested properties
 		if (key === "queues") {
+			// Only producers are bindings (accessible from Worker code).
+			// Consumers configure message delivery to the Worker and are
+			// managed through the Queues API, not the Worker bindings API,
+			// so they don't appear in the remote config.
 			if (normalizedRemote.queues?.producers && localConfig.queues?.producers) {
 				normalizedRemote.queues.producers = reorderBindings(
 					normalizedRemote.queues.producers,
