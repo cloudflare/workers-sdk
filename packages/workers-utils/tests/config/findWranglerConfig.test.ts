@@ -80,6 +80,73 @@ describe("config findWranglerConfig()", () => {
 			});
 		});
 
+		describe("multiple config file warning", () => {
+			it("should warn when both wrangler.json and wrangler.toml exist", async () => {
+				await seed({
+					"wrangler.json": "{}",
+					"wrangler.toml": "",
+				});
+
+				const warnings: string[] = [];
+				findWranglerConfig(".", { onWarning: (msg) => warnings.push(msg) });
+
+				expect(warnings).toHaveLength(1);
+				expect(warnings[0]).toContain("Multiple configuration files found");
+				expect(warnings[0]).toContain("Using: wrangler.json");
+				expect(warnings[0]).toContain("Ignoring: wrangler.toml");
+			});
+
+			it("should warn when wrangler.json, wrangler.jsonc, and wrangler.toml all exist", async () => {
+				await seed({
+					"wrangler.json": "{}",
+					"wrangler.jsonc": "{}",
+					"wrangler.toml": "",
+				});
+
+				const warnings: string[] = [];
+				findWranglerConfig(".", { onWarning: (msg) => warnings.push(msg) });
+
+				expect(warnings).toHaveLength(1);
+				expect(warnings[0]).toContain("Using: wrangler.json");
+				expect(warnings[0]).toContain(
+					"Ignoring: wrangler.jsonc, wrangler.toml"
+				);
+			});
+
+			it("should not warn when only one config file exists", async () => {
+				await seed({
+					"wrangler.toml": "",
+				});
+
+				const warnings: string[] = [];
+				findWranglerConfig(".", { onWarning: (msg) => warnings.push(msg) });
+
+				expect(warnings).toHaveLength(0);
+			});
+
+			it("should not warn when no onWarning callback is provided", async () => {
+				await seed({
+					"wrangler.json": "{}",
+					"wrangler.toml": "",
+				});
+
+				// Should not throw
+				expect(() => findWranglerConfig(".")).not.toThrow();
+			});
+
+			it("should not warn when config files are in different directories", async () => {
+				await seed({
+					"wrangler.json": "{}",
+					"foo/wrangler.toml": "",
+				});
+
+				const warnings: string[] = [];
+				findWranglerConfig("./foo", { onWarning: (msg) => warnings.push(msg) });
+
+				expect(warnings).toHaveLength(0);
+			});
+		});
+
 		it("should return user config path even if a deploy config is found", async () => {
 			await seed({
 				[`wrangler.toml`]: "DUMMY",
