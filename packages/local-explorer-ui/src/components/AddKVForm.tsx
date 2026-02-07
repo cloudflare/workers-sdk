@@ -54,7 +54,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 
 	return (
 		<form className="flex gap-2 mb-4 items-start" onSubmit={handleSubmit}>
-			<div className="flex flex-col w-[200px] shrink-0">
+			<div className="flex flex-col w-2xs shrink-0">
 				<label className="sr-only" htmlFor="add-key">
 					Key
 				</label>
@@ -75,13 +75,13 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 					<span className="text-danger text-xs mt-1">{keyError}</span>
 				)}
 			</div>
-			<div className="flex flex-col flex-1 min-w-[200px]">
+			<div className="flex flex-col flex-1 min-w-2xs">
 				<label className="sr-only" htmlFor="add-value">
 					Value
 				</label>
 				<textarea
 					id="add-value"
-					className="w-full font-mono bg-bg text-text placeholder:text-text! py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-focus-primary disabled:bg-bg-secondary disabled:text-text-secondary max-h-[200px] resize-none overflow-y-auto [field-sizing:content]"
+					className="w-full font-mono bg-bg text-text placeholder:text-text! py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-focus-primary disabled:bg-bg-secondary disabled:text-text-secondary max-h-2xs resize-none overflow-y-auto [field-sizing:content]"
 					placeholder="Value"
 					value={value}
 					onChange={(e) => setValue(e.target.value)}
