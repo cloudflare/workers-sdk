@@ -25,7 +25,9 @@ export const vectorizeInfoCommand = createCommand({
 	},
 	positionalArgs: ["name"],
 	async handler(args, { config }) {
-		logger.log(`📋 Fetching index info...`);
+		if (!args.json) {
+			logger.log(`📋 Fetching index info...`);
+		}
 		const info = await indexInfo(config, args.name);
 
 		if (args.json) {
