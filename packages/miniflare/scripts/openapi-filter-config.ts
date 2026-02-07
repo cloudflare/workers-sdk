@@ -39,12 +39,6 @@ const config = {
 	ignores: {
 		// Query/path parameters not implemented
 		parameters: [
-			// List keys - prefix filtering not implemented
-			{
-				path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/keys",
-				method: "get",
-				name: "prefix",
-			},
 			// Put value - expiration options not implemented
 			{
 				path: "/accounts/{account_id}/storage/kv/namespaces/{namespace_id}/values/{key_name}",

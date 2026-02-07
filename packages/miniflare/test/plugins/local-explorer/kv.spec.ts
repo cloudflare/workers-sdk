@@ -192,6 +192,60 @@ describe("KV API", () => {
 				errors: [expect.objectContaining({ message: "Namespace not found" })],
 			});
 		});
+
+		test("filters keys by prefix", async ({ expect }) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			await kv.put("users:alice", "value1");
+			await kv.put("users:bob", "value2");
+			await kv.put("posts:first", "value3");
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/keys?prefix=users:`
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: expect.arrayContaining([
+					expect.objectContaining({ name: "users:alice" }),
+					expect.objectContaining({ name: "users:bob" }),
+				]),
+				result_info: expect.objectContaining({ count: 2 }),
+			});
+		});
+
+		test("returns exact prefix match", async ({ expect }) => {
+			const kv = await mf.getKVNamespace("TEST_KV");
+			await kv.put("exact-match", "value1");
+			await kv.put("exact-match-extended", "value2");
+
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/keys?prefix=exact-match`
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: expect.arrayContaining([
+					expect.objectContaining({ name: "exact-match" }),
+					expect.objectContaining({ name: "exact-match-extended" }),
+				]),
+				result_info: expect.objectContaining({ count: 2 }),
+			});
+		});
+
+		test("returns empty result for non-matching prefix", async ({ expect }) => {
+			const response = await mf.dispatchFetch(
+				`${BASE_URL}/storage/kv/namespaces/test-kv-id/keys?prefix=nonexistent-prefix-xyz`
+			);
+
+			expect(response.status).toBe(200);
+			expect(await response.json()).toMatchObject({
+				success: true,
+				result: [],
+				result_info: expect.objectContaining({ count: 0 }),
+			});
+		});
 	});
 
 	describe("GET /storage/kv/namespaces/:namespaceId/values/:keyName", () => {

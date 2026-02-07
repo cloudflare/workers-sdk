@@ -290,6 +290,7 @@ export const zWorkersKvNamespaceListANamespaceSKeysData = z.object({
 	query: z
 		.object({
 			limit: z.number().gte(10).lte(1000).optional().default(1000),
+			prefix: z.string().optional(),
 			cursor: z.string().optional(),
 		})
 		.optional(),

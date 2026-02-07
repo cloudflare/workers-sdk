@@ -12,6 +12,7 @@ import {
 import KVIcon from "../../assets/icons/kv.svg?react";
 import { AddKVForm } from "../../components/AddKVForm";
 import { KVTable } from "../../components/KVTable";
+import { SearchForm } from "../../components/SearchForm";
 import type { KVEntry } from "../../api";
 
 export const Route = createFileRoute("/kv/$namespaceId")({
@@ -59,6 +60,8 @@ function NamespaceView() {
 	const [overwriting, setOverwriting] = useState(false);
 	// Signal to clear AddKVForm after successful overwrite
 	const [clearAddForm, setClearAddForm] = useState(0);
+	// Search prefix filter
+	const [prefix, setPrefix] = useState<string | undefined>(undefined);
 
 	const fetchEntries = useCallback(
 		async (nextCursor?: string) => {
@@ -73,7 +76,7 @@ function NamespaceView() {
 
 				const keysResponse = await workersKvNamespaceListANamespace_SKeys({
 					path: { namespace_id: namespaceId },
-					query: { cursor: nextCursor, limit: 50 },
+					query: { cursor: nextCursor, limit: 50, prefix },
 				});
 				const keys = keysResponse.data?.result ?? [];
 
@@ -113,7 +116,7 @@ function NamespaceView() {
 				setLoadingMore(false);
 			}
 		},
-		[namespaceId]
+		[namespaceId, prefix]
 	);
 
 	useEffect(() => {
@@ -124,12 +127,18 @@ function NamespaceView() {
 		setDeleteTarget(null);
 		setOverwriteConfirm(null);
 		setError(null);
+		setPrefix(undefined);
 	}, [namespaceId]);
 
 	const handleLoadMore = () => {
 		if (cursor && !loadingMore) {
 			void fetchEntries(cursor);
 		}
+	};
+
+	const handleSearch = (searchPrefix: string) => {
+		// Set prefix to undefined if empty string to fetch all keys
+		setPrefix(searchPrefix || undefined);
 	};
 
 	const checkKeyExists = async (key: string): Promise<boolean> => {
@@ -313,20 +322,34 @@ function NamespaceView() {
 				</span>
 			</div>
 
-			<AddKVForm onAdd={handleAdd} clearSignal={clearAddForm} />
-
 			{error && (
 				<div className="text-danger p-4 bg-danger/8 border border-danger/20 rounded-md mb-4">
 					{error}
 				</div>
 			)}
 
+			<SearchForm
+				key={namespaceId}
+				onSearch={handleSearch}
+				disabled={loading}
+			/>
+
+			<hr className="border-border my-4" />
+
+			<AddKVForm onAdd={handleAdd} clearSignal={clearAddForm} />
+
 			{loading ? (
 				<div className="text-center p-12 text-text-secondary">Loading...</div>
 			) : entries.length === 0 ? (
 				<div className="text-center p-12 text-text-secondary">
-					<p>No keys in this namespace.</p>
-					<p>Add an entry using the form above.</p>
+					{prefix ? (
+						<p>{`No keys found matching prefix "${prefix}".`}</p>
+					) : (
+						<>
+							<p>No keys in this namespace.</p>
+							<p>Add an entry using the form above.</p>
+						</>
+					)}
 				</div>
 			) : (
 				<>

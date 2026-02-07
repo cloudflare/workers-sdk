@@ -4,7 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "pnpm generate:api && vite build && prettier --write src/routeTree.gen.ts",
+		"build": "pnpm generate:api && vite build",
 		"check:lint": "eslint src --max-warnings=0",
 		"check:type": "tsc --build",
 		"deploy": "echo 'no deploy'",
