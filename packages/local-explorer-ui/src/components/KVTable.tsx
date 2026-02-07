@@ -161,7 +161,12 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 					return (
 						<tr key={entry.key.name} className="group hover:bg-bg-tertiary">
 							<td
-								className={`py-2 px-3 text-left align-top ${isLast ? "border-b-0 first:rounded-bl-[7px]" : "border-b border-border"}`}
+								className={cn(
+									"py-2 px-3 text-left align-top",
+									isLast
+										? "border-b-0 first:rounded-bl-[7px]"
+										: "border-b border-border"
+								)}
 							>
 								{isEditing && editData ? (
 									<div className="flex flex-col">
@@ -202,7 +207,10 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 								)}
 							</td>
 							<td
-								className={`py-2 px-3 text-left max-w-[400px] font-mono text-[13px] ${isLast ? "border-b-0" : "border-b border-border"}`}
+								className={cn(
+									"py-2 px-3 text-left max-w-[400px] font-mono text-[13px]",
+									isLast ? "border-b-0" : "border-b border-border"
+								)}
 							>
 								{isEditing && editData ? (
 									<div className="flex flex-col gap-2">
@@ -243,7 +251,12 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 								) : (
 									<div className="flex items-center gap-1.5 min-w-0">
 										<span
-											className={`overflow-hidden text-ellipsis whitespace-nowrap min-w-0 ${!entry.value ? "text-text-secondary" : ""}`}
+											className={cn(
+												"overflow-hidden text-ellipsis whitespace-nowrap min-w-0",
+												{
+													"text-text-secondary": !entry.value,
+												}
+											)}
 										>
 											{formatValue(entry.value)}
 										</span>
@@ -252,7 +265,12 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 								)}
 							</td>
 							<td
-								className={`py-2 px-3 whitespace-nowrap text-right ${isLast ? "border-b-0 last:rounded-br-[7px]" : "border-b border-border"}`}
+								className={cn(
+									"py-2 px-3 whitespace-nowrap text-right",
+									isLast
+										? "border-b-0 last:rounded-br-[7px]"
+										: "border-b border-border"
+								)}
 							>
 								{!isEditing && (
 									<ActionMenu

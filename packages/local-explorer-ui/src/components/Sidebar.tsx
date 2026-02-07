@@ -1,4 +1,5 @@
 import { Collapsible } from "@base-ui/react/collapsible";
+import { cn } from "@cloudflare/kumo";
 import { Link } from "@tanstack/react-router";
 import CloudflareLogo from "../assets/icons/cloudflare-logo.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
@@ -65,7 +66,12 @@ export function Sidebar({
 										<Link
 											to="/kv/$namespaceId"
 											params={{ namespaceId: ns.id }}
-											className={`block py-2.5 px-4 text-text no-underline border-b border-border cursor-pointer transition-colors hover:bg-border ${isActive ? "bg-primary/8 text-primary border-l-3 border-l-primary pl-[13px]" : ""}`}
+											className={cn(
+												"block py-2.5 px-4 text-text no-underline border-b border-border cursor-pointer transition-colors hover:bg-border",
+												isActive
+													? "bg-primary/8 text-primary border-l-3 border-l-primary pl-[13px]"
+													: ""
+											)}
 										>
 											{ns.title}
 										</Link>

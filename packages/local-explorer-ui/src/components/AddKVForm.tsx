@@ -1,4 +1,5 @@
 import { Button } from "@base-ui/react/button";
+import { cn } from "@cloudflare/kumo";
 import { useEffect, useState } from "react";
 import { validateKey } from "../utils/kv-validation";
 
@@ -59,7 +60,13 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 				</label>
 				<input
 					id="add-key"
-					className={`w-full font-mono bg-bg text-text placeholder:text-text! py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_rgba(255,72,1,0.15)] disabled:bg-bg-secondary disabled:text-text-secondary ${keyError ? "border-danger focus:shadow-[0_0_0_3px_rgba(251,44,54,0.15)]" : ""}`}
+					className={cn(
+						"w-full font-mono bg-bg text-text placeholder:text-text! py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_rgba(255,72,1,0.15)] disabled:bg-bg-secondary disabled:text-text-secondary",
+						{
+							"border-danger focus:shadow-[0_0_0_3px_rgba(251,44,54,0.15)]":
+								keyError,
+						}
+					)}
 					placeholder="Key"
 					value={key}
 					onChange={handleKeyChange}
