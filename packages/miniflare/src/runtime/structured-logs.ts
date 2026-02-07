@@ -1,9 +1,26 @@
+import { bold, green, grey, red, reset, yellow } from "kleur/colors";
 import { WorkerdStructuredLog } from "../plugins/core";
 import type { Stream } from "node:stream";
 
 export type StructuredLogsHandler = (
 	structuredLog: WorkerdStructuredLog
 ) => void;
+
+/**
+ * Regex pattern to detect Durable Object alarm execution logs from workerd.
+ * Workerd logs alarm executions with a pattern like:
+ * "Durable Object '<className>' alarm starting" or
+ * "Durable Object alarm running for <className>"
+ * This pattern captures the class name and any relevant timing/status info.
+ */
+const ALARM_PATTERN =
+	/Durable Object\s*'?([^']+)'?\s*(alarm|Alarm)\s*(starting|running|completed|failed|scheduled)/i;
+
+/**
+ * Alternative pattern for alarm completion/result logs
+ */
+const ALARM_RESULT_PATTERN =
+	/alarm\s*(handler|execution)?\s*(completed|finished|failed|error|ok|succeeded)/i;
 
 /**
  * Handles the structured logs emitted by a given stream
@@ -89,7 +106,76 @@ const messageClassifiers = {
 	isAccessViolation(chunk: string) {
 		return chunk.includes("access violation;");
 	},
+	// Is this chunk a Durable Object alarm log?
+	isAlarmLog(chunk: string) {
+		return ALARM_PATTERN.test(chunk) || ALARM_RESULT_PATTERN.test(chunk);
+	},
 };
+
+/**
+ * Formats a Durable Object alarm log message for better readability.
+ * Takes a raw workerd alarm log and formats it similar to request logs.
+ *
+ * @param message The raw alarm log message from workerd
+ * @returns A formatted, colorized alarm log message, or null if not an alarm log
+ */
+export function formatAlarmLog(message: string): string | null {
+	const alarmMatch = ALARM_PATTERN.exec(message);
+	if (alarmMatch) {
+		const className = alarmMatch[1];
+		const status = alarmMatch[3].toLowerCase();
+
+		let statusColor: typeof green;
+		let statusText: string;
+		switch (status) {
+			case "starting":
+			case "running":
+			case "scheduled":
+				statusColor = yellow;
+				statusText = status.charAt(0).toUpperCase() + status.slice(1);
+				break;
+			case "completed":
+				statusColor = green;
+				statusText = "Ok";
+				break;
+			case "failed":
+				statusColor = red;
+				statusText = "Failed";
+				break;
+			default:
+				statusColor = grey;
+				statusText = status;
+		}
+
+		return reset(
+			[bold("DO Alarm"), ` ${className} - `, statusColor(statusText)].join("")
+		);
+	}
+
+	const resultMatch = ALARM_RESULT_PATTERN.exec(message);
+	if (resultMatch) {
+		const result = resultMatch[2].toLowerCase();
+		let statusColor: typeof green;
+		let statusText: string;
+
+		if (
+			result === "completed" ||
+			result === "finished" ||
+			result === "ok" ||
+			result === "succeeded"
+		) {
+			statusColor = green;
+			statusText = "Ok";
+		} else {
+			statusColor = red;
+			statusText = "Failed";
+		}
+
+		return reset([bold("DO Alarm"), " - ", statusColor(statusText)].join(""));
+	}
+
+	return null;
+}
 
 /**
  * Wraps a structuredLogsHandler function so that it then performs extra filtering and
@@ -136,6 +222,18 @@ function wrapStructuredLogsHandler(
 				});
 			}
 
+			// Check for Durable Object alarm logs and format them nicely
+			if (messageClassifiers.isAlarmLog(structuredLog.message)) {
+				const formattedMessage = formatAlarmLog(structuredLog.message);
+				if (formattedMessage) {
+					return structuredLogsHandler({
+						timestamp: structuredLog.timestamp,
+						level: "info",
+						message: formattedMessage,
+					});
+				}
+			}
+
 			// IGNORABLE:
 			// anything else not handled above is considered ignorable
 			return;
@@ -151,6 +249,18 @@ function wrapStructuredLogsHandler(
 			// 	- https://github.com/cloudflare/workerd/blob/d170f4d9b/src/workerd/jsg/setup.c%2B%2B#L566
 			//  - https://github.com/cloudflare/workerd/blob/d170f4d9b/src/workerd/jsg/setup.c%2B%2B#L572
 			return;
+		}
+
+		// Also check for alarm logs in non-internal messages
+		if (messageClassifiers.isAlarmLog(structuredLog.message)) {
+			const formattedMessage = formatAlarmLog(structuredLog.message);
+			if (formattedMessage) {
+				return structuredLogsHandler({
+					timestamp: structuredLog.timestamp,
+					level: "info",
+					message: formattedMessage,
+				});
+			}
 		}
 
 		return structuredLogsHandler(structuredLog);
