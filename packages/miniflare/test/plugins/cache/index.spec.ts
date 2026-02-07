@@ -527,3 +527,65 @@ test("default and named caches are disjoint", async () => {
 	expect(deleted1).toBe(true);
 	expect(deleted2).toBe(true);
 });
+
+test("purgeCache clears all default cache entries", async () => {
+	const cache = ctx.caches.default;
+	const headers = { "Cache-Control": "max-age=3600" };
+
+	// Add multiple items to cache with unique keys for this test
+	await cache.put(
+		"http://localhost/purge-test-key1",
+		new Response("body1", { headers })
+	);
+	await cache.put(
+		"http://localhost/purge-test-key2",
+		new Response("body2", { headers })
+	);
+	await cache.put(
+		"http://localhost/purge-test-key3",
+		new Response("body3", { headers })
+	);
+
+	// Verify items are cached
+	expect(await cache.match("http://localhost/purge-test-key1")).toBeDefined();
+	expect(await cache.match("http://localhost/purge-test-key2")).toBeDefined();
+	expect(await cache.match("http://localhost/purge-test-key3")).toBeDefined();
+
+	// Purge cache - there may be entries from previous tests as well
+	const result = await ctx.mf.purgeCache();
+	expect(result).toBeGreaterThanOrEqual(3);
+
+	// Verify our test entries are gone
+	expect(await cache.match("http://localhost/purge-test-key1")).toBeUndefined();
+	expect(await cache.match("http://localhost/purge-test-key2")).toBeUndefined();
+	expect(await cache.match("http://localhost/purge-test-key3")).toBeUndefined();
+});
+
+test("purgeCache clears specific named cache", async () => {
+	const defaultCache = ctx.caches.default;
+	const namedCache = await ctx.caches.open("my-cache");
+	const headers = { "Cache-Control": "max-age=3600" };
+
+	await defaultCache.put(
+		"http://localhost/default",
+		new Response("default", { headers })
+	);
+	await namedCache.put(
+		"http://localhost/named",
+		new Response("named", { headers })
+	);
+
+	// Purge only the named cache
+	await ctx.mf.purgeCache("my-cache");
+
+	// Default cache should be intact
+	expect(await defaultCache.match("http://localhost/default")).toBeDefined();
+	// Named cache should be cleared
+	expect(await namedCache.match("http://localhost/named")).toBeUndefined();
+});
+
+test("purgeCache returns 0 when cache is already empty", async () => {
+	// Use a unique named cache that hasn't been used by other tests
+	const result = await ctx.mf.purgeCache("empty-test-cache");
+	expect(result).toBe(0);
+});
