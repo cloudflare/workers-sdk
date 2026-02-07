@@ -198,7 +198,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 										)}
 									</div>
 								) : (
-									<div className="flex items-center gap-1.5">
+									<div className="group/cell flex items-center gap-1.5">
 										<code className="text-primary font-medium">
 											{entry.key.name}
 										</code>
@@ -208,7 +208,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 							</td>
 							<td
 								className={cn(
-									"py-2 px-3 text-left max-w-[400px] font-mono text-[13px]",
+									"py-2 px-3 text-left max-w-[400px] font-mono text-[13px] group/cell",
 									isLast ? "border-b-0" : "border-b border-border"
 								)}
 							>

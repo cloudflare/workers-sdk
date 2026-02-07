@@ -19,7 +19,7 @@ export function CopyButton({ text }: CopyButtonProps) {
 	return (
 		<Button
 			className={cn(
-				"flex items-center justify-center w-6 h-6 p-0 border-none rounded bg-transparent text-text-secondary cursor-pointer opacity-0 transition-[opacity,background-color,color] shrink-0 hover:bg-border hover:text-text group-hover:opacity-100",
+				"flex items-center justify-center w-6 h-6 p-0 border-none rounded bg-transparent text-text-secondary cursor-pointer opacity-0 transition-[opacity,background-color,color] shrink-0 hover:bg-border hover:text-text group-hover/cell:opacity-100",
 				{
 					"opacity-100 text-success": copied,
 				}
