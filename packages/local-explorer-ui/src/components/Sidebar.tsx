@@ -28,7 +28,10 @@ export function Sidebar({
 }: SidebarProps) {
 	return (
 		<aside className="w-sidebar bg-bg-secondary border-r border-border flex flex-col">
-			<div className="flex items-center gap-2.5 p-4 border-b border-border min-h-[67px] box-border">
+			<a
+				className="flex items-center gap-2.5 p-4 border-b border-border min-h-[67px] box-border"
+				href="/"
+			>
 				<CloudflareLogo className="shrink-0 text-primary" />
 				<div className="flex flex-col gap-px">
 					<span className="text-sm font-semibold text-text leading-tight">
@@ -38,7 +41,8 @@ export function Sidebar({
 						Cloudflare Dev Tools
 					</span>
 				</div>
-			</div>
+			</a>
+
 			<Collapsible.Root defaultOpen>
 				<Collapsible.Trigger className="group flex items-center gap-2 w-full py-3 px-4 border-0 border-b border-border bg-transparent font-semibold text-[11px] uppercase tracking-wide text-text-secondary cursor-pointer transition-colors hover:bg-border">
 					<ChevronIcon className="transition-transform duration-200 group-data-[panel-open]:rotate-90" />
