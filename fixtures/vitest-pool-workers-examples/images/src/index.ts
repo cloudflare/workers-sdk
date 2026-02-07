@@ -43,10 +43,12 @@ export default {
 				const deleted = await env.IMAGES.delete(imageId);
 				return Response.json({ success: true, deleted });
 			}
-			case "/list": {
-				const list = await env.IMAGES.list({ limit: 10 });
-				return Response.json({ success: true, list });
-			}
+		case "/list": {
+			const limit = url.searchParams.get("limit") ? parseInt(url.searchParams.get("limit")!) : 10;
+			const cursor = url.searchParams.get("cursor") || undefined;
+			const list = await env.IMAGES.list({ limit, cursor });
+			return Response.json({ success: true, list });
+		}
 			default:
 				return Response.json({ error: "unknown path" }, { status: 404 });
 		}

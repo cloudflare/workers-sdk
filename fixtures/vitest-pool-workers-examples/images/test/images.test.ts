@@ -1,5 +1,5 @@
-import { SELF } from "cloudflare:test";
-import { expect, it, describe } from "vitest";
+import { SELF, env } from "cloudflare:test";
+import { afterEach, describe, it } from "vitest";
 
 const TINY_PNG = new Uint8Array([
 	137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 18, 0,
@@ -89,7 +89,14 @@ const TINY_PNG = new Uint8Array([
 ]);
 
 describe("Images binding", () => {
-	it("can upload an image", async () => {
+	afterEach(async () => {
+		const list = await env.IMAGES.list();
+		for (const image of list.images) {
+			await env.IMAGES.delete(image.id);
+		}
+	});
+
+	it("can upload an image", async ({ expect }) => {
 		const imageData = new Uint8Array([0xff, 0xd8, 0xff]); // Minimal JPEG header
 		const resp = await SELF.fetch("https://example.com/upload?id=test-123", {
 			method: "POST",
@@ -101,7 +108,7 @@ describe("Images binding", () => {
 		expect(result.metadata.id).toBe("test-123");
 	});
 
-	it("can upload a base64-encoded image", async () => {
+	it("can upload a base64-encoded image", async ({ expect }) => {
 		const imageData = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]); // Minimal JPEG header
 		const base64Data = btoa(String.fromCharCode(...imageData));
 
@@ -119,7 +126,7 @@ describe("Images binding", () => {
 		expect(retrievedData).toEqual(imageData);
 	});
 
-	it("can get image metadata", async () => {
+	it("can get image metadata", async ({ expect }) => {
 		// First upload
 		const imageData = new Uint8Array([0xff, 0xd8, 0xff]);
 		await SELF.fetch("https://example.com/upload?id=get-test", {
@@ -134,7 +141,7 @@ describe("Images binding", () => {
 		expect(result.metadata.id).toBe("get-test");
 	});
 
-	it("can get image data", async () => {
+	it("can get image data", async ({ expect }) => {
 		// First upload
 		const imageData = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
 		await SELF.fetch("https://example.com/upload?id=blob-test", {
@@ -150,7 +157,7 @@ describe("Images binding", () => {
 		expect(data.length).toBe(4);
 	});
 
-	it("can update image metadata", async () => {
+	it("can update image metadata", async ({ expect }) => {
 		// First upload
 		const imageData = new Uint8Array([0xff, 0xd8, 0xff]);
 		await SELF.fetch("https://example.com/upload?id=update-test", {
@@ -167,8 +174,7 @@ describe("Images binding", () => {
 		expect(result.metadata.requireSignedURLs).toBe(true);
 	});
 
-	it("can delete an image", async () => {
-		// First upload
+	it("can delete an image", async ({ expect }) => {
 		const imageData = new Uint8Array([0xff, 0xd8, 0xff]);
 		await SELF.fetch("https://example.com/upload?id=delete-test", {
 			method: "POST",
@@ -189,7 +195,7 @@ describe("Images binding", () => {
 		expect(getResult.metadata).toBe(null);
 	});
 
-	it("can list images", async () => {
+	it("can list images", async ({ expect }) => {
 		const resp = await SELF.fetch("https://example.com/list");
 		const result = (await resp.json()) as { success: boolean; list: { images: unknown[]; listComplete: boolean } };
 		expect(result.success).toBe(true);
@@ -197,20 +203,69 @@ describe("Images binding", () => {
 		expect(Array.isArray(result.list.images)).toBe(true);
 	});
 
-	it("returns null for non-existent image metadata", async () => {
+	it("can paginate through images with cursor", async ({ expect }) => {
+		const imageIds = ["img1", "img2", "img3", "img4", "img5"];
+		const imageData = new Uint8Array([0xff, 0xd8, 0xff]);
+
+		for (const id of imageIds) {
+			await SELF.fetch(`https://example.com/upload?id=${id}`, {
+				method: "POST",
+				body: imageData,
+			});
+		}
+
+		const page1Resp = await SELF.fetch("https://example.com/list?limit=2");
+		const page1 = (await page1Resp.json()) as {
+			success: boolean;
+			list: { images: { id: string }[]; cursor?: string; listComplete: boolean }
+		};
+		expect(page1.success).toBe(true);
+		expect(page1.list.images.length).toBe(2);
+		expect(page1.list.cursor).toBeDefined();
+		expect(page1.list.listComplete).toBe(false);
+
+		const page2Resp = await SELF.fetch(`https://example.com/list?limit=2&cursor=${page1.list.cursor}`);
+		const page2 = (await page2Resp.json()) as {
+			success: boolean;
+			list: { images: { id: string }[]; cursor?: string; listComplete: boolean }
+		};
+		expect(page2.success).toBe(true);
+		expect(page2.list.images.length).toBe(2);
+		expect(page2.list.cursor).toBeDefined();
+		expect(page2.list.listComplete).toBe(false);
+
+		const page3Resp = await SELF.fetch(`https://example.com/list?limit=2&cursor=${page2.list.cursor}`);
+		const page3 = (await page3Resp.json()) as {
+			success: boolean;
+			list: { images: { id: string }[]; cursor?: string; listComplete: boolean }
+		};
+		expect(page3.success).toBe(true);
+		expect(page3.list.images.length).toBe(1);
+		expect(page3.list.cursor).toBeUndefined();
+		expect(page3.list.listComplete).toBe(true);
+
+		const allFetchedIds = [
+			...page1.list.images.map(img => img.id),
+			...page2.list.images.map(img => img.id),
+			...page3.list.images.map(img => img.id),
+		];
+		expect(new Set(allFetchedIds).size).toBe(5);
+	});
+
+	it("returns null for non-existent image metadata", async ({ expect }) => {
 		const resp = await SELF.fetch("https://example.com/get?id=does-not-exist");
 		const result = (await resp.json()) as { metadata: null };
 		expect(result.metadata).toBe(null);
 	});
 
-	it("returns error for non-existent image blob", async () => {
+	it("returns error for non-existent image blob", async ({ expect }) => {
 		const resp = await SELF.fetch("https://example.com/getImage?id=does-not-exist");
 		const result = (await resp.json()) as { success: boolean; error: string };
 		expect(result.success).toBe(false);
 		expect(result.error).toBe("not found");
 	});
 
-	it("can return image info", async () => {
+	it("can return image info", async ({ expect }) => {
 		const resp = await SELF.fetch("https://example.com/info", {
 			method: "POST",
 			body: new Blob([TINY_PNG]).stream(),

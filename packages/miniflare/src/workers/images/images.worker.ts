@@ -121,13 +121,22 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 		if (options?.creator) {
 			images = images.filter((i) => i.creator === options.creator);
 		}
-
+		// Sort by uploaded date, then by ID as a tie-breaker for deterministic ordering
+		// This matches production behavior while ensuring stable sort order in tests
 		images.sort((a, b) => {
 			const dateA = a.uploaded ?? "";
 			const dateB = b.uploaded ?? "";
-			return options?.sortOrder === "asc"
-				? dateA.localeCompare(dateB)
-				: dateB.localeCompare(dateA);
+			const dateCompare = options?.sortOrder === "desc"
+				? dateB.localeCompare(dateA)
+				: dateA.localeCompare(dateB);
+
+			// Use ID as tie-breaker when dates are equal
+			if (dateCompare === 0) {
+				return options?.sortOrder === "desc"
+					? b.id.localeCompare(a.id)
+					: a.id.localeCompare(b.id);
+			}
+			return dateCompare;
 		});
 
 		// Handle pagination
@@ -136,8 +145,16 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 
 		if (options?.cursor) {
 			try {
-				const decodedId = atob(options.cursor);
-				const cursorIndex = images.findIndex((i) => i.id === decodedId);
+				// Decode cursor: base64(timestamp_ms:id)
+				// Format matches production's (created_at, id) tuple, encoded compactly
+				const decoded = atob(options.cursor);
+				const [timestampStr, id] = decoded.split(":", 2);
+				const timestamp = parseInt(timestampStr, 10);
+				const uploadedDate = new Date(timestamp).toISOString();
+
+				const cursorIndex = images.findIndex(
+					(i) => i.uploaded === uploadedDate && i.id === id
+				);
 				if (cursorIndex >= 0) {
 					startIndex = cursorIndex + 1;
 				}
@@ -148,11 +165,16 @@ export default class ImagesService extends WorkerEntrypoint<Env> {
 
 		const paginatedImages = images.slice(startIndex, startIndex + limit);
 		const hasMore = startIndex + limit < images.length;
-		const lastImageId = paginatedImages[paginatedImages.length - 1]?.id;
+		const lastImage = paginatedImages[paginatedImages.length - 1];
 
 		return {
 			images: paginatedImages,
-			cursor: hasMore && lastImageId ? btoa(lastImageId) : undefined,
+			cursor:
+				hasMore && lastImage
+					? btoa(
+							`${new Date(lastImage.uploaded ?? 0).getTime()}:${lastImage.id}`
+						)
+					: undefined,
 			listComplete: !hasMore,
 		};
 	}
