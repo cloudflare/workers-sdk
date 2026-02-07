@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { describe, it } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { getBasePath, readableRelative } from "../paths";
 
 describe("paths", () => {
@@ -15,6 +15,52 @@ describe("paths", () => {
 				global as unknown as { __RELATIVE_PACKAGE_PATH__: string }
 			).__RELATIVE_PACKAGE_PATH__ = "/foo/bar";
 			expect(getBasePath()).toEqual(path.resolve("/foo/bar"));
+		});
+	});
+
+	describe("getWranglerHiddenDirPath()", () => {
+		const originalEnv = process.env.WRANGLER_HOME;
+
+		beforeEach(() => {
+			delete process.env.WRANGLER_HOME;
+			// Clear the module cache to reset the env variable getter
+			vi.resetModules();
+		});
+
+		afterEach(() => {
+			if (originalEnv !== undefined) {
+				process.env.WRANGLER_HOME = originalEnv;
+			} else {
+				delete process.env.WRANGLER_HOME;
+			}
+		});
+
+		it("should return default .wrangler path when no env var set", async ({
+			expect,
+		}) => {
+			const { getWranglerHiddenDirPath } = await import("../paths");
+			expect(getWranglerHiddenDirPath("/project")).toBe(
+				path.join("/project", ".wrangler")
+			);
+		});
+
+		it("should respect WRANGLER_HOME environment variable", async ({
+			expect,
+		}) => {
+			process.env.WRANGLER_HOME = "/custom/wrangler";
+			const { getWranglerHiddenDirPath } = await import("../paths");
+			expect(getWranglerHiddenDirPath("/project")).toBe(
+				path.resolve("/custom/wrangler")
+			);
+		});
+
+		it("should use current working directory when projectRoot is undefined and no env var", async ({
+			expect,
+		}) => {
+			const { getWranglerHiddenDirPath } = await import("../paths");
+			expect(getWranglerHiddenDirPath(undefined)).toBe(
+				path.join(process.cwd(), ".wrangler")
+			);
 		});
 	});
 });

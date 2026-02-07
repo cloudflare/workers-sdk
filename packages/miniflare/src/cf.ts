@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { existsSync } from "node:fs";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { dim } from "kleur/colors";
@@ -7,7 +8,35 @@ import { Plugins } from "./plugins";
 import { Log, OptionalZodTypeOf } from "./shared";
 import type { IncomingRequestCfProperties } from "@cloudflare/workers-types/experimental";
 
-const defaultCfPath = path.resolve("node_modules", ".mf", "cf.json");
+/**
+ * Gets the default path for the cf.json cache file.
+ * Respects WRANGLER_CACHE_DIR and WRANGLER_HOME environment variables,
+ * and automatically detects Yarn PnP projects.
+ */
+function getDefaultCfPath(): string {
+	// Check for WRANGLER_CACHE_DIR environment variable
+	const wranglerCacheDir = process.env.WRANGLER_CACHE_DIR;
+	if (wranglerCacheDir) {
+		return path.resolve(wranglerCacheDir, "cf.json");
+	}
+
+	// Check for WRANGLER_HOME environment variable
+	const wranglerHome = process.env.WRANGLER_HOME;
+	if (wranglerHome) {
+		return path.resolve(wranglerHome, "cache", "cf.json");
+	}
+
+	// Check for Yarn PnP
+	const pnpExists = existsSync(".pnp.cjs") || existsSync(".pnp.js");
+	if (pnpExists) {
+		return path.resolve(".wrangler", "cache", "cf.json");
+	}
+
+	// Default to node_modules/.mf
+	return path.resolve("node_modules", ".mf", "cf.json");
+}
+
+const defaultCfPath = getDefaultCfPath();
 const defaultCfFetchEndpoint = "https://workers.cloudflare.com/cf.json";
 
 // Environment variable names for controlling cf fetch behavior
