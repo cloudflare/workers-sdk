@@ -19,7 +19,7 @@ import { realishPrintLogs } from "../../tail/printing";
 import { getAccessToken } from "../../user/access";
 import { RuntimeController } from "./BaseController";
 import { castErrorCause } from "./events";
-import { convertBindingsToCfWorkerInitBindings, unwrapHook } from "./utils";
+import { unwrapHook } from "./utils";
 import type {
 	CfAccount,
 	CfPreviewSession,
@@ -257,10 +257,6 @@ export class RemoteRuntimeController extends RuntimeController {
 		routes: Route[] | undefined,
 		bundleId: number
 	) {
-		const { bindings } = await convertBindingsToCfWorkerInitBindings(
-			config.bindings
-		);
-
 		// If we received a new `bundleComplete` event before we were able to
 		// dispatch a `reloadComplete` for this bundle, ignore this bundle.
 		if (bundleId !== this.#currentBundleId) {
@@ -286,8 +282,7 @@ export class RemoteRuntimeController extends RuntimeController {
 					}
 				: undefined,
 			format: bundle.entry.format,
-			// TODO: Remove this passthrough
-			bindings: bindings,
+			bindings: config.bindings,
 			compatibilityDate: config.compatibilityDate,
 			compatibilityFlags: config.compatibilityFlags,
 			routes,
