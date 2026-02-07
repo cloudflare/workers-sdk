@@ -435,6 +435,98 @@ describe("kv", () => {
 				);
 				expect(requests.count).toEqual(1);
 			});
+
+			function mockListRequestForDelete(namespaces: KVNamespaceInfo[]) {
+				const requests = { count: 0 };
+				msw.use(
+					http.get(
+						"*/accounts/:accountId/storage/kv/namespaces",
+						async ({ request, params }) => {
+							const url = new URL(request.url);
+							requests.count++;
+							expect(params.accountId).toEqual("some-account-id");
+
+							const pageSize = Number(url.searchParams.get("per_page"));
+							const page = Number(url.searchParams.get("page") ?? 1);
+							return HttpResponse.json(
+								createFetchResult(
+									namespaces.slice((page - 1) * pageSize, page * pageSize)
+								)
+							);
+						}
+					)
+				);
+				return requests;
+			}
+
+			it("should delete a namespace specified by name", async () => {
+				const listRequests = mockListRequestForDelete([
+					{ id: "some-namespace-id", title: "my-namespace" },
+					{ id: "other-namespace-id", title: "other-namespace" },
+				]);
+				const deleteRequests = mockDeleteRequest("some-namespace-id");
+
+				mockConfirm({
+					text: "Ok to proceed?",
+					result: true,
+				});
+
+				await runWrangler("kv namespace delete my-namespace");
+
+				expect(listRequests.count).toEqual(1);
+				expect(deleteRequests.count).toEqual(1);
+				expect(std.out).toContain("my-namespace (some-namespace-id)");
+				expect(std.out).toContain("Deleted KV namespace some-namespace-id");
+			});
+
+			it("should error if namespace name is not found", async () => {
+				mockListRequestForDelete([
+					{ id: "other-namespace-id", title: "other-namespace" },
+				]);
+
+				await expect(
+					runWrangler("kv namespace delete nonexistent-namespace")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: No namespace found with the name "nonexistent-namespace". Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".]`
+				);
+			});
+
+			it("should error if both namespace name and --namespace-id are provided", async () => {
+				await expect(
+					runWrangler("kv namespace delete my-namespace --namespace-id some-id")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Cannot specify multiple of: namespace name, --binding, or --namespace-id. Use only one.]`
+				);
+			});
+
+			it("should error if both namespace name and --binding are provided", async () => {
+				writeWranglerConfig(wranglerKVConfig);
+				await expect(
+					runWrangler("kv namespace delete my-namespace --binding someBinding")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Cannot specify multiple of: namespace name, --binding, or --namespace-id. Use only one.]`
+				);
+			});
+
+			it("should delete namespace by name with --skip-confirmation flag", async () => {
+				const listRequests = mockListRequestForDelete([
+					{ id: "some-namespace-id", title: "my-namespace" },
+				]);
+				const deleteRequests = mockDeleteRequest("some-namespace-id");
+
+				await runWrangler("kv namespace delete my-namespace -y");
+
+				expect(listRequests.count).toEqual(1);
+				expect(deleteRequests.count).toEqual(1);
+			});
+
+			it("should error if no namespace identifier is provided", async () => {
+				await expect(
+					runWrangler("kv namespace delete")
+				).rejects.toThrowErrorMatchingInlineSnapshot(
+					`[Error: Must specify one of: namespace name (as positional argument), --binding, or --namespace-id]`
+				);
+			});
 		});
 
 		describe("rename", () => {

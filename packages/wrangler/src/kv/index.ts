@@ -191,7 +191,12 @@ export const kvNamespaceDeleteCommand = createCommand({
 		status: "stable",
 		owner: "Product: KV",
 	},
+	positionalArgs: ["namespace"],
 	args: {
+		namespace: {
+			type: "string",
+			describe: "The name (title) of the namespace to delete",
+		},
 		binding: {
 			type: "string",
 			requiresArg: true,
@@ -215,24 +220,61 @@ export const kvNamespaceDeleteCommand = createCommand({
 	},
 
 	validateArgs(args) {
-		demandOneOfOption("binding", "namespace-id")(args);
+		// Check that exactly one of namespace, binding, or namespace-id is provided
+		const providedOptions = [
+			args.namespace,
+			args.binding,
+			args.namespaceId,
+		].filter(Boolean);
+
+		if (providedOptions.length === 0) {
+			throw new CommandLineArgsError(
+				"Must specify one of: namespace name (as positional argument), --binding, or --namespace-id"
+			);
+		}
+
+		if (providedOptions.length > 1) {
+			throw new CommandLineArgsError(
+				"Cannot specify multiple of: namespace name, --binding, or --namespace-id. Use only one."
+			);
+		}
 	},
 
 	async handler(args) {
 		const config = readConfig(args);
 		printResourceLocation("remote");
-		let id;
-		try {
-			id = await getKVNamespaceId(args, config, false);
-		} catch (e) {
-			throw new CommandLineArgsError(
-				"Not able to delete namespace.\n" + ((e as Error).message ?? e)
-			);
+		const accountId = await requireAuth(config);
+
+		let id: string;
+		let displayName: string;
+
+		// If namespace name is provided, look up the ID
+		if (args.namespace) {
+			const namespaces = await listKVNamespaces(config, accountId);
+			const namespace = namespaces.find((ns) => ns.title === args.namespace);
+
+			if (!namespace) {
+				throw new UserError(
+					`No namespace found with the name "${args.namespace}". ` +
+						`Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".`
+				);
+			}
+			id = namespace.id;
+			displayName = `${args.namespace} (${id})`;
+		} else {
+			// Existing logic for --binding or --namespace-id
+			try {
+				id = await getKVNamespaceId(args, config, false);
+			} catch (e) {
+				throw new CommandLineArgsError(
+					"Not able to delete namespace.\n" + ((e as Error).message ?? e)
+				);
+			}
+			displayName = args.binding ? `${args.binding} (${id})` : id;
 		}
 
-		const accountId = await requireAuth(config);
 		logger.log(
-			`About to delete ${chalk.bold("remote")} KV namespace '${args.binding ? args.binding + ` (${id})` : args.namespaceId}'.\n` +
+			`About to delete ${chalk.bold("remote")} KV namespace '${displayName}'.\n` +
 				`This action is irreversible and will permanently delete all data in the KV namespace.\n`
 		);
 		if (!args.skipConfirmation) {
