@@ -3,7 +3,12 @@ import { runCommand } from "helpers/command";
 import { hasSparrowSourceKey } from "helpers/sparrow";
 import { beforeEach, describe, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
-import { isLoggedIn, listAccounts, wranglerLogin } from "../accounts";
+import {
+	chooseAccount,
+	isLoggedIn,
+	listAccounts,
+	wranglerLogin,
+} from "../accounts";
 
 const loggedInWhoamiOutput = `
 -------------------------------------------------------
@@ -45,6 +50,21 @@ describe("wrangler account helpers", () => {
 		vi.mocked(hasSparrowSourceKey).mockReturnValue(true);
 
 		spinner = mockSpinner();
+	});
+
+	describe("chooseAccount", () => {
+		test("uses CLOUDFLARE_ACCOUNT_ID from environment if set", async ({
+			expect,
+		}) => {
+			vi.stubEnv("CLOUDFLARE_ACCOUNT_ID", "env-account-id-123");
+
+			const testCtx = createTestContext();
+			await chooseAccount(testCtx);
+
+			expect(testCtx.account).toEqual({ id: "env-account-id-123", name: "" });
+			// Should not call wrangler whoami when env var is set
+			expect(runCommand).not.toHaveBeenCalled();
+		});
 	});
 
 	describe("wranglerLogin", async () => {
