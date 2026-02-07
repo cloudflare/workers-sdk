@@ -1,5 +1,6 @@
 import { AlertDialog } from "@base-ui/react/alert-dialog";
 import { Button } from "@base-ui/react/button";
+import { CaretRightIcon } from "@phosphor-icons/react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -302,13 +303,13 @@ function NamespaceView() {
 
 	return (
 		<div>
-			<div className="flex items-center gap-2 py-4 px-6 -mx-6 mb-6 min-h-[67px] box-border bg-bg-secondary border-b border-border text-sm">
-				<span className="flex items-center gap-1.5 text-text-secondary">
+			<div className="flex items-center gap-2 py-4 px-6 -mx-6 mb-6 min-h-[67px] box-border bg-bg-secondary border-b border-border text-sm text-text-secondary">
+				<span className="flex items-center gap-1.5">
 					<KVIcon />
 					KV
 				</span>
-				<span className="text-text-secondary text-xs">&gt;</span>
-				<span className="flex items-center gap-1.5 text-text font-medium">
+				<CaretRightIcon className="w-4 h-4" />
+				<span className="flex items-center gap-1.5 font-medium">
 					{namespaceId}
 				</span>
 			</div>
@@ -324,9 +325,11 @@ function NamespaceView() {
 			{loading ? (
 				<div className="text-center p-12 text-text-secondary">Loading...</div>
 			) : entries.length === 0 ? (
-				<div className="text-center p-12 text-text-secondary">
-					<p>No keys in this namespace.</p>
-					<p>Add an entry using the form above.</p>
+				<div className="text-center p-12 text-text-secondary space-y-2 flex flex-col items-center justify-center">
+					<h2 className="text-2xl font-medium">No keys in this namespace</h2>
+					<p className="text-sm font-light">
+						Add an entry using the form above.
+					</p>
 				</div>
 			) : (
 				<>
