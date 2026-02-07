@@ -146,6 +146,7 @@ export const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	vpc_service: "VPC Service",
 	media: "Media",
 	assets: "Assets",
+	inherit: "Inherited",
 } as const;
 
 /**

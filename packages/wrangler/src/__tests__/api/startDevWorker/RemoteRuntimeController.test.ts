@@ -24,6 +24,7 @@ import type {
 	PreviewTokenExpiredEvent,
 	StartDevWorkerOptions,
 } from "../../../api";
+import type { StartDevWorkerInput } from "../../../api/startDevWorker/types";
 import type { CfWorkerInit } from "@cloudflare/workers-utils";
 
 // Mock the API modules
@@ -147,7 +148,7 @@ describe("RemoteRuntimeController", () => {
 				content: "export default { fetch() { return new Response('hello'); } }",
 			},
 			modules: [],
-			bindings: {} as CfWorkerInit["bindings"],
+			bindings: {} as StartDevWorkerInput["bindings"],
 			migrations: undefined,
 			compatibility_date: "2025-11-11",
 			compatibility_flags: [],
