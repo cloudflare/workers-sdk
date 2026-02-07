@@ -12,7 +12,7 @@ import type { Project } from "./../../pages/types";
 
 describe("pages project list", () => {
 	runInTempDir();
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 	mockAccountId();
 	mockApiToken();
 
@@ -90,6 +90,68 @@ describe("pages project list", () => {
 		const requests = mockProjectListRequest([], "new-account-id");
 		await runWrangler("pages project list");
 		expect(requests.count).toBe(1);
+	});
+
+	it("should return JSON output when --json flag is provided", async () => {
+		const projects: Project[] = [
+			{
+				name: "dogs",
+				subdomain: "docs.pages.dev",
+				domains: ["dogs.pages.dev"],
+				source: {
+					type: "github",
+				},
+				latest_deployment: {
+					modified_on: "2021-11-17T14:52:26.133835Z",
+				},
+				created_on: "2021-11-17T14:52:26.133835Z",
+				production_branch: "main",
+			},
+			{
+				name: "cats",
+				subdomain: "cats.pages.dev",
+				domains: ["cats.pages.dev", "kitten.com"],
+				latest_deployment: {
+					modified_on: "2021-11-17T14:52:26.133835Z",
+				},
+				created_on: "2021-11-17T14:52:26.133835Z",
+				production_branch: "main",
+			},
+		];
+
+		const requests = mockProjectListRequest(projects);
+		await runWrangler("pages project list --json");
+
+		expect(requests.count).toBe(1);
+
+		// Verify the output is valid JSON
+		const output = JSON.parse(std.out);
+		expect(output).toHaveLength(2);
+		expect(output[0]["Project Name"]).toBe("dogs");
+		expect(output[0]["Project Domains"]).toBe("dogs.pages.dev");
+		expect(output[0]["Git Provider"]).toBe("Yes");
+		expect(output[1]["Project Name"]).toBe("cats");
+		expect(output[1]["Project Domains"]).toBe("cats.pages.dev, kitten.com");
+		expect(output[1]["Git Provider"]).toBe("No");
+	});
+
+	it("should not print banner when --json flag is provided", async () => {
+		const projects: Project[] = [
+			{
+				name: "test-project",
+				subdomain: "test.pages.dev",
+				domains: ["test.pages.dev"],
+				created_on: "2021-11-17T14:52:26.133835Z",
+				production_branch: "main",
+			},
+		];
+
+		mockProjectListRequest(projects);
+		await runWrangler("pages project list --json");
+
+		// Banner should not be present in JSON output
+		expect(std.out).not.toContain("wrangler");
+		expect(std.out).not.toContain("⛅️");
 	});
 });
 
