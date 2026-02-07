@@ -43,7 +43,10 @@ export function getOutputDirectory(
 	);
 }
 
-const postfixRE = /[?#].*$/;
+// Removes query parameters (?...) and hash fragments (#...), but preserves the leading # in subpath imports
+// - \?.*$ matches query parameters (? followed by anything)
+// - (?!^)#.*$ matches hash fragments only when # is not at the start (preserving subpath imports like #path/to/file)
+const postfixRE = /\?.*$|(?!^)#.*$/;
 export function cleanUrl(url: string): string {
 	return url.replace(postfixRE, "");
 }
