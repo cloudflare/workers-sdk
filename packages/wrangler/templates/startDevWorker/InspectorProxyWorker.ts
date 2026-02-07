@@ -309,6 +309,7 @@ export class InspectorProxyWorker implements DurableObject {
 		const upgrade = await fetch(runtimeWebSocketUrl, {
 			headers: {
 				...this.proxyData.headers,
+				"User-Agent": `wrangler/${this.env.WRANGLER_VERSION}`,
 				Upgrade: "websocket",
 			},
 			signal: this.runtimeAbortController.signal,
