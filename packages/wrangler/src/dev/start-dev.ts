@@ -2,7 +2,7 @@ import assert from "node:assert";
 import path from "node:path";
 import { bold, green } from "@cloudflare/cli/colors";
 import { generateContainerBuildId } from "@cloudflare/containers-shared";
-import { getRegistryPath } from "@cloudflare/workers-utils";
+import { FatalError, getRegistryPath } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
 import { DevEnv } from "../api";
 import { MultiworkerRuntimeController } from "../api/startDevWorker/MultiworkerRuntimeController";
@@ -24,6 +24,38 @@ import type { EnablePagesAssetsServiceBindingOptions } from "../miniflare-cli/ty
 import type { CfAccount } from "./create-worker-preview";
 import type { Config } from "@cloudflare/workers-utils";
 import type { watch } from "chokidar";
+
+/**
+ * Parse a host string into hostname and port parts.
+ * Handles formats like "localhost:4000", "example.org", "[::1]:8080"
+ */
+function parseHostAndPort(host: string | undefined): {
+	hostname: string | undefined;
+	port: string | undefined;
+} {
+	if (!host) {
+		return { hostname: undefined, port: undefined };
+	}
+
+	// Check if user explicitly specified a port (handle IPv6 [::1]:port format)
+	const hasExplicitPort =
+		host.includes("]:") || (!host.startsWith("[") && host.includes(":"));
+
+	let url: URL;
+	try {
+		url = new URL(`http://${host}`);
+	} catch {
+		throw new FatalError(
+			`Invalid host "${host}". Expected format: hostname or hostname:port`
+		);
+	}
+
+	// Only set a port if the user explicitly set it
+	return {
+		hostname: url.hostname,
+		port: hasExplicitPort ? url.port : undefined,
+	};
+}
 
 /**
  * Starts one (primary) or more (secondary) DevEnv environments given the `args`.
@@ -276,7 +308,7 @@ async function setupDevEnv(
 					port: args.inspectorPort,
 				},
 				origin: {
-					hostname: args.host ?? args.localUpstream,
+					...parseHostAndPort(args.host ?? args.localUpstream),
 					secure:
 						args.upstreamProtocol === undefined
 							? undefined
