@@ -14,7 +14,7 @@ function IndexPage() {
 				Welcome to Local Explorer
 			</h2>
 			<p className="text-text-secondary text-sm font-light">
-				Select a resource from the sidebar to view and manage its.
+				Select a resource from the sidebar to view & manage it.
 			</p>
 		</div>
 	);
