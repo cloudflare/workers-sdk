@@ -84,7 +84,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 			</div>
 			<Button
 				type="submit"
-				className="btn shrink-0 inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-bg-tertiary hover:bg-primary-hover"
+				className="shrink-0 inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,color,transform] active:translate-y-px bg-primary text-white hover:bg-primary-hover data-[disabled]:bg-primary/50 data-[disabled]:text-white/70 data-[disabled]:cursor-not-allowed data-[disabled]:active:translate-y-0"
 				disabled={saving || isKeyInvalid}
 				focusableWhenDisabled
 			>

@@ -39,12 +39,12 @@ export function Sidebar({
 				</div>
 			</div>
 			<Collapsible.Root defaultOpen>
-				<Collapsible.Trigger className="sidebar-section-trigger flex items-center gap-2 w-full py-3 px-4 border-0 border-b border-border bg-transparent font-semibold text-[11px] uppercase tracking-wide text-text-secondary cursor-pointer transition-colors hover:bg-border">
-					<ChevronIcon className="sidebar-section-icon transition-transform duration-200" />
+				<Collapsible.Trigger className="group flex items-center gap-2 w-full py-3 px-4 border-0 border-b border-border bg-transparent font-semibold text-[11px] uppercase tracking-wide text-text-secondary cursor-pointer transition-colors hover:bg-border">
+					<ChevronIcon className="transition-transform duration-200 group-data-[panel-open]:rotate-90" />
 					<KVIcon className="w-3.5 h-3.5" />
 					KV Namespaces
 				</Collapsible.Trigger>
-				<Collapsible.Panel className="sidebar-section-panel">
+				<Collapsible.Panel className="overflow-hidden transition-[height,opacity] duration-200 ease-out data-[starting-style]:h-0 data-[starting-style]:opacity-0 data-[ending-style]:h-0 data-[ending-style]:opacity-0">
 					<ul className="list-none flex-1 overflow-y-auto">
 						{loading && (
 							<li className="block py-2.5 px-4 text-text-secondary border-b border-border">
