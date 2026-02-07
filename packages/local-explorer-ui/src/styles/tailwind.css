@@ -14,6 +14,12 @@
 	--color-danger-hover: light-dark(#dc2626, #ef4444);
 	--color-success: light-dark(#16a34a, #22c55e);
 
+	/* Focus ring shadows */
+	--shadow-focus-primary: 0 0 0 3px
+		light-dark(rgba(255, 72, 1, 0.15), rgba(255, 107, 51, 0.25));
+	--shadow-focus-danger: 0 0 0 3px
+		light-dark(rgba(251, 44, 54, 0.15), rgba(255, 77, 85, 0.25));
+
 	/* Custom sizing */
 	--width-sidebar: 240px;
 }

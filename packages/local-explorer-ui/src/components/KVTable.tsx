@@ -162,7 +162,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 						<tr key={entry.key.name} className="group hover:bg-bg-tertiary">
 							<td
 								className={cn(
-									"py-2 px-3 text-left align-top",
+									"py-2 px-3 text-left align-top group/cell",
 									isLast
 										? "border-b-0 first:rounded-bl-[7px]"
 										: "border-b border-border"
@@ -179,9 +179,9 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 										<input
 											id={`edit-key-${entry.key.name}`}
 											className={cn(
-												"w-full font-mono bg-bg text-text min-h-8 py-1.5 px-2 text-[13px] border border-primary rounded focus:outline-none focus:shadow-[0_0_0_2px_rgba(255,72,1,0.15)] disabled:bg-bg-secondary disabled:text-text-secondary",
+												"w-full font-mono bg-bg text-text min-h-8 py-1.5 px-2 text-[13px] border border-primary rounded focus:outline-none focus:shadow-focus-primary disabled:bg-bg-secondary disabled:text-text-secondary",
 												{
-													"border-danger focus:shadow-[0_0_0_2px_rgba(251,44,54,0.15)]":
+													"border-danger focus:shadow-focus-danger":
 														editData.keyError,
 												}
 											)}
@@ -222,7 +222,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 										</label>
 										<textarea
 											id={`edit-value-${entry.key.name}`}
-											className="w-full font-mono bg-bg text-text min-h-8 py-1.5 px-2 text-[13px] border border-primary rounded focus:outline-none focus:shadow-[0_0_0_2px_rgba(255,72,1,0.15)] disabled:bg-bg-secondary disabled:text-text-secondary max-h-[200px] resize-none overflow-y-auto [field-sizing:content]"
+											className="w-full font-mono bg-bg text-text min-h-8 py-1.5 px-2 text-[13px] border border-primary rounded focus:outline-none focus:shadow-focus-primary disabled:bg-bg-secondary disabled:text-text-secondary max-h-[200px] resize-none overflow-y-auto [field-sizing:content]"
 											value={editData.value}
 											onChange={(e) =>
 												setEditData({ ...editData, value: e.target.value })

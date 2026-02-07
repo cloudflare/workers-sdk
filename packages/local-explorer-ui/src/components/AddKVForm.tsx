@@ -61,10 +61,9 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 				<input
 					id="add-key"
 					className={cn(
-						"w-full font-mono bg-bg text-text placeholder:text-text! py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_rgba(255,72,1,0.15)] disabled:bg-bg-secondary disabled:text-text-secondary",
+						"w-full font-mono bg-bg text-text placeholder:text-text! py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-focus-primary disabled:bg-bg-secondary disabled:text-text-secondary",
 						{
-							"border-danger focus:shadow-[0_0_0_3px_rgba(251,44,54,0.15)]":
-								keyError,
+							"border-danger focus:shadow-focus-danger": keyError,
 						}
 					)}
 					placeholder="Key"
@@ -82,7 +81,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 				</label>
 				<textarea
 					id="add-value"
-					className="w-full font-mono bg-bg text-text placeholder:text-text! py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-[0_0_0_3px_rgba(255,72,1,0.15)] disabled:bg-bg-secondary disabled:text-text-secondary max-h-[200px] resize-none overflow-y-auto [field-sizing:content]"
+					className="w-full font-mono bg-bg text-text placeholder:text-text! py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-focus-primary disabled:bg-bg-secondary disabled:text-text-secondary max-h-[200px] resize-none overflow-y-auto [field-sizing:content]"
 					placeholder="Value"
 					value={value}
 					onChange={(e) => setValue(e.target.value)}
