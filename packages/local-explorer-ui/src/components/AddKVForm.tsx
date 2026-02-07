@@ -53,8 +53,11 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 	const isKeyInvalid = !!validateKey(key);
 
 	return (
-		<form className="flex gap-2 mb-4 items-start" onSubmit={handleSubmit}>
-			<div className="flex flex-col w-2xs shrink-0">
+		<form
+			className="flex flex-col lg:flex-row gap-2 mb-4 items-start"
+			onSubmit={handleSubmit}
+		>
+			<div className="flex flex-col w-full lg:w-2xs shrink-0">
 				<label className="sr-only" htmlFor="add-key">
 					Key
 				</label>
@@ -75,13 +78,13 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 					<span className="text-danger text-xs mt-1">{keyError}</span>
 				)}
 			</div>
-			<div className="flex flex-col flex-1 min-w-2xs">
+			<div className="flex flex-col flex-1 w-full lg:min-w-2xs">
 				<label className="sr-only" htmlFor="add-value">
 					Value
 				</label>
 				<textarea
 					id="add-value"
-					className="w-full font-mono bg-bg text-text placeholder:text-text! py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-focus-primary disabled:bg-bg-secondary disabled:text-text-secondary max-h-2xs resize-none overflow-y-auto [field-sizing:content]"
+					className="w-full font-mono bg-bg text-text placeholder:text-text! py-2 px-3 text-sm border border-border rounded-md focus:outline-none focus:border-primary focus:shadow-focus-primary disabled:bg-bg-secondary disabled:text-text-secondary max-h-2xs resize-none overflow-y-auto lg:[field-sizing:content]"
 					placeholder="Value"
 					value={value}
 					onChange={(e) => setValue(e.target.value)}
@@ -90,7 +93,7 @@ export function AddKVForm({ onAdd, clearSignal = 0 }: AddKVFormProps) {
 			</div>
 			<Button
 				type="submit"
-				className="shrink-0 inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,color,transform] active:translate-y-px bg-primary text-white hover:bg-primary-hover focus:outline-none focus:border-primary focus:shadow-focus-primary data-[disabled]:bg-primary/50 data-[disabled]:text-white/70 data-[disabled]:cursor-not-allowed data-[disabled]:active:translate-y-0"
+				className="shrink-0 w-full lg:w-auto inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,color,transform] active:translate-y-px bg-primary text-white hover:bg-primary-hover focus:outline-none focus:border-primary focus:shadow-focus-primary data-[disabled]:bg-primary/50 data-[disabled]:text-white/70 data-[disabled]:cursor-not-allowed data-[disabled]:active:translate-y-0"
 				disabled={saving || isKeyInvalid}
 				focusableWhenDisabled
 			>
