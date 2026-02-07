@@ -346,3 +346,21 @@ export const getLocalExplorerEnabledFromEnv =
 		variableName: "X_LOCAL_EXPLORER",
 		defaultValue: false,
 	});
+
+/**
+ * `WRANGLER_HOME` specifies a custom directory for Wrangler's local files.
+ * This overrides the default `.wrangler` directory in the project root.
+ * Useful for Yarn PnP or custom project structures.
+ */
+export const getWranglerHomeFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_HOME",
+});
+
+/**
+ * `WRANGLER_CACHE_DIR` specifies a custom directory for Wrangler's cache files.
+ * This overrides the default `node_modules/.cache/wrangler` location.
+ * Useful for Yarn PnP or projects without node_modules.
+ */
+export const getWranglerCacheDirFromEnv = getEnvironmentVariableFactory({
+	variableName: "WRANGLER_CACHE_DIR",
+});
