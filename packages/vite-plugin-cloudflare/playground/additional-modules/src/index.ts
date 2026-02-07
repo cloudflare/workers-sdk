@@ -1,5 +1,6 @@
 import bin from "./modules/bin-example.bin";
 import html from "./modules/html-example.html";
+import markdown from "./modules/markdown-example.md";
 import sql from "./modules/sql-example.sql";
 import text2 from "./modules/text__example__2.txt";
 import text from "./modules/text-example.txt";
@@ -32,6 +33,11 @@ export default {
 			}
 			case "/sql": {
 				return new Response(sql);
+			}
+			case "/md": {
+				return new Response(markdown, {
+					headers: { "Content-Type": "text/markdown" },
+				});
 			}
 			case "/wasm": {
 				const instance = (await WebAssembly.instantiate(wasm)) as Instance;
