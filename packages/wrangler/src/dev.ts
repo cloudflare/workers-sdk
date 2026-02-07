@@ -311,6 +311,11 @@ export const dev = createCommand({
 });
 
 export type AdditionalDevProps = {
+	/**
+	 * Default vars that can be overridden by config vars.
+	 * Useful for injecting environment-specific defaults like CF_PAGES variables.
+	 */
+	defaultVars?: Record<string, string>;
 	vars?: Record<string, string | Json>;
 	kv?: {
 		binding: string;
@@ -627,6 +632,9 @@ export function getBindings(
 
 		// non-inheritable fields
 		vars: {
+			// defaultVars provide baseline values (e.g., CF_PAGES vars for Pages dev)
+			// that can be overridden by config vars, .dev.vars, and CLI args
+			...args.defaultVars,
 			// Use a copy of combinedVars since we're modifying it later
 			...getVarsForDev(
 				configParam.userConfigPath,

@@ -253,6 +253,7 @@ async function setupDevEnv(
 					assets: undefined,
 				}),
 			},
+			defaultVars: args.defaultVars,
 			dev: {
 				auth,
 				remote: args.enablePagesAssetsServiceBinding

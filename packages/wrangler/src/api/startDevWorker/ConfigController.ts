@@ -191,6 +191,7 @@ async function resolveBindings(
 		input.envFiles,
 		!input.dev?.remote,
 		{
+			defaultVars: input.defaultVars,
 			kv: extractBindingsOfType("kv_namespace", input.bindings),
 			vars: Object.fromEntries(
 				extractBindingsOfType("plain_text", input.bindings).map((b) => [

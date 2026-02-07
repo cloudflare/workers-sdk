@@ -82,6 +82,44 @@ const DEFAULT_IP = process.platform === "win32" ? "127.0.0.1" : "localhost";
 const DEFAULT_PAGES_LOCAL_PORT = 8788;
 const DEFAULT_SCRIPT_PATH = "_worker.js";
 
+/**
+ * Generates Pages-specific environment variables for local development.
+ * These variables are normally injected by Cloudflare Pages CI during builds/deployments.
+ * @see https://developers.cloudflare.com/pages/configuration/build-configuration/#environment-variables
+ */
+function getPagesEnvironmentVariables(
+	localUrl: string
+): Record<string, string> {
+	let branch = "local";
+	let commitSha = "0000000000000000000000000000000000000000";
+
+	// Attempt to get actual git info for more realistic mocking
+	try {
+		branch = execSync("git rev-parse --abbrev-ref HEAD", {
+			encoding: "utf-8",
+			stdio: ["pipe", "pipe", "pipe"],
+		}).trim();
+	} catch {
+		// Not a git repo or git not available, use default
+	}
+
+	try {
+		commitSha = execSync("git rev-parse HEAD", {
+			encoding: "utf-8",
+			stdio: ["pipe", "pipe", "pipe"],
+		}).trim();
+	} catch {
+		// Not a git repo or git not available, use default
+	}
+
+	return {
+		CF_PAGES: "1",
+		CF_PAGES_BRANCH: branch,
+		CF_PAGES_COMMIT_SHA: commitSha,
+		CF_PAGES_URL: localUrl,
+	};
+}
+
 export const pagesDevCommand = createCommand({
 	metadata: {
 		description: "Develop your full-stack Pages application locally",
@@ -873,6 +911,11 @@ export const pagesDevCommand = createCommand({
 			}
 		}
 
+		// Get CF_PAGES environment variables for local dev
+		const pagesEnvVars = getPagesEnvironmentVariables(
+			`${localProtocol ?? "http"}://${ip}:${port}`
+		);
+
 		const devServer = await run(
 			{
 				MULTIWORKER: Array.isArray(args.config),
@@ -927,6 +970,9 @@ export const pagesDevCommand = createCommand({
 					compatibilityDate,
 					compatibilityFlags,
 					nodeCompat: undefined,
+					// CF_PAGES vars as defaults (can be overridden by config vars)
+					defaultVars: pagesEnvVars,
+					// CLI vars override everything
 					vars,
 					kv: kv_namespaces,
 					durableObjects: do_bindings,
