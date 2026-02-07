@@ -1,5 +1,6 @@
 import { Collapsible } from "@base-ui/react/collapsible";
 import { cn } from "@cloudflare/kumo";
+import { CaretRightIcon } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import CloudflareLogo from "../assets/icons/cloudflare-logo.svg?react";
 import KVIcon from "../assets/icons/kv.svg?react";
@@ -10,14 +11,6 @@ interface SidebarProps {
 	loading: boolean;
 	error: string | null;
 	currentPath: string;
-}
-
-function ChevronIcon(props: React.ComponentProps<"svg">) {
-	return (
-		<svg width="10" height="10" viewBox="0 0 10 10" fill="none" {...props}>
-			<path d="M3.5 9L7.5 5L3.5 1" stroke="currentcolor" strokeWidth="1.5" />
-		</svg>
-	);
 }
 
 export function Sidebar({
@@ -45,7 +38,7 @@ export function Sidebar({
 
 			<Collapsible.Root defaultOpen>
 				<Collapsible.Trigger className="group flex items-center gap-2 w-full py-3 px-4 border-0 border-b border-border bg-transparent font-semibold text-[11px] uppercase tracking-wide text-text-secondary cursor-pointer transition-colors hover:bg-border">
-					<ChevronIcon className="transition-transform duration-200 group-data-[panel-open]:rotate-90" />
+					<CaretRightIcon className="transition-transform duration-200 group-data-[panel-open]:rotate-90" />
 					<KVIcon className="w-3.5 h-3.5" />
 					KV Namespaces
 				</Collapsible.Trigger>
