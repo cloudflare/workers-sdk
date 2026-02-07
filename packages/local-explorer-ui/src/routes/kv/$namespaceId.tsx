@@ -303,15 +303,13 @@ function NamespaceView() {
 
 	return (
 		<div>
-			<div className="flex items-center gap-2 py-4 px-6 -mx-6 mb-6 min-h-[67px] box-border bg-bg-secondary border-b border-border text-sm text-text-secondary">
+			<div className="flex items-center gap-2 py-4 px-6 -mx-6 mb-6 min-h-[67px] box-border bg-bg-secondary border-b border-border text-sm font-medium text-text-secondary">
 				<span className="flex items-center gap-1.5">
 					<KVIcon />
 					KV
 				</span>
 				<CaretRightIcon className="w-4 h-4" />
-				<span className="flex items-center gap-1.5 font-medium">
-					{namespaceId}
-				</span>
+				<span className="flex items-center gap-1.5">{namespaceId}</span>
 			</div>
 
 			<AddKVForm onAdd={handleAdd} clearSignal={clearAddForm} />

@@ -48,7 +48,7 @@ function ActionMenu({ onEdit, onDelete }: ActionMenuProps) {
 				<Menu.Positioner sideOffset={4} align="end">
 					<Menu.Popup className="min-w-24 bg-bg border border-border rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[100] overflow-hidden transition-[opacity,transform] duration-150 data-[starting-style]:opacity-0 data-[starting-style]:-translate-y-1 data-[ending-style]:opacity-0 data-[ending-style]:-translate-y-1">
 						<Menu.Item
-							className="inline-flex items-center gap-1 w-full py-2 px-3 border-none bg-transparent text-left text-sm text-text cursor-pointer transition-colors hover:bg-bg-secondary data-[highlighted]:bg-bg-secondary"
+							className="inline-flex items-center gap-1 w-full py-2 px-3 border-none bg-transparent text-left text-sm text-text cursor-pointer transition-colors hover:bg-bg-secondary dark:hover:bg-bg-tertiary data-[highlighted]:bg-bg-secondary dark:data-[highlighted]:bg-bg-tertiary"
 							onClick={onEdit}
 						>
 							<PencilIcon />
