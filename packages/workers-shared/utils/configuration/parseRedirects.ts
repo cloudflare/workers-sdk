@@ -53,7 +53,16 @@ export function parseRedirects(
 			continue;
 		}
 
-		const tokens = line.split(/\s+/);
+		let tokens = line.split(/\s+/);
+
+		// Handle inline comments: truncate at first `#` token that starts a comment
+		// This allows `/a /b#fragment` but strips `/a /b # comment`
+		const commentIndex = tokens.findIndex(
+			(token, index) => index >= 2 && token.startsWith("#")
+		);
+		if (commentIndex !== -1) {
+			tokens = tokens.slice(0, commentIndex);
+		}
 
 		if (tokens.length < 2 || tokens.length > 3) {
 			invalid.push({

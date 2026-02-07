@@ -209,6 +209,89 @@ test("parseRedirects should accept relative URLs that don't point to .html files
 	});
 });
 
+test("parseRedirects should support inline comments", () => {
+	const input = `/a /b 301 # redirect a to b`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [{ from: "/a", status: 301, to: "/b", lineNumber: 1 }],
+		invalid: [],
+	});
+});
+
+test("parseRedirects should support inline comments without status code", () => {
+	const input = `/a /b # redirect with default status`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [{ from: "/a", status: 302, to: "/b", lineNumber: 1 }],
+		invalid: [],
+	});
+});
+
+test("parseRedirects should support inline comments after URL fragments", () => {
+	const input = `/a /b#section 301 # redirect to section`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [{ from: "/a", status: 301, to: "/b#section", lineNumber: 1 }],
+		invalid: [],
+	});
+});
+
+test("parseRedirects should support inline comments without space before hash", () => {
+	const input = `/a /b 301 #no space comment`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [{ from: "/a", status: 301, to: "/b", lineNumber: 1 }],
+		invalid: [],
+	});
+});
+
+test("parseRedirects should support multiple rules with inline comments", () => {
+	const input = `
+    /a /b 301 # first rule
+    /c /d # second rule with default status
+    # full line comment
+    /e /f 307 # third rule
+  `;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [
+			{ from: "/a", status: 301, to: "/b", lineNumber: 2 },
+			{ from: "/c", status: 302, to: "/d", lineNumber: 3 },
+			{ from: "/e", status: 307, to: "/f", lineNumber: 5 },
+		],
+		invalid: [],
+	});
+});
+
+test("parseRedirects should support inline comments with absolute URLs containing fragments", () => {
+	const input = `/a https://x.com/b#c # comment`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [
+			{ from: "/a", status: 302, to: "https://x.com/b#c", lineNumber: 1 },
+		],
+		invalid: [],
+	});
+});
+
+test("parseRedirects should support empty inline comments (just hash)", () => {
+	const input = `/a /b #`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [{ from: "/a", status: 302, to: "/b", lineNumber: 1 }],
+		invalid: [],
+	});
+});
+
+test("parseRedirects should support inline comments with multiple hashes in URL fragment", () => {
+	const input = `/a /b##anchor # comment`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [{ from: "/a", status: 302, to: "/b##anchor", lineNumber: 1 }],
+		invalid: [],
+	});
+});
+
 test("parseRedirects should support custom limits", () => {
 	const aaa = Array(1001).fill("a").join("");
 	const bbb = Array(1001).fill("b").join("");
