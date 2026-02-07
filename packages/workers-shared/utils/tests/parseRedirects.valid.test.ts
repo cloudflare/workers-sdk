@@ -46,6 +46,59 @@ test("parseRedirects should ignore comments", () => {
 	});
 });
 
+test("parseRedirects should handle a single comment-only line", () => {
+	const input = `# This is just a comment`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [],
+		invalid: [],
+	});
+});
+
+test("parseRedirects should handle an indented comment-only line", () => {
+	const input = `  # indented comment`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [],
+		invalid: [],
+	});
+});
+
+test("parseRedirects should handle multiple consecutive comment lines", () => {
+	const input = `
+# First comment
+# Second comment
+  # Indented comment
+/a /b 301
+# Comment after rule
+# Another comment
+/c /d
+# Final comment
+`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [
+			{ from: "/a", status: 301, to: "/b", lineNumber: 5 },
+			{ from: "/c", status: 302, to: "/d", lineNumber: 8 },
+		],
+		invalid: [],
+	});
+});
+
+test("parseRedirects should handle a file with only comments", () => {
+	const input = `
+# This file has no redirects
+# Just comments
+  # Some indented
+# And more comments
+`;
+	const result = parseRedirects(input);
+	expect(result).toEqual({
+		rules: [],
+		invalid: [],
+	});
+});
+
 test("parseRedirects should default to 302", () => {
 	const input = `
   /a /b 302
