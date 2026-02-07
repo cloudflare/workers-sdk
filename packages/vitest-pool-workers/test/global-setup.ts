@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { startMockNpmRegistry } from "@cloudflare/mock-npm-registry";
+import { version } from "../package.json";
 import type { GlobalSetupContext } from "vitest/node";
 
 const repoRoot = path.resolve(__dirname, "../../..");
@@ -48,7 +49,8 @@ async function createTestProject() {
 		private: true,
 		type: "module",
 		devDependencies: {
-			"@cloudflare/vitest-pool-workers": "*",
+			// Ensure we use the local version of vitest-pool-workers
+			"@cloudflare/vitest-pool-workers": version,
 			vitest: await getVitestPeerDep(),
 		},
 	};
