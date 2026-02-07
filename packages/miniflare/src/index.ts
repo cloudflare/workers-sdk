@@ -39,6 +39,7 @@ import {
 	Response,
 } from "./http";
 import {
+	CACHE_PLUGIN_NAME,
 	D1_PLUGIN_NAME,
 	DURABLE_OBJECTS_PLUGIN_NAME,
 	DurableObjectClassNames,
@@ -2634,6 +2635,46 @@ export class Miniflare {
 		const proxyClient = await this._getProxyClient();
 		return proxyClient.global
 			.caches as unknown as ReplaceWorkersTypes<CacheStorage>;
+	}
+	/**
+	 * Purges all entries from the cache.
+	 *
+	 * This is useful during development when cached assets need to be cleared
+	 * without restarting the Miniflare instance.
+	 *
+	 * @param cacheName - Optional name of specific cache to purge. If not provided,
+	 *                    purges the default cache.
+	 * @returns A promise that resolves with the number of entries purged.
+	 */
+	async purgeCache(cacheName?: string): Promise<number> {
+		await this.ready;
+
+		const objectNamespace = await this._getInternalDurableObjectNamespace(
+			CACHE_PLUGIN_NAME,
+			"cache:cache",
+			"CacheObject"
+		);
+
+		// The name used for the durable object ID follows the same convention as
+		// the cache-entry.worker.ts: "default" for the default cache, or
+		// "named:<cacheName>" for named caches.
+		const name = cacheName === undefined ? "default" : `named:${cacheName}`;
+		const objectId = objectNamespace.idFromName(name);
+		const objectStub = objectNamespace.get(objectId);
+
+		const response = await objectStub.fetch("http://localhost/purge-all", {
+			method: "DELETE",
+			// The MiniflareDurableObject requires cf.miniflare.name to be set
+			// for all regular requests (non-control ops)
+			cf: { miniflare: { name } },
+		});
+
+		if (!response.ok) {
+			throw new Error(`Failed to purge cache: ${response.statusText}`);
+		}
+
+		const result = (await response.json()) as { deleted: number };
+		return result.deleted;
 	}
 	getD1Database(bindingName: string, workerName?: string): Promise<D1Database> {
 		return this.#getProxy(D1_PLUGIN_NAME, bindingName, workerName);
