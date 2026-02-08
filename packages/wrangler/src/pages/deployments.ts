@@ -7,6 +7,7 @@ import { fetchResult } from "../cfetch";
 import { getConfigCache, saveToConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import { confirm } from "../dialogs";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
 import { requireAuth } from "../user";
@@ -147,7 +148,7 @@ export const pagesDeploymentDeleteCommand = createCommand({
 
 		projectName ??= config.project_name;
 
-		const isInteractive = process.stdin.isTTY;
+		const isInteractive = !isNonInteractiveOrCI();
 		if (!projectName && isInteractive) {
 			projectName = await promptSelectProject({ accountId });
 		}
