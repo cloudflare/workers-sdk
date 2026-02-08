@@ -7,7 +7,7 @@ import { logger } from "./logger";
 let cacheMessageShown = false;
 
 let __cacheFolder: string | null | undefined;
-function getCacheFolder() {
+export function getCacheFolder() {
 	if (__cacheFolder || __cacheFolder === null) {
 		return __cacheFolder;
 	}

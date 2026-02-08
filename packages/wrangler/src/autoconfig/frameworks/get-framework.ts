@@ -4,6 +4,7 @@ import { Astro } from "./astro";
 import { Hono } from "./hono";
 import { NextJs } from "./next";
 import { Nuxt } from "./nuxt";
+import { CloudflarePages } from "./pages";
 import { Qwik } from "./qwik";
 import { ReactRouter } from "./react-router";
 import { SolidStart } from "./solid-start";
@@ -50,6 +51,8 @@ export function getFramework(detectedFramework?: FrameworkInfo): Framework {
 			return new Vike(detectedFramework);
 		case "waku":
 			return new Waku(detectedFramework);
+		case "cloudflare-pages":
+			return new CloudflarePages(detectedFramework);
 		default:
 			return new Static(detectedFramework ?? { id: "static", name: "Static" });
 	}
