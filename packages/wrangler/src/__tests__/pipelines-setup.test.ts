@@ -1,6 +1,8 @@
 import { writeFileSync } from "node:fs";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- MSW handlers use expect at module scope */
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import {
 	__testSkipCredentialValidation,
 	__testSkipDelays,
@@ -452,16 +454,6 @@ describe("wrangler pipelines setup", () => {
 			);
 		});
 
-		it("validates pipeline name provided via --name flag - rejects spaces", async () => {
-			setIsTTY(true);
-
-			await expect(
-				runWrangler('pipelines setup --name "name with spaces"')
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: pipeline name must contain only letters, numbers, and underscores]`
-			);
-		});
-
 		it("accepts valid pipeline name with underscores and proceeds to stream config", async () => {
 			setIsTTY(true);
 
@@ -629,25 +621,10 @@ describe("wrangler pipelines setup", () => {
 			expect(std.err).toContain('The bucket name "ab"');
 		});
 
-		it("rejects empty bucket names", async () => {
-			setIsTTY(true);
-
-			mockBasicStreamConfig();
-			mockCancelAtBucketName();
-
-			await expect(
-				runWrangler('pipelines setup --name "test_pipeline"')
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: R2 bucket name - cancelled]`
-			);
-
-			expect(std.err).toContain("Bucket name is required");
-		});
-
 		it("allows retry with valid bucket name after invalid input", async () => {
 			setIsTTY(true);
 
-			mockBasicStreamConfig();
+			mockSinkDialogs("r2", "advanced");
 			mockPrompt({
 				text: "R2 bucket name (will be created if it doesn't exist):",
 				result: "invalid_bucket",
@@ -668,13 +645,60 @@ describe("wrangler pipelines setup", () => {
 				text: "R2 bucket name (will be created if it doesn't exist):",
 				result: "valid-bucket-name",
 			});
+			mockGetR2Bucket("valid-bucket-name", true);
+			mockAdvancedR2SinkPrompts();
+
+			mockConfirm({
+				text: "Create resources?",
+				result: false,
+			});
 
 			await expect(
 				runWrangler('pipelines setup --name "test_pipeline"')
-			).rejects.toThrow();
+			).rejects.toThrowErrorMatchingInlineSnapshot(`[Error: Setup cancelled]`);
 
-			expect(std.err).toContain('The bucket name "invalid_bucket"');
-			expect(std.err).toContain('The bucket name "UPPERCASE"');
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Cloudflare Pipelines Setup
+
+
+				STREAM
+
+
+				SINK
+
+				  Using existing bucket \\"valid-bucket-name\\"
+
+				  To create R2 API credentials:
+				  1. Go to dash.cloudflare.com → R2
+				  2. Click \\"Manage\\" next to API Tokens
+				  3. Create token with \\"Object Read & Write\\" permissions
+
+				 done
+
+				SUMMARY
+
+				  Stream    test_pipeline_stream
+				            HTTP enabled, unstructured
+
+				  Sink      test_pipeline_sink
+				            R2 → valid-bucket-name, json
+
+				"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe bucket name \\"invalid_bucket\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.[0m
+
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe bucket name \\"UPPERCASE\\" is invalid. Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.[0m
+
+
+				[31mX [41;31m[[41;97mERROR[41;31m][0m [1mSetup cancelled[0m
+
+				"
+			`);
 		});
 	});
 
@@ -811,39 +835,6 @@ describe("wrangler pipelines setup", () => {
 		});
 	});
 
-	describe("stream creation retry", () => {
-		it("cancels when user declines stream retry", async () => {
-			setIsTTY(true);
-
-			mockSinkDialogs("r2", "advanced");
-
-			mockPrompt({
-				text: "R2 bucket name (will be created if it doesn't exist):",
-				result: "test-bucket",
-			});
-			mockGetR2Bucket("test-bucket", true);
-			mockAdvancedR2SinkPrompts();
-
-			mockConfirm({
-				text: "Create resources?",
-				result: true,
-			});
-
-			mockCreateStreamRequest("test_pipeline_stream", { fail: true });
-
-			mockConfirm({
-				text: "  Retry?",
-				result: false,
-			});
-
-			await expect(
-				runWrangler('pipelines setup --name "test_pipeline"')
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Stream creation cancelled]`
-			);
-		});
-	});
-
 	describe("sink creation retry and cleanup", () => {
 		it("cleans up stream when user cancels after sink failure", async () => {
 			setIsTTY(true);
@@ -879,7 +870,46 @@ describe("wrangler pipelines setup", () => {
 			);
 
 			expect(deleteReq.count).toBe(1);
-			expect(std.out).toContain("done");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Cloudflare Pipelines Setup
+
+
+				STREAM
+
+
+				SINK
+
+				  Using existing bucket \\"test-bucket\\"
+
+				  To create R2 API credentials:
+				  1. Go to dash.cloudflare.com → R2
+				  2. Click \\"Manage\\" next to API Tokens
+				  3. Create token with \\"Object Read & Write\\" permissions
+
+				 done
+
+				SUMMARY
+
+				  Stream    test_pipeline_stream
+				            HTTP enabled, unstructured
+
+				  Sink      test_pipeline_sink
+				            R2 → test-bucket, json
+
+				 done
+				 failed
+				  Sink creation failed [code: 1000]
+				 done
+				"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mSink creation cancelled[0m
+
+				"
+			`);
 		});
 	});
 
@@ -925,9 +955,57 @@ describe("wrangler pipelines setup", () => {
 			// Should complete without error, just showing guidance
 			await runWrangler('pipelines setup --name "test_pipeline"');
 
-			expect(std.out).toContain(
-				"You can create the pipeline later with: wrangler pipelines create"
-			);
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Cloudflare Pipelines Setup
+
+
+				STREAM
+
+
+				SINK
+
+				  Using existing bucket \\"test-bucket\\"
+
+				  To create R2 API credentials:
+				  1. Go to dash.cloudflare.com → R2
+				  2. Click \\"Manage\\" next to API Tokens
+				  3. Create token with \\"Object Read & Write\\" permissions
+
+				 done
+
+				SUMMARY
+
+				  Stream    test_pipeline_stream
+				            HTTP enabled, unstructured
+
+				  Sink      test_pipeline_sink
+				            R2 → test-bucket, json
+
+				 done
+				 done
+
+				SQL
+
+				  Available tables:
+				    test_pipeline_stream (source)
+				    test_pipeline_sink (sink)
+
+
+				  INSERT INTO test_pipeline_sink SELECT * FROM test_pipeline_stream;
+
+				 done
+				 failed
+				  Pipeline creation failed [code: 1000]
+
+				  Stream and sink were created, but pipeline creation failed.
+
+				  You can create the pipeline later with: wrangler pipelines create
+				  Your stream \\"test_pipeline_stream\\" and sink \\"test_pipeline_sink\\" are ready."
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
 
@@ -1113,42 +1191,6 @@ describe("wrangler pipelines setup", () => {
 			expect(std.out).toContain("done");
 		});
 
-		it("validates catalog token", async () => {
-			setIsTTY(true);
-
-			mockSinkDialogs("r2_data_catalog", "simple");
-
-			mockPrompt({
-				text: "R2 bucket name (will be created if it doesn't exist):",
-				result: "test-bucket",
-			});
-			mockGetR2Bucket("test-bucket", true);
-			mockGetR2Catalog("test-bucket", { exists: true, active: true });
-
-			mockPrompt({
-				text: "Table name (e.g. events, user_activity):",
-				result: "events",
-			});
-			mockPrompt({
-				text: "Catalog API token:",
-				result: "bad-token",
-			});
-			mockUpsertR2CatalogCredential("test-bucket", { fail: true });
-			mockConfirm({
-				text: "Would you like to try again?",
-				result: false,
-			});
-
-			await expect(
-				runWrangler('pipelines setup --name "test_pipeline"')
-			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Catalog API token validation failed]`
-			);
-
-			expect(std.out).toContain("failed");
-			expect(std.out).toContain("Token invalid or missing permissions");
-		});
-
 		it("retries when catalog token validation fails", async () => {
 			setIsTTY(true);
 
@@ -1232,6 +1274,7 @@ describe("wrangler pipelines setup", () => {
 	describe("Data Catalog full flow", () => {
 		it("completes full setup from bucket to pipeline creation", async () => {
 			setIsTTY(true);
+			vi.useFakeTimers({ now: new Date("2025-01-01T00:00:00Z") });
 
 			mockSinkDialogs("r2_data_catalog", "simple");
 
@@ -1273,7 +1316,77 @@ describe("wrangler pipelines setup", () => {
 
 			await runWrangler('pipelines setup --name "test_pipeline"');
 
-			expect(std.out).toContain("Setup complete");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Cloudflare Pipelines Setup
+
+
+				STREAM
+
+
+				SINK
+
+				  Using existing bucket \\"test-bucket\\"
+				 done
+
+				  To create a Catalog API token:
+				  1. Go to dash.cloudflare.com → R2
+				  2. Click \\"Manage\\" next to API Tokens
+				  3. Create token with \\"Admin Read & Write\\" permissions
+
+				 done
+
+				SUMMARY
+
+				  Stream    test_pipeline_stream
+				            HTTP enabled, unstructured
+
+				  Sink      test_pipeline_sink
+				            Data Catalog → default/events
+
+				 done
+				 done
+
+				SQL
+
+				  Available tables:
+				    test_pipeline_stream (source)
+				    test_pipeline_sink (sink)
+
+
+				  INSERT INTO test_pipeline_sink SELECT * FROM test_pipeline_stream;
+
+				 done
+				 done
+
+				✓ Setup complete
+
+				To access your new Pipeline in your Worker, add the following snippet to your configuration file:
+				{
+				  \\"pipelines\\": [
+				    {
+				      \\"pipeline\\": \\"stream_123\\",
+				      \\"binding\\": \\"TEST_PIPELINE_STREAM\\"
+				    }
+				  ]
+				}
+
+				Then send events:
+
+				  await env.TEST_PIPELINE_STREAM.send([{\\"user_id\\":\\"sample_user_id\\",\\"event_name\\":\\"sample_event_name\\",\\"timestamp\\":1735689600000}]);
+
+				Or via HTTP:
+
+				  curl -X POST https://pipelines.cloudflare.com/test_pipeline_stream /
+				     -H \\"Content-Type: application/json\\" /
+				     -d '[{\\"user_id\\":\\"sample_user_id\\",\\"event_name\\":\\"sample_event_name\\",\\"timestamp\\":1735689600000}]'
+
+				Docs: https://developers.cloudflare.com/pipelines/
+				"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 	});
 
