@@ -138,13 +138,20 @@ export const pagesProjectCreateCommand = createCommand({
 		}
 
 		if (!productionBranch && isInteractive) {
+			logger.debug(
+				"pages project create: Detecting git repository for production branch suggestion..."
+			);
 			let isGitDir = true;
 			try {
 				execSync(`git rev-parse --is-inside-work-tree`, {
 					stdio: "ignore",
 				});
-			} catch {
+				logger.debug("pages project create: Git repository detected");
+			} catch (err) {
 				isGitDir = false;
+				logger.debug(
+					`pages project create: Not a git repository: ${err instanceof Error ? err.message : String(err)}`
+				);
 			}
 
 			if (isGitDir) {
@@ -152,7 +159,14 @@ export const pagesProjectCreateCommand = createCommand({
 					productionBranch = execSync(`git rev-parse --abbrev-ref HEAD`)
 						.toString()
 						.trim();
-				} catch {}
+					logger.debug(
+						`pages project create: Detected branch for suggestion: "${productionBranch}"`
+					);
+				} catch (err) {
+					logger.debug(
+						`pages project create: Failed to detect branch: ${err instanceof Error ? err.message : String(err)}`
+					);
+				}
 			}
 
 			productionBranch = await prompt("Enter the production branch name:", {
