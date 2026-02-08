@@ -1,5 +1,39 @@
 # @cloudflare/vite-plugin
 
+## 1.24.0
+
+### Minor Changes
+
+- [#12446](https://github.com/cloudflare/workers-sdk/pull/12446) [`1231a2e`](https://github.com/cloudflare/workers-sdk/commit/1231a2ee8bf2d80dac419ecb6db0e053820748ea) Thanks [@jamesopstad](https://github.com/jamesopstad)! - Infer `upload_source_maps` setting in the output Worker config from the `build.sourcemap` setting in the Vite config.
+
+  If [build.sourcemap](https://vite.dev/config/build-options#build-sourcemap) is enabled for a Worker environment, as in the following example, `"upload_source_maps": true` will now automatically be added to the output `wrangler.json` file.
+  This removes the need to additionally specify the `upload_source_maps` property in the input Worker config.
+
+  ```ts
+  export default defineConfig({
+  	environments: {
+  		my_worker: {
+  			build: {
+  				sourcemap: true,
+  			},
+  		},
+  	},
+  	plugins: [cloudflare()],
+  });
+  ```
+
+  Note that if `upload_source_maps` is set in the input Worker config, this value will take precedence.
+  This makes it possible to generate source maps without uploading them.
+
+### Patch Changes
+
+- [#12393](https://github.com/cloudflare/workers-sdk/pull/12393) [`fd8b3e5`](https://github.com/cloudflare/workers-sdk/commit/fd8b3e58a190b8f611ca1469d3aa092f2911a85d) Thanks [@BlankParticle](https://github.com/BlankParticle)! - Provide proxy shared secret to Miniflare so that the Worker receives the original Host header
+
+- Updated dependencies [[`2d90127`](https://github.com/cloudflare/workers-sdk/commit/2d90127f47dbcacf377842b3452d00a68a7abdc9), [`e02b5f5`](https://github.com/cloudflare/workers-sdk/commit/e02b5f500b54c5cbc99169656f60efb85d4d1a27), [`555b32a`](https://github.com/cloudflare/workers-sdk/commit/555b32a1ea90554699af0a233eb04bb5d9b56697), [`e02b5f5`](https://github.com/cloudflare/workers-sdk/commit/e02b5f500b54c5cbc99169656f60efb85d4d1a27), [`988dea9`](https://github.com/cloudflare/workers-sdk/commit/988dea906454ddb7df5f79976af0536c39008963), [`312b5eb`](https://github.com/cloudflare/workers-sdk/commit/312b5ebd3866d8280f61bbe2af3bb1002f6cf461), [`ce9dc01`](https://github.com/cloudflare/workers-sdk/commit/ce9dc01a4696e28bd9f3a900dd2f5a7783252906), [`937425c`](https://github.com/cloudflare/workers-sdk/commit/937425cdfe80c0c7f16b5ad47ba905a98fdb5f2e)]:
+  - miniflare@4.20260206.0
+  - wrangler@4.64.0
+  - @cloudflare/unenv-preset@2.12.1
+
 ## 1.23.1
 
 ### Patch Changes

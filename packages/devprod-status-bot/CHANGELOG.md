@@ -1,5 +1,13 @@
 # devprod-status-bot
 
+## 1.4.1
+
+### Patch Changes
+
+- [#12435](https://github.com/cloudflare/workers-sdk/pull/12435) [`c2163df`](https://github.com/cloudflare/workers-sdk/commit/c2163df17f1c7b7fe96f10fbca35dc19ee65b7e2) Thanks [@petebacondarwin](https://github.com/petebacondarwin)! - Simplify Version Packages PR CI failure alerts
+
+  The bot now sends an alert for any failing CI job on the Version Packages PR, instead of first fetching the required status checks from GitHub's branch protection API and filtering. This removes unnecessary complexity and ensures all CI failures are reported.
+
 ## 1.4.0
 
 ### Minor Changes

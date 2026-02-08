@@ -1,5 +1,54 @@
 # wrangler
 
+## 4.64.0
+
+### Minor Changes
+
+- [#12307](https://github.com/cloudflare/workers-sdk/pull/12307) [`e02b5f5`](https://github.com/cloudflare/workers-sdk/commit/e02b5f500b54c5cbc99169656f60efb85d4d1a27) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Improve autoconfig telemetry with granular event tracking
+
+  Adds detailed telemetry events to track the autoconfig workflow, including process start/end, detection, and configuration phases. Each event includes a unique session ID (`appId`), CI detection, framework information, and success/error status to help diagnose issues and understand usage patterns.
+
+- [#12307](https://github.com/cloudflare/workers-sdk/pull/12307) [`e02b5f5`](https://github.com/cloudflare/workers-sdk/commit/e02b5f500b54c5cbc99169656f60efb85d4d1a27) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Include all common telemetry properties in ad-hoc telemetry events
+
+  Previously, only command-based telemetry events (e.g., "wrangler command started/completed") included the full set of common properties. Ad-hoc events sent via `sendAdhocEvent` were missing important context like OS information, CI detection, and session tracking.
+
+  Now, all telemetry events include the complete set of common properties:
+
+  - `amplitude_session_id` and `amplitude_event_id` for session tracking
+  - `wranglerVersion` (and major/minor/patch variants)
+  - `osPlatform`, `osVersion`, `nodeVersion`
+  - `packageManager`
+  - `configFileType`
+  - `isCI`, `isPagesCI`, `isWorkersCI`
+  - `isInteractive`
+  - `isFirstUsage`
+  - `hasAssets`
+  - `agent`
+
+### Patch Changes
+
+- [#12440](https://github.com/cloudflare/workers-sdk/pull/12440) [`555b32a`](https://github.com/cloudflare/workers-sdk/commit/555b32a1ea90554699af0a233eb04bb5d9b56697) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "miniflare", "wrangler"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From         | To           |
+  | ---------- | ------------ | ------------ |
+  | workerd    | 1.20260205.0 | 1.20260206.0 |
+
+- [#12280](https://github.com/cloudflare/workers-sdk/pull/12280) [`988dea9`](https://github.com/cloudflare/workers-sdk/commit/988dea906454ddb7df5f79976af0536c39008963) Thanks [@penalosa](https://github.com/penalosa)! - Fix `wrangler init` failing with Yarn Classic
+
+  When using Yarn Classic (v1.x), running `wrangler init` or `wrangler init --from-dash` would fail because Yarn Classic doesn't properly handle version specifiers with special characters like `^` in `yarn create` commands. Yarn would install the package correctly but then fail to find the binary because it would look for a path like `.yarn/bin/create-cloudflare@^2.5.0` instead of `.yarn/bin/create-cloudflare`.
+
+  This fix removes the version specifier from the default C3 command entirely. Since C3 has had auto-update behavior for over two years, specifying a version is no longer necessary and removing it resolves the Yarn Classic compatibility issue.
+
+- [#12421](https://github.com/cloudflare/workers-sdk/pull/12421) [`937425c`](https://github.com/cloudflare/workers-sdk/commit/937425cdfe80c0c7f16b5ad47ba905a98fdb5f2e) Thanks [@ryanking13](https://github.com/ryanking13)! - Fix Python Workers deployment failing on Windows due to path separator handling
+
+  Previously, deploying Python Workers on Windows would fail because the backslash path separator (`\`) was not properly handled, causing the entire full path to be treated as a single filename. The deployment process now correctly normalizes paths to use forward slashes on all platforms.
+
+- Updated dependencies [[`2d90127`](https://github.com/cloudflare/workers-sdk/commit/2d90127f47dbcacf377842b3452d00a68a7abdc9), [`555b32a`](https://github.com/cloudflare/workers-sdk/commit/555b32a1ea90554699af0a233eb04bb5d9b56697), [`312b5eb`](https://github.com/cloudflare/workers-sdk/commit/312b5ebd3866d8280f61bbe2af3bb1002f6cf461), [`ce9dc01`](https://github.com/cloudflare/workers-sdk/commit/ce9dc01a4696e28bd9f3a900dd2f5a7783252906)]:
+  - miniflare@4.20260206.0
+  - @cloudflare/unenv-preset@2.12.1
+
 ## 4.63.0
 
 ### Minor Changes

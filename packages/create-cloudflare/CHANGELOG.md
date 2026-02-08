@@ -1,5 +1,37 @@
 # create-cloudflare
 
+## 2.64.0
+
+### Minor Changes
+
+- [#12286](https://github.com/cloudflare/workers-sdk/pull/12286) [`5ddd276`](https://github.com/cloudflare/workers-sdk/commit/5ddd2769e3ed50774f5742eb645355806f410fb2) Thanks [@elithrar](https://github.com/elithrar)! - Add AGENTS.md to Workers templates for AI coding agent guidance
+
+  New Workers projects created via `create-cloudflare` now include an `AGENTS.md` file that provides AI coding agents with retrieval-led guidance for Cloudflare APIs. This helps agents avoid using outdated knowledge from their training data and instead consult current documentation.
+
+  The file includes:
+
+  - Links to Cloudflare documentation and MCP servers
+  - Essential wrangler commands (`dev`, `deploy`, `types`)
+  - Pointers to product-specific documentation for limits and APIs
+
+### Patch Changes
+
+- [#12366](https://github.com/cloudflare/workers-sdk/pull/12366) [`96d1605`](https://github.com/cloudflare/workers-sdk/commit/96d160561065e50c6a4426520460f4c8bd70e5c4) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.20.0 | 3.21.0 |
+
+- [#12367](https://github.com/cloudflare/workers-sdk/pull/12367) [`9244501`](https://github.com/cloudflare/workers-sdk/commit/9244501b7b8191a977e20dc1cab8e2da7661a352) Thanks [@dependabot](https://github.com/apps/dependabot)! - Update dependencies of "create-cloudflare"
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | gatsby     | 5.15.0 | 5.16.0 |
+
 ## 2.63.0
 
 ### Minor Changes
