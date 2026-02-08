@@ -126,13 +126,22 @@ describe("pages project list", () => {
 
 		// Verify the output is valid JSON
 		const output = JSON.parse(std.out);
-		expect(output).toHaveLength(2);
-		expect(output[0]["Project Name"]).toBe("dogs");
-		expect(output[0]["Project Domains"]).toBe("dogs.pages.dev");
-		expect(output[0]["Git Provider"]).toBe("Yes");
-		expect(output[1]["Project Name"]).toBe("cats");
-		expect(output[1]["Project Domains"]).toBe("cats.pages.dev, kitten.com");
-		expect(output[1]["Git Provider"]).toBe("No");
+		expect(output).toMatchInlineSnapshot(`
+			Array [
+			  Object {
+			    "Git Provider": "Yes",
+			    "Last Modified": "[mock-time-ago]",
+			    "Project Domains": "dogs.pages.dev",
+			    "Project Name": "dogs",
+			  },
+			  Object {
+			    "Git Provider": "No",
+			    "Last Modified": "[mock-time-ago]",
+			    "Project Domains": "cats.pages.dev, kitten.com",
+			    "Project Name": "cats",
+			  },
+			]
+		`);
 	});
 
 	it("should not print banner when --json flag is provided", async () => {
