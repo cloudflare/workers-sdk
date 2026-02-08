@@ -2,6 +2,7 @@ import { beforeEach, describe, test } from "vitest";
 import { Astro } from "../../autoconfig/frameworks/astro";
 import { Static } from "../../autoconfig/frameworks/static";
 import { buildOperationsSummary } from "../../autoconfig/run";
+import { NpmPackageManager } from "../../package-manager";
 import { dedent } from "../../utils/dedent";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { useMockIsTTY } from "../helpers/mock-istty";
@@ -34,6 +35,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					configured: false,
 					outputDir: "public",
 					framework: new Static({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{
@@ -92,6 +94,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					configured: false,
 					outputDir: "dist",
 					framework: new Static({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{
@@ -148,6 +151,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					configured: false,
 					outputDir: "out",
 					framework: new Static({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{
@@ -198,6 +202,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					framework: new Astro({ id: "astro", name: "Astro" }),
 					configured: false,
 					outputDir: "dist",
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{
@@ -227,6 +232,7 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					framework: new Static({ id: "static", name: "Static" }),
 					configured: false,
 					outputDir: "public",
+					packageManager: NpmPackageManager,
 				},
 				testRawConfig,
 				{

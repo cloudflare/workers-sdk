@@ -6,16 +6,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
 import * as details from "../../../autoconfig/details";
 import { clearOutputFilePath } from "../../../output";
-import {
-	getPackageManager,
-	NpmPackageManager,
-	PnpmPackageManager,
-} from "../../../package-manager";
 import { mockConsoleMethods } from "../../helpers/mock-console";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import type { Config } from "@cloudflare/workers-utils";
-import type { Mock } from "vitest";
 
 describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	runInTempDir();
@@ -24,7 +18,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 
 	beforeEach(() => {
 		setIsTTY(true);
-		(getPackageManager as Mock).mockResolvedValue(NpmPackageManager);
 	});
 
 	afterEach(() => {
@@ -45,10 +38,6 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 	it.each(["npm", "pnpm"] as const)(
 		"should perform basic framework detection (using %s)",
 		async (pm) => {
-			(getPackageManager as Mock).mockResolvedValue(
-				pm === "pnpm" ? PnpmPackageManager : NpmPackageManager
-			);
-
 			await writeFile(
 				"package.json",
 				JSON.stringify({
@@ -57,6 +46,16 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 					},
 				})
 			);
+
+			// Create the appropriate lockfile so @netlify/build-info detects the package manager
+			if (pm === "pnpm") {
+				await writeFile("pnpm-lock.yaml", "lockfileVersion: 6.0");
+			} else {
+				await writeFile(
+					"package-lock.json",
+					JSON.stringify({ lockfileVersion: 3 })
+				);
+			}
 
 			await expect(details.getDetailsForAutoConfig()).resolves.toMatchObject({
 				buildCommand: pm === "pnpm" ? "pnpm astro build" : "npx astro build",

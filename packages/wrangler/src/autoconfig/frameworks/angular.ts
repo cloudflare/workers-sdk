@@ -7,17 +7,19 @@ import { dedent } from "../../utils/dedent";
 import { installPackages } from "../c3-vendor/packages";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
+import type { PackageManager } from "../../package-manager";
 
 export class Angular extends Framework {
 	async configure({
 		workerName,
 		outputDir,
 		dryRun,
+		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
 		if (!dryRun) {
 			await updateAngularJson(workerName);
 			await overrideServerFile();
-			await installAdditionalDependencies();
+			await installAdditionalDependencies(packageManager);
 		}
 		return {
 			wranglerConfig: {
@@ -74,8 +76,8 @@ async function overrideServerFile() {
 	);
 }
 
-async function installAdditionalDependencies() {
-	await installPackages(["xhr2"], {
+async function installAdditionalDependencies(packageManager: PackageManager) {
+	await installPackages(packageManager, ["xhr2"], {
 		dev: true,
 		startText: "Installing additional dependencies",
 		doneText: `${brandColor("installed")}`,

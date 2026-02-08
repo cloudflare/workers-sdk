@@ -1,6 +1,5 @@
 import { writeFileSync } from "node:fs";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { getPackageManager } from "../../package-manager";
 import { runCommand } from "../c3-vendor/command";
 import { installPackages } from "../c3-vendor/packages";
 import { Framework } from ".";
@@ -9,8 +8,9 @@ import type { ConfigurationOptions, ConfigurationResults } from ".";
 export class SvelteKit extends Framework {
 	async configure({
 		dryRun,
+		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		const { dlx } = await getPackageManager();
+		const { dlx } = packageManager;
 		if (!dryRun) {
 			await runCommand(
 				[
@@ -31,7 +31,7 @@ export class SvelteKit extends Framework {
 			);
 			writeFileSync("static/.assetsignore", "_worker.js\n_routes.json");
 
-			await installPackages([], {
+			await installPackages(packageManager, [], {
 				startText: "Installing packages",
 				doneText: `${brandColor("installed")}`,
 			});

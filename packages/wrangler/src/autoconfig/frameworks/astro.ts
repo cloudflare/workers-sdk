@@ -1,6 +1,5 @@
 import { writeFileSync } from "node:fs";
 import { brandColor, dim } from "@cloudflare/cli/colors";
-import { getPackageManager } from "../../package-manager";
 import { runCommand } from "../c3-vendor/command";
 import { Framework } from ".";
 import type { ConfigurationOptions, ConfigurationResults } from ".";
@@ -9,8 +8,9 @@ export class Astro extends Framework {
 	async configure({
 		outputDir,
 		dryRun,
+		packageManager,
 	}: ConfigurationOptions): Promise<ConfigurationResults> {
-		const { npx } = await getPackageManager();
+		const { npx } = packageManager;
 		if (!dryRun) {
 			await runCommand([npx, "astro", "add", "cloudflare", "-y"], {
 				silent: true,

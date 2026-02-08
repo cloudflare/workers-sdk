@@ -11,6 +11,7 @@ import { Static } from "../../autoconfig/frameworks/static";
 import * as run from "../../autoconfig/run";
 import * as format from "../../deployment-bundle/guess-worker-format";
 import { clearOutputFilePath } from "../../output";
+import { NpmPackageManager } from "../../package-manager";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -39,7 +40,13 @@ vi.mock("../../package-manager", () => ({
 		return {
 			type: "npm",
 			npx: "npx",
+			dlx: ["npx"],
 		};
+	},
+	NpmPackageManager: {
+		type: "npm",
+		npx: "npx",
+		dlx: ["npx"],
 	},
 }));
 
@@ -108,6 +115,7 @@ describe("autoconfig (deploy)", () => {
 					projectPath: process.cwd(),
 					workerName: "my-worker",
 					framework: new Static({ id: "static", name: "Static" }),
+					packageManager: NpmPackageManager,
 				})
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
@@ -126,6 +134,7 @@ describe("autoconfig (deploy)", () => {
 					configured: true,
 					projectPath: process.cwd(),
 					workerName: "my-worker",
+					packageManager: NpmPackageManager,
 				})
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
@@ -187,6 +196,7 @@ describe("autoconfig (deploy)", () => {
 							astro: "5",
 						},
 					},
+					packageManager: NpmPackageManager,
 				},
 				{ enableWranglerInstallation: true }
 			);
@@ -287,6 +297,7 @@ describe("autoconfig (deploy)", () => {
 				framework: new Static({ id: "static", name: "Static" }),
 				workerName: "my-worker",
 				outputDir: "dist",
+				packageManager: NpmPackageManager,
 			});
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -349,6 +360,7 @@ describe("autoconfig (deploy)", () => {
 				configured: false,
 				outputDir: process.cwd(),
 				framework: new Static({ id: "static", name: "Static" }),
+				packageManager: NpmPackageManager,
 			});
 
 			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`
@@ -377,6 +389,7 @@ describe("autoconfig (deploy)", () => {
 					framework: new Static({ id: "static", name: "Static" }),
 					workerName: "my-worker",
 					outputDir: "",
+					packageManager: NpmPackageManager,
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
 				`[Error: Cannot configure project without an output directory]`

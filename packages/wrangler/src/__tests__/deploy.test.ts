@@ -29,6 +29,7 @@ import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packa
 import { runAutoConfig } from "../autoconfig/run";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
+import { NpmPackageManager } from "../package-manager";
 import { getSubdomainValues } from "../triggers/deploy";
 import { writeAuthConfigFile } from "../user";
 import { fetchSecrets } from "../utils/fetch-secrets";
@@ -15867,6 +15868,7 @@ export default{
 			framework: new Static({ id: "static", name: "Static" }),
 			workerName: "my-site",
 			projectPath: ".",
+			packageManager: NpmPackageManager,
 		});
 
 		vi.mocked(runAutoConfig).mockImplementation(async () => {
