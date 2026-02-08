@@ -26,7 +26,7 @@ export * from "./types";
 export {
 	type Message,
 	type Location,
-	type File,
+	type ParseFile,
 	ParseError,
 	APIError,
 	parseTOML,
