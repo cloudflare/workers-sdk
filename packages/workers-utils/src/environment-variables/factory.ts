@@ -24,6 +24,10 @@ type VariableNames =
 
 	// ## Development & Local Testing
 
+	/** Controls whether to fetch the cf.json file. Set to "false" or "0" to disable fetching and use fallback data. Defaults to "true". */
+	| "CLOUDFLARE_CF_FETCH_ENABLED"
+	/** Custom path for caching the cf.json file. Overrides the default node_modules/.mf/cf.json location. */
+	| "CLOUDFLARE_CF_FETCH_PATH"
 	/** Local database connection strings for Hyperdrive development. The * should be replaced with the Hyperdrive binding name in the Worker. */
 	| `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_${string}`
 	/** Suppress Hyperdrive-related warnings during development. */
