@@ -5,6 +5,7 @@ import { additionalModulesPlugin } from "./plugins/additional-modules";
 import { configPlugin } from "./plugins/config";
 import { debugPlugin } from "./plugins/debug";
 import { devPlugin } from "./plugins/dev";
+import { typesPlugin } from "./plugins/types";
 import {
 	nodeJsAlsPlugin,
 	nodeJsCompatPlugin,
@@ -76,6 +77,7 @@ export function cloudflare(pluginConfig: PluginConfig = {}): vite.Plugin[] {
 		},
 		configPlugin(ctx),
 		devPlugin(ctx),
+		typesPlugin(ctx),
 		previewPlugin(ctx),
 		shortcutsPlugin(ctx),
 		debugPlugin(ctx),
