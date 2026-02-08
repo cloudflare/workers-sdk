@@ -1,6 +1,7 @@
 import { assert } from "node:console";
 import fs from "node:fs";
 import path from "node:path";
+import { getWranglerHomeFromEnv } from "@cloudflare/workers-utils";
 import onExit from "signal-exit";
 
 type DiscriminatedPath<Discriminator extends string> = string & {
@@ -83,10 +84,17 @@ export interface EphemeralDirectory {
 
 /**
  * Gets the path to the project's `.wrangler` folder.
+ * Can be overridden via the WRANGLER_HOME environment variable.
  */
 export function getWranglerHiddenDirPath(
 	projectRoot: string | undefined
 ): string {
+	// Check for environment variable override
+	const wranglerHome = getWranglerHomeFromEnv();
+	if (wranglerHome) {
+		return path.resolve(wranglerHome);
+	}
+
 	projectRoot ??= process.cwd();
 	return path.join(projectRoot, ".wrangler");
 }
