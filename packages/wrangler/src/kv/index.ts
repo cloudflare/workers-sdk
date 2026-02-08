@@ -235,7 +235,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 
 		if (providedOptions.length > 1) {
 			throw new CommandLineArgsError(
-				"Cannot specify multiple of: namespace name, --binding, or --namespace-id. Use only one."
+				"Cannot specify multiple of: namespace name (as positional argument), --binding, or --namespace-id. Use only one."
 			);
 		}
 	},
@@ -245,32 +245,18 @@ export const kvNamespaceDeleteCommand = createCommand({
 		printResourceLocation("remote");
 		const accountId = await requireAuth(config);
 
-		let id: string;
+		let namespaceId: string;
 		let displayName: string;
-
-		// If namespace name is provided, look up the ID
-		if (args.namespace) {
-			const namespaces = await listKVNamespaces(config, accountId);
-			const namespace = namespaces.find((ns) => ns.title === args.namespace);
-
-			if (!namespace) {
-				throw new UserError(
-					`No namespace found with the name "${args.namespace}". ` +
-						`Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".`
-				);
-			}
-			id = namespace.id;
-			displayName = `${args.namespace} (${id})`;
-		} else {
-			// Existing logic for --binding or --namespace-id
-			try {
-				id = await getKVNamespaceId(args, config, false);
-			} catch (e) {
-				throw new CommandLineArgsError(
-					"Not able to delete namespace.\n" + ((e as Error).message ?? e)
-				);
-			}
-			displayName = args.binding ? `${args.binding} (${id})` : id;
+		try {
+			({ namespaceId, displayName } = await getKVNamespaceId(
+				args,
+				config,
+				false
+			));
+		} catch (e) {
+			throw new CommandLineArgsError(
+				"Not able to delete namespace.\n" + ((e as Error).message ?? e)
+			);
 		}
 
 		logger.log(
@@ -285,9 +271,9 @@ export const kvNamespaceDeleteCommand = createCommand({
 			}
 		}
 
-		logger.log(`Deleting KV namespace ${id}.`);
-		await deleteKVNamespace(config, accountId, id);
-		logger.log(`Deleted KV namespace ${id}.`);
+		logger.log(`Deleting KV namespace ${namespaceId}.`);
+		await deleteKVNamespace(config, accountId, namespaceId);
+		logger.log(`Deleted KV namespace ${namespaceId}.`);
 		metrics.sendMetricsEvent("delete kv namespace", {
 			sendMetrics: config.send_metrics,
 		});
@@ -478,7 +464,11 @@ export const kvKeyPutCommand = createCommand({
 	async handler({ key, ttl, expiration, metadata, ...args }) {
 		const localMode = isLocal(args);
 		const config = readConfig(args);
-		const namespaceId = await getKVNamespaceId(args, config, localMode);
+		const { namespaceId, displayName } = await getKVNamespaceId(
+			args,
+			config,
+			localMode
+		);
 		// One of `args.path` and `args.value` must be defined
 		const value = args.path
 			? readFileSyncToBuffer(args.path)
@@ -491,11 +481,11 @@ export const kvKeyPutCommand = createCommand({
 
 		if (args.path) {
 			logger.log(
-				`Writing the contents of ${args.path} to the key "${key}" on namespace ${namespaceId}${metadataLog}.`
+				`Writing the contents of ${args.path} to the key "${key}" on namespace ${displayName}${metadataLog}.`
 			);
 		} else {
 			logger.log(
-				`Writing the value "${value}" to key "${key}" on namespace ${namespaceId}${metadataLog}.`
+				`Writing the value "${value}" to key "${key}" on namespace ${displayName}${metadataLog}.`
 			);
 		}
 
@@ -590,7 +580,7 @@ export const kvKeyListCommand = createCommand({
 		const localMode = isLocal(args);
 		// TODO: support for limit+cursor (pagination)
 		const config = readConfig(args);
-		const namespaceId = await getKVNamespaceId(args, config, localMode);
+		const { namespaceId } = await getKVNamespaceId(args, config, localMode);
 
 		let result: NamespaceKeyInfo[];
 		let metricEvent: EventNames;
@@ -688,7 +678,7 @@ export const kvKeyGetCommand = createCommand({
 	async handler({ key, ...args }) {
 		const localMode = isLocal(args);
 		const config = readConfig(args);
-		const namespaceId = await getKVNamespaceId(args, config, localMode);
+		const { namespaceId } = await getKVNamespaceId(args, config, localMode);
 
 		let bufferKVValue;
 		let metricEvent: EventNames;
@@ -787,9 +777,13 @@ export const kvKeyDeleteCommand = createCommand({
 	async handler({ key, ...args }) {
 		const localMode = isLocal(args);
 		const config = readConfig(args);
-		const namespaceId = await getKVNamespaceId(args, config, localMode);
+		const { namespaceId, displayName } = await getKVNamespaceId(
+			args,
+			config,
+			localMode
+		);
 
-		logger.log(`Deleting the key "${key}" on namespace ${namespaceId}.`);
+		logger.log(`Deleting the key "${key}" on namespace ${displayName}.`);
 
 		let metricEvent: EventNames;
 		if (localMode) {
@@ -836,7 +830,7 @@ export const kvBulkGetCommand = createCommand({
 	async handler({ filename, ...args }) {
 		const localMode = isLocal(args);
 		const config = readConfig(args);
-		const namespaceId = await getKVNamespaceId(args, config, localMode);
+		const { namespaceId } = await getKVNamespaceId(args, config, localMode);
 
 		const content = parseJSON(readFileSync(filename), filename) as (
 			| string
@@ -935,7 +929,7 @@ export const kvBulkPutCommand = createCommand({
 		// but we'll do that in the future if needed.
 
 		const config = readConfig(args);
-		const namespaceId = await getKVNamespaceId(args, config, localMode);
+		const { namespaceId } = await getKVNamespaceId(args, config, localMode);
 		const content = parseJSON(readFileSync(filename), filename);
 
 		if (!Array.isArray(content)) {
@@ -1059,11 +1053,15 @@ export const kvBulkDeleteCommand = createCommand({
 	async handler({ filename, ...args }) {
 		const localMode = isLocal(args);
 		const config = readConfig(args);
-		const namespaceId = await getKVNamespaceId(args, config, localMode);
+		const { namespaceId, displayName } = await getKVNamespaceId(
+			args,
+			config,
+			localMode
+		);
 
 		if (!args.force) {
 			const result = await confirm(
-				`Are you sure you want to delete all the keys read from "${filename}" from kv-namespace with id "${namespaceId}"?`
+				`Are you sure you want to delete all the keys read from "${filename}" from kv-namespace "${displayName}"?`
 			);
 			if (!result) {
 				logger.log(`Not deleting keys read from "${filename}".`);
