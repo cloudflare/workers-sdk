@@ -31,7 +31,7 @@ export abstract class Framework {
 	readonly id: string;
 	readonly name: string;
 
-	constructor(frameworkInfo: FrameworkInfo) {
+	constructor(frameworkInfo: Pick<FrameworkInfo, "id" | "name">) {
 		this.id = frameworkInfo.id;
 		this.name = frameworkInfo.name;
 	}

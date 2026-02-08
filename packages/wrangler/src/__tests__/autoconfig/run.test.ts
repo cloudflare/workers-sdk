@@ -13,7 +13,12 @@ import * as format from "../../deployment-bundle/guess-worker-format";
 import { clearOutputFilePath } from "../../output";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
+import {
+	clearDialogs,
+	mockConfirm,
+	mockPrompt,
+	mockSelect,
+} from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -272,6 +277,10 @@ describe("autoconfig (deploy)", () => {
 			mockPrompt({
 				text: "What do you want to name your Worker?",
 				result: "edited-worker-name",
+			});
+			mockSelect({
+				text: "What framework is your application using?",
+				result: "static",
 			});
 			mockPrompt({
 				text: "What directory contains your applications' output/asset files?",
