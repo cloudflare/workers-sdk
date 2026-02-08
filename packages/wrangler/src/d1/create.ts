@@ -12,7 +12,11 @@ import {
 	sharedResourceCreationArgs,
 } from "../utils/add-created-resource-config";
 import { getValidBindingName } from "../utils/getValidBindingName";
-import { JURISDICTION_CHOICES, LOCATION_CHOICES } from "./constants";
+import {
+	D1_DOCS_URL,
+	JURISDICTION_CHOICES,
+	LOCATION_CHOICES,
+} from "./constants";
 import type { DatabaseCreationResult } from "./types";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
@@ -40,8 +44,22 @@ export async function createD1Database(
 			}
 		);
 	} catch (e) {
-		if ((e as { code: number }).code === 7502) {
+		const errorCode = (e as { code: number }).code;
+
+		if (errorCode === 7502) {
 			throw new UserError("A database with that name already exists");
+		}
+
+		if (errorCode === 7406) {
+			throw new UserError(
+				dedent`
+					You have reached the maximum number of D1 databases for your account.
+					Please consider deleting unused databases, or visit the D1 documentation to learn more: ${D1_DOCS_URL}
+
+					To list your existing databases, run: wrangler d1 list
+					To delete a database, run: wrangler d1 delete <database-name>
+				`
+			);
 		}
 
 		throw e;
