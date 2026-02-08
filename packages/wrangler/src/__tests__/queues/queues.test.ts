@@ -196,9 +196,6 @@ describe("wrangler", () => {
 				if (queueSettings?.delivery_delay === undefined) {
 					queueSettings.delivery_delay = 0;
 				}
-				if (queueSettings?.message_retention_period === undefined) {
-					queueSettings.message_retention_period = 72000;
-				}
 
 				msw.use(
 					http.post(
@@ -253,7 +250,7 @@ describe("wrangler", () => {
 
 					OPTIONS
 					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 43200  [number] [default: 0]
-					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 86400 if on free tier, otherwise must be between 60 and 1209600  [number] [default: 72000]"
+					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 86400 if on free tier, otherwise must be between 60 and 1209600  [number]"
 				`);
 			});
 			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {
@@ -303,6 +300,7 @@ describe("wrangler", () => {
 
 			it("should send queue settings with message retention period", async () => {
 				const requests = mockCreateRequest("testQueue", {
+					delivery_delay: 0,
 					message_retention_period: 100,
 				});
 				await runWrangler(
