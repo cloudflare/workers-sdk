@@ -156,7 +156,10 @@ import {
 	pagesPublishCommand,
 } from "./pages/deploy";
 import { pagesDeploymentTailCommand } from "./pages/deployment-tails";
-import { pagesDeploymentListCommand } from "./pages/deployments";
+import {
+	pagesDeploymentDeleteCommand,
+	pagesDeploymentListCommand,
+} from "./pages/deployments";
 import { pagesDevCommand } from "./pages/dev";
 import { pagesDownloadConfigCommand } from "./pages/download-config";
 import { pagesFunctionsOptimizeRoutesCommand } from "./pages/functions";
@@ -1366,6 +1369,10 @@ export function createCLIParser(argv: string[]) {
 		{
 			command: "wrangler pages deployment tail",
 			definition: pagesDeploymentTailCommand,
+		},
+		{
+			command: "wrangler pages deployment delete",
+			definition: pagesDeploymentDeleteCommand,
 		},
 		{ command: "wrangler pages deploy", definition: pagesDeployCommand },
 		{ command: "wrangler pages publish", definition: pagesPublishCommand },
