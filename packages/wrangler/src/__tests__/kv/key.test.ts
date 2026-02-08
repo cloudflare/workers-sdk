@@ -148,7 +148,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value "my-value" to key "my-key" on namespace bound-id."
+					Writing the value "my-value" to key "my-key" on namespace someBinding (bound-id)."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -173,7 +173,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value "my-value" to key "my-key" on namespace preview-bound-id."
+					Writing the value "my-value" to key "my-key" on namespace someBinding (preview-bound-id)."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -220,7 +220,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Writing the value "my-value" to key "my-key" on namespace env-bound-id."
+					Writing the value "my-value" to key "my-key" on namespace someBinding (env-bound-id)."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);
@@ -1284,7 +1284,7 @@ describe("kv", () => {
 					──────────────────
 					Resource location: remote
 
-					Deleting the key "someKey" on namespace env-bound-id."
+					Deleting the key "someKey" on namespace someBinding (env-bound-id)."
 				`
 				);
 				expect(std.err).toMatchInlineSnapshot(`""`);

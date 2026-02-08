@@ -487,7 +487,10 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv namespace delete nonexistent-namespace")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: No namespace found with the name "nonexistent-namespace". Use --namespace-id instead or check available namespaces with "wrangler kv namespace list".]`
+					`
+					[Error: Not able to delete namespace.
+					No namespace found with the name "nonexistent-namespace". Use --namespace-id or --binding instead, or check available namespaces with "wrangler kv namespace list".]
+				`
 				);
 			});
 
@@ -495,7 +498,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv namespace delete my-namespace --namespace-id some-id")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Cannot specify multiple of: namespace name, --binding, or --namespace-id. Use only one.]`
+					`[Error: Cannot specify multiple of: namespace name (as positional argument), --binding, or --namespace-id. Use only one.]`
 				);
 			});
 
@@ -504,7 +507,7 @@ describe("kv", () => {
 				await expect(
 					runWrangler("kv namespace delete my-namespace --binding someBinding")
 				).rejects.toThrowErrorMatchingInlineSnapshot(
-					`[Error: Cannot specify multiple of: namespace name, --binding, or --namespace-id. Use only one.]`
+					`[Error: Cannot specify multiple of: namespace name (as positional argument), --binding, or --namespace-id. Use only one.]`
 				);
 			});
 
