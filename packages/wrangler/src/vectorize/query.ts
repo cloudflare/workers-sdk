@@ -191,7 +191,7 @@ export function validateQueryFilter(
 					for (const op in value) {
 						if (Object.prototype.hasOwnProperty.call(value, op)) {
 							const innerValue = value[op];
-							if (["$eq", "$ne", "$lt", "$lte", "$gt", "gte"].includes(op)) {
+							if (["$eq", "$ne", "$lt", "$lte", "$gt", "$gte"].includes(op)) {
 								if (!validateQueryFilterInnerValue(innerValue)) {
 									validInnerObj = false;
 								}
