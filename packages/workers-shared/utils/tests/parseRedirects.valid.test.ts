@@ -289,7 +289,7 @@ test("parseRedirects should support inline comments after URL fragments", () => 
 	});
 });
 
-test("parseRedirects should support inline comments without space before hash", () => {
+test("parseRedirects should support inline comments without space after hash", () => {
 	const input = `/a /b 301 #no space comment`;
 	const result = parseRedirects(input);
 	expect(result).toEqual({
