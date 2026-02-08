@@ -346,3 +346,40 @@ export const getLocalExplorerEnabledFromEnv =
 		variableName: "X_LOCAL_EXPLORER",
 		defaultValue: false,
 	});
+
+/**
+ * `CLOUDFLARE_CF_FETCH_ENABLED` controls whether Miniflare fetches the `cf.json` file
+ * containing request.cf properties from workers.cloudflare.com.
+ *
+ * - If set to "false", disables fetching and uses fallback data (no files created)
+ * - If set to "true" or not set, uses the default behavior (fetches and caches cf.json)
+ *
+ * This is particularly useful for non-JavaScript projects that don't want
+ * a node_modules directory created automatically.
+ *
+ * Example:
+ * ```sh
+ * # Disable cf fetching entirely
+ * CLOUDFLARE_CF_FETCH_ENABLED=false npx wrangler dev
+ * ```
+ */
+export const getCfFetchEnabledFromEnv = getBooleanEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_CF_FETCH_ENABLED",
+	defaultValue: true,
+});
+
+/**
+ * `CLOUDFLARE_CF_FETCH_PATH` specifies a custom path for caching the cf.json file.
+ *
+ * - If set, uses the specified path instead of the default node_modules/.mf/cf.json
+ * - If not set, uses the default location (node_modules/.mf/cf.json)
+ *
+ * Example:
+ * ```sh
+ * # Use a custom cache location
+ * CLOUDFLARE_CF_FETCH_PATH=/tmp/cf-cache.json npx wrangler dev
+ * ```
+ */
+export const getCfFetchPathFromEnv = getEnvironmentVariableFactory({
+	variableName: "CLOUDFLARE_CF_FETCH_PATH",
+});

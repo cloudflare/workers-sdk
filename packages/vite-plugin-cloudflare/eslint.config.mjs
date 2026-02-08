@@ -50,9 +50,13 @@ export default defineConfig([
 			"workers-sdk/no-vitest-import-expect": "error",
 		},
 	},
-	// Enable no-vitest-import-expect for playground and src test files (bucket 1: a-m)
+	// Enable no-vitest-import-expect for playground and src test files
 	{
-		files: ["playground/[a-m]*/**/__tests__/**/*.ts"],
+		files: [
+			"playground/**/__tests__/**/*.ts",
+			"src/**/*.spec.ts",
+			"src/**/__tests__/**/*.spec.ts",
+		],
 		rules: {
 			"workers-sdk/no-vitest-import-expect": "error",
 		},
