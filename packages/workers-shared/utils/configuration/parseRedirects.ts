@@ -53,7 +53,7 @@ export function parseRedirects(
 			continue;
 		}
 
-		// Handle inline comments: strip off first `#` token that starts a comment but not a URL fragment.
+		// Handle inline comments: strip off from the first `#` token that starts a comment, but not URL fragments.
 		// This allows `/a /b#fragment` but strips `/a /b # comment`
 		const tokens = line.replace(/\s+#.*$/, "").split(/\s+/);
 
