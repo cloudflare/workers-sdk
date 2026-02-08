@@ -108,6 +108,7 @@ describe("autoconfig (deploy)", () => {
 					projectPath: process.cwd(),
 					workerName: "my-worker",
 					framework: new Static({ id: "static", name: "Static" }),
+					outputDir: "./public",
 				})
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
@@ -379,7 +380,7 @@ describe("autoconfig (deploy)", () => {
 					outputDir: "",
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot configure project without an output directory]`
+				`[AssertionError: The Output Directory is unexpectedly missing]`
 			);
 		});
 	});

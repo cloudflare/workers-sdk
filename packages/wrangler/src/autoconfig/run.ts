@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -78,11 +79,10 @@ export async function runAutoConfig(
 		autoConfigDetails = updatedAutoConfigDetails;
 		assertNonConfigured(autoConfigDetails);
 
-		if (!autoConfigDetails.outputDir) {
-			throw new FatalError(
-				"Cannot configure project without an output directory"
-			);
-		}
+		assert(
+			autoConfigDetails.outputDir,
+			"The Output Directory is unexpectedly missing"
+		);
 
 		if (!autoConfigDetails.framework.autoConfigSupported) {
 			throw new FatalError(
