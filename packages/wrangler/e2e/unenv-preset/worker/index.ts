@@ -580,7 +580,11 @@ export const WorkerdTests: Record<string, () => void> = {
 		const mProcess = await import("node:process");
 		const gProcess = globalThis.process;
 
-		const useV2 = getRuntimeFlagValue("enable_nodejs_process_v2");
+		// V2 is only used when workerd has fixes for iterable fetch bodies enabled.
+		const useV2 =
+			getRuntimeFlagValue("enable_nodejs_process_v2") &&
+			getRuntimeFlagValue("fetch_iterable_type_support") &&
+			getRuntimeFlagValue("fetch_iterable_type_support_override_adjustment");
 
 		for (const p of [mProcess, gProcess]) {
 			assert.equal(typeof (p as any).binding, "function");

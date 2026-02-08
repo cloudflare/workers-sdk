@@ -63,6 +63,14 @@ export type CommonEventProperties = {
 	 */
 	hasAssets: boolean;
 	/**
+	 * The detected AI agent environment ID, if any (e.g., "claude-code", "cursor-agent").
+	 * Null if not running in an agentic environment.
+	 */
+	agent: string | null;
+};
+
+export type CommonCommandEventProperties = CommonEventProperties & {
+	/**
 	 * A list of normalised argument names/flags that were passed in or are set by default.
 	 * Excludes boolean flags set to false.
 	 */
@@ -71,17 +79,12 @@ export type CommonEventProperties = {
 	 * Same as argsUsed except concatenated for convenience in Amplitude
 	 */
 	argsCombination: string;
-	/**
-	 * The detected AI agent environment ID, if any (e.g., "claude-code", "cursor-agent").
-	 * Null if not running in an agentic environment.
-	 */
-	agent: string | null;
 };
 
 /**
  * Properties included in all "wrangler command started / completed / errored" events
  */
-type CommandEventProperties = CommonEventProperties & {
+type CommandEventProperties = CommonCommandEventProperties & {
 	/**
 	 * The command that is being run, e.g. `r2 bucket create`. It does not include the "wrangler" prefix.
 	 *

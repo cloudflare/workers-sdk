@@ -159,6 +159,8 @@ export {
 	CORE_PLUGIN,
 	CORE_PLUGIN_NAME,
 	SERVICE_ENTRY,
+	LOCAL_EXPLORER_BASE_PATH,
+	LOCAL_EXPLORER_API_PATH,
 	CoreOptionsSchema,
 	CoreSharedOptionsSchema,
 	compileModuleRules,

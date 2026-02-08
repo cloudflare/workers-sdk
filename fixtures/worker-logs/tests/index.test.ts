@@ -324,6 +324,10 @@ describe("'wrangler dev' correctly displays logs", () => {
 			const getOutput = await getWranglerDevOutput("module", [
 				"--compatibility-flags=enable_nodejs_process_v2",
 				"--compatibility-flags=nodejs_compat",
+				// Those flags are needed to enable the new process.v2 implementation
+				// See `getProcessOverrides` in `packages/unenv-preset/src/preset.ts`
+				"--compatibility-flags=fetch_iterable_type_support",
+				"--compatibility-flags=fetch_iterable_type_support_override_adjustment",
 			]);
 			await vi.waitFor(() =>
 				expect(getOutput()).toEqual([

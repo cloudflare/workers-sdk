@@ -1,8 +1,10 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { getTextResponse } from "../../__test-utils__";
 
 describe("external durable objects", async () => {
-	test("can use `scriptName` to bind to a Durable Object defined in another Worker", async () => {
+	test("can use `scriptName` to bind to a Durable Object defined in another Worker", async ({
+		expect,
+	}) => {
 		expect(await getTextResponse("/?name=my-do")).toEqual(
 			'From worker-a: {"name":"my-do","count":0}'
 		);

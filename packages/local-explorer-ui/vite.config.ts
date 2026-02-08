@@ -3,10 +3,12 @@ import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import svgr from "vite-plugin-svgr";
-import {
-	LOCAL_EXPLORER_API_PATH,
-	LOCAL_EXPLORER_BASE_PATH,
-} from "./src/constants";
+
+// Canonical definitions in packages/miniflare/src/plugins/core/constants.ts
+// Cannot import from miniflare directly due to circular dependency
+// (miniflare depends on @cloudflare/local-explorer-ui)
+const LOCAL_EXPLORER_BASE_PATH = "/cdn-cgi/explorer";
+const LOCAL_EXPLORER_API_PATH = `${LOCAL_EXPLORER_BASE_PATH}/api`;
 
 export default defineConfig({
 	plugins: [
@@ -18,6 +20,11 @@ export default defineConfig({
 		svgr(),
 		tailwindcss(),
 	],
+	define: {
+		"import.meta.env.VITE_LOCAL_EXPLORER_API_PATH": JSON.stringify(
+			LOCAL_EXPLORER_API_PATH
+		),
+	},
 	build: {
 		outDir: "dist",
 	},

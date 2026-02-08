@@ -426,6 +426,7 @@ export async function getDevMiniflareOptions(
 	return {
 		miniflareOptions: {
 			log: logger,
+			unsafeProxySharedSecret: ctx.proxySharedSecret,
 			logRequests: false,
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,
@@ -619,6 +620,7 @@ export async function getPreviewMiniflareOptions(
 	return {
 		miniflareOptions: {
 			log: logger,
+			unsafeProxySharedSecret: ctx.proxySharedSecret,
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),

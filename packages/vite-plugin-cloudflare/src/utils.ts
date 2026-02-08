@@ -59,6 +59,7 @@ export function withTrailingSlash(path: string): string {
 }
 
 export function createRequestHandler(
+	ctx: PluginContext,
 	handler: (
 		request: MiniflareRequest,
 		req: vite.Connect.IncomingMessage
@@ -80,7 +81,7 @@ export function createRequestHandler(
 			}
 			request = createRequest(req, res);
 
-			let response = await handler(toMiniflareRequest(request), req);
+			let response = await handler(toMiniflareRequest(ctx, request), req);
 
 			// Vite uses HTTP/2 when `server.https` or `preview.https` is enabled
 			if (req.httpVersionMajor === 2) {
@@ -105,7 +106,10 @@ export function satisfiesViteVersion(minVersion: string): boolean {
 	return semverGte(viteVersion, minVersion);
 }
 
-function toMiniflareRequest(request: Request): MiniflareRequest {
+function toMiniflareRequest(
+	ctx: PluginContext,
+	request: Request
+): MiniflareRequest {
 	const host = request.headers.get("Host");
 	const xForwardedHost = request.headers.get("X-Forwarded-Host");
 
@@ -115,6 +119,11 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 		// TODO: reconsider this when adopting `miniflare.dispatchFetch` as it may be possible to provide the Vite server host in the `host` header
 		request.headers.set("X-Forwarded-Host", host);
 	}
+
+	// Add the proxy shared secret to the request headers
+	// so the proxy worker can trust it and add host headers back
+	// wrangler dev already does this, we need to match the behavior here
+	request.headers.set(CoreHeaders.PROXY_SHARED_SECRET, ctx.proxySharedSecret);
 
 	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
 	const secFetchMode = request.headers.get("Sec-Fetch-Mode");

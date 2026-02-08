@@ -1,6 +1,6 @@
 import path from "node:path";
 import { stripVTControlCharacters } from "node:util";
-import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterAll, beforeAll, describe, test, vi } from "vitest";
 import {
 	resetServerLogs,
 	satisfiesViteVersion,
@@ -28,7 +28,7 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		process.stdin.isTTY = false;
 	});
 
-	test("display binding shortcut hint", () => {
+	test("display binding shortcut hint", ({ expect }) => {
 		// Set up the shortcut wrapper (after stubs are in place from beforeAll)
 		const mockContext = new PluginContext({
 			hasShownWorkerConfigWarnings: false,
@@ -63,7 +63,7 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 			"press b + enter to list configured Cloudflare bindings"
 		);
 	});
-	test("prints bindings with a single Worker", () => {
+	test("prints bindings with a single Worker", ({ expect }) => {
 		// Create a test server with a spy on bindCLIShortcuts
 		const mockBindCLIShortcuts = vi.spyOn(viteServer, "bindCLIShortcuts");
 		// Create mock plugin context
@@ -119,7 +119,7 @@ describe.skipIf(!satisfiesViteVersion("7.2.7"))("shortcuts", () => {
 		`);
 	});
 
-	test("prints bindings with multi Workers", () => {
+	test("prints bindings with multi Workers", ({ expect }) => {
 		// Create a test server with a spy on bindCLIShortcuts
 		const mockBindCLIShortcuts = vi.spyOn(viteServer, "bindCLIShortcuts");
 		// Create mock plugin context

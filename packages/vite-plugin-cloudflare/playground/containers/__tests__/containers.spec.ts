@@ -1,4 +1,4 @@
-import { expect, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import {
 	getTextResponse,
 	isCINonLinux,
@@ -13,7 +13,7 @@ test.skipIf(
 	isCINonLinux ||
 		// If the test is being run locally and docker is not running we just skip this test
 		isLocalWithoutDockerRunning
-)("starts container", async () => {
+)("starts container", async ({ expect }) => {
 	const startResponse = await getTextResponse("/start");
 	expect(startResponse).toBe("Container create request sent...");
 

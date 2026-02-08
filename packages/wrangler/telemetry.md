@@ -50,7 +50,9 @@ e.g.
 WRANGLER_LOG=debug npx wrangler deploy
 ```
 
-Telemetry source code can be viewed at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/src/metrics. It is run in the background and will not delay project execution. As a result, when necessary (e.g. no internet connection), it will fail quickly and quietly.
+Most of the telemetry source code used by Wrangler can be viewed at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/src/metrics. The rest of the telemetry related code is sparse across the Wrangler source, mostly it consists of `sendMetricsEvent` calls.
+
+All the telemetry logic is run in the background and will not delay project execution. As a result, when necessary (e.g. no internet connection), it will fail quickly and quietly.
 
 ## How can I configure Wrangler telemetry?
 

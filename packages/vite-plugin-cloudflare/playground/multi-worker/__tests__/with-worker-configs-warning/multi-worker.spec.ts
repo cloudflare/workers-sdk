@@ -1,8 +1,10 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { getJsonResponse, serverLogs } from "../../../__test-utils__";
 
 describe("multi-worker basic functionality", async () => {
-	test("a worker configs warning is present in the terminal", async () => {
+	test("a worker configs warning is present in the terminal", async ({
+		expect,
+	}) => {
 		/**
 		 * Note: we always expect the warning once for both values of `isBuild`.
 		 *       For dev is obvious, for builds we do get the warning once because we get it when we
@@ -17,7 +19,7 @@ describe("multi-worker basic functionality", async () => {
 		);
 	});
 
-	test("entry worker returns a response", async () => {
+	test("entry worker returns a response", async ({ expect }) => {
 		const result = await getJsonResponse();
 		expect(result).toEqual({ name: "Worker A" });
 	});

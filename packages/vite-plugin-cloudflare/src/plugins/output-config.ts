@@ -63,6 +63,14 @@ export const outputConfigPlugin = createPlugin("output-config", (ctx) => {
 							: undefined,
 				};
 
+				// Infer `upload_source_maps` from Vite's `build.sourcemap` if not explicitly set
+				if (
+					inputWorkerConfig.upload_source_maps === undefined &&
+					this.environment.config.build.sourcemap
+				) {
+					outputConfig.upload_source_maps = true;
+				}
+
 				if (inputWorkerConfig.configPath) {
 					const localDevVars = getLocalDevVarsForPreview(
 						inputWorkerConfig.configPath,
