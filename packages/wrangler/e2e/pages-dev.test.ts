@@ -124,11 +124,15 @@ describe.sequential("wrangler pages dev", () => {
 		).flat();
 		expect(bindings).toMatchInlineSnapshot(`
 			[
-			  "env.TEST_DO (TestDurableObject, defined in a)           Durable Object      local [not connected]",
-			  "env.TEST_KV (TEST_KV)                                   KV Namespace        local",
-			  "env.TEST_D1 (local-TEST_D1)                             D1 Database         local",
-			  "env.TEST_R2 (TEST_R2)                                   R2 Bucket           local",
-			  "env.TEST_SERVICE (test-worker)                          Worker              local [not connected]",
+			  "env.TEST_DO (TestDurableObject, defined in a)                  Durable Object            local [not connected]",
+			  "env.TEST_KV (TEST_KV)                                          KV Namespace              local",
+			  "env.TEST_D1 (local-TEST_D1)                                    D1 Database               local",
+			  "env.TEST_R2 (TEST_R2)                                          R2 Bucket                 local",
+			  "env.TEST_SERVICE (test-worker)                                 Worker                    local [not connected]",
+			  "env.CF_PAGES ("(hidden)")                                      Environment Variable      local",
+			  "env.CF_PAGES_BRANCH ("(hidden)")                               Environment Variable      local",
+			  "env.CF_PAGES_COMMIT_SHA ("(hidden)")                           Environment Variable      local",
+			  "env.CF_PAGES_URL ("(hidden)")                                  Environment Variable      local",
 			]
 		`);
 	});
@@ -325,9 +329,13 @@ describe.sequential("wrangler pages dev", () => {
 		expect(normalizeOutput(worker.currentOutput)).toMatchInlineSnapshot(`
 			"✨ Compiled Worker successfully
 			Your Worker has access to the following bindings:
-			Binding                                  Resource                  Mode
-			env.KV_BINDING_TOML (KV_ID_TOML)         KV Namespace              local
-			env.PAGES ("⚡️ Pages ⚡️")                Environment Variable      local
+			Binding                                      Resource                  Mode
+			env.KV_BINDING_TOML (KV_ID_TOML)             KV Namespace              local
+			env.CF_PAGES ("(hidden)")                    Environment Variable      local
+			env.CF_PAGES_BRANCH ("(hidden)")             Environment Variable      local
+			env.CF_PAGES_COMMIT_SHA ("(hidden)")         Environment Variable      local
+			env.CF_PAGES_URL ("(hidden)")                Environment Variable      local
+			env.PAGES ("⚡️ Pages ⚡️")                    Environment Variable      local
 			⎔ Starting local server...
 			[wrangler:info] Ready on http://<HOST>:<PORT>
 			[wrangler:info] GET / 200 OK (TIMINGS)"
@@ -445,6 +453,10 @@ describe.sequential("wrangler pages dev", () => {
 			env.SERVICE_BINDING_1_TOML (NEW_SERVICE_NAME_1)                          Worker                    local [not connected]
 			env.SERVICE_BINDING_2_TOML (SERVICE_NAME_2_TOML)                         Worker                    local [not connected]
 			env.SERVICE_BINDING_3_TOML (SERVICE_NAME_3_ARGS)                         Worker                    local [not connected]
+			env.CF_PAGES ("(hidden)")                                                Environment Variable      local
+			env.CF_PAGES_BRANCH ("(hidden)")                                         Environment Variable      local
+			env.CF_PAGES_COMMIT_SHA ("(hidden)")                                     Environment Variable      local
+			env.CF_PAGES_URL ("(hidden)")                                            Environment Variable      local
 			env.VAR1 ("(hidden)")                                                    Environment Variable      local
 			env.VAR2 ("VAR_2_TOML")                                                  Environment Variable      local
 			env.VAR3 ("(hidden)")                                                    Environment Variable      local
@@ -479,6 +491,62 @@ describe.sequential("wrangler pages dev", () => {
 		await expect(fetchText(url)).resolves.toBe(
 			"⚡️ Pages supports wrangler.toml ⚡️"
 		);
+	});
+
+	it("should inject CF_PAGES environment variables", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"_worker.js": dedent`
+				export default {
+					fetch(request, env) {
+						return Response.json({
+							CF_PAGES: env.CF_PAGES,
+							CF_PAGES_BRANCH: env.CF_PAGES_BRANCH,
+							CF_PAGES_COMMIT_SHA: env.CF_PAGES_COMMIT_SHA,
+							CF_PAGES_URL: env.CF_PAGES_URL,
+						});
+					}
+				}`,
+		});
+		const worker = helper.runLongLived(
+			`${cmd} --port ${port} --inspector-port ${inspectorPort} . --compatibility-date=2024-01-01`
+		);
+		const { url } = await worker.waitForReady();
+
+		const response = await fetch(url);
+		const data = (await response.json()) as Record<string, string>;
+
+		expect(data.CF_PAGES).toBe("1");
+		expect(data.CF_PAGES_BRANCH).toBeDefined();
+		expect(data.CF_PAGES_COMMIT_SHA).toBeDefined();
+		expect(data.CF_PAGES_URL).toContain("http");
+	});
+
+	it("should allow user to override CF_PAGES environment variables", async () => {
+		const helper = new WranglerE2ETestHelper();
+		await helper.seed({
+			"_worker.js": dedent`
+				export default {
+					fetch(request, env) {
+						return new Response(env.CF_PAGES_BRANCH);
+					}
+				}`,
+			"wrangler.toml": dedent`
+				name = "test-pages"
+				pages_build_output_dir = "."
+				compatibility_date = "2024-01-01"
+				
+				[vars]
+				CF_PAGES_BRANCH = "custom-branch"
+			`,
+		});
+		const worker = helper.runLongLived(
+			`${cmd} --port ${port} --inspector-port ${inspectorPort}`
+		);
+		const { url } = await worker.waitForReady();
+
+		const text = await fetchText(url);
+		expect(text).toBe("custom-branch");
 	});
 
 	describe("watch mode", () => {
