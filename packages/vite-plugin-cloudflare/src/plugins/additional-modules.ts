@@ -134,7 +134,7 @@ type ModuleRules = Array<{
 const moduleRules: ModuleRules = [
 	{ type: "CompiledWasm", pattern: /\.wasm(\?module)?$/ },
 	{ type: "Data", pattern: /\.bin$/ },
-	{ type: "Text", pattern: /\.(txt|html|sql)$/ },
+	{ type: "Text", pattern: /\.(txt|html|sql|md)$/ },
 ];
 
 const moduleRuleFilters = moduleRules.map((rule) => rule.pattern);

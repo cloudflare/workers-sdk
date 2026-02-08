@@ -13,6 +13,11 @@ declare module '*.sql' {
   export default sql
 }
 
+declare module '*.md' {
+	const markdown: string;
+	export default markdown;
+}
+
 declare module '*.wasm' {
 	const wasm: WebAssembly.Module
 	export default wasm
