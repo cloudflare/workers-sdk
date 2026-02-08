@@ -1,6 +1,8 @@
 import { join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used inside .forEach() parameterized test generation */
 import { describe, expect, test } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getValidatedWranglerConfigPath } from "../workers-configs";
 
 const fixturesPath = fileURLToPath(new URL("fixtures", import.meta.url));

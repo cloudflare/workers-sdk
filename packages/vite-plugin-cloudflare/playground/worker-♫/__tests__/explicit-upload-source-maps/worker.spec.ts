@@ -1,11 +1,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { expect, test } from "vitest";
+import { test } from "vitest";
 import { isBuild, rootDir } from "../../../__test-utils__";
 
 test.runIf(isBuild)(
 	"respects explicit `upload_source_maps` value in Worker config",
-	() => {
+	({ expect }) => {
 		const wranglerConfig = JSON.parse(
 			fs.readFileSync(
 				path.join(rootDir, "dist", "worker", "wrangler.json"),
