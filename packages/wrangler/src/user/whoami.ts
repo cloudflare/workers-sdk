@@ -6,7 +6,13 @@ import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
 import { fetchMembershipRoles } from "./membership";
-import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
+import {
+	DefaultScopeKeys,
+	getActiveProfile,
+	getAPIToken,
+	getAuthFromEnv,
+	getScopes,
+} from ".";
 import type { ApiCredentials, Scope } from ".";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
@@ -22,6 +28,12 @@ export async function whoami(
 	accountFilter?: string,
 	configAccountId?: string
 ) {
+	const activeProfile = getActiveProfile();
+	if (activeProfile !== "default") {
+		logger.log(
+			`Using profile: ${chalk.blue(activeProfile)}`
+		);
+	}
 	logger.log("Getting User settings...");
 	const user = await getUserInfo(complianceConfig);
 	if (!user) {
