@@ -530,7 +530,7 @@ describe.sequential("wrangler pages dev", () => {
 			"_worker.js": dedent`
 				export default {
 					fetch(request, env) {
-						return new Response(env.CF_PAGES_BRANCH + " " + env.CF_COMMIT_SHA);
+						return new Response(env.CF_PAGES_BRANCH + " " + env.CF_PAGES_COMMIT_SHA);
 					}
 				}`,
 			"wrangler.toml": dedent`
@@ -540,7 +540,7 @@ describe.sequential("wrangler pages dev", () => {
 
 				[vars]
 				CF_PAGES_BRANCH = "custom-branch"
-				CF_COMMIT_SHA = "custom-sha"
+				CF_PAGES_COMMIT_SHA = "custom-sha"
 			`,
 		});
 		const worker = helper.runLongLived(
