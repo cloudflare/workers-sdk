@@ -12,7 +12,7 @@ import { parse as dotenvParse } from "dotenv";
 import { FormData } from "undici";
 import { fetchResult } from "../cfetch";
 import { createCommand, createNamespace } from "../core/create-command";
-import { createFlatWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
+import { createWorkerUploadForm } from "../deployment-bundle/create-worker-upload-form";
 import { confirm, prompt } from "../dialogs";
 import { logger } from "../logger";
 import * as metrics from "../metrics";
@@ -68,7 +68,7 @@ async function createDraftWorker({
 			: `/accounts/${accountId}/workers/scripts/${scriptName}`,
 		{
 			method: "PUT",
-			body: createFlatWorkerUploadForm(
+			body: createWorkerUploadForm(
 				{
 					name: scriptName,
 					main: {

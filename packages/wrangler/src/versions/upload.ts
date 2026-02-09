@@ -579,6 +579,11 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const uploadSourceMaps =
 			props.uploadSourceMaps ?? config.upload_source_maps;
 
+		const bindings = getBindings({
+			...config,
+			vars: { ...config.vars, ...props.vars },
+		});
+
 		const {
 			modules,
 			dependencies,
@@ -676,11 +681,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					)
 				: undefined;
 
-		const bindings = getBindings({
-			...config,
-			vars: { ...config.vars, ...props.vars },
-		});
-
 		const placement = parseConfigPlacement(config);
 
 		const entryPointName = path.basename(resolvedEntryPointPath);
@@ -693,7 +693,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		const worker: CfWorkerInit = {
 			name: scriptName,
 			main,
-			bindings,
 			migrations,
 			modules,
 			containers: config.containers,
@@ -738,23 +737,14 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			modules
 		);
 
-		// mask anything that was overridden in cli args
-		// so that we don't log potential secrets into the terminal
-		const maskedVars = { ...bindings.vars };
-		for (const key of Object.keys(maskedVars)) {
-			if (maskedVars[key] !== config.vars[key]) {
-				// This means it was overridden in cli args
-				// so let's mask it
-				maskedVars[key] = "(hidden)";
-			}
-		}
-
 		let workerBundle: FormData;
 
 		if (props.dryRun) {
-			workerBundle = createWorkerUploadForm(worker);
+			workerBundle = createWorkerUploadForm(worker, bindings, {
+				dryRun: true,
+			});
 			printBindings(
-				{ ...bindings, vars: maskedVars },
+				bindings,
 				config.tail_consumers,
 				config.streaming_tail_consumers
 			);
@@ -769,7 +759,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.config
 				);
 			}
-			workerBundle = createWorkerUploadForm(worker);
+			workerBundle = createWorkerUploadForm(worker, bindings);
 
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
@@ -793,7 +783,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				logger.log("Worker Startup Time:", result.startup_time_ms, "ms");
 				bindingsPrinted = true;
 				printBindings(
-					{ ...bindings, vars: maskedVars },
+					bindings,
 					config.tail_consumers,
 					config.streaming_tail_consumers
 				);
@@ -802,7 +792,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			} catch (err) {
 				if (!bindingsPrinted) {
 					printBindings(
-						{ ...bindings, vars: maskedVars },
+						bindings,
 						config.tail_consumers,
 						config.streaming_tail_consumers
 					);

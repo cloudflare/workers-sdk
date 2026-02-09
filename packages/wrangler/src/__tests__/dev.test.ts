@@ -1629,8 +1629,12 @@ describe.sequential("wrangler dev", () => {
 					.filter(
 						(
 							binding
-						): binding is [string, Extract<Binding, { type: "plain_text" }>] =>
-							binding[1].type === "plain_text"
+						): binding is [
+							string,
+							Extract<Binding, { type: "plain_text" | "secret_text" }>,
+						] =>
+							binding[1].type === "plain_text" ||
+							binding[1].type === "secret_text"
 					)
 					.map(([b, v]) => [b, v.value])
 			);
@@ -1675,8 +1679,12 @@ describe.sequential("wrangler dev", () => {
 					.filter(
 						(
 							binding
-						): binding is [string, Extract<Binding, { type: "plain_text" }>] =>
-							binding[1].type === "plain_text"
+						): binding is [
+							string,
+							Extract<Binding, { type: "plain_text" | "secret_text" }>,
+						] =>
+							binding[1].type === "plain_text" ||
+							binding[1].type === "secret_text"
 					)
 					.map(([b, v]) => [b, v.value])
 			);

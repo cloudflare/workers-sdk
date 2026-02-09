@@ -53,26 +53,28 @@ function createWorkerBundleFormData(
 		placement = undefined;
 	}
 
-	return createWorkerUploadForm({
-		name: mainModule.name,
-		main: mainModule,
-		modules: workerBundle.modules,
-		bindings: getBindings(config, { pages: true }),
-		migrations: undefined,
-		compatibility_date: config?.compatibility_date,
-		compatibility_flags: config?.compatibility_flags,
-		keepVars: undefined,
-		keepSecrets: undefined,
-		keepBindings: undefined,
-		logpush: undefined,
-		sourceMaps: config?.upload_source_maps
-			? loadSourceMaps(mainModule, workerBundle.modules, workerBundle)
-			: undefined,
-		placement: placement,
-		tail_consumers: undefined,
-		limits: config?.limits,
-		assets: undefined,
-		containers: undefined, // containers are not supported in Pages
-		observability: undefined,
-	});
+	return createWorkerUploadForm(
+		{
+			name: mainModule.name,
+			main: mainModule,
+			modules: workerBundle.modules,
+			migrations: undefined,
+			compatibility_date: config?.compatibility_date,
+			compatibility_flags: config?.compatibility_flags,
+			keepVars: undefined,
+			keepSecrets: undefined,
+			keepBindings: undefined,
+			logpush: undefined,
+			sourceMaps: config?.upload_source_maps
+				? loadSourceMaps(mainModule, workerBundle.modules, workerBundle)
+				: undefined,
+			placement: placement,
+			tail_consumers: undefined,
+			limits: config?.limits,
+			assets: undefined,
+			containers: undefined, // containers are not supported in Pages
+			observability: undefined,
+		},
+		getBindings(config, { pages: true })
+	);
 }

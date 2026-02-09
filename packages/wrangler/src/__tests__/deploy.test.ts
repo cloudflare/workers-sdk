@@ -10241,8 +10241,8 @@ addEventListener('fetch', event => {});`
 					Worker Startup Time: 100 ms
 					Your Worker has access to the following bindings:
 					Binding                     Resource
-					env.TEXT ("(hidden)")       Environment Variable
-					env.COUNT ("(hidden)")      Environment Variable
+					env.TEXT (\\"sometext\\")       Environment Variable
+					env.COUNT (\\"1\\")             Environment Variable
 
 					Uploaded test-name (TIMINGS)
 					Deployed test-name triggers (TIMINGS)
