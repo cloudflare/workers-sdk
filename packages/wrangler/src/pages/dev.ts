@@ -91,7 +91,6 @@ function getPagesEnvironmentVariables(
 	localUrl: string
 ): Record<string, string> {
 	let branch = "local";
-	let commitSha = "0000000000000000000000000000000000000000";
 
 	// Attempt to get actual git info for more realistic mocking
 	try {
@@ -103,6 +102,7 @@ function getPagesEnvironmentVariables(
 		// Not a git repo or git not available, use default
 	}
 
+	let commitSha = "0000000000000000000000000000000000000000";
 	try {
 		commitSha = execSync("git rev-parse HEAD", {
 			encoding: "utf-8",
@@ -911,7 +911,6 @@ export const pagesDevCommand = createCommand({
 			}
 		}
 
-		// Get CF_PAGES environment variables for local dev
 		const pagesEnvVars = getPagesEnvironmentVariables(
 			`${localProtocol ?? "http"}://${ip}:${port}`
 		);

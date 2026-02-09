@@ -509,35 +509,38 @@ describe.sequential("wrangler pages dev", () => {
 				}`,
 		});
 		const worker = helper.runLongLived(
-			`${cmd} --port ${port} --inspector-port ${inspectorPort} . --compatibility-date=2024-01-01`
+			`${cmd} --port ${port} --inspector-port ${inspectorPort} .`
 		);
 		const { url } = await worker.waitForReady();
 
 		const response = await fetch(url);
 		const data = (await response.json()) as Record<string, string>;
 
-		expect(data.CF_PAGES).toBe("1");
-		expect(data.CF_PAGES_BRANCH).toBeDefined();
-		expect(data.CF_PAGES_COMMIT_SHA).toBeDefined();
-		expect(data.CF_PAGES_URL).toContain("http");
+		expect(data).toEqual({
+			CF_PAGES: "1",
+			CF_PAGES_BRANCH: expect.any(String),
+			CF_PAGES_COMMIT_SHA: expect.any(String),
+			CF_PAGES_URL: expect.stringContaining("http"),
+		});
 	});
 
-	it("should allow user to override CF_PAGES environment variables", async () => {
+	it("should allow user to override CF_PAGES... environment variables", async () => {
 		const helper = new WranglerE2ETestHelper();
 		await helper.seed({
 			"_worker.js": dedent`
 				export default {
 					fetch(request, env) {
-						return new Response(env.CF_PAGES_BRANCH);
+						return new Response(env.CF_PAGES_BRANCH + " " + env.CF_COMMIT_SHA);
 					}
 				}`,
 			"wrangler.toml": dedent`
 				name = "test-pages"
 				pages_build_output_dir = "."
 				compatibility_date = "2024-01-01"
-				
+
 				[vars]
 				CF_PAGES_BRANCH = "custom-branch"
+				CF_COMMIT_SHA = "custom-sha"
 			`,
 		});
 		const worker = helper.runLongLived(
@@ -546,7 +549,7 @@ describe.sequential("wrangler pages dev", () => {
 		const { url } = await worker.waitForReady();
 
 		const text = await fetchText(url);
-		expect(text).toBe("custom-branch");
+		expect(text).toBe("custom-branch custom-sha");
 	});
 
 	describe("watch mode", () => {

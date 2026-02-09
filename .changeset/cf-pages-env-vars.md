@@ -11,4 +11,4 @@ Add CF_PAGES environment variables to `wrangler pages dev`
 - `CF_PAGES_COMMIT_SHA` defaults to the current git commit SHA (or a placeholder if not in a git repo)
 - `CF_PAGES_URL` is set to the local dev server URL
 
-These variables can be overridden by user-defined vars in `wrangler.toml`, `.dev.vars`, or via CLI flags.
+These variables can be overridden by user-defined vars in the Wrangler configuration, `.env`, `.dev.vars`, or via CLI flags.
