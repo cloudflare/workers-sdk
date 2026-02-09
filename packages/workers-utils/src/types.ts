@@ -30,6 +30,7 @@ import type {
 	CfSendEmailBindings,
 	CfService,
 	CfTailConsumer,
+	CfUnsafeBinding,
 	CfUserLimits,
 	CfVectorize,
 	CfVpcService,
@@ -279,6 +280,7 @@ type BindingOmit<T> = Omit<T, "binding">;
 type NameOmit<T> = Omit<T, "name">;
 export type Binding =
 	| { type: "plain_text"; value: string }
+	| { type: "secret_text"; value: string }
 	| { type: "json"; value: Json }
 	| ({ type: "kv_namespace" } & BindingOmit<CfKvNamespace>)
 	| ({ type: "send_email" } & NameOmit<CfSendEmailBindings>)
@@ -309,5 +311,5 @@ export type Binding =
 	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
 	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
 	| ({ type: "media" } & BindingOmit<CfMediaBinding>)
-	| { type: `unsafe_${string}` }
+	| ({ type: `unsafe_${string}` } & Omit<CfUnsafeBinding, "name" | "type">)
 	| { type: "assets" };
