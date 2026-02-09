@@ -8,13 +8,14 @@
 		"check:lint": "eslint src --max-warnings=0",
 		"check:type": "tsc --build",
 		"deploy": "echo 'no deploy'",
-		"dev": "concurrently -n ui,worker -c blue,orange \"vite\" \"pnpm --filter @fixture/worker-with-resources start\"",
-		"dev:ui": "vite",
-		"generate:api": "openapi-ts && prettier --write src/api/generated",
+		"dev": "concurrently -n api,ui,worker -c green,blue,orange \"openapi-ts --watch\" \"vite\" \"pnpm -w turbo --filter @fixture/worker-with-resources start\"",
+		"dev:ui": "concurrently -n api,ui -c green,blue \"openapi-ts --watch\" \"vite\"",
+		"postinstall": "openapi-ts",
 		"preview": "vite preview"
 	},
 	"dependencies": {
 		"@base-ui/react": "^1.1.0",
+		"@cloudflare/kumo": "^1.1.0",
 		"@phosphor-icons/react": "^2.1.10",
 		"@tailwindcss/vite": "^4.0.15",
 		"@tanstack/react-router": "^1.158.0",

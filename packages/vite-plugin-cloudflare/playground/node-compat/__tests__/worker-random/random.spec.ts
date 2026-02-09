@@ -1,7 +1,9 @@
-import { expect, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import { getJsonResponse, WAIT_FOR_OPTIONS } from "../../../__test-utils__";
 
-test("should be able to call `getRandomValues()` bound to any object", async () => {
+test("should be able to call `getRandomValues()` bound to any object", async ({
+	expect,
+}) => {
 	await vi.waitFor(
 		async () =>
 			expect(await getJsonResponse()).toEqual([

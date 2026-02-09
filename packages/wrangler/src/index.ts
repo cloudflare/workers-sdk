@@ -4,7 +4,6 @@ import { checkMacOSVersion, setLogLevel } from "@cloudflare/cli";
 import {
 	CommandLineArgsError,
 	experimental_readRawConfig,
-	UserError,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { ProxyAgent, setGlobalDispatcher } from "undici";
@@ -67,7 +66,7 @@ import {
 import { demandSingleValue } from "./core";
 import { CommandHandledError } from "./core/CommandHandledError";
 import { CommandRegistry } from "./core/CommandRegistry";
-import { getErrorType, handleError } from "./core/handle-errors";
+import { handleError } from "./core/handle-errors";
 import { createRegisterYargsCommand } from "./core/register-yargs-command";
 import { d1Namespace } from "./d1";
 import { d1CreateCommand } from "./d1/create";
@@ -134,6 +133,7 @@ import {
 	telemetryNamespace,
 	telemetryStatusCommand,
 } from "./metrics/commands";
+import { sanitizeError } from "./metrics/sanitization";
 import {
 	mTlsCertificateDeleteCommand,
 	mTlsCertificateListCommand,
@@ -156,7 +156,10 @@ import {
 	pagesPublishCommand,
 } from "./pages/deploy";
 import { pagesDeploymentTailCommand } from "./pages/deployment-tails";
-import { pagesDeploymentListCommand } from "./pages/deployments";
+import {
+	pagesDeploymentDeleteCommand,
+	pagesDeploymentListCommand,
+} from "./pages/deployments";
 import { pagesDevCommand } from "./pages/dev";
 import { pagesDownloadConfigCommand } from "./pages/download-config";
 import { pagesFunctionsOptimizeRoutesCommand } from "./pages/functions";
@@ -1367,6 +1370,10 @@ export function createCLIParser(argv: string[]) {
 			command: "wrangler pages deployment tail",
 			definition: pagesDeploymentTailCommand,
 		},
+		{
+			command: "wrangler pages deployment delete",
+			definition: pagesDeploymentDeleteCommand,
+		},
 		{ command: "wrangler pages deploy", definition: pagesDeployCommand },
 		{ command: "wrangler pages publish", definition: pagesPublishCommand },
 		{ command: "wrangler pages secret", definition: pagesSecretNamespace },
@@ -2042,8 +2049,6 @@ function dispatchGenericCommandErrorEvent(
 		sanitizedArgs,
 		argsUsed: [],
 		durationMs,
-		errorType: getErrorType(error),
-		errorMessage:
-			error instanceof UserError ? error.telemetryMessage : undefined,
+		...sanitizeError(error),
 	});
 }

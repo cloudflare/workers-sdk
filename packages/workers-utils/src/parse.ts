@@ -13,7 +13,7 @@ export type Message = {
 	kind?: "warning" | "error";
 } & TelemetryMessage;
 
-export type Location = File & {
+export type Location = ParseFile & {
 	line: number;
 	column: number;
 	length?: number;
@@ -21,7 +21,7 @@ export type Location = File & {
 	suggestion?: string;
 };
 
-export type File = {
+export type ParseFile = {
 	file?: string;
 	fileText?: string;
 };
@@ -212,7 +212,7 @@ export function readFileSync(file: string): string {
 /**
  * Calculates the line and column location from an index.
  */
-export function indexLocation(file: File, index: number): Location {
+export function indexLocation(file: ParseFile, index: number): Location {
 	let lineText,
 		line = 0,
 		column = 0,
@@ -233,7 +233,7 @@ export function indexLocation(file: File, index: number): Location {
 /**
  * Guesses the line and column location of a search query.
  */
-export function searchLocation(file: File, query: unknown): Location {
+export function searchLocation(file: ParseFile, query: unknown): Location {
 	let lineText,
 		length,
 		line = 0,

@@ -10,6 +10,7 @@ import { runCommand } from "../deployment-bundle/run-custom-build";
 import { confirm } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
+import { sanitizeError } from "../metrics/sanitization";
 import { getPackageManager } from "../package-manager";
 import { addWranglerToAssetsIgnore } from "./add-wrangler-assetsignore";
 import { addWranglerToGitIgnore } from "./c3-vendor/add-wrangler-gitignore";
@@ -20,6 +21,7 @@ import {
 	displayAutoConfigDetails,
 } from "./details";
 import { Static } from "./frameworks/static";
+import { getAutoConfigId } from "./telemetry-utils";
 import { usesTypescript } from "./uses-typescript";
 import type {
 	ConfigurationResults,
@@ -33,13 +35,6 @@ import type {
 } from "./types";
 import type { PackageJSON, RawConfig } from "@cloudflare/workers-utils";
 
-type AutoConfigMetrics = Pick<
-	AutoConfigDetails,
-	"buildCommand" | "outputDir"
-> & {
-	framework: string | undefined;
-};
-
 export async function runAutoConfig(
 	autoConfigDetails: AutoConfigDetails,
 	autoConfigOptions: AutoConfigOptions = {}
@@ -51,184 +46,212 @@ export async function runAutoConfig(
 	const enableWranglerInstallation =
 		autoConfigOptions.enableWranglerInstallation ?? true;
 
-	assertNonConfigured(autoConfigDetails);
+	const autoConfigId = getAutoConfigId();
 
-	const detected: AutoConfigMetrics = {
-		buildCommand: autoConfigDetails.buildCommand,
-		outputDir: autoConfigDetails.outputDir,
-		framework: autoConfigDetails.framework.name,
-	};
 	sendMetricsEvent(
-		"autoconfig detected",
+		"autoconfig_configuration_started",
 		{
-			detected,
-			options: autoConfigOptions,
+			autoConfigId,
+			framework: autoConfigDetails.framework?.id,
+			dryRun,
 		},
 		{}
 	);
-	displayAutoConfigDetails(autoConfigDetails);
 
-	const updatedAutoConfigDetails = skipConfirmations
-		? autoConfigDetails
-		: await confirmAutoConfigDetails(autoConfigDetails);
-
-	if (autoConfigDetails !== updatedAutoConfigDetails) {
-		displayAutoConfigDetails(updatedAutoConfigDetails, {
-			heading: "Updated Project Settings:",
-		});
-	}
-
-	autoConfigDetails = updatedAutoConfigDetails;
 	assertNonConfigured(autoConfigDetails);
 
-	if (!autoConfigDetails.outputDir) {
-		throw new FatalError(
-			"Cannot configure project without an output directory"
+	let autoConfigSummary: AutoConfigSummary;
+
+	try {
+		displayAutoConfigDetails(autoConfigDetails);
+
+		const updatedAutoConfigDetails = skipConfirmations
+			? autoConfigDetails
+			: await confirmAutoConfigDetails(autoConfigDetails);
+
+		if (autoConfigDetails !== updatedAutoConfigDetails) {
+			displayAutoConfigDetails(updatedAutoConfigDetails, {
+				heading: "Updated Project Settings:",
+			});
+		}
+
+		autoConfigDetails = updatedAutoConfigDetails;
+		assertNonConfigured(autoConfigDetails);
+
+		if (!autoConfigDetails.outputDir) {
+			throw new FatalError(
+				"Cannot configure project without an output directory"
+			);
+		}
+
+		if (!autoConfigDetails.framework.autoConfigSupported) {
+			throw new FatalError(
+				`The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+			);
+		}
+
+		const { date: compatibilityDate } = getLocalWorkerdCompatibilityDate({
+			projectPath: autoConfigDetails.projectPath,
+		});
+
+		const wranglerConfig: RawConfig = {
+			$schema: "node_modules/wrangler/config-schema.json",
+			name: autoConfigDetails.workerName,
+			compatibility_date: compatibilityDate,
+			observability: {
+				enabled: true,
+			},
+		} satisfies RawConfig;
+
+		const dryRunConfigurationResults =
+			await autoConfigDetails.framework.configure({
+				outputDir: autoConfigDetails.outputDir,
+				projectPath: autoConfigDetails.projectPath,
+				workerName: autoConfigDetails.workerName,
+				dryRun: true,
+			});
+
+		const { npx } = await getPackageManager();
+
+		autoConfigSummary = await buildOperationsSummary(
+			{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
+			{
+				...wranglerConfig,
+				...dryRunConfigurationResults.wranglerConfig,
+			},
+			{
+				build:
+					dryRunConfigurationResults.buildCommandOverride ??
+					autoConfigDetails.buildCommand,
+				deploy:
+					dryRunConfigurationResults.deployCommandOverride ??
+					`${npx} wrangler deploy`,
+				version:
+					dryRunConfigurationResults?.versionCommandOverride ??
+					`${npx} wrangler versions upload`,
+			},
+			dryRunConfigurationResults.packageJsonScriptsOverrides
 		);
-	}
 
-	if (!autoConfigDetails.framework.autoConfigSupported) {
-		throw new FatalError(
-			`The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+		if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
+			throw new FatalError("Setup cancelled");
+		}
+
+		if (dryRun) {
+			logger.log(
+				`✋  ${"Autoconfig process run in dry-run mode, existing now."}`
+			);
+			logger.log("");
+
+			sendMetricsEvent(
+				"autoconfig_configuration_completed",
+				{
+					autoConfigId,
+					framework: autoConfigDetails.framework?.id,
+					success: true,
+					dryRun,
+				},
+				{}
+			);
+
+			return autoConfigSummary;
+		}
+
+		logger.debug(
+			`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
 		);
-	}
 
-	const { date: compatibilityDate } = getLocalWorkerdCompatibilityDate({
-		projectPath: autoConfigDetails.projectPath,
-	});
+		if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
+			await installWrangler();
+		}
 
-	const wranglerConfig: RawConfig = {
-		$schema: "node_modules/wrangler/config-schema.json",
-		name: autoConfigDetails.workerName,
-		compatibility_date: compatibilityDate,
-		observability: {
-			enabled: true,
-		},
-	} satisfies RawConfig;
-
-	const dryRunConfigurationResults =
-		await autoConfigDetails.framework.configure({
+		const configurationResults = await autoConfigDetails.framework.configure({
 			outputDir: autoConfigDetails.outputDir,
 			projectPath: autoConfigDetails.projectPath,
 			workerName: autoConfigDetails.workerName,
-			dryRun: true,
+			dryRun: false,
 		});
 
-	const { npx } = await getPackageManager();
+		if (autoConfigDetails.packageJson) {
+			const packageJsonPath = resolve(
+				autoConfigDetails.projectPath,
+				"package.json"
+			);
+			const existingPackageJson = JSON.parse(
+				await readFile(packageJsonPath, "utf8")
+			) as PackageJSON;
 
-	const autoConfigSummary = await buildOperationsSummary(
-		{ ...autoConfigDetails, outputDir: autoConfigDetails.outputDir },
-		{
-			...wranglerConfig,
-			...dryRunConfigurationResults.wranglerConfig,
-		},
-		{
-			build:
-				dryRunConfigurationResults.buildCommandOverride ??
-				autoConfigDetails.buildCommand,
-			deploy:
-				dryRunConfigurationResults.deployCommandOverride ??
-				`${npx} wrangler deploy`,
-			version:
-				dryRunConfigurationResults?.versionCommandOverride ??
-				`${npx} wrangler versions upload`,
-		},
-		dryRunConfigurationResults.packageJsonScriptsOverrides
-	);
+			await writeFile(
+				packageJsonPath,
+				JSON.stringify(
+					{
+						...existingPackageJson,
+						name:
+							autoConfigDetails.packageJson.name ?? existingPackageJson.name,
+						dependencies: {
+							...existingPackageJson.dependencies,
+							...autoConfigDetails.packageJson.dependencies,
+						},
+						devDependencies: {
+							...existingPackageJson.devDependencies,
+							...autoConfigDetails.packageJson.devDependencies,
+						},
+						scripts: {
+							...existingPackageJson.scripts,
+							...autoConfigDetails.packageJson.scripts,
+							...autoConfigSummary.scripts,
+						},
+					} satisfies PackageJSON,
+					null,
+					2
+				)
+			);
+		}
 
-	if (!(skipConfirmations || (await confirm("Proceed with setup?")))) {
-		throw new FatalError("Setup cancelled");
-	}
-
-	if (dryRun) {
-		logger.log(
-			`✋  ${"Autoconfig process run in dry-run mode, existing now."}`
-		);
-		logger.log("");
-		return autoConfigSummary;
-	}
-
-	logger.debug(
-		`Running autoconfig with:\n${JSON.stringify(autoConfigDetails, null, 2)}...`
-	);
-
-	if (autoConfigSummary.wranglerInstall && enableWranglerInstallation) {
-		await installWrangler();
-	}
-
-	const configurationResults = await autoConfigDetails.framework.configure({
-		outputDir: autoConfigDetails.outputDir,
-		projectPath: autoConfigDetails.projectPath,
-		workerName: autoConfigDetails.workerName,
-		dryRun: false,
-	});
-
-	if (autoConfigDetails.packageJson) {
-		const packageJsonPath = resolve(
+		await saveWranglerJsonc(
 			autoConfigDetails.projectPath,
-			"package.json"
+			wranglerConfig,
+			configurationResults.wranglerConfig
 		);
-		const existingPackageJson = JSON.parse(
-			await readFile(packageJsonPath, "utf8")
-		) as PackageJSON;
 
-		await writeFile(
-			packageJsonPath,
-			JSON.stringify(
-				{
-					...existingPackageJson,
-					name: autoConfigDetails.packageJson.name ?? existingPackageJson.name,
-					dependencies: {
-						...existingPackageJson.dependencies,
-						...autoConfigDetails.packageJson.dependencies,
-					},
-					devDependencies: {
-						...existingPackageJson.devDependencies,
-						...autoConfigDetails.packageJson.devDependencies,
-					},
-					scripts: {
-						...existingPackageJson.scripts,
-						...autoConfigDetails.packageJson.scripts,
-						...autoConfigSummary.scripts,
-					},
-				} satisfies PackageJSON,
-				null,
-				2
-			)
+		addWranglerToGitIgnore(autoConfigDetails.projectPath);
+
+		// If we're uploading the project path as the output directory, make sure we don't accidentally upload any sensitive Wrangler files
+		if (autoConfigDetails.outputDir === autoConfigDetails.projectPath) {
+			addWranglerToAssetsIgnore(autoConfigDetails.projectPath);
+		}
+
+		const buildCommand =
+			configurationResults.buildCommandOverride ??
+			autoConfigDetails.buildCommand;
+
+		if (buildCommand && runBuild) {
+			await runCommand(buildCommand, autoConfigDetails.projectPath, "[build]");
+		}
+	} catch (error) {
+		sendMetricsEvent(
+			"autoconfig_configuration_completed",
+			{
+				autoConfigId,
+
+				framework: autoConfigDetails.framework?.id,
+				dryRun,
+				success: false,
+				...sanitizeError(error),
+			},
+			{}
 		);
+
+		throw error;
 	}
-
-	await saveWranglerJsonc(
-		autoConfigDetails.projectPath,
-		wranglerConfig,
-		configurationResults.wranglerConfig
-	);
-
-	addWranglerToGitIgnore(autoConfigDetails.projectPath);
-
-	// If we're uploading the project path as the output directory, make sure we don't accidentally upload any sensitive Wrangler files
-	if (autoConfigDetails.outputDir === autoConfigDetails.projectPath) {
-		addWranglerToAssetsIgnore(autoConfigDetails.projectPath);
-	}
-
-	const buildCommand =
-		configurationResults.buildCommandOverride ?? autoConfigDetails.buildCommand;
-
-	if (buildCommand && runBuild) {
-		await runCommand(buildCommand, autoConfigDetails.projectPath, "[build]");
-	}
-
-	const used: AutoConfigMetrics = {
-		buildCommand,
-		outputDir: autoConfigDetails.outputDir,
-		framework: autoConfigDetails.framework.name,
-	};
 
 	sendMetricsEvent(
-		"autoconfig accepted",
+		"autoconfig_configuration_completed",
 		{
-			detected,
-			used,
+			autoConfigId,
+			framework: autoConfigDetails.framework?.id,
+			success: true,
+			dryRun,
 		},
 		{}
 	);

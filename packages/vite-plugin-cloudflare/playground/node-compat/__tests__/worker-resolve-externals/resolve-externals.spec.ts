@@ -1,4 +1,4 @@
-import { expect, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import {
 	getTextResponse,
 	isBuild,
@@ -8,7 +8,7 @@ import {
 
 test.skipIf(isBuild)(
 	"resolves Node.js external when calling `resolveId` directly",
-	async () => {
+	async ({ expect }) => {
 		await vi.waitFor(async () => {
 			expect(await getTextResponse()).toBe(`OK!`);
 			expect(serverLogs.info.join()).toContain("__node:dns__");

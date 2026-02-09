@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { Miniflare } from "miniflare";
 import { createBuilder, preview } from "vite";
-import { afterEach, describe, expect, test, vi } from "vitest";
+import { afterEach, describe, test, vi } from "vitest";
 
 const fixturesPath = fileURLToPath(new URL("./fixtures", import.meta.url));
 
@@ -11,7 +11,9 @@ describe("preview server", () => {
 		vi.resetAllMocks();
 	});
 
-	test("disposes Miniflare when preview server is closed", async () => {
+	test("disposes Miniflare when preview server is closed", async ({
+		expect,
+	}) => {
 		const disposeSpy = vi.spyOn(Miniflare.prototype, "dispose");
 		const builder = await createBuilder({
 			root: fixturesPath,

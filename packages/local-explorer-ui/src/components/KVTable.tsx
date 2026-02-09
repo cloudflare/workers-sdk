@@ -1,6 +1,7 @@
 import { Button } from "@base-ui/react/button";
 import { Menu } from "@base-ui/react/menu";
-import { DotsThreeIcon } from "@phosphor-icons/react";
+import { cn } from "@cloudflare/kumo";
+import { DotsThreeIcon, PencilIcon, TrashIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { validateKey } from "../utils/kv-validation";
 import { CopyButton } from "./CopyButton";
@@ -45,19 +46,21 @@ function ActionMenu({ onEdit, onDelete }: ActionMenuProps) {
 			</Menu.Trigger>
 			<Menu.Portal>
 				<Menu.Positioner sideOffset={4} align="end">
-					<Menu.Popup className="action-menu-dropdown">
+					<Menu.Popup className="min-w-24 bg-bg border border-border rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.15)] z-[100] overflow-hidden transition-[opacity,transform] duration-150 data-[starting-style]:opacity-0 data-[starting-style]:-translate-y-1 data-[ending-style]:opacity-0 data-[ending-style]:-translate-y-1">
 						<Menu.Item
-							className="action-menu-item block w-full py-2 px-3 border-none bg-transparent text-left text-sm text-text cursor-pointer transition-colors hover:bg-bg-secondary"
+							className="inline-flex items-center gap-1 w-full py-2 px-3 border-none bg-transparent text-left text-sm text-text cursor-pointer transition-colors hover:bg-bg-secondary dark:hover:bg-bg-tertiary data-[highlighted]:bg-bg-secondary dark:data-[highlighted]:bg-bg-tertiary"
 							onClick={onEdit}
 						>
-							Edit
+							<PencilIcon />
+							<span>Edit</span>
 						</Menu.Item>
-						<Menu.Separator className="h-px bg-border my-1" />
+						<Menu.Separator className="h-px bg-border" />
 						<Menu.Item
-							className="action-menu-item block w-full py-2 px-3 border-none bg-transparent text-left text-sm text-danger cursor-pointer transition-colors hover:bg-danger/8"
+							className="inline-flex items-center gap-1 w-full py-2 px-3 border-none bg-transparent text-left text-sm text-danger cursor-pointer transition-colors hover:bg-danger/8 data-[highlighted]:bg-danger/8"
 							onClick={onDelete}
 						>
-							Delete
+							<TrashIcon />
+							<span>Delete</span>
 						</Menu.Item>
 					</Menu.Popup>
 				</Menu.Positioner>
@@ -156,9 +159,14 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 					const isEditing = editData?.originalKey === entry.key.name;
 					const isLast = index === entries.length - 1;
 					return (
-						<tr key={entry.key.name} className="table-row hover:bg-bg-tertiary">
+						<tr key={entry.key.name} className="group hover:bg-bg-tertiary">
 							<td
-								className={`py-2 px-3 text-left align-top ${isLast ? "border-b-0 first:rounded-bl-[7px]" : "border-b border-border"}`}
+								className={cn(
+									"py-2 px-3 text-left align-top group/cell",
+									isLast
+										? "border-b-0 first:rounded-bl-[7px]"
+										: "border-b border-border"
+								)}
 							>
 								{isEditing && editData ? (
 									<div className="flex flex-col">
@@ -170,7 +178,13 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 										</label>
 										<input
 											id={`edit-key-${entry.key.name}`}
-											className={`w-full font-mono bg-bg text-text min-h-8 py-1.5 px-2 text-[13px] border border-primary rounded focus:outline-none focus:shadow-[0_0_0_2px_rgba(255,72,1,0.15)] disabled:bg-bg-secondary disabled:text-text-secondary ${editData.keyError ? "border-danger focus:shadow-[0_0_0_2px_rgba(251,44,54,0.15)]" : ""}`}
+											className={cn(
+												"w-full font-mono bg-bg text-text min-h-8 py-1.5 px-2 text-[13px] border border-primary rounded focus:outline-none focus:shadow-focus-primary disabled:bg-bg-secondary disabled:text-text-secondary",
+												{
+													"border-danger focus:shadow-focus-danger":
+														editData.keyError,
+												}
+											)}
 											value={editData.key}
 											onChange={(e) => handleKeyChange(e.target.value)}
 											onKeyDown={handleKeyDown}
@@ -184,7 +198,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 										)}
 									</div>
 								) : (
-									<div className="flex items-center gap-1.5">
+									<div className="group/cell flex items-center gap-1.5">
 										<code className="text-primary font-medium">
 											{entry.key.name}
 										</code>
@@ -193,7 +207,10 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 								)}
 							</td>
 							<td
-								className={`py-2 px-3 text-left max-w-[400px] font-mono text-[13px] ${isLast ? "border-b-0" : "border-b border-border"}`}
+								className={cn(
+									"py-2 px-3 text-left max-w-[400px] font-mono text-[13px] group/cell",
+									isLast ? "border-b-0" : "border-b border-border"
+								)}
 							>
 								{isEditing && editData ? (
 									<div className="flex flex-col gap-2">
@@ -205,7 +222,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 										</label>
 										<textarea
 											id={`edit-value-${entry.key.name}`}
-											className="w-full font-mono bg-bg text-text min-h-8 py-1.5 px-2 text-[13px] border border-primary rounded focus:outline-none focus:shadow-[0_0_0_2px_rgba(255,72,1,0.15)] disabled:bg-bg-secondary disabled:text-text-secondary max-h-[200px] resize-none overflow-y-auto [field-sizing:content]"
+											className="w-full font-mono bg-bg text-text min-h-8 py-1.5 px-2 text-[13px] border border-primary rounded focus:outline-none focus:shadow-focus-primary disabled:bg-bg-secondary disabled:text-text-secondary max-h-[200px] resize-none overflow-y-auto [field-sizing:content]"
 											value={editData.value}
 											onChange={(e) =>
 												setEditData({ ...editData, value: e.target.value })
@@ -215,14 +232,14 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 										/>
 										<div className="flex justify-end gap-1.5">
 											<Button
-												className="btn inline-flex items-center justify-center py-1 px-2.5 text-xs font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border"
+												className="inline-flex items-center justify-center py-1 px-2.5 text-xs font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-[disabled]:opacity-60 data-[disabled]:cursor-not-allowed data-[disabled]:active:translate-y-0"
 												onClick={handleCancel}
 												disabled={saving}
 											>
 												Cancel
 											</Button>
 											<Button
-												className="btn inline-flex items-center justify-center py-1 px-2.5 text-xs font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-bg-tertiary hover:bg-primary-hover"
+												className="inline-flex items-center justify-center py-1 px-2.5 text-xs font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-white hover:bg-primary-hover data-[disabled]:text-white/70 data-[disabled]:cursor-not-allowed data-[disabled]:active:translate-y-0"
 												onClick={handleSave}
 												disabled={saving || isKeyInvalid}
 												focusableWhenDisabled
@@ -234,7 +251,12 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 								) : (
 									<div className="flex items-center gap-1.5 min-w-0">
 										<span
-											className={`overflow-hidden text-ellipsis whitespace-nowrap min-w-0 ${!entry.value ? "text-text-secondary" : ""}`}
+											className={cn(
+												"overflow-hidden text-ellipsis whitespace-nowrap min-w-0",
+												{
+													"text-text-secondary": !entry.value,
+												}
+											)}
 										>
 											{formatValue(entry.value)}
 										</span>
@@ -243,7 +265,12 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 								)}
 							</td>
 							<td
-								className={`py-2 px-3 whitespace-nowrap text-right ${isLast ? "border-b-0 last:rounded-br-[7px]" : "border-b border-border"}`}
+								className={cn(
+									"py-2 px-3 whitespace-nowrap text-right",
+									isLast
+										? "border-b-0 last:rounded-br-[7px]"
+										: "border-b border-border"
+								)}
 							>
 								{!isEditing && (
 									<ActionMenu

@@ -3,7 +3,14 @@
 	"extends": ["//"],
 	"tasks": {
 		"build": {
-			"outputs": ["dist/**"]
+			"inputs": [
+				"$TURBO_DEFAULT$",
+				"../miniflare/src/workers/local-explorer/openapi.local.json"
+			],
+			"outputs": ["dist/**", "src/api/generated/**"]
+		},
+		"check:type": {
+			"dependsOn": ["build"]
 		}
 	}
 }
