@@ -620,7 +620,6 @@ export function buildMiniflareBindingOptions(
 				...devOptions,
 			},
 		});
-
 	}
 
 	/**
