@@ -270,7 +270,7 @@ function SettingOptionDropdown({
 	return (
 		<DropdownMenu modal={false}>
 			<DropdownMenu.Trigger asChild>
-				<Button variant="ghost" className="font-normal text-neutral-500">
+				<Button variant="ghost" className="font-normal text-muted">
 					{items[value]}
 					<CaretUpDownIcon />
 				</Button>

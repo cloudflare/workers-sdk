@@ -11,7 +11,7 @@ export function CodeBlock({
 }: CodeBlockProps): JSX.Element {
 	return (
 		<pre
-			className="rounded bg-neutral-100 p-3 text-sm font-mono overflow-x-auto overflow-y-auto dark:bg-neutral-800"
+			className="rounded bg-surface-secondary p-3 text-sm font-mono overflow-x-auto overflow-y-auto"
 			data-language={language}
 			style={maxHeight ? { maxHeight } : undefined}
 		>

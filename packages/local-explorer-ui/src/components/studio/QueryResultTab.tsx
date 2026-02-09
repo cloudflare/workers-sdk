@@ -24,11 +24,11 @@ export function StudioQueryResultTab({ result }: StudioQueryResultTabProps) {
 	}, [result.result.headers]);
 
 	return (
-		<div className="w-full h-full flex flex-col border-t border-neutral-200 dark:border-neutral-800">
+		<div className="w-full h-full flex flex-col border-t border-border">
 			<div className="grow overflow-hidden">
 				<StudioResultTable state={state} arrangeHeaderIndex={headerIndexList} />
 			</div>
-			<div className="shrink-0 h-11 flex items-center border-t border-neutral-200 dark:border-neutral-800">
+			<div className="shrink-0 h-11 flex items-center border-t border-border">
 				<div>
 					<StudioQueryResultStats stats={result.result.stat} />
 				</div>

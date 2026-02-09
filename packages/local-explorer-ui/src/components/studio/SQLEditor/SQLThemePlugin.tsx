@@ -46,35 +46,35 @@ export const StudioSQLDarkModeTheme = EditorView.theme(
 		},
 
 		".cm-gutters": {
-			backgroundColor: "black",
-			color: "#fff",
+			backgroundColor: "#1a1412",
+			color: "#ffeee6",
 			borderRight: "none",
 			width: "30px",
 		},
 
 		// Dark mode auto completion styling
 		".cm-tooltip-autocomplete": {
-			backgroundColor: "#000",
-			color: "#fff",
-			border: "1px solid #444", // Better contrast against pure black
+			backgroundColor: "#0f0c0a",
+			color: "#ffeee6",
+			border: "1px solid #3d2e24",
 			borderRadius: "6px",
-			boxShadow: "0 2px 6px rgba(255, 255, 255, 0.1)", // Subtle glow
+			boxShadow: "0 2px 6px rgba(255, 107, 51, 0.08)",
 		},
 
 		".cm-completionLabel": {
-			color: "#eee",
+			color: "#ffeee6",
 		},
 		".cm-completionIcon": {
-			color: "#aaa",
+			color: "#a08678",
 		},
 		".cm-completionDetail": {
-			color: "#777",
+			color: "#a08678",
 			fontStyle: "italic",
 			marginLeft: "auto",
 		},
 		".cm-tooltip-autocomplete > ul > li[aria-selected]": {
-			backgroundColor: "#333",
-			color: "#fff",
+			backgroundColor: "#2e221a",
+			color: "#ffeee6",
 		},
 	},
 	{ dark: true }
@@ -103,37 +103,37 @@ export const StudioSQLLightModeTheme = EditorView.theme(
 		},
 
 		".cm-gutters": {
-			backgroundColor: "white",
-			color: "#858585",
+			backgroundColor: "#fffdfb",
+			color: "#8a6e5c",
 			borderRight: "none",
 			width: "30px",
 		},
 
 		// Auto completion styling
 		".cm-tooltip-autocomplete": {
-			backgroundColor: "#fff", // White background
-			color: "#000", // Black text
-			border: "1px solid #ccc", // Light gray border
+			backgroundColor: "#fffdfb",
+			color: "#521000",
+			border: "1px solid #ebd5c1",
 			borderRadius: "6px",
-			boxShadow: "0 2px 6px rgba(0, 0, 0, 0.1)", // Subtle shadow for depth
+			boxShadow: "0 2px 6px rgba(255, 72, 1, 0.06)",
 			padding: "3px",
 		},
 
 		".cm-completionLabel": {
-			color: "#111",
+			color: "#521000",
 		},
 		".cm-completionIcon": {
-			color: "#666",
+			color: "#8a6e5c",
 		},
 		".cm-completionDetail": {
-			color: "#888",
+			color: "#8a6e5c",
 			fontStyle: "italic",
 			marginLeft: "auto",
 		},
 		".cm-tooltip-autocomplete > ul > li[aria-selected]": {
-			backgroundColor: "#ddd",
+			backgroundColor: "#f0e6dc",
 			borderRadius: "3px",
-			color: "#000",
+			color: "#521000",
 		},
 	},
 	{ dark: false }

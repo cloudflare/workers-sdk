@@ -163,8 +163,8 @@ export function renderList<T>(props: TreeViewRendererProps<T>) {
 									className={cn(
 										"flex h-8 items-center gap-0.5 px-4 text-xs cursor-pointer w-full group",
 										selectedKey === item.key
-											? "bg-neutral-200 dark:bg-neutral-800 dark:text-white"
-											: "hover:bg-neutral-200 dark:hover:bg-neutral-800",
+											? "bg-surface-tertiary text-text"
+											: "hover:bg-surface-tertiary",
 										"border border-transparent"
 									)}
 								>

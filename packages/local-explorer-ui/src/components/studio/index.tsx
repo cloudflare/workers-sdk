@@ -356,7 +356,7 @@ export function Studio({
 						<SplitPane
 							defaultSize={300}
 							minSize={50}
-							resizerClassName="!bg-neutral-300 dark:!bg-neutral-800 border-transparent"
+							resizerClassName="!bg-resizer border-transparent"
 							split="horizontal"
 						>
 							<StudioSidebarPane />

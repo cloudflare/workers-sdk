@@ -224,10 +224,10 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 		<SplitPane
 			defaultSize={250}
 			minSize={150}
-			resizerClassName="!bg-neutral-300 dark:!bg-neutral-800 border-transparent"
+			resizerClassName="!bg-resizer border-transparent"
 			split="horizontal"
 		>
-			<div className="w-full flex flex-col bg-white dark:bg-black">
+			<div className="w-full flex flex-col bg-surface">
 				<div className="grow overflow-hidden">
 					<StudioSQLEditor
 						autoCompleteSchema={autoCompelteSchema}
@@ -245,7 +245,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 					className="shrink-0 py-2 px-4 flex items-center gap-2"
 					style={{ paddingTop: 0 }}
 				>
-					<div className="text-xs grow text-neutral-500">
+					<div className="text-xs grow text-muted">
 						Ln {lineNumber} Col {columnNumber}
 					</div>
 
@@ -307,7 +307,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 					</div>
 				</div>
 			</div>
-			<div className="w-full h-full bg-white dark:bg-black">
+			<div className="w-full h-full bg-surface">
 				{queryTabs && queryTabs.length > 0 && (
 					<StudioWindowTab
 						key="main-window-tab"

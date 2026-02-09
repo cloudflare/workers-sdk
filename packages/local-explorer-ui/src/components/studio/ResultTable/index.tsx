@@ -167,7 +167,7 @@ export function StudioResultTable({
 						{hasColumnInfo && (
 							<>
 								<DropdownMenu.Separator />
-								<span className="text-xs font-medium px-3 py-1.5 text-gray-500">
+								<span className="text-xs font-medium px-3 py-1.5 text-muted">
 									Constraints and Indexes
 								</span>
 							</>
@@ -293,7 +293,7 @@ function HeaderDropdownMenu({
 		<DropdownMenu open={open} onOpenChange={setOpen}>
 			<DropdownMenu.Trigger asChild>
 				<div
-					className="flex items-center px-2 py-1 font-mono cursor-pointer w-full gap-1 bg-white dark:bg-neutral-900"
+					className="flex items-center px-2 py-1 font-mono cursor-pointer w-full gap-1 bg-surface"
 					style={{ height: 36 }}
 					onContextMenu={(e) => {
 						e.preventDefault();
@@ -330,7 +330,7 @@ function DropdownMenuColumnInfo({
 			{icon}
 			<div className="flex flex-col gap-0.5">
 				<div className="font-medium">{title}</div>
-				<div className="text-gray-500 text-sm">{description}</div>
+				<div className="text-muted text-sm">{description}</div>
 			</div>
 		</DropdownMenu.Item>
 	);

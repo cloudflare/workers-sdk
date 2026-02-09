@@ -119,7 +119,7 @@ export function useStudioResultTableContextMenu(
 							label: (
 								<div>
 									<div>UUID</div>
-									<div className="font-mono text-neutral-500">{uuid}</div>
+									<div className="font-mono text-muted">{uuid}</div>
 								</div>
 							),
 							onClick: () => {

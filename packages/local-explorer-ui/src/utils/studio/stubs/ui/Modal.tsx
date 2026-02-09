@@ -60,7 +60,7 @@ export function Modal({ isOpen, onClose, children, className }: ModalProps) {
 		<dialog
 			ref={dialogRef}
 			className={cn(
-				"rounded-lg border border-gray-200 bg-white p-0 shadow-xl backdrop:bg-black/50 dark:border-gray-700 dark:bg-gray-900",
+				"rounded-lg border border-border bg-surface p-0 shadow-xl backdrop:bg-black/50",
 				className
 			)}
 		>

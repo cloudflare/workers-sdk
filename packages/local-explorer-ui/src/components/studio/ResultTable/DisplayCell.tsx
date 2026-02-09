@@ -74,7 +74,7 @@ export const StudioTableDisplayCell = forwardRef(
 		const isAlignRight = align === "right";
 
 		const textBaseStyle = cn(
-			"flex grow text-neutral-500",
+			"flex grow text-muted",
 			isAlignRight ? "justify-end" : ""
 		);
 
@@ -101,7 +101,7 @@ export const StudioTableDisplayCell = forwardRef(
 					<span
 						className={cn(
 							"flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
-							"text-neutral-950 dark:text-neutral-50"
+							"text-text"
 						)}
 					>
 						{firstLine}

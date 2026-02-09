@@ -60,7 +60,7 @@ export function StudioTableCell<HeaderMetadata = unknown>({
 	}
 
 	const cellClassName = cn(
-		"overflow-hidden border-r border-b box-border hover:bg-neutral-100 dark:hover:bg-neutral-800 border-neutral-200 dark:border-neutral-800",
+		"overflow-hidden border-r border-b box-border hover:bg-accent border-border",
 		isSelected && "border-neutral-900 dark:border-neutral-100",
 		isBorderBottom && "border-b border-b-neutral-900 dark:border-b-neutral-100",
 		isBorderRight && "border-r border-r-neutral-900 dark:border-r-neutral-100",

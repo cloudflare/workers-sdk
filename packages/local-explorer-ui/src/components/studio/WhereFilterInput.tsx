@@ -150,7 +150,7 @@ export function StudioWhereFilterInput({
 
 		return (
 			<>
-				<span className="text-neutral-500">●</span>
+				<span className="text-muted">●</span>
 				<span>Apply</span>
 			</>
 		);

@@ -56,7 +56,7 @@ export function StudioWindowTab({
 
 	return (
 		<div className="w-full h-full flex flex-col">
-			<div className="relative shrink-0 grow-0 overflow-x-auto bg-neutral-100 dark:bg-neutral-900 flex">
+			<div className="relative shrink-0 grow-0 overflow-x-auto bg-surface-secondary flex">
 				{tabs.map((tab, tabIndex) => {
 					// Handles tab closure. If the closed tab is the currently active one,
 					// automatically select the nearest remaining tab to preserve continuity.
@@ -108,10 +108,7 @@ export function StudioWindowTab({
 					);
 				})}
 				{onNewClicked && <StudioWindowTabMenu onClick={onNewClicked} />}
-				<div
-					className="border-neutral-200 dark:border-neutral-800 border-b grow"
-					style={{ height: 40 }}
-				/>
+				<div className="border-border border-b grow" style={{ height: 40 }} />
 			</div>
 			<div className="relative grow">
 				{tabs.map((tab) => (
@@ -211,9 +208,9 @@ function StudioWindowTabMenu({
 		() =>
 			cn(
 				"flex gap-2 relative px-2", // display style
-				"bg-neutral-100 dark:bg-neutral-900", // background color
-				"border-b border-neutral-200 dark:border-neutral-800", // border style
-				"items-center text-left text-xs text-neutral-500" // text style
+				"bg-surface-secondary", // background color
+				"border-b border-border", // border style
+				"items-center text-left text-xs text-muted" // text style
 			),
 		[]
 	);
@@ -224,7 +221,7 @@ function StudioWindowTabMenu({
 			onClick={onClick}
 			style={{ position: "sticky", right: 0 }}
 		>
-			<div className="flex px-2 py-1.5 items-center gap-2 cursor-pointer hover:text-black dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors rounded-md">
+			<div className="flex px-2 py-1.5 items-center gap-2 cursor-pointer hover:text-text hover:bg-surface-tertiary transition-colors rounded-md">
 				<PlusIcon /> New
 			</div>
 		</div>
@@ -257,13 +254,13 @@ function StudioWindowTabItemRenderer({
 		() =>
 			cn(
 				"flex gap-2 relative px-2", // display style
-				"border-b border-r border-neutral-200 dark:border-neutral-800", // border style
+				"border-b border-r border-border", // border style
 				"items-center text-left text-xs ", // text style
-				"cursor-pointer hover:text-black dark:hover:text-white", // hover style
+				"cursor-pointer hover:text-text", // hover style
 				"select-none",
 				selected
-					? "border-b-transparent! bg-white dark:bg-black"
-					: "bg-neutral-100 dark:bg-neutral-900 text-neutral-500", // selected style
+					? "border-b-transparent! bg-surface"
+					: "bg-surface-secondary text-muted", // selected style
 				isTemp && "italic",
 				isDirty && "not-italic"
 			),

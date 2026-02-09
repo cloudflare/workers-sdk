@@ -81,13 +81,13 @@ function StudioResourceLoadingState() {
 	return (
 		<div className="flex flex-col px-2 grow">
 			<div className="h-8 w-full flex gap-1 items-center">
-				<div className="bg-neutral-200 dark:bg-neutral-800 rounded h-4 grow"></div>
+				<div className="bg-surface-tertiary rounded h-4 grow"></div>
 			</div>
 			<div className="h-8 w-full flex gap-1 items-center">
-				<div className="bg-neutral-200 dark:bg-neutral-800 rounded h-4 grow"></div>
+				<div className="bg-surface-tertiary rounded h-4 grow"></div>
 			</div>
 			<div className="h-8 w-full flex gap-1 items-center">
-				<div className="bg-neutral-200 dark:bg-neutral-800 rounded h-4 grow"></div>
+				<div className="bg-surface-tertiary rounded h-4 grow"></div>
 			</div>
 		</div>
 	);

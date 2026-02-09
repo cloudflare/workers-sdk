@@ -15,7 +15,7 @@ type State = {
 	dragging: boolean;
 };
 
-const BORDER_GRAY = "#e5e7eb"; // Tailwind gray-200
+const BORDER_COLOR = "var(--color-resizer)";
 
 class SplitPane extends React.Component<Props, State> {
 	state: State = {
@@ -43,7 +43,7 @@ class SplitPane extends React.Component<Props, State> {
 
 		let resizerStyle: React.CSSProperties = {
 			...this.props.resizerStyle,
-			backgroundColor: BORDER_GRAY,
+			backgroundColor: BORDER_COLOR,
 			opacity: 1,
 			backgroundClip: "padding-box",
 			zIndex: 1,

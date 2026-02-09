@@ -20,7 +20,7 @@ export function StudioTableHeaderList<HeaderMetadata = unknown>({
 	return (
 		<thead className="contents">
 			<tr className="contents">
-				<th className="sticky top-0 left-0 z-30 border-r border-b bg-neutral-50 dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800"></th>
+				<th className="sticky top-0 left-0 z-30 border-r border-b bg-bg-secondary border-border"></th>
 				{headers.map((header, idx) => {
 					return (
 						<StudioTableHeader
@@ -58,7 +58,7 @@ function StudioTableHeader<HeaderMetadata = unknown>({
 }) {
 	const className = cn(
 		sticky ? "z-30" : undefined,
-		"bg-background border-r border-b overflow-hidden sticky top-0 h-[35px] leading-[35px] flex text-left z-10 p-0 border-neutral-200 dark:border-neutral-800"
+		"bg-background border-r border-b overflow-hidden sticky top-0 h-[35px] leading-[35px] flex text-left z-10 p-0 border-border"
 	);
 
 	return (

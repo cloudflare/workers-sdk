@@ -64,7 +64,7 @@ export function Drawer({
 			{/* Overlay */}
 			<div
 				className={cn(
-					"fixed inset-0 z-[1200] bg-white/40 transition-opacity duration-300",
+					"fixed inset-0 z-[1200] bg-surface/40 transition-opacity duration-300",
 					isOpen ? "opacity-100" : "pointer-events-none opacity-0"
 				)}
 				onClick={onClose}
@@ -76,7 +76,7 @@ export function Drawer({
 				role="dialog"
 				aria-modal="true"
 				className={cn(
-					"fixed bottom-0 right-0 top-0 z-[99999] flex flex-col border-l border-gray-200 bg-white shadow-xl transition-transform duration-300 ease-in-out dark:border-gray-700 dark:bg-gray-900",
+					"fixed bottom-0 right-0 top-0 z-[99999] flex flex-col border-l border-border bg-surface shadow-xl transition-transform duration-300 ease-in-out",
 					isOpen ? "translate-x-0" : "translate-x-full"
 				)}
 				style={{
@@ -97,12 +97,12 @@ Drawer.Header = function DrawerHeader({
 	const { onClose } = React.useContext(DrawerContext);
 
 	return (
-		<div className="relative sticky top-0 bg-white p-4 dark:bg-gray-900">
+		<div className="relative sticky top-0 bg-surface p-4">
 			<div className="grid grid-cols-[1fr_min-content] gap-x-3 gap-y-2">
 				<div className="text-lg font-semibold">{children}</div>
 				<button
 					onClick={onClose}
-					className="absolute right-2 top-2 rounded p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+					className="absolute right-2 top-2 rounded p-1 text-muted hover:bg-accent"
 					aria-label="Close"
 				>
 					<svg
@@ -118,9 +118,7 @@ Drawer.Header = function DrawerHeader({
 						/>
 					</svg>
 				</button>
-				{description && (
-					<div className="text-sm text-gray-500">{description}</div>
-				)}
+				{description && <div className="text-sm text-muted">{description}</div>}
 			</div>
 		</div>
 	);
@@ -128,18 +126,14 @@ Drawer.Header = function DrawerHeader({
 
 Drawer.Body = function DrawerBody({ children }: DrawerBodyProps) {
 	return (
-		<div className="flex-1 overflow-y-auto border-y border-gray-200 p-4 dark:border-gray-700">
+		<div className="flex-1 overflow-y-auto border-y border-border p-4">
 			{children}
 		</div>
 	);
 };
 
 Drawer.Footer = function DrawerFooter({ children }: DrawerFooterProps) {
-	return (
-		<div className="sticky bottom-0 bg-white p-4 dark:bg-gray-900">
-			{children}
-		</div>
-	);
+	return <div className="sticky bottom-0 bg-surface p-4">{children}</div>;
 };
 
 export function FooterActions({

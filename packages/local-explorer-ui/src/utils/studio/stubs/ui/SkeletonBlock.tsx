@@ -24,7 +24,7 @@ export const SkeletonBlock = ({
 	return (
 		<div
 			className={cn(
-				"relative overflow-hidden rounded-md bg-gray-200 dark:bg-gray-700",
+				"relative overflow-hidden rounded-md bg-surface-tertiary",
 				"before:absolute before:inset-0 before:animate-pulse before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent",
 				className
 			)}

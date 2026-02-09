@@ -382,8 +382,8 @@ export function StudioTableExplorerTab({
 	);
 
 	return (
-		<div className="w-full h-full flex flex-col bg-white dark:bg-neutral-900">
-			<div className="shrink-0 border-b border-neutral-200 dark:border-neutral-800 gap-2 p-2 flex items-center">
+		<div className="w-full h-full flex flex-col bg-surface">
+			<div className="shrink-0 border-b border-border gap-2 p-2 flex items-center">
 				<Button shape="square" onClick={onRefreshClicked}>
 					<ArrowsCounterClockwiseIcon size={14} />
 				</Button>
@@ -461,7 +461,7 @@ export function StudioTableExplorerTab({
 					</>
 				)}
 			</div>
-			<div className="shrink-0 border-t border-neutral-200 dark:border-neutral-800 gap-2 py-1 px-2 flex items-center">
+			<div className="shrink-0 border-t border-border gap-2 py-1 px-2 flex items-center">
 				<div className="grow">
 					{queryStats && <StudioQueryResultStats stats={queryStats} />}
 				</div>
