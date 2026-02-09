@@ -108,6 +108,8 @@ function StudioResourceTreeView({
 		refreshSchema,
 		closeStudioTab,
 		openStudioTab,
+		selectedTabKey,
+		tabs,
 		updateStudioTabStatus,
 	} = useStudioContext();
 
@@ -126,7 +128,25 @@ function StudioResourceTreeView({
 		() => new Set()
 	);
 
-	const [selectedKey, setSelectedKey] = useState<string>("");
+	// Derive the sidebar selection from the currently active tab.
+	// This ensures the sidebar always reflects the actual tab state,
+	// including when tabs are closed or switched via the tab bar.
+	const selectedKey = useMemo(() => {
+		const activeTab = tabs.find((tab) => tab.key === selectedTabKey);
+		if (!activeTab) {
+			return "";
+		}
+
+		// Table tab identifiers have the format: "table/{schemaName}.{tableName}"
+		const tableMatch = activeTab.identifier.match(/^table\/([^.]+)\.(.+)$/);
+		if (tableMatch) {
+			const schemaName = tableMatch[1];
+			const tableName = tableMatch[2];
+			return `${schemaName}-${tableName}`;
+		}
+
+		return "";
+	}, [tabs, selectedTabKey]);
 
 	const filterCallback = useCallback(
 		(item: StudioTreeViewItem<StudioSchemaItem>) => {
@@ -157,11 +177,6 @@ function StudioResourceTreeView({
 	);
 
 	const handleSelectChange = (item: StudioTreeViewItem<StudioSchemaItem>) => {
-		if (selectedKey === item.key) {
-			return;
-		}
-		setSelectedKey(item.key);
-
 		if (item.data.type === "table" || item.data.type === "view") {
 			openStudioTab(
 				{
