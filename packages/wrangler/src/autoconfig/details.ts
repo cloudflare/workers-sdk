@@ -127,7 +127,12 @@ async function isPagesProject(
 			const functionsStat = statSync(functionsPath);
 			if (functionsStat.isDirectory()) {
 				const pagesConfirmed = await confirm(
-					"We have identified a `functions` directory in this project, which might indicate you have an active Cloudflare Pages deployment. Is this correct?"
+					"We have identified a `functions` directory in this project, which might indicate you have an active Cloudflare Pages deployment. Is this correct?",
+					{
+						defaultValue: true,
+						// In CI we do want to fallback to `false` so that we can proceed with the autoconfig flow
+						fallbackValue: false,
+					}
 				);
 				return pagesConfirmed;
 			}
