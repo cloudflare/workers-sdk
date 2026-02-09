@@ -186,12 +186,10 @@ describe("wrangler", () => {
 		describe("create", () => {
 			function mockCreateRequest(
 				queueName: string,
-				queueSettings:
-					| {
-							delivery_delay?: number;
-							message_retention_period?: number;
-					  }
-					| undefined = undefined
+				queueSettings?: {
+					delivery_delay?: number;
+					message_retention_period?: number;
+				}
 			) {
 				const requests = { count: 0 };
 
