@@ -352,7 +352,7 @@ export function Studio({
 		<ModalProvider>
 			<StudioContextMenuProvider>
 				<StudioContextProvider value={contextValues}>
-					<div className="w-full h-full overflow-hidden">
+					<div className="relative w-full h-full overflow-hidden">
 						<SplitPane
 							defaultSize={300}
 							minSize={50}
