@@ -59,7 +59,7 @@ export function printBindings(
 
 /**
  * Print all the bindings a worker would have access to.
- * Accepts StartDevWorkerInput["bindings"] format (Record<string, Binding>)
+ * Accepts StartDevWorkerInput["bindings"] format
  */
 function printFlatBindings(
 	bindings: StartDevWorkerInput["bindings"],
@@ -848,9 +848,7 @@ function printFlatBindings(
 
 		log(
 			`${containersTitle}\n${containers
-				.map((c) => {
-					return `- ${c.name} (${c.image})`;
-				})
+				.map((c) => `- ${c.name} (${c.image})`)
 				.join("\n")}`
 		);
 		log("");
