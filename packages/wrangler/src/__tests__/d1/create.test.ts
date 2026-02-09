@@ -142,4 +142,42 @@ describe("create", () => {
 			}"
 		`);
 	});
+
+	it("should show a user-friendly error when database limit is reached", async ({
+		expect,
+	}) => {
+		writeWranglerConfig({ name: "worker" }, "wrangler.json");
+
+		setIsTTY(false);
+		mockGetMemberships([
+			{ id: "IG-88", account: { id: "1701", name: "enterprise" } },
+		]);
+		msw.use(
+			http.post("*/accounts/:accountId/d1/database", async () => {
+				return HttpResponse.json(
+					{
+						result: null,
+						success: false,
+						errors: [
+							{
+								code: 7406,
+								message: "System limit reached: databases per account (10)",
+							},
+						],
+						messages: [],
+					},
+					{ status: 400 }
+				);
+			})
+		);
+
+		await expect(runWrangler("d1 create test")).rejects
+			.toThrowErrorMatchingInlineSnapshot(`
+			[Error: You have reached the maximum number of D1 databases for your account.
+			Please consider deleting unused databases, or visit the D1 documentation to learn more: https://developers.cloudflare.com/d1/
+
+			To list your existing databases, run: wrangler d1 list
+			To delete a database, run: wrangler d1 delete <database-name>]
+		`);
+	});
 });
