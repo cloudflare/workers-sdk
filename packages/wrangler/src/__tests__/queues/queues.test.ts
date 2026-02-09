@@ -186,16 +186,14 @@ describe("wrangler", () => {
 		describe("create", () => {
 			function mockCreateRequest(
 				queueName: string,
-				queueSettings: {
-					delivery_delay?: number;
-					message_retention_period?: number;
-				} = {}
+				queueSettings:
+					| {
+							delivery_delay?: number;
+							message_retention_period?: number;
+					  }
+					| undefined = undefined
 			) {
 				const requests = { count: 0 };
-
-				if (queueSettings?.delivery_delay === undefined) {
-					queueSettings.delivery_delay = 0;
-				}
 
 				msw.use(
 					http.post(
@@ -205,9 +203,9 @@ describe("wrangler", () => {
 
 							const body = (await request.json()) as {
 								queue_name: string;
-								settings: {
-									delivery_delay: number;
-									message_retention_period: number;
+								settings?: {
+									delivery_delay?: number;
+									message_retention_period?: number;
 								};
 							};
 							expect(body.queue_name).toEqual(queueName);
@@ -249,7 +247,7 @@ describe("wrangler", () => {
 					  -v, --version   Show version number  [boolean]
 
 					OPTIONS
-					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 43200  [number] [default: 0]
+					      --delivery-delay-secs            How long a published message should be delayed for, in seconds. Must be between 0 and 43200  [number]
 					      --message-retention-period-secs  How long to retain a message in the queue, in seconds. Must be between 60 and 86400 if on free tier, otherwise must be between 60 and 1209600  [number]"
 				`);
 			});
@@ -300,7 +298,6 @@ describe("wrangler", () => {
 
 			it("should send queue settings with message retention period", async () => {
 				const requests = mockCreateRequest("testQueue", {
-					delivery_delay: 0,
 					message_retention_period: 100,
 				});
 				await runWrangler(
