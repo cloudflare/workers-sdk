@@ -60,6 +60,7 @@ function DatabaseView(): JSX.Element {
 					category="d1"
 					driver={driver}
 					initialTable={searchParams.table}
+					key={params.databaseId}
 					onTableChange={handleTableChange}
 					resource={resource}
 				/>
