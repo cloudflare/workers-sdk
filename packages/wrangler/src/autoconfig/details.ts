@@ -217,7 +217,7 @@ export async function getDetailsForAutoConfig({
 	if (!outputDir) {
 		const errorMessage =
 			framework.id === "static"
-				? "Could not detect a directory containing the static (html, css and js) files for the project"
+				? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
 				: "Failed to detect an output directory for the project";
 
 		const error = new FatalError(errorMessage);
