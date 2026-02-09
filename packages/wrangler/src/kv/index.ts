@@ -195,7 +195,7 @@ export const kvNamespaceDeleteCommand = createCommand({
 	args: {
 		namespace: {
 			type: "string",
-			describe: "The name (title) of the namespace to delete",
+			describe: "The name of the namespace to delete",
 		},
 		binding: {
 			type: "string",
