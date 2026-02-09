@@ -12,7 +12,7 @@ import type { Project } from "./../../pages/types";
 
 describe("pages project list", () => {
 	runInTempDir();
-	mockConsoleMethods();
+	const std = mockConsoleMethods();
 	mockAccountId();
 	mockApiToken();
 
@@ -90,6 +90,58 @@ describe("pages project list", () => {
 		const requests = mockProjectListRequest([], "new-account-id");
 		await runWrangler("pages project list");
 		expect(requests.count).toBe(1);
+	});
+
+	it("should return JSON output when --json flag is provided", async () => {
+		const projects: Project[] = [
+			{
+				name: "dogs",
+				subdomain: "docs.pages.dev",
+				domains: ["dogs.pages.dev"],
+				source: {
+					type: "github",
+				},
+				latest_deployment: {
+					modified_on: "2021-11-17T14:52:26.133835Z",
+				},
+				created_on: "2021-11-17T14:52:26.133835Z",
+				production_branch: "main",
+			},
+			{
+				name: "cats",
+				subdomain: "cats.pages.dev",
+				domains: ["cats.pages.dev", "kitten.com"],
+				latest_deployment: {
+					modified_on: "2021-11-17T14:52:26.133835Z",
+				},
+				created_on: "2021-11-17T14:52:26.133835Z",
+				production_branch: "main",
+			},
+		];
+
+		const requests = mockProjectListRequest(projects);
+		await runWrangler("pages project list --json");
+
+		expect(requests.count).toBe(1);
+
+		// Verify the output is valid JSON
+		const output = JSON.parse(std.out);
+		expect(output).toMatchInlineSnapshot(`
+			Array [
+			  Object {
+			    "Git Provider": "Yes",
+			    "Last Modified": "[mock-time-ago]",
+			    "Project Domains": "dogs.pages.dev",
+			    "Project Name": "dogs",
+			  },
+			  Object {
+			    "Git Provider": "No",
+			    "Last Modified": "[mock-time-ago]",
+			    "Project Domains": "cats.pages.dev, kitten.com",
+			    "Project Name": "cats",
+			  },
+			]
+		`);
 	});
 });
 
