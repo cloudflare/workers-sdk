@@ -107,7 +107,7 @@ export function Sidebar({
 						{!loading &&
 							!error &&
 							databases.map((database) => {
-								const isActive = currentPath === `/kv/${database.uuid}`;
+								const isActive = currentPath === `/d1/${database.uuid}`;
 								return (
 									<li key={database.uuid}>
 										<Link
@@ -126,7 +126,7 @@ export function Sidebar({
 									</li>
 								);
 							})}
-						{!loading && !error && namespaces.length === 0 && (
+						{!loading && !error && databases.length === 0 && (
 							<li className="block py-2.5 px-4 text-text-secondary border-b border-border">
 								No databases
 							</li>
