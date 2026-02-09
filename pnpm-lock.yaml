@@ -2099,8 +2099,8 @@ importers:
         specifier: ^1.1.0
         version: 1.1.0(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@cloudflare/kumo':
-        specifier: ^1.0.0
-        version: 1.0.0(@phosphor-icons/react@2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(zod@3.25.76)
+        specifier: ^1.1.0
+        version: 1.1.0(@phosphor-icons/react@2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@cloudflare/style-const':
         specifier: ^6.1.3
         version: 6.1.3(react@19.2.1)
@@ -5178,14 +5178,14 @@ packages:
     peerDependencies:
       react: ^15.0.0-0 || ^16.0.0-0 || ^17.0.0-0
 
-  '@cloudflare/kumo@1.0.0':
-    resolution: {integrity: sha512-G4H1O3WVRGyXdaA619jsLpcZTs4rU2EsNC1tRdIvO1hPtQ5OTd7ZWFGa7CvgZgeg+Br2jUSRWSTVpO8rOmF9EA==}
+  '@cloudflare/kumo@1.1.0':
+    resolution: {integrity: sha512-Qh6lqKuDSuBwjc2VJPQIeVBxvTHVfIRG2FtxLrLYFQmagkHCagiOppvxtoxULC0gTl17ybUpEzmZwHKW0ztdHg==}
     hasBin: true
     peerDependencies:
       '@phosphor-icons/react': ^2.1.10
       react: ^18.0.0 || ^19.0.0
       react-dom: ^18.0.0 || ^19.0.0
-      zod: ^3.24.0
+      zod: ^4.0.0
     peerDependenciesMeta:
       zod:
         optional: true
@@ -16352,7 +16352,7 @@ snapshots:
     dependencies:
       react: 19.2.1
 
-  '@cloudflare/kumo@1.0.0(@phosphor-icons/react@2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(zod@3.25.76)':
+  '@cloudflare/kumo@1.1.0(@phosphor-icons/react@2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
     dependencies:
       '@base-ui/react': 1.1.0(@types/react@19.2.10)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@phosphor-icons/react': 2.1.10(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -16360,8 +16360,6 @@ snapshots:
       react: 19.2.1
       react-dom: 19.2.1(react@19.2.1)
       tailwind-merge: 3.4.0
-    optionalDependencies:
-      zod: 3.25.76
     transitivePeerDependencies:
       - '@types/react'
 
