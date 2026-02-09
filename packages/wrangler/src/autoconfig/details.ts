@@ -185,6 +185,35 @@ export async function getDetailsForAutoConfig({
 	const outputDir =
 		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
 
+	const baseDetails = {
+		projectPath,
+		framework,
+		packageJson,
+		...(detectedFramework
+			? {
+					buildCommand: await getProjectBuildCommand(detectedFramework),
+				}
+			: {}),
+		workerName: getWorkerName(packageJson?.name, projectPath),
+	};
+
+	if (configured) {
+		sendMetricsEvent(
+			"autoconfig_detection_completed",
+			{
+				autoConfigId,
+				framework: framework.id,
+				configured,
+				success: true,
+			},
+			{}
+		);
+		return {
+			...baseDetails,
+			configured: true,
+		};
+	}
+
 	if (!outputDir) {
 		const errorMessage =
 			framework.id === "static"
@@ -220,18 +249,21 @@ export async function getDetailsForAutoConfig({
 		{}
 	);
 
+	sendMetricsEvent(
+		"autoconfig_detection_completed",
+		{
+			autoConfigId,
+			framework: framework.id,
+			configured,
+			success: true,
+		},
+		{}
+	);
+
 	return {
-		projectPath,
-		configured,
-		framework,
-		packageJson,
-		...(detectedFramework
-			? {
-					buildCommand: await getProjectBuildCommand(detectedFramework),
-				}
-			: {}),
+		...baseDetails,
 		outputDir,
-		workerName: getWorkerName(packageJson?.name, projectPath),
+		configured: false,
 	};
 }
 
