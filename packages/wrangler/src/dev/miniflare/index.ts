@@ -613,13 +613,14 @@ export function buildMiniflareBindingOptions(
 
 		unsafeBindings.push({
 			name,
-			type,
+			type: type.slice("unsafe_".length),
 			plugin,
 			options: {
 				...options,
 				...devOptions,
 			},
 		});
+
 	}
 
 	/**
