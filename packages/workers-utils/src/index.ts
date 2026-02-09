@@ -26,7 +26,7 @@ export * from "./types";
 export {
 	type Message,
 	type Location,
-	type File,
+	type ParseFile,
 	ParseError,
 	APIError,
 	parseTOML,
@@ -49,6 +49,7 @@ export {
 	type NormalizeAndValidateConfigArgs,
 	isValidR2BucketName,
 	bucketFormatMessage,
+	getBindingTypeFriendlyName,
 } from "./config/validation";
 
 export { validatePagesConfig } from "./config/validation-pages";

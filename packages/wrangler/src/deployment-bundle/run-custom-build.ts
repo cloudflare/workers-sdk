@@ -8,10 +8,13 @@ import dedent from "ts-dedent";
 import { logger } from "../logger";
 import type { Config } from "@cloudflare/workers-utils";
 
+export type WranglerCommand = "dev" | "deploy" | "versions upload" | "types";
+
 export async function runCommand(
 	command: string,
 	cwd: string | undefined,
-	prefix = "[custom build]"
+	prefix = "[custom build]",
+	wranglerCommand?: WranglerCommand
 ) {
 	logger.log(chalk.blue(prefix), "Running:", command);
 	try {
@@ -19,6 +22,9 @@ export async function runCommand(
 			nodeOptions: {
 				shell: true,
 				cwd,
+				env: {
+					...(wranglerCommand ? { WRANGLER_COMMAND: wranglerCommand } : {}),
+				},
 			},
 			throwOnError: true,
 		});
@@ -65,10 +71,16 @@ export async function runCustomBuild(
 	expectedEntryAbsolute: string,
 	expectedEntryRelative: string,
 	build: Pick<Config["build"], "command" | "cwd">,
-	configPath: string | undefined
+	configPath: string | undefined,
+	wranglerCommand?: WranglerCommand
 ) {
 	if (build.command) {
-		await runCommand(build.command, build.cwd);
+		await runCommand(
+			build.command,
+			build.cwd,
+			"[custom build]",
+			wranglerCommand
+		);
 
 		assertEntryPointExists(
 			expectedEntryAbsolute,

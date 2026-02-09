@@ -28,7 +28,7 @@ import {
 	produceWorkerBundleForWorkerJSDirectory,
 } from "../../pages/functions/buildWorker";
 import { validateRoutes } from "../../pages/functions/routes-validation";
-import { upload } from "../../pages/upload";
+import { maxFileCountAllowedFromClaims, upload } from "../../pages/upload";
 import { getPagesTmpDir, truncateUtf8Bytes } from "../../pages/utils";
 import { validate } from "../../pages/validate";
 import { createUploadWorkerBundleContents } from "./create-worker-bundle-contents";
@@ -249,7 +249,15 @@ export async function deploy({
 		}
 	}
 
-	const fileMap = await validate({ directory });
+	// Fetch JWT to get file count limit for validation
+	const { jwt } = await fetchResult<{ jwt: string }>(
+		COMPLIANCE_REGION_CONFIG_PUBLIC,
+		`/accounts/${accountId}/pages/projects/${projectName}/upload-token`
+	);
+
+	const fileCountLimit = maxFileCountAllowedFromClaims(jwt);
+
+	const fileMap = await validate({ directory, fileCountLimit });
 
 	const manifest = await upload({
 		fileMap,

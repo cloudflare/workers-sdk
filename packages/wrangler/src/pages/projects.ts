@@ -24,8 +24,16 @@ export const pagesProjectListCommand = createCommand({
 	},
 	behaviour: {
 		provideConfig: false,
+		printBanner: (args) => !args.json,
 	},
-	async handler() {
+	args: {
+		json: {
+			type: "boolean",
+			description: "Return output as clean JSON",
+			default: false,
+		},
+	},
+	async handler({ json }) {
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
@@ -50,7 +58,11 @@ export const pagesProjectListCommand = createCommand({
 			account_id: accountId,
 		});
 
-		logger.table(data);
+		if (json) {
+			logger.log(JSON.stringify(data, null, 2));
+		} else {
+			logger.table(data);
+		}
 		metrics.sendMetricsEvent("list pages projects");
 	},
 });
@@ -138,13 +150,20 @@ export const pagesProjectCreateCommand = createCommand({
 		}
 
 		if (!productionBranch && isInteractive) {
+			logger.debug(
+				"pages project create: Detecting git repository for production branch suggestion..."
+			);
 			let isGitDir = true;
 			try {
 				execSync(`git rev-parse --is-inside-work-tree`, {
 					stdio: "ignore",
 				});
-			} catch {
+				logger.debug("pages project create: Git repository detected");
+			} catch (err) {
 				isGitDir = false;
+				logger.debug(
+					`pages project create: Not a git repository: ${err instanceof Error ? err.message : String(err)}`
+				);
 			}
 
 			if (isGitDir) {
@@ -152,7 +171,14 @@ export const pagesProjectCreateCommand = createCommand({
 					productionBranch = execSync(`git rev-parse --abbrev-ref HEAD`)
 						.toString()
 						.trim();
-				} catch {}
+					logger.debug(
+						`pages project create: Detected branch for suggestion: "${productionBranch}"`
+					);
+				} catch (err) {
+					logger.debug(
+						`pages project create: Failed to detect branch: ${err instanceof Error ? err.message : String(err)}`
+					);
+				}
 			}
 
 			productionBranch = await prompt("Enter the production branch name:", {

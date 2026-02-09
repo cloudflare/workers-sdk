@@ -16,14 +16,14 @@ type AutoConfigDetailsBase = {
 	/** The build command used to build the project (if any) */
 	buildCommand?: string;
 	/** The output directory (if no framework is used, points to the raw asset files) */
-	outputDir?: string;
+	outputDir: string;
 };
 
 export type AutoConfigDetailsForConfiguredProject = Optional<
 	AutoConfigDetailsBase,
 	// If AutoConfig detects that the project is already configured it's unnecessary to check
-	// what framework is being used, so in this case `framework` is optional
-	"framework"
+	// what framework is being used nor the output directory, so in this case thee fields are optional
+	"framework" | "outputDir"
 > & {
 	configured: true;
 };

@@ -69,7 +69,7 @@ export function unwrapHook<
 	return typeof hook === "function" ? hook(...args) : hook;
 }
 
-async function getBinaryFileContents(file: File<string | Uint8Array>) {
+export async function getBinaryFileContents(file: File<string | Uint8Array>) {
 	if ("contents" in file) {
 		if (file.contents instanceof Buffer) {
 			return file.contents;
@@ -532,7 +532,7 @@ export async function convertBindingsToCfWorkerInitBindings(
 	return { bindings, fetchers };
 }
 
-function isUnsafeBindingType(type: string): type is `unsafe_${string}` {
+export function isUnsafeBindingType(type: string): type is `unsafe_${string}` {
 	return type.startsWith("unsafe_");
 }
 
@@ -543,15 +543,38 @@ function omitType<T extends Record<string, unknown>>({
 	return value;
 }
 
+/**
+ * What configuration key does this binding use for referring to it's binding name?
+ */
+const nameBindings = [
+	"durable_object_namespace",
+	"logfwdr",
+	"ratelimit",
+	"unsafe_ratelimit",
+	"send_email",
+] as const;
+function getBindingKey(type: Binding["type"]) {
+	if ((nameBindings as readonly string[]).includes(type)) {
+		return "name";
+	}
+	return "binding";
+}
+
+type FlatBinding<Type> = Extract<Binding, { type: Type }> &
+	(Type extends (typeof nameBindings)[number]
+		? {
+				name: string;
+			}
+		: {
+				binding: string;
+			});
+
 export function extractBindingsOfType<
 	Type extends NonNullable<StartDevWorkerOptions["bindings"]>[string]["type"],
 >(
 	type: Type,
 	bindings: StartDevWorkerOptions["bindings"]
-): (Extract<Binding, { type: Type }> & {
-	binding: string;
-	/* ugh why durable objects :( */ name: string;
-})[] {
+): FlatBinding<Type>[] {
 	return Object.entries(bindings ?? {})
 		.filter(
 			(binding): binding is [string, Extract<Binding, { type: Type }>] =>
@@ -559,10 +582,6 @@ export function extractBindingsOfType<
 		)
 		.map((binding) => ({
 			...binding[1],
-			binding: binding[0],
-			name: binding[0],
-		})) as (Extract<Binding, { type: Type }> & {
-		binding: string;
-		/* ugh why durable objects :( */ name: string;
-	})[];
+			[getBindingKey(type)]: binding[0],
+		})) as FlatBinding<Type>[];
 }
