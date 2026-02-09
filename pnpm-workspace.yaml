@@ -30,7 +30,7 @@ catalog:
   vitest: "~3.2.0"
   vite: "^5.4.14"
   "ws": "8.18.0"
-  esbuild: "0.27.0"
+  esbuild: "0.27.3"
   playwright-chromium: "^1.56.1"
   "@cloudflare/workers-types": "^4.20260206.0"
   workerd: "1.20260206.0"
