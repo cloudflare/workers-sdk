@@ -29,6 +29,25 @@ export const StudioSQLBaseTheme = EditorView.baseTheme({
  * without needing any runtime dark mode detection.
  */
 export const StudioSQLTheme = EditorView.baseTheme({
+	/* Cursor — ensure the caret is visible against both light and dark backgrounds */
+	".cm-content": {
+		caretColor: "var(--color-text)",
+	},
+
+	/* Selection highlight */
+	"&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
+		backgroundColor: "var(--color-selection) !important",
+	},
+
+	/* Active line */
+	".cm-activeLine": {
+		backgroundColor: "var(--color-active-line)",
+	},
+	".cm-activeLineGutter": {
+		backgroundColor: "var(--color-active-line)",
+	},
+
+	/* Syntax token colors */
 	".tok-keyword": {
 		color: "var(--color-syntax-keyword)",
 	},
@@ -49,6 +68,7 @@ export const StudioSQLTheme = EditorView.baseTheme({
 		color: "var(--color-syntax-table)",
 	},
 
+	/* Gutters */
 	".cm-gutters": {
 		backgroundColor: "var(--color-bg)",
 		color: "var(--color-muted)",
@@ -56,6 +76,7 @@ export const StudioSQLTheme = EditorView.baseTheme({
 		width: "30px",
 	},
 
+	/* Autocomplete tooltip */
 	".cm-tooltip-autocomplete": {
 		backgroundColor: "var(--color-bg)",
 		color: "var(--color-text)",

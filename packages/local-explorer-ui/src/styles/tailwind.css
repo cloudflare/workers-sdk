@@ -28,6 +28,10 @@
 	--color-tooltip-text: #ffeee6;
 	--color-resizer: #d4c4b6;
 
+	/* SQL editor chrome */
+	--color-selection: rgba(82, 16, 0, 0.12);
+	--color-active-line: rgba(82, 16, 0, 0.05);
+
 	/* SQL editor syntax highlighting */
 	--color-syntax-keyword: #0000ff;
 	--color-syntax-string: #d16969;
@@ -42,6 +46,44 @@
 
 	/* Custom sizing */
 	--width-sidebar: 240px;
+}
+
+/*
+ * Map @cloudflare/kumo component tokens to our brand theme.
+ * Kumo's DropdownMenu, Button, Input, Tooltip, etc. reference --color-kumo-*
+ * and --text-color-kumo-* variables internally. Without these mappings,
+ * backgrounds and text colors resolve to transparent/invisible.
+ */
+:root {
+	/* Background tokens */
+	--color-kumo-base: var(--color-background);
+	--color-kumo-control: var(--color-surface);
+	--color-kumo-elevated: var(--color-surface-secondary);
+	--color-kumo-overlay: var(--color-accent);
+	--color-kumo-recessed: var(--color-surface-tertiary);
+	--color-kumo-tint: var(--color-surface-secondary);
+
+	/* Interactive / brand tokens */
+	--color-kumo-brand: var(--color-primary);
+	--color-kumo-brand-hover: var(--color-primary-hover);
+	--color-kumo-interact: var(--color-surface-tertiary);
+	--color-kumo-danger: var(--color-danger);
+
+	/* Border / line tokens */
+	--color-kumo-fill: var(--color-border);
+	--color-kumo-line: var(--color-border);
+	--color-kumo-ring: var(--color-muted);
+
+	/* Tooltip tokens */
+	--color-kumo-tip-shadow: rgba(0, 0, 0, 0.08);
+	--color-kumo-tip-stroke: transparent;
+
+	/* Text color tokens */
+	--text-color-kumo-default: var(--color-text);
+	--text-color-kumo-subtle: var(--color-muted);
+	--text-color-kumo-inactive: var(--color-muted);
+	--text-color-kumo-danger: var(--color-danger);
+	--text-color-kumo-link: var(--color-primary);
 }
 
 /* Dark mode color overrides */
@@ -71,6 +113,10 @@
 		--color-tooltip-text: #ffeee6;
 		--color-resizer: #3d2e24;
 
+		/* SQL editor chrome — dark mode */
+		--color-selection: rgba(255, 238, 230, 0.15);
+		--color-active-line: rgba(255, 238, 230, 0.06);
+
 		/* SQL editor syntax highlighting — dark mode */
 		--color-syntax-keyword: #4078f2;
 		--color-syntax-string: #d16969;
@@ -81,6 +127,10 @@
 
 		--shadow-focus-primary: 0 0 0 3px rgba(255, 107, 51, 0.25);
 		--shadow-focus-danger: 0 0 0 3px rgba(255, 77, 85, 0.25);
+
+		/* Kumo tooltip overrides for dark mode */
+		--color-kumo-tip-shadow: transparent;
+		--color-kumo-tip-stroke: var(--color-border);
 	}
 }
 
