@@ -313,6 +313,11 @@ export const deployCommand = createCommand({
 					);
 
 					if (!proceedWithPagesProject) {
+						sendAutoConfigProcessEndedMetricsEvent({
+							success: false,
+							command: "wrangler deploy",
+							dryRun: !!args.dryRun,
+						});
 						return;
 					}
 				} else if (!details.configured) {
