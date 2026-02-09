@@ -12,11 +12,12 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
-import { confirm, prompt } from "../dialogs";
+import { getErrorType } from "../core/handle-errors";
+import { confirm, prompt, select } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
 import { getPackageManager } from "../package-manager";
-import { getFramework } from "./frameworks/get-framework";
+import { allKnownFrameworks, getFramework } from "./frameworks/get-framework";
 import {
 	getAutoConfigId,
 	getAutoConfigTriggerCommand,
@@ -165,7 +166,7 @@ export async function getDetailsForAutoConfig({
 
 	const detectedFramework = buildSettings.at(0);
 
-	const framework = getFramework(detectedFramework?.framework);
+	const framework = getFramework(detectedFramework?.framework?.id);
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
@@ -181,6 +182,73 @@ export async function getDetailsForAutoConfig({
 
 	const configured = framework.isConfigured(projectPath) ?? false;
 
+	const outputDir =
+		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
+
+	const baseDetails = {
+		projectPath,
+		framework,
+		packageJson,
+		...(detectedFramework
+			? {
+					buildCommand: await getProjectBuildCommand(detectedFramework),
+				}
+			: {}),
+		workerName: getWorkerName(packageJson?.name, projectPath),
+	};
+
+	if (configured) {
+		sendMetricsEvent(
+			"autoconfig_detection_completed",
+			{
+				autoConfigId,
+				framework: framework.id,
+				configured,
+				success: true,
+			},
+			{}
+		);
+		return {
+			...baseDetails,
+			configured: true,
+		};
+	}
+
+	if (!outputDir) {
+		const errorMessage =
+			framework.id === "static"
+				? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
+				: "Failed to detect an output directory for the project";
+
+		const error = new FatalError(errorMessage);
+
+		sendMetricsEvent(
+			"autoconfig_detection_completed",
+			{
+				autoConfigId,
+				framework: framework.id,
+				configured,
+				success: false,
+				errorType: getErrorType(error),
+				errorMessage,
+			},
+			{}
+		);
+
+		throw error;
+	}
+
+	sendMetricsEvent(
+		"autoconfig_detection_completed",
+		{
+			autoConfigId,
+			framework: framework.id,
+			configured,
+			success: true,
+		},
+		{}
+	);
+
 	sendMetricsEvent(
 		"autoconfig_detection_completed",
 		{
@@ -193,17 +261,9 @@ export async function getDetailsForAutoConfig({
 	);
 
 	return {
-		projectPath,
-		configured,
-		framework,
-		packageJson,
-		...(detectedFramework
-			? {
-					buildCommand: await getProjectBuildCommand(detectedFramework),
-				}
-			: {}),
-		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
-		workerName: getWorkerName(packageJson?.name, projectPath),
+		...baseDetails,
+		outputDir,
+		configured: false,
 	};
 }
 
@@ -373,6 +433,30 @@ export async function confirmAutoConfigDetails(
 	});
 
 	updatedAutoConfigDetails.workerName = workerName;
+
+	const frameworkId = await select(
+		"What framework is your application using?",
+		{
+			choices: allKnownFrameworks.map((f) => ({
+				title: f.name,
+				value: f.id,
+				description:
+					f.id === "static"
+						? "No framework at all, or a static framework such as Vite, React or Gatsby."
+						: `The ${f.name} JavaScript framework`,
+			})),
+			defaultOption: allKnownFrameworks.findIndex((framework) => {
+				if (!autoConfigDetails?.framework) {
+					// If there is no framework already detected let's default to the static one
+					// (note: there should always be a framework at this point)
+					return framework.id === "static";
+				}
+				return autoConfigDetails.framework.id === framework.id;
+			}),
+		}
+	);
+
+	updatedAutoConfigDetails.framework = getFramework(frameworkId);
 
 	const outputDir = await prompt(
 		"What directory contains your applications' output/asset files?",

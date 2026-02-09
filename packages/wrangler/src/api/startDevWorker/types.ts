@@ -5,51 +5,22 @@ import type { ConfigController } from "./ConfigController";
 import type { DevEnv } from "./DevEnv";
 import type { ContainerNormalizedConfig } from "@cloudflare/containers-shared";
 import type {
-	CfAIBinding,
-	CfAnalyticsEngineDataset,
-	CfBrowserBinding,
-	CfD1Database,
-	CfDispatchNamespace,
-	CfDurableObject,
-	CfHelloWorld,
-	CfHyperdrive,
-	CfImagesBinding,
-	CfKvNamespace,
-	CfLogfwdrBinding,
-	CfMediaBinding,
+	BinaryFile,
+	Binding,
 	CfModule,
-	CfMTlsCertificate,
-	CfPipeline,
-	CfQueue,
-	CfR2Bucket,
-	CfRateLimit,
 	CfScriptFormat,
-	CfSecretsStoreSecrets,
-	CfSendEmailBindings,
-	CfService,
 	CfTailConsumer,
 	CfUnsafe,
-	CfVectorize,
-	CfVpcService,
-	CfWorkerLoader,
-	CfWorkflow,
 	Config,
 	ContainerApp,
 	ContainerEngine,
-	CustomDomainRoute,
 	DurableObjectMigration,
+	File,
 	Rule,
-	ZoneIdRoute,
-	ZoneNameRoute,
+	ServiceFetch,
+	Trigger,
 } from "@cloudflare/workers-utils";
-import type {
-	DispatchFetch,
-	Json,
-	Miniflare,
-	NodeJSCompatMode,
-	Request,
-	Response,
-} from "miniflare";
+import type { DispatchFetch, Miniflare, NodeJSCompatMode } from "miniflare";
 import type * as undici from "undici";
 
 type MiniflareWorker = Awaited<ReturnType<Miniflare["getWorker"]>>;
@@ -269,57 +240,4 @@ export type Bundle = EsbuildBundle;
 
 export type LogLevel = "debug" | "info" | "log" | "warn" | "error" | "none";
 
-export type File<Contents = string, Path = string> =
-	| { path: Path } // `path` resolved relative to cwd
-	| { contents: Contents; path?: Path }; // `contents` used instead, `path` can be specified if needed e.g. for module resolution
-export type BinaryFile = File<Uint8Array>; // Note: Node's `Buffer`s are instances of `Uint8Array`
-
-type QueueConsumer = NonNullable<Config["queues"]["consumers"]>[number];
-
-export type Trigger =
-	| { type: "workers.dev" }
-	| { type: "route"; pattern: string } // SimpleRoute
-	| ({ type: "route" } & ZoneIdRoute)
-	| ({ type: "route" } & ZoneNameRoute)
-	| ({ type: "route" } & CustomDomainRoute)
-	| { type: "cron"; cron: string }
-	| ({ type: "queue-consumer" } & QueueConsumer);
-
-type BindingOmit<T> = Omit<T, "binding">;
-type NameOmit<T> = Omit<T, "name">;
-export type Binding =
-	| { type: "plain_text"; value: string }
-	| { type: "json"; value: Json }
-	| ({ type: "kv_namespace" } & BindingOmit<CfKvNamespace>)
-	| ({ type: "send_email" } & NameOmit<CfSendEmailBindings>)
-	| { type: "wasm_module"; source: BinaryFile }
-	| { type: "text_blob"; source: File }
-	| ({ type: "browser" } & BindingOmit<CfBrowserBinding>)
-	| ({ type: "ai" } & BindingOmit<CfAIBinding>)
-	| ({ type: "images" } & BindingOmit<CfImagesBinding>)
-	| { type: "version_metadata" }
-	| { type: "data_blob"; source: BinaryFile }
-	| ({ type: "durable_object_namespace" } & NameOmit<CfDurableObject>)
-	| ({ type: "workflow" } & BindingOmit<CfWorkflow>)
-	| ({ type: "queue" } & BindingOmit<CfQueue>)
-	| ({ type: "r2_bucket" } & BindingOmit<CfR2Bucket>)
-	| ({ type: "d1" } & BindingOmit<CfD1Database>)
-	| ({ type: "vectorize" } & BindingOmit<CfVectorize>)
-	| ({ type: "hyperdrive" } & BindingOmit<CfHyperdrive>)
-	| ({ type: "service" } & BindingOmit<CfService>)
-	| { type: "fetcher"; fetcher: ServiceFetch }
-	| ({ type: "analytics_engine" } & BindingOmit<CfAnalyticsEngineDataset>)
-	| ({ type: "dispatch_namespace" } & BindingOmit<CfDispatchNamespace>)
-	| ({ type: "mtls_certificate" } & BindingOmit<CfMTlsCertificate>)
-	| ({ type: "pipeline" } & BindingOmit<CfPipeline>)
-	| ({ type: "secrets_store_secret" } & BindingOmit<CfSecretsStoreSecrets>)
-	| ({ type: "logfwdr" } & NameOmit<CfLogfwdrBinding>)
-	| ({ type: "unsafe_hello_world" } & BindingOmit<CfHelloWorld>)
-	| ({ type: "ratelimit" } & NameOmit<CfRateLimit>)
-	| ({ type: "worker_loader" } & BindingOmit<CfWorkerLoader>)
-	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
-	| ({ type: "media" } & BindingOmit<CfMediaBinding>)
-	| { type: `unsafe_${string}` }
-	| { type: "assets" };
-
-export type ServiceFetch = (request: Request) => Promise<Response> | Response;
+export type { Trigger, Binding, File, BinaryFile, ServiceFetch };
