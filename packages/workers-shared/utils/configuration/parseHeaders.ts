@@ -1,8 +1,8 @@
 import {
 	HEADER_SEPARATOR,
+	HEADER_UNSET_OPERATOR,
+	MAX_HEADER_LINE_LENGTH,
 	MAX_HEADER_RULES,
-	MAX_LINE_LENGTH,
-	UNSET_OPERATOR,
 } from "./constants";
 import { validateUrl } from "./validateURL";
 import type { HeadersRule, InvalidHeadersRule, ParsedHeaders } from "./types";
@@ -16,7 +16,7 @@ export function parseHeaders(
 	input: string,
 	{
 		maxRules = MAX_HEADER_RULES,
-		maxLineLength = MAX_LINE_LENGTH,
+		maxLineLength = MAX_HEADER_LINE_LENGTH,
 	}: { maxRules?: number; maxLineLength?: number } = {}
 ): ParsedHeaders {
 	const lines = input.split("\n");
@@ -94,8 +94,10 @@ export function parseHeaders(
 					message: "Expected a path beginning with at least one forward-slash",
 				});
 			} else {
-				if (line.trim().startsWith(UNSET_OPERATOR)) {
-					rule.unsetHeaders.push(line.trim().replace(UNSET_OPERATOR, ""));
+				if (line.trim().startsWith(HEADER_UNSET_OPERATOR)) {
+					rule.unsetHeaders.push(
+						line.trim().replace(HEADER_UNSET_OPERATOR, "")
+					);
 				} else {
 					invalid.push({
 						line,

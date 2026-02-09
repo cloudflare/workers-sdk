@@ -140,15 +140,15 @@ test("parseHeaders should add unset headers", () => {
 });
 
 test("parseHeaders should support custom limits", () => {
-	const aaa = Array(1001).fill("a").join("");
-	const bbb = Array(1001).fill("b").join("");
+	const aaa = "a".repeat(1001);
+	const bbb = "b".repeat(1001);
 	const huge_line = `${aaa}: ${bbb}`;
 	let input = `
     # Valid entry
     /a
       Name: Value
     # Jumbo comment line OK, ignored as normal
-    ${Array(1001).fill("#").join("")}
+    ${"#".repeat(1001)}
     # Huge path names rejected
     /b
       Name: Value

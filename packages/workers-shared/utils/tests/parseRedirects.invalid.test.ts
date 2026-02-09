@@ -1,10 +1,10 @@
 // eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { expect, test } from "vitest";
+import { MAX_REDIRECT_LINE_LENGTH } from "../configuration/constants";
 import { parseRedirects } from "../configuration/parseRedirects";
 
 // Snapshot values
 const maxDynamicRedirectRules = 100;
-const maxLineLength = 2000;
 const maxStaticRedirectRules = 2000;
 
 test("parseRedirects should reject malformed lines", () => {
@@ -19,12 +19,12 @@ test("parseRedirects should reject malformed lines", () => {
 		rules: [],
 		invalid: [
 			{
-				line: `/c`,
+				line: `    /c`,
 				lineNumber: 3,
 				message: "Expected exactly 2 or 3 whitespace-separated tokens. Got 1.",
 			},
 			{
-				line: `/d /e 302 !important`,
+				line: `    /d /e 302 !important`,
 				lineNumber: 5,
 				message: "Expected exactly 2 or 3 whitespace-separated tokens. Got 4.",
 			},
@@ -44,7 +44,7 @@ test("parseRedirects should reject invalid status codes", () => {
 		rules: [{ from: "/a", status: 301, to: "/b", lineNumber: 3 }],
 		invalid: [
 			{
-				line: `/c /d 418`,
+				line: `    /c /d 418`,
 				lineNumber: 5,
 				message:
 					"Valid status codes are 200, 301, 302 (default), 303, 307, or 308. Got 418.",
@@ -70,7 +70,7 @@ test(`parseRedirects should reject duplicate 'from' paths`, () => {
 		],
 		invalid: [
 			{
-				line: `/a /c`,
+				line: `    /a /c`,
 				lineNumber: 7,
 				message: `Ignoring duplicate rule for path /a.`,
 			},
@@ -78,31 +78,34 @@ test(`parseRedirects should reject duplicate 'from' paths`, () => {
 	});
 });
 
-test(`parseRedirects should reject lines longer than ${maxLineLength} chars`, () => {
-	const huge_line = `/${Array(maxLineLength).fill("a").join("")} /${Array(
-		maxLineLength
-	)
-		.fill("b")
-		.join("")} 301`;
+test(`parseRedirects should reject lines longer than ${MAX_REDIRECT_LINE_LENGTH} chars`, () => {
+	const huge_line = `/${"a".repeat(MAX_REDIRECT_LINE_LENGTH)} /${"b".repeat(MAX_REDIRECT_LINE_LENGTH)} 301`;
 	const input = `
     # Valid entry
     /a /b
     # Jumbo comment line OK, ignored as normal
-    ${Array(maxLineLength + 1)
-			.fill("#")
-			.join("")}
+    ${"#".repeat(MAX_REDIRECT_LINE_LENGTH + 1)}
     # Huge path names rejected
     ${huge_line}
   `;
 	const result = parseRedirects(input);
-	expect(result).toEqual({
-		rules: [{ from: "/a", status: 302, to: "/b", lineNumber: 3 }],
-		invalid: [
-			{
-				message: `Ignoring line 7 as it exceeds the maximum allowed length of ${maxLineLength}.`,
-			},
-		],
-	});
+	expect(result).toMatchInlineSnapshot(`
+		{
+		  "invalid": [
+		    {
+		      "message": "Ignoring line 7 as the redirect directive exceeds the maximum allowed length of 1000.",
+		    },
+		  ],
+		  "rules": [
+		    {
+		      "from": "/a",
+		      "lineNumber": 3,
+		      "status": 302,
+		      "to": "/b",
+		    },
+		  ],
+		}
+	`);
 });
 
 test("parseRedirects should reject any dynamic rules after the first 100", () => {
@@ -223,12 +226,12 @@ test("parseRedirects should reject malformed URLs", () => {
 	expect(result).toEqual({
 		invalid: [
 			{
-				line: `/some page /somewhere else`,
+				line: `  /some page /somewhere else`,
 				lineNumber: 3,
 				message: "Expected exactly 2 or 3 whitespace-separated tokens. Got 4.",
 			},
 			{
-				line: `https://yeah.com https://nah.com`,
+				line: `  https://yeah.com https://nah.com`,
 				lineNumber: 9,
 				message:
 					"Only relative URLs are allowed. Skipping absolute URL https://yeah.com.",
@@ -267,7 +270,7 @@ test("parseRedirects should reject non-relative URLs for proxying (200) redirect
 		rules: [],
 		invalid: [
 			{
-				line: `/a https://example.com/b 200`,
+				line: `\t/a https://example.com/b 200`,
 				lineNumber: 2,
 				message:
 					"Proxy (200) redirects can only point to relative paths. Got https://example.com/b",
