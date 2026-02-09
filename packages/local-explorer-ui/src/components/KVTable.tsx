@@ -239,7 +239,7 @@ export function KVTable({ entries, onSave, onDelete }: KVTableProps) {
 												Cancel
 											</Button>
 											<Button
-												className="inline-flex items-center justify-center py-1 px-2.5 text-xs font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-bg-tertiary hover:bg-primary-hover data-[disabled]:opacity-60 data-[disabled]:cursor-not-allowed data-[disabled]:active:translate-y-0"
+												className="inline-flex items-center justify-center py-1 px-2.5 text-xs font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-white hover:bg-primary-hover data-[disabled]:text-white/70 data-[disabled]:cursor-not-allowed data-[disabled]:active:translate-y-0"
 												onClick={handleSave}
 												disabled={saving || isKeyInvalid}
 												focusableWhenDisabled
