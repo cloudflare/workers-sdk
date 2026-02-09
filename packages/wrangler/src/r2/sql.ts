@@ -37,7 +37,16 @@ function formatSqlResults(data: SqlQueryResponse, duration: number): void {
 	logger.table(
 		rows.map((row) =>
 			Object.fromEntries(
-				column_order.map((column) => [column, String(row[column] ?? "")])
+				column_order.map((column) => {
+					const value = row[column];
+					if (value === null || value === undefined) {
+						return [column, ""];
+					}
+					if (typeof value === "object") {
+						return [column, JSON.stringify(value)];
+					}
+					return [column, String(value)];
+				})
 			)
 		),
 		{ wordWrap: true, head: column_order }

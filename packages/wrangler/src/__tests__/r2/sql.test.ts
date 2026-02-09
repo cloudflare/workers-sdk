@@ -223,6 +223,52 @@ describe("r2 sql", () => {
 			).rejects.toThrow("Received a malformed response from the API");
 		});
 
+		it("should handle nested objects in query results", async () => {
+			const mockResponse = {
+				success: true,
+				errors: [],
+				messages: [],
+				result: {
+					schema: [
+						{ name: "distribution", type: "Utf8" },
+						{ name: "approx_top_k(value, Int64(3))", type: "List" },
+					],
+					rows: [
+						{
+							distribution: "zipfian",
+							"approx_top_k(value, Int64(3))": [
+								{ value: 5, count: 100 },
+								{ value: 3, count: 80 },
+								{ value: 1, count: 60 },
+							],
+						},
+					],
+					metrics: {
+						r2_requests_count: 5,
+						files_scanned: 3,
+						bytes_scanned: 62900,
+					},
+				},
+			};
+
+			msw.use(
+				http.post(
+					"https://api.sql.cloudflarestorage.com/api/v1/accounts/:accountId/r2-sql/query/:bucketName",
+					async () => {
+						return HttpResponse.json(mockResponse);
+					},
+					{ once: true }
+				)
+			);
+
+			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
+			// Nested objects should be JSON-stringified, not displayed as [object Object].
+			expect(std.out).toContain("zipfian");
+			expect(std.out).not.toContain("[object Object]");
+			expect(std.out).toContain('"value":5');
+			expect(std.out).toContain('"count":100');
+		});
+
 		it("should handle null values in query results", async () => {
 			const mockResponse = {
 				success: true,
