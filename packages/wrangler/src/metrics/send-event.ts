@@ -71,6 +71,12 @@ export type EventNames =
 	| "update pipeline"
 	| "show pipeline"
 	| "provision resources"
+	| "create tunnel"
+	| "list tunnels"
+	| "delete tunnel"
+	| "info tunnel"
+	| "run tunnel"
+	| "quick-start tunnel"
 	| AutoConfigEvent;
 
 /** Event related to the autoconfig flow */
