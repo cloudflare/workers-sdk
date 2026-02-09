@@ -380,11 +380,19 @@ export type StartDevOptions = DevArguments &
  */
 export function maskVars(
 	bindings: CfWorkerInit["bindings"],
-	configParam: Config
+	configParam: Config,
+	defaultVars?: Record<string, string>
 ) {
 	const maskedVars = { ...bindings.vars };
 	for (const key of Object.keys(maskedVars)) {
-		if (maskedVars[key] !== configParam.vars[key]) {
+		// Don't mask if:
+		// 1. The value matches what's in config (wrangler.toml), OR
+		// 2. The value matches a default var (e.g., CF_PAGES vars which are not secrets)
+		const isFromConfig = maskedVars[key] === configParam.vars[key];
+		const isUnchangedDefault =
+			defaultVars?.[key] !== undefined && maskedVars[key] === defaultVars[key];
+
+		if (!isFromConfig && !isUnchangedDefault) {
 			// This means it was overridden in .dev.vars
 			// so let's mask it
 			maskedVars[key] = "(hidden)";
