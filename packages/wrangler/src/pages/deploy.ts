@@ -278,13 +278,22 @@ export const pagesDeployCommand = createCommand({
 						}
 					}
 
+					logger.debug(
+						"pages deploy: Detecting git repository for production branch suggestion..."
+					);
 					let isGitDir = true;
 					try {
 						execSync(`git rev-parse --is-inside-work-tree`, {
 							stdio: "ignore",
 						});
-					} catch {
+						logger.debug(
+							"pages deploy: Git repository detected for branch suggestion"
+						);
+					} catch (err) {
 						isGitDir = false;
+						logger.debug(
+							`pages deploy: Not a git repository: ${err instanceof Error ? err.message : String(err)}`
+						);
 					}
 
 					let productionBranch: string | undefined;
@@ -293,7 +302,14 @@ export const pagesDeployCommand = createCommand({
 							productionBranch = execSync(`git rev-parse --abbrev-ref HEAD`)
 								.toString()
 								.trim();
-						} catch {}
+							logger.debug(
+								`pages deploy: Suggested production branch: "${productionBranch}"`
+							);
+						} catch (err) {
+							logger.debug(
+								`pages deploy: Failed to detect current branch: ${err instanceof Error ? err.message : String(err)}`
+							);
+						}
 					}
 
 					productionBranch = await prompt("Enter the production branch name:", {
@@ -333,31 +349,46 @@ export const pagesDeployCommand = createCommand({
 		}
 
 		// We infer git info by default is not passed in
+		logger.debug("pages deploy: Detecting git repository information...");
 		let isGitDir = true;
 		try {
 			execSync(`git rev-parse --is-inside-work-tree`, {
 				stdio: "ignore",
 			});
-		} catch {
+			logger.debug("pages deploy: Git repository detected");
+		} catch (err) {
 			isGitDir = false;
+			logger.debug(
+				`pages deploy: Not a git repository or git not available: ${err instanceof Error ? err.message : String(err)}`
+			);
 		}
 
 		let isGitDirty = false;
 
 		if (isGitDir) {
 			try {
-				isGitDirty = Boolean(
-					execSync(`git status --porcelain`).toString().length
+				const statusOutput = execSync(`git status --porcelain`).toString();
+				isGitDirty = Boolean(statusOutput.length);
+				logger.debug(
+					`pages deploy: Working directory dirty status: ${isGitDirty}`
 				);
 
 				if (!branch) {
 					branch = execSync(`git rev-parse --abbrev-ref HEAD`)
 						.toString()
 						.trim();
+					logger.debug(`pages deploy: Detected branch: "${branch}"`);
+				} else {
+					logger.debug(`pages deploy: Using provided branch: "${branch}"`);
 				}
 
 				if (!commitHash) {
 					commitHash = execSync(`git rev-parse HEAD`).toString().trim();
+					logger.debug(`pages deploy: Detected commit hash: "${commitHash}"`);
+				} else {
+					logger.debug(
+						`pages deploy: Using provided commit hash: "${commitHash}"`
+					);
 				}
 
 				if (!commitMessage) {
@@ -369,8 +400,17 @@ export const pagesDeployCommand = createCommand({
 					])
 						.toString()
 						.trim();
+					logger.debug(
+						`pages deploy: Detected commit message: "${commitMessage.substring(0, 50)}${commitMessage.length > 50 ? "..." : ""}"`
+					);
+				} else {
+					logger.debug(`pages deploy: Using provided commit message`);
 				}
-			} catch {}
+			} catch (err) {
+				logger.debug(
+					`pages deploy: Failed to detect git information: ${err instanceof Error ? err.message : String(err)}`
+				);
+			}
 
 			if (isGitDirty && !commitDirty) {
 				logger.warn(
@@ -382,6 +422,11 @@ export const pagesDeployCommand = createCommand({
 				commitDirty = isGitDirty;
 			}
 		}
+
+		// Log final summary of git information
+		logger.debug(
+			`pages deploy: Git information summary - branch: ${branch ?? "not set"}, commitHash: ${commitHash ?? "not set"}, commitDirty: ${commitDirty ?? "not set"}`
+		);
 
 		const enableBundling = args.bundle ?? !(args.noBundle ?? config?.no_bundle);
 

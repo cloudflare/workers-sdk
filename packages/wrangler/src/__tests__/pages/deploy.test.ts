@@ -9,6 +9,7 @@ import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
 import { version } from "../../../package.json";
+import { logger } from "../../logger";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";
 import { ApiErrorCodes } from "../../pages/errors";
 import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
@@ -5825,6 +5826,207 @@ and that at least one include rule is provided.
 				"commit_message",
 				"Test commit"
 			);
+		});
+	});
+
+	describe("git detection debug logging", () => {
+		afterEach(() => {
+			logger.resetLoggerLevel();
+		});
+
+		it("should output debug logs for git detection when WRANGLER_LOG=debug", async () => {
+			vi.stubEnv("WRANGLER_LOG", "debug");
+			logger.loggerLevel = "debug";
+
+			mkdirSync("public");
+			writeFileSync("public/README.md", "# Test project");
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			msw.use(
+				http.post("*/pages/assets/check-missing", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: [],
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post("*/pages/assets/upload", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}),
+				http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { deployment_configs: { production: {}, preview: {} } },
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			// Verify debug logs contain git detection messages
+			expect(std.debug).toContain(
+				"pages deploy: Detecting git repository information..."
+			);
+			expect(std.debug).toContain("pages deploy: Git information summary");
+		});
+
+		it("should log git summary even when flags are provided outside a git repo", async () => {
+			vi.stubEnv("WRANGLER_LOG", "debug");
+			logger.loggerLevel = "debug";
+
+			mkdirSync("public");
+			writeFileSync("public/README.md", "# Test project");
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			msw.use(
+				http.post("*/pages/assets/check-missing", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: [],
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post("*/pages/assets/upload", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}),
+				http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { deployment_configs: { production: {}, preview: {} } },
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler(
+				"pages deploy public --project-name=foo --branch=main --commit-hash=abc123"
+			);
+
+			// Verify debug logs indicate not a git repo but show the provided values in summary
+			expect(std.debug).toContain(
+				"pages deploy: Not a git repository or git not available"
+			);
+			// Summary should show the provided flag values
+			expect(std.debug).toContain("pages deploy: Git information summary");
+			expect(std.debug).toContain("branch: main");
+			expect(std.debug).toContain("commitHash: abc123");
 		});
 	});
 
