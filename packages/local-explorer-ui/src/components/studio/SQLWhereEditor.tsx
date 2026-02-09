@@ -1,4 +1,3 @@
-import { isDarkMode } from "@cloudflare/style-const";
 import { autocompletion } from "@codemirror/autocomplete";
 import { SQLDialect } from "@codemirror/lang-sql";
 import { syntaxHighlighting } from "@codemirror/language";
@@ -6,11 +5,7 @@ import { keymap } from "@codemirror/view";
 import { classHighlighter } from "@lezer/highlight";
 import { forwardRef, useMemo } from "react";
 import { StudioCodeMirror } from "./CodeMirror";
-import {
-	StudioSQLBaseTheme,
-	StudioSQLDarkModeTheme,
-	StudioSQLLightModeTheme,
-} from "./SQLEditor/SQLThemePlugin";
+import { StudioSQLBaseTheme, StudioSQLTheme } from "./SQLEditor/SQLThemePlugin";
 import type {
 	StudioCodeMirrorProps,
 	StudioCodeMirrorReference,
@@ -44,7 +39,7 @@ export const StudioSQLWhereEditor = forwardRef<
 			// This is for syntax highlight
 			syntaxHighlighting(classHighlighter),
 			StudioSQLBaseTheme,
-			isDarkMode() ? StudioSQLDarkModeTheme : StudioSQLLightModeTheme,
+			StudioSQLTheme,
 		];
 
 		if (columnNames && columnNames.length > 0) {

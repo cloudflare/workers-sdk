@@ -1,4 +1,3 @@
-import { isDarkMode } from "@cloudflare/style-const";
 import {
 	acceptCompletion,
 	autocompletion,
@@ -16,11 +15,7 @@ import { beautifySQLQuery } from "../../../utils/studio/formatter";
 import { StudioCodeMirror } from "../CodeMirror";
 import { StudioSQLiteDialect } from "./SQLiteDialect";
 import { createSQLTableNameHighlightPlugin } from "./SQLiteTableNameHighlightPlugin";
-import {
-	StudioSQLBaseTheme,
-	StudioSQLDarkModeTheme,
-	StudioSQLLightModeTheme,
-} from "./SQLThemePlugin";
+import { StudioSQLBaseTheme, StudioSQLTheme } from "./SQLThemePlugin";
 import { StudioSQLStatementHighlightExtension } from "./StatementHighlightExtension";
 import { StudioWAEDialect } from "./WAEDialect";
 import type { StudioDialect } from "../../../types/studio";
@@ -57,7 +52,7 @@ export const StudioSQLEditor = forwardRef<
 	const combinedExtensions = useMemo(() => {
 		return [
 			StudioSQLBaseTheme,
-			isDarkMode() ? StudioSQLDarkModeTheme : StudioSQLLightModeTheme,
+			StudioSQLTheme,
 			lineNumbers(),
 			autocompletion(),
 			sql({

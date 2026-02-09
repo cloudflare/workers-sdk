@@ -23,118 +23,61 @@ export const StudioSQLBaseTheme = EditorView.baseTheme({
 	},
 });
 
-export const StudioSQLDarkModeTheme = EditorView.theme(
-	{
-		".tok-keyword": {
-			color: "#4078f2",
-		},
-		".tok-string": {
-			color: "#d16969",
-		},
-		".tok-number": {
-			color: "#808080",
-		},
-		".tok-comment": {
-			color: "#6a737d",
-		},
-		".tok-operator": {
-			color: "#bfbfbf",
-		},
-
-		".cm-table-name": {
-			color: "#fd79a8",
-		},
-
-		".cm-gutters": {
-			backgroundColor: "#1a1412",
-			color: "#ffeee6",
-			borderRight: "none",
-			width: "30px",
-		},
-
-		// Dark mode auto completion styling
-		".cm-tooltip-autocomplete": {
-			backgroundColor: "#0f0c0a",
-			color: "#ffeee6",
-			border: "1px solid #3d2e24",
-			borderRadius: "6px",
-			boxShadow: "0 2px 6px rgba(255, 107, 51, 0.08)",
-		},
-
-		".cm-completionLabel": {
-			color: "#ffeee6",
-		},
-		".cm-completionIcon": {
-			color: "#a08678",
-		},
-		".cm-completionDetail": {
-			color: "#a08678",
-			fontStyle: "italic",
-			marginLeft: "auto",
-		},
-		".cm-tooltip-autocomplete > ul > li[aria-selected]": {
-			backgroundColor: "#2e221a",
-			color: "#ffeee6",
-		},
+/**
+ * Unified CodeMirror theme that uses CSS custom properties from tailwind.css.
+ * Automatically adapts to light/dark mode via prefers-color-scheme media queries
+ * without needing any runtime dark mode detection.
+ */
+export const StudioSQLTheme = EditorView.baseTheme({
+	".tok-keyword": {
+		color: "var(--color-syntax-keyword)",
 	},
-	{ dark: true }
-);
-
-export const StudioSQLLightModeTheme = EditorView.theme(
-	{
-		".tok-keyword": {
-			color: "#0000ff",
-		},
-		".tok-string": {
-			color: "#d16969",
-		},
-		".tok-number": {
-			color: "#098658",
-		},
-		".tok-comment": {
-			color: "#6a737d",
-		},
-		".tok-operator": {
-			color: "#5a5a5a",
-		},
-
-		".cm-table-name": {
-			color: "#e84393",
-		},
-
-		".cm-gutters": {
-			backgroundColor: "#fffdfb",
-			color: "#8a6e5c",
-			borderRight: "none",
-			width: "30px",
-		},
-
-		// Auto completion styling
-		".cm-tooltip-autocomplete": {
-			backgroundColor: "#fffdfb",
-			color: "#521000",
-			border: "1px solid #ebd5c1",
-			borderRadius: "6px",
-			boxShadow: "0 2px 6px rgba(255, 72, 1, 0.06)",
-			padding: "3px",
-		},
-
-		".cm-completionLabel": {
-			color: "#521000",
-		},
-		".cm-completionIcon": {
-			color: "#8a6e5c",
-		},
-		".cm-completionDetail": {
-			color: "#8a6e5c",
-			fontStyle: "italic",
-			marginLeft: "auto",
-		},
-		".cm-tooltip-autocomplete > ul > li[aria-selected]": {
-			backgroundColor: "#f0e6dc",
-			borderRadius: "3px",
-			color: "#521000",
-		},
+	".tok-string": {
+		color: "var(--color-syntax-string)",
 	},
-	{ dark: false }
-);
+	".tok-number": {
+		color: "var(--color-syntax-number)",
+	},
+	".tok-comment": {
+		color: "var(--color-syntax-comment)",
+	},
+	".tok-operator": {
+		color: "var(--color-syntax-operator)",
+	},
+
+	".cm-table-name": {
+		color: "var(--color-syntax-table)",
+	},
+
+	".cm-gutters": {
+		backgroundColor: "var(--color-bg)",
+		color: "var(--color-muted)",
+		borderRight: "none",
+		width: "30px",
+	},
+
+	".cm-tooltip-autocomplete": {
+		backgroundColor: "var(--color-bg)",
+		color: "var(--color-text)",
+		border: "1px solid var(--color-border)",
+		borderRadius: "6px",
+		boxShadow: "0 2px 6px rgba(0, 0, 0, 0.08)",
+	},
+
+	".cm-completionLabel": {
+		color: "var(--color-text)",
+	},
+	".cm-completionIcon": {
+		color: "var(--color-muted)",
+	},
+	".cm-completionDetail": {
+		color: "var(--color-muted)",
+		fontStyle: "italic",
+		marginLeft: "auto",
+	},
+	".cm-tooltip-autocomplete > ul > li[aria-selected]": {
+		backgroundColor: "var(--color-accent)",
+		borderRadius: "3px",
+		color: "var(--color-text)",
+	},
+});

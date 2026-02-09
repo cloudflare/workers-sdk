@@ -28,6 +28,14 @@
 	--color-tooltip-text: #ffeee6;
 	--color-resizer: #d4c4b6;
 
+	/* SQL editor syntax highlighting */
+	--color-syntax-keyword: #0000ff;
+	--color-syntax-string: #d16969;
+	--color-syntax-number: #098658;
+	--color-syntax-comment: #6a737d;
+	--color-syntax-operator: #5a5a5a;
+	--color-syntax-table: #e84393;
+
 	/* Focus ring shadows */
 	--shadow-focus-primary: 0 0 0 3px rgba(255, 72, 1, 0.15);
 	--shadow-focus-danger: 0 0 0 3px rgba(251, 44, 54, 0.15);
@@ -62,6 +70,14 @@
 		--color-tooltip-bg: #3d2e24;
 		--color-tooltip-text: #ffeee6;
 		--color-resizer: #3d2e24;
+
+		/* SQL editor syntax highlighting — dark mode */
+		--color-syntax-keyword: #4078f2;
+		--color-syntax-string: #d16969;
+		--color-syntax-number: #808080;
+		--color-syntax-comment: #6a737d;
+		--color-syntax-operator: #bfbfbf;
+		--color-syntax-table: #fd79a8;
 
 		--shadow-focus-primary: 0 0 0 3px rgba(255, 107, 51, 0.25);
 		--shadow-focus-danger: 0 0 0 3px rgba(255, 77, 85, 0.25);
