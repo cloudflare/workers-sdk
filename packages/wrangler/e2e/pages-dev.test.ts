@@ -520,7 +520,9 @@ describe.sequential("wrangler pages dev", () => {
 			CF_PAGES: "1",
 			CF_PAGES_BRANCH: expect.any(String),
 			CF_PAGES_COMMIT_SHA: expect.any(String),
-			CF_PAGES_URL: expect.stringContaining("http"),
+			CF_PAGES_URL: expect.stringMatching(
+				/^https:\/\/[a-f0-9]{8}\..*\.pages\.dev$/
+			),
 		});
 	});
 

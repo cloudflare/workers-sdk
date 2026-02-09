@@ -12,6 +12,7 @@ import {
 import { watch } from "chokidar";
 import * as esbuild from "esbuild";
 import { readConfig } from "../config";
+import { getConfigCache } from "../config-cache";
 import { createCommand } from "../core/create-command";
 import { isBuildFailure } from "../deployment-bundle/build-failures";
 import { shouldCheckFetch } from "../deployment-bundle/bundle";
@@ -26,7 +27,11 @@ import { getBasePath } from "../paths";
 import { debounce } from "../utils/debounce";
 import * as shellquote from "../utils/shell-quote";
 import { buildFunctions } from "./buildFunctions";
-import { ROUTES_SPEC_VERSION, SECONDS_TO_WAIT_FOR_PROXY } from "./constants";
+import {
+	PAGES_CONFIG_CACHE_FILENAME,
+	ROUTES_SPEC_VERSION,
+	SECONDS_TO_WAIT_FOR_PROXY,
+} from "./constants";
 import { FunctionsNoRoutesError, getFunctionsNoRoutesWarning } from "./errors";
 import {
 	buildRawWorker,
@@ -37,6 +42,7 @@ import { validateRoutes } from "./functions/routes-validation";
 import { CLEANUP, CLEANUP_CALLBACKS, getPagesTmpDir } from "./utils";
 import type { AdditionalDevProps } from "../dev";
 import type { RoutesJSONSpec } from "./functions/routes-transformation";
+import type { PagesConfigCache } from "./types";
 import type {
 	CfModule,
 	Config,
@@ -88,7 +94,7 @@ const DEFAULT_SCRIPT_PATH = "_worker.js";
  * @see https://developers.cloudflare.com/pages/configuration/build-configuration/#environment-variables
  */
 function getPagesEnvironmentVariables(
-	localUrl: string
+	projectName: string
 ): Record<string, string> {
 	let branch = "local";
 
@@ -112,11 +118,14 @@ function getPagesEnvironmentVariables(
 		// Not a git repo or git not available, use default
 	}
 
+	// Use short SHA (first 8 characters) for commit preview URL format
+	const shortSha = commitSha.substring(0, 8);
+
 	return {
 		CF_PAGES: "1",
 		CF_PAGES_BRANCH: branch,
 		CF_PAGES_COMMIT_SHA: commitSha,
-		CF_PAGES_URL: localUrl,
+		CF_PAGES_URL: `https://${shortSha}.${projectName}.pages.dev`,
 	};
 }
 
@@ -911,9 +920,14 @@ export const pagesDevCommand = createCommand({
 			}
 		}
 
-		const pagesEnvVars = getPagesEnvironmentVariables(
-			`${localProtocol ?? "http"}://${ip}:${port}`
+		// Determine project name from config, cache, or directory name (matching deploy behavior)
+		const configCache = getConfigCache<PagesConfigCache>(
+			PAGES_CONFIG_CACHE_FILENAME
 		);
+		const projectName =
+			config.name ?? configCache.project_name ?? path.basename(process.cwd());
+
+		const pagesEnvVars = getPagesEnvironmentVariables(projectName);
 
 		const devServer = await run(
 			{
