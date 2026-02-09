@@ -1,7 +1,7 @@
 import { DatabaseIcon } from "@phosphor-icons/react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
-import { Studio } from "../../components/Studio";
+import { Studio } from "../../components/studio";
 import { LocalD1Driver } from "../../drivers/d1";
 import type { StudioResource } from "../../types/studio";
 
