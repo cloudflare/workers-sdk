@@ -47,9 +47,12 @@ export async function startRemoteProxySession(
 			inspector: false,
 			logLevel:
 				// If the logger has a logLevel of "debug" it means that the user is likely trying to debug some issue,
-				// so we should respect that here as well for the remote proxy session. In any other case, to avoid noisy
+				// so we should respect that here as well for the remote proxy session. If the logLevel is "none" the user
+				// is trying to fully silence logs and we should respect that. In any other case, to avoid noisy
 				// logs, we just simply fall back to "error"
-				logger.loggerLevel === "debug" ? "debug" : "error",
+				logger.loggerLevel === "debug" || logger.loggerLevel === "none"
+					? logger.loggerLevel
+					: "error",
 		},
 		bindings: rawBindings,
 	}).catch((startWorkerError) => {
