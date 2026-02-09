@@ -3,7 +3,8 @@
 	"tasks": {
 		"start": {
 			"dependsOn": ["wrangler#build"],
-			"cache": false
+			"cache": false,
+			"persistent": true
 		}
 	}
 }
