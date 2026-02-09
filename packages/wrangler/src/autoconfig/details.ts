@@ -12,6 +12,7 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
+import { getErrorType } from "../core/handle-errors";
 import { confirm, prompt, select } from "../dialogs";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
@@ -181,6 +182,73 @@ export async function getDetailsForAutoConfig({
 
 	const configured = framework.isConfigured(projectPath) ?? false;
 
+	const outputDir =
+		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
+
+	const baseDetails = {
+		projectPath,
+		framework,
+		packageJson,
+		...(detectedFramework
+			? {
+					buildCommand: await getProjectBuildCommand(detectedFramework),
+				}
+			: {}),
+		workerName: getWorkerName(packageJson?.name, projectPath),
+	};
+
+	if (configured) {
+		sendMetricsEvent(
+			"autoconfig_detection_completed",
+			{
+				autoConfigId,
+				framework: framework.id,
+				configured,
+				success: true,
+			},
+			{}
+		);
+		return {
+			...baseDetails,
+			configured: true,
+		};
+	}
+
+	if (!outputDir) {
+		const errorMessage =
+			framework.id === "static"
+				? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
+				: "Failed to detect an output directory for the project";
+
+		const error = new FatalError(errorMessage);
+
+		sendMetricsEvent(
+			"autoconfig_detection_completed",
+			{
+				autoConfigId,
+				framework: framework.id,
+				configured,
+				success: false,
+				errorType: getErrorType(error),
+				errorMessage,
+			},
+			{}
+		);
+
+		throw error;
+	}
+
+	sendMetricsEvent(
+		"autoconfig_detection_completed",
+		{
+			autoConfigId,
+			framework: framework.id,
+			configured,
+			success: true,
+		},
+		{}
+	);
+
 	sendMetricsEvent(
 		"autoconfig_detection_completed",
 		{
@@ -193,17 +261,9 @@ export async function getDetailsForAutoConfig({
 	);
 
 	return {
-		projectPath,
-		configured,
-		framework,
-		packageJson,
-		...(detectedFramework
-			? {
-					buildCommand: await getProjectBuildCommand(detectedFramework),
-				}
-			: {}),
-		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
-		workerName: getWorkerName(packageJson?.name, projectPath),
+		...baseDetails,
+		outputDir,
+		configured: false,
 	};
 }
 
