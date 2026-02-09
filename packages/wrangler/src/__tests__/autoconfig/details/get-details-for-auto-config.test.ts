@@ -107,7 +107,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		});
 	});
 
-	it("an error should be thrown is no output dir can be detected", async () => {
+	it("an error should be thrown if no output dir can be detected", async () => {
 		await expect(
 			details.getDetailsForAutoConfig()
 		).rejects.toThrowErrorMatchingInlineSnapshot(
