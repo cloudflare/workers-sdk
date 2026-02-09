@@ -9,6 +9,7 @@ import dedent from "ts-dedent";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
 import { version } from "../../../package.json";
+import { logger } from "../../logger";
 import { ROUTES_SPEC_VERSION } from "../../pages/constants";
 import { ApiErrorCodes } from "../../pages/errors";
 import { isRoutesJSONSpec } from "../../pages/functions/routes-validation";
@@ -830,13 +831,34 @@ describe("pages deploy", () => {
 
 	it("should refetch a JWT if it expires while uploading", async () => {
 		writeFileSync("logo.txt", "foobar");
-		mockGetUploadTokenRequest(
-			"<<funfetti-auth-jwt>>",
-			"some-account-id",
-			"foo"
-		);
 
+		// JWT is fetched 3 times:
+		// 1. For validation (before upload)
+		// 2. For upload's initial fetch
+		// 3. For upload's refresh after UNAUTHORIZED
+		let jwtFetchCount = 0;
 		msw.use(
+			http.get(
+				`*/accounts/:accountId/pages/projects/foo/upload-token`,
+				({ params }) => {
+					expect(params.accountId).toEqual("some-account-id");
+					jwtFetchCount++;
+					// First two fetches return jwt1, third fetch (refresh) returns jwt2
+					const jwt =
+						jwtFetchCount <= 2
+							? "<<funfetti-auth-jwt>>"
+							: "<<funfetti-auth-jwt2>>";
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { jwt },
+						},
+						{ status: 200 }
+					);
+				}
+			),
 			http.post<never, { hashes: string[] }>(
 				"*/pages/assets/check-missing",
 				async ({ request }) => {
@@ -878,21 +900,6 @@ describe("pages deploy", () => {
 							],
 							messages: [],
 							result: null,
-						},
-						{ status: 200 }
-					);
-				},
-				{ once: true }
-			),
-			http.get(
-				`*/accounts/:accountId/pages/projects/foo/upload-token`,
-				() => {
-					return HttpResponse.json(
-						{
-							success: true,
-							errors: [],
-							messages: [],
-							result: { jwt: "<<funfetti-auth-jwt2>>" },
 						},
 						{ status: 200 }
 					);
@@ -5828,6 +5835,207 @@ and that at least one include rule is provided.
 		});
 	});
 
+	describe("git detection debug logging", () => {
+		afterEach(() => {
+			logger.resetLoggerLevel();
+		});
+
+		it("should output debug logs for git detection when WRANGLER_LOG=debug", async () => {
+			vi.stubEnv("WRANGLER_LOG", "debug");
+			logger.loggerLevel = "debug";
+
+			mkdirSync("public");
+			writeFileSync("public/README.md", "# Test project");
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			msw.use(
+				http.post("*/pages/assets/check-missing", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: [],
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post("*/pages/assets/upload", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}),
+				http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { deployment_configs: { production: {}, preview: {} } },
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler("pages deploy public --project-name=foo");
+
+			// Verify debug logs contain git detection messages
+			expect(std.debug).toContain(
+				"pages deploy: Detecting git repository information..."
+			);
+			expect(std.debug).toContain("pages deploy: Git information summary");
+		});
+
+		it("should log git summary even when flags are provided outside a git repo", async () => {
+			vi.stubEnv("WRANGLER_LOG", "debug");
+			logger.loggerLevel = "debug";
+
+			mkdirSync("public");
+			writeFileSync("public/README.md", "# Test project");
+
+			mockGetUploadTokenRequest(
+				"<<funfetti-auth-jwt>>",
+				"some-account-id",
+				"foo"
+			);
+
+			msw.use(
+				http.post("*/pages/assets/check-missing", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: [],
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post("*/pages/assets/upload", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: null,
+						},
+						{ status: 200 }
+					);
+				}),
+				http.get("*/accounts/:accountId/pages/projects/foo", async () => {
+					return HttpResponse.json(
+						{
+							success: true,
+							errors: [],
+							messages: [],
+							result: { deployment_configs: { production: {}, preview: {} } },
+						},
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async () => {
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									latest_stage: {
+										name: "deploy",
+										status: "success",
+									},
+								},
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+
+			await runWrangler(
+				"pages deploy public --project-name=foo --branch=main --commit-hash=abc123"
+			);
+
+			// Verify debug logs indicate not a git repo but show the provided values in summary
+			expect(std.debug).toContain(
+				"pages deploy: Not a git repository or git not available"
+			);
+			// Summary should show the provided flag values
+			expect(std.debug).toContain("pages deploy: Git information summary");
+			expect(std.debug).toContain("branch: main");
+			expect(std.debug).toContain("commitHash: abc123");
+		});
+	});
+
 	describe("deploys using redirected configs", () => {
 		let fooProjectDetailsChecked = false;
 
@@ -5903,6 +6111,119 @@ and that at least one include rule is provided.
 		it("should work with any branch (i.e. the preview environment)", async () => {
 			await runWrangler("pages deploy --branch my-branch");
 			expect(std.info).toContain(expectedInfo);
+		});
+	});
+
+	describe("max file count limit from JWT", () => {
+		beforeEach(() => {
+			// Create 6 files for testing
+			for (let i = 0; i < 6; i++) {
+				writeFileSync(`file${i}.txt`, `content${i}`);
+			}
+
+			msw.use(
+				http.post(
+					"*/pages/assets/check-missing",
+					async ({ request }) => {
+						const body = (await request.json()) as { hashes: string[] };
+						return HttpResponse.json(
+							{ success: true, errors: [], messages: [], result: body.hashes },
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.post("*/pages/assets/upload", async () => {
+					return HttpResponse.json(
+						{ success: true, errors: [], messages: [], result: null },
+						{ status: 200 }
+					);
+				}),
+				http.post(
+					"*/accounts/:accountId/pages/projects/foo/deployments",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: {
+									id: "123-456-789",
+									url: "https://abcxyz.foo.pages.dev/",
+								},
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo/deployments/:deploymentId",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						expect(params.deploymentId).toEqual("123-456-789");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { latest_stage: { name: "deploy", status: "success" } },
+							},
+							{ status: 200 }
+						);
+					},
+					{ once: true }
+				),
+				http.get(
+					"*/accounts/:accountId/pages/projects/foo",
+					async ({ params }) => {
+						expect(params.accountId).toEqual("some-account-id");
+						return HttpResponse.json(
+							{
+								success: true,
+								errors: [],
+								messages: [],
+								result: { deployment_configs: { production: {}, preview: {} } },
+							},
+							{ status: 200 }
+						);
+					}
+				)
+			);
+		});
+
+		it("should error when file count exceeds limit from JWT", async () => {
+			// JWT with max_file_count_allowed: 5 (less than the 6 files we created)
+			const jwt =
+				"header." +
+				Buffer.from(JSON.stringify({ max_file_count_allowed: 5 })).toString(
+					"base64"
+				) +
+				".signature";
+			mockGetUploadTokenRequest(jwt, "some-account-id", "foo");
+
+			await expect(
+				runWrangler("pages deploy . --project-name=foo")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: Error: Pages only supports up to 5 files in a deployment for your current plan. Ensure you have specified your build output directory correctly.]`
+			);
+		});
+
+		it("should respect higher file count limit from JWT", async () => {
+			// JWT with max_file_count_allowed: 10 (more than the 6 files we created)
+			const jwt =
+				"header." +
+				Buffer.from(JSON.stringify({ max_file_count_allowed: 10 })).toString(
+					"base64"
+				) +
+				".signature";
+			mockGetUploadTokenRequest(jwt, "some-account-id", "foo");
+
+			await runWrangler("pages deploy . --project-name=foo");
+
+			expect(std.out).toContain("Success! Uploaded 6 files");
+			expect(std.out).toContain("Deployment complete!");
 		});
 	});
 });
