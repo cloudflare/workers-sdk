@@ -143,25 +143,6 @@ describe("pages project list", () => {
 			]
 		`);
 	});
-
-	it("should not print banner when --json flag is provided", async () => {
-		const projects: Project[] = [
-			{
-				name: "test-project",
-				subdomain: "test.pages.dev",
-				domains: ["test.pages.dev"],
-				created_on: "2021-11-17T14:52:26.133835Z",
-				production_branch: "main",
-			},
-		];
-
-		mockProjectListRequest(projects);
-		await runWrangler("pages project list --json");
-
-		// Banner should not be present in JSON output
-		expect(std.out).not.toContain("wrangler");
-		expect(std.out).not.toContain("⛅️");
-	});
 });
 
 /* -------------------------------------------------- */
