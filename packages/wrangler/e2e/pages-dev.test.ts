@@ -125,22 +125,24 @@ describe.sequential("wrangler pages dev", () => {
 			.flat()
 			.map((line) =>
 				// Normalize the CF_PAGES_URL which contains a generated project name
-				line.replace(
-					/https:\/\/[a-f0-9]+\.wrangler-smoke-[^.]+/,
-					"https://<HASH>.<PROJECT_NAME>"
-				)
+				line
+					.replace(
+						/https:\/\/[a-f0-9]+\.wrangler-smoke-[^.]+/,
+						"https://<HASH>.<PROJECT_NAME>"
+					)
+					.replaceAll(/\s+/g, " ")
 			);
 		expect(bindings).toMatchInlineSnapshot(`
 			[
-			  "env.TEST_DO (TestDurableObject, defined in a)                             Durable Object            local [not connected]",
-			  "env.TEST_KV (TEST_KV)                                                     KV Namespace              local",
-			  "env.TEST_D1 (local-TEST_D1)                                               D1 Database               local",
-			  "env.TEST_R2 (TEST_R2)                                                     R2 Bucket                 local",
-			  "env.TEST_SERVICE (test-worker)                                            Worker                    local [not connected]",
-			  "env.CF_PAGES ("1")                                                        Environment Variable      local",
-			  "env.CF_PAGES_BRANCH ("local")                                             Environment Variable      local",
-			  "env.CF_PAGES_COMMIT_SHA ("0000000000000000000000000000000000000...")      Environment Variable      local",
-			  "env.CF_PAGES_URL ("https://<HASH>.<PROJECT_NAME>...")                     Environment Variable      local",
+			  "env.TEST_DO (TestDurableObject, defined in a) Durable Object local [not connected]",
+			  "env.TEST_KV (TEST_KV) KV Namespace local",
+			  "env.TEST_D1 (local-TEST_D1) D1 Database local",
+			  "env.TEST_R2 (TEST_R2) R2 Bucket local",
+			  "env.TEST_SERVICE (test-worker) Worker local [not connected]",
+			  "env.CF_PAGES ("1") Environment Variable local",
+			  "env.CF_PAGES_BRANCH ("local") Environment Variable local",
+			  "env.CF_PAGES_COMMIT_SHA ("0000000000000000000000000000000000000...") Environment Variable local",
+			  "env.CF_PAGES_URL ("https://<HASH>.<PROJECT_NAME>...") Environment Variable local",
 			]
 		`);
 	});
