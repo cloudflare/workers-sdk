@@ -111,7 +111,7 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 		await expect(
 			details.getDetailsForAutoConfig()
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: Could not detect a directory containing the static (html, css and js) files for the project]`
+			`[Error: Could not detect a directory containing static files (e.g. html, css and js) for the project]`
 		);
 	});
 
