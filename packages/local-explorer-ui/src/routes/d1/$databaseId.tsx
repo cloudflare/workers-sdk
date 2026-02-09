@@ -44,7 +44,7 @@ function DatabaseView(): JSX.Element {
 
 	return (
 		<div className="flex flex-col h-full">
-			<div className="flex items-center gap-2 py-4 px-6 -mx-6 mb-6 min-h-[67px] box-border bg-bg-secondary border-b border-border text-sm font-medium text-text-secondary">
+			<div className="flex items-center gap-2 py-4 px-6 min-h-[67px] box-border bg-bg-secondary border-b border-border text-sm shrink-0">
 				<span className="flex items-center gap-1.5">
 					<DatabaseIcon />
 					D1
