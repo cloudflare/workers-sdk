@@ -7,6 +7,7 @@ import type { CancelablePromise } from "../core/CancelablePromise";
 import type { AccountRegistryToken } from "../models/AccountRegistryToken";
 import type { CreateImageRegistryRequestBody } from "../models/CreateImageRegistryRequestBody";
 import type { CustomerImageRegistry } from "../models/CustomerImageRegistry";
+import type { DeleteImageRegistryResponse } from "../models/DeleteImageRegistryResponse";
 import type { EmptyResponse } from "../models/EmptyResponse";
 import type { ImageRegistryCredentialsConfiguration } from "../models/ImageRegistryCredentialsConfiguration";
 import type { ImageRegistryProtocol } from "../models/ImageRegistryProtocol";
@@ -135,7 +136,7 @@ export class ImageRegistriesService {
 	 */
 	public static deleteImageRegistry(
 		domain: string
-	): CancelablePromise<EmptyResponse> {
+	): CancelablePromise<DeleteImageRegistryResponse> {
 		return __request(OpenAPI, {
 			method: "DELETE",
 			url: "/registries/{domain}",
