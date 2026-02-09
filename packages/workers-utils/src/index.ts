@@ -49,6 +49,7 @@ export {
 	type NormalizeAndValidateConfigArgs,
 	isValidR2BucketName,
 	bucketFormatMessage,
+	getBindingTypeFriendlyName,
 } from "./config/validation";
 
 export { validatePagesConfig } from "./config/validation-pages";
