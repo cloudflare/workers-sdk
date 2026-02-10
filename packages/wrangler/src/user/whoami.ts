@@ -54,7 +54,7 @@ export async function whoami(
 			accounts: user.accounts,
 			tokenPermissions: user.tokenPermissions,
 		};
-		logger.log(JSON.stringify(result, null, 2));
+		logger.json(result);
 		return;
 	}
 
