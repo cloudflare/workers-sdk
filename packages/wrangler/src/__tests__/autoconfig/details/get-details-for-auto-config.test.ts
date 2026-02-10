@@ -1,17 +1,21 @@
 import { randomUUID } from "node:crypto";
 import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
 /* eslint-disable workers-sdk/no-vitest-import-expect -- it.each patterns */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /* eslint-enable workers-sdk/no-vitest-import-expect */
 import * as details from "../../../autoconfig/details";
+import * as configCache from "../../../config-cache";
 import { clearOutputFilePath } from "../../../output";
 import {
 	getPackageManager,
 	NpmPackageManager,
 	PnpmPackageManager,
 } from "../../../package-manager";
+import { PAGES_CONFIG_CACHE_FILENAME } from "../../../pages/constants";
 import { mockConsoleMethods } from "../../helpers/mock-console";
+import { mockConfirm } from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 import type { Config } from "@cloudflare/workers-utils";
@@ -203,6 +207,109 @@ describe("autoconfig details - getDetailsForAutoConfig()", () => {
 			})
 		).resolves.toMatchObject({
 			workerName: "overridden-worker-name",
+		});
+	});
+
+	describe("Pages project detection", () => {
+		it("should detect Pages project when pages_build_output_dir is set in wrangler config", async () => {
+			await seed({
+				"public/index.html": `<h1>Hello World</h1>`,
+			});
+
+			const result = await details.getDetailsForAutoConfig({
+				wranglerConfig: {
+					configPath: "/tmp/wrangler.toml",
+					pages_build_output_dir: "./dist",
+				} as Config,
+			});
+
+			expect(result.configured).toBe(false);
+			expect(result.framework?.id).toBe("cloudflare-pages");
+			expect(result.framework?.name).toBe("Cloudflare Pages");
+		});
+
+		it("should detect Pages project when pages.json cache file exists", async () => {
+			const cacheFolder = join(process.cwd(), ".cache");
+			await seed({
+				"public/index.html": `<h1>Hello World</h1>`,
+				// Create a cache folder in the temp directory and add pages.json to it
+				[join(cacheFolder, PAGES_CONFIG_CACHE_FILENAME)]: JSON.stringify({
+					account_id: "test-account",
+				}),
+			});
+
+			// Mock getCacheFolder to return our temp cache folder
+			const getCacheFolderSpy = vi
+				.spyOn(configCache, "getCacheFolder")
+				.mockReturnValue(cacheFolder);
+
+			try {
+				const result = await details.getDetailsForAutoConfig();
+
+				expect(result.framework?.id).toBe("cloudflare-pages");
+				expect(result.framework?.name).toBe("Cloudflare Pages");
+			} finally {
+				getCacheFolderSpy.mockRestore();
+			}
+		});
+
+		it("should detect Pages project when functions directory exists, no framework is detected and the user confirms that it is", async () => {
+			await seed({
+				"public/index.html": `<h1>Hello World</h1>`,
+				"functions/hello.js": `
+					export function onRequest(context) {
+						return new Response("Hello, world!");
+					}
+				`,
+			});
+
+			mockConfirm({
+				text: "We have identified a `functions` directory in this project, which might indicate you have an active Cloudflare Pages deployment. Is this correct?",
+				result: true,
+			});
+
+			const result = await details.getDetailsForAutoConfig();
+
+			expect(result.framework?.id).toBe("cloudflare-pages");
+			expect(result.framework?.name).toBe("Cloudflare Pages");
+		});
+
+		it("should not detect Pages project when the user denies that, even it the functions directory exists and no framework is detected", async () => {
+			await seed({
+				"public/index.html": `<h1>Hello World</h1>`,
+				"functions/hello.js": `
+					export function onRequest(context) {
+						return new Response("Hello, world!");
+					}
+				`,
+			});
+
+			mockConfirm({
+				text: "We have identified a `functions` directory in this project, which might indicate you have an active Cloudflare Pages deployment. Is this correct?",
+				result: false,
+			});
+
+			const result = await details.getDetailsForAutoConfig();
+
+			expect(result.framework?.id).toBe("static");
+			expect(result.framework?.name).toBe("Static");
+		});
+
+		it("should not detect Pages project when functions directory exists but a framework is detected", async () => {
+			await seed({
+				"functions/hello.js":
+					"export const myFun = () => { console.log('Hello!'); };",
+				"package.json": JSON.stringify({
+					dependencies: {
+						astro: "5",
+					},
+				}),
+			});
+
+			const result = await details.getDetailsForAutoConfig();
+
+			// Should detect Astro, not Pages
+			expect(result.framework?.id).toBe("astro");
 		});
 	});
 });
