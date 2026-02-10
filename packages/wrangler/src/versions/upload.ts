@@ -747,7 +747,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			printBindings(
 				bindings,
 				config.tail_consumers,
-				config.streaming_tail_consumers
+				config.streaming_tail_consumers,
+				undefined,
+				{ unsafeMetadata: config.unsafe?.metadata }
 			);
 		} else {
 			assert(accountId, "Missing accountId");
@@ -788,7 +790,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				printBindings(
 					bindings,
 					config.tail_consumers,
-					config.streaming_tail_consumers
+					config.streaming_tail_consumers,
+					undefined,
+					{ unsafeMetadata: config.unsafe?.metadata }
 				);
 				versionId = result.id;
 				hasPreview = result.metadata.has_preview;
@@ -797,7 +801,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					printBindings(
 						bindings,
 						config.tail_consumers,
-						config.streaming_tail_consumers
+						config.streaming_tail_consumers,
+						undefined,
+						{ unsafeMetadata: config.unsafe?.metadata }
 					);
 				}
 
