@@ -45,6 +45,7 @@ export function StudioCreateUpdateTableTab({
 			.then((tableSchema) => {
 				setValue(transformTableSchematableSchema(tableSchema));
 			})
+			.catch(console.error)
 			.finally(() => setLoading(false));
 	}, [driver, schemaName, tableName]);
 

@@ -15,10 +15,14 @@ export type ModalOwnProps<Props> = Omit<Props, keyof ModalInjectedProps> & {
 	onClose?: () => void;
 };
 
-interface IModal<Props extends ModalInjectedProps> {
+/**
+ * Internal type-erased modal entry for heterogeneous storage.
+ * The public API remains fully generic via `openModal<Props>(...)`.
+ */
+interface IModalEntry {
 	id: string;
-	ModalComponent: ComponentType<Props>;
-	props?: ModalOwnProps<Props>;
+	ModalComponent: ComponentType<ModalInjectedProps>;
+	props?: Record<string, unknown>;
 }
 
 interface ModalContextValue {
@@ -53,20 +57,28 @@ export function useModalContext() {
  * Simple modal provider for the portable Studio component
  */
 export function ModalProvider({ children }: PropsWithChildren) {
-	const [modals, setModals] = useState<Array<IModal<any>>>([]);
+	const [modals, setModals] = useState<Array<IModalEntry>>([]);
 
-	const openModal = useCallback(
+	const handleOpenModal = useCallback(
 		<Props extends ModalInjectedProps>(
 			ModalComponent: ComponentType<Props>,
 			props?: ModalOwnProps<Props>
 		) => {
 			const id = crypto.randomUUID();
-			setModals((prev) => [...prev, { id, ModalComponent, props }]);
+			setModals((prev) => [
+				...prev,
+				{
+					id,
+					ModalComponent:
+						ModalComponent as unknown as ComponentType<ModalInjectedProps>,
+					props: props as unknown as Record<string, unknown>,
+				},
+			]);
 		},
 		[]
 	);
 
-	const closeModal = useCallback(
+	const handleCloseModal = useCallback(
 		<Props extends ModalInjectedProps>(
 			ModalComponent?: ComponentType<Props>
 		) => {
@@ -82,20 +94,23 @@ export function ModalProvider({ children }: PropsWithChildren) {
 	);
 
 	return (
-		<ModalContext.Provider value={{ openModal, closeModal }}>
+		<ModalContext.Provider
+			value={{ openModal: handleOpenModal, closeModal: handleCloseModal }}
+		>
 			{children}
 			{modals.map(({ id, ModalComponent, props = {} }) => {
 				const onClose = () => {
-					if (typeof props.onClose === "function") {
-						props.onClose();
+					const onCloseProp = props.onClose;
+					if (typeof onCloseProp === "function") {
+						(onCloseProp as () => void)();
 					}
-					closeModal(ModalComponent);
+					handleCloseModal(ModalComponent);
 				};
 
 				return (
 					<ModalComponent
 						key={id}
-						{...(props as any)}
+						{...(props as ModalInjectedProps)}
 						isOpen={true}
 						closeModal={onClose}
 					/>
@@ -108,7 +123,7 @@ export function ModalProvider({ children }: PropsWithChildren) {
 /**
  * Action creator for opening modals (for compatibility)
  */
-export function openModal<Props extends ModalInjectedProps>(
+export function createOpenModalAction<Props extends ModalInjectedProps>(
 	ModalComponent: ComponentType<Props>,
 	props?: ModalOwnProps<Props>
 ) {
@@ -120,7 +135,7 @@ export function openModal<Props extends ModalInjectedProps>(
 	return { type: "MODAL_OPEN", payload: { ModalComponent, props } };
 }
 
-export function closeModal<Props extends ModalInjectedProps>(
+export function createCloseModalAction<Props extends ModalInjectedProps>(
 	ModalComponent?: ComponentType<Props>
 ) {
 	console.warn(

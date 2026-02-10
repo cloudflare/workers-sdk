@@ -118,7 +118,7 @@ export const StudioSQLEditor = forwardRef<
 									changes: { from: 0, to: state.doc.length, insert: formatted },
 								});
 							}
-						} catch (e) {
+						} catch {
 							// Beautify failed; do nothing to avoid disrupting the user.
 						}
 						return true;

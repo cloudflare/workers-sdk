@@ -84,16 +84,14 @@ export function StudioTableExplorerTab({
 	const { setDirtyState, setBeforeTabClosingHandler } =
 		useStudioCurrentWindowTab();
 
-	// This effect subscribes to the change event and syncs the state.
-	// This is not simply derived state, which is why we disable the rule,
-	// as it is a false positive.
+	// This effect subscribes to the external table state's change event and syncs
+	// the change count into React state. The initial synchronous setState is valid
+	// setup before subscribing to the external store.
 	useEffect(() => {
-		// eslint-disable-next-line react-you-might-not-need-an-effect/no-event-handler
 		if (state) {
-			// eslint-disable-next-line react-you-might-not-need-an-effect/no-derived-state
+			// eslint-disable-next-line react-hooks/set-state-in-effect -- Subscribes to external store; initial sync + listener pattern is intentional
 			setChangeNumber(state.getChangedRows().length);
 
-			// eslint-disable-next-line react-you-might-not-need-an-effect/no-derived-state
 			return state.addChangeListener(() => {
 				setChangeNumber(state.getChangedRows().length);
 			});
@@ -139,7 +137,7 @@ export function StudioTableExplorerTab({
 				offset: pageOffset,
 				whereRaw,
 			})
-			.then(({ result, schema }) => {
+			.then(({ result, schema: fetchedSchema }) => {
 				// Fetch one extra row to check if a next page exists.
 				// If more than `pageLimit` rows are returned, we know there's another page.
 				// Then trim the result back down to the actual page size.
@@ -150,14 +148,14 @@ export function StudioTableExplorerTab({
 				setState(
 					createStudioTableStateFromResult({
 						result,
-						tableSchema: schema,
+						tableSchema: fetchedSchema,
 						schemas,
 						rowNumberOffset: pageOffset,
 						driver,
 					})
 				);
 
-				setSchema(schema);
+				setSchema(fetchedSchema);
 			})
 			.catch((e) => {
 				setError(e.toString());
@@ -177,6 +175,7 @@ export function StudioTableExplorerTab({
 	]);
 
 	useEffect(() => {
+		// eslint-disable-next-line react-hooks/set-state-in-effect -- Triggers async data fetch on mount/dependency change; setState occurs inside async .then(), not synchronously
 		onRefreshClicked();
 	}, [onRefreshClicked]);
 
@@ -213,7 +212,9 @@ export function StudioTableExplorerTab({
 					},
 					onClose: () => {
 						// Only trigger cancel callback if modal was closed without confirmation
-						if (!isClosingAfterConfirm) cancelCallback?.();
+						if (!isClosingAfterConfirm) {
+							cancelCallback?.();
+						}
 					},
 					title: "Discard Unsaved Changes?",
 					confirmationText: "Discard Changes",

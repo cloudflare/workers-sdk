@@ -111,6 +111,7 @@ function InputCellEditor({
 					document.body
 				)}
 			{popover ? (
+				// eslint-disable-next-line react-hooks/refs -- `refs.setReference` is a callback ref from @floating-ui/react, not a .current access
 				<div ref={refs.setReference} className="w-full h-full">
 					{popoverPlaceholder}
 				</div>

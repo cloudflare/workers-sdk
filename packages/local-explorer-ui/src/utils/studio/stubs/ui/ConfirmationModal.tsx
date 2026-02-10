@@ -13,8 +13,8 @@ export interface ModalInjectedProps {
 }
 
 export interface ModalHandlers extends ModalInjectedProps {
-	onConfirm: (...args: any[]) => void;
-	onCancel?: (...args: any[]) => void;
+	onConfirm: (...args: unknown[]) => void;
+	onCancel?: (...args: unknown[]) => void;
 }
 
 type Props = ModalHandlers & {
@@ -22,7 +22,7 @@ type Props = ModalHandlers & {
 	body: ReactNode;
 	actions: (args: {
 		closeModal: () => void;
-		onConfirm: (...args: any[]) => void;
+		onConfirm: (...args: unknown[]) => void;
 		isRequesting: boolean;
 	}) => ReactNode;
 	simple?: boolean;
@@ -41,7 +41,7 @@ export const ConfirmationModal = ({
 	const [isRequesting, setIsRequesting] = useState(false);
 
 	const onConfirm = useCallback(
-		async (...args: any[]) => {
+		async (...args: unknown[]) => {
 			setIsRequesting(true);
 			try {
 				await _onConfirm(...args);

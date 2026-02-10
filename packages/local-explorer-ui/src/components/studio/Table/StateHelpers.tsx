@@ -71,7 +71,7 @@ export function createStudioTableStateFromResult(
 ) {
 	const r = new StudioTableState<StudioResultHeaderMetadata>(
 		buildTableResultHeader(props),
-		props.result.rows.map((r) => ({ ...r }))
+		props.result.rows.map((row) => ({ ...row }))
 	);
 
 	r.rowNumberOffset = props.rowNumberOffset ?? 0;
@@ -186,7 +186,7 @@ function pipeWithTableSchema(
 
 		header.metadata.from = {
 			schema: tableSchema.schemaName,
-			table: tableSchema.tableName!,
+			table: tableSchema.tableName as string,
 			column: header.name,
 		};
 
@@ -204,9 +204,9 @@ function pipeWithTableSchema(
 			columnSchema.constraint.foreignKey.foreignColumns
 		) {
 			header.metadata.referenceTo = {
-				schema: columnSchema.constraint.foreignKey.foreignSchemaName!,
-				table: columnSchema.constraint.foreignKey.foreignTableName!,
-				column: columnSchema.constraint.foreignKey.foreignColumns[0]!,
+				schema: columnSchema.constraint.foreignKey.foreignSchemaName as string,
+				table: columnSchema.constraint.foreignKey.foreignTableName as string,
+				column: columnSchema.constraint.foreignKey.foreignColumns[0] as string,
 			};
 		}
 
@@ -216,9 +216,9 @@ function pipeWithTableSchema(
 					const foundIndex = constraint.foreignKey.columns.indexOf(header.name);
 					if (foundIndex !== -1) {
 						header.metadata.referenceTo = {
-							schema: constraint.foreignKey.foreignSchemaName!,
-							table: constraint.foreignKey.foreignTableName!,
-							column: constraint.foreignKey.columns[foundIndex]!,
+							schema: constraint.foreignKey.foreignSchemaName as string,
+							table: constraint.foreignKey.foreignTableName as string,
+							column: constraint.foreignKey.columns[foundIndex] as string,
 						};
 					}
 				}

@@ -72,6 +72,7 @@ export function StudioWhereFilterInput({
 
 	useEffect(() => {
 		if (currentValue.trim() === "") {
+			// eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronous state reset before setting up debounce timer is intentional cleanup logic
 			setParsingError("");
 			return;
 		}

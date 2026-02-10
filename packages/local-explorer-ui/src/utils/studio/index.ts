@@ -181,7 +181,7 @@ export function tokenizeSQL(
 		}
 
 		return tokens;
-	} catch (e) {
+	} catch {
 		return [{ type: "SQL", value: sql }];
 	}
 }

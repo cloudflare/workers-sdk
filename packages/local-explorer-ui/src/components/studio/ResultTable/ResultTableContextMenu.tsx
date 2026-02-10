@@ -33,14 +33,14 @@ export function useStudioResultTableContextMenu(
 				.map((row) => headers.map((header) => row.raw[header]));
 
 			const text = exportStudioDataAsDelimitedText([], rows, "\t", "\r\n", '"');
-			window.navigator.clipboard.writeText(text);
+			void window.navigator.clipboard.writeText(text);
 			return;
 		}
 
 		// Fallback: copy a single cell value
 		const value = state.getValue(y, x);
 		if (value != null) {
-			window.navigator.clipboard.writeText(String(value));
+			void window.navigator.clipboard.writeText(String(value));
 		}
 	}, [state]);
 
@@ -49,7 +49,7 @@ export function useStudioResultTableContextMenu(
 		if (focus) {
 			const y = focus.y;
 			const x = focus.x;
-			window.navigator.clipboard.readText().then((pasteValue) => {
+			void window.navigator.clipboard.readText().then((pasteValue) => {
 				const data = pasteValue.split("\r\n").map((row) => row.split("\t"));
 
 				for (let row = 0; row < data.length; row++) {
@@ -72,16 +72,16 @@ export function useStudioResultTableContextMenu(
 
 	const onContextMenu = useCallback(
 		({
-			state,
+			state: tableState,
 			event,
 		}: {
 			state: StudioTableState<StudioResultHeaderMetadata>;
 			event: React.MouseEvent<Element, MouseEvent>;
 		}) => {
 			const uuid = window.crypto.randomUUID();
-			const selectedRowIndex = state.getSelectedRowIndex();
+			const selectedRowIndex = tableState.getSelectedRowIndex();
 
-			const readOnlyMode = state
+			const readOnlyMode = tableState
 				.getHeaders()
 				.every((header) => header.setting.readonly);
 
@@ -90,7 +90,7 @@ export function useStudioResultTableContextMenu(
 					type: "button",
 					label: "Open in Multi-line Editor",
 					onClick: () => {
-						state.enterEditMode("text");
+						tableState.enterEditMode("text");
 					},
 				},
 				{
@@ -107,9 +107,9 @@ export function useStudioResultTableContextMenu(
 							type: "button",
 							label: <span className="font-mono">NULL</span>,
 							onClick: () => {
-								const focus = state.getFocus();
+								const focus = tableState.getFocus();
 								if (focus) {
-									state.changeValue(focus.y, focus.x, null);
+									tableState.changeValue(focus.y, focus.x, null);
 								}
 							},
 						},
@@ -123,9 +123,9 @@ export function useStudioResultTableContextMenu(
 								</div>
 							),
 							onClick: () => {
-								const focus = state.getFocus();
+								const focus = tableState.getFocus();
 								if (focus) {
-									state.changeValue(focus.y, focus.x, uuid);
+									tableState.changeValue(focus.y, focus.x, uuid);
 								}
 							},
 						},
@@ -155,7 +155,7 @@ export function useStudioResultTableContextMenu(
 							icon: PlusIcon,
 							label: "Insert row",
 							onClick: () => {
-								state.insertNewRow();
+								tableState.insertNewRow();
 							},
 						},
 						{
@@ -165,7 +165,7 @@ export function useStudioResultTableContextMenu(
 							icon: TrashIcon,
 							onClick: () => {
 								selectedRowIndex.forEach((rowIndex) =>
-									state.removeRow(rowIndex)
+									tableState.removeRow(rowIndex)
 								);
 							},
 							destructiveAction: true,

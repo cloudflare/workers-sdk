@@ -73,6 +73,7 @@ export function Studio({
 	}, [driver]);
 
 	useEffect(() => {
+		// eslint-disable-next-line react-hooks/set-state-in-effect -- Triggers async schema fetch on mount; setState occurs inside async .then(), not synchronously
 		refreshSchema();
 	}, [refreshSchema]);
 
@@ -215,6 +216,7 @@ export function Studio({
 		);
 
 		if (tableExists) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect -- One-time initialization to open initial table tab from URL params
 			openStudioTab({
 				schemaName: DEFAULT_SCHEMA_NAME,
 				tableName: initialTable,

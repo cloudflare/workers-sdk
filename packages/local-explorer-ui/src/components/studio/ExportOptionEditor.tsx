@@ -100,7 +100,9 @@ function SQLExportEditor({
 							onChange((prev) =>
 								produce(prev, (draft) => {
 									const batchSize = Number(e.target.value);
-									if (isNaN(batchSize) || batchSize < 1) return;
+									if (isNaN(batchSize) || batchSize < 1) {
+										return;
+									}
 									draft.batchSize = batchSize;
 								})
 							);
@@ -276,14 +278,14 @@ function SettingOptionDropdown({
 				</Button>
 			</DropdownMenu.Trigger>
 			<DropdownMenu.Content className="z-modal" align="end">
-				{Object.entries(items).map(([key, value]) => (
+				{Object.entries(items).map(([key, label]) => (
 					<DropdownMenu.Item
 						key={key}
 						onSelect={() => {
 							onChange(key);
 						}}
 					>
-						{value}
+						{label}
 					</DropdownMenu.Item>
 				))}
 			</DropdownMenu.Content>

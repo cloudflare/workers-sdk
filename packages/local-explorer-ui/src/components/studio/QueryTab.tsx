@@ -1,7 +1,7 @@
 import { Button, DropdownMenu } from "@cloudflare/kumo";
 import { SplitPane } from "@cloudflare/workers-editor-shared";
 import { BinocularsIcon, CaretDownIcon, PlayIcon } from "@phosphor-icons/react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { runStudioMultipleSQLStatements } from "../../utils/studio";
 import { beautifySQLQuery } from "../../utils/studio/formatter";
 import { useStudioContext } from "./Context";
@@ -161,12 +161,16 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 			title: "Summary",
 		});
 
-		if (queryTabItems.length > 0) {
-			setSelectedResultTabKey(queryTabItems[0].key);
-		}
-
 		return queryTabItems;
-	}, [progress, results, setSelectedResultTabKey, driver]);
+	}, [progress, results, driver]);
+
+	// Select the first result tab when query tabs change
+	useEffect(() => {
+		if (queryTabs && queryTabs.length > 0) {
+			// eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronizes tab selection after query results change; derived from memoized queryTabs
+			setSelectedResultTabKey(queryTabs[0].key);
+		}
+	}, [queryTabs]);
 
 	const autoCompelteSchema = useMemo(() => {
 		if (!schemas) {

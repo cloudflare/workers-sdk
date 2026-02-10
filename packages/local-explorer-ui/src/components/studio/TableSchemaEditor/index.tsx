@@ -220,11 +220,12 @@ export function StudioTableSchemaEditor({
 								{value.columns.map((_, columnIndex) => {
 									return (
 										<StudioColumnSchemaEditor
-											highlightSchemaChanges={highlightSchemaChanges}
-											readOnlyExistingColumns={readOnlyExistingColumns}
-											onChange={onChange}
-											value={value}
 											columnIndex={columnIndex}
+											highlightSchemaChanges={highlightSchemaChanges}
+											key={columnIndex}
+											onChange={onChange}
+											readOnlyExistingColumns={readOnlyExistingColumns}
+											value={value}
 										/>
 									);
 								})}

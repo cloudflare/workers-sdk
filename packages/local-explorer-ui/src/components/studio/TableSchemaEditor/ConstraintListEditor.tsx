@@ -81,7 +81,10 @@ export function StudioConstraintListEditor({
 											<div className="flex gap-2">
 												{(constraint.foreignKey.columns ?? []).map(
 													(column, columnIndex) => (
-														<div className="p-1 px-2 rounded bg-accent inline-block font-mono border border-color select-none flex gap-2 items-center">
+														<div
+															className="p-1 px-2 rounded bg-accent inline-block font-mono border border-color select-none gap-2 items-center"
+															key={columnIndex}
+														>
 															{column} <ArrowRightIcon />{" "}
 															{constraint.foreignKey?.foreignTableName}.
 															{

@@ -90,7 +90,7 @@ export type StudioTabDefinitionMetadata = ExtractGeneric<
 
 export const StudioTabDefinitionList = RegisteredTabDefinition.reduce(
 	(a, b) => {
-		a[b.type] = b as any;
+		a[b.type] = b as TabDefinition<StudioTabDefinitionMetadata>;
 		return a;
 	},
 	{} as Record<

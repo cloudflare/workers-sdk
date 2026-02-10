@@ -197,7 +197,7 @@ function StudioResourceTreeView({
 					icon: CopyIcon,
 					label: item.data.type === "table" ? "Copy table name" : "Copy name",
 					onClick: () => {
-						window.navigator.clipboard.writeText(item.data.name);
+						void window.navigator.clipboard.writeText(item.data.name);
 					},
 				},
 			];
@@ -207,7 +207,7 @@ function StudioResourceTreeView({
 					type: "button",
 					label: "Copy table schema",
 					onClick: () => {
-						window.navigator.clipboard.writeText(
+						void window.navigator.clipboard.writeText(
 							item.data.tableSchema?.createScript ?? ""
 						);
 					},

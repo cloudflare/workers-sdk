@@ -72,7 +72,7 @@ export function StudioColumnSchemaEditor({
 
 		onChange((prev) =>
 			produce(prev, (draft) => {
-				let pkConstraint = draft.constraints.find((c) => c.new?.primaryKey);
+				const pkConstraint = draft.constraints.find((c) => c.new?.primaryKey);
 
 				if (isPrimaryKey) {
 					// Remove column from primary key list

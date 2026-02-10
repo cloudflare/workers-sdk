@@ -218,7 +218,7 @@ function renderCellList<HeaderMetadata = unknown>({
 	onHeaderResize,
 	renderHeader,
 	state,
-	onHeaderContextMenu,
+	onHeaderContextMenu: _onHeaderContextMenu,
 	onGutterClick,
 	onCellMouseDown,
 }: RenderCellListProps<HeaderMetadata>) {

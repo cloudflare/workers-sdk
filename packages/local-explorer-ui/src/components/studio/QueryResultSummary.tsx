@@ -11,7 +11,7 @@ interface StudioQueryResultSummaryProps {
 export function StudioQueryResultSummary({
 	progress,
 }: StudioQueryResultSummaryProps): JSX.Element {
-	const [, setCurrentTime] = useState(() => Date.now());
+	const [currentTime, setCurrentTime] = useState(() => Date.now());
 
 	useEffect(() => {
 		if (progress.progress < progress.total) {
@@ -47,7 +47,7 @@ export function StudioQueryResultSummary({
 								<div className="text-xs">
 									Executing this query&nbsp;
 									<strong>
-										{formatTimeAgo(Date.now() - detail.start)}
+										{formatTimeAgo(currentTime - detail.start)}
 									</strong>{" "}
 									ago.
 								</div>
