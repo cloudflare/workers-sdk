@@ -38,7 +38,9 @@ export function getGlobalWranglerConfigPath(): string {
  * @param startDir The directory to start searching from (defaults to current working directory)
  * @returns The project root directory path, or undefined if not found
  */
-export function findProjectRoot(startDir: string = process.cwd()): string | undefined {
+export function findProjectRoot(
+	startDir: string = process.cwd()
+): string | undefined {
 	const projectMarkers = [
 		"wrangler.toml",
 		"wrangler.json",
@@ -77,7 +79,9 @@ export function findProjectRoot(startDir: string = process.cwd()): string | unde
  * @param projectRoot Optional project root directory (will be auto-detected if not provided)
  * @returns The path to the local .wrangler directory, or undefined if not found
  */
-export function getLocalWranglerConfigPath(projectRoot?: string): string | undefined {
+export function getLocalWranglerConfigPath(
+	projectRoot?: string
+): string | undefined {
 	// First, check current directory
 	const cwdWrangler = path.join(process.cwd(), ".wrangler");
 	if (isDirectory(cwdWrangler)) {
