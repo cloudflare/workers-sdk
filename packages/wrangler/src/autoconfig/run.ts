@@ -79,16 +79,18 @@ export async function runAutoConfig(
 		autoConfigDetails = updatedAutoConfigDetails;
 		assertNonConfigured(autoConfigDetails);
 
+		if (!autoConfigDetails.framework.autoConfigSupported) {
+			throw new FatalError(
+				autoConfigDetails.framework.id === "cloudflare-pages"
+					? `The target project seems to be using Cloudflare Pages. Automatically migrating from a Pages project to a Workers one is not yet supported.`
+					: `The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
+			);
+		}
+
 		assert(
 			autoConfigDetails.outputDir,
 			"The Output Directory is unexpectedly missing"
 		);
-
-		if (!autoConfigDetails.framework.autoConfigSupported) {
-			throw new FatalError(
-				`The detected framework ("${autoConfigDetails.framework.name}") cannot be automatically configured.`
-			);
-		}
 
 		const { date: compatibilityDate } = getLocalWorkerdCompatibilityDate({
 			projectPath: autoConfigDetails.projectPath,
@@ -186,19 +188,8 @@ export async function runAutoConfig(
 				JSON.stringify(
 					{
 						...existingPackageJson,
-						name:
-							autoConfigDetails.packageJson.name ?? existingPackageJson.name,
-						dependencies: {
-							...existingPackageJson.dependencies,
-							...autoConfigDetails.packageJson.dependencies,
-						},
-						devDependencies: {
-							...existingPackageJson.devDependencies,
-							...autoConfigDetails.packageJson.devDependencies,
-						},
 						scripts: {
 							...existingPackageJson.scripts,
-							...autoConfigDetails.packageJson.scripts,
 							...autoConfigSummary.scripts,
 						},
 					} satisfies PackageJSON,
