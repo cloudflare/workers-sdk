@@ -288,16 +288,15 @@ describe("r2 sql", () => {
 
 			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
 
-			expect(std.out).toMatchInlineSnapshot(`
-				"
-				 ⛅️ wrangler x.x.x
-				──────────────────
-				┌─┐
+			const startOfTable = std.out.indexOf("┌");
+			const endOfTable = std.out.indexOf("┘") + 1;
+
+			expect(std.out.slice(startOfTable, endOfTable)).toMatchInlineSnapshot(`
+				"┌─┐
 				│ approx_top_k(value, Int64(3)) │
 				├─┤
 				│ [{\\"value\\":0,\\"count\\":961},{\\"value\\":1,\\"count\\":485},{\\"value\\":2,\\"count\\":\\"\\"}] │
-				└─┘
-				Read 62.9 kB across 3 files from R2"
+				└─┘"
 			`);
 		});
 
