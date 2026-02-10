@@ -15,6 +15,7 @@ import { getNodeCompat } from "miniflare";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
+import { DEFAULT_MODULE_RULES } from "../deployment-bundle/rules";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getVarsForDev } from "../dev/dev-vars";
 import { logger } from "../logger";
@@ -31,7 +32,7 @@ import {
 import { generateRuntimeTypes } from "./runtime";
 import { logRuntimeTypesMessage } from "./runtime/log-runtime-types-message";
 import type { Entry } from "../deployment-bundle/entry";
-import type { Config, RawEnvironment } from "@cloudflare/workers-utils";
+import type { Config, RawEnvironment, Rule } from "@cloudflare/workers-utils";
 
 export const typesCommand = createCommand({
 	metadata: {
@@ -627,37 +628,24 @@ async function generateSimpleEnvTypes(
 		}
 	}
 
-	const modulesTypeStructure = new Array<string>();
-	if (config.rules) {
-		const moduleTypeMap = {
-			CompiledWasm: "WebAssembly.Module",
-			Data: "ArrayBuffer",
-			Text: "string",
-		};
-		for (const ruleObject of config.rules) {
-			const typeScriptType =
-				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
-			if (typeScriptType === undefined) {
-				continue;
-			}
+	// Separate user rules from default rules
+	const { userRulesOnly, allRules } = separateUserAndDefaultRules(config.rules);
 
-			for (const glob of ruleObject.globs) {
-				modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
-\tconst value: ${typeScriptType};
-\texport default value;
-}`);
-			}
-		}
-	}
+	// Generate module declarations for user-only rules (for console output)
+	const userModulesTypeStructure = generateModuleDeclarations(userRulesOnly);
+
+	// Generate module declarations for all rules (user + default, for file)
+	const allModulesTypeStructure = generateModuleDeclarations(allRules);
 
 	const typesHaveBeenFound =
-		envTypeStructure.length > 0 || modulesTypeStructure.length > 0;
+		envTypeStructure.length > 0 || allModulesTypeStructure.length > 0;
 	if (entrypointFormat === "modules" || typesHaveBeenFound) {
 		const { consoleOutput, fileContent } = generateTypeStrings(
 			entrypointFormat,
 			envInterface,
 			envTypeStructure.map(({ key, type }) => `${key}: ${type};`),
-			modulesTypeStructure,
+			userModulesTypeStructure,
+			allModulesTypeStructure,
 			stringKeys,
 			config.compatibility_date,
 			config.compatibility_flags,
@@ -1034,33 +1022,25 @@ async function generatePerEnvironmentTypes(
 		}
 	}
 
-	const modulesTypeStructure = new Array<string>();
-	if (config.rules) {
-		const moduleTypeMap = {
-			CompiledWasm: "WebAssembly.Module",
-			Data: "ArrayBuffer",
-			Text: "string",
-		};
-		for (const ruleObject of config.rules) {
-			const typeScriptType =
-				moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
-			if (typeScriptType !== undefined) {
-				for (const glob of ruleObject.globs) {
-					modulesTypeStructure.push(`declare module "${constructTSModuleGlob(glob)}" {
-	const value: ${typeScriptType};
-	export default value;
-	}`);
-				}
-			}
-		}
-	}
+	// Separate user rules from default rules
+	const { userRulesOnly: userRulesOnlyForEnv, allRules: allRulesForEnv } =
+		separateUserAndDefaultRules(config.rules);
+
+	// Generate module declarations for user-only rules (for console output)
+	const userModulesTypeStructureForEnv =
+		generateModuleDeclarations(userRulesOnlyForEnv);
+
+	// Generate module declarations for all rules (user + default, for file)
+	const allModulesTypeStructureForEnv =
+		generateModuleDeclarations(allRulesForEnv);
 
 	const { consoleOutput, fileContent } = generatePerEnvTypeStrings(
 		entrypointFormat,
 		envInterface,
 		perEnvInterfaces,
 		aggregatedEnvBindings,
-		modulesTypeStructure,
+		userModulesTypeStructureForEnv,
+		allModulesTypeStructureForEnv,
 		stringKeys,
 		config.compatibility_date,
 		config.compatibility_flags,
@@ -1086,13 +1066,101 @@ async function generatePerEnvironmentTypes(
 }
 
 /**
+ * Separates user-defined rules from default rules.
+ *
+ * Returns:
+ * - userRulesOnly: User rules that are NOT overlapping with default rules (for console output)
+ * - allRules: Combined user rules + default rules without duplicates (for file output)
+ */
+function separateUserAndDefaultRules(userRules: Rule[] = []) {
+	// Build a set of default globs for quick lookup
+	const defaultGlobSet = new Set<string>();
+	for (const rule of DEFAULT_MODULE_RULES) {
+		for (const glob of rule.globs) {
+			defaultGlobSet.add(glob);
+		}
+	}
+
+	// User rules that don't overlap with default rules (shown in console)
+	const userRulesOnly: Rule[] = [];
+	// Track which globs we've already added (from user rules)
+	const addedGlobs = new Set<string>();
+
+	for (const rule of userRules) {
+		const nonDefaultGlobs = rule.globs.filter(
+			(glob) => !defaultGlobSet.has(glob)
+		);
+		if (nonDefaultGlobs.length > 0) {
+			userRulesOnly.push({
+				...rule,
+				globs: nonDefaultGlobs,
+			});
+		}
+		// Track all globs from user rules
+		for (const glob of rule.globs) {
+			addedGlobs.add(glob);
+		}
+	}
+
+	// For the file output, we need all user rules + default rules that aren't already covered
+	const allRules: Rule[] = [...userRules];
+
+	for (const defaultRule of DEFAULT_MODULE_RULES) {
+		const missingGlobs = defaultRule.globs.filter(
+			(glob) => !addedGlobs.has(glob)
+		);
+		if (missingGlobs.length > 0) {
+			allRules.push({
+				...defaultRule,
+				globs: missingGlobs,
+			});
+		}
+	}
+
+	return {
+		userRulesOnly,
+		allRules,
+	};
+}
+
+/**
+ * Generates module declaration strings for the given rules.
+ */
+function generateModuleDeclarations(rules: Rule[]): string[] {
+	const moduleDeclarations = new Array<string>();
+	const moduleTypeMap = {
+		CompiledWasm: "WebAssembly.Module",
+		Data: "ArrayBuffer",
+		Text: "string",
+	};
+
+	for (const ruleObject of rules) {
+		const typeScriptType =
+			moduleTypeMap[ruleObject.type as keyof typeof moduleTypeMap];
+		if (typeScriptType === undefined) {
+			continue;
+		}
+
+		for (const glob of ruleObject.globs) {
+			moduleDeclarations.push(`declare module "${constructTSModuleGlob(glob)}" {
+	const value: ${typeScriptType};
+	export default value;
+}`);
+		}
+	}
+
+	return moduleDeclarations;
+}
+
+/**
  * Generates type strings for per-environment interfaces plus aggregated Env.
  *
  * @param formatType - The worker format type ("modules" or "service-worker")
  * @param envInterface - The name of the generated environment interface
  * @param perEnvInterfaces - Array of per-environment interface strings
  * @param aggregatedEnvBindings - Array of aggregated environment bindings as [key, type, required]
- * @param modulesTypeStructure - Array of module type declaration strings
+ * @param consoleModulesTypeStructure - Array of module type declaration strings for console output
+ * @param fileModulesTypeStructure - Array of module type declaration strings for file content
  * @param stringKeys - Array of variable names that should be typed as strings in process.env
  * @param compatibilityDate - Compatibility date for the worker
  * @param compatibilityFlags - Compatibility flags for the worker
@@ -1110,7 +1178,8 @@ function generatePerEnvTypeStrings(
 		required: boolean;
 		type: string;
 	}>,
-	modulesTypeStructure: string[],
+	consoleModulesTypeStructure: string[],
+	fileModulesTypeStructure: string[],
 	stringKeys: string[],
 	compatibilityDate: string | undefined,
 	compatibilityFlags: string[] | undefined,
@@ -1147,11 +1216,16 @@ function generatePerEnvTypeStrings(
 		baseContent = `export {};\ndeclare global {\n${envBindingLines}\n}`;
 	}
 
-	const modulesContent = modulesTypeStructure.join("\n");
+	const consoleModulesContent = consoleModulesTypeStructure.join("\n");
+	const fileModulesContent = fileModulesTypeStructure.join("\n");
 
 	return {
-		consoleOutput: `${baseContent}\n${modulesContent}`,
-		fileContent: `${baseContent}\n${modulesContent}`,
+		consoleOutput: consoleModulesContent
+			? `${baseContent}\n${consoleModulesContent}`
+			: baseContent,
+		fileContent: fileModulesContent
+			? `${baseContent}\n${fileModulesContent}`
+			: baseContent,
 	};
 }
 
@@ -1208,7 +1282,8 @@ function generateTypeStrings(
 	formatType: string,
 	envInterface: string,
 	envTypeStructure: string[],
-	modulesTypeStructure: string[],
+	consoleModulesTypeStructure: string[],
+	fileModulesTypeStructure: string[],
 	stringKeys: string[],
 	compatibilityDate: string | undefined,
 	compatibilityFlags: string[] | undefined,
@@ -1234,11 +1309,16 @@ function generateTypeStrings(
 		baseContent = `export {};\ndeclare global {\n${envTypeStructure.map((value) => `\tconst ${value}`).join("\n")}\n}`;
 	}
 
-	const modulesContent = modulesTypeStructure.join("\n");
+	const consoleModulesContent = consoleModulesTypeStructure.join("\n");
+	const fileModulesContent = fileModulesTypeStructure.join("\n");
 
 	return {
-		fileContent: `${baseContent}\n${modulesContent}`,
-		consoleOutput: `${baseContent}\n${modulesContent}`,
+		fileContent: fileModulesContent
+			? `${baseContent}\n${fileModulesContent}`
+			: baseContent,
+		consoleOutput: consoleModulesContent
+			? `${baseContent}\n${consoleModulesContent}`
+			: baseContent,
 	};
 }
 
