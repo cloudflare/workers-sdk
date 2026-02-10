@@ -31,6 +31,7 @@
 		"@hey-api/openapi-ts": "^0.91.1",
 		"@tanstack/react-router-devtools": "^1.158.0",
 		"@tanstack/router-plugin": "^1.158.0",
+		"@types/lodash": "^4.17.23",
 		"@types/react": "^19.2.0",
 		"@types/react-dom": "^19.2.0",
 		"@vitejs/plugin-react": "^4.4.1",
