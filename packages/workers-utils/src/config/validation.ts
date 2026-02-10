@@ -1,10 +1,11 @@
 import assert from "node:assert";
+import fs from "node:fs";
 import path from "node:path";
-import { isDockerfile } from "@cloudflare/containers-shared";
 import { isValidWorkflowName } from "@cloudflare/workflows-shared/src/lib/validators";
 import { dedent } from "ts-dedent";
 import { getCloudflareEnv } from "../environment-variables/misc-variables";
 import { UserError } from "../errors";
+import { isDirectory } from "../fs-helpers";
 import { isRedirectedRawConfig } from "./config-helpers";
 import { Diagnostics } from "./diagnostics";
 import {
@@ -35,6 +36,7 @@ import {
 	validateUniqueNameProperty,
 } from "./validation-helpers";
 import { configFileName, formatConfigSnippet } from ".";
+import type { Binding } from "../types";
 import type { CfWorkerInit } from "../worker";
 import type { Config, DevConfig, RawConfig, RawDevConfig } from "./config";
 import type {
@@ -65,6 +67,9 @@ export function isValidR2BucketName(name: string | undefined): name is string {
 
 export const bucketFormatMessage = `Bucket names must begin and end with an alphanumeric character, only contain lowercase letters, numbers, and hyphens, and be between 3 and 63 characters long.`;
 
+/**
+ * @deprecated new code should use getBindingTypeFriendlyName() instead
+ */
 export const friendlyBindingNames: Record<
 	keyof CfWorkerInit["bindings"],
 	string
@@ -102,6 +107,64 @@ export const friendlyBindingNames: Record<
 	vpc_services: "VPC Service",
 } as const;
 
+/**
+ * Friendly names for binding types (keyed by Binding["type"] discriminator).
+ * These are mostly (but not always) non-plural versions of friendlyBindingNames
+ */
+export const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
+	// The 3 binding types below are all rendered as "Environment Variable" to preserve existing behaviour (friendlyBindingNames.vars)
+	plain_text: "Environment Variable",
+	secret_text: "Environment Variable",
+	json: "Environment Variable",
+	kv_namespace: "KV Namespace",
+	send_email: "Send Email",
+	wasm_module: "Wasm Module",
+	text_blob: "Text Blob",
+	browser: "Browser",
+	ai: "AI",
+	images: "Images",
+	version_metadata: "Worker Version Metadata",
+	data_blob: "Data Blob",
+	durable_object_namespace: "Durable Object",
+	workflow: "Workflow",
+	queue: "Queue",
+	r2_bucket: "R2 Bucket",
+	d1: "D1 Database",
+	vectorize: "Vectorize Index",
+	hyperdrive: "Hyperdrive Config",
+	service: "Worker",
+	fetcher: "Service Binding",
+	analytics_engine: "Analytics Engine Dataset",
+	dispatch_namespace: "Dispatch Namespace",
+	mtls_certificate: "mTLS Certificate",
+	pipeline: "Pipeline",
+	secrets_store_secret: "Secrets Store Secret",
+	logfwdr: "logfwdr",
+	unsafe_hello_world: "Hello World",
+	ratelimit: "Rate Limit",
+	worker_loader: "Worker Loader",
+	vpc_service: "VPC Service",
+	media: "Media",
+	assets: "Assets",
+} as const;
+
+/**
+ * Get a friendly name for a binding type, handling unsafe bindings
+ */
+export function getBindingTypeFriendlyName(
+	bindingType: Binding["type"]
+): string {
+	if (bindingType in bindingTypeFriendlyNames) {
+		return bindingTypeFriendlyNames[bindingType];
+	}
+
+	if (bindingType.startsWith("unsafe_")) {
+		return "Unsafe Metadata";
+	}
+
+	return bindingType;
+}
+
 export type NormalizeAndValidateConfigArgs = {
 	name?: string;
 	env?: string;
@@ -113,6 +176,7 @@ export type NormalizeAndValidateConfigArgs = {
 	upstreamProtocol?: string;
 	script?: string;
 	enableContainers?: boolean;
+	generateTypes?: boolean;
 };
 
 const ENGLISH = new Intl.ListFormat("en-US");
@@ -566,6 +630,7 @@ function normalizeAndValidateDev(
 		upstreamProtocol: upstreamProtocolArg,
 		remote: remoteArg,
 		enableContainers: enableContainersArg,
+		generateTypes: generateTypesArg,
 	} = args;
 	assert(
 		localProtocolArg === undefined ||
@@ -582,6 +647,9 @@ function normalizeAndValidateDev(
 		enableContainersArg === undefined ||
 			typeof enableContainersArg === "boolean"
 	);
+	assert(
+		generateTypesArg === undefined || typeof generateTypesArg === "boolean"
+	);
 	const {
 		// On Windows, when specifying `localhost` as the socket hostname, `workerd`
 		// will only listen on the IPv4 loopback `127.0.0.1`, not the IPv6 `::1`:
@@ -593,6 +661,7 @@ function normalizeAndValidateDev(
 		ip = process.platform === "win32" ? "127.0.0.1" : "localhost",
 		port,
 		inspector_port,
+		inspector_ip,
 		local_protocol = localProtocolArg ?? "http",
 		// In remote mode upstream_protocol must be https, otherwise it defaults to local_protocol.
 		upstream_protocol = upstreamProtocolArg ?? remoteArg
@@ -601,6 +670,7 @@ function normalizeAndValidateDev(
 		host,
 		enable_containers = enableContainersArg ?? true,
 		container_engine,
+		generate_types = generateTypesArg ?? false,
 		...rest
 	} = rawDev;
 	validateAdditionalProperties(diagnostics, "dev", Object.keys(rest), []);
@@ -613,6 +683,13 @@ function normalizeAndValidateDev(
 		"inspector_port",
 		inspector_port,
 		"number"
+	);
+	validateOptionalProperty(
+		diagnostics,
+		"dev",
+		"inspector_ip",
+		inspector_ip,
+		"string"
 	);
 	validateOptionalProperty(
 		diagnostics,
@@ -647,15 +724,25 @@ function normalizeAndValidateDev(
 		"string"
 	);
 
+	validateOptionalProperty(
+		diagnostics,
+		"dev",
+		"generate_types",
+		generate_types,
+		"boolean"
+	);
+
 	return {
 		ip,
 		port,
 		inspector_port,
+		inspector_ip,
 		local_protocol,
 		upstream_protocol,
 		host,
 		enable_containers,
 		container_engine,
+		generate_types,
 	};
 }
 
@@ -1840,6 +1927,15 @@ function normalizeAndValidateEnvironment(
 		configPath
 	);
 
+	// top level 'rawEnv' includes inheritable keys and is validated elsewhere
+	if (envName !== "top level") {
+		validateAdditionalProperties(
+			diagnostics,
+			"env." + envName,
+			Object.keys(rawEnv),
+			Object.keys(environment)
+		);
+	}
 	return environment;
 }
 
@@ -2054,9 +2150,9 @@ const validateVars =
 		let isValid = true;
 		const fieldPath =
 			config === undefined ? `${field}` : `env.${envName}.${field}`;
-		const configVars = Object.keys(config?.vars ?? {});
-		// If there are no top level vars then there is nothing to do here.
-		if (configVars.length > 0) {
+
+		// Validate var values if vars is defined
+		if (value !== undefined) {
 			if (typeof value !== "object" || value === null) {
 				diagnostics.errors.push(
 					`The field "${fieldPath}" should be an object but got ${JSON.stringify(
@@ -2065,6 +2161,23 @@ const validateVars =
 				);
 				isValid = false;
 			} else {
+				// Check each var value for invalid types (e.g., Date objects)
+				for (const [varName, varValue] of Object.entries(value)) {
+					if (varValue instanceof Date) {
+						diagnostics.errors.push(
+							`The field "${fieldPath}.${varName}" is a TOML date, which is not supported. ` +
+								`Please use a string instead, e.g. ${varName} = "2025-12-19".`
+						);
+						isValid = false;
+					}
+				}
+			}
+		}
+
+		// Check for vars that exist at top level but not in the current environment
+		const configVars = Object.keys(config?.vars ?? {});
+		if (configVars.length > 0) {
+			if (typeof value === "object" && value !== null) {
 				for (const varName of configVars) {
 					if (!(varName in value)) {
 						diagnostics.warnings.push(
@@ -3042,6 +3155,9 @@ function validateContainerApp(
 					"class_name",
 					"scheduling_policy",
 					"instance_type",
+					"wrangler_ssh",
+					"authorized_keys",
+					"trusted_user_ca_keys",
 					"configuration",
 					"constraints",
 					"affinities",
@@ -3058,6 +3174,120 @@ function validateContainerApp(
 					`${field}.configuration`,
 					Object.keys(containerAppOptional.configuration),
 					["image", "secrets", "labels", "disk", "vcpu", "memory_mib"]
+				);
+			}
+
+			if ("wrangler_ssh" in containerAppOptional) {
+				if (
+					!isRequiredProperty(
+						containerAppOptional.wrangler_ssh,
+						"enabled",
+						"boolean"
+					)
+				) {
+					diagnostics.errors.push(
+						`${field}.wrangler_ssh.enabled must be a boolean`
+					);
+				}
+
+				if (
+					!isOptionalProperty(
+						containerAppOptional.wrangler_ssh,
+						"port",
+						"number"
+					) ||
+					containerAppOptional.wrangler_ssh.port < 1 ||
+					containerAppOptional.wrangler_ssh.port > 65535
+				) {
+					diagnostics.errors.push(
+						`${field}.wrangler_ssh.port must be a number between 1 and 65535 inclusive`
+					);
+				}
+			}
+
+			if ("authorized_keys" in containerAppOptional) {
+				if (!Array.isArray(containerAppOptional.authorized_keys)) {
+					diagnostics.errors.push(`${field}.authorized_keys must be an array`);
+				} else {
+					for (const index in containerAppOptional.authorized_keys) {
+						const fieldPath = `${field}.authorized_keys[${index}]`;
+						const key = containerAppOptional.authorized_keys[index];
+
+						if (!isRequiredProperty(key, "name", "string")) {
+							diagnostics.errors.push(`${fieldPath}.name must be a string`);
+						}
+
+						if (!isRequiredProperty(key, "public_key", "string")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key must be a string`
+							);
+						}
+
+						if (!key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key is a unsupported key type. Please provide a ED25519 public key.`
+							);
+						}
+					}
+				}
+			}
+
+			if ("trusted_user_ca_keys" in containerAppOptional) {
+				if (!Array.isArray(containerAppOptional.trusted_user_ca_keys)) {
+					diagnostics.errors.push(
+						`${field}.trusted_user_ca_keys must be an array`
+					);
+				} else {
+					for (const index in containerAppOptional.trusted_user_ca_keys) {
+						const fieldPath = `${field}.trusted_user_ca_keys[${index}]`;
+						const key = containerAppOptional.trusted_user_ca_keys[index];
+
+						if (!isOptionalProperty(key, "name", "string")) {
+							diagnostics.errors.push(`${fieldPath}.name must be a string`);
+						}
+
+						if (!isRequiredProperty(key, "public_key", "string")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key must be a string`
+							);
+						}
+
+						if (!key.public_key.toLowerCase().startsWith("ssh-ed25519")) {
+							diagnostics.errors.push(
+								`${fieldPath}.public_key is a unsupported key type. Please provide a ED25519 public key.`
+							);
+						}
+					}
+				}
+			}
+
+			if (
+				validateOptionalProperty(
+					diagnostics,
+					field,
+					"constraints",
+					containerAppOptional.constraints,
+					"object"
+				) &&
+				containerAppOptional.constraints
+			) {
+				const constraints = containerAppOptional.constraints;
+				if ("tier" in constraints) {
+					diagnostics.warnings.push(
+						`"constraints.tier" has been deprecated in favor of "constraints.tiers". Please update your configuration to use "constraints.tiers" instead.`
+					);
+
+					if ("tiers" in constraints) {
+						diagnostics.errors.push(
+							`${field}.constraints.tier and ${field}.constraints.tiers cannot both be set`
+						);
+					}
+				}
+				validateOptionalTypedArray(
+					diagnostics,
+					`${field}.constraints.tiers`,
+					constraints.tiers,
+					"number"
 				);
 			}
 
@@ -4319,11 +4549,19 @@ function normalizeAndValidateLimits(
 	rawEnv: RawEnvironment
 ): Config["limits"] {
 	if (rawEnv.limits) {
-		validateRequiredProperty(
+		validateOptionalProperty(
 			diagnostics,
 			"limits",
 			"cpu_ms",
 			rawEnv.limits.cpu_ms,
+			"number"
+		);
+
+		validateOptionalProperty(
+			diagnostics,
+			"limits",
+			"subrequests",
+			rawEnv.limits.subrequests,
 			"number"
 		);
 	}
@@ -4674,7 +4912,9 @@ function warnIfDurableObjectsHaveNoMigrations(
 				\`\`\`
 				${formatConfigSnippet(
 					{
-						migrations: [{ tag: "v1", new_classes: durableObjectClassnames }],
+						migrations: [
+							{ tag: "v1", new_sqlite_classes: durableObjectClassnames },
+						],
 					},
 					configPath
 				)}
@@ -4732,4 +4972,54 @@ function isRemoteValid(
 	}
 
 	return true;
+}
+
+/**
+ * Returns whether the provided `imagePath` is a path to a Dockerfile.
+ *
+ * @param imagePath path to Dockerfile or image registry path
+ * @param configPath path to the wrangler config file, if any
+ * @returns `true` if it is a dockerfile, `false` if it is a registry link, throws if neither
+ */
+export function isDockerfile(
+	imagePath: string,
+	configPath: string | undefined
+): boolean {
+	const baseDir = configPath ? path.dirname(configPath) : process.cwd();
+	const maybeDockerfile = path.resolve(baseDir, imagePath);
+	if (fs.existsSync(maybeDockerfile)) {
+		if (isDirectory(maybeDockerfile)) {
+			throw new UserError(
+				`${imagePath} is a directory, you should specify a path to the Dockerfile`
+			);
+		}
+		return true;
+	}
+
+	const errorPrefix = `The image "${imagePath}" does not appear to be a valid path to a Dockerfile, or a valid image registry path:\n`;
+	// not found, not a dockerfile, let's try parsing the image ref as an URL?
+	try {
+		new URL(`https://${imagePath}`);
+	} catch (e) {
+		if (e instanceof Error) {
+			throw new UserError(errorPrefix + e.message);
+		}
+		throw e;
+	}
+	const imageParts = imagePath.split("/");
+
+	if (!imageParts[imageParts.length - 1]?.includes(":")) {
+		throw new UserError(
+			errorPrefix +
+				`If this is an image registry path, it needs to include at least a tag ':' (e.g: docker.io/httpd:1)`
+		);
+	}
+	// validate URL
+	if (imagePath.includes("://")) {
+		throw new UserError(
+			errorPrefix +
+				`Image reference should not include the protocol part (e.g: docker.io/httpd:1, not https://docker.io/httpd:1)`
+		);
+	}
+	return false;
 }

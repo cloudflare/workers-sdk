@@ -8,13 +8,14 @@
 		"test:watch": "vitest"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"@cloudflare/workers-types": "catalog:default",
 		"@types/debug": "4.1.12",
 		"@types/pg": "^8.11.2",
 		"debug": "4.4.1",
-		"pg": "8.11.3",
-		"pg-cloudflare": "^1.1.1",
+		"pg": "8.16.3",
+		"pg-cloudflare": "^1.2.7",
 		"undici": "catalog:default",
 		"vitest": "catalog:default",
 		"wrangler": "workspace:*"

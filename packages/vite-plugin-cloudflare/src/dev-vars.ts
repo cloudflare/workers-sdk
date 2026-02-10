@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { unstable_getVarsForDev } from "wrangler";
+import * as wrangler from "wrangler";
 import type {
 	AssetsOnlyResolvedConfig,
 	WorkersResolvedConfig,
@@ -14,7 +14,7 @@ export function getLocalDevVarsForPreview(
 	configPath: string | undefined,
 	cloudflareEnv: string | undefined
 ): string | undefined {
-	const dotDevDotVars = unstable_getVarsForDev(
+	const dotDevDotVars = wrangler.unstable_getVarsForDev(
 		configPath,
 		undefined, // We don't currently support setting a list of custom `.env` files.
 		{}, // Don't pass actual vars since these will be loaded from the wrangler.json.

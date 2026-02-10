@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import { fetch } from "undici";
-import { afterAll, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterAll, beforeAll, describe, test, vi } from "vitest";
 import { unstable_startWorker } from "wrangler";
 import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
 
@@ -61,28 +61,32 @@ describe("find_additional_modules dev", () => {
 		}
 	});
 
-	test("supports bundled modules", async () => {
+	test("supports bundled modules", async ({ expect }) => {
 		const res = await get(worker, "/dep");
 		expect(await res.text()).toBe("bundled");
 	});
-	test("supports text modules", async () => {
+	test("supports text modules", async ({ expect }) => {
 		const res = await get(worker, "/text");
 		expect(await res.text()).toBe("test\n");
 	});
-	test("supports dynamic imports", async () => {
+	test("supports SQL modules", async ({ expect }) => {
+		const res = await get(worker, "/sql");
+		expect(await res.text()).toBe("SELECT * FROM users;\n");
+	});
+	test("supports dynamic imports", async ({ expect }) => {
 		const res = await get(worker, "/dynamic");
 		expect(await res.text()).toBe("dynamic");
 	});
-	test("supports commonjs lazy imports", async () => {
+	test("supports commonjs lazy imports", async ({ expect }) => {
 		const res = await get(worker, "/common");
 		expect(await res.text()).toBe("common");
 	});
-	test("supports variable dynamic imports", async () => {
+	test("supports variable dynamic imports", async ({ expect }) => {
 		const res = await get(worker, "/lang/en");
 		expect(await res.text()).toBe("hello");
 	});
 
-	test("watches additional modules", async () => {
+	test("watches additional modules", async ({ expect }) => {
 		const srcDir = path.join(tmpDir, "src");
 
 		// Update dynamically imported file
@@ -144,7 +148,7 @@ describe("find_additional_modules deploy", () => {
 		await fs.rm(tmpDir, { recursive: true, force: true });
 	});
 
-	test("doesn't bundle additional modules", async () => {
+	test("doesn't bundle additional modules", async ({ expect }) => {
 		const outDir = path.join(tmpDir, "out");
 		const result = await build(path.resolve(__dirname, ".."), outDir);
 		expect(result.status).toBe(0);
@@ -160,6 +164,7 @@ describe("find_additional_modules deploy", () => {
 			var dep_default = "bundled";
 
 			// src/index.ts
+			import sql from "./example.sql";
 			import text from "./text.txt";
 			var index_default = {
 			  async fetch(request) {
@@ -169,6 +174,9 @@ describe("find_additional_modules deploy", () => {
 			    }
 			    if (url.pathname === "/text") {
 			      return new Response(text);
+			    }
+			    if (url.pathname === "/sql") {
+			      return new Response(sql);
 			    }
 			    if (url.pathname === "/common") {
 			      return new Response(common);
@@ -197,7 +205,7 @@ describe("find_additional_modules deploy", () => {
 		expect(existsSync(path.join(outDir, "lang", "fr.js"))).toBe(true);
 	});
 
-	test("fails with service worker entrypoint", async () => {
+	test("fails with service worker entrypoint", async ({ expect }) => {
 		// Write basic service worker with `find_additional_modules` enabled
 		const serviceWorkerDir = path.join(tmpDir, "service-worker");
 		await fs.mkdir(serviceWorkerDir, { recursive: true });

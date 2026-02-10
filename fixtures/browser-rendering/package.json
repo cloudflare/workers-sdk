@@ -10,6 +10,7 @@
 		"test:ci": "vitest run"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/playwright": "^0.0.10",
 		"@cloudflare/puppeteer": "^1.0.2",
 		"@cloudflare/vitest-pool-workers": "workspace:*",

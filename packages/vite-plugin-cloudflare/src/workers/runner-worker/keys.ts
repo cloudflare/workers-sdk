@@ -47,6 +47,7 @@ function _checkExhaustiveKeys() {
 	const _workflowEntrypointExhaustive: (typeof WORKFLOW_ENTRYPOINT_KEYS)[number] =
 		undefined as unknown as UnbrandedKeys<WorkflowEntrypoint>;
 
+	// eslint-disable-next-line @typescript-eslint/no-unused-expressions
 	_workerEntrypointExhaustive ||
 		_durableObjectExhaustive ||
 		_workflowEntrypointExhaustive;

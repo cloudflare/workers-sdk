@@ -8,5 +8,10 @@
 			"service": "worker",
 			"entrypoint": "NamedEntrypoint",
 		},
+		{
+			"binding": "LEGACY",
+			"service": "worker",
+			"entrypoint": "legacy",
+		},
 	],
 }

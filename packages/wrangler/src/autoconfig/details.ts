@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import { statSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { basename, join, relative, resolve } from "node:path";
@@ -11,13 +12,36 @@ import {
 import { Project } from "@netlify/build-info";
 import { NodeFS } from "@netlify/build-info/node";
 import { captureException } from "@sentry/node";
-import { confirm, prompt } from "../dialogs";
+import { getErrorType } from "../core/handle-errors";
+import { confirm, prompt, select } from "../dialogs";
 import { logger } from "../logger";
+import { sendMetricsEvent } from "../metrics";
 import { getPackageManager } from "../package-manager";
-import { getFramework } from "./frameworks/get-framework";
-import type { AutoConfigDetails } from "./types";
+import { allKnownFrameworks, getFramework } from "./frameworks/get-framework";
+import {
+	getAutoConfigId,
+	getAutoConfigTriggerCommand,
+} from "./telemetry-utils";
+import type {
+	AutoConfigDetails,
+	AutoConfigDetailsForNonConfiguredProject,
+} from "./types";
 import type { Config, PackageJSON } from "@cloudflare/workers-utils";
 import type { Settings } from "@netlify/build-info";
+
+/**
+ * Asserts that the current project being targeted for autoconfig is not already configured.
+ *
+ * @param details The details detected for the project.
+ */
+export function assertNonConfigured(
+	details: AutoConfigDetails
+): asserts details is AutoConfigDetailsForNonConfiguredProject {
+	assert(
+		details.configured === false,
+		"Error: expected the current project not to be already configured"
+	);
+}
 
 class MultipleFrameworksError extends FatalError {
 	constructor(frameworks: string[]) {
@@ -104,6 +128,17 @@ export async function getDetailsForAutoConfig({
 } = {}): Promise<AutoConfigDetails> {
 	logger.debug(`Running autoconfig detection in ${projectPath}...`);
 
+	const autoConfigId = getAutoConfigId();
+
+	sendMetricsEvent(
+		"autoconfig_detection_started",
+		{
+			autoConfigId,
+			command: getAutoConfigTriggerCommand(),
+		},
+		{}
+	);
+
 	// If a real Wrangler config has been found & used, don't run autoconfig
 	if (wranglerConfig?.configPath) {
 		return {
@@ -124,23 +159,14 @@ export async function getDetailsForAutoConfig({
 
 	const buildSettings = await project.getBuildSettings();
 
-	// Workaround for https://github.com/netlify/build/pull/6806, and can be removed once merged
-	if (
-		buildSettings.length === 2 &&
-		buildSettings[0].framework.id === "react-router" &&
-		buildSettings[1].framework.id === "vite"
-	) {
-		buildSettings.pop();
-	}
-
 	// If we've detected multiple frameworks, it's too complex for us to try and configure—let's just bail
-	if (buildSettings && buildSettings?.length > 1) {
+	if (buildSettings.length > 1) {
 		throw new MultipleFrameworksError(buildSettings.map((b) => b.name));
 	}
 
-	const detectedFramework: Settings | undefined = buildSettings?.[0];
+	const detectedFramework = buildSettings.at(0);
 
-	const framework = getFramework(detectedFramework?.framework);
+	const framework = getFramework(detectedFramework?.framework?.id);
 	const packageJsonPath = resolve(projectPath, "package.json");
 
 	let packageJson: PackageJSON | undefined;
@@ -154,21 +180,120 @@ export async function getDetailsForAutoConfig({
 		logger.debug("No package.json found when running autoconfig");
 	}
 
-	const { type } = await getPackageManager();
+	const configured = framework.isConfigured(projectPath) ?? false;
 
-	const packageJsonBuild = packageJson?.scripts?.["build"]
-		? `${type} run build`
-		: undefined;
+	const outputDir =
+		detectedFramework?.dist ?? (await findAssetsDir(projectPath));
 
-	return {
-		projectPath: projectPath,
-		configured: framework?.isConfigured(projectPath) ?? false,
+	const baseDetails = {
+		projectPath,
 		framework,
 		packageJson,
-		buildCommand: detectedFramework?.buildCommand ?? packageJsonBuild,
-		outputDir: detectedFramework?.dist ?? (await findAssetsDir(projectPath)),
+		...(detectedFramework
+			? {
+					buildCommand: await getProjectBuildCommand(detectedFramework),
+				}
+			: {}),
 		workerName: getWorkerName(packageJson?.name, projectPath),
 	};
+
+	if (configured) {
+		sendMetricsEvent(
+			"autoconfig_detection_completed",
+			{
+				autoConfigId,
+				framework: framework.id,
+				configured,
+				success: true,
+			},
+			{}
+		);
+		return {
+			...baseDetails,
+			configured: true,
+		};
+	}
+
+	if (!outputDir) {
+		const errorMessage =
+			framework.id === "static"
+				? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
+				: "Failed to detect an output directory for the project";
+
+		const error = new FatalError(errorMessage);
+
+		sendMetricsEvent(
+			"autoconfig_detection_completed",
+			{
+				autoConfigId,
+				framework: framework.id,
+				configured,
+				success: false,
+				errorType: getErrorType(error),
+				errorMessage,
+			},
+			{}
+		);
+
+		throw error;
+	}
+
+	sendMetricsEvent(
+		"autoconfig_detection_completed",
+		{
+			autoConfigId,
+			framework: framework.id,
+			configured,
+			success: true,
+		},
+		{}
+	);
+
+	sendMetricsEvent(
+		"autoconfig_detection_completed",
+		{
+			autoConfigId,
+			framework: framework.id,
+			configured,
+			success: true,
+		},
+		{}
+	);
+
+	return {
+		...baseDetails,
+		outputDir,
+		configured: false,
+	};
+}
+
+/**
+ * Given a detected framework this function gets a `build` command for the target project that can be run in the terminal
+ * (such as `npm run build` or `npx astro build`). If no build command is detected `undefined` is returned instead.
+ *
+ * @param detectedFramework The detected framework (or settings) for the project
+ * @returns A runnable command for the build process if detected, undefined otherwise
+ */
+async function getProjectBuildCommand(
+	detectedFramework: Settings
+): Promise<string | undefined> {
+	if (!detectedFramework.buildCommand) {
+		return undefined;
+	}
+
+	const { type, dlx, npx } = await getPackageManager();
+
+	for (const packageManagerCommandPrefix of [type, dlx.join(" "), npx]) {
+		if (
+			detectedFramework.buildCommand.startsWith(packageManagerCommandPrefix)
+		) {
+			// The build command already is something like `npm run build` or similar
+			return detectedFramework.buildCommand;
+		}
+	}
+
+	// The command is something like `astro build` so we need to prefix it with `npx` and equivalents
+	return `${npx} ${detectedFramework.buildCommand}`;
 }
 
 const invalidWorkerNameCharsRegex = /[^a-z0-9- ]/g;
@@ -308,6 +433,30 @@ export async function confirmAutoConfigDetails(
 	});
 
 	updatedAutoConfigDetails.workerName = workerName;
+
+	const frameworkId = await select(
+		"What framework is your application using?",
+		{
+			choices: allKnownFrameworks.map((f) => ({
+				title: f.name,
+				value: f.id,
+				description:
+					f.id === "static"
+						? "No framework at all, or a static framework such as Vite, React or Gatsby."
+						: `The ${f.name} JavaScript framework`,
+			})),
+			defaultOption: allKnownFrameworks.findIndex((framework) => {
+				if (!autoConfigDetails?.framework) {
+					// If there is no framework already detected let's default to the static one
+					// (note: there should always be a framework at this point)
+					return framework.id === "static";
+				}
+				return autoConfigDetails.framework.id === framework.id;
+			}),
+		}
+	);
+
+	updatedAutoConfigDetails.framework = getFramework(frameworkId);
 
 	const outputDir = await prompt(
 		"What directory contains your applications' output/asset files?",

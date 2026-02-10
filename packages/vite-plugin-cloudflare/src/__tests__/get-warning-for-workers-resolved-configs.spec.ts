@@ -1,11 +1,11 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { getWarningForWorkersConfigs } from "../workers-configs";
 import type { ResolvedWorkerConfig } from "../plugin-config";
 import type { Unstable_Config as RawWorkerConfig } from "wrangler";
 
 describe("getWarningForWorkersConfigs", () => {
 	describe("no warning needed", () => {
-		test("entry worker only", () => {
+		test("entry worker only", ({ expect }) => {
 			const warning = getWarningForWorkersConfigs({
 				entryWorker: {
 					type: "worker",
@@ -21,7 +21,7 @@ describe("getWarningForWorkersConfigs", () => {
 			expect(warning).toBeUndefined();
 		});
 
-		test("multi workers", () => {
+		test("multi workers", ({ expect }) => {
 			const warning = getWarningForWorkersConfigs({
 				entryWorker: {
 					type: "worker",
@@ -56,7 +56,7 @@ describe("getWarningForWorkersConfigs", () => {
 		});
 	});
 
-	test("entry worker only", () => {
+	test("entry worker only", ({ expect }) => {
 		const warning = getWarningForWorkersConfigs({
 			entryWorker: {
 				type: "worker",
@@ -89,7 +89,7 @@ describe("getWarningForWorkersConfigs", () => {
 		`);
 	});
 
-	test("multi workers", () => {
+	test("multi workers", ({ expect }) => {
 		const warning = getWarningForWorkersConfigs({
 			entryWorker: {
 				type: "worker",

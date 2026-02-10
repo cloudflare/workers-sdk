@@ -1,6 +1,10 @@
 import * as fs from "node:fs";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import { detectAgenticEnvironment } from "am-i-vibing";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file with .each */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { sendMetricsEvent } from "../metrics";
@@ -16,16 +20,19 @@ import {
 	readMetricsConfig,
 	writeMetricsConfig,
 } from "../metrics/metrics-config";
-import { getMetricsDispatcher } from "../metrics/metrics-dispatcher";
+import {
+	allMetricsDispatchesCompleted,
+	getMetricsDispatcher,
+} from "../metrics/metrics-dispatcher";
 import { sniffUserAgent } from "../package-manager";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { MockInstance } from "vitest";
 
+vi.mock("am-i-vibing");
 vi.mock("../metrics/helpers");
 vi.mock("../metrics/send-event");
 vi.mock("../package-manager");
@@ -77,11 +84,22 @@ describe("metrics", () => {
 			});
 		});
 
-		afterEach(() => {
+		afterEach(async () => {
+			await allMetricsDispatchesCompleted();
 			vi.useRealTimers();
 		});
 
 		describe("sendAdhocEvent()", () => {
+			beforeEach(() => {
+				// Default: no agent detected
+				vi.mocked(detectAgenticEnvironment).mockReturnValue({
+					isAgentic: false,
+					id: null,
+					name: null,
+					type: null,
+				});
+			});
+
 			it("should send a request to the default URL", async () => {
 				const requests = mockMetricRequest();
 
@@ -89,14 +107,29 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1, b: 2 });
-				await Promise.all(dispatcher.requests);
+				await allMetricsDispatchesCompleted();
 				expect(requests.count).toBe(1);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
+					`"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"amplitude_session_id\\":1733961600000,\\"amplitude_event_id\\":0,\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"osPlatform\\":\\"mock platform\\",\\"osVersion\\":\\"mock os version\\",\\"nodeVersion\\":1,\\"packageManager\\":\\"npm\\",\\"isFirstUsage\\":false,\\"configFileType\\":\\"none\\",\\"isCI\\":false,\\"isPagesCI\\":false,\\"isWorkersCI\\":false,\\"isInteractive\\":true,\\"hasAssets\\":false,\\"agent\\":null,\\"category\\":\\"Workers\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
+			});
+
+			it("should include parsed wrangler version components in events", async () => {
+				const requests = mockMetricRequest();
+
+				const dispatcher = getMetricsDispatcher({
+					sendMetrics: true,
+				});
+				dispatcher.sendAdhocEvent("version-test");
+				await allMetricsDispatchesCompleted();
+				expect(requests.count).toBe(1);
+				expect(std.debug).toContain('"wranglerVersion":"1.2.3"');
+				expect(std.debug).toContain('"wranglerMajorVersion":1');
+				expect(std.debug).toContain('"wranglerMinorVersion":2');
+				expect(std.debug).toContain('"wranglerPatchVersion":3');
 			});
 
 			it("should write a debug log if the dispatcher is disabled", async () => {
@@ -108,7 +141,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(0);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Dispatching disabled - would have sent {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}."`
+					`"Metrics dispatcher: Dispatching disabled - would have sent {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"amplitude_session_id\\":1733961600000,\\"amplitude_event_id\\":0,\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"osPlatform\\":\\"mock platform\\",\\"osVersion\\":\\"mock os version\\",\\"nodeVersion\\":1,\\"packageManager\\":\\"npm\\",\\"isFirstUsage\\":false,\\"configFileType\\":\\"none\\",\\"isCI\\":false,\\"isPagesCI\\":false,\\"isWorkersCI\\":false,\\"isInteractive\\":true,\\"hasAssets\\":false,\\"agent\\":null,\\"category\\":\\"Workers\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}."`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -125,10 +158,10 @@ describe("metrics", () => {
 					sendMetrics: true,
 				});
 				dispatcher.sendAdhocEvent("some-event", { a: 1, b: 2 });
-				await Promise.all(dispatcher.requests);
+				await allMetricsDispatchesCompleted();
 
 				expect(std.debug).toMatchInlineSnapshot(`
-					"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}
+					"Metrics dispatcher: Posting data {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"amplitude_session_id\\":1733961600000,\\"amplitude_event_id\\":0,\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"osPlatform\\":\\"mock platform\\",\\"osVersion\\":\\"mock os version\\",\\"nodeVersion\\":1,\\"packageManager\\":\\"npm\\",\\"isFirstUsage\\":false,\\"configFileType\\":\\"none\\",\\"isCI\\":false,\\"isPagesCI\\":false,\\"isWorkersCI\\":false,\\"isInteractive\\":true,\\"hasAssets\\":false,\\"agent\\":null,\\"category\\":\\"Workers\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}
 					Metrics dispatcher: Failed to send request: Failed to fetch"
 				`);
 				expect(std.out).toMatchInlineSnapshot(`""`);
@@ -147,38 +180,55 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(0);
 				expect(std.debug).toMatchInlineSnapshot(
-					`"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"category\\":\\"Workers\\",\\"wranglerVersion\\":\\"1.2.3\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
+					`"Metrics dispatcher: Source Key not provided. Be sure to initialize before sending events {\\"deviceId\\":\\"f82b1f46-eb7b-4154-aa9f-ce95f23b2288\\",\\"event\\":\\"some-event\\",\\"timestamp\\":1733961600000,\\"properties\\":{\\"amplitude_session_id\\":1733961600000,\\"amplitude_event_id\\":0,\\"wranglerVersion\\":\\"1.2.3\\",\\"wranglerMajorVersion\\":1,\\"wranglerMinorVersion\\":2,\\"wranglerPatchVersion\\":3,\\"osPlatform\\":\\"mock platform\\",\\"osVersion\\":\\"mock os version\\",\\"nodeVersion\\":1,\\"packageManager\\":\\"npm\\",\\"isFirstUsage\\":false,\\"configFileType\\":\\"none\\",\\"isCI\\":false,\\"isPagesCI\\":false,\\"isWorkersCI\\":false,\\"isInteractive\\":true,\\"hasAssets\\":false,\\"agent\\":null,\\"category\\":\\"Workers\\",\\"os\\":\\"foo:bar\\",\\"a\\":1,\\"b\\":2}}"`
 				);
 				expect(std.out).toMatchInlineSnapshot(`""`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
 				expect(std.err).toMatchInlineSnapshot(`""`);
 			});
-		});
 
-		it("should keep track of all requests made", async () => {
-			const requests = mockMetricRequest();
-			const dispatcher = getMetricsDispatcher({
-				sendMetrics: true,
+			it("should include agent ID when detected", async () => {
+				vi.mocked(detectAgenticEnvironment).mockReturnValue({
+					isAgentic: true,
+					id: "claude-code",
+					name: "Claude Code",
+					type: "agent",
+				});
+
+				const requests = mockMetricRequest();
+				const dispatcher = getMetricsDispatcher({
+					sendMetrics: true,
+				});
+				dispatcher.sendAdhocEvent("some-event", { a: 1 });
+				await allMetricsDispatchesCompleted();
+
+				expect(requests.count).toBe(1);
+				expect(std.debug).toContain('"agent":"claude-code"');
 			});
 
-			dispatcher.sendAdhocEvent("some-event", { a: 1, b: 2 });
-			expect(dispatcher.requests.length).toBe(1);
+			it("should set agent to null if detection throws", async () => {
+				vi.mocked(detectAgenticEnvironment).mockImplementation(() => {
+					throw new Error("Detection failed");
+				});
 
-			expect(requests.count).toBe(0);
-			await Promise.allSettled(dispatcher.requests);
-			expect(requests.count).toBe(1);
+				const requests = mockMetricRequest();
+				const dispatcher = getMetricsDispatcher({
+					sendMetrics: true,
+				});
+				dispatcher.sendAdhocEvent("some-event", { a: 1 });
+				await allMetricsDispatchesCompleted();
 
-			dispatcher.sendAdhocEvent("another-event", { c: 3, d: 4 });
-			expect(dispatcher.requests.length).toBe(2);
-
-			expect(requests.count).toBe(1);
-			await Promise.allSettled(dispatcher.requests);
-			expect(requests.count).toBe(2);
+				expect(requests.count).toBe(1);
+				expect(std.debug).toContain('"agent":null');
+			});
 		});
 
 		describe("sendCommandEvent()", () => {
 			const reused = {
 				wranglerVersion: "1.2.3",
+				wranglerMajorVersion: 1,
+				wranglerMinorVersion: 2,
+				wranglerPatchVersion: 3,
 				osPlatform: "mock platform",
 				osVersion: "mock os version",
 				nodeVersion: 1,
@@ -192,10 +242,18 @@ describe("metrics", () => {
 				hasAssets: false,
 				argsUsed: [],
 				argsCombination: "",
-				command: "wrangler docs",
-				args: {},
+				agent: null,
+				sanitizedCommand: "docs",
+				sanitizedArgs: {},
 			};
 			beforeEach(() => {
+				// Default: no agent detected
+				vi.mocked(detectAgenticEnvironment).mockReturnValue({
+					isAgentic: false,
+					id: null,
+					name: null,
+					type: null,
+				});
 				globalThis.ALGOLIA_APP_ID = "FAKE-ID";
 				globalThis.ALGOLIA_PUBLIC_KEY = "FAKE-KEY";
 				msw.use(
@@ -231,7 +289,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 
-				const expectedStartReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command started",
 					timestamp: 1733961600000,
@@ -240,11 +298,9 @@ describe("metrics", () => {
 						amplitude_event_id: 0,
 						...reused,
 					},
-				};
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedStartReq)}`
-				);
-				const expectedCompleteReq = {
+				});
+
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command completed",
 					timestamp: 1733961606000,
@@ -253,20 +309,15 @@ describe("metrics", () => {
 						amplitude_event_id: 1,
 						...reused,
 						durationMs: 6000,
-						durationSeconds: 6,
-						durationMinutes: 0.1,
 					},
-				};
-				// command completed
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedCompleteReq)}`
-				);
+				});
+
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-
 					 ⛅️ wrangler x.x.x
 					──────────────────
+
+					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
 					Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -293,7 +344,7 @@ describe("metrics", () => {
 				);
 				expect(requests.count).toBe(2);
 
-				const expectedStartReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command started",
 					timestamp: 1733961600000,
@@ -302,12 +353,9 @@ describe("metrics", () => {
 						amplitude_event_id: 0,
 						...reused,
 					},
-				};
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedStartReq)}`
-				);
+				});
 
-				const expectedErrorReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command errored",
 					timestamp: 1733961606000,
@@ -316,16 +364,10 @@ describe("metrics", () => {
 						amplitude_event_id: 1,
 						...reused,
 						durationMs: 6000,
-						durationSeconds: 6,
-						durationMinutes: 0.1,
 						errorType: "TypeError",
 						errorMessage: undefined,
 					},
-				};
-
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedErrorReq)}`
-				);
+				});
 			});
 
 			it("should mark isCI as true if running in CI", async () => {
@@ -369,8 +411,7 @@ describe("metrics", () => {
 				await runWrangler("docs arg");
 				expect(requests.count).toBe(2);
 
-				// command started
-				const expectedStartReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command started",
 					timestamp: 1733961600000,
@@ -379,13 +420,9 @@ describe("metrics", () => {
 						amplitude_event_id: 0,
 						...{ ...reused, hasAssets: true },
 					},
-				};
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedStartReq)}`
-				);
+				});
 
-				// command completed
-				const expectedCompleteReq = {
+				expectLogToContainPostedData(std.debug, {
 					deviceId: "f82b1f46-eb7b-4154-aa9f-ce95f23b2288",
 					event: "wrangler command completed",
 					timestamp: 1733961606000,
@@ -394,19 +431,15 @@ describe("metrics", () => {
 						amplitude_event_id: 1,
 						...{ ...reused, hasAssets: true },
 						durationMs: 6000,
-						durationSeconds: 6,
-						durationMinutes: 0.1,
 					},
-				};
-				expect(std.debug).toContain(
-					`Posting data ${JSON.stringify(expectedCompleteReq)}`
-				);
+				});
+
 				expect(std.out).toMatchInlineSnapshot(`
 					"
-					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-
 					 ⛅️ wrangler x.x.x
 					──────────────────
+
+					Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
 					Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
 				`);
 				expect(std.warn).toMatchInlineSnapshot(`""`);
@@ -424,7 +457,7 @@ describe("metrics", () => {
 
 				expect(requests.count).toBe(2);
 				expect(std.debug).toContain('"argsCombination":""');
-				expect(std.debug).toContain('"command":"wrangler login"');
+				expect(std.debug).toContain('"sanitizedCommand":""');
 			});
 
 			it("should include args provided by the user", async () => {
@@ -473,6 +506,23 @@ describe("metrics", () => {
 				expect(std.debug).toContain('"errorMessage":"yargs validation error"');
 			});
 
+			it("should include agent ID in command events when detected", async () => {
+				vi.mocked(detectAgenticEnvironment).mockReturnValue({
+					isAgentic: true,
+					id: "cursor-agent",
+					name: "Cursor Agent",
+					type: "agent",
+				});
+
+				writeWranglerConfig();
+				const requests = mockMetricRequest();
+
+				await runWrangler("docs arg");
+
+				expect(requests.count).toBe(2);
+				expect(std.debug).toContain('"agent":"cursor-agent"');
+			});
+
 			describe("banner", () => {
 				beforeEach(() => {
 					vi.mocked(getWranglerVersion).mockReturnValue("1.2.3");
@@ -491,10 +541,10 @@ describe("metrics", () => {
 					await runWrangler("docs arg");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-
 						 ⛅️ wrangler x.x.x
 						──────────────────
+
+						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
 						Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
 					`);
 
@@ -526,10 +576,10 @@ describe("metrics", () => {
 					await runWrangler("docs arg");
 					expect(std.out).toMatchInlineSnapshot(`
 						"
-						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
-
 						 ⛅️ wrangler x.x.x
 						──────────────────
+
+						Cloudflare collects anonymous telemetry about your usage of Wrangler. Learn more at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/telemetry.md
 						Opening a link in your default browser: FAKE_DOCS_URL:{\\"params\\":\\"query=arg&hitsPerPage=1&getRankingInfo=0\\"}"
 					`);
 					expect(requests.count).toBe(2);
@@ -874,4 +924,33 @@ function mockMetricRequest() {
 	);
 
 	return requests;
+}
+
+/**
+ * Finds the posted properties from the log and compare them to expectedProperties.
+ *
+ * @param output The command log
+ * @param expectedProperties The expected properties
+ */
+function expectLogToContainPostedData(
+	output: string,
+	expectedProperties: Record<string, unknown>
+) {
+	const jsonRegexp = /(?<json>{.+})/g;
+
+	// The log contains (possibly multiple times):
+	// - "Metrics dispatcher: Posting data { ... }"
+	// - "\nsearchData: { ... }"
+	// - "\nTypeError: Failed to fetch"
+	//
+	// For the last two "\n" is used as a separator.
+	const foundPropObjects = output
+		.split(/Metrics dispatcher: Posting data|\n/)
+		.map((maybeProperties) => {
+			const match = jsonRegexp.exec(maybeProperties);
+			return match?.groups?.json ? JSON.parse(match.groups.json) : undefined;
+		})
+		.filter((propertiesOrUndefined) => propertiesOrUndefined !== undefined);
+
+	expect(foundPropObjects).toContainEqual(expectedProperties);
 }

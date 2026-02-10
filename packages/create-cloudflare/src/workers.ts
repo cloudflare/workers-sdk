@@ -10,9 +10,9 @@ import { installPackages } from "helpers/packages";
 import * as jsonc from "jsonc-parser";
 import TOML from "smol-toml";
 import {
-	readWranglerJson,
+	readWranglerJsonOrJsonc,
 	readWranglerToml,
-	wranglerJsonExists,
+	wranglerJsonOrJsoncExists,
 	wranglerTomlExists,
 } from "./wrangler/config";
 import type { C3Context, PackageJson } from "types";
@@ -35,7 +35,6 @@ export async function addTypes(ctx: C3Context) {
 /**
  * Generate types using the `cf-typegen` script and update tsconfig
  */
-
 async function generateWorkersTypes(ctx: C3Context, npm: string) {
 	const packageJsonPath = join(ctx.project.path, "package.json");
 	if (!existsSync(packageJsonPath)) {
@@ -63,8 +62,8 @@ async function generateWorkersTypes(ctx: C3Context, npm: string) {
 
 const maybeInstallNodeTypes = async (ctx: C3Context, npm: string) => {
 	let parsedConfig: Record<string, unknown> = {};
-	if (wranglerJsonExists(ctx)) {
-		parsedConfig = readWranglerJson(ctx);
+	if (wranglerJsonOrJsoncExists(ctx)) {
+		parsedConfig = readWranglerJsonOrJsonc(ctx);
 	} else if (wranglerTomlExists(ctx)) {
 		const wranglerTomlStr = readWranglerToml(ctx);
 		parsedConfig = TOML.parse(wranglerTomlStr);
@@ -106,27 +105,33 @@ export async function updateTsConfig(
 	const tsconfig = readFile(tsconfigPath);
 	try {
 		const config = jsonc.parse(tsconfig);
-		const currentTypes = config.compilerOptions?.types ?? [];
-		let newTypes: string[] = [...currentTypes];
+
+		// Skip if tsconfig uses project references
+		// Types should be defined in child tsconfigs (e.g., tsconfig.worker.json)
+		if (hasProjectReferences(config)) {
+			return;
+		}
+
+		const currentTypes: string[] = config.compilerOptions?.types ?? [];
+		let newTypes = new Set(currentTypes);
 		if (ctx.template.workersTypes === "installed") {
 			const entrypointVersion = getLatestTypesEntrypoint(ctx);
 			if (entrypointVersion === null) {
 				return;
 			}
 			const typesEntrypoint = `@cloudflare/workers-types/${entrypointVersion}`;
-			const explicitEntrypoint = (currentTypes as string[]).some((t) =>
+			const explicitEntrypoint = currentTypes.some((t) =>
 				t.match(/@cloudflare\/workers-types\/\d{4}-\d{2}-\d{2}/),
 			);
 			// If a type declaration with an explicit entrypoint exists, leave the types as is.
 			// Otherwise, add the latest entrypoint
 			if (!explicitEntrypoint) {
-				newTypes = newTypes.filter(
-					(t: string) => t !== "@cloudflare/workers-types",
-				);
-				newTypes.push(typesEntrypoint);
+				newTypes.delete("@cloudflare/workers-types");
+				newTypes.add(typesEntrypoint);
 			}
 		} else if (ctx.template.workersTypes === "generated") {
-			newTypes.push(ctx.template.typesPath ?? "./worker-configuration.d.ts");
+			newTypes.add(ctx.template.typesPath ?? "./worker-configuration.d.ts");
+
 			// if generated types include runtime types, remove @cloudflare/workers-types
 			const typegen = readFile(
 				ctx.template.typesPath ?? "./worker-configuration.d.ts",
@@ -136,17 +141,16 @@ export async function updateTsConfig(
 					line.includes("// Runtime types generated with workerd"),
 				)
 			) {
-				newTypes = newTypes.filter(
-					(t: string) => !t.startsWith("@cloudflare/workers-types"),
+				newTypes = new Set(
+					[...newTypes].filter(
+						(type) => !type.startsWith("@cloudflare/workers-types"),
+					),
 				);
 			}
 		}
 		// add node types if nodejs_compat is enabled
 		if (usesNodeCompat) {
-			newTypes.push("node");
-		}
-		if (newTypes.sort() === currentTypes.sort()) {
-			return;
+			newTypes.add("node");
 		}
 
 		// If we detect any tabs, use tabs, otherwise use spaces.
@@ -157,7 +161,7 @@ export async function updateTsConfig(
 		const edits = jsonc.modify(
 			tsconfig,
 			["compilerOptions", "types"],
-			newTypes,
+			[...newTypes].sort(),
 			{
 				formattingOptions: { insertSpaces: useSpaces },
 			},
@@ -167,6 +171,16 @@ export async function updateTsConfig(
 	} catch {
 		warn("Failed to update `tsconfig.json`.");
 	}
+}
+
+function hasProjectReferences(config: unknown): boolean {
+	if (typeof config !== "object" || config === null) {
+		return false;
+	}
+
+	const tsconfig = config as Record<string, unknown>;
+
+	return Array.isArray(tsconfig.references) && tsconfig.references.length > 0;
 }
 
 /**

@@ -1,6 +1,9 @@
 import { writeFileSync } from "node:fs";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs } from "../helpers/mock-dialogs";
@@ -9,7 +12,6 @@ import { mockProcess } from "../helpers/mock-process";
 import { createFetchResult, msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import { wranglerKVConfig } from "./constant";
 import type { KeyValue, NamespaceKeyInfo } from "../../kv/helpers";
 
@@ -1117,8 +1119,8 @@ describe("kv", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`one\`: \`1\`
-						  \`two\`: \`2\`]
+						  \`(redacted)\`: \`1\`
+						  \`(redacted)\`: \`2\`]
 					`);
 				});
 
@@ -1134,8 +1136,8 @@ describe("kv", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`one\`: \`1\`
-						  \`two\`: \`2\`]
+						  \`(redacted)\`: \`1\`
+						  \`(redacted)\`: \`2\`]
 					`);
 				});
 
@@ -1177,8 +1179,8 @@ describe("kv", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`one\`: \`1\`
-						  \`two\`: \`2\`]
+						  \`(redacted)\`: \`1\`
+						  \`(redacted)\`: \`2\`]
 					`);
 				});
 			});

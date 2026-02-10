@@ -17,8 +17,10 @@ import { requireAuth } from "./user";
 import { createBatches } from "./utils/create-batches";
 import { downloadWorkerConfig } from "./utils/download-worker-config";
 import * as shellquote from "./utils/shell-quote";
+import { isWorkerNotFoundError } from "./utils/worker-not-found-error";
 import type { PackageManager } from "./package-manager";
 import type { ServiceMetadataRes } from "@cloudflare/workers-utils";
+import type { ExecaError } from "execa";
 import type { ReadableStream } from "node:stream/web";
 
 export const init = createCommand({
@@ -26,6 +28,7 @@ export const init = createCommand({
 		description: "📥 Initialize a basic Worker",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
+		category: "Compute & AI",
 	},
 	args: {
 		name: {
@@ -62,8 +65,9 @@ export const init = createCommand({
 
 		const name = args.fromDash ?? args.name;
 
+		const c3CommandParts = shellquote.parse(getC3CommandFromEnv());
 		const c3Arguments = [
-			...shellquote.parse(getC3CommandFromEnv()),
+			...c3CommandParts,
 			...(name ? [name] : []),
 			...(yesFlag && isNpm(packageManager) ? ["-y"] : []), // --yes arg for npx
 			...(isNpm(packageManager) ? ["--"] : []),
@@ -83,7 +87,7 @@ export const init = createCommand({
 					`/accounts/${accountId}/workers/services/${args.fromDash}`
 				);
 			} catch (err) {
-				if ((err as { code?: number }).code === 10090) {
+				if (isWorkerNotFoundError(err)) {
 					throw new UserError(
 						"wrangler couldn't find a Worker with that name in your account.\nRun `wrangler whoami` to confirm you're logged into the correct account.",
 						{
@@ -131,12 +135,28 @@ export const init = createCommand({
 
 			// if telemetry is disabled in wrangler, prevent c3 from sending metrics too
 			const metricsConfig = readMetricsConfig();
-			await execa(packageManager.type, c3Arguments, {
-				stdio: "inherit",
-				...(metricsConfig.permission?.enabled === false && {
-					env: { CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1" },
-				}),
-			});
+			try {
+				const childProcess = execa(packageManager.type, c3Arguments, {
+					// Note: we need to pipe stdout and stderr otherwise execa won't include
+					//       those in the command's result/error, but we want it to so that we
+					//       can include those in the error Sentry receives
+					stdio: ["inherit", "pipe", "pipe"],
+					...(metricsConfig.permission?.enabled === false && {
+						env: { CREATE_CLOUDFLARE_TELEMETRY_DISABLED: "1" },
+					}),
+				});
+				childProcess.stdout?.pipe(process.stdout);
+				childProcess.stderr?.pipe(process.stderr);
+				await childProcess;
+			} catch (e: unknown) {
+				const execaError = e as ExecaError;
+				throw new Error(execaError.shortMessage, {
+					// We include the execaError as the cause, in this way this
+					// will be reflected in Sentry allowing us to better monitor
+					// C3 errors
+					cause: execaError,
+				});
+			}
 		}
 	},
 });

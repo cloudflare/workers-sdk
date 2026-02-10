@@ -122,12 +122,12 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 								oldExportTypes,
 								`Expected export types for Worker "${workerConfig.name}" to be defined`
 							);
-							const hasChanged = compareExportTypes(
+							const exportTypeHasChanged = compareExportTypes(
 								oldExportTypes,
 								newExportTypes
 							);
 
-							if (hasChanged) {
+							if (exportTypeHasChanged) {
 								viteDevServer.config.logger.info(
 									colors.dim(
 										colors.yellow(
@@ -166,13 +166,16 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 					const includeRulesMatcher = generateStaticRoutingRuleMatcher(
 						staticRouting.user_worker
 					);
-					const userWorkerHandler = createRequestHandler(async (request) => {
-						request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
+					const userWorkerHandler = createRequestHandler(
+						ctx,
+						async (request) => {
+							request.headers.set(CoreHeaders.ROUTE_OVERRIDE, entryWorkerName);
 
-						return ctx.miniflare.dispatchFetch(request, {
-							redirect: "manual",
-						});
-					});
+							return ctx.miniflare.dispatchFetch(request, {
+								redirect: "manual",
+							});
+						}
+					);
 
 					preMiddleware = async (req, res, next) => {
 						assert(req.url, `req.url not defined`);
@@ -185,7 +188,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 							req[kRequestType] = "asset";
 							next();
 						} else if (includeRulesMatcher({ request })) {
-							userWorkerHandler(req, res, next);
+							void userWorkerHandler(req, res, next);
 						} else {
 							next();
 						}
@@ -265,7 +268,7 @@ export const devPlugin = createPlugin("dev", (ctx) => {
 
 				// post middleware
 				viteDevServer.middlewares.use(
-					createRequestHandler(async (request, req) => {
+					createRequestHandler(ctx, async (request, req) => {
 						if (req[kRequestType] === "asset") {
 							request.headers.set(
 								CoreHeaders.ROUTE_OVERRIDE,

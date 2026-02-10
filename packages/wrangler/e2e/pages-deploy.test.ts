@@ -1,5 +1,5 @@
 import dedent from "ts-dedent";
-import { describe, test } from "vitest";
+import { describe, expect, test } from "vitest";
 import { CLOUDFLARE_ACCOUNT_ID } from "./helpers/account-id";
 import { WranglerE2ETestHelper } from "./helpers/e2e-wrangler-test";
 import { generateResourceName } from "./helpers/generate-resource-name";
@@ -8,7 +8,7 @@ describe.skipIf(!CLOUDFLARE_ACCOUNT_ID)("pages deploy", () => {
 	const helper = new WranglerE2ETestHelper();
 	const projectName = generateResourceName("pages");
 
-	test("deploy pages", async ({ expect }) => {
+	test("deploy pages", async () => {
 		await helper.seed({
 			"wrangler.toml": dedent`
 				name = "${projectName}"

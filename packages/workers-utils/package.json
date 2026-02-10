@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/workers-utils",
-	"version": "0.4.0",
+	"version": "0.9.1",
 	"description": "Utility package for common Worker operations",
 	"homepage": "https://github.com/cloudflare/workers-sdk#readme",
 	"bugs": {
@@ -29,7 +29,7 @@
 	],
 	"scripts": {
 		"build": "tsup",
-		"check:lint": "eslint . --max-warnings=0",
+		"check:lint": "eslint . --max-warnings=0 --cache",
 		"check:type": "tsc -p ./tsconfig.json",
 		"dev": "concurrently -c black,blue --kill-others-on-fail false \"pnpm tsup --watch src\" \"pnpm run check:type --watch --preserveWatchOutput\"",
 		"test": "vitest",
@@ -37,7 +37,6 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
-		"@cloudflare/containers-shared": "workspace:*",
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
@@ -48,7 +47,7 @@
 		"concurrently": "^8.2.2",
 		"eslint": "catalog:default",
 		"find-up": "^6.3.0",
-		"jsonc-parser": "^3.2.0",
+		"jsonc-parser": "catalog:default",
 		"smol-toml": "catalog:default",
 		"ts-dedent": "^2.2.0",
 		"tsdown": "^0.15.9",

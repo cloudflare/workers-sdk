@@ -35,7 +35,7 @@ export default class ViteProxyWorker extends WorkerEntrypoint<Env> {
 
 const serializedDate = "___serialized_date___";
 
-function tailEventsReplacer(_: string, value: any) {
+function tailEventsReplacer(_: string, value: unknown) {
 	// The tail events might contain Date objects which will not be restored directly
 	if (value instanceof Date) {
 		return { [serializedDate]: value.toISOString() };
@@ -43,9 +43,14 @@ function tailEventsReplacer(_: string, value: any) {
 	return value;
 }
 
-function tailEventsReviver(_: string, value: any) {
+function tailEventsReviver(_: string, value: unknown) {
 	// To restore Date objects from the serialized events
-	if (value && typeof value === "object" && serializedDate in value) {
+	if (
+		value &&
+		typeof value === "object" &&
+		serializedDate in value &&
+		typeof value[serializedDate] === "string"
+	) {
 		return new Date(value[serializedDate]);
 	}
 

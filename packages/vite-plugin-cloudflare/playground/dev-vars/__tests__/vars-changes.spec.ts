@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { expect, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import {
 	getJsonResponse,
 	isBuild,
@@ -9,7 +9,7 @@ import {
 
 test.runIf(!isBuild)(
 	"successfully updates when a var is updated in a .dev.vars file",
-	async () => {
+	async ({ expect }) => {
 		await vi.waitFor(
 			async () =>
 				expect(await getJsonResponse()).toEqual({

@@ -106,6 +106,33 @@ export class CFS
 
 	private readRoot: ((value: [string, FileType][]) => void) | null = null;
 
+	/**
+	 *
+	 * Given a path this function returns the path relative to the root folder, this function also handles the case in which the root folder
+	 * is not present in the path, or present in the middle of it.
+	 *
+	 * @example
+	 *  Assuming that the root folder is `my-worker`:
+	 *    - given `/my-worker/worker.js` returns `/worker.js`
+	 *    - given `/workspace/my-worker/worker.js` returns `/worker.js`
+	 *    - given `/workspace/my-worker/sub-dir/my-worker/worker.js` returns `/sub-dir/my-worker/worker.js`
+	 *    - given `/my-worker/my-worker/util.js` returns `/my-worker/util.js`
+	 *
+	 * @param path The target path
+	 * @returns The path relative to the root folder
+	 */
+	private getRootRelativePath(path: string): string {
+		const rootFolderStr = `/${this.rootFolder}/`;
+		const indexOfRoot = path.indexOf(rootFolderStr);
+
+		if (indexOfRoot < 0) {
+			// The root folder is not in the path so let's return the path as is
+			return path;
+		}
+
+		return path.slice(indexOfRoot + rootFolderStr.length);
+	}
+
 	constructor(channel: Channel<FromQuickEditMessage, ToQuickEditMessage>) {
 		this.channel = channel;
 		this.disposable = Disposable.from(
@@ -268,7 +295,7 @@ declare module "*.bin" {
 				this.channel.postMessage({
 					type: "CreateFile",
 					body: {
-						path: uri.path.split(this.rootFolder)[1],
+						path: this.getRootRelativePath(uri.path),
 						contents: content,
 					},
 				});
@@ -285,7 +312,7 @@ declare module "*.bin" {
 			this.channel.postMessage({
 				type: "UpdateFile",
 				body: {
-					path: uri.path.split(this.rootFolder)[1],
+					path: this.getRootRelativePath(uri.path),
 					contents: content,
 				},
 			});
@@ -315,13 +342,13 @@ declare module "*.bin" {
 		this.channel.postMessage({
 			type: "DeleteFile",
 			body: {
-				path: oldUri.path.split(this.rootFolder)[1],
+				path: this.getRootRelativePath(oldUri.path),
 			},
 		});
 		this.channel.postMessage({
 			type: "CreateFile",
 			body: {
-				path: newUri.path.split(this.rootFolder)[1],
+				path: this.getRootRelativePath(newUri.path),
 				contents: await this.readFile(newUri),
 			},
 		});
@@ -353,7 +380,7 @@ declare module "*.bin" {
 		this.channel.postMessage({
 			type: "DeleteFile",
 			body: {
-				path: uri.path.split(this.rootFolder)[1],
+				path: this.getRootRelativePath(uri.path),
 			},
 		});
 		this._fireSoon(

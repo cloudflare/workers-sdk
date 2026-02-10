@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { seed } from "@cloudflare/workers-utils/test-helpers";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- it.each patterns */
 import { afterEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getWorkerNameFromProject } from "../../../autoconfig/details";
 import { runInTempDir } from "../../helpers/run-in-tmp";
 

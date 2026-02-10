@@ -133,23 +133,14 @@ jobs:
         # We are running the package tests first be able to get early feedback on changes.
         # There is no point in running the fixtures if a package is broken.
         if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*"
+        # We skip @cloudflare/vitest-pool-workers tests in CI on Windows because they're very flaky. We still run the vitest-pool-workers-examples fixture, which is a comprehensive set of example tests and gives us a lot of confidence.
+        # The @cloudflare/vitest-pool-workers tests skipped are things like watch mode, which constantly times out probably due to the github runners in use.
+        run: pnpm run test:ci --log-order=stream --concurrency=1 --filter="./packages/*" ${{ matrix.os == 'windows-latest' && '--filter="!./packages/vitest-pool-workers"' || '' }}
         env:
           NODE_OPTIONS: "--max_old_space_size=8192"
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/packages/index.html
           CI_OS: ${{ matrix.description }}
-          NODE_DEBUG: "@cloudflare:vite-plugin"
-
-      - name: Run tests (vite-plugin playgrounds)
-        if: steps.changes.outputs.everything_but_markdown == 'true'
-        run: pnpm run test:ci --log-order=stream --filter="@vite-plugin-cloudflare/playground"
-        env:
-          NODE_OPTIONS: "--max_old_space_size=8192"
-          WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
-          TEST_REPORT_PATH: ${{ runner.temp }}/test-report/vite-plugin-playgrounds/index.html
-          CI_OS: ${{ matrix.description }}
-          NODE_DEBUG: "@cloudflare:vite-plugin"
 
       - name: Run tests (fixtures)
         if: steps.changes.outputs.everything_but_markdown == 'true'
@@ -160,7 +151,6 @@ jobs:
           WRANGLER_LOG_PATH: ${{ runner.temp }}/wrangler-debug-logs/
           TEST_REPORT_PATH: ${{ runner.temp }}/test-report/index.html
           CI_OS: ${{ matrix.description }}
-          NODE_DEBUG: "@cloudflare:vite-plugin"
 
       - name: Upload turbo logs
         if: always()

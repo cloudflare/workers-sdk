@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { existsSync } from "node:fs";
-import path from "node:path";
+import nodePath from "node:path";
 import { brandColor, dim } from "@cloudflare/cli/colors";
 import { fetch } from "undici";
 import { runCommand } from "./command";
@@ -60,7 +60,7 @@ export const installPackages = async (
 		// Npm install will update the package.json with a caret-range rather than the exact version/range we asked for.
 		// We can't use `npm install --save-exact` because that always pins to an exact version, and we want to allow ranges too.
 		// So let's just fix that up now by rewriting the package.json.
-		const pkgJsonPath = path.join(process.cwd(), "package.json");
+		const pkgJsonPath = nodePath.join(process.cwd(), "package.json");
 		const pkgJson = readJSON(pkgJsonPath) as PackageJson;
 		const deps = config.dev ? pkgJson.devDependencies : pkgJson.dependencies;
 		assert(deps, "dependencies should be defined");
@@ -84,7 +84,7 @@ export const installPackages = async (
  */
 export const npmInstall = async (ctx: C3Context) => {
 	// Skip this step if packages have already been installed
-	const nodeModulesPath = path.join(ctx.project.path, "node_modules");
+	const nodeModulesPath = nodePath.join(ctx.project.path, "node_modules");
 	if (existsSync(nodeModulesPath)) {
 		return;
 	}

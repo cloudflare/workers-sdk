@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { logger } from "../../logger";
 import {
 	eventNotificationHeaders,
@@ -12,7 +12,7 @@ import type { ApiCredentials } from "../../user";
 describe("event notifications", () => {
 	const std = mockConsoleMethods();
 
-	test("tableFromNotificationsGetResponse", async () => {
+	test("tableFromNotificationsGetResponse", async ({ expect }) => {
 		const bucketName = "my-bucket";
 		const response: GetNotificationConfigResponse = {
 			bucketName,
@@ -74,7 +74,7 @@ describe("event notifications", () => {
 		event_type:  LifecycleDeletion"
 	`);
 	});
-	test("auth email eventNotificationHeaders", () => {
+	test("auth email eventNotificationHeaders", ({ expect }) => {
 		const creds: ApiCredentials = {
 			authEmail: "test@example.com",
 			authKey: "some-big-secret",
@@ -86,7 +86,7 @@ describe("event notifications", () => {
 		});
 	});
 
-	test("API token eventNotificationHeaders", () => {
+	test("API token eventNotificationHeaders", ({ expect }) => {
 		const creds: ApiCredentials = { apiToken: "some-api-token" };
 		const result = eventNotificationHeaders(creds, "eu");
 		expect(result).toMatchObject({

@@ -1,6 +1,5 @@
 import events from "node:events";
 import { setTimeout } from "node:timers/promises";
-import test from "ava";
 import getPort from "get-port";
 import {
 	fetch,
@@ -8,20 +7,23 @@ import {
 	MiniflareCoreError,
 	MiniflareOptions,
 } from "miniflare";
+import { beforeAll, test, vi } from "vitest";
 import WebSocket from "ws";
-import { waitUntil } from "../../../test-shared";
+import { useDispose } from "../../../test-shared";
 
 const nullScript =
 	'addEventListener("fetch", (event) => event.respondWith(new Response(null, { status: 404 })));';
 
-test.before(() => {
+beforeAll(() => {
 	// the tests in this file don't immediately consume bodies of fetch requests (since they
 	// test the debugging/inspector behavior), so we need to skip the bodies check by
 	// setting process.env.MINIFLARE_ASSERT_BODIES_CONSUMED to undefined
 	process.env.MINIFLARE_ASSERT_BODIES_CONSUMED = undefined;
 });
 
-test("InspectorProxy: /json/version should provide details about the inspector version", async (t) => {
+test("InspectorProxy: /json/version should provide details about the inspector version", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -31,20 +33,22 @@ test("InspectorProxy: /json/version should provide details about the inspector v
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 
 	const res = await fetch(`http://localhost:${port}/json/version`);
-	t.is(res.headers.get("content-type"), "application/json");
+	expect(res.headers.get("content-type")).toBe("application/json");
 
 	const versionDetails = (await res.json()) as Record<string, string>;
 
-	t.regex(versionDetails["Browser"], /^miniflare\/v\d\.\d{8}\.\d+$/);
-	t.regex(versionDetails["Protocol-Version"], /^\d+\.\d+$/);
+	expect(versionDetails["Browser"]).toMatch(/^miniflare\/v\d\.\d{8}\.\d+$/);
+	expect(versionDetails["Protocol-Version"]).toMatch(/^\d+\.\d+$/);
 });
 
-test("InspectorProxy: /json should provide a list of a single worker inspector", async (t) => {
+test("InspectorProxy: /json should provide a list of a single worker inspector", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -54,24 +58,24 @@ test("InspectorProxy: /json should provide a list of a single worker inspector",
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 
 	const res = await fetch(`http://localhost:${port}/json`);
 	const inspectors = (await res.json()) as Record<string, string>[];
 
-	t.is(res.headers.get("content-type"), "application/json");
+	expect(res.headers.get("content-type")).toBe("application/json");
 
-	t.is(inspectors.length, 1);
+	expect(inspectors.length).toBe(1);
 
-	t.is(inspectors[0]["description"], "workers");
-	t.is(inspectors[0]["title"], "Cloudflare Worker");
-	t.is(inspectors[0]["webSocketDebuggerUrl"], `ws://localhost:${port}/`);
+	expect(inspectors[0]["description"]).toBe("workers");
+	expect(inspectors[0]["title"]).toBe("Cloudflare Worker");
+	expect(inspectors[0]["webSocketDebuggerUrl"]).toBe(`ws://localhost:${port}/`);
 });
 
-test("InspectorProxy: proxy port validation", async (t) => {
-	t.throws(
+test("InspectorProxy: proxy port validation", async ({ expect }) => {
+	expect(
 		() =>
 			new Miniflare({
 				workers: [
@@ -80,17 +84,18 @@ test("InspectorProxy: proxy port validation", async (t) => {
 						unsafeInspectorProxy: true,
 					},
 				],
-			}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_MISSING_INSPECTOR_PROXY_PORT",
-			message:
-				"inspector proxy requested but without an inspectorPort specified",
-		}
+			})
+	).toThrow(
+		new MiniflareCoreError(
+			"ERR_MISSING_INSPECTOR_PROXY_PORT",
+			"inspector proxy requested but without an inspectorPort specified"
+		)
 	);
 });
 
-test("InspectorProxy: /json should provide a list of a multiple worker inspector", async (t) => {
+test("InspectorProxy: /json should provide a list of a multiple worker inspector", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -110,35 +115,35 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 
 	const res = await fetch(`http://localhost:${port}/json`);
-	t.is(res.headers.get("content-type"), "application/json");
+	expect(res.headers.get("content-type")).toBe("application/json");
 
 	const inspectors = (await res.json()) as Record<string, string>[];
 
-	t.is(inspectors.length, 3);
+	expect(inspectors.length).toBe(3);
 
-	t.is(inspectors[0]["description"], "workers");
-	t.is(inspectors[0]["title"], "Cloudflare Worker");
-	t.is(inspectors[0]["webSocketDebuggerUrl"], `ws://localhost:${port}/`);
-	t.is(inspectors[1]["description"], "workers");
-	t.is(inspectors[1]["title"], "Cloudflare Worker: extra-worker-a");
-	t.is(
-		inspectors[1]["webSocketDebuggerUrl"],
+	expect(inspectors[0]["description"]).toBe("workers");
+	expect(inspectors[0]["title"]).toBe("Cloudflare Worker");
+	expect(inspectors[0]["webSocketDebuggerUrl"]).toBe(`ws://localhost:${port}/`);
+	expect(inspectors[1]["description"]).toBe("workers");
+	expect(inspectors[1]["title"]).toBe("Cloudflare Worker: extra-worker-a");
+	expect(inspectors[1]["webSocketDebuggerUrl"]).toBe(
 		`ws://localhost:${port}/extra-worker-a`
 	);
-	t.is(inspectors[2]["description"], "workers");
-	t.is(inspectors[2]["title"], "Cloudflare Worker: extra-worker-b");
-	t.is(
-		inspectors[2]["webSocketDebuggerUrl"],
+	expect(inspectors[2]["description"]).toBe("workers");
+	expect(inspectors[2]["title"]).toBe("Cloudflare Worker: extra-worker-b");
+	expect(inspectors[2]["webSocketDebuggerUrl"]).toBe(
 		`ws://localhost:${port}/extra-worker-b`
 	);
 });
 
-test("InspectorProxy: /json should provide a list of a multiple worker inspector with some filtered out", async (t) => {
+test("InspectorProxy: /json should provide a list of a multiple worker inspector with some filtered out", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -157,29 +162,30 @@ test("InspectorProxy: /json should provide a list of a multiple worker inspector
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 
 	const res = await fetch(`http://localhost:${port}/json`);
-	t.is(res.headers.get("content-type"), "application/json");
+	expect(res.headers.get("content-type")).toBe("application/json");
 
 	const inspectors = (await res.json()) as Record<string, string>[];
 
-	t.is(inspectors.length, 2);
+	expect(inspectors.length).toBe(2);
 
-	t.is(inspectors[0]["description"], "workers");
-	t.is(inspectors[0]["title"], "Cloudflare Worker");
-	t.is(inspectors[0]["webSocketDebuggerUrl"], `ws://localhost:${port}/`);
-	t.is(inspectors[1]["description"], "workers");
-	t.is(inspectors[1]["title"], "Cloudflare Worker: extra-worker-b");
-	t.is(
-		inspectors[1]["webSocketDebuggerUrl"],
+	expect(inspectors[0]["description"]).toBe("workers");
+	expect(inspectors[0]["title"]).toBe("Cloudflare Worker");
+	expect(inspectors[0]["webSocketDebuggerUrl"]).toBe(`ws://localhost:${port}/`);
+	expect(inspectors[1]["description"]).toBe("workers");
+	expect(inspectors[1]["title"]).toBe("Cloudflare Worker: extra-worker-b");
+	expect(inspectors[1]["webSocketDebuggerUrl"]).toBe(
 		`ws://localhost:${port}/extra-worker-b`
 	);
 });
 
-test("InspectorProxy: should allow inspector port updating via miniflare#setOptions", async (t) => {
+test("InspectorProxy: should allow inspector port updating via miniflare#setOptions", async ({
+	expect,
+}) => {
 	const initialInspectorPort = await getPort();
 	const options: MiniflareOptions = {
 		workers: [
@@ -190,37 +196,49 @@ test("InspectorProxy: should allow inspector port updating via miniflare#setOpti
 		],
 	};
 	const mf = new Miniflare({ ...options, inspectorPort: initialInspectorPort });
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
-	t.is(await getInspectorPortReady(mf), initialInspectorPort);
+	expect(await getInspectorPortReady(mf)).toBe(initialInspectorPort);
 
 	let res = await fetch(
 		`http://localhost:${initialInspectorPort}/json/version`
 	);
-	t.is(res.status, 200);
+	expect(res.status).toBe(200);
 
 	const newInspectorPort = await getPort();
 	await mf.setOptions({ ...options, inspectorPort: newInspectorPort });
 
-	t.not(initialInspectorPort, newInspectorPort);
+	expect(initialInspectorPort).not.toBe(newInspectorPort);
 
-	t.is(await getInspectorPortReady(mf), newInspectorPort);
+	expect(await getInspectorPortReady(mf)).toBe(newInspectorPort);
 
 	res = await fetch(`http://localhost:${newInspectorPort}/json/version`);
-	t.is(res.status, 200);
+	expect(res.status).toBe(200);
 
-	await waitUntil(t, async (t) => {
-		try {
-			await fetch(`http://localhost:${initialInspectorPort}/json/version`);
-		} catch {
-			t.pass("Old inspector port no longer responding");
-			return;
-		}
-		t.fail("Old inspector port still responding");
-	});
+	await vi.waitFor(
+		async () => {
+			try {
+				await fetch(`http://localhost:${initialInspectorPort}/json/version`);
+				// Old inspector port still responding
+				throw new Error("Old inspector port still responding");
+			} catch (e) {
+				// If it's our error, rethrow it
+				if (
+					e instanceof Error &&
+					e.message === "Old inspector port still responding"
+				) {
+					throw e;
+				}
+				// Otherwise, the port is no longer responding (which is what we want)
+			}
+		},
+		{ timeout: 10_000, interval: 100 }
+	);
 });
 
-test("InspectorProxy: should keep the same inspector port on miniflare#setOptions calls with inspectorPort set to 0", async (t) => {
+test("InspectorProxy: should keep the same inspector port on miniflare#setOptions calls with inspectorPort set to 0", async ({
+	expect,
+}) => {
 	const options: MiniflareOptions = {
 		inspectorPort: 0,
 		workers: [
@@ -231,7 +249,7 @@ test("InspectorProxy: should keep the same inspector port on miniflare#setOption
 		],
 	};
 	const mf = new Miniflare(options);
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const oldPort = await getInspectorPortReady(mf);
 
@@ -239,10 +257,12 @@ test("InspectorProxy: should keep the same inspector port on miniflare#setOption
 
 	const newPort = await getInspectorPortReady(mf);
 
-	t.is(oldPort, newPort);
+	expect(oldPort).toBe(newPort);
 });
 
-test("InspectorProxy: should not keep the same inspector port on miniflare#setOptions calls changing inspectorPort to 0", async (t) => {
+test("InspectorProxy: should not keep the same inspector port on miniflare#setOptions calls changing inspectorPort to 0", async ({
+	expect,
+}) => {
 	const initialInspectorPort = await getPort();
 	const options: MiniflareOptions = {
 		inspectorPort: initialInspectorPort,
@@ -254,24 +274,26 @@ test("InspectorProxy: should not keep the same inspector port on miniflare#setOp
 		],
 	};
 	const mf = new Miniflare(options);
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
-	t.is(await getInspectorPortReady(mf), initialInspectorPort);
+	expect(await getInspectorPortReady(mf)).toBe(initialInspectorPort);
 
 	await mf.setOptions({ ...options, inspectorPort: 0 });
 	const newInspectorPort = await getInspectorPortReady(mf);
 
-	t.not(initialInspectorPort, newInspectorPort);
+	expect(initialInspectorPort).not.toBe(newInspectorPort);
 
 	const res = await fetch(`http://localhost:${newInspectorPort}/json/version`);
-	t.is(res.status, 200);
+	expect(res.status).toBe(200);
 
-	await t.throwsAsync(
+	await expect(
 		fetch(`http://localhost:${initialInspectorPort}/json/version`)
-	);
+	).rejects.toThrow();
 });
 
-test("InspectorProxy: should allow debugging a single worker", async (t) => {
+test("InspectorProxy: should allow debugging a single worker", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -289,7 +311,7 @@ test("InspectorProxy: should allow debugging a single worker", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 
@@ -305,28 +327,30 @@ test("InspectorProxy: should allow debugging a single worker", async (t) => {
 
 	ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
 
-	t.like(await nextMessage(), {
+	expect(await nextMessage()).toMatchObject({
 		method: "Debugger.scriptParsed",
 	});
 
-	t.like(await nextMessage(), { id: 0 });
+	expect(await nextMessage()).toMatchObject({ id: 0 });
 
 	// Send request and hit `debugger;` statement
 	const resPromise = mf.dispatchFetch("http://localhost");
-	t.like(await nextMessage(), { method: "Debugger.paused" });
+	expect(await nextMessage()).toMatchObject({ method: "Debugger.paused" });
 
 	// Resume execution
 	ws.send(JSON.stringify({ id: 1, method: "Debugger.resume" }));
 
-	t.like(await nextMessage(), { id: 1 });
+	expect(await nextMessage()).toMatchObject({ id: 1 });
 
-	t.like(await nextMessage(), { method: "Debugger.resumed" });
+	expect(await nextMessage()).toMatchObject({ method: "Debugger.resumed" });
 
 	const res = await resPromise;
-	t.is(await res.text(), "body");
+	expect(await res.text()).toBe("body");
 });
 
-test("InspectorProxy: the devtools websocket communication should adapt to an inspector port changes in a miniflare#setOptions calls", async (t) => {
+test("InspectorProxy: the devtools websocket communication should adapt to an inspector port changes in a miniflare#setOptions calls", async ({
+	expect,
+}) => {
 	const options: MiniflareOptions = {
 		workers: [
 			{
@@ -344,7 +368,7 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 		],
 	};
 	const mf = new Miniflare({ ...options, inspectorPort: await getPort() });
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const testDebuggingWorkerOn = async (port: number) => {
 		// Connect inspector WebSocket
@@ -359,25 +383,25 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 
 		ws.send(JSON.stringify({ id: 0, method: "Debugger.enable" }));
 
-		t.like(await nextMessage(), {
+		expect(await nextMessage()).toMatchObject({
 			method: "Debugger.scriptParsed",
 		});
 
-		t.like(await nextMessage(), { id: 0 });
+		expect(await nextMessage()).toMatchObject({ id: 0 });
 
 		// Send request and hit `debugger;` statement
 		const resPromise = mf.dispatchFetch("http://localhost");
-		t.like(await nextMessage(), { method: "Debugger.paused" });
+		expect(await nextMessage()).toMatchObject({ method: "Debugger.paused" });
 
 		// Resume execution
 		ws.send(JSON.stringify({ id: 1, method: "Debugger.resume" }));
 
-		t.like(await nextMessage(), { id: 1 });
+		expect(await nextMessage()).toMatchObject({ id: 1 });
 
-		t.like(await nextMessage(), { method: "Debugger.resumed" });
+		expect(await nextMessage()).toMatchObject({ method: "Debugger.resumed" });
 
 		const res = await resPromise;
-		t.is(await res.text(), "body");
+		expect(await res.text()).toBe("body");
 
 		ws.close();
 	};
@@ -386,16 +410,18 @@ test("InspectorProxy: the devtools websocket communication should adapt to an in
 
 	await testDebuggingWorkerOn(initialInspectorPort);
 
-	mf.setOptions({ ...options, inspectorPort: await getPort() });
+	await mf.setOptions({ ...options, inspectorPort: await getPort() });
 
 	const newInspectorPort = await getInspectorPortReady(mf);
 
-	t.not(initialInspectorPort, newInspectorPort);
+	expect(initialInspectorPort).not.toBe(newInspectorPort);
 
 	await testDebuggingWorkerOn(newInspectorPort);
 });
 
-test("InspectorProxy: should allow debugging multiple workers", async (t) => {
+test("InspectorProxy: should allow debugging multiple workers", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -432,7 +458,7 @@ test("InspectorProxy: should allow debugging multiple workers", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 
@@ -463,11 +489,11 @@ test("InspectorProxy: should allow debugging multiple workers", async (t) => {
 	);
 
 	const waitForScriptParsed = async (worker: Worker) => {
-		t.like(await nextMessage(worker), {
+		expect(await nextMessage(worker)).toMatchObject({
 			method: "Debugger.scriptParsed",
 		});
 
-		t.like(await nextMessage(worker), { id: 0 });
+		expect(await nextMessage(worker)).toMatchObject({ id: 0 });
 	};
 
 	await waitForScriptParsed("worker-a");
@@ -475,19 +501,25 @@ test("InspectorProxy: should allow debugging multiple workers", async (t) => {
 
 	// Send request and hit `debugger;` statements
 	const resPromise = mf.dispatchFetch("http://localhost");
-	t.like(await nextMessage("worker-a"), { method: "Debugger.paused" });
+	expect(await nextMessage("worker-a")).toMatchObject({
+		method: "Debugger.paused",
+	});
 
 	const resumeWorker = async (worker: Worker) => {
 		const id = Math.floor(Math.random() * 50_000);
 		webSockets[worker].send(JSON.stringify({ id, method: "Debugger.resume" }));
-		t.like(await nextMessage(worker), { id });
-		t.like(await nextMessage(worker), { method: "Debugger.resumed" });
+		expect(await nextMessage(worker)).toMatchObject({ id });
+		expect(await nextMessage(worker)).toMatchObject({
+			method: "Debugger.resumed",
+		});
 	};
 
 	// Resume execution (first worker-a debugger)
 	await resumeWorker("worker-a");
 
-	t.like(await nextMessage("worker-b"), { method: "Debugger.paused" });
+	expect(await nextMessage("worker-b")).toMatchObject({
+		method: "Debugger.paused",
+	});
 
 	// Resume execution (worker-b debugger)
 	await resumeWorker("worker-b");
@@ -505,7 +537,7 @@ test("InspectorProxy: should allow debugging multiple workers", async (t) => {
 			continue;
 		}
 
-		t.like(nextMessageWorkerA, { method: "Debugger.paused" });
+		expect(nextMessageWorkerA).toMatchObject({ method: "Debugger.paused" });
 		break;
 	}
 
@@ -513,10 +545,12 @@ test("InspectorProxy: should allow debugging multiple workers", async (t) => {
 	await resumeWorker("worker-a");
 
 	const res = await resPromise;
-	t.is(await res.text(), "worker-a -> worker-b");
+	expect(await res.text()).toBe("worker-a -> worker-b");
 });
 
-test("InspectorProxy: should allow debugging workers created via setOptions", async (t) => {
+test("InspectorProxy: should allow debugging workers created via setOptions", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		inspectorPort: 0,
 		workers: [
@@ -535,7 +569,7 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	await mf.ready;
 
@@ -605,11 +639,11 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 	);
 
 	const waitForScriptParsed = async (worker: Worker) => {
-		t.like(await nextMessage(worker), {
+		expect(await nextMessage(worker)).toMatchObject({
 			method: "Debugger.scriptParsed",
 		});
 
-		t.like(await nextMessage(worker), { id: 0 });
+		expect(await nextMessage(worker)).toMatchObject({ id: 0 });
 	};
 
 	await waitForScriptParsed("worker-a");
@@ -617,19 +651,25 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 
 	// Send request and hit `debugger;` statements
 	const resPromise = mf.dispatchFetch("http://localhost");
-	t.like(await nextMessage("worker-a"), { method: "Debugger.paused" });
+	expect(await nextMessage("worker-a")).toMatchObject({
+		method: "Debugger.paused",
+	});
 
 	const resumeWorker = async (worker: Worker) => {
 		const id = Math.floor(Math.random() * 50_000);
 		webSockets[worker].send(JSON.stringify({ id, method: "Debugger.resume" }));
-		t.like(await nextMessage(worker), { id });
-		t.like(await nextMessage(worker), { method: "Debugger.resumed" });
+		expect(await nextMessage(worker)).toMatchObject({ id });
+		expect(await nextMessage(worker)).toMatchObject({
+			method: "Debugger.resumed",
+		});
 	};
 
 	// Resume execution (first worker-a debugger)
 	await resumeWorker("worker-a");
 
-	t.like(await nextMessage("worker-b"), { method: "Debugger.paused" });
+	expect(await nextMessage("worker-b")).toMatchObject({
+		method: "Debugger.paused",
+	});
 
 	// Resume execution (worker-b debugger)
 	await resumeWorker("worker-b");
@@ -647,7 +687,7 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 			continue;
 		}
 
-		t.like(nextMessageWorkerA, { method: "Debugger.paused" });
+		expect(nextMessageWorkerA).toMatchObject({ method: "Debugger.paused" });
 		break;
 	}
 
@@ -655,7 +695,7 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 	await resumeWorker("worker-a");
 
 	const res = await resPromise;
-	t.is(await res.text(), "worker-a -> worker-b");
+	expect(await res.text()).toBe("worker-a -> worker-b");
 });
 
 // The runtime inspector can send messages larger than 1MB limit websocket message permitted by UserWorkers.
@@ -665,7 +705,7 @@ test("InspectorProxy: should allow debugging workers created via setOptions", as
 // through the InspectorProxy, we need to make sure that such proxying does not hit the limit.
 // By logging a large string we can verify that the inspector messages are being proxied successfully.
 // (This issue was encountered with the wrangler inspector proxy worker: https://github.com/cloudflare/workers-sdk/issues/5297)
-test("InspectorProxy: can proxy messages > 1MB", async (t) => {
+test("InspectorProxy: can proxy messages > 1MB", async ({ expect }) => {
 	const LARGE_STRING = "This is a large string => " + "z".repeat(2 ** 20);
 
 	const mf = new Miniflare({
@@ -691,7 +731,7 @@ test("InspectorProxy: can proxy messages > 1MB", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const port = await getInspectorPortReady(mf);
 
@@ -707,19 +747,19 @@ test("InspectorProxy: can proxy messages > 1MB", async (t) => {
 
 	ws.send(JSON.stringify({ id: 0, method: "Runtime.enable" }));
 
-	t.like(await nextMessage(), {
+	expect(await nextMessage()).toMatchObject({
 		method: "Runtime.executionContextCreated",
 	});
 
-	t.like(await nextMessage(), { id: 0 });
+	expect(await nextMessage()).toMatchObject({ id: 0 });
 
 	ws.send(JSON.stringify({ id: 1, method: "Debugger.enable" }));
 
-	t.like(await nextMessage(), {
+	expect(await nextMessage()).toMatchObject({
 		method: "Debugger.scriptParsed",
 	});
 
-	t.like(await nextMessage(), { id: 1 });
+	expect(await nextMessage()).toMatchObject({ id: 1 });
 
 	// Send request had check that the large string gets logged
 	const resPromise = mf.dispatchFetch("http://localhost");
@@ -732,14 +772,14 @@ test("InspectorProxy: can proxy messages > 1MB", async (t) => {
 		};
 	} = await nextMessage();
 
-	t.is(msg.method, "Runtime.consoleAPICalled");
-	t.is(msg.params.type, "log");
-	t.is(msg.params.args.length, 1);
-	t.is(msg.params.args[0].type, "string");
-	t.is(msg.params.args[0].value, LARGE_STRING);
+	expect(msg.method).toBe("Runtime.consoleAPICalled");
+	expect(msg.params.type).toBe("log");
+	expect(msg.params.args.length).toBe(1);
+	expect(msg.params.args[0].type).toBe("string");
+	expect(msg.params.args[0].value).toBe(LARGE_STRING);
 
 	const res = await resPromise;
-	t.is(await res.text(), `body:${LARGE_STRING}`);
+	expect(await res.text()).toBe(`body:${LARGE_STRING}`);
 });
 
 async function getInspectorPortReady(mf: Miniflare) {

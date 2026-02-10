@@ -1,15 +1,45 @@
+/**
+ * This file contains:
+ *
+ * - The main entrypoint for the CLI, which calls `main()` from `index.ts`.
+ * - The exports for the public API of the package.
+ */
+
 import "cloudflare/shims/web";
 import process from "node:process";
 import { FatalError } from "@cloudflare/workers-utils";
 import { hideBin } from "yargs/helpers";
 import {
+	convertConfigBindingsToStartWorkerBindings,
+	DevEnv,
+	getPlatformProxy,
+	maybeStartOrUpdateRemoteProxySession,
+	startRemoteProxySession,
+	startWorker,
 	unstable_dev,
-	DevEnv as unstable_DevEnv,
+	unstable_getDevCompatibilityDate,
+	unstable_getDurableObjectClassNameToUseSQLiteMap,
+	unstable_getMiniflareWorkerOptions,
+	unstable_getVarsForDev,
+	unstable_getWorkerNameFromProject,
 	unstable_pages,
-	startWorker as unstable_startWorker,
+	unstable_readConfig,
 } from "./api";
-import { main } from ".";
-import type { Unstable_DevOptions, Unstable_DevWorker } from "./api";
+import { main } from "./index";
+import type {
+	Binding,
+	GetPlatformProxyOptions,
+	PlatformProxy,
+	RemoteProxySession,
+	SourcelessWorkerOptions,
+	StartRemoteProxySessionOptions,
+	Unstable_Config,
+	Unstable_DevOptions,
+	Unstable_DevWorker,
+	Unstable_MiniflareWorkerOptions,
+	Unstable_RawConfig,
+	Unstable_RawEnvironment,
+} from "./api";
 import type { Logger } from "./logger";
 import type { Request, Response } from "miniflare";
 
@@ -28,17 +58,39 @@ if (typeof vitest === "undefined" && require.main === module) {
 }
 
 /**
- * This is how we're exporting the API.
- * It makes it possible to import wrangler from 'wrangler',
- * and call wrangler.unstable_dev().
+ * Public API.
  */
-export { unstable_dev, unstable_pages, unstable_DevEnv, unstable_startWorker };
-export type { Unstable_DevWorker, Unstable_DevOptions };
 
-export * from "./api/integrations";
+export {
+	unstable_dev,
+	unstable_pages,
+	DevEnv as unstable_DevEnv,
+	startWorker as unstable_startWorker,
+	unstable_getVarsForDev,
+	unstable_readConfig,
+	unstable_getDurableObjectClassNameToUseSQLiteMap,
+	unstable_getDevCompatibilityDate,
+	unstable_getWorkerNameFromProject,
+	getPlatformProxy,
+	unstable_getMiniflareWorkerOptions,
+};
+
+export type {
+	Unstable_DevWorker,
+	Unstable_DevOptions,
+	Unstable_Config,
+	Unstable_RawConfig,
+	Unstable_RawEnvironment,
+	GetPlatformProxyOptions,
+	PlatformProxy,
+	SourcelessWorkerOptions,
+	Unstable_MiniflareWorkerOptions,
+};
+
+export { printBindings as unstable_printBindings } from "./utils/print-bindings";
 
 // Export internal APIs required by the Vitest integration as `unstable_`
-export { default as unstable_splitSqlQuery } from "./d1/splitter";
+export { splitSqlQuery as unstable_splitSqlQuery } from "./d1/splitter";
 
 // `miniflare-cli/assets` dynamically imports`@cloudflare/pages-shared/environment-polyfills`.
 // `@cloudflare/pages-shared/environment-polyfills/types.ts` defines `global`
@@ -52,28 +104,29 @@ export interface Unstable_ASSETSBindingsOptions {
 	proxyPort?: number;
 	directory?: string;
 }
-const generateASSETSBinding: (
+export const unstable_generateASSETSBinding: (
 	opts: Unstable_ASSETSBindingsOptions
 ) => (request: Request) => Promise<Response> =
 	// eslint-disable-next-line @typescript-eslint/no-require-imports
 	require("./miniflare-cli/assets").default;
-export { generateASSETSBinding as unstable_generateASSETSBinding };
 
 export {
 	defaultWranglerConfig as unstable_defaultWranglerConfig,
 	experimental_readRawConfig,
 	type ConfigBindingOptions as Experimental_ConfigBindingOptions,
 } from "@cloudflare/workers-utils";
+
+// TODO: consider if we want to keep exporting `experimental_patchConfig` from wrangler.
+//       wouldn't it be better for consumers to depend and use it directly from
+//       @cloudflare/workers-utils instead?
 export { experimental_patchConfig } from "@cloudflare/workers-utils";
 
 export {
 	startRemoteProxySession,
-	type StartRemoteProxySessionOptions,
 	maybeStartOrUpdateRemoteProxySession,
-	type Binding,
-	type RemoteProxySession,
 	convertConfigBindingsToStartWorkerBindings as unstable_convertConfigBindingsToStartWorkerBindings,
-} from "./api";
+};
+export type { StartRemoteProxySessionOptions, Binding, RemoteProxySession };
 
 export { getDetailsForAutoConfig as experimental_getDetailsForAutoConfig } from "./autoconfig/details";
 export { runAutoConfig as experimental_runAutoConfig } from "./autoconfig/run";

@@ -10,24 +10,22 @@ import {
 	findWranglerConfig,
 	ParseError,
 } from "@cloudflare/workers-utils";
-import { normalizeString } from "@cloudflare/workers-utils/test-helpers";
+import {
+	normalizeString,
+	writeRedirectedWranglerConfig,
+	writeWranglerConfig,
+} from "@cloudflare/workers-utils/test-helpers";
 import { sync } from "command-exists";
 import * as esbuild from "esbuild";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
 import dedent from "ts-dedent";
-import {
-	afterEach,
-	assert,
-	beforeEach,
-	describe,
-	expect,
-	it,
-	test,
-	vi,
-} from "vitest";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file with .each and custom matchers */
+import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { Static } from "../autoconfig/frameworks/static";
+import { getInstalledPackageVersion } from "../autoconfig/frameworks/utils/packages";
 import { runAutoConfig } from "../autoconfig/run";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
 import { clearOutputFilePath } from "../output";
@@ -79,10 +77,6 @@ import { mswListNewDeploymentsLatestFull } from "./helpers/msw/handlers/versions
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
 import { writeWorkerSource } from "./helpers/write-worker-source";
-import {
-	writeRedirectedWranglerConfig,
-	writeWranglerConfig,
-} from "./helpers/write-wrangler-config";
 import type { AssetManifest } from "../assets";
 import type { CustomDomain, CustomDomainChangeset } from "../deploy/deploy";
 import type { OutputEntry } from "../output";
@@ -93,7 +87,7 @@ import type {
 	WorkerMetadataBinding,
 } from "@cloudflare/workers-utils";
 import type { FormData } from "undici";
-import type { Mock } from "vitest";
+import type { Mock, MockInstance } from "vitest";
 
 vi.mock("command-exists");
 vi.mock("../check/commands", async (importOriginal) => {
@@ -120,6 +114,9 @@ vi.mock("../package-manager", async (importOriginal) => ({
 
 vi.mock("../autoconfig/details");
 vi.mock("../autoconfig/run");
+vi.mock("../autoconfig/frameworks");
+vi.mock("../autoconfig/frameworks/utils/packages");
+vi.mock("../autoconfig/c3-vendor/command");
 
 describe("deploy", () => {
 	mockAccountId();
@@ -152,6 +149,7 @@ describe("deploy", () => {
 			})
 		);
 		vi.mocked(fetchSecrets).mockResolvedValue([]);
+		vi.mocked(getInstalledPackageVersion).mockReturnValue(undefined);
 	});
 
 	afterEach(() => {
@@ -653,7 +651,7 @@ describe("deploy", () => {
 				 ⛅️ wrangler x.x.x
 				──────────────────
 				Attempting to login via OAuth...
-				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+				Opening a link in your default browser: https://dash.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 				Successfully logged in.
 				Total Upload: xx KiB / gzip: xx KiB
 				Worker Startup Time: 100 ms
@@ -697,7 +695,7 @@ describe("deploy", () => {
 					 ⛅️ wrangler x.x.x
 					──────────────────
 					Attempting to login via OAuth...
-					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
+					Opening a link in your default browser: https://dash.staging.cloudflare.com/oauth2/auth?response_type=code&client_id=54d11594-84e4-41aa-b438-e81b8fa78ee7&redirect_uri=http%3A%2F%2Flocalhost%3A8976%2Foauth%2Fcallback&scope=account%3Aread%20user%3Aread%20workers%3Awrite%20workers_kv%3Awrite%20workers_routes%3Awrite%20workers_scripts%3Awrite%20workers_tail%3Aread%20d1%3Awrite%20pages%3Awrite%20zone%3Aread%20ssl_certs%3Awrite%20ai%3Awrite%20ai-search%3Awrite%20ai-search%3Arun%20queues%3Awrite%20pipelines%3Awrite%20secrets_store%3Awrite%20containers%3Awrite%20cloudchamber%3Awrite%20connectivity%3Aadmin%20offline_access&state=MOCK_STATE_PARAM&code_challenge=MOCK_CODE_CHALLENGE&code_challenge_method=S256
 					Successfully logged in.
 					Total Upload: xx KiB / gzip: xx KiB
 					Worker Startup Time: 100 ms
@@ -733,15 +731,21 @@ describe("deploy", () => {
 				  https://test-name.test-sub-domain.workers.dev
 				Current Version ID: Galaxy-Class"
 			`);
-			expect(std.warn).toMatchInlineSnapshot(`
-			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token.[0m
 
-			  This is no longer supported in the current version of Wrangler.
-			  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
-			  environment variable.
+			// The current working directory is replaced with `<cwd>` to make the snapshot consistent across environments
+			// But since the actual working directory could be a long string on some operating systems it is possible that the string gets wrapped to a new line.
+			// To avoid failures across different environments, we remove any newline before `<cwd>` in the snapshot.
+			expect(std.warn.replaceAll(/from[ \r\n]+<cwd>/g, "from <cwd>"))
+				.toMatchInlineSnapshot(`
+					"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mIt looks like you have used Wrangler v1's \`config\` command to login with an API token[0m
 
-			"
-		`);
+					  from <cwd>/home/.config/.wrangler/config/default.toml.
+					  This is no longer supported in the current version of Wrangler.
+					  If you wish to authenticate via an API token then please set the \`CLOUDFLARE_API_TOKEN\`
+					  environment variable.
+
+					"
+				`);
 			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
@@ -821,8 +825,8 @@ describe("deploy", () => {
 					[Error: More than one account available but unable to select one in non-interactive mode.
 					Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 					Available accounts are (\`<name>\`: \`<account_id>\`):
-					  \`enterprise\`: \`1701\`
-					  \`enterprise-nx\`: \`nx01\`]
+					  \`(redacted)\`: \`1701\`
+					  \`(redacted)\`: \`nx01\`]
 				`);
 			});
 
@@ -3787,8 +3791,7 @@ addEventListener('fetch', event => {});`
 
 				await expect(runWrangler("deploy ./assets")).rejects
 					.toThrowErrorMatchingInlineSnapshot(`
-					[Error: The entry-point file at "assets" was not found.
-					The provided entry-point path, "assets", points to a directory, rather than a file.
+					[Error: The provided entry-point path, "assets", points to a directory, rather than a file.
 
 					 If you want to deploy a directory of static assets, you can do so by using the \`--assets\` flag. For example:
 
@@ -8116,9 +8119,7 @@ addEventListener('fetch', event => {});`
 
 			await expect(runWrangler("deploy")).rejects
 				.toThrowErrorMatchingInlineSnapshot(`
-				[Error: The expected output file at "." was not found after running custom build: node -e "4+4;".
-				The \`main\` property in your wrangler.toml file should point to the file generated by the custom build.
-				The provided entry-point path, ".", points to a directory, rather than a file.
+				[Error: The provided entry-point path, ".", points to a directory, rather than a file.
 
 				Did you mean to set the main field to one of:
 				\`\`\`
@@ -8134,11 +8135,8 @@ addEventListener('fetch', event => {});`
 				"
 			`);
 			expect(std.err).toMatchInlineSnapshot(`
-				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe expected output file at \\".\\" was not found after running custom build: node -e \\"4+4;\\".[0m
+				"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mThe provided entry-point path, \\".\\", points to a directory, rather than a file.[0m
 
-				  The \`main\` property in your wrangler.toml file should point to the file generated by the custom
-				  build.
-				  The provided entry-point path, \\".\\", points to a directory, rather than a file.
 
 				  Did you mean to set the main field to one of:
 				  \`\`\`
@@ -8349,7 +8347,7 @@ addEventListener('fetch', event => {});`
 				      \`\`\`
 				      [[migrations]]
 				      tag = \\"v1\\"
-				      new_classes = [ \\"SomeClass\\" ]
+				      new_sqlite_classes = [ \\"SomeClass\\" ]
 
 				      \`\`\`
 
@@ -9009,6 +9007,31 @@ addEventListener('fetch', event => {});`
 				Current Version ID: Galaxy-Class"
 			`);
 		});
+
+		it("should allow specifying a subrequests limit", async () => {
+			writeWranglerConfig({
+				limits: { subrequests: 100 },
+			});
+
+			await fs.promises.writeFile("index.js", `export default {};`);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedLimits: { subrequests: 100 },
+			});
+
+			await runWrangler("deploy index.js");
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+		});
 	});
 
 	describe("bindings", () => {
@@ -9256,9 +9279,12 @@ addEventListener('fetch', event => {});`
 				env.ENV_VAR_TWO (\\"Hello, I'm an environment variable\\")                                       Environment Variable
 				env.WASM_MODULE_ONE (some_wasm.wasm)                                                         Wasm Module
 				env.WASM_MODULE_TWO (more_wasm.wasm)                                                         Wasm Module
-				env.extra_data (\\"interesting value\\")                                                         Unsafe Metadata
-				env.more_data (\\"dubious value\\")                                                              Unsafe Metadata
 
+				The following unsafe metadata will be attached to your Worker:
+				{
+				  \\"extra_data\\": \\"interesting value\\",
+				  \\"more_data\\": \\"dubious value\\"
+				}
 				Uploaded test-name (TIMINGS)
 				Deployed test-name triggers (TIMINGS)
 				  https://test-name.test-sub-domain.workers.dev
@@ -11022,12 +11048,14 @@ addEventListener('fetch', event => {});`
 						──────────────────
 						Total Upload: xx KiB / gzip: xx KiB
 						Worker Startup Time: 100 ms
-						Your Worker has access to the following bindings:
-						Binding                               Resource
-						env.stringify (true)                  Unsafe Metadata
-						env.something (\\"else\\")                Unsafe Metadata
-						env.nested ({\\"stuff\\":\\"here\\"})         Unsafe Metadata
-
+						The following unsafe metadata will be attached to your Worker:
+						{
+						  \\"stringify\\": true,
+						  \\"something\\": \\"else\\",
+						  \\"nested\\": {
+						    \\"stuff\\": \\"here\\"
+						  }
+						}
 						Uploaded test-name (TIMINGS)
 						Deployed test-name triggers (TIMINGS)
 						  https://test-name.test-sub-domain.workers.dev
@@ -11460,7 +11488,7 @@ addEventListener('fetch', event => {});`
 			"[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1mThe module rule {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.file\\"]} does not have a fallback, the following rules will be ignored:[0m
 
 			   {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.other\\"]}
-			   {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\"]} (DEFAULT)
+			   {\\"type\\":\\"Text\\",\\"globs\\":[\\"**/*.txt\\",\\"**/*.html\\",\\"**/*.sql\\"]} (DEFAULT)
 
 			  Add \`fallthrough = true\` to rule to allow next rule to be used or \`fallthrough = false\` to silence
 			  this warning
@@ -11871,6 +11899,39 @@ addEventListener('fetch', event => {});`
 				  "warn": "",
 				}
 			`);
+		});
+
+		it("should use compilerOptions.paths to resolve non-js modules with module rules", async () => {
+			writeWranglerConfig({
+				main: "index.ts",
+				rules: [{ type: "Text", globs: ["**/*.graphql"], fallthrough: true }],
+			});
+			fs.writeFileSync(
+				"index.ts",
+				`import schema from '~lib/schema.graphql'; export default { fetch() { return new Response(schema)} }`
+			);
+			fs.mkdirSync("lib", { recursive: true });
+			fs.writeFileSync("lib/schema.graphql", `type Query { hello: String }`);
+			fs.writeFileSync(
+				"tsconfig.json",
+				JSON.stringify({
+					compilerOptions: {
+						baseUrl: ".",
+						paths: {
+							"~lib/*": ["lib/*"],
+						},
+					},
+				})
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({
+				expectedModules: {
+					"./bc4a21e10be4cae586632dfe5c3f049299c06466-schema.graphql":
+						"type Query { hello: String }",
+				},
+			});
+			await runWrangler("deploy index.ts");
+			expect(std.err).toMatchInlineSnapshot(`""`);
 		});
 
 		it("should output to target es2022 even if tsconfig says otherwise", async () => {
@@ -13897,9 +13958,8 @@ export default{
 			const expectedModules = {
 				"index.py": mainPython,
 				"helper.py": "# Helper module\ndef helper(): pass",
-				[`python_modules${path.sep}module1.so`]: "binary content for module 1",
-				[`python_modules${path.sep}module2.py`]:
-					"# Python vendor module 2\nprint('hello')",
+				"python_modules/module1.so": "binary content for module 1",
+				"python_modules/module2.py": "# Python vendor module 2\nprint('hello')",
 			};
 
 			mockSubDomainRequest();
@@ -13907,8 +13967,8 @@ export default{
 				expectedMainModule: "index.py",
 				expectedModules,
 				excludedModules: [
-					`python_modules${path.sep}test.pyc`,
-					`python_modules${path.sep}other${path.sep}test.pyc`,
+					"python_modules/test.pyc",
+					"python_modules/other/test.pyc",
 				],
 			});
 
@@ -15804,14 +15864,15 @@ export default{
 		});
 	});
 
-	it("should output a deploy output entry to WRANGLER_OUTPUT_FILE_PATH containing a field with the autoconfig summary if autoconfig run", async () => {
+	it("should output a deploy and an autoconfig output entry to WRANGLER_OUTPUT_FILE_PATH if autoconfig run", async () => {
 		const outputFile = "./output.json";
 
 		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
 			configured: false,
-			framework: new Static("static"),
+			framework: new Static({ id: "static", name: "Static" }),
 			workerName: "my-site",
 			projectPath: ".",
+			outputDir: "./public",
 		});
 
 		vi.mocked(runAutoConfig).mockImplementation(async () => {
@@ -15840,15 +15901,19 @@ export default{
 			WRANGLER_OUTPUT_FILE_PATH: outputFile,
 		});
 
-		const deployOutputEntry = (await readFile(outputFile, "utf8"))
+		const outputEntries = (await readFile(outputFile, "utf8"))
 			.split("\n")
 			.filter(Boolean)
-			.map((line) => JSON.parse(line))
-			.find((obj) => obj.type === "deploy") as OutputEntry | undefined;
+			.map((line) => JSON.parse(line)) as OutputEntry[];
 
-		assert(deployOutputEntry?.type === "deploy");
+		expect(outputEntries).toContainEqual(
+			expect.objectContaining({ type: "deploy" })
+		);
 
-		expect(deployOutputEntry.autoconfig_summary).toMatchInlineSnapshot(`
+		const autoconfigOutputEntry = outputEntries.find(
+			(obj) => obj.type === "autoconfig"
+		);
+		expect(autoconfigOutputEntry?.summary).toMatchInlineSnapshot(`
 			Object {
 			  "outputDir": "public",
 			  "scripts": Object {
@@ -15866,38 +15931,282 @@ export default{
 		`);
 	});
 
-	it("should output a deploy output entry to WRANGLER_OUTPUT_FILE_PATH not containing a field with the autoconfig summary if autoconfig didn't run", async () => {
-		const outputFile = "./output.json";
+	describe("open-next delegation", () => {
+		async function mockOpenNextLikeProject() {
+			vi.mocked(getInstalledPackageVersion).mockReturnValue("1.14.4");
 
-		writeWranglerConfig({
-			name: "worker-name",
-			compatibility_date: "2025-12-02",
-			assets: {
-				directory: ".",
-			},
+			fs.mkdirSync("./.open-next/assets", { recursive: true });
+			fs.writeFileSync(
+				"./.open-next/worker.js",
+				"export default { fetch() { return new Response(''); } };"
+			);
+			fs.writeFileSync("./next.config.js", "export default {};");
+			fs.writeFileSync(
+				"./open-next.config.ts",
+				dedent`
+					import { defineCloudflareConfig } from "@opennextjs/cloudflare";
+					export default defineCloudflareConfig();
+				`
+			);
+
+			await mockAUSRequest([]);
+
+			writeWorkerSource();
+			mockGetServiceByName("test-name", "production", "dash");
+			writeWranglerConfig(
+				{
+					main: ".open-next/worker.js",
+					compatibility_date: "2024-04-24",
+					compatibility_flags: [
+						"nodejs_compat",
+						"global_fetch_strictly_public",
+					],
+					assets: {
+						binding: "ASSETS",
+						directory: ".open-next/assets",
+					},
+				},
+				"./wrangler.jsonc"
+			);
+			mockSubDomainRequest();
+			mockUploadWorkerRequest({ expectedMainModule: "worker.js" });
+			mockGetServiceBindings("test-name", []);
+			mockGetServiceRoutes("test-name", []);
+			mockGetServiceCustomDomainRecords([]);
+			mockGetServiceSubDomainData("test-name", {
+				enabled: true,
+				previews_enabled: true,
+			});
+			mockGetServiceSchedules("test-name", { schedules: [] });
+			mockGetServiceMetadata("test-name", {
+				created_on: "2025-08-07T09:34:47.846308Z",
+				modified_on: "2025-08-08T10:48:12.688997Z",
+				script: {
+					created_on: "2025-08-07T09:34:47.846308Z",
+					modified_on: "2025-08-08T10:48:12.688997Z",
+					id: "my-worker-id",
+					compatibility_date: "2024-04-24",
+				},
+			} as unknown as ServiceMetadataRes["default_environment"]);
+		}
+
+		it("should delegate to open-next when run in an open-next project and set OPEN_NEXT_DEPLOY", async () => {
+			vi.spyOn(process, "argv", "get").mockReturnValue([
+				"npx",
+				"wrangler",
+				"deploy",
+				"--x-autoconfig",
+			]);
+			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
+				.runCommand;
+
+			await mockOpenNextLikeProject();
+
+			await runWrangler("deploy --x-autoconfig");
+
+			expect(runCommandSpy).toHaveBeenCalledOnce();
+			const call = (runCommandSpy as unknown as MockInstance).mock.calls[0];
+			const [command, options] = call;
+			expect(command).toEqual([
+				"npx",
+				"opennextjs-cloudflare",
+				"deploy",
+				"--x-autoconfig",
+			]);
+			expect(options).toMatchObject({
+				env: {
+					// Note: we want to ensure that OPEN_NEXT_DEPLOY has been set, this is not strictly necessary but it helps us
+					//       ensure that we can't end up in an infinite wrangler<>open-next invokation loop
+					OPEN_NEXT_DEPLOY: "true",
+				},
+			});
+
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				OpenNext project detected, calling \`opennextjs-cloudflare deploy\`",
+				  "warn": "",
+				}
+			`);
 		});
 
-		vi.mocked(getDetailsForAutoConfig).mockResolvedValue({
-			configured: true,
-			framework: new Static("static"),
-			workerName: "my-worker",
-			projectPath: ".",
+		it("should delegate to open-next when run in an open-next project and set OPEN_NEXT_DEPLOY and pass the various CLI arguments", async () => {
+			vi.spyOn(process, "argv", "get").mockReturnValue([
+				"npx",
+				"wrangler",
+				"deploy",
+				"--keep-vars",
+				"--x-autoconfig",
+			]);
+			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
+				.runCommand;
+
+			await mockOpenNextLikeProject();
+
+			await runWrangler("deploy --x-autoconfig");
+
+			expect(runCommandSpy).toHaveBeenCalledOnce();
+			const call = (runCommandSpy as unknown as MockInstance).mock.calls[0];
+			const [command, options] = call;
+			expect(command).toEqual([
+				"npx",
+				"opennextjs-cloudflare",
+				"deploy",
+				// `opennextjs-cloudflare deploy` accepts all the same arguments `wrangler deploy` does (since it then forwards them
+				// to wrangler), so we do want to make sure that arguments are indeed forwarded to `opennextjs-cloudflare deploy`
+				"--keep-vars",
+				"--x-autoconfig",
+			]);
+			expect(options).toMatchObject({
+				env: {
+					// Note: we want to ensure that OPEN_NEXT_DEPLOY has been set, this is not strictly necessary but it helps us
+					//       ensure that we can't end up in an infinite wrangler<>open-next invokation loop
+					OPEN_NEXT_DEPLOY: "true",
+				},
+			});
+
+			expect(std).toMatchInlineSnapshot(`
+				Object {
+				  "debug": "",
+				  "err": "",
+				  "info": "",
+				  "out": "
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				OpenNext project detected, calling \`opennextjs-cloudflare deploy\`",
+				  "warn": "",
+				}
+			`);
 		});
 
-		await runWrangler("deploy --x-autoconfig --dry-run", {
-			...process.env,
-			WRANGLER_OUTPUT_FILE_PATH: outputFile,
+		it("should not delegate to open-next deploy when run in an open-next project and OPEN_NEXT_DEPLOY is set", async () => {
+			vi.stubEnv("OPEN_NEXT_DEPLOY", "1");
+
+			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
+				.runCommand;
+
+			await mockOpenNextLikeProject();
+
+			await runWrangler("deploy --x-autoconfig");
+
+			expect(runCommandSpy).not.toHaveBeenCalledOnce();
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding            Resource
+				env.ASSETS         Assets
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
 		});
 
-		const deployOutputEntry = (await readFile(outputFile, "utf8"))
-			.split("\n")
-			.filter(Boolean)
-			.map((line) => JSON.parse(line))
-			.find((obj) => obj.type === "deploy") as OutputEntry | undefined;
+		it("should not delegate to open-next deploy when the --x-autoconfig flag is not provided", async () => {
+			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
+				.runCommand;
 
-		assert(deployOutputEntry?.type === "deploy");
+			await mockOpenNextLikeProject();
 
-		expect(deployOutputEntry.autoconfig_summary).toBeUndefined();
+			await runWrangler("deploy");
+
+			expect(runCommandSpy).not.toHaveBeenCalledOnce();
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding            Resource
+				env.ASSETS         Assets
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not delegate to open-next deploy when the Next.js config file is missing (to avoid false positives)", async () => {
+			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
+				.runCommand;
+
+			await mockOpenNextLikeProject();
+
+			// Let's delete the next.config.js file
+			fs.rmSync("./next.config.js");
+
+			await runWrangler("deploy --x-autoconfig");
+
+			expect(runCommandSpy).not.toHaveBeenCalledOnce();
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding            Resource
+				env.ASSETS         Assets
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
+
+		it("should not delegate to open-next deploy when the open-next config file is missing (to avoid false positives)", async () => {
+			const runCommandSpy = (await import("../autoconfig/c3-vendor/command"))
+				.runCommand;
+
+			await mockOpenNextLikeProject();
+
+			// Let's delete the open-next.config.ts file
+			fs.rmSync("./open-next.config.ts");
+
+			await runWrangler("deploy --x-autoconfig");
+
+			expect(runCommandSpy).not.toHaveBeenCalledOnce();
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding            Resource
+				env.ASSETS         Assets
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+		});
 	});
 });
 

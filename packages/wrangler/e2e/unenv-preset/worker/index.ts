@@ -580,7 +580,11 @@ export const WorkerdTests: Record<string, () => void> = {
 		const mProcess = await import("node:process");
 		const gProcess = globalThis.process;
 
-		const useV2 = getRuntimeFlagValue("enable_nodejs_process_v2");
+		// V2 is only used when workerd has fixes for iterable fetch bodies enabled.
+		const useV2 =
+			getRuntimeFlagValue("enable_nodejs_process_v2") &&
+			getRuntimeFlagValue("fetch_iterable_type_support") &&
+			getRuntimeFlagValue("fetch_iterable_type_support_override_adjustment");
 
 		for (const p of [mProcess, gProcess]) {
 			assert.equal(typeof (p as any).binding, "function");
@@ -727,6 +731,174 @@ export const WorkerdTests: Record<string, () => void> = {
 			runInThisContext: "function",
 			createScript: "function",
 		});
+	},
+
+	async testInspector() {
+		const inspector = await import("node:inspector");
+
+		assertTypeOfProperties(inspector, {
+			Session: "function",
+			close: "function",
+			console: "object",
+			open: "function",
+			url: "function",
+			waitForDebugger: "function",
+			Network: "object",
+		});
+
+		assertTypeOfProperties(inspector.default, {
+			Session: "function",
+			close: "function",
+			console: "object",
+			open: "function",
+			url: "function",
+			waitForDebugger: "function",
+			Network: "object",
+		});
+	},
+
+	async testInspectorPromises() {
+		const inspectorPromises = await import("node:inspector/promises");
+		assertTypeOfProperties(inspectorPromises, {
+			Session: "function",
+			close: "function",
+			console: "object",
+			open: "function",
+			url: "function",
+			waitForDebugger: "function",
+		});
+
+		if (getRuntimeFlagValue("enable_nodejs_inspector_module")) {
+			// In unenv this object is polyfilled by a "notImplementedClass" which has type function.
+			assertTypeOf(inspectorPromises, "Network", "object");
+		}
+
+		assertTypeOfProperties(inspectorPromises.default, {
+			Session: "function",
+			close: "function",
+			console: "object",
+			open: "function",
+			url: "function",
+			waitForDebugger: "function",
+		});
+
+		if (getRuntimeFlagValue("enable_nodejs_inspector_module")) {
+			// In unenv this object is polyfilled by a "notImplementedClass" which has type function.
+			assertTypeOf(inspectorPromises.default, "Network", "object");
+		}
+	},
+
+	async testSqlite() {
+		let sqlite;
+		try {
+			// This source file is imported by the Node runtime (to retrieve the list of tests).
+			// As `node:sqlite` has only be added in Node 22.5.0, we need to try/catch to not error with older versions.
+			// Note: This test is not meant to be executed by the Node runtime,
+			// but only by workerd where `node:sqlite` is available.
+			// @ts-expect-error TS2307 - node:sqlite is only available in Node 22.5.0+
+			sqlite = await import("node:sqlite");
+		} catch {
+			throw new Error(
+				"sqlite is not available. This should never happen in workerd."
+			);
+		}
+
+		// Common exports (both unenv stub and native workerd)
+		assertTypeOfProperties(sqlite, {
+			DatabaseSync: "function",
+			StatementSync: "function",
+			constants: "object",
+			default: "object",
+		});
+		assertTypeOfProperties(sqlite.default, {
+			DatabaseSync: "function",
+			StatementSync: "function",
+			constants: "object",
+		});
+
+		if (getRuntimeFlagValue("enable_nodejs_sqlite_module")) {
+			// Native workerd exports `backup` function and non-empty constants
+			assertTypeOf(sqlite, "backup", "function");
+			assertTypeOf(sqlite.default, "backup", "function");
+			assert.strictEqual(
+				"SQLITE_CHANGESET_OMIT" in sqlite.constants,
+				true,
+				"constants should contain SQLITE_CHANGESET_OMIT"
+			);
+		} else {
+			// unenv stub: no backup function and empty constants
+			assertTypeOf(sqlite, "backup", "undefined");
+			assertTypeOf(sqlite.default, "backup", "undefined");
+			assert.deepStrictEqual(
+				Object.keys(sqlite.constants),
+				[],
+				"constants should be empty in unenv stub"
+			);
+		}
+	},
+
+	async testDgram() {
+		const dgram = await import("node:dgram");
+
+		assertTypeOfProperties(dgram, {
+			createSocket: "function",
+			Socket: "function",
+		});
+
+		assertTypeOfProperties(dgram.default, {
+			createSocket: "function",
+			Socket: "function",
+		});
+	},
+
+	async testStreamWrap() {
+		if (!getRuntimeFlagValue("enable_nodejs_stream_wrap_module")) {
+			// `node:_stream_wrap` is implemented as a mock in unenv
+			return;
+		}
+
+		// @ts-expect-error TS2307 - _stream_wrap is an internal Node.js module without type declarations
+		const streamWrap = await import("node:_stream_wrap");
+
+		// `JSStreamSocket` is the default export of `node:_stream_wrap`
+		assertTypeOf(streamWrap, "default", "function");
+	},
+
+	async testRepl() {
+		const repl = await import("node:repl");
+
+		// Common exports (both unenv stub and native workerd)
+		assertTypeOfProperties(repl, {
+			writer: "function",
+			start: "function",
+			Recoverable: "function",
+			REPLServer: "function",
+			builtinModules: "object",
+			_builtinLibs: "object",
+			REPL_MODE_SLOPPY: "symbol",
+			REPL_MODE_STRICT: "symbol",
+		});
+
+		assertTypeOfProperties(repl.default, {
+			writer: "function",
+			start: "function",
+			Recoverable: "function",
+			REPLServer: "function",
+			builtinModules: "object",
+			_builtinLibs: "object",
+			REPL_MODE_SLOPPY: "symbol",
+			REPL_MODE_STRICT: "symbol",
+		});
+
+		// builtinModules should be an array (not in TypeScript types but exported by both unenv and workerd)
+		assert.ok(Array.isArray((repl as any).builtinModules));
+		assert.ok((repl as any).builtinModules.length > 0);
+
+		// Both implementations throw when calling start()
+		assert.throws(
+			() => repl.start(),
+			/not implemented|ERR_METHOD_NOT_IMPLEMENTED/
+		);
 	},
 };
 

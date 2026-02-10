@@ -21,13 +21,13 @@ export default {
 				});
 			}
 			case "/images": {
-				const request = await fetch(image);
+				const response = await fetch(image);
 
-				if (!request.body) {
+				if (!response.body) {
 					return new Response("Failed to fetch image", { status: 500 });
 				}
 
-				const info = await env.IMAGES.info(request.body);
+				const info = await env.IMAGES.info(response.body);
 
 				if (info.format !== "image/png") {
 					return new Response("Images binding returns an incorrect format", {

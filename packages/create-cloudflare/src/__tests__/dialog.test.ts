@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, test } from "vitest";
 import { collectCLIOutput, normalizeOutput } from "../../../cli/test-util";
 import { printSummary, printWelcomeMessage } from "../dialog";
 import type { C3Context } from "types";
@@ -16,7 +16,7 @@ describe("dialog helpers", () => {
 	});
 
 	describe("printWelcomeMessage", () => {
-		test("with telemetry disabled", () => {
+		test("with telemetry disabled", ({ expect }) => {
 			printWelcomeMessage("0.0.0", false, {});
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
@@ -29,7 +29,7 @@ describe("dialog helpers", () => {
 			`);
 		});
 
-		test("with telemetry enabled", () => {
+		test("with telemetry enabled", ({ expect }) => {
 			printWelcomeMessage("0.0.0", true, {});
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
@@ -45,7 +45,7 @@ describe("dialog helpers", () => {
 			`);
 		});
 
-		test("with telemetry disabled in experimental mode", () => {
+		test("with telemetry disabled in experimental mode", ({ expect }) => {
 			printWelcomeMessage("0.0.0", false, { experimental: true });
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
@@ -60,7 +60,7 @@ describe("dialog helpers", () => {
 			`);
 		});
 
-		test("with telemetry enabled in experimental mode", () => {
+		test("with telemetry enabled in experimental mode", ({ expect }) => {
 			printWelcomeMessage("0.0.0", true, { experimental: true });
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
@@ -113,7 +113,7 @@ describe("dialog helpers", () => {
 			process.stdout.columns = originalStdoutColumns;
 		});
 
-		test("with deploy", async () => {
+		test("with deploy", async ({ expect }) => {
 			await printSummary(ctx);
 
 			expect(normalizeOutput(std.out)).toMatchInlineSnapshot(`
@@ -141,7 +141,7 @@ describe("dialog helpers", () => {
 			`);
 		});
 
-		test("with no deploy", async () => {
+		test("with no deploy", async ({ expect }) => {
 			await printSummary({
 				...ctx,
 				account: undefined,

@@ -14,6 +14,7 @@ class FilteredPushArray<T> extends Array<T> {
 
 export default defineConfig({
 	test: {
+		teardownTimeout: 1_000,
 		projects: ["*/vitest.*config.*ts"],
 		globalSetup: ["./vitest.global.ts"],
 		// Configure the `vite-node` server used by Vitest code to import configs,

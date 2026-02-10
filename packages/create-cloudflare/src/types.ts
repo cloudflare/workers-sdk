@@ -6,12 +6,14 @@ export type C3Args = {
 	deploy?: boolean;
 	open?: boolean;
 	git?: boolean;
+	agents?: boolean;
 	autoUpdate?: boolean;
 	category?: string;
 	// frameworks specific
 	framework?: string;
 	experimental?: boolean;
 	platform?: "pages" | "workers";
+	variant?: string;
 	// workers specific
 	ts?: boolean;
 	lang?: string;

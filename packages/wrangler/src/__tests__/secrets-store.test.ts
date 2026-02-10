@@ -3,7 +3,7 @@ import {
 	mockModifiedDate,
 } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, vi } from "vitest";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -22,7 +22,7 @@ describe("secrets-store help", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	it("shows help text when no arguments are passed", async () => {
+	it("shows help text when no arguments are passed", async ({ expect }) => {
 		await runWrangler("secrets-store");
 		await endEventLoop();
 
@@ -30,11 +30,11 @@ describe("secrets-store help", () => {
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler secrets-store
 
-			🔐 Manage the Secrets Store [open-beta]
+			🔐 Manage the Secrets Store [open beta]
 
 			COMMANDS
-			  wrangler secrets-store store   🔐 Manage Stores within the Secrets Store [open-beta]
-			  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [open-beta]
+			  wrangler secrets-store store   🔐 Manage Stores within the Secrets Store [open beta]
+			  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [open beta]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -46,7 +46,7 @@ describe("secrets-store help", () => {
 		`);
 	});
 
-	it("shows help when an invalid argument is passed", async () => {
+	it("shows help when an invalid argument is passed", async ({ expect }) => {
 		await expect(() => runWrangler("secrets-store qwer")).rejects.toThrow(
 			"Unknown argument: qwer"
 		);
@@ -60,11 +60,11 @@ describe("secrets-store help", () => {
 			"
 			wrangler secrets-store
 
-			🔐 Manage the Secrets Store [open-beta]
+			🔐 Manage the Secrets Store [open beta]
 
 			COMMANDS
-			  wrangler secrets-store store   🔐 Manage Stores within the Secrets Store [open-beta]
-			  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [open-beta]
+			  wrangler secrets-store store   🔐 Manage Stores within the Secrets Store [open beta]
+			  wrangler secrets-store secret  🔐 Manage Secrets within the Secrets Store [open beta]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -98,7 +98,7 @@ describe("secrets-store store commands", () => {
 	});
 
 	describe("secrets-store store create", () => {
-		it("creates a store", async () => {
+		it("creates a store", async ({ expect }) => {
 			const reqProm = mockStoreCreate();
 			await runWrangler("secrets-store store create test-store --remote");
 
@@ -117,7 +117,7 @@ describe("secrets-store store commands", () => {
 			`);
 		});
 
-		it("errors in creating a store when no name passed", async () => {
+		it("errors in creating a store when no name passed", async ({ expect }) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler("secrets-store store create --remote");
@@ -131,7 +131,7 @@ describe("secrets-store store commands", () => {
 	});
 
 	describe("secrets-store store list", () => {
-		it("lists stores", async () => {
+		it("lists stores", async ({ expect }) => {
 			mockStoreList();
 			await runWrangler("secrets-store store list --remote");
 
@@ -150,7 +150,7 @@ describe("secrets-store store commands", () => {
 			`);
 		});
 
-		it("handles an empty response of stores", async () => {
+		it("handles an empty response of stores", async ({ expect }) => {
 			mockStoreListEmpty();
 
 			let err: undefined | Error;
@@ -188,7 +188,7 @@ describe("secrets-store secret commands", () => {
 	});
 
 	describe("secrets-store secret create", () => {
-		it("creates a secret", async () => {
+		it("creates a secret", async ({ expect }) => {
 			const reqProm = mockSecretCreate();
 
 			mockPrompt({
@@ -234,7 +234,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in creating a secret when no store-id passed", async () => {
+		it("errors in creating a secret when no store-id passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler(
@@ -253,7 +255,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in creating a secret when no name passed", async () => {
+		it("errors in creating a secret when no name passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler(
@@ -272,7 +276,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in creating a secret when no value passed", async () => {
+		it("errors in creating a secret when no value passed", async ({
+			expect,
+		}) => {
 			mockPrompt({
 				text: "Enter a secret value:",
 				options: { isSecret: true },
@@ -297,7 +303,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in creating a secret when no scopes passed", async () => {
+		it("errors in creating a secret when no scopes passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler(
@@ -318,7 +326,7 @@ describe("secrets-store secret commands", () => {
 	});
 
 	describe("secrets-store secret list", () => {
-		it("lists secrets", async () => {
+		it("lists secrets", async ({ expect }) => {
 			mockSecretList();
 			await runWrangler(
 				"secrets-store secret list 850e0805c1084551bb46d150b5dfe414 --remote"
@@ -341,7 +349,7 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("handles empty response of secrets", async () => {
+		it("handles empty response of secrets", async ({ expect }) => {
 			mockSecretListEmpty();
 			let err: undefined | Error;
 			try {
@@ -357,7 +365,9 @@ describe("secrets-store secret commands", () => {
 			);
 		});
 
-		it("errors in listing secrets when no store-id passed", async () => {
+		it("errors in listing secrets when no store-id passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler("secrets-store secret list --remote");
@@ -371,7 +381,7 @@ describe("secrets-store secret commands", () => {
 	});
 
 	describe("secrets-store secret get", () => {
-		it("gets a secret", async () => {
+		it("gets a secret", async ({ expect }) => {
 			mockSecretGet();
 			await runWrangler(
 				"secrets-store secret get 850e0805c1084551bb46d150b5dfe414 --secret-id df3f6eb1159a4f10ac5fe836e2b8169c --remote"
@@ -390,7 +400,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in getting a secret when no store-id passed", async () => {
+		it("errors in getting a secret when no store-id passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler(
@@ -404,7 +416,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in getting a secret when no secret-id passed", async () => {
+		it("errors in getting a secret when no secret-id passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler(
@@ -420,7 +434,7 @@ describe("secrets-store secret commands", () => {
 	});
 
 	describe("secrets-store secret delete", () => {
-		it("deletes a secret", async () => {
+		it("deletes a secret", async ({ expect }) => {
 			mockSecretDelete();
 			await runWrangler(
 				"secrets-store secret delete 850e0805c1084551bb46d150b5dfe414 --secret-id df3f6eb1159a4f10ac5fe836e2b8169c --remote"
@@ -435,7 +449,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in deleting a secret when no store-id passed", async () => {
+		it("errors in deleting a secret when no store-id passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler(
@@ -449,7 +465,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in deleting a secret when no secret-id passed", async () => {
+		it("errors in deleting a secret when no secret-id passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler(
@@ -465,7 +483,7 @@ describe("secrets-store secret commands", () => {
 	});
 
 	describe("secrets-store secret update", () => {
-		it("updates a secret", async () => {
+		it("updates a secret", async ({ expect }) => {
 			mockConfirm({
 				text: "Do you want to update the secret value?",
 				result: true,
@@ -512,7 +530,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in updating a secret when no store-id passed", async () => {
+		it("errors in updating a secret when no store-id passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler(
@@ -531,7 +551,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in updating a secret when no secret-id passed", async () => {
+		it("errors in updating a secret when no secret-id passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler(
@@ -550,7 +572,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in updating a secret when no params to update are passed", async () => {
+		it("errors in updating a secret when no params to update are passed", async ({
+			expect,
+		}) => {
 			mockConfirm({
 				text: "Do you want to update the secret value?",
 				result: true,
@@ -581,7 +605,7 @@ describe("secrets-store secret commands", () => {
 	});
 
 	describe("secrets-store secret duplicate", () => {
-		it("duplicates a secret", async () => {
+		it("duplicates a secret", async ({ expect }) => {
 			const reqProm = mockSecretDuplicate();
 			await runWrangler(
 				"secrets-store secret duplicate " +
@@ -617,7 +641,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in duplicating a secret when no store-id passed", async () => {
+		it("errors in duplicating a secret when no store-id passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler(
@@ -636,7 +662,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in duplicating a secret when no secret-id passed", async () => {
+		it("errors in duplicating a secret when no secret-id passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler(
@@ -655,7 +683,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in duplicating a secret when no name passed", async () => {
+		it("errors in duplicating a secret when no name passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler(
@@ -674,7 +704,9 @@ describe("secrets-store secret commands", () => {
 			`);
 		});
 
-		it("errors in duplicating a secret when no scopes passed", async () => {
+		it("errors in duplicating a secret when no scopes passed", async ({
+			expect,
+		}) => {
 			let err: undefined | Error;
 			try {
 				await runWrangler(

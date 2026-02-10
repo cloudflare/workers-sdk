@@ -46,9 +46,6 @@ const nativeModules = [
 	"zlib",
 ];
 
-// Modules implemented via a mix of workerd APIs and polyfills.
-const hybridModules = ["process"];
-
 /**
  * Creates the Cloudflare preset for the given compatibility date and compatibility flags
  *
@@ -79,6 +76,12 @@ export function getCloudflarePreset({
 	const wasiOverrides = getWasiOverrides(compat);
 	const consoleOverrides = getConsoleOverrides(compat);
 	const vmOverrides = getVmOverrides(compat);
+	const inspectorOverrides = getInspectorOverrides(compat);
+	const sqliteOverrides = getSqliteOverrides(compat);
+	const dgramOverrides = getDgramOverrides(compat);
+	const streamWrapOverrides = getStreamWrapOverrides(compat);
+	const replOverrides = getReplOverrides(compat);
+	const processOverrides = getProcessOverrides(compat);
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicNativeModules = [
@@ -94,11 +97,16 @@ export function getCloudflarePreset({
 		...wasiOverrides.nativeModules,
 		...consoleOverrides.nativeModules,
 		...vmOverrides.nativeModules,
+		...inspectorOverrides.nativeModules,
+		...sqliteOverrides.nativeModules,
+		...dgramOverrides.nativeModules,
+		...streamWrapOverrides.nativeModules,
+		...replOverrides.nativeModules,
+		...processOverrides.nativeModules,
 	];
 
 	// "dynamic" as they depend on the compatibility date and flags
 	const dynamicHybridModules = [
-		...hybridModules,
 		...httpOverrides.hybridModules,
 		...http2Overrides.hybridModules,
 		...osOverrides.hybridModules,
@@ -110,6 +118,12 @@ export function getCloudflarePreset({
 		...wasiOverrides.hybridModules,
 		...consoleOverrides.hybridModules,
 		...vmOverrides.hybridModules,
+		...inspectorOverrides.hybridModules,
+		...sqliteOverrides.hybridModules,
+		...dgramOverrides.hybridModules,
+		...streamWrapOverrides.hybridModules,
+		...replOverrides.hybridModules,
+		...processOverrides.hybridModules,
 	];
 
 	return {
@@ -143,7 +157,7 @@ export function getCloudflarePreset({
 			clearImmediate: false,
 			setImmediate: false,
 			...consoleOverrides.inject,
-			process: "@cloudflare/unenv-preset/node/process",
+			...processOverrides.inject,
 		},
 		polyfill: ["@cloudflare/unenv-preset/polyfill/performance"],
 		external: dynamicNativeModules.flatMap((p) => [p, `node:${p}`]),
@@ -595,4 +609,296 @@ function getVmOverrides({
 				nativeModules: [],
 				hybridModules: [],
 			};
+}
+
+/**
+ * Returns the overrides for `node:inspector` and `node:inspector/promises` (unenv or workerd)
+ *
+ * The native inspector implementation:
+ * - is enabled starting from 2026-01-29
+ * - can be enabled with the "enable_nodejs_inspector_module" flag
+ * - can be disabled with the "disable_nodejs_inspector_module" flag
+ */
+function getInspectorOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_inspector_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_inspector_module"
+	);
+	const enabledByDate = compatibilityDate >= "2026-01-29";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	// When enabled, use the native `inspector` module from workerd
+	return enabled
+		? {
+				nativeModules: ["inspector/promises", "inspector"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:sqlite` (unenv or workerd)
+ *
+ * The native sqlite implementation:
+ * - is enabled starting from 2026-01-29
+ * - can be enabled with the "enable_nodejs_sqlite_module" flag
+ * - can be disabled with the "disable_nodejs_sqlite_module" flag
+ */
+function getSqliteOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_sqlite_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_sqlite_module"
+	);
+	const enabledByDate = compatibilityDate >= "2026-01-29";
+
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	// When enabled, use the native `sqlite` module from workerd
+	return enabled
+		? {
+				nativeModules: ["sqlite"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:dgram` (unenv or workerd)
+ *
+ * The native dgram implementation:
+ * - is enabled starting from 2026-01-29
+ * - can be enabled with the "enable_nodejs_dgram_module" flag
+ * - can be disabled with the "disable_nodejs_dgram_module" flag
+ */
+function getDgramOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_dgram_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_dgram_module"
+	);
+
+	const enabledByDate = compatibilityDate >= "2026-01-29";
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	// When enabled, use the native `dgram` module from workerd
+	return enabled
+		? {
+				nativeModules: ["dgram"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:_stream_wrap` (unenv or workerd)
+ *
+ * The native _stream_wrap implementation:
+ * - is enabled starting from 2026-01-29
+ * - can be enabled with the "enable_nodejs_stream_wrap_module" flag
+ * - can be disabled with the "disable_nodejs_stream_wrap_module" flag
+ */
+function getStreamWrapOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_stream_wrap_module"
+	);
+
+	const enabledByFlag = compatibilityFlags.includes(
+		"enable_nodejs_stream_wrap_module"
+	);
+
+	const enabledByDate = compatibilityDate >= "2026-01-29";
+	const enabled = (enabledByFlag || enabledByDate) && !disabledByFlag;
+
+	// When enabled, use the native `_stream_wrap` module from workerd
+	return enabled
+		? {
+				nativeModules: ["_stream_wrap"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:repl` (unenv or workerd)
+ *
+ * The native repl implementation:
+ * - is experimental and has no default enable date
+ * - can be enabled with the "enable_nodejs_repl_module" flag
+ * - can be disabled with the "disable_nodejs_repl_module" flag
+ */
+function getReplOverrides({
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): { nativeModules: string[]; hybridModules: string[] } {
+	const disabledByFlag = compatibilityFlags.includes(
+		"disable_nodejs_repl_module"
+	);
+
+	const enabledByFlag =
+		compatibilityFlags.includes("enable_nodejs_repl_module") &&
+		compatibilityFlags.includes("experimental");
+
+	const enabled = enabledByFlag && !disabledByFlag;
+
+	// When enabled, use the native `repl` module from workerd
+	return enabled
+		? {
+				nativeModules: ["repl"],
+				hybridModules: [],
+			}
+		: {
+				nativeModules: [],
+				hybridModules: [],
+			};
+}
+
+/**
+ * Returns the overrides for `node:process` (unenv or workerd)
+ *
+ * The native process v2 implementation:
+ * - is enabled starting from 2025-09-15
+ * - can be enabled with the "enable_nodejs_process_v2" flag
+ * - can be disabled with the "disable_nodejs_process_v2" flag
+ * - can only be used when the fixes for iterable request/response bodies are enabled
+ */
+function getProcessOverrides({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): {
+	nativeModules: string[];
+	hybridModules: string[];
+	inject: { process: string | false };
+} {
+	const disabledV2ByFlag = compatibilityFlags.includes(
+		"disable_nodejs_process_v2"
+	);
+
+	const enabledV2ByFlag = compatibilityFlags.includes(
+		"enable_nodejs_process_v2"
+	);
+	const enabledV2ByDate = compatibilityDate >= "2025-09-15";
+
+	// When `node:process` v2 is enabled, astro will detect workerd as it was Node.js.
+	// This causes astro to take a code path that uses iterable request/response bodies.
+	// So we need to make sure that the fixes for iterable bodies are also enabled.
+	// @see https://github.com/cloudflare/workers-sdk/issues/10855
+	const hasFixes = hasFetchIterableFixes({
+		compatibilityDate,
+		compatibilityFlags,
+	});
+
+	const useV2 =
+		hasFixes && (enabledV2ByFlag || enabledV2ByDate) && !disabledV2ByFlag;
+
+	return useV2
+		? {
+				nativeModules: ["process"],
+				hybridModules: [],
+				// We can use the native global, return `false` to drop the unenv default
+				inject: { process: false },
+			}
+		: {
+				nativeModules: [],
+				hybridModules: ["process"],
+				// Use the module default export as the global `process`
+				inject: { process: "@cloudflare/unenv-preset/node/process" },
+			};
+}
+
+/**
+ * Workerd fixes iterable request/response bodies when both these compatibility flags are used:
+ * - `fetch_iterable_type_support`
+ * - `fetch_iterable_type_support_override_adjustment`
+ *
+ * @see https://github.com/cloudflare/workerd/issues/2746
+ * @see https://github.com/cloudflare/workerd/blob/main/src/workerd/io/compatibility-date.capnp
+ */
+function hasFetchIterableFixes({
+	compatibilityDate,
+	compatibilityFlags,
+}: {
+	compatibilityDate: string;
+	compatibilityFlags: string[];
+}): boolean {
+	const supportEnabledByFlag = compatibilityFlags.includes(
+		"fetch_iterable_type_support"
+	);
+
+	const supportDisabledByFlag = compatibilityFlags.includes(
+		"no_fetch_iterable_type_support"
+	);
+
+	const supportEnabledByDate = compatibilityDate >= "2026-02-19";
+
+	const supportEnabled =
+		(supportEnabledByDate || supportEnabledByFlag) && !supportDisabledByFlag;
+
+	if (!supportEnabled) {
+		return false;
+	}
+
+	const adjustmentEnabledByFlag = compatibilityFlags.includes(
+		"fetch_iterable_type_support_override_adjustment"
+	);
+	const adjustmentDisabledByFlag = compatibilityFlags.includes(
+		"no_fetch_iterable_type_support_override_adjustment"
+	);
+	// At this point, we know that `supportEnabled` is `true`
+	const adjustmentImpliedBySupport = compatibilityDate >= "2026-01-15";
+
+	const adjustmentEnabled =
+		(adjustmentEnabledByFlag || adjustmentImpliedBySupport) &&
+		!adjustmentDisabledByFlag;
+
+	return adjustmentEnabled;
 }

@@ -2,7 +2,7 @@ import {
 	createPagesEventContext,
 	waitOnExecutionContext,
 } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import * as apiMiddleware from "../functions/api/_middleware";
 import * as apiKVKeyFunction from "../functions/api/kv/[key]";
 import * as apiPingFunction from "../functions/api/ping";
@@ -13,7 +13,7 @@ import * as apiPingFunction from "../functions/api/ping";
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
 describe("functions", () => {
-	it("calls function", async () => {
+	it("calls function", async ({ expect }) => {
 		const request = new IncomingRequest("http://example.com/api/ping");
 		const ctx = createPagesEventContext<typeof apiPingFunction.onRequest>({
 			request,
@@ -24,7 +24,7 @@ describe("functions", () => {
 		expect(await response.text()).toBe("GET pong");
 	});
 
-	it("calls function with params", async () => {
+	it("calls function with params", async ({ expect }) => {
 		let request = new IncomingRequest("http://example.com/api/kv/key", {
 			method: "PUT",
 			body: "value",
@@ -50,7 +50,7 @@ describe("functions", () => {
 		expect(await response.text()).toBe("value");
 	});
 
-	it("uses isolated storage for each test", async () => {
+	it("uses isolated storage for each test", async ({ expect }) => {
 		// Check write in previous test undone
 		const request = new IncomingRequest("http://example.com/api/kv/key");
 		const ctx = createPagesEventContext<typeof apiKVKeyFunction.onRequestGet>({
@@ -63,7 +63,7 @@ describe("functions", () => {
 		expect(response.status).toBe(204);
 	});
 
-	it("calls middleware", async () => {
+	it("calls middleware", async ({ expect }) => {
 		const request = new IncomingRequest("http://example.com/api/ping");
 		const ctx = createPagesEventContext<typeof apiMiddleware.onRequest>({
 			request,

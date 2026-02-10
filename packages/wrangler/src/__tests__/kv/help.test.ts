@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, test } from "vitest";
+import { afterEach, beforeEach, describe, it, test } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -23,54 +23,56 @@ describe("kv", () => {
 	});
 
 	describe("help", () => {
-		test("kv --help", async () => {
+		test("kv --help", async ({ expect }) => {
 			const result = runWrangler("kv --help");
 
 			await expect(result).resolves.toBeUndefined();
 			expect(std.out).toMatchInlineSnapshot(`
-			"wrangler kv
+				"wrangler kv
 
-			🗂️  Manage Workers KV Namespaces
+				🗂️ Manage Workers KV Namespaces
 
-			COMMANDS
-			  wrangler kv namespace  Interact with your Workers KV Namespaces
-			  wrangler kv key        Individually manage Workers KV key-value pairs
-			  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
+				COMMANDS
+				  wrangler kv namespace  Interact with your Workers KV Namespaces
+				  wrangler kv key        Individually manage Workers KV key-value pairs
+				  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
 
-			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
+			`);
 		});
 
-		it("should show help when no argument is passed", async () => {
+		it("should show help when no argument is passed", async ({ expect }) => {
 			await runWrangler("kv");
 			await endEventLoop();
 			expect(std.out).toMatchInlineSnapshot(`
-			"wrangler kv
+				"wrangler kv
 
-			🗂️  Manage Workers KV Namespaces
+				🗂️ Manage Workers KV Namespaces
 
-			COMMANDS
-			  wrangler kv namespace  Interact with your Workers KV Namespaces
-			  wrangler kv key        Individually manage Workers KV key-value pairs
-			  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
+				COMMANDS
+				  wrangler kv namespace  Interact with your Workers KV Namespaces
+				  wrangler kv key        Individually manage Workers KV key-value pairs
+				  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
 
-			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
+			`);
 		});
 
-		it("should show help when an invalid argument is passed", async () => {
+		it("should show help when an invalid argument is passed", async ({
+			expect,
+		}) => {
 			await expect(() => runWrangler("kv asdf")).rejects.toThrow(
 				"Unknown argument: asdf"
 			);
@@ -80,24 +82,24 @@ describe("kv", () => {
 			"
 		`);
 			expect(std.out).toMatchInlineSnapshot(`
-			"
-			wrangler kv
+				"
+				wrangler kv
 
-			🗂️  Manage Workers KV Namespaces
+				🗂️ Manage Workers KV Namespaces
 
-			COMMANDS
-			  wrangler kv namespace  Interact with your Workers KV Namespaces
-			  wrangler kv key        Individually manage Workers KV key-value pairs
-			  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
+				COMMANDS
+				  wrangler kv namespace  Interact with your Workers KV Namespaces
+				  wrangler kv key        Individually manage Workers KV key-value pairs
+				  wrangler kv bulk       Interact with multiple Workers KV key-value pairs at once
 
-			GLOBAL FLAGS
-			  -c, --config    Path to Wrangler configuration file  [string]
-			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
-			  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
-			      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
-			  -h, --help      Show help  [boolean]
-			  -v, --version   Show version number  [boolean]"
-		`);
+				GLOBAL FLAGS
+				  -c, --config    Path to Wrangler configuration file  [string]
+				      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
+				  -e, --env       Environment to use for operations, and for selecting .env and .dev.vars files  [string]
+				      --env-file  Path to an .env file to load - can be specified multiple times - values from earlier files are overridden by values in later files  [array]
+				  -h, --help      Show help  [boolean]
+				  -v, --version   Show version number  [boolean]"
+			`);
 		});
 	});
 });

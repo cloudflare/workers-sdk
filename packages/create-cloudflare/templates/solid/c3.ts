@@ -1,8 +1,8 @@
 import { logRaw, updateStatus } from "@cloudflare/cli";
 import { blue } from "@cloudflare/cli/colors";
+import { getLocalWorkerdCompatibilityDate } from "@cloudflare/workers-utils";
 import { runFrameworkGenerator } from "frameworks/index";
 import { mergeObjectProperties, transformFile } from "helpers/codemod";
-import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
 import * as recast from "recast";
@@ -23,7 +23,9 @@ const configure = async (ctx: C3Context) => {
 	usesTypescript(ctx);
 	const filePath = `app.config.${usesTypescript(ctx) ? "ts" : "js"}`;
 
-	const compatDate = await getWorkerdCompatibilityDate();
+	const { date: compatDate } = getLocalWorkerdCompatibilityDate({
+		projectPath: ctx.project.path,
+	});
 
 	updateStatus(`Updating configuration in ${blue(filePath)}`);
 

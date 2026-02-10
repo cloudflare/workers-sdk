@@ -17,6 +17,7 @@ Telemetry in Wrangler allows us to better identify bugs and gain visibility on u
   - Whether or not TypeScript is being used
   - The framework being used
   - The build command being used
+  - How secrets are managed (e.g. whether secrets are added individually or in bulk, whether input comes from interactive prompts, stdin, or files, and the format used for bulk imports). No secret names, values, or counts are tracked.
 - Information about your connection to Cloudflare's API (e.g. how long it takes Wrangler to deploy your Worker)
 - The version of the Wrangler client that is sending the event
 - The package manager that the Wrangler client is using. (e.g. npm, yarn)
@@ -25,6 +26,7 @@ Telemetry in Wrangler allows us to better identify bugs and gain visibility on u
 - The format of the Wrangler configuration file (e.g. `toml`, `jsonc`)
 - Total session duration of the command run (e.g. 3 seconds, etc.)
 - Whether the Wrangler client is running in CI or in an interactive instance
+- Whether the command was executed by an AI coding agent (e.g. Claude Code, Cursor, GitHub Copilot), and if so, which agent
 - Error _type_ (e.g. `APIError` or `UserError`), and sanitised error messages that will not include user information like filepaths or stack traces (e.g. `Asset too large`).
 - General machine information such as OS and OS Version
 
@@ -48,7 +50,9 @@ e.g.
 WRANGLER_LOG=debug npx wrangler deploy
 ```
 
-Telemetry source code can be viewed at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/src/metrics. It is run in the background and will not delay project execution. As a result, when necessary (e.g. no internet connection), it will fail quickly and quietly.
+Most of the telemetry source code used by Wrangler can be viewed at https://github.com/cloudflare/workers-sdk/tree/main/packages/wrangler/src/metrics. The rest of the telemetry related code is sparse across the Wrangler source, mostly it consists of `sendMetricsEvent` calls.
+
+All the telemetry logic is run in the background and will not delay project execution. As a result, when necessary (e.g. no internet connection), it will fail quickly and quietly.
 
 ## How can I configure Wrangler telemetry?
 

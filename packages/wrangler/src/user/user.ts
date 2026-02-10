@@ -247,9 +247,9 @@ import {
 	getTokenUrlFromEnv,
 } from "./auth-variables";
 import { getAccountChoices } from "./choose-account";
-import { generateAuthUrl } from "./generate-auth-url";
+import { generateAuthUrl, OAUTH_CALLBACK_URL } from "./generate-auth-url";
 import { generateRandomState } from "./generate-random-state";
-import type { ChooseAccountItem } from "./choose-account";
+import type { Account } from "./shared";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 import type { ParsedUrlQuery } from "node:querystring";
 import type { Response } from "undici";
@@ -264,7 +264,15 @@ export type ApiCredentials =
 	  };
 
 /**
- * Try to read an API token or Global Auth from the environment.
+ * Try to read API credentials from environment variables.
+ *
+ * Authentication priority (highest to lowest):
+ * 1. Global API Key + Email (CLOUDFLARE_API_KEY + CLOUDFLARE_EMAIL)
+ * 2. API Token (CLOUDFLARE_API_TOKEN)
+ * 3. OAuth token from local state (via `wrangler login`) - not handled here
+ *
+ * Note: Global API Key + Email requires two headers (X-Auth-Key + X-Auth-Email),
+ * while API Token and OAuth token are both used as Bearer tokens.
  */
 export function getAuthFromEnv(): ApiCredentials | undefined {
 	const globalApiKey = getCloudflareGlobalAuthKeyFromEnv();
@@ -297,6 +305,7 @@ interface State extends AuthTokens {
 	hasAuthCodeBeenExchangedForAccessToken?: boolean;
 	stateQueryParam?: string;
 	scopes?: Scope[];
+	account?: Account;
 }
 
 /**
@@ -357,6 +366,8 @@ const DefaultScopes = {
 	"zone:read": "Grants read level access to account zone.",
 	"ssl_certs:write": "See and manage mTLS certificates for your account",
 	"ai:write": "See and change Workers AI catalog and assets",
+	"ai-search:write": "See and change AI Search data",
+	"ai-search:run": "Run search queries on your AI Search instances",
 	"queues:write": "See and change Cloudflare Queues settings and data",
 	"pipelines:write":
 		"See and change Cloudflare Pipelines configurations and data",
@@ -387,11 +398,7 @@ export function validateScopeKeys(
 	return scopes.every((scope) => scope in DefaultScopes);
 }
 
-function getCallbackUrl(host = "localhost", port = 8976) {
-	return `http://${host}:${port}/oauth/callback`;
-}
-
-let LocalState: State = {
+let localState: State = {
 	...getAuthTokens(),
 };
 
@@ -422,7 +429,8 @@ function getAuthTokens(config?: UserAuthConfig): AuthTokens | undefined {
 			};
 		} else if (api_token) {
 			logger.warn(
-				"It looks like you have used Wrangler v1's `config` command to login with an API token.\n" +
+				"It looks like you have used Wrangler v1's `config` command to login with an API token\n" +
+					`from ${config === undefined ? getAuthConfigFilePath() : "in-memory config"}.\n` +
 					"This is no longer supported in the current version of Wrangler.\n" +
 					"If you wish to authenticate via an API token then please set the `CLOUDFLARE_API_TOKEN` environment variable."
 			);
@@ -448,14 +456,14 @@ export function reinitialiseAuthTokens(): void;
 export function reinitialiseAuthTokens(config: UserAuthConfig): void;
 
 export function reinitialiseAuthTokens(config?: UserAuthConfig): void {
-	LocalState = {
+	localState = {
 		...getAuthTokens(config),
 	};
 }
 
 export function getAPIToken(): ApiCredentials | undefined {
-	if (LocalState.apiToken) {
-		return { apiToken: LocalState.apiToken };
+	if (localState.apiToken) {
+		return { apiToken: localState.apiToken };
 	}
 
 	const localAPIToken = getAuthFromEnv();
@@ -463,7 +471,7 @@ export function getAPIToken(): ApiCredentials | undefined {
 		return localAPIToken;
 	}
 
-	const storedAccessToken = LocalState.accessToken?.value;
+	const storedAccessToken = localState.accessToken?.value;
 	if (storedAccessToken) {
 		return { apiToken: storedAccessToken };
 	}
@@ -487,8 +495,8 @@ class ErrorOAuth2 extends UserError {
 	}
 }
 
-// For really unknown errors.
-class ErrorUnknown extends Error {
+// Unclassified Oauth errors
+class ErrorUnknown extends UserError {
 	toString(): string {
 		return "ErrorUnknown";
 	}
@@ -617,7 +625,7 @@ function toErrorClass(rawError: string): ErrorOAuth2 | ErrorUnknown {
 		case "invalid_token":
 			return new ErrorInvalidToken(rawError);
 		default:
-			return new ErrorUnknown();
+			return new ErrorUnknown(rawError);
 	}
 }
 
@@ -663,7 +671,7 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 		return false;
 	}
 
-	const state = LocalState;
+	const state = localState;
 
 	const stateQueryParam = query.state;
 	if (stateQueryParam !== state.stateQueryParam) {
@@ -678,16 +686,11 @@ function isReturningFromAuthServer(query: ParsedUrlQuery): boolean {
 	return true;
 }
 
-async function getAuthURL(
-	scopes: string[],
-	clientId: string,
-	callbackHost: string,
-	callbackPort: number
-): Promise<string> {
+async function getAuthURL(scopes: string[], clientId: string): Promise<string> {
 	const { codeChallenge, codeVerifier } = await generatePKCECodes();
 	const stateQueryParam = generateRandomState(RECOMMENDED_STATE_LENGTH);
 
-	Object.assign(LocalState, {
+	Object.assign(localState, {
 		codeChallenge,
 		codeVerifier,
 		stateQueryParam,
@@ -696,7 +699,6 @@ async function getAuthURL(
 	return generateAuthUrl({
 		authUrl: getAuthUrlFromEnv(),
 		clientId,
-		callbackUrl: getCallbackUrl(callbackHost, callbackPort),
 		scopes,
 		stateQueryParam,
 		codeChallenge,
@@ -718,13 +720,13 @@ type TokenResponse =
  * Refresh an access token from the remote service.
  */
 async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
-	if (!LocalState.refreshToken) {
+	if (!localState.refreshToken) {
 		logger.warn("No refresh token is present.");
 	}
 
 	const params = new URLSearchParams({
 		grant_type: "refresh_token",
-		refresh_token: LocalState.refreshToken?.value ?? "",
+		refresh_token: localState.refreshToken?.value ?? "",
 		client_id: getClientIdFromEnv(),
 	});
 
@@ -764,10 +766,10 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 				value: access_token,
 				expiry: new Date(Date.now() + expires_in * 1000).toISOString(),
 			};
-			LocalState.accessToken = accessToken;
+			localState.accessToken = accessToken;
 
 			if (refresh_token) {
-				LocalState.refreshToken = {
+				localState.refreshToken = {
 					value: refresh_token,
 				};
 			}
@@ -776,13 +778,13 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
 				// Multiple scopes are passed and delimited by spaces,
 				// despite using the singular name "scope".
 				scopes = scope.split(" ") as Scope[];
-				LocalState.scopes = scopes;
+				localState.scopes = scopes;
 			}
 
 			const accessContext: AccessContext = {
 				token: accessToken,
 				scopes,
-				refreshToken: LocalState.refreshToken,
+				refreshToken: localState.refreshToken,
 			};
 			return accessContext;
 		} catch (error) {
@@ -799,7 +801,7 @@ async function exchangeRefreshTokenForAccessToken(): Promise<AccessContext> {
  * Fetch an access token from the remote service.
  */
 async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
-	const { authorizationCode, codeVerifier = "" } = LocalState;
+	const { authorizationCode, codeVerifier = "" } = localState;
 
 	if (!codeVerifier) {
 		logger.warn("No code verifier is being sent.");
@@ -810,7 +812,7 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 	const params = new URLSearchParams({
 		grant_type: `authorization_code`,
 		code: authorizationCode ?? "",
-		redirect_uri: getCallbackUrl(),
+		redirect_uri: OAUTH_CALLBACK_URL,
 		client_id: getClientIdFromEnv(),
 		code_verifier: codeVerifier,
 	});
@@ -834,17 +836,17 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 	}
 	const { access_token, expires_in, refresh_token, scope } = json;
 	let scopes: Scope[] = [];
-	LocalState.hasAuthCodeBeenExchangedForAccessToken = true;
+	localState.hasAuthCodeBeenExchangedForAccessToken = true;
 
 	const expiryDate = new Date(Date.now() + expires_in * 1000);
 	const accessToken: AccessToken = {
 		value: access_token,
 		expiry: expiryDate.toISOString(),
 	};
-	LocalState.accessToken = accessToken;
+	localState.accessToken = accessToken;
 
 	if (refresh_token) {
-		LocalState.refreshToken = {
+		localState.refreshToken = {
 			value: refresh_token,
 		};
 	}
@@ -853,13 +855,13 @@ async function exchangeAuthCodeForAccessToken(): Promise<AccessContext> {
 		// Multiple scopes are passed and delimited by spaces,
 		// despite using the singular name "scope".
 		scopes = scope.split(" ") as Scope[];
-		LocalState.scopes = scopes;
+		localState.scopes = scopes;
 	}
 
 	const accessContext: AccessContext = {
 		token: accessToken,
 		scopes,
-		refreshToken: LocalState.refreshToken,
+		refreshToken: localState.refreshToken,
 	};
 	return accessContext;
 }
@@ -927,8 +929,7 @@ export function writeAuthConfigFile(config: UserAuthConfig) {
 }
 
 export function readAuthConfigFile(): UserAuthConfig {
-	const toml = parseTOML<UserAuthConfig>(readFileSync(getAuthConfigFilePath()));
-	return toml;
+	return parseTOML(readFileSync(getAuthConfigFilePath())) as UserAuthConfig;
 }
 
 type LoginProps = {
@@ -964,6 +965,32 @@ export async function loginOrRefreshIfRequired(
 	}
 }
 
+/**
+ * Get the OAuth token from local state, refreshing it if necessary.
+ * This only handles OAuth tokens stored locally (from `wrangler login`),
+ * not API tokens or API key/email from environment variables.
+ *
+ * Returns the token string if available, or undefined if not logged in.
+ */
+export async function getOAuthTokenFromLocalState(): Promise<
+	string | undefined
+> {
+	// Check if we have an OAuth token
+	if (!localState.accessToken) {
+		return undefined;
+	}
+
+	// If the token is expired, try to refresh it
+	if (isAccessTokenExpired()) {
+		const didRefresh = await refreshToken();
+		if (!didRefresh) {
+			return undefined;
+		}
+	}
+
+	return localState.accessToken?.value;
+}
+
 export async function getOauthToken(options: {
 	browser: boolean;
 	scopes: string[];
@@ -978,12 +1005,7 @@ export async function getOauthToken(options: {
 	callbackHost: string;
 	callbackPort: number;
 }): Promise<AccessContext> {
-	const urlToOpen = await getAuthURL(
-		options.scopes,
-		options.clientId,
-		options.callbackHost,
-		options.callbackPort
-	);
+	const urlToOpen = await getAuthURL(options.scopes, options.clientId);
 	let server: http.Server;
 	let loginTimeoutHandle: ReturnType<typeof setTimeout>;
 	const timerPromise = new Promise<AccessContext>((_, reject) => {
@@ -1061,6 +1083,10 @@ export async function getOauthToken(options: {
 		if (options.callbackHost !== "localhost" || options.callbackPort !== 8976) {
 			logger.log(
 				`Temporary login server listening on ${options.callbackHost}:${options.callbackPort}`
+			);
+			logger.log(
+				"Note that the OAuth login page will always redirect to `localhost:8976`.\n" +
+					"If you have changed the callback host or port because you are running in a container, then ensure that you have port forwarding set up correctly."
 			);
 		}
 		server.listen(options.callbackPort, options.callbackHost);
@@ -1141,7 +1167,7 @@ export async function login(
  * Checks to see if the access token has expired.
  */
 function isAccessTokenExpired(): boolean {
-	const { accessToken } = LocalState;
+	const { accessToken } = localState;
 	return Boolean(accessToken && new Date() >= new Date(accessToken.expiry));
 }
 
@@ -1179,8 +1205,8 @@ export async function logout(): Promise<void> {
 		return;
 	}
 
-	if (!LocalState.accessToken) {
-		if (!LocalState.refreshToken) {
+	if (!localState.accessToken) {
+		if (!localState.refreshToken) {
 			logger.log("Not logged in, exiting...");
 			return;
 		}
@@ -1188,7 +1214,7 @@ export async function logout(): Promise<void> {
 		const body =
 			`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
 			`token_type_hint=refresh_token&` +
-			`token=${encodeURIComponent(LocalState.refreshToken?.value || "")}`;
+			`token=${encodeURIComponent(localState.refreshToken?.value || "")}`;
 
 		const response = await fetch(getRevokeUrlFromEnv(), {
 			method: "POST",
@@ -1205,7 +1231,7 @@ export async function logout(): Promise<void> {
 	const body =
 		`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
 		`token_type_hint=refresh_token&` +
-		`token=${encodeURIComponent(LocalState.refreshToken?.value || "")}`;
+		`token=${encodeURIComponent(localState.refreshToken?.value || "")}`;
 
 	const response = await fetch(getRevokeUrlFromEnv(), {
 		method: "POST",
@@ -1255,20 +1281,24 @@ export async function getAccountId(
 				value: account.id,
 			})),
 		});
-		const account = accounts.find(
-			(a) => a.id === accountID
-		) as ChooseAccountItem;
+		const account = accounts.find((a) => a.id === accountID) as Account;
 		saveAccountToCache({ id: account.id, name: account.name });
 		return accountID;
 	} catch (e) {
 		// Did we try to select an account in CI or a non-interactive terminal?
 		if (e instanceof NoDefaultValueProvided) {
+			// Redact account names (which may contain email addresses) in non-interactive mode
+			// to avoid leaking sensitive information in CI logs
+			const redactAccountName = isNonInteractiveOrCI();
 			throw new UserError(
 				`More than one account available but unable to select one in non-interactive mode.
 Please set the appropriate \`account_id\` in your ${configFileName(undefined)} file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 Available accounts are (\`<name>\`: \`<account_id>\`):
 ${accounts
-	.map((account) => `  \`${account.name}\`: \`${account.id}\``)
+	.map(
+		(account) =>
+			`  \`${redactAccountName ? "(redacted)" : account.name}\`: \`${account.id}\``
+	)
 	.join("\n")}`
 			);
 		}
@@ -1315,24 +1345,25 @@ export function requireApiToken(): ApiCredentials {
 }
 
 /**
- * Save the given account details to a cache
+ * Saves the given account details to the filesystem cache as well as the local state
+ *
+ * @param account The account to save
  */
-function saveAccountToCache(account: { id: string; name: string }): void {
-	saveToConfigCache<{ account: { id: string; name: string } }>(
-		"wrangler-account.json",
-		{ account }
-	);
+function saveAccountToCache(account: Account): void {
+	localState.account = account;
+	saveToConfigCache<{ account: Account }>("wrangler-account.json", { account });
 }
 
 /**
- * Fetch the given account details from a cache if available
+ * Retrieves the account details from either the local state or the filesystem cache (in that order)
+ *
+ * @returns The cached account if present, `undefined` otherwise
  */
-export function getAccountFromCache():
-	| undefined
-	| { id: string; name: string } {
-	return getConfigCache<{ account: { id: string; name: string } }>(
-		"wrangler-account.json"
-	).account;
+export function getAccountFromCache(): undefined | Account {
+	if (localState.account) {
+		return localState.account;
+	}
+	return getConfigCache<{ account: Account }>("wrangler-account.json").account;
 }
 
 /**
@@ -1340,7 +1371,7 @@ export function getAccountFromCache():
  * if the token is an OAuth token.
  */
 export function getScopes(): Scope[] | undefined {
-	return LocalState.scopes;
+	return localState.scopes;
 }
 
 export function printScopes(scopes: Scope[]) {
@@ -1381,8 +1412,7 @@ async function fetchAuthToken(body: URLSearchParams) {
 			logger.error(
 				"Failed to fetch auth token:",
 				response.status,
-				response.statusText,
-				await response.text()
+				response.statusText
 			);
 		}
 		return response;

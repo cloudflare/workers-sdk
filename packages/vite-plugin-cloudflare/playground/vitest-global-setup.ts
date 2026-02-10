@@ -1,17 +1,20 @@
 import { isDockerRunning } from "@cloudflare/containers-shared";
 import { chromium } from "playwright-chromium";
+import { version } from "vite";
 import { getDockerPath } from "../src/containers";
 import type { BrowserServer } from "playwright-chromium";
-import type { GlobalSetupContext } from "vitest/node";
+import type { TestProject } from "vitest/node";
 
 let browserServer: BrowserServer | undefined;
 
-export async function setup({ provide }: GlobalSetupContext): Promise<void> {
+export async function setup({ provide }: TestProject): Promise<void> {
+	// eslint-disable-next-line turbo/no-undeclared-env-vars
 	process.env.NODE_ENV = process.env.VITE_TEST_BUILD
 		? "production"
 		: "development";
 
 	browserServer = await chromium.launchServer({
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		headless: !process.env.VITE_DEBUG_SERVE,
 		args: process.env.CI
 			? ["--no-sandbox", "--disable-setuid-sandbox"]
@@ -20,6 +23,8 @@ export async function setup({ provide }: GlobalSetupContext): Promise<void> {
 
 	provide("wsEndpoint", browserServer.wsEndpoint());
 }
+
+console.log(`Testing with Vite ${version}`);
 
 const dockerIsRunning = await isDockerRunning(getDockerPath());
 

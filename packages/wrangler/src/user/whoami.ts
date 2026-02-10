@@ -1,7 +1,8 @@
 import { getCloudflareComplianceRegion } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
-import { isAuthenticationError } from "../deploy/deploy";
+import { isAuthenticationError } from "../core/handle-errors";
+import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
 import { fetchMembershipRoles } from "./membership";
@@ -9,9 +10,17 @@ import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes } from ".";
 import type { ApiCredentials, Scope } from ".";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
+/**
+ * Displays information about the currently authenticated user, including their
+ * email, accounts, token permissions, and membership roles.
+ *
+ * When called with `accountFilter` and `configAccountId`, also checks for potential
+ * `account_id` mismatches that could cause authentication errors.
+ */
 export async function whoami(
 	complianceConfig: ComplianceConfig,
-	accountFilter?: string
+	accountFilter?: string,
+	configAccountId?: string
 ) {
 	logger.log("Getting User settings...");
 	const user = await getUserInfo(complianceConfig);
@@ -30,6 +39,7 @@ export async function whoami(
 	}
 	printComplianceRegion(complianceConfig);
 	printAccountList(user);
+	printAccountIdMismatchWarning(user, accountFilter, configAccountId);
 	printTokenPermissions(user);
 	await printMembershipInfo(complianceConfig, user, accountFilter);
 }
@@ -47,9 +57,11 @@ function printComplianceRegion(complianceConfig: ComplianceConfig) {
 }
 
 function printUserEmail(user: UserInfo) {
+	const redactFields = isNonInteractiveOrCI();
+
 	if (user.authType === "Account API Token") {
 		// Account API Tokens only have access to a single account
-		const accountName = user.accounts[0].name;
+		const accountName = redactFields ? "(redacted)" : user.accounts[0].name;
 		return void logger.log(
 			`👋 You are logged in with an ${user.authType}, associated with the account ${chalk.blue(accountName)}.`
 		);
@@ -59,18 +71,65 @@ function printUserEmail(user: UserInfo) {
 			`👋 You are logged in with an ${user.authType}. Unable to retrieve email for this user. Are you missing the \`User->User Details->Read\` permission?`
 		);
 	}
+	const email = redactFields ? "(redacted)" : user.email;
 	logger.log(
-		`👋 You are logged in with an ${user.authType}, associated with the email ${chalk.blue(user.email)}.`
+		`👋 You are logged in with an ${user.authType}, associated with the email ${chalk.blue(email)}.`
 	);
 }
 
 function printAccountList(user: UserInfo) {
+	const redactFields = isNonInteractiveOrCI();
+
 	logger.table(
 		user.accounts.map((account) => ({
-			"Account Name": account.name,
+			"Account Name": redactFields ? "(redacted)" : account.name,
 			"Account ID": account.id,
 		}))
 	);
+}
+
+/**
+ * Prints a warning if the account_id in the Wrangler configuration does not match
+ * any of the user's authenticated accounts.
+ *
+ * Only shows warning if:
+ * 1. We have an accountFilter (the account ID from the failed request)
+ * 2. We have a configAccountId (the account_id from the wrangler config)
+ * 3. The accountFilter matches the configAccountId (meaning the config account_id was used)
+ * 4. The accountFilter is NOT in the user's accounts list
+ */
+function printAccountIdMismatchWarning(
+	user: UserInfo,
+	accountFilter?: string,
+	configAccountId?: string
+) {
+	if (!accountFilter || !configAccountId) {
+		return;
+	}
+
+	// Check if the account ID from the failed request matches the configured account_id
+	if (accountFilter !== configAccountId) {
+		return;
+	}
+
+	// Check if the configured account_id is in the user's accounts
+	const accountInUserAccounts = user.accounts.some(
+		(account) => account.id === accountFilter
+	);
+
+	if (!accountInUserAccounts) {
+		logger.log(
+			formatMessage({
+				text: `The \`account_id\` in your Wrangler configuration (${chalk.blue(configAccountId)}) does not match any of your authenticated accounts.`,
+				kind: "warning",
+				notes: [
+					{
+						text: "This may be causing the authentication error. Check your Wrangler configuration file and ensure the `account_id` is correct for your account.",
+					},
+				],
+			})
+		);
+	}
 }
 
 function printTokenPermissions(user: UserInfo) {
@@ -130,8 +189,10 @@ async function printMembershipInfo(
 		if (!membershipRoles) {
 			return;
 		}
+		const redactFields = isNonInteractiveOrCI();
+		const accountName = redactFields ? "(redacted)" : selectedAccount.name;
 		logger.log(
-			`🎢 Membership roles in "${selectedAccount.name}": Contact account super admin to change your permissions.`
+			`🎢 Membership roles in "${accountName}": Contact account super admin to change your permissions.`
 		);
 		for (const role of membershipRoles) {
 			logger.log(`- ${role}`);

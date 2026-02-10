@@ -1,5 +1,7 @@
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- helper functions with expect */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { printWranglerBanner } from "../wrangler-banner";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
@@ -35,7 +37,7 @@ describe("dispatch-namespace", () => {
 			  "info": "",
 			  "out": "wrangler dispatch-namespace
 
-			🏗️  Manage dispatch namespaces
+			🏗️ Manage dispatch namespaces
 
 			COMMANDS
 			  wrangler dispatch-namespace list                        List all dispatch namespaces

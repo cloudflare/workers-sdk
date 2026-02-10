@@ -277,3 +277,4 @@ export const error = (
 };
 
 export { checkMacOSVersion } from "./check-macos-version";
+export { showCursor } from "./cursor";

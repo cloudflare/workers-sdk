@@ -218,6 +218,13 @@ export interface DevConfig {
 	inspector_port: number | undefined;
 
 	/**
+	 * IP address for the local dev server's inspector to listen on
+	 *
+	 * @default 127.0.0.1
+	 */
+	inspector_ip: string | undefined;
+
+	/**
 	 * Protocol that local wrangler dev server listens to requests on.
 	 *
 	 * @default http
@@ -252,6 +259,13 @@ export interface DevConfig {
 	 * Note that windows is only supported via WSL at the moment
 	 */
 	container_engine: ContainerEngine | undefined;
+
+	/**
+	 * Re-generate your worker types when your Wrangler configuration file changes.
+	 *
+	 * @default false
+	 */
+	generate_types: boolean;
 }
 
 export type RawDevConfig = Partial<DevConfig>;
@@ -292,12 +306,14 @@ export const defaultWranglerConfig: Config = {
 		ip: process.platform === "win32" ? "127.0.0.1" : "localhost",
 		port: undefined, // the default of 8787 is set at runtime
 		inspector_port: undefined, // the default of 9229 is set at runtime
+		inspector_ip: undefined, // the default of 127.0.0.1 is set at runtime
 		local_protocol: "http",
 		upstream_protocol: "http",
 		host: undefined,
 		// Note this one is also workers only
 		enable_containers: true,
 		container_engine: undefined,
+		generate_types: false,
 	},
 
 	/** INHERITABLE ENVIRONMENT FIELDS **/

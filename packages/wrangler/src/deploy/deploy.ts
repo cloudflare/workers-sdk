@@ -11,7 +11,6 @@ import {
 	formatCompatibilityDate,
 	formatConfigSnippet,
 	getDockerPath,
-	ParseError,
 	parseNonHyphenedUuid,
 	UserError,
 } from "@cloudflare/workers-utils";
@@ -19,8 +18,10 @@ import PQueue from "p-queue";
 import { Response } from "undici";
 import { syncAssets } from "../assets";
 import { fetchListResult, fetchResult } from "../cfetch";
-import { buildContainer, deployContainers } from "../cloudchamber/deploy";
+import { buildContainer } from "../containers/build";
 import { getNormalizedContainerOptions } from "../containers/config";
+import { deployContainers } from "../containers/deploy";
+import { isAuthenticationError } from "../core/handle-errors";
 import { getBindings, provisionBindings } from "../deployment-bundle/bindings";
 import { bundleWorker } from "../deployment-bundle/bundle";
 import { printBundleSize } from "../deployment-bundle/bundle-reporter";
@@ -64,6 +65,7 @@ import { helpIfErrorIsSizeOrScriptStartup } from "../utils/friendly-validator-er
 import { parseConfigPlacement } from "../utils/placement";
 import { printBindings } from "../utils/print-bindings";
 import { retryOnAPIFailure } from "../utils/retry";
+import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import {
 	createDeployment,
 	patchNonVersionedScriptSettings,
@@ -463,12 +465,10 @@ export default async function deploy(props: Props): Promise<{
 				}
 			}
 		} catch (e) {
-			// code: 10090, message: workers.api.error.service_not_found
-			// is thrown from the above fetchResult on the first deploy of a Worker
-			if ((e as { code?: number }).code !== 10090) {
-				throw e;
-			} else {
+			if (isWorkerNotFoundError(e)) {
 				workerExists = false;
+			} else {
+				throw e;
 			}
 		}
 	}
@@ -803,7 +803,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			bindings,
 			migrations,
 			modules,
-			containers: config.containers ?? undefined,
+			containers: config.containers,
 			sourceMaps: uploadSourceMaps
 				? loadSourceMaps(main, modules, bundle)
 				: undefined,
@@ -910,6 +910,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				{ ...withoutStaticAssets, vars: maskedVars },
 				config.tail_consumers,
 				config.streaming_tail_consumers,
+				config.containers,
 				{ warnIfNoBindings: true }
 			);
 		} else {
@@ -1049,7 +1050,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 				printBindings(
 					{ ...withoutStaticAssets, vars: maskedVars },
 					config.tail_consumers,
-					config.streaming_tail_consumers
+					config.streaming_tail_consumers,
+					config.containers
 				);
 
 				versionId = parseNonHyphenedUuid(result.deployment_id);
@@ -1079,7 +1081,8 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					printBindings(
 						{ ...withoutStaticAssets, vars: maskedVars },
 						config.tail_consumers,
-						config.streaming_tail_consumers
+						config.streaming_tail_consumers,
+						config.containers
 					);
 				}
 				const message = await helpIfErrorIsSizeOrScriptStartup(
@@ -1178,7 +1181,6 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 			versionId,
 			accountId,
 			scriptName,
-			dryRun: props.dryRun ?? false,
 		});
 	}
 
@@ -1390,11 +1392,6 @@ async function publishRoutesFallback(
 	}
 
 	return deployedRoutes;
-}
-
-export function isAuthenticationError(e: unknown): e is ParseError {
-	// TODO: don't want to report these
-	return e instanceof ParseError && (e as { code?: number }).code === 10000;
 }
 
 export async function updateQueueConsumers(

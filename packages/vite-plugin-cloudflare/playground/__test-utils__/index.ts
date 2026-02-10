@@ -1,9 +1,15 @@
 import fs from "node:fs";
+import semverGte from "semver/functions/gte";
+import { version as viteVersion } from "vite";
 import { onTestFinished, test } from "vitest";
 import { isWindows } from "../vitest-setup";
 
 export * from "../vitest-setup";
 export * from "./responses";
+
+export function satisfiesViteVersion(minVersion: string): boolean {
+	return semverGte(viteVersion, minVersion);
+}
 
 /** Common options to use with `vi.waitFor()` */
 export const WAIT_FOR_OPTIONS = {

@@ -1,3 +1,4 @@
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAssetWithMetadataFromKV } from "../src/utils/kv";
 import type { AssetMetadata } from "../src/utils/kv";
@@ -78,7 +79,7 @@ describe("[Asset Worker] Fetching assets from KV", () => {
 			expect(spy).toHaveBeenCalledTimes(2);
 		});
 
-		it("should retry on 404 and cache with 30s ttl", async () => {
+		it("should retry on 404 and cache with shorter ttl", async () => {
 			let attempts = 0;
 			spy.mockImplementation(() => {
 				if (attempts++ === 0) {

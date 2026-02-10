@@ -11,6 +11,10 @@ import chalk from "chalk";
 import { getAssetsOptions, validateAssetsArgsAndConfig } from "../assets";
 import { getDetailsForAutoConfig } from "../autoconfig/details";
 import { runAutoConfig } from "../autoconfig/run";
+import {
+	sendAutoConfigProcessEndedMetricsEvent,
+	sendAutoConfigProcessStartedMetricsEvent,
+} from "../autoconfig/telemetry-utils";
 import { readConfig } from "../config";
 import { createCommand } from "../core/create-command";
 import { getEntry } from "../deployment-bundle/entry";
@@ -27,13 +31,14 @@ import { getRules } from "../utils/getRules";
 import { getScriptName } from "../utils/getScriptName";
 import { useServiceEnvironments } from "../utils/useServiceEnvironments";
 import deploy from "./deploy";
-import type { AutoConfigSummary } from "../autoconfig/types";
+import { maybeDelegateToOpenNextDeployCommand } from "./open-next";
 
 export const deployCommand = createCommand({
 	metadata: {
 		description: "🆙 Deploy a Worker to Cloudflare",
 		owner: "Workers: Deploy and Config",
 		status: "stable",
+		category: "Compute & AI",
 	},
 	positionalArgs: ["script"],
 	args: {
@@ -252,6 +257,7 @@ export const deployCommand = createCommand({
 			AUTOCREATE_RESOURCES: args.experimentalAutoCreate,
 		}),
 		warnIfMultipleEnvsConfiguredButNoneSpecified: true,
+		printMetricsBanner: true,
 	},
 	validateArgs(args) {
 		if (args.nodeCompat) {
@@ -278,23 +284,67 @@ export const deployCommand = createCommand({
 			!args.script &&
 			!args.assets;
 
-		let autoConfigSummary: AutoConfigSummary | undefined;
-
 		if (shouldRunAutoConfig) {
-			const details = await getDetailsForAutoConfig({
-				wranglerConfig: config,
+			sendAutoConfigProcessStartedMetricsEvent({
+				command: "wrangler deploy",
+				dryRun: !!args.dryRun,
 			});
 
-			// Only run auto config if the project is not already configured
-			if (!details.configured) {
-				autoConfigSummary = await runAutoConfig(details);
-
-				// If autoconfig worked, there should now be a new config file, and so we need to read config again
-				config = readConfig(args, {
-					hideWarnings: false,
-					useRedirectIfAvailable: true,
+			try {
+				const details = await getDetailsForAutoConfig({
+					wranglerConfig: config,
 				});
+
+				// Only run auto config if the project is not already configured
+				if (!details.configured) {
+					const autoConfigSummary = await runAutoConfig(details);
+
+					writeOutput({
+						type: "autoconfig",
+						version: 1,
+						command: "deploy",
+						summary: autoConfigSummary,
+					});
+
+					// If autoconfig worked, there should now be a new config file, and so we need to read config again
+					config = readConfig(args, {
+						hideWarnings: false,
+						useRedirectIfAvailable: true,
+					});
+				}
+			} catch (error) {
+				sendAutoConfigProcessEndedMetricsEvent({
+					command: "wrangler deploy",
+					dryRun: !!args.dryRun,
+					success: false,
+					error,
+				});
+				throw error;
 			}
+
+			sendAutoConfigProcessEndedMetricsEvent({
+				success: true,
+				command: "wrangler deploy",
+				dryRun: !!args.dryRun,
+			});
+		}
+
+		// Note: the open-next delegation should happen after we run the auto-config logic so that we
+		//       make sure that the deployment of brand newly auto-configured Next.js apps is correctly
+		//       delegated here
+		const deploymentDelegatedToOpenNext =
+			// Currently the delegation to open-next is gated behind the autoconfig experimental flag, this is because
+			// this behavior is currently only necessary in the autoconfig flow and having it un-gated/stable in wrangler
+			// releases caused different issues. All the issues should have been fixed (by
+			// https://github.com/cloudflare/workers-sdk/pull/11694 and https://github.com/cloudflare/workers-sdk/pull/11710)
+			// but as a precaution we're gating the feature under the autoconfig flag for the time being
+			args.experimentalAutoconfig &&
+			!args.dryRun &&
+			(await maybeDelegateToOpenNextDeployCommand(process.cwd()));
+
+		if (deploymentDelegatedToOpenNext) {
+			// We've delegated the deployment to open-next so we must not run any actual deployment logic now
+			return;
 		}
 
 		if (!config.configPath) {
@@ -428,7 +478,6 @@ export const deployCommand = createCommand({
 			targets,
 			wrangler_environment: args.env,
 			worker_name_overridden: workerNameOverridden,
-			autoconfig_summary: autoConfigSummary,
 		});
 
 		metrics.sendMetricsEvent(

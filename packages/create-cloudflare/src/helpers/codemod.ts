@@ -1,5 +1,5 @@
 import { existsSync, lstatSync, readdirSync } from "node:fs";
-import path, { extname, join } from "node:path";
+import nodePath, { extname, join } from "node:path";
 import * as recast from "recast";
 import * as esprimaParser from "recast/parsers/esprima";
 import * as typescriptParser from "recast/parsers/typescript";
@@ -50,11 +50,11 @@ export const parseTs = (src: string) => {
 // Parse a provided file with recast and return an ast
 // Selects the correct parser based on the file extension
 export const parseFile = (filePath: string) => {
-	const lang = path.extname(filePath).slice(1);
+	const lang = nodePath.extname(filePath).slice(1);
 	const parser = lang === "js" ? esprimaParser : typescriptParser;
 
 	try {
-		const fileContents = readFile(path.resolve(filePath));
+		const fileContents = readFile(nodePath.resolve(filePath));
 
 		if (fileContents) {
 			return recast.parse(fileContents, { parser }).program as Program;

@@ -1,6 +1,8 @@
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import * as user from "../../user";
 import { mockAccount, setWranglerConfig } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -28,12 +30,12 @@ describe("containers info", () => {
 		await runWrangler("containers info --help");
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.out).toMatchInlineSnapshot(`
-			"wrangler containers info [ID]
+			"wrangler containers info <ID>
 
-			Get information about a specific container
+			Get information about a specific container [open beta]
 
 			POSITIONALS
-			  ID  id of the containers to view  [string]
+			  ID  ID of the container to view  [string] [required]
 
 			GLOBAL FLAGS
 			  -c, --config    Path to Wrangler configuration file  [string]
@@ -75,17 +77,48 @@ describe("containers info", () => {
 		);
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		await runWrangler("containers info asdf");
-		expect(std.out).toMatchInlineSnapshot(`"{}"`);
+		expect(std.out).toMatchInlineSnapshot(`
+			"{
+			    \\"id\\": \\"asdf\\",
+			    \\"created_at\\": \\"2025-02-14T18:03:13.268999936Z\\",
+			    \\"account_id\\": \\"test-account\\",
+			    \\"name\\": \\"app-test\\",
+			    \\"version\\": 1,
+			    \\"configuration\\": {
+			        \\"image\\": \\"registry.test.cfdata.org/test-app:v1\\",
+			        \\"network\\": {
+			            \\"mode\\": \\"private\\"
+			        }
+			    },
+			    \\"scheduling_policy\\": \\"regional\\",
+			    \\"instances\\": 2,
+			    \\"jobs\\": false,
+			    \\"constraints\\": {
+			        \\"region\\": \\"WNAM\\"
+			    },
+			    \\"durable_objects\\": {
+			        \\"namespace_id\\": \\"test-id\\"
+			    },
+			    \\"health\\": {
+			        \\"instances\\": {
+			            \\"healthy\\": 2,
+			            \\"failed\\": 0,
+			            \\"scheduling\\": 0,
+			            \\"starting\\": 0
+			        }
+			    }
+			}"
+		`);
 	});
 
 	it("should error when not given an ID", async () => {
 		await expect(
 			runWrangler("containers info")
 		).rejects.toThrowErrorMatchingInlineSnapshot(
-			`[Error: You must provide an ID. Use 'wrangler containers list\` to view your containers.]`
+			`[Error: Not enough non-option arguments: got 0, need at least 1]`
 		);
 		expect(std.err).toMatchInlineSnapshot(`
-			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mYou must provide an ID. Use 'wrangler containers list\` to view your containers.[0m
+			"[31mX [41;31m[[41;97mERROR[41;31m][0m [1mNot enough non-option arguments: got 0, need at least 1[0m
 
 			"
 		`);

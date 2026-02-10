@@ -17,15 +17,16 @@ export const certNamespace = createNamespace({
 	metadata: {
 		description:
 			"🪪 Manage client mTLS certificates and CA certificate chains used for secured connections",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: SSL",
+		category: "Networking & security",
 	},
 });
 
 export const certUploadNamespace = createNamespace({
 	metadata: {
 		description: "Upload a new cert",
-		status: "open-beta",
+		status: "open beta",
 		owner: "Product: SSL",
 	},
 });

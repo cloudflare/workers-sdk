@@ -7,6 +7,7 @@ import {
 	generateContainerBuildId,
 	resolveDockerHost,
 } from "@cloudflare/containers-shared";
+import { getLocalExplorerEnabledFromEnv } from "@cloudflare/workers-utils";
 import {
 	getDefaultDevRegistryPath,
 	kUnsafeEphemeralUniqueKey,
@@ -15,12 +16,7 @@ import {
 	Response as MiniflareResponse,
 } from "miniflare";
 import { globSync } from "tinyglobby";
-import * as vite from "vite";
-import {
-	maybeStartOrUpdateRemoteProxySession,
-	unstable_convertConfigBindingsToStartWorkerBindings,
-	unstable_getMiniflareWorkerOptions,
-} from "wrangler";
+import * as wrangler from "wrangler";
 import { getAssetsConfig } from "./asset-config";
 import {
 	ASSET_WORKER_NAME,
@@ -31,6 +27,7 @@ import {
 import { getContainerOptions, getDockerPath } from "./containers";
 import { getInputInspectorPort } from "./debug";
 import { additionalModuleRE } from "./plugins/additional-modules";
+import { ENVIRONMENT_NAME_HEADER } from "./shared";
 import { withTrailingSlash } from "./utils";
 import type { CloudflareDevEnvironment } from "./cloudflare-environment";
 import type { ContainerTagToOptionsMap } from "./containers";
@@ -45,6 +42,7 @@ import type {
 	WorkerdStructuredLog,
 	WorkerOptions,
 } from "miniflare";
+import type * as vite from "vite";
 import type {
 	Binding,
 	RemoteProxySession,
@@ -183,7 +181,7 @@ export async function getDevMiniflareOptions(
 											: pathname
 									);
 								}
-							} catch (error) {}
+							} catch {}
 						}
 					}
 
@@ -208,7 +206,7 @@ export async function getDevMiniflareOptions(
 						return new MiniflareResponse(html, {
 							headers: { "Content-Type": "text/html" },
 						});
-					} catch (error) {
+					} catch {
 						throw new Error(`Unexpected error. Failed to load "${pathname}".`);
 					}
 				},
@@ -246,7 +244,7 @@ export async function getDevMiniflareOptions(
 					[...resolvedPluginConfig.environmentNameToWorkerMap].map(
 						async ([environmentName, worker]) => {
 							const bindings =
-								unstable_convertConfigBindingsToStartWorkerBindings(
+								wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
 									worker.config
 								);
 
@@ -258,7 +256,7 @@ export async function getDevMiniflareOptions(
 								!resolvedPluginConfig.remoteBindings
 									? // if remote bindings are not enabled then the proxy session can simply be null
 										null
-									: await maybeStartOrUpdateRemoteProxySession(
+									: await wrangler.maybeStartOrUpdateRemoteProxySession(
 											{
 												name: worker.config.name,
 												bindings: bindings ?? {},
@@ -294,20 +292,21 @@ export async function getDevMiniflareOptions(
 								}
 							}
 
-							const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
-								{
-									...worker.config,
-									assets: undefined,
-								},
-								resolvedPluginConfig.cloudflareEnv,
-								{
-									remoteProxyConnectionString:
-										remoteProxySessionData?.session
-											?.remoteProxyConnectionString,
+							const miniflareWorkerOptions =
+								wrangler.unstable_getMiniflareWorkerOptions(
+									{
+										...worker.config,
+										assets: undefined,
+									},
+									resolvedPluginConfig.cloudflareEnv,
+									{
+										remoteProxyConnectionString:
+											remoteProxySessionData?.session
+												?.remoteProxyConnectionString,
 
-									containerBuildId,
-								}
-							);
+										containerBuildId,
+									}
+								);
 
 							const { externalWorkers, workerOptions } = miniflareWorkerOptions;
 
@@ -384,10 +383,17 @@ export async function getDevMiniflareOptions(
 												}
 											: {}),
 										__VITE_INVOKE_MODULE__: async (request) => {
+											const targetEnvironmentName = request.headers.get(
+												ENVIRONMENT_NAME_HEADER
+											);
+											assert(
+												targetEnvironmentName,
+												`Expected ${ENVIRONMENT_NAME_HEADER} header`
+											);
 											const payload =
 												(await request.json()) as vite.CustomPayload;
 											const devEnvironment = viteDevServer.environments[
-												environmentName
+												targetEnvironmentName
 											] as CloudflareDevEnvironment;
 											const result =
 												await devEnvironment.hot.handleInvoke(payload);
@@ -420,11 +426,13 @@ export async function getDevMiniflareOptions(
 	return {
 		miniflareOptions: {
 			log: logger,
+			unsafeProxySharedSecret: ctx.proxySharedSecret,
 			logRequests: false,
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
+			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,
@@ -458,7 +466,7 @@ export async function getDevMiniflareOptions(
 
 				try {
 					contents = await fsp.readFile(modulePath);
-				} catch (error) {
+				} catch {
 					throw new Error(
 						`Import "${modulePath}" not found. Does the file exist?`
 					);
@@ -500,10 +508,12 @@ function getPreviewModules(
 				path: entryPath,
 			} as const,
 			...modulesRules.flatMap(({ type, include }) =>
-				globSync(include, { cwd: rootPath, ignore: entryPath }).map((path) => ({
-					type,
-					path,
-				}))
+				globSync(include, { cwd: rootPath, ignore: entryPath }).map(
+					(globPath) => ({
+						type,
+						path: globPath,
+					})
+				)
 			),
 		],
 	} satisfies Pick<WorkerOptions, "rootPath" | "modules">;
@@ -527,7 +537,9 @@ export async function getPreviewMiniflareOptions(
 		await Promise.all(
 			resolvedPluginConfig.workers.map(async (workerConfig, i) => {
 				const bindings =
-					unstable_convertConfigBindingsToStartWorkerBindings(workerConfig);
+					wrangler.unstable_convertConfigBindingsToStartWorkerBindings(
+						workerConfig
+					);
 
 				const preExistingRemoteProxySessionData = workerConfig.configPath
 					? remoteProxySessionsDataMap.get(workerConfig.configPath)
@@ -536,7 +548,7 @@ export async function getPreviewMiniflareOptions(
 				const remoteProxySessionData = !resolvedPluginConfig.remoteBindings
 					? // if remote bindings are not enabled then the proxy session can simply be null
 						null
-					: await maybeStartOrUpdateRemoteProxySession(
+					: await wrangler.maybeStartOrUpdateRemoteProxySession(
 							{
 								name: workerConfig.name,
 								bindings: bindings ?? {},
@@ -571,16 +583,13 @@ export async function getPreviewMiniflareOptions(
 					}
 				}
 
-				const miniflareWorkerOptions = unstable_getMiniflareWorkerOptions(
-					workerConfig,
-					undefined,
-					{
+				const miniflareWorkerOptions =
+					wrangler.unstable_getMiniflareWorkerOptions(workerConfig, undefined, {
 						remoteProxyConnectionString:
 							remoteProxySessionData?.session?.remoteProxyConnectionString,
 
 						containerBuildId,
-					}
-				);
+					});
 
 				const { externalWorkers } = miniflareWorkerOptions;
 
@@ -611,10 +620,12 @@ export async function getPreviewMiniflareOptions(
 	return {
 		miniflareOptions: {
 			log: logger,
+			unsafeProxySharedSecret: ctx.proxySharedSecret,
 			inspectorPort:
 				inputInspectorPort === false ? undefined : inputInspectorPort,
 			unsafeDevRegistryPath: getDefaultDevRegistryPath(),
 			unsafeTriggerHandlers: true,
+			unsafeLocalExplorer: getLocalExplorerEnabledFromEnv(),
 			handleStructuredLogs: getStructuredLogsLogger(logger),
 			defaultPersistRoot: getPersistenceRoot(
 				resolvedViteConfig.root,

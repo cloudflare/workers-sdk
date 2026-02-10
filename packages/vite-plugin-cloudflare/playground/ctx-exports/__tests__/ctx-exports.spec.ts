@@ -1,5 +1,5 @@
 import * as path from "node:path";
-import { describe, expect, test, vi } from "vitest";
+import { describe, test, vi } from "vitest";
 import {
 	getTextResponse,
 	isBuild,
@@ -9,13 +9,17 @@ import {
 } from "../../__test-utils__";
 
 describe("initial load", () => {
-	test("can use `ctx.exports` to access a Worker Entrypoint", async () => {
+	test("can use `ctx.exports` to access a Worker Entrypoint", async ({
+		expect,
+	}) => {
 		expect(await getTextResponse("/worker-entrypoint")).toBe(
 			"Hello World from a Worker Entrypoint"
 		);
 	});
 
-	test("can use `ctx.exports` to access a Durable Object", async () => {
+	test("can use `ctx.exports` to access a Durable Object", async ({
+		expect,
+	}) => {
 		expect(await getTextResponse("/durable-object")).toBe(
 			"Hello World from a Durable Object"
 		);
@@ -23,7 +27,9 @@ describe("initial load", () => {
 });
 
 describe.runIf(!isBuild)("file changes", () => {
-	test("does not restart the dev server if the exports have not changed", async () => {
+	test("does not restart the dev server if the exports have not changed", async ({
+		expect,
+	}) => {
 		mockFileChange(
 			path.join(__dirname, "../src/index.ts"),
 			() => `
@@ -53,7 +59,9 @@ export default {
 		}, WAIT_FOR_OPTIONS);
 	});
 
-	test("restarts dev server with updated exports when exports have changed", async () => {
+	test("restarts dev server with updated exports when exports have changed", async ({
+		expect,
+	}) => {
 		mockFileChange(
 			path.join(__dirname, "../src/index.ts"),
 			() => `

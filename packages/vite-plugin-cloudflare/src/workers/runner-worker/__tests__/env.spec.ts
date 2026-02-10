@@ -1,8 +1,9 @@
-import { describe, expect, test } from "vitest";
+import { describe, test } from "vitest";
 import { stripInternalEnv } from "../env";
 
 const internalEnv = {
 	__VITE_RUNNER_OBJECT__: {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		get: () => ({}) as any,
 	},
 	__VITE_INVOKE_MODULE__: {
@@ -14,12 +15,14 @@ const internalEnv = {
 };
 
 describe("stripInternalEnv", () => {
-	test("strips internal properties", () => {
+	test("strips internal properties", ({ expect }) => {
 		const result = stripInternalEnv(internalEnv);
 		expect(result).toEqual({});
 	});
 
-	test("strips internal properties when extra properties are included", () => {
+	test("strips internal properties when extra properties are included", ({
+		expect,
+	}) => {
 		const env = {
 			...internalEnv,
 			test: "this is a test",

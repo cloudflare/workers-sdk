@@ -1,5 +1,6 @@
 import { execFileSync, spawn } from "node:child_process";
 import * as fs from "node:fs";
+import path from "node:path";
 import { PassThrough, Writable } from "node:stream";
 import {
 	getCloudflareContainerRegistry,
@@ -7,8 +8,11 @@ import {
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
 import { ApplicationAffinityHardwareGeneration } from "@cloudflare/containers-shared/src/client/models/ApplicationAffinityHardwareGeneration";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- module-level helper functions use expect */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { clearCachedAccount } from "../../cloudchamber/locations";
 import { mockAccountV4 as mockContainersAccount } from "../cloudchamber/utils";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
@@ -25,7 +29,6 @@ import {
 import { mswListNewDeploymentsLatestFull } from "../helpers/msw/handlers/versions";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type {
 	AccountRegistryToken,
 	Application,
@@ -109,6 +112,10 @@ describe("wrangler deploy with containers", () => {
 					getCloudflareContainerRegistry() +
 					"/some-account-id/my-container:Galaxy",
 			},
+			durable_objects: {
+				// uses namespace_id when the DO is a binding
+				namespace_id: "1",
+			},
 		});
 
 		await runWrangler("deploy index.js");
@@ -122,6 +129,9 @@ describe("wrangler deploy with containers", () => {
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+			The following containers are available:
+			- my-container (<cwd>/Dockerfile)
 
 			Uploaded test-name (TIMINGS)
 			Building image my-container:Galaxy
@@ -151,7 +161,7 @@ describe("wrangler deploy with containers", () => {
 			│   instance_type = \\"lite\\"
 			│
 			│   [containers.constraints]
-			│   tier = 1
+			│   tiers = [ 1, 2 ]
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = \\"1\\"
@@ -198,6 +208,9 @@ describe("wrangler deploy with containers", () => {
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
+			The following containers are available:
+			- my-container (registry.cloudflare.com/hello:world)
+
 			Uploaded test-name (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -224,7 +237,7 @@ describe("wrangler deploy with containers", () => {
 			│   instance_type = \\"lite\\"
 			│
 			│   [containers.constraints]
-			│   tier = 1
+			│   tiers = [ 1, 2 ]
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = \\"1\\"
@@ -284,6 +297,9 @@ describe("wrangler deploy with containers", () => {
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
+			The following containers are available:
+			- my-container (registry.cloudflare.com/hello:world)
+
 			Uploaded test-name (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -322,7 +338,7 @@ describe("wrangler deploy with containers", () => {
 			│   size_mb = 2000
 			│
 			│   [containers.constraints]
-			│   tier = 1
+			│   tiers = [ 1, 2 ]
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = \\"1\\"
@@ -382,6 +398,9 @@ describe("wrangler deploy with containers", () => {
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
+			The following containers are available:
+			- my-container (registry.cloudflare.com/hello:world)
+
 			Uploaded test-name (TIMINGS)
 			Deployed test-name triggers (TIMINGS)
 			  https://test-name.test-sub-domain.workers.dev
@@ -414,7 +433,7 @@ describe("wrangler deploy with containers", () => {
 			│   size_mb = 2000
 			│
 			│   [containers.constraints]
-			│   tier = 1
+			│   tiers = [ 1, 2 ]
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = \\"1\\"
@@ -472,23 +491,33 @@ describe("wrangler deploy with containers", () => {
 
 		await runWrangler("deploy --cwd src");
 
-		expect(std.out).toMatchInlineSnapshot(`
-			"
-			 ⛅️ wrangler x.x.x
-			──────────────────
-			Total Upload: xx KiB / gzip: xx KiB
-			Worker Startup Time: 100 ms
-			Your Worker has access to the following bindings:
-			Binding                                            Resource
-			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+		// we filter stdout normally to replace cwd since that is temporary
+		// however in this case since we pass a cwd to wrangler, the cwd wrangler runs in
+		// is different from the cwd for the test so our normal matching doesn't work
+		const wranglerCWD = process.cwd().split(path.sep);
+		wranglerCWD.splice(-1, 1);
+		expect(std.out.replace(wranglerCWD.join("/"), "<test-cwd>"))
+			.toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				Your Worker has access to the following bindings:
+				Binding                                            Resource
+				env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
-			Uploaded test-name (TIMINGS)
-			Building image my-container:Galaxy
-			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
-			Deployed test-name triggers (TIMINGS)
-			  https://test-name.test-sub-domain.workers.dev
-			Current Version ID: Galaxy-Class"
-		`);
+				The following containers are available:
+				- my-container (<test-cwd>/Dockerfile)
+
+				Uploaded test-name (TIMINGS)
+				Building image my-container:Galaxy
+				Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
@@ -545,6 +574,9 @@ describe("wrangler deploy with containers", () => {
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
+			The following containers are available:
+			- my-container (<cwd>/Dockerfile)
+
 			Uploaded test-name (TIMINGS)
 			Building image my-container:Galaxy
 			Image does not exist remotely, pushing: registry.cloudflare.com/some-account-id/my-container:Galaxy
@@ -590,7 +622,7 @@ describe("wrangler deploy with containers", () => {
 					memory_mib: 256,
 				},
 				constraints: {
-					tier: 1,
+					tiers: [1, 2],
 				},
 				durable_objects: {
 					namespace_id: "1",
@@ -692,6 +724,12 @@ describe("wrangler deploy with containers", () => {
 					},
 				],
 			},
+			migrations: [
+				{
+					tag: "v1",
+					new_sqlite_classes: ["DurableObjectClass2", "ExampleDurableObject"],
+				},
+			],
 			containers: [
 				DEFAULT_CONTAINER_FROM_DOCKERFILE,
 				{
@@ -729,7 +767,7 @@ describe("wrangler deploy with containers", () => {
 					memory_mib: 256,
 				},
 				constraints: {
-					tier: 1,
+					tiers: [1, 2],
 				},
 				durable_objects: {
 					namespace_id: "1",
@@ -800,7 +838,7 @@ describe("wrangler deploy with containers", () => {
 			│   instance_type = \\"lite\\"
 			│
 			│   [containers.constraints]
-			│   tier = 1
+			│   tiers = [ 1, 2 ]
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = \\"2\\"
@@ -843,7 +881,7 @@ describe("wrangler deploy with containers", () => {
 					memory_mib: 256,
 				},
 				constraints: {
-					tier: 1,
+					tiers: [1, 2],
 				},
 				durable_objects: {
 					namespace_id: "1",
@@ -952,7 +990,7 @@ describe("wrangler deploy with containers", () => {
 						memory_mib: 256,
 					},
 					constraints: {
-						tier: 1,
+						tiers: [1, 2],
 					},
 					durable_objects: {
 						namespace_id: "1",
@@ -1077,7 +1115,7 @@ describe("wrangler deploy with containers", () => {
 				memory_mib: 256,
 			},
 			constraints: {
-				tier: 1,
+				tiers: [1, 2],
 			},
 			durable_objects: {
 				namespace_id: "1",
@@ -1115,7 +1153,7 @@ describe("wrangler deploy with containers", () => {
 				│ + [containers.configuration.observability.logs]
 				│ + enabled = true
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1158,7 +1196,7 @@ describe("wrangler deploy with containers", () => {
 				│ + [containers.configuration.observability.logs]
 				│ + enabled = true
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1214,7 +1252,7 @@ describe("wrangler deploy with containers", () => {
 				│ - enabled = true
 				│ + enabled = false
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1270,7 +1308,7 @@ describe("wrangler deploy with containers", () => {
 				│ - enabled = true
 				│ + enabled = false
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1322,64 +1360,7 @@ describe("wrangler deploy with containers", () => {
 				│ - enabled = true
 				│ + enabled = false
 				│   [containers.constraints]
-				│   tier = 1
-				│
-				│
-				│  SUCCESS  Modified application my-container (Application ID: abc)
-				│
-				╰ Applied changes
-
-				"
-			`);
-		});
-		it("should ignore deprecated observability.logging field from the api", async () => {
-			mockGetVersion("Galaxy-Class");
-			writeWranglerConfig({
-				...DEFAULT_DURABLE_OBJECTS,
-				containers: [DEFAULT_CONTAINER_FROM_REGISTRY],
-			});
-
-			mockGetApplications([
-				{
-					...sharedGetApplicationResult,
-					configuration: {
-						...sharedGetApplicationResult.configuration,
-						observability: {
-							logging: {
-								enabled: false,
-							},
-							logs: {
-								enabled: true,
-							},
-						},
-					},
-				},
-			]);
-
-			mockModifyApplication({
-				configuration: {
-					image: "registry.cloudflare.com/some-account-id/hello:world",
-					observability: { logs: { enabled: false } },
-				},
-			});
-
-			mockCreateApplicationRollout();
-
-			await runWrangler("deploy index.js");
-
-			expect(cliStd.stdout).toMatchInlineSnapshot(`
-				"╭ Deploy a container application deploy changes to your application
-				│
-				│ Container application changes
-				│
-				├ EDIT my-container
-				│
-				│   instance_type = \\"lite\\"
-				│   [containers.configuration.observability.logs]
-				│ - enabled = true
-				│ + enabled = false
-				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│
 				│
 				│  SUCCESS  Modified application my-container (Application ID: abc)
@@ -1450,9 +1431,6 @@ describe("wrangler deploy with containers", () => {
 							logs: {
 								enabled: false,
 							},
-							logging: {
-								enabled: false,
-							},
 						},
 					},
 				},
@@ -1487,7 +1465,7 @@ describe("wrangler deploy with containers", () => {
 					image: `${registry}/hello:1.0`,
 					instance_type: "lite",
 					constraints: {
-						tier: 2,
+						tiers: [2],
 					},
 				},
 			],
@@ -1525,7 +1503,7 @@ describe("wrangler deploy with containers", () => {
 			│   instance_type = \\"lite\\"
 			│
 			│   [containers.constraints]
-			│   tier = 2
+			│   tiers = [ 2 ]
 			│
 			│   [containers.durable_objects]
 			│   namespace_id = \\"1\\"
@@ -1579,7 +1557,7 @@ describe("wrangler deploy with containers", () => {
 				│   instance_type = \\"lite\\"
 				│
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│
 				│   [containers.affinities]
 				│   hardware_generation = \\"highest-overall-performance\\"
@@ -1632,7 +1610,7 @@ describe("wrangler deploy with containers", () => {
 						memory_mib: 256,
 					},
 					constraints: {
-						tier: 1,
+						tiers: [1, 2],
 					},
 					durable_objects: {
 						namespace_id: "1",
@@ -1662,7 +1640,7 @@ describe("wrangler deploy with containers", () => {
 				├ EDIT my-container
 				│
 				│   [containers.constraints]
-				│   tier = 1
+				│   tiers = [ 1, 2 ]
 				│ + [containers.affinities]
 				│ + hardware_generation = \\"highest-overall-performance\\"
 				│
@@ -1752,7 +1730,7 @@ describe("wrangler deploy with containers", () => {
 					memory_mib: 256,
 				},
 				constraints: {
-					tier: 1,
+					tiers: [1, 2],
 				},
 				durable_objects: {
 					namespace_id: "1",
@@ -1779,6 +1757,450 @@ describe("wrangler deploy with containers", () => {
 		expect(std.err).toMatchInlineSnapshot(`""`);
 		expect(std.warn).toMatchInlineSnapshot(`""`);
 	});
+
+	it("should enable ssh when provided for new container", async () => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					wrangler_ssh: {
+						enabled: true,
+						port: 1010,
+					},
+					authorized_keys: [
+						{
+							name: "jeff",
+							public_key:
+								"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+						},
+					],
+				},
+			],
+		});
+
+		mockGetApplications([]);
+
+		mockCreateApplication({
+			name: "my-container",
+			max_instances: 10,
+			scheduling_policy: SchedulingPolicy.DEFAULT,
+			configuration: {
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+				wrangler_ssh: {
+					enabled: true,
+					port: 1010,
+				},
+				authorized_keys: [
+					{
+						name: "jeff",
+						public_key:
+							"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+					},
+				],
+			},
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(std.warn).toBe("");
+		expect(std.err).toBe("");
+
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ NEW my-container
+			│
+			│   [[containers]]
+			│   name = \\"my-container\\"
+			│   scheduling_policy = \\"default\\"
+			│   instances = 0
+			│   max_instances = 10
+			│   rollout_active_grace_period = 0
+			│
+			│   [containers.configuration]
+			│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│   instance_type = \\"lite\\"
+			│
+			│   [containers.configuration.wrangler_ssh]
+			│   enabled = true
+			│   port = 1010
+			│
+			│   [[containers.configuration.authorized_keys]]
+			│   name = \\"jeff\\"
+			│   public_key = \\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm\\"
+			│
+			│   [containers.constraints]
+			│   tiers = [ 1, 2 ]
+			│
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
+			│
+			│
+			│  SUCCESS  Created application my-container (Application ID: undefined)
+			│
+			╰ Applied changes
+
+			"
+		`);
+	});
+
+	it("should enable ssh when provided for an existing container", async () => {
+		mockGetVersion("Galaxy-Class");
+		writeWranglerConfig({
+			...DEFAULT_DURABLE_OBJECTS,
+			containers: [
+				{
+					...DEFAULT_CONTAINER_FROM_REGISTRY,
+					wrangler_ssh: {
+						enabled: true,
+					},
+					authorized_keys: [
+						{
+							name: "jeff",
+							public_key:
+								"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+						},
+					],
+				},
+			],
+		});
+
+		mockGetApplications([
+			{
+				id: "abc",
+				instances: 0,
+				created_at: new Date().toString(),
+				version: 1,
+				account_id: "1",
+				name: "my-container",
+				max_instances: 10,
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				configuration: {
+					image: "registry.cloudflare.com/hello:world",
+				},
+				durable_objects: {
+					namespace_id: "1",
+				},
+			},
+		]);
+
+		mockModifyApplication({
+			configuration: {
+				image: "registry.cloudflare.com/some-account-id/hello:world",
+				wrangler_ssh: {
+					enabled: true,
+				},
+				authorized_keys: [
+					{
+						name: "jeff",
+						public_key:
+							"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm",
+					},
+				],
+			},
+		});
+
+		mockCreateApplicationRollout({
+			description: "Progressive update",
+			strategy: "rolling",
+			kind: "full_auto",
+		});
+
+		await runWrangler("deploy index.js");
+
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
+
+		expect(cliStd.stdout).toMatchInlineSnapshot(`
+			"╭ Deploy a container application deploy changes to your application
+			│
+			│ Container application changes
+			│
+			├ EDIT my-container
+			│
+			│   name = \\"my-container\\"
+			│   scheduling_policy = \\"default\\"
+			│   version = 1
+			│ + rollout_active_grace_period = 0
+			│   [containers.configuration]
+			│ - image = \\"registry.cloudflare.com/hello:world\\"
+			│ + image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+			│ + instance_type = \\"lite\\"
+			│ + [[containers.configuration.authorized_keys]]
+			│ + name = \\"jeff\\"
+			│ + public_key = \\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC0chNcjRotdsxXTwPPNoqVCGn4EcEWdUkkBPNm/v4gm\\"
+			│ + [containers.configuration.wrangler_ssh]
+			│ + enabled = true
+			│   [containers.durable_objects]
+			│   namespace_id = \\"1\\"
+			│ + [containers.constraints]
+			│ + tiers = [ 1, 2 ]
+			│
+			│
+			│  SUCCESS  Modified application my-container (Application ID: abc)
+			│
+			╰ Applied changes
+
+			"
+		`);
+	});
+
+	describe("ctx.exports", async () => {
+		// note how mockGetVersion is NOT mocked in any of these, unlike the other tests.
+		// instead we mock the list durable objects endpoint, which the ctx.exports path uses instead
+		it("should be able to deploy a new container", async () => {
+			writeWranglerConfig({
+				// no DO!
+				migrations: [
+					{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+				],
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						rollout_active_grace_period: 600,
+					},
+				],
+			});
+
+			mockGetApplications([]);
+			mockListDurableObjects([
+				{
+					id: "some-id",
+					name: "name",
+					script: "test-name",
+					class: "ExampleDurableObject",
+				},
+			]);
+			mockUploadWorkerRequest({
+				expectedBindings: [],
+				useOldUploadApi: true,
+				expectedContainers: [{ class_name: "ExampleDurableObject" }],
+			});
+			mockCreateApplication({
+				name: "my-container",
+				max_instances: 10,
+				scheduling_policy: SchedulingPolicy.DEFAULT,
+				rollout_active_grace_period: 600,
+				durable_objects: {
+					namespace_id: "some-id",
+				},
+			});
+
+			await runWrangler("deploy index.js");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				Total Upload: xx KiB / gzip: xx KiB
+				Worker Startup Time: 100 ms
+				The following containers are available:
+				- my-container (registry.cloudflare.com/hello:world)
+
+				Uploaded test-name (TIMINGS)
+				Deployed test-name triggers (TIMINGS)
+				  https://test-name.test-sub-domain.workers.dev
+				Current Version ID: Galaxy-Class"
+			`);
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ NEW my-container
+				│
+				│   [[containers]]
+				│   name = \\"my-container\\"
+				│   scheduling_policy = \\"default\\"
+				│   instances = 0
+				│   max_instances = 10
+				│   rollout_active_grace_period = 600
+				│
+				│   [containers.configuration]
+				│   image = \\"registry.cloudflare.com/some-account-id/hello:world\\"
+				│   instance_type = \\"lite\\"
+				│
+				│   [containers.constraints]
+				│   tiers = [ 1, 2 ]
+				│
+				│   [containers.durable_objects]
+				│   namespace_id = \\"some-id\\"
+				│
+				│
+				│  SUCCESS  Created application my-container (Application ID: undefined)
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
+
+		it("should error if a container name has been used before but attached to a different DO", async () => {
+			writeWranglerConfig({
+				migrations: [
+					{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+				],
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						rollout_active_grace_period: 600,
+					},
+				],
+			});
+
+			mockGetApplications([
+				{
+					id: "abc",
+					name: "my-container",
+					instances: 0,
+					max_instances: 10,
+					created_at: new Date().toString(),
+					version: 1,
+					account_id: "1",
+					scheduling_policy: SchedulingPolicy.DEFAULT,
+					rollout_active_grace_period: 0,
+					configuration: {
+						image: `${getCloudflareContainerRegistry()}/some-account-id/my-container:Galaxy`,
+						disk: {
+							size: "2GB",
+							size_mb: 2000,
+						},
+						vcpu: 0.0625,
+						memory: "256MB",
+						memory_mib: 256,
+					},
+					constraints: {
+						tiers: [1, 2],
+					},
+					durable_objects: {
+						namespace_id: "something-else",
+					},
+				},
+			]);
+			mockListDurableObjects([
+				{
+					id: "something",
+					name: "name",
+					script: "test-name",
+					class: "ExampleDurableObject",
+				},
+			]);
+			mockUploadWorkerRequest({
+				expectedBindings: [],
+				useOldUploadApi: true,
+				expectedContainers: [{ class_name: "ExampleDurableObject" }],
+			});
+
+			await expect(
+				runWrangler("deploy index.js")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`[Error: There is already an application with the name my-container deployed that is associated with a different durable object namespace (something-else). Either change the container name or delete the existing application first.]`
+			);
+		});
+
+		it("should be able to redeploy an existing application", async () => {
+			writeWranglerConfig({
+				migrations: [
+					{ tag: "v1", new_sqlite_classes: ["ExampleDurableObject"] },
+				],
+				containers: [
+					{
+						...DEFAULT_CONTAINER_FROM_REGISTRY,
+						rollout_active_grace_period: 600,
+					},
+				],
+			});
+			mockUploadWorkerRequest({
+				expectedBindings: [],
+				useOldUploadApi: true,
+				expectedContainers: [{ class_name: "ExampleDurableObject" }],
+			});
+			mockListDurableObjects([
+				{
+					id: "something",
+					name: "name",
+					script: "test-name",
+					class: "ExampleDurableObject",
+				},
+			]);
+			mockGetApplications([
+				{
+					id: "abc",
+					name: "my-container",
+					instances: 0,
+					max_instances: 2,
+					created_at: new Date().toString(),
+					version: 1,
+					account_id: "1",
+					scheduling_policy: SchedulingPolicy.DEFAULT,
+					configuration: {
+						image: "registry.cloudflare.com/some-account-id/hello:world",
+						disk: {
+							size: "2GB",
+							size_mb: 2000,
+						},
+						vcpu: 0.0625,
+						memory: "256MB",
+						memory_mib: 256,
+					},
+					constraints: {
+						tiers: [1, 2],
+					},
+					durable_objects: {
+						namespace_id: "something",
+					},
+					rollout_active_grace_period: 500,
+				},
+			]);
+			fs.writeFileSync("./Dockerfile", "FROM scratch");
+			mockGenerateImageRegistryCredentials();
+			mockModifyApplication({
+				configuration: {
+					image: "registry.cloudflare.com/some-account-id/hello:world",
+				},
+				max_instances: 10,
+				rollout_active_grace_period: 600,
+			});
+			mockCreateApplicationRollout({
+				description: "Progressive update",
+				strategy: "rolling",
+				kind: "full_auto",
+			});
+			await runWrangler("deploy index.js");
+
+			expect(std.err).toMatchInlineSnapshot(`""`);
+			expect(std.warn).toMatchInlineSnapshot(`""`);
+			expect(cliStd.stdout).toMatchInlineSnapshot(`
+				"╭ Deploy a container application deploy changes to your application
+				│
+				│ Container application changes
+				│
+				├ EDIT my-container
+				│
+				│   [[containers]]
+				│ - max_instances = 2
+				│ + max_instances = 10
+				│   name = \\"my-container\\"
+				│ - rollout_active_grace_period = 500
+				│ + rollout_active_grace_period = 600
+				│   scheduling_policy = \\"default\\"
+				│   [containers.configuration]
+				│
+				│
+				│  SUCCESS  Modified application my-container (Application ID: abc)
+				│
+				╰ Applied changes
+
+				"
+			`);
+		});
+	});
 });
 
 // This is a separate describe block because we intentionally do not mock any
@@ -1791,11 +2213,11 @@ describe("wrangler deploy with containers dry run", () => {
 	beforeEach(() => {
 		clearCachedAccount();
 		expect(process.env.CLOUDFLARE_API_TOKEN).toBeUndefined();
+		vi.mocked(spawn).mockReset();
 	});
 
 	afterEach(() => {
 		vi.unstubAllEnvs();
-		vi.mocked(spawn).mockReset();
 	});
 
 	it("builds the image without pushing", async () => {
@@ -1827,6 +2249,9 @@ describe("wrangler deploy with containers dry run", () => {
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
 
+			The following containers are available:
+			- my-container (<cwd>/Dockerfile)
+
 			--dry-run: exiting now."
 		`);
 		expect(cliStd.stdout).toMatchInlineSnapshot(`""`);
@@ -1853,6 +2278,9 @@ describe("wrangler deploy with containers dry run", () => {
 			Your Worker has access to the following bindings:
 			Binding                                            Resource
 			env.EXAMPLE_DO_BINDING (ExampleDurableObject)      Durable Object
+
+			The following containers are available:
+			- my-container (registry.cloudflare.com/hello:world)
 
 			--dry-run: exiting now."
 		`);
@@ -1947,7 +2375,7 @@ describe("containers.unsafe configuration", () => {
 					memory_mib: 256,
 				},
 				constraints: {
-					tier: 1,
+					tiers: [1, 2],
 				},
 				durable_objects: {
 					namespace_id: "1",
@@ -2209,6 +2637,24 @@ function mockGetApplications(applications: Application[]) {
 		http.get("*/applications", async () => {
 			return HttpResponse.json({ success: true, result: applications });
 		})
+	);
+}
+
+function mockListDurableObjects(
+	durableObjects: Array<{
+		id: string;
+		name: string;
+		script: string;
+		class: string;
+	}>
+) {
+	msw.use(
+		http.get(
+			"*/accounts/:accountId/workers/durable_objects/namespaces",
+			async () => {
+				return HttpResponse.json(createFetchResult(durableObjects));
+			}
+		)
 	);
 }
 

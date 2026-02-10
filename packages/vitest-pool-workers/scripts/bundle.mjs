@@ -91,22 +91,18 @@ const commonOptions = {
 	external: [
 		// Node.js built-ins (handled automatically by esbuild but listed for completeness)
 		"node:*",
+		// Cloudflare/workerd built-ins
 		"cloudflare:*",
 		"workerd:*",
 		// Virtual/runtime modules
 		"__VITEST_POOL_WORKERS_DEFINES",
 		"__VITEST_POOL_WORKERS_USER_OBJECT",
-		// All npm packages (previously handled by packages: "external")
-		"birpc",
+		// External dependencies (see scripts/deps.ts for rationale)
 		"cjs-module-lexer",
-		"devalue",
+		"esbuild",
+		// Workspace dependencies
 		"miniflare",
-		"semver",
-		"semver/*",
 		"wrangler",
-		"zod",
-		"undici",
-		"undici/*",
 		// Peer dependencies
 		"vitest",
 		"vitest/*",

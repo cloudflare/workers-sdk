@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, test } from "vitest";
 import { Astro } from "../../autoconfig/frameworks/astro";
 import { Static } from "../../autoconfig/frameworks/static";
 import { buildOperationsSummary } from "../../autoconfig/run";
@@ -24,15 +24,23 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 	});
 
 	describe("interactive mode", () => {
-		test("presents a summary for a simple project where only a wrangler.jsonc file needs to be created", async () => {
+		test("presents a summary for a simple project where only a wrangler.jsonc file needs to be created", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
 					configured: false,
 					outputDir: "public",
+					framework: new Static({ id: "static", name: "Static" }),
 				},
-				testRawConfig
+				testRawConfig,
+				{
+					build: "npm run build",
+					deploy: "npx wrangler deploy",
+					version: "npx wrangler versions upload",
+				}
 			);
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -51,8 +59,12 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 
 			expect(summary).toMatchInlineSnapshot(`
 				Object {
+				  "buildCommand": "npm run build",
+				  "deployCommand": "npx wrangler deploy",
+				  "frameworkId": "static",
 				  "outputDir": "public",
 				  "scripts": Object {},
+				  "versionCommand": "npx wrangler versions upload",
 				  "wranglerConfig": Object {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
@@ -66,7 +78,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			`);
 		});
 
-		test("shows that wrangler will be added as a devDependency when not already installed as such", async () => {
+		test("shows that wrangler will be added as a devDependency when not already installed as such", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
@@ -77,8 +91,14 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					},
 					configured: false,
 					outputDir: "dist",
+					framework: new Static({ id: "static", name: "Static" }),
 				},
-				testRawConfig
+				testRawConfig,
+				{
+					build: "npm run build",
+					deploy: "npx wrangler deploy",
+					version: "npx wrangler versions upload",
+				}
 			);
 
 			expect(std.out).toContain(
@@ -90,11 +110,15 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 
 			expect(summary).toMatchInlineSnapshot(`
 				Object {
+				  "buildCommand": "npm run build",
+				  "deployCommand": "npx wrangler deploy",
+				  "frameworkId": "static",
 				  "outputDir": "dist",
 				  "scripts": Object {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
 				  },
+				  "versionCommand": "npx wrangler versions upload",
 				  "wranglerConfig": Object {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
@@ -108,7 +132,9 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			`);
 		});
 
-		test("when a package.json is present wrangler@latest will be unconditionally installed (even if already present)", async () => {
+		test("when a package.json is present wrangler@latest will be unconditionally installed (even if already present)", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
@@ -121,8 +147,14 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 					},
 					configured: false,
 					outputDir: "out",
+					framework: new Static({ id: "static", name: "Static" }),
 				},
-				testRawConfig
+				testRawConfig,
+				{
+					build: "npm run build",
+					deploy: "npx wrangler deploy",
+					version: "npx wrangler versions upload",
+				}
 			);
 
 			expect(std.out).toContain(
@@ -134,11 +166,15 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 
 			expect(summary).toMatchInlineSnapshot(`
 				Object {
+				  "buildCommand": "npm run build",
+				  "deployCommand": "npx wrangler deploy",
+				  "frameworkId": "static",
 				  "outputDir": "out",
 				  "scripts": Object {
 				    "deploy": "wrangler deploy",
 				    "preview": "wrangler dev",
 				  },
+				  "versionCommand": "npx wrangler versions upload",
 				  "wranglerConfig": Object {
 				    "$schema": "node_modules/wrangler/config-schema.json",
 				    "compatibility_date": "2025-01-01",
@@ -152,16 +188,22 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			`);
 		});
 
-		test("shows that when needed a framework specific configuration will be run", async () => {
+		test("shows that when needed a framework specific configuration will be run", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
-					framework: new Astro(),
+					framework: new Astro({ id: "astro", name: "Astro" }),
 					configured: false,
 					outputDir: "dist",
 				},
-				testRawConfig
+				testRawConfig,
+				{
+					build: "npm run build",
+					deploy: "npx wrangler deploy",
+				}
 			);
 
 			expect(std.out).toContain(
@@ -171,18 +213,26 @@ describe("autoconfig run - buildOperationsSummary()", () => {
 			expect(summary.frameworkConfiguration).toBe(
 				'Configuring project for Astro with "astro add cloudflare"'
 			);
+
+			expect(summary.frameworkId).toBe("astro");
 		});
 
-		test("doesn't show the framework specific configuration step for the Static framework", async () => {
+		test("doesn't show the framework specific configuration step for the Static framework", async ({
+			expect,
+		}) => {
 			const summary = await buildOperationsSummary(
 				{
 					workerName: "worker-name",
 					projectPath: "<PROJECT_PATH>",
-					framework: new Static("static"),
+					framework: new Static({ id: "static", name: "Static" }),
 					configured: false,
 					outputDir: "public",
 				},
-				testRawConfig
+				testRawConfig,
+				{
+					build: "npm run build",
+					deploy: "npx wrangler deploy",
+				}
 			);
 
 			expect(std.out).not.toContain("🛠️  Configuring project for");

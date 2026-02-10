@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
@@ -9,6 +9,7 @@ import { bold } from "kleur/colors";
 import { MockAgent } from "undici";
 import SCRIPT_ENTRY from "worker:core/entry";
 import STRIP_CF_CONNECTING_IP from "worker:core/strip-cf-connecting-ip";
+import SCRIPT_LOCAL_EXPLORER from "worker:local-explorer/explorer";
 import { z } from "zod";
 import { fetch } from "../../http";
 import {
@@ -54,7 +55,9 @@ import {
 	getCustomFetchServiceName,
 	getCustomNodeServiceName,
 	getUserServiceName,
+	LOCAL_EXPLORER_DISK,
 	SERVICE_ENTRY,
+	SERVICE_LOCAL_EXPLORER,
 } from "./constants";
 import {
 	buildStringScriptPath,
@@ -176,6 +179,10 @@ const CoreOptionsSchemaInput = z.intersection(
 		// Strip the CF-Connecting-IP header from outbound fetches
 		stripCfConnectingIp: z.boolean().default(true),
 
+		// Zone to use for the CF-Worker header in outbound fetches
+		// If not specified, defaults to `${worker-name}.example.com`
+		zone: z.string().optional(),
+
 		/** Configuration used to connect to the container engine */
 		containerEngine: z
 			.union([
@@ -239,6 +246,7 @@ export const CoreSharedOptionsSchema = z
 		httpsCertPath: z.string().optional(),
 
 		inspectorPort: z.number().optional(),
+		inspectorHost: z.string().optional(),
 
 		verbose: z.boolean().optional(),
 
@@ -275,6 +283,8 @@ export const CoreSharedOptionsSchema = z
 		unsafeStickyBlobs: z.boolean().optional(),
 		// Enable directly triggering user Worker handlers with paths like `/cdn-cgi/handler/scheduled`
 		unsafeTriggerHandlers: z.boolean().optional(),
+		// Enable the local explorer at /cdn-cgi/explorer
+		unsafeLocalExplorer: z.boolean().optional(),
 		// Enable logging requests
 		logRequests: z.boolean().default(true),
 
@@ -919,6 +929,9 @@ export const CORE_PLUGIN: Plugin<
 		}
 
 		if (options.stripCfConnectingIp) {
+			// Use the zone option if provided, otherwise default to `${worker-name}.example.com`
+			const workerName = options.name ?? "worker";
+			const cfWorkerValue = options.zone ?? `${workerName}.example.com`;
 			services.push({
 				name: getStripCfConnectingIpName(workerIndex),
 				worker: {
@@ -930,6 +943,12 @@ export const CORE_PLUGIN: Plugin<
 					],
 					compatibilityDate: "2025-01-01",
 					compatibilityFlags: ["connect_pass_through", "experimental"],
+					bindings: [
+						{
+							name: "CF_WORKER_ZONE",
+							text: cfWorkerValue,
+						},
+					],
 					globalOutbound: getGlobalOutbound(workerIndex, options),
 				},
 			});
@@ -945,6 +964,7 @@ export interface GlobalServicesOptions {
 	fallbackWorkerName: string | undefined;
 	loopbackPort: number;
 	log: Log;
+	/** All user workerd-native bindings, used for Miniflare's magic proxy and the local explorer worker */
 	proxyBindings: Worker_Binding[];
 }
 export function getGlobalServices({
@@ -996,6 +1016,14 @@ export function getGlobalServices({
 		// Add `proxyBindings` here, they'll be added to the `ProxyServer` `env`
 		...proxyBindings,
 	];
+	if (sharedOptions.unsafeLocalExplorer) {
+		serviceEntryBindings.push({
+			name: CoreBindings.SERVICE_LOCAL_EXPLORER,
+			service: {
+				name: SERVICE_LOCAL_EXPLORER,
+			},
+		});
+	}
 	if (sharedOptions.upstream !== undefined) {
 		serviceEntryBindings.push({
 			name: CoreBindings.TEXT_UPSTREAM_URL,
@@ -1015,7 +1043,7 @@ export function getGlobalServices({
 			data: encoder.encode(liveReloadScript),
 		});
 	}
-	return [
+	const services: Service[] = [
 		{
 			name: SERVICE_LOOPBACK,
 			external: { http: { cfBlobHeader: CoreHeaders.CF_BLOB } },
@@ -1061,6 +1089,95 @@ export function getGlobalServices({
 			},
 		},
 	];
+
+	if (sharedOptions.unsafeLocalExplorer) {
+		// Build binding ID map from proxyBindings
+		// Maps binding names to their actual resource IDs
+		const IDToBindingName: {
+			d1: Record<string, string>;
+			kv: Record<string, string>;
+		} = {
+			d1: {},
+			kv: {},
+		};
+
+		for (const binding of proxyBindings) {
+			// D1 bindings: name = "MINIFLARE_PROXY:d1:worker-*:BINDING", wrapped.innerBindings[0].service.name = "d1:db:ID"
+			if (
+				binding.name?.startsWith(
+					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:d1:`
+				) &&
+				"wrapped" in binding
+			) {
+				const [innerBinding] = binding.wrapped?.innerBindings ?? [];
+				assert(innerBinding && "service" in innerBinding);
+
+				const databaseId = innerBinding.service?.name?.replace(/^d1:db:/, "");
+				assert(databaseId);
+
+				IDToBindingName.d1[databaseId] = binding.name;
+			}
+
+			// KV bindings: name = "MINIFLARE_PROXY:kv:worker:BINDING", kvNamespace.name = "kv:ns:ID"
+			if (
+				binding.name?.startsWith(
+					`${CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY}:kv:`
+				) &&
+				"kvNamespace" in binding &&
+				binding.kvNamespace?.name?.startsWith("kv:ns:")
+			) {
+				// Extract ID from service name "kv:ns:ID"
+				const namespaceId = binding.kvNamespace.name.replace(/^kv:ns:/, "");
+				IDToBindingName.kv[namespaceId] = binding.name;
+			}
+		}
+
+		// Disk service for serving local-explorer-ui assets
+		// The UI dist is copied to miniflare's dist/local-explorer-ui at build time.
+		// In the bundled CJS output, __dirname is dist/src/ so we need ../local-explorer-ui
+		const distPath = path.join(__dirname, "../local-explorer-ui");
+		if (existsSync(distPath)) {
+			services.push({
+				name: LOCAL_EXPLORER_DISK,
+				disk: {
+					path: distPath,
+					writable: false,
+				},
+			});
+		} else {
+			throw new MiniflareCoreError(
+				"ERR_MISSING_EXPLORER_UI",
+				`Local Explorer UI assets not found at expected path: ${distPath}`
+			);
+		}
+
+		services.push({
+			name: SERVICE_LOCAL_EXPLORER,
+			worker: {
+				compatibilityDate: "2026-01-01",
+				compatibilityFlags: ["nodejs_compat"],
+				modules: [
+					{
+						name: "explorer.worker.js",
+						esModule: SCRIPT_LOCAL_EXPLORER(),
+					},
+				],
+				bindings: [
+					...proxyBindings,
+					{
+						name: CoreBindings.JSON_LOCAL_EXPLORER_BINDING_MAP,
+						json: JSON.stringify(IDToBindingName),
+					},
+					{
+						name: CoreBindings.EXPLORER_DISK,
+						service: { name: LOCAL_EXPLORER_DISK },
+					},
+				],
+			},
+		});
+	}
+
+	return services;
 }
 
 function getWorkerScript(

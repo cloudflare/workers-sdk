@@ -1,5 +1,153 @@
 # @cloudflare/workers-utils
 
+## 0.9.1
+
+### Patch Changes
+
+- [#12368](https://github.com/cloudflare/workers-sdk/pull/12368) [`bd4bb98`](https://github.com/cloudflare/workers-sdk/commit/bd4bb98677f065f19872bbf05024b6ad13284a89) Thanks [@KianNH](https://github.com/KianNH)! - Preserve Containers configuration when using `versions` commands
+
+  Previously, commands like `wrangler versions upload` would inadvertently disable Containers on associated Durable Object namespaces because the `containers` property was being omitted from the API request body.
+
+## 0.9.0
+
+### Minor Changes
+
+- [#11803](https://github.com/cloudflare/workers-sdk/pull/11803) [`1bd1488`](https://github.com/cloudflare/workers-sdk/commit/1bd1488b1eb1d88aa854e8938acc88cdc0ce7f29) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Add a new `subrequests` limit to the `limits` field of the Wrangler configuration file
+
+  Before only the `cpu_ms` limit was supported in the `limits` field of the Wrangler configuration file, now a `subrequests` limit can be specified as well which enables the user to limit the number of fetch requests that a Worker's invocation can make.
+
+  Example:
+
+  ```json
+  {
+  	"$schema": "./node_modules/wrangler/config-schema.json",
+  	"limits": {
+  		"cpu_ms": 1000,
+  		"subrequests": 150 // newly added field
+  	}
+  }
+  ```
+
+## 0.8.1
+
+### Patch Changes
+
+- [#12156](https://github.com/cloudflare/workers-sdk/pull/12156) [`abd2b71`](https://github.com/cloudflare/workers-sdk/commit/abd2b716a526d2ae33b3dfab478f3ab4bdea840d) Thanks [@irvinebroque](https://github.com/irvinebroque)! - Fix compatibility date detection failing when creating new projects
+
+  Previously, `getLocalWorkerdCompatibilityDate()` would fail to find the locally installed `miniflare` and `workerd` packages, causing `npm create cloudflare@latest` to fall back to a hardcoded date (2025-09-27) instead of using the current workerd compatibility date.
+
+  The issue was that `module.createRequire()` was called with a directory path. Node.js treats this as a filename at that location and looks for `node_modules` in the parent directory rather than the intended directory. This is now fixed by appending `package.json` to the path, which ensures module resolution starts from the correct location.
+
+  Fixes #12155
+
+- [#11969](https://github.com/cloudflare/workers-sdk/pull/11969) [`9acb24b`](https://github.com/cloudflare/workers-sdk/commit/9acb24b27470ab741bb181bb0e7c21947449507b) Thanks [@emily-shen](https://github.com/emily-shen)! - Validate environments for unexpected fields in Wrangler config
+
+  Previously, this check only applied to the top-level environment.
+
+## 0.8.0
+
+### Minor Changes
+
+- [#12008](https://github.com/cloudflare/workers-sdk/pull/12008) [`e414f05`](https://github.com/cloudflare/workers-sdk/commit/e414f05271887ed43a9a0a660d66565e9847c489) Thanks [@penalosa](https://github.com/penalosa)! - Add support for customising the inspector IP address
+
+  Adds a new `--inspector-ip` CLI flag and `dev.inspector_ip` configuration option to allow customising the IP address that the inspector server listens on. Previously, the inspector was hardcoded to listen only on `127.0.0.1`.
+
+  Example usage:
+
+  ```bash
+  # CLI flag
+  wrangler dev --inspector-ip 0.0.0.0
+  ```
+
+  ```jsonc
+  // wrangler.json
+  {
+  	"dev": {
+  		"inspector_ip": "0.0.0.0",
+  	},
+  }
+  ```
+
+- [#12034](https://github.com/cloudflare/workers-sdk/pull/12034) [`05714f8`](https://github.com/cloudflare/workers-sdk/commit/05714f871022e998dfbd7005f795d2fa3b9aee56) Thanks [@emily-shen](https://github.com/emily-shen)! - Add a no-op local explorer worker, which is gated by the experimental flag `X_LOCAL_EXPLORER`.
+
+## 0.7.1
+
+### Patch Changes
+
+- [#11946](https://github.com/cloudflare/workers-sdk/pull/11946) [`fa39a73`](https://github.com/cloudflare/workers-sdk/commit/fa39a73040dd27d35d429deda34fdc8e15b15fbe) Thanks [@MattieTK](https://github.com/MattieTK)! - Fix `configFileName` returning wrong filename for `.jsonc` config files
+
+  Previously, users with a `wrangler.jsonc` config file would see error messages and hints referring to `wrangler.json` instead of `wrangler.jsonc`. This was because the `configFormat` function collapsed both `.json` and `.jsonc` files into a single `"jsonc"` value, losing the distinction between them.
+
+  Now `configFormat` returns `"json"` for `.json` files and `"jsonc"` for `.jsonc` files, allowing `configFileName` to return the correct filename for each format.
+
+## 0.7.0
+
+### Minor Changes
+
+- [#11755](https://github.com/cloudflare/workers-sdk/pull/11755) [`0f8d69d`](https://github.com/cloudflare/workers-sdk/commit/0f8d69d31071abeb567aa3c8478492536b5740fb) Thanks [@nikitassharma](https://github.com/nikitassharma)! - Users can now specify `constraints.tiers` for their container applications. `tier` is deprecated in favor of `tiers`.
+  If left unset, we will default to `tiers: [1, 2]`.
+  Note that `constraints` is an experimental feature.
+
+## 0.6.0
+
+### Minor Changes
+
+- [#11702](https://github.com/cloudflare/workers-sdk/pull/11702) [`f612b46`](https://github.com/cloudflare/workers-sdk/commit/f612b4683a7e1408709ad378fb6c5b96af485d49) Thanks [@gpanders](https://github.com/gpanders)! - Add support for trusted_user_ca_keys in Wrangler
+
+  You can now configure SSH trusted user CA keys for containers. Add the following to your wrangler.toml:
+
+  ```toml
+  [[containers.trusted_user_ca_keys]]
+  public_key = "ssh-ed25519 AAAAC3..."
+  ```
+
+  This allows you to specify CA public keys that can be used to verify SSH user certificates.
+
+- [#11620](https://github.com/cloudflare/workers-sdk/pull/11620) [`25f6672`](https://github.com/cloudflare/workers-sdk/commit/25f66726d3b2f55a6139273e8f307f0cf3c44422) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Expose a new `getLocalWorkerdCompatibilityDate` utility that allows callers to get the compatibility date of the locally installed `workerd` package.
+
+- [#11616](https://github.com/cloudflare/workers-sdk/pull/11616) [`fc95831`](https://github.com/cloudflare/workers-sdk/commit/fc958315f7f452155385628092db822badc09404) Thanks [@NuroDev](https://github.com/NuroDev)! - Add type generation support to `wrangler dev`
+
+  You can now have your worker configuration types be automatically generated when the local Wrangler development server starts.
+
+  To use it you can either:
+
+  1. Add the `--types` flag when running `wrangler dev`.
+  2. Update your Wrangler configuration file to add the new `dev.generate_types` boolean property.
+
+  ```json
+  {
+  	"$schema": "node_modules/wrangler/config-schema.json",
+  	"name": "example",
+  	"main": "src/index.ts",
+  	"compatibility_date": "2025-12-12",
+  	"dev": {
+  		"generate_types": true
+  	}
+  }
+  ```
+
+- [#11620](https://github.com/cloudflare/workers-sdk/pull/11620) [`25f6672`](https://github.com/cloudflare/workers-sdk/commit/25f66726d3b2f55a6139273e8f307f0cf3c44422) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Expose new `isCompatDate` utility that discerns whether a string represents a compatibility date or not
+
+### Patch Changes
+
+- [#11737](https://github.com/cloudflare/workers-sdk/pull/11737) [`2cfea12`](https://github.com/cloudflare/workers-sdk/commit/2cfea12660d0ab2841d230889de6ff628792223e) Thanks [@NuroDev](https://github.com/NuroDev)! - Fix the `triggers` JSON schema default value to use valid JSON (`{"crons":[]}`) instead of an invalid JavaScript literal, which was causing IDE auto-completion to insert a string rather than an object.
+
+- [#11651](https://github.com/cloudflare/workers-sdk/pull/11651) [`d123ad0`](https://github.com/cloudflare/workers-sdk/commit/d123ad006d72bdee97cce5f4857e6d06a6fc16da) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Surface error in diagnostics when TOML date/time values are used in `vars`
+
+  TOML parses unquoted date/time values like `DATE = 2024-01-01` as TOML Date, Date-Time, and Time values. The config validation now surfaces an error in the diagnostics result when this type of values are encountered, with a clear message telling you to quote the value as a string, e.g. `DATE = "2024-01-01"`.
+
+- [#11693](https://github.com/cloudflare/workers-sdk/pull/11693) [`385ec7f`](https://github.com/cloudflare/workers-sdk/commit/385ec7fe17b7e06d669481448555282e5a982626) Thanks [@vicb](https://github.com/vicb)! - Update the signature of ParseTOML to drop the Generics.
+
+  Use an explicit cast where required.
+
+## 0.5.0
+
+### Minor Changes
+
+- [#11661](https://github.com/cloudflare/workers-sdk/pull/11661) [`4b3fba2`](https://github.com/cloudflare/workers-sdk/commit/4b3fba29795797c50bee2b18e21a299727e295f7) Thanks [@edmundhung](https://github.com/edmundhung)! - Add `getOpenNextDeployFromEnv()` environment variable helper which will be used to signal the current process is being run by the open-next deploy command.
+
+- [#11621](https://github.com/cloudflare/workers-sdk/pull/11621) [`90c0676`](https://github.com/cloudflare/workers-sdk/commit/90c067631419d2590dc4338342e622dbc782f201) Thanks [@dario-piotrowicz](https://github.com/dario-piotrowicz)! - Expose `writeWranglerConfig`, `writeDeployRedirectConfig`, `writeRedirectedWranglerConfig` and `readWranglerConfig` from `/test-helpers`
+
 ## 0.4.0
 
 ### Minor Changes

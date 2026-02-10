@@ -5,7 +5,7 @@
 
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
+import nodePath from "node:path";
 import { getGlobalWranglerConfigPath } from "./global-wrangler-config-path";
 
 export const USER_ID_CACHE_PATH = "user-id.json";
@@ -14,7 +14,7 @@ export const USER_ID_CACHE_PATH = "user-id.json";
  * Stringify and write the given info to the metrics config file.
  */
 export function writeMetricsConfig(config: MetricsConfigFile) {
-	mkdirSync(path.dirname(getMetricsConfigPath()), { recursive: true });
+	mkdirSync(nodePath.dirname(getMetricsConfigPath()), { recursive: true });
 	writeFileSync(
 		getMetricsConfigPath(),
 		JSON.stringify(
@@ -43,7 +43,7 @@ export function readMetricsConfig(): MetricsConfigFile {
  * Get the path to the metrics config file.
  */
 function getMetricsConfigPath(): string {
-	return path.resolve(getGlobalWranglerConfigPath(), "metrics.json");
+	return nodePath.resolve(getGlobalWranglerConfigPath(), "metrics.json");
 }
 
 /**

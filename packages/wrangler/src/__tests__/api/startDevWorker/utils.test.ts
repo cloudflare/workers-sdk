@@ -1,9 +1,11 @@
 import assert from "node:assert";
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { convertConfigBindingsToStartWorkerBindings } from "../../../api/startDevWorker/utils";
 
 describe("convertConfigBindingsToStartWorkerBindings", () => {
-	it("converts config bindings into startWorker bindings", async () => {
+	it("converts config bindings into startWorker bindings", async ({
+		expect,
+	}) => {
 		const result = convertConfigBindingsToStartWorkerBindings({
 			kv_namespaces: [
 				{
@@ -138,7 +140,9 @@ describe("convertConfigBindingsToStartWorkerBindings", () => {
 		});
 	});
 
-	it("prioritizes preview values compared to their standard counterparts", async () => {
+	it("prioritizes preview values compared to their standard counterparts", async ({
+		expect,
+	}) => {
 		const result = convertConfigBindingsToStartWorkerBindings({
 			ai: undefined,
 			browser: undefined,

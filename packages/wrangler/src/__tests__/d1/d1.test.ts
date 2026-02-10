@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -8,14 +8,14 @@ describe("d1", () => {
 	const std = mockConsoleMethods();
 	runInTempDir();
 
-	it("should show help when no argument is passed", async () => {
+	it("should show help when no argument is passed", async ({ expect }) => {
 		await runWrangler("d1");
 		await endEventLoop();
 
 		expect(std.out).toMatchInlineSnapshot(`
 			"wrangler d1
 
-			🗄  Manage Workers D1 databases
+			🗄️ Manage Workers D1 databases
 
 			COMMANDS
 			  wrangler d1 create <name>       Creates a new D1 database, and provides the binding and UUID that you will put in your config file
@@ -38,7 +38,9 @@ describe("d1", () => {
 		`);
 	});
 
-	it("should show help when an invalid argument is passed", async () => {
+	it("should show help when an invalid argument is passed", async ({
+		expect,
+	}) => {
 		await expect(() => runWrangler("d1 asdf")).rejects.toThrow(
 			"Unknown argument: asdf"
 		);
@@ -52,7 +54,7 @@ describe("d1", () => {
 			"
 			wrangler d1
 
-			🗄  Manage Workers D1 databases
+			🗄️ Manage Workers D1 databases
 
 			COMMANDS
 			  wrangler d1 create <name>       Creates a new D1 database, and provides the binding and UUID that you will put in your config file
@@ -75,7 +77,9 @@ describe("d1", () => {
 		`);
 	});
 
-	it("should show help when the migrations command is passed", async () => {
+	it("should show help when the migrations command is passed", async ({
+		expect,
+	}) => {
 		await runWrangler("d1 migrations");
 		await endEventLoop();
 
@@ -99,7 +103,9 @@ describe("d1", () => {
 		`);
 	});
 
-	it("should show help when the time travel command is passed", async () => {
+	it("should show help when the time travel command is passed", async ({
+		expect,
+	}) => {
 		await runWrangler("d1 time-travel");
 		await endEventLoop();
 		expect(std.out).toMatchInlineSnapshot(`

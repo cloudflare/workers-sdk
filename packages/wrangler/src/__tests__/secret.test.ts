@@ -1,10 +1,17 @@
 import * as fs from "node:fs";
 import { writeFileSync } from "node:fs";
 import readline from "node:readline";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import * as TOML from "smol-toml";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { VERSION_NOT_DEPLOYED_ERR_CODE } from "../secret";
+import {
+	WORKER_NOT_FOUND_ERR_CODE,
+	workerNotFoundErrorMessage,
+} from "../utils/worker-not-found-error";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "./helpers/mock-dialogs";
@@ -14,7 +21,6 @@ import { useMockStdin } from "./helpers/mock-stdin";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { Interface } from "node:readline";
 
 function createFetchResult(
@@ -53,8 +59,8 @@ function mockNoWorkerFound(isBulk = false) {
 					return HttpResponse.json(
 						createFetchResult(null, false, [
 							{
-								code: 10007,
-								message: "This Worker does not exist on your account.",
+								code: WORKER_NOT_FOUND_ERR_CODE,
+								message: workerNotFoundErrorMessage,
 							},
 						])
 					);
@@ -70,8 +76,8 @@ function mockNoWorkerFound(isBulk = false) {
 					return HttpResponse.json(
 						createFetchResult(null, false, [
 							{
-								code: 10007,
-								message: "This Worker does not exist on your account.",
+								code: WORKER_NOT_FOUND_ERR_CODE,
+								message: workerNotFoundErrorMessage,
 							},
 						])
 					);
@@ -453,9 +459,9 @@ describe("wrangler secret", () => {
 						[Error: More than one account available but unable to select one in non-interactive mode.
 						Please set the appropriate \`account_id\` in your Wrangler configuration file or assign it to the \`CLOUDFLARE_ACCOUNT_ID\` environment variable.
 						Available accounts are (\`<name>\`: \`<account_id>\`):
-						  \`account-name-1\`: \`account-id-1\`
-						  \`account-name-2\`: \`account-id-2\`
-						  \`account-name-3\`: \`account-id-3\`]
+						  \`(redacted)\`: \`account-id-1\`
+						  \`(redacted)\`: \`account-id-2\`
+						  \`(redacted)\`: \`account-id-3\`]
 					`);
 				});
 			});
@@ -543,9 +549,12 @@ describe("wrangler secret", () => {
 
 			await expect(runWrangler(`secret put secret-name --name ${scriptName}`))
 				.rejects.toThrowErrorMatchingInlineSnapshot(`
-				[Error: Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed. Please ensure that the latest version of your Worker is fully deployed (wrangler versions deploy) before modifying secrets. Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.
-
-				Note: This limitation will be addressed in an upcoming release.]
+				[Error: Secret edit failed. You attempted to modify a secret, but the latest version of your Worker isn't currently deployed.
+				This limitation exists to prevent accidental deployment when using Worker versions and secrets together.
+				To resolve this, you have two options:
+				(1) use the \`wrangler versions secret put\` instead, which allows you to update secrets without deploying; or
+				(2) deploy the latest version first, then modify secrets.
+				Alternatively, you can use the Cloudflare dashboard to modify secrets and deploy the version.]
 			`);
 		});
 	});
@@ -887,6 +896,35 @@ describe("wrangler secret", () => {
 			`);
 			expect(error).toMatchInlineSnapshot(
 				`[Error: Required Worker name missing. Please specify the Worker name in your Wrangler configuration file, or pass it as an argument with \`--name <worker-name>\`]`
+			);
+		});
+
+		it("should error if worker is not found (error code 10007)", async () => {
+			msw.use(
+				http.get(
+					`*/accounts/:accountId/workers/scripts/:scriptName/secrets`,
+					() => {
+						return HttpResponse.json(
+							createFetchResult(null, false, [
+								{
+									code: WORKER_NOT_FOUND_ERR_CODE,
+									message: workerNotFoundErrorMessage,
+								},
+							])
+						);
+					},
+					{ once: true }
+				)
+			);
+			await expect(
+				runWrangler("secret list --name non-existent-worker")
+			).rejects.toThrowErrorMatchingInlineSnapshot(
+				`
+				[Error: Worker "non-existent-worker" not found.
+
+				If this is a new Worker, run \`wrangler deploy\` first to create it.
+				Otherwise, check that the Worker name is correct and you're logged into the right account.]
+			`
 			);
 		});
 

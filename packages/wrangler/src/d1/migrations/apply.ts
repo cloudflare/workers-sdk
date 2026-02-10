@@ -6,6 +6,7 @@ import { createCommand } from "../../core/create-command";
 import { confirm } from "../../dialogs";
 import { isNonInteractiveOrCI } from "../../is-interactive";
 import { logger } from "../../logger";
+import { isLocal } from "../../utils/is-local";
 import { DEFAULT_MIGRATION_PATH, DEFAULT_MIGRATION_TABLE } from "../constants";
 import { executeSql } from "../execute";
 import { getDatabaseInfoFromConfig } from "../utils";
@@ -68,16 +69,20 @@ export const d1MigrationsApplyCommand = createCommand({
 	},
 	positionalArgs: ["database"],
 	async handler({ database, local, remote, persistTo, preview }, { config }) {
-		const databaseInfo = getDatabaseInfoFromConfig(config, database);
+		if (!config.configPath) {
+			throw new UserError(
+				"No configuration file found. Create a wrangler.jsonc file to define your D1 database."
+			);
+		}
+
+		const databaseInfo = getDatabaseInfoFromConfig(config, database, {
+			requireDatabaseId: !isLocal({ local, remote }),
+		});
 
 		if (!databaseInfo && remote) {
 			throw new UserError(
 				`Couldn't find a D1 DB with the name or binding '${database}' in your ${configFileName(config.configPath)} file.`
 			);
-		}
-
-		if (!config.configPath) {
-			return;
 		}
 
 		const migrationsPath = await getMigrationsPath({

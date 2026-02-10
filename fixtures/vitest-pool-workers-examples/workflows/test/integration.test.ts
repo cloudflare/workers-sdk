@@ -1,12 +1,14 @@
 import { env, introspectWorkflow, SELF } from "cloudflare:test";
-import { expect, it } from "vitest";
+import { it } from "vitest";
 
 const STATUS_COMPLETE = "complete";
 const STEP_NAME = "AI content scan";
 const mockResult = { violationScore: 0 };
 
 // This example implicitly disposes the Workflow instance
-it("workflow should be able to reach the end and be successful", async () => {
+it("workflow should be able to reach the end and be successful", async ({
+	expect,
+}) => {
 	// CONFIG with `await using` to ensure Workflow instances cleanup:
 	await using introspector = await introspectWorkflow(env.MODERATOR);
 	await introspector.modifyAll(async (m) => {
@@ -26,11 +28,16 @@ it("workflow should be able to reach the end and be successful", async () => {
 	);
 	await expect(instance.waitForStatus(STATUS_COMPLETE)).resolves.not.toThrow();
 
+	const output = await instance.getOutput();
+	expect(output).toEqual({ status: "auto_approved" });
+
 	// DISPOSE: ensured by `await using`
 });
 
 // This example explicitly disposes the Workflow instances
-it("workflow batch should be able to reach the end and be successful", async () => {
+it("workflow batch should be able to reach the end and be successful", async ({
+	expect,
+}) => {
 	// CONFIG:
 	let introspector = await introspectWorkflow(env.MODERATOR);
 	try {
@@ -52,6 +59,9 @@ it("workflow batch should be able to reach the end and be successful", async () 
 			await expect(
 				instance.waitForStatus(STATUS_COMPLETE)
 			).resolves.not.toThrow();
+
+			const output = await instance.getOutput();
+			expect(output).toEqual({ status: "auto_approved" });
 		}
 	} finally {
 		// DISPOSE:

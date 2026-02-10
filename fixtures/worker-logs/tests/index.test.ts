@@ -1,5 +1,5 @@
+import { stripVTControlCharacters } from "node:util";
 import { resolve } from "path";
-import stripAnsi from "strip-ansi";
 import { describe, onTestFinished, test, vi } from "vitest";
 import { runWranglerDev } from "../../shared/src/run-wrangler-long-lived";
 
@@ -43,7 +43,7 @@ async function getWranglerDevOutput(
 	await response.text();
 
 	return () => {
-		const output = stripAnsi(getOutput())
+		const output = stripVTControlCharacters(getOutput())
 			// Windows gets a different marker for ✘, so let's normalize it here
 			// so that these tests can be platform independent
 			.replaceAll("✘", "X")
@@ -324,6 +324,10 @@ describe("'wrangler dev' correctly displays logs", () => {
 			const getOutput = await getWranglerDevOutput("module", [
 				"--compatibility-flags=enable_nodejs_process_v2",
 				"--compatibility-flags=nodejs_compat",
+				// Those flags are needed to enable the new process.v2 implementation
+				// See `getProcessOverrides` in `packages/unenv-preset/src/preset.ts`
+				"--compatibility-flags=fetch_iterable_type_support",
+				"--compatibility-flags=fetch_iterable_type_support_override_adjustment",
 			]);
 			await vi.waitFor(() =>
 				expect(getOutput()).toEqual([

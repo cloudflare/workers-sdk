@@ -38,20 +38,7 @@ export type EventNames =
 	| "delete r2 bucket"
 	| "login user"
 	| "logout user"
-	| "create pubsub namespace"
-	| "list pubsub namespaces"
-	| "delete pubsub namespace"
-	| "view pubsub namespace"
-	| "create pubsub broker"
-	| "update pubsub broker"
-	| "list pubsub brokers"
-	| "delete pubsub broker"
-	| "view pubsub broker"
-	| "issue pubsub broker credentials"
-	| "revoke pubsub broker credentials"
-	| "unrevoke pubsub broker credentials"
-	| "list pubsub broker revoked credentials"
-	| "list pubsub broker public-keys"
+	| "retrieve auth token"
 	| "list dispatch namespaces"
 	| "view dispatch namespace"
 	| "create dispatch namespace"
@@ -61,6 +48,7 @@ export type EventNames =
 	| "list pages projects"
 	| "create pages deployment"
 	| "list pages deployments"
+	| "delete pages deployment"
 	| "build pages functions"
 	| "run dev"
 	| "run dev (api)"
@@ -83,8 +71,16 @@ export type EventNames =
 	| "update pipeline"
 	| "show pipeline"
 	| "provision resources"
-	| "autoconfig detected"
-	| "autoconfig accepted";
+	| AutoConfigEvent;
+
+/** Event related to the autoconfig flow */
+type AutoConfigEvent =
+	| "autoconfig_process_started"
+	| "autoconfig_process_ended"
+	| "autoconfig_detection_started"
+	| "autoconfig_detection_completed"
+	| "autoconfig_configuration_started"
+	| "autoconfig_configuration_completed";
 
 /**
  * Send a metrics event, with no extra properties, to Cloudflare, if usage tracking is enabled.

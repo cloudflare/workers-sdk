@@ -17,6 +17,7 @@
 		"@cloudflare/vite-plugin": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
 		"playwright-chromium": "catalog:default",
+		"semver": "^7.7.1",
 		"ts-dedent": "^2.2.0",
 		"typescript": "catalog:default"
 	}

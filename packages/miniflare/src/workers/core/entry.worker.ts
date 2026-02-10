@@ -9,6 +9,7 @@ import {
 	yellow,
 } from "kleur/colors";
 import { HttpError, LogLevel, SharedHeaders } from "miniflare:shared";
+import { LOCAL_EXPLORER_BASE_PATH } from "../../plugins/core/constants";
 import { isCompressedByCloudflareFL } from "../../shared/mime-types";
 import { CoreBindings, CoreHeaders } from "./constants";
 import { handleEmail } from "./email";
@@ -19,6 +20,7 @@ import { handleScheduled } from "./scheduled";
 type Env = {
 	[CoreBindings.SERVICE_LOOPBACK]: Fetcher;
 	[CoreBindings.SERVICE_USER_FALLBACK]: Fetcher;
+	[CoreBindings.SERVICE_LOCAL_EXPLORER]: Fetcher;
 	[CoreBindings.TEXT_CUSTOM_SERVICE]: string;
 	[CoreBindings.TEXT_UPSTREAM_URL]?: string;
 	[CoreBindings.JSON_CF_BLOB]: IncomingRequestCfProperties;
@@ -76,6 +78,8 @@ function getUserRequest(
 
 	// If Miniflare was configured with `upstream`, then we use this to override the url and host in the request.
 	const upstreamUrl = env[CoreBindings.TEXT_UPSTREAM_URL];
+	// Store the original hostname before it gets rewritten by upstream
+	const originalHostname = upstreamUrl !== undefined ? url.host : undefined;
 	if (upstreamUrl !== undefined) {
 		// If a custom `upstream` was specified, make sure the URL starts with it
 		let path = url.pathname + url.search;
@@ -107,6 +111,12 @@ function getUserRequest(
 
 	if (rewriteHeadersFromOriginalUrl) {
 		request.headers.set("Host", url.host);
+	}
+
+	// Set the original hostname header when using upstream, so Workers can
+	// access the original hostname even after the Host header is rewritten
+	if (originalHostname !== undefined) {
+		request.headers.set(CoreHeaders.ORIGINAL_HOSTNAME, originalHostname);
 	}
 
 	if (clientIp && !request.headers.get("CF-Connecting-IP")) {
@@ -341,6 +351,9 @@ function maybeLogRequest(
 	return res;
 }
 
+/**
+ * Proxy here refers to the 'magic proxy' used by getPlatformProxy
+ */
 function handleProxy(request: Request, env: Env) {
 	const ns = env[CoreBindings.DURABLE_OBJECT_NAMESPACE_PROXY];
 	// Always use the same singleton Durable Object instance, so we always have
@@ -370,7 +383,7 @@ export default <ExportedHandler<Env>>{
 				};
 		request = new Request(request, { cf });
 
-		// The proxy client will always specify an operation
+		// The magic proxy client (used by getPlatformProxy) will always specify an operation
 		const isProxy = request.headers.get(CoreHeaders.OP) !== null;
 		if (isProxy) return handleProxy(request, env);
 
@@ -397,6 +410,11 @@ export default <ExportedHandler<Env>>{
 		}
 
 		try {
+			if (env[CoreBindings.SERVICE_LOCAL_EXPLORER]) {
+				if (url.pathname.startsWith(LOCAL_EXPLORER_BASE_PATH)) {
+					return await env[CoreBindings.SERVICE_LOCAL_EXPLORER].fetch(request);
+				}
+			}
 			if (env[CoreBindings.TRIGGER_HANDLERS]) {
 				if (
 					url.pathname === "/cdn-cgi/handler/scheduled" ||

@@ -10,6 +10,7 @@
 		"type:tests": "tsc -p ./tests/tsconfig.json"
 	},
 	"devDependencies": {
+		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:^",
 		"@cloudflare/workers-types": "catalog:default",
 		"typescript": "catalog:default",

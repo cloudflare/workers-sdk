@@ -1,106 +1,84 @@
-import { logRaw } from "@cloudflare/cli";
-import { brandColor, dim } from "@cloudflare/cli/colors";
-import { spinner } from "@cloudflare/cli/interactive";
+import { logRaw, updateStatus } from "@cloudflare/cli";
+import { blue } from "@cloudflare/cli/colors";
 import { runFrameworkGenerator } from "frameworks/index";
-import { loadTemplateSnippets, transformFile } from "helpers/codemod";
+import { mergeObjectProperties, transformFile } from "helpers/codemod";
+import { getWorkerdCompatibilityDate } from "helpers/compatDate";
+import { usesTypescript } from "helpers/files";
 import { detectPackageManager } from "helpers/packageManagers";
-import { installPackages } from "helpers/packages";
 import * as recast from "recast";
 import type { TemplateConfig } from "../../src/templates";
 import type { C3Context } from "types";
 
-const { npm, name: pm } = detectPackageManager();
+const { npm } = detectPackageManager();
 
 const generate = async (ctx: C3Context) => {
-	await runFrameworkGenerator(ctx, [
-		ctx.project.name,
-		"--template",
-		"angular-v17",
-	]);
-
-	logRaw(""); // newline
+	await runFrameworkGenerator(ctx, [ctx.project.name, "--template=latest"]);
+	logRaw("");
 };
 
 const configure = async (ctx: C3Context) => {
-	// Fix hoisting issues with pnpm, yarn and bun
-	if (pm === "pnpm" || pm === "yarn" || pm === "bun") {
-		const packages = [];
-		packages.push("nitropack");
-		packages.push("h3");
-		packages.push("@ngtools/webpack");
-		packages.push("@angular-devkit/build-angular");
+	usesTypescript(ctx);
+	const filePath = `vite.config.${usesTypescript(ctx) ? "ts" : "js"}`;
 
-		await installPackages(packages, {
-			dev: true,
-			startText: `Installing ${packages.join(", ")}`,
-			doneText: `${brandColor("installed")} ${dim(`via \`${npm} install\``)}`,
-		});
-	}
+	const compatDate = getWorkerdCompatibilityDate(ctx.project.path);
 
-	updateViteConfig(ctx);
-};
+	updateStatus(`Updating configuration in ${blue(filePath)}`);
 
-const updateViteConfig = (ctx: C3Context) => {
-	const b = recast.types.builders;
-	const s = spinner();
-
-	const configFile = "vite.config.ts";
-	s.start(`Updating \`${configFile}\``);
-
-	const snippets = loadTemplateSnippets(ctx);
-
-	transformFile(configFile, {
-		visitProgram(n) {
-			const lastImportIndex = n.node.body.findLastIndex(
-				(t) => t.type === "ImportDeclaration",
-			);
-			const lastImport = n.get("body", lastImportIndex);
-			lastImport.insertAfter(...snippets.devBindingsModuleTs);
-
-			return this.traverse(n);
-		},
-		visitCallExpression(n) {
+	transformFile(filePath, {
+		visitCallExpression: function (n) {
 			const callee = n.node.callee as recast.types.namedTypes.Identifier;
-			if (callee.name === "analog") {
-				const pluginArguments = b.objectProperty(
-					b.identifier("nitro"),
-					b.objectExpression([
-						b.objectProperty(
-							b.identifier("preset"),
-							b.stringLiteral("cloudflare-pages"),
-						),
-						b.objectProperty(
-							b.identifier("modules"),
-							b.arrayExpression([b.identifier("devBindingsModule")]),
-						),
-					]),
-				);
-
-				n.node.arguments = [b.objectExpression([pluginArguments])];
+			if (callee.name !== "analog") {
+				return this.traverse(n);
 			}
 
-			return this.traverse(n);
+			const b = recast.types.builders;
+			const presetDef = [
+				b.objectProperty(
+					b.identifier("nitro"),
+					b.objectExpression([
+						// preset: "cloudflare_module"
+						b.objectProperty(
+							b.identifier("preset"),
+							b.stringLiteral("cloudflare_module"),
+						),
+						b.objectProperty(
+							b.identifier("compatibilityDate"),
+							b.stringLiteral(compatDate),
+						),
+					]),
+				),
+			];
+
+			if (n.node.arguments.length === 0) {
+				n.node.arguments.push(b.objectExpression(presetDef));
+			} else {
+				mergeObjectProperties(
+					n.node.arguments[0] as recast.types.namedTypes.ObjectExpression,
+					presetDef,
+				);
+			}
+
+			return false;
 		},
 	});
-
-	s.stop(`${brandColor(`updated`)} ${dim(`\`${configFile}\``)}`);
 };
 
 const config: TemplateConfig = {
 	configVersion: 1,
 	id: "analog",
 	frameworkCli: "create-analog",
-	platform: "pages",
 	displayName: "Analog",
+	platform: "workers",
 	copyFiles: {
 		path: "./templates",
 	},
+	path: "templates/analog",
 	generate,
 	configure,
 	transformPackageJson: async () => ({
 		scripts: {
-			preview: `${npm} run build && wrangler pages dev`,
-			deploy: `${npm} run build && wrangler pages deploy`,
+			preview: `${npm} run build && wrangler dev`,
+			deploy: `${npm} run build && wrangler deploy`,
 			"cf-typegen": `wrangler types`,
 		},
 	}),

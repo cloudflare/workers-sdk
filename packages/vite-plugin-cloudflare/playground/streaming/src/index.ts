@@ -1,4 +1,4 @@
-function sleep(ms: number) {
+function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
@@ -38,7 +38,7 @@ export default {
 		if (url.pathname === "/") {
 			const { readable, writable } = new TransformStream();
 
-			streamResponse(writable);
+			void streamResponse(writable);
 
 			return new Response(readable, {
 				headers: { "Content-Type": "text/html; charset=UTF-8" },

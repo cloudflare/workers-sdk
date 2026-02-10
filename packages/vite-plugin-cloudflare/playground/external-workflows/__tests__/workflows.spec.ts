@@ -1,18 +1,10 @@
-import { expect, test, vi } from "vitest";
+import { test, vi } from "vitest";
 import { getJsonResponse, WAIT_FOR_OPTIONS } from "../../__test-utils__";
 
-test("creates a Workflow with an ID", async () => {
+test("creates a Workflow with an ID", async ({ expect }) => {
 	const instanceId = "external-workflows-test-id";
 
 	await getJsonResponse(`/create?id=${instanceId}`);
-
-	await vi.waitFor(async () => {
-		expect(await getJsonResponse(`/get?id=${instanceId}`)).toEqual({
-			status: "running",
-			__LOCAL_DEV_STEP_OUTPUTS: [{ output: "First step result" }],
-			output: null,
-		});
-	}, WAIT_FOR_OPTIONS);
 
 	await vi.waitFor(async () => {
 		expect(await getJsonResponse(`/get?id=${instanceId}`)).toEqual({

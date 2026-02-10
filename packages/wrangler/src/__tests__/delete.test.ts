@@ -1,5 +1,8 @@
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- large file >500 lines */
 import { beforeEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
 import { mockConfirm } from "./helpers/mock-dialogs";
@@ -7,7 +10,6 @@ import { useMockIsTTY } from "./helpers/mock-istty";
 import { msw } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
 import { runWrangler } from "./helpers/run-wrangler";
-import { writeWranglerConfig } from "./helpers/write-wrangler-config";
 import type { ServiceReferenceResponse, Tail } from "../delete";
 import type { KVNamespaceInfo } from "../kv/helpers";
 
@@ -41,6 +43,57 @@ describe("delete", () => {
 			 ⛅️ wrangler x.x.x
 			──────────────────
 			Successfully deleted my-script",
+			  "warn": "",
+			}
+		`);
+	});
+
+	it("should delete a service using positional name argument", async () => {
+		mockConfirm({
+			text: `Are you sure you want to delete my-positional-worker? This action cannot be undone.`,
+			result: true,
+		});
+		mockListKVNamespacesRequest();
+		mockListReferencesRequest("my-positional-worker");
+		mockListTailsByConsumerRequest("my-positional-worker");
+		mockDeleteWorkerRequest({ name: "my-positional-worker" });
+		await runWrangler("delete my-positional-worker");
+
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Successfully deleted my-positional-worker",
+			  "warn": "",
+			}
+		`);
+	});
+
+	it("should use positional name argument over the name from the Wrangler config file", async () => {
+		writeWranglerConfig({ name: "config-provided-name" });
+		mockConfirm({
+			text: `Are you sure you want to delete cli-provided-name? This action cannot be undone.`,
+			result: true,
+		});
+		mockListKVNamespacesRequest();
+		mockListReferencesRequest("cli-provided-name");
+		mockListTailsByConsumerRequest("cli-provided-name");
+		mockDeleteWorkerRequest({ name: "cli-provided-name" });
+		await runWrangler("delete cli-provided-name");
+
+		expect(std).toMatchInlineSnapshot(`
+			Object {
+			  "debug": "",
+			  "err": "",
+			  "info": "",
+			  "out": "
+			 ⛅️ wrangler x.x.x
+			──────────────────
+			Successfully deleted cli-provided-name",
 			  "warn": "",
 			}
 		`);

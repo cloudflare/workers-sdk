@@ -4,7 +4,7 @@ import {
 	waitOnExecutionContext,
 } from "cloudflare:test";
 import { exports as importedExports } from "cloudflare:workers";
-import { expect, it } from "vitest";
+import { it } from "vitest";
 import worker from "../src/index";
 
 // This will improve in the next major version of `@cloudflare/workers-types`,
@@ -12,23 +12,27 @@ import worker from "../src/index";
 // `Request` to pass to `worker.fetch()`.
 const IncomingRequest = Request<unknown, IncomingRequestCfProperties>;
 
-it.skip("has the correct context exports from `createExecutionContext()`", async () => {
+it("has the correct context exports from `createExecutionContext()`", async ({
+	expect,
+}) => {
 	const ctx = createExecutionContext();
-	expect(ctx.exports.NamedEntryPoint.greet()).toBe(
-		`Hello MainWorker from Main NamedEntryPoint!`
+	expect(await ctx.exports.NamedEntryPoint.greet()).toMatchInlineSnapshot(
+		`"Hello MainWorker from Main NamedEntryPoint!"`
 	);
 });
 
-it.skip("has the correct imported context exports", async () => {
-	expect(importedExports.NamedEntryPoint.greet()).toBe(
-		`Hello MainWorker from Main NamedEntryPoint!`
+it("has the correct imported context exports", async ({ expect }) => {
+	expect(await importedExports.NamedEntryPoint.greet()).toMatchInlineSnapshot(
+		`"Hello MainWorker from Main NamedEntryPoint!"`
 	);
 });
 
-it.skip("can pass the context exports to a worker", async () => {
+it("can pass the context exports to a worker", async ({ expect }) => {
 	const request = new IncomingRequest("http://example.com");
 	const ctx = createExecutionContext();
 	const response = await worker.fetch(request, env, ctx);
 	await waitOnExecutionContext(ctx);
-	expect(await response.text()).toBe("👋 http://example.com/");
+	expect(await response.text()).toMatchInlineSnapshot(
+		`"👋 Hello MainWorker from Main NamedEntryPoint!"`
+	);
 });

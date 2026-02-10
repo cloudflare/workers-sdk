@@ -243,7 +243,7 @@ describe("[Workers + Assets] dynamic site", () => {
 		expect(await response.text()).not.toContain("X-Header");
 	});
 
-	it.todo("should warn of _worker.js", async ({ expect }) => {
+	it.todo("should warn of _worker.js", async () => {
 		// let response = await fetch(`http://${ip}:${port}/_worker.js`);
 		// expect(await response.text()).not.toContain("bang");
 	});

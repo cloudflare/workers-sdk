@@ -1,6 +1,6 @@
+import { UserError } from "@cloudflare/workers-utils";
 import { buildImage } from "./build";
 import { ExternalRegistryKind } from "./client/models/ExternalRegistryKind";
-import { UserError } from "./error";
 import { getCloudflareContainerRegistry } from "./knobs";
 import { dockerLoginImageRegistry } from "./login";
 import { getCloudflareRegistryWithAccountNamespace } from "./registry";
@@ -206,9 +206,9 @@ export function resolveImageName(accountId: string, image: string): string {
 }
 
 /**
- * get type of container registry, and validate
- * currently we support cloudflare managed registries and AWS ECR
- * when using cloudflare mananged registries we expect CLOUDFLARE_CONTAINER_REGISTRY to be set
+ * Get type of container registry, and validate.
+ * Currently we support Cloudflare managed registries and AWS ECR.
+ * When using Cloudflare managed registries we expect CLOUDFLARE_CONTAINER_REGISTRY to be set
  */
 export const getAndValidateRegistryType = (domain: string): RegistryPattern => {
 	// TODO: use parseImageName when that gets moved to this package

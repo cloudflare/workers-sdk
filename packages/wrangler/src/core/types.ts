@@ -48,10 +48,16 @@ export type DeepFlatten<T> = T extends object
 	? { [K in keyof T]: DeepFlatten<T[K]> }
 	: T;
 
+export type MetadataCategory =
+	| "Account"
+	| "Compute & AI"
+	| "Storage & databases"
+	| "Networking & security";
+
 export type Command = `wrangler${string}`;
 export type Metadata = {
 	description: string;
-	status: "experimental" | "alpha" | "private-beta" | "open-beta" | "stable";
+	status: "experimental" | "alpha" | "private beta" | "open beta" | "stable";
 	statusMessage?: string;
 	deprecated?: boolean;
 	deprecatedMessage?: string;
@@ -64,6 +70,12 @@ export type Metadata = {
 		description: string;
 	}[];
 	hideGlobalFlags?: string[];
+	/**
+	 * Optional category for grouping commands in the help output.
+	 * Commands with the same category will be grouped together under a shared heading.
+	 * Commands without a category will appear under the default "COMMANDS" group.
+	 */
+	category?: MetadataCategory;
 };
 
 export type ArgDefinition = Omit<PositionalOptions, "type"> &
@@ -141,6 +153,12 @@ export type CommandDefinition<
 		printBanner?: boolean | ((args: HandlerArgs<NamedArgDefs>) => boolean);
 
 		/**
+		 * Opt-in to printing a metrics banner for this command.
+		 * @default false
+		 */
+		printMetricsBanner?: boolean;
+
+		/**
 		 * By default, wrangler will print warnings about the Wrangler configuration file.
 		 * Set this value to `false` to skip printing these warnings.
 		 */
@@ -178,6 +196,12 @@ export type CommandDefinition<
 		 * using the `-e|--env` cli flag, show a warning suggesting that one should instead be specified.
 		 */
 		warnIfMultipleEnvsConfiguredButNoneSpecified?: boolean;
+
+		/**
+		 * Opt out of sending metrics for this command
+		 * @default true
+		 */
+		sendMetrics?: boolean;
 	};
 
 	/**
@@ -220,10 +244,25 @@ export type AliasDefinition = {
 	metadata?: Partial<Metadata>;
 };
 
+export type InternalCommandDefinition = {
+	type: "command";
+	command: Command;
+} & CommandDefinition;
+
+export type InternalNamespaceDefinition = {
+	type: "namespace";
+	command: Command;
+} & NamespaceDefinition;
+
+export type InternalAliasDefinition = {
+	type: "alias";
+	command: Command;
+} & AliasDefinition;
+
 export type InternalDefinition =
-	| ({ type: "command"; command: Command } & CommandDefinition)
-	| ({ type: "namespace"; command: Command } & NamespaceDefinition)
-	| ({ type: "alias"; command: Command } & AliasDefinition);
+	| InternalCommandDefinition
+	| InternalNamespaceDefinition
+	| InternalAliasDefinition;
 export type DefinitionTreeNode = {
 	definition?: InternalDefinition;
 	subtree: DefinitionTree;

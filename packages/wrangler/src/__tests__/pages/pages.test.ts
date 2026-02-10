@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, it } from "vitest";
 import { endEventLoop } from "../helpers/end-event-loop";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
@@ -14,7 +14,9 @@ describe("pages", () => {
 		await endEventLoop();
 	});
 
-	it("should display a list of available subcommands, for pages with no subcommand", async () => {
+	it("should display a list of available subcommands, for pages with no subcommand", async ({
+		expect,
+	}) => {
 		await runWrangler("pages");
 		await endEventLoop();
 
@@ -40,7 +42,9 @@ describe("pages", () => {
 		`);
 	});
 
-	it("should display a list of available subcommands, for 'pages dev help'", async () => {
+	it("should display a list of available subcommands, for 'pages dev help'", async ({
+		expect,
+	}) => {
 		await runWrangler("pages dev help");
 		await endEventLoop();
 
@@ -86,7 +90,9 @@ describe("pages", () => {
 		`);
 	});
 
-	it("should display a list of available subcommands for 'pages project help`", async () => {
+	it("should display a list of available subcommands for 'pages project help`", async ({
+		expect,
+	}) => {
 		await runWrangler("pages project help");
 		await endEventLoop();
 
@@ -108,7 +114,9 @@ describe("pages", () => {
 		`);
 	});
 
-	it("should display a list of available subcommands for 'pages deployment'", async () => {
+	it("should display a list of available subcommands for 'pages deployment'", async ({
+		expect,
+	}) => {
 		await runWrangler("pages deployment help");
 		await endEventLoop();
 
@@ -118,11 +126,12 @@ describe("pages", () => {
 			Interact with the deployments of a project
 
 			COMMANDS
-			  wrangler pages deployment list                List deployments in your Cloudflare Pages project
-			  wrangler pages deployment create [directory]  Deploy a directory of static assets as a Pages deployment
+			  wrangler pages deployment list                    List deployments in your Cloudflare Pages project
+			  wrangler pages deployment create [directory]      Deploy a directory of static assets as a Pages deployment
 
-			                                                Alias for \\"wrangler pages deploy\\".
-			  wrangler pages deployment tail [deployment]   Start a tailing session for a project's deployment and livestream logs from your Functions
+			                                                    Alias for \\"wrangler pages deploy\\".
+			  wrangler pages deployment tail [deployment]       Start a tailing session for a project's deployment and livestream logs from your Functions
+			  wrangler pages deployment delete <deployment-id>  Delete a deployment in your Cloudflare Pages project
 
 			GLOBAL FLAGS
 			      --cwd       Run as if Wrangler was started in the specified directory instead of the current working directory  [string]
@@ -132,7 +141,9 @@ describe("pages", () => {
 		`);
 	});
 
-	it("should display a list of available subcommands for 'pages deploy'", async () => {
+	it("should display a list of available subcommands for 'pages deploy'", async ({
+		expect,
+	}) => {
 		await runWrangler("pages deploy help");
 		await endEventLoop();
 
@@ -162,7 +173,9 @@ describe("pages", () => {
 		`);
 	});
 
-	it("should display a list of available subcommands for 'pages secret'", async () => {
+	it("should display a list of available subcommands for 'pages secret'", async ({
+		expect,
+	}) => {
 		await runWrangler("pages secret help");
 		await endEventLoop();
 
@@ -185,7 +198,9 @@ describe("pages", () => {
 		`);
 	});
 
-	it("should display a list of available subcommands for 'pages download'", async () => {
+	it("should display a list of available subcommands for 'pages download'", async ({
+		expect,
+	}) => {
 		await runWrangler("pages download help");
 		await endEventLoop();
 
@@ -206,7 +221,7 @@ describe("pages", () => {
 	});
 
 	describe("deprecation message for deprecated options", () => {
-		it("should display for 'pages dev -- <command>'", async () => {
+		it("should display for 'pages dev -- <command>'", async ({ expect }) => {
 			await expect(
 				runWrangler("pages dev -- echo 'hi'")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -222,7 +237,7 @@ describe("pages", () => {
 				"
 			`);
 		});
-		it("should display for 'pages dev --script-path'", async () => {
+		it("should display for 'pages dev --script-path'", async ({ expect }) => {
 			await expect(
 				runWrangler("pages dev --script-path=_worker.js -- echo 'hi'")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -247,7 +262,7 @@ describe("pages", () => {
 	});
 
 	describe("beta message for subcommands", () => {
-		it("should display for pages:dev", async () => {
+		it("should display for pages:dev", async ({ expect }) => {
 			await expect(
 				runWrangler("pages dev")
 			).rejects.toThrowErrorMatchingInlineSnapshot(
@@ -262,7 +277,7 @@ describe("pages", () => {
 			`);
 		});
 
-		it("should display for pages:functions:build", async () => {
+		it("should display for pages:functions:build", async ({ expect }) => {
 			await expect(runWrangler("pages functions build")).rejects.toThrowError();
 
 			expect(std.out).toMatchInlineSnapshot(`
@@ -273,7 +288,9 @@ describe("pages", () => {
 			`);
 		});
 
-		it("should display for pages:functions:optimize-routes", async () => {
+		it("should display for pages:functions:optimize-routes", async ({
+			expect,
+		}) => {
 			await expect(
 				runWrangler(
 					'pages functions optimize-routes --routes-path="/build/_routes.json" --output-routes-path="/build/_optimized-routes.json"'

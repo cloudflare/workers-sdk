@@ -60,8 +60,9 @@ export type Log = {
 	group: string | null;
 	target: string | null;
 	metadata: {
-		result: unknown;
-		payload: unknown;
+		result: string;
+		payload: string;
+		error: { name: string; message: string };
 	};
 };
 
@@ -167,10 +168,29 @@ export class Engine extends DurableObject<Env> {
 		};
 	}
 
-	async getStatus(
-		_accountId: number,
-		_instanceId: string
-	): Promise<InstanceStatus> {
+	readLogsFromEvent(eventType: InstanceEvent): EngineLogs {
+		const logs = [
+			...this.ctx.storage.sql.exec<{
+				event: InstanceEvent;
+				groupKey: string | null;
+				target: string | null;
+				metadata: string;
+			}>(
+				"SELECT event, groupKey, target, metadata FROM states WHERE event = ?",
+				eventType
+			),
+		];
+
+		return {
+			logs: logs.map((log) => ({
+				...log,
+				metadata: JSON.parse(log.metadata),
+				group: log.groupKey,
+			})),
+		};
+	}
+
+	async getStatus(): Promise<InstanceStatus> {
 		if (this.accountId === undefined) {
 			// Engine could have restarted, so we try to restore from its state
 			const metadata =
@@ -353,6 +373,34 @@ export class Engine extends DurableObject<Env> {
 		}
 	}
 
+	async getOutputOrError(isOutput: boolean): Promise<unknown> {
+		const status = await this.getStatus();
+
+		if (isOutput) {
+			if (status !== InstanceStatus.Complete) {
+				throw new Error(
+					`Cannot retrieve output: Workflow instance is in status "${instanceStatusName(status)}" but must be "complete" to have an output available`
+				);
+			}
+			const logs = this.readLogsFromEvent(InstanceEvent.WORKFLOW_SUCCESS).logs;
+			return logs.at(0)?.metadata.result;
+		} else {
+			if (status !== InstanceStatus.Errored) {
+				throw new Error(
+					`Cannot retrieve error: Workflow instance is in status "${instanceStatusName(status)}" but must be "errored" to have error information available`
+				);
+			}
+			const logs = this.readLogsFromEvent(InstanceEvent.WORKFLOW_FAILURE).logs;
+			const log = logs.at(0);
+			if (!log?.metadata.error) {
+				throw new Error(
+					"Cannot retrieve error: No workflow instance failure log found"
+				);
+			}
+			return log.metadata.error;
+		}
+	}
+
 	async abort(_reason: string) {
 		// TODO: Maybe don't actually kill but instead check a flag and return early if true
 	}
@@ -497,7 +545,7 @@ export class Engine extends DurableObject<Env> {
 		this.instanceId = instance.id;
 		this.workflowName = workflow.name;
 
-		const status = await this.getStatus(accountId, instance.id);
+		const status = await this.getStatus();
 		if (
 			[
 				InstanceStatus.Errored, // TODO (WOR-85): Remove this once upgrade story is done

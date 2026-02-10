@@ -4,10 +4,10 @@
 
 export type ApplicationHealthInstances = {
 	/**
-	 * Number of active durable object containers in this application.
+	 * Number of active containers in this application.
 	 *
 	 */
-	durable_objects_active?: number;
+	active: number;
 	/**
 	 * Number of healthy instances. If the application is attached to a DO namespace,
 	 * this represents the number of prepared container instances.

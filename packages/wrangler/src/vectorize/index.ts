@@ -5,5 +5,6 @@ export const vectorizeNamespace = createNamespace({
 		description: "🧮 Manage Vectorize indexes",
 		status: "stable",
 		owner: "Product: Vectorize",
+		category: "Storage & databases",
 	},
 });

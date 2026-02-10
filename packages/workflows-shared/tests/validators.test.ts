@@ -1,3 +1,4 @@
+// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
 import { describe, expect, it } from "vitest";
 import {
 	isValidStepName,

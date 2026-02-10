@@ -1,3 +1,4 @@
+import { statSync } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { spinner, spinnerWhile } from "@cloudflare/cli/interactive";
@@ -82,6 +83,13 @@ export const d1ExportCommand = createCommand({
 			throw new UserError(`You cannot specify both --no-schema and --no-data`);
 		}
 
+		const stats = statSync(output, { throwIfNoEntry: false });
+		if (stats?.isDirectory()) {
+			throw new UserError(
+				`Please specify a file path for --output, not a directory.`
+			);
+		}
+
 		// Allow multiple --table x --table y flags or none
 		const tables: string[] = table
 			? Array.isArray(table)
@@ -105,7 +113,9 @@ async function exportLocal(
 	noSchema: boolean,
 	noData: boolean
 ) {
-	const localDB = getDatabaseInfoFromConfig(config, name);
+	const localDB = getDatabaseInfoFromConfig(config, name, {
+		requireDatabaseId: false,
+	});
 	if (!localDB) {
 		throw new UserError(
 			`Couldn't find a D1 DB with the name or binding '${name}' in your ${configFileName(config.configPath)} file.`

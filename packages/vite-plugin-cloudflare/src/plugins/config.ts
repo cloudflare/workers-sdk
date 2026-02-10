@@ -1,5 +1,7 @@
+import assert from "node:assert";
+import * as path from "node:path";
 import { hasAssetsConfigChanged } from "../asset-config";
-import { createBuildApp } from "../build";
+import { createBuildApp, removeAssetsField } from "../build";
 import {
 	cloudflareBuiltInModules,
 	createCloudflareEnvironmentOptions,
@@ -9,6 +11,8 @@ import { hasLocalDevVarsFileChanged } from "../dev-vars";
 import { createPlugin, debuglog, getOutputDirectory } from "../utils";
 import { validateWorkerEnvironmentOptions } from "../vite-config";
 import { getWarningForWorkersConfigs } from "../workers-configs";
+import type { PluginContext } from "../context";
+import type { EnvironmentOptions, UserConfig } from "vite";
 
 /**
  * Plugin to handle configuration and config file watching
@@ -44,43 +48,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 						deny: [...defaultDeniedFiles, ".dev.vars", ".dev.vars.*"],
 					},
 				},
-				environments:
-					ctx.resolvedPluginConfig.type === "workers"
-						? {
-								...Object.fromEntries(
-									[...ctx.resolvedPluginConfig.environmentNameToWorkerMap].map(
-										([environmentName, worker]) => {
-											return [
-												environmentName,
-												createCloudflareEnvironmentOptions({
-													workerConfig: worker.config,
-													userConfig,
-													mode: env.mode,
-													environmentName,
-													isEntryWorker:
-														ctx.resolvedPluginConfig.type === "workers" &&
-														environmentName ===
-															ctx.resolvedPluginConfig
-																.entryWorkerEnvironmentName,
-													hasNodeJsCompat:
-														ctx.getNodeJsCompat(environmentName) !== undefined,
-												}),
-											];
-										}
-									)
-								),
-								client: {
-									build: {
-										outDir: getOutputDirectory(userConfig, "client"),
-									},
-									optimizeDeps: {
-										// Some frameworks allow users to mix client and server code in the same file and then extract the server code.
-										// As the dependency optimization may happen before the server code is extracted, we should exclude Cloudflare built-ins from client optimization.
-										exclude: [...cloudflareBuiltInModules],
-									},
-								},
-							}
-						: undefined,
+				environments: getEnvironmentsConfig(ctx, userConfig, env.mode),
 				builder: {
 					buildApp:
 						userConfig.builder?.buildApp ??
@@ -91,7 +59,7 @@ export const configPlugin = createPlugin("config", (ctx) => {
 		configResolved(resolvedViteConfig) {
 			ctx.setResolvedViteConfig(resolvedViteConfig);
 
-			if (ctx.resolvedPluginConfig.type === "workers") {
+			if (ctx.resolvedPluginConfig.type !== "preview") {
 				validateWorkerEnvironmentOptions(
 					ctx.resolvedPluginConfig,
 					ctx.resolvedViteConfig
@@ -126,5 +94,125 @@ export const configPlugin = createPlugin("config", (ctx) => {
 
 			viteDevServer.watcher.on("change", configChangedHandler);
 		},
+		// This hook is not supported in Vite 6
+		buildApp: {
+			order: "post",
+			async handler(builder) {
+				if (ctx.resolvedPluginConfig.type !== "workers") {
+					return;
+				}
+
+				const workerEnvironments = [
+					...ctx.resolvedPluginConfig.environmentNameToWorkerMap.keys(),
+				].map((environmentName) => {
+					const environment = builder.environments[environmentName];
+					assert(environment, `"${environmentName}" environment not found`);
+
+					return environment;
+				});
+
+				// Build any Worker environments that haven't already been built
+				await Promise.all(
+					workerEnvironments
+						.filter((environment) => !environment.isBuilt)
+						.map((environment) => builder.build(environment))
+				);
+
+				const { entryWorkerEnvironmentName } = ctx.resolvedPluginConfig;
+				const entryWorkerEnvironment =
+					builder.environments[entryWorkerEnvironmentName];
+				assert(
+					entryWorkerEnvironment,
+					`No "${entryWorkerEnvironmentName}" environment`
+				);
+				const entryWorkerBuildDirectory = path.resolve(
+					builder.config.root,
+					entryWorkerEnvironment.config.build.outDir
+				);
+
+				if (!builder.environments.client?.isBuilt) {
+					removeAssetsField(entryWorkerBuildDirectory);
+				}
+			},
+		},
 	};
 });
+
+/**
+ * Generates the environment configuration for all Worker environments.
+ */
+function getEnvironmentsConfig(
+	ctx: PluginContext,
+	userConfig: UserConfig,
+	mode: string
+): Record<string, EnvironmentOptions> | undefined {
+	assertIsNotPreview(ctx);
+
+	if (!ctx.resolvedPluginConfig.environmentNameToWorkerMap.size) {
+		return;
+	}
+
+	const workerEnvironments = Object.fromEntries(
+		[...ctx.resolvedPluginConfig.environmentNameToWorkerMap].flatMap(
+			([environmentName, worker]) => {
+				const childEnvironmentNames =
+					ctx.resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap.get(
+						environmentName
+					) ?? [];
+
+				const sharedOptions = {
+					workerConfig: worker.config,
+					userConfig,
+					mode,
+					hasNodeJsCompat: ctx.getNodeJsCompat(environmentName) !== undefined,
+				};
+
+				const isEntryWorker =
+					environmentName ===
+						ctx.resolvedPluginConfig.prerenderWorkerEnvironmentName ||
+					(ctx.resolvedPluginConfig.type === "workers" &&
+						environmentName ===
+							ctx.resolvedPluginConfig.entryWorkerEnvironmentName);
+
+				const parentConfig = [
+					environmentName,
+					createCloudflareEnvironmentOptions({
+						...sharedOptions,
+						environmentName,
+						isEntryWorker,
+						isParentEnvironment: true,
+					}),
+				] as const;
+
+				const childConfigs = childEnvironmentNames.map(
+					(childEnvironmentName) =>
+						[
+							childEnvironmentName,
+							createCloudflareEnvironmentOptions({
+								...sharedOptions,
+								environmentName: childEnvironmentName,
+								isEntryWorker: false,
+								isParentEnvironment: false,
+							}),
+						] as const
+				);
+
+				return [parentConfig, ...childConfigs];
+			}
+		)
+	);
+
+	return {
+		...workerEnvironments,
+		client: {
+			build: {
+				outDir: getOutputDirectory(userConfig, "client"),
+			},
+			optimizeDeps: {
+				// Some frameworks allow users to mix client and server code in the same file and then extract the server code.
+				// As the dependency optimization may happen before the server code is extracted, we should exclude Cloudflare built-ins from client optimization.
+				exclude: [...cloudflareBuiltInModules],
+			},
+		},
+	};
+}

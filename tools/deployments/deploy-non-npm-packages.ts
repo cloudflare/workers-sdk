@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -120,7 +120,7 @@ export function deployPackage(
 	deploymentErrors: Map<string, string>
 ) {
 	try {
-		execSync(`pnpm -F ${pkgName} run deploy`, {
+		spawnSync(`pnpm`, [`-F`, pkgName, `run`, `deploy`], {
 			env: process.env,
 			stdio: "inherit",
 		});

@@ -186,6 +186,7 @@ export async function unstable_dev(
 		compatibilityFlags: options?.compatibilityFlags,
 		ip: "127.0.0.1",
 		inspectorPort: options?.inspectorPort ?? 0,
+		inspectorIp: undefined,
 		v: undefined,
 		cwd: undefined,
 		localProtocol: options?.localProtocol,
@@ -223,6 +224,7 @@ export async function unstable_dev(
 		dockerPath,
 		containerEngine: options?.experimental?.containerEngine,
 		experimentalTailLogs: true,
+		types: false,
 	};
 
 	//outside of test mode, rebuilds work fine, but only one instance of wrangler will work at a time

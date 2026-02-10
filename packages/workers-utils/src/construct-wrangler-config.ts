@@ -1,5 +1,5 @@
+import { formatCompatibilityDate } from "./compatibility-date";
 import { ENVIRONMENT_TAG_PREFIX, SERVICE_TAG_PREFIX } from "./constants";
-import { formatCompatibilityDate } from "./format-compatibility-date";
 import { mapWorkerMetadataBindings } from "./map-worker-metadata-bindings";
 import type { RawConfig } from "./config";
 import type {
@@ -40,7 +40,7 @@ interface APIWorkerConfig {
 	assets?: AssetConfig;
 	bindings: WorkerMetadata["bindings"];
 	observability: Cloudflare.Workers.Beta.Worker.Observability | undefined;
-	limits: { cpu_ms: number } | undefined;
+	limits: { cpu_ms?: number; subrequests?: number } | undefined;
 	placement: Cloudflare.Workers.Beta.Workers.Version.Placement | undefined;
 	subdomain: {
 		enabled: boolean;

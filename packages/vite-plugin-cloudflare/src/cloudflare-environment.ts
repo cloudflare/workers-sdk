@@ -1,16 +1,20 @@
 import assert from "node:assert";
+import { nonPrefixedNodeModules } from "@cloudflare/unenv-preset";
 import { CoreHeaders } from "miniflare";
 import * as vite from "vite";
+import { nodeBuiltinsRE } from "./nodejs-compat";
 import { additionalModuleRE } from "./plugins/additional-modules";
 import {
+	ENVIRONMENT_NAME_HEADER,
 	GET_EXPORT_TYPES_PATH,
 	INIT_PATH,
 	IS_ENTRY_WORKER_HEADER,
+	IS_PARENT_ENVIRONMENT_HEADER,
 	UNKNOWN_HOST,
 	VIRTUAL_WORKER_ENTRY,
 	WORKER_ENTRY_PATH_HEADER,
 } from "./shared";
-import { debuglog, getOutputDirectory } from "./utils";
+import { debuglog, getOutputDirectory, isRolldown } from "./utils";
 import type { ExportTypes } from "./export-types";
 import type {
 	ResolvedWorkerConfig,
@@ -97,7 +101,7 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 	async initRunner(
 		miniflare: Miniflare,
 		workerConfig: ResolvedWorkerConfig,
-		isEntryWorker: boolean
+		options: { isEntryWorker: boolean; isParentEnvironment: boolean }
 	): Promise<void> {
 		const response = await miniflare.dispatchFetch(
 			new URL(INIT_PATH, UNKNOWN_HOST),
@@ -105,7 +109,9 @@ export class CloudflareDevEnvironment extends vite.DevEnvironment {
 				headers: {
 					[CoreHeaders.ROUTE_OVERRIDE]: workerConfig.name,
 					[WORKER_ENTRY_PATH_HEADER]: encodeURIComponent(workerConfig.main),
-					[IS_ENTRY_WORKER_HEADER]: String(isEntryWorker),
+					[IS_ENTRY_WORKER_HEADER]: String(options.isEntryWorker),
+					[ENVIRONMENT_NAME_HEADER]: this.name,
+					[IS_PARENT_ENVIRONMENT_HEADER]: String(options.isParentEnvironment),
 					upgrade: "websocket",
 				},
 			}
@@ -170,12 +176,27 @@ const defaultConditions = ["workerd", "worker", "module", "browser"];
 // workerd uses [v8 version 14.2 as of 2025-10-17](https://developers.cloudflare.com/workers/platform/changelog/#2025-10-17)
 const target = "es2024";
 
+// TODO: consider removing in next major to use default extensions
+const resolveExtensions = [
+	".mjs",
+	".js",
+	".mts",
+	".ts",
+	".jsx",
+	".tsx",
+	".json",
+	".cjs",
+	".cts",
+	".ctx",
+];
+
 export function createCloudflareEnvironmentOptions({
 	workerConfig,
 	userConfig,
 	mode,
 	environmentName,
 	isEntryWorker,
+	isParentEnvironment,
 	hasNodeJsCompat,
 }: {
 	workerConfig: ResolvedWorkerConfig;
@@ -183,8 +204,18 @@ export function createCloudflareEnvironmentOptions({
 	mode: vite.ConfigEnv["mode"];
 	environmentName: string;
 	isEntryWorker: boolean;
+	isParentEnvironment: boolean;
 	hasNodeJsCompat: boolean;
 }): vite.EnvironmentOptions {
+	const rollupOptions: vite.Rollup.RollupOptions = isParentEnvironment
+		? {
+				input: {
+					[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
+				},
+				// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
+				preserveEntrySignatures: "strict",
+			}
+		: {};
 	const define = getProcessEnvReplacements(hasNodeJsCompat, mode);
 
 	return {
@@ -213,40 +244,67 @@ export function createCloudflareEnvironmentOptions({
 			outDir: getOutputDirectory(userConfig, environmentName),
 			copyPublicDir: false,
 			ssr: true,
-			rollupOptions: {
-				input: {
-					[MAIN_ENTRY_NAME]: VIRTUAL_WORKER_ENTRY,
-				},
-				// workerd checks the types of the exports so we need to ensure that additional exports are not added to the entry module
-				preserveEntrySignatures: "strict",
-				// rolldown-only option
-				...("rolldownVersion" in vite ? ({ platform: "neutral" } as any) : {}),
-			},
+			...(isRolldown
+				? {
+						rolldownOptions: {
+							...rollupOptions,
+							platform: "neutral",
+							resolve: {
+								extensions: resolveExtensions,
+							},
+						},
+					}
+				: {
+						rollupOptions,
+					}),
 		},
 		optimizeDeps: {
 			// Note: ssr pre-bundling is opt-in and we need to enable it by setting `noDiscovery` to false
 			noDiscovery: false,
+			// Workaround for https://github.com/vitejs/vite/issues/20867
+			// Longer term solution is to use full-bundle mode rather than `optimizeDeps`
+			// @ts-expect-error - option added in Vite 7.3.1
+			ignoreOutdatedRequests: true,
 			// We need to normalize the path as it is treated as a glob and backslashes are therefore treated as escape characters.
 			entries: vite.normalizePath(workerConfig.main),
-			exclude: [...cloudflareBuiltInModules],
-			esbuildOptions: {
-				platform: "neutral",
-				target,
-				conditions: [...defaultConditions, "development"],
-				resolveExtensions: [
-					".mjs",
-					".js",
-					".mts",
-					".ts",
-					".jsx",
-					".tsx",
-					".json",
-					".cjs",
-					".cts",
-					".ctx",
-				],
-				define,
-			},
+			exclude: [
+				...cloudflareBuiltInModules,
+				...nonPrefixedNodeModules,
+				...nonPrefixedNodeModules.map((module) => `node:${module}`),
+				// New Node.js built-in modules are only published with the `node:` prefix.
+				...["node:sea", "node:sqlite", "node:test", "node:test/reporters"],
+			],
+			...(isRolldown
+				? {
+						rolldownOptions: {
+							platform: "neutral",
+							resolve: {
+								conditionNames: [...defaultConditions, "development"],
+								extensions: resolveExtensions,
+							},
+							transform: {
+								target,
+								define,
+							},
+							plugins: [
+								// In Vite 8, `require` calls are not automatically replaced when the format is ESM and `platform` is `neutral`
+								// @ts-expect-error: added in Vite 8
+								vite.esmExternalRequirePlugin({
+									external: [nodeBuiltinsRE],
+									skipDuplicateCheck: true,
+								}),
+							],
+						},
+					}
+				: {
+						esbuildOptions: {
+							platform: "neutral",
+							conditions: [...defaultConditions, "development"],
+							resolveExtensions,
+							target,
+							define,
+						},
+					}),
 		},
 		// We manually set `process.env` replacements using `define`
 		keepProcessEnv: true,
@@ -265,6 +323,7 @@ function getProcessEnvReplacements(
 	hasNodeJsCompat: boolean,
 	mode: vite.ConfigEnv["mode"]
 ): Record<string, string> {
+	// eslint-disable-next-line turbo/no-undeclared-env-vars
 	const nodeEnv = process.env.NODE_ENV || mode;
 	const nodeEnvReplacements = {
 		"process.env.NODE_ENV": JSON.stringify(nodeEnv),
@@ -287,19 +346,39 @@ export function initRunners(
 	viteDevServer: vite.ViteDevServer,
 	miniflare: Miniflare
 ): Promise<void[]> | undefined {
-	return Promise.all(
-		[...resolvedPluginConfig.environmentNameToWorkerMap].map(
-			([environmentName, worker]) => {
-				debuglog("Initializing worker:", worker.config.name);
-				const isEntryWorker =
-					environmentName === resolvedPluginConfig.entryWorkerEnvironmentName;
+	const initPromises = [
+		...resolvedPluginConfig.environmentNameToWorkerMap,
+	].flatMap(([environmentName, worker]) => {
+		debuglog("Initializing worker:", worker.config.name);
+		const isEntryWorker =
+			environmentName === resolvedPluginConfig.entryWorkerEnvironmentName;
 
-				return (
-					viteDevServer.environments[
-						environmentName
-					] as CloudflareDevEnvironment
-				).initRunner(miniflare, worker.config, isEntryWorker);
-			}
-		)
-	);
+		const childEnvironmentNames =
+			resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap.get(
+				environmentName
+			) ?? [];
+
+		const parentInit = (
+			viteDevServer.environments[environmentName] as CloudflareDevEnvironment
+		).initRunner(miniflare, worker.config, {
+			isEntryWorker,
+			isParentEnvironment: true,
+		});
+
+		const childInits = childEnvironmentNames.map((childEnvironmentName) => {
+			debuglog("Initializing child environment:", childEnvironmentName);
+			return (
+				viteDevServer.environments[
+					childEnvironmentName
+				] as CloudflareDevEnvironment
+			).initRunner(miniflare, worker.config, {
+				isEntryWorker: false,
+				isParentEnvironment: false,
+			});
+		});
+
+		return [parentInit, ...childInits];
+	});
+
+	return Promise.all(initPromises);
 }

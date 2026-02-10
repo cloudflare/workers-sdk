@@ -1,5 +1,20 @@
 # @cloudflare/eslint-config-shared
 
+## 1.2.1
+
+### Patch Changes
+
+- [#12347](https://github.com/cloudflare/workers-sdk/pull/12347) [`1a1f9e4`](https://github.com/cloudflare/workers-sdk/commit/1a1f9e4802e9c524cc8c59cca6340c995ae8fa12) Thanks [@vicb](https://github.com/vicb)! - Add an ESLint rule checking that `expect` is not imported from `vitest`.
+
+  Retrieving `expect` from the test context is safer for concurrent tests,
+  so we will standardize on using that.
+
+## 1.2.0
+
+### Minor Changes
+
+- [#11902](https://github.com/cloudflare/workers-sdk/pull/11902) [`2aa769c`](https://github.com/cloudflare/workers-sdk/commit/2aa769c8730a0ef99f315f9a1dd5d25d52c51974) Thanks [@emily-shen](https://github.com/emily-shen)! - Add a custom eslint rule that checks for unsafe command execution
+
 ## 1.1.0
 
 ### Minor Changes

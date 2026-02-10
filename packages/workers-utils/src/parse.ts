@@ -13,7 +13,7 @@ export type Message = {
 	kind?: "warning" | "error";
 } & TelemetryMessage;
 
-export type Location = File & {
+export type Location = ParseFile & {
 	line: number;
 	column: number;
 	length?: number;
@@ -21,7 +21,7 @@ export type Location = File & {
 	suggestion?: string;
 };
 
-export type File = {
+export type ParseFile = {
 	file?: string;
 	fileText?: string;
 };
@@ -82,22 +82,28 @@ export class APIError extends ParseError {
 }
 
 /**
- * A wrapper around `TOML.parse` that throws a `ParseError`.
+ * Parses a TOML string to an object.
+ *
+ * Note: throws a `ParseError` if parsing fails.
+ *
+ * @param tomlContent The TOML content to parse.
+ * @param filePath Optional file path for error reporting.
+ * @returns The parsed TOML object.
  */
-export function parseTOML<T>(input: string, file?: string): T | never {
+export function parseTOML(tomlContent: string, filePath?: string): unknown {
 	try {
-		return TOML.parse(input) as T;
+		return TOML.parse(tomlContent);
 	} catch (err) {
 		if (!(err instanceof TomlError)) {
 			throw err;
 		}
 
 		const location = {
-			lineText: input.split("\n")[err.line - 1],
+			lineText: tomlContent.split("\n")[err.line - 1],
 			line: err.line,
 			column: err.column - 1,
-			file,
-			fileText: input,
+			file: filePath,
+			fileText: tomlContent,
 		};
 		throw new ParseError({
 			text: err.message.substring(0, err.message.indexOf("\n")),
@@ -206,7 +212,7 @@ export function readFileSync(file: string): string {
 /**
  * Calculates the line and column location from an index.
  */
-export function indexLocation(file: File, index: number): Location {
+export function indexLocation(file: ParseFile, index: number): Location {
 	let lineText,
 		line = 0,
 		column = 0,
@@ -227,7 +233,7 @@ export function indexLocation(file: File, index: number): Location {
 /**
  * Guesses the line and column location of a search query.
  */
-export function searchLocation(file: File, query: unknown): Location {
+export function searchLocation(file: ParseFile, query: unknown): Location {
 	let lineText,
 		length,
 		line = 0,

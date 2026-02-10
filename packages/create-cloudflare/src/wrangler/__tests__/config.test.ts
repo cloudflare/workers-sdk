@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { mockWorkersTypesDirectory } from "helpers/__tests__/mocks";
 import { getWorkerdCompatibilityDate } from "helpers/compatDate";
 import { readFile, writeFile } from "helpers/files";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, test, vi } from "vitest";
 import { createTestContext } from "../../__tests__/helpers";
 import { updateWranglerConfig } from "../config";
 
@@ -16,9 +16,7 @@ describe("update wrangler config", () => {
 	const ctx = createTestContext();
 
 	beforeEach(() => {
-		vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(
-			Promise.resolve(mockCompatDate),
-		);
+		vi.mocked(getWorkerdCompatibilityDate).mockReturnValue(mockCompatDate);
 		vi.mocked(existsSync).mockImplementation((f) =>
 			(f as string).endsWith(".toml"),
 		);
@@ -30,11 +28,14 @@ describe("update wrangler config", () => {
 		);
 	});
 
-	test("placeholder replacement", async () => {
+	test("placeholder replacement `<TBD>`", async ({ expect }) => {
 		const toml = [
 			`name = "<TBD>"`,
 			`main = "src/index.ts"`,
 			`compatibility_date = "<TBD>"`,
+			`[[services]]`,
+			`binding = "SELF_SERVICE"`,
+			`service = "<WORKER_NAME>"`,
 		].join("\n");
 		vi.mocked(readFile).mockReturnValue(toml);
 
@@ -48,29 +49,31 @@ describe("update wrangler config", () => {
 			name = "test"
 			main = "src/index.ts"
 			compatibility_date = "2024-01-17"
+			compatibility_flags = [ "nodejs_compat" ]
+
+			[[services]]
+			binding = "SELF_SERVICE"
+			service = "test"
 
 			[observability]
 			enabled = true
 
 			# Smart Placement
-			# Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+			# https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 			# [placement]
 			# mode = "smart"
 
-			###
 			# Bindings
 			# Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
 			# databases, object storage, AI inference, real-time communication and more.
 			# https://developers.cloudflare.com/workers/runtime-apis/bindings/
-			###
 
 			# Environment Variables
 			# https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-			# [vars]
-			# MY_VARIABLE = "production_value"
-
 			# Note: Use secrets to store sensitive data.
 			# https://developers.cloudflare.com/workers/configuration/secrets/
+			# [vars]
+			# MY_VARIABLE = "production_value"
 
 			# Static Assets
 			# https://developers.cloudflare.com/workers/static-assets/binding/
@@ -78,16 +81,68 @@ describe("update wrangler config", () => {
 			# directory = "./public/"
 			# binding = "ASSETS"
 
-			# Service Bindings (communicate between multiple Workers)
-			# https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-			# [[services]]
-			# binding = "MY_SERVICE"
-			# service = "my-service"
 			"
 		`);
 	});
 
-	test("placeholder replacement (json)", async () => {
+	test("placeholder replacement", async ({ expect }) => {
+		const toml = [
+			`name = "<WORKER_NAME>"`,
+			`main = "src/index.ts"`,
+			`compatibility_date = "<COMPATIBILITY_DATE>"`,
+			`[[services]]`,
+			`binding = "SELF_SERVICE"`,
+			`service = "<WORKER_NAME>"`,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toMatchInlineSnapshot(`
+			"#:schema node_modules/wrangler/config-schema.json
+			# For more details on how to configure Wrangler, refer to:
+			# https://developers.cloudflare.com/workers/wrangler/configuration/
+			name = "test"
+			main = "src/index.ts"
+			compatibility_date = "2024-01-17"
+			compatibility_flags = [ "nodejs_compat" ]
+
+			[[services]]
+			binding = "SELF_SERVICE"
+			service = "test"
+
+			[observability]
+			enabled = true
+
+			# Smart Placement
+			# https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+			# [placement]
+			# mode = "smart"
+
+			# Bindings
+			# Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+			# databases, object storage, AI inference, real-time communication and more.
+			# https://developers.cloudflare.com/workers/runtime-apis/bindings/
+
+			# Environment Variables
+			# https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+			# Note: Use secrets to store sensitive data.
+			# https://developers.cloudflare.com/workers/configuration/secrets/
+			# [vars]
+			# MY_VARIABLE = "production_value"
+
+			# Static Assets
+			# https://developers.cloudflare.com/workers/static-assets/binding/
+			# [assets]
+			# directory = "./public/"
+			# binding = "ASSETS"
+
+			"
+		`);
+	});
+
+	test("placeholder replacement `<TBD>` (json)", async ({ expect }) => {
 		vi.mocked(existsSync).mockImplementationOnce((f) =>
 			(f as string).endsWith(".json"),
 		);
@@ -95,6 +150,12 @@ describe("update wrangler config", () => {
 			name: "<TBD>",
 			main: "src/index.ts",
 			compatibility_date: "<TBD>",
+			services: [
+				{
+					binding: "SELF_SERVICE",
+					service: "<WORKER_NAME>",
+				},
+			],
 		});
 		vi.mocked(readFile).mockReturnValueOnce(json);
 
@@ -111,14 +172,23 @@ describe("update wrangler config", () => {
 				"name": "test",
 				"main": "src/index.ts",
 				"compatibility_date": "2024-01-17",
+				"services": [
+					{
+						"binding": "SELF_SERVICE",
+						"service": "test"
+					}
+				],
 				"observability": {
 					"enabled": true
-				}
+				},
+				"compatibility_flags": [
+					"nodejs_compat"
+				]
 				/**
 				 * Smart Placement
-				 * Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+				 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 				 */
-				// "placement": { "mode": "smart" }
+				// "placement": {  "mode": "smart" }
 				/**
 				 * Bindings
 				 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
@@ -128,27 +198,89 @@ describe("update wrangler config", () => {
 				/**
 				 * Environment Variables
 				 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-				 */
-				// "vars": { "MY_VARIABLE": "production_value" }
-				/**
 				 * Note: Use secrets to store sensitive data.
 				 * https://developers.cloudflare.com/workers/configuration/secrets/
 				 */
+				// "vars": {  "MY_VARIABLE": "production_value" }
 				/**
 				 * Static Assets
 				 * https://developers.cloudflare.com/workers/static-assets/binding/
 				 */
-				// "assets": { "directory": "./public/", "binding": "ASSETS" }
-				/**
-				 * Service Bindings (communicate between multiple Workers)
-				 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
-				 */
-				// "services": [{ "binding": "MY_SERVICE", "service": "my-service" }]
+				// "assets": {  "directory": "./public/",  "binding": "ASSETS" }
 			}"
 		`);
 	});
 
-	test("string literal replacement", async () => {
+	test("placeholder replacement (json)", async ({ expect }) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const json = JSON.stringify({
+			name: "<WORKER_NAME>",
+			main: "src/index.ts",
+			compatibility_date: "<COMPATIBILITY_DATE>",
+			services: [
+				{
+					binding: "SELF_SERVICE",
+					service: "<WORKER_NAME>",
+				},
+			],
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(ctx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).toMatchInlineSnapshot(`
+			"/**
+			 * For more details on how to configure Wrangler, refer to:
+			 * https://developers.cloudflare.com/workers/wrangler/configuration/
+			 */
+			{
+				"$schema": "node_modules/wrangler/config-schema.json",
+				"name": "test",
+				"main": "src/index.ts",
+				"compatibility_date": "2024-01-17",
+				"services": [
+					{
+						"binding": "SELF_SERVICE",
+						"service": "test"
+					}
+				],
+				"observability": {
+					"enabled": true
+				},
+				"compatibility_flags": [
+					"nodejs_compat"
+				]
+				/**
+				 * Smart Placement
+				 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+				 */
+				// "placement": {  "mode": "smart" }
+				/**
+				 * Bindings
+				 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+				 * databases, object storage, AI inference, real-time communication and more.
+				 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+				 */
+				/**
+				 * Environment Variables
+				 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+				 * Note: Use secrets to store sensitive data.
+				 * https://developers.cloudflare.com/workers/configuration/secrets/
+				 */
+				// "vars": {  "MY_VARIABLE": "production_value" }
+				/**
+				 * Static Assets
+				 * https://developers.cloudflare.com/workers/static-assets/binding/
+				 */
+				// "assets": {  "directory": "./public/",  "binding": "ASSETS" }
+			}"
+		`);
+	});
+
+	test("string literal replacement", async ({ expect }) => {
 		const toml = [`name = "my-cool-worker"`, `main = "src/index.ts"`].join(
 			"\n",
 		);
@@ -164,29 +296,27 @@ describe("update wrangler config", () => {
 			name = "test"
 			main = "src/index.ts"
 			compatibility_date = "2024-01-17"
+			compatibility_flags = [ "nodejs_compat" ]
 
 			[observability]
 			enabled = true
 
 			# Smart Placement
-			# Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+			# https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 			# [placement]
 			# mode = "smart"
 
-			###
 			# Bindings
 			# Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
 			# databases, object storage, AI inference, real-time communication and more.
 			# https://developers.cloudflare.com/workers/runtime-apis/bindings/
-			###
 
 			# Environment Variables
 			# https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-			# [vars]
-			# MY_VARIABLE = "production_value"
-
 			# Note: Use secrets to store sensitive data.
 			# https://developers.cloudflare.com/workers/configuration/secrets/
+			# [vars]
+			# MY_VARIABLE = "production_value"
 
 			# Static Assets
 			# https://developers.cloudflare.com/workers/static-assets/binding/
@@ -199,11 +329,12 @@ describe("update wrangler config", () => {
 			# [[services]]
 			# binding = "MY_SERVICE"
 			# service = "my-service"
+
 			"
 		`);
 	});
 
-	test("missing name and compat date", async () => {
+	test("missing name and compat date", async ({ expect }) => {
 		const toml = `main = "src/index.ts"`;
 		vi.mocked(readFile).mockReturnValue(toml);
 
@@ -217,29 +348,27 @@ describe("update wrangler config", () => {
 			main = "src/index.ts"
 			name = "test"
 			compatibility_date = "2024-01-17"
+			compatibility_flags = [ "nodejs_compat" ]
 
 			[observability]
 			enabled = true
 
 			# Smart Placement
-			# Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+			# https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 			# [placement]
 			# mode = "smart"
 
-			###
 			# Bindings
 			# Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
 			# databases, object storage, AI inference, real-time communication and more.
 			# https://developers.cloudflare.com/workers/runtime-apis/bindings/
-			###
 
 			# Environment Variables
 			# https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-			# [vars]
-			# MY_VARIABLE = "production_value"
-
 			# Note: Use secrets to store sensitive data.
 			# https://developers.cloudflare.com/workers/configuration/secrets/
+			# [vars]
+			# MY_VARIABLE = "production_value"
 
 			# Static Assets
 			# https://developers.cloudflare.com/workers/static-assets/binding/
@@ -252,11 +381,12 @@ describe("update wrangler config", () => {
 			# [[services]]
 			# binding = "MY_SERVICE"
 			# service = "my-service"
+
 			"
 		`);
 	});
 
-	test("dont replace valid existing compatibility date", async () => {
+	test("dont replace valid existing compatibility date", async ({ expect }) => {
 		const toml = [
 			`name = "super-old-worker"`,
 			`compatibility_date = "2001-10-12"`,
@@ -272,29 +402,27 @@ describe("update wrangler config", () => {
 			# https://developers.cloudflare.com/workers/wrangler/configuration/
 			name = "test"
 			compatibility_date = "2001-10-12"
+			compatibility_flags = [ "nodejs_compat" ]
 
 			[observability]
 			enabled = true
 
 			# Smart Placement
-			# Docs: https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+			# https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
 			# [placement]
 			# mode = "smart"
 
-			###
 			# Bindings
 			# Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
 			# databases, object storage, AI inference, real-time communication and more.
 			# https://developers.cloudflare.com/workers/runtime-apis/bindings/
-			###
 
 			# Environment Variables
 			# https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
-			# [vars]
-			# MY_VARIABLE = "production_value"
-
 			# Note: Use secrets to store sensitive data.
 			# https://developers.cloudflare.com/workers/configuration/secrets/
+			# [vars]
+			# MY_VARIABLE = "production_value"
 
 			# Static Assets
 			# https://developers.cloudflare.com/workers/static-assets/binding/
@@ -307,7 +435,265 @@ describe("update wrangler config", () => {
 			# [[services]]
 			# binding = "MY_SERVICE"
 			# service = "my-service"
+
 			"
 		`);
+	});
+
+	test("placeholder replacement with Workflows (json)", async ({ expect }) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const json = JSON.stringify({
+			name: "<WORKER_NAME>",
+			main: "src/index.ts",
+			compatibility_date: "<COMPATIBILITY_DATE>",
+			workflows: [
+				{
+					name: "workflow-<WORKER_NAME>",
+				},
+			],
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(ctx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).toMatchInlineSnapshot(`
+			"/**
+			 * For more details on how to configure Wrangler, refer to:
+			 * https://developers.cloudflare.com/workers/wrangler/configuration/
+			 */
+			{
+				"$schema": "node_modules/wrangler/config-schema.json",
+				"name": "test",
+				"main": "src/index.ts",
+				"compatibility_date": "2024-01-17",
+				"workflows": [
+					{
+						"name": "workflow-test"
+					}
+				],
+				"observability": {
+					"enabled": true
+				},
+				"compatibility_flags": [
+					"nodejs_compat"
+				]
+				/**
+				 * Smart Placement
+				 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
+				 */
+				// "placement": {  "mode": "smart" }
+				/**
+				 * Bindings
+				 * Bindings allow your Worker to interact with resources on the Cloudflare Developer Platform, including
+				 * databases, object storage, AI inference, real-time communication and more.
+				 * https://developers.cloudflare.com/workers/runtime-apis/bindings/
+				 */
+				/**
+				 * Environment Variables
+				 * https://developers.cloudflare.com/workers/wrangler/configuration/#environment-variables
+				 * Note: Use secrets to store sensitive data.
+				 * https://developers.cloudflare.com/workers/configuration/secrets/
+				 */
+				// "vars": {  "MY_VARIABLE": "production_value" }
+				/**
+				 * Static Assets
+				 * https://developers.cloudflare.com/workers/static-assets/binding/
+				 */
+				// "assets": {  "directory": "./public/",  "binding": "ASSETS" }
+				/**
+				 * Service Bindings (communicate between multiple Workers)
+				 * https://developers.cloudflare.com/workers/wrangler/configuration/#service-bindings
+				 */
+				// "services": [  {   "binding": "MY_SERVICE",   "service": "my-service"  } ]
+			}"
+		`);
+	});
+
+	test("does not add nodejs_compat if already present (toml)", async ({
+		expect,
+	}) => {
+		const toml = [
+			`name = "my-worker"`,
+			`main = "src/index.ts"`,
+			`compatibility_flags = ["nodejs_compat"]`,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toContain('compatibility_flags = [ "nodejs_compat" ]');
+		expect(newToml.match(/nodejs_compat/g)?.length).toBe(1);
+	});
+
+	test("does not add nodejs_compat if nodejs_compat_v2 is present (toml)", async ({
+		expect,
+	}) => {
+		const toml = [
+			`name = "my-worker"`,
+			`main = "src/index.ts"`,
+			`compatibility_flags = ["nodejs_compat_v2"]`,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toContain('compatibility_flags = [ "nodejs_compat_v2" ]');
+		expect(newToml).not.toContain('"nodejs_compat"');
+	});
+
+	test("preserves existing compatibility flags when adding nodejs_compat (toml)", async ({
+		expect,
+	}) => {
+		const toml = [
+			`name = "my-worker"`,
+			`main = "src/index.ts"`,
+			`compatibility_flags = ["some_other_flag"]`,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toContain("nodejs_compat");
+		expect(newToml).toContain("some_other_flag");
+	});
+
+	test("does not add nodejs_compat if already present (json)", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const json = JSON.stringify({
+			name: "my-worker",
+			main: "src/index.ts",
+			compatibility_flags: ["nodejs_compat"],
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(ctx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig.match(/nodejs_compat/g)?.length).toBe(1);
+	});
+
+	test("does not add nodejs_compat if nodejs_compat_v2 is present (json)", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const json = JSON.stringify({
+			name: "my-worker",
+			main: "src/index.ts",
+			compatibility_flags: ["nodejs_compat_v2"],
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(ctx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).toContain("nodejs_compat_v2");
+		expect(newConfig).not.toContain('"nodejs_compat"');
+	});
+
+	test("preserves existing compatibility flags when adding nodejs_compat (json)", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const json = JSON.stringify({
+			name: "my-worker",
+			main: "src/index.ts",
+			compatibility_flags: ["some_other_flag"],
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(ctx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).toContain("nodejs_compat");
+		expect(newConfig).toContain("some_other_flag");
+	});
+
+	test("does not add nodejs_compat if no_nodejs_compat is present (toml)", async ({
+		expect,
+	}) => {
+		const toml = [
+			`name = "my-worker"`,
+			`main = "src/index.ts"`,
+			`compatibility_flags = ["no_nodejs_compat"]`,
+		].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(ctx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).toContain('compatibility_flags = [ "no_nodejs_compat" ]');
+		expect(newToml).not.toContain('"nodejs_compat"');
+	});
+
+	test("does not add nodejs_compat if no_nodejs_compat is present (json)", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const json = JSON.stringify({
+			name: "my-worker",
+			main: "src/index.ts",
+			compatibility_flags: ["no_nodejs_compat"],
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(ctx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).toContain("no_nodejs_compat");
+		expect(newConfig).not.toContain('"nodejs_compat"');
+	});
+
+	test("does not add nodejs_compat for Python projects (toml)", async ({
+		expect,
+	}) => {
+		const pythonCtx = createTestContext("test", {
+			...ctx.args,
+			lang: "python",
+		});
+		const toml = [`name = "my-worker"`, `main = "src/index.py"`].join("\n");
+		vi.mocked(readFile).mockReturnValue(toml);
+
+		await updateWranglerConfig(pythonCtx);
+
+		const newToml = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newToml).not.toContain("nodejs_compat");
+	});
+
+	test("does not add nodejs_compat for Python projects (json)", async ({
+		expect,
+	}) => {
+		vi.mocked(existsSync).mockImplementationOnce((f) =>
+			(f as string).endsWith(".json"),
+		);
+		const pythonCtx = createTestContext("test", {
+			...ctx.args,
+			lang: "python",
+		});
+		const json = JSON.stringify({
+			name: "my-worker",
+			main: "src/index.py",
+		});
+		vi.mocked(readFile).mockReturnValueOnce(json);
+
+		await updateWranglerConfig(pythonCtx);
+
+		const newConfig = vi.mocked(writeFile).mock.calls[0][1];
+		expect(newConfig).not.toContain("nodejs_compat");
 	});
 });

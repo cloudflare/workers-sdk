@@ -8,41 +8,42 @@ import {
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import dedent from "ts-dedent";
-import { afterEach, beforeEach, describe, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
-	findPackageNames,
+	findPackages,
 	readChangesets,
 	validateChangesets,
 } from "../validate-changesets";
+import type { PackageJSON } from "../validate-changesets";
 
 describe("findPackageNames()", () => {
-	it("should return all the private packages which contain deploy scripts", ({
-		expect,
-	}) => {
-		expect(findPackageNames()).toEqual(
+	it("should return all the private packages which contain deploy scripts", () => {
+		expect(new Set(findPackages().keys())).toEqual(
 			new Set([
 				"@cloudflare/chrome-devtools-patches",
 				"@cloudflare/cli",
+				"@cloudflare/containers-shared",
+				"@cloudflare/devprod-status-bot",
+				"@cloudflare/edge-preview-authenticated-proxy",
+				"@cloudflare/eslint-config-shared",
+				"@cloudflare/format-errors",
 				"@cloudflare/kv-asset-handler",
+				"@cloudflare/local-explorer-ui",
 				"@cloudflare/pages-shared",
+				"@cloudflare/playground-preview-worker",
 				"@cloudflare/quick-edit",
+				"@cloudflare/turbo-r2-archive",
 				"@cloudflare/unenv-preset",
+				"@cloudflare/vite-plugin",
 				"@cloudflare/vitest-pool-workers",
 				"@cloudflare/workers-editor-shared",
+				"@cloudflare/workers-playground",
 				"@cloudflare/workers-shared",
 				"@cloudflare/workers-utils",
 				"@cloudflare/workflows-shared",
-				"@cloudflare/containers-shared",
-				"@cloudflare/vite-plugin",
 				"create-cloudflare",
-				"@cloudflare/devprod-status-bot",
-				"@cloudflare/edge-preview-authenticated-proxy",
-				"@cloudflare/format-errors",
 				"miniflare",
-				"@cloudflare/playground-preview-worker",
 				"solarflare-theme",
-				"@cloudflare/turbo-r2-archive",
-				"@cloudflare/workers-playground",
 				"wrangler",
 			])
 		);
@@ -63,9 +64,7 @@ describe("readChangesets()", () => {
 		}
 	});
 
-	it("should load files from the changeset directory that look like changesets", ({
-		expect,
-	}) => {
+	it("should load files from the changeset directory that look like changesets", () => {
 		writeFileSync(resolve(tmpDir, "README.md"), "Some text");
 		writeFileSync(resolve(tmpDir, ".hidden.md"), "Some text");
 		writeFileSync(resolve(tmpDir, "change-set-one.md"), "Some text");
@@ -90,9 +89,14 @@ describe("readChangesets()", () => {
 });
 
 describe("validateChangesets()", () => {
-	it("should report errors for any invalid changesets", ({ expect }) => {
+	it("should report errors for any invalid changesets", () => {
 		const errors = validateChangesets(
-			new Set(["package-a", "package-b", "package-c"]),
+			new Map<string, PackageJSON>([
+				["package-a", { name: "package-a" }],
+				["package-b", { name: "package-b" }],
+				["package-c", { name: "package-c" }],
+				["package-d", { name: "package-d", "workers-sdk": { deploy: true } }],
+			]),
 			[
 				{
 					file: "valid-one.md",
@@ -149,20 +153,34 @@ describe("validateChangesets()", () => {
 
 						docs: test`,
 				},
+				{
+					file: "deployable-package.md",
+					contents: dedent`
+						---
+						"package-d": patch
+						---
+
+						fix: test`,
+				},
 			]
 		);
 		expect(errors).toMatchInlineSnapshot(`
 			[
 			  "Error: could not parse changeset - invalid frontmatter: at file "invalid-frontmatter.md"",
-			  "Invalid package name "package-invalid" in changeset at "invalid-package.md".",
+			  "Unknown package name "package-invalid" in changeset at "invalid-package.md".",
 			  "Invalid type "foo" for package "package-a" in changeset at "invalid-type.md".",
+			  "Currently we are not allowing changes to package "package-d" in changeset at "deployable-package.md" since it would trigger a Worker/Pages deployment.",
 			]
 		`);
 	});
 
-	it("should report errors for major bump changesets", ({ expect }) => {
+	it("should report errors for major bump changesets", () => {
 		const errors = validateChangesets(
-			new Set(["package-a", "package-b", "package-c"]),
+			new Map<string, PackageJSON>([
+				["package-a", { name: "package-a" }],
+				["package-b", { name: "package-b" }],
+				["package-c", { name: "package-c" }],
+			]),
 			[
 				{
 					file: "patch-one.md",

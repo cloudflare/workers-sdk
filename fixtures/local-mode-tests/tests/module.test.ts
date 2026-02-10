@@ -1,5 +1,5 @@
 import path from "path";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, it } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { Unstable_DevWorker } from "wrangler";
 
@@ -39,7 +39,7 @@ describe("module worker", () => {
 		process.env.NODE_ENV = originalNodeEnv;
 	});
 
-	it("renders variables", async () => {
+	it("renders variables", async ({ expect }) => {
 		const resp = await worker.fetch("/vars");
 		expect(resp).not.toBe(undefined);
 
@@ -59,13 +59,13 @@ describe("module worker", () => {
 		`);
 	});
 
-	it("should return Hi by default", async () => {
+	it("should return Hi by default", async ({ expect }) => {
 		const resp = await worker.fetch("/");
 		expect(resp).not.toBe(undefined);
 		const respJson = await resp.text();
 		expect(respJson).toBe(JSON.stringify({ greeting: "Hi!" }));
 	});
-	it("should return Bonjour when French", async () => {
+	it("should return Bonjour when French", async ({ expect }) => {
 		const resp = await worker.fetch("/", { headers: { lang: "fr-FR" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
@@ -74,7 +74,7 @@ describe("module worker", () => {
 		}
 	});
 
-	it("should return G'day when Australian", async () => {
+	it("should return G'day when Australian", async ({ expect }) => {
 		const resp = await worker.fetch("/", { headers: { lang: "en-AU" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
@@ -83,7 +83,7 @@ describe("module worker", () => {
 		}
 	});
 
-	it("should return Good day when British", async () => {
+	it("should return Good day when British", async ({ expect }) => {
 		const resp = await worker.fetch("/", { headers: { lang: "en-GB" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
@@ -92,7 +92,7 @@ describe("module worker", () => {
 		}
 	});
 
-	it("should return Howdy when Texan", async () => {
+	it("should return Howdy when Texan", async ({ expect }) => {
 		const resp = await worker.fetch("/", { headers: { lang: "en-TX" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
@@ -101,7 +101,7 @@ describe("module worker", () => {
 		}
 	});
 
-	it("should return Hello when American", async () => {
+	it("should return Hello when American", async ({ expect }) => {
 		const resp = await worker.fetch("/", { headers: { lang: "en-US" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
@@ -110,7 +110,7 @@ describe("module worker", () => {
 		}
 	});
 
-	it("should return Hola when Spanish", async () => {
+	it("should return Hola when Spanish", async ({ expect }) => {
 		const resp = await worker.fetch("/", { headers: { lang: "es-ES" } });
 		expect(resp).not.toBe(undefined);
 		if (resp) {
@@ -119,7 +119,7 @@ describe("module worker", () => {
 		}
 	});
 
-	it("returns hex string", async () => {
+	it("returns hex string", async ({ expect }) => {
 		const resp = await worker.fetch("/buffer");
 		expect(resp).not.toBe(undefined);
 

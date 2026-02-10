@@ -1,6 +1,7 @@
 import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vitest/config";
 import { isExperimental, testPackageManager } from "./e2e/helpers/constants";
+import { getLogFolder } from "./e2e/helpers/log-stream";
 
 export default defineConfig({
 	plugins: [tsconfigPaths({ projects: ["tsconfig.json"] })],
@@ -11,7 +12,7 @@ export default defineConfig({
 		globalSetup: ["e2e/helpers/global-setup.ts"],
 		reporters: ["json", "verbose", "hanging-process"],
 		outputFile: {
-			json: `./.e2e-logs${isExperimental ? "-experimental" : ""}/${testPackageManager}/results.json`,
+			json: `${getLogFolder(isExperimental, testPackageManager)}/results.json`,
 		},
 	},
 });

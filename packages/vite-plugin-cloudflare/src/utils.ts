@@ -1,4 +1,4 @@
-import * as path from "node:path";
+import * as nodePath from "node:path";
 import * as util from "node:util";
 import { createRequest, sendResponse } from "@remix-run/node-fetch-server";
 import {
@@ -6,9 +6,11 @@ import {
 	Request as MiniflareRequest,
 	Response as MiniflareResponse,
 } from "miniflare";
+import semverGte from "semver/functions/gte";
+import { version as viteVersion } from "vite";
+import * as vite from "vite";
 import type { PluginContext } from "./context";
 import type * as http from "node:http";
-import type * as vite from "vite";
 
 export const debuglog = util.debuglog("@cloudflare:vite-plugin");
 
@@ -37,7 +39,7 @@ export function getOutputDirectory(
 
 	return (
 		userConfig.environments?.[environmentName]?.build?.outDir ??
-		path.join(rootOutputDirectory, environmentName)
+		nodePath.join(rootOutputDirectory, environmentName)
 	);
 }
 
@@ -57,6 +59,7 @@ export function withTrailingSlash(path: string): string {
 }
 
 export function createRequestHandler(
+	ctx: PluginContext,
 	handler: (
 		request: MiniflareRequest,
 		req: vite.Connect.IncomingMessage
@@ -78,7 +81,7 @@ export function createRequestHandler(
 			}
 			request = createRequest(req, res);
 
-			let response = await handler(toMiniflareRequest(request), req);
+			let response = await handler(toMiniflareRequest(ctx, request), req);
 
 			// Vite uses HTTP/2 when `server.https` or `preview.https` is enabled
 			if (req.httpVersionMajor === 2) {
@@ -99,7 +102,14 @@ export function createRequestHandler(
 	};
 }
 
-function toMiniflareRequest(request: Request): MiniflareRequest {
+export function satisfiesViteVersion(minVersion: string): boolean {
+	return semverGte(viteVersion, minVersion);
+}
+
+function toMiniflareRequest(
+	ctx: PluginContext,
+	request: Request
+): MiniflareRequest {
 	const host = request.headers.get("Host");
 	const xForwardedHost = request.headers.get("X-Forwarded-Host");
 
@@ -109,6 +119,11 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 		// TODO: reconsider this when adopting `miniflare.dispatchFetch` as it may be possible to provide the Vite server host in the `host` header
 		request.headers.set("X-Forwarded-Host", host);
 	}
+
+	// Add the proxy shared secret to the request headers
+	// so the proxy worker can trust it and add host headers back
+	// wrangler dev already does this, we need to match the behavior here
+	request.headers.set(CoreHeaders.PROXY_SHARED_SECRET, ctx.proxySharedSecret);
 
 	// Undici sets the `Sec-Fetch-Mode` header to `cors` so we capture it in a custom header to be converted back later.
 	const secFetchMode = request.headers.get("Sec-Fetch-Mode");
@@ -123,3 +138,5 @@ function toMiniflareRequest(request: Request): MiniflareRequest {
 		signal: request.signal,
 	});
 }
+
+export const isRolldown = "rolldownVersion" in vite;

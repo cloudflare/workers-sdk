@@ -68,7 +68,7 @@ describe("Pages _worker.js/ directory", () => {
 		expect(existsSync(join(tmpDir, "./v3/r2"))).toBeTruthy();
 	});
 
-	it("should bundle", async ({ expect }) => {
+	it("should bundle", ({ expect }) => {
 		const tempDir = realpathSync(
 			mkdtempSync(join(tmpdir(), "worker-bundle-tests"))
 		);

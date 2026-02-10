@@ -172,6 +172,29 @@ export type ContainerApp = {
 				disk_mb?: number;
 		  };
 
+	wrangler_ssh?: {
+		/**
+		 * If enabled, those with write access to a container will be able to SSH into it through Wrangler.
+		 * @default false
+		 */
+		enabled: boolean;
+		/**
+		 * Port that the SSH service is running on
+		 * @defaults to 22
+		 */
+		port?: number;
+	};
+
+	/**
+	 * SSH public keys to put in the container's authorized_keys file.
+	 */
+	authorized_keys?: { name: string; public_key: string }[];
+
+	/**
+	 * Trusted user CA keys to put in the container's trusted_user_ca_keys file.
+	 */
+	trusted_user_ca_keys?: { name?: string; public_key: string }[];
+
 	/**
 	 * @deprecated Use top level `containers` fields instead.
 	 * `configuration.image` should be `image`
@@ -196,7 +219,11 @@ export type ContainerApp = {
 	constraints?: {
 		regions?: string[];
 		cities?: string[];
+		/**
+		 * @deprecated Use `tiers` instead
+		 */
 		tier?: number;
+		tiers?: number[];
 	};
 
 	/**
@@ -448,7 +475,7 @@ interface EnvironmentInheritable {
 	 *
 	 * For reference, see https://developers.cloudflare.com/workers/wrangler/configuration/#triggers
 	 *
-	 * @default {crons: undefined}
+	 * @default {crons:[]}
 	 * @inheritable
 	 */
 	triggers: { crons: string[] | undefined };
@@ -1332,7 +1359,9 @@ export interface DispatchNamespaceOutbound {
 
 export interface UserLimits {
 	/** Maximum allowed CPU time for a Worker's invocation in milliseconds */
-	cpu_ms: number;
+	cpu_ms?: number;
+	/** Maximum allowed number of fetch requests that a Worker's invocation can execute */
+	subrequests?: number;
 }
 
 export type Assets = {

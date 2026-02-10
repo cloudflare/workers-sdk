@@ -1,5 +1,5 @@
 import { rm, writeFile } from "node:fs/promises";
-import { describe, test, vi } from "vitest";
+import { describe, onTestFinished, test, vi } from "vitest";
 import {
 	fetchJson,
 	isBuildAndPreviewOnWindows,
@@ -13,7 +13,7 @@ const commands = ["dev", "buildAndPreview"] as const;
 
 describe("basic e2e tests", () => {
 	describe.each(packageManagers)('with "%s" package manager', async (pm) => {
-		const projectPath = seed("basic", pm);
+		const projectPath = seed("basic", { pm });
 
 		describe.each(commands)('with "%s" command', (command) => {
 			test.skipIf(isBuildAndPreviewOnWindows(command))(
@@ -61,7 +61,6 @@ describe("basic e2e tests", () => {
 				() => {
 					test("can read vars from wrangler configuration and .env", async ({
 						expect,
-						onTestFinished,
 					}) => {
 						await writeFile(
 							projectPath + "/.env",
@@ -81,7 +80,6 @@ describe("basic e2e tests", () => {
 
 					test("will not load local dev vars from .env if there is a .dev.vars file", async ({
 						expect,
-						onTestFinished,
 					}) => {
 						await writeFile(
 							projectPath + "/.env",
@@ -105,7 +103,6 @@ describe("basic e2e tests", () => {
 
 					test("will not load local dev vars from .env if CLOUDFLARE_LOAD_DEV_VARS_FROM_DOT_ENV is set to false", async ({
 						expect,
-						onTestFinished,
 					}) => {
 						await writeFile(
 							projectPath + "/.env",
@@ -125,7 +122,6 @@ describe("basic e2e tests", () => {
 
 					test("can merge vars from wrangler configuration, .env, and .env.local", async ({
 						expect,
-						onTestFinished,
 					}) => {
 						await writeFile(
 							projectPath + "/.env",
@@ -150,7 +146,6 @@ describe("basic e2e tests", () => {
 
 					test("can merge vars from wrangler configuration, .env, and .env.local, and environment specific files", async ({
 						expect,
-						onTestFinished,
 					}) => {
 						await writeFile(
 							projectPath + "/.env",

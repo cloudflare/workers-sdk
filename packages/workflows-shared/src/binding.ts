@@ -135,6 +135,15 @@ export class WorkflowBinding extends WorkerEntrypoint<Env> {
 		const stub = this.env.ENGINE.get(stubId);
 		return await stub.waitForStatus(status);
 	}
+
+	public async unsafeGetOutputOrError(
+		instanceId: string,
+		isOutput: boolean
+	): Promise<unknown> {
+		const stubId = this.env.ENGINE.idFromName(instanceId);
+		const stub = this.env.ENGINE.get(stubId);
+		return await stub.getOutputOrError(isOutput);
+	}
 }
 
 export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
@@ -167,16 +176,12 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 	public async status(): Promise<
 		InstanceStatus & { __LOCAL_DEV_STEP_OUTPUTS: unknown[] }
 	> {
-		const status = await this.stub.getStatus(0, this.id);
+		const status = await this.stub.getStatus();
 
 		// NOTE(lduarte): for some reason, sync functions over RPC are typed as never instead of Promise<EngineLogs>
 		using logs = await (this.stub.readLogs() as unknown as Promise<
 			EngineLogs & Disposable
 		>);
-
-		const workflowSuccessEvent = logs.logs
-			.filter((log) => log.event === InstanceEvent.WORKFLOW_SUCCESS)
-			.at(0);
 
 		const filteredLogs = logs.logs.filter(
 			(log) =>
@@ -191,15 +196,19 @@ export class WorkflowHandle extends RpcTarget implements WorkflowInstance {
 		);
 
 		const workflowOutput =
-			workflowSuccessEvent !== undefined
-				? workflowSuccessEvent.metadata.result
-				: null;
+			logs.logs.find((log) => log.event === InstanceEvent.WORKFLOW_SUCCESS)
+				?.metadata.result ?? null;
+
+		const workflowError = logs.logs.find(
+			(log) => log.event === InstanceEvent.WORKFLOW_FAILURE
+		)?.metadata.error;
 
 		return {
 			status: instanceStatusName(status),
 			__LOCAL_DEV_STEP_OUTPUTS: stepOutputs,
 			output: workflowOutput,
-		}; // output, error
+			error: workflowError,
+		};
 	}
 
 	public async sendEvent(args: {

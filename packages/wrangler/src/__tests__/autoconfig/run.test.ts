@@ -1,24 +1,43 @@
 import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { FatalError, readFileSync } from "@cloudflare/workers-utils";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in helper function at module scope */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import * as c3 from "../../autoconfig/c3-vendor/packages";
 import * as details from "../../autoconfig/details";
 import { Static } from "../../autoconfig/frameworks/static";
 import * as run from "../../autoconfig/run";
 import * as format from "../../deployment-bundle/guess-worker-format";
 import { clearOutputFilePath } from "../../output";
-import * as compatDate from "../../utils/compatibility-date";
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
-import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
+import {
+	clearDialogs,
+	mockConfirm,
+	mockPrompt,
+	mockSelect,
+} from "../helpers/mock-dialogs";
 import { useMockIsTTY } from "../helpers/mock-istty";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
 import { writeWorkerSource } from "../helpers/write-worker-source";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import type { Framework } from "../../autoconfig/frameworks";
 import type { MockInstance } from "vitest";
+
+vi.mock("@cloudflare/workers-utils", async (importOriginal) => {
+	const originalModule =
+		// eslint-disable-next-line @typescript-eslint/consistent-type-imports
+		await importOriginal<Awaited<typeof import("@cloudflare/workers-utils")>>();
+	return {
+		...originalModule,
+		getLocalWorkerdCompatibilityDate: vi.fn(() => ({
+			date: "2000-01-01",
+			source: "workerd",
+		})),
+	};
+});
 
 vi.mock("../../package-manager", () => ({
 	getPackageManager() {
@@ -93,6 +112,8 @@ describe("autoconfig (deploy)", () => {
 					configured: false,
 					projectPath: process.cwd(),
 					workerName: "my-worker",
+					framework: new Static({ id: "static", name: "Static" }),
+					outputDir: "./public",
 				})
 			);
 		const runSpy = vi.spyOn(run, "runAutoConfig");
@@ -127,10 +148,6 @@ describe("autoconfig (deploy)", () => {
 			installSpy = vi
 				.spyOn(c3, "installWrangler")
 				.mockImplementation(async () => {});
-
-			vi.spyOn(compatDate, "getDevCompatibilityDate").mockImplementation(
-				() => "2000-01-01"
-			);
 		});
 
 		it("happy path", async () => {
@@ -149,28 +166,36 @@ describe("autoconfig (deploy)", () => {
 				result: true,
 			});
 			await writeFile(".gitignore", "");
-			const configureSpy = vi.fn(async ({ outputDir }) => ({
-				wranglerConfig: {
-					assets: { directory: outputDir },
-				},
-			}));
-			await run.runAutoConfig({
-				projectPath: process.cwd(),
-				buildCommand: "echo 'built' > build.txt",
-				configured: false,
-				workerName: "my-worker",
-				framework: {
-					name: "Fake",
-					configure: configureSpy,
-					isConfigured: () => false,
-				} as unknown as Framework,
-				outputDir: "dist",
-				packageJson: {
-					dependencies: {
-						astro: "5",
+			const configureSpy = vi.fn(
+				async ({ outputDir }) =>
+					({
+						wranglerConfig: {
+							assets: { directory: outputDir },
+						},
+					}) satisfies ReturnType<Framework["configure"]>
+			);
+			await run.runAutoConfig(
+				{
+					projectPath: process.cwd(),
+					buildCommand: "echo 'built' > build.txt",
+					configured: false,
+					workerName: "my-worker",
+					framework: {
+						id: "fake",
+						name: "Fake",
+						configure: configureSpy,
+						isConfigured: () => false,
+						autoConfigSupported: true,
+					},
+					outputDir: "dist",
+					packageJson: {
+						dependencies: {
+							astro: "5",
+						},
 					},
 				},
-			});
+				{ enableWranglerInstallation: true }
+			);
 
 			expect(std.out).toMatchInlineSnapshot(`
 				"
@@ -254,6 +279,10 @@ describe("autoconfig (deploy)", () => {
 				text: "What do you want to name your Worker?",
 				result: "edited-worker-name",
 			});
+			mockSelect({
+				text: "What framework is your application using?",
+				result: "static",
+			});
 			mockPrompt({
 				text: "What directory contains your applications' output/asset files?",
 				result: "dist",
@@ -265,7 +294,7 @@ describe("autoconfig (deploy)", () => {
 			await run.runAutoConfig({
 				projectPath: process.cwd(),
 				configured: false,
-				framework: new Static("static"),
+				framework: new Static({ id: "static", name: "Static" }),
 				workerName: "my-worker",
 				outputDir: "dist",
 			});
@@ -274,13 +303,13 @@ describe("autoconfig (deploy)", () => {
 				"
 				Detected Project Settings:
 				 - Worker Name: my-worker
-				 - Framework: static
+				 - Framework: Static
 				 - Output Directory: dist
 
 
 				Updated Project Settings:
 				 - Worker Name: edited-worker-name
-				 - Framework: static
+				 - Framework: Static
 				 - Output Directory: dist
 
 
@@ -329,6 +358,7 @@ describe("autoconfig (deploy)", () => {
 				workerName: "my-worker",
 				configured: false,
 				outputDir: process.cwd(),
+				framework: new Static({ id: "static", name: "Static" }),
 			});
 
 			expect(readFileSync(".assetsignore")).toMatchInlineSnapshot(`
@@ -354,12 +384,12 @@ describe("autoconfig (deploy)", () => {
 				run.runAutoConfig({
 					projectPath: process.cwd(),
 					configured: false,
-					framework: new Static("static"),
+					framework: new Static({ id: "static", name: "Static" }),
 					workerName: "my-worker",
 					outputDir: "",
 				})
 			).rejects.toThrowErrorMatchingInlineSnapshot(
-				`[Error: Cannot configure project without an output directory]`
+				`[AssertionError: The Output Directory is unexpectedly missing]`
 			);
 		});
 	});

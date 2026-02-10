@@ -1,6 +1,5 @@
 import assert from "node:assert";
 import test, { describe } from "node:test";
-import { setTimeout } from "node:timers/promises";
 import getPort from "get-port";
 import { unstable_startWorker } from "wrangler";
 
@@ -20,7 +19,7 @@ describe("startWorker - configuration errors", () => {
 				assert(cause instanceof Error);
 				assert.match(
 					cause.message,
-					/The entry-point file at "not a real entrypoint" was not found./
+					/The entry-point file at "not a real entrypoint" was not found\./
 				);
 				return true;
 			}
@@ -88,9 +87,9 @@ describe("startWorker - configuration errors", () => {
 			worker.setConfig({ entrypoint: "not a real entrypoint" }, true),
 			(err) => {
 				assert(err instanceof Error);
-				assert.strictEqual(
+				assert.match(
 					err.message,
-					'The entry-point file at "not a real entrypoint" was not found.'
+					/The entry-point file at "not a real entrypoint" was not found\./
 				);
 				return true;
 			}

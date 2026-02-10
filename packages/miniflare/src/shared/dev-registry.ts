@@ -225,6 +225,7 @@ export class DevRegistry {
 			type: "setup",
 			runtimeEntryURL,
 			fallbackServicePorts,
+			logLevel: this.log.level,
 		});
 	}
 

@@ -9,3 +9,9 @@ export {
 } from "./normalize";
 export { runInTempDir } from "./run-in-tmp";
 export { seed } from "./seed";
+export {
+	writeWranglerConfig,
+	writeDeployRedirectConfig,
+	writeRedirectedWranglerConfig,
+	readWranglerConfig,
+} from "./wrangler-config";

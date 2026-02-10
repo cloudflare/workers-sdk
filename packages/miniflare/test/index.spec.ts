@@ -21,7 +21,6 @@ import {
 	Queue,
 	R2Bucket,
 } from "@cloudflare/workers-types/experimental";
-import test, { ThrowsExpectation } from "ava";
 import {
 	_forceColour,
 	_transformsForContentEncodingAndContentType,
@@ -41,6 +40,7 @@ import {
 	Worker_Module,
 	WorkerOptions,
 } from "miniflare";
+import { onTestFinished, test } from "vitest";
 import {
 	CloseEvent as StandardCloseEvent,
 	MessageEvent as StandardMessageEvent,
@@ -50,6 +50,7 @@ import {
 	FIXTURES_PATH,
 	TestLog,
 	useCwd,
+	useDispose,
 	useServer,
 	useTmp,
 	utf8Encode,
@@ -61,27 +62,25 @@ const ADD_WASM_MODULE = Buffer.from(
 	"base64"
 );
 
-test.serial("Miniflare: validates options", async (t) => {
+test("Miniflare: validates options", async ({ expect }) => {
 	// Check empty workers array rejected
-	t.throws(() => new Miniflare({ workers: [] }), {
-		instanceOf: MiniflareCoreError,
-		code: "ERR_NO_WORKERS",
-		message: "No workers defined",
-	});
+	expect(() => new Miniflare({ workers: [] })).toThrow(
+		new MiniflareCoreError("ERR_NO_WORKERS", "No workers defined")
+	);
 
 	// Check workers with the same name rejected
-	t.throws(
+	expect(
 		() =>
 			new Miniflare({
 				workers: [{ script: "" }, { script: "" }],
-			}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_DUPLICATE_NAME",
-			message: "Multiple workers defined without a `name`",
-		}
+			})
+	).toThrow(
+		new MiniflareCoreError(
+			"ERR_DUPLICATE_NAME",
+			"Multiple workers defined without a `name`"
+		)
 	);
-	t.throws(
+	expect(
 		() =>
 			new Miniflare({
 				workers: [
@@ -90,58 +89,70 @@ test.serial("Miniflare: validates options", async (t) => {
 					{ script: "", name: "b" },
 					{ script: "", name: "a" },
 				],
-			}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_DUPLICATE_NAME",
-			message: 'Multiple workers defined with the same `name`: "a"',
-		}
+			})
+	).toThrow(
+		new MiniflareCoreError(
+			"ERR_DUPLICATE_NAME",
+			'Multiple workers defined with the same `name`: "a"'
+		)
 	);
 
 	// Disable colours for easier to read expectations
 	_forceColour(false);
-	t.teardown(() => _forceColour());
+	onTestFinished(() => _forceColour());
 
 	// Check throws validation error with incorrect options
-	// @ts-expect-error intentionally testing incorrect types
-	t.throws(() => new Miniflare({ name: 42, script: "" }), {
-		instanceOf: MiniflareCoreError,
-		code: "ERR_VALIDATION",
-		message: `Unexpected options passed to \`new Miniflare()\` constructor:
+	let error: MiniflareCoreError | undefined = undefined;
+	try {
+		// @ts-expect-error intentionally testing incorrect types
+		new Miniflare({ name: 42, script: "" });
+	} catch (e) {
+		error = e as MiniflareCoreError;
+	}
+	expect(error).toBeInstanceOf(MiniflareCoreError);
+	expect(error?.code).toEqual("ERR_VALIDATION");
+	expect(error?.message).toEqual(
+		`Unexpected options passed to \`new Miniflare()\` constructor:
 {
   name: 42,
         ^ Expected string, received number
   ...,
-}`,
-	});
+}`
+	);
 
 	// Check throws validation error with primitive option
-	// @ts-expect-error intentionally testing incorrect types
-	t.throws(() => new Miniflare("addEventListener(...)"), {
-		instanceOf: MiniflareCoreError,
-		code: "ERR_VALIDATION",
-		message: `Unexpected options passed to \`new Miniflare()\` constructor:
+	error = undefined;
+	try {
+		// @ts-expect-error intentionally testing incorrect types
+		new Miniflare("addEventListener(...)");
+	} catch (e) {
+		error = e as MiniflareCoreError;
+	}
+	expect(error).toBeInstanceOf(MiniflareCoreError);
+	expect(error?.code).toEqual("ERR_VALIDATION");
+	expect(error?.message).toEqual(
+		`Unexpected options passed to \`new Miniflare()\` constructor:
 'addEventListener(...)'
-^ Expected object, received string`,
-	});
+^ Expected object, received string`
+	);
 });
 
-test("Miniflare: ready returns copy of entry URL", async (t) => {
+test("Miniflare: ready returns copy of entry URL", async ({ expect }) => {
 	const mf = new Miniflare({
 		port: 0,
 		modules: true,
 		script: "",
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const url1 = await mf.ready;
 	url1.protocol = "ws:";
 	const url2 = await mf.ready;
-	t.not(url1, url2);
-	t.is(url2.protocol, "http:");
+	expect(url1).not.toBe(url2);
+	expect(url2.protocol).toBe("http:");
 });
 
-test("Miniflare: setOptions: can update host/port", async (t) => {
+test("Miniflare: setOptions: can update host/port", async ({ expect }) => {
 	// Extract loopback port from injected live reload script
 	const loopbackPortRegexp = /\/\/ Miniflare Live Reload.+url\.port = (\d+)/s;
 
@@ -156,7 +167,7 @@ test("Miniflare: setOptions: can update host/port", async (t) => {
 		})`,
 	};
 	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	async function getState() {
 		const url = await mf.ready;
@@ -172,24 +183,24 @@ test("Miniflare: setOptions: can update host/port", async (t) => {
 	const state2 = await getState();
 
 	// Make sure ports were reused when `port: 0` passed to `setOptions()`
-	t.not(state1.url.port, "0");
-	t.is(state1.url.port, state2.url.port);
-	t.not(state1.inspectorUrl.port, "0");
-	t.is(state1.inspectorUrl.port, state2.inspectorUrl.port);
+	expect(state1.url.port).not.toBe("0");
+	expect(state1.url.port).toBe(state2.url.port);
+	expect(state1.inspectorUrl.port).not.toBe("0");
+	expect(state1.inspectorUrl.port).toBe(state2.inspectorUrl.port);
 
 	// Make sure updating the host restarted the loopback server
-	t.not(state1.loopbackPort, undefined);
-	t.not(state2.loopbackPort, undefined);
-	t.not(state1.loopbackPort, state2.loopbackPort);
+	expect(state1.loopbackPort).toBeDefined();
+	expect(state2.loopbackPort).toBeDefined();
+	expect(state1.loopbackPort).not.toBe(state2.loopbackPort);
 
 	// Make sure setting port to `undefined` always gives a new port, but keeps
 	// existing loopback server
 	opts.port = undefined;
 	await mf.setOptions(opts);
 	const state3 = await getState();
-	t.not(state3.url.port, "0");
-	t.not(state1.url.port, state3.url.port);
-	t.is(state2.loopbackPort, state3.loopbackPort);
+	expect(state3.url.port).not.toBe("0");
+	expect(state1.url.port).not.toBe(state3.url.port);
+	expect(state2.loopbackPort).toBe(state3.loopbackPort);
 });
 
 const interfaces = os.networkInterfaces();
@@ -198,7 +209,7 @@ const localInterface = (interfaces["en0"] ?? interfaces["eth0"])?.find(
 );
 (localInterface === undefined ? test.skip : test)(
 	"Miniflare: can use local network address as host",
-	async (t) => {
+	async ({ expect }) => {
 		assert(localInterface !== undefined);
 		const mf = new Miniflare({
 			host: localInterface.address,
@@ -210,17 +221,17 @@ const localInterface = (interfaces["en0"] ?? interfaces["eth0"])?.find(
 				},
 			},
 		});
-		t.teardown(() => mf.dispose());
+		useDispose(mf);
 
 		let res = await mf.dispatchFetch("https://example.com");
-		t.is(await res.text(), "body");
+		expect(await res.text()).toBe("body");
 
 		const worker = await mf.getWorker();
 		res = await worker.fetch("https://example.com");
-		t.is(await res.text(), "body");
+		expect(await res.text()).toBe("body");
 	}
 );
-test("Miniflare: can use IPv6 loopback as host", async (t) => {
+test("Miniflare: can use IPv6 loopback as host", async ({ expect }) => {
 	const mf = new Miniflare({
 		host: "::1",
 		modules: true,
@@ -231,17 +242,19 @@ test("Miniflare: can use IPv6 loopback as host", async (t) => {
 			},
 		},
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("https://example.com");
-	t.is(await res.text(), "body");
+	expect(await res.text()).toBe("body");
 
 	const worker = await mf.getWorker();
 	res = await worker.fetch("https://example.com");
-	t.is(await res.text(), "body");
+	expect(await res.text()).toBe("body");
 });
 
-test("Miniflare: routes to multiple workers with fallback", async (t) => {
+test("Miniflare: routes to multiple workers with fallback", async ({
+	expect,
+}) => {
 	const opts: MiniflareOptions = {
 		workers: [
 			{
@@ -261,24 +274,26 @@ test("Miniflare: routes to multiple workers with fallback", async (t) => {
 		],
 	};
 	const mf = new Miniflare(opts);
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	// Check "a"'s more specific route checked first
 	let res = await mf.dispatchFetch("http://localhost/api");
-	t.is(await res.text(), "a");
+	expect(await res.text()).toBe("a");
 
 	// Check "b" still accessible
 	res = await mf.dispatchFetch("http://localhost/api/2");
-	t.is(await res.text(), "b");
+	expect(await res.text()).toBe("b");
 
 	// Check fallback to first
 	res = await mf.dispatchFetch("http://localhost/notapi");
-	t.is(await res.text(), "a");
+	expect(await res.text()).toBe("a");
 });
 
-test("Miniflare: custom service using Content-Encoding header", async (t) => {
+test("Miniflare: custom service using Content-Encoding header", async ({
+	expect,
+}) => {
 	const testBody = "x".repeat(100);
-	const { http } = await useServer(t, (req, res) => {
+	const { http } = await useServer((req, res) => {
 		const testEncoding = req.headers["x-test-encoding"]?.toString();
 		const contentType = "text/html"; // known content-type that will always be compressed
 		const encoders = _transformsForContentEncodingAndContentType(
@@ -308,33 +323,27 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 			},
 		},
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
-	const test = async (encoding: string) => {
+	const testEncoding = async (encoding: string) => {
 		const res = await mf.dispatchFetch("http://localhost", {
 			headers: {
 				"Accept-Encoding": encoding,
 				"X-Test-Encoding": encoding,
 			},
 		});
-		t.is(await res.text(), testBody, encoding);
+		expect(await res.text()).toBe(testBody);
 		// This header is mostly just for this test -- but is an indication for anyone who wants to know if the response _was_ compressed
-		t.is(
-			res.headers.get("MF-Content-Encoding"),
-			encoding,
-			`Expected the response, before decoding, to be encoded as ${encoding}`
-		);
+		// Expected the response, before decoding, to be encoded as ${encoding}
+		expect(res.headers.get("MF-Content-Encoding")).toBe(encoding);
 		// Ensure this header has been removed -- undici.fetch has already decoded (decompressed) the response
-		t.is(
-			res.headers.get("Content-Encoding"),
-			null,
-			"Expected Content-Encoding header to be removed"
-		);
+		// Expected Content-Encoding header to be removed
+		expect(res.headers.get("Content-Encoding")).toBe(null);
 	};
 
-	await test("gzip");
-	await test("deflate");
-	await test("br");
+	await testEncoding("gzip");
+	await testEncoding("deflate");
+	await testEncoding("br");
 	// `undici`'s `fetch()` is currently broken when `Content-Encoding` specifies
 	// multiple encodings. Once https://github.com/nodejs/undici/pull/2159 is
 	// released, we can re-enable this test.
@@ -342,7 +351,7 @@ test("Miniflare: custom service using Content-Encoding header", async (t) => {
 	// await test("deflate, gzip");
 });
 
-test("Miniflare: negotiates acceptable encoding", async (t) => {
+test("Miniflare: negotiates acceptable encoding", async ({ expect }) => {
 	const testBody = "x".repeat(100);
 	const mf = new Miniflare({
 		bindings: { TEST_BODY: testBody },
@@ -413,7 +422,7 @@ test("Miniflare: negotiates acceptable encoding", async (t) => {
 		};
 		`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	// Using `fetch()` directly to simulate eyeball
 	const url = await mf.ready;
@@ -427,106 +436,108 @@ test("Miniflare: negotiates acceptable encoding", async (t) => {
 	let res = await fetch(url, {
 		headers: { "Accept-Encoding": "hello" },
 	});
-	t.deepEqual(await res.json(), {
+	expect(await res.json()).toEqual({
 		AcceptEncoding: "br, gzip",
 		clientAcceptEncoding: "hello",
 	});
 
 	// Check all encodings supported
 	res = await fetch(gzipUrl);
-	t.is(await res.text(), testBody);
+	expect(await res.text()).toBe(testBody);
 	res = await fetch(brUrl);
-	t.is(await res.text(), testBody);
+	expect(await res.text()).toBe(testBody);
 	res = await fetch(deflateUrl);
-	t.is(await res.text(), testBody);
+	expect(await res.text()).toBe(testBody);
 
 	// Check with `Accept-Encoding: gzip`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "gzip" } });
-	t.is(res.headers.get("Content-Encoding"), "gzip");
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe("gzip");
+	expect(await res.text()).toBe(testBody);
 	res = await fetch(brUrl, { headers: { "Accept-Encoding": "gzip" } });
-	t.is(res.headers.get("Content-Encoding"), "gzip");
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe("gzip");
+	expect(await res.text()).toBe(testBody);
 	// "deflate" isn't an accepted encoding inside Workers, so returned as is
 	res = await fetch(deflateUrl, { headers: { "Accept-Encoding": "gzip" } });
-	t.is(res.headers.get("Content-Encoding"), "deflate");
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe("deflate");
+	expect(await res.text()).toBe(testBody);
 
 	// Check with `Accept-Encoding: br`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "br" } });
-	t.is(res.headers.get("Content-Encoding"), "br");
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe("br");
+	expect(await res.text()).toBe(testBody);
 	res = await fetch(brUrl, { headers: { "Accept-Encoding": "br" } });
-	t.is(res.headers.get("Content-Encoding"), "br");
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe("br");
+	expect(await res.text()).toBe(testBody);
 	// "deflate" isn't an accepted encoding inside Workers, so returned as is
 	res = await fetch(deflateUrl, { headers: { "Accept-Encoding": "br" } });
-	t.is(res.headers.get("Content-Encoding"), "deflate");
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe("deflate");
+	expect(await res.text()).toBe(testBody);
 
 	// Check with mixed `Accept-Encoding`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "gzip, br" } });
-	t.is(res.headers.get("Content-Encoding"), "gzip");
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe("gzip");
+	expect(await res.text()).toBe(testBody);
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "br, gzip" } });
-	t.is(res.headers.get("Content-Encoding"), "br");
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe("br");
+	expect(await res.text()).toBe(testBody);
 	res = await fetch(gzipUrl, {
 		headers: { "Accept-Encoding": "br;q=0.5, gzip" },
 	});
-	t.is(res.headers.get("Content-Encoding"), "gzip");
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe("gzip");
+	expect(await res.text()).toBe(testBody);
 
 	// Check empty `Accept-Encoding`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "" } });
-	t.is(res.headers.get("Content-Encoding"), "gzip");
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe("gzip");
+	expect(await res.text()).toBe(testBody);
 
 	// Check identity encoding
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "identity" } });
-	t.is(res.headers.get("Content-Encoding"), null);
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe(null);
+	expect(await res.text()).toBe(testBody);
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "*" } });
-	t.is(res.headers.get("Content-Encoding"), null);
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe(null);
+	expect(await res.text()).toBe(testBody);
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "zstd, *" } });
-	t.is(res.headers.get("Content-Encoding"), null);
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe(null);
+	expect(await res.text()).toBe(testBody);
 	res = await fetch(gzipUrl, {
 		headers: { "Accept-Encoding": "zstd, identity;q=0" },
 	});
-	t.is(res.status, 415);
-	t.is(res.headers.get("Accept-Encoding"), "br, gzip");
-	t.is(await res.text(), "Unsupported Media Type");
+	expect(res.status).toBe(415);
+	expect(res.headers.get("Accept-Encoding")).toBe("br, gzip");
+	expect(await res.text()).toBe("Unsupported Media Type");
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": "zstd, *;q=0" } });
-	t.is(res.status, 415);
-	t.is(res.headers.get("Accept-Encoding"), "br, gzip");
-	t.is(await res.text(), "Unsupported Media Type");
+	expect(res.status).toBe(415);
+	expect(res.headers.get("Accept-Encoding")).toBe("br, gzip");
+	expect(await res.text()).toBe("Unsupported Media Type");
 
 	// Check malformed `Accept-Encoding`
 	res = await fetch(gzipUrl, { headers: { "Accept-Encoding": ",(,br,,,q=," } });
-	t.is(res.headers.get("Content-Encoding"), "br");
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Encoding")).toBe("br");
+	expect(await res.text()).toBe(testBody);
 
 	// Check `Content-Type: text/html` is compressed (FL always compresses html)
 	res = await fetch(defaultCompressedUrl);
-	t.is(res.headers.get("Content-Type"), "text/html");
-	t.is(res.headers.get("Content-Encoding"), "gzip");
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Type")).toBe("text/html");
+	expect(res.headers.get("Content-Encoding")).toBe("gzip");
+	expect(await res.text()).toBe(testBody);
 
 	// Check `Content-Type: text/event-stream` is not compressed (FL does not compress this mime type)
 	res = await fetch(defaultUncompressedUrl);
-	t.is(res.headers.get("Content-Type"), "text/event-stream");
-	t.is(res.headers.get("Content-Encoding"), null);
-	t.is(await res.text(), testBody);
+	expect(res.headers.get("Content-Type")).toBe("text/event-stream");
+	expect(res.headers.get("Content-Encoding")).toBe(null);
+	expect(await res.text()).toBe(testBody);
 });
 
-test("Miniflare: custom service using Set-Cookie header", async (t) => {
+test("Miniflare: custom service using Set-Cookie header", async ({
+	expect,
+}) => {
 	const testCookies = [
 		"key1=value1; Max-Age=3600",
 		"key2=value2; Domain=example.com; Secure",
 	];
-	const { http } = await useServer(t, (req, res) => {
+	const { http } = await useServer((req, res) => {
 		res.writeHead(200, { "Set-Cookie": testCookies });
 		res.end();
 	});
@@ -547,13 +558,13 @@ test("Miniflare: custom service using Set-Cookie header", async (t) => {
 		// https://github.com/cloudflare/workerd/blob/14b54764609c263ea36ab862bb8bf512f9b1387b/src/workerd/io/compatibility-date.capnp#L273-L278
 		compatibilityDate: "2023-03-01",
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost");
-	t.deepEqual(await res.json(), testCookies);
+	expect(await res.json()).toEqual(testCookies);
 });
 
-test("Miniflare: web socket kitchen sink", async (t) => {
+test("Miniflare: web socket kitchen sink", async ({ expect }) => {
 	// Create deferred promises for asserting asynchronous event results
 	const clientEventPromise = new DeferredPromise<MessageEvent>();
 	const serverMessageEventPromise = new DeferredPromise<StandardMessageEvent>();
@@ -564,13 +575,13 @@ test("Miniflare: web socket kitchen sink", async (t) => {
 	const wss = new WebSocketServer({
 		server,
 		handleProtocols(protocols) {
-			t.deepEqual(protocols, new Set(["protocol1", "protocol2"]));
+			expect(protocols).toEqual(new Set(["protocol1", "protocol2"]));
 			return "protocol2";
 		},
 	});
 	wss.on("connection", (ws, req) => {
 		// Testing receiving additional headers sent from upgrade request
-		t.is(req.headers["user-agent"], "Test");
+		expect(req.headers["user-agent"]).toBe("Test");
 
 		ws.send("hello from server");
 		ws.addEventListener("message", serverMessageEventPromise.resolve);
@@ -581,7 +592,9 @@ test("Miniflare: web socket kitchen sink", async (t) => {
 	});
 	const port = await new Promise<number>((resolve) => {
 		server.listen(0, () => {
-			t.teardown(() => server.close());
+			onTestFinished(() => {
+				server.close();
+			});
 			resolve((server.address() as AddressInfo).port);
 		});
 	});
@@ -596,16 +609,16 @@ test("Miniflare: web socket kitchen sink", async (t) => {
 			// Testing loopback server WebSocket coupling
 			CUSTOM(request) {
 				// Testing dispatchFetch custom cf injection
-				t.is(request.cf?.country, "MF");
+				expect(request.cf?.country).toBe("MF");
 				// Testing dispatchFetch injects default cf values
-				t.is(request.cf?.regionCode, "TX");
-				t.is(request.headers.get("MF-Custom-Service"), null);
+				expect(request.cf?.regionCode).toBe("TX");
+				expect(request.headers.get("MF-Custom-Service")).toBe(null);
 				// Testing WebSocket-upgrading fetch
 				return fetch(`http://localhost:${port}`, request);
 			},
 		},
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	// Testing dispatchFetch WebSocket coupling
 	const res = await mf.dispatchFetch("http://localhost", {
@@ -623,20 +636,22 @@ test("Miniflare: web socket kitchen sink", async (t) => {
 	res.webSocket.send("hello from client");
 	res.webSocket.close(1000, "Test Closure");
 	// Test receiving additional headers from upgrade response
-	t.is(res.headers.get("Set-Cookie"), "key=value");
-	t.is(res.headers.get("Sec-WebSocket-Protocol"), "protocol2");
+	expect(res.headers.get("Set-Cookie")).toBe("key=value");
+	expect(res.headers.get("Sec-WebSocket-Protocol")).toBe("protocol2");
 
 	// Check event results
 	const clientEvent = await clientEventPromise;
 	const serverMessageEvent = await serverMessageEventPromise;
 	const serverCloseEvent = await serverCloseEventPromise;
-	t.is(clientEvent.data, "hello from server");
-	t.is(serverMessageEvent.data, "hello from client");
-	t.is(serverCloseEvent.code, 1000);
-	t.is(serverCloseEvent.reason, "Test Closure");
+	expect(clientEvent.data).toBe("hello from server");
+	expect(serverMessageEvent.data).toBe("hello from client");
+	expect(serverCloseEvent.code).toBe(1000);
+	expect(serverCloseEvent.reason).toBe("Test Closure");
 });
 
-test("Miniflare: custom service binding to another Miniflare instance", async (t) => {
+test("Miniflare: custom service binding to another Miniflare instance", async ({
+	expect,
+}) => {
 	const mfOther = new Miniflare({
 		modules: true,
 		script: `export default {
@@ -647,7 +662,7 @@ test("Miniflare: custom service binding to another Miniflare instance", async (t
 			}
 		}`,
 	});
-	t.teardown(() => mfOther.dispose());
+	useDispose(mfOther);
 
 	const mf = new Miniflare({
 		script: `addEventListener("fetch", (event) => {
@@ -658,21 +673,20 @@ test("Miniflare: custom service binding to another Miniflare instance", async (t
 				// Check internal keys removed (e.g. `MF-Custom-Service`, `MF-Original-URL`)
 				// https://github.com/cloudflare/miniflare/issues/475
 				const keys = [...request.headers.keys()];
-				t.deepEqual(
-					keys.filter((key) => key.toLowerCase().startsWith("mf-")),
-					[]
-				);
+				expect(
+					keys.filter((key) => key.toLowerCase().startsWith("mf-"))
+				).toEqual([]);
 
 				return await mfOther.dispatchFetch(request);
 			},
 		},
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	// Checking URL (including protocol/host) and body preserved through
 	// `dispatchFetch()` and custom service bindings
 	let res = await mf.dispatchFetch("https://custom1.mf/a?key=value");
-	t.deepEqual(await res.json(), {
+	expect(await res.json()).toEqual({
 		method: "GET",
 		url: "https://custom1.mf/a?key=value",
 		body: null,
@@ -682,7 +696,7 @@ test("Miniflare: custom service binding to another Miniflare instance", async (t
 		method: "POST",
 		body: "body",
 	});
-	t.deepEqual(await res.json(), {
+	expect(await res.json()).toEqual({
 		method: "POST",
 		url: "https://custom2.mf/b",
 		body: "body",
@@ -690,13 +704,13 @@ test("Miniflare: custom service binding to another Miniflare instance", async (t
 
 	// https://github.com/cloudflare/miniflare/issues/476
 	res = await mf.dispatchFetch("https://custom3.mf/c", { method: "DELETE" });
-	t.deepEqual(await res.json(), {
+	expect(await res.json()).toEqual({
 		method: "DELETE",
 		url: "https://custom3.mf/c",
 		body: null,
 	});
 });
-test("Miniflare: service binding to current worker", async (t) => {
+test("Miniflare: service binding to current worker", async ({ expect }) => {
 	const mf = new Miniflare({
 		serviceBindings: { SELF: kCurrentWorker },
 		modules: true,
@@ -710,13 +724,13 @@ test("Miniflare: service binding to current worker", async (t) => {
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "body:callback");
+	expect(await res.text()).toBe("body:callback");
 });
-test("Miniflare: service binding to network", async (t) => {
-	const { http } = await useServer(t, (req, res) => res.end("network"));
+test("Miniflare: service binding to network", async ({ expect }) => {
+	const { http } = await useServer((req, res) => res.end("network"));
 	const mf = new Miniflare({
 		serviceBindings: { NETWORK: { network: { allow: ["private"] } } },
 		modules: true,
@@ -724,13 +738,13 @@ test("Miniflare: service binding to network", async (t) => {
 			fetch(request, env) { return env.NETWORK.fetch(request); }
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch(http);
-	t.is(await res.text(), "network");
+	expect(await res.text()).toBe("network");
 });
-test("Miniflare: service binding to external server", async (t) => {
-	const { http } = await useServer(t, (req, res) => res.end("external"));
+test("Miniflare: service binding to external server", async ({ expect }) => {
+	const { http } = await useServer((req, res) => res.end("external"));
 	const mf = new Miniflare({
 		serviceBindings: {
 			EXTERNAL: { external: { address: http.host, http: {} } },
@@ -740,13 +754,13 @@ test("Miniflare: service binding to external server", async (t) => {
 			fetch(request, env) { return env.EXTERNAL.fetch(request); }
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("https://example.com");
-	t.is(await res.text(), "external");
+	expect(await res.text()).toBe("external");
 });
-test("Miniflare: service binding to disk", async (t) => {
-	const tmp = await useTmp(t);
+test("Miniflare: service binding to disk", async ({ expect }) => {
+	const tmp = await useTmp();
 	const testPath = path.join(tmp, "test.txt");
 	await fs.writeFile(testPath, "👋");
 	const mf = new Miniflare({
@@ -758,19 +772,19 @@ test("Miniflare: service binding to disk", async (t) => {
 			fetch(request, env) { return env.DISK.fetch(request); }
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("https://example.com/test.txt");
-	t.is(await res.text(), "👋");
+	expect(await res.text()).toBe("👋");
 
 	res = await mf.dispatchFetch("https://example.com/test.txt", {
 		method: "PUT",
 		body: "✏️",
 	});
-	t.is(res.status, 204);
-	t.is(await fs.readFile(testPath, "utf8"), "✏️");
+	expect(res.status).toBe(204);
+	expect(await fs.readFile(testPath, "utf8")).toBe("✏️");
 });
-test("Miniflare: service binding to named entrypoint", async (t) => {
+test("Miniflare: service binding to named entrypoint", async ({ expect }) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -813,17 +827,19 @@ test("Miniflare: service binding to named entrypoint", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://placeholder");
-	t.deepEqual(await res.json(), {
+	expect(await res.json()).toEqual({
 		aRpc: "a:rpc:pong",
 		aNamed: "a:named:pong",
 		bNamed: "b:named:pong",
 	});
 });
 
-test("Miniflare: service binding to named entrypoint that implements a method returning a plain object", async (t) => {
+test("Miniflare: service binding to named entrypoint that implements a method returning a plain object", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -859,15 +875,17 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const bindings = await mf.getBindings<{ RPC_SERVICE: any }>();
 	const o = await bindings.RPC_SERVICE.getObject();
-	t.deepEqual(o.isPlainObject, true);
-	t.deepEqual(o.value, 123);
+	expect(o.isPlainObject).toEqual(true);
+	expect(o.value).toEqual(123);
 });
 
-test("Miniflare: service binding to named entrypoint that implements a method returning an RpcTarget instance", async (t) => {
+test("Miniflare: service binding to named entrypoint that implements a method returning an RpcTarget instance", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -914,14 +932,14 @@ test("Miniflare: service binding to named entrypoint that implements a method re
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const bindings = await mf.getBindings<{ RPC_SERVICE: any }>();
 	const rpcTarget = await bindings.RPC_SERVICE.getRpcTarget();
-	t.deepEqual(rpcTarget.id, "test-id");
+	expect(rpcTarget.id).toEqual("test-id");
 });
 
-test("Miniflare: tail consumer called", async (t) => {
+test("Miniflare: tail consumer called", async ({ expect }) => {
 	const mf = new Miniflare({
 		handleRuntimeStdio: () => {},
 		workers: [
@@ -960,21 +978,20 @@ test("Miniflare: tail consumer called", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://placeholder");
-	t.deepEqual(await res.text(), "hello from a");
-	t.deepEqual(
+	expect(await res.text()).toEqual("hello from a");
+	expect(
 		(
 			(await (await mf.dispatchFetch("http://placeholder/b")).json()) as {
 				logs: { message: string[] }[];
 			}[]
-		)[0].logs[0].message,
-		["Tail: log event"]
-	);
+		)[0].logs[0].message
+	).toEqual(["Tail: log event"]);
 });
 
-test("Miniflare: custom outbound service", async (t) => {
+test("Miniflare: custom outbound service", async ({ expect }) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -1007,15 +1024,15 @@ test("Miniflare: custom outbound service", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
-	t.deepEqual(await res.json(), {
+	expect(await res.json()).toEqual({
 		res1: "one",
 		res2: "fallback:https://example.com/2",
 	});
 });
 
-test("Miniflare: can send GET request with body", async (t) => {
+test("Miniflare: can send GET request with body", async ({ expect }) => {
 	// https://github.com/cloudflare/workerd/issues/1122
 	const mf = new Miniflare({
 		compatibilityDate: "2023-08-01",
@@ -1031,7 +1048,7 @@ test("Miniflare: can send GET request with body", async (t) => {
 		}`,
 		cf: { key: "value" },
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	// Can't use `dispatchFetch()` here as `fetch()` prohibits `GET` requests
 	// with bodies/`Content-Length: 0` headers
@@ -1043,30 +1060,29 @@ test("Miniflare: can send GET request with body", async (t) => {
 	}
 
 	let res = await get();
-	t.deepEqual(await json(res), {
+	expect(await json(res)).toEqual({
 		cf: { key: "value", clientAcceptEncoding: "" },
 		contentLength: null,
 		hasBody: false,
 	});
 
 	res = await get({ headers: { "content-length": "0" } });
-	t.deepEqual(await json(res), {
+	expect(await json(res)).toEqual({
 		cf: { key: "value", clientAcceptEncoding: "" },
 		contentLength: "0",
 		hasBody: true,
 	});
 });
 
-test("Miniflare: handles redirect responses", async (t) => {
+test("Miniflare: handles redirect responses", async ({ expect }) => {
 	// https://github.com/cloudflare/workers-sdk/issues/5018
 
-	const { http } = await useServer(t, (req, res) => {
+	const { http } = await useServer((req, res) => {
 		// Check no special headers set
 		const headerKeys = Object.keys(req.headers);
-		t.deepEqual(
-			headerKeys.filter((key) => key.toLowerCase().startsWith("mf-")),
-			[]
-		);
+		expect(
+			headerKeys.filter((key) => key.toLowerCase().startsWith("mf-"))
+		).toEqual([]);
 
 		const { pathname } = new URL(req.url ?? "", "http://placeholder");
 		if (pathname === "/ping") {
@@ -1105,59 +1121,63 @@ test("Miniflare: handles redirect responses", async (t) => {
 			}
 	}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	// Check relative redirect
 	let res = await mf.dispatchFetch("https://custom.mf/redirect-relative", {
 		redirect: "manual",
 	});
-	t.is(res.status, 302);
-	t.is(res.headers.get("Location"), "/relative-redirected");
+	expect(res.status).toBe(302);
+	expect(res.headers.get("Location")).toBe("/relative-redirected");
 	await res.arrayBuffer(); // (drain)
 
 	res = await mf.dispatchFetch("https://custom.mf/redirect-relative");
-	t.is(res.status, 200);
-	t.is(await res.text(), "end:https://custom.mf/relative-redirected");
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("end:https://custom.mf/relative-redirected");
 
 	// Check absolute redirect to same origin
 	res = await mf.dispatchFetch("https://custom.mf/redirect-absolute", {
 		redirect: "manual",
 	});
-	t.is(res.status, 302);
-	t.is(res.headers.get("Location"), "https://custom.mf/absolute-redirected");
+	expect(res.status).toBe(302);
+	expect(res.headers.get("Location")).toBe(
+		"https://custom.mf/absolute-redirected"
+	);
 	await res.arrayBuffer(); // (drain)
 
 	res = await mf.dispatchFetch("https://custom.mf/redirect-absolute");
-	t.is(res.status, 200);
-	t.is(await res.text(), "end:https://custom.mf/absolute-redirected");
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("end:https://custom.mf/absolute-redirected");
 
 	// Check absolute redirect to external origin
 	res = await mf.dispatchFetch("https://custom.mf/redirect-external", {
 		redirect: "manual",
 	});
-	t.is(res.status, 302);
-	t.is(res.headers.get("Location"), new URL("/ping", http).href);
+	expect(res.status).toBe(302);
+	expect(res.headers.get("Location")).toBe(new URL("/ping", http).href);
 	await res.arrayBuffer(); // (drain)
 
 	res = await mf.dispatchFetch("https://custom.mf/redirect-external");
-	t.is(res.status, 200);
-	t.is(await res.text(), "pong");
+	expect(res.status).toBe(200);
+	expect(await res.text()).toBe("pong");
 
 	// Check absolute redirect to external origin, then redirect back to initial
 	res = await mf.dispatchFetch("https://custom.mf/redirect-external-and-back", {
 		redirect: "manual",
 	});
-	t.is(res.status, 302);
-	t.is(res.headers.get("Location"), new URL("/redirect-back", http).href);
+	expect(res.status).toBe(302);
+	expect(res.headers.get("Location")).toBe(
+		new URL("/redirect-back", http).href
+	);
 	await res.arrayBuffer(); // (drain)
 
 	res = await mf.dispatchFetch("https://custom.mf/redirect-external-and-back");
-	t.is(res.status, 200);
+	expect(res.status).toBe(200);
 	// External server redirects back to worker running in `workerd`
-	t.is(await res.text(), "end:https://custom.mf/external-redirected");
+	expect(await res.text()).toBe("end:https://custom.mf/external-redirected");
 });
 
-test("Miniflare: fetch mocking", async (t) => {
+test("Miniflare: fetch mocking", async ({ expect }) => {
 	const fetchMock = createFetchMock();
 	fetchMock.disableNetConnect();
 	const origin = fetchMock.get("https://example.com");
@@ -1184,27 +1204,28 @@ test("Miniflare: fetch mocking", async (t) => {
 	}
 
 	const mf = new Miniflare(resultOptions);
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "Mocked response!");
+	expect(await res.text()).toBe("Mocked response!");
 
 	// Check `outboundService`and `fetchMock` mutually exclusive
-	await t.throwsAsync(
+	await expect(
 		mf.setOptions({
 			script: "",
 			fetchMock,
 			outboundService: "",
-		}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_MULTIPLE_OUTBOUNDS",
-			message:
-				"Only one of `outboundService` or `fetchMock` may be specified per worker",
-		}
+		})
+	).rejects.toThrow(
+		new MiniflareCoreError(
+			"ERR_MULTIPLE_OUTBOUNDS",
+			"Only one of `outboundService` or `fetchMock` may be specified per worker"
+		)
 	);
 });
-test("Miniflare: custom upstream as origin (with colons)", async (t) => {
-	const upstream = await useServer(t, (req, res) => {
+test("Miniflare: custom upstream as origin (with colons)", async ({
+	expect,
+}) => {
+	const upstream = await useServer((req, res) => {
 		res.end(`upstream: ${new URL(req.url ?? "", "http://upstream")}`);
 	});
 	const mf = new Miniflare({
@@ -1216,13 +1237,15 @@ test("Miniflare: custom upstream as origin (with colons)", async (t) => {
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	// Check rewrites protocol, hostname, and port, but keeps pathname and query
 	const res = await mf.dispatchFetch("https://random:0/path:path?a=1");
-	t.is(await res.text(), "upstream: http://upstream/extra:extra/path:path?a=1");
+	expect(await res.text()).toBe(
+		"upstream: http://upstream/extra:extra/path:path?a=1"
+	);
 });
-test("Miniflare: custom upstream as origin", async (t) => {
-	const upstream = await useServer(t, (req, res) => {
+test("Miniflare: custom upstream as origin", async ({ expect }) => {
+	const upstream = await useServer((req, res) => {
 		res.end(`upstream: ${new URL(req.url ?? "", "http://upstream")}`);
 	});
 	const mf = new Miniflare({
@@ -1238,15 +1261,65 @@ test("Miniflare: custom upstream as origin", async (t) => {
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	// Check rewrites protocol, hostname, and port, but keeps pathname and query
 	const res = await mf.dispatchFetch("https://random:0/path?a=1");
-	t.deepEqual(await res.json(), {
+	expect(await res.json()).toEqual({
 		resp: "upstream: http://upstream/extra/path?a=1",
 		host: upstream.http.host,
 	});
 });
-test("Miniflare: set origin to original URL if proxy shared secret matches", async (t) => {
+test("Miniflare: custom upstream sets MF-Original-Hostname header", async ({
+	expect,
+}) => {
+	const upstream = await useServer((req, res) => {
+		res.end(`upstream`);
+	});
+	const mf = new Miniflare({
+		upstream: upstream.http.toString(),
+		modules: true,
+		script: `export default {
+			async fetch(request) {
+				return Response.json({
+					host: request.headers.get("Host"),
+					originalHostname: request.headers.get("MF-Original-Hostname")
+				});
+			}
+		}`,
+	});
+	useDispose(mf);
+	// Check that original hostname is preserved when using upstream
+	const res = await mf.dispatchFetch(
+		"https://my-original-host.example.com:8080/path?a=1"
+	);
+	expect(await res.json()).toEqual({
+		host: upstream.http.host,
+		originalHostname: "my-original-host.example.com:8080",
+	});
+});
+test("Miniflare: MF-Original-Hostname header not set without upstream", async ({
+	expect,
+}) => {
+	const mf = new Miniflare({
+		modules: true,
+		script: `export default {
+			async fetch(request) {
+				return Response.json({
+					originalHostname: request.headers.get("MF-Original-Hostname")
+				});
+			}
+		}`,
+	});
+	useDispose(mf);
+	// Check that original hostname header is not set when not using upstream
+	const res = await mf.dispatchFetch("https://random:0/path?a=1");
+	expect(await res.json()).toEqual({
+		originalHostname: null,
+	});
+});
+test("Miniflare: set origin to original URL if proxy shared secret matches", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		unsafeProxySharedSecret: "SOME_PROXY_SHARED_SECRET_VALUE",
 		modules: true,
@@ -1258,16 +1331,18 @@ test("Miniflare: set origin to original URL if proxy shared secret matches", asy
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("https://random:0/path?a=1", {
 		headers: { "MF-Proxy-Shared-Secret": "SOME_PROXY_SHARED_SECRET_VALUE" },
 	});
-	t.deepEqual(await res.json(), {
+	expect(await res.json()).toEqual({
 		host: "random:0",
 	});
 });
-test("Miniflare: keep origin as listening host if proxy shared secret not provided", async (t) => {
+test("Miniflare: keep origin as listening host if proxy shared secret not provided", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
@@ -1278,14 +1353,16 @@ test("Miniflare: keep origin as listening host if proxy shared secret not provid
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("https://random:0/path?a=1");
-	t.deepEqual(await res.json(), {
+	expect(await res.json()).toEqual({
 		host: (await mf.ready).host,
 	});
 });
-test("Miniflare: 400 error on proxy shared secret header when not configured", async (t) => {
+test("Miniflare: 400 error on proxy shared secret header when not configured", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
@@ -1296,18 +1373,19 @@ test("Miniflare: 400 error on proxy shared secret header when not configured", a
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("https://random:0/path?a=1", {
 		headers: { "MF-Proxy-Shared-Secret": "SOME_PROXY_SHARED_SECRET_VALUE" },
 	});
-	t.is(res.status, 400);
-	t.is(
-		await res.text(),
+	expect(res.status).toBe(400);
+	expect(await res.text()).toBe(
 		"Disallowed header in request: MF-Proxy-Shared-Secret=SOME_PROXY_SHARED_SECRET_VALUE"
 	);
 });
-test("Miniflare: 400 error on proxy shared secret header mismatch with configuration", async (t) => {
+test("Miniflare: 400 error on proxy shared secret header mismatch with configuration", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		unsafeProxySharedSecret: "SOME_PROXY_SHARED_SECRET_VALUE",
 		modules: true,
@@ -1319,19 +1397,20 @@ test("Miniflare: 400 error on proxy shared secret header mismatch with configura
 	  		}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("https://random:0/path?a=1", {
 		headers: { "MF-Proxy-Shared-Secret": "BAD_PROXY_SHARED_SECRET" },
 	});
-	t.is(res.status, 400);
-	t.is(
-		await res.text(),
+	expect(res.status).toBe(400);
+	expect(await res.text()).toBe(
 		"Disallowed header in request: MF-Proxy-Shared-Secret=BAD_PROXY_SHARED_SECRET"
 	);
 });
 
-test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async (t) => {
+test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		compatibilityFlags: ["nodejs_compat", "rtti_api"],
@@ -1350,12 +1429,12 @@ test("Miniflare: `node:`, `cloudflare:` and `workerd:` modules", async (t) => {
 			}
 		`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "dGVzdA==");
+	expect(await res.text()).toBe("dGVzdA==");
 });
 
-test("Miniflare: modules in sub-directories", async (t) => {
+test("Miniflare: modules in sub-directories", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: [
 			{
@@ -1375,12 +1454,12 @@ test("Miniflare: modules in sub-directories", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "123");
+	expect(await res.text()).toBe("123");
 });
 
-test("Miniflare: python modules", async (t) => {
+test("Miniflare: python modules", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: [
 			{
@@ -1397,12 +1476,14 @@ test("Miniflare: python modules", async (t) => {
 		],
 		compatibilityFlags: ["python_workers", "python_no_global_handlers"],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "4");
+	expect(await res.text()).toBe("4");
 });
 
-test("Miniflare: HTTPS fetches using browser CA certificates", async (t) => {
+test("Miniflare: HTTPS fetches using browser CA certificates", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
@@ -1411,14 +1492,14 @@ test("Miniflare: HTTPS fetches using browser CA certificates", async (t) => {
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	const res = await mf.dispatchFetch("http://localhost");
-	t.true(res.ok);
+	expect(res.ok).toBe(true);
 	await res.arrayBuffer(); // (drain)
 });
 
-test("Miniflare: accepts https requests", async (t) => {
-	const log = new TestLog(t);
+test("Miniflare: accepts https requests", async ({ expect }) => {
+	const log = new TestLog();
 
 	const mf = new Miniflare({
 		log,
@@ -1430,18 +1511,20 @@ test("Miniflare: accepts https requests", async (t) => {
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("https://localhost");
-	t.true(res.ok);
+	expect(res.ok).toBe(true);
 	await res.arrayBuffer(); // (drain)
 
-	t.assert(log.logs[0][1].startsWith("Ready on https://"));
+	expect(log.logs[0][1].startsWith("Ready on https://"));
 });
 
 // Regression test for https://github.com/cloudflare/workers-sdk/issues/9357
-test("Miniflare: throws error messages that reflect the actual issue", async (t) => {
-	const log = new TestLog(t);
+test("Miniflare: throws error messages that reflect the actual issue", async ({
+	expect,
+}) => {
+	const log = new TestLog();
 
 	const mf = new Miniflare({
 		log,
@@ -1455,17 +1538,16 @@ test("Miniflare: throws error messages that reflect the actual issue", async (t)
 			},
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("https://localhost");
-	t.regex(
-		await res.text(),
+	expect(await res.text()).toMatch(
 		/TypeError: Object\.defineProperty called on non-object/
 	);
 });
 
-test("Miniflare: manually triggered scheduled events", async (t) => {
-	const log = new TestLog(t);
+test("Miniflare: manually triggered scheduled events", async ({ expect }) => {
+	const log = new TestLog();
 
 	const mf = new Miniflare({
 		log,
@@ -1482,20 +1564,22 @@ test("Miniflare: manually triggered scheduled events", async (t) => {
 			}`,
 		unsafeTriggerHandlers: true,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "false");
+	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/scheduled");
-	t.is(await res.text(), "ok");
+	expect(await res.text()).toBe("ok");
 
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "true");
+	expect(await res.text()).toBe("true");
 });
 
-test("Miniflare: manually triggered email handler - valid email", async (t) => {
-	const log = new TestLog(t);
+test("Miniflare: manually triggered email handler - valid email", async ({
+	expect,
+}) => {
+	const log = new TestLog();
 
 	const mf = new Miniflare({
 		log,
@@ -1512,10 +1596,10 @@ test("Miniflare: manually triggered email handler - valid email", async (t) => {
 			}`,
 		unsafeTriggerHandlers: true,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "false");
+	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
 		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
@@ -1531,15 +1615,17 @@ This is a random email body.
 			method: "POST",
 		}
 	);
-	t.is(await res.text(), "Worker successfully processed email");
-	t.is(res.status, 200);
+	expect(await res.text()).toBe("Worker successfully processed email");
+	expect(res.status).toBe(200);
 
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "true");
+	expect(await res.text()).toBe("true");
 });
 
-test("Miniflare: manually triggered email handler - setReject does not throw", async (t) => {
-	const log = new TestLog(t);
+test("Miniflare: manually triggered email handler - setReject does not throw", async ({
+	expect,
+}) => {
+	const log = new TestLog();
 
 	const mf = new Miniflare({
 		log,
@@ -1557,10 +1643,10 @@ test("Miniflare: manually triggered email handler - setReject does not throw", a
 			}`,
 		unsafeTriggerHandlers: true,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "false");
+	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
 		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
@@ -1576,18 +1662,19 @@ This is a random email body.
 			method: "POST",
 		}
 	);
-	t.is(
-		await res.text(),
+	expect(await res.text()).toBe(
 		"Worker rejected email with the following reason: I just don't like this email :("
 	);
-	t.is(res.status, 400);
+	expect(res.status).toBe(400);
 
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "true");
+	expect(await res.text()).toBe("true");
 });
 
-test("Miniflare: manually triggered email handler - forward does not throw", async (t) => {
-	const log = new TestLog(t);
+test("Miniflare: manually triggered email handler - forward does not throw", async ({
+	expect,
+}) => {
+	const log = new TestLog();
 
 	const mf = new Miniflare({
 		log,
@@ -1605,10 +1692,10 @@ test("Miniflare: manually triggered email handler - forward does not throw", asy
 			}`,
 		unsafeTriggerHandlers: true,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "false");
+	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
 		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
@@ -1624,15 +1711,17 @@ This is a random email body.
 			method: "POST",
 		}
 	);
-	t.is(await res.text(), "Worker successfully processed email");
-	t.is(res.status, 200);
+	expect(await res.text()).toBe("Worker successfully processed email");
+	expect(res.status).toBe(200);
 
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "true");
+	expect(await res.text()).toBe("true");
 });
 
-test("Miniflare: manually triggered email handler - invalid email, no message id", async (t) => {
-	const log = new TestLog(t);
+test("Miniflare: manually triggered email handler - invalid email, no message id", async ({
+	expect,
+}) => {
+	const log = new TestLog();
 
 	const mf = new Miniflare({
 		log,
@@ -1649,10 +1738,10 @@ test("Miniflare: manually triggered email handler - invalid email, no message id
 			}`,
 		unsafeTriggerHandlers: true,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "false");
+	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
 		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
@@ -1667,18 +1756,19 @@ This is a random email body.
 			method: "POST",
 		}
 	);
-	t.is(
-		await res.text(),
+	expect(await res.text()).toBe(
 		"Email could not be parsed: invalid or no message id provided"
 	);
-	t.is(res.status, 400);
+	expect(res.status).toBe(400);
 
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "false");
+	expect(await res.text()).toBe("false");
 });
 
-test("Miniflare: manually triggered email handler - reply handler works", async (t) => {
-	const log = new TestLog(t);
+test("Miniflare: manually triggered email handler - reply handler works", async ({
+	expect,
+}) => {
+	const log = new TestLog();
 
 	const mf = new Miniflare({
 		log,
@@ -1711,10 +1801,10 @@ This is a random email body.
 			}`,
 		unsafeTriggerHandlers: true,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "false");
+	expect(await res.text()).toBe("false");
 
 	res = await mf.dispatchFetch(
 		"http://localhost/cdn-cgi/handler/email?from=someone@example.com&to=someone-else@example.com",
@@ -1730,14 +1820,16 @@ This is a random email body.
 			method: "POST",
 		}
 	);
-	t.is(await res.text(), "Worker successfully processed email");
-	t.is(res.status, 200);
+	expect(await res.text()).toBe("Worker successfully processed email");
+	expect(res.status).toBe(200);
 
 	res = await mf.dispatchFetch("http://localhost");
-	t.is(await res.text(), "true");
+	expect(await res.text()).toBe("true");
 });
 
-test("Miniflare: unimplemented /cdn-cgi/handler/ routes", async (t) => {
+test("Miniflare: unimplemented /cdn-cgi/handler/ routes", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `
@@ -1749,17 +1841,16 @@ test("Miniflare: unimplemented /cdn-cgi/handler/ routes", async (t) => {
 		`,
 		unsafeTriggerHandlers: true,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost/cdn-cgi/handler/foo");
-	t.is(
-		await res.text(),
+	expect(await res.text()).toBe(
 		`"/cdn-cgi/handler/foo" is not a valid handler. Did you mean to use "/cdn-cgi/handler/scheduled" or "/cdn-cgi/handler/email"?`
 	);
-	t.is(res.status, 404);
+	expect(res.status).toBe(404);
 });
 
-test("Miniflare: other /cdn-cgi/ routes", async (t) => {
+test("Miniflare: other /cdn-cgi/ routes", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `
@@ -1771,15 +1862,15 @@ test("Miniflare: other /cdn-cgi/ routes", async (t) => {
 		`,
 		unsafeTriggerHandlers: true,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost/cdn-cgi/foo");
-	t.is(await res.text(), "Hello world");
-	t.is(res.status, 200);
+	expect(await res.text()).toBe("Hello world");
+	expect(res.status).toBe(200);
 });
 
-test("Miniflare: listens on ipv6", async (t) => {
-	const log = new TestLog(t);
+test("Miniflare: listens on ipv6", async ({ expect }) => {
+	const log = new TestLog();
 
 	const mf = new Miniflare({
 		log,
@@ -1791,33 +1882,35 @@ test("Miniflare: listens on ipv6", async (t) => {
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const url = await mf.ready;
 
 	let response = await fetch(`http://localhost:${url.port}`);
-	t.true(response.ok);
+	expect(response.ok).toBe(true);
 
 	response = await fetch(`http://[::1]:${url.port}`);
-	t.true(response.ok);
+	expect(response.ok).toBe(true);
 
 	response = await fetch(`http://127.0.0.1:${url.port}`);
-	t.true(response.ok);
+	expect(response.ok).toBe(true);
 });
 
-test("Miniflare: dispose() immediately after construction", async (t) => {
+test("Miniflare: dispose() immediately after construction", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({ script: "", modules: true });
 	const readyPromise = mf.ready;
+	// Attach rejection handler BEFORE dispose() to prevent unhandled rejection
+	const readyAssertion = expect(readyPromise).rejects.toThrow(
+		new MiniflareCoreError("ERR_DISPOSED", "Cannot use disposed instance")
+	);
 	await mf.dispose();
-	await t.throwsAsync(readyPromise, {
-		instanceOf: MiniflareCoreError,
-		code: "ERR_DISPOSED",
-		message: "Cannot use disposed instance",
-	});
+	await readyAssertion;
 });
 
-test("Miniflare: getBindings() returns all bindings", async (t) => {
-	const tmp = await useTmp(t);
+test("Miniflare: getBindings() returns all bindings", async ({ expect }) => {
+	const tmp = await useTmp();
 	const blobPath = path.join(tmp, "blob.txt");
 	await fs.writeFile(blobPath, "blob");
 	const mf = new Miniflare({
@@ -1837,7 +1930,7 @@ test("Miniflare: getBindings() returns all bindings", async (t) => {
 		r2Buckets: ["BUCKET"],
 	});
 	let disposed = false;
-	t.teardown(() => {
+	onTestFinished(() => {
 		if (!disposed) return mf.dispose();
 	});
 
@@ -1855,20 +1948,22 @@ test("Miniflare: getBindings() returns all bindings", async (t) => {
 	}
 	const bindings = await mf.getBindings<Env>();
 
-	t.like(bindings, {
+	expect(bindings).toMatchObject({
 		STRING: "hello",
 		OBJECT: { a: 1, b: { c: 2 } },
 		TEXT: "blob",
 	});
-	t.deepEqual(bindings.DATA, viewToBuffer(utf8Encode("blob")));
+	expect(bindings.DATA).toEqual(viewToBuffer(utf8Encode("blob")));
 
 	const opts: util.InspectOptions = { colors: false };
-	t.regex(util.inspect(bindings.SELF, opts), /name: 'Fetcher'/);
-	t.regex(util.inspect(bindings.DB, opts), /name: 'D1Database'/);
-	t.regex(util.inspect(bindings.DO, opts), /name: 'DurableObjectNamespace'/);
-	t.regex(util.inspect(bindings.KV, opts), /name: 'KvNamespace'/);
-	t.regex(util.inspect(bindings.QUEUE, opts), /name: 'WorkerQueue'/);
-	t.regex(util.inspect(bindings.BUCKET, opts), /name: 'R2Bucket'/);
+	expect(util.inspect(bindings.SELF, opts)).toMatch(/name: 'Fetcher'/);
+	expect(util.inspect(bindings.DB, opts)).toMatch(/name: 'D1Database'/);
+	expect(util.inspect(bindings.DO, opts)).toMatch(
+		/name: 'DurableObjectNamespace'/
+	);
+	expect(util.inspect(bindings.KV, opts)).toMatch(/name: 'KvNamespace'/);
+	expect(util.inspect(bindings.QUEUE, opts)).toMatch(/name: 'WorkerQueue'/);
+	expect(util.inspect(bindings.BUCKET, opts)).toMatch(/name: 'R2Bucket'/);
 
 	// Check with WebAssembly binding (aren't supported by modules workers)
 	const addWasmPath = path.join(tmp, "add.wasm");
@@ -1881,18 +1976,22 @@ test("Miniflare: getBindings() returns all bindings", async (t) => {
 	const { ADD } = await mf.getBindings<{ ADD: WebAssembly.Module }>();
 	const instance = new WebAssembly.Instance(ADD);
 	assert(typeof instance.exports.add === "function");
-	t.is(instance.exports.add(1, 2), 3);
+	expect((instance.exports.add as (a: number, b: number) => number)(1, 2)).toBe(
+		3
+	);
 
 	// Check bindings poisoned after dispose
 	await mf.dispose();
 	disposed = true;
-	const expectations: ThrowsExpectation<Error> = {
-		message:
-			"Attempted to use poisoned stub. Stubs to runtime objects must be re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`.",
-	};
-	t.throws(() => bindings.KV.get("key"), expectations);
+	expect(() => bindings.KV.get("key")).toThrow(
+		new Error(
+			"Attempted to use poisoned stub. Stubs to runtime objects must be re-created after calling `Miniflare#setOptions()` or `Miniflare#dispose()`."
+		)
+	);
 });
-test("Miniflare: getBindings() returns wrapped bindings", async (t) => {
+test("Miniflare: getBindings() returns wrapped bindings", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -1921,7 +2020,7 @@ test("Miniflare: getBindings() returns wrapped bindings", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	interface Env {
 		Greeter: {
@@ -1932,9 +2031,11 @@ test("Miniflare: getBindings() returns wrapped bindings", async (t) => {
 
 	const helloWorld = Greeter.sayHello("World");
 
-	t.is(helloWorld, "Hello World");
+	expect(helloWorld).toBe("Hello World");
 });
-test("Miniflare: getBindings() handles wrapped bindings returning objects containing functions", async (t) => {
+test("Miniflare: getBindings() handles wrapped bindings returning objects containing functions", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -1963,7 +2064,7 @@ test("Miniflare: getBindings() handles wrapped bindings returning objects contai
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	interface Env {
 		Greeter: {
@@ -1975,10 +2076,12 @@ test("Miniflare: getBindings() handles wrapped bindings returning objects contai
 
 	const helloWorld = Greeter.sayHello("World");
 
-	t.is(helloWorld, "Hello World");
-	t.is(Greeter.greeting, "Hello");
+	expect(helloWorld).toBe("Hello World");
+	expect(Greeter.greeting).toBe("Hello");
 });
-test("Miniflare: getBindings() handles wrapped bindings returning objects containing nested functions", async (t) => {
+test("Miniflare: getBindings() handles wrapped bindings returning objects containing nested functions", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -2010,7 +2113,7 @@ test("Miniflare: getBindings() handles wrapped bindings returning objects contai
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	interface Env {
 		Greeter: {
@@ -2027,9 +2130,11 @@ test("Miniflare: getBindings() handles wrapped bindings returning objects contai
 
 	const helloWorld = Greeter.obj.obj1.obj2.sayHello("World");
 
-	t.is(helloWorld, "Hello World from a nested function");
+	expect(helloWorld).toBe("Hello World from a nested function");
 });
-test("Miniflare: getBindings() handles wrapped bindings returning functions returning functions", async (t) => {
+test("Miniflare: getBindings() handles wrapped bindings returning functions returning functions", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -2060,7 +2165,7 @@ test("Miniflare: getBindings() handles wrapped bindings returning functions retu
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	interface Env {
 		GreetFactory: {
@@ -2072,10 +2177,12 @@ test("Miniflare: getBindings() handles wrapped bindings returning functions retu
 
 	const greetFunction = GreetFactory.getGreetFunction();
 
-	t.is(greetFunction("Esteemed World"), "Salutations Esteemed World");
-	t.is(GreetFactory.greeting, "Salutations");
+	expect(greetFunction("Esteemed World")).toBe("Salutations Esteemed World");
+	expect(GreetFactory.greeting).toBe("Salutations");
 });
-test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
+test("Miniflare: getWorker() allows dispatching events directly", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `
@@ -2118,23 +2225,23 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 			}
 		}`,
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 	const fetcher = await mf.getWorker();
 
 	// Check `Fetcher#scheduled()` (implicitly testing `Fetcher#fetch()`)
 	let scheduledResult = await fetcher.scheduled({
 		cron: "* * * * *",
 	});
-	t.deepEqual(scheduledResult, { outcome: "ok", noRetry: true });
+	expect(scheduledResult).toEqual({ outcome: "ok", noRetry: true });
 	scheduledResult = await fetcher.scheduled({
 		scheduledTime: new Date(1000),
 		cron: "30 * * * *",
 	});
-	t.deepEqual(scheduledResult, { outcome: "ok", noRetry: false });
+	expect(scheduledResult).toEqual({ outcome: "ok", noRetry: false });
 
 	let res = await fetcher.fetch("http://localhost/scheduled");
 	const scheduledController = await res.json();
-	t.deepEqual(scheduledController, {
+	expect(scheduledController).toEqual({
 		scheduledTime: 1000,
 		cron: "30 * * * *",
 	});
@@ -2144,7 +2251,7 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 		{ id: "a", timestamp: new Date(1000), body: "a", attempts: 1 },
 		{ id: "b", timestamp: new Date(2000), body: { b: 1 }, attempts: 1 },
 	]);
-	t.deepEqual(queueResult, {
+	expect(queueResult).toEqual({
 		outcome: "ok",
 		ackAll: false,
 		retryBatch: {
@@ -2167,7 +2274,7 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 			attempts: 1,
 		},
 	]);
-	t.deepEqual(queueResult, {
+	expect(queueResult).toEqual({
 		outcome: "ok",
 		ackAll: false,
 		retryBatch: {
@@ -2179,7 +2286,7 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 
 	res = await fetcher.fetch("http://localhost/queue");
 	const queueBatch = await res.json();
-	t.deepEqual(queueBatch, {
+	expect(queueBatch).toEqual({
 		queue: "queue",
 		messages: [
 			{
@@ -2199,9 +2306,11 @@ test("Miniflare: getWorker() allows dispatching events directly", async (t) => {
 
 	// Check `Fetcher#fetch()`
 	res = await fetcher.fetch("https://dummy:1234/get-url");
-	t.is(await res.text(), "https://dummy:1234/get-url");
+	expect(await res.text()).toBe("https://dummy:1234/get-url");
 });
-test("Miniflare: getBindings() and friends return bindings for different workers", async (t) => {
+test("Miniflare: getBindings() and friends return bindings for different workers", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -2230,72 +2339,69 @@ test("Miniflare: getBindings() and friends return bindings for different workers
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	// Check `getBindings()`
 	let bindings = await mf.getBindings();
-	t.deepEqual(Object.keys(bindings), ["DB", "DO"]);
+	expect(Object.keys(bindings)).toEqual(["DB", "DO"]);
 	bindings = await mf.getBindings("");
-	t.deepEqual(Object.keys(bindings), ["KV", "QUEUE"]);
+	expect(Object.keys(bindings)).toEqual(["KV", "QUEUE"]);
 	bindings = await mf.getBindings("b");
-	t.deepEqual(Object.keys(bindings), ["BUCKET"]);
-	await t.throwsAsync(() => mf.getBindings("c"), {
-		instanceOf: TypeError,
-		message: '"c" worker not found',
-	});
+	expect(Object.keys(bindings)).toEqual(["BUCKET"]);
+	await expect(() => mf.getBindings("c")).rejects.toThrow(
+		new TypeError('"c" worker not found')
+	);
 
 	// Check `getWorker()`
 	let fetcher = await mf.getWorker();
-	t.is(await (await fetcher.fetch("http://localhost")).text(), "a");
+	expect(await (await fetcher.fetch("http://localhost")).text()).toBe("a");
 	fetcher = await mf.getWorker("");
-	t.is(await (await fetcher.fetch("http://localhost")).text(), "unnamed");
+	expect(await (await fetcher.fetch("http://localhost")).text()).toBe(
+		"unnamed"
+	);
 	fetcher = await mf.getWorker("b");
-	t.is(await (await fetcher.fetch("http://localhost")).text(), "b");
-	await t.throwsAsync(() => mf.getWorker("c"), {
-		instanceOf: TypeError,
-		message: '"c" worker not found',
-	});
-
-	const unboundExpectations = (name: string): ThrowsExpectation<TypeError> => ({
-		instanceOf: TypeError,
-		message: `"${name}" unbound in "c" worker`,
-	});
+	expect(await (await fetcher.fetch("http://localhost")).text()).toBe("b");
+	await expect(() => mf.getWorker("c")).rejects.toThrow(
+		new TypeError('"c" worker not found')
+	);
 
 	// Check `getD1Database()`
 	let binding: unknown = await mf.getD1Database("DB");
-	t.not(binding, undefined);
-	let expectations = unboundExpectations("DB");
-	await t.throwsAsync(() => mf.getD1Database("DB", "c"), expectations);
+	expect(binding).toBeDefined();
+	await expect(() => mf.getD1Database("DB", "c")).rejects.toThrow(
+		new TypeError(`"DB" unbound in "c" worker`)
+	);
 
 	// Check `getDurableObjectNamespace()`
 	binding = await mf.getDurableObjectNamespace("DO");
-	t.not(binding, undefined);
-	expectations = unboundExpectations("DO");
-	await t.throwsAsync(
-		() => mf.getDurableObjectNamespace("DO", "c"),
-		expectations
+	expect(binding).toBeDefined();
+	await expect(() => mf.getDurableObjectNamespace("DO", "c")).rejects.toThrow(
+		new TypeError(`"DO" unbound in "c" worker`)
 	);
 
 	// Check `getKVNamespace()`
 	binding = await mf.getKVNamespace("KV", "");
-	t.not(binding, undefined);
-	expectations = unboundExpectations("KV");
-	await t.throwsAsync(() => mf.getKVNamespace("KV", "c"), expectations);
+	expect(binding).toBeDefined();
+	await expect(() => mf.getKVNamespace("KV", "c")).rejects.toThrow(
+		new TypeError(`"KV" unbound in "c" worker`)
+	);
 
 	// Check `getQueueProducer()`
 	binding = await mf.getQueueProducer("QUEUE", "");
-	t.not(binding, undefined);
-	expectations = unboundExpectations("QUEUE");
-	await t.throwsAsync(() => mf.getQueueProducer("QUEUE", "c"), expectations);
+	expect(binding).toBeDefined();
+	await expect(() => mf.getQueueProducer("QUEUE", "c")).rejects.toThrow(
+		new TypeError(`"QUEUE" unbound in "c" worker`)
+	);
 
 	// Check `getR2Bucket()`
 	binding = await mf.getR2Bucket("BUCKET", "b");
-	t.not(binding, undefined);
-	expectations = unboundExpectations("BUCKET");
-	await t.throwsAsync(() => mf.getQueueProducer("BUCKET", "c"), expectations);
+	expect(binding).toBeDefined();
+	await expect(() => mf.getR2Bucket("BUCKET", "c")).rejects.toThrow(
+		new TypeError(`"BUCKET" unbound in "c" worker`)
+	);
 });
 
-test("Miniflare: allows direct access to workers", async (t) => {
+test("Miniflare: allows direct access to workers", async ({ expect }) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -2332,44 +2438,41 @@ test("Miniflare: allows direct access to workers", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	// Check can access workers as usual
 	let res = await mf.dispatchFetch("http://localhost/");
-	t.is(await res.text(), "b");
+	expect(await res.text()).toBe("b");
 
 	// Check can access workers directly
 	// (`undefined` worker name should default to entrypoint, not unnamed worker)
 	const aURL = await mf.unsafeGetDirectURL();
 	const cURL = await mf.unsafeGetDirectURL("c");
 	res = await fetch(aURL);
-	t.is(await res.text(), "a");
+	expect(await res.text()).toBe("a");
 	res = await fetch(cURL);
-	t.is(await res.text(), "c");
+	expect(await res.text()).toBe("c");
 
 	// Check can access workers directly with different entrypoints
 	const d1URL = await mf.unsafeGetDirectURL("d", "One");
 	const d2URL = await mf.unsafeGetDirectURL("d", "two");
 	res = await fetch(d1URL);
-	t.is(await res.text(), "d:1");
+	expect(await res.text()).toBe("d:1");
 	res = await fetch(d2URL);
-	t.is(await res.text(), "d:2");
+	expect(await res.text()).toBe("d:2");
 
 	// Can can only access configured for direct access
-	await t.throwsAsync(mf.unsafeGetDirectURL("z"), {
-		instanceOf: TypeError,
-		message: '"z" worker not found',
-	});
-	await t.throwsAsync(mf.unsafeGetDirectURL(""), {
-		instanceOf: TypeError,
-		message: 'Direct access disabled in "" worker for default entrypoint',
-	});
-	await t.throwsAsync(mf.unsafeGetDirectURL("d", "three"), {
-		instanceOf: TypeError,
-		message: 'Direct access disabled in "d" worker for "three" entrypoint',
-	});
+	await expect(mf.unsafeGetDirectURL("z")).rejects.toThrow(
+		new TypeError('"z" worker not found')
+	);
+	await expect(mf.unsafeGetDirectURL("")).rejects.toThrow(
+		new TypeError('Direct access disabled in "" worker for default entrypoint')
+	);
+	await expect(mf.unsafeGetDirectURL("d", "three")).rejects.toThrow(
+		new TypeError('Direct access disabled in "d" worker for "three" entrypoint')
+	);
 });
-test("Miniflare: allows RPC between multiple instances", async (t) => {
+test("Miniflare: allows RPC between multiple instances", async ({ expect }) => {
 	const mf1 = new Miniflare({
 		unsafeDirectSockets: [{ entrypoint: "TestEntrypoint" }],
 		compatibilityFlags: ["experimental"],
@@ -2381,7 +2484,7 @@ test("Miniflare: allows RPC between multiple instances", async (t) => {
 			}
 		`,
 	});
-	t.teardown(() => mf1.dispose());
+	useDispose(mf1);
 
 	const testEntrypointUrl = await mf1.unsafeGetDirectURL("", "TestEntrypoint");
 
@@ -2400,39 +2503,41 @@ test("Miniflare: allows RPC between multiple instances", async (t) => {
 			}
 		`,
 	});
-	t.teardown(() => mf2.dispose());
+	useDispose(mf2);
 
 	const res = await mf2.dispatchFetch("http://placeholder");
-	t.is(await res.text(), "pong");
+	expect(await res.text()).toBe("pong");
 });
 
 // Only test `MINIFLARE_WORKERD_PATH` on Unix. The test uses a Node.js script
 // with a shebang, directly as the replacement `workerd` binary, which won't
 // work on Windows.
 const isWindows = process.platform === "win32";
-const unixSerialTest = isWindows ? test.skip : test.serial;
+const unixSerialTest = isWindows ? test.skip : test.sequential;
 unixSerialTest(
 	"Miniflare: MINIFLARE_WORKERD_PATH overrides workerd path",
-	async (t) => {
+	async ({ expect }) => {
 		const workerdPath = path.join(FIXTURES_PATH, "little-workerd.mjs");
 
 		const original = process.env.MINIFLARE_WORKERD_PATH;
 		process.env.MINIFLARE_WORKERD_PATH = workerdPath;
-		t.teardown(() => {
+		onTestFinished(() => {
 			// Setting key/values pairs on `process.env` coerces values to strings
 			if (original === undefined) delete process.env.MINIFLARE_WORKERD_PATH;
 			else process.env.MINIFLARE_WORKERD_PATH = original;
 		});
 
 		const mf = new Miniflare({ script: "" });
-		t.teardown(() => mf.dispose());
+		useDispose(mf);
 
 		const res = await mf.dispatchFetch("http://localhost");
-		t.is(await res.text(), "When I grow up, I want to be a big workerd!");
+		expect(await res.text()).toBe(
+			"When I grow up, I want to be a big workerd!"
+		);
 	}
 );
 
-test("Miniflare: exits cleanly", async (t) => {
+test("Miniflare: exits cleanly", async ({ expect }) => {
 	const miniflarePath = require.resolve("miniflare");
 	const result = childProcess.spawn(
 		process.execPath,
@@ -2465,7 +2570,7 @@ test("Miniflare: exits cleanly", async (t) => {
 
 	// Make sure workerd started
 	const [message] = await once(result, "message");
-	t.is(message, "body");
+	expect(message).toBe("body");
 
 	// Check exit doesn't output anything
 	const closePromise = once(result, "close");
@@ -2474,11 +2579,11 @@ test("Miniflare: exits cleanly", async (t) => {
 	const stdout = await text(result.stdout);
 	const stderr = await text(result.stderr);
 	await closePromise;
-	t.is(stdout, "");
-	t.is(stderr, "");
+	expect(stdout).toBe("");
+	expect(stderr).toBe("");
 });
 
-test("Miniflare: supports unsafe eval bindings", async (t) => {
+test("Miniflare: supports unsafe eval bindings", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `export default {
@@ -2492,14 +2597,14 @@ test("Miniflare: supports unsafe eval bindings", async (t) => {
 		}`,
 		unsafeEvalBinding: "UNSAFE_EVAL",
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
-	t.true(response.ok);
-	t.is(await response.text(), "the computed value is 3");
+	expect(response.ok).toBe(true);
+	expect(await response.text()).toBe("the computed value is 3");
 });
 
-test("Miniflare: supports wrapped bindings", async (t) => {
+test("Miniflare: supports wrapped bindings", async ({ expect }) => {
 	const store = new Map<string, string>();
 	const mf = new Miniflare({
 		workers: [
@@ -2570,13 +2675,15 @@ test("Miniflare: supports wrapped bindings", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost/");
-	t.deepEqual(await res.json(), { value: "value", emptyValue: null });
-	t.deepEqual(store, new Map([["ns:key", "another value"]]));
+	expect(await res.json()).toEqual({ value: "value", emptyValue: null });
+	expect(store).toEqual(new Map([["ns:key", "another value"]]));
 });
-test("Miniflare: check overrides default bindings with bindings from wrapped binding designator", async (t) => {
+test("Miniflare: check overrides default bindings with bindings from wrapped binding designator", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -2604,12 +2711,14 @@ test("Miniflare: check overrides default bindings with bindings from wrapped bin
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const res = await mf.dispatchFetch("http://localhost/");
-	t.deepEqual(await res.json(), { A: "default a", B: "overridden b" });
+	expect(await res.json()).toEqual({ A: "default a", B: "overridden b" });
 });
-test("Miniflare: checks uses compatibility and outbound configuration of binder", async (t) => {
+test("Miniflare: checks uses compatibility and outbound configuration of binder", async ({
+	expect,
+}) => {
 	const workers: WorkerOptions[] = [
 		{
 			compatibilityDate: "2022-03-21", // Default-on date for `global_navigator`
@@ -2649,10 +2758,10 @@ test("Miniflare: checks uses compatibility and outbound configuration of binder"
 		},
 	];
 	const mf = new Miniflare({ workers });
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost/");
-	t.deepEqual(await res.json(), {
+	expect(await res.json()).toEqual({
 		typeofNavigator: "object",
 		importedNode: true,
 		outboundText: "outbound:http://placeholder/",
@@ -2670,13 +2779,15 @@ test("Miniflare: checks uses compatibility and outbound configuration of binder"
 	workers[0].fetchMock = fetchMock;
 	await mf.setOptions({ workers });
 	res = await mf.dispatchFetch("http://localhost/");
-	t.deepEqual(await res.json(), {
+	expect(await res.json()).toEqual({
 		typeofNavigator: "undefined",
 		importedNode: false,
 		outboundText: "mocked",
 	});
 });
-test("Miniflare: cannot call getWorker() on wrapped binding worker", async (t) => {
+test("Miniflare: cannot call getWorker() on wrapped binding worker", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		workers: [
 			{
@@ -2697,20 +2808,20 @@ test("Miniflare: cannot call getWorker() on wrapped binding worker", async (t) =
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
-	await t.throwsAsync(mf.getWorker("binding"), {
-		instanceOf: TypeError,
-		message:
-			'"binding" is being used as a wrapped binding, and cannot be accessed as a worker',
-	});
+	await expect(mf.getWorker("binding")).rejects.toThrow(
+		new TypeError(
+			'"binding" is being used as a wrapped binding, and cannot be accessed as a worker'
+		)
+	);
 });
-test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
+test("Miniflare: prohibits invalid wrapped bindings", async ({ expect }) => {
 	const mf = new Miniflare({ modules: true, script: "" });
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	// Check prohibits using entrypoint worker
-	await t.throwsAsync(
+	await expect(
 		mf.setOptions({
 			name: "a",
 			modules: true,
@@ -2718,35 +2829,33 @@ test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
 			wrappedBindings: {
 				WRAPPED: { scriptName: "a", entrypoint: "wrapped" },
 			},
-		}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_INVALID_WRAPPED",
-			message:
-				'Cannot use "a" for wrapped binding because it\'s the entrypoint.\n' +
-				'Ensure "a" isn\'t the first entry in the `workers` array.',
-		}
+		})
+	).rejects.toThrow(
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "a" for wrapped binding because it\'s the entrypoint.\n' +
+				'Ensure "a" isn\'t the first entry in the `workers` array.'
+		)
 	);
 
 	// Check prohibits using service worker
-	await t.throwsAsync(
+	await expect(
 		mf.setOptions({
 			workers: [
 				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
 				{ name: "binding", script: "" },
 			],
-		}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_INVALID_WRAPPED",
-			message:
-				'Cannot use "binding" for wrapped binding because it\'s a service worker.\n' +
-				'Ensure "binding" sets `modules` to `true` or an array of modules',
-		}
+		})
+	).rejects.toThrow(
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it\'s a service worker.\n' +
+				'Ensure "binding" sets `modules` to `true` or an array of modules'
+		)
 	);
 
 	// Check prohibits multiple modules
-	await t.throwsAsync(
+	await expect(
 		mf.setOptions({
 			workers: [
 				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
@@ -2758,18 +2867,17 @@ test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
 					],
 				},
 			],
-		}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_INVALID_WRAPPED",
-			message:
-				'Cannot use "binding" for wrapped binding because it isn\'t a single module.\n' +
-				'Ensure "binding" doesn\'t include unbundled `import`s.',
-		}
+		})
+	).rejects.toThrow(
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it isn\'t a single module.\n' +
+				'Ensure "binding" doesn\'t include unbundled `import`s.'
+		)
 	);
 
 	// Check prohibits non-ES-modules
-	await t.throwsAsync(
+	await expect(
 		mf.setOptions({
 			workers: [
 				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
@@ -2778,17 +2886,16 @@ test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
 					modules: [{ type: "CommonJS", path: "index.cjs", contents: "" }],
 				},
 			],
-		}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_INVALID_WRAPPED",
-			message:
-				'Cannot use "binding" for wrapped binding because it isn\'t a single ES module',
-		}
+		})
+	).rejects.toThrow(
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it isn\'t a single ES module'
+		)
 	);
 
 	// Check prohibits Durable Object bindings
-	await t.throwsAsync(
+	await expect(
 		mf.setOptions({
 			workers: [
 				{
@@ -2804,18 +2911,17 @@ test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
 					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
 				},
 			],
-		}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_INVALID_WRAPPED",
-			message:
-				'Cannot use "binding" for wrapped binding because it is bound to with Durable Object bindings.\n' +
-				'Ensure other workers don\'t define Durable Object bindings to "binding".',
-		}
+		})
+	).rejects.toThrow(
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it is bound to with Durable Object bindings.\n' +
+				'Ensure other workers don\'t define Durable Object bindings to "binding".'
+		)
 	);
 
 	// Check prohibits service bindings
-	await t.throwsAsync(
+	await expect(
 		mf.setOptions({
 			workers: [
 				{
@@ -2831,18 +2937,17 @@ test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
 					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
 				},
 			],
-		}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_INVALID_WRAPPED",
-			message:
-				'Cannot use "binding" for wrapped binding because it is bound to with service bindings.\n' +
-				'Ensure other workers don\'t define service bindings to "binding".',
-		}
+		})
+	).rejects.toThrow(
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it is bound to with service bindings.\n' +
+				'Ensure other workers don\'t define service bindings to "binding".'
+		)
 	);
 
 	// Check prohibits compatibility date and flags
-	await t.throwsAsync(
+	await expect(
 		mf.setOptions({
 			workers: [
 				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
@@ -2852,16 +2957,15 @@ test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
 					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
 				},
 			],
-		}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_INVALID_WRAPPED",
-			message:
-				'Cannot use "binding" for wrapped binding because it defines a compatibility date.\n' +
-				"Wrapped bindings use the compatibility date of the worker with the binding.",
-		}
+		})
+	).rejects.toThrow(
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it defines a compatibility date.\n' +
+				"Wrapped bindings use the compatibility date of the worker with the binding."
+		)
 	);
-	await t.throwsAsync(
+	await expect(
 		mf.setOptions({
 			workers: [
 				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
@@ -2871,18 +2975,17 @@ test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
 					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
 				},
 			],
-		}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_INVALID_WRAPPED",
-			message:
-				'Cannot use "binding" for wrapped binding because it defines compatibility flags.\n' +
-				"Wrapped bindings use the compatibility flags of the worker with the binding.",
-		}
+		})
+	).rejects.toThrow(
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it defines compatibility flags.\n' +
+				"Wrapped bindings use the compatibility flags of the worker with the binding."
+		)
 	);
 
 	// Check prohibits outbound service
-	await t.throwsAsync(
+	await expect(
 		mf.setOptions({
 			workers: [
 				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
@@ -2894,18 +2997,17 @@ test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
 					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
 				},
 			],
-		}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_INVALID_WRAPPED",
-			message:
-				'Cannot use "binding" for wrapped binding because it defines an outbound service.\n' +
-				"Wrapped bindings use the outbound service of the worker with the binding.",
-		}
+		})
+	).rejects.toThrow(
+		new MiniflareCoreError(
+			"ERR_INVALID_WRAPPED",
+			'Cannot use "binding" for wrapped binding because it defines an outbound service.\n' +
+				"Wrapped bindings use the outbound service of the worker with the binding."
+		)
 	);
 
 	// Check prohibits cyclic wrapped bindings
-	await t.throwsAsync(
+	await expect(
 		mf.setOptions({
 			workers: [
 				{ modules: true, script: "", wrappedBindings: { WRAPPED: "binding" } },
@@ -2915,15 +3017,14 @@ test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
 					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
 				},
 			],
-		}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_CYCLIC",
-			message:
-				"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves.",
-		}
+		})
+	).rejects.toThrow(
+		new MiniflareCoreError(
+			"ERR_CYCLIC",
+			"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves."
+		)
 	);
-	await t.throwsAsync(
+	await expect(
 		mf.setOptions({
 			workers: [
 				{
@@ -2947,29 +3048,30 @@ test("Miniflare: prohibits invalid wrapped bindings", async (t) => {
 					modules: [{ type: "ESModule", path: "index.mjs", contents: "" }],
 				},
 			],
-		}),
-		{
-			instanceOf: MiniflareCoreError,
-			code: "ERR_CYCLIC",
-			message:
-				"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves.",
-		}
+		})
+	).rejects.toThrow(
+		new MiniflareCoreError(
+			"ERR_CYCLIC",
+			"Generated workerd config contains cycles. Ensure wrapped bindings don't have bindings to themselves."
+		)
 	);
 });
 
-test("Miniflare: getCf() returns a standard cf object", async (t) => {
+test("Miniflare: getCf() returns a standard cf object", async ({ expect }) => {
 	const mf = new Miniflare({ script: "", modules: true });
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const cf = await mf.getCf();
-	t.like(cf, {
+	expect(cf).toMatchObject({
 		colo: "DFW",
 		city: "Austin",
 		regionCode: "TX",
 	});
 });
 
-test("Miniflare: getCf() returns a user provided cf object", async (t) => {
+test("Miniflare: getCf() returns a user provided cf object", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		script: "",
 		modules: true,
@@ -2977,13 +3079,13 @@ test("Miniflare: getCf() returns a user provided cf object", async (t) => {
 			myFakeField: "test",
 		},
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const cf = await mf.getCf();
-	t.deepEqual(cf, { myFakeField: "test" });
+	expect(cf).toEqual({ myFakeField: "test" });
 });
 
-test("Miniflare: dispatchFetch() can override cf", async (t) => {
+test("Miniflare: dispatchFetch() can override cf", async ({ expect }) => {
 	const mf = new Miniflare({
 		script:
 			"export default { fetch(request) { return Response.json(request.cf) } }",
@@ -2992,16 +3094,16 @@ test("Miniflare: dispatchFetch() can override cf", async (t) => {
 			myFakeField: "test",
 		},
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const cf = await mf.dispatchFetch("http://example.com/", {
 		cf: { myFakeField: "test2" },
 	});
 	const cfJson = (await cf.json()) as { myFakeField: string };
-	t.deepEqual(cfJson.myFakeField, "test2");
+	expect(cfJson.myFakeField).toEqual("test2");
 });
 
-test("Miniflare: CF-Connecting-IP is injected", async (t) => {
+test("Miniflare: CF-Connecting-IP is injected", async ({ expect }) => {
 	const mf = new Miniflare({
 		script:
 			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
@@ -3010,18 +3112,18 @@ test("Miniflare: CF-Connecting-IP is injected", async (t) => {
 			myFakeField: "test",
 		},
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const ip = await mf.dispatchFetch("http://example.com/");
 	// Tracked in https://github.com/cloudflare/workerd/issues/3310
 	if (!isWindows) {
-		t.deepEqual(await ip.text(), "127.0.0.1");
+		expect(await ip.text()).toEqual("127.0.0.1");
 	} else {
-		t.deepEqual(await ip.text(), "");
+		expect(await ip.text()).toEqual("");
 	}
 });
 
-test("Miniflare: CF-Connecting-IP is injected (ipv6)", async (t) => {
+test("Miniflare: CF-Connecting-IP is injected (ipv6)", async ({ expect }) => {
 	const mf = new Miniflare({
 		script:
 			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
@@ -3031,19 +3133,21 @@ test("Miniflare: CF-Connecting-IP is injected (ipv6)", async (t) => {
 		},
 		host: "::1",
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const ip = await mf.dispatchFetch("http://example.com/");
 
 	// Tracked in https://github.com/cloudflare/workerd/issues/3310
 	if (!isWindows) {
-		t.deepEqual(await ip.text(), "::1");
+		expect(await ip.text()).toEqual("::1");
 	} else {
-		t.deepEqual(await ip.text(), "");
+		expect(await ip.text()).toEqual("");
 	}
 });
 
-test("Miniflare: CF-Connecting-IP is preserved when present", async (t) => {
+test("Miniflare: CF-Connecting-IP is preserved when present", async ({
+	expect,
+}) => {
 	const mf = new Miniflare({
 		script:
 			"export default { fetch(request) { return new Response(request.headers.get('CF-Connecting-IP')) } }",
@@ -3052,21 +3156,21 @@ test("Miniflare: CF-Connecting-IP is preserved when present", async (t) => {
 			myFakeField: "test",
 		},
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const ip = await mf.dispatchFetch("http://example.com/", {
 		headers: {
 			"CF-Connecting-IP": "128.0.0.1",
 		},
 	});
-	t.deepEqual(await ip.text(), "128.0.0.1");
+	expect(await ip.text()).toEqual("128.0.0.1");
 });
 
 // regression test for https://github.com/cloudflare/workers-sdk/issues/7924
 // The "server" service just returns the value of the CF-Connecting-IP header which would normally be added by Miniflare. If you send a request to with no such header, Miniflare will add one.
 // The "client" service makes an outbound request with a fake CF-Connecting-IP header to the "server" service. If the outbound stripping happens then this header will not make it to the "server" service
 // so its response will contain the header added by Miniflare. If the stripping is turned off then the response from the "server" service will contain the fake header.
-test("Miniflare: strips CF-Connecting-IP", async (t) => {
+test("Miniflare: strips CF-Connecting-IP", async ({ expect }) => {
 	const server = new Miniflare({
 		script:
 			"export default { fetch(request) { return new Response(request.headers.get(`CF-Connecting-IP`)) } }",
@@ -3078,15 +3182,17 @@ test("Miniflare: strips CF-Connecting-IP", async (t) => {
 		script: `export default { fetch(request) { return fetch('${serverUrl.href}', {headers: {"CF-Connecting-IP":"fake-value"}}) } }`,
 		modules: true,
 	});
-	t.teardown(() => client.dispose());
-	t.teardown(() => server.dispose());
+	useDispose(client);
+	useDispose(server);
 
 	const landingPage = await client.dispatchFetch("http://example.com/");
 	// The CF-Connecting-IP header value of "fake-value" should be stripped by Miniflare, and should be replaced with a generic 127.0.0.1
-	t.notDeepEqual(await landingPage.text(), "fake-value");
+	expect(await landingPage.text()).not.toEqual("fake-value");
 });
 
-test("Miniflare: does not strip CF-Connecting-IP when configured", async (t) => {
+test("Miniflare: does not strip CF-Connecting-IP when configured", async ({
+	expect,
+}) => {
 	const server = new Miniflare({
 		script:
 			"export default { fetch(request) { return new Response(request.headers.get(`CF-Connecting-IP`)) } }",
@@ -3099,14 +3205,87 @@ test("Miniflare: does not strip CF-Connecting-IP when configured", async (t) => 
 		modules: true,
 		stripCfConnectingIp: false,
 	});
-	t.teardown(() => client.dispose());
-	t.teardown(() => server.dispose());
+	useDispose(client);
+	useDispose(server);
 
 	const landingPage = await client.dispatchFetch("http://example.com/");
-	t.deepEqual(await landingPage.text(), "fake-value");
+	expect(await landingPage.text()).toEqual("fake-value");
 });
 
-test("Miniflare: can use module fallback service", async (t) => {
+// Test for https://github.com/cloudflare/workers-sdk/issues/4367
+// The CF-Worker header should be added to outbound fetch requests to match production behavior
+test("Miniflare: adds CF-Worker header to outbound requests with zone option", async ({
+	expect,
+}) => {
+	const server = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }",
+		modules: true,
+	});
+	const serverUrl = await server.ready;
+
+	const client = new Miniflare({
+		name: "my-worker",
+		zone: "my-zone.example.com",
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}') } }`,
+		modules: true,
+	});
+	useDispose(client);
+	useDispose(server);
+
+	const response = await client.dispatchFetch("http://example.com/");
+	// The CF-Worker header should be set to the zone value when provided
+	expect(await response.text()).toEqual("my-zone.example.com");
+});
+
+test("Miniflare: CF-Worker header defaults to worker-name.example.com when zone not set", async ({
+	expect,
+}) => {
+	const server = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }",
+		modules: true,
+	});
+	const serverUrl = await server.ready;
+
+	const client = new Miniflare({
+		name: "my-worker",
+		// No zone set, should default to `${worker-name}.example.com`
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}') } }`,
+		modules: true,
+	});
+	useDispose(client);
+	useDispose(server);
+
+	const response = await client.dispatchFetch("http://example.com/");
+	// The CF-Worker header should default to `${worker-name}.example.com` when no zone is specified
+	expect(await response.text()).toEqual("my-worker.example.com");
+});
+
+test("Miniflare: CF-Worker header defaults to worker.example.com when neither zone nor name set", async ({
+	expect,
+}) => {
+	const server = new Miniflare({
+		script:
+			"export default { fetch(request) { return new Response(request.headers.get(`CF-Worker`)) } }",
+		modules: true,
+	});
+	const serverUrl = await server.ready;
+
+	const client = new Miniflare({
+		// No name or zone set, should default to "worker.example.com"
+		script: `export default { fetch(request) { return fetch('${serverUrl.href}') } }`,
+		modules: true,
+	});
+	useDispose(client);
+	useDispose(server);
+
+	const response = await client.dispatchFetch("http://example.com/");
+	// The CF-Worker header should default to "worker.example.com" when neither zone nor name is specified
+	expect(await response.text()).toEqual("worker.example.com");
+});
+
+test("Miniflare: can use module fallback service", async ({ expect }) => {
 	const modulesRoot = "/";
 	const modules: Record<string, Omit<Worker_Module, "name">> = {
 		"/virtual/a.mjs": {
@@ -3186,127 +3365,126 @@ test("Miniflare: can use module fallback service", async (t) => {
 			},
 		],
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	let res = await mf.dispatchFetch("http://localhost/a");
-	t.is(await res.text(), "acd");
+	expect(await res.text()).toBe("acd");
 
 	// Check fallback service ignored if not explicitly enabled
 	res = await mf.dispatchFetch("http://localhost/b");
-	t.is(res.status, 500);
-	t.is(await res.text(), 'Error: No such module "virtual/a.mjs".');
+	expect(res.status).toBe(500);
+	expect(await res.text()).toBe('Error: No such module "virtual/a.mjs".');
 });
 
-test.serial(
-	"Miniflare: respects rootPath for path-valued options",
-	async (t) => {
-		const tmp = await useTmp(t);
-		const aPath = path.join(tmp, "a");
-		const bPath = path.join(tmp, "b");
-		await fs.mkdir(aPath);
-		await fs.mkdir(bPath);
-		await fs.writeFile(path.join(aPath, "1.txt"), "one text");
-		await fs.writeFile(path.join(aPath, "1.bin"), "one data");
-		await fs.writeFile(path.join(aPath, "add.wasm"), ADD_WASM_MODULE);
-		await fs.writeFile(path.join(bPath, "2.txt"), "two text");
-		await fs.writeFile(path.join(tmp, "3.txt"), "three text");
-		const mf = new Miniflare({
-			rootPath: tmp,
-			kvPersist: "kv",
-			workers: [
-				{
-					name: "a",
-					rootPath: "a",
-					routes: ["*/a"],
-					textBlobBindings: { TEXT: "1.txt" },
-					dataBlobBindings: { DATA: "1.bin" },
-					wasmBindings: { ADD: "add.wasm" },
-					// WASM bindings aren't supported by modules workers
-					script: `addEventListener("fetch", (event) => {
+test("Miniflare: respects rootPath for path-valued options", async ({
+	expect,
+}) => {
+	const tmp = await useTmp();
+	const aPath = path.join(tmp, "a");
+	const bPath = path.join(tmp, "b");
+	await fs.mkdir(aPath);
+	await fs.mkdir(bPath);
+	await fs.writeFile(path.join(aPath, "1.txt"), "one text");
+	await fs.writeFile(path.join(aPath, "1.bin"), "one data");
+	await fs.writeFile(path.join(aPath, "add.wasm"), ADD_WASM_MODULE);
+	await fs.writeFile(path.join(bPath, "2.txt"), "two text");
+	await fs.writeFile(path.join(tmp, "3.txt"), "three text");
+	const mf = new Miniflare({
+		rootPath: tmp,
+		kvPersist: "kv",
+		workers: [
+			{
+				name: "a",
+				rootPath: "a",
+				routes: ["*/a"],
+				textBlobBindings: { TEXT: "1.txt" },
+				dataBlobBindings: { DATA: "1.bin" },
+				wasmBindings: { ADD: "add.wasm" },
+				// WASM bindings aren't supported by modules workers
+				script: `addEventListener("fetch", (event) => {
 						event.respondWith(Response.json({
 							text: TEXT,
 							data: new TextDecoder().decode(DATA),
 							result: new WebAssembly.Instance(ADD).exports.add(1, 2)
 						}));
 					});`,
-				},
-				{
-					name: "b",
-					rootPath: "b",
-					routes: ["*/b"],
-					textBlobBindings: { TEXT: "2.txt" },
-					sitePath: ".",
-					script: `addEventListener("fetch", (event) => {
+			},
+			{
+				name: "b",
+				rootPath: "b",
+				routes: ["*/b"],
+				textBlobBindings: { TEXT: "2.txt" },
+				sitePath: ".",
+				script: `addEventListener("fetch", (event) => {
 						event.respondWith(Response.json({
 							text: TEXT,
 							manifest: Object.keys(__STATIC_CONTENT_MANIFEST)
 						}));
 					});`,
-				},
-				{
-					name: "c",
-					routes: ["*/c"],
-					textBlobBindings: { TEXT: "3.txt" },
-					kvNamespaces: { NAMESPACE: "namespace" },
-					modules: true,
-					script: `export default {
+			},
+			{
+				name: "c",
+				routes: ["*/c"],
+				textBlobBindings: { TEXT: "3.txt" },
+				kvNamespaces: { NAMESPACE: "namespace" },
+				modules: true,
+				script: `export default {
 						async fetch(request, env, ctx) {
 						 	await env.NAMESPACE.put("key", "value");
 							return Response.json({ text: env.TEXT });
 						}
 					}`,
-				},
-			],
-		});
-		t.teardown(() => mf.dispose());
+			},
+		],
+	});
+	useDispose(mf);
 
-		let res = await mf.dispatchFetch("http://localhost/a");
-		t.deepEqual(await res.json(), {
-			text: "one text",
-			data: "one data",
-			result: 3,
-		});
-		res = await mf.dispatchFetch("http://localhost/b");
-		t.deepEqual(await res.json(), {
-			text: "two text",
-			manifest: ["2.txt"],
-		});
-		res = await mf.dispatchFetch("http://localhost/c");
-		t.deepEqual(await res.json(), {
-			text: "three text",
-		});
-		t.true(existsSync(path.join(tmp, "kv", "namespace")));
+	let res = await mf.dispatchFetch("http://localhost/a");
+	expect(await res.json()).toEqual({
+		text: "one text",
+		data: "one data",
+		result: 3,
+	});
+	res = await mf.dispatchFetch("http://localhost/b");
+	expect(await res.json()).toEqual({
+		text: "two text",
+		manifest: ["2.txt"],
+	});
+	res = await mf.dispatchFetch("http://localhost/c");
+	expect(await res.json()).toEqual({
+		text: "three text",
+	});
+	expect(existsSync(path.join(tmp, "kv", "namespace"))).toBe(true);
 
-		// Check persistence URLs not resolved relative to root path
-		await mf.setOptions({
-			rootPath: tmp,
-			kvPersist: url.pathToFileURL(path.join(tmp, "kv")).href,
-			kvNamespaces: { NAMESPACE: "namespace" },
-			modules: true,
-			script: `export default {
+	// Check persistence URLs not resolved relative to root path
+	await mf.setOptions({
+		rootPath: tmp,
+		kvPersist: url.pathToFileURL(path.join(tmp, "kv")).href,
+		kvNamespaces: { NAMESPACE: "namespace" },
+		modules: true,
+		script: `export default {
 				async fetch(request, env, ctx) {
 					return new Response(await env.NAMESPACE.get("key"));
 				}
 			}`,
-		});
-		res = await mf.dispatchFetch("http://localhost");
-		t.is(await res.text(), "value");
+	});
+	res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("value");
 
-		// Check only resolves root path once for single worker options (with relative
-		// root path)
-		useCwd(t, tmp);
-		await mf.setOptions({
-			rootPath: "a",
-			textBlobBindings: { TEXT: "1.txt" },
-			script:
-				'addEventListener("fetch", (event) => event.respondWith(new Response(TEXT)));',
-		});
-		res = await mf.dispatchFetch("http://localhost");
-		t.is(await res.text(), "one text");
-	}
-);
+	// Check only resolves root path once for single worker options (with relative
+	// root path)
+	useCwd(tmp);
+	await mf.setOptions({
+		rootPath: "a",
+		textBlobBindings: { TEXT: "1.txt" },
+		script:
+			'addEventListener("fetch", (event) => event.respondWith(new Response(TEXT)));',
+	});
+	res = await mf.dispatchFetch("http://localhost");
+	expect(await res.text()).toBe("one text");
+});
 
-test("Miniflare: custom Node service binding", async (t) => {
+test("Miniflare: custom Node service binding", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `
@@ -3329,17 +3507,16 @@ test("Miniflare: custom Node service binding", async (t) => {
 			},
 		},
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
 	const text = await response.text();
-	t.is(
-		text,
+	expect(text).toBe(
 		`Response from custom Node service binding. The value of "custom-header" is "foo".`
 	);
 });
 
-test("Miniflare: custom Node outbound service", async (t) => {
+test("Miniflare: custom Node outbound service", async ({ expect }) => {
 	const mf = new Miniflare({
 		modules: true,
 		script: `
@@ -3360,17 +3537,18 @@ test("Miniflare: custom Node outbound service", async (t) => {
 			},
 		},
 	});
-	t.teardown(() => mf.dispose());
+	useDispose(mf);
 
 	const response = await mf.dispatchFetch("http://localhost");
 	const text = await response.text();
-	t.is(
-		text,
+	expect(text).toBe(
 		`Response from custom Node outbound service. The value of "custom-header" is "foo".`
 	);
 });
 
-test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file creation", async (t) => {
+test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file creation", async ({
+	expect,
+}) => {
 	const originalEnv = process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
 	const configFilePath = "workerd-config.json";
 
@@ -3379,7 +3557,7 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file cre
 		await fs.unlink(configFilePath);
 	}
 
-	t.teardown(async () => {
+	onTestFinished(async () => {
 		if (originalEnv === undefined) {
 			delete process.env.MINIFLARE_WORKERD_CONFIG_DEBUG;
 		} else {
@@ -3404,10 +3582,8 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file cre
 	let response = await mf.dispatchFetch("http://localhost");
 	// seems like miniflare doesn't like it if you don't read the response
 	await response.text();
-	t.false(
-		existsSync(configFilePath),
-		"config file should not be created when MINIFLARE_WORKERD_CONFIG_DEBUG is not set"
-	);
+	// config file should not be created when MINIFLARE_WORKERD_CONFIG_DEBUG is not set
+	expect(existsSync(configFilePath)).toBe(false);
 	await mf.dispose();
 
 	// ensure the config file is created with the flag
@@ -3422,9 +3598,7 @@ test("Miniflare: MINIFLARE_WORKERD_CONFIG_DEBUG controls workerd config file cre
 	});
 	response = await mf.dispatchFetch("http://localhost");
 	await response.text();
-	t.true(
-		existsSync(configFilePath),
-		"workerd-config.json should be created when MINIFLARE_WORKERD_CONFIG_DEBUG=true"
-	);
+	// workerd-config.json should be created when MINIFLARE_WORKERD_CONFIG_DEBUG=true
+	expect(existsSync(configFilePath)).toBe(true);
 	await mf.dispose();
 });

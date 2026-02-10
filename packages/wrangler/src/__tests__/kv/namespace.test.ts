@@ -1,6 +1,9 @@
 import { readFile } from "node:fs/promises";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- test.each */
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { clearDialogs, mockConfirm, mockPrompt } from "../helpers/mock-dialogs";
@@ -8,7 +11,6 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import { wranglerKVConfig } from "./constant";
 import type { KVNamespaceInfo } from "../../kv/helpers";
 
@@ -118,6 +120,42 @@ describe("kv", () => {
 
 			          "
 		        `);
+			});
+
+			it("should error if the namespace already exists", async () => {
+				msw.use(
+					http.post(
+						"*/accounts/:accountId/storage/kv/namespaces",
+						() => {
+							return HttpResponse.json(
+								{
+									result: null,
+									success: false,
+									errors: [
+										{
+											code: 10014,
+											message:
+												"create namespace: 'A namespace with this account ID and title already exists'",
+										},
+									],
+									messages: [],
+								},
+								{ status: 400 }
+							);
+						},
+						{ once: true }
+					)
+				);
+
+				await expect(runWrangler("kv namespace create DuplicateNamespace"))
+					.rejects.toThrowErrorMatchingInlineSnapshot(`
+				[Error: A KV namespace with the title "DuplicateNamespace" already exists.
+
+				You can list existing namespaces with their IDs by running:
+				  wrangler kv namespace list
+
+				Or choose a different namespace name.]
+			`);
 			});
 
 			describe.each(["wrangler.json", "wrangler.toml"])("%s", (configPath) => {

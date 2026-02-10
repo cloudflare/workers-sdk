@@ -2,6 +2,7 @@
  * Note! Much of this is copied and modified from cloudchamber/apply.ts
  * However this code is only used for containers interactions, not cloudchamber ones!
  */
+import assert from "node:assert";
 import {
 	endSection,
 	log,
@@ -22,17 +23,26 @@ import {
 import {
 	FatalError,
 	formatConfigSnippet,
+	getDockerPath,
 	UserError,
 } from "@cloudflare/workers-utils";
-import { promiseSpinner } from "../cloudchamber/common";
+import { fetchResult } from "../cfetch";
+import {
+	fillOpenAPIConfiguration,
+	promiseSpinner,
+} from "../cloudchamber/common";
 import { inferInstanceType } from "../cloudchamber/instance-type/instance-type";
+import { buildContainer } from "../containers/build";
 import { getAccountId } from "../user";
 import { Diff } from "../utils/diff";
 import {
 	sortObjectRecursive,
 	stripUndefined,
 } from "../utils/sortObjectRecursive";
+import { fetchVersion } from "../versions/api";
+import { containersScope } from ".";
 import type { ImageRef } from "../cloudchamber/build";
+import type { ApiVersion } from "../versions/types";
 import type {
 	Application,
 	ApplicationID,
@@ -43,8 +53,126 @@ import type {
 	Observability as ObservabilityConfiguration,
 	RolloutStepRequest,
 } from "@cloudflare/containers-shared";
-import type { Config, ContainerApp } from "@cloudflare/workers-utils";
+import type {
+	ComplianceConfig,
+	Config,
+	ContainerApp,
+	WorkerMetadataBinding,
+} from "@cloudflare/workers-utils";
 
+type DeployContainersArgs = {
+	versionId: string;
+	accountId: string;
+	scriptName: string;
+};
+
+export async function deployContainers(
+	config: Config,
+	normalisedContainerConfig: ContainerNormalizedConfig[],
+	{ versionId, accountId, scriptName }: DeployContainersArgs
+) {
+	await fillOpenAPIConfiguration(config, containersScope);
+
+	const pathToDocker = getDockerPath();
+	const boundDOs = new Set(
+		config.durable_objects.bindings.map((b) => b.class_name)
+	);
+
+	let imageRef: ImageRef;
+	let maybeVersionInfo: ApiVersion | undefined;
+	let maybeAllDurableObjects: DurableObjectNamespace[] | undefined;
+
+	for (const container of normalisedContainerConfig) {
+		if ("dockerfile" in container) {
+			imageRef = await buildContainer(
+				container,
+				versionId,
+				false, // dry runs will have already exited by this point
+				pathToDocker
+			);
+		} else {
+			imageRef = { newTag: container.image_uri };
+		}
+
+		// Only bound DOs are returned in version info. For unbound DOs, we need to list all DO namespaces.
+		if (boundDOs.has(container.class_name)) {
+			maybeVersionInfo ??= await fetchVersion(
+				config,
+				accountId,
+				scriptName,
+				versionId
+			);
+			type DurableObjectBinding = Extract<
+				WorkerMetadataBinding,
+				{ type: "durable_object_namespace" }
+			>;
+			const targetDurableObject = maybeVersionInfo.resources.bindings.find(
+				(binding): binding is DurableObjectBinding =>
+					binding.type === "durable_object_namespace" &&
+					binding.class_name === container.class_name &&
+					// DO cannot be defined in a different script to the container
+					(binding.script_name === undefined ||
+						binding.script_name === scriptName) &&
+					binding.namespace_id !== undefined
+			);
+			if (!targetDurableObject) {
+				throw new UserError(
+					"Could not deploy container application as durable object was not found in list of bindings"
+				);
+			}
+			assert(
+				targetDurableObject && targetDurableObject.namespace_id !== undefined
+			);
+
+			await apply(
+				{
+					imageRef,
+					durable_object_namespace_id: targetDurableObject.namespace_id,
+				},
+				container,
+				config
+			);
+		} else {
+			// The DO is unbound, so we need to list all DO namespaces to find the right one
+			// TODO: use the list API with filters when it exists
+			maybeAllDurableObjects ??= await listDurableObjects(config, accountId);
+			const targetDurableObject = maybeAllDurableObjects.find(
+				(durableObject) =>
+					durableObject.class === container.class_name &&
+					durableObject.script === scriptName
+			);
+
+			assert(targetDurableObject, "Durable Object not returned from list API");
+			await apply(
+				{
+					imageRef,
+					durable_object_namespace_id: targetDurableObject.id,
+				},
+				container,
+				config
+			);
+		}
+	}
+}
+
+type DurableObjectNamespace = {
+	id: string;
+	class: string;
+	name: string;
+	script: string;
+	useSqlite: boolean;
+};
+async function listDurableObjects(
+	complianceConfig: ComplianceConfig,
+	accountId: string
+): Promise<DurableObjectNamespace[]> {
+	return await fetchResult<DurableObjectNamespace[]>(
+		complianceConfig,
+		`/accounts/${accountId}/workers/durable_objects/namespaces`,
+		{},
+		new URLSearchParams({ per_page: "1000" })
+	);
+}
 /**
  * Source overwrites target
  */
@@ -88,20 +216,6 @@ function createApplicationToModifyApplication(
 		scheduling_policy: req.scheduling_policy,
 		rollout_active_grace_period: req.rollout_active_grace_period,
 	};
-}
-
-function cleanupObservability(
-	observability: ObservabilityConfiguration | undefined
-) {
-	if (observability === undefined) {
-		return;
-	}
-
-	// `logging` field is deprecated, so if the server returns both `logging` and `logs`
-	// fields, drop the `logging` one.
-	if (observability.logging !== undefined && observability.logs !== undefined) {
-		delete observability.logging;
-	}
 }
 
 /**
@@ -185,6 +299,9 @@ function containerConfigToCreateRequest(
 				containerApp.observability.logs_enabled,
 				prevApp?.configuration.observability
 			),
+			wrangler_ssh: containerApp.wrangler_ssh,
+			authorized_keys: containerApp.authorized_keys,
+			trusted_user_ca_keys: containerApp.trusted_user_ca_keys,
 		},
 		// deprecated in favour of max_instances
 		instances: 0,
@@ -217,9 +334,6 @@ export async function apply(
 	const existingApplications = await promiseSpinner(
 		ApplicationsService.listApplications(),
 		{ message: "Loading applications" }
-	);
-	existingApplications.forEach((app) =>
-		cleanupObservability(app.configuration.observability)
 	);
 	// TODO: this is not correct right now as there can be multiple applications
 	// with the same name.
@@ -263,8 +377,7 @@ export async function apply(
 			prevApp.durable_objects.namespace_id !== args.durable_object_namespace_id
 		) {
 			throw new UserError(
-				`Application "${prevApp.name}" is assigned to durable object ${prevApp.durable_objects.namespace_id}, but a new DO namespace is being assigned to the application,
-					you should delete the container application and deploy again`,
+				`There is already an application with the name ${containerConfig.name} deployed that is associated with a different durable object namespace (${prevApp.durable_objects.namespace_id}). Either change the container name or delete the existing application first.`,
 				{
 					telemetryMessage:
 						"trying to redeploy container to different durable object",

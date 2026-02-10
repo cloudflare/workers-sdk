@@ -10,7 +10,7 @@ export async function preServe() {
 		rmSync(".wrangler", { force: true, recursive: true });
 		execSync(`pnpm wrangler d1 migrations apply prisma-demo-db --local`);
 		execSync(
-			`pnpm wrangler d1 execute prisma-demo-db --command "INSERT INTO  \"User\" (\"email\", \"name\") VALUES ('jane@prisma.io', 'Jane Doe (Local)');" --local`
+			`pnpm wrangler d1 execute prisma-demo-db --command "INSERT INTO  "User" ("email", "name") VALUES ('jane@prisma.io', 'Jane Doe (Local)');" --local`
 		);
 		execSync(`pnpm prisma generate`);
 	} finally {

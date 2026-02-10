@@ -1,6 +1,12 @@
-import { describe, expect, test, vi } from "vitest";
+import { describe, test, vi } from "vitest";
 import { confirmAutoConfigDetails } from "../../../autoconfig/details";
-import { mockConfirm, mockPrompt } from "../../helpers/mock-dialogs";
+import { Astro } from "../../../autoconfig/frameworks/astro";
+import { Static } from "../../../autoconfig/frameworks/static";
+import {
+	mockConfirm,
+	mockPrompt,
+	mockSelect,
+} from "../../helpers/mock-dialogs";
 import { useMockIsTTY } from "../../helpers/mock-istty";
 
 vi.mock("../../../package-manager", () => ({
@@ -16,7 +22,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 	const { setIsTTY } = useMockIsTTY();
 
 	describe("interactive mode", () => {
-		test("no modifications applied", async () => {
+		test("no modifications applied", async ({ expect }) => {
 			setIsTTY(true);
 
 			mockConfirm({
@@ -28,19 +34,30 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				buildCommand: "npm run build",
 				projectPath: "<PROJECT_PATH>",
 				configured: false,
+				framework: new Static({ id: "static", name: "Static" }),
+				outputDir: "./public",
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
-					Object {
-					  "buildCommand": "npm run build",
-					  "configured": false,
-					  "projectPath": "<PROJECT_PATH>",
-					  "workerName": "worker-name",
-					}
-				`);
+				Object {
+				  "buildCommand": "npm run build",
+				  "configured": false,
+				  "framework": Static {
+				    "autoConfigSupported": true,
+				    "configurationDescription": undefined,
+				    "id": "static",
+				    "name": "Static",
+				  },
+				  "outputDir": "./public",
+				  "projectPath": "<PROJECT_PATH>",
+				  "workerName": "worker-name",
+				}
+			`);
 		});
 
-		test("settings can be updated in a plain static site without a framework nor a build script", async () => {
+		test("settings can be updated in a plain static site without a framework nor a build script", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockConfirm({
@@ -50,6 +67,10 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			mockPrompt({
 				text: "What do you want to name your Worker?",
 				result: "new-name",
+			});
+			mockSelect({
+				text: "What framework is your application using?",
+				result: "static",
 			});
 			mockPrompt({
 				text: "What directory contains your applications' output/asset files?",
@@ -66,11 +87,18 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				outputDir: "<OUTPUT_DIR>",
 				projectPath: "<PROJECT_PATH>",
 				configured: false,
+				framework: new Static({ id: "static", name: "Static" }),
 			});
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
 				Object {
 				  "buildCommand": "npm run app:build",
 				  "configured": false,
+				  "framework": Static {
+				    "autoConfigSupported": true,
+				    "configurationDescription": undefined,
+				    "id": "static",
+				    "name": "Static",
+				  },
 				  "outputDir": "./_public_",
 				  "projectPath": "<PROJECT_PATH>",
 				  "workerName": "new-name",
@@ -78,7 +106,9 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			`);
 		});
 
-		test("settings can be updated in a static app using a framework", async () => {
+		test("settings can be updated in a static app using a framework", async ({
+			expect,
+		}) => {
 			setIsTTY(true);
 
 			mockConfirm({
@@ -88,6 +118,10 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			mockPrompt({
 				text: "What do you want to name your Worker?",
 				result: "my-astro-worker",
+			});
+			mockSelect({
+				text: "What framework is your application using?",
+				result: "astro",
 			});
 			mockPrompt({
 				text: "What directory contains your applications' output/asset files?",
@@ -101,11 +135,7 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 			const updatedAutoConfigDetails = await confirmAutoConfigDetails({
 				workerName: "my-astro-site",
 				buildCommand: "astro build",
-				framework: {
-					isConfigured: () => false,
-					configure: () => ({ wranglerConfig: {} }),
-					name: "astro",
-				},
+				framework: new Astro({ id: "astro", name: "Astro" }),
 				outputDir: "<OUTPUT_DIR>",
 				projectPath: "<PROJECT_PATH>",
 				configured: false,
@@ -114,10 +144,11 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				Object {
 				  "buildCommand": "npm run build",
 				  "configured": false,
-				  "framework": Object {
-				    "configure": [Function],
-				    "isConfigured": [Function],
-				    "name": "astro",
+				  "framework": Astro {
+				    "autoConfigSupported": true,
+				    "configurationDescription": "Configuring project for Astro with \\"astro add cloudflare\\"",
+				    "id": "astro",
+				    "name": "Astro",
 				  },
 				  "outputDir": "",
 				  "projectPath": "<PROJECT_PATH>",
@@ -125,10 +156,51 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				}
 			`);
 		});
+
+		test("framework can be changed from a detected framework to another", async ({
+			expect,
+		}) => {
+			setIsTTY(true);
+
+			mockConfirm({
+				text: "Do you want to modify these settings?",
+				result: true,
+			});
+			mockPrompt({
+				text: "What do you want to name your Worker?",
+				result: "my-nuxt-worker",
+			});
+			mockSelect({
+				text: "What framework is your application using?",
+				result: "nuxt",
+			});
+			mockPrompt({
+				text: "What directory contains your applications' output/asset files?",
+				result: "./dist",
+			});
+			mockPrompt({
+				text: "What is your application's build command?",
+				result: "npm run build",
+			});
+
+			const updatedAutoConfigDetails = await confirmAutoConfigDetails({
+				workerName: "my-astro-site",
+				buildCommand: "astro build",
+				framework: new Astro({ id: "astro", name: "Astro" }),
+				outputDir: "<OUTPUT_DIR>",
+				projectPath: "<PROJECT_PATH>",
+				configured: false,
+			});
+
+			expect(updatedAutoConfigDetails.framework?.id).toBe("nuxt");
+			expect(updatedAutoConfigDetails.framework?.name).toBe("Nuxt");
+		});
 	});
 
 	describe("non-interactive mode", () => {
-		test("no modifications are applied in non-interactive", async () => {
+		test("no modifications are applied in non-interactive", async ({
+			expect,
+		}) => {
 			setIsTTY(false);
 
 			const updatedAutoConfigDetails = await confirmAutoConfigDetails({
@@ -136,12 +208,21 @@ describe("autoconfig details - confirmAutoConfigDetails()", () => {
 				buildCommand: "npm run build",
 				projectPath: "<PROJECT_PATH>",
 				configured: false,
+				framework: new Static({ id: "static", name: "Static" }),
+				outputDir: "./public",
 			});
 
 			expect(updatedAutoConfigDetails).toMatchInlineSnapshot(`
 				Object {
 				  "buildCommand": "npm run build",
 				  "configured": false,
+				  "framework": Static {
+				    "autoConfigSupported": true,
+				    "configurationDescription": undefined,
+				    "id": "static",
+				    "name": "Static",
+				  },
+				  "outputDir": "./public",
 				  "projectPath": "<PROJECT_PATH>",
 				  "workerName": "worker-name",
 				}

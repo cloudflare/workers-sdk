@@ -2,8 +2,10 @@ import assert from "node:assert";
 import path from "node:path";
 import { resolveDockerHost } from "@cloudflare/containers-shared";
 import {
+	configFileName,
 	getDisableConfigWatching,
 	getDockerPath,
+	getLocalWorkerdCompatibilityDate,
 	UserError,
 } from "@cloudflare/workers-utils";
 import { watch } from "chokidar";
@@ -29,7 +31,6 @@ import {
 	requireApiToken,
 	requireAuth,
 } from "../../user";
-import { getDevCompatibilityDate } from "../../utils/compatibility-date";
 import {
 	DEFAULT_INSPECTOR_PORT,
 	DEFAULT_LOCAL_PORT,
@@ -58,6 +59,25 @@ import type { WorkerRegistry } from "miniflare";
 
 const getInspectorPort = memoizeGetPort(DEFAULT_INSPECTOR_PORT, "127.0.0.1");
 const getLocalPort = memoizeGetPort(DEFAULT_LOCAL_PORT, "localhost");
+
+async function resolveInspectorConfig(
+	config: Config,
+	input: StartDevWorkerInput
+): Promise<StartDevWorkerOptions["dev"]["inspector"]> {
+	if (input.dev?.inspector === false) {
+		return false;
+	}
+	const hostname =
+		input.dev?.inspector?.hostname ?? config.dev.inspector_ip ?? "127.0.0.1";
+	const port =
+		input.dev?.inspector?.port ??
+		config.dev.inspector_port ??
+		(await getInspectorPort(hostname));
+	return {
+		hostname,
+		port,
+	};
+}
 
 async function resolveDevConfig(
 	config: Config,
@@ -132,15 +152,7 @@ async function resolveDevConfig(
 			httpsKeyPath: input.dev?.server?.httpsKeyPath,
 			httpsCertPath: input.dev?.server?.httpsCertPath,
 		},
-		inspector:
-			input.dev?.inspector === false
-				? false
-				: {
-						port:
-							input.dev?.inspector?.port ??
-							config.dev.inspector_port ??
-							(await getInspectorPort()),
-					},
+		inspector: await resolveInspectorConfig(config, input),
 		origin: {
 			secure:
 				input.dev?.origin?.secure ?? config.dev.upstream_protocol === "https",
@@ -161,6 +173,7 @@ async function resolveDevConfig(
 				resolveDockerHost(input.dev?.dockerPath ?? getDockerPath())
 			: undefined,
 		containerBuildId: input.dev?.containerBuildId,
+		generateTypes: input.dev?.generateTypes ?? config.dev.generate_types,
 	} satisfies StartDevWorkerOptions["dev"];
 }
 
@@ -211,6 +224,7 @@ async function resolveBindings(
 			},
 			input.tailConsumers ?? config.tail_consumers,
 			input.streamingTailConsumers ?? config.streaming_tail_consumers,
+			config.containers,
 			{
 				registry,
 				local: !input.dev?.remote,
@@ -325,7 +339,11 @@ async function resolveConfig(
 		name:
 			getScriptName({ name: input.name, env: input.env }, config) ?? "worker",
 		config: config.configPath,
-		compatibilityDate: getDevCompatibilityDate(config, input.compatibilityDate),
+		compatibilityDate: getDevCompatibilityDate(
+			entry.projectRoot,
+			config,
+			input.compatibilityDate
+		),
 		compatibilityFlags: input.compatibilityFlags ?? config.compatibility_flags,
 		complianceRegion: input.complianceRegion ?? config.compliance_region,
 		pythonModules: {
@@ -402,7 +420,7 @@ async function resolveConfig(
 			`This worker is bound to live services: ${services
 				.map(
 					(service) =>
-						`${service.name} (${service.service}${
+						`${service.binding} (${service.service}${
 							service.environment ? `@${service.environment}` : ""
 						}${service.entrypoint ? `#${service.entrypoint}` : ""})`
 				)
@@ -467,15 +485,38 @@ async function resolveConfig(
 		}
 	}
 
-	// prompt user to update their types if we detect that it is out of date
-	const typesChanged = await checkTypesDiff(config, entry);
-	if (typesChanged) {
-		logger.log(
-			"❓ Your types might be out of date. Re-run `wrangler types` to ensure your types are correct."
-		);
-	}
+	await checkTypesDiff(config, entry);
 
 	return { config: resolved, printCurrentBindings };
+}
+
+/**
+ * Returns the compatibility date to use in development.
+ *
+ * When no compatibility date is configured, uses the installed Workers runtime's latest supported date.
+ *
+ * @param config wrangler configuration
+ * @param compatibilityDate configured compatibility date
+ * @returns the compatibility date to use in development
+ */
+function getDevCompatibilityDate(
+	projectPath: string,
+	config: Config | undefined,
+	compatibilityDate = config?.compatibility_date
+): string {
+	const { date: workerdDate } = getLocalWorkerdCompatibilityDate({
+		projectPath,
+	});
+
+	if (config?.configPath && compatibilityDate === undefined) {
+		logger.warn(
+			`No compatibility_date was specified. Using the installed Workers runtime's latest supported date: ${workerdDate}.\n` +
+				`❯❯ Add one to your ${configFileName(config.configPath)} file: compatibility_date = "${workerdDate}", or\n` +
+				`❯❯ Pass it in your terminal: wrangler dev [<SCRIPT>] --compatibility-date=${workerdDate}\n\n` +
+				"See https://developers.cloudflare.com/workers/platform/compatibility-dates/ for more information."
+		);
+	}
+	return compatibilityDate ?? workerdDate;
 }
 
 export class ConfigController extends Controller {
@@ -569,6 +610,7 @@ export class ConfigController extends Controller {
 							: input.dev?.server?.secure
 								? "https"
 								: "http",
+					generateTypes: input.dev?.generateTypes,
 				},
 				{ useRedirectIfAvailable: true }
 			);

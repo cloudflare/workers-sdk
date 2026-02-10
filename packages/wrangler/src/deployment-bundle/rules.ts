@@ -6,7 +6,7 @@ export function isJavaScriptModuleRule(rule: Rule) {
 }
 
 export const DEFAULT_MODULE_RULES: Rule[] = [
-	{ type: "Text", globs: ["**/*.txt", "**/*.html"] },
+	{ type: "Text", globs: ["**/*.txt", "**/*.html", "**/*.sql"] },
 	{ type: "Data", globs: ["**/*.bin"] },
 	{ type: "CompiledWasm", globs: ["**/*.wasm", "**/*.wasm?module"] },
 ];

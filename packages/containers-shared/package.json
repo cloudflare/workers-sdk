@@ -1,6 +1,6 @@
 {
 	"name": "@cloudflare/containers-shared",
-	"version": "0.4.0",
+	"version": "0.9.0",
 	"private": true,
 	"description": "Package that contains shared container functionality for Cloudflare Workers SDK.",
 	"homepage": "https://github.com/cloudflare/workers-sdk/tree/main/packages/containers-shared#readme",
@@ -15,7 +15,7 @@
 	"license": "MIT OR Apache-2.0",
 	"author": "wrangler@cloudflare.com",
 	"scripts": {
-		"check:lint": "eslint . --max-warnings 0",
+		"check:lint": "eslint . --max-warnings 0 --cache",
 		"check:type": "tsc -p ./tsconfig.json && pnpm run type:tests",
 		"deploy": "echo 'no deploy'",
 		"test": "vitest",
@@ -26,6 +26,7 @@
 	"devDependencies": {
 		"@cloudflare/eslint-config-shared": "workspace:*",
 		"@cloudflare/workers-tsconfig": "workspace:*",
+		"@cloudflare/workers-utils": "workspace:*",
 		"@types/node": "catalog:default",
 		"eslint": "catalog:default",
 		"typescript": "catalog:default",

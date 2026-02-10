@@ -278,7 +278,8 @@ export function createModuleCollector(props: {
 								// and resolve the file path to the correct file.
 								try {
 									const resolved = await build.resolve(args.path, {
-										kind: "import-statement",
+										kind: args.kind,
+										importer: args.importer,
 										resolveDir: args.resolveDir,
 										pluginData: {
 											skip: true,

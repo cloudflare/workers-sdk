@@ -1,5 +1,5 @@
 import { writeFileSync } from "node:fs";
-import { describe, expect, it, vi } from "vitest";
+import { describe, it, vi } from "vitest";
 import { mockConsoleMethods } from "../helpers/mock-console";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
@@ -12,7 +12,7 @@ describe("pipe test", () => {
 		.mockImplementation(() => true);
 	runInTempDir();
 
-	it("should display banner", async () => {
+	it("should display banner", async ({ expect }) => {
 		writeFileSync("wormhole.txt", "passageway");
 		await runWrangler(
 			`r2 object put bucket-object-test/wormhole.txt --file ./wormhole.txt `
@@ -42,7 +42,7 @@ describe("pipe test", () => {
 		`);
 	});
 
-	it("should not display banner in pipe mode", async () => {
+	it("should not display banner in pipe mode", async ({ expect }) => {
 		writeFileSync("wormhole.txt", "passageway");
 		await runWrangler(
 			`r2 object put bucket-object-test/wormhole.txt --file ./wormhole.txt `

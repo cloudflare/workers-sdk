@@ -12,8 +12,8 @@ import {
 } from "@cloudflare/cli";
 import { CancelError } from "@cloudflare/cli/error";
 import { isInteractive } from "@cloudflare/cli/interactive";
-import { cliDefinition, parseArgs } from "helpers/args";
-import { isUpdateAvailable } from "helpers/cli";
+import { cliDefinition, parseArgs, processArgument } from "helpers/args";
+import { C3_DEFAULTS, isUpdateAvailable } from "helpers/cli";
 import { runCommand } from "helpers/command";
 import {
 	detectPackageManager,
@@ -33,6 +33,7 @@ import {
 	createContext,
 	updatePackageName,
 	updatePackageScripts,
+	writeAgentsMd,
 } from "./templates";
 import { validateProjectDirectory } from "./validators";
 import { addTypes } from "./workers";
@@ -147,11 +148,17 @@ const create = async (ctx: C3Context) => {
 	if (!ctx.args.experimental) {
 		await copyTemplateFiles(ctx);
 	}
-	await updatePackageName(ctx);
+	updatePackageName(ctx);
 
 	chdir(ctx.project.path);
 	await npmInstall(ctx);
 	await rectifyPmMismatch(ctx);
+
+	// Offer AGENTS.md for Workers templates that don't use a framework
+	// Framework templates may need framework-specific agent guidance
+	if (ctx.template.platform === "workers" && !ctx.template.frameworkCli) {
+		await offerAgentsMd(ctx);
+	}
 
 	endSection(`Application created`);
 };
@@ -169,7 +176,14 @@ const configure = async (ctx: C3Context) => {
 	if (ctx.args.experimental) {
 		const { npx } = detectPackageManager();
 
-		await runCommand([npx, "wrangler", "setup", "--yes"]);
+		await runCommand([
+			npx,
+			"wrangler",
+			"setup",
+			"--yes",
+			"--no-completion-message",
+			"--no-install-wrangler",
+		]);
 	} else {
 		// Note: This _must_ be called before the configure phase since
 		//       pre-existing workers assume its presence in their configure phase
@@ -208,6 +222,22 @@ const deploy = async (ctx: C3Context) => {
 const printBanner = (args: Partial<C3Args>) => {
 	printWelcomeMessage(version, reporter.isEnabled, args);
 	startSection(`Create an application with Cloudflare`, "Step 1 of 3");
+};
+
+const offerAgentsMd = async (ctx: C3Context) => {
+	ctx.args.agents ??= await processArgument(ctx.args, "agents", {
+		type: "confirm",
+		question:
+			"Do you want to add an AGENTS.md file to help AI coding tools understand Cloudflare APIs?",
+		label: "agents",
+		defaultValue: C3_DEFAULTS.agents,
+	});
+
+	if (!ctx.args.agents) {
+		return;
+	}
+
+	writeAgentsMd(ctx.project.path);
 };
 
 main(process.argv)

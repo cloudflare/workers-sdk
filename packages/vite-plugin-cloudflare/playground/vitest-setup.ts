@@ -7,10 +7,8 @@ import {
 	loadConfigFromFile,
 	mergeConfig,
 	preview,
-	Rollup,
 } from "vite";
 import { beforeAll, inject } from "vitest";
-import type * as http from "node:http";
 import type { Browser, Page } from "playwright-chromium";
 import type {
 	ConfigEnv,
@@ -20,6 +18,7 @@ import type {
 	PluginOption,
 	PreviewServer,
 	ResolvedConfig,
+	Rollup,
 	UserConfig,
 	ViteDevServer,
 } from "vite";
@@ -27,6 +26,7 @@ import type { RunnerTestFile } from "vitest";
 
 export const workspaceRoot = path.resolve(__dirname, "../");
 
+// eslint-disable-next-line turbo/no-undeclared-env-vars
 export const isBuild = !!process.env.VITE_TEST_BUILD;
 export const isWindows = process.platform === "win32";
 
@@ -39,7 +39,7 @@ export const isLocalWithoutDockerRunning =
 /**
  * Vite Dev Server when testing serve
  */
-export let viteServer: ViteDevServer;
+export let viteServer: ViteDevServer | PreviewServer;
 /**
  * Root of the Vite fixture
  */
@@ -69,29 +69,34 @@ export const serverLogs: {
 export const browserLogs: string[] = [];
 export const browserErrors: Error[] = [];
 
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 export let resolvedConfig: ResolvedConfig = undefined!;
 
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 export let page: Page = undefined!;
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 export let browser: Browser = undefined!;
 export let viteTestUrl: string = "";
-export let watcher: Rollup.RollupWatcher | undefined = undefined;
+export const watcher: Rollup.RollupWatcher | undefined = undefined;
 
 export function setViteUrl(url: string): void {
 	viteTestUrl = url;
 }
 
 export function resetServerLogs() {
-	serverLogs.info = [];
-	serverLogs.warns = [];
-	serverLogs.errors = [];
+	serverLogs.info.splice(0, serverLogs.info.length);
+	serverLogs.warns.splice(0, serverLogs.warns.length);
+	serverLogs.errors.splice(0, serverLogs.errors.length);
 }
 
 beforeAll(async (s) => {
-	let server: ViteDevServer | http.Server | PreviewServer | undefined;
+	let server: ViteDevServer | PreviewServer | undefined;
 
 	const suite = s as RunnerTestFile;
 
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	testPath = suite.filepath!;
+	// eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain, @typescript-eslint/no-non-null-assertion
 	testName = slash(testPath).match(/playground\/([\w-♫]+)\//)?.[1]!;
 	testDir = path.dirname(testPath);
 	if (testName) {
@@ -115,7 +120,9 @@ beforeAll(async (s) => {
 	const globalConsole = console;
 	const warn = globalConsole.warn;
 	globalConsole.warn = (msg: string, ...args: unknown[]) => {
-		if (msg.includes("Generated an empty chunk")) return;
+		if (msg.includes("Generated an empty chunk")) {
+			return;
+		}
 		warn.call(globalConsole, msg, ...args);
 	};
 
@@ -124,6 +131,7 @@ beforeAll(async (s) => {
 			console.timeLog(logLabel, `BROWSER LOG [${msg.type()}]: ${msg.text()}`);
 			// ignore favicon requests in headed browser
 			if (
+				// eslint-disable-next-line turbo/no-undeclared-env-vars
 				process.env.VITE_DEBUG_SERVE &&
 				msg.text().includes("Failed to load resource:") &&
 				msg.location().url.includes("favicon.ico")
@@ -193,6 +201,7 @@ beforeAll(async (s) => {
 
 		await page?.close();
 		await server?.close();
+		// @ts-expect-error TODO: fix
 		await watcher?.close();
 		await browser?.close();
 	};
@@ -262,14 +271,16 @@ export async function loadConfig(configEnv: ConfigEnv) {
 }
 
 export async function startDefaultServe(): Promise<
-	ViteDevServer | http.Server | PreviewServer
+	ViteDevServer | PreviewServer
 > {
 	setupConsoleWarnCollector(serverLogs.warns);
 
 	if (!isBuild) {
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		process.env.VITE_INLINE = "inline-serve";
 		const config = await loadConfig({ command: "serve", mode: "development" });
 		viteServer = await (await createServer(config)).listen();
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		viteTestUrl = viteServer.resolvedUrls!.local[0]!;
 		if (viteServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
@@ -277,6 +288,7 @@ export async function startDefaultServe(): Promise<
 		await page.goto(viteTestUrl);
 		return viteServer;
 	} else {
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		process.env.VITE_INLINE = "inline-build";
 		// determine build watch
 		const resolvedPlugin: () => PluginOption = () => ({
@@ -297,18 +309,27 @@ export async function startDefaultServe(): Promise<
 		const builder = await createBuilder(buildConfig);
 		await builder.buildApp();
 
+		// This environment variable is used to indicate to the preview server that it is being run during a build
+		// We need to delete it here as, during testing, preview also runs in the same process after the build completes
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
+		delete process.env.CLOUDFLARE_VITE_BUILD;
+
 		const previewConfig = await loadConfig({
 			command: "serve",
 			mode: "development",
 			isPreview: true,
 		});
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		const _nodeEnv = process.env.NODE_ENV;
 		// Make sure we are running from within the playground.
 		// Otherwise workerd will error with messages about not being allowed to escape the starting directory with `..`.
 		process.chdir(previewConfig.root);
 		const previewServer = await preview(previewConfig);
 		// prevent preview change NODE_ENV
+		// eslint-disable-next-line turbo/no-undeclared-env-vars
 		process.env.NODE_ENV = _nodeEnv;
+		viteServer = previewServer;
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 		viteTestUrl = previewServer!.resolvedUrls!.local[0]!;
 		if (previewServer.config.base === "/") {
 			viteTestUrl = viteTestUrl.replace(/\/$/, "");
@@ -322,7 +343,7 @@ export async function startDefaultServe(): Promise<
  * Send the rebuild complete message in build watch
  */
 export async function notifyRebuildComplete(
-	watcher: Rollup.RollupWatcher
+	rollupWatcher: Rollup.RollupWatcher
 ): Promise<Rollup.RollupWatcher> {
 	let resolveFn: undefined | (() => void);
 	const callback = (event: Rollup.RollupWatcherEvent): void => {
@@ -330,11 +351,11 @@ export async function notifyRebuildComplete(
 			resolveFn?.();
 		}
 	};
-	watcher.on("event", callback);
+	rollupWatcher.on("event", callback);
 	await new Promise<void>((resolve) => {
 		resolveFn = resolve;
 	});
-	return watcher.off("event", callback);
+	return rollupWatcher.off("event", callback);
 }
 
 // logLevel values taken from the vite source code: https://github.com/vitejs/vite/blob/302f8091b/packages/vite/src/node/logger.ts#L30-L35
@@ -373,7 +394,9 @@ export function createInMemoryLogger(
 		},
 		warnOnce(msg) {
 			if (thresholdLogLevel >= logLevels.warn) {
-				if (warnedMessages.has(msg)) return;
+				if (warnedMessages.has(msg)) {
+					return;
+				}
 				warns.push(msg);
 				logger.hasWarned = true;
 				warnedMessages.add(msg);

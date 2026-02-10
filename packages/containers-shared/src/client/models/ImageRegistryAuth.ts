@@ -2,13 +2,15 @@
 /* tslint:disable */
 /* eslint-disable */
 
+import type { SecretsStoreRef } from "./SecretsStoreRef";
+
 /**
- * A JSON string that encodes the auth required to authenticate with an external image registry. The format of the JSON object is determined by the registry being configured.
+ * Credentials needed to authenticate with an external image registry.
  */
 export type ImageRegistryAuth = {
+	/**
+	 * The format of this value is determined by the registry being configured.
+	 */
 	public_credential: string;
-	private_credential: {
-		store_id: string;
-		secret_name: string;
-	};
+	private_credential: string | SecretsStoreRef;
 };

@@ -1,11 +1,15 @@
 import { resolveDockerHost } from "@cloudflare/containers-shared";
-import { getDockerPath, getRegistryPath } from "@cloudflare/workers-utils";
+import {
+	getDockerPath,
+	getLocalWorkerdCompatibilityDate,
+	getRegistryPath,
+} from "@cloudflare/workers-utils";
 import { kCurrentWorker, Miniflare } from "miniflare";
 import { getAssetsOptions, NonExistentAssetsDirError } from "../../../assets";
 import { readConfig } from "../../../config";
 import { partitionDurableObjectBindings } from "../../../deployment-bundle/entry";
 import { DEFAULT_MODULE_RULES } from "../../../deployment-bundle/rules";
-import { getBindings } from "../../../dev";
+import { getFlatBindings } from "../../../dev";
 import { getDurableObjectClassNameToUseSQLiteMap } from "../../../dev/class-names-sqlite";
 import {
 	buildAssetOptions,
@@ -17,6 +21,7 @@ import { logger } from "../../../logger";
 import { getSiteAssetPaths } from "../../../sites";
 import { dedent } from "../../../utils/dedent";
 import { maybeStartOrUpdateRemoteProxySession } from "../../remoteBindings";
+import { extractBindingsOfType } from "../../startDevWorker/utils";
 import { CacheStorage } from "./caches";
 import { ExecutionContext } from "./executionContext";
 // TODO: import from `@cloudflare/workers-utils` after migrating to `tsdown`
@@ -39,7 +44,16 @@ import type {
 export { getVarsForDev as unstable_getVarsForDev } from "../../../dev/dev-vars";
 export { readConfig as unstable_readConfig };
 export { getDurableObjectClassNameToUseSQLiteMap as unstable_getDurableObjectClassNameToUseSQLiteMap };
-export { getDevCompatibilityDate as unstable_getDevCompatibilityDate } from "../../../utils/compatibility-date";
+
+/**
+ * @deprecated use `getLocalWorkerdCompatibilityDate` from "@cloudflare/workers-utils" instead.
+ *
+ * We're keeping this function only not to break the vite plugin that relies on it, we should remove it as soon as possible.
+ */
+export function unstable_getDevCompatibilityDate() {
+	return getLocalWorkerdCompatibilityDate().date;
+}
+
 export { getWorkerNameFromProject as unstable_getWorkerNameFromProject } from "../../../autoconfig/details";
 export type {
 	Config as Unstable_Config,
@@ -196,7 +210,7 @@ async function getMiniflareOptionsFromConfig(args: {
 }): Promise<MiniflareOptions> {
 	const { config, options, remoteProxyConnectionString } = args;
 
-	const bindings = getBindings(
+	const bindings = getFlatBindings(
 		config,
 		options.environment,
 		options.envFiles,
@@ -226,7 +240,10 @@ async function getMiniflareOptionsFromConfig(args: {
 				`);
 
 		// Remove workflows from bindings to prevent Miniflare from complaining
-		bindings.workflows = [];
+		const workflowBindings = extractBindingsOfType("workflow", bindings);
+		for (const workflow of workflowBindings) {
+			delete bindings?.[workflow.binding];
+		}
 	}
 
 	const { bindingOptions, externalWorkers } = buildMiniflareBindingOptions(
@@ -235,8 +252,6 @@ async function getMiniflareOptionsFromConfig(args: {
 			complianceRegion: config.compliance_region,
 			bindings,
 			queueConsumers: undefined,
-			services: bindings.services,
-			serviceBindings: {},
 			migrations: config.migrations,
 			tails: [],
 			streamingTails: [],
@@ -389,7 +404,7 @@ export function unstable_getMiniflareWorkerOptions(
 	const containerDOClassNames = new Set(
 		config.containers?.map((c) => c.class_name)
 	);
-	const bindings = getBindings(config, env, options?.envFiles, true, {});
+	const bindings = getFlatBindings(config, env, options?.envFiles, true, {});
 
 	const enableContainers =
 		options?.overrides?.enableContainers !== undefined
@@ -402,8 +417,6 @@ export function unstable_getMiniflareWorkerOptions(
 			complianceRegion: config.compliance_region,
 			bindings,
 			queueConsumers: config.queues.consumers,
-			services: [],
-			serviceBindings: {},
 			migrations: config.migrations,
 			tails: config.tail_consumers,
 			streamingTails: config.streaming_tail_consumers,
@@ -420,9 +433,10 @@ export function unstable_getMiniflareWorkerOptions(
 	// `durableObjects` to use more traditional Miniflare config expecting the
 	// user to define workers with the required names in the `workers` array.
 	// These will run the same `workerd` processes as tests.
-	if (bindings.services !== undefined) {
+	const serviceBindings = extractBindingsOfType("service", bindings);
+	if (serviceBindings.length > 0) {
 		bindingOptions.serviceBindings = Object.fromEntries(
-			bindings.services.map((binding) => {
+			serviceBindings.map((binding) => {
 				const name =
 					binding.service === config.name ? kCurrentWorker : binding.service;
 				if (options?.remoteProxyConnectionString && binding.remote) {
@@ -439,7 +453,11 @@ export function unstable_getMiniflareWorkerOptions(
 			})
 		);
 	}
-	if (bindings.durable_objects !== undefined) {
+	const durableObjectBindings = extractBindingsOfType(
+		"durable_object_namespace",
+		bindings
+	);
+	if (durableObjectBindings.length > 0) {
 		type DurableObjectDefinition = NonNullable<
 			typeof bindingOptions.durableObjects
 		>[string];
@@ -449,7 +467,7 @@ export function unstable_getMiniflareWorkerOptions(
 		);
 
 		bindingOptions.durableObjects = Object.fromEntries(
-			bindings.durable_objects.bindings.map((binding) => {
+			durableObjectBindings.map((binding) => {
 				const useSQLite = classNameToUseSQLite.get(binding.class_name);
 				return [
 					binding.name,

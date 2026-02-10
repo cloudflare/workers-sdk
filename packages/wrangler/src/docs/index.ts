@@ -6,7 +6,7 @@ import { runSearch } from "./helpers";
 
 export const docs = createCommand({
 	metadata: {
-		description: "📚 Open Wrangler's command documentation in your browser\n",
+		description: "📚 Open Wrangler's command documentation in your browser",
 		owner: "Workers: Authoring and Testing",
 		status: "stable",
 	},
@@ -22,6 +22,9 @@ export const docs = createCommand({
 			type: "boolean",
 			describe: "Takes you to the docs, even if search fails",
 		},
+	},
+	behaviour: {
+		printMetricsBanner: true,
 	},
 	positionalArgs: ["search"],
 	async handler(args, { config }) {

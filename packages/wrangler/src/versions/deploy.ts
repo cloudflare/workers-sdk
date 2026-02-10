@@ -7,7 +7,7 @@ import {
 	leftT,
 	spinnerWhile,
 } from "@cloudflare/cli/interactive";
-import { APIError, UserError } from "@cloudflare/workers-utils";
+import { UserError } from "@cloudflare/workers-utils";
 import { fetchResult } from "../cfetch";
 import { createCommand } from "../core/create-command";
 import { isNonInteractiveOrCI } from "../is-interactive";
@@ -15,6 +15,7 @@ import * as metrics from "../metrics";
 import { writeOutput } from "../output";
 import { requireAuth } from "../user";
 import formatLabelledValues from "../utils/render-labelled-values";
+import { isWorkerNotFoundError } from "../utils/worker-not-found-error";
 import {
 	createDeployment,
 	fetchDeployableVersions,
@@ -263,8 +264,7 @@ export async function confirmLatestDeploymentOverwrite(
 			});
 		}
 	} catch (e) {
-		const isNotFound = e instanceof APIError && e.code == 10007;
-		if (!isNotFound) {
+		if (!isWorkerNotFoundError(e)) {
 			throw e;
 		}
 	}

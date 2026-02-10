@@ -216,7 +216,11 @@ export async function launchBrowser({
 		pipe: false,
 		onExit: async () => {
 			await fs.promises
-				.rm(tempUserData, { recursive: true, force: true })
+				.rm(tempUserData, {
+					recursive: true,
+					force: true,
+					maxRetries: 5, // In case of Windows file locks
+				})
 				.catch((e) => {
 					log.debug(
 						`Unable to remove Chrome user data directory: ${String(e)}`

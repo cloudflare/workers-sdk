@@ -12,7 +12,6 @@ import {
 	getContainerDevOptions,
 	LocalRuntimeController,
 } from "./LocalRuntimeController";
-import { convertCfWorkerInitBindingsToBindings } from "./utils";
 import type { RemoteProxySession } from "../remoteBindings";
 import type { ControllerBus } from "./BaseController";
 import type { BundleCompleteEvent } from "./events";
@@ -126,9 +125,7 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 					{
 						name: configBundle.name,
 						complianceRegion: configBundle.complianceRegion,
-						bindings:
-							convertCfWorkerInitBindingsToBindings(configBundle.bindings) ??
-							{},
+						bindings: configBundle.bindings ?? {},
 					},
 					this.#remoteProxySessionsData.get(data.config.name) ?? null
 				);
@@ -210,6 +207,8 @@ export class MultiworkerRuntimeController extends LocalRuntimeController {
 					logger.log(chalk.dim("⎔ Reloading local server..."));
 
 					await this.#mf.setOptions(mergedMfOptions);
+
+					logger.log(chalk.dim("⎔ Local server updated and ready"));
 				}
 
 				// All asynchronous `Miniflare` methods will wait for all `setOptions()`

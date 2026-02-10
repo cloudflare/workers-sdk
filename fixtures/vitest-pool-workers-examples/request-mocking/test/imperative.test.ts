@@ -1,13 +1,13 @@
 import assert from "node:assert";
 import events from "node:events";
 import { SELF } from "cloudflare:test";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, it, vi } from "vitest";
 
 afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-it("mocks GET requests", async () => {
+it("mocks GET requests", async ({ expect }) => {
 	vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
 		const request = new Request(input, init);
 		const url = new URL(request.url);
@@ -34,7 +34,7 @@ it("mocks GET requests", async () => {
 	expect(await response.text()).toMatch("No mock found");
 });
 
-it("mocks POST requests", async () => {
+it("mocks POST requests", async ({ expect }) => {
 	vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
 		const request = new Request(input, init);
 		const url = new URL(request.url);
@@ -60,7 +60,7 @@ it("mocks POST requests", async () => {
 	expect(await response.text()).toBe("✅");
 });
 
-it("mocks WebSocket requests", async () => {
+it("mocks WebSocket requests", async ({ expect }) => {
 	vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
 		const request = new Request(input, init);
 		const url = new URL(request.url);

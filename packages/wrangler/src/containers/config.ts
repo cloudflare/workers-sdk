@@ -1,13 +1,12 @@
 import assert from "node:assert";
 import path, { dirname } from "node:path";
 import {
-	getAndValidateRegistryType,
 	InstanceType,
-	isDockerfile,
 	resolveImageName,
 	SchedulingPolicy,
 } from "@cloudflare/containers-shared";
-import { UserError } from "@cloudflare/workers-utils";
+import { isDockerfile, UserError } from "@cloudflare/workers-utils";
+import { getDurableObjectClassNameToUseSQLiteMap } from "../dev/class-names-sqlite";
 import { getAccountId } from "../user";
 import type {
 	ApplicationAffinities,
@@ -62,19 +61,25 @@ export const getNormalizedContainerOptions = async (
 
 	for (const container of config.containers) {
 		assert(container.name, "container name should have been set by validation");
-		const targetDurableObject = config.durable_objects.bindings.find(
-			(durableObject) => durableObject.class_name === container.class_name
-		);
-		if (!targetDurableObject) {
+		const allDOs = getDurableObjectClassNameToUseSQLiteMap(config.migrations);
+
+		if (
+			!allDOs.has(container.class_name) &&
+			config.durable_objects.bindings.find(
+				(doBinding) => doBinding.class_name === container.class_name
+			) === undefined
+		) {
 			throw new UserError(
 				`The container class_name ${container.class_name} does not match any durable object class_name defined in your Wrangler config file. Note that the durable object must be defined in the same script as the container.`,
 				{ telemetryMessage: "no DO defined that matches container class_name" }
 			);
 		}
-
-		if (targetDurableObject.script_name !== undefined) {
+		const maybeBoundDO = config.durable_objects.bindings.find(
+			(durableObject) => durableObject.class_name === container.class_name
+		);
+		if (maybeBoundDO && maybeBoundDO.script_name !== undefined) {
 			throw new UserError(
-				`The container ${container.name} is referencing the durable object ${container.class_name}, which appears to be defined on the ${targetDurableObject.script_name} Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.`,
+				`The container ${container.name} is referencing the durable object ${container.class_name}, which appears to be defined on the ${maybeBoundDO.script_name} Worker instead (via the 'script_name' field). You cannot configure a container on a Durable Object that is defined in another Worker.`,
 				{
 					telemetryMessage:
 						"contaienr class_name refers to an external durable object",
@@ -85,6 +90,20 @@ export const getNormalizedContainerOptions = async (
 		const rolloutStepPercentageFallback =
 			(container.max_instances ?? 0) < 2 ? 100 : [10, 100];
 
+		// tiers will take precedence over tier
+		// if unset, wrangler will default to [1, 2]
+		// A value of -1 will be treated as "all tiers"
+		let tiers: number[] | undefined;
+		if (container.constraints?.tiers) {
+			tiers = container.constraints.tiers;
+		} else if (container.constraints?.tier === -1) {
+			tiers = undefined;
+		} else if (container.constraints?.tier) {
+			tiers = [container.constraints.tier];
+		} else {
+			tiers = [1, 2];
+		}
+
 		const shared: Omit<SharedContainerConfig, "disk_size" | "instance_type"> = {
 			name: container.name,
 			class_name: container.class_name,
@@ -92,13 +111,7 @@ export const getNormalizedContainerOptions = async (
 			scheduling_policy: (container.scheduling_policy ??
 				SchedulingPolicy.DEFAULT) as SchedulingPolicy,
 			constraints: {
-				// if the tier is -1, then we allow all tiers
-				// Wrangler will default an input value to 1. The API, however, will
-				// treat an undefined value to mean no constraints on tier (i.e. "all tiers")
-				tier:
-					container.constraints?.tier === -1
-						? undefined
-						: container.constraints?.tier ?? 1,
+				tiers,
 				regions: container.constraints?.regions?.map((region) =>
 					region.toUpperCase()
 				),
@@ -118,6 +131,9 @@ export const getNormalizedContainerOptions = async (
 					config.observability?.logs?.enabled ??
 					config.observability?.enabled === true,
 			},
+			wrangler_ssh: container.wrangler_ssh,
+			authorized_keys: container.authorized_keys,
+			trusted_user_ca_keys: container.trusted_user_ca_keys,
 		};
 
 		let instanceTypeOrLimits: InstanceTypeOrLimits;
@@ -173,7 +189,6 @@ export const getNormalizedContainerOptions = async (
 				image_vars: container.image_vars,
 			});
 		} else {
-			getAndValidateRegistryType(container.image);
 			normalizedContainers.push({
 				...shared,
 				...instanceTypeOrLimits,

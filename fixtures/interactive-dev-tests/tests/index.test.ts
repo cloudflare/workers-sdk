@@ -6,8 +6,9 @@ import path from "node:path";
 import rl from "node:readline";
 import stream from "node:stream";
 import { setTimeout } from "node:timers/promises";
-import stripAnsi from "strip-ansi";
+import { stripVTControlCharacters } from "node:util";
 import { fetch } from "undici";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- complex test with .each patterns */
 import {
 	afterAll,
 	afterEach,
@@ -17,6 +18,7 @@ import {
 	it,
 	vi,
 } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { wranglerEntryPath } from "../../shared/src/run-wrangler-long-lived";
 import type pty from "@cdktf/node-pty-prebuilt-multiarch";
 
@@ -109,7 +111,11 @@ if (process.platform === "win32") {
 	});
 
 	const readyRegexp = /Ready on (http:\/\/[a-z0-9.]+:[0-9]+)/;
-	async function startWranglerDev(args: string[], skipWaitingForReady = false) {
+	async function startWranglerDev(
+		args: string[],
+		skipWaitingForReady = false,
+		env?: Record<string, string>
+	) {
 		const stdoutStream = new stream.PassThrough();
 		const stdoutInterface = rl.createInterface(stdoutStream);
 
@@ -117,6 +123,11 @@ if (process.platform === "win32") {
 		const exitPromise = new Promise<number>(
 			(resolve) => (exitResolve = resolve)
 		);
+
+		const ptyOptionsWithEnv = {
+			...ptyOptions,
+			env: env ?? (process.env as Record<string, string>),
+		} satisfies pty.IPtyForkOptions;
 
 		const pty = await import("@cdktf/node-pty-prebuilt-multiarch");
 		const ptyProcess = pty.spawn(
@@ -128,7 +139,7 @@ if (process.platform === "win32") {
 				"--port=0",
 				"--inspector-port=0",
 			],
-			ptyOptions
+			ptyOptionsWithEnv
 		);
 		const result: PtyProcess = {
 			pty: ptyProcess,
@@ -151,7 +162,11 @@ if (process.platform === "win32") {
 		if (!skipWaitingForReady) {
 			let readyMatch: RegExpMatchArray | null = null;
 			for await (const line of stdoutInterface) {
-				if ((readyMatch = readyRegexp.exec(stripAnsi(line))) !== null) break;
+				if (
+					(readyMatch = readyRegexp.exec(stripVTControlCharacters(line))) !==
+					null
+				)
+					break;
 			}
 			assert(readyMatch !== null, "Expected ready message");
 			result.url = readyMatch[1];
@@ -263,6 +278,19 @@ if (process.platform === "win32") {
 				expect(wrangler.stdout).not.toContain("clear console");
 				expect(wrangler.stdout).not.toContain("to exit");
 				expect(wrangler.stdout).not.toContain("rebuild container");
+			});
+			it("should not show local explorer hotkey by default", async () => {
+				const wrangler = await startWranglerDev(args);
+				wrangler.pty.kill();
+				expect(wrangler.stdout).not.toContain("open local explorer");
+			});
+			it("should show local explorer hotkey when X_LOCAL_EXPLORER=true", async () => {
+				const wrangler = await startWranglerDev(args, false, {
+					...(process.env as Record<string, string>),
+					X_LOCAL_EXPLORER: "true",
+				});
+				wrangler.pty.kill();
+				expect(wrangler.stdout).toContain("open local explorer");
 			});
 		});
 	});

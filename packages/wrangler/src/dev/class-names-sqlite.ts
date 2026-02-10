@@ -1,6 +1,12 @@
 import { UserError } from "@cloudflare/workers-utils";
 import type { Config } from "@cloudflare/workers-utils";
 
+/**
+ * Based on the migrations, infer what the current Durable Object class names are.
+ * This includes unbound (ctx.exports) and bound DOs.
+ * Returns class name mapped to whether it uses SQLite storage.
+ * This is imperfect because you can delete a migration after it has been applied.
+ */
 export function getDurableObjectClassNameToUseSQLiteMap(
 	migrations: Config["migrations"] | undefined
 ) {

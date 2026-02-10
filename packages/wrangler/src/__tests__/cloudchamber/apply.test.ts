@@ -4,9 +4,12 @@ import {
 	SchedulingPolicy,
 	SecretAccessType,
 } from "@cloudflare/containers-shared";
+import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
 import { http, HttpResponse } from "msw";
 import patchConsole from "patch-console";
+/* eslint-disable workers-sdk/no-vitest-import-expect -- expect used in MSW handlers */
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
+/* eslint-enable workers-sdk/no-vitest-import-expect */
 import { mockAccountId, mockApiToken } from "../helpers/mock-account-id";
 import { mockCLIOutput } from "../helpers/mock-cli-output";
 import { mockConsoleMethods } from "../helpers/mock-console";
@@ -14,7 +17,6 @@ import { useMockIsTTY } from "../helpers/mock-istty";
 import { msw } from "../helpers/msw";
 import { runInTempDir } from "../helpers/run-in-tmp";
 import { runWrangler } from "../helpers/run-wrangler";
-import { writeWranglerConfig } from "../helpers/write-wrangler-config";
 import { mockAccount } from "./utils";
 import type {
 	Application,
@@ -85,7 +87,7 @@ function mockModifyApplication(
 describe("cloudchamber apply", () => {
 	const { setIsTTY } = useMockIsTTY();
 	const std = mockCLIOutput();
-	mockConsoleMethods();
+	const console = mockConsoleMethods();
 
 	mockAccountId();
 	mockApiToken();
@@ -94,6 +96,30 @@ describe("cloudchamber apply", () => {
 	afterEach(() => {
 		patchConsole(() => {});
 		msw.resetHandlers();
+	});
+
+	test("should show deprecation warning when running cloudchamber apply", async () => {
+		setIsTTY(false);
+		mockGetApplications([]);
+		mockCreateApplication({ id: "test-abc" });
+
+		await writeWranglerConfig({
+			name: "test-container",
+			containers: [
+				{
+					name: "test-app",
+					class_name: "TestDurableObject",
+					image: "registry.cloudflare.com/test:latest",
+					instances: 1,
+				},
+			],
+		});
+
+		await runWrangler("cloudchamber apply");
+
+		expect(console.warn).toContain("deprecated");
+		expect(console.warn).toContain("wrangler deploy");
+		expect(console.warn).toContain("next major version");
 	});
 
 	test("can apply a simple application", async () => {
@@ -1301,80 +1327,6 @@ describe("cloudchamber apply", () => {
 		expect(app.instances).toEqual(1);
 	});
 
-	test("ignores deprecated observability.logging", async () => {
-		setIsTTY(false);
-		writeWranglerConfig({
-			name: "my-container",
-			containers: [
-				{
-					name: "my-container-app",
-					class_name: "DurableObjectClass",
-					instances: 1,
-					image: "registry.cloudflare.com/beep:boop",
-				},
-			],
-		});
-		mockGetApplications([
-			{
-				id: "abc",
-				name: "my-container-app",
-				instances: 1,
-				created_at: new Date().toString(),
-				version: 1,
-				account_id: "1",
-				scheduling_policy: SchedulingPolicy.REGIONAL,
-				configuration: {
-					image: "registry.cloudflare.com/beep:boop",
-					observability: {
-						logs: {
-							enabled: true,
-						},
-						logging: {
-							enabled: true,
-						},
-					},
-					disk: {
-						size: "2GB",
-						size_mb: 2000,
-					},
-					vcpu: 0.0625,
-					memory: "256MB",
-					memory_mib: 256,
-				},
-				constraints: {
-					tier: 1,
-				},
-			},
-		]);
-		const applicationReqBodyPromise = mockModifyApplication();
-		await runWrangler("cloudchamber apply");
-		expect(std.stdout).toMatchInlineSnapshot(`
-			"╭ Deploy a container application deploy changes to your application
-			│
-			│ Container application changes
-			│
-			├ EDIT my-container-app
-			│
-			│   instance_type = \\"lite\\"
-			│   [containers.configuration.observability.logs]
-			│ - enabled = true
-			│ + enabled = false
-			│   [containers.constraints]
-			│   tier = 1
-			│
-			│
-			│  SUCCESS  Modified application my-container-app
-			│
-			╰ Applied changes
-
-			"
-		`);
-		expect(std.stderr).toMatchInlineSnapshot(`""`);
-		const app = await applicationReqBodyPromise;
-		expect(app.constraints?.tier).toEqual(1);
-		expect(app.instances).toEqual(1);
-	});
-
 	test("keeps observability logs enabled", async () => {
 		setIsTTY(false);
 		writeWranglerConfig({
@@ -1402,9 +1354,6 @@ describe("cloudchamber apply", () => {
 					image: "registry.cloudflare.com/beep:boop",
 					observability: {
 						logs: {
-							enabled: true,
-						},
-						logging: {
 							enabled: true,
 						},
 					},
@@ -1514,9 +1463,6 @@ describe("cloudchamber apply", () => {
 					image: "registry.cloudflare.com/beep:boop",
 					observability: {
 						logs: {
-							enabled: false,
-						},
-						logging: {
 							enabled: false,
 						},
 					},

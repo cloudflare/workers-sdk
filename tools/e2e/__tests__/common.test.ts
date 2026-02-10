@@ -1,5 +1,5 @@
 import { getGlobalDispatcher, MockAgent, setGlobalDispatcher } from "undici";
-import { afterEach, beforeEach, describe, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	deleteDatabase,
 	deleteKVNamespace,
@@ -38,9 +38,7 @@ afterEach(() => {
 });
 
 describe("listTmpE2EProjects()", () => {
-	it("makes paged REST requests and returns a filtered list of projects", async ({
-		expect,
-	}) => {
+	it("makes paged REST requests and returns a filtered list of projects", async () => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
@@ -125,9 +123,7 @@ describe("deleteProject()", () => {
 });
 
 describe("listTmpKVNamespaces()", () => {
-	it("makes a REST request and returns a filtered list of kv namespaces", async ({
-		expect,
-	}) => {
+	it("makes a REST request and returns a filtered list of kv namespaces", async () => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
@@ -206,9 +202,7 @@ describe("deleteKVNamespace()", () => {
 });
 
 describe("listTmpDatabases()", () => {
-	it("makes a REST request and returns a filtered list of d1 databases", async ({
-		expect,
-	}) => {
+	it("makes a REST request and returns a filtered list of d1 databases", async () => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({
@@ -299,9 +293,7 @@ describe("deleteDatabase()", () => {
 });
 
 describe("listTmpE2EWorkers()", () => {
-	it("makes a REST request and returns a filtered list of workers", async ({
-		expect,
-	}) => {
+	it("makes a REST request and returns a filtered list of workers", async () => {
 		agent
 			.get("https://api.cloudflare.com")
 			.intercept({

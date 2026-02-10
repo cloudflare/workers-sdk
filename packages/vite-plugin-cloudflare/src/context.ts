@@ -1,4 +1,5 @@
 import assert from "node:assert";
+import { randomUUID } from "node:crypto";
 import { Miniflare } from "miniflare";
 import { getInitialWorkerNameToExportTypesMap } from "./export-types";
 import { debuglog } from "./utils";
@@ -9,10 +10,12 @@ import type {
 	PreviewResolvedConfig,
 	ResolvedPluginConfig,
 	ResolvedWorkerConfig,
+	Worker,
 	WorkersResolvedConfig,
 } from "./plugin-config";
 import type { MiniflareOptions } from "miniflare";
 import type * as vite from "vite";
+import type { Unstable_Config } from "wrangler";
 
 /**
  * Used to store state that should persist across server restarts.
@@ -34,9 +37,11 @@ export class PluginContext {
 	#sharedContext: SharedContext;
 	#resolvedPluginConfig?: ResolvedPluginConfig;
 	#resolvedViteConfig?: vite.ResolvedConfig;
+	#proxySharedSecret: string;
 
 	constructor(sharedContext: SharedContext) {
 		this.#sharedContext = sharedContext;
+		this.#proxySharedSecret = randomUUID();
 	}
 
 	/** Creates a new Miniflare instance or updates the existing instance */
@@ -140,12 +145,57 @@ export class PluginContext {
 		return this.#resolvedViteConfig;
 	}
 
+	isChildEnvironment(environmentName: string): boolean {
+		if (this.resolvedPluginConfig.type === "preview") {
+			return false;
+		}
+
+		for (const childEnvironmentNames of this.resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap.values()) {
+			if (childEnvironmentNames.includes(environmentName)) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	#getWorker(environmentName: string): Worker | undefined {
+		if (this.resolvedPluginConfig.type === "preview") {
+			return;
+		}
+
+		const worker =
+			this.resolvedPluginConfig.environmentNameToWorkerMap.get(environmentName);
+
+		if (worker) {
+			return worker;
+		}
+
+		// Check if this is a child environment and, if so, return the parent's Worker
+		for (const [parentEnvironmentName, childEnvironmentNames] of this
+			.resolvedPluginConfig.environmentNameToChildEnvironmentNamesMap) {
+			if (childEnvironmentNames.includes(environmentName)) {
+				return this.resolvedPluginConfig.environmentNameToWorkerMap.get(
+					parentEnvironmentName
+				);
+			}
+		}
+
+		return undefined;
+	}
+
 	getWorkerConfig(environmentName: string): ResolvedWorkerConfig | undefined {
-		return this.resolvedPluginConfig.type === "workers"
-			? this.resolvedPluginConfig.environmentNameToWorkerMap.get(
-					environmentName
-				)?.config
-			: undefined;
+		return this.#getWorker(environmentName)?.config;
+	}
+
+	get allWorkerConfigs(): Unstable_Config[] {
+		if (this.resolvedPluginConfig.type === "preview") {
+			return this.resolvedPluginConfig.workers;
+		}
+
+		return Array.from(
+			this.resolvedPluginConfig.environmentNameToWorkerMap.values()
+		).map((worker) => worker.config);
 	}
 
 	get entryWorkerConfig(): ResolvedWorkerConfig | undefined {
@@ -159,11 +209,11 @@ export class PluginContext {
 	}
 
 	getNodeJsCompat(environmentName: string): NodeJsCompat | undefined {
-		return this.resolvedPluginConfig.type === "workers"
-			? this.resolvedPluginConfig.environmentNameToWorkerMap.get(
-					environmentName
-				)?.nodeJsCompat
-			: undefined;
+		return this.#getWorker(environmentName)?.nodeJsCompat;
+	}
+
+	get proxySharedSecret(): string {
+		return this.#proxySharedSecret;
 	}
 }
 
