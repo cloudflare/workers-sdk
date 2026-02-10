@@ -229,24 +229,49 @@ describe("r2 sql", () => {
 				errors: [],
 				messages: [],
 				result: {
+					request_id: "dqe-prod-test",
 					schema: [
-						{ name: "distribution", type: "Utf8" },
-						{ name: "approx_top_k(value, Int64(3))", type: "List" },
+						{
+							name: "approx_top_k(value, Int64(3))",
+							descriptor: {
+								type: {
+									name: "list",
+									item: {
+										type: {
+											name: "struct",
+											fields: [
+												{
+													type: { name: "int64" },
+													nullable: true,
+													name: "value",
+												},
+												{
+													type: { name: "uint64" },
+													nullable: false,
+													name: "count",
+												},
+											],
+										},
+										nullable: true,
+									},
+								},
+								nullable: true,
+							},
+						},
 					],
 					rows: [
 						{
-							distribution: "zipfian",
 							"approx_top_k(value, Int64(3))": [
-								{ value: 5, count: 100 },
-								{ value: 3, count: null },
-								{ value: 1, count: 60 },
+								{ value: 0, count: 961 },
+								{ value: 1, count: 485 },
+								{ value: 2, count: 364 },
 							],
 						},
 					],
 					metrics: {
-						r2_requests_count: 5,
+						r2_requests_count: 6,
 						files_scanned: 3,
-						bytes_scanned: 62900,
+						bytes_scanned: 62878,
 					},
 				},
 			};
@@ -263,7 +288,6 @@ describe("r2 sql", () => {
 
 			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
 			// Nested objects should be JSON-stringified, not displayed as [object Object].
-			// Null values inside nested objects should be rendered as empty strings.
 			expect(std.out).toMatchInlineSnapshot();
 		});
 
