@@ -742,6 +742,7 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 		if (props.dryRun) {
 			workerBundle = createWorkerUploadForm(worker, bindings, {
 				dryRun: true,
+				unsafe: config.unsafe,
 			});
 			printBindings(
 				bindings,
@@ -759,7 +760,9 @@ See https://developers.cloudflare.com/workers/platform/compatibility-dates for m
 					props.config
 				);
 			}
-			workerBundle = createWorkerUploadForm(worker, bindings);
+			workerBundle = createWorkerUploadForm(worker, bindings, {
+				unsafe: config.unsafe,
+			});
 
 			await ensureQueuesExistByConfig(config);
 			let bindingsPrinted = false;
