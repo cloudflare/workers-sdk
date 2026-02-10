@@ -11,6 +11,7 @@ import { syncWorkersSite } from "../sites";
 import { requireApiToken } from "../user";
 import { isAbortError } from "../utils/isAbortError";
 import { getZoneIdForPreview } from "../zones";
+import type { StartDevWorkerInput } from "../api";
 import type { AssetsOptions } from "../assets";
 import type { LegacyAssetPaths } from "../sites";
 import type { ApiCredentials } from "../user";
@@ -80,7 +81,9 @@ export function handlePreviewSessionCreationError(
 }
 
 export type CfWorkerInitWithName = Required<Pick<CfWorkerInit, "name">> &
-	CfWorkerInit;
+	Omit<CfWorkerInit, "bindings"> & {
+		bindings: StartDevWorkerInput["bindings"];
+	};
 
 export async function createRemoteWorkerInit(props: {
 	bundle: EsbuildBundle;
@@ -94,7 +97,7 @@ export async function createRemoteWorkerInit(props: {
 	assets: AssetsOptions | undefined;
 	legacyAssetPaths: LegacyAssetPaths | undefined;
 	format: CfScriptFormat;
-	bindings: CfWorkerInit["bindings"];
+	bindings: StartDevWorkerInput["bindings"];
 	compatibilityDate: string | undefined;
 	compatibilityFlags: string[] | undefined;
 	minimal_mode?: boolean;
@@ -147,6 +150,22 @@ export async function createRemoteWorkerInit(props: {
 			)
 		: undefined;
 
+	const bindings = { ...props.bindings };
+
+	if (workersSitesAssets.namespace) {
+		bindings["__STATIC_CONTENT"] = {
+			type: "kv_namespace",
+			id: workersSitesAssets.namespace,
+		};
+	}
+
+	if (workersSitesAssets.manifest && props.format === "service-worker") {
+		bindings["__STATIC_CONTENT_MANIFEST"] = {
+			type: "text_blob",
+			source: { contents: "__STATIC_CONTENT_MANIFEST" },
+		};
+	}
+
 	const init: CfWorkerInitWithName = {
 		name: props.name,
 		main: {
@@ -156,21 +175,7 @@ export async function createRemoteWorkerInit(props: {
 			content,
 		},
 		modules,
-		bindings: {
-			...props.bindings,
-			kv_namespaces: (props.bindings.kv_namespaces || []).concat(
-				workersSitesAssets.namespace
-					? { binding: "__STATIC_CONTENT", id: workersSitesAssets.namespace }
-					: []
-			),
-			text_blobs: {
-				...props.bindings.text_blobs,
-				...(workersSitesAssets.manifest &&
-					props.format === "service-worker" && {
-						__STATIC_CONTENT_MANIFEST: "__STATIC_CONTENT_MANIFEST",
-					}),
-			},
-		},
+		bindings,
 		migrations: undefined, // no migrations in dev
 		compatibility_date: props.compatibilityDate,
 		compatibility_flags: props.compatibilityFlags,
