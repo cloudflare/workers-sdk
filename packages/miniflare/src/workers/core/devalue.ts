@@ -55,7 +55,9 @@ export const structuredSerializableReducers: ReducersRevivers = {
 			let name = value.constructor.name;
 			// Subclasses like Node.js `Buffer` extend standard typed arrays but
 			// aren't available in all runtimes. Normalise to the parent constructor.
-			if (!ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS.some((c) => c.name === name)) {
+			if (
+				!ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS.some((c) => c.name === name)
+			) {
 				for (const ctor of ALLOWED_ARRAY_BUFFER_VIEW_CONSTRUCTORS) {
 					if (value instanceof ctor) {
 						name = ctor.name;
