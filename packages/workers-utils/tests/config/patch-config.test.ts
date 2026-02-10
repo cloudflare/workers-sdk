@@ -1,8 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { experimental_patchConfig } from "@cloudflare/workers-utils";
 import dedent from "ts-dedent";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { describe, expect, it } from "vitest";
+import { describe, it } from "vitest";
 import { runInTempDir, writeWranglerConfig } from "../../src/test-helpers";
 import type { RawConfig } from "@cloudflare/workers-utils";
 
@@ -491,7 +490,7 @@ describe("experimental_patchConfig()", () => {
 				expectedJson,
 				expectedToml,
 			}) => {
-				it.each(["json", "toml"])("%s", (configType) => {
+				it.for(["json", "toml"])("%s", (configType, { expect }) => {
 					writeWranglerConfig(
 						original,
 						configType === "json" ? "./wrangler.json" : "./wrangler.toml"
@@ -513,7 +512,7 @@ describe("experimental_patchConfig()", () => {
 		describe.each(replacingOnlyTestCases)(
 			`$name`,
 			({ original, replacingPatch, expectedJson, expectedToml }) => {
-				it.each(["json", "toml"])("%s", (configType) => {
+				it.for(["json", "toml"])("%s", (configType, { expect }) => {
 					writeWranglerConfig(
 						original,
 						configType === "json" ? "./wrangler.json" : "./wrangler.toml"
@@ -534,7 +533,7 @@ describe("experimental_patchConfig()", () => {
 
 	describe("jsonc", () => {
 		describe("add multiple bindings", () => {
-			it("isArrayInsertion = true", () => {
+			it("isArrayInsertion = true", ({ expect }) => {
 				const jsonc = `
 				{
 					// a comment
@@ -605,7 +604,7 @@ describe("experimental_patchConfig()", () => {
 					}"
 				`);
 			});
-			it("isArrayInsertion = false ", () => {
+			it("isArrayInsertion = false ", ({ expect }) => {
 				const jsonc = dedent`
 		{
 			// a comment
@@ -688,7 +687,7 @@ describe("experimental_patchConfig()", () => {
 			});
 		});
 
-		it("should not error if a `null` is passed in", () => {
+		it("should not error if a `null` is passed in", ({ expect }) => {
 			const jsonc = `
 				{
 					"compatibility_date": "2022-01-12",
@@ -717,7 +716,7 @@ describe("experimental_patchConfig()", () => {
 		});
 
 		describe("edit existing bindings", () => {
-			it("isArrayInsertion = false", () => {
+			it("isArrayInsertion = false", ({ expect }) => {
 				const jsonc = `
 				{
 					// comment one
@@ -782,7 +781,7 @@ describe("experimental_patchConfig()", () => {
 		});
 
 		describe("edit existing bindings with patch array in a different order (will mess up comments)", () => {
-			it("isArrayInsertion = false", () => {
+			it("isArrayInsertion = false", ({ expect }) => {
 				const jsonc = `
 				{
 					// comment one
@@ -849,7 +848,7 @@ describe("experimental_patchConfig()", () => {
 		});
 
 		describe("delete existing bindings (cannot preserve comments)", () => {
-			it("isArrayInsertion = false", () => {
+			it("isArrayInsertion = false", ({ expect }) => {
 				const jsonc = `
 				{
 					// comment one

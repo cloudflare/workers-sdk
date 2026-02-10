@@ -2,8 +2,7 @@ import { randomBytes } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-// eslint-disable-next-line workers-sdk/no-vitest-import-expect -- see #12346
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, it, vi } from "vitest";
 import { unstable_dev } from "wrangler";
 import type { Unstable_DevWorker } from "wrangler";
 
@@ -92,7 +91,7 @@ compatibility_date = "2023-01-01"
 
 	let tokenId: string | null = null;
 
-	it("should obtain token from exchange_url", async () => {
+	it("should obtain token from exchange_url", async ({ expect }) => {
 		const resp = await worker.fetch(
 			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=${encodeURIComponent(
 				`http://127.0.0.1:${remote.port}/exchange`
@@ -111,7 +110,7 @@ compatibility_date = "2023-01-01"
 		`
 		);
 	});
-	it("should reject invalid exchange_url", async () => {
+	it("should reject invalid exchange_url", async ({ expect }) => {
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		const resp = await worker.fetch(
 			`https://preview.devprod.cloudflare.dev/exchange?exchange_url=not_an_exchange_url`,
@@ -122,7 +121,7 @@ compatibility_date = "2023-01-01"
 			`"{"error":"Error","message":"Invalid URL"}"`
 		);
 	});
-	it("should allow tokens > 4096 bytes", async () => {
+	it("should allow tokens > 4096 bytes", async ({ expect }) => {
 		// 4096 is the size limit for cookies
 		const token = randomBytes(4096).toString("hex");
 		expect(token.length).toBe(8192);
@@ -170,7 +169,7 @@ compatibility_date = "2023-01-01"
 			headers: expect.arrayContaining([["cf-workers-preview-token", token]]),
 		});
 	});
-	it("should be redirected with cookie", async () => {
+	it("should be redirected with cookie", async ({ expect }) => {
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
 				`http://127.0.0.1:${remote.port}/prewarm`
@@ -194,7 +193,7 @@ compatibility_date = "2023-01-01"
 			.split(";")[0]
 			.split("=")[1];
 	});
-	it("should reject invalid prewarm url", async () => {
+	it("should reject invalid prewarm url", async ({ expect }) => {
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=not_a_prewarm_url&remote=${encodeURIComponent(
@@ -206,7 +205,7 @@ compatibility_date = "2023-01-01"
 			`"{"error":"Error","message":"Invalid URL"}"`
 		);
 	});
-	it("should reject invalid remote url", async () => {
+	it("should reject invalid remote url", async ({ expect }) => {
 		vi.spyOn(console, "error").mockImplementation(() => {});
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/.update-preview-token?token=TEST_TOKEN&prewarm=${encodeURIComponent(
@@ -219,7 +218,7 @@ compatibility_date = "2023-01-01"
 		);
 	});
 
-	it("should convert cookie to header", async () => {
+	it("should convert cookie to header", async ({ expect }) => {
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev`,
 			{
@@ -238,7 +237,7 @@ compatibility_date = "2023-01-01"
 			]),
 		});
 	});
-	it("should not follow redirects", async () => {
+	it("should not follow redirects", async ({ expect }) => {
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/redirect`,
 			{
@@ -256,7 +255,7 @@ compatibility_date = "2023-01-01"
 		);
 		expect(await resp.text()).toMatchInlineSnapshot('""');
 	});
-	it("should return method", async () => {
+	it("should return method", async ({ expect }) => {
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/method`,
 			{
@@ -270,7 +269,7 @@ compatibility_date = "2023-01-01"
 
 		expect(await resp.text()).toMatchInlineSnapshot('"PUT"');
 	});
-	it("should return header", async () => {
+	it("should return header", async ({ expect }) => {
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/header`,
 			{
@@ -285,7 +284,7 @@ compatibility_date = "2023-01-01"
 
 		expect(await resp.text()).toMatchInlineSnapshot('"custom"');
 	});
-	it("should return status", async () => {
+	it("should return status", async ({ expect }) => {
 		const resp = await worker.fetch(
 			`https://random-data.preview.devprod.cloudflare.dev/status`,
 			{
@@ -384,7 +383,9 @@ compatibility_date = "2023-01-01"
 		await worker.stop();
 	});
 
-	it("should allow arbitrary headers in cross-origin requests", async () => {
+	it("should allow arbitrary headers in cross-origin requests", async ({
+		expect,
+	}) => {
 		const resp = await worker.fetch(
 			`https://0000.rawhttp.devprod.cloudflare.dev`,
 			{
@@ -399,7 +400,9 @@ compatibility_date = "2023-01-01"
 		expect(resp.headers.get("Access-Control-Allow-Headers")).toBe("foo");
 	});
 
-	it("should allow arbitrary methods in cross-origin requests", async () => {
+	it("should allow arbitrary methods in cross-origin requests", async ({
+		expect,
+	}) => {
 		const resp = await worker.fetch(
 			`https://0000.rawhttp.devprod.cloudflare.dev`,
 			{
@@ -414,7 +417,7 @@ compatibility_date = "2023-01-01"
 		expect(resp.headers.get("Access-Control-Allow-Methods")).toBe("*");
 	});
 
-	it("should preserve multiple cookies", async () => {
+	it("should preserve multiple cookies", async ({ expect }) => {
 		const token = randomBytes(4096).toString("hex");
 		const resp = await worker.fetch(
 			`https://0000.rawhttp.devprod.cloudflare.dev/cookies`,
@@ -434,7 +437,7 @@ compatibility_date = "2023-01-01"
 		);
 	});
 
-	it("should pass headers to the user-worker", async () => {
+	it("should pass headers to the user-worker", async ({ expect }) => {
 		const token = randomBytes(4096).toString("hex");
 		const resp = await worker.fetch(
 			`https://0000.rawhttp.devprod.cloudflare.dev/`,
@@ -472,7 +475,9 @@ compatibility_date = "2023-01-01"
 		`);
 	});
 
-	it("should use the method specified on the X-CF-Http-Method header", async () => {
+	it("should use the method specified on the X-CF-Http-Method header", async ({
+		expect,
+	}) => {
 		const token = randomBytes(4096).toString("hex");
 		const resp = await worker.fetch(
 			`https://0000.rawhttp.devprod.cloudflare.dev/method`,
@@ -490,9 +495,9 @@ compatibility_date = "2023-01-01"
 		expect(await resp.text()).toEqual("PUT");
 	});
 
-	it.each(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])(
+	it.for(["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])(
 		"should support %s method specified on the X-CF-Http-Method header",
-		async (method) => {
+		async (method, { expect }) => {
 			const token = randomBytes(4096).toString("hex");
 			const resp = await worker.fetch(
 				`https://0000.rawhttp.devprod.cloudflare.dev/method`,
@@ -514,7 +519,9 @@ compatibility_date = "2023-01-01"
 		}
 	);
 
-	it("should fallback to the request method if the X-CF-Http-Method header is missing", async () => {
+	it("should fallback to the request method if the X-CF-Http-Method header is missing", async ({
+		expect,
+	}) => {
 		const token = randomBytes(4096).toString("hex");
 		const resp = await worker.fetch(
 			`https://0000.rawhttp.devprod.cloudflare.dev/method`,
@@ -531,7 +538,9 @@ compatibility_date = "2023-01-01"
 		expect(await resp.text()).toEqual("PUT");
 	});
 
-	it("should strip cf-ew-raw- prefix from headers which have it before hitting the user-worker", async () => {
+	it("should strip cf-ew-raw- prefix from headers which have it before hitting the user-worker", async ({
+		expect,
+	}) => {
 		const token = randomBytes(4096).toString("hex");
 		const resp = await worker.fetch(
 			`https://0000.rawhttp.devprod.cloudflare.dev/`,
