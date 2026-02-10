@@ -231,6 +231,17 @@ export function createCloudflareEnvironmentOptions({
 		define,
 		dev: {
 			createEnvironment(name, config) {
+				// CloudflareDevEnvironment requires initRunner() to be called
+				// via configureServer. If that hook was stripped, fall back
+				// to a standard Vite environment.
+				const hasConfigureServer = config.plugins.some(
+					(plugin) =>
+						plugin.name === "vite-plugin-cloudflare:dev" &&
+						typeof plugin.configureServer === "function"
+				);
+				if (!hasConfigureServer) {
+					return vite.createRunnableDevEnvironment(name, config);
+				}
 				return new CloudflareDevEnvironment(name, config);
 			},
 		},
