@@ -24,8 +24,16 @@ export const pagesProjectListCommand = createCommand({
 	},
 	behaviour: {
 		provideConfig: false,
+		printBanner: (args) => !args.json,
 	},
-	async handler() {
+	args: {
+		json: {
+			type: "boolean",
+			description: "Return output as clean JSON",
+			default: false,
+		},
+	},
+	async handler({ json }) {
 		const config = getConfigCache<PagesConfigCache>(
 			PAGES_CONFIG_CACHE_FILENAME
 		);
@@ -50,7 +58,11 @@ export const pagesProjectListCommand = createCommand({
 			account_id: accountId,
 		});
 
-		logger.table(data);
+		if (json) {
+			logger.log(JSON.stringify(data, null, 2));
+		} else {
+			logger.table(data);
+		}
 		metrics.sendMetricsEvent("list pages projects");
 	},
 });
