@@ -598,6 +598,7 @@ describe("deploy", () => {
 					configure: async () => ({ wranglerConfig: {} }),
 					isConfigured: () => false,
 				},
+				outputDir: "public",
 			});
 
 		mockConfirm({
@@ -635,6 +636,7 @@ describe("deploy", () => {
 					configure: async () => ({ wranglerConfig: {} }),
 					isConfigured: () => false,
 				},
+				outputDir: "public",
 			});
 
 		// The command will fail later due to missing entry-point, but we can still verify

@@ -155,6 +155,7 @@ describe("autoconfig (deploy)", () => {
 					configure: async () => ({ wranglerConfig: {} }),
 					isConfigured: () => false,
 				},
+				outputDir: "public",
 			})
 		);
 		const runSpy = vi.spyOn(run, "runAutoConfig");

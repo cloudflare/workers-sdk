@@ -66,9 +66,9 @@ async function hasIndexHtml(dir: string): Promise<boolean> {
 }
 
 /**
- * If we haven't detected a framework being used, we need to "guess" what output dir the user is intending to use.
- * This is best-effort, and so will not be accurate all the time. The heuristic we use is the first child directory
- * with an `index.html` file present.
+ * If we haven't detected a framework being used, or the project is a Pages one, we need to "guess" what output dir the
+ * user is intending to use. This is best-effort, and so will not be accurate all the time. The heuristic we use is the
+ * first child directory with an `index.html` file present.
  */
 async function findAssetsDir(from: string): Promise<string | undefined> {
 	if (await hasIndexHtml(from)) {
