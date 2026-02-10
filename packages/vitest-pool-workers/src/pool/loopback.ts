@@ -260,9 +260,7 @@ async function pushStackedStorage(intoDepth: number, persistPath: string) {
 	await fs.mkdir(stackFramePath, { recursive: true });
 
 	// For each Durable Object unique key in the persistence path...
-	for (const key of await fs.readdir(persistPath, {
-		withFileTypes: true,
-	})) {
+	for (const key of await fs.readdir(persistPath, { withFileTypes: true })) {
 		// (skipping stack directory)
 		if (key.name === STACK_DIR_NAME) {
 			continue;
@@ -290,9 +288,7 @@ async function pushStackedStorage(intoDepth: number, persistPath: string) {
 }
 async function popStackedStorage(fromDepth: number, persistPath: string) {
 	// Delete every Durable Object unique key directory in the persistence path
-	for (const key of await fs.readdir(persistPath, {
-		withFileTypes: true,
-	})) {
+	for (const key of await fs.readdir(persistPath, { withFileTypes: true })) {
 		// (skipping stack directory)
 		if (key.name === STACK_DIR_NAME) {
 			continue;

@@ -10,19 +10,6 @@ import { test as baseTest, inject, vi } from "vitest";
 
 const debuglog = util.debuglog("vitest-pool-workers:test");
 
-// In case this process stops unexpectedly, kill all child processes
-const processes = new Set<childProcess.ChildProcess>();
-process.on("exit", () => {
-	for (const proc of processes) {
-		if (proc.pid) {
-			proc.stdout?.destroy();
-			proc.stderr?.destroy();
-			proc.stdin?.destroy();
-			treeKill(proc.pid, "SIGKILL");
-		}
-	}
-});
-
 export const minimalVitestConfig = `
 import { defineWorkersConfig } from "@cloudflare/vitest-pool-workers/config";
 export default defineWorkersConfig({
@@ -137,28 +124,10 @@ export const test = baseTest.extend<{
 	async vitestDev({ tmpPath }, use) {
 		const tmpPoolInstallationPath = inject("tmpPoolInstallationPath");
 
-		let proc: childProcess.ChildProcess | undefined;
-		try {
-			await use(({ flags = [], maxBuffer } = {}) => {
-				proc = childProcess.exec(
-					`pnpm exec vitest dev --root="${tmpPath}" ` + flags.join(" "),
-					{
-						cwd: tmpPoolInstallationPath,
-						env: getNoCIEnv(),
-						maxBuffer,
-					}
-				);
-				processes.add(proc);
-				proc.on("exit", () => {
-					if (proc) {
-						processes.delete(proc);
-					}
-				});
-				return wrap(proc);
-			});
-		} finally {
-			// Kill all processes after the test
-			if (proc) {
+		// In case this process stops unexpectedly, kill all child processes
+		const processes = new Set<childProcess.ChildProcess>();
+		const killAllProcesses = () => {
+			for (const proc of processes) {
 				if (proc.pid) {
 					proc.stdout?.destroy();
 					proc.stderr?.destroy();
@@ -166,7 +135,29 @@ export const test = baseTest.extend<{
 					treeKill(proc.pid, "SIGKILL");
 				}
 			}
-		}
+		};
+		process.on("exit", killAllProcesses);
+
+		await use(({ flags = [], maxBuffer } = {}) => {
+			const proc = childProcess.exec(
+				`pnpm exec vitest dev --root="${tmpPath}" ` + flags.join(" "),
+				{
+					cwd: tmpPoolInstallationPath,
+					env: getNoCIEnv(),
+					maxBuffer,
+				}
+			);
+			processes.add(proc);
+			proc.on("exit", () => {
+				if (proc) {
+					processes.delete(proc);
+				}
+			});
+			return wrap(proc);
+		});
+
+		killAllProcesses();
+		process.off("exit", killAllProcesses);
 	},
 });
 
