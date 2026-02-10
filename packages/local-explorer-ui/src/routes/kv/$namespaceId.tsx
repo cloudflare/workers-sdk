@@ -65,7 +65,7 @@ function NamespaceView() {
 	const [prefix, setPrefix] = useState<string | undefined>(undefined);
 
 	const fetchEntries = useCallback(
-		async (nextCursor?: string) => {
+		async (nextCursor?: string, prefixParam?: string) => {
 			try {
 				if (nextCursor) {
 					setLoadingMore(true);
@@ -77,7 +77,7 @@ function NamespaceView() {
 
 				const keysResponse = await workersKvNamespaceListANamespace_SKeys({
 					path: { namespace_id: namespaceId },
-					query: { cursor: nextCursor, limit: 50, prefix },
+					query: { cursor: nextCursor, limit: 50, prefix: prefixParam },
 				});
 				const keys = keysResponse.data?.result ?? [];
 
@@ -117,29 +117,27 @@ function NamespaceView() {
 				setLoadingMore(false);
 			}
 		},
-		[namespaceId, prefix]
+		[namespaceId]
 	);
-
-	useEffect(() => {
-		void fetchEntries();
-	}, [fetchEntries]);
 
 	useEffect(() => {
 		setDeleteTarget(null);
 		setOverwriteConfirm(null);
 		setError(null);
 		setPrefix(undefined);
-	}, [namespaceId]);
+		void fetchEntries(undefined, undefined);
+	}, [namespaceId, fetchEntries]);
 
 	const handleLoadMore = () => {
 		if (cursor && !loadingMore) {
-			void fetchEntries(cursor);
+			void fetchEntries(cursor, prefix);
 		}
 	};
 
 	const handleSearch = (searchPrefix: string) => {
-		// Set prefix to undefined if empty string to fetch all keys
-		setPrefix(searchPrefix || undefined);
+		const newPrefix = searchPrefix || undefined;
+		setPrefix(newPrefix);
+		void fetchEntries(undefined, newPrefix);
 	};
 
 	const checkKeyExists = async (key: string): Promise<boolean> => {
