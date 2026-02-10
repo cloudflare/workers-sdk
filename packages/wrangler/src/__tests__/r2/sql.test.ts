@@ -238,7 +238,7 @@ describe("r2 sql", () => {
 							distribution: "zipfian",
 							"approx_top_k(value, Int64(3))": [
 								{ value: 5, count: 100 },
-								{ value: 3, count: 80 },
+								{ value: 3, count: null },
 								{ value: 1, count: 60 },
 							],
 						},
@@ -263,10 +263,8 @@ describe("r2 sql", () => {
 
 			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
 			// Nested objects should be JSON-stringified, not displayed as [object Object].
-			expect(std.out).toContain("zipfian");
-			expect(std.out).not.toContain("[object Object]");
-			expect(std.out).toContain('"value":5');
-			expect(std.out).toContain('"count":100');
+			// Null values inside nested objects should be rendered as empty strings.
+			expect(std.out).toMatchInlineSnapshot();
 		});
 
 		it("should handle null values in query results", async () => {

@@ -43,7 +43,10 @@ function formatSqlResults(data: SqlQueryResponse, duration: number): void {
 						return [column, ""];
 					}
 					if (typeof value === "object") {
-						return [column, JSON.stringify(value)];
+						return [
+							column,
+							JSON.stringify(value, (_k, v) => (v === null ? "" : v)),
+						];
 					}
 					return [column, String(value)];
 				})
