@@ -1337,8 +1337,21 @@ export async function logout(options?: { project?: boolean }): Promise<void> {
 		return;
 	}
 
-	if (!localState.accessToken) {
-		if (!localState.refreshToken) {
+	// Read tokens from the target auth file (not from localState)
+	// This ensures we revoke the correct tokens when using --project
+	let targetConfig: UserAuthConfig;
+	try {
+		targetConfig = parseTOML(readFileSync(configPath)) as UserAuthConfig;
+	} catch {
+		logger.log("Error reading auth config file, exiting...");
+		return;
+	}
+
+	const targetAccessToken = targetConfig.oauth_token;
+	const targetRefreshToken = targetConfig.refresh_token;
+
+	if (!targetAccessToken) {
+		if (!targetRefreshToken) {
 			logger.log("Not logged in, exiting...");
 			return;
 		}
@@ -1346,7 +1359,7 @@ export async function logout(options?: { project?: boolean }): Promise<void> {
 		const body =
 			`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
 			`token_type_hint=refresh_token&` +
-			`token=${encodeURIComponent(localState.refreshToken?.value || "")}`;
+			`token=${encodeURIComponent(targetRefreshToken)}`;
 
 		const response = await fetch(getRevokeUrlFromEnv(), {
 			method: "POST",
@@ -1363,7 +1376,7 @@ export async function logout(options?: { project?: boolean }): Promise<void> {
 	const body =
 		`client_id=${encodeURIComponent(getClientIdFromEnv())}&` +
 		`token_type_hint=refresh_token&` +
-		`token=${encodeURIComponent(localState.refreshToken?.value || "")}`;
+		`token=${encodeURIComponent(targetRefreshToken || "")}`;
 
 	const response = await fetch(getRevokeUrlFromEnv(), {
 		method: "POST",
