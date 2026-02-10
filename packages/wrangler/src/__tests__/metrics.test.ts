@@ -49,9 +49,6 @@ describe("metrics", () => {
 	runInTempDir({ homedir: "foo" });
 
 	beforeEach(async () => {
-		vi.mocked(ci).isCI = false;
-		vi.mocked(ci).CLOUDFLARE_PAGES = false;
-		vi.mocked(ci).CLOUDFLARE_WORKERS = false;
 		setIsTTY(true);
 		vi.stubEnv("SPARROW_SOURCE_KEY", "MOCK_KEY");
 		logger.loggerLevel = "debug";
@@ -635,10 +632,6 @@ describe("metrics", () => {
 	});
 
 	describe("getMetricsConfig()", () => {
-		beforeEach(() => {
-			vi.mocked(ci).isCI = false;
-		});
-
 		describe("enabled", () => {
 			it("should return the WRANGLER_SEND_METRICS environment variable for enabled if it is defined", async () => {
 				vi.stubEnv("WRANGLER_SEND_METRICS", "false");

@@ -80,6 +80,7 @@
 		"capnp-es": "catalog:default",
 		"capnweb": "^0.1.0",
 		"chokidar": "^4.0.1",
+		"ci-info": "catalog:default",
 		"concurrently": "^8.2.2",
 		"devalue": "^5.3.2",
 		"devtools-protocol": "^0.0.1182435",

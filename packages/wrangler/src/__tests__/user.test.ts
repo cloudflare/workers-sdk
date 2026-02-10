@@ -46,7 +46,6 @@ describe("User", () => {
 
 	beforeEach(() => {
 		msw.use(...mswSuccessOauthHandlers, ...mswSuccessUserHandlers);
-		vi.mocked(ci).isCI = false;
 	});
 
 	describe("login", () => {

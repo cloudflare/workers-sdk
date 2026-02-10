@@ -213,9 +213,6 @@ describe.sequential("wrangler dev", () => {
 		beforeEach(() => {
 			vi.mocked(ci).isCI = true;
 		});
-		afterEach(() => {
-			vi.mocked(ci).isCI = false;
-		});
 
 		it("should kick you to the login flow when running wrangler dev in remote mode without authorization", async () => {
 			fs.writeFileSync("index.js", `export default {};`);
