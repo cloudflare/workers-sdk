@@ -288,7 +288,11 @@ describe("r2 sql", () => {
 
 			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
 			// Nested objects should be JSON-stringified, not displayed as [object Object].
-			expect(std.out).toMatchInlineSnapshot();
+			expect(std.out).not.toContain("[object Object]");
+			expect(std.out).toContain(
+				'[{"value":0,"count":961},{"value":1,"count":485},{"value":2,"count":364}]'
+			);
+			expect(std.out).toContain("across 3 files from R2");
 		});
 
 		it("should handle null values in query results", async () => {
