@@ -403,10 +403,13 @@ const HANDLERS = {
 		toConfig: (
 			bindingName: string,
 			binding: Extract<Binding, { type: "kv_namespace" }>
-		): CfKvNamespace => ({
-			...binding,
-			binding: bindingName,
-		}),
+		): CfKvNamespace => {
+			const { type: _, ...rest } = binding;
+			return {
+				...rest,
+				binding: bindingName,
+			};
+		},
 	},
 	d1: {
 		Handler: D1Handler,
@@ -426,10 +429,13 @@ const HANDLERS = {
 		toConfig: (
 			bindingName: string,
 			binding: Extract<Binding, { type: "d1" }>
-		): CfD1Database => ({
-			...binding,
-			binding: bindingName,
-		}),
+		): CfD1Database => {
+			const { type: _, ...rest } = binding;
+			return {
+				...rest,
+				binding: bindingName,
+			};
+		},
 	},
 	r2_bucket: {
 		Handler: R2Handler,
@@ -447,11 +453,13 @@ const HANDLERS = {
 		toConfig: (
 			bindingName: string,
 			binding: Extract<Binding, { type: "r2_bucket" }>
-		): CfR2Bucket => ({
-			binding: bindingName,
-			bucket_name: binding.bucket_name,
-			jurisdiction: binding.jurisdiction,
-		}),
+		): CfR2Bucket => {
+			const { type: _, ...rest } = binding;
+			return {
+				...rest,
+				binding: bindingName,
+			};
+		},
 	},
 };
 
