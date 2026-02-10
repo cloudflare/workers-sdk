@@ -15069,6 +15069,87 @@ export default{
 					'"workflow-two" (currently belongs to "other-worker-b")'
 				);
 			});
+
+			it("should skip workflow conflict check in non-interactive mode without --strict", async () => {
+				setIsTTY(false);
+
+				writeWranglerConfig({
+					main: "index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+						},
+					],
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class MyWorkflow extends WorkflowEntrypoint {};
+				`
+				);
+
+				// Note: we don't mock the workflows API endpoint - if it's called, the test will fail
+				mockSubDomainRequest();
+				mockUploadWorkerRequest();
+				mockDeployWorkflow("my-workflow");
+
+				await runWrangler("deploy");
+
+				// Should deploy without warning (check was skipped)
+				expect(std.warn).not.toContain(
+					"already exist and belong to different workers"
+				);
+				expect(std.out).toContain("Uploaded test-name");
+			});
+
+			it("should abort deploy in non-interactive strict mode when workflow belongs to different worker", async () => {
+				setIsTTY(false);
+
+				writeWranglerConfig({
+					main: "index.js",
+					workflows: [
+						{
+							binding: "WORKFLOW",
+							name: "my-workflow",
+							class_name: "MyWorkflow",
+						},
+					],
+				});
+				await fs.promises.writeFile(
+					"index.js",
+					`
+					import { WorkflowEntrypoint } from 'cloudflare:workers';
+					export default {};
+					export class MyWorkflow extends WorkflowEntrypoint {};
+				`
+				);
+
+				mockListWorkflows([
+					{
+						id: "existing-workflow-id",
+						name: "my-workflow",
+						script_name: "other-worker",
+						class_name: "SomeClass",
+						created_on: "2024-01-01T00:00:00Z",
+						modified_on: "2024-01-01T00:00:00Z",
+					},
+				]);
+
+				await runWrangler("deploy --strict");
+
+				expect(std.warn).toContain(
+					"already exist and belong to different workers"
+				);
+				expect(std.err).toContain(
+					"Aborting the deployment operation because of conflicts"
+				);
+				expect(std.out).not.toContain("Uploaded");
+				expect(process.exitCode).not.toBe(0);
+			});
 		});
 	});
 

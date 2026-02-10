@@ -488,19 +488,16 @@ export default async function deploy(props: Props): Promise<{
 		}
 	}
 
-	if (accountId && config.workflows?.length) {
+	if (
+		accountId &&
+		config.workflows?.length &&
+		(isInteractive() || props.strict)
+	) {
 		const workflowCheck = await checkWorkflowConflicts(config, accountId, name);
 
 		if (workflowCheck.hasConflicts) {
 			logger.warn(workflowCheck.message);
-
-			const shouldContinue = await confirm("Do you want to continue?", {
-				defaultValue: true,
-				fallbackValue: true,
-			});
-
-			if (!shouldContinue) {
-				cancel("Aborting deploy...");
+			if (!(await deployConfirm("Do you want to continue?"))) {
 				return { versionId, workerTag };
 			}
 		}
