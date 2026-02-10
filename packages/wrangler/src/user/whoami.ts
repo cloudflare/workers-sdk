@@ -1,13 +1,22 @@
-import { getCloudflareComplianceRegion, findProjectRoot } from "@cloudflare/workers-utils";
-import chalk from "chalk";
 import path from "node:path";
+import {
+	findProjectRoot,
+	getCloudflareComplianceRegion,
+} from "@cloudflare/workers-utils";
+import chalk from "chalk";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
 import { isAuthenticationError } from "../core/handle-errors";
 import { isNonInteractiveOrCI } from "../is-interactive";
 import { logger } from "../logger";
 import { formatMessage } from "../utils/format-message";
 import { fetchMembershipRoles } from "./membership";
-import { DefaultScopeKeys, getAPIToken, getAuthFromEnv, getScopes, getAuthConfigFilePath } from ".";
+import {
+	DefaultScopeKeys,
+	getAPIToken,
+	getAuthConfigFilePath,
+	getAuthFromEnv,
+	getScopes,
+} from ".";
 import type { ApiCredentials, Scope } from ".";
 import type { ComplianceConfig } from "@cloudflare/workers-utils";
 
@@ -51,8 +60,9 @@ function printAuthSource() {
 	try {
 		const configPath = getAuthConfigFilePath();
 		const projectRoot = findProjectRoot();
-		const isLocal = projectRoot && configPath.includes(path.join(projectRoot, ".wrangler"));
-		
+		const isLocal =
+			projectRoot && configPath.includes(path.join(projectRoot, ".wrangler"));
+
 		if (isLocal) {
 			const relativePath = path.relative(process.cwd(), configPath);
 			logger.log(`🔐 Auth source: local (${chalk.blue(relativePath)})`);

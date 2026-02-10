@@ -955,6 +955,12 @@ export function getAuthConfigFilePath(
 		environment === "production" ? "default.toml" : `${environment}.toml`;
 	const configSubPath = `${USER_AUTH_CONFIG_PATH}/${fileName}`; // "config/default.toml"
 
+	// Check for WRANGLER_AUTH_TYPE environment variable to force global auth
+	const authType = process.env.WRANGLER_AUTH_TYPE;
+	if (authType === "global" && !options?.useLocal) {
+		return path.join(getGlobalWranglerConfigPath(), configSubPath);
+	}
+
 	// Explicit flags take priority
 	if (options?.useGlobal) {
 		return path.join(getGlobalWranglerConfigPath(), configSubPath);

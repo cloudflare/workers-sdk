@@ -23,6 +23,8 @@ type VariableNames =
 	| "WRANGLER_R2_SQL_AUTH_TOKEN"
 	/** Custom directory for global Wrangler configuration and authentication. Overrides the default ~/.wrangler/ location. */
 	| "WRANGLER_HOME"
+	/** Force authentication type. Set to "global" to use global auth even when local project auth exists. */
+	| "WRANGLER_AUTH_TYPE"
 
 	// ## Development & Local Testing
 
