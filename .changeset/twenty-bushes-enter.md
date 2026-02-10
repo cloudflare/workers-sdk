@@ -8,7 +8,7 @@ Fixes the issue of the default maximum message retention (365400 seconds) being 
 
 Previous:
 
-- Wrangler set a default value of 365400 seconds max message retention if the setting was not explicitly provided in the Wrangler configuration. 
+- Wrangler set a default value of 365400 seconds max message retention if the setting was not explicitly provided in the Wrangler configuration.
 - The maximum retention period was documented as 1209600 seconds for all queues users because it was required to be on paid tier.
 - Wrangler also set a default value of 0 seconds for delivery delay if the setting was not explicitly provided in the Wrangler configuration.
 
