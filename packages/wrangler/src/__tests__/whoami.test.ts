@@ -310,6 +310,7 @@ describe("whoami", () => {
 			──────────────────
 			Getting User settings...
 			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			🔐 Auth source: global (<cwd>/home/.config/.wrangler/config/default.toml)
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤
@@ -375,6 +376,7 @@ describe("whoami", () => {
 			──────────────────
 			Getting User settings...
 			👋 You are logged in with an OAuth Token, associated with the email (redacted).
+			🔐 Auth source: global (<cwd>/home/.config/.wrangler/config/default.toml)
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤
@@ -414,6 +416,8 @@ describe("whoami", () => {
 			🎢 Membership roles in \\"(redacted)\\": Contact account super admin to change your permissions.
 			- Test role"
 		`);
+		expect(std.warn).toMatchInlineSnapshot(`""`);
+		expect(std.err).toMatchInlineSnapshot(`""`);
 	});
 
 	it("should display membership error on authentication error 10000", async ({
@@ -425,7 +429,7 @@ describe("whoami", () => {
 				"*/memberships",
 				() =>
 					HttpResponse.json(
-						createFetchResult(undefined, false, [
+						createFetchResult([], false, [
 							{ code: 10000, message: "Authentication error" },
 						])
 					),
@@ -439,6 +443,7 @@ describe("whoami", () => {
 			──────────────────
 			Getting User settings...
 			👋 You are logged in with an OAuth Token, associated with the email user@example.com.
+			🔐 Auth source: global (<cwd>/home/.config/.wrangler/config/default.toml)
 			┌─┬─┐
 			│ Account Name │ Account ID │
 			├─┼─┤

@@ -91,10 +91,16 @@ export function findProjectRoot(
 export function getLocalWranglerConfigPath(
 	projectRoot?: string,
 ): string | undefined {
+	// Get the global wrangler path to compare against
+	const globalWranglerPath = nodePath.resolve(getGlobalWranglerConfigPath());
+
 	// First, check current directory
 	const cwdWrangler = nodePath.join(process.cwd(), ".wrangler");
 	if (isDirectory(cwdWrangler)) {
-		return cwdWrangler;
+		// Ensure it's not the same as the global config path
+		if (nodePath.resolve(cwdWrangler) !== globalWranglerPath) {
+			return cwdWrangler;
+		}
 	}
 
 	// If not provided, find the project root
@@ -105,7 +111,10 @@ export function getLocalWranglerConfigPath(
 
 	const localWranglerPath = nodePath.join(root, ".wrangler");
 	if (isDirectory(localWranglerPath)) {
-		return localWranglerPath;
+		// Ensure it's not the same as the global config path
+		if (nodePath.resolve(localWranglerPath) !== globalWranglerPath) {
+			return localWranglerPath;
+		}
 	}
 
 	return undefined;

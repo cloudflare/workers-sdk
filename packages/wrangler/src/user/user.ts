@@ -432,9 +432,13 @@ function getAuthTokens(config?: UserAuthConfig): {
 			const configPath = getAuthConfigFilePath();
 			authConfig = readAuthConfigFile();
 			// Detect if the config path is local or global
+			const globalConfigPath = path.resolve(getGlobalWranglerConfigPath());
+			const resolvedConfigPath = path.resolve(path.dirname(configPath));
 			const projectRoot = findProjectRoot();
 			const isLocal =
-				projectRoot && configPath.includes(path.join(projectRoot, ".wrangler"));
+				resolvedConfigPath !== globalConfigPath &&
+				projectRoot &&
+				configPath.includes(path.join(projectRoot, ".wrangler"));
 			authSource = isLocal ? "local" : "global";
 		}
 
@@ -1014,13 +1018,21 @@ export function writeAuthConfigFile(
 	});
 
 	// Track whether this is local or global auth
+	const globalConfigPath = path.resolve(getGlobalWranglerConfigPath());
+	const resolvedConfigPath = path.resolve(path.dirname(configPath));
 	const projectRoot = findProjectRoot();
 	const isLocal =
-		configPath.includes(path.join(process.cwd(), ".wrangler")) ||
-		(projectRoot !== undefined &&
-			configPath.includes(path.join(projectRoot, ".wrangler")));
+		resolvedConfigPath !== globalConfigPath &&
+		(configPath.includes(path.join(process.cwd(), ".wrangler")) ||
+			(projectRoot !== undefined &&
+				configPath.includes(path.join(projectRoot, ".wrangler"))));
 
-	reinitialiseAuthTokens(config, isLocal ? "local" : "global");
+	// Reinitialise without passing config so warnings show correct file path
+	const { tokens } = getAuthTokens();
+	localState = {
+		...tokens,
+		authSource: isLocal ? "local" : "global",
+	};
 }
 
 export function readAuthConfigFile(

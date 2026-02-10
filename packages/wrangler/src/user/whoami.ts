@@ -2,6 +2,7 @@ import path from "node:path";
 import {
 	findProjectRoot,
 	getCloudflareComplianceRegion,
+	getGlobalWranglerConfigPath,
 } from "@cloudflare/workers-utils";
 import chalk from "chalk";
 import { fetchPagedListResult, fetchResult } from "../cfetch";
@@ -59,9 +60,13 @@ export async function whoami(
 function printAuthSource() {
 	try {
 		const configPath = getAuthConfigFilePath();
+		const globalConfigPath = path.resolve(getGlobalWranglerConfigPath());
+		const resolvedConfigPath = path.resolve(path.dirname(configPath));
 		const projectRoot = findProjectRoot();
 		const isLocal =
-			projectRoot && configPath.includes(path.join(projectRoot, ".wrangler"));
+			resolvedConfigPath !== globalConfigPath &&
+			projectRoot &&
+			configPath.includes(path.join(projectRoot, ".wrangler"));
 
 		if (isLocal) {
 			const relativePath = path.relative(process.cwd(), configPath);
