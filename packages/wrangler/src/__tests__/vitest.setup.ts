@@ -179,10 +179,12 @@ vi.mock("../user/generate-auth-url", async (importOriginal) => {
 	};
 });
 
-vi.mock("../is-ci", async (importOriginal) => {
-	const original = await importOriginal<typeof import("../is-ci")>();
-	return { ...original, CI: { isCI: vi.fn().mockImplementation(() => false) } };
-});
+vi.mock("ci-info", () => ({
+	default: { isCI: false, CLOUDFLARE_PAGES: false, CLOUDFLARE_WORKERS: false },
+	isCI: false,
+	CLOUDFLARE_PAGES: false,
+	CLOUDFLARE_WORKERS: false,
+}));
 
 vi.mock("../user/generate-random-state", () => {
 	return {

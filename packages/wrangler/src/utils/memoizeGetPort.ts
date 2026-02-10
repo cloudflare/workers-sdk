@@ -1,9 +1,9 @@
+import ci from "ci-info";
 import getPort, { portNumbers } from "get-port";
-import isCI from "is-ci";
 
 // Probe consecutive ports to increase the chance to get the same port across dev sessions.
 // In CI, we avoid probing consecutive ports to reduce the chance of collisions
-const NUM_CONSECUTIVE_PORTS_TO_PROBE = isCI ? 0 : 10;
+const NUM_CONSECUTIVE_PORTS_TO_PROBE = ci.isCI ? 0 : 10;
 
 /**
  * Get an available TCP port number.

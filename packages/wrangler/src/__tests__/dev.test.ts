@@ -6,6 +6,7 @@ import {
 	FatalError,
 } from "@cloudflare/workers-utils";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import ci from "ci-info";
 import getPort from "get-port";
 import { http, HttpResponse } from "msw";
 import dedent from "ts-dedent";
@@ -15,7 +16,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ConfigController } from "../api/startDevWorker/ConfigController";
 import { unwrapHook } from "../api/startDevWorker/utils";
 import { getWorkerAccountAndContext } from "../dev/remote";
-import { CI } from "../is-ci";
 import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
 import { DEFAULT_WORKERS_TYPES_FILE_PATH } from "../type-generation/helpers";
@@ -210,9 +210,11 @@ describe.sequential("wrangler dev", () => {
 
 	describe("authorization without env var", () => {
 		mockApiToken({ apiToken: null });
-		const isCISpy = vi.spyOn(CI, "isCI").mockReturnValue(true);
+		beforeEach(() => {
+			vi.mocked(ci).isCI = true;
+		});
 		afterEach(() => {
-			isCISpy.mockClear();
+			vi.mocked(ci).isCI = false;
 		});
 
 		it("should kick you to the login flow when running wrangler dev in remote mode without authorization", async () => {

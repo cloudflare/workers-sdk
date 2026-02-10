@@ -1,11 +1,11 @@
 import { configFormat } from "@cloudflare/workers-utils";
 import { detectAgenticEnvironment } from "am-i-vibing";
 import chalk from "chalk";
+import ci from "ci-info";
 import { fetch } from "undici";
 import isInteractive from "../is-interactive";
 import { logger } from "../logger";
 import { sniffUserAgent } from "../package-manager";
-import { CI, isPagesCI, isWorkersCI } from "./../is-ci";
 import {
 	getNodeVersion,
 	getOS,
@@ -78,9 +78,9 @@ export function getMetricsDispatcher(options: MetricsConfigOptions) {
 			packageManager: sniffUserAgent(),
 			isFirstUsage: readMetricsConfig().permission === undefined,
 			configFileType: configFormat(options.configPath),
-			isCI: CI.isCI(),
-			isPagesCI: isPagesCI(),
-			isWorkersCI: isWorkersCI(),
+			isCI: ci.isCI,
+			isPagesCI: ci.CLOUDFLARE_PAGES,
+			isWorkersCI: ci.CLOUDFLARE_WORKERS,
 			isInteractive: isInteractive(),
 			hasAssets: options.hasAssets ?? false,
 			agent,
