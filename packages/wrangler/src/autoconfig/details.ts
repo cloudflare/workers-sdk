@@ -290,7 +290,7 @@ export async function getDetailsForAutoConfig({
 
 	if (!outputDir) {
 		const errorMessage =
-			framework.id === "static"
+			framework.id === "static" || framework.id === "cloudflare-pages"
 				? "Could not detect a directory containing static files (e.g. html, css and js) for the project"
 				: "Failed to detect an output directory for the project";
 
