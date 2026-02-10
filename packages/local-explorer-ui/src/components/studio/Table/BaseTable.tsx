@@ -58,13 +58,17 @@ export function StudioBaseTable<HeaderMetadata = unknown>({
 
 		// We will rearrange the index based on specified index
 		const headerAfterArranged = arrangeHeaderIndex.map((arrangedIndex) => {
-			return headers[arrangedIndex];
+			// `arrangeHeaderIndex` contains valid indices into headers
+			return headers[arrangedIndex] as (typeof headers)[number];
 		});
 
 		// Sticky will also alter the specified index
 		return [
-			...(stickyHeaderIndex !== undefined ? [headers[stickyHeaderIndex]] : []),
-			...headerAfterArranged.filter((x) => x.index !== stickyHeaderIndex),
+			...(stickyHeaderIndex !== undefined
+				? // `stickyHeaderIndex` is checked for undefined before use
+					[headers[stickyHeaderIndex as keyof typeof headers]]
+				: []),
+			...headerAfterArranged.filter((x) => x?.index !== stickyHeaderIndex),
 		] as StudioTableHeaderProps<HeaderMetadata>[];
 	}, [state, arrangeHeaderIndex, stickyHeaderIndex]);
 
@@ -282,7 +286,7 @@ function renderCellList<HeaderMetadata = unknown>({
 					</div>
 				</td>
 
-				{hasSticky && (
+				{hasSticky && headers[0] && (
 					<StudioTableCell
 						key={-1}
 						state={state}
@@ -293,7 +297,8 @@ function renderCellList<HeaderMetadata = unknown>({
 						onMouseDown={(e) => {
 							if (onCellMouseDown) {
 								onCellMouseDown(e, {
-									x: headers[0].index,
+									// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Parent conditional (headers[0] &&) guarantees this exists
+									x: headers[0]!.index,
 									y: absoluteRowIndex,
 								});
 							}

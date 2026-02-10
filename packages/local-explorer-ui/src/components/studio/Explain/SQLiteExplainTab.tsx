@@ -34,7 +34,7 @@ export function StudioSQLiteExplainTab({ data }: StudioSQLiteExplainProps) {
 
 	tree.forEach((node) => {
 		if (node.parent) {
-			nodeTable[node.parent].children.push(node);
+			nodeTable[node.parent]?.children.push(node);
 		}
 	});
 

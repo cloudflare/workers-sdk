@@ -1,4 +1,4 @@
-import { Button, Dialog, Input, Text } from "@cloudflare/kumo";
+import { Button, Dialog, Text } from "@cloudflare/kumo";
 import { useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 
@@ -55,36 +55,40 @@ export const DeleteConfirmationModal = ({
 	};
 
 	return (
-		<Dialog open={isOpen} onOpenChange={(open) => !open && closeModal()}>
-			<Dialog.Content>
-				<Dialog.Header>
-					<Dialog.Title>{title}</Dialog.Title>
-				</Dialog.Header>
+		<Dialog.Root
+			open={isOpen}
+			onOpenChange={(open: boolean) => {
+				if (!open) {
+					closeModal();
+				}
+			}}
+		>
+			<Dialog>
+				<Dialog.Title>{title}</Dialog.Title>
 				<form onSubmit={handleSubmit}>
-					<Dialog.Body>
-						<div className="space-y-4">
-							{body}
-							{challenge && (
-								<div className="space-y-2">
-									<Text size="sm">
-										Type <strong>{challenge}</strong> to confirm
-									</Text>
-									<Input
-										value={challengeInput}
-										onChange={(e) => setChallengeInput(e.target.value)}
-										autoComplete="off"
-										autoFocus
-									/>
-								</div>
-							)}
-							{deleteFailed && (
-								<div className="rounded-md bg-red-50 p-3 text-red-700">
-									{failureText}
-								</div>
-							)}
-						</div>
-					</Dialog.Body>
-					<Dialog.Footer>
+					<div className="space-y-4">
+						{body}
+						{challenge && (
+							<div className="space-y-2">
+								<Text size="sm">
+									Type <strong>{challenge}</strong> to confirm
+								</Text>
+								<input
+									className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+									value={challengeInput}
+									onChange={(e) => setChallengeInput(e.target.value)}
+									autoComplete="off"
+									autoFocus
+								/>
+							</div>
+						)}
+						{deleteFailed && (
+							<div className="rounded-md bg-red-50 p-3 text-red-700">
+								{failureText}
+							</div>
+						)}
+					</div>
+					<div className="flex gap-2 justify-end mt-4">
 						<Button variant="secondary" onClick={closeModal}>
 							Cancel
 						</Button>
@@ -96,9 +100,9 @@ export const DeleteConfirmationModal = ({
 						>
 							{confirmationText}
 						</Button>
-					</Dialog.Footer>
+					</div>
 				</form>
-			</Dialog.Content>
-		</Dialog>
+			</Dialog>
+		</Dialog.Root>
 	);
 };

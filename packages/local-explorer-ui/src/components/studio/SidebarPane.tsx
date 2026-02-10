@@ -12,9 +12,12 @@ import { useStudioContext } from "./Context";
 import { useStudioContextMenu } from "./ContextMenu";
 import { StudioDropTableModal } from "./DropTableModal";
 import { StudioTreeView } from "./TreeView";
-import type { StudioSchemaItem, StudioSchemas } from "../../types/studio";
+import type {
+	DropdownItemBuilderProps,
+	StudioSchemaItem,
+	StudioSchemas,
+} from "../../types/studio";
 import type { StudioTreeViewItem } from "./TreeView";
-import type { DropdownItemBuilderProps } from "@cloudflare/kumo";
 
 export function StudioSidebarPane() {
 	const { schemas, loadingSchema } = useStudioContext();

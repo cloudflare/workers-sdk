@@ -93,7 +93,7 @@ function InputCellEditor({
 						className="bg-surface border border-color rounded fixed shadow flex flex-col"
 						ref={refs.setFloating}
 						style={{
-							...floatingStyles,
+							...(floatingStyles as React.CSSProperties),
 							width: POPOVER_WIDTH,
 							height: POPOVER_HEIGHT,
 						}}

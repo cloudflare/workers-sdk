@@ -1,8 +1,8 @@
-import type { StudioResultHeaderMetadata } from "../../components/Studio/Table/StateHelpers";
+import type { StudioResultHeaderMetadata } from "../../components/studio/Table/StateHelpers";
 import type {
 	StudioTableState,
 	StudioTableStateRow,
-} from "../../components/Studio/Table/TableState";
+} from "../../components/studio/Table/TableState";
 import type {
 	IStudioDriver,
 	StudioTableRowMutationRequest,

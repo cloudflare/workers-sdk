@@ -2,9 +2,9 @@ import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useCallback } from "react";
 import { useStudioContextMenu } from "../ContextMenu";
 import { exportStudioDataAsDelimitedText } from "../utils-export";
+import type { DropdownItemBuilderProps } from "../../../types/studio";
 import type { StudioResultHeaderMetadata } from "../Table/StateHelpers";
 import type { StudioTableState } from "../Table/TableState";
-import type { DropdownItemBuilderProps } from "@cloudflare/kumo";
 
 export function useStudioResultTableContextMenu(
 	state: StudioTableState<StudioResultHeaderMetadata>
@@ -54,15 +54,18 @@ export function useStudioResultTableContextMenu(
 
 				for (let row = 0; row < data.length; row++) {
 					if (row === data.length - 1) {
-						if (data[row].length === 1 && data[row][0] === "") {
+						const lastRow = data[row] as string[];
+						if (lastRow.length === 1 && lastRow[0] === "") {
 							break;
 						}
 					}
-					for (let col = 0; col < data[row].length; col++) {
+					const currentRow = data[row] as string[];
+					for (let col = 0; col < currentRow.length; col++) {
+						const cellValue = currentRow[col] as string;
 						state.changeValue(
 							y + row,
 							x + col,
-							data[row][col].toLowerCase() === "null" ? null : data[row][col]
+							cellValue.toLowerCase() === "null" ? null : cellValue
 						);
 					}
 				}

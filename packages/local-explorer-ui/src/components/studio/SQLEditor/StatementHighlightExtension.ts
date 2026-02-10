@@ -136,7 +136,7 @@ export function splitStudioSQLStatements(
 	let accumulateNodes: SyntaxNode[] = [];
 
 	for (let i = 0; i < statements.length; i++) {
-		const statement = statements[i];
+		const statement = statements[i] as SyntaxNode;
 		pendingEndCount += requiresStatementEnd(state, statement);
 
 		if (pendingEndCount) {
@@ -158,13 +158,15 @@ export function splitStudioSQLStatements(
 		statementGroups.push(accumulateNodes);
 	}
 
-	return statementGroups.map((r) => ({
-		from: r[0].from,
-		to: r[r.length - 1].to,
-		text: generateText
-			? state.doc.sliceString(r[0].from, r[r.length - 1].to)
-			: "",
-	}));
+	return statementGroups.map((r) => {
+		const first = r[0] as SyntaxNode;
+		const last = r[r.length - 1] as SyntaxNode;
+		return {
+			from: first.from,
+			to: last.to,
+			text: generateText ? state.doc.sliceString(first.from, last.to) : "",
+		};
+	});
 }
 
 export function resolveStudioToNearestStatement(
@@ -182,7 +184,7 @@ export function resolveStudioToNearestStatement(
 	// Check if our current cursor is within any statement
 	let i = 0;
 	for (; i < statements.length; i++) {
-		const statement = statements[i];
+		const statement = statements[i] as StudioStatementSegment;
 		if (cursor < statement.from) {
 			break;
 		}
@@ -195,20 +197,23 @@ export function resolveStudioToNearestStatement(
 	}
 
 	if (i === 0) {
-		return statements[0];
+		return statements[0] ?? null;
 	}
 	if (i === statements.length) {
-		return statements[i - 1];
+		return statements[i - 1] ?? null;
 	}
 
 	const cursorLine = state.doc.lineAt(cursor).number;
-	const topLine = state.doc.lineAt(statements[i - 1].to).number;
-	const bottomLine = state.doc.lineAt(statements[i].from).number;
+	// Both i-1 and i are valid indices (0 < i < statements.length)
+	const prevStatement = statements[i - 1] as StudioStatementSegment;
+	const nextStatement = statements[i] as StudioStatementSegment;
+	const topLine = state.doc.lineAt(prevStatement.to).number;
+	const bottomLine = state.doc.lineAt(nextStatement.from).number;
 
 	if (cursorLine - topLine >= bottomLine - cursorLine) {
-		return statements[i];
+		return nextStatement;
 	} else {
-		return statements[i - 1];
+		return prevStatement;
 	}
 }
 

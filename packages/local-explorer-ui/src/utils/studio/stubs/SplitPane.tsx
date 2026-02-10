@@ -18,7 +18,7 @@ type State = {
 const BORDER_COLOR = "var(--color-resizer)";
 
 class SplitPane extends React.Component<Props, State> {
-	state: State = {
+	override state: State = {
 		dragging: false,
 	};
 
@@ -36,13 +36,13 @@ class SplitPane extends React.Component<Props, State> {
 		}
 	};
 
-	render() {
+	override render() {
 		const { children, split, ...otherProps } = this.props;
 		const { dragging } = this.state;
 		const { onDragStarted, onDragFinished } = this;
 
 		let resizerStyle: React.CSSProperties = {
-			...this.props.resizerStyle,
+			...(this.props.resizerStyle as React.CSSProperties),
 			backgroundColor: BORDER_COLOR,
 			opacity: 1,
 			backgroundClip: "padding-box",
@@ -75,7 +75,7 @@ class SplitPane extends React.Component<Props, State> {
 
 		const paneStyle: React.CSSProperties = {
 			overflow: "hidden",
-			...this.props.paneStyle,
+			...(this.props.paneStyle as React.CSSProperties),
 		};
 
 		// the iframes in our draggable panels cause issues since
@@ -84,12 +84,16 @@ class SplitPane extends React.Component<Props, State> {
 		// by the parent window. So, while we're dragging, we add
 		// `pointerEvents: 'none'` to prevent the iframes from
 		// intercepting mouse events
-		const style: React.CSSProperties = { ...this.props.style, zIndex: 0 };
+		const style: React.CSSProperties = {
+			...(this.props.style as React.CSSProperties),
+			zIndex: 0,
+		};
 		if (dragging) {
 			style.pointerEvents = "none";
 		}
 
 		return (
+			// @ts-expect-error -- csstype version mismatch between react-split-pane (3.1.2) and React (3.2.3); runtime CSS is identical
 			<ReactSplitPane
 				{...otherProps}
 				{...{

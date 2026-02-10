@@ -3,6 +3,7 @@ import { StudioTableState } from "./TableState";
 import type {
 	IStudioDriver,
 	StudioColumnTypeHint,
+	StudioResultRow,
 	StudioResultSet,
 	StudioSchemas,
 	StudioTableColumn,
@@ -150,7 +151,7 @@ function pipeCalculateInitialSize(
 		}
 
 		for (let i = 0; i < Math.min(result.rows.length, 100); i++) {
-			const row = result.rows[i];
+			const row = result.rows[i] as StudioResultRow;
 			const cell = row[header.name ?? ""];
 
 			if (typeof cell === "string") {
@@ -262,7 +263,7 @@ function pipeEditableTable(
 				table.columns.push(from.column);
 			} else if (schemas) {
 				const pkColumns =
-					schemas[from.schema].find((t) => t.tableName === from.table)
+					schemas[from.schema]?.find((t) => t.tableName === from.table)
 						?.tableSchema?.pk ?? [];
 
 				tables.push({

@@ -291,26 +291,29 @@ function HeaderDropdownMenu({
 
 	return (
 		<DropdownMenu open={open} onOpenChange={setOpen}>
-			<DropdownMenu.Trigger asChild>
-				<div
-					className="flex items-center px-2 py-1 font-mono cursor-pointer w-full gap-1 bg-surface"
-					style={{ height: 36 }}
-					onContextMenu={(e) => {
-						e.preventDefault();
-						e.stopPropagation();
+			<DropdownMenu.Trigger
+				render={(props) => (
+					<div
+						{...props}
+						className="flex items-center px-2 py-1 font-mono cursor-pointer w-full gap-1 bg-surface"
+						style={{ height: 36 }}
+						onContextMenu={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
 
-						setOpen(true);
-					}}
-				>
-					{header.display?.icon ? (
-						<header.display.icon className="size-4" />
-					) : (
-						header.display.iconElement
-					)}
-					<div className="grow line-clamp-1">{header.display.text}</div>
-					{orderIconPart}
-				</div>
-			</DropdownMenu.Trigger>
+							setOpen(true);
+						}}
+					>
+						{header.display?.icon ? (
+							<header.display.icon className="size-4" />
+						) : (
+							header.display.iconElement
+						)}
+						<div className="grow line-clamp-1">{header.display.text}</div>
+						{orderIconPart}
+					</div>
+				)}
+			/>
 			{children}
 		</DropdownMenu>
 	);

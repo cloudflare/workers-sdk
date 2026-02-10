@@ -59,16 +59,21 @@ export const ConfirmationModal = ({
 	}, [_onCancel, closeModal]);
 
 	return (
-		<Dialog open={!!isOpen} onOpenChange={(open) => !open && onCancel()}>
-			<Dialog.Content>
-				<Dialog.Header>
-					<Dialog.Title>{title}</Dialog.Title>
-				</Dialog.Header>
-				<Dialog.Body>{body}</Dialog.Body>
-				<Dialog.Footer>
+		<Dialog.Root
+			open={!!isOpen}
+			onOpenChange={(open: boolean) => {
+				if (!open) {
+					onCancel();
+				}
+			}}
+		>
+			<Dialog>
+				<Dialog.Title>{title}</Dialog.Title>
+				<div>{body}</div>
+				<div className="flex gap-2 justify-end mt-4">
 					{actions({ isRequesting, onConfirm, closeModal: onCancel })}
-				</Dialog.Footer>
-			</Dialog.Content>
-		</Dialog>
+				</div>
+			</Dialog>
+		</Dialog.Root>
 	);
 };

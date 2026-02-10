@@ -22,13 +22,15 @@ class CursorV2 {
 
 	constructor(private tokens: StudioSQLToken[]) {
 		// Trim whitespace tokens from the beginning and end
-		while (this.tokens.length > 0 && this.tokens[0].type === "WHITESPACE") {
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Length check above guarantees this exists
+		while (this.tokens.length > 0 && this.tokens[0]!.type === "WHITESPACE") {
 			this.tokens.shift();
 		}
 
 		while (
 			this.tokens.length > 0 &&
-			this.tokens[this.tokens.length - 1].type === "WHITESPACE"
+			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Length check above guarantees this exists
+			this.tokens[this.tokens.length - 1]!.type === "WHITESPACE"
 		) {
 			this.tokens.pop();
 		}
@@ -52,7 +54,9 @@ class CursorV2 {
 			return "";
 		}
 
-		return this.tokens[this.ptr].value;
+		// `end()` check above guarantees ptr is within bounds
+		const token = this.tokens[this.ptr] as StudioSQLToken;
+		return token.value;
 	}
 
 	consumeBlock(): string {
@@ -64,7 +68,9 @@ class CursorV2 {
 	}
 
 	currentType() {
-		return this.tokens[this.ptr].type;
+		// Callers check `end()` before calling; `ptr` is within bounds
+		const token = this.tokens[this.ptr] as StudioSQLToken;
+		return token.type;
 	}
 
 	consumeParen(): CursorV2 {

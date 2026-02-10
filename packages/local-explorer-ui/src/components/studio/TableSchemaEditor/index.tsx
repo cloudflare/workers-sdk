@@ -1,4 +1,4 @@
-import { Button, Input } from "@cloudflare/kumo";
+import { Button } from "@cloudflare/kumo";
 import { SplitPane } from "@cloudflare/workers-editor-shared";
 import { KeyIcon } from "@phosphor-icons/react";
 import { produce } from "immer";
@@ -142,13 +142,13 @@ export function StudioTableSchemaEditor({
 		>
 			<div className="flex flex-col w-full h-full overflow-hidden text-xs bg-surface">
 				<div className="flex gap-2 p-4 py-2 border-b border-color shadow-xs">
-					<Input
+					<input
 						autoFocus
 						style={{ width: "250px" }}
 						placeholder="Table name"
-						size="base"
+						className="h-9 rounded-lg border border-gray-300 px-3 text-base bg-transparent"
 						value={value.name.new ?? ""}
-						onValueChange={handleNameChange}
+						onChange={(e) => handleNameChange(e.target.value)}
 						disabled={readOnlyExistingColumns}
 					/>
 					<div className="grow" />

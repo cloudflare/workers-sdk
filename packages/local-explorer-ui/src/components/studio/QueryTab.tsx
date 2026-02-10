@@ -167,8 +167,10 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 	// Select the first result tab when query tabs change
 	useEffect(() => {
 		if (queryTabs && queryTabs.length > 0) {
-			// eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronizes tab selection after query results change; derived from memoized queryTabs
-			setSelectedResultTabKey(queryTabs[0].key);
+			// Synchronizes tab selection after query results change; length check guarantees this exists
+			const [tab] = queryTabs as [StudioWindowTabItem];
+			// eslint-disable-next-line react-hooks/set-state-in-effect
+			setSelectedResultTabKey(tab.key);
 		}
 	}, [queryTabs]);
 
@@ -192,7 +194,7 @@ export function StudioQueryTab({ query }: StudioQueryTabProps): JSX.Element {
 					return [
 						tableSchema.name,
 						tableSchema.tableSchema.columns.map((column) => column.name),
-					];
+					] satisfies [string, string[]];
 				})
 				.filter(([_, columns]) => columns.length > 0)
 		) as Record<string, string[]>;

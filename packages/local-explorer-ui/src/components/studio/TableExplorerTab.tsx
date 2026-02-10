@@ -300,7 +300,7 @@ export function StudioTableExplorerTab({
 	}, [pageOffset, pageLimit, guardUnsavedChanges]);
 
 	const onWhereRawApplied = useCallback(
-		(newWhereRaw) => {
+		(newWhereRaw: string) => {
 			guardUnsavedChanges(() => {
 				setWhereRaw(newWhereRaw);
 
@@ -368,7 +368,7 @@ export function StudioTableExplorerTab({
 			if (e instanceof Error) {
 				alert(e.message);
 			} else {
-				alert(e.toString());
+				alert(String(e));
 			}
 		}
 	}, [driver, tableName, schema, state, openModal]);
@@ -476,21 +476,20 @@ export function StudioTableExplorerTab({
 						>
 							<CaretLeftIcon size={14} weight="bold" />
 						</InputGroup.Button>
-						<InputGroup.Input
-							className="border-l text-center"
+						<input
+							className="border-l text-center bg-transparent text-sm outline-none"
 							style={{ width: 50 }}
 							value={pageLimitInput}
 							onChange={(e) => setPageLimitInput(e.currentTarget.value)}
-							title="Limit"
-							label="Limit"
+							aria-label="Limit"
 							onBlur={onLimitBlur}
 						/>
-						<InputGroup.Input
+						<input
 							style={{ width: 50 }}
 							value={pageOffsetInput}
-							className="border-l text-center"
+							className="border-l text-center bg-transparent text-sm outline-none"
 							onChange={(e) => setPageOffsetInput(e.currentTarget.value)}
-							title="Offset"
+							aria-label="Offset"
 							onBlur={onOffsetBlur}
 						/>
 						<InputGroup.Button

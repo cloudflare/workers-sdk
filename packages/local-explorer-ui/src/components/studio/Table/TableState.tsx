@@ -695,7 +695,11 @@ export class StudioTableState<HeaderMetadata = unknown> {
 			this.selectionRanges.push(newRange);
 			this.mergeSelectionRanges();
 		} else {
-			const selectedRange = this.selectionRanges[selectedRangeIndex];
+			// `findSelectionRange` returned a non-negative index, guaranteeing this exists
+			const selectedRange = this.selectionRanges[
+				selectedRangeIndex
+			] as TableSelectionRange;
+
 			const splitedRanges = this.splitSelectionRange(selectedRange, newRange);
 			if (splitedRanges.length >= 0) {
 				this.selectionRanges.splice(selectedRangeIndex, 1);

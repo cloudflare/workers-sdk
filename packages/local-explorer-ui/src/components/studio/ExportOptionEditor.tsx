@@ -1,4 +1,4 @@
-import { Button, DropdownMenu, Input, Switch, Text } from "@cloudflare/kumo";
+import { Button, DropdownMenu, Switch, Text } from "@cloudflare/kumo";
 import { CaretUpDownIcon } from "@phosphor-icons/react";
 import { produce } from "immer";
 import type { StudioExportOption } from "../../utils/studio/export";
@@ -64,7 +64,8 @@ export function StudioExportOptionEditor({
 			<SettingItem lastItem>
 				<SettingLabel>Filename</SettingLabel>
 				<SettingOption>
-					<Input
+					<input
+						className="font-mono w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-transparent"
 						value={value.filename}
 						onChange={(e) => {
 							onChange((prev) =>
@@ -74,7 +75,6 @@ export function StudioExportOptionEditor({
 							);
 						}}
 						spellCheck={false}
-						className="font-mono"
 					/>
 				</SettingOption>
 			</SettingItem>
@@ -94,7 +94,8 @@ function SQLExportEditor({
 			<SettingItem>
 				<SettingLabel>Batch Size</SettingLabel>
 				<SettingOption>
-					<Input
+					<input
+						className="font-mono text-right w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-transparent"
 						value={value.batchSize}
 						onChange={(e) => {
 							onChange((prev) =>
@@ -108,7 +109,6 @@ function SQLExportEditor({
 							);
 						}}
 						spellCheck={false}
-						className="font-mono text-right"
 					/>
 				</SettingOption>
 			</SettingItem>
@@ -121,7 +121,8 @@ function SQLExportEditor({
 					</Text>
 				</SettingLabel>
 				<SettingOption>
-					<Input
+					<input
+						className="font-mono text-right w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-transparent"
 						value={value.maxStatementLength}
 						onChange={(e) => {
 							onChange((prev) =>
@@ -131,7 +132,6 @@ function SQLExportEditor({
 							);
 						}}
 						spellCheck={false}
-						className="font-mono text-right"
 					/>
 				</SettingOption>
 			</SettingItem>
@@ -139,7 +139,8 @@ function SQLExportEditor({
 			<SettingItem>
 				<SettingLabel>Table Name</SettingLabel>
 				<SettingOption>
-					<Input
+					<input
+						className="font-mono w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-transparent"
 						value={value.tableName}
 						onChange={(e) => {
 							onChange((prev) =>
@@ -149,7 +150,6 @@ function SQLExportEditor({
 							);
 						}}
 						spellCheck={false}
-						className="font-mono"
 					/>
 				</SettingOption>
 			</SettingItem>
@@ -271,12 +271,14 @@ function SettingOptionDropdown({
 }) {
 	return (
 		<DropdownMenu modal={false}>
-			<DropdownMenu.Trigger asChild>
-				<Button variant="ghost" className="font-normal text-muted">
-					{items[value]}
-					<CaretUpDownIcon />
-				</Button>
-			</DropdownMenu.Trigger>
+			<DropdownMenu.Trigger
+				render={
+					<Button variant="ghost" className="font-normal text-muted">
+						{items[value]}
+						<CaretUpDownIcon />
+					</Button>
+				}
+			/>
 			<DropdownMenu.Content className="z-modal" align="end">
 				{Object.entries(items).map(([key, label]) => (
 					<DropdownMenu.Item

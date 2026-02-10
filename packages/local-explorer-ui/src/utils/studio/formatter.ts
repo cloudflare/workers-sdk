@@ -2,8 +2,8 @@
 // It’s intentionally small and limited in scope.
 // For broader functionality, consider switching to a full library such as sql-formatter.
 
-import { sqliteBuiltinFunctionList } from "../../components/Studio/SQLEditor/SQLiteDialect";
-import { waeBuiltinFunctionList } from "../../components/Studio/SQLEditor/WAEDialect";
+import { sqliteBuiltinFunctionList } from "../../components/studio/SQLEditor/SQLiteDialect";
+import { waeBuiltinFunctionList } from "../../components/studio/SQLEditor/WAEDialect";
 import { tokenizeSQL } from "./index";
 import type { StudioDialect, StudioSQLToken } from "../../types/studio";
 
@@ -34,9 +34,12 @@ export function beautifySQLQuery(statement: string, dialect: StudioDialect) {
 	}
 
 	for (let i = 0; i < verifyTokens.length; i++) {
-		if (tokens[i].value !== verifyTokens[i].value) {
+		// Loop bounds guarantee index is valid; lengths are equal (checked above)
+		const original = tokens[i] as StudioSQLToken;
+		const formatted = verifyTokens[i] as StudioSQLToken;
+		if (original.value !== formatted.value) {
 			throw new Error(
-				`Fail to format the query at token #${i}: "${tokens[i].value}" -> "${verifyTokens[i].value}"`
+				`Fail to format the query at token #${i}: "${original.value}" -> "${formatted.value}"`
 			);
 		}
 	}
@@ -63,7 +66,7 @@ function formatInternal(
 	let indentStack: IndentFrame = [];
 
 	for (let i = 0; i < tokens.length; i++) {
-		const token = tokens[i];
+		const token = tokens[i] as StudioSQLToken;
 		const previousToken = i > 0 ? tokens[i - 1] : undefined;
 		const normalizedToken = token.value.toUpperCase();
 
@@ -278,13 +281,14 @@ function needsSpace(result: StudioSQLToken[]) {
 	if (result.length === 0) {
 		return false;
 	}
-	if (result[result.length - 1].type === "WHITESPACE") {
+	const last = result[result.length - 1] as StudioSQLToken;
+	if (last.type === "WHITESPACE") {
 		return false;
 	}
-	if (result[result.length - 1].value === ".") {
+	if (last.value === ".") {
 		return false;
 	}
-	if (result[result.length - 1].value === "(") {
+	if (last.value === "(") {
 		return false;
 	}
 	return true;
@@ -306,15 +310,15 @@ export function getStudioTableNameFromSQL(sql: string) {
 		const fromIndex = tokens.findIndex(
 			(token) => token.value.toUpperCase() === "FROM"
 		);
-
 		if (fromIndex === -1) {
 			return "";
 		}
-		const tableName = tokens[fromIndex + 1];
 
-		if (tableName.type !== "IDENTIFIER") {
+		const tableName = tokens[fromIndex + 1];
+		if (!tableName || tableName.type !== "IDENTIFIER") {
 			return "";
 		}
+
 		return tableName.value;
 	} catch {
 		return "";

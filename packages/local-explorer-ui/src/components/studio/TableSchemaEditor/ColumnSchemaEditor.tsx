@@ -3,7 +3,6 @@ import {
 	Checkbox,
 	cn,
 	DropdownMenu,
-	Input,
 	Label,
 	Select,
 } from "@cloudflare/kumo";
@@ -58,12 +57,12 @@ export function StudioColumnSchemaEditor({
 	const column = value.columns[columnIndex];
 
 	const isPrimaryKey =
-		column.new?.constraint?.primaryKey ||
+		column?.new?.constraint?.primaryKey ||
 		value.constraints.some((constraint) =>
-			(constraint.new?.primaryColumns ?? []).includes(column.new?.name ?? "")
+			(constraint.new?.primaryColumns ?? []).includes(column?.new?.name ?? "")
 		);
 
-	const editableColumn = column.new;
+	const editableColumn = column?.new;
 
 	const onPrimaryKeyClicked = useCallback(() => {
 		if (!editableColumn) {
@@ -135,7 +134,7 @@ export function StudioColumnSchemaEditor({
 	);
 
 	const handleEditColumn = useCallback(() => {
-		if (!column.new) {
+		if (!column?.new) {
 			return;
 		}
 
@@ -146,7 +145,7 @@ export function StudioColumnSchemaEditor({
 				onChange((prev) =>
 					produce(prev, (draft) => {
 						const targetColumn = draft.columns.find(
-							(draftColumn) => draftColumn.key === column.key
+							(draftColumn) => draftColumn.key === column?.key
 						);
 						if (!targetColumn) {
 							return;
@@ -162,7 +161,7 @@ export function StudioColumnSchemaEditor({
 	const handleRemoveColumn = useCallback(() => {
 		onChange((prev) =>
 			produce(prev, (draft) => {
-				draft.columns = draft.columns.filter((c) => c.key !== column.key);
+				draft.columns = draft.columns.filter((c) => c.key !== column?.key);
 			})
 		);
 	}, [onChange, column]);
@@ -225,11 +224,13 @@ export function StudioColumnSchemaEditor({
 			</td>
 			<td className="p-2 border border-border text-center">
 				<DropdownMenu>
-					<DropdownMenu.Trigger asChild>
-						<Button variant="ghost" size="sm" shape="square">
-							<DotsThreeOutlineIcon weight="fill" size={16} />
-						</Button>
-					</DropdownMenu.Trigger>
+					<DropdownMenu.Trigger
+						render={
+							<Button variant="ghost" size="sm" shape="square">
+								<DotsThreeOutlineIcon weight="fill" size={16} />
+							</Button>
+						}
+					/>
 					<DropdownMenu.Content side="bottom" align="end">
 						<DropdownMenu.Item
 							disabled={!!column.old}
@@ -375,39 +376,46 @@ export function StudioColumnEditiorDrawer({
 			}}
 		>
 			<div className="flex flex-col gap-2">
-				<Label
-					title="Column name"
-					requiredDescription={"Column name must be unique"}
-					required
-					isValid={!isColumnNameDuplicated}
-				>
-					<Input
-						className="w-full"
+				<div>
+					<Label
+						tooltip={
+							isColumnNameDuplicated ? "Column name must be unique" : undefined
+						}
+					>
+						Column name
+					</Label>
+					<input
+						className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-transparent"
 						placeholder="e.g., user_id"
 						value={value.name}
-						onValueChange={(newColumnName) => {
+						onChange={(e) => {
 							setValue(
 								produce(value, (draft) => {
-									draft.name = newColumnName;
+									draft.name = e.target.value;
 								})
 							);
 						}}
 					/>
-				</Label>
+				</div>
 
-				<Label title="Data type" className="w-full" required>
+				<div className="w-full">
+					<Label>Data type</Label>
 					<Select
 						placeholder="Select a type"
 						className="w-full"
 						value={value.type}
-						onChange={(newType) => {
+						onValueChange={(newType) => {
+							if (!newType) {
+								return;
+							}
 							setValue((prev) =>
 								produce(prev, (draft) => {
 									draft.type = newType;
 								})
 							);
 						}}
-						options={[
+					>
+						{[
 							...(["", "TEXT", "INTEGER", "REAL", "BLOB"].includes(
 								value.type?.toUpperCase()
 							)
@@ -422,9 +430,13 @@ export function StudioColumnEditiorDrawer({
 							{ label: "Integer", value: "INTEGER" },
 							{ label: "Real", value: "REAL" },
 							{ label: "Blob", value: "BLOB" },
-						]}
-					/>
-				</Label>
+						].map((option) => (
+							<Select.Option key={option.value} value={option.value}>
+								{option.label}
+							</Select.Option>
+						))}
+					</Select>
+				</div>
 			</div>
 		</Drawer>
 	);

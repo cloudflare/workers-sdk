@@ -318,7 +318,7 @@ export async function runStudioMultipleSQLStatements(
 
 	for (let i = 0; i < statements.length; i++) {
 		const statement = statements[i] as string;
-		const sql = statements[i];
+		const sql = statement;
 
 		const logEntry: StudioMultipleQueryProgress["logs"][number] = {
 			order: i,
