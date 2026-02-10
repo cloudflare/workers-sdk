@@ -1,14 +1,15 @@
 {
 	"name": "@cloudflare/local-explorer-ui",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "pnpm openapi-ts && vite build && prettier --write src/routeTree.gen.ts",
+		"build": "openapi-ts && vite build",
 		"check:lint": "eslint src --max-warnings=0",
 		"check:type": "tsc --build",
 		"deploy": "echo 'no deploy'",
-		"dev": "concurrently -n api,ui,worker -c green,blue,orange \"openapi-ts --watch\" \"vite\" \"pnpm -w turbo --filter @fixture/worker-with-resources start\"",
+		"predev": "pnpm -w build --filter wrangler",
+		"dev": "concurrently -n api,ui,worker -c green,blue,orange \"openapi-ts --watch\" \"vite\" \"pnpm --filter @fixture/worker-with-resources start\"",
 		"dev:ui": "concurrently -n api,ui -c green,blue \"openapi-ts --watch\" \"vite\"",
 		"postinstall": "openapi-ts",
 		"preview": "vite preview"

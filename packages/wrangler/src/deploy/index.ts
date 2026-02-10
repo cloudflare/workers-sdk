@@ -268,14 +268,6 @@ export const deployCommand = createCommand({
 		}
 	},
 	async handler(args, { config }) {
-		if (config.pages_build_output_dir) {
-			throw new UserError(
-				"It looks like you've run a Workers-specific command in a Pages project.\n" +
-					"For Pages, please run `wrangler pages deploy` instead.",
-				{ telemetryMessage: true }
-			);
-		}
-
 		const shouldRunAutoConfig =
 			args.experimentalAutoconfig &&
 			// If there is a positional parameter or an assets directory specified via --assets then
@@ -283,6 +275,18 @@ export const deployCommand = createCommand({
 			// and that they are specifying what needs to be deployed
 			!args.script &&
 			!args.assets;
+
+		if (
+			config.pages_build_output_dir &&
+			// Note: autoconfig handle Pages projects on its own, so we don't want to hard fail here if autoconfig run
+			!shouldRunAutoConfig
+		) {
+			throw new UserError(
+				"It looks like you've run a Workers-specific command in a Pages project.\n" +
+					"For Pages, please run `wrangler pages deploy` instead.",
+				{ telemetryMessage: true }
+			);
+		}
 
 		if (shouldRunAutoConfig) {
 			sendAutoConfigProcessStartedMetricsEvent({
@@ -295,8 +299,29 @@ export const deployCommand = createCommand({
 					wranglerConfig: config,
 				});
 
-				// Only run auto config if the project is not already configured
-				if (!details.configured) {
+				if (details.framework?.id === "cloudflare-pages") {
+					// If the project is a Pages project then warn the user but allow them to proceed if they wish so
+					logger.warn(
+						"It seems that you have run `wrangler deploy` on a Pages project, `wrangler pages deploy` should be used instead. Proceeding will likely produce unwanted results."
+					);
+					const proceedWithPagesProject = await confirm(
+						"Are you sure that you want to proceed?",
+						{
+							defaultValue: false,
+							fallbackValue: true,
+						}
+					);
+
+					if (!proceedWithPagesProject) {
+						sendAutoConfigProcessEndedMetricsEvent({
+							success: false,
+							command: "wrangler deploy",
+							dryRun: !!args.dryRun,
+						});
+						return;
+					}
+				} else if (!details.configured) {
+					// Only run auto config if the project is not already configured
 					const autoConfigSummary = await runAutoConfig(details);
 
 					writeOutput({

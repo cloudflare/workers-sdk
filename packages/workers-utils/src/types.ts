@@ -312,4 +312,5 @@ export type Binding =
 	| ({ type: "vpc_service" } & BindingOmit<CfVpcService>)
 	| ({ type: "media" } & BindingOmit<CfMediaBinding>)
 	| ({ type: `unsafe_${string}` } & Omit<CfUnsafeBinding, "name" | "type">)
-	| { type: "assets" };
+	| { type: "assets" }
+	| { type: "inherit" };

@@ -111,7 +111,7 @@ export const friendlyBindingNames: Record<
  * Friendly names for binding types (keyed by Binding["type"] discriminator).
  * These are mostly (but not always) non-plural versions of friendlyBindingNames
  */
-export const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
+const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	// The 3 binding types below are all rendered as "Environment Variable" to preserve existing behaviour (friendlyBindingNames.vars)
 	plain_text: "Environment Variable",
 	secret_text: "Environment Variable",
@@ -146,6 +146,7 @@ export const bindingTypeFriendlyNames: Record<Binding["type"], string> = {
 	vpc_service: "VPC Service",
 	media: "Media",
 	assets: "Assets",
+	inherit: "Inherited",
 } as const;
 
 /**

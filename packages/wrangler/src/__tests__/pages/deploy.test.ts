@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { chdir } from "node:process";
 import { writeWranglerConfig } from "@cloudflare/workers-utils/test-helpers";
+import ci from "ci-info";
 import { execa } from "execa";
 import { http, HttpResponse } from "msw";
 import TOML from "smol-toml";
@@ -46,7 +47,7 @@ describe("pages deploy", () => {
 
 	//TODO Abstract MSW handlers that repeat to this level - JACOB
 	beforeEach(() => {
-		vi.stubEnv("CI", "true");
+		vi.mocked(ci).isCI = true;
 		setIsTTY(false);
 	});
 
@@ -1776,7 +1777,7 @@ describe("pages deploy", () => {
 
 	// regression test for issue #3629
 	it("should not error when deploying a new project with a new repo", async () => {
-		vi.stubEnv("CI", "false");
+		vi.mocked(ci).isCI = false;
 		setIsTTY(true);
 		await execa("git", ["init"]);
 		writeFileSync("logo.png", "foobar");
