@@ -421,7 +421,8 @@ describe("whoami", () => {
 	}) => {
 		writeAuthConfigFile({ oauth_token: "some-oauth-token" });
 		await runWrangler("whoami --json");
-		const output = JSON.parse(std.out);
+		let output;
+		expect(() => (output = JSON.parse(std.out))).not.toThrow();
 		expect(output).toEqual({
 			loggedIn: true,
 			authType: "OAuth Token",
