@@ -102,7 +102,7 @@ function getPagesEnvironmentVariables(
 	try {
 		branch = execSync("git rev-parse --abbrev-ref HEAD", {
 			encoding: "utf-8",
-			stdio: ["pipe", "pipe", "pipe"],
+			stdio: "pipe",
 		}).trim();
 	} catch {
 		// Not a git repo or git not available, use default
@@ -112,14 +112,22 @@ function getPagesEnvironmentVariables(
 	try {
 		commitSha = execSync("git rev-parse HEAD", {
 			encoding: "utf-8",
-			stdio: ["pipe", "pipe", "pipe"],
+			stdio: "pipe",
 		}).trim();
 	} catch {
 		// Not a git repo or git not available, use default
 	}
 
-	// Use short SHA (first 8 characters) for commit preview URL format
-	const shortSha = commitSha.substring(0, 8);
+	// Use short SHA (fallback to 8 characters of main commit) for preview URL format
+	let shortSha = commitSha.substring(0, 8);
+	try {
+		shortSha = execSync("git rev-parse --short HEAD", {
+			encoding: "utf-8",
+			stdio: "pipe",
+		}).trim();
+	} catch {
+		// Not a git repo or git not available, use default
+	}
 
 	return {
 		CF_PAGES: "1",
