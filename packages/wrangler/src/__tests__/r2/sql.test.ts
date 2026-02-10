@@ -223,7 +223,7 @@ describe("r2 sql", () => {
 			).rejects.toThrow("Received a malformed response from the API");
 		});
 
-		it("should handle nested objects in query results", async () => {
+		it("should handle nested objects (as JSON with null converted to '') in query results", async () => {
 			const mockResponse = {
 				success: true,
 				errors: [],
@@ -264,7 +264,7 @@ describe("r2 sql", () => {
 							"approx_top_k(value, Int64(3))": [
 								{ value: 0, count: 961 },
 								{ value: 1, count: 485 },
-								{ value: 2, count: 364 },
+								{ value: 2, count: null },
 							],
 						},
 					],
@@ -287,12 +287,18 @@ describe("r2 sql", () => {
 			);
 
 			await runWrangler(`r2 sql query ${mockWarehouse} "${mockQuery}"`);
-			// Nested objects should be JSON-stringified, not displayed as [object Object].
-			expect(std.out).not.toContain("[object Object]");
-			expect(std.out).toContain(
-				'[{"value":0,"count":961},{"value":1,"count":485},{"value":2,"count":364}]'
-			);
-			expect(std.out).toContain("across 3 files from R2");
+
+			expect(std.out).toMatchInlineSnapshot(`
+				"
+				 ⛅️ wrangler x.x.x
+				──────────────────
+				┌─┐
+				│ approx_top_k(value, Int64(3)) │
+				├─┤
+				│ [{\\"value\\":0,\\"count\\":961},{\\"value\\":1,\\"count\\":485},{\\"value\\":2,\\"count\\":\\"\\"}] │
+				└─┘
+				Read 62.9 kB across 3 files from R2"
+			`);
 		});
 
 		it("should handle null values in query results", async () => {
