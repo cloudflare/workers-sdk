@@ -98,7 +98,7 @@ function getPagesEnvironmentVariables(
 ): Record<string, string> {
 	let branch = "local";
 
-	// Attempt to get actual git info for more realistic mocking
+	// Attempt to get actual git info to match what happens in Pages CI as accurately as possible.
 	try {
 		branch = execSync("git rev-parse --abbrev-ref HEAD", {
 			encoding: "utf-8",
