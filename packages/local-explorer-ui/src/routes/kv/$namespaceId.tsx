@@ -310,7 +310,7 @@ function NamespaceView() {
 
 	return (
 		<div>
-			<div className="flex items-center gap-2 py-4 px-6 -mx-6 mb-6 min-h-[67px] box-border bg-bg-secondary border-b border-border text-sm font-medium text-text-secondary">
+			<div className="flex items-center gap-2 py-4 px-6 -mx-6 mb-6 min-h-16.75 box-border bg-bg-secondary border-b border-border text-sm font-medium text-text-secondary">
 				<span className="flex items-center gap-1.5">
 					<KVIcon />
 					KV
@@ -364,7 +364,7 @@ function NamespaceView() {
 					{hasMore && (
 						<div className="text-center p-4">
 							<Button
-								className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-[disabled]:opacity-60 data-[disabled]:cursor-not-allowed data-[disabled]:active:translate-y-0"
+								className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0"
 								onClick={handleLoadMore}
 								disabled={loadingMore}
 								focusableWhenDisabled
@@ -381,8 +381,8 @@ function NamespaceView() {
 				onOpenChange={(open) => !open && setDeleteTarget(null)}
 			>
 				<AlertDialog.Portal>
-					<AlertDialog.Backdrop className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
-					<AlertDialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001] bg-bg rounded-xl p-6 w-full max-w-[500px] shadow-[0_4px_24px_rgba(0,0,0,0.15),0_0_0_1px_var(--color-border)] transition-[opacity,transform] duration-150 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95">
+					<AlertDialog.Backdrop className="fixed inset-0 bg-black/50 flex items-center justify-center z-1000 transition-opacity duration-150 data-starting-style:opacity-0 data-ending-style:opacity-0" />
+					<AlertDialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-1001 bg-bg rounded-xl p-6 w-full max-w-125 shadow-[0_4px_24px_rgba(0,0,0,0.15),0_0_0_1px_var(--color-border)] transition-[opacity,transform] duration-150 data-starting-style:opacity-0 data-starting-style:scale-95 data-ending-style:opacity-0 data-ending-style:scale-95">
 						<AlertDialog.Title className="text-lg font-semibold mb-4">
 							Delete key?
 						</AlertDialog.Title>
@@ -393,14 +393,14 @@ function NamespaceView() {
 						<div className="flex justify-end gap-2 mt-6">
 							<AlertDialog.Close
 								render={
-									<Button className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-[disabled]:opacity-60 data-[disabled]:cursor-not-allowed data-[disabled]:active:translate-y-0" />
+									<Button className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0" />
 								}
 								disabled={deleting}
 							>
 								Cancel
 							</AlertDialog.Close>
 							<Button
-								className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-danger text-bg-tertiary hover:bg-danger-hover data-[disabled]:opacity-60 data-[disabled]:cursor-not-allowed data-[disabled]:active:translate-y-0"
+								className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-danger text-bg-tertiary hover:bg-danger-hover data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0"
 								onClick={handleConfirmDelete}
 								disabled={deleting}
 								focusableWhenDisabled
@@ -417,8 +417,8 @@ function NamespaceView() {
 				onOpenChange={(open) => !open && setOverwriteConfirm(null)}
 			>
 				<AlertDialog.Portal>
-					<AlertDialog.Backdrop className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
-					<AlertDialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001] bg-bg rounded-xl p-6 w-full max-w-[500px] shadow-[0_4px_24px_rgba(0,0,0,0.15),0_0_0_1px_var(--color-border)] transition-[opacity,transform] duration-150 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95">
+					<AlertDialog.Backdrop className="fixed inset-0 bg-black/50 flex items-center justify-center z-1000 transition-opacity duration-150 data-starting-style:opacity-0 data-ending-style:opacity-0" />
+					<AlertDialog.Popup className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-1001 bg-bg rounded-xl p-6 w-full max-w-125 shadow-[0_4px_24px_rgba(0,0,0,0.15),0_0_0_1px_var(--color-border)] transition-[opacity,transform] duration-150 data-starting-style:opacity-0 data-starting-style:scale-95 data-ending-style:opacity-0 data-ending-style:scale-95">
 						<AlertDialog.Title className="text-lg font-semibold mb-4">
 							Overwrite key?
 						</AlertDialog.Title>
@@ -429,14 +429,14 @@ function NamespaceView() {
 						<div className="flex justify-end gap-2 mt-6">
 							<AlertDialog.Close
 								render={
-									<Button className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-[disabled]:opacity-60 data-[disabled]:cursor-not-allowed data-[disabled]:active:translate-y-0" />
+									<Button className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-bg-tertiary text-text border border-border hover:bg-border data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0" />
 								}
 								disabled={overwriting}
 							>
 								Cancel
 							</AlertDialog.Close>
 							<Button
-								className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-bg-tertiary hover:bg-primary-hover data-[disabled]:opacity-60 data-[disabled]:cursor-not-allowed data-[disabled]:active:translate-y-0"
+								className="inline-flex items-center justify-center py-2 px-4 text-sm font-medium border-none rounded-md cursor-pointer transition-[background-color,transform] active:translate-y-px bg-primary text-bg-tertiary hover:bg-primary-hover data-disabled:opacity-60 data-disabled:cursor-not-allowed data-disabled:active:translate-y-0"
 								onClick={handleConfirmOverwrite}
 								disabled={overwriting}
 								focusableWhenDisabled
